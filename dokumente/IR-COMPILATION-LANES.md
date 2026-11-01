@@ -995,3 +995,203 @@ claimed. Every Lean invocation used slot 1 with ELAN_TOOLCHAIN removed,
 artifacts were read only. `git diff --check` passed. Scripts, the corrected
 scratch fixture and logs remain in `.scratch-ir13/`; only this inventory is
 committed.
+
+### Grammatik export catalogue (2026-11-01)
+
+Read-only audit of **42d30ce4074ef4283a9131e9382c994959353757**. No Lean
+invocation, grammar build or execution probe was made. This catalogue refines
+the bounded IR-07/IR-13 inventories: a `without G form` diagnostic does not by
+itself establish that the canonical model lacks a rule.
+
+**Count: 32 A packages, 8 B packages, 18 C packages.** The counting unit is one
+numbered package below, including its explicit bounds, not a parser constructor,
+diagnostic occurrence or compiled program. A has an executable G construction
+and an actual Stage0 emitter with a connected generic proof branch; source
+expansion and its preservation proof remain to be implemented. B has existing
+model semantics but also needs Stage0 work. C lacks a canonical source/admission
+rule or semantic binding and is **not a pure export**. Abstract value/library
+theorems alone do not establish executable source semantics. B/C explicitly
+cover the variants outside an A row's domain; an A row is not whole-family
+coverage. In particular, the four IR-13 declarations are not four completed
+source expansions.
+
+**Coordinates.** All `Uebersetze*.lean:line` references below are exact source
+coordinates under `grammatik/Grammatik/Parser/Elab/` at the audited commit.
+`S` denotes `grammatik/Grammatik/Kern/Syntax/Syntax.lean`, `Z` its sibling
+`Zucker.lean`. `Ty` is defined in `Kern/Syntax/Typen.lean:35`. Their meanings
+are `eval` in `Kern/Semantik/Semantik/T1.lean` and `execStmt`/`execBlock`/
+`execEnd` in `Kern/Semantik/Semantik/T2.lean`. For example, `breaking` recurses
+at T2:216; advances/retires leave the runtime world unchanged at T2:245/246.
+
+| Canonical model | Actual Stage0 emitter and connected proof (paths under `stage0/Stage0/`) |
+|---|---|
+| `Expr` (S:422), quantifiers/reachability/references/aggregates (S:500/507/510/515) | `Senke/Ausdruck.lean` and `Ausdruck/Gleichungen.lean`; `lowE_ok` in `Senke/Ausdruck/Satz.lean:34`. Successful emission is a premise, not a coverage theorem. |
+| `Stmt` / `Block` / `Endblock` (S:569/651/721) | `lowS` / `lowB` / `lowEnd` in `Senke/Anweisung.lean:174/292/415`; mutual `lowS_ok` / `lowB_ok` / `lowEnd_ok` in `Senke/Anweisung/Satz.lean:50/352/459`. |
+| `Stmt.breaking/advances/retires` (S:610/637/640) | Emitter branches `Anweisung.lean:279/280/281`, proof branches `Anweisung/Satz.lean:146/151/152`. No separate instruction is necessary for a declaration/resource index. |
+| Runtime check, traversal, bytes, state shift | `blockCheck_case` (`Senke/Anweisung/Faelle/Kontrolle/Check.lean:32`), `traverse_case` (`Faelle/Schleifen/Traversal.lean:15`), `readBytesL_ok` (`Senke/Ausdruck/Bytes.lean:17`), `putBytes_ok` / `shift_ok` (`Senke/Anweisung/Bytes/Put.lean:12`, `Shift.lean:17`), called by the mutual dispatchers. |
+| Unit/image composition | `Compiler.compile_source_program` (`Compiler.lean:80`) records the elaborated program; existing emission proofs compose through `lowFun_spec`, `Emitted.correct` (`IRBild.lean:96`) and `irBild_correct` (`IRBild.lean:113`). They do not invent semantics for an unexported surface macro. |
+
+**Sweep.** All six `Uebersetze*.lean` modules were searched for literal and
+computed error strings, `without G form`, `no G form`, `lacks` and default
+matches. The matches were compared with `STyp`, `SExpr`, `SAnw`, `SKlausel`,
+`STabTeil` and `SItemTief`. The actual route is `Frontend.source` →
+`elabWithScopes` (`Frontend/Elaboration.lean:10`) → `lowerAllg` → compiler and
+emitter; `elabWithScopes` still invokes canonical `uRestFehler` first. Existing
+Stage0 adapters matter: `pre108` resolves names/imports and opens module/public
+wrappers, checked scopes normalize supported aliases/constants, and
+`Frontend/Tables.tableWithEmpty` already handles empty fixed-count tables.
+Those older canonical refusals are not outstanding packages. The specialized
+`104 lowering` and later witness functions in `Uebersetze.lean` are not the
+general compiler route and add no count.
+
+**Common preservation duties for A/B:** exact names/types, evaluation order,
+old/result scope, guards and declared writes/effects; exact resource indices
+(`darf`, `gdarf`, `RufPasst`, `nachSig`, return `Perm`), not empty replacements;
+all required invariant restorations, failure/nonreturn outcomes and canonical
+budget/recursion accounting. Cost, floor, online/offline, proof and reservation
+metadata must not vanish merely because an existing export omits it. Every
+new expansion needs generic source-to-G preservation and a nondegenerate witness,
+connected to the existing IR proof. Tests or abstract roundtrip/monoid theorems
+do not replace that bridge. No row authorizes an OS assumption, numerical
+pointer or another interpreter.
+
+**A — pure export, Stage0 ready within the stated domain.** No new model rule
+is needed for these bounded constructions. The last column names existing IR
+proofs and the still missing export obligations, not a completed source theorem.
+
+| ID / source form | Exact refusal or absent export | Target canonical construction | Existing Stage0 proof; what export must preserve |
+|---|---|---|---|
+| A01 `breaking I { ... }` | `Uebersetze.lean:2538`, `stmt without G form: waive`, via `uAnwReihe` default | `Stmt.breaking` (S:610) | `lowS_ok` branch :146 recurses through `lowB_ok`. Resolve each invariant name (multiple names become nested scopes); retain body/exits and invariant restoration at return. |
+| A02 linear/ghost mark order, `consumes`/`allocs`, advances clause/statement | `Uebersetze.lean:1925/1952/2538`: `effect without G form`, `clause without G form`, `... step`; `UebersetzeAllg.lean:231/232/382` fixes empty signatures/`Marke := Empty` | `D.Marke/stufen`, `Signatur.konsumiert/produziert`, `Res.marke`, `nachSig`, `Stmt.advances` (S:185/89/287/306/637) | `lowS_ok` :151 and generic call/bind/return branches. Export one consistent mark namespace, exact flow/conformance/return resources, possession and `a+1 < stufen`; never produce an owner mark. Complete owner minting is C09. |
+| A03 `retires m from s ...` | `Uebersetze.lean:1953`, `clause without G form`; raw `quits` tail has no body export | `Stmt.retires` (S:640), final resource list | `lowS_ok` :152. Resolve mark/stage/assumption, consume exactly that mark on the correct exits and retain assumption provenance. Runtime erasure is not erasure of the obligation. |
+| A04 `table ... owner m` guard metadata, given valid initial ownership | `Uebersetze.lean:1172`, `table without G form`; `UebersetzeAllg.lean:382/387` exports no owners | `D.eigner`, `D.braucht` with `.inr (m,s)`, `darf` (S:190/192/301) | Generic `lowE_ok`/`lowS_ok` slot/thru/store proofs. Export shared/owner guards, uniqueness and `eigner_nie_erzeugt`. The current `own`→writable Bool conversion is insufficient; minter/borrow-return semantics are C09. |
+| A05 scalar `table ... backed k` and backed accesses | `Uebersetze.lean:1172`, `table without G form`; runtime narrow bounds also :2860 | Static count plus explicit `Block.check`/`Block.narrow` and slots (S:699/703) | `blockCheck_case`, `lowB_ok`/`lowEnd_ok`. Preserve address-space count versus backed bound; prove the backing guard before each access, not just `i < count`. Preserve table identity through narrowing. |
+| A06 table constants, `ops insert/remove/relabel`, `occupied f`, on represented scalar tables | `Uebersetze.lean:1132/1163/1165`, `table without G form` for non-invariant parts | Generated Fn/signatures/requires/calls/conditionals/stores (S header :31; ordinary `Stmt`/`Programm`) | `lowE_ok`/`lowS_ok`/`lowFun_spec` for generated functions. Generate freshness/reachability/leaf/occupancy contracts, exact effects and `by ops` writer discipline. No dedicated ops instruction is needed; a generic source generator proof is still missing. |
+| A07 scalar dynamic arena ceiling, constant `grow ... by n else ...`, dynamic alloc over represented storage | `Uebersetze.lean:3992` (`arena with a dynamic ceiling without G form`), :2538 (`... grow`) | `DynForm`, `Block.dynGrowB/dynAlloc` in `Bausteine/Arena/ArenaDyn.lean:270/341/362`, reducing to check/narrow/stores | `lowE_ok`/`lowB_ok`/`blockCheck_case`; canonical `dynGrow_commit`/`dynAlloc_simuliert`. Export committed counter, `used <= committed <= M`, failure and effects. Physical provision/commit is B06/C08, not established by a counter update. |
+| A08 scalar `free A[i]` and free-list allocation | `Uebersetze.lean:2538`, `stmt without G form: free`; no reuse export | `FreiForm`, `Block.freiVar` (`Arena/Struktur/Formen/ArenaAllocForm.lean:34`), `Block.freiNimm` (`Arena/Struktur/ArenaFrei.lean:386`) | Existing store/bind/check proofs; canonical `freiVar_ausfuehren`/`freiVar_lebt`, ownership `release_post`/`allocList_post` (`Arena/Ownership/Body/Forms.lean:195/125`). Attach the actual ownership judgment: consume origin, invalidate aliases, prevent double-free/use-after-free. Two emitted stores alone do not close this. |
+| A09 arena lock carriers and table/arena group invariants | `Uebersetze.lean:1181` (`arena under a lock without G form`), :4338 (`invariant carrier without G form`) | `D.braucht/traeger`, `Programm.invariante`, `Stmt.locks` (S:190/206/813/605) | `locks_ok`, `lowS_ok`/`lowB_ok`. Preserve table-cell footprints, metadata guards, rank/U003 and restores. An invariant over a counter/global has the separate C05 boundary; do not disguise that global as a table carrier. |
+| A10 already evaluable constant expressions in counts, bounds, lock ranks, payload ranges and initializers | `Uebersetze.lean:998/1018/1022/1033/1067/1212/1805/2853/2860/3816/3892/3915/4226` | Existing typed bounds, literal indices/counts, `D.rang`, `Expr.lit`, initial values | `lowE_ok` and existing initialization. Reuse checked scopes with exact sign/range/overflow/storage width. Only expressions already denoted by the canonical constant evaluator qualify; arbitrary compile-time control/contracts are C17. |
+| A11 constant numeric state stages and transition through a table capability | `Uebersetze.lean:4306` (`state stage without G form`), :2513 (`transition through a pointer without G form`) | `D.erlaubt`, `Stmt.shift` (S:161/588) | `shift_ok` in `lowS_ok` :159. Preserve actual constant stage values, declared edge/range, table identity, write/guard checks and prestate failure. Do not replace numeric stages by ordinals. Edge contracts are C04. |
+| A12 implication `p => q` | `Uebersetze.lean:1604`, computed `ensures clause without G form` default | `Expr.impl = or (not p) q` (Z:139) | `lowE_ok` Boolean branches. Preserve predicate/binder scope, footprint and old/result legality, including generated contracts/invariants. |
+| A13 domain membership, `a reaches b via f`, chain membership | `Uebersetze.lean:1604/1490`, predicate/compare-side defaults | `Expr.member/chain` (Z:156/169), `reaches` (S:507), `existsSlots` | `reachesL_ok` and quantifier branches in `lowE_ok` (`Ausdruck/Satz.lean:465/468/471`). Preserve guarded table, option-self edge type, bounded-chain meaning and index identities. |
+| A14 finite unvisited traversal/quantification over descendants, ancestors, queue, explicit scheduler tables and one-word fixed-array elements | `Uebersetze.lean:1570` (`quantifier domain without G form`), :3173/3174 (`traverse of/domain without G form`) | `Expr.descendants/ancestors/queue` (Z:159/164/173), quantifiers, filtered `Stmt.traverse` (S:611) | `lowE_ok` reach/quantifier branches, `traverse_case` in `lowS_ok`. Derive declared edges/carrier and element indices, filter, binder scope, invariant and leave/next. Use existing arrGet for represented elements. Record fields/mappings are C01, wider arrays B02, consuming traversal C11. |
+| A15 ordinary `Held(L)` predicates after resource admission | `Uebersetze.lean:1604`; special `requires Held` collection already exists | Fact `Res.held L in Λ` (S:288/301), checked reification to `Expr.tru` | `lowE_ok` true branch. Prove possession in the current Λ, never accept by spelling; retain lock signature/floor. Shared witnesses depend on C10. |
+| A16 string equality/order with both maxima <=1 byte | `Uebersetze.lean:1541` comparison dispatch, :1490 default; `UebersetzeAllg.lean:1189` (`aggregate as a number`) | `Expr.strEq/strLt` (S:531/533), Boolean combinations | `strCompare_ok` in `lowE_ok` (`Ausdruck/Satz.lean:66/69`). Preserve byte/length order and maximum bounds. Longer strings are B02. |
+| A17 same-region reference equality/inequality | Numeric comparison path `Uebersetze.lean:1541`; `UebersetzeAllg.lean:1189` / `zahlVon` refuses the nonnumeric side; body values :1651 say `reference as a number` | `Expr.refEq` (S:510), `Expr.not` | `refEq_ok` in `lowE_ok` :40. Retain region identity and valid origins; equality grants no address arithmetic. Provider realization remains B04/B06/C08. |
+| A18 one-word context type adapters: Bool/option elements, normal table capabilities as values/results, scalar open-table fields | `Uebersetze.lean:1023/1034/1806/1171`: type/field/result/open-table non-number refusals | Existing Ty and `Expr.var/ptrOf/slot/slotRef`, binds/results (S:422/438/512/654/722) | Scalar `lowE_ok`/`lowS_ok`/`lowB_ok`/`lowEnd_ok`. Carry the complete kind/type through field/parameter/result paths; a capability is a table identity. Provider creation/transport remains B04/B06/C08; wide values B02; records/spaces C01/C12. |
+| A19 mutable scalar options/tags/indices/capabilities/function pointers and call results | `Uebersetze.lean:2893/2961/2981/3026` (`let mut ...`), :2424 (`assignment to a pointer or an index`); `UebersetzeAllg2.lean:1168` (`assignment to a non-number variable`) | `Block.bind`, generic `Stmt.assignVar` (S:654/584), call bind | `lowS_ok` :63 and `lowB_ok` bind/call cases, within `wordTy`. Preserve declared mutable type/range, lexical scope, reference/mark provenance. This does not permit owning-value copies. Aggregate mutation is B02. |
+| A20 matching binding annotations, scalar noninteger call results and scalar foreign function addresses | `Uebersetze.lean:2980/3004/3474/3513/3064`; `address of a foreign fn without G form`; `uWertArt` omits option/tag results | `Block/Endblock.bindCall/Ind/Else` (S:655/658/661/731/736/774) and typed bind/narrow; checked ordinary-function thunk for a foreign address | Existing `lowB_ok`/`lowEnd_ok`, `fnref_ok` and wrapper `lowFun_spec`. Prove thunk signature/call behavior with the actual gate; nontrivial foreign contracts retain C08. Check actual type, not only numeric range; retain reason context, conformance, continuation resources and alloc failure. Wide/gate results are B02/B04. |
+| A21 internal let-else inside an error continuation | `UebersetzeAllg3.lean:412/969`, stale `Endblock lacks bindCallElse` | **Existing** `Endblock.bindCallElse` (S:736), execEnd at T2:375 | `lowEnd:432`, `lowEnd_ok:501`. Repair continuation parsing/scopes and reason/callee resources. No new constructor. The :412 branch is the context-preserving `lowSeqL` mode; bind-capable `lowSeq` already handles this at :438. |
+| A22 foreign calls/bindings and fallible numeric foreign calls in error continuations | `UebersetzeAllg3.lean:857/859/966`, `foreign call ... no G form here` / unfinished nested let-else | `Endblock.cons (Stmt.axiomCall ...)`, `bindAxiom`, `bindAxiomElse` (S:616/743/751) | `lowS_ok:340`, `lowEnd_ok:506/510`. Retain effects, gate/hardware failure and reason decoding. The unfinished branch must parse the real error body, not an empty list. Noninteger fallible results are B04. |
+| A23 fixed scalar arena alloc at function top level / in an Endblock | `UebersetzeAllg3.lean:957/1251`, `Endblock lacks arenaAlloc` | Existing `Endblock.narrow/bind/cons` (S:727/779), same stores/bump as `Block.arenaAlloc` (`Arena/ArenaZucker.lean:203`) | `lowEnd_ok` narrow/bind/store branches. Define/prove this sugar; retain failure continuation, store/bump order, bounds and ownership. A convenience definition is absent, not an essential core constructor. No-else alloc is C11. |
+| A24 declared check's linear Duty and producing/consuming **ordinary function** gates | `Uebersetze.lean:4039`, `item without G form`; mark/signature gap in A02 | `Res.marke`, signature flow, `nachSig`, `RufPasst` (S:89/287/306/345) | Generic call/bind/return proofs. Generate/check exact Duty flow and gate/checker functions; retain can-fail/floor/probe obligations. `Block.check` is a different construct. Full measurement/admission and foreign gate contracts remain C16/C08. |
+| A25 format views/checks with each integer access <=8 bytes | `Uebersetze.lean:4039`, `item without G form`; decorated fields :1117 | Count-one view/table, `getBytes`, `bitfeld/embeds` (Z:276/288), `putBytes`, `Block.check` (S:468/580/703) | `readBytesL_ok`, `putBytes_ok`, `blockCheck_case`. Generate/prove layout, endian conversion, offsets, reserved bits, where/range and carrier bounds. `FormatRoundtrip.roundtrip` is not that bridge; @version provides no migration reader. Wider accesses B03. |
+| A26 ordinary scalar accumulators, all max/min/add/or/and operators | `Uebersetze.lean:4039`, `item without G form` | Global + generated stores/conditionals/arithmetic; `Stmt.mergeMax/mergeAdd` (Z:206/210) | `lowE_ok`/`lowS_ok`, existing initialization. Preserve neutral value/operator/range (especially add), guard/write effects and generated contracts. Concurrent per-core/RMW claims are not supplied by a plain store; C15. |
+| A27 walk's fixed-level traversal projection over modelled table nodes | `Uebersetze.lean:4039`, `item without G form`; mappings uses :1570/3174 | `Stmt.walk2` (Z:306), repeated traversal and filtered down/leaf tests | `traverse_case`, `lowS_ok`/`lowB_ok`. Prove source-derived visitation/mapping and invariant/exit correspondence; `walk_hits_mapping` alone does not. Full generated mapping records are C01; wide transport B02. |
+| A28 scalar noninteger constants (Bool, option/tag, <=1-byte string) | Collectors omit them; uses reach `Uebersetze.lean:1453` (`name unknown`) / `UebersetzeAllg.lean:1351` (`constant without G form`) | Typed `Expr.tru/fls/none/some/case/why/strLit` | Existing `lowE_ok` branches. Preserve constant type/identity, checked literal/payload interpretation; never substitute zero. Wide values B02, general evaluation C17. |
+| A29 float literals, conversion, narrowing and comparison in the finite IEEE kernel model | `Uebersetze.lean:1023/1806/1657/1663` type/result/value defaults; bare float names also reach :822 (`type unknown`) | `Ty.fl`, `Block.floatLit/Of/Narrow`, `Expr.fllt/flle` (S:488/712/714/718) | Actual `lowB_ok` :445/449/453 and `lowE_ok` :140/144 branches. Export rational bounds, finite/rounded/failure meaning, operand order and binders; retain Stop107. Arithmetic is B01. |
+| A30 slot quantifiers beside a represented noninteger scalar result | `UebersetzeAllg.lean:1170`, `quantifier beside a result of this type without G form` | `forallSlots/existsSlots` with actual result `ErgCtx` (S:500/502/803) | `lowE_ok` quantifier proofs. Extend `ergAlsParam`, preserving result type/position under every binder. A tag/option must not become an Int. |
+| A31 calls nested in value/return expressions, where already allowed by source checking | `Uebersetze.lean:1663/1490/1541`, value/compare/predicate defaults; special binding-RHS call handling is narrower | Existing `Block/Endblock.bindCall`, `Stmt.call` and result variable, no new `Expr.call` | `lowB_ok`/`lowEnd_ok` call proofs. Lift calls in source evaluation order with contracts/effects/resource states and failure/nonreturn continuations. No repeated/eager evaluation or invented expression-call syntax. Fallible indirect calls C07. |
+| A32 Boolean exchange/update and represented scalar nonnumeric atomic payload values | `Uebersetze.lean:3447` (`exchange ... not a number`); `UebersetzeAllg2.lean:1044/1075` (`aggregate atomic without G form`) | Generic `Block.exchange`, `Stmt.publish`, `Block.awaits`, `Expr.wenn` (S:697/634/693/538) | Existing exchange/publish/awaits cases of all three mutual proofs. Preserve pairing, atomic/guard/write checks, CAS retry and weak-memory duties. Only current scalar memory encodings qualify; multiword atomicity is extra work in B02. |
+
+**B — model exists, export plus Stage0 work required.** These are not cases
+whose only blocker is the canonical exporter.
+
+| ID / source form | Exact export boundary | Existing model/proof and additional blocker | Preservation / implementation needed |
+|---|---|---|---|
+| B01 float Add/Sub/Mul/Div | Same type/value defaults as A29 (`Uebersetze.lean:1023/1806/1663`) | `Block.float` (S:709), semantics T2:329; `Anweisung.lean:384` still returns `none`, `lowB_ok:444` only discharges impossible emission | Finish/connect actual arithmetic/normalization/rounding/range candidate and source export. Do not adjust IEEE semantics to match the candidate. |
+| B02 wider variants of A16/A18-A20/A25-A29/A32: arbitrary arrays/strings, fields/locals/returns/atomic values | `Uebersetze.lean:1023/1034/1171/2893/2926/2961/2981/3004/3040/3447/3816`; `UebersetzeAllg.lean:1189/1351`; `UebersetzeAllg2.lean:1044/1075/1168` | General Ty.arr/str and typed syntax exist; connected proofs cover only emitted cases. `Ausdruck/Gleichungen.lean:292-317` restricts strings to maxima <=1; scalar assignment requires `wordTy` | IR-03 common encoding must reach every frame/call/memory/initialization consumer and proof. Multiword atomic exchange also needs a real atomic mechanism/proof, never consecutive plain stores. Record Ty itself is C01. |
+| B03 integer format accesses wider than eight bytes | `Uebersetze.lean:4039`, `item without G form` | G getBytes/putBytes accepts n bytes; actual `Anweisung.lean:238` checks `n <= 8`, expression byte lowering has the matching restriction | Extend common wide values and byte/range/address/bounds proofs plus source expansion. Total format size >8 alone is not a blocker if all individual accesses satisfy A25. |
+| B04 fallible foreign Bool/provider results, other nonnumeric foreign results and richer open-table values/references | `Uebersetze.lean:4158/4161/4162/1806/3040/1171` | `D.aerg : Ax -> Option Ty`, `Block/Endblock.bindAxiomElse`, slotRef already exist. `Anweisung.lean:350/476` accepts only nonnegative Int fallible results; `Senke/Tor.chkC:149` has Int/Bool/never but no reference/aggregate validation | Add actual gate result/region realization and generic proof, preserving reason encoding, fresh/disjoint origins, bounds and failure. Provider user-logic contracts have the separate C08 admission gap. |
+| B05 old(static), richer old snapshots in contracts | `Uebersetze.lean:1481-1485` sends old through `uZugriff`; :1330 rejects static places; richer predicates :1490/1604 | `Expr.oldG/oldS` (S:443/444), initial-world semantics T1:250/251. Both emitter equations (`Ausdruck/Gleichungen.lean:112/116`) return `none` | Entry snapshots/IR-03/10 frame and unchanged-region proofs. Loading current memory is unsound. Numeric old(slot) already exports and is an emitter-only limit, not an extra missing export. |
+| B06 arena pb/blw, provider realization and physical growth | `Uebersetze.lean:3993`, `arena placement without G form`; existing scalar provider syntax later meets B04 | `D.offen/anbieter`, `Block/Endblock.alloc` (Z:234/254); `Arena/Unbounded/{GForm,GRefine,Realization,Linked}` gives allocation/ownership/region refinements | Connect source expansion, gate binding, layout extension, availability and lifetime to Stage0. `Block.allocationAttempt` / `allocation_grant_bridge` (`Unbounded/GForm.lean:19/70`) is not the whole-image theorem. Preserve threshold/failure and provision as user logic; never invent an address or assume an OS. |
+| B07 userspace child body at a checked stack handoff | `Uebersetze.lean:2538`, `stmt without G form: child` | Generic thread-machine `FadenSchritt.kind` and goal rules; `spawn_kind_ziel` is a concrete witness, not a generic compiler theorem; existing `Senke.CloneOK`/clone support is not a source-child attachment theorem | Connect actual gate/stack/entry contract, resource transfer, starts, frame/ABI and parent/child outcomes. No `lowS/lowB/lowEnd` child case; never execute child sequentially in parent. Boot/ASM excluded. |
+| B08 richer closed concurrent-start arguments | `Uebersetze.lean:4071`, `concurrent member with an argument outside its parameter's type`; restricted `uStartArg` | Args/Env/starts exist; literal/Bool/None/table-capability starts already export. `StartArgument.expression:11` is proved by the same restricted matcher | Extend reification/extraction and initialization/image proofs for checked constants, Some, tags, arrays/function references. Retain source identity, multiplicity, closure and exact value/type. Large arguments also need B02. |
+
+**C — canonical model/admission rule or semantic binding missing; owner
+decision first.** There is no complete emitter+proof for the requested source
+semantics merely because an abstract theorem or primitive can be found.
+
+| ID / source form | Exact refusal / default | Model evidence and missing rule | Required decision / preserved guarantees |
+|---|---|---|---|
+| C01 records/products, record fields/payloads, complete walk mappings | `Uebersetze.lean:1023/1034/4227/4039`, type/field/payload/item defaults; named records also :822/2050 | Ty has no record/product constructor; Ty.sum has only optional integer payloads. `Stmt.verbund` (Z:215) writes a count-one table, not a record value | Define canonical value/field/type/ownership semantics before IR-03 representation and full IR-13 walkers. No unrelated array representation, discarded field or record-free replacement of source semantics. |
+| C02 translators, library region payloads and @library calls | `Uebersetze.lean:4039` (transT), :1998 (`fn is not impl` for library fn), :2538 (bindLib/lcall) | No typed translator/region component or executed expansion in UProg. `Logik/Vertraege/Uebersetzung.nutzlastZert` certifies payload typing, not arbitrary translator execution | Canonical map/payload/call binding, termination/effects/cost and name correspondence; existing IR-01 prerequisite applies. No restored source interpreter. |
+| C03 nonexhaustive reasons and noninteger/structured tagged payloads | `Uebersetze.lean:4290`, `reason that is not exhaustive without G form`; :4227 (`payload type without G form`) | Ty.why has exactly n reasons, Ty.sum payloads are optional Int ranges (Typen:42/44) | Establish open-reason/payload semantics; numeric error codes or nested representation alone are insufficient. Ordinary exhaustive integer-payload tags already export. |
+| C04 transition requires/effects and nonconstant stage expressions | `Uebersetze.lean:4311` (`state transition clause without G form`), :4306 (stage) | D.erlaubt relates Ints; Stmt.shift has edge/range/write/guard premises but no clause-contract rule | Specify edge duties and stage-expression meaning without dropping clauses. Constant numeric stages are A11. |
+| C05 group invariants over globals | `Uebersetze.lean:4338`, `invariant carrier without G form` | D.traeger is `Inv -> List Tab` (S:206), no global-carrier alternative | Extend carrier/footprint/restoration/U003 semantics and validate goal guarantees; never omit the global. Arena tables are A09. |
+| C06 nontrivial function-pointer requires/ensures | `Uebersetze.lean:4603/4604`, `contract on a function-pointer type without G form` | Signatur/SigPasst has effects/resources/floor but no predicate contract; Programm requires/ensures is indexed by concrete Fn | Indirect caller duty and target conformance rule (O43), preserving every possible target's contracts. Trivial requires/ensures true already pass. |
+| C07 fallible indirect calls / pointer reason channels | `Uebersetze.lean:4617`, `pointer type with a reason channel without G form`; :3009/2534 requires let-else | Stmt.callInd/Block.bindCallInd/Endblock.bindCallInd require zero reasons (S:601/658/774); no indirect bind-else | Canonical error continuation/conformance/resource rule before emitter+proof. Do not erase the channel or substitute a direct target. |
+| C08 foreign/axiom/syscall contracts, resource effects, provider contracts and fallible void handling | `Uebersetze.lean:4039` (axiomT requires), :4126/4132 (foreign effect/clause), :4186 (gate pre/post), :4156 (reason channel without answer) | D.Ax has typed answers/writes but no requires/ensures or linear signature flow. Ref/provider refinements supply duties, not source contract admission | Establish user-logic contract/admission and provider freshness/disjointness bridge; OS behavior is not hardware. A ref type/TorOK is insufficient. Model a fallible unit/void result explicitly, not as an invented number. |
+| C09 complete owner minter and own borrow/return discipline | `Uebersetze.lean:1172/1925/1806/822`, table/resource/result/type boundaries | Owner guards/initial resources exist (A04); Ty has no mark value, foreign calls preserve Λ, `eigner_nie_erzeugt` forbids owner production by every signature (S:203) | Connect unique mint, root/start-once and borrowing/returning an existing mark without production/duplication. `own`→writable Bool at :1005/1758 supplies no such proof. |
+| C10 shared locks and full RCU/observes/reclamation | `Uebersetze.lean:1212` (shared declaration), :3590 (`shared lock without G form`), :4039 (rcuT), :2538 (watch); other masks :1203 | Stmt.observes (Z:200) is ordinary locks sugar; Res.held has no reader/writer distinction or grace-period/reclamation state | Canonical shared/RCU lifetime admission preserving rank, exclusion and reclamation. An exclusive lock is not automatically the requested RCU semantics; non-irqs masks need a named mask rule too. |
+| C11 consuming traversal, no-else arena alloc, lock-crossing return admission | `Uebersetze.lean:3175/3536/2538`; `UebersetzeAllg3.lean:178/799` (`return under locks`) | Stmt.traverse is a fixed index sweep; Isabelle.Consuming/GabbroV.GvTraversal is not its source expansion. Arena alloc requires a failure Endblock. Stmt.ret requires Λ.Perm V.ende, incompatible with an extra held lock under current admission | Establish the consuming mutation/measure, capacity duty for omitted failure, or resource-aware cleanup/return rule respectively. Stage0 also keeps retFrei restrictions; loosening that gate alone is unsafe. These are control-admission variants, not runtime no-ops. |
+| C12 named spaces, unsupported rights, byte/raw/entry pointer wrappers | `Uebersetze.lean:1004/1013/1023/1757/1766`; :963 rejects a nontable pointee | Ty.ptr n rw is a table capability, not a byte extent/space value; fnptr is a checked function identity | Define safe userspace region/code-capability semantics and checked profiles first. No data/code confusion or fabricated table number. Numeric raw addresses remain excluded. |
+| C13 count comprehensions, sizeof/aligned, wrapping/saturating and remaining bit builtins without executable G expansion | `Uebersetze.lean:1663/1490/1604/1563`, value/compare/predicate/operator defaults; unknown-width complement :1422/1423 | Zahl.addW/subW/mulW/shlW/addS (`Kern/Semantik/Ueberlauf`) and Zahl.clz/ctz/log2_floor/popcount/rotl/rotr/bswap (`Kern/Syntax/Bits`) are value functions; Expr/eval has no matching case/canonical sugar. No Expr count fold or layout-predicate binding | Approve a canonical checked desugaring/rule retaining storage width, modulo/clamp/shift, count budget and checked layout. A mathematical function is not an emitted-source theorem. Existing known-width complement/wrapping fields already export. |
+| C14 profiles/requires-profile, when TESTBUILD, static alignment/section and userspace guest-entry binding | `Uebersetze.lean:4039` (profT/gateT/trustT), :3908 (static placement). Actual earlier guards `stage0/Stage0/Profil.lean:52/53/54`; entry obligations :31-41 | Missing source-to-goal profile/selection/guest binding. Target Lay/address models and syntactic options do not interpret the clauses | Checked selection/ABI/layout/profile and user-logic entry contract correspondence; never discard declarations. Hardware/boot/register-ABI entry work stays excluded. Dispatch-only entries and current target selection already pass their gates. |
+| C15 per-CPU accumulator layout/reduction/quiescence | `Uebersetze.lean:4039`, `item without G form` | Isabelle.AccumulatesMonoid has abstract neutral/fold/order/RMW facts, no source-to-G per-core layout/initialization/quiescence bridge | Checked core identity, disjoint cells, initialization, updates and quiescent observation/reduction for all five operators, retaining range/overflow duties. A26 does not supply the concurrent theorem. |
+| C16 full declared-check measurement/floor/counterprobe admission beyond Duty | `Uebersetze.lean:4039`, `item without G form` | Res.marke/signature flow models Duty (A24), but no SCheck expansion/admission relates claim/measure/floor/probe to generated producer/gates | Establish that binding with failure paths and foreign gates (C08). A Boolean check or merely introducing a mark cannot certify a measured claim or derive ensures. |
+| C17 generic type/order wrappers, source decreases-measure binding and extended compile-time contracts/control | `Uebersetze.lean:1951` refuses the ordinary `decreases` clause (`SKlausel.drops`); typeT has no blanket refusal: :833 collects selected aliases, uses later fail at :822/1023. `uKonstFns:875` only accepts single-return numeric bodies and discards clauses; unresolved uses :1453/1663/3816 | Monomorphic Ty; recursion already has `rufAt`/abstieg (`Semantik/T2.lean:455`) and `lowFun_spec`, but no export binding from the source measure expression to that duty. Konstanten.KExpr covers its arithmetic cut, not arbitrary source contracts/bodies. `stage0/Stage0/Frontend/Source.lean:41` refuses unsupported compile-time call contracts/effects/bodies before normalization | Checked instantiation/non-mark order, source measure-to-recursion obligation and compile-time denotation/contract rule; a missing measure bridge must not be solved by ignoring decreases. Linear mark order is A02. Silent omission is not semantics; never remove the constant-hull guard to make an initializer pass. |
+| C18 partial array reset/page release (`reset X at i count n`) | `Uebersetze.lean:2538`, `stmt without G form: reset`; only the no-range arena reset has an export at :2518 | Whole arena reset is existing `Stmt.assignGlob` sugar; typed array stores also exist. The partial-reset/released-page source rule and its provider/lifetime binding do not | Specify checked range, zero-after-reset behavior and explicit user-logic page-return service; retain live-cell/alias safety. A store loop proves zeroing, not page release. Existing `ArenaDyn.discard_live` (`Arena/ArenaSeiten.lean:25`) is an abstract preservation fact, not a source-to-G/image bridge. |
+
+**Remaining diagnostics and scope accounting (no hidden extra A packages).**
+
+- `UebersetzeSum.lean:24/41/53/59` rejects malformed/foreign values or forms
+  outside existing tag paths. Valid integer payloads already reach Expr.case;
+  richer payloads are C01/C03 and richer calls/bindings A20/A31/B02/B04.
+  Tagged case/type defaults at `Uebersetze.lean:4247/4258/4259/4266/4281/4282`
+  also include malformed syntax; valid constant payload extensions are A10.
+- `UebersetzeAllg{,2}` parameter/index/place/argument/count defaults normally
+  enforce type/table/guard/range/count/rights premises. Those are real refusals;
+  scalar adapters are A18-A20, wide storage B02/B04, spaces/products C01/C12.
+  Non-array indexing, array bounds and empty-array inference failures are not
+  permission to add defaults or unmodelled array concatenation. String addition
+  already reaches strCat through `addW`; comparison is A16/B02.
+- Exchange-tail errors (`Uebersetze.lean:2575/2576/2699/2711/2716/2721/2733/2734`)
+  refuse updates outside the represented pure guarded-value grammar. No
+  relaxation is needed for its supported updates. Richer calls require A31
+  plus atomic evaluation duties; nonnumeric/wide exchange is A32/B02. A
+  non-atomic publish/await, wrong payload or missing write right stays refused.
+- Loop/retry/forever headers (:2783/2811/2816/2817/2825/2828), match/arm defaults
+  (:1527/1533/3228/3311/3321/3329/3341/3384), fuel, block closure, reason mismatch
+  and return/leave/next placement mostly enforce grammar/model premises.
+  Domain/consuming variants are A14/C11, constant headers A10, richer results
+  A20/A31. Missing until/progress is not export-only. The leaf-reader mid-body
+  return refusal `UebersetzeAllg2.lean:1380` is already handled by structured
+  `uAnwReihe`/`lowSeqL`; lock-crossing return is C11.
+- `UebersetzeAllg3.lean:857/859/966/969/957/1251` are unfinished adapters
+  (A21-A23), not proof of model absence. Its :412 belongs to context-preserving
+  lowSeqL, not the whole bind-capable reader. `UebersetzePipeline.lean` adds
+  phase-error propagation, not another missing source-form family.
+- Already exported modules/imports/public names, checked aliases/constants,
+  empty tables, plain statics/tables/states, tree metadata, ordinary
+  contracts/spec/refines, scalar calls/loops/starts/synchronization are not
+  relisted, although independent emitter limits can remain. Parser-only holes
+  (such as unavailable general array literal syntax) are not Elab exports.
+  Ignored cost/proof metadata is admission/preservation debt, not coverage.
+- All register/device class/field/bank/mirror/transition errors, observed-by-
+  device atomics (`Uebersetze.lean:3963`), ASM bodies, boot, privileged entry and
+  proposed raw numeric addresses are excluded. Ordinary safe byte capabilities
+  and userspace gate/provider contracts are not excluded merely because they
+  are unsupported; they remain C08/C12.
+
+**Effort estimate (engineering days, not measured build time).** A: **20-40
+person-days** for the 32 bounded packages with generic export preservation,
+witnesses and connected checks. Local adapters typically take 0.5-1 day;
+mark/signature, arena ownership and generated IR-13 expansions roughly 2-5 days
+each and share substantial work. B: **25-55 person-days** across eight packages,
+overlapping existing IR-03/04/06/10/11/12 work; do not add this twice to staffed
+lanes. C: **5-10 person-days for canonical design/decisions**, then provisionally
+**30-70+ person-days** for model/admission, goal validation and implementation;
+no completion date precedes the owner's decisions. Unchanged guarantees and
+available Lean slots are assumed.
+
+Critical path: canonical resource/signature/source-expansion interface for
+A02-A08/A24; shared value/ABI/gate/region interface for B; owner decisions for C.
+A useful first batch is A01, A11-A15, A21-A23 (roughly 3-7 person-days combined),
+then shared resource export. Four independent ad hoc IR-13 exporters would
+duplicate that boundary. This catalogue grants no implementation/build authority.
+
+Validation is static: refusal coordinates, constructor shapes, emitter matches
+and named theorem call sites were read at the stated commit; document counts
+and `git diff --check` were checked before commit. **Zero new source cases were
+compiled or proved by this planning task.**
