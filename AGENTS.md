@@ -94,6 +94,10 @@ expanding infrastructure for a small subset.
   `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
   `free -g` before every heavy step; with less than 8 GiB available, wait. Agents keep the slot lock only for
   one module and must not end their run while a build they started still runs.
+- **Build less, keep working (owner, 2026-11-01):** check rarely — batch several finished edits into one
+  check of the affected modules instead of checking after every small change. While a check runs or waits
+  for memory/a slot, keep writing the next proofs and code instead of idling; never stop a run because a
+  check is pending.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 
