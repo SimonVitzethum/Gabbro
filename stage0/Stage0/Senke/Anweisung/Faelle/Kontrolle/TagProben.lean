@@ -41,9 +41,7 @@ theorem simulation_zeuge [Kern] :
     Ok memory 0 65536 64 4 code (· = BitVec.ofInt 64 (2 ^ 32 + 42)) := by
   have hw : ∀ m, WeltAt m layout world := by
     intro m
-    refine ⟨?_, ?_, ?_⟩
-    · intro t; exact Fin.elim0 t
-    · intro g; exact Fin.elim0 g
+    refine ⟨(fun t => Fin.elim0 t), (fun g => Fin.elim0 g), ?_⟩
     · intro x hl hh
       change 65536 ≤ x at hl
       change x < 65536 at hh
@@ -52,8 +50,9 @@ theorem simulation_zeuge [Kern] :
   have hp := pre
   refine ⟨by decide +kernel, by decide +kernel, by decide +kernel, hp, ?_⟩
   have packed : Ok memory 0 65536 64 4 Case.code (· = 10753) :=
-    (lowE_ok world world (W := fun _ => True) (fun m _ => hw m)
-      Case.expr 4 Case.code Case.top hl (by decide +kernel) memory 0 .nil hp.left).mono
+    (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+      Case.expr 4 Case.code Case.top hl (by decide +kernel) memory 0 .nil hp.left
+      |>.word (wordCompatB_sound _ (by decide +kernel))).mono
       (fun _ hn => hn.2.trans (by decide +kernel))
   apply ok_seq hp packed (hK := by decide)
   intro m w hp hr he

@@ -25,13 +25,25 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
       (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
       (execStmt O passes R (Stmt.putBytes (l := l) t field hf n i hlo hhi e hw hl) σ ρ) reserved := by
-  simp only [lowS] at h
+  simp only [lowS, resultWords_vertragVon] at h
   split at h
   · next hn =>
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨⟨ce, te⟩, he, ⟨ci', ti⟩, hi, ⟨cb, tb⟩, hb, h⟩ := h
     simp only [Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
+    have hbnd : b < 2 ^ 64 := by
+      by_contra hh
+      have hcell := hW.lay.1 t field (b.toNat - 1) (L.bounded (by omega))
+      have hsmall := hW.lay.2.2
+      have cw : valueWords (D.typ t field) = 1 := by rw [hf]; rfl
+      simp only [Lay.elem, cw] at hcell
+      omega
+    have hpow0 : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
+      exact_mod_cast (Nat.pow_le_pow_right (n := 256) (i := n) (by decide) hn)
+    have hvalue : valueWords (.int 0 (256 ^ n - 1)) = 1 :=
+      integerWords_unsigned (by omega) (by norm_num at hpow0 ⊢; omega)
+    have hindex : valueWords (.int a b) = 1 := integerWords_unsigned hlo hbnd
     have hks := hW.ks
     have hte := lowE_top e _ _ _ he
     have hti := lowE_top i _ _ _ hi
@@ -41,26 +53,29 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     let k := eval σE i σE ρ
     have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ (ci' ++ cb)) ρ reserved := by simpa only [List.append_assoc] using hp
     have hpe := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, we, re, ene⟩ := lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hpe
+    obtain ⟨m1, s1, a1s, valueE⟩ := lowE_ok σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hpe
+    obtain ⟨we, re, ene⟩ := ValueAt.word (.int 0 (256 ^ n - 1)) z trivial valueE
     have a1 := Agree.widen a1s hks
     have hw1 : WeltAt m1 L σE := hpe.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have hp1 := hq.next a1 (Nat.le_refl _) (by omega)
     have hpi := PreS.welt (hp1.left.up (d' := frei Γ reserved + 1) (by omega)) hks hw1 hW.lay (by have := hW.lo; omega)
-    obtain ⟨m2, s2, a2s, wi, ri, eni⟩ := lowE_ok σE σE (fun _ h => h) i _ ci' ti hi (by omega) m1 _ ρ hpi
+    obtain ⟨m2, s2, a2s, valueI⟩ := lowE_ok σE σE (fun _ h => h) hW.lay i _ ci' ti hi (by omega) m1 _ ρ hpi
+    obtain ⟨wi, ri, eni⟩ := ValueAt.word (.int a b) k trivial valueI
     have a2 := Agree.widen a2s hks
     have hw2 : WeltAt m2 L σE := hpi.wstab m1 m2 hw1 (a2s.mono (Nat.zero_le _))
     have enz1 : EnvAt L m1 fp (Env.cons z ρ) reserved :=
-      envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) re ene
+      envAt_cons (envAt_agree hp.env a1 hp.frame (Nat.le_refl _) (by omega)) valueE
     have enz2 : EnvAt L m2 fp (Env.cons z ρ) reserved := envAt_agree enz1 a2 hp1.frame
-      (by simp only [frei, List.length_cons]; omega) (by omega)
+      (by simp only [frei, contextWords_cons, hvalue, hindex]; omega) (by omega)
     have enk : EnvAt L m2 fp (Env.cons k (Env.cons z ρ)) reserved := by
       have hr : m2.rd64 (slot fp (BitVec.ofNat 64 (frei ((.int 0 (256 ^ n - 1)) :: Γ) reserved))) = some wi := by
-        simpa only [frei, List.length_cons, Nat.add_succ] using ri
-      exact envAt_cons enz2 hr eni
+        simpa only [frei, contextWords_cons, hvalue, Nat.add_assoc] using ri
+      exact envAt_cons enz2 (by
+        simpa only [frei, contextWords_cons, hvalue, Nat.add_assoc] using valueI)
     have hp2 := hp1.next (a := ci') (a2.mono (Nat.le_succ _)) (Nat.le_refl _) (by omega)
     have hpb : PreS L m2 (pc + BitVec.ofNat 64 (16 * ce.length) + BitVec.ofNat 64 (16 * ci'.length)) fp K
         (frei Γ reserved + 2) cb (Env.cons k (Env.cons z ρ)) reserved :=
-      ⟨by simp only [frei, List.length_cons]; omega, hp.small, hp2.frame, hp2.code, hp2.far, enk,
+      ⟨by simp only [frei, contextWords_cons, hvalue, hindex]; omega, hp.small, hp2.frame, hp2.code, hp2.far, enk,
         trivial, wstab_true _ _⟩
     have hpow : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
       have hh := Nat.pow_le_pow_right (n := 256) (i := n) (by decide) hn

@@ -1,0 +1,13 @@
+// A byte of a string with more than one byte, selected with an index range wider than the capacity:
+// negative and too large indices read the zero byte.
+module ir_probe {
+impl fn main() -> i32 in -1000 .. 2000 effects { pure } {
+    let s : string max 3 = "abc";
+    let a : i32 in -2 .. 5 = 1;
+    let b : i32 in -2 .. 5 = -1;
+    let c : i32 in -2 .. 5 = 4;
+    let d : i32 in -2 .. 5 = 2;
+    let e : u32 in 0 .. 1000 = 900;
+    return s[a] + s[b] + s[c] + s[d] + s[e];
+}
+}

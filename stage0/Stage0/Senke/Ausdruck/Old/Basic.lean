@@ -78,8 +78,8 @@ theorem SnapAt.agree {cs : List (Zelle D)} {σ0 : World D} {m m' : Runner.Mem}
     {fp : Runner.W} {K lo : Nat} (h : SnapAt L cs σ0 m fp) (hf : FrameOK m fp K)
     (ha : Agree fp lo K m m') (hl : 3 < lo) (hk : lo ≤ K) : SnapAt L cs σ0 m' fp := by
   intro c hc
-  obtain ⟨w, hw, he⟩ := h c hc
-  exact ⟨w, by rw [agree_rd_low ha hf.room hl hk]; exact hw, he⟩
+  obtain ⟨width, value⟩ := h c hc
+  exact ⟨width, value.agree ha hf (by omega) hk⟩
 
 theorem SnapAt.left {a b : List (Zelle D)} {σ0 : World D} {m : Runner.Mem} {fp : Runner.W}
     (h : SnapAt L (a ++ b) σ0 m fp) : SnapAt L a σ0 m fp :=
@@ -92,33 +92,47 @@ theorem SnapAt.right {a b : List (Zelle D)} {σ0 : World D} {m : Runner.Mem} {fp
 theorem lowEns_top {Γ : Ctx} {Λ : List (Res D)} :
     {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) → (top : Nat) →
     lowEns L e d = some (c, top) → d < top
-  | _, .oldG .., d, c, top, h => by simp only [lowEns, Option.some.injEq, Prod.mk.injEq] at h; omega
+  | _, .oldG .., d, c, top, h => by
+    simp only [lowEns] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+    · cases h
   | _, .oldS _ _ i _, d, c, top, h => by
-    simp only [lowEns, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨_, _, _, _⟩ := h
-    omega
-  | _, .widen _ _ e, d, c, top, h => lowEns_top e d c top h
+    simp only [lowEns] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨_, _, _, _⟩ := h
+      omega
+    · cases h
+  | _, .widen _ _ e, d, c, top, h =>
+    resizeIntegerL_top h (fun cc tt hc => lowEns_top e d cc tt hc)
   | _, .add a b, d, c, top, h => by
     simp only [lowEns] at h
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-    have := lowEns_top a d ca ta ha
-    simp only [bin2, Prod.mk.injEq] at he
-    omega
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
+      have := lowEns_top a d ca ta ha
+      simp only [bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
   | _, .sub a b, d, c, top, h => by
     simp only [lowEns] at h
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-    have := lowEns_top a d ca ta ha
-    simp only [bin2, Prod.mk.injEq] at he
-    omega
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
+      have := lowEns_top a d ca ta ha
+      simp only [bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
   | _, .mul a b, d, c, top, h => by
     simp only [lowEns] at h
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
-    have := lowEns_top a d ca ta ha
-    simp only [bin2, Prod.mk.injEq] at he
-    omega
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, he⟩ := h
+      have := lowEns_top a d ca ta ha
+      simp only [bin2, Prod.mk.injEq] at he
+      omega
+    · cases h
   | _, .and a b, d, c, top, h => by
     simp only [lowEns] at h
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h

@@ -195,11 +195,7 @@ theorem header_step [Kern] {n : Nat} {m : Runner.Mem}
     ⟨h.pre.ctx, h.pre.small, frameOK_agreeW h.pre.frame aw,
       codeAt_agreeWIn call_win aw h.pre.code h.pre.far, h.pre.far,
       (fun _ x => nomatch x), trivial, wstab_true _ _⟩
-  have hw : WeltAt m1 callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun x hx hy => by change m.wr _ = true; exact h.world.2.2 x hx hy)⟩
-    cases g
-    obtain ⟨v, hv, he⟩ := h.world.2.1 ()
-    exact ⟨v, (rd64_agree_out (a := 8192) a (by decide) (Or.inr (by decide))).trans hv, he⟩
+  have hw : WeltAt m1 callLayout world := weltAt_stab call_win.lay call_win.top m m1 h.world (a.mono (Nat.zero_le _))
   have im1 := codeAt_agreeWIn call_win aw h.image image_far
   have test := h.image 0 (by decide +kernel)
   have dec := h.image 1 (by decide +kernel)

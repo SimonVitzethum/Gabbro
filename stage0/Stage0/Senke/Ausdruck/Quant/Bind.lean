@@ -1,5 +1,6 @@
 /- Frame-slot borrowing for expression binders, including nested quantifiers. -/
 import Stage0.Senke.Ausdruck.Quant.Frame
+import Stage0.Senke.Ausdruck.Aggregat.Scalar
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -8,7 +9,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 theorem quantBind_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {n : Int} {k : Zahl 0 (n - 1)} {cb : List II} {P : Runner.W → Prop}
-    (hk : lit32 k.n = true) (hd : frei Γ reserved < d) (hK : d + 2 < K)
+    (hn : valueWords (.index n) = 1) (hk : lit32 k.n = true) (hd : frei Γ reserved < d) (hK : d + 2 < K)
     (hp : Pre L m pc fp K d (quantBindC (frei Γ reserved) d k.n cb) ρ W reserved)
     (ih : ∀ m pc, Pre L m pc fp K (d + 2) cb (Env.cons (show Wert D (.index n) from k) ρ) W reserved →
       Ok m pc fp K (d + 2) cb P) :
@@ -34,9 +35,10 @@ theorem quantBind_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {Γ : Ctx} 
   have h1s : Pre L m1 _ fp K s ([ci 1 s k.n 0] ++ (cb ++ ([ci 2 s (d + 1) 0] ++ [ci 2 d (d + 2) 0]))) ρ W reserved :=
     { h1 with ctx := Nat.le_refl _ }
   have h2 := h1s.next a2 (show s ≤ d + 2 by omega) (by omega)
-  have he : EnvAt L m2 fp (Env.cons (show Wert D (.index n) from k) ρ) reserved := envAt_cons h2.env r2 rfl
+  have he : EnvAt L m2 fp (Env.cons (show Wert D (.index n) from k) ρ) reserved :=
+    envAt_cons h2.env (ValueAt.of_enc hn r2 rfl)
   have hb : Pre L m2 _ fp K (d + 2) cb (Env.cons (show Wert D (.index n) from k) ρ) W reserved :=
-    { h2.left with ctx := by simp only [frei, List.length_cons] at *; omega, env := he }
+    { h2.left with ctx := by simp only [frei, contextWords_cons, hn] at *; omega, env := he }
   obtain ⟨m3, s3, a3, w, rw3, pw⟩ := ih m2 _ hb
   have h3 := h2.next a3 (Nat.le_refl _) (by omega)
   have rs3 : m3.rd64 (slot fp (BitVec.ofNat 64 (d + 1))) = some v := by

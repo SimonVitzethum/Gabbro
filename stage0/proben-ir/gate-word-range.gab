@@ -1,0 +1,18 @@
+// Full signed-word foreign-result bounds; an out-of-range answer must stop with 110.
+module ir_probe {
+assume process_id "The Linux getpid service returns the calling process ID." falsifier probe_id;
+syscall process_id() -> i64 in -4294967296 .. 4294967296
+    abi linux arch x86_64 number 39
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume process_id falsifier probe_id;
+impl fn main() -> u64 in 0 .. 100 effects { pure } {
+    let n = process_id();
+    if n > 0 { return 17; }
+    return 19;
+}
+}

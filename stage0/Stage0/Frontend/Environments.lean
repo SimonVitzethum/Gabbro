@@ -299,8 +299,10 @@ theorem normalize_environments (items : List SItemTief)
   · simpa only [prepare, List.nil_append] using
       aliases_collected (prepare items).initial [] items
 
-/-- Canonical source scopes derived before runtime elaboration. The scalar environment keeps
-    every binding in declaration order, and function candidates retain their original source. -/
+/-- Canonical source scopes derived before runtime elaboration. Alias and scalar collection
+    schedules retain certified declaration permutations, and functions keep their
+    original bodies and signatures. Alias ranges use aliasStep; scalar values use typedConstants
+    at every original declared range. -/
 structure Scopes (original : List SItemTief) where
   values : List (String × Int)
   declared : List (String × (Int × Int))
@@ -308,10 +310,14 @@ structure Scopes (original : List SItemTief) where
   aliasConstants : List (String × Int)
   aliasOrigin : aliasConstants = uConstsRech (uKonstFns original) original [] ∨ aliasConstants = values
   functionsUseValues : Bool
-  aliases : declared = original.foldl (aliasStep aliasConstants) []
+  aliasOrder : List SItemTief
+  aliasPermutation : aliasOrder.Perm original
+  aliases : declared = aliasOrder.foldl (aliasStep aliasConstants) []
   functionOrigin : functions = constantFunctions
     (if functionsUseValues then declared ++ values.map (fun c => (c.1, (c.2, c.2))) else declared) original
-  scalarValues : typedConstants declared functions original [] = some values
+  scalarOrder : List SItemTief
+  scalarPermutation : scalarOrder.Perm original
+  scalarValues : typedConstants declared functions scalarOrder [] = some values
 
 /-- The canonical environment used to elaborate compile-time function signatures. Existing
     scopes use declared aliases; dependent signatures additionally use certified scalar bounds. -/
@@ -336,7 +342,7 @@ def scopes (items target : List SItemTief)
     (h : EnvironmentFacts items target) : Scopes items := by
   let p := prepare items
   refine ⟨uConstsRech (uKonstFns target) target [], p.env, p.fns, p.initial,
-    Or.inl rfl, false, h.2.2, ?_, ?_⟩
+    Or.inl rfl, false, items, .refl _, h.2.2, ?_, items, .refl _, ?_⟩
   · exact constantFunctions_aliases p.initial p.env [] items
   · have hc := h.1
     change typedConstants p.env p.fns p.expanded [] = _ at hc
@@ -347,9 +353,9 @@ def scopes (items target : List SItemTief)
 
 /-- Final scalar values must leave all resolved alias ranges unchanged. -/
 def ScopeStable {items : List SItemTief} (scope : Scopes items) : Prop :=
-  uAliase scope.values (aliases scope.aliasConstants [] items) = scope.declared
+  uAliase scope.values (aliases scope.aliasConstants [] scope.aliasOrder) = scope.declared
 
-/-- The canonical original-declaration fold and alias stability are kept together. -/
+/-- The canonical source-derived alias schedule and final-value stability are kept together. -/
 structure DerivedScopes (items : List SItemTief) where
   scope : Scopes items
   stable : ScopeStable scope
@@ -359,9 +365,9 @@ structure DerivedScopes (items : List SItemTief) where
 def evaluatedScopes (items : List SItemTief) (values : List (String × Int))
     (h : typedConstants (prepare items).env (prepare items).fns items [] = some values) : Scopes items :=
   ⟨values, (prepare items).env, (prepare items).fns, (prepare items).initial,
-    Or.inl rfl, false,
+    Or.inl rfl, false, items, .refl _,
     (by simpa only [prepare, List.nil_append] using (aliases_collected (prepare items).initial [] items)),
-    constantFunctions_aliases (prepare items).initial (prepare items).env [] items, h⟩
+    constantFunctions_aliases (prepare items).initial (prepare items).env [] items, items, .refl _, h⟩
 
 /-- The actual consumer needs the certified original scalar fold, not a second encoding through
     the legacy collector's builtin-only constant declarations. Preserve full alias stability. -/

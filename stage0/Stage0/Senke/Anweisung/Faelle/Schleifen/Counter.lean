@@ -88,12 +88,14 @@ theorem reserved_write_preserves [Kern] {D : Gabbro.Grammatik.Deklaration} {L : 
   have hj : FB + j < K := by unfold frei at bound; omega
   constructor
   · intro τ x
-    obtain ⟨w, read, enc⟩ := env τ x
+    obtain ⟨valid, words⟩ := env τ x
     have low := vslot_reserved x reserved
-    have high := vslot_lt (reserved := reserved) x
-    refine ⟨w, ?_, enc⟩
-    rw [Mem.rd64_write_far (slot_far room hj (by omega) (by omega))]
-    exact read
+    have high := variableOffset_bound x
+    refine ⟨valid, ?_⟩
+    intro i hi
+    have width := encodeWords_length L τ (ρ.get x)
+    rw [Mem.rd64_write_far (slot_far room hj (by unfold vslot frei at *; omega) (by omega))]
+    exact words i hi
   · intro i hi ne
     exact Mem.rd64_write_far (slot_far room hj (by unfold frei at bound; omega) (Ne.symm ne))
 

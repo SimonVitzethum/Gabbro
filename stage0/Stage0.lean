@@ -54,14 +54,12 @@ import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
-import Stage0.Senke.Anweisung.Faelle.Schleifen.EarlyExit
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
 import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe
 
 import Stage0.Senke.Anweisung.Faelle.Schleifen.HookProben
 import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
-import Stage0.Senke.Anweisung.Faelle.Schleifen.StatementCost
 import Stage0.Senke.Sperre.Proben
 
 import Stage0.Senke.Ausdruck.Arithmetik.ScalarProbe

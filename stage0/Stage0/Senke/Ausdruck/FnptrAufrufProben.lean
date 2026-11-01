@@ -36,7 +36,7 @@ def pointer : Expr D [] [] (.fnptr 0) := .glob () (by intro w h; cases h)
 
 def indirect : List II := [ci 1 4 8192 0, ci 15 4 4 0] ++ callTailN 0 0 4 true
 
-def caller : List II := indirect ++ [ci 2 4 6 0]
+def caller : List II := indirect ++ receiveC (D.sigNr 0) 4
 
 /-- Code segments followed by writable zero memory; the world and depth words are initialized below. -/
 def callMem : Runner.Mem :=
@@ -82,14 +82,21 @@ theorem call_pre [Kern] : PreS callLayout callMem 2048 4096 256 4 caller (Env.ni
   · unfold CodeFar; decide +kernel
   · intro _ x; nomatch x
 
-theorem call_world : WeltAt callMem callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem call_world [Kern] : WeltAt callMem callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 theorem call_win : WIn callLayout 4096 128 256 := by
-  refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩, ?_, by decide, by decide, by decide⟩
-  constructor
+  refine ⟨⟨(fun t => nomatch t), fun g => by cases g; exact ⟨by decide, by decide⟩, by decide⟩, ?_, by decide, by decide, by decide⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro c c' hc hc' h
+    cases c with
+    | elem t => nomatch t
+    | glob g =>
+      cases c' with
+      | elem t => nomatch t
+      | glob g' => cases g; cases g'; exact absurd rfl h
   · intro c c' hc hc' h
     cases c with
     | elem t => nomatch t
@@ -141,14 +148,16 @@ theorem lowInd_ok_zeuge [Kern] :
     Umf callLayout addresses target 2 callMem 4096 128 256 ∧
     WIn callLayout 4096 128 256 ∧ WeltAt callMem callLayout world ∧
     ∃ m', Star ⟨2048, 4096⟩ callMem ⟨2144, 4096⟩ m' ∧ AgreeW callLayout 4096 4 256 callMem m' ∧
-      (∃ w, m'.rd64 (slot 4096 6) = some w ∧ Enc callLayout (.int 0 100) (⟨21, by decide, by decide⟩ : Zahl 0 100) w) ∧
+      ResultAt callLayout m' (slot 4096 4) (FB + contextWords (D.params 2)) (D.erg 2)
+        (⟨21, by decide, by decide⟩ : Zahl 0 100) ∧
       WeltAt m' callLayout world := by
   refine ⟨call_spec, rfl, call_pre.left, call_umf, call_win, call_world, ?_⟩
   have h := lowInd_ok (reserved := 0) call_spec (A := addresses)
     addresses_bound
     pointer .nil world world (c := indirect) (top := 9) (by rfl) (by decide)
     call_pre.left call_umf call_win call_world
-  exact h
+  obtain ⟨m', steps, changed, ⟨result, _, _⟩, world'⟩ := h
+  exact ⟨m', steps, changed, result, world'⟩
 
 /-- The statement instance uses the same jointly inhabited code, environment and callee premises. -/
 theorem indStmt_ok_zeuge [Kern] :
@@ -163,14 +172,15 @@ theorem indBind_ok_zeuge [Kern] :
     Sim (l := false) callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] ⟨2048, 4096⟩ callMem 2160 2160 2160
       (.ok world (Env.cons (τ := .int 0 100) (⟨21, by decide, by decide⟩ : Zahl 0 100) Env.nil)) := by
   have h := indBind_ok (τ := .int 0 100) (f := 2) (fp := 4096) (rp := 0) (cfp := 0) (ρ0 := Env.nil)
-    (lo := 4) (K := 256) (Ks := 128) (pr := []) (cc := indirect) (cr := []) (tc := 9)
-    call_spec addresses_bound pointer .nil rfl rfl world Env.nil rfl (by decide) call_pre
+    (lo := 4) (K := 256) (Ks := 128) (pr := []) (cc := indirect) (cr := []) (tc := 9) (pc := 2048)
+    call_spec addresses_bound pointer .nil rfl rfl world Env.nil rfl (by decide) (by decide) call_pre
     call_win rfl (by decide) call_umf call_head call_world (fun _ h => nomatch h)
     (fun σ v => Ausgang.ok (V := vertragVon D 2) (l := false) σ (Env.cons v Env.nil)) .logik .hardware
     (fun t m out => Sim callLayout tiny 2 world Env.nil 0 0 4096 4 256 [] t m 2160 2160 2160 out)
     (Sim.prefix (by decide)) (fun _ _ _ h => h) (fun _ _ _ h => h)
     (fun m' σ' v hp' _ _ hw' =>
-      ⟨m', Star.refl _ _, AgreeW.refl _ _ _ _ _, hp'.env, hw', Keeps.refl _ _ _⟩)
+      ⟨m', star_cast (Star.refl (⟨2160, 4096⟩ : T) m') (by simp only [T.mk.injEq, and_true]; decide +kernel) rfl,
+        AgreeW.refl _ _ _ _ _, hp'.env, hw', Keeps.refl _ _ _⟩)
   exact h
 
 /-- An unrepresentable address is refused instead of being truncated to an immediate. -/

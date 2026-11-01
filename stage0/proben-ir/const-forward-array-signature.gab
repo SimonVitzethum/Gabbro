@@ -1,0 +1,13 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_array_signature {
+const VALUES : [Result; COUNT] = [identity(ANSWER)];
+const fn identity(x : Result) -> Result effects { pure } { return x; }
+type Result = Bound;
+type Bound = u8 in 0 .. LIMIT;
+const ANSWER : u8 = LATER;
+const COUNT : u8 = SIZE;
+const LATER : u8 = 42;
+const SIZE : u8 = 1;
+const LIMIT : u8 = 100;
+impl fn main() -> Result effects { pure } { return VALUES[0]; }
+}

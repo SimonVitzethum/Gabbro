@@ -3,7 +3,7 @@
   Subject:   The two paths of giving a lock (`gibC`) when no thread waits: the count - 1 is not 0 -- done; it is 0 --
              `cas` gives the owner word back (me -> 0), the waiters read 0, no `futex_wake`.
 -/
-import Stage0.Senke.Sperre.Nimm
+import Stage0.Senke.Sperre.Contended
 
 namespace Gabbro.Stage0.Senke
 

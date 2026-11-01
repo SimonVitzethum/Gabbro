@@ -1,0 +1,8 @@
+// A noncyclic prefix cannot conceal an indirect cycle.
+module alias_cycle_tail {
+type Result = A;
+type A = B;
+type B = C;
+type C = A;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

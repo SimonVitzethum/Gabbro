@@ -75,7 +75,7 @@ def Emitted.Simulates [Runner.IR.Kern] {src : String} {K : Nat} {options : Profi
     | .ok _ v => ∃ t' m' q,
         Runner.IR.Star ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m t' m' ∧
         Runner.IR.StopAt t' m' q ∧ q.nr = 231 ∧
-        Senke.EncErg output.image.Y ((declOf output.compiled.unit).erg output.compiled.main) v q.a1
+        Senke.ExitErg output.image.Y ((declOf output.compiled.unit).erg output.compiled.main) v q.a1
     | .logik e => Senke.Stops ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m
         (Senke.logikCode e)
     | .hardware h => Senke.Stops ⟨BitVec.ofNat 64 Senke.codeBase, BitVec.ofNat 64 output.image.fp0⟩ m

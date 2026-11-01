@@ -57,10 +57,10 @@ theorem pre [Kern] : PreS callLayout memory 2048 4096 256 8 code (Env.nil : Env 
   unfold CodeFar
   decide +kernel
 
-theorem world_at : WeltAt memory callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem world_at [Kern] : WeltAt memory callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 theorem sync : SyncOK memory callLayout 4096 128 :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,
@@ -138,9 +138,10 @@ theorem loaded_pre [Kern] (budget : Fin 3) :
   ⟨pre.ctx, pre.small, loaded_frame budget, loaded_code budget, pre.far,
     (fun _ x => nomatch x), trivial, wstab_true _ _⟩
 
-theorem loaded_world (budget : Fin 3) : WeltAt (loaded budget) callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem loaded_world [Kern] (budget : Fin 3) : WeltAt (loaded budget) callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
+  refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
   have h : ∀ b : Fin 3, (loaded b).rd64 8192 = some 64 := by
     apply allFin
     decide +kernel

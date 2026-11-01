@@ -1,0 +1,6 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_cycle {
+const A : u8 = B + 1;
+const B : u8 = A + 1;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

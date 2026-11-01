@@ -1,6 +1,7 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
 import Stage0.Senke.Anweisung.Faelle.Kontext
 import Stage0.Senke.Anweisung.TorLauf
+import Stage0.Senke.Welt.Spans.CellStore
 
 namespace Gabbro.Stage0.Senke
 
@@ -16,7 +17,7 @@ theorem assignSlotRef_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
@@ -24,42 +25,53 @@ theorem assignSlotRef_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex
       (show Stmt D (vertragVon D f) l Γ Λ Λ from .assignSlotRef r t ht ho field e hw hL) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
-  simp only [lowS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, ⟨ca, ta⟩, ha, hc⟩ := h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+  simp only [lowS, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
   simp only [execStmt, Sim]
   have hks := hW.ks
-  have heTop := lowE_top e _ _ _ he
-  have haTop := slotA_top ha
+  have tops := slotStoreC_top hc
   generalize hσE : σ.lese Λ _ = σE
   have hWaE : WeltAt m L σE := by rw [← hσE]; exact hWa
-  -- Inspecting the reference code at its address establishes membership before the store.
-  -- No execution is assumed here: a reflexive frame agreement preserves the same environment.
-  have hpa := PreS.welt ((hp.left.next (Agree.refl _ _ _ _) (Nat.le_succ _) (by omega)))
-    hW.ks hWaE hW.lay (by have := hW.lo; omega)
-  have haddr := slotRefA_ok ht ha (by omega : ta ≤ Ks)
-    (fun m pc hp => lowE_ok σE σE (fun _ h => h) r _ cr tr hr (by omega) m pc ρ hp) hpa
-  obtain ⟨_, _, _, _, _, _, hk⟩ := haddr
-  have hin := hW.lay.1 t field (eval σE r σE ρ).zelle hk
-  obtain ⟨m', s', a', en, hw'⟩ := store_ok (σ := σE) hp hW hWaE (by omega)
-    (fun m pc hp => lowE_ok σE σE (fun _ h => h) e _ ce te he (by omega) m pc ρ hp)
-    (fun m pc hp => (slotRefA_ok ht ha (by omega)
-      (fun m pc hp => lowE_ok σE σE (fun _ h => h) r _ cr tr hr (by omega) m pc ρ hp) hp).mono
-        (fun _ he => he.1))
-    hin (fun m w hm hpe => weltAt_slot hm hW.lay hW.dis hk hpe)
-  exact ⟨m', s', a'.mono hlo2, en, hw', keeps_of_agreeW hW a' hpr (by have := hW.ks; omega)⟩
+  have pre := PreS.welt hp hks hWaE hW.lay hW.lo
+  have refWord : ∀ m pc, Pre L m pc fp Ks (frei Γ reserved + valueWords (D.typ t field)) cr ρ
+      (fun m => WeltAt m L σE) reserved →
+      Ok m pc fp Ks (frei Γ reserved + valueWords (D.typ t field)) cr (Enc L _ (eval σE r σE ρ)) :=
+    fun m pc hp => (lowE_ok σE σE (fun _ h => h) hW.lay r _ cr tr hr (by simp only at tops; omega) m pc ρ hp).word trivial
+  -- the reference's cell is known only after its code ran; it lies in the declared table's represented cells
+  have indexPre : Pre L m (pc + BitVec.ofNat 64 (16 * ce.length)) fp Ks
+      (frei Γ reserved + valueWords (D.typ t field)) cr ρ (fun m => WeltAt m L σE) reserved := by
+    unfold slotStoreC at hc
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hc
+    obtain ⟨⟨ca, ta⟩, hca, rfl, rfl⟩ := hc
+    unfold cellAddressC at hca
+    split at hca
+    · simp only [Option.some.injEq, Prod.mk.injEq] at hca
+      obtain ⟨rfl, rfl⟩ := hca
+      exact (pre.left.next (Agree.refl _ _ _ _) (Nat.le_add_right _ _) (by omega)).left
+    · cases hca
+  obtain ⟨_, _, _, _, _, hv⟩ := refWord m _ indexPre
+  obtain ⟨_, _, t', ht', _, hk⟩ := hv
+  have same : t' = t := Option.some.inj (ht'.symm.trans ht)
+  subst same
+  obtain ⟨m', s', a', hw'⟩ := slotStoreC_ok (σ := σE) (kn := (eval σE r σE ρ).zelle) hc (by omega) hk
+    hW.lay hW.dis hW.lo pre
+    (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
+    (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1)
+  exact ⟨m', s', (a'.widen hks).mono hlo2,
+    envAt_agreeW hp.env a' hW.lo (by have := hp.frame.room; omega) (Nat.le_refl _) (by omega), hw',
+    keeps_of_agreeW hW (a'.widen hks) hpr (by omega)⟩
 
 theorem leave_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {proof0 : _} :
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .leave proof0) reserved := by
   intro c top h _ _ _ m pc σ ρ hp _ _ _ _ hWa _
-  simp only [lowS] at h
+  simp only [lowS, resultWords_vertragVon] at h
   split at h
   · next hl =>
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -72,13 +84,13 @@ theorem next_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {proof0 : _} :
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .next proof0) reserved := by
   intro c top h _ _ _ m pc σ ρ hp _ _ _ _ hWa _
-  simp only [lowS] at h
+  simp only [lowS, resultWords_vertragVon] at h
   split at h
   · next hl =>
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -91,13 +103,13 @@ theorem endLeave_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {proof0 : _} :
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .leave proof0) reserved := by
   intro c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd] at h
+  simp only [lowEnd, resultWords_vertragVon] at h
   split at h
   · next hl =>
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -109,13 +121,13 @@ theorem endNext_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {proof0 : _} :
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .next proof0) reserved := by
   intro c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd] at h
+  simp only [lowEnd, resultWords_vertragVon] at h
   split at h
   · next hl =>
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -127,13 +139,13 @@ theorem axiomCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
      {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {hn : _} {proof0 : _} {proof1 : _} {proof2 : _} {proof3 : _} :
     StmtCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Stmt D (vertragVon D f) l Γ Λ Λ from .axiomCall a args hn proof0 proof1 proof2 proof3) reserved := by
   intro c top h hK _ hW m pc σ ρ hp _ hlo2 _ _ hWa hpr
-  simp only [lowS] at h
+  simp only [lowS, resultWords_vertragVon] at h
   have hks := hW.ks
   have h7 := torC_top h
   obtain ⟨m1, w, s1, a1, _, hw1, _⟩ := torC0_ok (O := O) (σ := σ.lese Λ args.orte) h (by omega) hW hp hWa

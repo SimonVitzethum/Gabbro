@@ -1,0 +1,5 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_array_unknown {
+const VALUES : [u8; MISSING] = [42];
+impl fn main() -> u8 effects { pure } { return 42; }
+}

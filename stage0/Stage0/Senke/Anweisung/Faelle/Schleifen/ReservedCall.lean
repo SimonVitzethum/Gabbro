@@ -55,10 +55,10 @@ theorem pre [Kern] : PreS callLayout memory 2048 4096 256 8 code (Env.nil : Env 
   unfold CodeFar
   decide +kernel
 
-theorem world_at : WeltAt memory callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem world_at [Kern] : WeltAt memory callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 theorem sync : SyncOK memory callLayout 4096 128 :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,
@@ -253,9 +253,9 @@ theorem forever_runtime_zeuge [Kern] :
     exact fun k hk => h ⟨k, hk⟩
   have hf : FrameOK leaveMemory 4096 256 := ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
   have hw : WeltAt leaveMemory callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   have hs : Stops ⟨2048, 4096⟩ leaveMemory 111 :=
     stop_ok hc (by unfold CodeFar; decide) hf (by decide) (by decide) (by decide)
   intro n
@@ -329,10 +329,10 @@ theorem pre [Kern] : PreS callLayout memory 2048 4096 256 8 code (Env.nil : Env 
   unfold CodeFar
   decide +kernel
 
-theorem world_at : WeltAt memory callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem world_at [Kern] : WeltAt memory callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 theorem sync : SyncOK memory callLayout 4096 128 :=
   ⟨by decide, by decide, by decide, by decide, by decide, by decide,

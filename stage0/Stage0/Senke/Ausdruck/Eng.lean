@@ -6,6 +6,25 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
+/-- A scalar interval, signed or unsigned, occupies one word. -/
+theorem scalarFits_word {lo hi : Int} (h : scalarFits lo hi = true) : valueWords (.int lo hi) = 1 := by
+  simp only [scalarFits, inW, inU, Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq] at h
+  rcases h with ⟨a, b⟩ | ⟨a, b⟩
+  · exact integerWords_word a b
+  · exact integerWords_unsigned a b
+
+/-- The narrowed target of a successful lowering is a one-word scalar. -/
+theorem eng_width {lo hi lo' hi' : Int} {d top : Nat} {a b : Option (List II × Nat)} {c : List II}
+    (lower : engL d lo hi lo' hi' a b = some (c, top)) : valueWords (.int lo' hi') = 1 := by
+  simp only [engL, bind, Option.bind_eq_some_iff] at lower
+  obtain ⟨_, _, _, _, ⟨ct, tt⟩, ht, _⟩ := lower
+  unfold intervalTestL at ht
+  split at ht
+  · next fits =>
+    simp only [Bool.and_eq_true] at fits
+    exact scalarFits_word fits.2
+  · cases ht
+
 /-- Input and fallback are each evaluated once on their canonical path. The
     shared predicate preserves the input word and reports the original interval. -/
 theorem eng_ok {Λ : List (Res D)} {Γ : Ctx} {lo hi lo' hi' : Int}

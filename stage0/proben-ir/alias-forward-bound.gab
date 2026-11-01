@@ -1,0 +1,11 @@
+// Reverse aliases retain computed bounds, const signatures and original scalar order.
+module alias_forward_bound {
+type Result = Bound;
+type Bound = u8 in 0 .. LIMIT;
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+const fn identity(x: Result) -> Result { return x; }
+const ANSWER : Result = identity(LIMIT);
+const VALUES : [Result; 1] = [identity(ANSWER)];
+impl fn main() -> Result effects { pure } { return VALUES[0]; }
+}

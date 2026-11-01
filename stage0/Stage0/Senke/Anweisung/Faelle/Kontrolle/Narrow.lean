@@ -21,7 +21,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
     (hw : inW low high = true) (hl : inW low' low' = true) (hh : inW high' high' = true)
     (hd : frei Γ reserved + 4 ≤ Ks)
     (hs : 16 * (narrowC (frei Γ reserved) low' high' ce cx cr).length < 2 ^ 31)
-    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (D.params f).length)
+    (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo0 : lo = FB + (contextWords (D.params f)))
     (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W}
     (herr : ¬ (low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high') →
@@ -31,7 +31,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).1)
         (pc' + BitVec.ofNat 64 (16 * cx.length) + BitVec.ofInt 64 (exPlus ex (cr.length + 1)).2) out reserved)
     (hrest : ∀ hin : low' ≤ (eval σ e σ ρ).n ∧ (eval σ e σ ρ).n ≤ high',
-      ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved + 1) cr (Env.cons (τ := .int low' high')
+      ∀ m' pc', PreS L m' pc' fp K (frei (.int low' high' :: Γ) reserved) cr (Env.cons (τ := .int low' high')
         ⟨(eval σ e σ ρ).n, hin.1, hin.2⟩ ρ) reserved → Umf L A C dv m' fp Ks K →
       Kopf L f m' fp K rp cfp ρ0 P σ0 → WeltAt m' L σ →
       Sim L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc', fp⟩ m' (pc' + BitVec.ofNat 64 (16 * cr.length))
@@ -47,7 +47,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ ((engTest 13 (frei Γ reserved) low' high').1 ++
       [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)) ρ reserved := hp
   have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, r1, hen⟩ := lowE_ok (reserved := reserved) σ σ (fun _ h => h) e _ ce te he hte m pc ρ hpw
+  obtain ⟨m1, s1, a1s, w, r1, hen⟩ := (lowE_ok (reserved := reserved) σ σ (fun _ h => h) hW.lay e _ ce te he hte m pc ρ hpw).word trivial
   have a1 := Agree.widen a1s hks
   have hn := hq.next a1 (Nat.le_refl _) (by omega)
   have hw1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
@@ -97,10 +97,11 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
         have := of_decide_eq_false hin; exact Classical.byContradiction this
       have rv : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w := by
         rw [agree_rd_low a2 hn.frame.room (by omega) (by omega)]; exact r1
-      have hp'2 : PreS L m' pc' fp K (frei Γ reserved + 1) cr
+      have wd : valueWords (.int low' high') = 1 := integerWords_word hlW.1 hhW.2
+      have hp'2 : PreS L m' pc' fp K (frei (.int low' high' :: Γ) reserved) cr
           (Env.cons (τ := .int low' high') ⟨(eval σ e σ ρ).n, hin'.1, hin'.2⟩ ρ) reserved :=
-        { hp' with ctx := by simp only [frei, List.length_cons]; omega
-                   env := envAt_cons hp'.env rv (by exact hen) }
+        { hp' with ctx := by simp only [frei, contextWords_cons, wd]; omega
+                   env := envAt_cons hp'.env (ValueAt.of_enc wd rv (by exact hen)) }
       exact hrest hin' m' pc' hp'2 hu' hk' hw'
   refine Sim.prefix hlo s1 (agreeW_of (a1.mono hlo2))
     (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.cast hsim rfl ?_ ?_ ?_)

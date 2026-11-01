@@ -1,1 +1,1 @@
-compile-time scalar cannot be evaluated at its canonical declared range
+compile-time dependency cycle at constant BAD

@@ -43,10 +43,10 @@ theorem memory_code : CodeAt memory 2048 compiled.1 := by
 theorem memory_frame : FrameOK memory 4096 256 :=
   ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
-theorem memory_world : WeltAt memory FnptrProben.callLayout FnptrProben.world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem memory_world [Kern] : WeltAt memory FnptrProben.callLayout FnptrProben.world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 end Gabbro.Stage0.Senke.IntervalProbe
 
@@ -68,6 +68,6 @@ theorem eng_ok_zeuge [Kern] :
       decide +kernel
     · intro _ x; nomatch x
   exact lowE_int_value_ok FnptrProben.world FnptrProben.world (fun _ h => h)
-    expression (by decide) lowered (by change compiled.2 ≤ 256; rw [code_top]; decide) memory Env.nil pre
+    FnptrProben.call_win.lay expression (by decide) lowered (by change compiled.2 ≤ 256; rw [code_top]; decide) memory Env.nil pre
 
 end Gabbro.Stage0.Senke

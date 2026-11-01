@@ -220,8 +220,9 @@ theorem loopJumpBlock_counted_zeuge (next : Bool) :
         by decide +kernel, by decide +kernel⟩
     · cases next <;> unfold CodeFar image <;> decide +kernel
   have hw : WeltAt (memory next) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases next <;> decide +kernel
   refine ⟨lower, ?_⟩
   have result := loopJumpBlock_counted next lower pre hw
@@ -299,8 +300,9 @@ theorem joint (positive : Bool) :
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt (memory positive) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases positive <;> decide +kernel
   have sync : SyncOK (memory positive) callLayout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,
@@ -371,7 +373,7 @@ theorem sourceStop_zeuge [Kern] (L : Lay D) (P : Programm D) (A : D.Fn → Nat)
   unfold source
   refine ⟨recursiveBlockCost.sourceStop (inv := .tru) (body := .cons (.leave rfl) .nil) (rest := .nil) rfl ?_⟩
   intro lo ens pr ex code top lower
-  dsimp only [lowS] at lower
+  dsimp only [lowS, resultWords_vertragVon] at lower
   split at lower
   · rw [show lowE L (Expr.tru (Γ := []) (Λ := [])) (frei [] 2) 2 =
         some ([ci 1 6 1 0], 7) from rfl] at lower
@@ -424,9 +426,9 @@ theorem counter_positive_source_counted_zeuge :
       by unfold CodeFar foreverCounter; decide +kernel,
       (fun _ x => nomatch x), trivial, wstab_true _ _⟩
   have hw : WeltAt memory callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   exact counter_positive_source_counted (L := callLayout) (fuel := 2)
     (Γ := []) (reserved := 4) (counter := 6) (one := 7)
     (pc := 2048) (fp := 4096) (code := []) (jump := 128)
@@ -485,8 +487,9 @@ theorem joint (positive : Bool) :
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt (memory positive) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases positive <;> decide +kernel
   have sync : SyncOK (memory positive) callLayout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,
@@ -652,8 +655,9 @@ theorem joint (positive : Bool) :
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt (memory positive) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases positive <;> decide +kernel
   have sync : SyncOK (memory positive) callLayout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,
@@ -764,8 +768,9 @@ theorem joint (positive : Bool) :
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt (memory positive) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases positive <;> decide +kernel
   have sync : SyncOK (memory positive) callLayout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,

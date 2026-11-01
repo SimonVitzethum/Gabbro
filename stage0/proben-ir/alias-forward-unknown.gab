@@ -1,0 +1,5 @@
+// An unresolved leaf is not an acyclic alias value.
+module alias_forward_unknown {
+type Result = Missing;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

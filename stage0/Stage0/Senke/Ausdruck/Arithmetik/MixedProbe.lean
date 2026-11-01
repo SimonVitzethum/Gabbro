@@ -14,7 +14,7 @@ def compiled : List II × Nat := (lowE FnptrProben.callLayout expression 4).getD
 def bytes : List Runner.B := compiled.1.flatMap encII
 
 theorem lowered : lowE FnptrProben.callLayout expression 4 = some compiled := by decide +kernel
-theorem code_length : compiled.1.length = 22 := by decide +kernel
+theorem code_length : compiled.1.length = 6 := by decide +kernel
 theorem code_top : compiled.2 = 9 := by decide +kernel
 
 def memory : Runner.Mem :=
@@ -26,7 +26,7 @@ theorem memory_code : CodeAt memory 2048 compiled.1 := by
   apply codeAt_bytes compiled.1 2048 (by decide +kernel)
   intro i hi
   change i < bytes.length at hi
-  have size : bytes.length = 352 := by simp only [bytes, flatMap_enc_len, code_length]
+  have size : bytes.length = 96 := by simp only [bytes, flatMap_enc_len, code_length]
   have bound : 2048 + i < 2 ^ 64 := by omega
   have address : (BitVec.ofNat 64 (2048 + i)).toNat = 2048 + i := by
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound]
@@ -39,10 +39,10 @@ theorem memory_code : CodeAt memory 2048 compiled.1 := by
 theorem memory_frame : FrameOK memory 4096 256 :=
   ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩
 
-theorem memory_world : WeltAt memory FnptrProben.callLayout FnptrProben.world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem memory_world [Kern] : WeltAt memory FnptrProben.callLayout FnptrProben.world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
-  decide +kernel
+  exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
 
 end Gabbro.Stage0.Senke.MixedProbe
 
@@ -62,18 +62,7 @@ theorem scalarCompareL_ok_zeuge [Kern] :
       unfold CodeFar
       decide +kernel
     · intro _ x; nomatch x
-  obtain ⟨out, run, agree, word, read, value⟩ := lowE_ok
-    FnptrProben.world FnptrProben.world (fun _ h => h) expression 4 compiled.1 compiled.2
-    lowered (by rw [code_top]; decide) memory 2048 Env.nil pre
-  refine ⟨out, run, agree, trivial, ?_⟩
-  intro i bound
-  have zero : i = 0 := by
-    change i < (([(1 : Runner.W)] : List Runner.W)).length at bound
-    simp only [List.length_cons, List.length_nil] at bound
-    omega
-  subst i
-  change word = 1 at value
-  change out.rd64 (slot 4096 (BitVec.ofNat 64 (4 + 0))) = some 1
-  simpa only [value, Nat.add_zero] using read
+  exact lowE_ok FnptrProben.world FnptrProben.world (fun _ h => h) FnptrProben.call_win.lay
+    expression 4 compiled.1 compiled.2 lowered (by rw [code_top]; decide) memory 2048 Env.nil pre
 
 end Gabbro.Stage0.Senke

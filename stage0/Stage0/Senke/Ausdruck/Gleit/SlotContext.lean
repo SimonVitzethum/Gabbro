@@ -1,12 +1,15 @@
 /- Reify readable frame slots as a proof-only integer environment. -/
 import Stage0.Senke.Ausdruck.Gleit.Skalieren
 import Stage0.Senke.Ausdruck.Quant.Frame
+import Stage0.Senke.Ausdruck.Aggregat.Scalar
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
 abbrev frameWordTy : Ty := .int (-2^63) (2^63 - 1)
+@[simp] theorem frameWordTy_width : valueWords frameWordTy = 1 := by decide
+
 def frameWordCtx (n : Nat) : Ctx := List.replicate n frameWordTy
 
 theorem frameWordEnv {m : Runner.Mem} {fp : Runner.W} {K n : Nat}
@@ -25,6 +28,7 @@ theorem frameWordEnv {m : Runner.Mem} {fp : Runner.W} {K n : Nat}
         by simpa using BitVec.toInt_le (x := w)⟩
     refine ⟨Env.cons v ρ, ?_⟩
     apply envAt_cons hρ
+    apply ValueAt.of_enc frameWordTy_width
     · simpa [frei, frameWordCtx] using hw
     · exact (BitVec.ofInt_toInt).symm
 
@@ -58,7 +62,8 @@ theorem frameWordLoad (n i : Nat) (h : i < n) (ρ : Env D (frameWordCtx n)) :
       (BitVec.ofInt 64 (ρ.get (frameWordVar n i h)).n) := by
   intro fp K j c top hc ht m pc hp
   cases hc
-  obtain ⟨w, hr, he⟩ := hp.env _ (frameWordVar n i h)
+  obtain ⟨w, hr, he⟩ := ValueAt.word frameWordTy (ρ.get (frameWordVar n i h))
+    (by trivial) (hp.env _ (frameWordVar n i h))
   rw [frameWordVar_slot] at hr
   change w = BitVec.ofInt 64 (ρ.get (frameWordVar n i h)).n at he
   subst w
@@ -74,7 +79,7 @@ private theorem contextLoad (input : Nat) (hi : FB ≤ input)
       (fun j => some ([ci 2 j input 0], j + 1)) (BitVec.ofInt 64 z.n) := by
   intro fp K j c top hc ht m pc hp
   cases hc
-  obtain ⟨w, hr, he⟩ := hp.env _ Var.here
+  obtain ⟨w, hr, he⟩ := ValueAt.word frameWordTy z (by trivial) (hp.env _ Var.here)
   have eqslot : vslot (Var.here : Var (frameWordTy :: frameWordCtx (input - FB)) frameWordTy) = input := by
     simp [vslot_here, frei, frameWordCtx]; omega
   rw [eqslot] at hr
@@ -103,6 +108,7 @@ theorem floatOfIntContinuationL_ok (F : Gleitkomma.Format)
   let v : Zahl (-2^63) (2^63 - 1) := ⟨z, hz.1, by omega⟩
   have env' : EnvAt L m fp (Env.cons (τ := frameWordTy) v ρbase) := by
     apply envAt_cons env
+    apply ValueAt.of_enc frameWordTy_width
     · simpa [frei, frameWordCtx, show FB + (input - FB) = input by omega] using hr
     · rfl
   rw [he] at hp

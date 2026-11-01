@@ -22,7 +22,7 @@ inductive ArgsCost (L : Lay D) (reserved F : Nat) :
   | cons {Γ Λ τ ts} {e : Expr D Γ Λ τ} {rest : Args D Γ Λ ts}
       {σ₀ σ : World D} {ρ : Env D Γ} {nr ne : Nat}
       (tail : ArgsCost L reserved F rest σ₀ σ ρ nr)
-      (head : ExprCost L reserved e (F + FB + ts.length) ne
+      (head : ExprCost L reserved e (F + FB + (contextWords ts)) ne
         (Enc L τ (eval σ₀ e σ ρ))) :
       ArgsCost L reserved F (.cons e rest) σ₀ σ ρ (nr + ne)
 
@@ -34,7 +34,7 @@ theorem ArgsCost.sound {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty}
     (certificate : ArgsCost L reserved F args σ₀ σ ρ n)
     {c : List II} {top K : Nat} {m : Mem} {pc fp : W} {W : Mem → Prop}
     (lower : lowA L args (F + FB) reserved = some (c, top))
-    (fits : top ≤ K) (room : F + FB + ts.length ≤ K)
+    (fits : top ≤ K) (room : F + FB + (contextWords ts) ≤ K)
     (pre : Pre L m pc fp K (F + FB) c ρ W reserved) :
     ∃ m', Counted n ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
       Agree fp (F + FB) K m m' ∧
@@ -49,25 +49,31 @@ theorem ArgsCost.sound {Γ : Ctx} {Λ : List (Res D)} {ts : List Ty}
     simp only [lowA, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, hr, ⟨ce, te⟩, he, hc⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
-    simp only [List.length_cons] at room
+    simp only [contextWords_cons] at room
     obtain ⟨m1, s1, a1, e1⟩ := ih hr (by omega) (by omega) pre.left
     have hp1 := (pre.next a1 (Nat.le_refl _) (by omega)).up
-      (d' := F + FB + ts.length) (by omega)
-    obtain ⟨m2, s2, a2, w, hw, hen⟩ := head.sound he (by omega) hp1
+      (d' := F + FB + (contextWords ts)) (by omega)
+    obtain ⟨m2, s2, a2, value⟩ := head.sound_value he (by omega) hp1
     refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2),
       a1.trans (a2.mono (by omega)), ?_⟩
     simp only [evalArgs]
-    have hfr : F + frei ts = F + FB + ts.length := by simp only [frei]; omega
-    refine envAt_cons (fp := slot fp (BitVec.ofNat 64 F)) ?_
-      (by rw [slot_slot, hfr]; exact hw) hen
-    intro τ' y
-    obtain ⟨w', hw', he'⟩ := e1 τ' y
-    refine ⟨w', ?_, he'⟩
-    have := vslot_lt (reserved := 0) y
-    rw [slot_slot] at hw' ⊢
-    rw [agree_rd_low a2 hp1.frame.room
-      (by simp only [frei] at this; omega) (by omega)]
-    exact hw'
+    have hfr : F + frei ts = F + FB + (contextWords ts) := by simp only [frei]; omega
+    refine envAt_cons (fp := slot fp (BitVec.ofNat 64 F)) ?_ ?_
+    · intro τ' y
+      obtain ⟨valid, words⟩ := e1 τ' y
+      refine ⟨valid, ?_⟩
+      intro i hi
+      have bound := variableOffset_bound y
+      have width := encodeWords_length L τ' ((evalArgs σ₀ rest σ ρ).get y)
+      have read := words i hi
+      rw [slot_slot] at read ⊢
+      rw [agree_rd_low a2 hp1.frame.room (by unfold vslot frei at *; omega) (by omega)]
+      exact read
+    · refine ⟨value.1, ?_⟩
+      intro i hi
+      rw [slot_slot]
+      have read := value.2 i hi
+      simpa only [frei, Nat.add_zero, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using read
 
 theorem st_step_counted {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {va vb : Runner.W} {m' : Runner.Mem}
     (hc : CodeAt m pc [ci 16 ((s + 1 : Nat) : Int) s 0]) (hK : s + 1 < K) (hK2 : K < 2 ^ 31)
@@ -266,7 +272,7 @@ theorem relocate_counted {m : Mem} {pc fp : W} {K base shift n : Nat}
     · intro i hi
       by_cases top : i = n
       · subst i
-        rw [agree_rd_high tailFrame frame.room (by omega) (by omega)]
+        rw [agree_rd_above tailFrame frame.room (by omega) (by omega)]
         rw [read]
         exact rd64_write_same (frame.rd dst (by dsimp [dst]; omega))
       · rw [moved i (by omega)]
@@ -279,21 +285,25 @@ theorem relocate_env_counted {D : Deklaration} {L : Lay D} {Γ : Ctx}
     (frame : FrameOK m fp K) (small : K < 2 ^ 31)
     (bound : frei Γ (reserved + extra) ≤ K)
     (env : EnvAt L m fp ρ reserved)
-    (code : CodeAt m pc (relocateC (FB + reserved) extra Γ.length))
-    (far : CodeFar pc Γ.length fp K) :
-    ∃ m', Counted Γ.length ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * Γ.length), fp⟩ m' ∧
+    (code : CodeAt m pc (relocateC (FB + reserved) extra (contextWords Γ)))
+    (far : CodeFar pc (contextWords Γ) fp K) :
+    ∃ m', Counted (contextWords Γ) ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * contextWords Γ), fp⟩ m' ∧
       Agree fp (FB + reserved + extra) (frei Γ (reserved + extra)) m m' ∧
       EnvAt L m' fp ρ (reserved + extra) := by
   obtain ⟨m', run, writes, moved⟩ := relocate_counted frame small
-    (show FB + reserved + extra + Γ.length ≤ K by unfold frei at bound; omega) code far
+    (show FB + reserved + extra + contextWords Γ ≤ K by unfold frei at bound; omega) code far
   refine ⟨m', run, ?_, ?_⟩
   · simpa [frei, Nat.add_assoc] using writes
   · intro τ x
-    obtain ⟨w, read, enc⟩ := env τ x
-    have ix := idx_lt x
-    have h := moved (Γ.length - 1 - Var.idx x) (by omega)
-    refine ⟨w, ?_, enc⟩
-    simpa [vslot, Nat.add_assoc] using h.trans read
+    obtain ⟨valid, words⟩ := env τ x
+    have ix := variableOffset_bound x
+    refine ⟨valid, ?_⟩
+    intro i hi
+    have width := encodeWords_length L τ (ρ.get x)
+    have h := moved (variableOffset x + i) (by omega)
+    have read := words i hi
+    simpa [vslot, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+      h.trans (by simpa only [vslot, Nat.add_assoc] using read)
 
 namespace RelocateProbe
 
@@ -321,29 +331,29 @@ end RelocateProbe
     this lemma does not establish execution of the preceding ensures code. -/
 theorem returnTail_counted {m : Mem} {pc fp rp cfp w : W} {K lo : Nat}
     (code : CodeAt m pc
-      [ci 19 ((lo + 1 : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0])
+      [ci 19 ((lo + returnWords (D.erg f) (D.gruende f) : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0])
     (far : CodeFar pc 3 fp K) (frame : FrameOK m fp K)
-    (small : K < 2 ^ 31) (abi : 2 < lo) (room : lo + 1 < K)
-    (flag : m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1)
+    (small : K < 2 ^ 31) (abi : 2 < lo) (room : lo + returnWords (D.erg f) (D.gruende f) < K)
+    (flag : m.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 1)
     (value : m.rd64 (slot fp (BitVec.ofNat 64 lo)) = some w)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       Agree fp 2 K m m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 := by
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 1 := by
   have branch := code 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at branch
   have stepBranch : Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩ m :=
     .next (run_step branch (by decide)
       (run_brz_ne branch (by rw [sx_nat (by omega)]; exact flag) (by decide))) (.refl _ _)
-  have tail := codeAt_right (a := [ci 19 ((lo + 1 : Nat) : Int) 48 0]) code
+  have tail := codeAt_right (a := [ci 19 ((lo + returnWords (D.erg f) (D.gruende f) : Nat) : Int) 48 0]) code
   have moved := mov_to_counted (codeAt_left tail) frame (j := 2) (s := lo)
     (by omega) (by omega) small value
   let m' := write m (slot fp (BitVec.ofNat 64 2)) 8 w.toNat
   have agree : Agree fp 2 K m m' := agree_write frame.room (by omega) (by omega) _
   have farRet : CodeFar (pc + 16 + 16) 1 fp K := by
     simpa using codeFar_tail (a := [ci 2 2 lo 0])
-      (codeFar_tail (a := [ci 19 ((lo + 1 : Nat) : Int) 48 0])
+      (codeFar_tail (a := [ci 19 ((lo + returnWords (D.erg f) (D.gruende f) : Nat) : Int) 48 0])
         (b := [ci 2 2 lo 0, ci 21 0 0 0]) far)
   have retBefore : CodeAt m (pc + 16 + 16) [ci 21 0 0 0] := by
     simpa using codeAt_right (a := [ci 2 2 lo 0]) tail
@@ -371,7 +381,7 @@ theorem callTail_counted {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List
     {σ : World D} {ρa : Env D (D.params f)}
     (hc : CodeAt m pc (callTail A f F indirect)) (hcf : CodeFar pc 4 fp K)
     (hF : FrameOK m fp K) (hK : K < 2 ^ 31)
-    (hFB : FB ≤ F) (hT : F + FB + (D.params f).length + 1 ≤ Ks)
+    (hFB : FB ≤ F) (hT : F + FB + (contextWords (D.params f)) + 1 ≤ Ks)
     (hA : A f < 2 ^ 31) (hP : PCode m A C fp K)
     (hdv : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1))
     (hE : EnvAt L m (slot fp (BitVec.ofNat 64 F)) ρa)
@@ -409,7 +419,7 @@ theorem callTail_counted {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List
   have i3 := hc 3 (by simp [callTail, callTailN])
   simp only [callTail, callTailN, ci, List.getElem_cons_zero, List.getElem_cons_succ] at i0 i1 i2 i3
   -- the writes
-  let T := F + FB + (D.params f).length
+  let T := F + FB + (contextWords (D.params f))
   have hsT : sx (II.f (T : Int)) = BitVec.ofNat 64 T := sx_nat (by omega)
   have hs2 : sx (II.f ((F + 2 : Nat) : Int)) = BitVec.ofNat 64 (F + 2) := sx_nat (by omega)
   have hsF : sx (II.f (F : Int)) = BitVec.ofNat 64 F := sx_nat (by omega)
@@ -512,11 +522,14 @@ theorem callTail_counted {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List
     exact rd_same hF1 (by omega) _
   have gE : EnvAt L m5 (slot fp (BitVec.ofNat 64 F)) ρa := by
     intro τ x
-    obtain ⟨w, hw, he⟩ := hE τ x
-    refine ⟨w, ?_, he⟩
-    have h1 := vslot_lt (reserved := 0) x
+    have value := hE τ x
+    refine ⟨value.1, ?_⟩
+    intro i hi
+    have hw := value.2 i hi
+    have width := encodeWords_length L τ (ρa.get x)
+    have h1 := variableOffset_bound x
     have h2 : FB ≤ vslot x := by unfold vslot; omega
-    simp only [frei] at h1
+    have bound : vslot x + i < FB + contextWords (D.params f) := by unfold vslot; omega
     rw [slot_slot] at hw ⊢
     simp only [m5, m4, m3, m2, m1]
     rw [rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega),
@@ -598,7 +611,7 @@ theorem countedAssignVar_case
     (world : WeltAt m L σ) :
     CountedReach (ne + 1) L fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * code.length)) σ (ρ.set x v) reserved := by
-  simp only [lowS] at lower
+  simp only [lowS, resultWords_vertragVon] at lower
   split at lower
   next allowed =>
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
@@ -646,7 +659,7 @@ theorem countedAssignGlob_case
     (world : WeltAt m L σ) :
     CountedReach (ne + (1 + 1)) L fp lo K pr ⟨pc, fp⟩ m
       (pc + BitVec.ofNat 64 (16 * code.length)) (σ.storeGlob g v) ρ reserved := by
-  simp only [lowS] at lower
+  simp only [lowS, resultWords_vertragVon] at lower
   split at lower
   next allowed =>
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
@@ -776,10 +789,10 @@ theorem BlockCost.sound {V : Vertrag D} {l : Bool} {Γ : Ctx}
         rw [hr0] at hr
         cases hr
         apply ih hr0 (Nat.le_trans (Nat.le_max_right _ _) fits) ?_ ?_ hp hw
-        · simp only [frei, List.length_cons] at low ⊢; omega
+        · simp only [frei, contextWords_cons] at low ⊢; omega
         · intro j hj
           have h := hprotected j hj
-          simp only [frei, List.length_cons] at h ⊢; omega)
+          simp only [frei, contextWords_cons] at h ⊢; omega)
     obtain ⟨m', run, agree, env, world', keep⟩ := result
     exact ⟨m', run, agree, envAt_tail env, world', keep⟩
 
@@ -794,7 +807,7 @@ theorem BlockCost.sound {V : Vertrag D} {l : Bool} {Γ : Ctx}
     · intro cr tr cs ts hr hs hp
       rw [hr0] at hr; cases hr
       rw [hs0] at hs; cases hs
-      simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hs0
+      simp only [lowS, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hs0
       obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := hs0
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
       have room := lowE_top _ _ _ _ hc
@@ -876,7 +889,7 @@ theorem countedEndCons_case
       ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved) cr ρ1 reserved →
       WeltAt m' L σ1 → ∃ u b, Counted nr ⟨pc', fp⟩ m' u b ∧ Done u b) :
     ∃ u b, Counted (ns + nr) ⟨pc, fp⟩ m u b ∧ Done u b := by
-  simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+  simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
   obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
   obtain ⟨m1, run1, agree1, env1, world1, keep1⟩ :=
@@ -981,9 +994,9 @@ theorem block_sound_zeuge :
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
   have hw : WeltAt memory callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   obtain ⟨cert⟩ := block_certificate_zeuge (L := callLayout) (reserved := 0)
     (vertragVon FnptrProben.D 2) world
   exact cert.sound lower (by decide) call_win (by decide)
@@ -1026,8 +1039,9 @@ theorem sound_zeuge (choice : Bool) :
     · cases choice <;> unfold CodeFar <;> decide +kernel
     · intro _ x; nomatch x
   have hw : WeltAt (memory choice) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases choice <;> decide +kernel
   obtain ⟨leaf⟩ := block_certificate_zeuge (L := callLayout) (reserved := 0)
     (vertragVon FnptrProben.D 2) world
@@ -1094,9 +1108,9 @@ theorem args_sound_zeuge :
       [ci 1 4 2 0, ci 1 5 2 0] .nil (fun m => WeltAt m callLayout world) from
       ⟨pre.ctx, pre.small, pre.frame, pre.code, pre.far, pre.env, ?_, ?_⟩)
   · simpa [slot, FB] using result
-  · refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+  · refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   · exact fun m m' h a => weltAt_stab call_win.lay (by decide) m m' h (a.mono (Nat.zero_le _))
 
 open FnptrProben in
@@ -1189,9 +1203,9 @@ theorem store_counted_zeuge :
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
   have hw : WeltAt storeMemory callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   apply store_counted (ce := [ci 1 4 576 0]) (ca := [ci 1 5 8192 0])
     (ne := 1) (na := 1) (a := 8192) (Pe := (· = 576)) pre call_win hw (by decide)
   · intro m pc hp
@@ -1396,30 +1410,30 @@ end OldProbe
 theorem retC_counted {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     {e : Expr D (τ :: Γ) Λ .bool} {v : Wert D τ} {snapshot w : W} {n lo r top K : Nat}
     {ens : List II} {m : Mem} {pc fp rp cfp : W} {ρ : Env D Γ}
-    (certificate : EnsCost L snapshot e (lo + 1) n (· = 1))
-    (lower : lowEns L e (lo + 1) = some (ens, top)) (fits : top ≤ K)
+    (certificate : EnsCost L snapshot e (lo + returnWords (D.erg f) (D.gruende f)) n (· = 1))
+    (lower : lowEns L e (lo + returnWords (D.erg f) (D.gruende f)) = some (ens, top)) (fits : top ≤ K)
     (pre : PreS L m pc fp K lo (retC lo r ens) ρ)
-    (abi : 3 < lo) (room : lo + 1 < K) (resultSlot : r < K)
+    (abi : 3 < lo) (room : lo + returnWords (D.erg f) (D.gruende f) < K) (resultSlot : r < K)
     (resultBase : lo = frei Γ) (encoded : Enc L τ v w)
     (value : m.rd64 (slot fp (BitVec.ofNat 64 r)) = some w)
     (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m', Counted (1 + n + 3) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 ∧ Agree fp 2 K m m' := by
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 1 ∧ Agree fp 2 K m m' := by
   have hp : PreS L m pc fp K lo
       ([ci 2 lo r 0] ++ (ens ++
-        ([ci 19 ((lo + 1 : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0] ++ stopC 102 (lo + 1)))) ρ := by
+        ([ci 19 ((lo + returnWords (D.erg f) (D.gruende f) : Nat) : Int) 48 0, ci 2 2 lo 0, ci 21 0 0 0] ++ stopC 102 (lo + returnWords (D.erg f) (D.gruende f))))) ρ := by
     simpa [retC, List.append_assoc] using pre
   have first := mov_to_counted hp.left.code hp.frame (j := lo) (s := r)
     (by omega) resultSlot hp.small value
   let m1 := write m (slot fp (BitVec.ofNat 64 lo)) 8 w.toNat
   have a1 : Agree fp lo K m m1 := agree_write hp.frame.room (by omega) (by omega) _
   have next := hp.next a1 (Nat.le_refl _) (by omega)
-  have postPre : PreS L m1 (pc + 16) fp K (lo + 1) ens (.cons v ρ) := by
+  have postPre : PreS L m1 (pc + 16) fp K (lo + returnWords (D.erg f) (D.gruende f)) ens (.cons v ρ) := by
     refine ⟨?_, next.small, next.frame, next.left.code, next.left.far,
       ?_, trivial, wstab_true _ _⟩
-    · simp only [frei, List.length_cons]; simp only [frei] at resultBase; omega
+    · simp only [frei, contextWords_cons]; simp only [frei] at resultBase; omega
     · apply envAt_cons next.env
       · rw [← resultBase]; exact rd_same hp.frame (by omega) w
       · exact encoded
@@ -1452,19 +1466,19 @@ theorem normalRet_counted {Γ Δ : Ctx} {Λ Ξ : List (Res D)} {τ : Ty}
     {snapshot : W} {ne nq d lo te tq K : Nat} {ce cq : List II}
     {m : Mem} {pc fp rp cfp : W} {ρ : Env D Γ} {parameters : Env D Δ}
     (result : ExprCost L reserved e d ne (Enc L τ v))
-    (ensures : EnsCost L snapshot q (lo + 1) nq (· = 1))
+    (ensures : EnsCost L snapshot q (lo + returnWords (D.erg f) (D.gruende f)) nq (· = 1))
     (lowerResult : lowE L (reserved := reserved) e d = some (ce, te))
-    (lowerEnsures : lowEns L q (lo + 1) = some (cq, tq))
+    (lowerEnsures : lowEns L q (lo + returnWords (D.erg f) (D.gruende f)) = some (cq, tq))
     (fitResult : te ≤ K) (fitEnsures : tq ≤ K)
     (pre : PreS L m pc fp K d (ce ++ retC lo d cq) ρ reserved)
     (parameterEnv : EnvAt L m fp parameters)
     (base : lo = frei Δ) (separate : lo ≤ d)
-    (abi : 3 < lo) (room : lo + 1 < K)
+    (abi : 3 < lo) (room : lo + returnWords (D.erg f) (D.gruende f) < K)
     (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m' w', Counted (ne + (1 + nq + 3)) ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
       m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w' ∧
-      Enc L τ v w' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1 ∧ Agree fp 2 K m m' ∧
+      Enc L τ v w' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 1 ∧ Agree fp 2 K m m' ∧
       FrameOK m' fp K ∧ m'.rd64 fp = some rp ∧ m'.rd64 (fp + 8) = some cfp ∧
       (∀ σ, LayIn L → fp.toNat + 8 * K ≤ L.lo → WeltAt m L σ → WeltAt m' L σ) := by
   have resultRoom := lowE_top _ _ _ _ lowerResult
@@ -1577,24 +1591,24 @@ end SourceReturnProbe
 theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
     (code : CodeAt m pc (retWhyC lo r)) (far : CodeFar pc 3 fp K)
     (frame : FrameOK m fp K) (small : K < 2 ^ 31)
-    (abi : 2 < lo) (room : lo + 1 < K) (reason : r < 2 ^ 31)
+    (abi : 2 < lo) (room : lo + returnWords (D.erg f) (D.gruende f) < K) (reason : r < 2 ^ 31)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp) :
     ∃ m', Counted 3 ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0 ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 0 ∧
       m'.rd64 (slot fp 2) = some (BitVec.ofNat 64 r) := by
   have first := const_step_counted (codeAt_left (a := [ci 1 2 r 0]) code)
     frame (j := 2) (k := r) (by omega) small (by simp [lit32]; omega)
   let m1 := write m (slot fp (BitVec.ofNat 64 2)) 8 (BitVec.ofInt 64 (r : Int)).toNat
   have a1 : Agree fp 2 K m m1 := agree_write frame.room (by omega) (by omega) _
-  have far1 := codeFar_tail (a := [ci 1 2 r 0]) (b := [ci 1 (lo + 1) 0 0, ci 21 0 0 0]) far
+  have far1 := codeFar_tail (a := [ci 1 2 r 0]) (b := [ci 1 (lo + returnWords (D.erg f) (D.gruende f)) 0 0, ci 21 0 0 0]) far
   have code1 := (codeAt_right (a := [ci 1 2 r 0]) code).agree a1 far1
   have frame1 := frame.agree a1
-  have second := const_step_counted (codeAt_left (a := [ci 1 (lo + 1) 0 0]) code1)
-    frame1 (j := lo + 1) (k := 0) room small (by decide)
-  let m2 := write m1 (slot fp (BitVec.ofNat 64 (lo + 1))) 8 0
-  have a2 : Agree fp 2 K m1 m2 := (agree_write (lo := lo + 1) frame1.room (by omega) room 0).mono (by omega)
-  have far2 := codeFar_tail (a := [ci 1 (lo + 1) 0 0]) (b := [ci 21 0 0 0]) far1
-  have code2 := (codeAt_right (a := [ci 1 (lo + 1) 0 0]) code1).agree a2 far2
+  have second := const_step_counted (codeAt_left (a := [ci 1 (lo + returnWords (D.erg f) (D.gruende f)) 0 0]) code1)
+    frame1 (j := lo + returnWords (D.erg f) (D.gruende f)) (k := 0) room small (by decide)
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) 8 0
+  have a2 : Agree fp 2 K m1 m2 := (agree_write (lo := lo + returnWords (D.erg f) (D.gruende f)) frame1.room (by omega) room 0).mono (by omega)
+  have far2 := codeFar_tail (a := [ci 1 (lo + returnWords (D.erg f) (D.gruende f)) 0 0]) (b := [ci 21 0 0 0]) far1
+  have code2 := (codeAt_right (a := [ci 1 (lo + returnWords (D.erg f) (D.gruende f)) 0 0]) code1).agree a2 far2
   have ins := code2 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at ins
   have rpc : m2.rd64 fp = some rp := by
@@ -1607,7 +1621,7 @@ theorem returnWhy_counted {m : Mem} {pc fp rp cfp : W} {K lo r : Nat}
     .next (run_step ins (by decide) (run_ret rpc rfp)) (.refl _ _)
   refine ⟨m2, (first.trans (by simpa [m1, m2] using second)).trans last, a1.trans a2, ?_⟩
   refine ⟨rd_same frame1 room 0, ?_⟩
-  have keep := agree_write (m := m1) (lo := lo + 1) frame1.room (by omega) room 0
+  have keep := agree_write (m := m1) (lo := lo + returnWords (D.erg f) (D.gruende f)) frame1.room (by omega) room 0
   have read := agree_rd_low (i := 2) keep frame1.room (by omega) (by omega)
   change m2.rd64 (slot fp 2) = _ at read
   rw [read]
@@ -1626,8 +1640,8 @@ inductive EndCost (L : Lay D) (reserved : Nat) (V : Vertrag D) (l : Bool) (Δ : 
       {q : Expr D (τ :: Δ) Ξ .bool}
       (typed : V.erg = some τ) (proof : Λ.Perm V.ende)
       (value : ExprCost L reserved e (frei Γ reserved) ne (Enc L τ v))
-      (post : EnsCost L snapshot q (lo + 1) nq (· = 1))
-      (lowerPost : lowEns L q (lo + 1) = some ens) :
+      (post : EnsCost L snapshot q (lo + returnWords (D.erg f) (D.gruende f)) nq (· = 1))
+      (lowerPost : lowEns L q (lo + returnWords (D.erg f) (D.gruende f)) = some ens) :
       EndCost L reserved V l Δ snapshot ens lo
         (.ret (typed.symm ▸ ErgExpr.val e) proof) σ ρ (ne + (1 + nq + 3))
   | assign {Γ Λ τ} {x : Var Γ τ} {e : Expr D Γ Λ τ}
@@ -1659,11 +1673,11 @@ def EndCost.Post {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (fp : W) (m : Mem) : Prop :=
   match certificate with
   | .reason (r := r) =>
-      m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 0 ∧
+      m.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 0 ∧
       m.rd64 (slot fp 2) = some (BitVec.ofNat 64 r.val)
   | .normal (v := v) _ _ _ _ _ =>
       ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ Enc L _ v w ∧
-        m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) = some 1
+        m.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) = some 1
   | .assign _ tail => tail.Post fp m
   | .bind _ tail => tail.Post fp m
   | .branch _ _ child => child.Post fp m
@@ -1759,7 +1773,7 @@ theorem EndCost.result_read {Δ snapshot ens lo V l Γ Λ b σ ρ n}
 theorem EndCost.result_status {Δ snapshot ens lo V l Γ Λ b σ ρ n}
     (certificate : EndCost L reserved V l Δ snapshot ens lo (Γ := Γ) (Λ := Λ) b σ ρ n)
     {fp : W} {m : Mem} (post : certificate.Post fp m) :
-    m.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
+    m.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) =
       some (if certificate.result.isSome then 1 else 0) := by
   induction certificate with
   | reason => exact post.1
@@ -1800,7 +1814,7 @@ theorem EndCost.post_countedSim
     (agree : AgreeW L fp 2 K m m')
     (world : WeltAt m' L σ)
     (post : certificate.Post fp m')
-    (base : lo = FB + (D.params f).length)
+    (base : lo = FB + (contextWords (D.params f)))
     (ensures : ∀ σ' v, certificate.outcome = .zurueck σ' v →
       wahr? (eval σ0 (P.ensures f)
         (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
@@ -1858,7 +1872,7 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
   have hks := inside.ks
   induction certificate generalizing top code m pc ex with
   | reason =>
-    simp only [lowEnd] at lower
+    simp only [lowEnd, resultWords_vertragVon] at lower
     split at lower
     next accepted =>
       cases lower
@@ -1878,7 +1892,7 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
       intro rt h
       cases h
       rfl
-    simp only [lowEnd, herg typed, Bind.bind, Option.bind_eq_some_iff, pure,
+    simp only [lowEnd, resultWords_vertragVon, herg typed, Bind.bind, Option.bind_eq_some_iff, pure,
       Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
@@ -1889,7 +1903,7 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
       (by simp only [retTop] at fits; omega) entry savedPC savedFP
     exact ⟨m', run, ⟨w, read, enc, flag⟩, agreeW_of agree, frame, rpc, rfp, hw σ inside.lay (by have := inside.top; omega) world⟩
   | assign value tail ih =>
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     obtain ⟨m1, run1, agree1, env1, world1, keep1⟩ :=
@@ -1914,7 +1928,7 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
       (by rw [agreeW_rdW inside agree1 (i := 3) (by omega) lowBound]; exact entry) rpc rfp
     exact ⟨m2, run1.trans run2, post, (agree1.mono (by omega)).trans finalAgree, frame, rpc, rfp, hw⟩
   | @bind Γ Λ τ e rest σ ρ v ne nr value tail ih =>
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     have room := lowE_top _ _ _ _ he
@@ -1925,7 +1939,7 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
     have far := codeFar_right (n := ce.length) (k := cr.length) (by simpa using pre.far)
     have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K
         (frei Γ reserved + 1) cr (Env.cons v ρ) reserved :=
-      ⟨by simp only [frei, List.length_cons]; omega, pre.small, pre.frame.agree a1,
+      ⟨by simp only [frei, contextWords_cons]; omega, pre.small, pre.frame.agree a1,
         (codeAt_right pre.code).agree a1 far, far,
         envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega)) read encoded,
         trivial, wstab_true _ _⟩
@@ -1936,15 +1950,15 @@ theorem EndCost.sound {Δ : Ctx} {snapshot : W} {ens : List II × Nat} {lo : Nat
       have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
     obtain ⟨m2, run2, post, finalAgree, frame, rpc, rfp, hw⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits)
-      (by simp only [frei, List.length_cons] at low ⊢; omega)
-      (fun j hj => by have := hprotected j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      (by simp only [frei, contextWords_cons] at low ⊢; omega)
+      (fun j hj => by have := hprotected j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
       nextPre (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
       (envAt_agree parameterEnv a1 pre.frame (by omega) (by omega))
       (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
     exact ⟨m2, run1.trans run2, post, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, rpc, rfp, hw⟩
 
   | @branch Γ Λ c t e σ ρ choice nc nb condition jumpFits child ih =>
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     have room := lowE_top _ _ _ _ hc
@@ -2024,7 +2038,7 @@ theorem EndCost.terminalCountedSim {P : Programm D} {f : D.Fn} {Δ : Ctx} {snaps
     (entry : m.rd64 (slot fp (BitVec.ofNat 64 3)) = some snapshot)
     (savedPC : m.rd64 fp = some rp) (savedFP : m.rd64 (fp + 8) = some cfp)
     {σ0 : World D} {ρ0 : Env D (D.params f)} {e eL eN : W}
-    (abiBase : lo = FB + (D.params f).length)
+    (abiBase : lo = FB + (contextWords (D.params f)))
     (ensures : ∀ σ' v, certificate.outcome = .zurueck σ' v →
       wahr? (eval σ0 (P.ensures f)
         (σ'.lese (vertragVon D f).ende (P.ensures f).orte)
@@ -2073,9 +2087,9 @@ theorem endCost_sound_zeuge :
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
   have hw : WeltAt memory callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   let v : Wert FnptrProben.D (.int 2 2) := ⟨2, by decide, by decide⟩
   let cert : EndCost callLayout 0 contract false [] 64 ([], 6) 4 body world .nil 6 :=
     .bind (v := v) .literal (.assign (v := v) .literal .reason)
@@ -2116,8 +2130,9 @@ theorem branch_sound_zeuge (choice : Bool) :
     · unfold CodeFar; cases choice <;> decide +kernel
     · intro _ x; nomatch x
   have hw : WeltAt (branchMemory choice) callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
+    refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
     cases choice <;> decide +kernel
   let v : Wert FnptrProben.D (.int 2 2) := ⟨2, by decide, by decide⟩
   have leaf : EndCost callLayout 0 contract false [] 64 ([], 6) 4 branchChild world .nil 4 :=
@@ -2178,9 +2193,9 @@ theorem endCost_sound_zeuge :
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
   have hw : WeltAt memory callLayout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   let v : Wert FnptrProben.D (.int 37 37) := ⟨37, by decide, by decide⟩
   let cert : EndCost callLayout 0 contract false [] 64 ([ci 1 5 1 0], 6) 4 body world .nil 9 :=
     .bind (v := v) .literal (.assign (v := v) .literal
@@ -2198,19 +2213,19 @@ theorem lowFun_counted {P : Programm D} {A : D.Fn → Nat} {L : Lay D} {f : D.Fn
     {σ : World D} {ρ : Env D (D.params f)} {m : Mem} {pc fp rp cfp depth : W}
     (lower : lowFun passes P A L f = some (code, top)) (fits : top ≤ Ks)
     (inside : WIn L fp Ks K)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
-      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
+      ∀ snapshot, EndCost L ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ ρ nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
-    (pre : PreS L m pc fp K (FB + (D.params f).length) code ρ)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
+    (pre : PreS L m pc fp K (FB + (contextWords (D.params f))) code ρ)
     (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
     (savedFP : m.rd64 (fp + 8) = some cfp)
     (depthRead : m.rd64 (slot fp 2) = some depth) (positive : depth ≠ 0) :
     ∃ n m', n ≤ declared ∧ Counted n ⟨pc, fp⟩ m ⟨rp, cfp⟩ m' ∧
-      (∃ ens, ∃ hens : lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens,
+      (∃ ens, ∃ hens : lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens,
         ∃ snapshot, (body ens hens snapshot).Post fp m') ∧
       AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ m'.rd64 fp = some rp ∧ m'.rd64 (fp + 8) = some cfp ∧ WeltAt m' L σ := by
   have hks := inside.ks
@@ -2220,19 +2235,19 @@ theorem lowFun_counted {P : Programm D} {A : D.Fn → Nat} {L : Lay D} {f : D.Fn
     simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
     obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
     subst code
-    let s := FB + (D.params f).length
-    let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+    let s := FB + (contextWords (D.params f))
+    let reserved := (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)
     have bounds := fits
     rw [← ht] at bounds
     simp only [frei] at bounds
     have hp : PreS L m pc fp K s
         (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
-          (relocateC FB reserved (D.params f).length ++ cb))))) ρ := by
+          (relocateC FB reserved (contextWords (D.params f)) ++ cb))))) ρ := by
       simpa [s, reserved, List.append_assoc] using pre
     have first := guard_pass_counted hp.left.code (by decide) depthRead positive
     have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
     have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
-        (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) ρ := by
+        (cs ++ (relocateC FB reserved (contextWords (D.params f)) ++ cb))) ρ := by
       simpa [List.append_assoc] using hp1
     have hpq := phases.left
     obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
@@ -2248,7 +2263,7 @@ theorem lowFun_counted {P : Programm D} {A : D.Fn → Nat} {L : Lay D} {f : D.Fn
       exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
         (by unfold vslot FB; omega)).trans hw, enc⟩
     have farS := codeFar_tail rest.far
-    have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) ρ :=
+    have rem : PreS L mS _ fp K s (relocateC FB reserved (contextWords (D.params f)) ++ cb) ρ :=
       ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
         farS, envS, trivial, wstab_true _ _⟩
     obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
@@ -2352,9 +2367,9 @@ theorem terminalCountedSim_zeuge :
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt memory layout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   have joint := lowFun_counted (declared := 12) (rp := 2048) (cfp := 16384) (nq := 1) (nb := 6) (σ := world) (depth := 1)
     (ρ := Env.cons (τ := .int 37 37) (⟨37, by decide, by decide⟩ : Wert fixtureDecl (.int 37 37)) Env.nil) lower (by decide) inside .truth
     (by
@@ -2417,19 +2432,19 @@ theorem ArgsCost.fullCall {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31) (positive : dv ≠ 0)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
-      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
+      ∀ snapshot, EndCost L ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     (pre : PreS L m pc fp K (frei Γ reserved) (callC A f (frei Γ reserved) ca) ρ reserved)
     (surroundings : Umf L A C dv m fp Ks K)
     (inside : WIn L fp Ks K) (world : WeltAt m L σ) :
     ∃ n m', n ≤ na + 4 + declared ∧ Counted n ⟨pc, fp⟩ m
       ⟨pc + BitVec.ofNat 64 (16 * (ca.length + 4)), fp⟩ m' ∧
-      (∃ ens, ∃ hens : lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens,
+      (∃ ens, ∃ hens : lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens,
         ∃ snapshot, (body ens hens snapshot).Post (slot fp (BitVec.ofNat 64 (frei Γ reserved))) m') ∧
       AgreeW L fp (frei Γ reserved) K m m' ∧ FrameOK m' fp K ∧
       FrameOK m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved) ∧
@@ -2445,8 +2460,8 @@ theorem ArgsCost.fullCall {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
     arguments.callEntry lowerArgs fitsArgs address pre surroundings inside world
   have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
       (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
-      (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
-    ⟨by simpa [frei] using Nat.le_refl (FB + (D.params f).length),
+      (FB + (contextWords (D.params f))) (C f) (evalArgs σ₀ args σ ρ) :=
+    ⟨by simpa [frei] using Nat.le_refl (FB + (contextWords (D.params f))),
       by have := pre.small; omega, frame, (code f).1, (code f).2,
       env, trivial, wstab_true _ _⟩
   obtain ⟨n, m2, bound, run, post, calleeAgree, frame, rpc, rfp, hw⟩ := lowFun_counted lowerFun fitsFun
@@ -2468,13 +2483,13 @@ theorem BlockCost.call {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31) (positive : dv ≠ 0)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
-      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
+      ∀ snapshot, EndCost L ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     {V : Vertrag D} {l : Bool} {Λ' : List (Res D)}
     {rest : Block D V l Γ (nach D f Λ) Λ'} {σ' : World D} {ρ' : Env D Γ}
     {nr tr lo : Nat} {cr : List II} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
@@ -2518,13 +2533,13 @@ theorem actualBlockCost.call {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31) (positive : dv ≠ 0)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
-      ∀ snapshot, EndCost L ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
+      ∀ snapshot, EndCost L ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     {V : Vertrag D} {l : Bool} {Λ' : List (Res D)}
     {rest : Block D V l Γ (nach D f Λ) Λ'} {σ' : World D} {ρ' : Env D Γ}
     {nr lo : Nat} {ens : List II × Nat} {pr : List Nat} {ex : Int × Int}
@@ -2544,7 +2559,7 @@ theorem actualBlockCost.call {Γ : Ctx} {Λ : List (Res D)} {f : D.Fn}
         σ' ρ' reserved := by
   simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
   obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
-  simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
+  simp only [lowS, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
   obtain ⟨⟨ca, ta⟩, lowerArgs, stmtOut⟩ := lowerStmt
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj stmtOut
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
@@ -2621,14 +2636,14 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     {rest : Endblock D V l Γ (nach D f Λ)}
     {nr : Nat} {output : Ausgang V l Γ}
     {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
@@ -2643,14 +2658,14 @@ inductive RecursiveEndCost (L : Lay D) (P : Programm D)
     (lowerFun : lowFun passes P A L f = some (C f, top))
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     (result : terminalResult returned = some ⟨τ, v⟩)
     {he : D.erg f = some τ}
     {rest : Endblock D V l (τ :: Γ) (nach D f Λ)}
@@ -2708,7 +2723,7 @@ theorem RecursiveEndCost.sound
       AgreeW L fp 2 K m m' ∧ FrameOK m' fp K ∧ WeltAt m' L σ ∧
       (∀ τ v, terminalResult output = some ⟨τ, v⟩ →
         ∃ w, m'.rd64 (slot fp 2) = some w ∧ Enc L τ v w) ∧
-      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + 1))) =
+      m'.rd64 (slot fp (BitVec.ofNat 64 (lo + returnWords (D.erg f) (D.gruende f)))) =
         some (if (terminalResult output).isSome then 1 else 0) ∧
       (∀ r, terminalReason output = some r →
         m'.rd64 (slot fp 2) = some (BitVec.ofNat 64 r.val)) := by
@@ -2724,7 +2739,7 @@ theorem RecursiveEndCost.sound
     have calleeRun {m : Mem} {pc fp rp cfp : W} {K : Nat}
         (fits : topF ≤ childKs)
         (inside : WIn L fp childKs K)
-        (pre : PreS L m pc fp K (FB + (D.params f).length) (C f)
+        (pre : PreS L m pc fp K (FB + (contextWords (D.params f))) (C f)
           (evalArgs σ₀ args σ ρ))
         (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
         (savedFP : m.rd64 (fp + 8) = some cfp)
@@ -2744,19 +2759,19 @@ theorem RecursiveEndCost.sound
         simp only [Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
         obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
         rw [← hc] at pre
-        let s := FB + (D.params f).length
-        let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+        let s := FB + (contextWords (D.params f))
+        let reserved := (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)
         have bounds := fits
         rw [← ht] at bounds
         simp only [frei] at bounds
         have hp : PreS L m pc fp K s
             (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
-              (relocateC FB reserved (D.params f).length ++ cb))))) (evalArgs σ₀ args σ ρ) := by
+              (relocateC FB reserved (contextWords (D.params f)) ++ cb))))) (evalArgs σ₀ args σ ρ) := by
           simpa [s, reserved, List.append_assoc] using pre
         have first := guard_pass_counted hp.left.code (by decide) depthRead positive
         have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
         have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
-            (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) (evalArgs σ₀ args σ ρ) := by
+            (cs ++ (relocateC FB reserved (contextWords (D.params f)) ++ cb))) (evalArgs σ₀ args σ ρ) := by
           simpa [List.append_assoc] using hp1
         have hpq := phases.left
         obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
@@ -2772,7 +2787,7 @@ theorem RecursiveEndCost.sound
           exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
             (by unfold vslot FB; omega)).trans hw, enc⟩
         have farS := codeFar_tail rest.far
-        have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) (evalArgs σ₀ args σ ρ) :=
+        have rem : PreS L mS _ fp K s (relocateC FB reserved (contextWords (D.params f)) ++ cb) (evalArgs σ₀ args σ ρ) :=
           ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
             farS, envS, trivial, wstab_true _ _⟩
         obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
@@ -2803,11 +2818,11 @@ theorem RecursiveEndCost.sound
           (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
           (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp bodyUmf (by omega)
         simp only [relocateC_length] at rb
-        refine ⟨2 + nq + 2 + cs.length + (D.params f).length + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
+        refine ⟨2 + nq + 2 + cs.length + (contextWords (D.params f)) + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
         simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
           first.trans (rq.trans (rs.trans (rr.trans rb)))
       next refused => simp at lower
-    simp only [lowEnd, lowS, Bind.bind, Option.bind_eq_some_iff, pure,
+    simp only [lowEnd, resultWords_vertragVon, lowS, Bind.bind, Option.bind_eq_some_iff, pure,
       Option.some.injEq, Prod.mk.injEq] at lower
     obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, rfl, rfl⟩ := lower
     obtain ⟨⟨ca, ta⟩, ha, out⟩ := hs
@@ -2829,7 +2844,7 @@ theorem RecursiveEndCost.sound
       simpa only [deq] using childUmf
     have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
         (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
-        (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
+        (FB + (contextWords (D.params f))) (C f) (evalArgs σ₀ args σ ρ) :=
       ⟨by simp [frei], by have := pre.small; omega, childFrame,
         (childUmf'.code f).1, (childUmf'.code f).2, env, trivial, wstab_true _ _⟩
     obtain ⟨nCall, m2, boundCall, callRun, calleeAgree, frame, hw, resultRead⟩ :=
@@ -2856,7 +2871,7 @@ theorem RecursiveEndCost.sound
     rw [← len] at joined
     exact joined.trans restRun
   | @assign depth Ks reserved V l Δ snapshot ens lo Γ Λ τ output x e rest σ ρ v ne nr value tail ih =>
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, hr, ⟨cs, ts⟩, hs, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     obtain ⟨m1, run1, agree1, env1, world1, keep1⟩ :=
@@ -2882,7 +2897,7 @@ theorem RecursiveEndCost.sound
       (Umf.agreeW inside surroundings agree1 (by unfold FB; omega)) depthBound
     exact ⟨_, m2, by omega, run1.trans run2, (agree1.mono (by omega)).trans finalAgree, frame, hw, (by simpa using result2), (by simpa using status)⟩
   | @bind depth Ks reserved V l Δ snapshot ens lo Γ Λ τ output e rest σ ρ v ne nr value tail ih =>
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨ce, te⟩, he, ⟨cr, tr⟩, hr, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     have hks := inside.ks
@@ -2894,7 +2909,7 @@ theorem RecursiveEndCost.sound
     have far := codeFar_right (n := ce.length) (k := cr.length) (by simpa using pre.far)
     have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K
         (frei Γ reserved + 1) cr (Env.cons v ρ) reserved :=
-      ⟨by simp only [frei, List.length_cons]; omega, pre.small, pre.frame.agree a1,
+      ⟨by simp only [frei, contextWords_cons]; omega, pre.small, pre.frame.agree a1,
         (codeAt_right pre.code).agree a1 far, far,
         envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega)) read encoded,
         trivial, wstab_true _ _⟩
@@ -2905,8 +2920,8 @@ theorem RecursiveEndCost.sound
       have h := agree_rd_low (i := 1) a1 pre.frame.room (by omega) (by omega)
       simpa [slot] using h.trans (by simpa [slot] using savedFP)
     obtain ⟨n2, m2, bound2, run2, finalAgree, frame, hw, result2, status⟩ := ih hr (Nat.le_trans (Nat.le_max_right _ _) fits) inside
-      (by simp only [frei, List.length_cons] at low ⊢; omega)
-      abi lowBound (fun j hj => by have := hprotected j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+      (by simp only [frei, contextWords_cons] at low ⊢; omega)
+      abi lowBound (fun j hj => by have := hprotected j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
       nextPre (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
       parameters (envAt_agree parameterEnv a1 pre.frame (by omega) (by omega)) base
       (by rw [agree_rd_low a1 pre.frame.room (by omega) (by omega)]; exact entry) rpc rfp
@@ -2914,7 +2929,7 @@ theorem RecursiveEndCost.sound
     exact ⟨_, m2, by omega, run1.trans run2, (agreeW_of (a1.mono (by omega))).trans finalAgree, frame, hw, (by simpa using result2), (by simpa using status)⟩
 
   | @branch depth Ks reserved V l Δ snapshot ens lo Γ Λ output c t e σ ρ choice nc nb condition jumpFits child ih =>
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cc, tc⟩, hc, ⟨ce, te⟩, he, ⟨ct, tt⟩, ht, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     have hks := inside.ks
@@ -2983,7 +2998,7 @@ theorem RecursiveEndCost.sound
     have calleeRun {m : Mem} {pc fp rp cfp : W} {K : Nat}
         (fits : topF ≤ childKs)
         (inside : WIn L fp childKs K)
-        (pre : PreS L m pc fp K (FB + (D.params f).length) (C f)
+        (pre : PreS L m pc fp K (FB + (contextWords (D.params f))) (C f)
           (evalArgs σ₀ args σ ρ))
         (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
         (savedFP : m.rd64 (fp + 8) = some cfp)
@@ -3003,19 +3018,19 @@ theorem RecursiveEndCost.sound
         simp only [Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
         obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
         rw [← hc] at pre
-        let s := FB + (D.params f).length
-        let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+        let s := FB + (contextWords (D.params f))
+        let reserved := (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)
         have bounds := fits
         rw [← ht] at bounds
         simp only [frei] at bounds
         have hp : PreS L m pc fp K s
             (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
-              (relocateC FB reserved (D.params f).length ++ cb))))) (evalArgs σ₀ args σ ρ) := by
+              (relocateC FB reserved (contextWords (D.params f)) ++ cb))))) (evalArgs σ₀ args σ ρ) := by
           simpa [s, reserved, List.append_assoc] using pre
         have first := guard_pass_counted hp.left.code (by decide) depthRead positive
         have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
         have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
-            (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) (evalArgs σ₀ args σ ρ) := by
+            (cs ++ (relocateC FB reserved (contextWords (D.params f)) ++ cb))) (evalArgs σ₀ args σ ρ) := by
           simpa [List.append_assoc] using hp1
         have hpq := phases.left
         obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
@@ -3031,7 +3046,7 @@ theorem RecursiveEndCost.sound
           exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
             (by unfold vslot FB; omega)).trans hw, enc⟩
         have farS := codeFar_tail rest.far
-        have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) (evalArgs σ₀ args σ ρ) :=
+        have rem : PreS L mS _ fp K s (relocateC FB reserved (contextWords (D.params f)) ++ cb) (evalArgs σ₀ args σ ρ) :=
           ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
             farS, envS, trivial, wstab_true _ _⟩
         obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
@@ -3062,11 +3077,11 @@ theorem RecursiveEndCost.sound
           (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
           (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp bodyUmf (by omega)
         simp only [relocateC_length] at rb
-        refine ⟨2 + nq + 2 + cs.length + (D.params f).length + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
+        refine ⟨2 + nq + 2 + cs.length + (contextWords (D.params f)) + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
         simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
           first.trans (rq.trans (rs.trans (rr.trans rb)))
       next refused => simp at lower
-    simp only [lowEnd, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
+    simp only [lowEnd, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨ca, ta⟩, ha, ⟨cr, tr⟩, hr, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     change max (callTop f (frei Γ reserved) ta) tr ≤ Ks at fits
@@ -3086,7 +3101,7 @@ theorem RecursiveEndCost.sound
       simpa only [deq] using childUmf
     have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
         (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
-        (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
+        (FB + (contextWords (D.params f))) (C f) (evalArgs σ₀ args σ ρ) :=
       ⟨by simp [frei], by have := pre.small; omega, childFrame,
         (childUmf'.code f).1, (childUmf'.code f).2, env, trivial, wstab_true _ _⟩
     obtain ⟨nCall, m2, boundCall, callRun, calleeAgree, frame, hw, resultRead⟩ :=
@@ -3146,14 +3161,14 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
     (depthBound : depth + 2 < 2 ^ 64)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     {ca : List II} {ta K : Nat} {m : Mem} {pc fp : W}
     (lowerArgs : lowA L args (frei Γ reserved + FB) reserved = some (ca, ta))
     (fitsArgs : callTop f (frei Γ reserved) ta ≤ Ks)
@@ -3169,7 +3184,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
   have calleeRun {m : Mem} {pc fp rp cfp : W} {K : Nat}
       (fits : top ≤ childKs)
       (inside : WIn L fp childKs K)
-      (pre : PreS L m pc fp K (FB + (D.params f).length) (C f)
+      (pre : PreS L m pc fp K (FB + (contextWords (D.params f))) (C f)
         (evalArgs σ₀ args σ ρ))
       (world : WeltAt m L σ) (savedPC : m.rd64 fp = some rp)
       (savedFP : m.rd64 (fp + 8) = some cfp)
@@ -3189,19 +3204,19 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
       simp only [Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
       obtain ⟨⟨cq, tq⟩, hq, ens, hens, ⟨cb, tb⟩, hb, cs, hcs, hc, ht⟩ := lower
       rw [← hc] at pre
-      let s := FB + (D.params f).length
-      let reserved := (D.params f).length + 2 + 2 * counterDepthE (P.rumpf f)
+      let s := FB + (contextWords (D.params f))
+      let reserved := (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)
       have bounds := fits
       rw [← ht] at bounds
       simp only [frei] at bounds
       have hp : PreS L m pc fp K s
           (guardC 2 105 s ++ (cq ++ (guardC s 101 s ++ (cs ++
-            (relocateC FB reserved (D.params f).length ++ cb))))) (evalArgs σ₀ args σ ρ) := by
+            (relocateC FB reserved (contextWords (D.params f)) ++ cb))))) (evalArgs σ₀ args σ ρ) := by
         simpa [s, reserved, List.append_assoc] using pre
       have first := guard_pass_counted hp.left.code (by decide) depthRead positive
       have hp1 := hp.next (Agree.refl _ _ _ _) (Nat.le_refl _) (by omega)
       have phases : PreS L m (pc + BitVec.ofNat 64 (16 * (guardC 2 105 s).length)) fp K s ((cq ++ guardC s 101 s) ++
-          (cs ++ (relocateC FB reserved (D.params f).length ++ cb))) (evalArgs σ₀ args σ ρ) := by
+          (cs ++ (relocateC FB reserved (contextWords (D.params f)) ++ cb))) (evalArgs σ₀ args σ ρ) := by
         simpa [List.append_assoc] using hp1
       have hpq := phases.left
       obtain ⟨m1, rq, a1, env1, _⟩ := requirement.guard hq (by omega) hpq
@@ -3217,7 +3232,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
         exact ⟨w, (keep (vslot x) (by have := vslot_lt (reserved := 0) x; unfold frei at this; omega)
           (by unfold vslot FB; omega)).trans hw, enc⟩
       have farS := codeFar_tail rest.far
-      have rem : PreS L mS _ fp K s (relocateC FB reserved (D.params f).length ++ cb) (evalArgs σ₀ args σ ρ) :=
+      have rem : PreS L mS _ fp K s (relocateC FB reserved (contextWords (D.params f)) ++ cb) (evalArgs σ₀ args σ ρ) :=
         ⟨rest.ctx, pre.small, hfS, (codeAt_right rest.code).agree aS farS,
           farS, envS, trivial, wstab_true _ _⟩
       obtain ⟨mR, rr, aR, moved⟩ := relocate_env_counted hfS pre.small
@@ -3248,7 +3263,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
         (fun _ h => nomatch h) bodyPre worldR (evalArgs σ₀ args σ ρ) original rfl
         (rd64_rdW (hfS.agree ar) (by omega)) rpc rfp bodyUmf (by omega)
       simp only [relocateC_length] at rb
-      refine ⟨2 + nq + 2 + cs.length + (D.params f).length + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
+      refine ⟨2 + nq + 2 + cs.length + (contextWords (D.params f)) + nBody, m', by have := declaration cs hcs; omega, ?_, (agreeW_of (all.mono (by decide))).trans bodyAgree, frame, finalWorld, resultRead⟩
       simpa [s, pc_add, relocateC_length, List.length_append, Nat.add_assoc] using
         first.trans (rq.trans (rs.trans (rr.trans rb)))
     next refused => simp at lower
@@ -3266,7 +3281,7 @@ theorem ArgsCost.fullRecursiveCall {P : Programm D} {passes : Nat} {Γ : Ctx} {�
     simpa only [deq] using childUmf
   have calleePre : PreS L m1 (BitVec.ofNat 64 (A f))
       (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (K - frei Γ reserved)
-      (FB + (D.params f).length) (C f) (evalArgs σ₀ args σ ρ) :=
+      (FB + (contextWords (D.params f))) (C f) (evalArgs σ₀ args σ ρ) :=
     ⟨by simp [frei], by have := pre.small; omega, childFrame,
       (childUmf'.code f).1, (childUmf'.code f).2, env, trivial, wstab_true _ _⟩
   obtain ⟨nCall, m2, boundCall, callRun, calleeAgree, frame, hw, resultRead⟩ :=
@@ -3570,14 +3585,14 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
     (depthBound : depth + 2 < 2 ^ 64)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     {Λ' : List (Res D)}
     {rest : Block D V l Γ (nach D f Λ) Λ'} {outcome : Ausgang V l Γ}
     {nr : Nat}
@@ -3594,14 +3609,14 @@ inductive recursiveBlockCost (L : Lay D) (reserved : Nat) (P : Programm D)
     (fitsFun : top ≤ Ks - frei Γ reserved)
     (address : A f < 2 ^ 31) (depthEq : dv = BitVec.ofNat 64 (depth + 1))
     (depthBound : depth + 2 < 2 ^ 64)
-    (requirement : ExprCost L 0 (P.requires f) (FB + (D.params f).length) nq (· = 1))
-    (body : ∀ ens, lowEns L (P.ensures f) (FB + (D.params f).length + 1) = some ens →
+    (requirement : ExprCost L 0 (P.requires f) (FB + (contextWords (D.params f))) nq (· = 1))
+    (body : ∀ ens, lowEns L (P.ensures f) (FB + (contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f)) = some ens →
       ∀ snapshot, RecursiveEndCost L P passes A C depth (Ks - frei Γ reserved)
-        ((D.params f).length + 2 + 2 * counterDepthE (P.rumpf f))
-        (vertragVon D f) false (D.params f) snapshot ens (FB + (D.params f).length)
+        ((contextWords (D.params f)) + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f))
+        (vertragVon D f) false (D.params f) snapshot ens (FB + (contextWords (D.params f)))
         (P.rumpf f) σ (evalArgs σ₀ args σ ρ) returned nb)
     (declaration : ∀ cs, snapC L (oldCells (P.ensures f)) = some cs →
-      2 + nq + 2 + cs.length + (D.params f).length + nb ≤ declared)
+      2 + nq + 2 + cs.length + (contextWords (D.params f)) + nb ≤ declared)
     (result : terminalResult returned = some ⟨τ, v⟩)
     {he : D.erg f = some τ}
     {Λ' : List (Res D)}
@@ -3657,7 +3672,7 @@ theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
     obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
     have imageBound := imageFits _ _ _ _ _ _ lowerStmt
-    dsimp only [lowS] at lowerStmt
+    dsimp only [lowS, resultWords_vertragVon] at lowerStmt
     split at lowerStmt
     next allowed =>
       obtain ⟨cc, hcc, emitted⟩ := Option.bind_eq_some_iff.mp lowerStmt
@@ -3680,7 +3695,7 @@ theorem recursiveBlockCost.sound {P : Programm D} {passes : Nat}
   | @call Γ Λ f args σ₀ σ ρ na nq nb declared depth returned arguments topFun lowerFun fitsFun address depthEq depthBound requirement body declaration Λ' rest outcome nr hp hr tail ih =>
     simp only [lowB, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lower
     obtain ⟨⟨cr, tr⟩, lowerTail, ⟨cs, ts⟩, lowerStmt, out⟩ := lower
-    simp only [lowS, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
+    simp only [lowS, resultWords_vertragVon, Bind.bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at lowerStmt
     obtain ⟨⟨ca, ta⟩, lowerArgs, stmtOut⟩ := lowerStmt
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj stmtOut
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj out
@@ -4250,9 +4265,9 @@ theorem call_continuation_zeuge : ∃ n, n ≤ 17 ∧
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt memory layout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   have sync : SyncOK memory layout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,
       (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
@@ -4371,9 +4386,9 @@ theorem bind_continuation_zeuge : ∃ n, n ≤ 18 ∧
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt memory layout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   have sync : SyncOK memory layout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,
       (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
@@ -4542,9 +4557,9 @@ theorem sound_zeuge : ∃ n m', n ≤ 23 ∧
       | elem t => nomatch t
       | glob _ => rfl
   have hw : WeltAt memory layout world := by
-    refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+    refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
     cases g
-    decide +kernel
+    exact ValueAt.ofCellWord (w := 64) (by decide) (by decide +kernel) rfl
   have sync : SyncOK memory layout 4096 128 :=
     ⟨by decide, by decide, by decide, by decide, by decide, by decide,
       (fun l => nomatch l), by decide, (fun l => nomatch l), (fun l => nomatch l), (fun l => nomatch l)⟩
@@ -4585,13 +4600,13 @@ def CountedSimOutcome (L : Lay D) (P : Programm D) (f : D.Fn)
   | .hardware h => pending (hwCode h)
   | .why σ r => u = ⟨rp, cfp⟩ ∧ AgreeW L fp 2 K m a ∧
       a.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 r.val) ∧
-      ReturnFlag a fp (D.params f).length false ∧ WeltAt a L σ
+      ReturnFlag a fp (contextWords (D.params f)) false (returnWords (D.erg f) (D.gruende f)) ∧ WeltAt a L σ
   | .zurueck σ v =>
       if wahr? (eval σ0 (P.ensures f) (σ.lese (vertragVon D f).ende (P.ensures f).orte)
           (ergEnv (D.erg f) v ρ0)) = false then pending 102
       else u = ⟨rp, cfp⟩ ∧ AgreeW L fp 2 K m a ∧
         (∃ w, a.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧
-          EncErg L (D.erg f) v w ∧ ReturnFlag a fp (D.params f).length true) ∧ WeltAt a L σ
+          EncErg L (D.erg f) v w ∧ ReturnFlag a fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧ WeltAt a L σ
 
 /-- All outcome kinds consume observations of the very same counted endpoint.
     In particular no callee-frame equality is imposed on a return. -/
@@ -5452,7 +5467,7 @@ theorem NestedForever.accepted_sound
       CountedSim k L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m
         (pc + BitVec.ofNat 64 (16 * code.length))
         (pc + BitVec.ofNat 64 (16 * code.length)) (pc + 16 + 16) outcome reserved := by
-  dsimp only [lowS] at lower
+  dsimp only [lowS, resultWords_vertragVon] at lower
   split at lower
   next allowed =>
     obtain ⟨⟨cc, tc⟩, lowerInv, emitted⟩ := Option.bind_eq_some_iff.mp lower

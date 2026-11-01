@@ -1,0 +1,8 @@
+// A string literal widened to a larger capacity keeps its length word and bytes and pads with zero words.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let s : string max 5 = "abc";
+    let t : string max 5 = s;
+    return lenof(t);
+}
+}

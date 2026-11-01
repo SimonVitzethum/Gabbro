@@ -1,6 +1,7 @@
 /- Subject: Reusing the ordinary expression and store proofs for captured byte spans. -/
 import Stage0.Senke.Anweisung.Bytes.Extract
 import Stage0.Senke.Anweisung.Schreiben
+import Stage0.Senke.Welt.WordCell
 import Stage0.Senke.Anweisung.Simulation
 
 namespace Gabbro.Stage0.Senke
@@ -58,15 +59,16 @@ theorem putBytesL_ok {L : Lay D} {Γ : Ctx} {Λ : List (Res D)} {t : D.Tab} {f :
       have := k.le_hi; have := Int.toNat_of_nonneg hk0; omega
     have hkn : (((k.n + j).toNat : Nat) : Int) = k.n + j := Int.toNat_of_nonneg hk0
     have htop := slotA_top ha
+    have cw : valueWords (D.typ t f) = 1 := by rw [hf]; rfl
     obtain ⟨m1, s1, a1, en1, hw1⟩ := store_ok hp'.left hW hWa (by omega)
       (fun m pc hp => (bytePartC_ok hz (by omega) (by omega) hp).mono
         (fun w hw => (enc_int_cast_back hf part w).mpr hw))
-      (fun m pc hp => slotA_ok (σ₀ := σ) (σ := σ) (i := ix) ha (by omega)
-        (fun m pc hp => lowE_ok σ σ (fun _ h => h) ix _ ci' ti hi (by omega) m pc _ hp) hp)
-      (by simpa only [hixn] using (hW.lay.1 t f (k.n + j).toNat (L.bounded hkc)))
+      (fun m pc hp => slotA_ok (σ₀ := σ) (σ := σ) (i := ix) cw ha (by omega)
+        (fun m pc hp => lowE_ok σ σ (fun _ h => h) hW.lay ix _ ci' ti hi (by omega) m pc _ hp |>.word trivial) hp)
+      (by have h := hW.lay.1 t f (k.n + j).toNat (L.bounded hkc); rw [cw] at h; simpa only [hixn] using h)
       (fun m w hm hw => by
         have hnw : Enc L (D.typ t f) (cast (congrArg (Wert D) hf).symm part) w := hw
-        have hh := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hnw
+        have hh := weltAt_slotWord cw hm hW.lay hW.dis (L.bounded hkc) hnw
         rw [hkn] at hh
         exact hh)
     have hcf := codeFar_right (n := (ce ++ ca ++ [stC (frei Γ reserved + 2)]).length) (k := rest.length) (by simpa only [List.length_append] using hp'.far)

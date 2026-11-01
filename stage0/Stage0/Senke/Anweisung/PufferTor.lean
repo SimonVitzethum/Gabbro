@@ -78,14 +78,16 @@ theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : 
   have hpU := hp.up (d' := s + 1) (by omega)
   have hq : PreS L m pc fp K (s + 1) ca ρ reserved := hpU.left.left.left.left.left
   have hpw := PreS.welt hq hks hWa hl (by omega)
-  obtain ⟨m1, s1, a1, hA1⟩ := lowR_ok σ σ (fun _ h => h) args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
+  obtain ⟨m1, s1, a1, hA1⟩ := lowR_ok σ σ (fun _ h => h) hW.lay args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
   have hW1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
   -- the cells' words
   let ws : Nat → Runner.W := fun k => wAt m (L.elem t f k)
   have hcell : ∀ k, k < c → (L.elem t f k : Int) < 2 ^ 31 ∧ L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi := fun k hk => by
-    have := hl.1 t f k (L.bounded (by omega)); exact ⟨by omega, this.1, this.2⟩
+    have h := hl.1 t f k (L.bounded (by omega))
+    rw [show valueWords (D.typ t f) = 1 by rw [hτ]; rfl] at h
+    exact ⟨by omega, h.1, by omega⟩
   have hwsm : ∀ k, k < c → m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (ws k) := fun k hk => by
-    obtain ⟨w, hw, _⟩ := hWa.1 t f k (L.bounded (by omega))
+    obtain ⟨w, hw, _⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hWa.1 t f k (L.bounded (by omega)))
     show _ = some (wAt m (L.elem t f k))
     rw [wAt_of hw]; exact hw
   let Wc : Runner.Mem → Prop := fun m' => ∀ k, k < c → m'.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some (ws k)
@@ -227,10 +229,10 @@ theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : 
     simp only [Bool.false_eq_true, ↓reduceIte] at hU
     subst hU
     refine ⟨m7, w, by simpa using s16, agreeW_of a17, hs7, ?_, by rw [hroh]⟩
-    refine weltAt_puf hl hd (by omega) hcount hOhne (fun k hk => ?_) (fun a h1 h2 _ => hworld7 a h1 h2)
+    refine weltAt_puf (by rw [hτ]; rfl) hl hd (by omega) hcount hOhne (fun k hk => ?_) (fun a h1 h2 _ => hworld7 a h1 h2)
       (hW5.2.2.keep (by rw [a67.wr, hwr6]))
     have hk' : k < c := by omega
-    refine ⟨ws k, by rw [hworld7 _ (by have := hcell k hk'; omega) (by have := hcell k hk'; omega)]; exact hWc5 k hk', ?_⟩
+    refine ValueAt.ofCellWord (by rw [hτ]; rfl) (w := ws k) (by rw [hworld7 _ (by have := hcell k hk'; omega) (by have := hcell k hk'; omega)]; exact hWc5 k hk') ?_
     have := hCol k hk
     simp only [Bool.false_eq_true, ↓reduceIte, wAt_of (hWc5 k hk')] at this
     exact this
@@ -250,21 +252,21 @@ theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : 
        codeFar_sub2 hfU hks, hn7.env, trivial, wstab_true _ _⟩
     rw [hU] at hpre7 hfU
     have hW7 : WeltWr m7 L := hW5.2.2.keep (by rw [a67.wr, hwr6])
-    obtain ⟨m8, s8, a8, hc8, ho8⟩ := unpackK_ok hl hd (by omega) (by omega) hord c (by omega)
+    obtain ⟨m8, s8, a8, hc8, ho8⟩ := unpackK_ok (by rw [hτ]; rfl) hl hd (by omega) (by omega) hord c (by omega)
       (fun k hk => by have : k / 8 < Wn := (by rw [hWn]; simp only [pufW]; omega); omega) m7 _ hpre7 hW7
       (fun k hk => by
-        obtain ⟨w', hw', _⟩ := hW5.1 t f k (L.bounded hk)
+        obtain ⟨w', hw', _⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW5.1 t f k (L.bounded hk))
         rw [a67.rd, hrd6]; exact rd64_some_all hw')
     rw [← hU] at s8
     refine ⟨m8, w, s16.trans s8 |> fun h => star_cast h rfl ?_, (agreeW_of a17).trans (AgreeW.widen (a8.mono (by omega)) hks), ?_, ?_, by rw [hroh]⟩
     · simp only [T.mk.injEq, and_true, p16]
       exact congrArg (fun x => pc + BitVec.ofNat 64 x) (by omega)
     · rw [agreeW_rd_low a8 (by omega) hroom (by omega) (by omega)]; exact hs7
-    · refine weltAt_puf hl hd (by omega) hcount hOhne (fun k hk => ?_)
+    · refine weltAt_puf (by rw [hτ]; rfl) hl hd (by omega) hcount hOhne (fun k hk => ?_)
         (fun a h1 h2 h3 => by rw [ho8 a h1 h2 (fun k hk => h3 k (by omega)), hworld7 a h1 h2])
         (hW5.2.2.keep (by rw [a8.wr, a67.wr, hwr6]))
       have hk' : k < c := by omega
-      refine ⟨_, hc8 k hk', ?_⟩
+      refine ValueAt.ofCellWord (by rw [hτ]; rfl) (hc8 k hk') ?_
       have := hCol k hk
       simp only [↓reduceIte] at this
       rw [hbyte k hk']

@@ -76,12 +76,22 @@ theorem AgreeK.rd_low {fp : W} {s a i : Nat} {m m' : Mem} (h : AgreeK fp s a m m
   · have := fp.isLt
     simp only [BitVec.toNat_add, BitVec.toNat_ofNat, hs] at h1; omega
 
+/-- Lock bookkeeping preserves complete values below its scratch frame. -/
+theorem AgreeK.valueAt {fp : W} {base s a : Nat} {m m' : Mem} {τ : Ty} {v : Wert D τ}
+    (h : AgreeK fp s a m m') (value : ValueAt L m fp base τ v)
+    (below : base + valueWords τ ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a)
+    (ha : a + 24 < 2 ^ 31) : ValueAt L m' fp base τ v := by
+  refine ⟨value.1, ?_⟩
+  intro i hi
+  have width := encodeWords_length L τ v
+  rw [h.rd_low (by omega) hf ha]
+  exact value.2 i hi
+
 theorem AgreeK.envAt {reserved : Nat} {fp : W} {s a : Nat} {m m' : Mem} {Γ : Ctx} {ρ : Env D Γ} (h : AgreeK fp s a m m')
     (he : EnvAt L m fp ρ reserved) (hs : frei Γ reserved ≤ s) (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha : a + 24 < 2 ^ 31) :
     EnvAt L m' fp ρ reserved := fun τ x => by
-  obtain ⟨w, hw, hen⟩ := he τ x
-  have := vslot_lt (reserved := reserved) x
-  exact ⟨w, by rw [h.rd_low (by omega) hf ha]; exact hw, hen⟩
+  have bound := variableOffset_bound x
+  exact h.valueAt (he τ x) (by unfold vslot frei at *; omega) hf ha
 
 theorem AgreeK.codeAt {fp : W} {s a : Nat} {m m' : Mem} (h : AgreeK fp s a m m') (hf : fp.toNat + 8 * (s + 18) ≤ a)
     (ha : a + 24 < 2 ^ 31) {pc : W} {is : List II} (hc : CodeAt m pc is) {K : Nat} (hcf : CodeFar pc is.length fp K) :
@@ -97,30 +107,43 @@ theorem AgreeK.preS {reserved : Nat} {m m1 : Mem} {pc fp : W} {K d s a : Nat} {x
    ha.envAt h.env hs hf ha31, trivial, wstab_true _ _⟩
 
 theorem AgreeK.kopf {P : Programm D} {σ0 : World D} {m m1 : Mem} {fp : W} {K s a : Nat} {f : D.Fn} {rp cfp : W} {ρ0 : Env D (D.params f)}
-    (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : AgreeK fp s a m m1) (hs : FB + (D.params f).length ≤ s)
+    (h : Kopf L f m fp K rp cfp ρ0 P σ0) (ha : AgreeK fp s a m m1) (hs : FB + (contextWords (D.params f)) ≤ s)
     (hf : fp.toNat + 8 * (s + 18) ≤ a) (ha31 : a + 24 < 2 ^ 31) : Kopf L f m1 fp K rp cfp ρ0 P σ0 := by
   have hFB3 : FB = 4 := rfl
   refine ⟨by rw [ha.rd_low (by omega) hf ha31]; exact h.r0, by rw [ha.rd_low (by omega) hf ha31]; exact h.r1,
     ha.envAt h.env (by simp only [frei]; omega) hf ha31, h.big, ?_⟩
   intro c hc
-  obtain ⟨w, hw, he⟩ := h.entry c hc
-  exact ⟨w, by rw [ha.rd_low (by omega) hf ha31]; exact hw, he⟩
+  obtain ⟨width, value⟩ := h.entry c hc
+  exact ⟨width, ha.valueAt value (by omega) hf ha31⟩
+
+/-- A complete cell whose bytes keep their values keeps every word and its recursive validity. -/
+theorem valueAt_keep {m m' : Mem} {address : Nat} {τ : Ty} {v : Wert D τ}
+    (input : ValueAt L m (BitVec.ofNat 64 address) 0 τ v) (hrd : m'.rd = m.rd)
+    (bound : address + 8 * valueWords τ < 2 ^ 31)
+    (hb : ∀ x : W, address ≤ x.toNat → x.toNat < address + 8 * valueWords τ → m'.b x = m.b x) :
+    ValueAt L m' (BitVec.ofNat 64 address) 0 τ v := by
+  refine ⟨input.1, fun i hi => ?_⟩
+  have index : i < valueWords τ := by simpa only [encodeWords_length] using hi
+  have addr : slot (BitVec.ofNat 64 address) (BitVec.ofNat 64 (0 + i)) =
+      BitVec.ofNat 64 (address + 8 * i) := by
+    simp only [Nat.zero_add, slot]
+    change BitVec.ofNat 64 address + BitVec.ofNat 64 i * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+    congr 1; omega
+  have h := input.2 i hi
+  rw [addr] at h ⊢
+  rw [rd64_keep hrd fun j hj => hb _ (by rw [lk_byte (by omega) hj]; omega) (by rw [lk_byte (by omega) hj]; omega)]
+  exact h
 
 theorem weltAt_keep {m m' : Mem} {L : Lay D} {σ : World D} (h : WeltAt m L σ) (hl : LayIn L) (hrd : m'.rd = m.rd)
     (hwr : m'.wr = m.wr) (hb : ∀ x : W, L.lo ≤ x.toNat → x.toNat < L.hi → m'.b x = m.b x) : WeltAt m' L σ := by
   obtain ⟨hs, hg, hw⟩ := h
   obtain ⟨hl1, hl2, hl3⟩ := hl
   refine ⟨fun t f k hk => ?_, fun g => ?_, hw.keep hwr⟩
-  · obtain ⟨w, hrw, he⟩ := hs t f k hk
-    have := hl1 t f k hk
-    refine ⟨w, ?_, he⟩
-    rw [rd64_keep hrd fun j hj => hb _ (by rw [lk_byte (by omega) hj]; omega) (by rw [lk_byte (by omega) hj]; omega)]
-    exact hrw
-  · obtain ⟨w, hrw, he⟩ := hg g
-    have := hl2 g
-    refine ⟨w, ?_, he⟩
-    rw [rd64_keep hrd fun j hj => hb _ (by rw [lk_byte (by omega) hj]; omega) (by rw [lk_byte (by omega) hj]; omega)]
-    exact hrw
+  · have := hl1 t f k hk
+    exact valueAt_keep (hs t f k hk) hrd (by omega) fun x h1 h2 => hb x (by omega) (by omega)
+  · have := hl2 g
+    exact valueAt_keep (hg g) hrd (by omega) fun x h1 h2 => hb x (by omega) (by omega)
 
 theorem AgreeK.weltAt {m m1 : Mem} {fp : W} {s a : Nat} {L : Lay D} {σ : World D} (h : AgreeK fp s a m m1)
     (hw : WeltAt m L σ) (hl : LayIn L) (hlo : fp.toNat + 8 * (s + 18) ≤ L.lo) (hhi : L.hi ≤ a) : WeltAt m1 L σ :=

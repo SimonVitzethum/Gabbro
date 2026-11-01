@@ -86,7 +86,7 @@ theorem reachL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt 
         · intro _ c top hh ht m pc hp
           have hr := reachL_ok hf hWL hn goal fuel next b q c top hh ht
             (fun c top h ht m pc hp => (hnxt c top h ht m pc hp).mono fun w hw => by simpa [heq, Enc, optN] using hw) hb m pc hp
-          simpa only [kette, if_neg hne, heq] using hr
+          simpa only [Ok, Executes, kette, if_neg hne, heq] using hr
 
 /-- The preflight checks and the bounded-chain proof for a complete reachability expression. -/
 theorem reachesL_ok {L : Lay D} {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .opt (D.count t))

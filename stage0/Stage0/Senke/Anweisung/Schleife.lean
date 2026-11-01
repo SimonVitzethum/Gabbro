@@ -38,7 +38,7 @@ theorem trav_stopped {m : Runner.Mem} {ρ : Env D Γ}
     (by decide)
 
 theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved := reserved) L inv (frei Γ reserved + 1) = some ci')
-    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (D.params f).length)
+    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (contextWords (D.params f)))
     (htop : max ci'.2 (max cb.2 (frei Γ reserved + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ) reserved) cb.1 ρ' reserved → Umf L A C dv m' fp Ks K →
@@ -54,6 +54,11 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (idxAb (D.count t) k n) σ' ρ') reserved := by
+  have hindex : valueWords (.index (D.count t)) = 1 :=
+    integerWords_word (by omega) (by have h := hn; simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at h; omega)
+  have hctxWidth : frei (.index (D.count t) :: Γ) reserved = frei Γ reserved + 1 := by
+    simp [frei, hindex, Nat.add_assoc]
+
   have hks := hW.ks
   have hnl : (D.count t) < 2 ^ 63 ∧ -2 ^ 63 ≤ D.count t := by
     simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hn; omega
@@ -135,9 +140,14 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
       have hE2 : EnvAt L m2 fp ρ' reserved := envAt_agree hp.env (A12.mono (Nat.le_succ _)) hp.frame (Nat.le_refl _) (by omega)
       have hex : Enc L (D := D) (.index (D.count t)) x (BitVec.ofNat 64 k) := by
         simp only [Enc]; rw [hxn, BitVec.ofInt_natCast]
+      have indexWidth : valueWords (.index (D.count t)) = 1 := by
+        change integerWords 0 (D.count t - 1) = 1
+        have bounds := hn
+        simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at bounds
+        exact integerWords_unsigned (by decide) (by omega)
       have hpb : PreS L m2 (pc + BitVec.ofNat 64 (16 * (5 + travCountSize (D.count t) + ci'.1.length))) fp K (frei (.index (D.count t) :: Γ) reserved) cb.1
           (Env.cons (show Wert D (Ty.index (D.count t)) from x) ρ') reserved :=
-        mkPreS (Nat.le_refl _) hp.small hF2 (trav_body hc2) (codeFar_at hp.far (by omega)) (envAt_cons hE2 hk2 hex)
+        mkPreS (Nat.le_refl _) hp.small hF2 (trav_body hc2) (codeFar_at hp.far (by omega)) (envAt_cons hE2 (ValueAt.of_enc indexWidth hk2 hex))
       have hu2 := hu.agree A12 hp.frame (by omega)
       have hk2' := hk.agree A12 hp.frame (by omega)
       have hb := hbody m2 _ (σ'.lese Λ inv.orte) (Env.cons (show Wert D (Ty.index (D.count t)) from x) ρ') hpb hu2 hk2' hWa2
@@ -209,8 +219,8 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
             ρ1.tail reserved :=
           mkPreS (by simp only [frei]; omega) hp.small hF4 (trav_inv2 hc4) (codeFar_at hp.far (by omega)) (envAt_tail e4)
         have hpw := PreS.welt hq hks w4 hW.lay (by have := hW.lo; omega)
-        obtain ⟨m6, s6, a6s, w', hw', hen'⟩ := lowE_ok (σ1.lese Λ inv.orte) (σ1.lese Λ inv.orte) (fun _ h => h) inv
-          _ ci'.1 ci'.2 hci (by omega) m4 _ ρ1.tail hpw
+        obtain ⟨m6, s6, a6s, w', hw', hen'⟩ := lowE_ok (σ1.lese Λ inv.orte) (σ1.lese Λ inv.orte) (fun _ h => h) hW.lay inv
+          _ ci'.1 ci'.2 hci (by omega) m4 _ ρ1.tail hpw |>.word trivial
         have hWa6 : WeltAt m6 L σ1 := hpw.wstab m4 m6 w4 (a6s.mono (Nat.zero_le _))
         have a6 := Agree.widen a6s hks
         have A16 : AgreeW L fp lo K m' m6 := A14.trans (agreeW_of (a6.mono (by omega)))
@@ -251,7 +261,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
 
 /-- **`traverse`**: the code of `travC` runs G's `traverseLauf` over all indices. -/
 theorem trav_ok (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved := reserved) L inv (frei Γ reserved + 1) = some ci')
-    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (D.params f).length)
+    (hlenc : 16 * (9 + travCountSize (D.count t) + ci'.1.length + cb.1.length) < 2 ^ 31) (hlo0 : lo = FB + (contextWords (D.params f)))
     (htop : max ci'.2 (max cb.2 (frei Γ reserved + 9)) ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo) (hlo2 : lo ≤ frei Γ reserved)
     (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     (hbody : ∀ m' pc' σ' ρ', PreS L m' pc' fp K (frei (.index (D.count t) :: Γ) reserved) cb.1 ρ' reserved → Umf L A C dv m' fp Ks K →
@@ -266,6 +276,11 @@ theorem trav_ok (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserved 
       (pc + BitVec.ofNat 64 (16 * (travCode (frei Γ reserved) (D.count t) ci'.1 cb.1).length)) eL eN
       (traverseLauf (l := l) (fun σ ρ => execBlock O passes R body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ))) (alleIndizes (D.count t)) σ ρ) reserved := by
+  have hindex : valueWords (.index (D.count t)) = 1 :=
+    integerWords_word (by omega) (by have h := hn; simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at h; omega)
+  have hctxWidth : frei (.index (D.count t) :: Γ) reserved = frei Γ reserved + 1 := by
+    simp [frei, hindex, Nat.add_assoc]
+
   have hks := hW.ks
   have hroom := hp.frame.room
   have hFB3 : FB = 4 := rfl
