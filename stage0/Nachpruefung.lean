@@ -17,6 +17,11 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.SourceWitness.source_image_joint_zeuge
 #print axioms Gabbro.Stage0.SourceWitness.entry_ir_simulation_zeuge
 #print axioms Gabbro.Stage0.Frontend.arrayMeaning_collected
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_call_bound_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_custom_negative_bound_zeuge
+#print axioms Gabbro.Stage0.Frontend.typedItem_sound
+#print axioms Gabbro.Stage0.Frontend.typedItem_sound_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_inline_range_zeuge
 #print axioms Gabbro.Stage0.ArrayWitness.array_constant_typed_zeuge
 #print axioms Gabbro.Stage0.ArrayWitness.arrayMeaning_collected_zeuge
 #print axioms Gabbro.Stage0.ArrayWitness.source_image_joint_zeuge
@@ -88,11 +93,15 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.lowTags_ok
 #print axioms Gabbro.Stage0.Senke.retFreiArms_istZ
 #print axioms Gabbro.Stage0.Senke.onTag_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.tagPayload_ok
+#print axioms Gabbro.Stage0.Senke.TagDecodeProbe.simulation_zeuge
+#print axioms Gabbro.Stage0.Senke.TagDecodeProbe.dispatcher_zeuge
 #print axioms Gabbro.Stage0.Senke.sumFits_zeuge
 #print axioms Gabbro.Stage0.Senke.lowN_ok
 #print axioms Gabbro.Stage0.Senke.packSum_ok
 
 #print axioms Gabbro.Stage0.Senke.shift_ok
+#print axioms Gabbro.Stage0.Senke.ShiftProbe.simulation_zeuge
 #print axioms Gabbro.Stage0.Senke.readBytesL_ok
 #print axioms Gabbro.Stage0.Senke.putBytesL_ok
 #print axioms Gabbro.Stage0.Senke.putBytes_ok
@@ -269,7 +278,6 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.computed_range_decisions_zeuge
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_nan_ok
-#print axioms Gabbro.Stage0.Senke.floatKeyL_ok
 #print axioms Gabbro.Stage0.Senke.floatRangeL_raw_ok
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok
 #print axioms Gabbro.Stage0.Senke.canonicalFloatRangeL_ok_zeuge
@@ -382,3 +390,5 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.strEq_ok
 #print axioms Gabbro.Stage0.Senke.xorOrSpan_ok
 #print axioms Gabbro.Stage0.Senke.strEq_words_iff
+#print axioms Gabbro.Stage0.Senke.retFreiGrundArms_istZ
+#print axioms Gabbro.Stage0.Senke.locks_reason_zeuge

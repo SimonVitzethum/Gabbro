@@ -1,0 +1,8 @@
+// An argument inside the caller's type still must satisfy the callee's own canonical range.
+module const_signature_bound_refused {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+const fn identity(x : u8 in 0 .. LIMIT) -> u8 in 0 .. LIMIT effects { pure } { return x; }
+const ANSWER : Base = identity(43);
+impl fn main() -> Base effects { pure } { return ANSWER; }
+}

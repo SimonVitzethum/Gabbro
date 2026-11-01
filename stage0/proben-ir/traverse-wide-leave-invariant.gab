@@ -1,0 +1,14 @@
+// A leave checks the invariant again after the body changes its global.
+module ir_probe {
+static mut valid : bool = false;
+table t count 4294967296 { slot { } }
+impl fn main() -> u64 in 0 .. 100 effects { reads t.slots, reads valid, writes valid } {
+    valid = true;
+    if !valid { return 41; }
+    traverse i over slots of t by unvisited touches reads t.slots, reads valid, writes valid invariant valid {
+        valid = false;
+        leave i;
+    }
+    return 17;
+}
+}

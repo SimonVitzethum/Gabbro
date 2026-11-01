@@ -78,13 +78,10 @@ theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
   | _, .empty, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, .num e, d, c, top, h => by
-    simp only [lowE_eqs] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ce, te⟩, _, he⟩ := h
-      simp only [packSum, bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, _, he⟩ := h
+    simp only [packSum, bin2, Prod.mk.injEq] at he
+    omega
 
 theorem readBytesL_top (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
     (n j d : Nat) → (c : List II) → (top : Nat) →
@@ -122,6 +119,19 @@ theorem wordL_top {o d top : Nat} {a b : Option (List II × Nat)} {c : List II}
   obtain ⟨ca, _, cb, _, h⟩ := h
   obtain ⟨_, rfl⟩ := Prod.mk.inj h
   omega
+
+theorem scalarCompareL_top {equal : Bool} {d top : Nat} {l1 h1 l2 h2 : Int}
+    {a b : Option (List II × Nat)} {c : List II}
+    (left : ∀ ca ta, a = some (ca, ta) → d < ta)
+    (lower : scalarCompareL equal d l1 h1 l2 h2 a b = some (c, top)) : d < top := by
+  simp only [scalarCompareL, bind, Option.bind_eq_some_iff] at lower
+  obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, lower⟩ := lower
+  have := left ca ta ha
+  split at lower
+  · simp only [pure, Option.some.injEq, Prod.mk.injEq, bin2] at lower; omega
+  · split at lower
+    · simp only [pure, Option.some.injEq, Prod.mk.injEq] at lower; omega
+    · cases lower
 
 theorem strGetL_top {d top : Nat} {a b : Option (List II × Nat)} {c : List II}
     (h : strGetL d a b = some (c, top)) : d < top := by
@@ -238,7 +248,9 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
   | _, _, .refEq a b, d, c, top, h => wordL_top h
   | _, _, .and a b, d, c, top, h | _, _, .or a b, d, c, top, h =>
     bin_top (fun c t h => lowE_top a d c t h) h
-  | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h | _, _, .div _ _ a b, d, c, top, h
+  | _, _, .lt a b, d, c, top, h | _, _, .eq a b, d, c, top, h =>
+    scalarCompareL_top (fun c t h => lowE_top a d c t h) h
+  | _, _, .div _ _ a b, d, c, top, h
   | _, _, .add a b, d, c, top, h | _, _, .sub a b, d, c, top, h | _, _, .mul a b, d, c, top, h
   | _, _, .rem _ _ a b, d, c, top, h | _, _, .sdiv _ a b, d, c, top, h | _, _, .srem _ a b, d, c, top, h
   | _, _, .band _ _ a b, d, c, top, h
@@ -282,13 +294,10 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       omega
     · cases h
   | _, _, .le a b, d, c, top, h => by
-    simp only [lowE_eqs] at h
-    split at h
-    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨cb, tb⟩, _, ⟨ca, ta⟩, _, he⟩ := h
-      simp only [bin2, Prod.mk.injEq] at he
-      omega
-    · cases h
+    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨cc, tc⟩, _, h⟩ := h
+    simp only [bin2, Prod.mk.injEq] at h
+    omega
   | _, _, .lit n, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -335,13 +344,13 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       omega
     · cases h
   | _, _, .eng e lo' hi' b, d, c, top, h => by
-    simp only [lowE_eqs, engL] at h
+    simp only [lowE_eqs, engL, bind, Option.bind_eq_some_iff] at h
+    obtain ⟨⟨ce, te⟩, he, ⟨cb, tb⟩, _, ⟨ct, tt⟩, _, h⟩ := h
     split at h
-    · simp only [bind, Option.bind_eq_some_iff] at h
-      obtain ⟨⟨ce, te⟩, _, ⟨cb, tb⟩, _, h⟩ := h
-      split at h
-      · simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
-      · cases h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have := lowE_top e d ce te he
+      omega
     · cases h
   | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
     simp only [lowE_eqs] at h

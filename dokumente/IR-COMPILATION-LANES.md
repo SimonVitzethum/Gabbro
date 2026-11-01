@@ -546,6 +546,63 @@ Axiom audits for Emitted.correct, irBild_correct and both joint/entry witnesses 
 propext, Classical.choice and Quot.sound. No additional language form or totality claim follows
 from this fixture; remaining userspace form adapters and named canonical prerequisites stay open.
 
+### IR-09 concurrency inventory and lock-body extension
+
+The canonical frontend already collects `atomT` into atomic globals and exact
+payload lists, lowers atomic reads, publish and exchange into G, and checks
+concurrent declarations. The actual Stage-0 emitter already implements scalar
+publish (store), awaits (load), exchange (CAS loop) and exclusive recursive locks
+(take/body/release, including leave/next release stubs). Their generic proof path
+is `lowS_ok`/`lowB_ok`/`lowEnd_ok`, `locks_ok`, `awaits_ok`, and the image theorem
+consumed by `irBild_correct`. These are existing cases, not new IR-09 coverage.
+All inherited `WeltAt`, `SyncOK`, `SichtOK`, gate and runner-kernel premises remain.
+This inventory does not identify the sequential image simulation with a complete
+GX interleaving/weak-memory compiler theorem.
+
+The lock-body admission gate now recursively accepts `onWhy`, `floatLit` and
+`floatOf` when their continuations are return-free. `retFreiGrundArms_istZ` and
+the extended mutual `retFreiS_istZ`/`retFreiB_istZ` prove that every admitted
+body still excludes both ordinary and reason returns. The existing actual
+`lowS` lock branch consumes this gate, and its existing generic `locks_ok`
+composition supplies release on normal completion, leave and next. Float range
+failures remain logic stops. No ABI representation or atomic algorithm changes.
+
+Exact remaining prerequisites/restrictions:
+
+- Canonical `uRestFehler` refuses `rcuT` with `item without G form`.
+  Syntax.lean describes observes as a lock, but the canonical elaborator has no
+  RCU declaration/reclamation adapter. Reusing that lock alone would not establish
+  reader lifetime or reclamation correctness; no RCU declaration is erased.
+- `uAnwReihe` refuses shared lock holding with `shared lock without G form`;
+  `uSperre` only accepts its represented declaration shape and masks (`irqs`).
+  These source/model boundaries are not bypassed by Stage-0.
+- Actual returns inside locks remain refused: the existing lock epilogue handles
+  normal/leave/next outcomes, not function returns. General retry/forever and
+  fallible-call combinations still need their own return-free control argument.
+- Atomic/global payload representation remains subject to the existing scalar
+  memory/emitter domain. Full aggregate ABI and memory migration belongs to
+  IR-03/06; no low-word aggregate representation is introduced here.
+- Root argument/multiplicity/frame work stays with IR-12; this lane does not
+  duplicate its pending integration or claim an additional root theorem.
+
+This is an independent connected lock-body extension, not closure of IR-09.
+
+The canonical source reader does not yet construct float binders (also recorded
+by the existing `FloatProbe` fixtures); the float gate extension is G-to-IR
+coverage only until IR-04 connects those source forms. The new textual case is
+reason dispatch under a lock, including loop early exits and subsequent lock
+reacquisition. Float binders must not be counted as newly accepted source forms.
+
+Measured for this extension: direct slot-4 checks of Code, OhneRet, the dependent
+statement/block/endblock and image proof chain, current Frontend/Compiler/Bindung,
+IRBild and Sperre.Proben passed in the private artifact overlay. Six textual
+source-to-IR-to-ASM cases matched: lock-reason-dispatch, why-dispatch, why-jumps,
+atomic-payload-lock (42 each), sperre and atomar (208 each). The RCU declaration
+probe refused explicitly with `item without G form`. Axiom audits of
+retFreiGrundArms_istZ, retFreiB_istZ, locks_reason_zeuge, locks_ok, lowS_ok and
+irBild_correct contain only standard axioms (the admission/emission witness
+needs only propext and Quot.sound). No grammar build or guardian ran. Scratch
+and full logs remain local in scratch/ir09; no aggregate consumer ABI was changed.
 ### IR-01 nested constant-array contract guard closure
 
 The frozen `elabWithScopes` body retains the canonical nested
@@ -828,3 +885,165 @@ of capacity at most one and a long string, `strWeit` narrowing of long strings (
 string with an index range wider than `[0, n)` (needs an in-range test before the dynamic selection), ordinary
 records (canonical-model prerequisite), IR-08's `StatementCost`/`EarlyExit` migration to the new
 copy/return/store ABI, and `getBytes`/`putBytes`/`shift` at the eight-byte limit (IR-02/IR-06).
+
+### IR-05 bounded inventory (base c84ef50cc, 2026-11-01)
+
+The canonical frontend is `uOptEin`/`lowOpt`, `uBool`/`lowEns`,
+`UebersetzeSum`, `lowSeqL`/`lowArmsT`/`lowGArmsL`, and `uWhys`;
+Stage0's scoped frontend retains those consumers. The canonical typed forms are
+table-index options and sums with zero or one bounded-integer payload; other
+payload shapes refuse in the frontend. All nine owned forms have model and
+frontend paths; none is wholly missing. Status below describes the actual
+baseline emitter, not complete family coverage.
+
+| Form | Baseline status and exact remaining boundary | Connected proof |
+|---|---|---|
+| Expr `none` | Compiled; word -1, no payload. | `lowE_ok` |
+| Expr `some` | Compiled when its index expression lowers; keeps that word. Wide indices and sentinel-safe consumers remain restricted. | `lowE_ok` |
+| Expr `istSome` | Compiled for table bound <= 2^63; larger bounds refused. | `istSome_ok` through `lowE_ok` |
+| Expr `case` | Compiled for <=256 tags, every payload interval width <2^56, and selected payload lower bound in signed32; child emission must succeed. Other cases refused. | mutual `lowN_ok`/`lowE_ok`, `packSum_ok` |
+| Expr `why` | Compiled for reason count <2^31; larger counts refused. Encodes the ordinal, not the external code. | `lowE_ok` |
+| Stmt `onOption` | Compiled for bound <=2^63 and compilable arms; sentinel test preserves the Some index binding. Larger bounds refused. | `onOption_ok` in `Anweisung/Satz.lowS_ok` |
+| Stmt `onTag` | Compiled for the same packed sum limits, signed32 payload lower bounds in all arms and compilable bodies. Other cases refused. | `onTag_ok`/`lowTags_ok` through `lowS_ok` |
+| Stmt `onWhy` | Already compiled for count <2^31 and compilable reason arms; no payload binding. Larger counts refused. | `onWhy_ok`/`lowGrund_ok` through `lowS_ok` |
+| TopLevel `whyT` | Compiled by canonical `uWhys` for exhaustive declarations; non-exhaustive reasons explicitly refused by the frontend. Binding code separately retains external reason codes. | canonical source provenance in `compile_source_program`/`Emitted.correct`, then `irBild_correct` |
+
+`lowB` and `lowEnd` call `lowE` for binders and `lowS` for nested
+statements; the mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok` dispatcher connects
+these forms to function/image correctness. Fallible-call reason bindings use
+the existing slot-2 result-or-reason channel and status at FB+parameter-count+1.
+The canonical direct `let x = f()` adapter also refuses sum-valued results
+with `call without a value`, although canonical sum expressions/results exist.
+Sum arguments likewise refuse with `argument without G form`. These call
+adapters remain IR-10 prerequisites, not new constructor cases.
+Multiword payloads, shared widths/ABI and broader frontend/model prerequisites
+remain open with their owning lanes. The first bounded step selected the
+signed32-lower-bound refusal of the one-word `case` constructor; the decoder
+follow-up below closes the matching dispatch restriction. The ABI is unchanged.
+
+
+The selected `Expr.case` extension is now connected: `packSum` reuses
+`wordConstant` for the payload lower bound, and `lowN` no longer requires that
+bound to fit signed32. The existing small-immediate path, packed encoding,
+`sumFits` guards and child-emission requirements remain. The extra materializer
+scratch word is included in the returned high-water mark. `packSum_ok`, the
+mutual `lowN_ok`/`lowE_ok`, the statement/block/end-block dispatcher and
+`irBild_correct` compile on that same implementation. The real-memory
+`AggregateProbe.Case.simulation_zeuge` jointly supplies all expression premises,
+proves the exact word 10753 (tag 1, offset 42), and checks top=7 at destination 4.
+
+Measured in the private `.scratch-ir05` overlay, each Lean invocation under the
+capped slot-2 lock: 131 affected modules through IRBild/Haupt plus Aggregate/Proben
+pass. Three new textual constructor probes (positive, negative and unsigned64
+lower bounds) and five existing option/tag/reason probes execute with their
+expected ASM exit codes. The new probes execute runtime-payload construction;
+the exact packed result is checked by the formal witness. The same three new
+sources were explicitly refused by the baseline emitter. At that checkpoint, two
+additional textual probes refused width 2^56 and large-bound tag decoding.
+All 13 audited statements use only propext, Classical.choice and Quot.sound;
+`gabbro_ziel` retains exactly those three. Layout passes for all 1471 Lean files;
+all six changed Lean modules remain below 500 lines. Grammar artifacts were reused.
+That constructor-only checkpoint left large-bound `onTag` open. Wider sums,
+options/reasons beyond the listed domains and multiword ABI integration remain open.
+
+
+The decoder mirror step now removes the signed32 payload-lower-bound refusal
+from `tagPayloadC` using `wordConstant`. Its small-immediate path, packed
+encoding, `sumFits` and width-2^56 refusal are unchanged. The existing three-word
+dispatch scratch bound covers the materializer. `tagPayload_ok`/`tagArm_ok`,
+`lowTags_ok`/`onTag_ok`, mutual `lowS_ok`/`lowB_ok`/`lowEnd_ok` and
+`irBild_correct` compile on the actual emitter. The real-memory
+`TagDecodeProbe.simulation_zeuge` constructs word 10753 and decodes 2^32 + 42;
+`dispatcher_zeuge` admits positive, negative and unsigned64 lower bounds.
+All 246 private direct module checks through Haupt, Stage0 and Nachpruefung pass.
+Twelve textual source-to-IR-to-ASM executions pass, including both runtime
+payload endpoints, skipped large-bound arms, and the promoted former decoder
+refusal (`case-offset-dispatch`). The width-2^56 probe still refuses. All 14
+focused axiom audits, including `gabbro_ziel`, report exactly propext,
+Classical.choice and Quot.sound. Layout passes for 1472 Lean files; the five
+changed Lean modules stay below 500 lines. Checks use the private worktree
+overlay and capped slot-2 lock; grammar artifacts are reused. This closes one decoder
+restriction, without extending the remaining packed-width, option/reason or ABI
+domains above.
+
+### IR-07 bounded inventory (base a6970b425, 2026-11-01)
+
+Read against canonical `Kern/Syntax/Syntax`, `Kern/Semantik`,
+`Bausteine/Arena` and `Parser/Elab/Uebersetze{,Allg,Allg2,Allg3}`;
+Stage0 uses `Frontend.elabWithScopes`, `Compiler.compile`, `lowE`/`lowS`/
+`lowB`/`lowEnd` and the mutual `Anweisung/Satz` dispatcher. No device-register
+transition is included. A typed emitter alone is not textual form coverage.
+
+| Owned form | Baseline status and exact boundary | Connected proof / prerequisite |
+|---|---|---|
+| Stmt `shift` | Compiled for signed-word field intervals, signed32 old/new stage numbers, compilable index and address. Other representable old/new constants are refused solely by the emitter. Frontend `uZustandVon`/`lowShiftL` checks declared transition, destination range, write effects and guards. | `shift_ok` in `lowS_ok`, then `lowB_ok`/`lowEnd_ok`, function/image correctness. Selected bounded extension: materialize both signed-word state constants with the existing word materializer. |
+| Stmt `breaking` | Typed emitter compiles its body and the mutual proof recurses into it. Textual `breaking` (`SAnw.waive`) has no `uAnwReihe` export case: refused as `stmt without G form: waive`. | Existing model rule and `lowS_ok` branch; missing canonical frontend export, not missing IR emitter. Invariant restoration at returns must remain mandatory. |
+| Stmt `advances` | Typed emitter emits no instructions, matching `execStmt`'s unchanged runtime world. Source statement (`SAnw.step`) is refused as `stmt without G form: step`; function `moves` clause as `clause without G form`. | Existing model rule and `lowS_ok`; missing mark/signature export (`declOf` has `Marke := Empty`, no owner marks), not missing emitter. |
+| Stmt `retires` | Typed emitter likewise emits no instructions with a connected `lowS_ok` branch. Source `quits` clause is refused as `clause without G form`. | Existing model consumes a held mark and names its assumption. Missing canonical mark/signature export, not missing emitter. |
+| TopLevel `arenaT` | Fixed positive capacity, scalar element, no placement: exported to table plus `#used` static. Block-position `alloc A(v) else { ... }` expands through `Block.arenaAlloc`; `reset A` is a counter store. Dynamic ceiling/placement refuse as `arena with a dynamic ceiling without G form` / `arena placement without G form`. Top-level/else-position alloc refuse explicitly in `lowBodyF`/`lowEndL`; alloc without else, grow/free and extended reset are not exported. | Existing `ArenaZucker` and lowerings of bind/narrow/stores connect block allocation; no separate allocator emitter is needed. Dynamic/ownership arena models exist in `Bausteine/Arena`, but their canonical source-to-G bridge and lifetime/availability obligations are missing. Wider element storage additionally needs IR-03. |
+| TopLevel `stateT` | Compiled by `uZustand`: named stages become ordinals in first-written order; allowed pairs feed `D.erlaubt`. State-transition requires/effects clauses refuse as `state transition clause without G form`; non-name stages as `state stage without G form`. | Source provenance (`compile_source_program`), checked `lowShiftL`, then `shift_ok`. Clause-bearing transition semantics need a canonical model/export rule; this lane adds none. |
+| TopLevel `groupT` | Compiled by `uInvs`/`uInv` for ordinary table carriers and predicates accepted by `uBool`/`lowBool`; locks checked by `uU003` and canonical invariant checking. Arena/global carriers refuse as `invariant carrier without G form`. Runtime compilation still depends on predicate emission. | Canonical `Programm.invariante`, checker, source provenance and function/image proofs; richer carriers need canonical export/checking support, not an isolated group emitter. |
+
+Additional parent-lane obligations: `table ... backed ...` and `owner ...` refuse
+as `table without G form` in `uTabelle`; the canonical ownership model exists,
+but `declOf` exports neither owner marks nor their resource contracts. Open
+`table T from provider` exports a numeric-field region and `alloc T` becomes a
+provider call; actual fresh/disjoint provider memory, layout extension and
+lifetime contracts remain a missing provider-contract integration (IR-06 memory
+primitives already accept supplied region cells). A plain numerical provider
+answer cannot close it. No existing guarantee may be replaced with an unchecked
+address. Multiword transport remains IR-03-owned. None of the seven owned typed
+families is absent from the model; the textual/export restrictions above remain
+open even where typed soundness is connected.
+
+The canonical arena sugar does not carry reservation `lo` (`ArenaZucker` documents
+that boundary). `uInv` exports the name, carriers and predicate, not the source
+cost/online/proof metadata. These source-to-model boundaries are not counted as
+completed by the existing primitive emitters.
+
+The bounded `Stmt.shift` step now materializes both state constants with
+`wordConstant`, retaining its immediate fast path. The field interval and old
+state must fit signed64; the destination still carries its original field-range
+proof. Unsigned intervals above signed64, unrepresentable states, missing index
+or address emission and the other inventory boundaries remain refused. No ABI,
+canonical model, ownership rule, provider contract or source syntax changed.
+The existing eight-word scratch allowance covers both materializers. `shift_ok`
+uses signed-word injectivity for the old-state comparison and the shared
+materialization theorem for the write; the mutual dispatcher, `lowFun_spec`,
+`Emitted.correct` and `irBild_correct` remain connected to the actual emitter.
+
+`ShiftProbe.simulation_zeuge` jointly supplies the real code/frame/table-memory
+premises: cell one initially holds 2^32 + 41, becomes 2^32 + 42, cell zero stays
+zero and protected frame slot three stays 77. Both state constants fail signed32.
+Textual stages remain dense named ordinals; the large-constant path is exercised
+by this typed memory witness, not by claiming a practical text declaration with
+billions of stage names. Four textual source-to-IR-to-ASM executions pass (two
+new, two existing), including the state sequence on a signed64-sized field and
+failed-prestate stop 106. Two new textual refusal probes retain missing write
+permission and undeclared-edge errors.
+
+Measured in the private `.scratch-ir07` overlay: 153 Stage0 modules pass direct
+checks, including the statement/block/end-block dispatcher and IRBild/Haupt.
+All nine focused axiom audits, including the memory witness and `gabbro_ziel`,
+report exactly propext, Classical.choice and Quot.sound. Layout passes for all
+1473 tracked Lean files; all five changed Lean files remain below 500 lines.
+Every Lean invocation used the capped slot-2 lock, with ELAN_TOOLCHAIN removed;
+grammar artifacts were reused. No full guardian or grammar rebuild was run.
+This closes the one-word signed-state constant restriction, not the remaining
+source-export, provider, ownership or multiword boundaries in the inventory.
+
+## IR-03 merge of master `6444b5cc3` (2026-11-01)
+
+Master (IR-01 const bounds, IR-02 wide kernels and mixed64 compare, IR-05 `wordConstant` tag bounds, IR-07
+signed64 `shift`, IR-08 traversal, IR-09 locks/atomics) is merged into the full-ABI branch. Master's scalar
+helpers (`wordConstant`, `scalarCompareL`, `engTest`/`intervalTestL`, `tagPayloadC` with word constants) are
+kept; they run on the complete ABI: `lowE_ok` is `ValueOk` (the scalar relations are taken through
+`ValueAt.word`), literals stay on `constWords`, `tagPayloadC` additionally requires a one-word payload
+(`valueWords (.int lo hi) = 1`), `eng_width` is derived from `scalarFits`. Master's probes `ShiftProbe`,
+`IntervalProbe`, `MixedProbe`, `TagProben` and `Aggregat/Proben` are migrated to `LayIn`/`LayDis`/`WeltAt` over
+`ValueAt`. `StatementCost`/`EarlyExit` stay out of the root until the counted copy/return/store transports exist.
+
+Measured: 294-module `Stage0` + `Stage0.Haupt` closure rebuilt; `Nachpruefung.lean` 336 theorems on
+`propext`/`Classical.choice`/`Quot.sound` only (6 axiom-free), no `sorry`; layout check passes; all 168 textual
+programs of `stage0/proben-ir` compile and execute (or are refused with the expected text) with 0 mismatches.
+`grammatik/` untouched. Merge commit: see `git log` (the commit whose message begins "Merge master 6444b5cc3").

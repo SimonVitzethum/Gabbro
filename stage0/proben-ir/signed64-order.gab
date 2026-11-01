@@ -1,0 +1,12 @@
+// Signed extrema continue to use signed comparison alongside unsigned words.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 42 effects { pure } {
+    if -9223372036854775808 < 0 {
+        if -1 <= 0 {
+            if 9223372036854775807 < -1 { return 0; }
+            return 42;
+        }
+    }
+    return 0;
+}
+}

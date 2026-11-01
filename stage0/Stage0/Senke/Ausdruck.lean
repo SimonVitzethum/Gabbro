@@ -117,6 +117,11 @@ def inU (lo hi : Int) : Bool := decide (0 ≤ lo) && decide (hi < 2 ^ 64)
 /-- Exact scalar interval in either signed or unsigned interpretation. -/
 def scalarFits (lo hi : Int) : Bool := inW lo hi || inU lo hi
 
+/-- Select the interpretation in which both complete scalar intervals fit. -/
+def scalarOrder (l1 h1 l2 h2 : Int) : Option Nat :=
+  if inW l1 h1 && inW l2 h2 then some 13
+  else if inU l1 h1 && inU l2 h2 then some 27 else none
+
 def lit32 (n : Int) : Bool := decide (-2 ^ 31 ≤ n) && decide (n < 2 ^ 31)
 
 def ci (o : Nat) (a b c : Int) : II := ⟨o, a, b, c⟩
@@ -132,25 +137,6 @@ def wennL (d : Nat) (cc ca cb : Option (List II × Nat)) : Option (List II × Na
   let cb ← cb
   if 16 * (ca.1.length + cb.1.length + 2) < 2 ^ 31 then
     some (wennC d cc.1 ca.1 cb.1, max cc.2 (max ca.2 cb.2))
-  else none
-
-/-- Test whether the word in `d` lies outside the signed interval; the flag is in `d+1`. -/
-def engTest (d : Nat) (lo hi : Int) : List II :=
-  [ci 1 (d + 1) lo 0, ci 13 (d + 1) d (d + 1), ci 1 (d + 2) hi 0,
-   ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]
-
-/-- Evaluate once, test the interval and skip the fallback when the value already fits. -/
-def engC (d : Nat) (lo hi : Int) (ce cb : List II) : List II :=
-  ce ++ engTest d lo hi ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
-
-/-- Bounds must fit the signed literal fields; all compared values must fit a signed word. -/
-def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
-  if inW lo hi && lit32 lo' && lit32 hi' then
-    let ce ← ce
-    let cb ← cb
-    if 16 * (cb.1.length + 1) < 2 ^ 31 then
-      some (engC d lo' hi' ce.1 cb.1, max ce.2 (max cb.2 (d + 3)))
-    else none
   else none
 
 /-- `d := op d (d+1)` after `a` into `d` and `b` into `d+1`. -/
@@ -252,6 +238,62 @@ def resizeIntegerL (lo hi lo' hi' : Int) (d : Nat)
     let extension ← integerExtensionL lo (target - source) (d + source)
     pure (child.1 ++ extension.1, max child.2 extension.2)
 
+/-- One scalar word, retaining the single-instruction path for small constants. -/
+def wordConstant (d : Nat) (n : Int) : List II × Nat :=
+  if lit32 n then ([ci 1 d n 0], d + 1)
+  else konstWL 4 (BitVec.ofInt 64 n).toNat d
+
+/-- Compare previously evaluated scalar operands, guarding the signed operand
+    before its raw word is compared with an unsigned operand. -/
+def mixedCmpC (leftSigned equal : Bool) (d : Nat) : List II :=
+  [ci 1 (d + 2) 0 0,
+   ci 13 (d + 2) ((if leftSigned then d else d + 1) : Nat) (d + 2),
+   ci (if equal then 14 else 27) (d + 3) d (d + 1)] ++
+  if leftSigned && !equal then [ci 9 d (d + 2) (d + 3)]
+  else [ci 1 (d + 4) 1 0, ci 10 (d + 4) (d + 2) (d + 4), ci 8 d (d + 3) (d + 4)]
+
+/-- Compare each complete scalar domain, with a sign guard when no common raw
+    interpretation exists. Both operand programs are evaluated exactly once. -/
+def scalarCompareL (equal : Bool) (d : Nat) (l1 h1 l2 h2 : Int)
+    (a b : Option (List II × Nat)) : Option (List II × Nat) := do
+  let a ← a
+  let b ← b
+  match scalarOrder l1 h1 l2 h2 with
+  | some o => pure (bin2 (if equal then 14 else o) d a b)
+  | none =>
+    if scalarFits l1 h1 && scalarFits l2 h2 then
+      pure (a.1 ++ b.1 ++ mixedCmpC (inW l1 h1) equal d, max (max a.2 b.2) (d + 5))
+    else none
+
+/-- One raw interval predicate. Its flag is in `d+1`; the input in `d` is preserved. -/
+def engTest (o d : Nat) (lo hi : Int) : List II × Nat :=
+  ((wordConstant (d + 1) lo).1 ++ [ci o (d + 1) d (d + 1)] ++
+    (wordConstant (d + 2) hi).1 ++
+    [ci o (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)],
+   max (wordConstant (d + 1) lo).2 (wordConstant (d + 2) hi).2)
+
+/-- Normalize a scalar interval test in the input's interpretation. Disjoint
+    intervals produce a true outside flag after the input has been evaluated. -/
+def intervalTestL (d : Nat) (lo hi lo' hi' : Int) : Option (List II × Nat) :=
+  if scalarFits lo hi && scalarFits lo' hi' then
+    if hi < lo' ∨ hi' < lo then some ([ci 1 (d + 1) 1 0], d + 2)
+    else do
+      let o ← scalarOrder lo hi lo hi
+      pure (engTest o d (max lo lo') (min hi hi'))
+  else none
+
+/-- Evaluate the input once, test it, and evaluate the fallback only outside. -/
+def engC (d : Nat) (ce ct cb : List II) : List II :=
+  ce ++ ct ++ [ci 19 (d + 1) ((16 * (cb.length + 1) : Nat) : Int) 0] ++ cb
+
+def engL (d : Nat) (lo hi lo' hi' : Int) (ce cb : Option (List II × Nat)) : Option (List II × Nat) := do
+  let ce ← ce
+  let cb ← cb
+  let ct ← intervalTestL d lo hi lo' hi'
+  if 16 * (cb.1.length + 1) < 2 ^ 31 then
+    some (engC d ce.1 ct.1 cb.1, max ce.2 (max ct.2 cb.2))
+  else none
+
 /-- Signed magnitude key: strip the sign, multiply by `1 - 2 * sign`.
     The two supplied operand codes evaluate the same pure expression at `d` and `d+3`. -/
 def floatKeyL (d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) := do
@@ -317,7 +359,7 @@ def slotC (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat) (ci' : List II × Nat
 
 /-- Pack the payload word in `d`: subtract its lower bound, multiply by 256, add the tag. -/
 def packSum (d : Nat) (lo : Int) (tag : Nat) (ce : List II × Nat) : List II × Nat :=
-  bin2 3 d (bin2 5 d (bin2 4 d ce ([ci 1 (d + 1) lo 0], d + 2))
+  bin2 3 d (bin2 5 d (bin2 4 d ce (wordConstant (d + 1) lo))
     ([ci 1 (d + 1) 256 0], d + 2)) ([ci 1 (d + 1) tag 0], d + 2)
 
 /-- Read a little-endian byte span, one aligned world word per byte. The index code is
@@ -436,19 +478,16 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     if valueWords (.int (-hi) (-lo)) = 1 then do let ca ← lowE L (reserved := reserved) a (d + 1); pure (bin2 4 d ([ci 1 d 0 0], d + 1) ca)
     else none
   | _, _, .not a, d => do let ca ← lowE L (reserved := reserved) a d; pure (bin2 10 d ca ([ci 1 (d + 1) 1 0], d + 2))
-  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d =>
-    if inW l1 h1 && inW l2 h2 then do
-      let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
-      pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
-    else none
+  | _, _, @Expr.le _ _ _ l1 h1 l2 h2 a b, d => do
+    let c ← scalarCompareL false d l2 h2 l1 h1
+      (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
+    pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))
   | _, _, @Expr.lt _ _ _ l1 h1 l2 h2 a b, d =>
-    if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 13 d ca cb)
-    else none
+    scalarCompareL false d l1 h1 l2 h2
+      (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, @Expr.eq _ _ _ l1 h1 l2 h2 a b, d =>
-    if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
-    else none
+    scalarCompareL true d l1 h1 l2 h2
+      (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, .fllt a b, d => floatExprL false d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .flle a b, d => floatExprL true d (lowE L (reserved := reserved) b) (lowE L (reserved := reserved) a)
   | _, _, .and a b, d => do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 8 d ca cb)
@@ -554,10 +593,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
 def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option (Int × Int)} (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
   match c, e, d with
   | _, .empty, d => some ([ci 1 d tag 0], d + 1)
-  | some (lo, _), .num e, d => if lit32 lo then do
+  | some (lo, _), .num e, d => do
       let ce ← lowE L (reserved := reserved) e d
       pure (packSum d lo tag ce)
-    else none
 end
 
 /-! ## Values in words -/

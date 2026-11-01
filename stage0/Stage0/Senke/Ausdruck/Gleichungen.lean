@@ -181,23 +181,20 @@ theorem lowE_literal_boundaries_zeuge :
     else none) := rfl
 
 @[lowE_eqs] theorem lowE_lt (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.lt a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 13 d ca cb)
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.lt a b) d =
+      scalarCompareL false d l1 h1 l2 h2
+        (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := rfl
 
 @[lowE_eqs] theorem lowE_le (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.le a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let cb ← lowE L (reserved := reserved) b d; let ca ← lowE L (reserved := reserved) a (d + 1)
-      pure (bin2 10 d (bin2 13 d cb ca) ([ci 1 (d + 1) 1 0], d + 2))
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.le a b) d = (do
+      let c ← scalarCompareL false d l2 h2 l1 h1
+        (lowE L (reserved := reserved) b d) (lowE L (reserved := reserved) a (d + 1))
+      pure (bin2 10 d c ([ci 1 (d + 1) 1 0], d + 2))) := rfl
 
 @[lowE_eqs] theorem lowE_eq (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
-    lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.eq a b) d =
-    (if inW l1 h1 && inW l2 h2 then do
-      let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 14 d ca cb)
-    else none) := rfl
+    lowE L (reserved := reserved) (Expr.eq a b) d =
+      scalarCompareL true d l1 h1 l2 h2
+        (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := rfl
 
 @[lowE_eqs] theorem lowE_fllt (a : Expr D Γ Λ (.fl l1 h1)) (b : Expr D Γ Λ (.fl l2 h2)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.fllt a b) d =
@@ -245,10 +242,9 @@ theorem lowE_literal_boundaries_zeuge :
     lowN L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag .empty d = some ([ci 1 d tag 0], d + 1) := rfl
 
 @[lowE_eqs] theorem lowN_num (tag : Nat) (e : Expr D Γ Λ (.int lo hi)) :
-    lowN L (reserved := reserved) tag (.num e) d = (if lit32 lo then do
+    lowN L (reserved := reserved) tag (.num e) d = (do
       let ce ← lowE L (reserved := reserved) e d
-      pure (packSum d lo tag ce)
-    else none) := rfl
+      pure (packSum d lo tag ce)) := rfl
 
 @[lowE_eqs] theorem lowE_why (n : Nat) (r : Fin n) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.why n r) d =

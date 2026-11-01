@@ -49,21 +49,24 @@ theorem tagTest_ok {m : Runner.Mem} {pc fp : Runner.W} {K s k : Nat} {Γ : Ctx} 
     rw [he]
 
 theorem tagPayload_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {Γ : Ctx} {ρ : Env D Γ}
-    {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {w : Runner.W} (hl : lit32 lo = true) (hK : s + 2 ≤ K)
+    {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {w : Runner.W} (hK : s + 3 ≤ K)
     (hp : Pre (reserved := reserved) L m pc fp K s
-      [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)] ρ W)
+      ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++
+        [ci 3 s s (s + 1)]) ρ W)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (some (lo, hi)) v)) :
     Ok m pc fp K s
-      [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
+      ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++
+        [ci 3 s s (s + 1)])
       (Enc (D := D) L (.int lo hi) v) := by
   have hq : Pre (reserved := reserved) L m pc fp K s (([] ++ [ci 1 (s + 1) 8 0] ++ [ci 12 s s (s + 1)]) ++
-      [ci 1 (s + 1) lo 0] ++ [ci 3 s s (s + 1)]) ρ W := hp
+      (wordConstant (s + 1) lo).1 ++ [ci 3 s s (s + 1)]) ρ W := hp
   refine bin_ok2 (Pa := fun x => x = w >>> 8)
     (bin_ok2 (input_ok hw) (fun m pc hp => const_ok hp (by decide) (by omega))
       (g := fun a b => some (a >>> (b.toNat % 64)))
       (fun a b ha hb => ⟨_, rfl, by rw [ha, hb]; rfl⟩) rfl (by decide) (by omega) (by simpa only [Int.natCast_add, Int.ofNat_one, Int.add_assoc, show (1 : Int) + 1 = 2 from rfl] using hq.left.left))
-    (fun m pc hp => const_ok hp hl (by omega)) (g := fun a b => some (a + b))
+    (fun m pc hp => wordConstant_ok (by have := (wordConstant_top (s + 1) lo).2; omega) hp)
+    (g := fun a b => some (a + b))
     (fun a b ha hb => ⟨_, rfl, ?_⟩) rfl (by decide) (by omega) hq
   simp only [Enc]
   rw [ha, hb, hoff]
@@ -138,17 +141,17 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
     simp only [tagPayloadC] at hcp
     split at hcp
     · next ha =>
-      simp only [Bool.and_eq_true, decide_eq_true_eq] at ha
+      simp only [decide_eq_true_eq] at ha
       simp only [Option.some.injEq] at hcp
       subst cp
       have hks := hW.ks
       have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, st, a1s, w1, r1, e1⟩ := tagPayload_ok ha.1 (by omega) hpw hw hoff
+      obtain ⟨m1, st, a1s, w1, r1, e1⟩ := tagPayload_ok (by omega) hpw hw hoff
       have a1 := Agree.widen a1s hks
       have hq := hp.next a1 (Nat.le_refl _) (by omega)
       have hfr : frei (ArmCtx Γ (some (a, z))) reserved = frei Γ reserved + valueWords (.int a z) := by simp [frei, ArmCtx, Nat.add_assoc]
       have hp1 : PreS (reserved := reserved) L m1 _ fp K (frei (ArmCtx Γ (some (a, z))) reserved) cb (armEnv v ρ) :=
-        ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env (ValueAt.of_enc ha.2 r1 e1),
+        ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env (ValueAt.of_enc ha r1 e1),
          trivial, wstab_true _ _⟩
       have ih := hb ex cb tb hcb htb (by omega) m1 _ σ _ hp1
         (by rw [hfr]; omega)

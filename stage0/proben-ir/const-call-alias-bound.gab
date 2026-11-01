@@ -1,0 +1,10 @@
+// A constant-backed function result supplies a later alias bound.
+module dependent_call_bound {
+type Base = u8;
+const LIMIT : Base = 40 + 2;
+const fn identity(x : u8 in 0 .. LIMIT) -> u8 in 0 .. LIMIT effects { pure } { return x; }
+const BOUND : Base = identity(42);
+type Result = u8 in 0 .. BOUND;
+const ANSWER : Result = BOUND;
+impl fn main() -> Base effects { pure } { return ANSWER; }
+}

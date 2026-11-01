@@ -189,3 +189,52 @@ theorem simulation_zeuge [Kern] :
   exact (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
     expr 10 code 12 hl (by decide) memory 0 env hp).word trivial
 end Gabbro.Stage0.Senke.AggregateProbe.Reserved
+
+namespace Gabbro.Stage0.Senke.AggregateProbe.Case
+open Gabbro.Grammatik Runner.IR Runner.Mem
+
+/-- Both the payload and its lower bound require the shared word materializer. -/
+def expr : Expr D [] [] (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)]) :=
+  .case _ ⟨1, by decide⟩ (.num (.widen (by decide) (by decide) (.lit (2 ^ 32 + 42))))
+def code : List II := ((lowE layout expr 4).getD ([], 0)).1
+def top : Nat := ((lowE layout expr 4).getD ([], 0)).2
+
+def memory : Runner.Mem where
+  b a := ((code.flatMap encII)[a.toNat]?).getD 0
+  rd _ := true
+  wr _ := true
+
+/-- All premises of the actual generic lowering theorem hold together; its result
+    has tag 1 and offset 42, with the two scratch words included in the frame. -/
+theorem simulation_zeuge [Kern] :
+    lowE layout expr 4 = some (code, top) ∧ top = 7 ∧ code ≠ [] ∧
+    PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) ∧
+    Enc layout (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)])
+      (eval world expr world .nil) 10753 ∧
+    Ok memory 0 65536 64 4 code (· = 10753) := by
+  have hl : lowE layout expr 4 = some (code, top) := by decide +kernel
+  have hp : PreS layout memory 0 65536 64 4 code (Env.nil : Env D []) := by
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+      ?_, ?_, ?_, trivial, wstab_true _ _⟩
+    · apply codeAt_bytes code 0 (by decide +kernel)
+      intro i hi
+      have hs : (code.flatMap encII).length < 2 ^ 64 := by decide +kernel
+      refine ⟨rfl, rfl, ?_⟩
+      simp only [memory, Nat.zero_add, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt (show i < 2 ^ 64 by omega), List.getElem?_eq_getElem hi, Option.getD_some]
+    · unfold CodeFar; decide +kernel
+    · intro _ x; nomatch x
+  have hw : ∀ m, WeltAt m layout world := by
+    intro m
+    refine ⟨(fun t => Fin.elim0 t), (fun g => Fin.elim0 g), ?_⟩
+    · intro x hl hh
+      change 65536 ≤ x at hl
+      change x < 65536 at hh
+      omega
+  have he : Enc layout (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)])
+      (eval world expr world .nil) 10753 := by constructor <;> decide +kernel
+  refine ⟨hl, by decide +kernel, by decide +kernel, hp, he, ?_⟩
+  exact (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+    expr 4 code top hl (by decide +kernel) memory 0 .nil hp).word (wordCompatB_sound _ (by decide +kernel)) |>.mono (fun _ hn => hn.2.trans he.2.symm)
+
+end Gabbro.Stage0.Senke.AggregateProbe.Case

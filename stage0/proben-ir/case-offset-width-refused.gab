@@ -1,0 +1,8 @@
+// The first payload interval too wide for the packed one-word representation still refuses.
+module case_offset_width_refused {
+tagged type Message = { Empty, Item(u64 in 4294967296 .. 72057598332895232) };
+impl fn main() -> u8 effects { pure } {
+    let m = Item(4294967296);
+    return 42;
+}
+}

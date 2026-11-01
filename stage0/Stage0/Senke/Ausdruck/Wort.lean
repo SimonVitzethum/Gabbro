@@ -69,6 +69,93 @@ theorem ofInt_nat {x : Int} (h0 : 0 ≤ x) (h1 : x < 2 ^ 64) : (BitVec.ofInt 64 
 theorem ofInt_natCast (n : Nat) (h : n < 2 ^ 64) : (BitVec.ofInt 64 (n : Int)).toNat = n := by
   rw [BitVec.toNat_ofInt]; omega
 
+theorem ult_in {x y : Int} (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : 0 ≤ y ∧ y < 2 ^ 64) :
+    (BitVec.ofInt 64 x).ult (BitVec.ofInt 64 y) = decide (x < y) := by
+  rw [BitVec.ult_eq_decide, ofInt_nat hx.1 hx.2, ofInt_nat hy.1 hy.2]
+  have same : x.toNat < y.toNat ↔ x < y := by omega
+  simp only [same]
+
+theorem beq_unsigned {x y : Int} (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : 0 ≤ y ∧ y < 2 ^ 64) :
+    (BitVec.ofInt 64 x == BitVec.ofInt 64 y) = decide (x = y) := by
+  by_cases equal : x = y
+  · subst y; simp
+  · have distinct : BitVec.ofInt 64 x ≠ BitVec.ofInt 64 y := by
+      intro words
+      have same := congrArg BitVec.toNat words
+      rw [ofInt_nat hx.1 hx.2, ofInt_nat hy.1 hy.2] at same
+      omega
+    simp [equal, distinct]
+
+/-- The word ordering selected by the two scalar comparison opcodes. -/
+def scalarCmp (o : Nat) (a b : Runner.W) : Bool := if o = 13 then a.slt b else a.ult b
+
+/-- The selected actual opcode preserves both integer ordering and equality. -/
+theorem scalarOrder_spec {l1 h1 l2 h2 x y : Int} {o : Nat}
+    (selected : scalarOrder l1 h1 l2 h2 = some o)
+    (hx0 : l1 ≤ x) (hx1 : x ≤ h1) (hy0 : l2 ≤ y) (hy1 : y ≤ h2) :
+    op o = bin (fun a b => some (Runner.IR.bool (scalarCmp o a b))) ∧ o < 256 ∧
+      scalarCmp o (BitVec.ofInt 64 x) (BitVec.ofInt 64 y) = decide (x < y) ∧
+      (BitVec.ofInt 64 x == BitVec.ofInt 64 y) = decide (x = y) := by
+  unfold scalarOrder at selected
+  split at selected
+  · next bounds =>
+    cases selected
+    simp only [Bool.and_eq_true] at bounds
+    have rx := inW_spec bounds.1 hx0 hx1
+    have ry := inW_spec bounds.2 hy0 hy1
+    exact ⟨rfl, by decide, slt_in rx ry, beq_in rx ry⟩
+  · split at selected
+    · next bounds =>
+      cases selected
+      simp only [inU, Bool.and_eq_true, decide_eq_true_eq] at bounds
+      have rx : 0 ≤ x ∧ x < 2 ^ 64 := by omega
+      have ry : 0 ≤ y ∧ y < 2 ^ 64 := by omega
+      exact ⟨rfl, by decide, ult_in rx ry, beq_unsigned rx ry⟩
+    · cases selected
+
+theorem scalarOrder_zeuge :
+    scalarOrder 0 18446744073709551615 0 18446744073709551615 = some 27 ∧
+    scalarOrder (-9223372036854775808) 9223372036854775807 0 255 = some 13 ∧
+    scalarOrder (-1) (-1) 9223372036854775808 18446744073709551615 = none := by decide
+
+/-- A signed scalar against an unsigned scalar needs an explicit sign guard:
+    the same raw word can denote both `-1` and `2^64-1`. -/
+theorem mixed_left_lt {x y : Int}
+    (hx : -2 ^ 63 ≤ x ∧ x < 2 ^ 63) (hy : 0 ≤ y ∧ y < 2 ^ 64) :
+    (decide (x < 0) || (BitVec.ofInt 64 x).ult (BitVec.ofInt 64 y)) = decide (x < y) := by
+  by_cases neg : x < 0
+  · have less : x < y := by omega
+    simp [neg, less]
+  · rw [ult_in (by omega) hy]
+    simp [neg]
+
+theorem mixed_right_lt {x y : Int}
+    (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : -2 ^ 63 ≤ y ∧ y < 2 ^ 63) :
+    ((!decide (y < 0)) && (BitVec.ofInt 64 x).ult (BitVec.ofInt 64 y)) = decide (x < y) := by
+  by_cases neg : y < 0
+  · have less : ¬ x < y := by omega
+    simp [neg, less]
+  · rw [ult_in hx (by omega)]
+    simp [neg]
+
+theorem mixed_left_eq {x y : Int}
+    (hx : -2 ^ 63 ≤ x ∧ x < 2 ^ 63) (hy : 0 ≤ y ∧ y < 2 ^ 64) :
+    ((!decide (x < 0)) && (BitVec.ofInt 64 x == BitVec.ofInt 64 y)) = decide (x = y) := by
+  by_cases neg : x < 0
+  · have unequal : x ≠ y := by omega
+    simp [neg, unequal]
+  · rw [beq_unsigned (by omega) hy]
+    simp [neg]
+
+theorem mixed_right_eq {x y : Int}
+    (hx : 0 ≤ x ∧ x < 2 ^ 64) (hy : -2 ^ 63 ≤ y ∧ y < 2 ^ 63) :
+    ((!decide (y < 0)) && (BitVec.ofInt 64 x == BitVec.ofInt 64 y)) = decide (x = y) := by
+  by_cases neg : y < 0
+  · have unequal : x ≠ y := by omega
+    simp [neg, unequal]
+  · rw [beq_unsigned hx (by omega)]
+    simp [neg]
+
 /-- Unsigned IR division agrees with the canonical nonnegative integer quotient. -/
 theorem udiv_w {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ 64)
     (hb0 : 0 < b) (hb1 : b < 2 ^ 64) :

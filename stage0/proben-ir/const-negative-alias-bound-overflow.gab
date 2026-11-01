@@ -1,0 +1,9 @@
+// Discovery may skip a failed declaration; final evaluation must reject its intermediate overflow.
+module const_negative_bound_overflow {
+type Small = i8 in -10 .. 100;
+const fn negative() -> Small effects { pure } { return 0 - 1; }
+const NEGATIVE : Small = negative();
+type Bound = i8 in NEGATIVE .. 100;
+const ANSWER : Bound = (100 + 1) - 59;
+impl fn main() -> Bound effects { pure } { return ANSWER; }
+}

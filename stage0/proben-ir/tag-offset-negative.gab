@@ -1,0 +1,22 @@
+// Recover both runtime endpoints while dispatch skips large-bound payload arms.
+module tag_offset_negative {
+tagged type Message = { Empty, Before(i64 in -4294967396 .. -4294967296), Item(i64 in -4294967396 .. -4294967296), After(i64 in -4294967396 .. -4294967296) };
+impl fn decode(x : i64 in -4294967396 .. -4294967296) -> u8 effects { pure } {
+    let m = Item(x);
+    let mut answer : u8 = 0;
+    match m {
+        Empty => { answer = 7; }
+        Before(value) => { answer = 5; }
+        Item(value) => {
+            if value == x { answer = 21; } else { answer = 9; }
+        }
+        After(value) => { answer = 3; }
+    }
+    return answer;
+}
+impl fn main() -> u32 in 0 .. 1000 effects { pure } {
+    let x = decode(-4294967396);
+    let y = decode(-4294967296);
+    return x + y;
+}
+}

@@ -164,24 +164,16 @@ def tagTestC (s k : Nat) : List II :=
   [ci 2 (s + 1) s 0, ci 1 (s + 2) 255 0, ci 8 (s + 1) (s + 1) (s + 2),
    ci 1 (s + 2) k 0, ci 14 (s + 1) (s + 1) (s + 2)]
 
-/-- Decode a payload in its binding slot. Its lower bound must currently fit a literal. -/
+/-- Decode a one-word payload in its binding slot, materialising the lower bound in two scratch words. -/
 def tagPayloadC (s : Nat) : Option (Int × Int) → Option (List II)
   | none => some []
-  | some (lo, hi) => if lit32 lo && decide (valueWords (.int lo hi) = 1) then
-      some [ci 1 (s + 1) 8 0, ci 12 s s (s + 1), ci 1 (s + 1) lo 0, ci 3 s s (s + 1)]
+  | some (lo, hi) => if decide (valueWords (.int lo hi) = 1) then
+      some ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++ [ci 3 s s (s + 1)])
     else none
-
-/-- Signed interval test with full word constants. The fourth temporary word
-    belongs to the high-bound materializer; the source value remains in `d`. -/
-def narrowTest (d : Nat) (lo hi : Int) : List II :=
-  (konstWL 4 (BitVec.ofInt 64 lo).toNat (d + 1)).1 ++
-    ([ci 13 (d + 1) d (d + 1)] ++
-    ((konstWL 4 (BitVec.ofInt 64 hi).toNat (d + 2)).1 ++
-    [ci 13 (d + 2) (d + 2) d, ci 9 (d + 1) (d + 1) (d + 2)]))
 
 /-- An outside flag selects the terminating error arm; the value stays in `d`. -/
 def narrowC (d : Nat) (lo hi : Int) (ce cx cr : List II) : List II :=
-  ce ++ (narrowTest d lo hi ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
+  ce ++ ((engTest 13 d lo hi).1 ++ [ci 19 (d + 1) (16 * (cx.length + 2)) 0] ++ cx ++
     [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)
 
 /-- Compare a reason's entire word, preserving its slot for subsequent arms. -/
@@ -266,14 +258,14 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II
     let cr ← lowE (reserved := reserved) L r (frei Γ reserved + valueWords (D.typ t f))
     slotStoreC L t f (frei Γ reserved) ce cr
   | _, Γ, _, _, .shift t f (lo := a) (hi := b) _ i von nach _ _ _ _, reserved =>
-    if inW a b && lit32 von && lit32 nach then do
+    if inW a b && inW von von then do
       let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved))
       let cr ← slotC L t f ((frei Γ reserved)) ci'
       let cj ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
       let ca ← slotA L t f ((frei Γ reserved) + 1) cj
-      let test := bin2 14 ((frei Γ reserved)) cr ([ci 1 ((frei Γ reserved) + 1) von 0], (frei Γ reserved) + 2)
+      let test := bin2 14 ((frei Γ reserved)) cr (wordConstant (frei Γ reserved + 1) von)
       pure (test.1 ++ (guardC ((frei Γ reserved)) 106 ((frei Γ reserved)) ++
-        ([ci 1 ((frei Γ reserved)) nach 0] ++ ca.1 ++ [stC ((frei Γ reserved))])),
+        ((wordConstant (frei Γ reserved) nach).1 ++ ca.1 ++ [stC ((frei Γ reserved))])),
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
   | _, Γ, _, _, .traverse t inv body, reserved =>
