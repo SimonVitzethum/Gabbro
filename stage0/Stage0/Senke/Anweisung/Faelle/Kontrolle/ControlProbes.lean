@@ -1,5 +1,7 @@
 /- Nonempty control-flow fixtures, including check forms unavailable in the source reader. -/
 import Stage0.Senke.Welt.Anordnung
+import Stage0.IRBild
+import Grammatik.Parser.Cover.Differenz
 
 namespace Gabbro.Stage0.Senke.ControlProbe
 set_option maxRecDepth 100000
@@ -65,7 +67,7 @@ def gateBinding : TorB :=
   ⟨1, [some 0, some 1, some 2, none, none, none], [(-9, 0), (-4, 1)]⟩
 
 def imageOf (body : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry [] 1024
+  let b ← bild 1 (programOf body) (layU u (fun _ => some gateBinding)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024
   pure b.bytes
 
 def blockImageOf (body : Block D (vertragVon D entry) false [] [] []) : Except String (List Runner.B) :=
@@ -152,11 +154,42 @@ theorem fieldless_table_layout_zeuge :
     D.count table = 4294967296 ∧ tabSz u table = 0 ∧ IsEmpty (D.Feld table) := by
   exact ⟨rfl, (fieldless_table_layout u table rfl).2⟩
 
+local instance : DecidableEq D.Fn :=
+  inferInstanceAs (DecidableEq (Fin u.fns.length))
+
+/-- The canonical checker accepts this exact large-count, fieldless program.
+    Source export can preserve it without introducing a replacement source rule. -/
+theorem traverse_wide_checker_zeuge :
+    Gabbro.Grammatik.Zielsatz.AkzeptiertX program
+      (Gabbro.Grammatik.Parser.Cover.Differenz.sperrFamilie u)
+      [entry] [] [Sum.inl table] [] = true := by
+  decide +kernel
+
 /-- A real image witness for the generic wide traversal case. This does not
     claim the missing empty-table source exporter has been implemented. -/
 theorem traverse_wide_image_zeuge :
     (bild 1 program (layU u (fun _ => none)) [entry] Fin.val
-      (fun _ => "main") entry [] 1024).isOk = true := by
+      (fun _ => "main") entry .nil [] 1024).isOk = true := by
+  decide +kernel
+
+end Gabbro.Stage0.Senke.WideTraverseProbe
+
+namespace Gabbro.Stage0.Senke.WideTraverseProbe
+
+/-- The real source uses a wide declared count and returns from its first iteration.
+    Truncating the count to zero would reach the distinct return value 17 instead. -/
+def source : String :=
+  "module ir_probe { table t count 4294967296 { slot { } } impl fn main() -> u64 in 0 .. 100 effects { reads t.slots } { traverse i over slots of t by unvisited touches reads t.slots { return 23; } return 17; } }"
+
+def sourceCount : Option Int := do
+  let compiled ← (Gabbro.Stage0.compile source).toOption
+  let table ← compiled.unit.tabs[0]?
+  pure table.count
+
+/-- Canonical source, exact original count and actual IR image are jointly inhabited. -/
+theorem traverse_wide_source_zeuge :
+    sourceCount = some 4294967296 ∧
+    (Gabbro.Stage0.irBild source 1024).isOk = true := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.WideTraverseProbe

@@ -122,7 +122,7 @@ theorem callee_certificate_zeuge :
       (.add (.add (.lit 2) (.lit 3)) (.lit 4)) 4
       (fun r => ∃ a b, (∃ x y, x = BitVec.ofInt 64 2 ∧ y = BitVec.ofInt 64 3 ∧ a = x + y) ∧
         b = BitVec.ofInt 64 4 ∧ r = a + b)) := by
-  exact ⟨⟨5, ExprCost.add (ExprCost.add .literal .literal) .literal, by decide⟩⟩
+  exact ⟨⟨5, ExprCost.add (by decide) (ExprCost.add (by decide) .literal .literal) .literal, by decide⟩⟩
 
 
 /-- The control image emitted for a true invariant and an empty body. Its

@@ -1,0 +1,6 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_signature_cycle {
+const ANSWER : u8 = identity(42);
+const fn identity(x : u8 in 0 .. ANSWER) -> u8 effects { pure } { return x; }
+impl fn main() -> u8 effects { pure } { return 42; }
+}

@@ -297,7 +297,7 @@ theorem FloatNormalizeHead.write_quotient
   obtain ⟨env, envAt⟩ := frameWordEnv (L := L) (n := dst-FB) pre.frame (by omega)
   have idx : base-FB < dst-FB := by omega
   have slotEq : FB + (base-FB) = base := by omega
-  obtain ⟨w, hr, he⟩ := envAt _ (frameWordVar (dst-FB) (base-FB) idx)
+  obtain ⟨w, hr, he⟩ := ValueAt.word frameWordTy _ trivial (envAt _ (frameWordVar (dst-FB) (base-FB) idx))
   rw [frameWordVar_slot, slotEq, head.readQ] at hr
   cases hr
   change BitVec.ofInt 64 q =
@@ -399,7 +399,7 @@ theorem FloatNormalizeHead.write_fields
     intro s v low high read
     have idx : s-FB < dst-FB := by omega
     have slotEq : FB+(s-FB) = s := by omega
-    obtain ⟨w, hr, he⟩ := envAt _ (frameWordVar (dst-FB) (s-FB) idx)
+    obtain ⟨w, hr, he⟩ := ValueAt.word frameWordTy _ trivial (envAt _ (frameWordVar (dst-FB) (s-FB) idx))
     rw [frameWordVar_slot, slotEq, read] at hr
     cases hr
     change v = BitVec.ofInt 64 (env.get (frameWordVar (dst-FB) (s-FB) idx)).n at he
@@ -956,7 +956,7 @@ theorem retainedWordCode_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     dsimp only [x]
     rw [frameWordVar_slot]
     omega
-  obtain ⟨v, rv, ev⟩ := env _ x
+  obtain ⟨v, rv, ev⟩ := ValueAt.word frameWordTy _ trivial (env _ x)
   rw [hx, read] at rv
   cases rv
   change w = BitVec.ofInt 64 (η.get x).n at ev
@@ -1326,7 +1326,7 @@ theorem retainedWordCodes_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
       dsimp only [x]
       rw [frameWordVar_slot]
       omega
-    obtain ⟨v, rv, ev⟩ := env _ x
+    obtain ⟨v, rv, ev⟩ := ValueAt.word frameWordTy _ trivial (env _ x)
     rw [hx, read] at rv
     cases rv
     change w = BitVec.ofInt 64 (η.get x).n at ev

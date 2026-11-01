@@ -1,0 +1,6 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_bound_cycle {
+type Bound = u8 in 0 .. LIMIT;
+const LIMIT : Bound = 42;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

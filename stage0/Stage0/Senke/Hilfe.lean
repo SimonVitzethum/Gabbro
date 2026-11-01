@@ -12,6 +12,32 @@ set_option linter.unusedSectionVars false
 
 variable [Kern]
 
+/-- Slot `i` of the frame at slot `F` is slot `F + i`. -/
+theorem slot_slot (fp : Runner.W) (F i : Nat) :
+    slot (slot fp (BitVec.ofNat 64 F)) (BitVec.ofNat 64 i) = slot fp (BitVec.ofNat 64 (F + i)) := by
+  simp only [slot]
+  apply BitVec.eq_of_toNat_eq
+  have h8 : (8 : Runner.W).toNat = 8 := rfl
+  simp only [BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat, h8]
+  omega
+
+/-- Caller and callee views name the same complete value span. -/
+theorem ValueAt.frame_shift {D : Deklaration} {L : Lay D} {m : Runner.Mem} {fp : Runner.W}
+    {F base : Nat} {τ : Ty} {v : Wert D τ} :
+    ValueAt L m (slot fp (BitVec.ofNat 64 F)) base τ v ↔ ValueAt L m fp (F + base) τ v := by
+  constructor
+  · intro value
+    refine ⟨value.1, ?_⟩
+    intro i hi
+    have read := value.2 i hi
+    rw [slot_slot] at read
+    simpa only [Nat.add_assoc] using read
+  · intro value
+    refine ⟨value.1, ?_⟩
+    intro i hi
+    rw [slot_slot]
+    simpa only [Nat.add_assoc] using value.2 i hi
+
 theorem star_cast {t t' u u' : T} {m m' : Runner.Mem} (h : Star t m t' m') (h1 : t = u) (h2 : t' = u') :
     Star u m u' m' := by subst h1; subst h2; exact h
 
@@ -72,19 +98,63 @@ theorem star_ins {m m' : Runner.Mem} {pc fp : Runner.W} {i : II} (hc : CodeAt m 
   Star.one (run_step (t := ⟨pc, fp⟩) (by simpa using hc 0 (by simp)) ho hr)
 
 theorem vslot_lt {reserved : Nat} {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : vslot x reserved < frei Γ reserved := by
-  have : Var.idx x < Γ.length := by
-    induction x with
-    | here => simp [Var.idx]
-    | there x ih => simp [Var.idx]; omega
+  have := variableOffset_bound x
+  have := valueWords_pos τ
   unfold vslot frei; omega
+
+/-- The complete value survives writes above its end, including all nested data. -/
+theorem ValueAt.agree {m m' : Runner.Mem} {fp : Runner.W} {base lo K : Nat} {τ : Ty}
+    {v : Wert D τ} (value : ValueAt L m fp base τ v) (changed : Agree fp lo K m m')
+    (frame : FrameOK m fp K) (below : base + valueWords τ ≤ lo) (fits : lo ≤ K) :
+    ValueAt L m' fp base τ v := by
+  refine ⟨value.1, ?_⟩
+  intro i hi
+  have width := encodeWords_length L τ v
+  rw [agree_rd_low changed frame.room (by omega) fits]
+  exact value.2 i hi
+
+theorem ResultAt.agree {m m' : Runner.Mem} {fp : Runner.W} {base lo K : Nat}
+    {e : Option Ty} {v : ErgVal D e} (value : ResultAt L m fp base e v)
+    (changed : Agree fp lo K m m') (frame : FrameOK m fp K)
+    (below : base + resultWords e ≤ lo) (fits : lo ≤ K) : ResultAt L m' fp base e v := by
+  cases e with
+  | some τ => exact ValueAt.agree value changed frame below fits
+  | none =>
+    intro i hi
+    have zero : i = 0 := by simpa using hi
+    subst i
+    rw [agree_rd_low changed frame.room (by change base + 1 ≤ lo at below; omega) fits]
+    exact value 0 (by simp)
+
+theorem ResultAt.first {m : Runner.Mem} {fp : Runner.W} {base : Nat}
+    {e : Option Ty} {v : ErgVal D e} (value : ResultAt L m fp base e v) :
+    ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 base)) = some w := by
+  cases e with
+  | none => exact ⟨0, value 0 (by simp)⟩
+  | some τ =>
+    have width := encodeWords_length L τ v
+    have positive := valueWords_pos τ
+    exact ⟨(encodeWords L τ v)[0]'(by omega), value.2 0 (by omega)⟩
+
+/-- A slot following an exact copy footprint retains its whole word. This is
+    the shared status/header separation fact for received return areas. -/
+theorem agree_rd_above {m m' : Runner.Mem} {fp : Runner.W} {lo last K i : Nat}
+    (changed : Agree fp lo last m m') (room : fp.toNat + 8 * K ≤ 2 ^ 64)
+    (above : last ≤ i) (fits : i < K) :
+    m'.rd64 (slot fp (BitVec.ofNat 64 i)) = m.rd64 (slot fp (BitVec.ofNat 64 i)) := by
+  have address := slot_toNat (i := i) room fits
+  simp only [Runner.Mem.rd64, changed.rd]
+  rw [le_congr (fun j hj => changed.b _ fun ⟨low, high⟩ => by
+    have := fp.isLt
+    simp only [BitVec.toNat_add, BitVec.toNat_ofNat, address] at low high
+    omega)]
+
 
 theorem envAt_agree {D : Deklaration} {L : Lay D} {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {d K : Nat} {reserved : Nat}
     (h : EnvAt L m fp ρ reserved) (ha : Agree fp d K m m') (hF : FrameOK m fp K) (hd : frei Γ reserved ≤ d) (hK : d ≤ K) :
     EnvAt L m' fp ρ reserved := by
   intro τ x
-  obtain ⟨w, hw, he⟩ := h τ x
-  refine ⟨w, ?_, he⟩
-  rw [agree_rd_low ha hF.room (by have := vslot_lt (reserved := reserved) x; omega) hK]
-  exact hw
+  have bound := variableOffset_bound x
+  exact (h τ x).agree ha hF (by unfold vslot frei at *; omega) hK
 
 end Gabbro.Stage0.Senke

@@ -1,12 +1,5 @@
-/-
-  File:      stage0/Stage0/Senke/Welt/WeltAt.lean
-  Subject:   The world in memory (`WeltAt`): every element of every column and every global at its address (`Lay`), as
-             the word of its value; an element of a byte column is the low byte of the word read there.
-
-  The world lies above everything a frame uses (`fp + 8K ≤ lo`), so code that writes only its frame keeps it
-  (`weltAt_stab`). It describes the slots and globals only, so asking or reading (`lese`, `fragt`, which only
-  record events) keeps it by definition.
--/
+/- Complete canonical world values at typed physical addresses. Full-span bounds
+   and separation protect every limb; frame changes preserve recursive validity. -/
 import Stage0.Senke.Ausdruck.Sim
 
 namespace Gabbro.Stage0.Senke
@@ -17,8 +10,8 @@ variable {D : Deklaration} {L : Lay D}
 
 /-- Every element and every global, one word each, inside `[lo, hi)`, below `2^31`. -/
 def LayIn (L : Lay D) : Prop :=
-  (∀ t f (k : Nat), (k : Int) < L.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 ≤ L.hi) ∧
-  (∀ g, L.lo ≤ L.ga g ∧ L.ga g + 8 ≤ L.hi) ∧ L.hi < 2 ^ 31
+  (∀ t f (k : Nat), (k : Int) < L.count t → L.lo ≤ L.elem t f k ∧ L.elem t f k + 8 * valueWords (D.typ t f) ≤ L.hi) ∧
+  (∀ g, L.lo ≤ L.ga g ∧ L.ga g + 8 * valueWords (D.gtyp g) ≤ L.hi) ∧ L.hi < 2 ^ 31
 
 /-- A cell of the world: a global, or element `k` of column `f` of table `t`. -/
 inductive Zelle (D : Deklaration) where
@@ -35,8 +28,15 @@ def Zelle.da (L : Lay D) : Zelle D → Prop
   | .glob _ => True
   | .elem t _ k => (k : Int) < L.count t
 
+/-- Complete byte extent of a typed cell, using the single canonical ABI. -/
+def Zelle.bytes : Zelle D → Nat
+  | .glob g => 8 * valueWords (D.gtyp g)
+  | .elem t f _ => 8 * valueWords (D.typ t f)
+
 /-- No two cells share a word: different cells have different addresses, all on one grid of 8. -/
 structure LayDis (L : Lay D) : Prop where
+  spans : ∀ c c' : Zelle D, c.da L → c'.da L → c ≠ c' →
+    c.adr L + c.bytes ≤ c'.adr L ∨ c'.adr L + c'.bytes ≤ c.adr L
   inj : ∀ c c' : Zelle D, c.da L → c'.da L → c.adr L = c'.adr L → c = c'
   grid : ∀ c : Zelle D, c.da L → c.adr L % 8 = L.lo % 8
 
@@ -53,9 +53,9 @@ def WeltWr (m : Runner.Mem) (L : Lay D) : Prop :=
   ∀ x : Nat, L.lo ≤ x → x < L.hi → m.wr (BitVec.ofNat 64 x) = true
 
 def WeltAt (m : Runner.Mem) (L : Lay D) (σ : World D) : Prop :=
-  (∀ t f (k : Nat), (k : Int) < L.count t → ∃ w, m.rd64 (BitVec.ofNat 64 (L.elem t f k)) = some w ∧
-    Enc L (D.typ t f) (σ.slots t k f) w) ∧
-  (∀ g, ∃ w, m.rd64 (BitVec.ofNat 64 (L.ga g)) = some w ∧ Enc L (D.gtyp g) (σ.globs g) w) ∧
+  (∀ t f (k : Nat), (k : Int) < L.count t →
+    ValueAt L m (BitVec.ofNat 64 (L.elem t f k)) 0 (D.typ t f) (σ.slots t k f)) ∧
+  (∀ g, ValueAt L m (BitVec.ofNat 64 (L.ga g)) 0 (D.gtyp g) (σ.globs g)) ∧
   WeltWr m L
 
 /-- A word of the world may be written. -/
@@ -78,18 +78,34 @@ theorem rd64_agree_out {m m' : Runner.Mem} {fp : Runner.W} {lo K a : Nat} (ha : 
     simp only [BitVec.toNat_add, BitVec.toNat_ofNat] at g1 g2
     omega)]
 
+/-- Frame-only changes preserve every word and all recursive validity of a cell. -/
+theorem valueAt_world_stab {m m' : Runner.Mem} {fp : Runner.W} {K address : Nat}
+    {τ : Ty} {v : Wert D τ} (changed : Agree fp 0 K m m')
+    (sep : fp.toNat + 8 * K ≤ address)
+    (bound : address + 8 * valueWords τ < 2 ^ 31)
+    (input : ValueAt L m (BitVec.ofNat 64 address) 0 τ v) :
+    ValueAt L m' (BitVec.ofNat 64 address) 0 τ v := by
+  refine ⟨input.1, fun i hi => ?_⟩
+  have index : i < valueWords τ := by simpa only [encodeWords_length] using hi
+  have addr : slot (BitVec.ofNat 64 address) (BitVec.ofNat 64 (0 + i)) =
+      BitVec.ofNat 64 (address + 8 * i) := by
+    simp only [Nat.zero_add, slot]
+    change BitVec.ofNat 64 address + BitVec.ofNat 64 i * BitVec.ofNat 64 8 = _
+    rw [← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+    congr 1; omega
+  rw [addr, rd64_agree_out changed (by omega) (Or.inr (by omega))]
+  have h := input.2 i hi
+  rwa [addr] at h
+
 theorem weltAt_stab {L : Lay D} {σ : World D} {fp : Runner.W} {K : Nat} (hl : LayIn L)
     (hwl : fp.toNat + 8 * K ≤ L.lo) : WStab (fun m => WeltAt m L σ) fp K := by
   intro m m' hm ha
   obtain ⟨hs, hg, hwr⟩ := hm
-  obtain ⟨hl1, hl2, hl3⟩ := hl
   refine ⟨fun t f k hk => ?_, fun g => ?_, hwr.keep ha.wr⟩
-  · obtain ⟨w, hw, he⟩ := hs t f k hk
-    have := hl1 t f k hk
-    exact ⟨w, by rw [rd64_agree_out ha (by omega) (Or.inr (by omega))]; exact hw, he⟩
-  · obtain ⟨w, hw, he⟩ := hg g
-    have := hl2 g
-    exact ⟨w, by rw [rd64_agree_out ha (by omega) (Or.inr (by omega))]; exact hw, he⟩
+  · have hin := hl.1 t f k hk
+    exact valueAt_world_stab ha (by omega) (by have := hl.2.2; omega) (hs t f k hk)
+  · have hin := hl.2.1 g
+    exact valueAt_world_stab ha (by omega) (by have := hl.2.2; omega) (hg g)
 
 /-! ## What a statement changes: its frame's slots from `lo` and the world -/
 

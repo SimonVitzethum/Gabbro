@@ -15,24 +15,55 @@ variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
 
+/-- The actual caller receive code transports every allocated return word and
+    preserves the following status slot, even when the normal value uses less
+    than the shared normal/reason area. -/
+theorem receive_run {m : Runner.Mem} {pc fp : Runner.W} {K F : Nat}
+    (signature : Signatur D.Tab D.Glob D.Lock D.Marke)
+    (frame : FrameOK m fp K) (small : K < 2 ^ 31)
+    (fits : receiveTop signature F ≤ K)
+    (code : CodeAt m pc (receiveC signature F))
+    (far : CodeFar pc (receiveC signature F).length fp K) :
+    ∃ m', Star ⟨pc, fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16 * (receiveC signature F).length), fp⟩ m' ∧
+      Agree fp F K m m' ∧
+      (∀ i, i < returnWords signature.erg signature.gruende →
+        m'.rd64 (slot fp (BitVec.ofNat 64 (F + i))) =
+          m.rd64 (slot fp (BitVec.ofNat 64 (F + FB + contextWords signature.params + i)))) ∧
+      m'.rd64 (slot fp (BitVec.ofNat 64
+        (F + FB + contextWords signature.params + returnWords signature.erg signature.gruende))) =
+      m.rd64 (slot fp (BitVec.ofNat 64
+        (F + FB + contextWords signature.params + returnWords signature.erg signature.gruende))) := by
+  have fb : FB = 4 := rfl
+  have bound : F + FB + contextWords signature.params + returnWords signature.erg signature.gruende + 1 ≤ K := fits
+  obtain ⟨m', run, changed, copied⟩ := copyRegion_run frame small
+    (by omega) (by omega) (Or.inl (by omega)) code
+    (by simpa only [receiveC, copyWords_length] using far)
+  refine ⟨m', ?_, Agree.widen changed (by omega), copied, ?_⟩
+  · simpa only [receiveC, copyWords_length] using run
+  · exact agree_rd_above changed frame.room (by omega) (by omega)
+
 theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     {dv : Runner.W} {c : Nat} (hS : FunSpec L A C R dv c)
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks F : Nat} {f : D.Fn} {σ : World D} {ρa : Env D (D.params f)}
     (hc : CodeAt m pc (callTail A f F indirect)) (hcf : CodeFar pc 4 fp K) (hF : FrameOK m fp K) (hK : K < 2 ^ 31)
-    (hFB : FB ≤ F) (hT : F + FB + (D.params f).length + 1 ≤ Ks) (hcap : F + c ≤ Ks) (hA : A f < 2 ^ 31)
+    (hFB : FB ≤ F) (hT : F + FB + (contextWords (D.params f)) + 1 ≤ Ks) (hcap : F + c ≤ Ks) (hA : A f < 2 ^ 31)
     (hP : PCode m A C fp K) (hdv : m.rd64 (slot fp (BitVec.ofNat 64 2)) = some (dv + 1))
     (hE : EnvAt L m (slot fp (BitVec.ofNat 64 F)) ρa) (hW : WIn L fp Ks K) (hWa : WeltAt m L σ)
     (hy : SyncOK m L fp Ks)
     (htarget : indirect = true → m.rd64 (slot fp (BitVec.ofNat 64 F)) = some (BitVec.ofNat 64 (A f)) := by simp) :
     match R f σ ρa with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧ AgreeW L fp F K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (D.params f).length true) ∧ WeltAt m' L σ'
+        (ResultAt L m' (slot fp (BitVec.ofNat 64 F)) (FB + contextWords (D.params f)) (D.erg f) v ∧
+          ReturnMirror m' (slot fp (BitVec.ofNat 64 F)) (FB + contextWords (D.params f)) ∧
+          ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧ WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
     | .why σ' r => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 4), fp⟩ m' ∧
         AgreeW L fp F K m m' ∧
-        m'.rd64 (slot fp (BitVec.ofNat 64 (F + 2))) = some (BitVec.ofNat 64 r.val) ∧
-        ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (D.params f).length false ∧ WeltAt m' L σ' := by
+        ValueAt L m' (slot fp (BitVec.ofNat 64 F)) (FB + contextWords (D.params f)) (.why (D.gruende f)) r ∧
+        ReturnMirror m' (slot fp (BitVec.ofNat 64 F)) (FB + contextWords (D.params f)) ∧
+        ReturnFlag m' (slot fp (BitVec.ofNat 64 F)) (contextWords (D.params f)) false (returnWords (D.erg f) (D.gruende f)) ∧ WeltAt m' L σ' := by
   have hroom := hF.room
   have hlt := hF.lt
   have hFB3 : FB = 4 := rfl
@@ -54,7 +85,7 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
   have i3 := hc 3 (by simp [callTail, callTailN])
   simp only [callTail, callTailN, ci, List.getElem_cons_zero, List.getElem_cons_succ] at i0 i1 i2 i3
   -- the writes
-  let T := F + FB + (D.params f).length
+  let T := F + FB + (contextWords (D.params f))
   have hsT : sx (II.f (T : Int)) = BitVec.ofNat 64 T := sx_nat (by omega)
   have hs2 : sx (II.f ((F + 2 : Nat) : Int)) = BitVec.ofNat 64 (F + 2) := sx_nat (by omega)
   have hsF : sx (II.f (F : Int)) = BitVec.ofNat 64 F := sx_nat (by omega)
@@ -157,11 +188,14 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
     exact rd_same hF1 (by omega) _
   have gE : EnvAt L m5 (slot fp (BitVec.ofNat 64 F)) ρa := by
     intro τ x
-    obtain ⟨w, hw, he⟩ := hE τ x
-    refine ⟨w, ?_, he⟩
-    have h1 := vslot_lt (reserved := 0) x
+    have value := hE τ x
+    refine ⟨value.1, ?_⟩
+    intro i hi
+    have hw := value.2 i hi
+    have width := encodeWords_length L τ (ρa.get x)
+    have h1 := variableOffset_bound x
     have h2 : FB ≤ vslot x := by unfold vslot; omega
-    simp only [frei] at h1
+    have bound : vslot x + i < FB + contextWords (D.params f) := by unfold vslot; omega
     rw [slot_slot] at hw ⊢
     simp only [m5, m4, m3, m2, m1]
     rw [rd_other hroom (by omega) (by omega) (by omega), rd_other hroom (by omega) (by omega) (by omega),
@@ -178,9 +212,9 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
   cases hR : R f σ ρa with
   | ok σ' v =>
     rw [hR] at hspec
-    obtain ⟨m6, s6, a6, ⟨w, hw, he, flag⟩, hw6⟩ := hspec
+    obtain ⟨m6, s6, a6, value, hw6⟩ := hspec
     refine ⟨m6, s14.trans ?_, (agreeW_of a15).trans ((agreeW_sub hF5.lt hFF a6).mono (by omega)),
-      ⟨w, by rw [← slot_slot]; exact hw, he, flag⟩, hw6⟩
+      value, hw6⟩
     rw [e16] at s6
     exact s6
   | logik e =>
@@ -188,9 +222,9 @@ theorem call_ok {indirect : Bool} {A : D.Fn → Nat} {C : D.Fn → List II} {R :
     exact Stops.prefix s14 hspec
   | why σ' r =>
     rw [hR] at hspec
-    obtain ⟨m6, s6, a6, hw, flag, hw6⟩ := hspec
+    obtain ⟨m6, s6, a6, value, mirror, flag, hw6⟩ := hspec
     refine ⟨m6, s14.trans ?_, (agreeW_of a15).trans ((agreeW_sub hF5.lt hFF a6).mono (by omega)),
-      by rw [← slot_slot]; exact hw, flag, hw6⟩
+      value, mirror, flag, hw6⟩
     rw [e16] at s6
     exact s6
   | hardware e =>
@@ -227,9 +261,9 @@ theorem Pre.up {m : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {c : List II} 
 
 /-- The arguments land in the parameter slots of the frame at slot `F`, and nothing below `F + FB` changes. -/
 theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
-    (hWL : ∀ m, W m → WeltAt m L σ) :
+    (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (c : List II) → (top : Nat) →
-    lowA L args (F + FB) reserved = some (c, top) → top ≤ K → F + FB + τs.length ≤ K →
+    lowA L args (F + FB) reserved = some (c, top) → top ≤ K → F + FB + contextWords τs ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K (F + FB) c ρ W reserved →
     ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧ Agree fp (F + FB) K m m' ∧
       EnvAt L m' (slot fp (BitVec.ofNat 64 F)) (evalArgs σ₀ args σ ρ)
@@ -242,22 +276,30 @@ theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat}
     obtain ⟨⟨cr, tr⟩, hr, ⟨ce, te⟩, he, hc⟩ := h
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
-    simp only [List.length_cons] at hL
-    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok (reserved := reserved) σ₀ σ hWL rest cr tr hr (by omega) (by omega) m pc ρ hp.left
-    have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := F + FB + τs.length) (by omega)
-    obtain ⟨m2, s2, a2, w, hw, hen⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ hWL e _ ce te he (by omega) m1 _ ρ hp1
+    simp only [contextWords_cons] at hL
+    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok (reserved := reserved) σ₀ σ hWL hLay rest cr tr hr (by omega) (by omega) m pc ρ hp.left
+    have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := F + FB + contextWords τs) (by omega)
+    obtain ⟨m2, s2, a2, value⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ hWL hLay e _ ce te he (by omega) m1 _ ρ hp1
     have hF1 := hp1.frame
     refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans (a2.mono (by omega)), ?_⟩
     simp only [evalArgs]
-    have hfr : F + frei τs = F + FB + τs.length := by simp only [frei]; omega
-    refine envAt_cons (fp := slot fp (BitVec.ofNat 64 F)) ?_ (by rw [slot_slot, hfr]; exact hw) hen
-    intro τ' y
-    obtain ⟨w', hw', he'⟩ := e1 τ' y
-    refine ⟨w', ?_, he'⟩
-    have := vslot_lt (reserved := 0) y
-    rw [slot_slot] at hw' ⊢
-    rw [agree_rd_low a2 hF1.room (by simp only [frei] at this; omega) (by omega)]
-    exact hw'
+    have hfr : F + frei τs = F + FB + contextWords τs := by simp only [frei]; omega
+    refine envAt_cons (fp := slot fp (BitVec.ofNat 64 F)) ?_ ?_
+    · intro τ' y
+      obtain ⟨valid, words⟩ := e1 τ' y
+      refine ⟨valid, ?_⟩
+      intro i hi
+      have bound := variableOffset_bound y
+      have width := encodeWords_length L τ' ((evalArgs σ₀ rest σ ρ).get y)
+      have read := words i hi
+      rw [slot_slot] at read ⊢
+      rw [agree_rd_low a2 hF1.room (by unfold vslot frei at *; omega) (by omega)]
+      exact read
+    · refine ⟨value.1, ?_⟩
+      intro i hi
+      rw [slot_slot]
+      have read := value.2 i hi
+      simpa only [frei, Nat.add_zero, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using read
 
 /-- A whole call `callC`: the arguments, the call, the callee's contract; back with the result in slot
     `F + 2`, nothing below `F` changed. -/
@@ -271,20 +313,23 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     match R f σ (evalArgs σ₀ args σ ρ) with
     | .ok σ' v => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ reserved) ca).length), fp⟩ m' ∧
         AgreeW L fp (frei Γ reserved) K m m' ∧
-        (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 2))) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (D.params f).length true) ∧
+        (ResultAt L m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (FB + contextWords (D.params f)) (D.erg f) v ∧
+          ReturnMirror m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (FB + contextWords (D.params f)) ∧
+          ReturnFlag m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧
         WeltAt m' L σ'
     | .logik e => Stops ⟨pc, fp⟩ m (logikCode e)
     | .hardware h => Stops ⟨pc, fp⟩ m (hwCode h)
     | .why σ' r => ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (callC A f (frei Γ reserved) ca).length), fp⟩ m' ∧
         AgreeW L fp (frei Γ reserved) K m m' ∧
-        m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved + 2))) = some (BitVec.ofNat 64 r.val) ∧
-        ReturnFlag m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (D.params f).length false ∧ WeltAt m' L σ' := by
+        ValueAt L m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (FB + contextWords (D.params f)) (.why (D.gruende f)) r ∧
+        ReturnMirror m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (FB + contextWords (D.params f)) ∧
+        ReturnFlag m' (slot fp (BitVec.ofNat 64 (frei Γ reserved))) (contextWords (D.params f)) false (returnWords (D.erg f) (D.gruende f)) ∧ WeltAt m' L σ' := by
   simp only [callTop] at htop
   have hFB : FB ≤ frei Γ reserved := by simp only [frei]; omega
   have hks := hW.ks
   have hp' : PreS L m pc fp K (frei Γ reserved + FB) (ca ++ callTail A f (frei Γ reserved)) ρ reserved := hp.up (by omega)
   have hpw := PreS.welt hp'.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, e1⟩ := lowA_ok (reserved := reserved) (F := frei Γ reserved) σ₀ σ (fun _ h => h) args ca ta hca (by omega) (by omega) m pc ρ hpw
+  obtain ⟨m1, s1, a1s, e1⟩ := lowA_ok (reserved := reserved) (F := frei Γ reserved) σ₀ σ (fun _ h => h) hW.lay args ca ta hca (by omega) (by omega) m pc ρ hpw
   have a1 := Agree.widen a1s hks
   have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
   have hp1 := hp'.next a1 (Nat.le_refl _) (by omega)
@@ -302,8 +347,8 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
     exact s2
   | logik e => exact Stops.prefix s1 hc
   | why σ' r =>
-    obtain ⟨m2, s2, a2, hw, flag, hw2⟩ := hc
-    refine ⟨m2, s1.trans ?_, (agreeW_of (a1.mono (by omega))).trans a2, hw, flag, hw2⟩
+    obtain ⟨m2, s2, a2, value, mirror, flag, hw2⟩ := hc
+    refine ⟨m2, s1.trans ?_, (agreeW_of (a1.mono (by omega))).trans a2, value, mirror, flag, hw2⟩
     simp only [callC]
     rw [pc_add1, hl4]
     exact s2

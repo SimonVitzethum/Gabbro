@@ -1,0 +1,7 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_limit_word {
+const ANSWER : u8 = LIMIT - DELTA;
+const DELTA : u8 = 213;
+const LIMIT : u8 = u8::max;
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

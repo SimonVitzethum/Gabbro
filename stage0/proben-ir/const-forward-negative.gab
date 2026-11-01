@@ -1,0 +1,8 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_negative {
+type Small = i8 in -10 .. 100;
+const ANSWER : Small = NEGATIVE + 43;
+const NEGATIVE : Small = ZERO - 1;
+const ZERO : Small = 0;
+impl fn main() -> Small effects { pure } { return ANSWER; }
+}

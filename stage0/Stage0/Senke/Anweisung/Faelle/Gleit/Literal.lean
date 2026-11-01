@@ -13,7 +13,7 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {q low high : Int × Int} {rest : Block D (vertragVon D f) l (.fl low high :: Γ) Λ Λ'} :
@@ -48,19 +48,20 @@ theorem blockFloatLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     simp only [execBlock, hv]
     refine bindValue_ok (L := L) (τ := .fl low high) (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp hu hk hWa
     · intro m pc hp
+      refine Ok.value (width := rfl) ?_
       exact (konstWL_ok 4 _ (by simpa only [hx] using hb) (by omega) hp).mono
         fun w hen => ⟨hwf, by simpa only [hx] using hen⟩
     · intro m pc hp hu hk hw
       exact ihRest (ex := ex) cr tr hr (by omega)
         (by simp only [List.length_append] at hs; omega) hW m pc σ _ hp hlo
-        (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu hk hw
-        (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+        (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
+        (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
 
 theorem blockFloatOfLit_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Int} {low high : Int × Int} {rest : Block D (vertragVon D f) l (.fl low high :: Γ) Λ Λ'} :
@@ -79,7 +80,7 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
     (hA : ∀ f, A f < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
-    (hlo0 : lo = FB + (D.params f).length) (hens : lowEns L (P.ensures f) (lo + 1) = some (cens, tens))
+    (hlo0 : lo = FB + (contextWords (D.params f))) (hens : lowEns L (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {a b : Int} {e : Expr D Γ Λ (.int a b)} {low high : Int × Int} {rest : Block D (vertragVon D f) l (.fl low high :: Γ) Λ Λ'} :
@@ -118,7 +119,7 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
           w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 x)) := by
       intro j code t hc ht m pc hp
       exact (computedFloatOfE_ok (σ₀ := σr) (σ := σr) hc hp ht
-        (fun c t hc ht hp => lowE_ok σr σr (fun _ h => h) e j c t hc ht m pc ρ hp)).mono
+        (fun c t hc ht hp => lowE_ok σr σr (fun _ h => h) hW.lay e j c t hc ht m pc ρ hp |>.word trivial)).mono
           (fun w hw => ⟨hwf, hw⟩)
     simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
     simp only [execBlock]
@@ -155,11 +156,12 @@ theorem blockFloatOfComputed_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes
         have hvx := floatPasst_x hv
         refine bindValue_ok (L := L) (τ := .fl low high) (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
         · intro m pc hp
+          refine Ok.value (width := rfl) ?_
           exact (conv _ _ _ he (by omega) m pc hp).mono
             fun w hen => ⟨by simpa only [hvx] using hen.1, by simpa only [hvx] using hen.2⟩
         · intro m pc hp hu hk hw
           exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc σr _ hp hlo
-            (by simp only [frei, List.length_cons] at hlo2 ⊢; omega) hu hk hw
-            (fun j hj => by have := hpr j hj; simp only [frei, List.length_cons] at this ⊢; omega)
+            (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
+            (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
 
 end Gabbro.Stage0.Senke

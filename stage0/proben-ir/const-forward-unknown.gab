@@ -1,0 +1,5 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_unknown {
+const ANSWER : u8 = MISSING + 2;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

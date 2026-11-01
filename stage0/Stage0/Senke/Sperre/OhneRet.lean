@@ -91,6 +91,8 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     · exact retFreiB_istZ a h.2 _ _
   | _, _, _, _, .onTag v arms, h, σ, ρ => by
     exact retFreiArms_istZ arms h _ _ _
+  | _, _, _, _, .onWhy _ arms, h, σ, ρ => by
+    exact retFreiGrundArms_istZ arms h _ _ _
   | _, _, _, _, .traverse _ _ b, h, σ, ρ => by
     simp only [retFreiS] at h
     simp only [execStmt]
@@ -105,7 +107,6 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     rw [istZ_mapWelt]
     exact retFreiB_istZ b h _ _
   | _, _, _, _, .shift .., _, _, _ => by simp only [execStmt]; split <;> rfl
-  | _, _, _, _, .onWhy .., h, _, _
   | _, _, _, _, .retry .., h, _, _ | _, _, _, _, .forever .., h, _, _ | _, _, _, _, .regWrite .., h, _, _
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _
   | _, _, _, _, .retWhy .., h, _, _ | _, _, _, _, .assignSlotRef .., h, _, _ => by simp [retFreiS] at h
@@ -120,6 +121,13 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     split
     · exact retFreiB_istZ r h.2 _ _
     · exact hs
+  | _, _, _, _, .floatLit _ _ _ r, h, σ, ρ
+  | _, _, _, _, .floatOf _ _ _ r, h, σ, ρ => by
+    simp only [retFreiB] at h
+    simp only [execBlock]
+    split
+    · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
+    · rfl
   | _, _, _, _, .bind _ r, h, σ, ρ => by
     simp only [retFreiB] at h
     simp only [execBlock]
@@ -163,7 +171,6 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .bindAxiomElse .., h, _, _ | _, _, _, _, .regRead .., h, _, _
   | _, _, _, _, .regReadElse .., h, _, _
   | _, _, _, _, .narrow .., h, _, _ | _, _, _, _, .check .., h, _, _ | _, _, _, _, .float .., h, _, _
-  | _, _, _, _, .floatLit .., h, _, _ | _, _, _, _, .floatOf .., h, _, _
   | _, _, _, _, .floatNarrow .., h, _, _ => by simp [retFreiB] at h
 theorem retFreiArms_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) →
@@ -177,6 +184,17 @@ theorem retFreiArms_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .cons _ rest, h, ⟨⟨i + 1, _⟩, nutz⟩, σ, ρ => by
     simp only [retFreiArms, Bool.and_eq_true] at h
     exact retFreiArms_istZ rest h.2 _ σ ρ
+theorem retFreiGrundArms_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
+    {k : Nat} → (arms : GrundArms D V l Γ Λ Λ' k) →
+    retFreiGrundArms arms = true → ∀ v σ ρ, istZ (execGrund O passes R arms v σ ρ) = false
+  | _, _, _, _, _, .nil, _, v, _, _ => Fin.elim0 v
+  | _, _, _, _, _, .cons b rest, h, ⟨0, _⟩, σ, ρ => by
+    simp only [retFreiGrundArms, Bool.and_eq_true] at h
+    exact retFreiB_istZ b h.1 σ ρ
+  | _, _, _, _, _, .cons _ rest, h, ⟨i + 1, _⟩, σ, ρ => by
+    simp only [retFreiGrundArms, Bool.and_eq_true] at h
+    exact retFreiGrundArms_istZ rest h.2 _ σ ρ
+
 end
 
 end Gabbro.Stage0.Senke

@@ -6,6 +6,7 @@
              else no answer.
 -/
 import Stage0.Senke.Anweisung.TorLauf
+import Stage0.Senke.Anweisung.SchleifeTeile
 
 namespace Gabbro.Stage0.Senke
 

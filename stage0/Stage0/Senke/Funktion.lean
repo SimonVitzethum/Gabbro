@@ -27,13 +27,13 @@ variable {D : Deklaration} {V : Vertrag D}
 
 /-- The code of `f`, and the first slot it does not write. -/
 def lowFun (passes : Nat) (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D.Fn) : Option (List II × Nat) :=
-  let np := (D.params f).length
+  let np := (contextWords (D.params f))
   if (D.invs.filter (schuldet f)).isEmpty then do
     let req ← lowE L (P.requires f) (FB + np)
-    let ens ← lowEns L (P.ensures f) (FB + np + 1)
+    let ens ← lowEns L (P.ensures f) (FB + np + returnWords (D.erg f) (D.gruende f))
     -- Preserve the incoming ABI and both return words, then reserve one pair per
     -- simultaneously active forever before relocating the lexical environment.
-    let reserved := np + 2 + 2 * counterDepthE (P.rumpf f)
+    let reserved := np + returnWords (D.erg f) (D.gruende f) + 1 + 2 * counterDepthE (P.rumpf f)
     let body ← lowEnd (reserved := reserved) passes A L (FB + np) ens [] (0, 0) (P.rumpf f)
     let snap ← snapC L (oldCells (P.ensures f))
     pure (guardC 2 105 (FB + np) ++ req.1 ++ guardC (FB + np) 101 (FB + np) ++ snap ++ (relocateC FB reserved np ++ body.1),

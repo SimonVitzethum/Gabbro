@@ -1,0 +1,31 @@
+// Wide signed division and remainder with runtime operands: the quotient/remainder identity and exact values.
+module ir_probe {
+impl fn dr(a : i64 in -1267650600228229401496703205376 .. 1267650600228229401496703205376, b : i64 in -1000 .. -1) -> u32 in 0 .. 3 effects { pure } {
+    let q = a / b;
+    let r = a % b;
+    if q * b + r == a { return 1; }
+    return 0;
+}
+impl fn dp(a : i64 in -1267650600228229401496703205376 .. 1267650600228229401496703205376, b : i64 in 1 .. 1000) -> u32 in 0 .. 3 effects { pure } {
+    let q = a / b;
+    let r = a % b;
+    if q * b + r == a { return 1; }
+    return 0;
+}
+impl fn exact(a : i64 in -1267650600228229401496703205376 .. 1267650600228229401496703205376, b : i64 in 1 .. 1000) -> i64 in -1267650600228229401496703205376 .. 1267650600228229401496703205376 effects { pure } {
+    return a / b;
+}
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let c0 = dp(1267650600228229401496703205376, 3);
+    let c1 = dp(-1267650600228229401496703205376, 3);
+    let c2 = dr(-1267650600228229401496703205376, -7);
+    let c3 = dr(5, -2);
+    let c4 = dp(0, 1000);
+    let c5 = dr(1267650600228229401496703205376, -1);
+    let c6 = dr(-1267650600228229401496703205376, -1);
+    let c7 = dp(12345678901234567890123456, 999);
+    let e = exact(1267650600228229401496703205376, 3);
+    if e == 422550200076076467165567735125 { return c0 + c1 + c2 + c3 + c4 + c5 + c6 + c7 + 40; }
+    return 0;
+}
+}

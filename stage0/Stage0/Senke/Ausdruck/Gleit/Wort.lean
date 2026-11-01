@@ -58,4 +58,38 @@ theorem float_word_injective {a b : GFloat}
   simpa only [Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht _ ha,
     Gleitkomma.ausBits_zuBits _ Gleitkomma.f64_dicht _ hb] using this
 
+theorem wordConstant_length (d : Nat) (n : Int) :
+    (wordConstant d n).1.length = if lit32 n then 1 else 17 := by
+  unfold wordConstant
+  split <;> simp [konstWL, bin2]
+
+theorem wordConstant_top (d : Nat) (n : Int) :
+    d < (wordConstant d n).2 ∧ (wordConstant d n).2 ≤ d + 2 := by
+  unfold wordConstant
+  split
+  · simp
+  · exact konstWL_top 4 _ d
+
+/-- The shared materializer runs on the actual memory and preserves the frame
+    prefix. Two words suffice for either immediate or digit materialization. -/
+theorem wordConstant_ok {reserved : Nat} {m : Runner.Mem} {pc fp : Runner.W}
+    {K d : Nat} {n : Int} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (room : (wordConstant d n).2 ≤ K)
+    (pre : Pre L m pc fp K d (wordConstant d n).1 ρ W reserved) :
+    Ok m pc fp K d (wordConstant d n).1 (· = BitVec.ofInt 64 n) := by
+  by_cases small : lit32 n = true
+  · have hp : Pre L m pc fp K d [ci 1 d n 0] ρ W reserved := by
+      simpa [wordConstant, small] using pre
+    have fit : d + 1 ≤ K := by simpa [wordConstant, small] using room
+    simpa [wordConstant, small] using const_ok hp small (by omega)
+  · have hp : Pre L m pc fp K d (konstWL 4 (BitVec.ofInt 64 n).toNat d).1 ρ W reserved := by
+      simpa [wordConstant, small] using pre
+    have fit : d + 2 ≤ K := by
+      simp only [wordConstant, small, Bool.false_eq_true, ↓reduceIte, konstWL, bin2] at room
+      omega
+    have run := (konstWL_ok 4 (BitVec.ofInt 64 n).toNat (BitVec.isLt _) fit hp).mono
+      (fun w hw => by simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using hw)
+    simpa [wordConstant, small] using run
+
+
 end Gabbro.Stage0.Senke

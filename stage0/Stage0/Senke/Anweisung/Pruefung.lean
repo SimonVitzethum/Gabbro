@@ -4,6 +4,7 @@
              changes no slot below `s + 1`; outside, the stop 110 (G's hardware outcome at the gate).
 -/
 import Stage0.Senke.Anweisung.Tor
+import Stage0.Senke.Ausdruck.Arithmetik.Interval
 
 namespace Gabbro.Stage0.Senke
 
@@ -19,21 +20,27 @@ variable {D : Deklaration} {L : Lay D}
 
 theorem bool_ne_zero {b : Bool} : Runner.IR.bool b ≠ 0 ↔ b = true := by cases b <;> decide
 
-theorem slt_lit {w : Runner.W} {k : Int} (hk : lit32 k = true) : w.slt (BitVec.ofInt 64 k) = decide (w.toInt < k) := by
-  simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hk
+theorem slt_lit {w : Runner.W} {k : Int} (hk : inW k k = true) : w.slt (BitVec.ofInt 64 k) = decide (w.toInt < k) := by
+  simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at hk
   rw [BitVec.slt_eq_decide, toInt_ofInt_in (by omega) (by omega)]
 
 /-- `d := slot s < k` with `d = s + 1`. -/
 theorem sltC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {k : Int} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS L m pc fp K (s + 1) (sltC s k) ρ reserved) (hk : lit32 k = true) (hs : s + 2 < K)
+    (hp : PreS L m pc fp K (s + 1) (sltC s k) ρ reserved) (hk : inW k k = true) (hs : s + 2 < K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     Ok m pc fp K (s + 1) (sltC s k) (· = Runner.IR.bool (decide (w.toInt < k))) := by
-  have hp' : PreS L m pc fp K (s + 1) ([ci 2 ((s + 1 : Nat) : Int) s 0] ++ [ci 1 (((s + 1 : Nat) : Int) + 1) k 0,
-      ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)]) ρ reserved := hp
-  have := hp.small
-  exact ok_seq hp' (mov_ok hp'.left (by omega) (by omega) hw)
-    (fun m' w' hp'' hr he => (binK_ok (r := Runner.IR.bool (w'.slt (BitVec.ofInt 64 k))) hp'' hr hk rfl (by decide)
-      rfl (by omega)).mono fun x hx => by rw [hx, he, slt_lit hk]) (by omega)
+  have hp' : PreS L m pc fp K (s + 1)
+      ((wordConstant (s + 1) k).1 ++ [ci 13 (s + 1) s (s + 1)]) ρ reserved := hp
+  have fit := wordConstant_top (s + 1) k
+  obtain ⟨m1, s1, a1, w1, r1, rfl⟩ := wordConstant_ok (by omega) hp'.left
+  have hp1 := hp'.next a1 (Nat.le_refl _) (by omega)
+  have hw1 : m1.rd64 (slot fp (BitVec.ofNat 64 s)) = some w := by
+    rw [agree_rd_low a1 hp.frame.room (by omega) (by omega)]; exact hw
+  obtain ⟨m2, s2, a2, w2, r2, hv2⟩ := eng_bin_ok (d := s + 1) (a := s) (b := s + 1) hp1 (by omega) (by omega) (by omega) hw1 r1
+    (g := fun x y => some (Runner.IR.bool (x.slt y))) rfl (by decide) rfl
+  refine ⟨m2, ?_, a1.trans a2, w2, r2, ?_⟩
+  · simpa only [sltC, List.length_append, List.length_singleton, pc_add] using s1.trans s2
+  · rw [hv2, slt_lit hk]
 
 /-- A test `c` leaving `v` in slot `d`, then the guard over `d`. -/
 theorem test_ok {m : Runner.Mem} {pc fp : Runner.W} {K d s : Nat} {c : List II} {Γ : Ctx} {ρ : Env D Γ}
@@ -54,7 +61,7 @@ theorem test_ok {m : Runner.Mem} {pc fp : Runner.W} {K d s : Nat} {c : List II} 
 
 /-- The lower bound. -/
 theorem loC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {lo : Int} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS L m pc fp K (s + 1) (loC s lo) ρ reserved) (hk : lit32 lo = true) (hs : s + 10 ≤ K)
+    (hp : PreS L m pc fp K (s + 1) (loC s lo) ρ reserved) (hk : inW lo lo = true) (hs : s + 10 ≤ K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     (lo ≤ w.toInt → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (loC s lo).length), fp⟩ m' ∧
       Agree fp (s + 1) K m m') ∧ (¬ lo ≤ w.toInt → Stops ⟨pc, fp⟩ m 110) := by
@@ -75,7 +82,7 @@ theorem loC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {lo : Int} {Γ : 
 
 /-- The upper bound. -/
 theorem hiC_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {hi : Int} {Γ : Ctx} {ρ : Env D Γ} {w : Runner.W}
-    (hp : PreS L m pc fp K (s + 1) (hiC s hi) ρ reserved) (hk : lit32 (hi + 1) = true) (hs : s + 10 ≤ K)
+    (hp : PreS L m pc fp K (s + 1) (hiC s hi) ρ reserved) (hk : inW (hi + 1) (hi + 1) = true) (hs : s + 10 ≤ K)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
     (w.toInt ≤ hi → ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (hiC s hi).length), fp⟩ m' ∧
       Agree fp (s + 1) K m m') ∧ (¬ w.toInt ≤ hi → Stops ⟨pc, fp⟩ m 110) := by

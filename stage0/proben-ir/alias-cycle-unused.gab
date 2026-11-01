@@ -1,0 +1,6 @@
+// Even unused mutually recursive aliases must not disappear from the canonical collector.
+module alias_cycle_unused {
+type A = B;
+type B = A;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

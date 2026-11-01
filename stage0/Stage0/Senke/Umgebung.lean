@@ -36,21 +36,47 @@ theorem idx_eq : {Γ : Ctx} → {τ τ' : Ty} → (x : Var Γ τ) → (y : Var �
 
 theorem vslot_ne {Γ : Ctx} {τ τ' : Ty} {x : Var Γ τ} {y : Var Γ τ'} (h : Var.idx y ≠ Var.idx x) :
     vslot y reserved ≠ vslot x reserved := by
-  have := idx_lt x; have := idx_lt y
-  unfold vslot; omega
+  suffices variableOffset y ≠ variableOffset x by unfold vslot; omega
+  induction x generalizing τ' with
+  | here =>
+    cases y with
+    | here => exact False.elim (h rfl)
+    | there y =>
+      have := variableOffset_bound y
+      have := valueWords_pos τ'
+      simp only [variableOffset]; omega
+  | @there Γ₁ τ₁ σ₁ x ih =>
+    cases y with
+    | here =>
+      have hb := variableOffset_bound x
+      have pos := valueWords_pos τ₁
+      simp only [variableOffset]
+      omega
+    | there y => exact ih (by intro heq; apply h; simpa only [Var.idx, heq])
 
+
+/-- Updating a variable preserves complete values of all other variables, rather
+    than only their first words. The writer supplies the new canonical span. -/
 theorem envAt_set {m m' : Runner.Mem} {fp : Runner.W} {Γ : Ctx} {ρ : Env D Γ} {τ : Ty} {x : Var Γ τ}
-    {v : Wert D τ} {w : Runner.W} (h : EnvAt L m fp ρ reserved) (hx : m'.rd64 (slot fp (BitVec.ofNat 64 (vslot x reserved))) = some w)
-    (he : Enc L τ v w) (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
-      m'.rd64 (slot fp (BitVec.ofNat 64 (vslot y reserved))) = m.rd64 (slot fp (BitVec.ofNat 64 (vslot y reserved)))) :
+    {v : Wert D τ} (h : EnvAt L m fp ρ reserved)
+    (hx : ValueAt L m' fp (vslot x reserved) τ v)
+    (hothers : ∀ (τ' : Ty) (y : Var Γ τ'), Var.idx y ≠ Var.idx x →
+      ∀ i, i < valueWords τ' →
+      m'.rd64 (slot fp (BitVec.ofNat 64 (vslot y reserved + i))) =
+        m.rd64 (slot fp (BitVec.ofNat 64 (vslot y reserved + i)))) :
     EnvAt L m' fp (ρ.set x v) reserved := by
   intro τ' y
   by_cases hy : Var.idx y = Var.idx x
   · obtain ⟨rfl, hh⟩ := idx_eq x y hy
     cases hh
-    exact ⟨w, hx, by rw [get_set_same]; exact he⟩
-  · obtain ⟨w', hw', he'⟩ := h τ' y
-    exact ⟨w', by rw [hothers τ' y hy]; exact hw', by rw [get_set_ne ρ x y v hy]; exact he'⟩
+    rw [get_set_same]
+    exact hx
+  · rw [get_set_ne ρ x y v hy]
+    obtain ⟨valid, words⟩ := h τ' y
+    refine ⟨valid, ?_⟩
+    intro i hi
+    rw [hothers τ' y hy i (by simpa only [encodeWords_length] using hi)]
+    exact words i hi
 
 
 end Gabbro.Stage0.Senke

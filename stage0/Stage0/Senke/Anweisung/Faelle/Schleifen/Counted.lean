@@ -45,22 +45,25 @@ theorem const_step_counted {m : Runner.Mem} {pc fp : Runner.W} {K j : Nat} {k : 
       (Runner.Mem.write m (slot fp (BitVec.ofNat 64 j)) 8 (BitVec.ofInt 64 k).toNat) :=
   .next (const_instruction hc hF hj hK hk) (.refl _ _)
 
-/-- The single-instruction literal case. Larger accepted literals use
-    `konstWL_counted_ok` and the literal branch of `ExprCost.sound`. -/
-theorem lowE_lit_counted {D : Gabbro.Grammatik.Deklaration} {L : Lay D}
+/-- Quantitative base case derived from the actual accepted `lowE` result,
+    rather than an assumed child bound or evaluation of a particular program.
+    This does not cover compound expressions, calls, or loop bodies. -/
+theorem lowE_lit32_counted {D : Gabbro.Grammatik.Deklaration} {L : Lay D}
     {Γ : Gabbro.Grammatik.Ctx} {Λ : List (Gabbro.Grammatik.Res D)}
     {reserved d top K : Nat} {n : Int} {code : List II}
     {m : Runner.Mem} {pc fp : Runner.W}
-    (literal : lit32 n = true)
     (lower : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ)
       (.lit n) d = some (code, top))
     (codeAt : CodeAt m pc code) (frame : FrameOK m fp K)
-    (fits : top ≤ K) (small : K < 2 ^ 31) :
+    (fits : top ≤ K) (small : K < 2 ^ 31) (literal : lit32 n = true) :
     Counted 1 ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
       (Runner.Mem.write m (slot fp (BitVec.ofNat 64 d)) 8 (BitVec.ofInt 64 n).toNat) := by
-  rw [lowE_lit, if_pos literal] at lower
-  cases lower
-  exact const_step_counted codeAt frame (by omega) small literal
+  rw [lowE_lit] at lower
+  split at lower
+  next accepted =>
+    cases lower
+    exact const_step_counted codeAt frame (by omega) small accepted
+  next refused => exact (refused literal).elim
 
 
 open Gabbro.Grammatik Runner.Mem
@@ -192,47 +195,133 @@ theorem bin_counted_keep {m : Runner.Mem} {pc fp : Runner.W} {K d o na nb : Nat}
   exact s3
 
 
-/-- Constant materialization retains exact instruction counts and the writable-frame invariant. -/
+/-- Exact count and scalar value of an actual constant instruction. -/
 theorem const_counted_ok {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
-    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {n : Int}
-    (literal : lit32 n = true) (inside : d < K)
-    (pre : Pre L m pc fp K d [ci 1 d n 0] ρ W reserved) :
-    CountedOk 1 m pc fp K d [ci 1 d n 0] (· = BitVec.ofInt 64 n) := by
-  obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame inside (BitVec.ofInt 64 n)
-  exact ⟨_, const_step_counted pre.code pre.frame inside pre.small literal,
-    agree, _, rd, rfl⟩
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {k : Int}
+    (small : lit32 k = true) (fits : d + 1 ≤ K)
+    (pre : Pre L m pc fp K d [ci 1 d k 0] ρ W reserved) :
+    CountedOk 1 m pc fp K d [ci 1 d k 0] (· = BitVec.ofInt 64 k) := by
+  obtain ⟨writable, read, changed⟩ := wr_slot pre.frame (d := d) (by omega) (BitVec.ofInt 64 k)
+  exact ⟨_, const_step_counted pre.code pre.frame (by omega) pre.small small,
+    changed, _, read, rfl⟩
 
-/-- The existing base-65536 template executes exactly four instructions per digit. -/
-theorem konstWL_counted_ok {fp : Runner.W} {K d : Nat}
+theorem CountedOk.mono {n m pc fp K d code P Q} (run : CountedOk n m pc fp K d code P)
+    (post : ∀ w, P w → Q w) : CountedOk n m pc fp K d code Q := by
+  obtain ⟨m', steps, changed, w, read, value⟩ := run
+  exact ⟨m', steps, changed, w, read, post w value⟩
+
+/-- The arbitrary-word generator is straight-line code; every emitted instruction
+    is counted, including all radix constants and both arithmetic operations. -/
+theorem konstWL_counted {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} (k n : Nat)
-    (bound : n < 65536 ^ k) (room : d + 2 ≤ K)
-    {m : Runner.Mem} {pc : Runner.W}
+    (range : n < 65536 ^ k) (fits : d + 2 ≤ K)
     (pre : Pre L m pc fp K d (konstWL k n d).1 ρ W reserved) :
-    CountedOk (4 * k + 1) m pc fp K d (konstWL k n d).1 (· = BitVec.ofNat 64 n) := by
+    CountedOk ((konstWL k n d).1.length) m pc fp K d (konstWL k n d).1
+      (· = BitVec.ofNat 64 n) := by
   induction k generalizing n m pc with
   | zero =>
-    have : n = 0 := by simpa using bound
+    have zero : n = 0 := by simpa using range
     subst n
     exact const_counted_ok (by decide) (by omega) pre
   | succ k ih =>
-    have quotient : n / 65536 < 65536 ^ k := by rw [Nat.pow_succ] at bound; omega
-    have digit : lit32 (n % 65536 : Nat) = true := lit32_nat (by omega)
-    rw [show 4 * (k + 1) + 1 = (4 * k + 1 + 1 + 1) + 1 + 1 by omega]
-    apply bin_counted_keep (na := 4 * k + 3) (nb := 1) (o := 3)
-      (Pa := fun w => w = BitVec.ofNat 64 (n / 65536) * BitVec.ofInt 64 65536)
-      (Pb := fun w => w = BitVec.ofInt 64 (n % 65536 : Nat))
-      (g := fun a b => some (a + b)) ?_ ?_ ?_ rfl (by decide) (by omega) pre
-    · apply bin_counted_keep (na := 4 * k + 1) (nb := 1) (o := 5) (ih _ quotient pre.left.left.left.left)
-        (fun _ _ _ hp => const_counted_ok (by decide) (by omega) hp)
-        (fun a b ha hb => ⟨_, rfl, by rw [ha, hb]⟩) rfl (by decide) (by omega) pre.left.left
-    · intro m pc _ hp
-      exact const_counted_ok digit (by omega) hp
-    · intro a b ha hb
-      refine ⟨_, rfl, ?_⟩
-      rw [ha, hb, BitVec.ofInt_natCast,
-        show BitVec.ofInt 64 65536 = BitVec.ofNat 64 65536 from rfl,
-        ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
-      exact congrArg (BitVec.ofNat 64) (by omega)
+    have quotient : n / 65536 < 65536 ^ k := by rw [Nat.pow_succ] at range; omega
+    have low : lit32 (n % 65536 : Nat) = true := lit32_nat (by omega)
+    have head : ∀ m pc, Pre L m pc fp K d
+        (bin2 5 d (konstWL k (n / 65536) d) ([ci 1 (d + 1) 65536 0], d + 2)).1 ρ W reserved →
+        CountedOk ((konstWL k (n / 65536) d).1.length + 1 + 1) m pc fp K d
+          (bin2 5 d (konstWL k (n / 65536) d) ([ci 1 (d + 1) 65536 0], d + 2)).1
+          (· = BitVec.ofNat 64 (n / 65536) * BitVec.ofInt 64 65536) := by
+      intro m pc hp
+      exact bin_counted_keep (ih _ quotient hp.left.left)
+        (fun m pc _ hp => const_counted_ok (by decide) (by omega) hp)
+        (fun a b ha hb => ⟨_, rfl, by rw [ha, hb]⟩) rfl (by decide) (by omega) hp
+    have run := bin_counted_keep (head m pc pre.left.left)
+      (fun m pc _ hp => const_counted_ok low (by omega) hp)
+      (P := fun r => r = BitVec.ofNat 64 n) (g := fun a b => some (a + b))
+      (by
+        intro a b ha hb
+        refine ⟨_, rfl, ?_⟩
+        rw [ha, hb, BitVec.ofInt_natCast,
+          show BitVec.ofInt 64 65536 = BitVec.ofNat 64 65536 from rfl,
+          ← BitVec.ofNat_mul, ← BitVec.ofNat_add]
+        exact congrArg (BitVec.ofNat 64) (by omega)) rfl (by decide) (by omega) pre
+    simpa only [konstWL, bin2, List.length_append, List.length_singleton, Int.natCast_add, Int.natCast_emod, Int.cast_ofNat_Int] using run
+
+theorem wordConst_counted {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} (w : Runner.W)
+    (fits : (wordConst w d).2 ≤ K)
+    (pre : Pre L m pc fp K d (wordConst w d).1 ρ W reserved) :
+    CountedOk ((wordConst w d).1.length) m pc fp K d (wordConst w d).1 (· = w) := by
+  unfold wordConst at fits pre ⊢
+  split at fits
+  · next small =>
+    rw [if_pos small] at pre ⊢
+    exact (const_counted_ok small (by omega) pre).mono fun r hr => by
+      rw [hr, BitVec.ofInt_toInt]
+  · next large =>
+    rw [if_neg large] at pre ⊢
+    have room : d + 2 ≤ K := by
+      simpa [konstWL, bin2, Nat.max_assoc, Nat.max_comm, Nat.max_left_comm] using fits
+    exact (konstWL_counted 4 w.toNat (by simpa using w.isLt) room pre).mono fun r hr => by
+      simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using hr
+
+/-- Complete literal materialization has exactly the emitted straight-line length,
+    with every output limb and nested word preserved, not just the low word. -/
+theorem constWords_counted {fp : Runner.W} {K : Nat} {Γ : Ctx} {ρ : Env D Γ}
+    {W : Runner.Mem → Prop} (words : List Runner.W) {m : Runner.Mem} {pc : Runner.W} {d : Nat}
+    (fits : (constWords words d).2 ≤ K)
+    (pre : Pre L m pc fp K d (constWords words d).1 ρ W reserved) :
+    ∃ m', Counted ((constWords words d).1.length) ⟨pc, fp⟩ m
+        ⟨pc + BitVec.ofNat 64 (16 * (constWords words d).1.length), fp⟩ m' ∧
+      Agree fp d K m m' ∧ WordsAt m' fp d words := by
+  induction words generalizing m pc d with
+  | nil => exact ⟨m, by simpa [constWords] using Counted.refl ⟨pc, fp⟩ m, .refl _ _ _ _, by intro i hi; cases hi⟩
+  | cons w ws ih =>
+    have headTop := wordConst_top w d
+    obtain ⟨m1, run1, changed1, r, read1, value⟩ := wordConst_counted w
+      (by simp only [constWords] at fits; omega) pre.left
+    subst r
+    have next := pre.next changed1 (Nat.le_succ d) (by simp only [constWords] at fits; omega)
+    obtain ⟨m2, run2, changed2, output⟩ := ih (d := d + 1)
+      (by simp only [constWords] at fits; omega) next
+    refine ⟨m2, ?_, changed1.trans (changed2.mono (Nat.le_succ d)), ?_⟩
+    · simpa only [constWords, List.length_append, pc_add] using run1.trans run2
+    · intro i hi
+      cases i with
+      | zero =>
+        rw [Nat.add_zero, agree_rd_low changed2 (pre.frame.agree changed1).room (by omega)
+          (by simp only [constWords] at fits; omega)]
+        exact read1
+      | succ i =>
+        simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using output i (by simp at hi; omega)
+
+/-- The count uses precisely the selected emitter, including every limb of an
+    arbitrary declared literal. Small signed immediates retain cost one. -/
+def literalCount (n : Int) (d : Nat) : Nat :=
+  if lit32 n then 1 else (constWords (integerEncoding (integerWords n n) n) d).1.length
+
+theorem lowE_literal_counted {Γ : Ctx} {Λ : List (Res D)} {n : Int} {d top K : Nat}
+    {code : List II} {m : Runner.Mem} {pc fp : Runner.W} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    (lower : lowE L (reserved := reserved) (Λ := Λ) (Γ := Γ) (.lit n) d = some (code, top))
+    (fits : top ≤ K) (pre : Pre L m pc fp K d code ρ W reserved) :
+    CountedOk (literalCount n d) m pc fp K d code (· = BitVec.ofInt 64 n) := by
+  rw [lowE_lit] at lower
+  split at lower
+  · next small =>
+    cases lower
+    simpa only [literalCount, small, ite_true] using const_counted_ok small (by omega) pre
+  · next large =>
+    have pair := Option.some.inj lower
+    have codeEq := congrArg Prod.fst pair
+    have topEq := congrArg Prod.snd pair
+    dsimp only at codeEq topEq
+    subst code
+    subst top
+    obtain ⟨m', run, changed, output⟩ := constWords_counted
+      (integerEncoding (integerWords n n) n) fits pre
+    have read := integerEncoding_read_first (n := integerWords n n) (by unfold integerWords; omega) output
+    exact ⟨m', by simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, encodeWords] using run,
+      changed, _, read, rfl⟩
 
 /-- Constructor-level cost composition for actual `bin2` lowering. Child
     hypotheses are reusable at every memory/PC, as in `lowE_ok`; no whole
@@ -272,16 +361,17 @@ theorem bin2_counted {Γ : Ctx} {Λ : List (Res D)} {τa τb : Ty}
 inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
     {τ : Ty} → Expr D Γ Λ τ → Nat → Nat → (Runner.W → Prop) → Type
   | literal {n : Int} {d : Nat} :
-      ExprCost L reserved (.lit n) d (if lit32 n then 1 else 17) (· = BitVec.ofInt 64 n)
+      ExprCost L reserved (.lit n) d (literalCount n d) (· = BitVec.ofInt 64 n)
   | truth {d : Nat} : ExprCost L reserved .tru d 1 (· = 1)
   | falsity {d : Nat} : ExprCost L reserved .fls d 1 (· = 0)
   | binary {τ τa τb : Ty} {e : Expr D Γ Λ τ}
       {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {d o na nb : Nat}
       {Pa Pb P : Runner.W → Prop} {g : Runner.W → Runner.W → Option Runner.W}
-      (equation : lowE L (reserved := reserved) e d =
+      (equation : ∀ code top, lowE L (reserved := reserved) e d = some (code, top) →
         (do let ca ← lowE L (reserved := reserved) a d
             let cb ← lowE L (reserved := reserved) b (d + 1)
-            pure (bin2 o d ca cb)))
+            pure (bin2 o d ca cb)) = some (code, top))
+      (narrow : ∀ code top, lowE L (reserved := reserved) e d = some (code, top) → valueWords τ = 1)
       (left : ExprCost L reserved a d na Pa)
       (right : ExprCost L reserved b (d + 1) nb Pb)
       (values : ∀ wa wb, Pa wa → Pb wb → ∃ r, g wa wb = some r ∧ P r)
@@ -293,11 +383,17 @@ inductive ExprCost (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (reserved : Nat) :
 def ExprCost.add {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
     {a : Expr D Γ Λ (.int l1 h1)} {b : Expr D Γ Λ (.int l2 h2)}
     {d na nb : Nat} {Pa Pb : Runner.W → Prop}
+    (narrow : valueWords (.int (l1 + l2) (h1 + h2)) = 1)
     (left : ExprCost L reserved a d na Pa)
     (right : ExprCost L reserved b (d + 1) nb Pb) :
     ExprCost L reserved (.add a b) d (na + nb + 1)
       (fun r => ∃ wa wb, Pa wa ∧ Pb wb ∧ r = wa + wb) :=
-  .binary (lowE_add L d a b) left right
+  .binary (by
+    intro code top made
+    rw [lowE_add, if_pos narrow] at made
+    exact made) (by
+    intro code top _
+    exact narrow) left right
     (fun wa wb ha hb => ⟨wa + wb, rfl, wa, wb, ha, hb, rfl⟩) rfl (by decide)
 
 /-- Sound for every accepted lowering, layout, environment and stable world
@@ -312,18 +408,7 @@ theorem ExprCost.sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     CountedOk n m pc fp K d code P := by
   induction certificate generalizing code top K m pc with
   | @literal n' d' =>
-    rw [lowE_lit] at lower
-    split at lower
-    next accepted =>
-      cases lower
-      simpa only [accepted, ite_true] using const_counted_ok accepted (by omega) pre
-    next large =>
-      split at lower
-      · cases lower
-        have room : d' + 2 ≤ K := by simp only [konstWL, bin2] at fits; omega
-        have run := konstWL_counted_ok 4 (BitVec.ofInt 64 n').toNat (BitVec.isLt _) room pre
-        simpa only [if_neg large, BitVec.ofNat_toNat, BitVec.setWidth_eq, konstWL, bin2] using run
-      · contradiction
+    exact lowE_literal_counted lower fits pre
   | @truth d =>
     rw [lowE_tru] at lower
     cases lower
@@ -336,11 +421,78 @@ theorem ExprCost.sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     obtain ⟨hw, rd, agree⟩ := wr_slot pre.frame (d := d) (by omega) (0 : Runner.W)
     exact ⟨_, const_step_counted pre.code pre.frame (by omega) pre.small (by decide),
       agree, _, rd, rfl⟩
-  | binary equation left right values opcode byte ihA ihB =>
-    rw [equation] at lower
-    exact bin2_counted lower fits
+  | binary equation narrow left right values opcode byte ihA ihB =>
+    exact bin2_counted (equation code top lower) fits
       (fun ca ta ha ht m pc hp => ihA ha ht hp)
       (fun cb tb hb ht m pc hp => ihB hb ht hp) values opcode byte pre
+
+/-- Accepted non-scalar certificates retain the exact point-literal source and
+    its complete emitted count; binary scalar profiles cannot certify a wide value. -/
+theorem ExprCost.width_or_literal {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {d n : Nat} {P : Runner.W → Prop}
+    (certificate : ExprCost L reserved e d n P) {code : List II} {top : Nat}
+    (lower : lowE L (reserved := reserved) e d = some (code, top)) :
+    valueWords τ = 1 ∨ ∃ k : Int, τ = .int k k ∧
+      HEq e (Expr.lit (D := D) (Γ := Γ) (Λ := Λ) k) ∧ n = literalCount k d := by
+  cases certificate with
+  | literal => exact .inr ⟨_, rfl, HEq.rfl, rfl⟩
+  | truth => exact .inl rfl
+  | falsity => exact .inl rfl
+  | binary equation narrow left right values opcode byte => exact .inl (narrow _ _ lower)
+
+/-- A counted expression result carries the same complete typed memory relation
+    as ordinary lowering. Scalar specializations are proved through Enc.single. -/
+def CountedValueOk (n : Nat) (L : Lay D) (m : Mem) (pc fp : W) (K d : Nat)
+    (code : List II) (τ : Ty) (v : Wert D τ) : Prop :=
+  ∃ m', Counted n ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
+    Agree fp d K m m' ∧ ValueAt L m' fp d τ v
+
+theorem lowE_literal_value_counted {Γ : Ctx} {Λ : List (Res D)} {k : Int}
+    (v : Zahl k k) {d top K : Nat} {code : List II} {m : Mem} {pc fp : W}
+    {ρ : Env D Γ} {W : Mem → Prop}
+    (lower : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.lit k) d = some (code, top))
+    (fits : top ≤ K) (pre : Pre L m pc fp K d code ρ W reserved) :
+    CountedValueOk (literalCount k d) L m pc fp K d code (.int k k) v := by
+  have number : v.n = k := by have := v.lo_le; have := v.le_hi; omega
+  rw [lowE_lit] at lower
+  split at lower
+  · next small =>
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj lower)
+    obtain ⟨m', run, changed, w, read, encoded⟩ := const_counted_ok small (by omega) pre
+    refine ⟨m', by simpa only [literalCount, small, ite_true] using run,
+      changed, ValueAt.of_enc ?_ read ?_⟩
+    · have bounds := small
+      simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at bounds
+      exact integerWords_word (by omega) (by omega)
+    · simpa only [Enc, number] using encoded
+  · next large =>
+    have pair := Option.some.inj lower
+    have codeEq := congrArg Prod.fst pair
+    have topEq := congrArg Prod.snd pair
+    dsimp only at codeEq topEq
+    subst code
+    subst top
+    obtain ⟨m', run, changed, output⟩ := constWords_counted
+      (integerEncoding (integerWords k k) k) fits pre
+    refine ⟨m', ?_, changed, trivial, ?_⟩
+    · simpa only [literalCount, large, Bool.false_eq_true, ↓reduceIte, encodeWords] using run
+    · simpa only [encodeWords, number] using output
+
+theorem ExprCost.sound_value {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    {e : Expr D Γ Λ τ} {d n : Nat} {v : Wert D τ}
+    (certificate : ExprCost L reserved e d n (Enc L τ v))
+    {code : List II} {top K : Nat} {m : Mem} {pc fp : W}
+    {ρ : Env D Γ} {W : Mem → Prop}
+    (lower : lowE L (reserved := reserved) e d = some (code, top))
+    (fits : top ≤ K) (pre : Pre L m pc fp K d code ρ W reserved) :
+    CountedValueOk n L m pc fp K d code τ v := by
+  rcases certificate.width_or_literal lower with width | ⟨k, sameType, sameExpr, count⟩
+  · obtain ⟨m', run, changed, w, read, encoded⟩ := certificate.sound lower fits pre
+    exact ⟨m', run, changed, ValueAt.of_enc width read encoded⟩
+  · subst τ
+    cases sameExpr
+    subst n
+    exact lowE_literal_value_counted v lower fits pre
 
 /-- Quantitative normal block outcome, retaining the same world, environment
     and protected-slot obligations as `Reach`. -/
@@ -371,13 +523,16 @@ def CountedRetZ (n : Nat) (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D
   if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
   then CountedStops n t m 102
   else ∃ m', Counted n t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-    (∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some w ∧ EncErg L (D.erg f) v w ∧ ReturnFlag m' fp (D.params f).length true) ∧ WeltAt m' L σ'
+    (ResultAt L m' fp (FB + contextWords (D.params f)) (D.erg f) v ∧
+      ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
+      ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧ WeltAt m' L σ'
 
 def CountedRetWhy (n : Nat) (L : Lay D) (f : D.Fn) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
     (t : T) (m : Runner.Mem) (σ : World D) (r : Fin (D.gruende f)) : Prop :=
   ∃ m', Counted n t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
-    m'.rd64 (slot fp (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 r.val) ∧
-    ReturnFlag m' fp (D.params f).length false ∧ WeltAt m' L σ
+    ValueAt L m' fp (FB + contextWords (D.params f)) (.why (D.gruende f)) r ∧
+    ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
+    ReturnFlag m' fp (contextWords (D.params f)) false (returnWords (D.erg f) (D.gruende f)) ∧ WeltAt m' L σ
 
 def CountedSim (n : Nat) (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (rp cfp : Runner.W)
     {l : Bool} {Γ : Ctx} (fp : Runner.W) (lo K : Nat) (pr : List Nat) (t : T) (m : Runner.Mem) (e eL eN : Runner.W) (o : Ausgang (vertragVon D f) l Γ) (reserved : Nat := 0) : Prop :=
@@ -563,7 +718,7 @@ theorem countedBlockBind_case
     (world : WeltAt m L σ)
     (restRuns : ∀ cr tr,
       lowB (reserved := reserved) passes A L lo ens pr ex rest = some (cr, tr) →
-      ∀ m' pc', PreS L m' pc' fp K (frei Γ reserved + 1) cr (Env.cons v ρ) reserved →
+      ∀ m' pc', PreS L m' pc' fp K (frei (τ :: Γ) reserved) cr (Env.cons v ρ) reserved →
       WeltAt m' L σ →
       CountedReach nr L fp lo K pr ⟨pc', fp⟩ m'
         (pc' + BitVec.ofNat 64 (16 * cr.length)) σ2 ρ2 reserved) :
@@ -577,16 +732,16 @@ theorem countedBlockBind_case
   have hks := inside.ks
   have hpw := PreS.welt pre.left inside.ks world inside.lay
     (by have := inside.lo; omega)
-  obtain ⟨m1, run1, a1s, w, read, encoded⟩ := certificate.sound he
+  obtain ⟨m1, run1, a1s, value⟩ := certificate.sound_value he
     (Nat.le_trans (Nat.le_max_left _ _) fits) hpw
   have a1 := Agree.widen a1s inside.ks
   have far := codeFar_right (n := ce.length) (k := cr.length) (by simpa using pre.far)
   have nextPre : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K
-      (frei Γ reserved + 1) cr (Env.cons v ρ) reserved :=
-    ⟨by simp only [frei, List.length_cons]; omega, pre.small, pre.frame.agree a1,
+      (frei (τ :: Γ) reserved) cr (Env.cons v ρ) reserved :=
+    ⟨by simp only [frei, contextWords_cons]; omega, pre.small, pre.frame.agree a1,
       (codeAt_right pre.code).agree a1 far, far,
       envAt_cons (envAt_agree pre.env a1 pre.frame (Nat.le_refl _) (by omega))
-        read encoded, trivial, wstab_true _ _⟩
+        value, trivial, wstab_true _ _⟩
   obtain ⟨m2, run2, a2, env2, world2, keep2⟩ := restRuns cr tr hr m1 _ nextPre
     (hpw.wstab m m1 world (a1s.mono (Nat.zero_le _)))
   refine ⟨m2, ?_, (agreeW_of (a1.mono low)).trans a2, env2, world2, ?_⟩

@@ -1,0 +1,8 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_diamond {
+const ANSWER : u8 = LEFT + RIGHT;
+const LEFT : u8 = BASE + 1;
+const RIGHT : u8 = BASE + 1;
+const BASE : u8 = 20;
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

@@ -13,7 +13,8 @@ were organised) is in `git log`, not here.
 Sonnet 5.5 implementation agents, no others: one rolling lane on Lean slot 1 (IR-06 memory, handed back; then IR-02 wide-integer kernels
 in `t3-db31d27d`, handed back; now IR-04 floats in `t3-c3ebf14f`) and IR-03 (full multiword ABI, Lean slot 2) in `t3-c7fc551c`. Additionally (owner, same day) two GPT Sol 6.1
 agents for small bounded tasks: IR-01 const-signature bounds in `t3-d342a8ed` (slot 1, shared) and IR-02
-`wideExtend`/mixed-sign multiword compare in `t3-db31d27d` (slot 2, shared; IR-03 has priority). All other lanes stay paused
+`wideExtend`/mixed-sign multiword compare in `t3-db31d27d` (slot 2, shared; IR-03 has priority). The two Sonnet lanes (IR-03, IR-04) resumed at 00:00 (2026-11-01)
+after the owner pause; two Sol 6.1 agents stay active for small tasks. All other lanes stay paused
 with their worktrees, dirty changes and scratch preserved. Last checked and pushed integration: `94547b852`.
 
 **Lean concurrency update (2026-10-31).** The owner now permits up to TWO simultaneous Lean builds/direct
@@ -66,6 +67,20 @@ expanding infrastructure for a small subset.
   retired Lean execution path.
 - **Never rebuild `grammatik/` for this task.** Reuse its existing compiled artifacts. Run affected Stage-0
   compilation checks directly; do not invoke a build or guardian that would rebuild the grammar.
+  **Exception (owner, 2026-11-01):** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for
+  forms whose canonical model rule already exists may be added, batched into ONE change by ONE agent with
+  one grammar rebuild (inside the two-slot limit), `gabbro_ziel` still on the standard axioms and the Lean
+  guardian afterwards.
+  **Model extension (owner, 2026-11-01):** wherever the Lean model or machine G is not strong or complete
+  enough for an existing source form, extend it there (syntax, G semantics, `Akzeptiert`, proofs) instead
+  of dropping the form; this covers the C packages of the export catalogue in
+  `dokumente/IR-COMPILATION-LANES.md`. Every extension keeps `gabbro_ziel` on the standard axioms, never
+  weakens a guarantee, describes any change of meaning of `Spec.lean` in its commit, and is followed by the
+  Lean guardian. Only one agent at a time changes `grammatik/`.
+  **Grammar build memory (owner, 2026-11-01):** a `grammatik/` build may use all currently available memory
+  minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
+  `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
+  allows. Stage-0 checks keep their 5G slots.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 

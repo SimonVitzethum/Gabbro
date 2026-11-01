@@ -1,0 +1,9 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_signature {
+const ANSWER : u8 = identity(LATER);
+const fn identity(x : u8 in 0 .. LIMIT) -> u8 in 0 .. LIMIT effects { pure } { return x; }
+const LATER : u8 = BASE + 2;
+const LIMIT : u8 = 100;
+const BASE : u8 = 40;
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

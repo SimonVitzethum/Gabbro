@@ -1,0 +1,6 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_duplicate {
+const ANSWER : u8 = 41;
+const ANSWER : u8 = 42;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

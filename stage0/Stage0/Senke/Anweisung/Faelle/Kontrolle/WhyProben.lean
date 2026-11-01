@@ -57,8 +57,8 @@ def callLayout : Lay D where
 
 def target (f : D.Fn) : List II := ((lowFun 1 P addresses callLayout f).getD ([], 0)).1
 
-def caller (f : D.Fn) : List II :=
-  elseC 9 4 (callC addresses f 4 []) [ci 1 5 11 0] [ci 1 5 22 0]
+def caller (g : D.Fn) : List II :=
+  elseC (D.signatur g) 4 (callC addresses g 4 []) [ci 1 5 11 0] [ci 1 5 22 0]
 
 def callMem (f : D.Fn) : Runner.Mem :=
   let segments := [(64, (target 0).flatMap encII), (576, (target 1).flatMap encII),
@@ -103,14 +103,22 @@ theorem call_pre [Kern] (g : D.Fn) : PreS callLayout (callMem g) 2048 4096 256 4
   · unfold CodeFar; first | decide +kernel | (revert g; apply allFin; decide +kernel)
   · intro _ x; nomatch x
 
-theorem call_world (g : D.Fn) : WeltAt (callMem g) callLayout world := by
-  refine ⟨(fun t => nomatch t), (fun g => ⟨64, ?_, rfl⟩), (fun _ _ _ => rfl)⟩
+theorem call_world [Kern] (g : D.Fn) : WeltAt (callMem g) callLayout world := by
+  refine ⟨(fun t => nomatch t), (fun g => ?_), (fun _ _ _ => rfl)⟩
   cases g
+  refine ValueAt.ofCellWord (w := 64) (by decide) ?_ rfl
   first | decide +kernel | (revert g; apply allFin; decide +kernel)
 
 theorem call_win : WIn callLayout 4096 128 256 := by
-  refine ⟨⟨(fun t => nomatch t), fun _ => ⟨by change 8192 ≤ 8192; decide, by change 8192 + 8 ≤ 8200; decide⟩, by decide⟩, ?_, by decide, by decide, by decide⟩
-  constructor
+  refine ⟨⟨(fun t => nomatch t), fun g => by cases g; exact ⟨by decide, by decide⟩, by decide⟩, ?_, by decide, by decide, by decide⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro c c' hc hc' h
+    cases c with
+    | elem t => nomatch t
+    | glob g =>
+      cases c' with
+      | elem t => nomatch t
+      | glob g' => cases g; cases g'; exact absurd rfl h
   · intro c c' hc hc' h
     cases c with
     | elem t => nomatch t
@@ -159,14 +167,27 @@ theorem outcomes_zeuge :
     (match rufAt P O 1 2 2 world .nil with | .ok _ v => v.n | _ => -1) = 42 := by
   decide +kernel
 
+theorem call_ht (g : D.Fn) :
+    max (callTop g (frei []) 8) (frei [] + FB + contextWords (D.params g) + returnWords (D.erg g) (D.gruende g) + 1) +
+      39 ≤ 128 := by
+  revert g; apply allFin; decide +kernel
+
+theorem call_hs (g : D.Fn) :
+    16 * (elseC (D.signatur g) (frei []) (callC addresses g (frei []) []) [ci 1 5 11 0] [ci 1 5 22 0]).length < 2 ^ 31 := by
+  revert g; apply allFin; decide +kernel
+
 /-- The selected continuation has the encoded binding and the resulting world. -/
 def Arrived [Kern] (g : D.Fn) : Prop :=
   match rufAt P O 1 2 g world .nil with
-  | .ok σ v => ∃ m', Star ⟨2048, 4096⟩ (callMem g) ⟨2144, 4096⟩ m' ∧
-      PreS callLayout m' 2144 4096 256 5 [ci 1 5 11 0]
+  | .ok σ v => ∃ m', Star ⟨2048, 4096⟩ (callMem g)
+        ⟨callBranchPC 2048 (callC addresses g (frei []) []) [ci 1 5 11 0] (returnWords (D.erg g) (D.gruende g)) true, 4096⟩ m' ∧
+      PreS callLayout m' (callBranchPC 2048 (callC addresses g (frei []) []) [ci 1 5 11 0]
+        (returnWords (D.erg g) (D.gruende g)) true) 4096 256 (frei [.int 0 100]) [ci 1 5 11 0]
         (Env.cons (τ := .int 0 100) v .nil) ∧ WeltAt m' callLayout σ
-  | .why σ r => ∃ m', Star ⟨2048, 4096⟩ (callMem g) ⟨2176, 4096⟩ m' ∧
-      PreS callLayout m' 2176 4096 256 5 [ci 1 5 22 0]
+  | .why σ r => ∃ m', Star ⟨2048, 4096⟩ (callMem g)
+        ⟨callBranchPC 2048 (callC addresses g (frei []) []) [ci 1 5 11 0] (returnWords (D.erg g) (D.gruende g)) false, 4096⟩ m' ∧
+      PreS callLayout m' (callBranchPC 2048 (callC addresses g (frei []) []) [ci 1 5 11 0]
+        (returnWords (D.erg g) (D.gruende g)) false) 4096 256 (frei [.why 3]) [ci 1 5 22 0]
         (Env.cons (τ := .why 3) r .nil) ∧ WeltAt m' callLayout σ
   | _ => False
 
@@ -183,8 +204,8 @@ theorem callElse_ok_zeuge [Kern] (g : D.Fn) :
     apply allFin
     decide +kernel
   have h := callElse_ok (reserved := 0) (g := g) (ca := []) (ta := 8) call_spec (addresses_bound g)
-    (Args.nil : Args D [] [] (D.params g)) rfl world rfl (by change 49 ≤ 128; decide) (call_pre g)
-    (by change 144 < 2 ^ 31; decide) (call_umf g) call_win (call_world g)
+    (Args.nil : Args D [] [] (D.params g)) rfl world rfl (call_ht g) (call_pre g)
+    (call_hs g) (call_umf g) call_win (call_world g)
   rcases h with ⟨σ, v, m', hr, st, _, hp, hw⟩ | ⟨σ, r, m', hr, st, _, hp, hw⟩ |
     ⟨e, hr, _⟩ | ⟨e, hr, _⟩
   all_goals simp only [evalArgs] at hr

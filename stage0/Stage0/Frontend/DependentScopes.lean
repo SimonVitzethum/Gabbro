@@ -1,4 +1,6 @@
 import Stage0.Frontend.Environments
+import Stage0.Frontend.AliasOrder
+import Stage0.Frontend.AliasMeaning
 
 namespace Gabbro.Stage0.Frontend
 open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
@@ -7,11 +9,14 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     output remains untrusted until resolveCandidate rechecks the full original source fold.
     Reuse canonical typed evaluation directly: custom-range negatives need no source materialization.
     Failed declarations are skipped only here; final validation checks every original scalar. -/
-def nextCandidates (items : List SItemTief) (values : List (String × Int)) : List (String × Int) :=
-  let expanded := aliases values [] items
+def nextCandidates (items : List SItemTief) (values : List (String × Int))
+    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩)
+    (scalars : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
+    List (String × Int) :=
+  let expanded := aliases values [] order.val
   let env := uAliase values expanded
   let fns := constantFunctions (env ++ values.map (fun c => (c.1, (c.2, c.2)))) expanded
-  items.foldl (fun collected item => (typedItem env fns collected item).getD collected) []
+  scalars.val.foldl (fun collected item => (typedItem env fns collected item).getD collected) []
 
 /-- A new candidate cannot hide unresolved integer alias declarations, including unused cycles. -/
 def aliasesResolved (env : List (String × (Int × Int))) (items : List SItemTief) : Bool :=
@@ -22,35 +27,38 @@ def aliasesResolved (env : List (String × (Int × Int))) (items : List SItemTie
 
 /-- Validate a discovery candidate by re-evaluating every original scalar at its exact original
     type and then comparing the complete alias fold against those final, ordered values. -/
-def resolveCandidate (items : List SItemTief) (candidate : List (String × Int)) :
+def resolveCandidate (items : List SItemTief) (candidate : List (String × Int))
+    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩)
+    (scalars : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
     Except String (DerivedScopes items) :=
-  let expanded := aliases candidate [] items
+  let expanded := aliases candidate [] order.val
   let env := uAliase candidate expanded
   let tentativeFns := constantFunctions (env ++ candidate.map (fun c => (c.1, (c.2, c.2)))) items
   if !aliasesResolved env items then .error "compile-time aliases contain unresolved dependencies or cycles"
-  else match typedConstants env tentativeFns items [] with
+  else match typedConstants env tentativeFns scalars.val [] with
   | none => .error "compile-time scalar cannot be evaluated at its canonical declared range"
   | some preliminary =>
     let fns := constantFunctions (env ++ preliminary.map (fun c => (c.1, (c.2, c.2)))) items
-    match h : typedConstants env fns items [] with
+    match h : typedConstants env fns scalars.val [] with
     | none => .error "compile-time scalar cannot be evaluated at its canonical declared range"
     | some values =>
       if hs : values = preliminary then
-        if ha : env = items.foldl (aliasStep values) [] then
-          let scope : Scopes items := ⟨values, env, fns, values, Or.inr rfl, true, ha,
-            by simp only [↓reduceIte, hs]; rfl, h⟩
+        if ha : env = order.val.foldl (aliasStep values) [] then
+          let scope : Scopes items := ⟨values, env, fns, values, Or.inr rfl, true, order.val, order.property, ha,
+            by simp only [↓reduceIte, hs]; rfl, scalars.val, scalars.property, h⟩
           .ok ⟨scope, by
-            change uAliase values (aliases values [] items) = env
-            simpa only [List.nil_append] using (aliases_collected values [] items).trans ha.symm⟩
+            change uAliase values (aliases values [] order.val) = env
+            simpa only [List.nil_append] using (aliases_collected values [] order.val).trans ha.symm⟩
         else .error "compile-time candidate disagrees with final original alias/type environment"
       else .error "compile-time function signature bounds are not stable"
 
 /-- A successful discovery result has the exact full alias environment derived from the final
     original scalar fold, not the potentially incomplete candidate values. -/
 theorem resolveCandidate_final (items : List SItemTief) (candidate : List (String × Int))
-    (result : DerivedScopes items) (h : resolveCandidate items candidate = .ok result) :
+    (result : DerivedScopes items) (order scalars : { ordered : List SItemTief // ordered.Perm items })
+    (h : resolveCandidate items candidate order scalars = .ok result) :
     result.scope.aliasConstants = result.scope.values ∧
-      result.scope.declared = items.foldl (aliasStep result.scope.values) [] ∧
+      result.scope.declared = result.scope.aliasOrder.foldl (aliasStep result.scope.values) [] ∧
       result.scope.functionsUseValues = true := by
   unfold resolveCandidate at h
   dsimp only at h
@@ -72,21 +80,26 @@ theorem resolveCandidate_final (items : List SItemTief) (candidate : List (Strin
 
 /-- Bounded discovery is not acceptance: only resolveCandidate's canonical full-fold certificate
     may return a scope. Unresolved or cyclic candidates terminate with a precise refusal. -/
-def discoverScopes (items : List SItemTief) : Nat → List (String × Int) → Except String (DerivedScopes items)
+def discoverScopes (items : List SItemTief) (fuel : Nat) (candidate : List (String × Int))
+    (order : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩)
+    (scalars : { ordered : List SItemTief // ordered.Perm items } := ⟨items, .refl _⟩) :
+    Except String (DerivedScopes items) :=
+  match fuel, candidate with
   | 0, _ => .error "compile-time dependencies remain unresolved"
   | fuel + 1, candidate =>
-    match resolveCandidate items candidate with
+    match resolveCandidate items candidate order scalars with
     | .ok result => .ok result
     | .error reason =>
-      let next := nextCandidates items candidate
+      let next := nextCandidates items candidate order scalars
       if next = candidate then .error reason
-      else discoverScopes items fuel next
+      else discoverScopes items fuel next order scalars
 
 theorem discoverScopes_final (items : List SItemTief) (fuel : Nat)
     (candidate : List (String × Int)) (result : DerivedScopes items)
-    (h : discoverScopes items fuel candidate = .ok result) :
+    (order scalars : { ordered : List SItemTief // ordered.Perm items })
+    (h : discoverScopes items fuel candidate order scalars = .ok result) :
     result.scope.aliasConstants = result.scope.values ∧
-      result.scope.declared = items.foldl (aliasStep result.scope.values) [] ∧
+      result.scope.declared = result.scope.aliasOrder.foldl (aliasStep result.scope.values) [] ∧
       result.scope.functionsUseValues = true := by
   induction fuel generalizing candidate with
   | zero => simp only [discoverScopes] at h; contradiction
@@ -96,7 +109,7 @@ theorem discoverScopes_final (items : List SItemTief) (fuel : Nat)
     · rename_i found hf
       have he := Except.ok.inj h
       subst result
-      exact resolveCandidate_final _ _ _ hf
+      exact resolveCandidate_final _ _ _ _ _ hf
     · try dsimp only at h
       split at h
       · contradiction
@@ -105,18 +118,62 @@ theorem discoverScopes_final (items : List SItemTief) (fuel : Nat)
 /-- Preserve complete conservative scopes. Newly resolvable signatures also require discovery,
     even when only an array initializer calls them and the scalar fold already succeeds. The count
     selects a path only; acceptance still requires its full canonical scope certificate. -/
-def elaborateScopes (items : List SItemTief) : Except String (DerivedScopes items) :=
-  match deriveScopes items with
-  | .ok result =>
-    if (constantFunctions result.scope.types items).length = result.scope.functions.length then .ok result
-    else discoverScopes items (items.length + 1) result.scope.values
-  | .error _ => discoverScopes items (items.length + 1) (prepare items).initial
+def elaborateScopes (items : List SItemTief) : Except String (DerivedScopes items) := do
+  let order ← orderAliases items
+  let conservative : Except String (DerivedScopes items) := match deriveScopes items with
+    | .ok result =>
+      if (constantFunctions result.scope.types items).length = result.scope.functions.length ∧
+          aliasesResolved result.scope.declared items = true then .ok result
+      else discoverScopes items (items.length + 1) result.scope.values
+    | .error _ => discoverScopes items (items.length + 1) (prepare items).initial
+  let canonical := conservative.toOption.filter fun result =>
+    items.all (checkAliasMeaning result.scope.types)
+  match canonical with
+  | some result => pure result
+  | none =>
+    discoverScopes items (items.length + 1) (prepare items).initial ⟨order.ordered, order.permutation⟩
 
+/-- Successful frontend scope discovery includes a checked strict alias dependency rank. -/
+theorem elaborateScopes_dependencies (items : List SItemTief) (result : DerivedScopes items)
+    (h : elaborateScopes items = .ok result) :
+    AliasAcyclic items ∧ (aliasNames items).Nodup := by
+  unfold elaborateScopes at h
+  cases ho : orderAliases items with
+  | error e =>
+    rw [ho] at h
+    change Except.error e = Except.ok result at h
+    contradiction
+  | ok order => exact ⟨order.acyclic, order.unique⟩
+
+/-- Preserve complete conservative scopes once every alias resolves and its graph is checked. -/
 theorem elaborateScopes_preserves (items : List SItemTief) (result : DerivedScopes items)
+    (order : AliasOrder items) (ho : orderAliases items = .ok order)
     (h : deriveScopes items = .ok result)
-    (complete : (constantFunctions result.scope.types items).length = result.scope.functions.length) :
+    (complete : (constantFunctions result.scope.types items).length = result.scope.functions.length)
+    (resolved : aliasesResolved result.scope.declared items = true)
+    (meaning : items.all (checkAliasMeaning result.scope.types) = true) :
     elaborateScopes items = .ok result := by
-  simp only [elaborateScopes, h, complete, ↓reduceIte]
+  simp [elaborateScopes, ho, h, complete, resolved, meaning, Except.toOption, Option.filter]
+  rfl
+
+/-- The conservative-preservation premises hold jointly for real alias declarations and a
+    computed scalar; the complete previous scope is retained, not just its final value. -/
+theorem elaborateScopes_preserves_zeuge :
+    let items := [SItemTief.typeT [] "Small" [] [] (some (.atom "u8")),
+      .typeT [] "Alias" [] [] (some (.atom "Small")),
+      .constT "ANSWER" (.atom "Alias") (.one (.bin "+" (.lit 40) (.lit 2)))]
+    ∃ result, deriveScopes items = .ok result ∧ elaborateScopes items = .ok result ∧
+      result.scope.values = [("ANSWER", 42)] := by
+  dsimp only
+  refine ⟨(deriveScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_⟩
+  · exact Gabbro.Grammatik.except_ok_get _
+  · apply elaborateScopes_preserves _ _ ((orderAliases _).toOption.get (by decide +kernel))
+    · exact Gabbro.Grammatik.except_ok_get _
+    · exact Gabbro.Grammatik.except_ok_get _
+    · decide +kernel
+    · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 /-- A computed alias-typed constant discovers a dependent range and a further alias chain;
     all final bindings and ranges come from the strict original fold, not discovery output. -/
@@ -241,5 +298,32 @@ theorem elaborateScopes_inline_range_zeuge :
   refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
   all_goals first | rfl | decide +kernel
+
+/-- A reverse alias chain with a computed bound supplies exact const-function signatures and
+    scalar values. Original-order discovery refuses; the new certified schedule succeeds. -/
+theorem elaborateScopes_forward_zeuge :
+    let items := [SItemTief.typeT [] "Result" [] [] (some (.atom "Bound")),
+      .typeT [] "Bound" [] [] (some (.range (.atom "u8") (.lit 0) (.variable "LIMIT") false)),
+      .typeT [] "Base" [] [] (some (.atom "u8")),
+      .constT "LIMIT" (.atom "Base") (.one (.bin "+" (.lit 40) (.lit 2))),
+      .fnT ⟨"const", "identity", [("x", .atom "Result")], some (.atom "Result"), none, []⟩
+        (.block [] (some (.ret (some (.variable "x"))))),
+      .constT "ANSWER" (.atom "Result") (.one (.call "identity" [.variable "LIMIT"]))]
+    ∃ result, elaborateScopes items = .ok result ∧
+      result.scope.values = [("LIMIT", 42), ("ANSWER", 42)] ∧
+      result.scope.declared = [("Bound", (0, 42)), ("Result", (0, 42)), ("Base", (0, 255))] ∧
+      result.scope.functions.map (fun f => (f.name, f.params, f.erg)) =
+        [("identity", [("x", (0, 42))], (0, 42))] ∧
+      (discoverScopes items (items.length + 1) (prepare items).initial).toOption.isNone = true ∧
+      AliasAcyclic items := by
+  dsimp only
+  refine ⟨(elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact Gabbro.Grammatik.except_ok_get _
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+  · exact (elaborateScopes_dependencies _ ((elaborateScopes _).toOption.get (by decide +kernel))
+      (Gabbro.Grammatik.except_ok_get _)).1
 
 end Gabbro.Stage0.Frontend

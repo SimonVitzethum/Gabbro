@@ -1,0 +1,22 @@
+// Recover both runtime endpoints while dispatch skips large-bound payload arms.
+module tag_offset_large {
+tagged type Message = { Empty, Before(u64 in 4294967296 .. 4294967396), Item(u64 in 4294967296 .. 4294967396), After(u64 in 4294967296 .. 4294967396) };
+impl fn decode(x : u64 in 4294967296 .. 4294967396) -> u8 effects { pure } {
+    let m = Item(x);
+    let mut answer : u8 = 0;
+    match m {
+        Empty => { answer = 7; }
+        Before(value) => { answer = 5; }
+        Item(value) => {
+            if value == x { answer = 21; } else { answer = 9; }
+        }
+        After(value) => { answer = 3; }
+    }
+    return answer;
+}
+impl fn main() -> u32 in 0 .. 1000 effects { pure } {
+    let x = decode(4294967296);
+    let y = decode(4294967396);
+    return x + y;
+}
+}

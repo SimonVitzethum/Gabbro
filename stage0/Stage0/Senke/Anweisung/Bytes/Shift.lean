@@ -4,7 +4,9 @@
 -/
 import Stage0.Senke.Anweisung.Simulation
 import Stage0.Senke.Anweisung.Schreiben
+import Stage0.Senke.Welt.WordCell
 import Stage0.Senke.Anweisung
+import Stage0.Senke.Ausdruck.Gleit.Wort
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -39,19 +41,27 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     obtain ⟨rfl, rfl⟩ := h
     have hks := hW.ks
     have htop := slotA_top ha
+    have cellWidth : valueWords (D.typ t field) = 1 := by
+      rw [ht]
+      have bounds := hfit.1
+      simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at bounds
+      exact integerWords_word bounds.1 bounds.2
     have htopr : frei Γ reserved + 2 ≤ tr := by
-      simp only [slotC, ht, aggregateFits, ↓reduceIte, Option.map_eq_some_iff] at hr
-      obtain ⟨⟨cc, tc⟩, hc, hh⟩ := hr
-      have := slotA_top hc
-      simp only [Option.some.injEq, Prod.mk.injEq] at hh
-      omega
+      simp only [slotC] at hr
+      split at hr
+      · simp only [Option.map_eq_some_iff] at hr
+        obtain ⟨⟨cc, tc⟩, hc, hh⟩ := hr
+        have := slotA_top hc
+        simp only [Prod.mk.injEq] at hh
+        omega
+      · cases hr
     let σE := σ.lese Λ (.inl t :: i.orte)
     have hWE : WeltAt m L σE := hWa
     let old : Wert D (.int a b) := ht ▸ σE.slots t (eval σE i σE ρ).n field
     have heq : Enc L (D.typ t field) (σE.slots t (eval σE i σE ρ).n field) =
         (fun w => w = BitVec.ofInt 64 old.n) := by funext w; exact propext (enc_int_cast ht _ w)
-    let test := cr ++ [ci 1 (frei Γ reserved + 1) von 0] ++ [ci 14 (frei Γ reserved) (frei Γ reserved) (frei Γ reserved + 1)]
-    let tail := [ci 1 (frei Γ reserved) nach 0] ++ ca ++ [stC (frei Γ reserved)]
+    let test := cr ++ (wordConstant (frei Γ reserved + 1) von).1 ++ [ci 14 (frei Γ reserved) (frei Γ reserved) (frei Γ reserved + 1)]
+    let tail := (wordConstant (frei Γ reserved) nach).1 ++ ca ++ [stC (frei Γ reserved)]
     have hp' : PreS L m pc fp K (frei Γ reserved) (test ++ (guardC (frei Γ reserved) 106 (frei Γ reserved) ++ tail)) ρ reserved := hp
     have hpw := PreS.welt hp'.left hks hWE hW.lay (by have := hW.lo; omega)
     have hread : ∀ m pc, Pre L m pc fp Ks (frei Γ reserved) cr ρ (fun m => WeltAt m L σE) reserved →
@@ -59,15 +69,15 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       intro m pc hp
       rw [← heq]
       exact slotC_ok hr (by omega)
-        (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ ci' ti hi
-          (by have := slotC_top hr; simp only at this; omega) m pc ρ hp) (fun _ h => h) hp
+        (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay i _ ci' ti hi
+          (by have := slotC_top hr; simp only at this; omega) m pc ρ hp |>.word trivial) (fun _ h => h) hp
     have htest : Ok m pc fp Ks (frei Γ reserved) test (fun w => w = Runner.IR.bool (decide (old.n = von))) := by
-      refine bin_ok hread (fun m pc hp => const_ok hp hfit.1.2 (by omega))
+      refine bin_ok hread (fun m pc hp => wordConstant_ok (by omega) hp)
         (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) (by omega) hpw
       intro wa wb pa pb
       refine ⟨_, rfl, ?_⟩
-      rw [pa, pb, beq_in (inW_spec hfit.1.1 old.lo_le old.le_hi)
-        (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq] at hfit; omega)]
+      rw [pa, pb, beq_in (inW_spec hfit.1 old.lo_le old.le_hi)
+        (inW_spec hfit.2 (Int.le_refl _) (Int.le_refl _))]
     obtain ⟨m1, s1, a1s, w, hw1, rfl⟩ := htest
     have a1 := Agree.widen a1s hks
     have hp1 := hp'.next a1 (Nat.le_refl _) (by omega)
@@ -83,12 +93,14 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       have hkc : ((eval σE i σE ρ).n.toNat : Int) < D.count t := by have := (eval σE i σE ρ).le_hi; omega
       have hkn : ((eval σE i σE ρ).n.toNat : Int) = (eval σE i σE ρ).n := Int.toNat_of_nonneg hn0
       obtain ⟨m2, s2, a2, en, hw2⟩ := store_ok (σ := σE) hp2 hW hWE1 (by omega)
-        (fun m pc hp => (const_ok hp hfit.2 (by omega)).mono (fun w hw => (enc_int_back ht ⟨nach, hn.1, hn.2⟩ w).mpr hw))
-        (fun m pc hp => slotA_ok ha (by omega)
-          (fun m pc hp => lowE_ok σE σE (fun _ h => h) i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp) hp)
-        (hW.lay.1 t field _ (L.bounded hkc)) (fun m w hm hw => by
+        (fun m pc hp => (wordConstant_ok
+          (by have := (wordConstant_top (frei Γ reserved) nach).2; omega) hp).mono
+          (fun w hw => (enc_int_back ht ⟨nach, hn.1, hn.2⟩ w).mpr hw))
+        (fun m pc hp => slotA_ok cellWidth ha (by omega)
+          (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp |>.word trivial) hp)
+        (by have h := hW.lay.1 t field _ (L.bounded hkc); rw [cellWidth] at h; omega) (fun m w hm hw => by
           have hnw : Enc L (D.typ t field) ((ht ▸ (⟨nach, hn.1, hn.2⟩ : Zahl a b) : Wert D (D.typ t field))) w := hw
-          have hh := weltAt_slot hm hW.lay hW.dis (L.bounded hkc) hnw
+          have hh := weltAt_slotWord cellWidth hm hW.lay hW.dis (L.bounded hkc) hnw
           rw [hkn] at hh
           exact hh)
       have aa : AgreeW L fp (frei Γ reserved) K m m2 := (agreeW_of a1).trans a2

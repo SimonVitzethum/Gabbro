@@ -1,0 +1,15 @@
+// Ordering and equality retain the full unsigned word, including quotient bits.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 42 effects { pure } {
+    let quotient = 18446744073709551615 / 3;
+    if 1 < 18446744073709551615 {
+        if 18446744073709551615 <= 18446744073709551615 {
+            if quotient == 6148914691236517205 {
+                if 18446744073709551615 < 9223372036854775808 { return 0; }
+                return 42;
+            }
+        }
+    }
+    return 0;
+}
+}

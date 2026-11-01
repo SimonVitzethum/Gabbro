@@ -35,6 +35,17 @@ def valueWords : Ty → Nat
   | .why n => integerWords 0 (n - 1)
   | _ => 1
 
+/-- The values whose complete encoding is the single word of the established scalar operations. -/
+def wordCompatB : Ty → Bool
+  | .opt n => decide (n ≤ 2 ^ 63)
+  | .sum cs => sumFits cs
+  | .arr τ n => match n with
+    | 0 => true
+    | 1 => wordCompatB τ
+    | _ => false
+  | .str n => decide (n ≤ 1)
+  | _ => true
+
 /-- Result area width; empty returns keep one ABI word. -/
 def resultWords : Option Ty → Nat
   | none => 1
@@ -107,6 +118,61 @@ theorem integerWords_unsigned {lo hi : Int} (hl : 0 ≤ lo) (hh : hi < 2 ^ 64) :
   have : (0 : Nat).log2 = 0 := rfl
   rw [this]
   omega
+
+/-- The selected width has room for the declared upper bound, including a sign
+    bit exactly when the source interval admits negative values. -/
+theorem integerWords_high (lo hi : Int) :
+    hi.toNat < 2 ^ (64 * integerWords lo hi - if lo < 0 then 1 else 0) := by
+  have width : 1 ≤ integerWords lo hi := by unfold integerWords; omega
+  have digits : (hi.toNat.log2 + if lo < 0 then 1 else 0) / 64 + 1 ≤ integerWords lo hi := by
+    unfold integerWords; omega
+  have exponent : hi.toNat.log2 < 64 * integerWords lo hi - if lo < 0 then 1 else 0 := by
+    by_cases negative : lo < 0
+    · simp only [if_pos negative] at digits ⊢; omega
+    · simp only [if_neg negative] at digits ⊢; omega
+  by_cases zero : hi.toNat = 0
+  · rw [zero]
+    exact Nat.two_pow_pos _
+  · exact (Nat.log2_lt zero).mp exponent
+
+/-- The negative lower bound fits the signed interpretation of the top limb. -/
+theorem integerWords_low (lo hi : Int) :
+    (-lo - 1).toNat < 2 ^ (64 * integerWords lo hi - 1) := by
+  have width : 1 ≤ integerWords lo hi := by unfold integerWords; omega
+  have digits : ((-lo - 1).toNat.log2 + 1) / 64 + 1 ≤ integerWords lo hi := by
+    unfold integerWords; omega
+  have exponent : (-lo - 1).toNat.log2 < 64 * integerWords lo hi - 1 := by omega
+  by_cases zero : (-lo - 1).toNat = 0
+  · rw [zero]
+    exact Nat.two_pow_pos _
+  · exact (Nat.log2_lt zero).mp exponent
+
+theorem integerWords_signed {lo hi z : Int} (negative : lo < 0) (lower : lo ≤ z) (upper : z ≤ hi) :
+    -(2 ^ (64 * integerWords lo hi - 1)) ≤ z ∧ z < 2 ^ (64 * integerWords lo hi - 1) := by
+  have high := integerWords_high lo hi
+  rw [if_pos negative] at high
+  have low := integerWords_low lo hi
+  have boundHigh : (hi.toNat : Int) < 2 ^ (64 * integerWords lo hi - 1) := by exact_mod_cast high
+  have boundLow : ((-lo - 1).toNat : Int) < 2 ^ (64 * integerWords lo hi - 1) := by exact_mod_cast low
+  omega
+
+theorem integerWords_nonnegative {lo hi z : Int} (positive : 0 ≤ lo) (lower : lo ≤ z) (upper : z ≤ hi) :
+    0 ≤ z ∧ z < 2 ^ (64 * integerWords lo hi) := by
+  have high := integerWords_high lo hi
+  rw [if_neg (by omega : ¬lo < 0), Nat.sub_zero] at high
+  have bound : (hi.toNat : Int) < 2 ^ (64 * integerWords lo hi) := by exact_mod_cast high
+  omega
+
+theorem integerWords_range {lo hi z : Int} (lower : lo ≤ z) (upper : z ≤ hi) :
+    -(2 ^ (64 * integerWords lo hi)) ≤ z ∧ z < 2 ^ (64 * integerWords lo hi) := by
+  by_cases negative : lo < 0
+  · have signed := integerWords_signed negative lower upper
+    have capacity : (2 : Int) ^ (64 * integerWords lo hi - 1) ≤ 2 ^ (64 * integerWords lo hi) := by
+      exact_mod_cast (Nat.pow_le_pow_right (n := 2) (i := 64 * integerWords lo hi - 1) (by decide) (by omega))
+    omega
+  · have nonnegative := integerWords_nonnegative (by omega : 0 ≤ lo) lower upper
+    have capacity : (0 : Int) < 2 ^ (64 * integerWords lo hi) := Int.pow_pos (by decide)
+    omega
 
 @[simp] theorem resultWords_vertragVon (D : Deklaration) (f : D.Fn) :
     resultWords (vertragVon D f).erg = resultWords (D.erg f) := rfl

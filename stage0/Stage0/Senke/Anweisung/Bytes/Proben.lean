@@ -4,6 +4,8 @@
 -/
 import Stage0.Senke.Welt.Anordnung
 import Stage0.Senke.Anweisung.Bytes.Put
+import Stage0.Senke.Anweisung.Bytes.ShiftProbe
+import Stage0.Senke.Anweisung.Bytes.Reserved
 
 namespace Gabbro.Stage0.Senke.ByteProbe
 open Gabbro.Grammatik Gabbro.Grammatik.Parser.Uebersetze
@@ -61,7 +63,7 @@ theorem byte_roundtrip_zeuge :
 
 /-- The same G program is lowered by the ordinary image builder. -/
 def imageOf (code : Endblock D (vertragVon D entry) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf code) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry [] 1024
+  let b ← bild 1 (programOf code) (layU u (fun _ => none)) [entry] Fin.val (fun _ => "main") entry .nil [] 1024
   pure b.bytes
 
 def image : Except String (List Runner.B) := imageOf body

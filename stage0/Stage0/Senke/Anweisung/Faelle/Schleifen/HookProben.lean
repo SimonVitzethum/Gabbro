@@ -111,7 +111,7 @@ def program (mode : Nat) : Programm D where
 
 def image (budget mode : Nat) : Except String (List Runner.B) := do
   let b ← bild budget (program mode) (layU u (fun _ => none))
-    [mainFn, worker, callee] Fin.val (fun f => if f.val = 0 then "main" else if f.val = 1 then "worker" else "callee") mainFn [] 512
+    [mainFn, worker, callee] Fin.val (fun f => if f.val = 0 then "main" else if f.val = 1 then "worker" else "callee") mainFn .nil [] 512
   pure b.bytes
 
 def expected (budget mode : Nat) : Int :=
@@ -190,7 +190,7 @@ theorem lowE_lit_counted_zeuge [Runner.IR.Kern] :
     subst k
     simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero]
     exact ⟨by decide +kernel, by decide +kernel, by decide +kernel, by decide +kernel⟩
-  exact lowE_lit_counted (literal := by decide) (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
+  exact lowE_lit32_counted (literal := by decide) (L := FnptrProben.callLayout) (Γ := []) (Λ := [])
     (reserved := 0) (d := 4) (top := 5) (K := 256) (n := 8192)
     (by decide +kernel) code FnptrProben.call_frame (by decide) (by decide)
 
@@ -203,7 +203,7 @@ theorem exprCost_zeuge :
     lowE FnptrProben.callLayout e 4 = some
       ([ci 1 4 7 0, ci 1 5 9 0, ci 3 4 4 5, ci 1 5 11 0, ci 3 4 4 5], 6) := by
   constructor
-  · exact ⟨_, ⟨ExprCost.add (ExprCost.add .literal .literal) .literal⟩⟩
+  · exact ⟨_, ⟨ExprCost.add (by decide) (ExprCost.add (by decide) .literal .literal) .literal⟩⟩
   · rfl
 
 def compositeCode : List II :=
@@ -238,7 +238,7 @@ theorem exprCost_execution_zeuge [Runner.IR.Kern] :
       code, ?_, ?_, trivial, wstab_true _ _⟩
     · unfold CodeFar; decide +kernel
     · intro _ x; nomatch x
-  exact (ExprCost.add (ExprCost.add .literal .literal) .literal).sound
+  exact (ExprCost.add (by decide) (ExprCost.add (by decide) .literal .literal) .literal).sound
     (L := FnptrProben.callLayout) (Γ := []) (Λ := []) (reserved := 0) (top := 6)
     (e := .add (.add (.lit 7) (.lit 9)) (.lit 11)) (by rfl) (by decide) pre
 

@@ -133,10 +133,9 @@ def torC0 (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (a : D.Ax) (args : Args D �
     Option (List II × Nat) :=
   if D.agruende a = 0 then torC (reserved := reserved) L a args s else none
 
-/-- `d := slot s` with `d = s + 1`, then `d := d < k` (the constant into `d + 1`). -/
+/-- Compare the retained answer with a signed-word bound using the shared scalar materializer. -/
 def sltC (s : Nat) (k : Int) : List II :=
-  [ci 2 ((s + 1 : Nat) : Int) s 0, ci 1 (((s + 1 : Nat) : Int) + 1) k 0,
-    ci 13 ((s + 1 : Nat) : Int) ((s + 1 : Nat) : Int) (((s + 1 : Nat) : Int) + 1)]
+  (wordConstant (s + 1) k).1 ++ [ci 13 (s + 1) s (s + 1)]
 
 /-- `lo ≤ slot s`, else the stop 110: `d := s < lo`, `d := (d = 0)`, the guard over `d`. -/
 def loC (s : Nat) (lo : Int) : List II :=
@@ -146,14 +145,14 @@ def loC (s : Nat) (lo : Int) : List II :=
 /-- `slot s ≤ hi`, else the stop 110: `d := s < hi + 1`, the guard over `d`. -/
 def hiC (s : Nat) (hi : Int) : List II := sltC s (hi + 1) ++ guardC (s + 1) 110 (s + 2)
 
-/-- The test of the answer in slot `s` against its declared type; it writes the slots `s + 1 .. s + 9`. A bound covering
-    the signed-word range needs no test; any other must be a 32-bit literal. Multiword
+/-- The test of the answer in slot `s` against its declared type; it writes the slots `s + 1 .. s + 9`. A bound beyond
+    64 bits needs no test; every remaining bound must fit a signed word. Multiword
     results are refused by this register profile. Boolean words are normalized; never stops. -/
 def chkC : Option Ty → Nat → Option (List II)
   | some (.int lo hi), s =>
     if valueWords (.int lo hi) = 1 then
-      let a := if lo ≤ -2 ^ 63 then some [] else if lit32 lo then some (loC s lo) else none
-      let b := if 2 ^ 63 - 1 ≤ hi then some [] else if lit32 (hi + 1) then some (hiC s hi) else none
+      let a := if lo ≤ -2 ^ 63 then some [] else if inW lo lo then some (loC s lo) else none
+      let b := if 2 ^ 63 - 1 ≤ hi then some [] else if inW (hi + 1) (hi + 1) then some (hiC s hi) else none
       match a, b with
       | some a, some b => some (a ++ b)
       | _, _ => none

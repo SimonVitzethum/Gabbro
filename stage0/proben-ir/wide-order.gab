@@ -1,0 +1,20 @@
+// Ordering and equality of integers wider than 64 bits, signed and unsigned, with negation.
+module ir_probe {
+impl fn main() -> u32 in 0 .. 255 effects { pure } {
+    let big = 340282366920938463463374607431768211455;
+    let neg = -340282366920938463463374607431768211455;
+    let small = 5;
+    if neg < small {
+        if small < big {
+            if neg <= neg {
+                if big <= big {
+                    if -big == neg {
+                        if big == big { return 42; }
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+}

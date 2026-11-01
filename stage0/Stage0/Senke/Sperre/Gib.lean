@@ -3,7 +3,8 @@
   Subject:   The two paths of giving a lock (`gibC`) when no thread waits: the count - 1 is not 0 -- done; it is 0 --
              `cas` gives the owner word back (me -> 0), the waiters read 0, no `futex_wake`.
 -/
-import Stage0.Senke.Sperre.Nimm
+import Stage0.Senke.Sperre.Contended
+import Stage0.Senke.Sperre.Futex
 
 namespace Gabbro.Stage0.Senke
 
@@ -40,11 +41,11 @@ theorem gib_mehr {L : Lay D} (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o 
   exact ⟨m5, _, s1.trans (s2.trans (s3.trans (s4.trans (s5.trans (s6.trans s7))))),
     h5.congr rfl (by simp [upd]) rfl⟩
 
-/-- The count - 1 is 0 and no thread waits: the owner word goes back to 0. -/
-theorem gib_letzt {L : Lay D} (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f (meW L fp) c 0) {p : Nat}
+/-- Last release up to the waiter test, for every waiter count. -/
+theorem gib_release {L : Lay D} (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f (meW L fp) c w) {p : Nat}
     (hc : At code p (gibC L a s)) (hme : MeOK L fp) (hc1 : c - 1 = 0) :
-    ∃ m' f', Star ⟨pc + BitVec.ofNat 64 (16 * p), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (p + 29)), fp⟩ m' ∧
-      LS m0 m' fp s a f' 0 0 0 := by
+    ∃ m' f', Star ⟨pc + BitVec.ofNat 64 (16 * p), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (p + 20)), fp⟩ m' ∧
+      LS m0 m' fp s a f' 0 0 w ∧ f' 2 = w := by
   have htop := E.top
   have hs := E.small
   obtain ⟨m1, s1, h1⟩ := ls_const E h (hc.get (j := 0) rfl) (d := 1) rfl (by omega) (lit32_nat (by omega))
@@ -75,12 +76,21 @@ theorem gib_letzt {L : Lay D} (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f (
   have h11' := h11.congr (o' := 0) (by simp [upd, e7]) rfl rfl
   obtain ⟨m12, s12, h12⟩ := ls_const E h11' (g 18 _ rfl) (d := 1) rfl (by omega) (lit32_nat (by omega))
   obtain ⟨m13, s13, h13⟩ := ls_ld E h12 (g 19 _ rfl) (d := 2) (e := 1) rfl rfl (by omega) (by omega)
-    (v := 0) (by
+    (v := w) (by
       show m12.rd64 (BitVec.ofInt 64 ((a + 16 : Nat) : Int)) = _
       rw [BitVec.ofInt_natCast]; exact h12.w)
-  have s14 := ls_brz_zero E h13 (g 20 _ rfl) (e := 2) (k := 9) rfl rfl (by omega) (by omega) (by simp [upd])
   exact ⟨m13, _, s1.trans (s2.trans (s3.trans (s4.trans (s5.trans (s6.trans (s7.trans (s8.trans (s9.trans
-    (s10.trans (s11.trans (s12.trans (s13.trans s14)))))))))))), h13.congr rfl (by simpa using hc1) rfl⟩
+    (s10.trans (s11.trans (s12.trans s13))))))))))), h13.congr rfl (by simpa using hc1) rfl, by simp [upd]⟩
+
+/-- No waiters: the last release skips the syscall, as before. -/
+theorem gib_letzt {L : Lay D} (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f (meW L fp) c 0) {p : Nat}
+    (hc : At code p (gibC L a s)) (hme : MeOK L fp) (hc1 : c - 1 = 0) :
+    ∃ m' f', Star ⟨pc + BitVec.ofNat 64 (16 * p), fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (p + 29)), fp⟩ m' ∧
+      LS m0 m' fp s a f' 0 0 0 := by
+  obtain ⟨m', f', steps, state, test⟩ := gib_release E h hc hme hc1
+  have branch := ls_brz_zero E state (hc.get (j := 20) rfl)
+    (e := 2) (k := 9) rfl rfl (by omega) (by omega) test
+  exact ⟨m', f', steps.trans branch, state⟩
 
 end
 

@@ -1,0 +1,11 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_negative_bound {
+type Result = Bound;
+type Bound = i8 in LOW .. HIGH;
+const ANSWER : Result = 42;
+const LOW : i8 = ZERO - 1;
+const HIGH : u8 = LIMIT;
+const ZERO : i8 = 0;
+const LIMIT : u8 = 100;
+impl fn main() -> Result effects { pure } { return ANSWER; }
+}

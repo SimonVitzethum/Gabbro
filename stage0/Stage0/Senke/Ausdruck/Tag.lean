@@ -2,7 +2,7 @@
   File:      stage0/Stage0/Senke/Ausdruck/Tag.lean
   Subject:   An injective word representation for tagged values: tag + 256 * payload offset.
 -/
-import Stage0.Senke.Ausdruck.Top
+import Stage0.Senke.Ausdruck.Gleit.Wort
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
@@ -132,7 +132,7 @@ variable [Kern]
 /-- Construct a sum word from its payload expression, using wrapping word arithmetic. -/
 theorem packSum_ok {m : Runner.Mem} {pc fp : Runner.W} {K d tag : Nat} {Γ : Ctx} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} {lo hi : Int} {v : Zahl lo hi} {ce : List II × Nat}
-    (hl : lit32 lo = true) (htag : tag < 256) (hK : d + 2 ≤ K)
+    (hl : (wordConstant (d + 1) lo).2 ≤ K) (htag : tag < 256) (hK : d + 2 ≤ K)
     (ih : ∀ m pc, Pre L m pc fp K d ce.1 ρ W reserved → Ok m pc fp K d ce.1 (Enc (D := D) L (.int lo hi) v))
     (hp : Pre L m pc fp K d (packSum d lo tag ce).1 ρ W reserved) :
     Ok m pc fp K d (packSum d lo tag ce).1
@@ -140,7 +140,7 @@ theorem packSum_ok {m : Runner.Mem} {pc fp : Runner.W} {K d tag : Nat} {Γ : Ctx
   simp only [packSum, bin2] at hp ⊢
   refine bin_ok (Pa := fun w => w = BitVec.ofInt 64 ((v.n - lo) * 256))
     (fun m pc hp => bin_ok (Pa := fun w => w = BitVec.ofInt 64 (v.n - lo))
-      (fun m pc hp => bin_ok ih (fun m pc hp => const_ok hp hl (by omega))
+      (fun m pc hp => bin_ok ih (fun m pc hp => wordConstant_ok hl hp)
         (g := fun a b => some (a - b))
         (fun a b ha hb => ⟨_, rfl, by rw [ha, hb, ← ofInt_sub']⟩) rfl (by decide) (by omega) hp)
       (fun m pc hp => const_ok hp (by decide) (by omega)) (g := fun a b => some (a * b))

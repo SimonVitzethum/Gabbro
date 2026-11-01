@@ -1,0 +1,6 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_bound_exclusive {
+const ANSWER : u8 in 0 ..< LIMIT = LIMIT;
+const LIMIT : u8 = 42;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

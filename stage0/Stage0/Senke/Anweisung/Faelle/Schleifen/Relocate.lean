@@ -1,6 +1,5 @@
 /- Overlap-safe emitted frame relocation: copy the highest source word first. -/
-import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
-import Stage0.Senke.Anweisung.PufferTor
+import Stage0.Senke.Rueckkehr
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner Runner.IR Runner.Mem
@@ -47,7 +46,7 @@ theorem relocate_run [Kern] {m : Mem} {pc fp : W} {K base shift n : Nat}
     · intro i hi
       by_cases top : i = n
       · subst i
-        rw [agree_rd_high tailFrame frame.room (by omega) (by omega)]
+        rw [agree_rd_above tailFrame frame.room (by omega) (by omega)]
         rw [read]
         exact rd64_write_same (frame.rd dst (by dsimp [dst]; omega))
       · rw [moved i (by omega)]
@@ -60,20 +59,23 @@ theorem relocate_env [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     (frame : FrameOK m fp K) (small : K < 2 ^ 31)
     (bound : frei Γ (reserved + extra) ≤ K)
     (env : EnvAt L m fp ρ reserved)
-    (code : CodeAt m pc (relocateC (FB + reserved) extra Γ.length))
-    (far : CodeFar pc Γ.length fp K) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * Γ.length), fp⟩ m' ∧
+    (code : CodeAt m pc (relocateC (FB + reserved) extra (contextWords Γ)))
+    (far : CodeFar pc (contextWords Γ) fp K) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * contextWords Γ), fp⟩ m' ∧
       Agree fp (FB + reserved + extra) (frei Γ (reserved + extra)) m m' ∧
       EnvAt L m' fp ρ (reserved + extra) := by
   obtain ⟨m', run, writes, moved⟩ := relocate_run frame small
-    (show FB + reserved + extra + Γ.length ≤ K by unfold frei at bound; omega) code far
+    (show FB + reserved + extra + contextWords Γ ≤ K by unfold frei at bound; omega) code far
   refine ⟨m', run, ?_, ?_⟩
   · simpa [frei, Nat.add_assoc] using writes
   · intro τ x
-    obtain ⟨w, read, enc⟩ := env τ x
-    have ix := idx_lt x
-    have h := moved (Γ.length - 1 - Var.idx x) (by omega)
-    refine ⟨w, ?_, enc⟩
-    simpa [vslot, Nat.add_assoc] using h.trans read
+    obtain ⟨valid, words⟩ := env τ x
+    have ix := variableOffset_bound x
+    refine ⟨valid, ?_⟩
+    intro i hi
+    have width := encodeWords_length L τ (ρ.get x)
+    have h := moved (variableOffset x + i) (by omega)
+    have read := words i hi
+    simpa [vslot, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using h.trans (by simpa only [vslot, Nat.add_assoc] using read)
 
 end Gabbro.Stage0.Senke

@@ -1,0 +1,17 @@
+// Two transitions preserve neighboring cells and obey the declared state graph.
+module ir_probe {
+table T count 2 { slot { s : u64 in 0 .. 9223372036854775807, } }
+state S {
+    transition begin { s : Idle -> Busy }
+    transition finish { s : Busy -> Done }
+}
+impl fn main() -> u32 in 0 .. 255
+    effects { reads T.slots, writes T.slots }
+{
+    T.slots[0].s = 77;
+    transition T.slots[1].s : Idle -> Busy;
+    transition T.slots[1].s : Busy -> Done;
+    if T.slots[0].s == 77 && T.slots[1].s == 2 { return 42; }
+    return 0;
+}
+}

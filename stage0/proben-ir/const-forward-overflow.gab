@@ -1,0 +1,6 @@
+// Unused invalid declarations must refuse before IR emission.
+module const_forward_overflow {
+const ANSWER : u8 = LATER + 1 - 1;
+const LATER : u8 = 255;
+impl fn main() -> u8 effects { pure } { return 42; }
+}

@@ -13,7 +13,6 @@ structure InitialState [Runner.IR.Kern] {src : String} {K : Nat} {options : Prof
   oracle : Orakel (declOf image.compiled.unit)
   memory : Runner.Mem
   world : World (declOf image.compiled.unit)
-  arguments : Env (declOf image.compiled.unit) ((declOf image.compiled.unit).params image.compiled.main)
   bytes : Senke.BytesAt memory Runner.Prog.IMG image.image.bytes
   loaded : Senke.WeltAt memory image.image.Y world
   gates : Senke.TorOK image.image.Y oracle
@@ -21,8 +20,8 @@ structure InitialState [Runner.IR.Kern] {src : String} {K : Nat} {options : Prof
 
 theorem InitialState.simulates [Runner.IR.Kern] [Senke.CloneOK]
     {src : String} {K : Nat} {options : Profil.Options} {image : Emitted src K options}
-    (state : InitialState image) : image.Simulates state.oracle state.memory state.world state.arguments :=
-  image.correct.2 state.oracle state.memory state.world state.arguments
+    (state : InitialState image) : image.Simulates state.oracle state.memory state.world :=
+  image.correct.2 state.oracle state.memory state.world
     state.bytes state.loaded state.gates state.view
 
 /-- Character-pinned source avoids reducing the UTF decoder through a whole compiler witness. -/
@@ -74,13 +73,6 @@ private def fieldlessWorld (u : UProg) (ht : ∀ t : Fin u.tabs.length, fieldCou
   spur := []
 
 def world : World D := fieldlessWorld output.compiled.unit fieldless carrier_shape.2.1
-
-private def emptyArguments (D : Deklaration) (ctx : Ctx) (h : ctx = []) : Env D ctx :=
-  Eq.mpr (congrArg (fun ctx => Env D ctx) h) (Env.nil : Env D [])
-
-def arguments : Env D (D.params output.compiled.main) := emptyArguments D _ params_empty
-
-
 
 local instance kernel : Runner.IR.Kern := ⟨fun _ _ _ _ => True⟩
 local instance clone : Senke.CloneOK where
@@ -148,19 +140,17 @@ def InitialState.ofFieldless [Runner.IR.Kern] {src : String} {K : Nat} {options 
     (fields : ∀ t : Fin image.compiled.unit.tabs.length, fieldCount image.compiled.unit t = 0)
     (globals : image.compiled.unit.globs.length = 0) (foreign : image.compiled.unit.axs.length = 0)
     (registers : image.compiled.unit.regs.length = 0)
-    (params : (declOf image.compiled.unit).params image.compiled.main = [])
     (bound : Runner.Prog.IMG + image.image.bytes.length < 2 ^ 64) : InitialState image :=
   ⟨emptyOracle image.compiled.unit foreign registers, loadedMemory image.image.bytes,
     fieldlessWorld image.compiled.unit fields globals,
-    emptyArguments (declOf image.compiled.unit) _ params,
     loadedBytes _ bound, fieldlessWorldLoaded _ fields globals _ _,
     emptyGates _ foreign registers _, emptyView _ foreign registers⟩
 
 attribute [irreducible] output
 
-/-- A concrete accepted source/image with jointly inhabited initial contracts and entry arguments. -/
+/-- A concrete accepted source/image with jointly inhabited initial contracts; its image carries the entry arguments. -/
 def initial : InitialState output :=
-  ⟨oracle, memory, world, arguments, bytes_loaded, world_loaded, gates, view⟩
+  ⟨oracle, memory, world, bytes_loaded, world_loaded, gates, view⟩
 
 attribute [irreducible] initial
 
@@ -177,7 +167,7 @@ theorem source_image_joint_zeuge :
 
 /-- Instantiation of the generic execution theorem at this concrete, inhabited entry state. -/
 theorem entry_ir_simulation_zeuge :
-    output.Simulates initial.oracle initial.memory initial.world initial.arguments :=
+    output.Simulates initial.oracle initial.memory initial.world :=
   initial.simulates
 
 end Gabbro.Stage0.SourceWitness

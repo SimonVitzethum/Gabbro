@@ -1,0 +1,7 @@
+// Forward dependencies retain exact canonical types and values.
+module const_forward_range_exclusive {
+const ANSWER : u8 in 0 ..< LIMIT + 1 = LIMIT;
+const LIMIT : u8 = BASE + 2;
+const BASE : u8 = 40;
+impl fn main() -> u8 effects { pure } { return ANSWER; }
+}

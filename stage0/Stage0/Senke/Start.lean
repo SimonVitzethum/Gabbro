@@ -2,9 +2,12 @@
   File:      stage0/Stage0/Senke/Start.lean
   Subject:   A thread's start (`start_ok`): from its start code (`startC`) in a frame of its own, the thread runs its
              root as G's `rufAt n` and ends with the system call `e` (`exit_group` with `main`'s result, `exit` for a
-             root), or with the stop of G's outcome.
+             root), or with the stop of G's outcome. The thread's parameter words are already in its frame (the
+             image's bytes); the start's scratch lies above them (`startScratch`), so they survive the spawns and
+             reach the call as `EnvAt`.
 -/
 import Stage0.Senke.BildLese
+import Stage0.Senke.Welt.StartEnv
 
 namespace Gabbro.Stage0.Senke
 
@@ -70,8 +73,38 @@ theorem exitw_ok {m : Runner.Mem} {pc fp : Runner.W} {K nr s r : Nat} {w : Runne
   · rw [hsx, show (40 : Runner.W) = BitVec.ofNat 64 (8 * 5) by rfl, slot_plus]; exact r5
   · rw [hsx, show (48 : Runner.W) = BitVec.ofNat 64 (8 * 6) by rfl, slot_plus]; exact r6
 
-theorem encErg_none' {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : EncErg Y e v w := by
+/-- The scratch of a start lies above the callee header, the complete parameter span, one result word and the status
+    word: neither the spawns nor the exit code write a parameter word. -/
+theorem startScratch_ge (f : D.Fn) : FB + FB + contextWords (D.params f) + 1 ≤ startScratch f := by
+  have positive : 1 ≤ returnWords (D.erg f) (D.gruende f) :=
+    Nat.le_trans (resultWords_pos _) (resultWords_le_returnWords _ _)
+  rw [startScratch_eq]
+  omega
+
+theorem exitErg_none' {e : Option Ty} (h : e = none) (v : ErgVal D e) (w : Runner.W) : ExitErg Y e v w := by
   subst h; trivial
+
+/-- A returned result is read at its first canonical word, which is the exit status. -/
+theorem resultAt_exit {m : Runner.Mem} {fp : Runner.W} {base : Nat} :
+    (e : Option Ty) → (v : ErgVal D e) → ResultAt Y m fp base e v → e.isSome = true →
+    ∃ w, m.rd64 (slot fp (BitVec.ofNat 64 base)) = some w ∧ ExitErg Y e v w
+  | none, _, _, h => by simp at h
+  | some τ, v, r, _ => by
+    have r' : ValueAt Y m fp base τ (show Wert D τ from v) := r
+    have length : 0 < (encodeWords Y τ (show Wert D τ from v)).length := by
+      rw [encodeWords_length]; exact valueWords_pos τ
+    have read := r'.2 0 length
+    simp only [Nat.add_zero] at read
+    refine ⟨(encodeWords Y τ (show Wert D τ from v))[0]'length, read, ?_, fun compatible => ?_⟩
+    · have head : ∀ (l : List Runner.W) (h : 0 < l.length), l[0]'h = l.headD 0 := fun l h => by
+        cases l with
+        | nil => simp at h
+        | cons a t => rfl
+      exact head _ length
+    · obtain ⟨w', read', encoded⟩ := ValueAt.word τ (show Wert D τ from v) compatible r'
+      rw [read'] at read
+      cases read
+      exact encoded
 
 theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2 ^ 64) :
     CodeFar (BitVec.ofNat 64 a) k (BitVec.ofNat 64 f) K := by
@@ -84,21 +117,23 @@ theorem codeFar_nat' {a k f K : Nat} (ha : a + 16 * k ≤ f) (hf : f + 8 * K < 2
 theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT : TorOK Y O] [hV : SichtOK O] {A : D.Fn → Nat}
     {C : D.Fn → List II} {L Ks n : Nat} {f : D.Fn} {e : Nat} {keep : Bool}
     (hLA : Y.fa = A) (hC : ∀ g, ∃ top, lowFun passes P A Y g = some (C g, top) ∧ top ≤ L) (hAlt : ∀ g, A g < 2 ^ 31)
-    (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) (hpar : (D.params f).isEmpty = true) (hwhy : D.gruende f = 0)
-    (hroomK : FB + 2 * L ≤ Ks) (hexK : exitSlot + 8 ≤ Ks) (hL1 : 1 ≤ L) (hn : n = depthOf Ks L) (he : e < 2 ^ 31)
+    (hlen : ∀ g, 16 * (C g).length < 2 ^ 31) (hwhy : D.gruende f = 0)
+    (hroomK : FB + 2 * L ≤ Ks) (hexK : startScratch f + 8 ≤ Ks) (hL1 : 1 ≤ L) (hn : n = depthOf Ks L) (he : e < 2 ^ 31)
     {pc fpI : Nat} {m : Runner.Mem} (hfit : fpI + 8 * Ks < 2 ^ 31)
     (hc : CodeAt m (BitVec.ofNat 64 pc) (startC A f n e keep)) (hpc : pc + 16 * startLen ≤ fpI)
     (hF : FrameOK m (BitVec.ofNat 64 fpI) Ks) (hP : PCode m A C (BitVec.ofNat 64 fpI) Ks)
-    (hW : WIn Y (BitVec.ofNat 64 fpI) Ks Ks) (σ : World D) (ρ : Env D (D.params f)) (hWa : WeltAt m Y σ)
+    (hW : WIn Y (BitVec.ofNat 64 fpI) Ks Ks) (σ : World D) (ρ : Env D (D.params f))
+    (hval : ∀ τ (x : Var (D.params f) τ), ValueValid Y τ (ρ.get x))
+    (hρ : WordsAt m (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) FB (encodeEnv Y ρ)) (hWa : WeltAt m Y σ)
     (hy : SyncOK m Y (BitVec.ofNat 64 fpI) Ks) :
     match rufAt P O passes n f σ ρ with
     | .ok _ v => ∃ t' m' q, Star ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m t' m' ∧ StopAt t' m' q ∧
-        q.nr = BitVec.ofNat 64 e ∧ (keep = true → EncErg Y (D.erg f) v q.a1)
+        q.nr = BitVec.ofNat 64 e ∧ (keep = true → ExitErg Y (D.erg f) v q.a1)
     | .logik l => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (logikCode l)
     | .hardware h => Stops ⟨BitVec.ofNat 64 pc, BitVec.ofNat 64 fpI⟩ m (hwCode h)
     | _ => False := by
   have hFB3 : FB = 4 := rfl
-  have hex : exitSlot = 10 := rfl
+  have hex := startScratch_ge f
   have hsl : startLen = 8 := rfl
   have hK : Ks < 2 ^ 31 := by omega
   have hroom := hF.room
@@ -109,10 +144,10 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
   have hnK : n + 1 ≤ Ks := by have := Nat.div_le_self (Ks - FB) L; omega
   have hS := lowFun_spec (Y := Y) (P := P) (O := O) (passes := passes) hLA hC hAlt hlen n (by omega)
   have hS0' : CodeAt m (BitVec.ofNat 64 pc) ([ci 1 2 ((n + 1 : Nat) : Int) 0] ++ (callTail A f FB ++
-      [ci 1 exitSlot e 0,
-       if keep && (D.erg f).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
-       else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
-       ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0])) := by
+      [ci 1 (startScratch f) e 0,
+       if keep && (D.erg f).isSome then ci 2 ((startScratch f + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
+       else ci 1 ((startScratch f + 1 : Nat) : Int) 0 0,
+       ci 23 ((startScratch f + 7 : Nat) : Int) (startScratch f) 0])) := by
     simpa [startC, List.append_assoc] using hc
   have s1 := const_step (j := 2) (k := ((n + 1 : Nat) : Int)) (codeAt_left hS0') hF (by omega) hK
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
@@ -122,10 +157,10 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
   have hfp0 : (BitVec.ofNat 64 fpI).toNat = fpI := by simp only [BitVec.toNat_ofNat]; omega
   have hWa1 : WeltAt m1 Y σ := weltAt_stab hW.lay hW.top m m1 hWa (a1.mono (Nat.zero_le _))
   have hfC : CodeFar (BitVec.ofNat 64 pc + BitVec.ofNat 64 (16 * [ci 1 2 ((n + 1 : Nat) : Int) 0].length))
-      (callTail A f FB ++ [ci 1 exitSlot e 0,
-       if keep && (D.erg f).isSome then ci 2 ((exitSlot + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
-       else ci 1 ((exitSlot + 1 : Nat) : Int) 0 0,
-       ci 23 ((exitSlot + 7 : Nat) : Int) exitSlot 0]).length (BitVec.ofNat 64 fpI) Ks := by
+      (callTail A f FB ++ [ci 1 (startScratch f) e 0,
+       if keep && (D.erg f).isSome then ci 2 ((startScratch f + 1 : Nat) : Int) ((FB + 2 : Nat) : Int) 0
+       else ci 1 ((startScratch f + 1 : Nat) : Int) 0 0,
+       ci 23 ((startScratch f + 7 : Nat) : Int) (startScratch f) 0]).length (BitVec.ofNat 64 fpI) Ks := by
     rw [ofNat_add64]; exact codeFar_nat' (by simp [callTail, callTailN]; omega) (by omega)
   have hc1 := (codeAt_right hS0').agree a1 hfC
   have hdv : m1.rd64 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 2)) = some (BitVec.ofNat 64 n + 1) := by
@@ -133,9 +168,11 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
       rw [BitVec.ofInt_natCast]; exact ofNat_succ n
     simp only [m1]
     rw [rd_same hF (by omega), hconv]
-  have hnp : (D.params f).length = 0 := by simpa using hpar
-  have hE : EnvAt Y m1 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) ρ := fun τ x => by
-    have := idx_lt x; omega
+  have hρ1 : WordsAt m1 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) (FB + 0) (encodeEnv Y ρ) :=
+    startEnvWords_depth (frameOffset := FB) (reserved := 0) (words := encodeEnv Y ρ)
+      (BitVec.ofInt 64 ((n + 1 : Nat) : Int)).toNat hF (by rw [encodeEnv_length]; omega) (by omega) hρ
+  have hE : EnvAt Y m1 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 FB)) ρ :=
+    (envAt_encoding (reserved := 0) ρ).mpr ⟨hval, hρ1⟩
   have hcall := call_ok (σ := σ) hS (codeAt_left hc1) (codeFar_left (k := 3) (by
       have h4 : (callTail A f FB).length = 4 := rfl; simpa [h4] using hfC)) hF1 hK (Nat.le_refl _)
     (by omega) (by rw [hn1]; omega) (hAlt f) (pcode_agree hP a1) hdv hE hW hWa1
@@ -143,20 +180,24 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
   generalize rufAt P O passes n f σ ρ = o at hcall ⊢
   cases o with
   | ok σ' v =>
-    obtain ⟨m2, s2, a2, ⟨w, hw, hew, _⟩, _⟩ := hcall
+    obtain ⟨m2, s2, a2, ⟨hres, hmirror, _⟩, _⟩ := hcall
     have hfE := codeFar_tail (a := callTail A f FB) hfC
     have hexC := codeAt_agreeWIn hW (a2.mono (Nat.zero_le _)) (codeAt_right (a := callTail A f FB) hc1) hfE
     have hF2 := frameOK_agreeW hF1 a2
     by_cases hs : (keep && (D.erg f).isSome) = true
     · simp only [hs, ite_true] at hexC hfE
+      obtain ⟨w, hread, hexit⟩ := resultAt_exit (D.erg f) v hres (by simp only [Bool.and_eq_true] at hs; exact hs.2)
+      have hw : m2.rd64 (slot (BitVec.ofNat 64 fpI) (BitVec.ofNat 64 (FB + 2))) = some w := by
+        have mirrored := hmirror.trans hread
+        rwa [slot_slot] at mirrored
       obtain ⟨t', m', q, sx, hq, hnr, ha⟩ := exitw_ok hexC hfE hF2 (by omega) (by omega) hK hw he
-      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun _ => by rw [ha]; exact hew⟩
+      refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun _ => by rw [ha]; exact hexit⟩
     · simp only [hs, Bool.false_eq_true, ite_false] at hexC hfE
-      obtain ⟨t', m', q, sx, hq, hnr, _⟩ := sys_ok (nr := e) (c := 0) (s := exitSlot) hexC hfE hF2 (by omega) hK
+      obtain ⟨t', m', q, sx, hq, hnr, _⟩ := sys_ok (nr := e) (c := 0) (s := startScratch f) hexC hfE hF2 (by omega) hK
         (by decide) he
       refine ⟨t', m', q, s1.trans (s2.trans sx), hq, hnr, fun hk => ?_⟩
       simp only [hk, Bool.true_and, Option.isSome_iff_ne_none, ne_eq, Decidable.not_not] at hs
-      exact encErg_none' hs v _
+      exact exitErg_none' hs v _
   | logik l => exact Stops.prefix s1 hcall
   | why _ r => exact (keinGrund hwhy r : False).elim
   | hardware h => exact Stops.prefix s1 hcall
@@ -168,45 +209,44 @@ theorem start_ok {P : Programm D} {O : Orakel D} {passes : Nat} {Y : Lay D} [hT 
 class CloneOK : Prop where
   ans : ∀ m : Runner.Mem, ∃ r x : Runner.W, r ≠ 0 ∧ Kern.ans cloneReq m (some (r, x)) m
 
-/-- One `spawn`: the start code's address and the frame's address into `exitSlot`, `exitSlot + 1`; the new thread's
-    id into `exitSlot + 2`; the asking thread goes on. -/
-theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K a f : Nat}
-    (hc : CodeAt m pc [ci 1 exitSlot a 0, ci 1 ((exitSlot + 1 : Nat) : Int) f 0,
-      ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0]) (hF : FrameOK m fp K) (hK : exitSlot + 3 ≤ K)
+/-- One `spawn`: the start code's address and the frame's address into the scratch slots `s`, `s + 1`; the new
+    thread's id into `s + 2`; the asking thread goes on. Every slot below `s` is unchanged. -/
+theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K s a f : Nat}
+    (hc : CodeAt m pc [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0,
+      ci 24 ((s + 2 : Nat) : Int) s 0]) (hF : FrameOK m fp K) (hK : s + 3 ≤ K)
     (hK2 : K < 2 ^ 31) (ha : a < 2 ^ 31) (hf : f < 2 ^ 31) (hcf : CodeFar pc 3 fp K) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m' ∧ Agree fp exitSlot K m m' := by
-  have hex : exitSlot = 10 := rfl
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * 3), fp⟩ m' ∧ Agree fp s K m m' := by
   have hroom := hF.room
-  have hc' : CodeAt m pc ([ci 1 exitSlot a 0] ++ ([ci 1 ((exitSlot + 1 : Nat) : Int) f 0] ++
-      [ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0])) := hc
+  have hc' : CodeAt m pc ([ci 1 s a 0] ++ ([ci 1 ((s + 1 : Nat) : Int) f 0] ++
+      [ci 24 ((s + 2 : Nat) : Int) s 0])) := hc
   have s1 := const_step (k := (a : Int)) (codeAt_left hc') hF (by omega) hK2
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
-  let m1 := write m (slot fp (BitVec.ofNat 64 exitSlot)) 8 (BitVec.ofInt 64 (a : Int)).toNat
-  have a1 : Agree fp exitSlot K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
+  let m1 := write m (slot fp (BitVec.ofNat 64 s)) 8 (BitVec.ofInt 64 (a : Int)).toNat
+  have a1 : Agree fp s K m m1 := agree_write hroom (Nat.le_refl _) (by omega) _
   have hF1 := hF.agree a1
   have hc1 := (codeAt_right hc').agree a1 (codeFar_right (n := 1) (k := 2) hcf)
-  have s2 := const_step (j := exitSlot + 1) (k := (f : Int)) (codeAt_left hc1) hF1 (by omega) hK2
+  have s2 := const_step (j := s + 1) (k := (f : Int)) (codeAt_left hc1) hF1 (by omega) hK2
     (by simp only [lit32, Bool.and_eq_true, decide_eq_true_eq]; omega)
-  let m2 := write m1 (slot fp (BitVec.ofNat 64 (exitSlot + 1))) 8 (BitVec.ofInt 64 (f : Int)).toNat
-  have a2 : Agree fp exitSlot K m1 m2 := agree_write hroom (by omega) (by omega) _
+  let m2 := write m1 (slot fp (BitVec.ofNat 64 (s + 1))) 8 (BitVec.ofInt 64 (f : Int)).toNat
+  have a2 : Agree fp s K m1 m2 := agree_write hroom (by omega) (by omega) _
   have hF2 := hF1.agree a2
-  have hc2 : CodeAt m2 (pc + 16 + 16) [ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0] := by
-    have := (codeAt_right (a := [ci 1 exitSlot a 0, ci 1 ((exitSlot + 1 : Nat) : Int) f 0])
-      (b := [ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0]) hc).agree (a1.trans a2) (codeFar_right (n := 2) (k := 1) hcf)
-    rwa [show pc + BitVec.ofNat 64 (16 * [ci 1 exitSlot a 0, ci 1 ((exitSlot + 1 : Nat) : Int) f 0].length) =
+  have hc2 : CodeAt m2 (pc + 16 + 16) [ci 24 ((s + 2 : Nat) : Int) s 0] := by
+    have := (codeAt_right (a := [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0])
+      (b := [ci 24 ((s + 2 : Nat) : Int) s 0]) hc).agree (a1.trans a2) (codeFar_right (n := 2) (k := 1) hcf)
+    rwa [show pc + BitVec.ofNat 64 (16 * [ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0].length) =
       pc + 16 + 16 by rw [BitVec.add_assoc]; rfl] at this
   obtain ⟨r, x, hr0, hk⟩ := CloneOK.ans m2
   have hi := hc2 0 (by simp)
   simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
-  have h0 : m2.rd64 (slot fp (BitVec.ofNat 64 exitSlot)) = some (BitVec.ofInt 64 (a : Int)) := by
+  have h0 : m2.rd64 (slot fp (BitVec.ofNat 64 s)) = some (BitVec.ofInt 64 (a : Int)) := by
     simp only [m2]
     rw [rd64_write_far (slot_far hroom (by omega) (by omega) (by omega))]
     exact rd64_wr64 (wr64_some (hF.wr _ (by omega))) (hF.rd _ (by omega))
-  have h1 : m2.rd64 (slot fp (BitVec.ofNat 64 exitSlot) + 8) = some (BitVec.ofInt 64 (f : Int)) := by
+  have h1 : m2.rd64 (slot fp (BitVec.ofNat 64 s) + 8) = some (BitVec.ofInt 64 (f : Int)) := by
     rw [show (8 : Runner.W) = BitVec.ofNat 64 (8 * 1) by rfl, slot_plus]
     exact rd64_wr64 (wr64_some (hF1.wr _ (by omega))) (hF1.rd _ (by omega))
   have s3 : Star ⟨pc + 16 + 16, fp⟩ m2 ⟨pc + 16 + 16 + 16, fp⟩
-      (write m2 (slot fp (BitVec.ofNat 64 (exitSlot + 2))) 8 r.toNat) := by
+      (write m2 (slot fp (BitVec.ofNat 64 (s + 2))) 8 r.toNat) := by
     refine Star.one (run_step (t := ⟨_, fp⟩) hi (by decide) ?_)
     simp only [op]
     refine f2_run (t := ⟨_, fp⟩) hi ?_
@@ -224,19 +264,19 @@ theorem spawn1_ok [CloneOK] {m : Runner.Mem} {pc fp : Runner.W} {K a f : Nat}
   rw [show (16 : Runner.W) = BitVec.ofNat 64 16 from rfl, addr_norm, addr_norm]
 
 /-- The spawns of all roots. -/
-theorem spawnC_ok [CloneOK] {fp : Runner.W} {K : Nat} (hK : exitSlot + 3 ≤ K) (hK2 : K < 2 ^ 31) :
+theorem spawnC_ok [CloneOK] {fp : Runner.W} {K s : Nat} (hK : s + 3 ≤ K) (hK2 : K < 2 ^ 31) :
     (l : List (Nat × Nat)) → (∀ x ∈ l, x.1 < 2 ^ 31 ∧ x.2 < 2 ^ 31) → (m : Runner.Mem) → (pc : Runner.W) →
-    CodeAt m pc (spawnC l) → FrameOK m fp K → CodeFar pc (spawnC l).length fp K →
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (spawnC l).length), fp⟩ m' ∧ Agree fp exitSlot K m m'
+    CodeAt m pc (spawnC s l) → FrameOK m fp K → CodeFar pc (spawnC s l).length fp K →
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (spawnC s l).length), fp⟩ m' ∧ Agree fp s K m m'
   | [], _, m, pc, _, _, _ => ⟨m, by simpa [spawnC] using Star.refl _ m, Agree.refl _ _ _ _⟩
   | (a, f) :: r, hl, m, pc, hc, hF, hcf => by
     have h0 := hl (a, f) (by simp)
-    have hc' : CodeAt m pc ([ci 1 exitSlot a 0, ci 1 ((exitSlot + 1 : Nat) : Int) f 0,
-        ci 24 ((exitSlot + 2 : Nat) : Int) exitSlot 0] ++ spawnC r) := hc
-    have hcf' : CodeFar pc (3 + (spawnC r).length) fp K := by
+    have hc' : CodeAt m pc ([ci 1 s a 0, ci 1 ((s + 1 : Nat) : Int) f 0,
+        ci 24 ((s + 2 : Nat) : Int) s 0] ++ spawnC s r) := hc
+    have hcf' : CodeFar pc (3 + (spawnC s r).length) fp K := by
       have h := hcf
       simp only [spawnC, List.length_append, List.length_cons, List.length_nil] at h
-      rwa [show 0 + 1 + 1 + 1 + (spawnC r).length = 3 + (spawnC r).length by omega] at h
+      rwa [show 0 + 1 + 1 + 1 + (spawnC s r).length = 3 + (spawnC s r).length by omega] at h
     obtain ⟨m1, s1, a1⟩ := spawn1_ok (codeAt_left hc') hF hK hK2 h0.1 h0.2 (codeFar_left hcf')
     have hc1 := (codeAt_right hc').agree a1 (codeFar_right hcf')
     obtain ⟨m2, s2, a2⟩ := spawnC_ok hK hK2 r (fun x hx => hl x (by simp [hx])) m1 _ hc1 (hF.agree a1)
