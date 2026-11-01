@@ -53,6 +53,17 @@ is refused (`ir: main takes a parameter that is not a table pointer: no start-ar
 parameterless (`ir: a root takes parameters`, guard kept: concurrent start arguments need the `SourceStart` list instead
 of the deduplicated name list). No second startup ABI.
 
+Measured on master `f8af1160f` + IR-12: the Stage0 root closure (286 modules rebuilt on IR-03's warm library incl. `Stage0`,
+`Nachpruefung`, `Stage0.Haupt`, `StartArgumentProben`, `StartImageProben`, `ProfilProben`) is green; `Nachpruefung` 397
+theorems on the standard axioms only, `gabbro_ziel` and its siblings on exactly `propext`/`Classical.choice`/`Quot.sound`
+(grammar not rebuilt); layout check clean (`BildSatz` 481 lines). All 218 textual programs of `stage0/proben-ir` pass on
+the assembly runner or refuse with the expected text (new: `main-pointer-params` 43, `main-int-parameter`). The old
+probes in `stage0/proben`: `hello`, `echo`, `threads` now compile and print exactly their `.aus` with exit 0;
+`upper` compiles and exits 0 but prints nothing instead of `ABC`: it has no gate, its stdin/stdout path was the retired
+Lean driver's `io.ein`/`io.aus` convention, which no longer exists in the image path. It needs an owner decision
+(a verified profile I/O convention with its own named assumption, or a gate-based `upper`); none was invented here.
+The full Lean guardian was not run: it would rebuild `grammatik/` in this worktree (no warm `.lake`).
+
 **Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
 `e4815ed3f`; actual parameterized image startup remains blocked on IR-03's full ABI. Its slot now runs
 IR-09 userspace concurrency/RCU. IR-12 is not counted complete and resumes for actual image integration
@@ -2905,7 +2916,7 @@ Branch `t3/central-value-abi`: master `ae716338a` merged (`cd8cf4d5d`) and curre
 (`c6ce18d84`, fast-forwardable: `master` is an ancestor). After both merges the whole Stage0 closure rebuilds, all 207
 textual regressions in `stage0/proben-ir` pass, `Nachpruefung` and `gabbro_ziel` stay on the three standard axioms,
 the layout check is clean and no file under 500 lines on master reaches 500. The four old probes in `stage0/proben`
-(`echo`, `hello`, `threads`, `upper`) still refuse with "main takes parameters" (known IR-12 limit). Earlier:
+(`echo`, `hello`, `threads`, `upper`) refused with "main takes parameters" at that point (activated by IR-12, see above). Earlier:
 master `6444b5cc3` merged (`05cfd542b`), then `strGet` over any scalar index range,
 `strWeit` narrowing, `strWeit` of short to long strings and `strEq` between short and long strings (commits above).
 
