@@ -81,6 +81,9 @@ expanding infrastructure for a small subset.
   minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
   `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
   allows. Stage-0 checks keep their 5G slots.
+- **No swap for ANY run (owner, 2026-11-01):** every process an agent or root starts that can use real memory —
+  `lean`, `lake`, `cargo`, the runner and regression loops, guardians, Python measurement scripts — runs
+  inside `systemd-run --user --scope -p MemorySwapMax=0` with a MemoryMax/MemoryHigh. No exceptions.
 - **RAM discipline (owner, 2026-11-01):** inside a Stage-0 slot exactly ONE `lean` process runs, with
   `-j1 -DElab.async=false -M4608`, checked module by module in dependency order. Never run a parallel
   `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
