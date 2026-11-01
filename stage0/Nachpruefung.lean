@@ -403,3 +403,24 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.locks_reason_zeuge
 
 #print axioms Gabbro.Stage0.Senke.GateProbe.word_range_images_zeuge
+
+-- Contended locks: named OS return behavior and explicit interference premises.
+#print axioms Runner.IR.futexOK_zeuge
+#print axioms Gabbro.Stage0.Senke.add_waiters
+#print axioms Gabbro.Stage0.Senke.LockInv.increment
+#print axioms Gabbro.Stage0.Senke.LockInv.decrement
+#print axioms Gabbro.Stage0.Senke.LockOK.invariant
+#print axioms Gabbro.Stage0.Senke.futex_prepare
+#print axioms Gabbro.Stage0.Senke.futex_entry
+#print axioms Gabbro.Stage0.Senke.futex_return
+#print axioms Gabbro.Stage0.Senke.nimm_wait_entry
+#print axioms Gabbro.Stage0.Senke.nimm_wait_retry
+#print axioms Gabbro.Stage0.Senke.nimm_retry
+#print axioms Gabbro.Stage0.Senke.nimm_retry_acquired
+#print axioms Gabbro.Stage0.Senke.gib_release
+#print axioms Gabbro.Stage0.Senke.gib_waiters_entry
+#print axioms Gabbro.Stage0.Senke.gib_waiters_return
+#print axioms Gabbro.Stage0.Senke.WaitProbe.nimm_wait_acquired_zeuge
+#print axioms Gabbro.Stage0.Senke.WaitProbe.gib_waiters_zeuge
+#print axioms Gabbro.Stage0.Senke.WaitProbe.nimm_wait_spurious_zeuge
+#print axioms Gabbro.Stage0.Senke.WaitProbe.sync_waiters_zeuge

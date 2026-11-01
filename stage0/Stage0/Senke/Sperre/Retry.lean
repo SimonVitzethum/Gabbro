@@ -48,7 +48,7 @@ theorem nimm_retry (E : LE m0 pc fp s a code) (h : LS m0 m fp s a f o c w)
       (by simpa [upd] using free)
     refine ⟨m4, scratch4, ?_, ?_, ?_⟩
     · simpa only [free, ite_false] using s1.trans (s2.trans (s3.trans (s4.trans branch)))
-    · simp only [free, ite_false]; exact ⟨state4, by simp [scratch4, upd]⟩
+    · simp only [free, ite_false]; exact ⟨state4, by simp [scratch4]⟩
     · simpa [scratch4, upd] using id
 
 /-- Any finite sequence of actual retry/WAIT instructions that returns here

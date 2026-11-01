@@ -2791,3 +2791,56 @@ used the capped slot-2 lock with `ELAN_TOOLCHAIN` removed; grammar artifacts
 were reused, with no grammar build or full guardian. This closes only the
 foreign-owner acquisition prefix: full WAIT/WAKE, interference, ordering and
 `ir_parallel` remain open, and no additional source-form family is claimed.
+
+### IR-09 contended WAIT/WAKE sequential facts (base 2d54e78f2, 2026-11-01)
+
+The owner explicitly authorized a named OS binding premise for futex, following
+`CloneOK`/`TorOK`. `Runner.IR.FutexOK spurious` now states exactly the return
+properties used here: a returning WAIT sees a different low 32-bit word or is
+classified by the explicit `spurious` relation; a successful WAKE returns a
+count at most the requested `n`. Negative WAKE error returns are allowed.
+Interruptions, mismatch/error returns and a value changed back before return
+can be classified as spurious. There is no eventual-return, release, scheduling
+or fairness premise, no hardware assumption, and no Lean postulate.
+
+`futex_prepare`, `futex_entry` and `futex_return` simulate the actual request
+setup and syscall. Memory changes during a blocking call are **separate,
+explicit client premises** (`LS` resume state and stable lock-word invariant),
+not consequences of `FutexOK`. In particular the current `AgreeK` frame keeps
+code, non-scratch frame words and the world unchanged across that boundary;
+it is not the missing general source-world interference relation.
+
+`add_waiters` proves the actual seven-instruction successful counter-CAS
+iteration without interference inside that iteration. `LockInv` describes
+stable free/held lock boundaries, including foreign owners and nonzero waiters,
+with recursion and waiter counts below `2^62`. Its counter proofs require room
+before increment and a registered waiter before decrement. `nimm_wait_entry` registers a waiter and reaches WAIT;
+`nimm_wait_retry` consumes a supplied return, unregisters that waiter and jumps
+to instruction **17**, the actual acquisition-CAS retry. `nimm_retry` either
+returns to WAIT with the foreign owner intact or acquires a free lock.
+`nimm_retry_acquired` finishes any finite actual retry history whose supplied
+resume state is free; it does not prove eventual acquisition.
+
+`gib_release` centralizes the last-release prefix through the waiter test.
+`gib_waiters_entry` proves the nonzero-waiter branch reaches WAKE-one;
+`gib_waiters_return` finishes it under an explicit response/frame premise and
+leaves owner/count zero with the same waiter count. Returning WAITs remove their
+own counter entries; WAKE itself does not decrement the counter.
+`LockOK`/`SyncOK` can now specify waiter counts, and their frame/call/monotonicity
+lemmas preserve those exact counts. Their defaults and the existing `locks_ok`
+and source-to-image theorem domains still require zero waiters and free/mine
+ownership, with all existing guarantees retained.
+
+`WaitProbe` supplies encoded instruction bytes and writable real lock/frame
+memory for acquisition after an explicit foreign release, a spurious unchanged
+WAIT followed by a failed retry, WAKE with five waiters, and nonzero-waiter
+`SyncOK` inherited by a callee. These are individual-thread `Star` facts.
+Concurrent `ir_parallel`, interference inside counter CAS loops, general world
+updates while blocked, ordering and progress remain outside this bounded proof;
+no additional source-form family is counted complete.
+
+The `lock-wait-wake` source regression uses bounded long critical sections on
+two real assembly-runner OS threads. It complements the short `sperre` probe:
+tracing the long probe exercises successful sleeping WAIT returns and WAKE-one,
+while the short probe also exercises mismatch returns. This runtime evidence
+is separate from the sequential component proofs and does not close `ir_parallel`.
