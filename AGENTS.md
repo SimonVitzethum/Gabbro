@@ -11,7 +11,8 @@ were organised) is in `git log`, not here.
 
 **TEAM AND BUILD RULES (owner, 2026-11-01, supersede every older staffing rule below).**
 - **Two Claude Sonnet 5.5 leads**, both T3 Code agents. Each lead controls, through T3 `delegate_task`, exactly
-  ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor sub-agents. All agents are T3 Code agents.
+  ONE GPT Sol 6.1 and FOUR OpenCode Muse Spark 1.3 Contributor sub-agents (only the Go access:
+  model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`). All agents are T3 Code agents.
   The leads work on the C packages and the Lean module-system migration; every other lane (IR-04 floats,
   IR-02 `narrow`, the remaining A/B packages and IR lanes) is paused with its worktree and resumes after C.
 - **Only the leads build.** Each lead runs its own builds and may do heavy work itself; sub-agents and their
