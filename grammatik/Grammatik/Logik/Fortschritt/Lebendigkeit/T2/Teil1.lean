@@ -431,7 +431,6 @@ theorem gueltig : ∀ (n : Nat) (L : D.Lock), hoeher ls L < n → ∀ (t : Faden
       obtain ⟨j, j1, j2, j3⟩ := warte R hO hRang hEx hFifo hFair hAnw hRel hA
       exact ⟨j, j1, j2, j3⟩
 
-include hO hls hRang hEx hFifo hFair hH hAkt hAnw in
 end Beweis
 end Kern
 end Gabbro.Grammatik

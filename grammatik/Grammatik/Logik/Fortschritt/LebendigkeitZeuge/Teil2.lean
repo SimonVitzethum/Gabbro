@@ -9,8 +9,8 @@ public import Grammatik.Logik.Fortschritt.LebendigkeitZeuge.Teil1
 namespace Gabbro.Grammatik
 set_option linter.unusedVariables false
 
-/-- **The run, tabled.** -/
 set_option maxHeartbeats 8000000 in
+/-- **The run, tabled.** -/
 theorem lLauf : ∃ Ms : Nat → RufMaschineG mD,
     Ms 0 = RufStartG mP mSp mInit ∧
     (∀ j u, lAkt j = some u → RufSchrittG mP mO 0 (Ms j) u (Ms (j + 1))) ∧

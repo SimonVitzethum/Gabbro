@@ -13,6 +13,7 @@ variable (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = true → 
   (P : Programm D) (O : Orakel D) (passes : Nat)
   (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D))
   {sp₁ sp₂ : Speicher D}
+include hAx in
 include hST
 include hAx in
 include hAx in

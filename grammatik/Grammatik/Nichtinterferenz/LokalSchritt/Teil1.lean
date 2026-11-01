@@ -439,6 +439,5 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 
-include hAx in
 end Schritt
 end Gabbro.Grammatik
