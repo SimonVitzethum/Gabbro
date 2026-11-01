@@ -2,23 +2,57 @@
 # Format per probe: <name> | <expected outcome> | <purpose>.
 # Positive probes (must compile and run): <name>.gab + <name>.code (main result).
 # Negative probes (must be refused): <name>.gab + <name>.error (one-line refusal text).
+# Stop probes (accepted, run stops): <name>.gab + <name>.code (stop code).
 global-sum | result 100 | group over two globals under one lock holds at return.
 global-restored | result 100 | invariant broken between two stores, restored before return.
 global-two-locks | result 100 | two globals under two rank-ordered locks, both held across the writes.
 mixed-table-global | result 120 | mixed table/global group: quantified table predicate reading a global bound.
-broken-at-return | refusal: group invariant summe_bleibt is false at return | writer returns with the global sum at 101.
+broken-at-return | stop 103 | accepted, writer returns with the global sum at 101: the return epilogue evaluates the owed predicate and stops.
 write-without-lock | refusal: `schreibe_ohne_sperre` writes 2 carriers of `group Summe` but does not hold K | both globals written with no guard held.
-dropped-maintains | refusal: function `schreibe_ohne_pflicht` writes a carrier of group invariant `summe_bleibt` without naming it in `maintains` | writer of a group carrier names no duty (N496).
-unknown-carrier | refusal: `group Summe` names `K`, which is not a carrier | group names a lock instead of a carrier (U001).
 half-locked | refusal: `nimm_halb` writes 2 carriers of `group Paar` but does not hold B | both globals written while holding only one of two locks (U003).
-undeclared-read | refusal: group invariant `summe_bleibt` reads `fremd`, which is not a declared carrier of `group Summe` | invariant reads a guarded global outside its declared carrier set.
-# UNSURE: exact refusal WORDING of all six .error lines -- the U001/U003 formats mirror
-# crates/gabbro-check/src/gruppe.rs verbatim, but post-C05 texts may differ; the N496,
-# broken-at-return and undeclared-read texts are best readings with no existing template.
-# UNSURE: `runs online` on group invariants -- existing group examples use `runs offline`;
-# online is chosen because C05 claims restoration at returns, paralleling online table
-# invariants in beispiele/47 and beispiele/53.
-# UNSURE: whether `main` must repeat transitive callee effects/locks and carry `maintains`;
-# included both per the N496 sentence (callers writing through callees owe the duty).
-# UNSURE: bare-global reads in predicates (`cnt + total == 100`) -- inferred from `old(g)`
-# and body reads; no existing group invariant reads a global.
+dropped-maintains | refusal (N496): `schreibe_ohne_pflicht` writes `cnt`, a carrier of the invariant `summe_bleibt`, and does not maintain it | writer of a group carrier names no duty.
+unknown-carrier | refusal (U001): `group Summe` names `K`, which is not a carrier | group names a lock instead of a carrier (U002+U007 also fire, as in twin gift/281).
+undeclared-read | PROPOSED refusal: group invariant `summe_bleibt` reads `fremd`, which is not a declared carrier of `group Summe` | invariant reads a guarded global outside its declared carrier set.
+# VERIFIED 2026-11-01 by reading the real front end (no build/run per lead rules).
+# U001/U003 wordings are verbatim current sentences: U001 in
+# crates/gabbro-check/src/gruppe.rs:117-124 ("carriers are `table`, `static`
+# and `state`"), U003 in gruppe.rs:343-354. The probe texts match the format
+# strings exactly (modulo probe names); post-C05 texts are unchanged by the
+# C05 design (which generalizes uU003 to f.puts and f.gputs without rewording).
+# N496 wording is the verbatim current sentence in
+# crates/gabbro-check/src/m1.rs:8103-8110; refused today for group carriers
+# (sammle_inv_traeger collects group carriers regardless of kind; twin
+# beispiele/gift/1232). The carrier named is the first group carrier in the
+# declared effects hull (`cnt`: geschrieben_or_abgeleitet, m1.rs:7739-7771).
+# `runs online`/`runs offline` both parse in both front ends (Rust:
+# crates/gabbro-syntax/src/parse.rs:4853-4857, Laeuft::Online/Offline;
+# Lean: grammatik/Grammatik/Parser/Item/ElementTief.lean parseGruppenInv).
+# Positives and the two lock-footprint probes keep `runs online`: an online
+# invariant needs a keeper (N583, crates/gabbro-check/src/kbedingung.rs:1781+,
+# paralleling the online table invariants of beispiele/47 and beispiele/53),
+# and every online probe here names its keeper in `maintains`, so N583 stays
+# silent. The three isolation probes use `runs offline` like their gift twins
+# (281, 1232, 66): with no keeper an online invariant would co-fire N583 and
+# hide the targeted refusal (dropped-maintains isolates N496 alone; the
+# unknown-carrier shape unavoidably co-fires U002+U007 exactly as twin 281).
+# `main` repeats the transitive callee effects/locks and carries `maintains`
+# where it writes through a callee: E008 holds callers to their callees'
+# effects ("`effects` is compositional", wirkungen.rs:1518+) and N496 books
+# the caller-owes duty explicitly ("a caller that writes the carrier through
+# a callee owes it as well", saetze.rs:2975-2980). No rule refuses declared
+# but locally unused effects, so the repeated lines are safe.
+# Bare-global reads in predicates (`cnt + total == 100`) parse in both front
+# ends as ordinary global reads (G already implements `eval .glob`; the C05
+# export checks reads against the declared carrier set,
+# IR-COMPILATION-LANES.md C05 row); no existing group invariant reads a
+# global, so the shape itself is new but syntactically current.
+# broken-at-return is a STOP probe, not a refusal: no checker rule refuses a
+# false-at-return group invariant (N511 is lock-section exits only,
+# freigabe_pruef.rs:49+; N583 is no-keeper only), while the C05 Stage-0 design
+# evaluates ensures (stop 102) then owed predicates in declaration order
+# (first failure stop 103) in the shared return epilogue
+# (IR-COMPILATION-LANES.md C05 Stage-0 row); stop 103 is `logikCode
+# .invariante` (stage0/Stage0/Senke/Stopp.lean:21-29). Hand computation:
+# 30 + 71 = 101 is not 100. Initial truth (30 + 70) holds, so closedness is
+# satisfied; the Rust checker is silent on this file (U003 held, N496 kept,
+# U006/U007 clean, no lock invariant for N511).
