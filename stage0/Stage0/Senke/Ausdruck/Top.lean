@@ -155,11 +155,17 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
         have := lowE_top a d ca ta ha
         omega
       · cases h
-  | _, _, .arrSet _ _ v, d, c, top, h => by
+  | _, _, .arrSet a i v, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
     · exact lowE_top v d c top h
-    · cases h
+    · simp only [arrSetL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨ca, ta⟩, ha, ⟨cv, tv⟩, hv, ⟨ci, ti⟩, hi, _, rfl⟩ := h
+        have := lowE_top a d ca ta ha
+        omega
+      · cases h
   | _, _, @Expr.strLit _ n _ _ bs hb, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq] at h
     have ceiling := congrArg Prod.snd h

@@ -293,7 +293,10 @@ theorem lowE_literal_boundaries_zeuge :
         (lowE L (reserved := reserved) i (d + valueWords (.arr τ n)))) := rfl
 
 @[lowE_eqs] theorem lowE_arrSet (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) (v : Expr D Γ Λ τ) :
-    lowE L (reserved := reserved) (.arrSet a i v) d = (if n = 1 then lowE L (reserved := reserved) v d else none) := rfl
+    lowE L (reserved := reserved) (.arrSet a i v) d = (if n = 1 then lowE L (reserved := reserved) v d else
+      arrSetL τ n d (lowE L (reserved := reserved) a d)
+        (lowE L (reserved := reserved) v (d + valueWords (.arr τ n)))
+        (lowE L (reserved := reserved) i (d + valueWords (.arr τ n) + valueWords τ))) := rfl
 
 @[lowE_eqs] theorem lowE_strLit (bs : List (Zahl 0 255)) (h : bs.length ≤ n) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.strLit bs h) d =

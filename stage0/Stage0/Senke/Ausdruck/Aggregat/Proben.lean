@@ -130,12 +130,12 @@ theorem accepted_zeuge :
     (lowE layout (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) .arrNil)) 3).isSome = true ∧
     (lowE layout (.arrGet (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) .arrNil))
       (.widen (by decide) (by decide) (.lit 0))) 3).isSome = true ∧
+    (lowE layout (.arrSet (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) .arrNil))
+      (.widen (by decide) (by decide) (.lit 0)) (.lit 1)) 3).isSome = true ∧
     (lowE layout (Expr.strLit (D := D) (Γ := []) (Λ := []) (n := 2) [] (by decide)) 3).isSome = true := by decide +kernel
 
 /-- Each still unsupported operation fails at its own static representation guard. -/
 theorem refused_zeuge :
-    lowE layout (.arrSet (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) (.arrCons (Expr.lit (D := D) (Γ := []) (Λ := []) 1) .arrNil))
-      (.widen (by decide) (by decide) (.lit 0)) (.lit 1)) 3 = none ∧
     lowE layout (.strCat letter letter) 3 = none ∧
     lowE layout (.strWeit 2 letter) 3 = none ∧
     lowE layout (.strGet letter (.lit (2 ^ 63))) 3 = none := by decide +kernel

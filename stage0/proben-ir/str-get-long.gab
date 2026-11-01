@@ -1,6 +1,6 @@
 // A byte of a string with more than one byte is selected from its complete word span.
 module ir_probe {
-impl fn main() -> i32 in -100 .. 300 effects { pure } {
+impl fn main() -> i32 in -300 .. 600 effects { pure } {
     let s : string max 3 = "abc";
     let t : string max 3 = s;
     return t[1] + t[2] - t[0];

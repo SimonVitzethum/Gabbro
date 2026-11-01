@@ -1,5 +1,5 @@
 /- Complete variable lowering uses the shared frame transport. -/
-import Stage0.Senke.Frame.Copy
+import Stage0.Senke.Ausdruck.Aggregat.FrameCopy
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem

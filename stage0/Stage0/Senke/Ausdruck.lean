@@ -25,6 +25,7 @@ import Runner.IR.Rahmen
 import Stage0.Senke.Welt.Lay
 import Stage0.Senke.Welt.Spans.CellCode
 import Stage0.Senke.Ausdruck.Aggregat.Wert
+import Stage0.Senke.Ausdruck.Aggregat.FrameCode
 import Stage0.Senke.Ausdruck.Aggregat.Kopie
 import Stage0.Senke.Ausdruck.Aggregat.Layout
 import Stage0.Senke.Ausdruck.Aggregat.Encoding
@@ -386,6 +387,19 @@ def arrGetL (τ : Ty) (n d : Nat) (a b : Option (List II × Nat)) : Option (List
       max (max ca.2 cb.2) (ptr + 2))
   else none
 
+/-- Replacing element `i` of an array of more than one element evaluates the array at `d`, the new element and
+    the index in the consecutive spans above it, and stores the complete element through the frame pointer. -/
+def arrSetL (τ : Ty) (n d : Nat) (a v i : Option (List II × Nat)) : Option (List II × Nat) :=
+  if 0 < n ∧ 8 * valueWords τ < 2 ^ 31 then do
+    let ca ← a
+    let cv ← v
+    let ci ← i
+    let src := d + valueWords (.arr τ n)
+    let ptr := src + valueWords τ
+    pure (ca.1 ++ cv.1 ++ ci.1 ++ storeFrameSpan (valueWords τ) d src ptr (ptr + 1),
+      max (max (max ca.2 cv.2) ci.2) (ptr + 2))
+  else none
+
 /-- Byte `i` of a string of capacity `n > 1`: the string occupies `n + 1` words at `d`, the index
     word follows it; the byte is the word `d + 1 + i` (zero beyond the length), copied to `d`. -/
 def strGetLongL (n d : Nat) (s i : Option (List II × Nat)) : Option (List II × Nat) := do
@@ -475,7 +489,10 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, @Expr.arrGet _ _ _ τ n a i, d => if n = 1 then lowE L (reserved := reserved) a d else
     arrGetL τ n d (lowE L (reserved := reserved) a d)
       (lowE L (reserved := reserved) i (d + valueWords (.arr τ n)))
-  | _, _, @Expr.arrSet _ _ _ _ n _ _ v, d => if n = 1 then lowE L (reserved := reserved) v d else none
+  | _, _, @Expr.arrSet _ _ _ τ n a i v, d => if n = 1 then lowE L (reserved := reserved) v d else
+    arrSetL τ n d (lowE L (reserved := reserved) a d)
+      (lowE L (reserved := reserved) v (d + valueWords (.arr τ n)))
+      (lowE L (reserved := reserved) i (d + valueWords (.arr τ n) + valueWords τ))
   | _, _, @Expr.strLit _ n _ _ bs hb, d =>
     some (constWords (encodeWords L (.str n) ⟨bs, hb⟩) d)
   | _, _, @Expr.strLen _ _ _ n s, d =>

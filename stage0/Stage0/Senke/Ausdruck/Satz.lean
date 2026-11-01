@@ -64,7 +64,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     arrGet_ok a i (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .arrSet a i v, d, c, top, h, hK, m, pc, ρ, hp =>
-    arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp) h hK hp
+    arrSet_ok a i v (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v _ ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay i _ ca ta ha hta m pc ρ hp) h hK hp
   | _, _, .strLit bs hb, d, c, top, h, hK, m, pc, ρ, hp => strLit_ok bs hb h hK hp
   | _, _, .strLen s, d, c, top, h, hK, m, pc, ρ, hp =>
     strLen_ok s (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay s d ca ta ha hta m pc ρ hp) h hK hp
