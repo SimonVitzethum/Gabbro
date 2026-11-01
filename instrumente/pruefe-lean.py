@@ -67,8 +67,10 @@ SLOT_DATEIEN = [pathlib.Path.home() / ".cache" / f"gabbro-stage0-build.slot-{n}.
 WACHE = W / "arbeitsprotokoll" / "lean-wache"      # scratch of this guardian (not committed)
 LEAN_SERIELL = W / "instrumente" / "teile" / "lean-seriell.py"
 # What a killed or memory-starved run prints: a lack of memory is not a finding (AGENTS.md), the stage is NOT MEASURED.
-SPEICHERZEICHEN = ("excessive memory consumption", "out of memory", "cannot allocate memory",
-                   "exited with code 137", "exited with code 143", "exited with code 75", "lean-seriell: ")
+# Lean's own "excessive memory consumption" counts only when it is the ONLY error: a module that also has real
+# errors is red (measured: StatementCost.lean has 98 errors and one memory message among them).
+KILLZEICHEN = ("exited with code 137", "exited with code 143", "exited with code 75", "lean-seriell: ")
+SPEICHERZEICHEN = ("excessive memory consumption", "out of memory", "cannot allocate memory")
 SERIELL = False
 
 
@@ -154,7 +156,13 @@ def lauf(cmd, cwd, frist, mx=None, env=None):
     except subprocess.TimeoutExpired:
         return 124, f"Frist {frist} s ueberschritten"
     out = p.stdout + p.stderr
-    if p.returncode in (137, 143, -9, -15) or (p.returncode != 0 and any(z in out.lower() for z in SPEICHERZEICHEN)):
+    tief = out.lower()
+    fehler = len(re.findall(r"^error: .*\.lean:\d+:\d+: ", out, re.M))
+    nur_speicher = fehler > 0 and fehler == sum(len(re.findall(r"^error: .*\.lean:\d+:\d+: .*" + z, tief, re.M))
+                                                  for z in SPEICHERZEICHEN)
+    if p.returncode in (137, 143, -9, -15) or (p.returncode != 0 and (
+            any(z in tief for z in KILLZEICHEN) or nur_speicher
+            or (fehler == 0 and any(z in tief for z in SPEICHERZEICHEN)))):
         raise NichtGemessen(f"killed or out of memory (rc {p.returncode}): {out.strip()[-200:]!r}")
     return p.returncode, out
 
