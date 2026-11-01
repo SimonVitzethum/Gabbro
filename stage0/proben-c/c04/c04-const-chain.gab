@@ -1,0 +1,15 @@
+// C04 baseline: two constant-stage transitions chained on one field reach stage 2.
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, } }
+state S {
+    transition begin { s : Idle -> Busy }
+    transition finish { s : Busy -> Done }
+}
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    transition T.slots[1].s : Idle -> Busy;
+    transition T.slots[1].s : Busy -> Done;
+    return T.slots[1].s;
+}
+}

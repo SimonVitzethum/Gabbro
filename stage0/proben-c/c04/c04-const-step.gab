@@ -1,0 +1,11 @@
+// C04 baseline: a plain constant-stage transition writes the new stage.
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, } }
+state S { transition begin { s : Idle -> Busy } }
+impl fn main() -> u32 in 0 .. 2
+    effects { reads T.slots, writes T.slots }
+{
+    transition T.slots[0].s : Idle -> Busy;
+    return T.slots[0].s;
+}
+}

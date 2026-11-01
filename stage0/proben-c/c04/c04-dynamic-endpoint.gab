@@ -1,0 +1,10 @@
+// C04: a declaration with numeric stage endpoints elaborates (A11 normalization).
+module ir_probe {
+table T count 2 { slot { s : u32 in 0 .. 2, } }
+state S { transition begin { s : 0 -> 1 } }
+impl fn main() -> u32 in 0 .. 10
+    effects { pure }
+{
+    return 7;
+}
+}
