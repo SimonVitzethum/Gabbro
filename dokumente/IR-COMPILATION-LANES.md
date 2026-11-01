@@ -2163,3 +2163,337 @@ measured-memory grammar-build exception and the two global slots; Stage-0 direct
 checks use isolated artifacts and release their assigned slot per module. Final
 pipeline compilation and assembly-runner witnesses follow the same source
 fixtures. No build, grammar edit, push or merge was performed for this design.
+
+### Model extension design: C02, C12, C14, C15, C16 (2026-11-01)
+
+Baseline `d13842f9b`; source inspection only. **New** marks proposed names,
+including constructor names; unmarked declarations below were located in this
+checkout. Kernel paths are relative to `grammatik/Grammatik/`. This supplements
+the four preceding design sections, without enabling any export or claiming a
+compiled case. Every added constructor goes at the **end** of its inductive,
+including parser intermediates, events, continuations and proof judgments.
+Changing an existing constructor's arguments migrates all clients together.
+
+**Architecture.** Use checked source expansions into the existing typed program
+where possible. C12 supplies the missing capability values; C08 supplies their
+software boundary and grant history; C01 supplies payload products, C03 reasons,
+C06/C07 callable interfaces, C09 ownership and C11 cleanup. These are proposed
+shared interfaces, not already implemented facts. Do not introduce a second heap,
+translator interpreter, callback machine, check-token system or execution backend.
+
+| Package | Core change | Spec impact | Engineering days |
+|---|---|---|---|
+| C02 | Source-bound translation certificate, immutable typed payload and ordinary library-call expansion | Conservative generated-program interpretation; exact translator relation needs the owner decision below | 14–24: identity/export 4–6, certified maps/products 7–13, full call/image closure 3–5 |
+| C12 | Space/rights-aware data capabilities, live byte slices and restricted entry handles | **Yes:** live capability provenance/extent and code/data separation; generalize the address-space statement | 20–34: table rights/spaces 5–8, live byte capabilities 10–17, entry handles 5–9 |
+| C14 | Source-bound profile, build selection, placement and userspace entry/service correspondence | **Yes:** assumption provenance and selected-program statement; guest boundary remains user logic | 12–20: profile/selection 5–8, layout 3–5, userspace entry 4–7 |
+| C15 | Per-core cells with proved identity, initialization, synchronized update and quiescent fold | **Yes:** accumulator/history correspondence, with existing race/time qualifications retained | 16–28: cells/algebra 5–9, concurrency/identity 7–12, export/IR closure 4–7 |
+| C16 | Declared-check expansion and verdict/measurement/floor/probe provenance tied to Duty | **Yes:** check evidence and its consumption, never truth of arbitrary claim text | 12–20: expansion/admission 5–8, evidence/replay 4–7, export/IR 3–5 |
+
+These **74–126 person-days** include generic proofs, witnesses, export and
+connected Stage-0 work; shared work charged to earlier packages is excluded.
+They are estimates, not measured build times. Implementation remains gated by
+the explicit source-meaning questions below and the single grammatik owner.
+
+**C02 — translators, payload regions and library calls.**
+
+The actual parser loses essential input: `Parser/Stmt/Anweisung.parseLibRuf`
+(:459–480) keeps only `args.length` and skips the balanced region;
+`parseLetLib:288` also drops that count. `SAnw.lcall` has names/count and
+`bindLib` names only. `SItemTief.transT` retains target, `FnSig` and body
+(`Parser/Item/ElementTief:622/1837`); `SKlausel.load` retains the payload path.
+`Logik/Vertraege/Uebersetzung.nutzlastZert_mem` proves only entry ranges.
+Its header explicitly says the translator is unverified and the output is
+checked. `crates/gabbro-check/src/uebersetzung.rs::versuch` admits only exact
+integer rows and an identity translator; it is not a generic map proof.
+
+| Layer | Implementable change |
+|---|---|
+| Lossless source/export | Generalize the existing `SAnw.bindLib/lcall` arguments to one **new** `SLibraryCall` record: resolved library/function paths, ordered `List SExpr` arguments and a balanced token tree for the region, retaining source coordinates for diagnostics. Change `parseLibRuf`, both consumers, equality/printer/round-trip/name-resolution clients together; never reconstruct tokens from the old count. Preserve translator identity, `SKlausel.load`, scopes, declaration visibility and exactly one translator per library function in **new** `ULibrary` metadata in `UProg`. Coordinates: `Uebersetze.lean:1998` (`fn is not impl`), :2538 (unhandled `lcall/bindLib` statement default), :4039 (`transT` default). Library bodies become ordinary checked `UFn`s, retaining all contracts/effects/reasons/costs. |
+| Canonical map/input | Add **new** `TranslationDecl D` after typed syntax: source declaration IDs, input schema/region decoder, output schema, pure translator function, payload parameter position and target function. The decoder is a closed, checked relation from the retained token tree to a typed value; identity integer rows are its first constructor. Additional token/tree schemas require an explicit typed schema using C01 products/arrays/sums and a decoder soundness theorem, not a Rust-only convention. Proposed compile-time table parameters/results denote by-value row collections (`Ty.arr` of the C01 row product), with a schema-to-source-type proof; they are not runtime `Ty.ptr` capabilities or reads of an unrelated mutable table. This compile-time interpretation belongs to the C02 source-meaning decision. A general translator needs C17's source-preserving finite instantiation/control rules. Unsupported schemas remain refused. |
+| Certificate and totality | Add **new** `TranslationCertificate` recording the exact call site, decoder derivation, translator/body identity, input, output and output typing. Under the recommended stronger map meaning, require an execution derivation of the **existing** pure `rufAt`/`execEnd` semantics from that input to that output, plus source-derived `MassPflicht`/termination and absence of logic/hardware/budget stops. Equality of output types alone is insufficient. Check finite derivations or kernel proofs produced by an untrusted Rust candidate generator; resource exhaustion refuses translation. Do not restore the retired executable Lean interpreter, or call an unrelated evaluator a translator. Pure means no carrier/foreign/atomic/lock/resource effects and no hidden runtime dependence, recursively through direct/indirect callees. Bill compilation work separately from the runtime program's `ZeitAb`; no generic timing project. |
+| Payload and G expansion | Materialize one immutable private payload per source call site, with every row/field/value initialized exactly as certified. Map the schema to C01 fields and the selected checked layout; the last library parameter is filled once with its read-only table/region capability, never also supplied by the caller. Add **new** `LibraryExpansion P` relating the source call, payload initialization and an ordinary `call/bindCall/bindCallElse` to the resolved library function. Evaluate ordinary arguments once in source order; compile-time translation has no runtime side effect. The actual call retains requires/ensures, normal/reason outcomes, signature flow, log and runtime cost. Payload lifetime is the image lifetime unless a separately proved nonescaping shorter lifetime is used; no mutable or linear/owner payload is admitted by an immutable byte copy. |
+| Akzeptiert and proofs | No new execution constructor is necessary. Add **new** `libraryB`/`LibraryAdmission` to the Bool/`AkzeptiertSpec(X)`, checking finite identities, complete payloads, read-only access, certificate references and generated call closure; kernel-checked certificate correctness is a separate proof, never a trusted flag. Use generated bodies' ordinary `NutzerPflicht(A)` and C06/C08 duties. Re-establish `Extraktion` read sets, `VertragsFuss`, `RahmenTreu`, `Getrennt` capability leaves, `Folge/FolgeBeweis` and `KostenG` for the expansion. Initialization/frame lemmas establish the immutable payload is never overwritten and disjoint from writable regions. The common goal closure below applies without new hardware premises. |
+| Stage 0 | IR-01/13 own lossless decoding/schema/source provenance; IR-03/06 own complete payload spans and initialization in `Senke/Welt/{Lay,WeltAt,StartLayout}` and `Ausdruck/Aggregat`; IR-10 owns the ordinary call/return proof. Extend `Frontend.elabWithScopes`, `Compiler.Compiled` and `CanonicalSourceProgram` with exact translation/expansion certificates, then `compile_source_program` and `IRBild.irBild_correct`. Prove source library calls equal their generated calls under the payload relation, including contracts that read the payload, old snapshots and reason paths. `nutzlastZert_mem` is a scalar field lemma inside this proof, not the whole certificate. |
+
+**Spec:** the existing goal applies to the generated accepted program; record
+the source-to-generated interpretation explicitly. Stronger translator-result
+correspondence changes the current output-only translation promise and requires
+owner review; it adds no oracle assumption. Missing/ambiguous translator,
+unretained tokens, malformed schema, wrong arity/type, unproved totality/map,
+effects, mutable/linear payload and unproved payload precondition stay refused.
+Witnesses: existing `beispiele/106-summe-uebersetzt.gab` identity, a nonidentity
+bounded map, two call sites with different regions, multi-field/product payload,
+payload-reading requires and both call outcomes. Negative twins include a
+well-typed **wrong** translator output, reordered arguments, changed translator
+body under the same name, omitted field, escaping mutable alias and wrong profile.
+
+**C12 — safe spaces, rights, byte slices and entry handles.**
+
+`Ty.ptr n rw` currently has `Unit` values; `Ty.ref n` has cell-number values.
+Neither describes a live byte extent. `Parser/Expr/Typ.parseRechte` retains a
+rights string including `+`/`own@…`; `Uebersetze.uTyp:1004–1023` and
+`uParam:1757–1766` reject spaces/rights, while :963 requires a table pointee.
+The current `own` to writable-Bool branch is not ownership admission.
+`STyp.raw` is a parser carrier for raw **type text**, not authorization for
+numeric addresses. `STyp.entry` and `eintrittscode.rs` have a restricted
+forward-only meaning (N575–N577), distinct from an ordinary callable `fnptr`.
+
+| Layer | Implementable change |
+|---|---|
+| One data-capability type | In `Kern/Syntax/Typen`, add **new** `DataRights` (read/write flags and an optional resolved owner identity), **new** `DataTarget.table n` / `.bytes` and **new** `DataCapTy` (nominal space ID, rights, target). Generalize existing `Ty.ptr` to take `DataCapTy`; do not keep an old pointer API beside a new equivalent one. Table capability values remain `Unit` because the table identity is in the type. Byte capability values are **new** `RegionSlice` data: grant identity/generation, logical byte-carrier reference, offset and length, with natural-number bounds, never a numeric machine base. Space/owner/carrier IDs are finite declaration references checked against `Deklaration`, not globally meaningful guessed numbers. Arrays/products/sums recurse through this type using C01/C03. |
+| Rights and spaces | Add **new** declaration maps for table/global space, region schema and the owner-ID-to-`D.Marke` correspondence. Canonical rights union handles `r`, `w`, `rw` and combinations without dropping `own@…`; `w` allows stores but not reads/read-modify-write. Reuse C09's `OwnerFlow`/loans for own, not the read/write flags. `x` is admitted only for a checked code interface; never combine data write and execute into an unproved self-modifying-code capability. Different space names are nominally different, not automatically physically disjoint: C08's realization proves backing separation. Reject cross-space coercion unless an explicit proved boundary relation transports the same origin and attenuated rights. Device/mmio/port/boot effects and numeric raw addresses remain excluded. |
+| Producers, lifetime and G | Generalize `Expr.ptrOf/thru`, `Stmt.assignThru` and their permission premises to the descriptor; ordinary table dereference still names exactly the existing carrier and guard set. New byte slices come only from declared initial grants, a C08 successful provider boundary, or a checked bounded subslice of an existing live slice; no arbitrary slice literal/int conversion. Attach **new** `CapUse` derivations to uses/flows, checked by **new** `capUseB`, reusing C01 `ValueUse`, C09 loans and C08 `GrantInventory`/`BoundaryRecord`. The dynamic invariant is slice generation live, extent included, rights sufficient, and no revoked loan. Actual grant IDs live in values/ledger, not in a guessed static type parameter. Extend `World` with a **new** read-only grant view for sequential semantics; `RufMaschineG.weltVon` obtains it from the deterministic C08 boundary-history fold, not a second mutable inventory. Foreign steps update that same view via the canonical boundary transition; ordinary memory stores preserve it. Append **new** `Ereignis.capUse` recording grant/generation, selected interval and access mode at a successful use. Prove the view/history agreement through locals, fields, calls, suspended frames, returns, starts, cleanup, GX presented memory and release/reuse. |
+| Byte operations | Map a live slice to a declared byte field (`D.typ t f = .int 0 255`) of a closed/open byte carrier via the grant realization. Share `World.bytesAb`/existing byte stores; do not add an independent byte heap. Append **new** `Block.capRead`, `Endblock.capRead` and `Stmt.capWrite` for checked byte-run access, with capability/index operands evaluated once, static run length `n`, exact byte-order rule and ordinary result/continuation contexts. Require at typing/admission the enclosing signature's writes and `darf` proofs for **every** possible root, not just the selected runtime root. At execution resolve the carrier and grant view, check rights/liveness and require `i ≥ 0`, `n ≤ length`, `i ≤ length-n`; invalidity uses existing `Logik.bereich`, excluded on legal runs by user duty. Checks precede memory effects; an unknown root cannot be a stuck match. The success result is `.int 0 (256^n-1)`; empty runs are allowed at the end. All accesses record the resolved underlying carrier's existing guards/effects; footprints conservatively include the finite carrier set permitted by the capability schema. No guessed single carrier for a dynamically returned region. Typed-object byte views require a proved encoding/decoding invariant; initially refuse them rather than letting a byte write create an invalid typed value. |
+| Entry wrappers | Append **new** `Ty.entry (space sig : Nat)` with a finite entry-binding identity as value. Add declaration metadata mapping that identity to signature, selected image entry and allowed forwarding site; **new** `EntryUse` is the entry case of `CapUse`. An initial/generated wrapper is the only producer; source `&f` remains `fnptr`, and no Gabbro expression calls, compares, stores, duplicates or casts an entry handle. Its one forwarding use is the matching foreign parameter outside loops, preserving N575–N577. C14 proves the wrapper/root/service correspondence. Ordinary callable `ptr<code,x>` resolves to the existing checked `fnptr`/C06 contract, never to an arbitrary byte-slice offset. Guest-code capability is usable only by its C08/C14 isolation service, not as an ordinary verified function target. |
+| Akzeptiert/goal | Add **new** capability/entry admission to `AkzeptiertSpec(X)` and the Bool: descriptor references, rights, exact producer/use paths, finite possible roots and guarded footprints. Semantic disjointness, provider behavior and borrow validity remain source-derived duties, not Bool decisions over arbitrary worlds. Add **new** `CapTreueG` to `Ziel/ZielX/ZielFX`: every admitted live use has the unique grant/entry provenance, valid extent/rights and compatible C01/C09 flow. Reprove G/GX step preservation using C08's single global ledger; releasing a grant with a borrower or queued callback refuses. Extend `Getrennt.traegerVon`/`ParamGetrenntL` and C01's recursive leaf version to grant roots; overlapping slices do not become distinct by having different variables or space labels. |
+| Address statement and IR | `Adressen/Layout.LayoutOk.geschlossen/offen` currently fixes closed carriers to space 0 and open tables to separate nonzero spaces; globals are implicitly 0. Generalize `AdressLayout` with global-space mapping and `LayoutOk` with correspondence to declared logical spaces plus **separate** injective region/grant backing realization. Open extents remain separate region identities even when several inhabit one named source space; never place unbounded mathematical regions at overlapping bases in one flat space. Reprove `zelle_im_bereich`, `zellen_getrennt`, `geaendert_im_bereich` and `Bereich`'s outside-write theorem. Extend IR-03 encoding/`ValueValid` with capability spans (origin/slice or checked ABI representation), IR-06 `WeltAt` with one grant-to-storage relation, IR-11 buffer packing/unpacking and IR-12 entry relocation. A machine address appears only inside that proved layout/binding relation. Prove new bounds/read/write cases through `lowB_ok/lowEnd_ok/lowS_ok`, then function/image/source correctness; stale handles cannot pass an unchanged numeric-address check after reuse. |
+
+**Spec:** generalize the named-space/extent interpretation and add capability
+provenance/lifetime/code separation, preserving the original conditional
+`speicherAdressen` leg and C08's stronger physical realization. No cross-domain
+snapshot guarantee follows from a space name: `Kern/Semantik/Adressraum` explicitly
+leaves check/copy cuts, and `EinSnapshot` is not supplied by this package.
+Uncontrolled concurrent mutation needs a proved software copy/synchronization
+binding; it cannot become an implicit hardware or OS promise.
+Witnesses: named-space table aliases, write-only store/read refusal, own loan and
+return, byte subslices and zero-length boundary, two provider grants, release and
+reuse with a stale generation refused, nested capability fields, one entry
+forwarding plus a real declared root. Negative twins: `own` without mark,
+overlapping writable arguments, out-of-bounds/overflow, forged/dead grant,
+space cast, typed-byte corruption, data-to-code, duplicate/late entry forwarding.
+
+**C14 — profiles, selection, placement and userspace guest/entry binding.**
+
+`Kern/Syntax/Profil` already has `Profil.gut/bindet`, `Bibliothek`,
+`bindung_fuegt_nichts_hinzu` and keyed `pruefeSchluessel_einigung`, but its CUTS
+say it is not wired into the goal. More seriously, `namensGleichheitAux`'s free
+case compares predicates at **one existential witness world**, and
+`erfuellt .frei = True`; neither establishes semantic assumption identity/truth.
+`Stage0.Profil.prepareItems` currently proves exact unchanged syntax and
+`arch = x86_64`; its early :52–54 guards precede the Elab refusals.
+
+| Layer | Implementable change |
+|---|---|
+| Canonical profile binding | Retain one `Profil`/`Bibliothek` architecture. Replace free-entry content comparison by a reference into one source-derived registry of resolved assumption identity, declaration text/class/falsifier and semantic interpretation; duplicate spellings with different declarations refuse. A proof relates that interpretation to the actual named `HardwareAnnahmen` component; never decide equality of arbitrary `Prop`s. For existing free-predicate clients the replacement relation requires identity and equivalence at **every** world, not `∃ σ`. Keep mode projection separate from hardware truth: `profil_modell` may construct a consistent keyed assignment, never prove free prose or hardware by `erfuellt = True`. |
+| Checked configuration | Add **new** `ProfileBinding` connecting `SItemTief.profT` (`bedarf` distinguishes requirements), source registry, every linked library's complete requirements, selected target and supported mode interpretation. Preserve duplicate-equal entries as a set; reject conflicts, missing names/requirements and unsupported modes. Resolve every key (`arch`, `rounding`, `fp_contract`, `memory_model`, `interrupt_routing`) by a closed supported decoder, not arbitrary Nat codes or missing-key 0. Defaults, if needed for a profile-free userspace image, are explicit checked image defaults, never synthesized source assumptions. Bind IEEE mode to the actual arithmetic lowering and W/GX model, and architecture to the emitted image; unsupported hardware routing stays refused. |
+| Build selection | Add **new** `BuildMode` (shipping default/test) and **new** `Selection` certificate over the **original** parsed items and explicit mode. Recursively interpret `gateT` through modules/public wrappers before name/constant/target/start extraction; retain module scopes. Prove selected declarations and all dependencies (types, constants, contracts, direct/indirect calls, payloads, starts, probes and profile entries) are closed. Preserve the Rust `gatter.rs` G001–G003 rules for ungated dependencies and reserved `TESTBUILD`. Function-tail gates supported by Rust also need lossless canonical parsing: current `FnSig` has no gate field; add one with parser/printer/provenance proofs or retain an explicit refusal, never infer it from raw discarded clauses. |
+| Source-to-goal statement | Put the profile/selection/placement certificate in **new** `Einheit` metadata and preserve its structural admission in the `Pruefer`/`PrueferX` unit adapter; raw `Akzeptiert P …` still checks the selected program. Add matching fields to its specification/Bool adapter, not a proof-irrelevant successful option parse. Replace `Prepared.unchanged`/`CanonicalSourceProgram`'s selected-equals-original requirement by the exact `Selection` relation, retaining original lex/parse evidence and scope derivation from the selected tree. State **new** profiled-source correctness: `ProfileBinding` supplies exactly the already named hardware components to `gabbro_ziel` for that selected unit. Library linking transports requirements via `Profil.bindet` without adding software or unlisted assumptions. Prove both modes separately; never infer shipping safety or reports from a test-only proof. |
+| Static placement | Preserve `.globT` alignment/section in `UGlob` instead of `uGlobs:3908`'s refusal. Add **new** `PlacementSpec` with source object identity, evaluated positive alignment and section name, and a checked profile section-to-region/permission policy. Require supported power-of-two alignment, checked offset/size rounding, full aggregate span, pairwise disjointness and initializer/zero contents. A section is an opaque selected-image label, not implicitly ELF or a physical address. Actual image mapping establishes the policy, including read-only payloads and no data execute/write-code alias. Extend `AdressLayout`/IR `Lay`, startup initialization and image relocation proofs; a string in metadata alone does not discharge placement. |
+| Entry and guest boundary | Distinguish C12's generated forward-only `entry fn` from `SItemTief.trustT` guest entry. Add **new** `UserEntryBinding` tying the former to a generated trampoline, exact declared root/arguments, selected ABI, stack **region** and the C08 start service; prove one forwarding, actual activation/return/join behavior and lifetime against `FadenSchritt`/GX starts. For `trustT`, **new** `GuestBoundary` names a code-region capability, proved userspace isolation/invocation service, allowed memory/resource transfer and return-or-noreturn behavior. Arbitrary guest instructions are not executed as G code or given Gabbro body guarantees: all observable interaction is the proved service contract, with guest-owned storage outside protected live grants. Existing regs/stack fields are retained and interpreted only as arguments to a supported ordinary userspace ABI adapter. Actual register-state manipulation, privileged transfer, boot or unknown ABI stays excluded/refused. The historical `EntrustDecl.annahme` cannot assert OS isolation; link it only to genuine named hardware and prove software isolation in C08 user logic. |
+| Export/Stage 0 | Coordinates `Uebersetze.lean:3908/4039`, `Parser/Item/ElementTief:615/623/624`, `Stage0/Profil.lean:31–54`; extend `Frontend/Source`, `Compiler.Compiled/CanonicalSourceProgram`, `Bindung` target selection, `Senke/Welt/StartLayout`, `Bild/BildSatz` and `IRBild`. IR-12 owns source-selected entries, placement and start/image certificates; IR-11 supplies actual service/ABI correspondence. Change early refusals only when their exact source certificate and generic lowering are available; keep `runnerCompatible` until another backend/image proof exists. Dispatch-only entries retain their old specialization. |
+
+**Spec:** hardware assumptions become the explicit profile-selected named set,
+with C08's software duties in (b); linking adds no assumption. Runs refer to the
+selected unit, whose source provenance includes mode and placement. Extend
+`Laufzeit` correspondence for proved entry/start bindings without silently
+assuming the OS behavior currently mentioned there. Guest safety is boundary
+isolation under the proved binding, never a claim about arbitrary guest logic,
+termination or costs. Re-establish the shared goal chain and
+`Zielsatz/Projekte/Verbund` profile transport. Witnesses: one profile/two libraries,
+same name with conflicting assumptions, both build modes, indirect/test-only
+dependency, aligned multiword static in a non-ELF policy, exact entry forwarding,
+two joined roots, isolated guest returning through a proved userspace service.
+Refuse inconsistent/missing/unsupported profile modes, stale selected manifests,
+misalignment/overflow/unknown sections, late callbacks, unproved isolation and
+all privileged entry/register/boot operations.
+
+**C15 — per-core accumulators, all five operators.**
+
+`Parser/Item/ElementTief.accT` stores name/type/operator/optional core count;
+`Uebersetze.lean:4039` refuses it. `Isabelle/AccumulatesMonoid` proves abstract
+fold/permutation/RMW identities, not actual cells. `beispiele/23-akkumulatoren.gab`
+states assignment means merge, the core query is a foreign binding, and live
+folds are not atomic snapshots. `Zielsatz/Eigenschaften/KernMaske`'s
+`kern : Faden → Nat` is a schedule parameter, not a runtime core-query theorem.
+The Rust per-core exemption in `fusswache2.rs::per_core` is explicitly not yet a
+G proof. Current `llvm.rs:4729` creates a scalar initialized to 0; this neither
+implements N cells nor supplies the `min` neutral value.
+
+| Layer | Implementable change |
+|---|---|
+| Canonical descriptor/expansion | Add **new** `AccumulatorDecl D` after syntax: declaration identity, positive constant N, storage width/signedness/range, closed merge operator, N distinct private global carriers and locks, core-query binding and generated update/reduction functions. Add **new** `AccumulatorExpansion P` relating every source assignment to merge and every source read to the N-cell fold. Generate **N carriers**, not N supposedly independent W locations in one table: W/races remain carrier-granular. Source writes/effects expand to the full permitted cell set, with real guards. No new G execution constructor is needed; use ordinary bind/call, conditional dispatch, arithmetic/check/narrow, global stores and locks. |
+| Core identity | C08's **new** core-query contract returns exactly a `Fin N`-equivalent bounded value with a boundary record identifying the executing core at that query. Tie it to the same declared core assignment used by the userspace scheduler/binding; a Rust thread number, modulo reduction or constant 0 is not evidence. Query once per source update; migration after the query does not reselect the destination. If the owner requires the core at the store rather than at query time, require a proved pinned/no-migration scope spanning both. Runtime scheduling/pinning is software user logic; no implicit OS/hardware assumption. Source cannot supply an arbitrary cell selector. |
+| Correct concurrency first | Use one existing exclusive lock per private carrier around the complete load/merge/store. This is a concrete safe expansion for reentrant/same-core updaters and gives live readers race-free cells. It avoids needing an unproved assertion that one hardware core implies one unfinished writer. Generate a compatible total lock-rank order and infer/check caller floors after expansion; update holds only its selected cell lock. Prove an optional lock erasure only when a C09-style unique updater lease excludes every conflicting update/read throughout the emitted sequence; this optimization is not required for completion. Never implement a plain load/store under the Rust per-core exemption, or add an unbounded CAS loop under a bounded source cost. |
+| Neutral values/operators | Use the mathematical range `[lo,hi]` plus preserved storage width `w`. `max` starts at `lo`, `min` at `hi`; `add` starts at 0, which must inhabit the declared range; bitwise `or` starts at all-zero and `and` at the w-bit all-ones pattern (signed interpretation is explicit). Require the bit-pattern neutral and every returned fold value to inhabit the declared type; reject a restricted range lacking them rather than silently use 0. Bool or/and use false/true. Prove max/min/bitwise laws on those typed encodings, extending the existing abstract `MergeMonoid` facts; its Nat-max/Bool-or instances do not prove signed word cases. Checked integer add uses mathematical sums with user range/overflow duties at each cell update **and each actual reduction prefix**. It is not automatically a total monoid on a bounded subtype, and wrapping/saturation is never implicit; wrapping needs its explicit C13 type/rule. |
+| History and quiescence | Define **new** `AccHistory` from generated update call/store records, grouped by accumulator and queried core. At the actual store, record its saved argument/core and pre/post cell values in the shared ghost history; retain an in-flight contribution until the matching release/completion. A failure before any store adds none; a later failure cannot erase a store already performed. Prove each guarded cell equals its completed fold plus any committed in-flight contribution since one-time initialization. For live reads, take/release cell locks in index order and return the fold of those recorded samples; no whole-fold linearizability claim. Define **new** `AccQuiescent` over the read interval: initialization complete and no update in flight or occurring in that interval. Derive it from a proved joined/frozen writer phase or an internal all-cell lock scope acquired in increasing rank, never from a caller-provided Bool. Under it, prove sampled fold equals fold of all contributions and the abstract neutral-start RMW chain. Conditional permutation equality for checked addition requires all compared prefixes in range; nonnegative contributions suffice if the total fits, mixed signs need the stronger prefix duty. No reset/restart of initialized cells while a writer or observation survives. |
+| Admission/Spec/IR | Add **new** `accumulatorB`/`AccumulatorAdmission` to `AkzeptiertSpec(X)` and Bool: N/identity/schema, generated private storage and lock access only, exact core binding, neutral initialization, complete call graphs/effects/floors and source expansion. Semantic query/range/quiescence facts are source-derived `NutzerPflicht(A)` duties. Add **new** `AccumulatorTreueG` to the goal for cell/history equality and conditional quiescent reduction; ordinary `RennfreiBisGA`, group invariants and `KernHaltEA` still apply. IR-09 proves actual lock protocol via `Senke/Sperre/Satz.locks_ok`; IR-02/03/13 provide checked typed merge/fold; IR-11 core binding; IR-12 one-time cell initialization/start ordering; IR-08/10 control/call closure. Connect `lowS_ok/lowB_ok/lowEnd_ok`, `Rekursion.lowFun_spec` and source/image theorems. Count generated dispatch, N reads, checks, locking and query in costs; refuse an unsupported declared bound instead of retaining the source's old constant cost. Lock-wait bounds retain the existing explicit qualifications. |
+
+**Spec:** add cell/history and conditional quiescent equality, with the core
+identity provenance in user logic. Do not add a per-core race exemption or make
+quiescence/finite waiting universal. Witness all five operators with N ≥ 2,
+distinct neutral values (signed max and min especially), same-core reentrancy,
+migration after the recorded query, joined/frozen reduction and live sampled
+fold. Negative twins: N=0/unknown, out-of-range core, min initialized to zero,
+`and` initialized to zero, wrong width/sign, missing lock/lease, read concurrent
+with a plain writer, local-add fit but total overflow, mixed-sign intermediate
+overflow, premature reduction and reset during an active update. Floats remain
+refused (F004); `beispiele/23` is a source fixture, not already accepted evidence.
+
+**C16 — declared-check admission beyond a linear Duty.**
+
+`SCheck` (`Parser/Item/ElementTief:455`) retains all seven fields;
+`Uebersetze.lean:4039` drops none, but refuses `checkT`. Existing name checks
+N020–N027/N043–N045 in `namen.rs` and Boolean typing in `m1.rs:1318` are useful
+constraints, not a generic expansion theorem. In particular N022 currently
+tests whether a floor **names** the measured quantity; this proves no useful
+lower bound. `spiegel_und_sonde` records the settled rule: `expects` names an
+external probe owned by exactly one obligation (N024). Earlier comments saying
+this is unresolved do not reopen that owner decision.
+
+| Layer | Implementable change |
+|---|---|
+| Descriptor and exact expansion | Add **new** `CheckDecl D` after syntax: resolved declaration/claim text, ordered measured place selectors, generated Boolean probe/producer, typed floors, actual gate functions/checks, unique optional external probe identity/text, build mode and source coordinates. Store its finite metadata with `Programm` so `Akzeptiert` sees the same declaration as the generated code; `Einheit` retains its source certificate. A **new** `CheckExpansion P` proves the generated probe is the written `canFail`, every returning path yields Bool and its signature contains all actual reads/calls. Reuse A24's `Res.marke`/`Signatur.produziert/konsumiert` and `nachSig`: no second evidence-token type. Generated names are collision-checked (`erzeugernamen.rs`), not an open external symbol that can replace the source probe. |
+| Invocation and gates | A declared check is not itself an execution step. Bind its generated producer to an explicit generated/declared test-driver call site under C14, or a resolved ordinary call, and prove that call through the same G/IR pipeline. The driver observes the returned Bool/report and transfers its Duty to one selected declared consumer; invoking another consumer requires another completed producer invocation. Record that selection in the expansion, rather than auto-running all gates or duplicating one Duty across their list. If a gate is called without the required producer report, ordinary resource admission refuses it. A driver handling a false result still must discharge the completed obligation through an admitted failure-handling consumer. Its policy is explicit user logic; merely declaring `gates` cannot invent execution, measurement or success. |
+| Measurements and floors | Resolve measured places and aliases at their true scopes, including locals bound inside the probe only after their definitions and only on paths where they exist. Capture actual sampled values with a typed path-indexed **new** `CheckReport`, identifying source place, observation point, value and guard/region provenance. A report contains copyable observations/ghost provenance, never a second usable owner or a capability surviving its loan; noncopyable measurements need a proved read-only projection or refuse. Missing values on an early returning path are explicit absent samples, never zero. Evaluate applicable floors over those snapshots and retain their Bool outcomes. A check is read-only on program payload: recursively verify actual direct/indirect/foreign effect summaries and frames, not base-name equality or textual absence of assignment. Observation/acquire/await synchronization is allowed only through its proved existing/C10 rule and is recorded; no assumption that repeated reads form one snapshot. Measurement service calls use C08 contracts, including failure and changed software metadata. |
+| Admission and obligations | Add **new** `checkB`/`CheckAdmission` to `AkzeptiertSpec(X)` and Bool: source/producer/gate identity, full observation/footprint scope, complete Boolean exits, read-only frame, floors at supported comparison sites, and one-to-one counterprobe ownership. Generate a **new** `CheckSitePflicht` clause of the existing sequential caller-duty judgment, transported by C06/C08 prefix replay: all range/guard/old/availability duties, exact report-to-Duty correspondence and any **declared** gate precondition. A floor contributes a checked Boolean assertion/record, not an inferred theorem because its text mentions a name. Claim/counterprobe strings remain labels; no `ensures` is derived from them or from one successful sample. Contract use of a semantic claim needs an explicit formal predicate and user proof, outside prose interpretation. |
+| Duty and both verdicts | Recommended meaning: Duty records a completed measurement/probe **with its verdict**, not proof that the prose claim is true. The generated ordinary producer returns Bool and produces one Duty on **each** normal return, including false; false/floor-failure remain distinguishable report data. A halted/divergent/foreign-failure path produces no completed report unless explicitly returned as a false verdict; no success is silently synthesized. The consuming gate discharges that same report once; a success-only gate needs its explicit user-logic precondition that the report's verdict and applicable floors hold. This preserves the common `nachSig` rule of C07/C08 and avoids a special success-only resource signature. If the owner instead requires all `gates` to demand success implicitly, specify that generated precondition and failure routing before enabling the source; do not secretly produce Duty only on one branch of a fixed signature. Gates naming other checks compose the existing consume/produce flow, with cycle/rank/termination obligations and no duplicate token. |
+| Evidence in G/GX | Add **new** `CheckEvidence` to C08/C09's shared ghost history/location inventory: producer call activation, actual report, current token location and consuming gate event. Capture each measured value/floor result through a generated private typed identity-sample function at that exact site: its evaluated call argument supplies the report entry and its result is the same value. The checked expansion identifies these functions and their producer activation; source cannot call them independently. Record samples at their actual pushes, then complete the report at the producer's normal pop and consume it at the admitted gate push. This avoids inventing lost local values at return. Match ordinary function entry/return events and `CheckExpansion`, rather than allowing a public empty `allocs Duty` function to forge completion. Extend `RufMaschineG/T1–T3` and GX replay with this metadata; unrelated calls preserve it. No new execution constructor is required. Add **new** `CheckTreueG` to `Ziel/ZielX/ZielFX`: each live/consumed Duty has exactly one corresponding completed report and compatible transfer history. C09/C01 conservation handles movement through frames/fields; no duplicable report may manufacture a second Duty. |
+| Counterprobe admission | Bind the external `expects` name uniquely to the check, exact probe text, selected source/build/image and a typed external test adapter under C08. Record **new** probe status `notRun`, `passed`, `failed` with execution provenance. Structural admission requires a valid unique binding, not a fabricated successful run. A measured acceptance claim requires an actual result for the matching artifact, expected false verdict and satisfied test-setup duties; absence remains unmeasured, an unexpected true verdict fails that measurement. An untrusted test log is evidence metadata, never a Lean axiom discharging a universal claim. Formal proof that a constructed test state makes the probe false is a separate generic/source-derived theorem, not proof that external hardware ran it. |
+| Export/Stage 0 | Lower `checkT` into the generated `UFn`s and retained `CheckDecl`, not just `Block.check`. Reuse source statement/expression/old/range lowering for `canFail`, A24 signatures for ordinary gates and C08 signatures/duties for foreign gates; error paths must retain exact C03 reasons and C11 cleanup. IR-13/01 own expansion and scope/measurement identity; IR-10/11 caller/foreign gates; IR-09 observations; IR-12 selected probe/image identity. Emit real probe/floor/observation/sample-call work with existing kernels, prove samples/Bool results agree, and erase only ghost report/Duty bookkeeping after its generic simulation. An identity-sample call may be inlined only with a connected equivalence proof preserving its logical record and accounted cost; it is initially an ordinary emitted call. Extend function/pop/push, `Compiler.Compiled`, `CanonicalSourceProgram`, `compile_source_program` and `IRBild.irBild_correct`; a printed list of measures is not the measured execution. |
+
+**Spec:** strengthen provenance and linear discharge, include check/gate duties
+in (a)/(b), retain false reports and make no empirical/universal claim from
+prose. Software measurement adapters are C08 user logic; counterprobes neither
+add hardware assumptions nor establish hardware truth. Witnesses: true and false
+probe with both reports consumed, failed floor, early return before a local
+sample, calibrated check gating another check, fallible measurement service,
+alias-hidden/transitive writer refused, guarded observation with proper cleanup,
+unique external counterprobe with false verdict and a separate unrun status,
+shipping/test selection and indirect gate dispatch. Refuse missing verdict,
+unknown/ambiguous gate/measure, undischarged/forged Duty, aliased write to measured
+state, floor outside its scope, unsupported synchronization, duplicate probe
+ownership, stale artifact result and any attempt to infer ensures from claim text.
+
+**Shared goal proof/rebuild handoff (implementation only).**
+
+| Package | Required preservation and rebuild surface |
+|---|---|
+| C02 | Parser statement/round-trip/name clients, `Uebersetze*`, checked expansion/certificate, payload initialization, source provenance and ordinary call/image proofs. For the scalar identity expansion, primitive G semantics is unchanged; products/region payloads additionally rebuild C01/C12 clients. |
+| C12 | `Typen`, `Syntax`, `Semantik/Semantik/T1–T2`, `Syntax/{Extraktion,Geist,Fehler,Satz}`, all pointer/value/signature/declaration clients and new byte binder cases. Extend `Extraktion/T3.eval_liest_nur_orte`, locality in `ZielOrt/Grundlage/ZielOrtSem`, `Logik/Vertraege/{Getrennt,VertragsFuss,RahmenTreu,EinpassenVoll}`, G/GX step/replay and address proofs. C03 `RawAnswer` decoding validates origins through the shared boundary, not by accepting any positive word. |
+| C14 | `Kern/Syntax/Profil` and its import dependents; source/parser/selection/profile registry, `Einheit`/unit checker adapters, `Laufzeit`, start/entry/image/layout proofs and `Zielsatz/Projekte/Verbund`. Generated ordinary calls use the existing frame/replay proofs; wrappers add no privileged G case. |
+| C15 | Descriptor/expansion/algebra and generated `Programm` declarations; `Nebenlaeufigkeit/Rennfreiheit/{RennfreiVoll,RennfreiG}`, `Nebenlaeufigkeit/Sperren/SperreBeweis`, `Speichermodell/Maschine/{GXMaschine,SperreSemA}` and `Speichermodell/Atomar/{AtomarAkteur,AtomarLauf}` establish the actual guarded cell/history invariant. Re-establish no-deadlock/ranks through `Nebenlaeufigkeit/Allgemein/Verklemmung`, `KernMaske` and start/join visibility; quiescence is interval-specific, not a new global scheduler premise. |
+| C16 | `CheckDecl`, generated probe/gate code, report/history fields and `Logik/Ruf/Maschine/RufMaschineG/T1–T4` normal-pop/push proofs; actual observation/world/old snapshots through G/GX replay and ownership. Add zero-effect ghost-history transport to trace/lock/cost/contract proofs, not erased executable probe steps. |
+
+For **each** affected package, extend `Zielsatz/Kern/Akzeptiert.akzeptiert_iff`
+and `Zielsatz/Atomar/AtomarAkzeptiert.akzeptiertSpecX_of` with sound finite
+admission and all old `frag/fuss/stufen/renn/antworten/masken` checks retained.
+Keep shared-atomic reads out of contracts even when hidden in a payload/slice or
+probe predicate. Replay concrete calls, reports, grant transfers and old worlds
+through `Zielsatz/ZielOrt/Rahmen/ZielOrtRahmen`,
+`Zielsatz/Eigenschaften/Invarianten`, `Logik/Fortschritt/{Folge,FolgeBeweis,KostenG}`
+and the progress modules. Re-establish `VertragAmOrtG`, normal/reason restoration,
+lock visibility, outside-write preservation, call logs and actual expanded costs.
+Lift new metadata/invariants through `Nebenlaeufigkeit/Sperren/MitRuhe*`,
+`Zielsatz/Einbettung`, `FadenMaschine`, GX starts and
+`Zielsatz/Projekte/Verbund`; the idle root creates no grants, checks, entries or
+accumulator updates. Carry represented bodies/duties through `GabbroV/GvBruecke`.
+
+Then re-establish `Zielsatz/Kern/Beweis.ziel_aus/zielF_aus`,
+`Zielsatz/Atomar/BeweisAtomar.zielX_aus/zielFX_aus`, `gabbro_ziel`,
+`gabbro_ziel_gx`, `gabbro_ziel_sc_aus` and `gabbro_ziel_verbund` and their
+non-degenerate witnesses. Each generic syntax/export theorem gets a `_zeuge`
+jointly satisfying its admission and semantic duties, plus matching source,
+`AkzeptiertX`, connected IR and assembly-runner fixtures. Model edits require the
+full grammar build, layout check and Lean guardian with **exactly** `propext`,
+`Classical.choice`, `Quot.sound`; describe each Spec meaning change in its commit.
+One grammatik owner batches changes, using freshly measured available memory
+minus 2 GiB and the two global slots; Stage-0 checks retain the 5-GiB slot scopes
+and isolated artifacts. No build was performed by this document task.
+
+**Owner questions — genuine source-meaning choices, with recommendations.**
+
+- **C02 output promise:** must output equal the declared translator's map, or
+  is any well-typed certified payload the language meaning? Current
+  `Uebersetzung`/`uebersetzung.rs` explicitly promise output typing only.
+  Recommend exact source-bound map correspondence with kernel-checked execution
+  certificates, retaining output typing as one component. This is a stronger
+  translation promise and must be approved before replacing the old cut;
+  likewise approve table-shaped translator inputs/results as immutable row
+  values in the compile-time context, rather than mutable runtime capabilities.
+- **C12 named spaces/rights:** does a named space identify a logical namespace,
+  a distinct protection domain, or a platform memory-kind policy? Recommend a
+  nominal logical namespace with an explicit checked profile/binding realizing
+  protection and any barriers; names alone confer neither disjointness nor
+  TOCTOU protection. Recommend `own` remain the C09 exclusive loan/move, not an
+  extra copyable write bit; this reuses the existing C09 ownership question.
+- **C14 guest meaning:** is existing `entrust` intended to admit an ordinary
+  userspace isolation-service invocation when its fields match a proved ABI?
+  Recommend that bounded interpretation, with software isolation/start behavior
+  proved under C08 and only actual hardware in the profile. Unrestricted guest
+  execution/register-state entry remains excluded. Profile key equality and
+  shipping/test selection already have stated meanings; they are not new choices.
+- **C15 core/reduction meaning:** is the destination the core sampled at update
+  entry or the core executing the store, and may reads synchronize? Recommend
+  sample-once at entry and per-cell guarded live sampling, with exact reduction
+  only under proved interval quiescence. Private synchronization is the safe
+  baseline; erase it only with a proved exclusive lease. Recommend mathematical
+  checked add with explicit intermediate-range duties, never implicit wrap or
+  saturation. These choices affect scheduling/cost and must be recorded before
+  admitting `accT`; all five operators remain part of the full package.
+- **C16 Duty/verdict:** does a gate discharge a completed test obligation even
+  when its verdict is false, or may every named gate execute only after success?
+  Recommend completed-report Duty, with success-only behavior expressed by the
+  gate's explicit formal precondition and failure handling. This preserves one
+  common returning resource flow and cannot derive a prose claim. Recommend
+  `gates` list alternative consumers, with one fresh completed producer call per
+  consumption and an explicit checked driver choosing the consumer. If it means
+  an ordered series from one measurement, specify a staged mark/order protocol
+  instead; one linear Duty cannot be consumed repeatedly. Recommend
+  floors be recorded/evaluated over the actual samples; a missing/false floor
+  cannot yield a successful-evidence assertion. External probe identity/unique
+  ownership is already decided (N024); whether a release policy demands a run
+  is separate from structural source admission, and unrun never means passed.
+
+**Staging.** Freeze the common schema/resource/boundary/capability descriptors
+with the grammatik owner first. Build C14 profile/selection and C12 table rights
+as conservative foundations; join C01 values and C08 boundaries before C02
+identity payloads and C12 byte/entry transport. Then close general C02 maps with
+C17 termination/control, C14 actual entry/service binding and C16 check/report
+flow. C15 scalar algebra/initialization can proceed early, but enabling updates
+requires the actual core-query and lock protocol; quiescent reduction closes it.
+Commit each compiling implementation stage and retain named refusals for its
+unimplemented remainder. No helper/metadata-only stage closes a whole C cell.
+
+**Overall C-package plan.** Section labels below refer to the existing
+`Model extension design` headings on this date: **D1** = C13/C17/C05/C04,
+**D2** = C01/C03, **D3** = C06/C07/C08, **D4** = C09/C10/C11/C18,
+**D5** = this section. Order is a dependency order for staged slices, not
+authorization for parallel agents; a foundation may precede completion of its
+whole package. Dependencies in parentheses affect the richer slice only.
+
+| Package | Design | Person-days | Main dependencies | Recommended order |
+|---|---|---|---|---|
+| C13 builtins/count/layout | D1 | 8–14 | IR-02/03, checked layout | 1 |
+| C17 measures/generics/compile-time | D1, bounded measure design only | 12–24 full estimate: 2–4 measure + 10–20 remainder | C13, IR-01; full remainder still needs detailed design | 2 measure; 12 remainder |
+| C14 profiles/selection/placement/entry | D5 | 12–20 | IR-12; (C08/C12 entry/service) | 3 foundation; 13 entry |
+| C05 global invariant carriers | D1 | 8–13 | invariant-return IR-10 | 4 |
+| C01 products/mappings/ownership | D2 | 18–30 | IR-03; (C09/C12 ownership/walk bindings) | 5 values; 14 richer slice |
+| C03 reasons/typed payloads | D2 | 9–15 | C01, IR-03/10/11 | 6 |
+| C06 pointer contracts | D3 | 7–12 | IR-10, contract replay | 7 |
+| C08 foreign/provider contracts | D3 | 16–27 | C06 foundation; C03 outcomes; (C09/C12 resources/grants) | 8 foundation; 15 provider closure |
+| C12 spaces/capabilities/entry wrappers | D5 | 20–34 | C01/C08/C09, IR-03/06/11/12 | 9 rights; 16 live bytes/entry |
+| C09 mint/owner loans | D4 | 12–20 | C08, common C01/C12 location flow | 10 |
+| C11 consuming/capacity/cleanup | D4 | 18–30 | C09; C08/C12; IR-07/08/10 | 11 cleanup/capacity; 17 consuming |
+| C02 translators/library payloads | D5 | 14–24 | C01/C14, IR-01/03/10/13; (C17 maps, C08/C12 regions) | 12 identity; 18 full maps |
+| C07 indirect reason calls | D3 | 6–10 | C03/C06, common C08 outcome flow | 13 |
+| C04 transition contracts/stages | D1 | 5–9 | C05/C13, IR-10 | 14 |
+| C16 declared checks | D5 | 12–20 | A24, C08/C14, C09/C11; (C10 observations) | 15 core; 20 observation closure |
+| C15 per-core accumulators | D5 | 16–28 | C13/C08/C14, IR-03/09/11/12 | 16 algebra; 19 concurrency/reduction |
+| C10 shared locks/RCU | D4 | 30–50 | C09/C11; C08/C12 live regions | 17 RW; 21 full RCU |
+| C18 partial reset/page return | D4 | 14–24 | C01/C08/C11/C12; (C10 outstanding observations) | 18 zeroing; 22 page/lifetime closure |
+
+Total full C implementation estimate: **237–404 person-days**, including
+the separately identified, still undesigned C17 remainder; without that
+remainder **227–384**. This supersedes the catalogue's preliminary **30–70+**
+implementation range, which preceded these detailed proof/lifecycle designs.
+The earlier **5–10 design/decision days** are separate, not added to implemented
+progress. Shared interfaces/ABI work is counted in its owning package; B/IR-lane
+work already charged elsewhere must not be added again. Critical path is
+value/channel migration → software contract and grant replay → capability and
+resource conservation → RCU/entry/page-service closure, under the available Lean
+slots and owner decisions. No elapsed completion date or universal speed claim
+follows from these person-day ranges.
+
+Validation of this design is static source/name/path inspection and
+`git diff --check` only. **Zero new language cases compiled or proved; no Lean
+file edited, no build, push or merge.**
