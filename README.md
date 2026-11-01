@@ -28,13 +28,17 @@ the LLVM backend are **not** verified, and no bridge to any binary exists yet ([
 
 ## 1. Quick start
 
-Install **Rust 1.86 or newer** (the crates have no third-party dependencies) and put `~/.cargo/bin` on your `PATH`. Checking source needs
-nothing else. `gabbro build` additionally needs the LLVM tools `opt`, `llc` and `ld.lld`; there is no C compiler in the chain.
+**With Nix** (flakes enabled): `nix build github:SimonVitzethum/Gabbro` builds the `gabbro` command with its LLVM tools,
+and `nix develop` (or `direnv allow`, the checkout has an `.envrc`) gives a shell with Rust, elan, LLVM/lld, qemu-user and
+Python for working on the repository. The flake builds the Cargo workspace (`Cargo.toml`, `Cargo.lock`), so those stay.
+
+**Without Nix**: install **Rust 1.86 or newer** (the crates have no third-party dependencies) and put `~/.cargo/bin` on your
+`PATH`; `gabbro build` additionally needs the LLVM tools `opt`, `llc` and `ld.lld`; there is no C compiler in the chain.
 
 ```bash
 git clone https://github.com/SimonVitzethum/Gabbro
 cd Gabbro
-cargo install --path crates/gabbro-cli
+nix build && export PATH=$PWD/result/bin:$PATH     # or: cargo install --path crates/gabbro-cli
 mkdir hello && cd hello
 gabbro new hello
 gabbro check hello.gab
@@ -134,13 +138,13 @@ premise (b), the user's logic, in Lean from the source for five programs; that d
 | | |
 |---|---|
 | Start here | [Tutorial](dokumente/TUTORIAL.md) · [open work](TODO.md) · [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean) · [how work is run](AGENTS.md) |
-| Language | [Own and aliasing](dokumente/A1-OWN-PAPER.md) (`own`, `R014`/`R015`, `noalias`) · [Syntax](dokumente/SYNTAX.md) |
-| Backend and hardware | [LLVM backend](dokumente/LLVM-BACKEND.md) · [AArch64 plan](ARM-PLAN.md) · [translation validation](dokumente/PLAN-TRANSLATION-VALIDATION.md) |
-| Plans | [dynamic structures](dokumente/PLAN-DYNAMIC.md) · [standard library](dokumente/PLAN-STDLIB.md) · [long-range](dokumente/PLAN-LONG-RANGE.md) |
+| Language | [Syntax](dokumente/SYNTAX.md) · [language](dokumente/LANGUAGE.md) · [build system](dokumente/BUILD-SYSTEM.md) |
+| Compiler | [Stage-0 IR compilation](dokumente/IR-COMPILATION-LANES.md) · [self-hosting](dokumente/PLAN-SELF-HOSTING.md) · [GabbroV](dokumente/GABBROV.md) |
+| Plans | [long-range](dokumente/PLAN-LONG-RANGE.md) · [low-level syntax](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) |
 | Measurements | [MESSUNGEN](dokumente/MEASUREMENTS.md) · [TOOLBOX](dokumente/TOOLBOX.md) |
 
 > **How this repository is written: AI agents, and where the human stands.** Agents do implementation, checking and coordination; Simon
-> decides what counts as reached, refused or merged. Every commit names its model (`Co-Authored-By`). **Nothing counts because an agent
+> decides what counts as reached, refused or merged. Commits follow Conventional Commits, carry `Signed-off-by` and name the model that wrote them (`Co-Authored-By`). **Nothing counts because an agent
 > said so:** numbers are re-measured at merge time, and a claim bigger than its proof gets sent back.
 
 > **License: AGPL-3.0** ([LICENSE](LICENSE)). What you write in Gabbro is not a derived work: your program, everything the compiler
