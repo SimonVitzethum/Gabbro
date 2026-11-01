@@ -1046,4 +1046,4 @@ kept; they run on the complete ABI: `lowE_ok` is `ValueOk` (the scalar relations
 Measured: 294-module `Stage0` + `Stage0.Haupt` closure rebuilt; `Nachpruefung.lean` 336 theorems on
 `propext`/`Classical.choice`/`Quot.sound` only (6 axiom-free), no `sorry`; layout check passes; all 168 textual
 programs of `stage0/proben-ir` compile and execute (or are refused with the expected text) with 0 mismatches.
-`grammatik/` untouched. Merge commit: see `git log` (the commit whose message begins "Merge master 6444b5cc3").
+`grammatik/` untouched. Merge commit: `05cfd542b`.
