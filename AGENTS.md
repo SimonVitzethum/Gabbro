@@ -77,10 +77,23 @@ expanding infrastructure for a small subset.
   `dokumente/IR-COMPILATION-LANES.md`. Every extension keeps `gabbro_ziel` on the standard axioms, never
   weakens a guarantee, describes any change of meaning of `Spec.lean` in its commit, and is followed by the
   Lean guardian. Only one agent at a time changes `grammatik/`.
+  **C packages approved (owner, 2026-11-01):** all 18 C packages may change `grammatik/` and machine G as
+  designed in `dokumente/IR-COMPILATION-LANES.md`, with the recommended answer to every owner question in
+  those design sections, provided `gabbro_ziel` stays proved on the standard axioms. All C work is done in
+  2–3 full `grammatik/` build rounds: round 1 C13, C17, C05, C04, C03; round 2 C01, C06, C07, C08, C09,
+  C11, C18; round 3 C10, C02, C12, C14, C15, C16. Between rounds only single changed modules are checked.
   **Grammar build memory (owner, 2026-11-01):** a `grammatik/` build may use all currently available memory
   minus 2 GiB, under a systemd scope: measure `MemAvailable` right before the build and set
   `MemoryMax = available - 2G` (MemoryHigh about 1G below, MemorySwapMax=0); parallel jobs as that memory
   allows. Stage-0 checks keep their 5G slots.
+- **No swap for ANY run (owner, 2026-11-01):** every process an agent or root starts that can use real memory —
+  `lean`, `lake`, `cargo`, the runner and regression loops, guardians, Python measurement scripts — runs
+  inside `systemd-run --user --scope -p MemorySwapMax=0` with a MemoryMax/MemoryHigh. No exceptions.
+- **RAM discipline (owner, 2026-11-01):** inside a Stage-0 slot exactly ONE `lean` process runs, with
+  `-j1 -DElab.async=false -M4608`, checked module by module in dependency order. Never run a parallel
+  `lake build` of `stage0/` (it spawns one `lean -M16384` per module and thrashes inside the 5G scope). Check
+  `free -g` before every heavy step; with less than 8 GiB available, wait. Agents keep the slot lock only for
+  one module and must not end their run while a build they started still runs.
 - **At most two Lean builds or direct Lean checks may run globally, across all worktrees.** Use the two
   slot locks and allocation above, including for audits, witnesses and `lean --run` compiler invocations.
 

@@ -1,0 +1,58 @@
+// Hold each critical section long enough for the other OS thread to sleep in
+// futex WAIT. Both threads add 4 * 50000 under one lock: exit 400000 mod 256 = 128.
+module ir_probe {
+
+table counter count 1 { slot { value : u32 wrapping, done : u32 in 0 .. 1, } }
+table rounds count 4 { slot { x : bool, } }
+table work count 50000 { slot { x : bool, } }
+table waiting count 4000000 { slot { x : bool, } }
+
+lock L protects { counter } rank 0 held <= 10000000 ops;
+
+impl fn worker()
+    effects { reads counter.slots, writes counter.slots, reads rounds.slots, reads work.slots, locks L }
+    costs <= 100000000 ops
+{
+    traverse i over slots of rounds by unvisited
+        touches reads rounds.slots, reads work.slots, reads counter.slots, writes counter.slots, locks L
+    {
+        locks L {
+            traverse j over slots of work by unvisited
+                touches reads work.slots, reads counter.slots, writes counter.slots
+            {
+                counter.slots[0].value = counter.slots[0].value + 1;
+            }
+        }
+    }
+    locks L { counter.slots[0].done = 1; }
+}
+
+concurrent { worker };
+
+impl fn main() -> u32
+    effects { reads counter.slots, writes counter.slots, reads rounds.slots, reads work.slots, reads waiting.slots, locks L }
+    costs <= 1000000000 ops
+{
+    traverse i over slots of rounds by unvisited
+        touches reads rounds.slots, reads work.slots, reads counter.slots, writes counter.slots, locks L
+    {
+        locks L {
+            traverse j over slots of work by unvisited
+                touches reads work.slots, reads counter.slots, writes counter.slots
+            {
+                counter.slots[0].value = counter.slots[0].value + 1;
+            }
+        }
+    }
+    traverse k over slots of waiting by unvisited
+        touches reads waiting.slots, reads counter.slots, locks L
+    {
+        locks L {
+            if counter.slots[0].done == 1 { leave k; }
+        }
+    }
+    let mut answer : u32 = 0;
+    locks L { answer = counter.slots[0].value; }
+    return answer;
+}
+}

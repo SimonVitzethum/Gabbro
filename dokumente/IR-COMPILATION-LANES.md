@@ -2996,6 +2996,59 @@ were reused, with no grammar build or full guardian. This closes only the
 foreign-owner acquisition prefix: full WAIT/WAKE, interference, ordering and
 `ir_parallel` remain open, and no additional source-form family is claimed.
 
+### IR-09 contended WAIT/WAKE sequential facts (base 2d54e78f2, 2026-11-01)
+
+The owner explicitly authorized a named OS binding premise for futex, following
+`CloneOK`/`TorOK`. `Runner.IR.FutexOK spurious` now states exactly the return
+properties used here: a returning WAIT sees a different low 32-bit word or is
+classified by the explicit `spurious` relation; a successful WAKE returns a
+count at most the requested `n`. Negative WAKE error returns are allowed.
+Interruptions, mismatch/error returns and a value changed back before return
+can be classified as spurious. There is no eventual-return, release, scheduling
+or fairness premise, no hardware assumption, and no Lean postulate.
+
+`futex_prepare`, `futex_entry` and `futex_return` simulate the actual request
+setup and syscall. Memory changes during a blocking call are **separate,
+explicit client premises** (`LS` resume state and stable lock-word invariant),
+not consequences of `FutexOK`. In particular the current `AgreeK` frame keeps
+code, non-scratch frame words and the world unchanged across that boundary;
+it is not the missing general source-world interference relation.
+
+`add_waiters` proves the actual seven-instruction successful counter-CAS
+iteration without interference inside that iteration. `LockInv` describes
+stable free/held lock boundaries, including foreign owners and nonzero waiters,
+with recursion and waiter counts below `2^62`. Its counter proofs require room
+before increment and a registered waiter before decrement. `nimm_wait_entry` registers a waiter and reaches WAIT;
+`nimm_wait_retry` consumes a supplied return, unregisters that waiter and jumps
+to instruction **17**, the actual acquisition-CAS retry. `nimm_retry` either
+returns to WAIT with the foreign owner intact or acquires a free lock.
+`nimm_retry_acquired` finishes any finite actual retry history whose supplied
+resume state is free; it does not prove eventual acquisition.
+
+`gib_release` centralizes the last-release prefix through the waiter test.
+`gib_waiters_entry` proves the nonzero-waiter branch reaches WAKE-one;
+`gib_waiters_return` finishes it under an explicit response/frame premise and
+leaves owner/count zero with the same waiter count. Returning WAITs remove their
+own counter entries; WAKE itself does not decrement the counter.
+`LockOK`/`SyncOK` can now specify waiter counts, and their frame/call/monotonicity
+lemmas preserve those exact counts. Their defaults and the existing `locks_ok`
+and source-to-image theorem domains still require zero waiters and free/mine
+ownership, with all existing guarantees retained.
+
+`WaitProbe` supplies encoded instruction bytes and writable real lock/frame
+memory for acquisition after an explicit foreign release, a spurious unchanged
+WAIT followed by a failed retry, WAKE with five waiters, and nonzero-waiter
+`SyncOK` inherited by a callee. These are individual-thread `Star` facts.
+Concurrent `ir_parallel`, interference inside counter CAS loops, general world
+updates while blocked, ordering and progress remain outside this bounded proof;
+no additional source-form family is counted complete.
+
+The `lock-wait-wake` source regression uses bounded long critical sections on
+two real assembly-runner OS threads. It complements the short `sperre` probe:
+tracing the long probe exercises successful sleeping WAIT returns and WAKE-one,
+while the short probe also exercises mismatch returns. This runtime evidence
+is separate from the sequential component proofs and does not close `ir_parallel`.
+
 ## IR-02 wide integer operators in `lowE` (2026-11-01)
 
 The verified wide kernels (`Arithmetik/Wide/*`) are now emitted by the actual expression lowering for integer
@@ -3038,3 +3091,109 @@ it), so its acceptance witness is `WideInt/Proben.lowE_wide_eng_zeuge`.
 Open (exact): the statement `narrow x to lo .. hi` of a value wider than 64 bits is still refused
 (`uses a form outside the IR fragment`; its lowering is the scalar interval test, not `Expr.eng`); counted
 (`StatementCost`/`EarlyExit`) wide costs.
+
+### IR-09 catch-up through IR-03, IR-02 and IR-12 (2026-11-01)
+
+The lane first merged `1652a7d0c` as `63dc7af56`, then caught master through
+`19947e92b`. The complete-value ABI is retained: lock frame preservation uses
+`ValueAt` and parameter/context word counts, with no scalar ABI restored.
+The nonzero-reservation byte witness was ported to complete value spans and
+cell-span disjointness and connected to the existing byte probes/audit.
+
+The current connected closure has 324 Stage0 and 32 Runner modules. All were
+checked in the private overlay; 283 affected Stage0 modules were rechecked for
+the later master updates, including `Stage0`, `Stage0.Haupt` and
+`Nachpruefung`. Four additional Runner modules (generator dependencies, main
+and audit) pass. The audits report 413 Stage0 and 14 Runner assertions with no
+foreign axioms; cached `gabbro_ziel` has exactly `propext`, `Classical.choice`,
+`Quot.sound`. Grammar sources/artifacts were not rebuilt or changed.
+
+All 219 standard textual IR probes pass: 174 emitted images execute with the
+expected exit and 45 refusals have the expected text. The old I/O probes
+`hello`, `echo`, `threads` now pass after the inherited IR-12 activation.
+`upper` compiles and exits zero with empty output instead of `ABC`, matching
+the master limitation documented above: its retired driver's implicit I/O
+convention has no image binding. No new convention is assumed here.
+The actual two-thread `lock-wait-wake` image exits 128; its trace has eight
+successful sleeping WAIT returns and ten WAKE-one calls (eight return one,
+two return zero). This evidence does not establish `ir_parallel`.
+
+The forbidden-proof scan passes for 1448 Lean files and layout for 1547;
+no master Lean file below 500 lines crosses that limit. Every Lean invocation
+uses slot 1, the prescribed 4G/5G/no-swap scope, an unset `ELAN_TOOLCHAIN` and
+`-j1 -DElab.async=false -M4608`. No full guardian or push is claimed.
+An additional all-files check exposed old ABI type errors in the unimported
+5498-line `Schleifen/StatementCost.lean` (including the `retWhyC` arity), then
+ended with a Lean memory exception at the fixed cap. That separate cost module
+is unchanged and outside the connected closure; it is not claimed green.
+IR-09's concurrent coverage boundary remains the inventory's open
+`ir_parallel`, ordering/interference, shared-lock and RCU work.
+
+Fast-forwardable IR-09 integration checkpoint: `2c5226333` (master `19947e92b` is an ancestor, checked).
+
+### IR-09 first structural concurrent refinement step (2026-11-01)
+
+`ir_parallel` must map **every** finite `Runner.Mach.Tr M actI` of the
+existing IR request machine (OS-thread starts from `cloneReq`, futex requests, reads/writes/CAS,
+and the SC/TSO memory states) to a `RufErreichbarGX` run. The relation needs a
+thread/root/stack map and per-thread code/continuation, complete `EnvAt`/`Kopf`
+values, source call log, open-lock trace and remaining budgets; the common memory relation must
+agree on the source carriers visible at each boundary. A finite IR prefix may
+stutter in GX during scratch computation, failed CAS, waiter registration,
+WAIT/WAKE and retry. A successful lock acquisition/release must match the
+structured `RufSchrittG.dannLocks`/release boundary; a successful source atomic
+operation must match its GX leaf with the observed old value and exact update.
+Other-thread steps preserve private frames and stable non-atomic carriers;
+shared atomics are presented through GX's existing `Tg` relation, never frozen
+by a global `WeltAt` equality. TSO buffer drains and publication/acquisition
+must be connected to the existing W ordering/visibility facts, not inferred
+from the single-thread successful-CAS path. A pending WAIT is a suspended
+request continuation, allowing other `Tr` threads to run; a returning syscall
+alone supplies no scheduling or eventual-return claim.
+
+Reuse the connected `Sim`/`Reach`/return cases and IR-03 complete-value ABI,
+`locks_ok` and the contended `LS`/`LockInv` WAIT/retry/WAKE components,
+`ex_tail`/`exch_ok`/`awaits_ok` and their payload/visibility premises, and
+`spawnC_ok`/image-root setup. Their existing sequential statements remain
+unchanged. In particular `SyncOK`'s free/mine condition is a local entry
+condition, not a global concurrent invariant: foreign-owned locks require
+`LockInv`, ownership from GX's open-lock traces and separate transient protocol
+states between machine instructions. `AgreeK` footprints compose the private
+frame rely; source stable-carrier preservation reuses `stabilS_relyX`,
+`gx_aussen`, and `zielInvSA_schrittGX` from `Speichermodell/Atomar/AtomarLauf`.
+This relation must be maintained at request-continuation granularity
+(`Res IR.T` under `actI`), since other threads can run between the loads and
+CAS of one IR instruction. Neither `Star` nor one complete `Sim` execution
+can be treated as atomic; the existing existential single-thread simulations
+are ingredients, not a backward refinement for arbitrary concurrent runs.
+
+Assumptions remain the existing checked source/admission, user duties and
+oracle/binding premises (including `CloneOK`, `TorOK`, exact layout, memory
+permissions, stack/entry and visibility conditions), the existing runner
+SC/TSO refinement premises and the explicitly named `FutexOK spurious` OS
+binding premise. No fairness, eventual acquisition, scheduler behavior,
+unchanged shared memory during WAIT or extra hardware premise is added.
+Footprint preservation and counter-CAS retry/linearization are proof
+obligations, not extra named assumptions. `FutexOK` must be applied to the
+actual concurrent memory-answer relation at completion; its present sequential
+instance does not itself establish this bridge.
+
+The first component is `AgreeK.foreign_frame`: a foreign lock/scratch footprint
+preserves permissions and every word/validity obligation of a disjoint local
+`EnvAt`, with either address ordering permitted. The witness uses a three-word
+array in one frame and real changed scratch/lock words in another. This is a
+rely/guarantee frame lemma, not the full `ir_parallel` theorem; arbitrary shared
+world updates, concurrent atomic retries, ownership/ordering and transient
+lock-state refinement remain open. No new source-form completion is claimed.
+
+Measured for this component: `Interference`, `Sperre.Proben`, `Stage0` and
+`Nachpruefung` pass capped direct checks. The generic word/frame lemmas need
+only `propext` and `Quot.sound`; the joint witness uses the three standard
+axioms. The Stage0 audit now has 416 assertions with no foreign axioms or
+duplicate entries. The import closure gains one Stage0 module (325 total).
+The new file is 86 lines and the audit is 485; no existing sub-500-line file
+crosses 500. The forbidden-proof scan passes for 1449 files, and layout passes
+for 1548 tracked Lean files with at most 20 entries per folder. Source emission
+is unchanged, so the textual/runner measurements above remain the measured
+compiler behavior, including the inherited `upper` limitation. This completes
+only the first frame component; the full concurrent refinement remains open.
