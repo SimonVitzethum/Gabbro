@@ -105,10 +105,10 @@ syscall schreibe(fd : u64, puffer : ptr<normal, r> u8, laenge : u64) -> u64
     costs <= 8 ops
     assume linux_schreibe falsifier sonde_schreibe;
 
-// **(3) The buffer is a `static`: the LLVM lowering hands a gate a global, not a local.** `check`
-// says one `E247` hint about it (no lock guards a carrier the program writes) -- a hint, not a
-// refusal; a one-thread program needs no lock.
-pub static mut TEXT : [u8; 3] = 0;
+// **(3) The buffer is a `static`: the LLVM lowering hands a gate a global, not a local.** It is
+// not `mut` and starts with its bytes, so no function writes it and it needs no lock: `check`
+// says 0 hints. A `static mut` that a function writes would want a `requires Held(L)` guard (`E247`).
+pub static TEXT : [u8; 3] = [72, 105, 10];   // H, i, newline
 
 // **(4) `pub fn main` is the entry.** The generator writes `_start` around it and hands the
 // answer to `exit_group`; a `program` target names exactly one such function.
@@ -118,12 +118,9 @@ pub static mut TEXT : [u8; 3] = 0;
 // the number the body actually costs, beside the number this line promises.** Read it; never
 // guess it. A promise that is too small is `K001`, and it is arithmetic, not opinion.
 pub fn main() -> u64
-    effects {{ reads TEXT, writes TEXT, writes ausgabe }}
+    effects {{ reads TEXT, writes ausgabe }}
     costs   <= 40 ops
 {{
-    TEXT[0] = 72;   // H
-    TEXT[1] = 105;  // i
-    TEXT[2] = 10;   // newline
     schreibe(1, TEXT, 3);
     return 0;
 }}
