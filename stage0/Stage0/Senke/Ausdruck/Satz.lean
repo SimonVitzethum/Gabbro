@@ -13,6 +13,7 @@ import Stage0.Senke.Ausdruck.Tag
 import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
 import Stage0.Senke.Ausdruck.Aggregat.Array
+import Stage0.Senke.Ausdruck.Aggregat.IntegerOps
 import Stage0.Senke.Ausdruck.Aggregat.StringOps
 import Stage0.Senke.Ausdruck.Option
 import Stage0.Senke.Ausdruck.Bytes
@@ -277,181 +278,42 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     exact run.mono (fun w value => by
       by_cases comparison : (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n <;>
         simpa [Enc, eval, bool_word, wahr?, comparison] using value)
-  | _, _, .div h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inUE, inU, decide_eq_true_eq] at hw
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, udiv_w (by omega) (by omega) (by omega) (by omega), rfl⟩
-    · cases h
-  | _, _, .rem h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inUE, inU, decide_eq_true_eq] at hw
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, urem_w (by omega) (by omega) (by omega) (by omega), rfl⟩
-    · cases h
-  | _, _, .sdiv hb a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inWE, nichtMin, inW, decide_eq_true_eq] at hw
-      have := (eval σ₀ a σ ρ).lo_le
-      have := (eval σ₀ a σ ρ).le_hi
-      refine Ok.value ?_ (integerWords_word (by unfold betragMax; omega) (by unfold betragMax; omega))
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, sdiv_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
-    · cases h
-  | _, _, .srem hb a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inWE, nichtMin, inW, decide_eq_true_eq] at hw
-      have := (eval σ₀ b σ ρ).lo_le
-      have := (eval σ₀ b σ ρ).le_hi
-      refine Ok.value ?_ (integerWords_word (by unfold betragMax; omega) (by unfold betragMax; omega))
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, srem_w (by omega) (by omega) (by omega) (by omega) (by omega), rfl⟩
-    · cases h
-  | _, _, .band h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inUE, inU, inWE, inW, decide_eq_true_eq] at hw
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, rfl, and_w (by omega) (by omega) (by omega) (by omega)⟩
-    · cases h
-  | _, _, .bor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inUE, inU, inWE, inW, decide_eq_true_eq] at hw
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      let result := eval σ₀ (Expr.bor w h0 h0' hw1 hw2 a b) σ ρ
-      have bits := Nat.or_lt_two_pow (x := (eval σ₀ a σ ρ).n.toNat)
-        (y := (eval σ₀ b σ ρ).n.toNat) (n := 64) (by omega) (by omega)
-      have bitsInt : (((eval σ₀ a σ ρ).n.toNat ||| (eval σ₀ b σ ρ).n.toNat : Nat) : Int) < 2 ^ 64 := by
-        exact_mod_cast bits
-      let source : Zahl 0 (2 ^ 64 - 1) := ⟨result.n, result.lo_le, by
-        change (((eval σ₀ a σ ρ).n.toNat ||| (eval σ₀ b σ ρ).n.toNat : Nat) : Int) ≤ 2 ^ 64 - 1
-        omega⟩
-      refine resizeIntegerL_ok source result rfl ?_ h hK hp
-      intro raw rawTop rawLower rawFits hp
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      refine binE_ok rawLower rawFits (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, rfl, or_w (by omega) (by omega) (by omega) (by omega)⟩
-    · cases h
-  | _, _, .bxor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inUE, inU, inWE, inW, decide_eq_true_eq] at hw
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      let result := eval σ₀ (Expr.bxor w h0 h0' hw1 hw2 a b) σ ρ
-      have bits := Nat.xor_lt_two_pow (x := (eval σ₀ a σ ρ).n.toNat)
-        (y := (eval σ₀ b σ ρ).n.toNat) (n := 64) (by omega) (by omega)
-      have bitsInt : (((eval σ₀ a σ ρ).n.toNat ^^^ (eval σ₀ b σ ρ).n.toNat : Nat) : Int) < 2 ^ 64 := by
-        exact_mod_cast bits
-      let source : Zahl 0 (2 ^ 64 - 1) := ⟨result.n, result.lo_le, by
-        change (((eval σ₀ a σ ρ).n.toNat ^^^ (eval σ₀ b σ ρ).n.toNat : Nat) : Int) ≤ 2 ^ 64 - 1
-        omega⟩
-      refine resizeIntegerL_ok source result rfl ?_ h hK hp
-      intro raw rawTop rawLower rawFits hp
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      refine binE_ok rawLower rawFits (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, rfl, xor_w (by omega) (by omega) (by omega) (by omega)⟩
-    · cases h
-  | _, _, .shl _ _ _ h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next width =>
-      refine Ok.value ?_ width
-      split at h
-      · next hw =>
-        simp only [Bool.and_eq_true, inUE, inU, inWE, lt64, inW, decide_eq_true_eq] at hw
-        refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-          (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-          ?_ rfl (by decide) hp
-        intro wa wb pa pb
-        have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-        have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-        simp only [Enc] at pa pb
-        subst pa pb
-        exact ⟨_, rfl, shl_w _ (by omega) (by omega)⟩
-      · cases h
-    · cases h
-  | _, _, .shr _ _ _ h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hw =>
-      simp only [Bool.and_eq_true, inUE, inU, inWE, lt64, inW, decide_eq_true_eq] at hw
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      refine binE_ok h hK (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
-        (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial)
-        ?_ rfl (by decide) hp
-      intro wa wb pa pb
-      have a1 := (eval σ₀ a σ ρ).lo_le; have a2 := (eval σ₀ a σ ρ).le_hi
-      have b1 := (eval σ₀ b σ ρ).lo_le; have b2 := (eval σ₀ b σ ρ).le_hi
-      simp only [Enc] at pa pb
-      subst pa pb
-      exact ⟨_, rfl, shr_w (by omega) (by omega) (by omega) (by omega)⟩
-    · cases h
+  | _, _, .div h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    div_ok h0 h1' a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .rem h0 h1' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    rem_ok h0 h1' a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .sdiv hb a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    sdiv_ok hb a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .srem hb a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    srem_ok hb a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .band h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    band_ok h0 h0' a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .bor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    bor_ok w h0 h0' hw1 hw2 a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .bxor w h0 h0' hw1 hw2 a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    bxor_ok w h0 h0' hw1 hw2 a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .shl w hw1 hw2 h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    shl_ok w hw1 hw2 h0 h0' a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
+  | _, _, .shr w hw1 hw2 h0 h0' a b, d, c, top, h, hK, m, pc, ρ, hp =>
+    shr_ok w hw1 hw2 h0 h0' a b
+      (fun ca ta ha hta m pc hp => (lowE_ok σ₀ σ hWL hLay a d ca ta ha hta m pc ρ hp).word trivial)
+      (fun cb tb hb htb m pc hp => (lowE_ok σ₀ σ hWL hLay b (d + 1) cb tb hb htb m pc ρ hp).word trivial) h hK hp
   | _, _, .none n, d, c, top, h, hK, m, pc, ρ, hp =>
     constValue_ok (L := L) (τ := .opt n) none trivial h hK hp
   | _, _, .ptrOf .., d, c, top, h, hK, m, pc, ρ, hp => by
