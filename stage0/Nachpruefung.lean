@@ -21,6 +21,7 @@ import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Frontend.orderAliases_acyclic
 #print axioms Gabbro.Stage0.Frontend.orderAliases_zeuge
 #print axioms Gabbro.Stage0.Frontend.orderAliases_cycle_zeuge
+#print axioms Gabbro.Stage0.Frontend.elaborateScopes_preserves_zeuge
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_dependencies
 #print axioms Gabbro.Stage0.Frontend.elaborateScopes_forward_zeuge
 #print axioms Gabbro.Stage0.compile_source_program

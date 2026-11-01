@@ -153,6 +153,25 @@ theorem elaborateScopes_preserves (items : List SItemTief) (result : DerivedScop
   simp [elaborateScopes, ho, h, complete, resolved, meaning, Except.toOption, Option.filter]
   rfl
 
+/-- The conservative-preservation premises hold jointly for real alias declarations and a
+    computed scalar; the complete previous scope is retained, not just its final value. -/
+theorem elaborateScopes_preserves_zeuge :
+    let items := [SItemTief.typeT [] "Small" [] [] (some (.atom "u8")),
+      .typeT [] "Alias" [] [] (some (.atom "Small")),
+      .constT "ANSWER" (.atom "Alias") (.one (.bin "+" (.lit 40) (.lit 2)))]
+    ∃ result, deriveScopes items = .ok result ∧ elaborateScopes items = .ok result ∧
+      result.scope.values = [("ANSWER", 42)] := by
+  dsimp only
+  refine ⟨(deriveScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_⟩
+  · exact Gabbro.Grammatik.except_ok_get _
+  · apply elaborateScopes_preserves _ _ ((orderAliases _).toOption.get (by decide +kernel))
+    · exact Gabbro.Grammatik.except_ok_get _
+    · exact Gabbro.Grammatik.except_ok_get _
+    · decide +kernel
+    · decide +kernel
+    · decide +kernel
+  · decide +kernel
+
 /-- A computed alias-typed constant discovers a dependent range and a further alias chain;
     all final bindings and ranges come from the strict original fold, not discovery output. -/
 theorem elaborateScopes_dependent_zeuge :
