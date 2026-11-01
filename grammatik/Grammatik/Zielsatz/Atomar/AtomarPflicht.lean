@@ -31,7 +31,7 @@
 module
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Speichermodell.Atomar.AtomarRec
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
 @[expose] public section
 
 

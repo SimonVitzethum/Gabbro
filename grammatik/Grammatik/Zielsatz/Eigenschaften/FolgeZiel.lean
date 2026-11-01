@@ -14,7 +14,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Kern.Beweis
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
 @[expose] public section
 
 

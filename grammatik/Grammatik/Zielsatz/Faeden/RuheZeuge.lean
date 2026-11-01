@@ -18,7 +18,7 @@ module
 public import Grammatik.Zielsatz.Faeden.Ruhe
 public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik
 @[expose] public section
 
 

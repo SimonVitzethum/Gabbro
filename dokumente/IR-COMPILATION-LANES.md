@@ -1349,7 +1349,7 @@ Every new constructor is appended at the **end** of its inductive, including the
 mutual `Expr` family and exporter intermediates; keep existing constructor numbers.
 For all four packages, carry renaming, footprints, ghost checks and declaration
 embeddings through `Kern/Syntax/Zucker`, `Kern/Syntax/Extraktion`,
-`Nebenlaeufigkeit/Sperren/MitRuhe*` and `Zielsatz/Einbettung/Syntax`. Extend the
+`Nebenlaeufigkeit/Sperren/Ruhe/MitRuhe*` and `Zielsatz/Einbettung/Syntax`. Extend the
 GabbroV bridge in `GabbroV/GvBruecke` where its represented fragment changes.
 No acceptance component may default to true on a new form.
 
@@ -1780,7 +1780,7 @@ must not add an unrelated user premise to an existing accepted scalar program.
    explicit Spec diff/review, not the label “representation only”.
 5. **Remaining theorem closure.** Extend renaming, ghost/fragment checks,
    `Syntax/Geist`, `Syntax/Fehler`, `Syntax/Extraktion`,
-   `Nebenlaeufigkeit/Sperren/MitRuhe*`, `Zielsatz/Einbettung/Syntax`,
+   `Nebenlaeufigkeit/Sperren/Ruhe/MitRuhe*`, `Zielsatz/Einbettung/Syntax`,
    `Speichermodell/Maschine/GXMaschine` and atomic replay for the changed syntax
    and outcome types; update the represented `GabbroV/GvBruecke` fragment.
    Extend `Logik/Fortschritt/KostenG/T1.kostenExpr` and statement/binder costs for
@@ -2205,7 +2205,7 @@ ignored failure and stale resident-content assumption after return.
    provenance. Extend `Logik/Ruf/Maschine/RufMaschineG/T1–T4` (residues, transitions,
    starts, log/stack fidelity), `Nebenlaeufigkeit/Allgemein/FadenMaschine` and
    `Speichermodell/Maschine/GXMaschine` without losing dormant-start uniqueness.
-   Migrate `Nebenlaeufigkeit/Sperren/MitRuhe*` and `Zielsatz/Einbettung` for every
+   Migrate `Nebenlaeufigkeit/Sperren/Ruhe/MitRuhe*` and `Zielsatz/Einbettung` for every
    new declaration/resource/state field; otherwise idle roots/linking can forge
    authority or forget epochs. Carry GabbroV's represented fragment through
    `GabbroV/GvBruecke` and the actual source-derived obligations.
@@ -2515,7 +2515,7 @@ through `Zielsatz/ZielOrt/Rahmen/ZielOrtRahmen`,
 `Zielsatz/Eigenschaften/Invarianten`, `Logik/Fortschritt/{Folge,FolgeBeweis,KostenG}`
 and the progress modules. Re-establish `VertragAmOrtG`, normal/reason restoration,
 lock visibility, outside-write preservation, call logs and actual expanded costs.
-Lift new metadata/invariants through `Nebenlaeufigkeit/Sperren/MitRuhe*`,
+Lift new metadata/invariants through `Nebenlaeufigkeit/Sperren/Ruhe/MitRuhe*`,
 `Zielsatz/Einbettung`, `FadenMaschine`, GX starts and
 `Zielsatz/Projekte/Verbund`; the idle root creates no grants, checks, entries or
 accumulator updates. Carry represented bodies/duties through `GabbroV/GvBruecke`.

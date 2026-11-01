@@ -6,7 +6,7 @@
              `execStmtHA`. Opus lane O25b, 2026-09-26. Standalone.
 -/
 module
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre
 public import Grammatik.Speichermodell.Maschine.SperreSemA
 @[expose] public section
 

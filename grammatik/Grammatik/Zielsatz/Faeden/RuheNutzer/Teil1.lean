@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.Kern.Spec
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre
 
 @[expose] public section
 

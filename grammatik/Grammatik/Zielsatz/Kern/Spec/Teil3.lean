@@ -3,7 +3,7 @@ module
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Logik.Fortschritt.KostenG
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe
 public import Grammatik.Logik.Vertraege.AntwortOrte
 public import Grammatik.Speichermodell.Maschine.MaschineW
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine

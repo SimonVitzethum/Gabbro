@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
 
 @[expose] public section
 

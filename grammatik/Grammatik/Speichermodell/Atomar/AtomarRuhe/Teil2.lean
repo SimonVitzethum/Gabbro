@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre
 public import Grammatik.Speichermodell.Maschine.SperreSemA
 public import Grammatik.Speichermodell.Atomar.AtomarRuhe.Teil1
 

@@ -265,10 +265,10 @@ public import Grammatik.Korpus.Referenz.Pflicht108
 public import Grammatik.Proben.ProbeD
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGrund
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
 public import Grammatik.Zielsatz.Faeden.Ruhe

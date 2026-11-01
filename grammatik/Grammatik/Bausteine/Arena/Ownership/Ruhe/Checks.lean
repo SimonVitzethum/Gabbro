@@ -1,6 +1,6 @@
 module
 public import Grammatik.Bausteine.Arena.Ownership.Body.Check.Program
-public import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe
 @[expose] public section
 
 
