@@ -18,6 +18,13 @@ were organised) is in `git log`, not here.
 - **Only the leads build.** Each lead runs its own builds and may do heavy work itself; sub-agents and their
   sub-agents never build or check Lean, and their worktrees carry no `.lake` (no Mathlib, no build cache).
   A lead checks its sub-agents' work in its own tree.
+- **One integration branch, one build per lead (owner, 2026-11-01).** A lead merges the branches of all its
+  agents (its Sol, its four Muse and its own work) into ONE integration branch and builds/checks that branch
+  only; never one build per agent. All eight Muse and both Sol stay busy at all times: when one finishes, its
+  branch goes into the integration branch and it gets its next task at once.
+- **Heavy witness modules are not rebuilt during work.** Probe files that run the parser/elaborator in the
+  kernel (`Grammatik/Parser/Elab/Proben/**`, `*Proben*.lean`) need 7–12 GB each; they are checked only in the
+  final integration build of a round, never in single-module checks.
 - **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`,
   `lean` and the shell. The four guardians stay root's tools.
 - **One Mathlib for all trees**: the read-only store is `grammatik/.lake/packages` of the root checkout. A lead
