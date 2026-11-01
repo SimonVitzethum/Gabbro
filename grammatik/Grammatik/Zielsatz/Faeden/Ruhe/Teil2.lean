@@ -11,9 +11,6 @@ open Zielsatz
 variable {D : Deklaration}
 section Transfer
 variable [DecidableEq D.Fn] (P : Programm D) {S : SperrInv D} {fs ws : List D.Fn}
-omit [DecidableEq D.Fn] in
-omit [DecidableEq D.Fn] in
-omit [DecidableEq D.Fn] in
 
 /-- **The checker's Bool on `P.mitRuhe` follows from the Bool on `P`**
     (the member lists of locks and carriers are the same). -/

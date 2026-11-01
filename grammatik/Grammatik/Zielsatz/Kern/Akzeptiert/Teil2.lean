@@ -15,11 +15,6 @@ variable [DecidableEq D.Fn]
 section Komponenten
 variable {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
   {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
-omit [DecidableEq D.Fn] in
-omit [DecidableEq D.Fn] in
-omit [DecidableEq D.Fn] in
-omit [DecidableEq D.Fn] in
-omit [DecidableEq D.Fn] in
 
 theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     {w : D.Fn} : poolSicherWB P fs cs w = true ↔ PoolSicherW P fs w := by

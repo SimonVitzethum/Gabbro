@@ -17,20 +17,11 @@ variable (hO : GutO O) (hls : ∀ L : D.Lock, L ∈ ls)
     L ∈ offen ((R.M n).faeden f).spur → L ∉ offen ((R.M n).faeden g).spur)
   (hFifo : FifoSperre R) (hFair : FairF R F) (hH : Haltezeit R h k)
   (hAkt : AbschnittAktiv R) (hAnw : Anwaerter R Ts)
-include hO hls hRang hEx hFifo hFair hH hAkt hAnw in
-include hRang in
-include hRang in
-include hRang hFair hAkt in
-include hRang hFair hAkt in
-include hO hRang hFifo hFair in
-include hO hRang hEx hFifo hFair hAnw in
-include hO hRang hEx hFifo hFair hAnw in
-include hO hls hRang hEx hFifo hFair hH hAkt hAnw in
-include hO hls hRang hEx hFifo hFair hH hAkt hAnw in
 /-- **THE WAITING BOUND, core form.** A thread standing at `locks L` at
     scheduler step `n0` takes `L` at a step `j < n0 + wartezeit L` and holds
     it after that step. -/
 
+include hO hls hRang hEx hFifo hFair hH hAkt hAnw in
 theorem wartezeit_kern (L : D.Lock) (t : Faden) (n0 : Nat) (hA : AnSperre (R.M n0) t L) :
     ∃ j, n0 ≤ j ∧ j < n0 + wartezeit ls Ts h k F L ∧ R.akt j = some t ∧
       L ∈ offen ((R.M (j + 1)).faeden t).spur := by
