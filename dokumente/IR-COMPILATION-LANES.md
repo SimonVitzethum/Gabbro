@@ -3064,3 +3064,5 @@ it), so its acceptance witness is `WideInt/Proben.lowE_wide_eng_zeuge`.
 Open (exact): the statement `narrow x to lo .. hi` of a value wider than 64 bits is still refused
 (`uses a form outside the IR fragment`; its lowering is the scalar interval test, not `Expr.eng`); counted
 (`StatementCost`/`EarlyExit`) wide costs.
+
+Source-to-G export lane, step 1 (2026-11-01): fast-forwardable `24fcdda28992fba93537d3260d1b56dbc8b928b2` includes master `19947e92b`; ancestry checked. Complete 318-module closure, 252/252 IR regressions (63 refusals), standard axioms, clean layout/size checks. I/O 3/4: `upper` still expects the retired implicit `io.ein`/`io.aus` adapter; its source has no read/write gate, so the emitted image correctly exits without output. No grammar rebuild or model change.
