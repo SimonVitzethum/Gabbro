@@ -66,3 +66,5 @@ qemu_*.core
 
 # Nix build output (`nix build`).
 /result
+# direnv cache of the flake shell.
+/.direnv/
