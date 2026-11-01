@@ -15,6 +15,9 @@ were organised) is in `git log`, not here.
 changes and scratch preserved, and resumes only when C is done. Per round, new constructors/types of `Expr`,
 `Stmt`, `Ty` and the declaration fields are added first in ONE central commit (appended at the END of their
 inductive), then the agents work in parallel on disjoint files; checks are rare and batched.
+Additionally (owner, 2026-11-01) TEN OpenCode Muse Spark 1.3 Contributor agents take lighter bounded tasks
+(acceptance probe corpora per C package under `stage0/proben-c/`, the batch builder of `dokumente/TOOLBOX.md`
+§6, guardian fixes, orphan-module triage, file splits); they never run full builds.
 
 **Lean module system (owner, 2026-11-01, fixed rule).** All Lean in the repository (`grammatik/`,
 `stage0/`, `runner/`, `programmlogik/`, `passlogik/` and every other Lean package) is migrated completely to
