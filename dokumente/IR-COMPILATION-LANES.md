@@ -39,12 +39,19 @@ Root validation logs are retained in `.scratch-integration/merged/`. Source file
 the successful combined checks; artifact-gap and interrupted aggregate-fixture logs are preserved too.
 Slot-1 integration priority is released; IR-01 and IR-08 may resume their deferred module checks.
 
-**Parameterized-start activation blocker:** The current fixed `exitSlot = 2*FB+2 = 10` used by
-`spawnC`/`startC` overlaps a three-word parameter span at slots 8, 9, 10 in root frame `F = FB`.
-Keep the empty-parameter guard. Before activating IR-12 startup, place scratch beyond the shared
-parameter/result/status region (using the finalized `receiveTop signature FB` convention or its proved
-equivalent), update bounds/footprints and prove initialization survives spawn/call. IR-12 owns that
-future activation after the coherent full ABI is published; no second startup ABI is authorized.
+**Parameterized-start activation (IR-12, 2026-11-01): done for `main`.** `exitSlot` is gone. A start's scratch
+(the spawns in `main`'s frame, the exit code of every thread) is `startScratch f = receiveTop (D.signatur f) FB`, above
+the callee header, the complete parameter span, the shared result area and the status word. `bild` takes `main`'s
+environment `ρ`; its words (`encodeEnv`, the call ABI's own encoding) are the image's bytes in the first frame at slots
+`FB + FB ..` (`Bild.args`, `Bild.bytes`: header, code, first frame via `startFrameBytes`, then zeros). `spawnC_ok` /
+`spawn1_ok` leave every slot below the scratch unchanged, `start_ok` takes the words and `ValueValid` of the environment
+and derives `EnvAt` after the depth write (`startEnvWords_depth`); `bild_kern` derives them from the loaded bytes
+(`startEnvBytes_words`) and preserves them across the spawns (`wordsAt_frame_agree`). `bild_ok`/`bild_ok_u`/
+`irBild_correct` quantify over no environment any more: `Emitted.args` is `main`'s fixed environment, the pointer to
+the table each parameter's type names (`mainEnv`, G's value `()`, encoded as the zero word); any other `main` parameter
+is refused (`ir: main takes a parameter that is not a table pointer: no start-argument form`). Roots stay
+parameterless (`ir: a root takes parameters`, guard kept: concurrent start arguments need the `SourceStart` list instead
+of the deduplicated name list). No second startup ABI.
 
 **Rolling allocation update:** IR-12 handed back green source/start-byte/profile/CLI checkpoints through
 `e4815ed3f`; actual parameterized image startup remains blocked on IR-03's full ABI. Its slot now runs

@@ -1,4 +1,5 @@
 /- Gate decoding witnesses, with inhabited boolean and never call sites. -/
+import Stage0.Senke.Welt.MainEnv
 import Stage0.Senke.Welt.Anordnung
 import Stage0.Senke.Anweisung.TorLauf
 import Grammatik.Parser.Elab.UebersetzeAllg3
@@ -59,7 +60,7 @@ def binding (a : D.Ax) : Option TorB :=
   some ⟨if a.val = 1 then 231 else 39, regsIn 0, []⟩
 
 def imageOf (body : Endblock D (vertragVon D main) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main [] 1024
+  let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main .nil [] 1024
   pure b.bytes
 
 theorem boolean_images_zeuge : (imageOf boolBody).isOk = true ∧
@@ -113,9 +114,12 @@ def startRoots : Except String (List Nat) := do
   let entry ← fnIdx p.fns "main"
   let (P, _) ← lowerAllg p
   let rs ← (uOhneDoppelte (p.roots ++ p.gestartet)).mapM (fnIdx p.fns)
-  let b ← bild 1 P (layU p (fun _ => none)) (List.finRange p.fns.length) Fin.val
-    (fun _ => "probe") entry (rs.filter (fun f => f.val != entry.val)) 1024
-  pure (b.roots.map Fin.val)
+  match mainEnv ((declOf p).params entry) with
+  | none => throw "main takes a parameter that is not a table pointer"
+  | some ρ =>
+    let b ← bild 1 P (layU p (fun _ => none)) (List.finRange p.fns.length) Fin.val
+      (fun _ => "probe") entry ρ (rs.filter (fun f => f.val != entry.val)) 1024
+    pure (b.roots.map Fin.val)
 
 theorem start_image_zeuge : startRoots.toOption = some [0] := by decide +kernel
 
