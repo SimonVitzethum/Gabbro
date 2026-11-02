@@ -53,7 +53,7 @@ theorem traverseLauf_all_okP {D : Deklaration} {V : Vertrag D} {τ : Ty} {Γ : C
       traverseLauf (l := l) schritt inv ks σ ρ = .ok σ' ρ' ∧ cells σ' := by
   induction ks generalizing σ ρ with
   | nil =>
-      exact ⟨(inv σ ρ).1, ρ, by simp only [traverseLauf, invOk], invCells σ ρ hσ⟩
+      exact ⟨(inv σ ρ).1, ρ, by simp only [traverseLauf, invOk, ite_true], invCells σ ρ hσ⟩
   | cons k ks ih =>
       obtain ⟨σ', ρ', hstep, hσ'⟩ := stepOkP σ k ρ hσ
       have hinv : (inv σ ρ).2 = true := invOk σ ρ
@@ -191,7 +191,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     ∀ (σ : World D) (ρ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
       (∀ nodev, binding.entries σ nodev = tbl) →
       ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-        execBlock oracle passes calls
+        execBlock oracle passes calls (l := true)
           (.cons (.ite (code.descend (binding.renameEntry rename) (.var .here))
             (.cons (.onOption (Expr.prodGet (.var .here) binding.child)
               (.cons (binding.expand guard code level
@@ -202,18 +202,18 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
   intro σ ρ hstab
   simp only [execBlock]
   have hdesc : ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-      execStmt oracle passes calls
+      execStmt oracle passes calls (l := true)
         (.ite (code.descend (binding.renameEntry rename) (.var .here))
           (.cons (.onOption (Expr.prodGet (.var .here) binding.child)
             (.cons (binding.expand guard code level
               (fun x => .there (binding.renameEntry rename x)) (.var .here)
-              ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil)) σ ρ =
+              ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil) σ ρ =
       .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
     simp only [execStmt]
     split
     · -- `dwhen` holds: follow the checked optional child.
       have honOpt : ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-          execStmt oracle passes calls
+          execStmt oracle passes calls (l := true)
             (.onOption (Expr.prodGet (.var .here) binding.child)
               (.cons (binding.expand guard code level
                 (fun x => .there (binding.renameEntry rename x)) (.var .here)
@@ -230,7 +230,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             have hstabRec : ∀ nodev, binding.entries
                 ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) nodev = tbl :=
               fun nodev => hstab nodev
-            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ hstabRec
+            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (loop' := true) (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ hstabRec
             simp only [execBlock, hrec]
             exact ⟨_, _, rfl, hc3⟩
       obtain ⟨σ', ρ', honOpt, hcOpt⟩ := honOpt
@@ -266,10 +266,10 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
   induction level with
   | zero =>
       intro Γ loop rename node path σ ρ hstab
-      have hexpand : binding.expand guard code 0 rename node path =
-          binding.expandLevel guard code 0 rename node path none := rfl
+      have hexpand : binding.expand guard code 0 (loop := loop) rename node path =
+          binding.expandLevel (loop := loop) guard code 0 rename node path none := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
-      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
+      refine traverseLauf_all_okP (Λ := resources) _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
         (fun σ₁ ρ₁ => ok.invOk rename 0 path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
       intro σ₁ k ρ₁ hstab₁
       have hstabBind : ∀ nodev,
@@ -308,11 +308,11 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       exact ⟨_, _, hstep, hcstep⟩
   | succ level ih =>
       intro Γ loop rename node path σ ρ hstab
-      have hexpand : binding.expand guard code (level + 1) rename node path =
-          binding.expandLevel guard code (level + 1) rename node path
+      have hexpand : binding.expand guard code (level + 1) (loop := loop) rename node path =
+          binding.expandLevel (loop := loop) guard code (level + 1) rename node path
             (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)) := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
-      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
+      refine traverseLauf_all_okP (Λ := resources) _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
         (fun σ₁ ρ₁ => ok.invOk rename (level + 1) path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
       intro σ₁ k ρ₁ hstab₁
       have hstabBind : ∀ nodev,
@@ -383,7 +383,7 @@ theorem walkExpand_correct {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (visitT (binding.tree state leaf descend) (shape.levels - 1) tbl).Pairwise
       (fun x y => x.1 ≠ y.1) := by
   obtain ⟨σw, ρw, hw, _⟩ := walkExpand_ok binding guard code tbl oracle passes calls leaf descend
-    state ok (loop := false) (shape.levels - 1) (fun x => .there x) root []
+    state ok (loop := false) (shape.levels - 1) (fun x => .there x) (.var .here) []
     (state.lese resources root.orte)
     (.cons (eval (state.lese resources root.orte) root (state.lese resources root.orte) env) env)
     ok.stable
