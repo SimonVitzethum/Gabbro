@@ -320,3 +320,7 @@ public import Grammatik.Logik.WP.HA.ZeugeZertifikat2
 public import Grammatik.Logik.WP.HA.ZeugeZertifikat3
 public import Grammatik.Logik.WP.HA.ZeugeZertifikat4
 public import Grammatik.Logik.WP.HA.Zertifikat
+public import Grammatik.Parser.Profil.Register
+public import Grammatik.Parser.Profil.RegisterZeuge
+public import Grammatik.Parser.Profil.Auswahl
+public import Grammatik.Parser.Profil.Pipeline
