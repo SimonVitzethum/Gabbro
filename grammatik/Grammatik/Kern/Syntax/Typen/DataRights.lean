@@ -24,12 +24,12 @@ def join (a b : DataRights) : Option DataRights :=
     | some m, some n => if m = n then some (some m) else none
   owner.map fun n => ⟨a.read || b.read, a.write || b.write, n⟩
 
-private def splitParts : List Char → List Char → List (List Char)
+def splitParts : List Char → List Char → List (List Char)
   | [], acc => [acc.reverse]
   | '+' :: rest, acc => acc.reverse :: splitParts rest []
   | c :: rest, acc => splitParts rest (c :: acc)
 
-private def part (resolveOwner : String → Option Nat) : List Char → Option DataRights
+def part (resolveOwner : String → Option Nat) : List Char → Option DataRights
   | ['r'] => some ⟨true, false, none⟩
   | ['w'] => some ⟨false, true, none⟩
   | ['r', 'w'] => some ⟨true, true, none⟩
@@ -39,7 +39,7 @@ private def part (resolveOwner : String → Option Nat) : List Char → Option D
     else (resolveOwner (String.ofList name)).map fun n => ⟨true, true, some n⟩
   | _ => none
 
-private def parts (resolveOwner : String → Option Nat) : List (List Char) → Option DataRights
+def parts (resolveOwner : String → Option Nat) : List (List Char) → Option DataRights
   | [] => some {}
   | p :: ps => do
     let a ← part resolveOwner p

@@ -90,7 +90,7 @@ def libraryDecl (members : List SItemTief) (call : SLibraryCall) : Except String
     guard matches exactly the two false constructors, so expansion output takes the existing
     lowering (`uAnw1`, `uRuf`). -/
 
-/-- Whether a source statement still contains a library call: the elaborator's C02 guard matches
+/- Whether a source statement still contains a library call: the elaborator's C02 guard matches
     exactly the two false constructors (`uAnwReihe`). Lists ride in their own helpers, like
     `beqSAnw`/`beqSAnwList`. -/
 mutual
@@ -133,7 +133,7 @@ def torZurErweiterung (schemaOk ruffrei : Bool) : Except String Unit :=
   else if !ruffrei then .error allgemeineAbbildungVerweigert
   else .ok ()
 
-/-- Whether a surface expression calls anything. Stage 1 certifies only call-free bounded maps
+/- Whether a surface expression calls anything. Stage 1 certifies only call-free bounded maps
     (`TranslationDecl.noCalls`), so a translator body holding a call needs the C17 control rules.
     `Some`/`None` data constructors are values, not calls. -/
 mutual
@@ -156,7 +156,7 @@ def callFreeExprs : List SExpr → Bool
   | e :: rest => callFreeExpr e && callFreeExprs rest
 end
 
-/-- Whether a translator body is stage-1 certifiable: no call, no control needing C17
+/- Whether a translator body is stage-1 certifiable: no call, no control needing C17
     instantiation rules (`each`/`loop`/`retry`), and no memory, thread, atomic or device effect.
     Pure data flow (`bind`, `set`, conditions, matches, narrowing) rides through; anything the
     ordinary elaborator refuses (`waive`, `other`, `leave`, `next`) keeps its own precise refusal
@@ -217,7 +217,7 @@ theorem ohneBibliothekAnw_exportBind (bind : Bool) (x : String) (ty : Option STy
     (lib : ULibrary) (c : SLibraryCall) :
     ohneBibliothekAnw (exportLibraryBind bind x ty lib c) = true := rfl
 
-/-- Rewrite one statement: library calls expand against the resolved members through the shared
+/- Rewrite one statement: library calls expand against the resolved members through the shared
     gate, every other constructor keeps its shape with rewritten children. Surface expressions
     ride through unchanged: the payload is appended, never substituted. -/
 mutual

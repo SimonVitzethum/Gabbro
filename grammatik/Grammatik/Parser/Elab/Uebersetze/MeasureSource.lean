@@ -96,7 +96,7 @@ theorem uMeasureCall_exact (f : String) (args : List SExpr) (measure : UMeasure)
       cases ha : uMeasureSource a with
       | error error => simp only [uMeasureCall, ha] at lowered; cases lowered
       | ok x =>
-        have hconv : uMeasureCall f [a] = .ok (.conv f x) := by simp only [uMeasureCall, ha]
+        have hconv : uMeasureCall f [a] = .ok (.conv f x) := by simp only [uMeasureCall, ha]; rfl
         rw [hconv, Except.ok.injEq] at lowered
         subst measure
         simp only [UMeasure.source, uMeasureSource_exact a x ha]
