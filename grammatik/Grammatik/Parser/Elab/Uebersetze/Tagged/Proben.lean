@@ -88,18 +88,18 @@ def taggedValueSchema : USum Ty :=
 
 /-- The canonical type elaborator can resolve complete aggregate schemas. Typed sums retain the resolved aggregate payload types. -/
 theorem tagged_resolve_zeuge :
-    taggedSourceSchema.resolve (uTyp [] []) = .ok taggedValueSchema := by decide
+    taggedSourceSchema.resolve (uTyp [] [] []) = .ok taggedValueSchema := by decide
 
 theorem USum.resolveCases_shape_zeuge :
     taggedValueSchema.cases.map (fun c => (c.1, c.2.isSome)) =
       taggedSourceSchema.cases.map (fun c => (c.1, c.2.isSome)) :=
-  USum.resolveCases_shape (uTyp [] []) taggedSourceSchema.cases (by decide)
+  USum.resolveCases_shape (uTyp [] [] []) taggedSourceSchema.cases (by decide)
 
 theorem USum.resolve_shape_zeuge :
     taggedValueSchema.name = taggedSourceSchema.name ∧
       taggedValueSchema.cases.map (fun c => (c.1, c.2.isSome)) =
         taggedSourceSchema.cases.map (fun c => (c.1, c.2.isSome)) :=
-  USum.resolve_shape (uTyp [] []) taggedSourceSchema tagged_resolve_zeuge
+  USum.resolve_shape (uTyp [] [] []) taggedSourceSchema tagged_resolve_zeuge
 
 theorem uSumFaelle_missing_close_refused :
     (match uSumFaelle 100 nestedPayload.dropLast.dropLast.dropLast with
