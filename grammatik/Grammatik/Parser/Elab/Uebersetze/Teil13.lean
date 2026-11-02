@@ -8,6 +8,7 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
+public import Grammatik.Parser.Elab.Konst.Export
 
 @[expose] public section
 
@@ -185,11 +186,17 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
 def elabU : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
-    if ms0.any (fun item => match item with
+    let blockiert := ms0.find? (fun item => match item with
       | .fnT sig body => strEq sig.art "const" && (match body with
         | .block [] (some (.ret (some _))) => false
         | _ => true)
-      | _ => false) then .error "const function with a block body: stage 3 evaluator pending" else
+      | _ => false)
+    if blockiert.isSome then
+      (match (uKonstFns ms0).find? (fun k => match k.rumpf with
+        | .block [] (some (.ret (some _))) => false
+        | _ => true) with
+      | some k => Konst.Export.constBlockVerweigerung k
+      | _ => .error "const function with a block body: certified evaluation unavailable") else
     let consts := uConstsRech (uKonstFns ms0) ms0 []
     let alias := uAliase consts ms0 ++ uAliasBreiten ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
     match uRestFehler ms0 with
