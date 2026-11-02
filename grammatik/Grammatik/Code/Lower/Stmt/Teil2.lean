@@ -278,7 +278,7 @@ def lowerGA (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     first computes it (`payCode`) and makes it a new local, then runs its body; an arm without one is
     just its body. -/
 def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat) (ov : Opd) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Gabbro.Grammatik.Ty)} →
       Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs → Lbl → Lbl → St → Option (List Block × St)
   | _, _, _, _, _, .nil, _, _, s => some ([], s)
   | _, _, _, _, _, .cons (c := c) b rest, lb, k, s =>
@@ -290,7 +290,7 @@ def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W 
               | some (b2, s2) => some (b1 ++ b2, s2)
               | none => none
           | none => none
-      | some (lo, hi), b =>
+      | some (.int lo hi), b =>
           match payCode top W L lo hi ov s.r with
           | some (cp, op, r1) =>
               match bindCode (.int lo hi) op r1 with
@@ -303,6 +303,7 @@ def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W 
                   | none => none
               | none => none
           | none => none
+      | some _, _ => none
 
 def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →

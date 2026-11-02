@@ -286,7 +286,7 @@ theorem endSG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact EndSG.schrumpf (endSG rest hr ho _ _ _ h1)
 
 theorem armsSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     ArmsG A mr arms → arms.ohneOrakel = true → ∀ (v : Wert D (.sum cs)),
     SGB O passes (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

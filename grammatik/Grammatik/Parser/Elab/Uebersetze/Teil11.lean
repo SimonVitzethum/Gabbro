@@ -122,7 +122,7 @@ def uSumKonst (consts : List (String × Int)) (sm : USum) : SKonstWert → Excep
     | none => .error ("case unknown: " ++ c)
   | .one (.call c [e]) =>
     match sm.cases.findIdx? (fun x => strEq x.1 c), (sm.cases.find? (fun x => strEq x.1 c)).bind (·.2) with
-    | some i, some (lo, hi) =>
+    | some i, some (.int lo hi) =>
       match uKonstWert lo hi [] consts 64 e with
       | some z => .ok (.fall i (.zahl z))
       | none => .error "static initialiser without G form"

@@ -69,12 +69,12 @@ theorem sem_optNone {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.o
   rw [semR_dann O passes (.cons _ rest), nachA_cons, semR_dann]
   simp only [execStmt, hv]
 
-theorem sem_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem sem_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (lo hi : Int) (b : Block D V l (.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+    (τ : Ty) (b : Block D V l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) =
-      ⟨some (lo, hi), b, nutz⟩) :
+      ⟨some τ, b, nutz⟩) :
     semR O passes (.dann b (.schrumpf (.dann rest k))) (σ.lese Λ v.orte) (armEnv nutz ρ) =
       semR O passes (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
   rw [semR_dann O passes (.cons _ rest), nachA_cons]
@@ -82,10 +82,10 @@ theorem sem_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int)
   rw [execArms_wahl, hw]
   exact (semR_dann O passes b _ _ _).trans (nachA_schrumpf O passes _ _).symm
 
-theorem sem_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem sem_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast none)
+    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
     semR O passes (.dann b (.dann rest k)) (σ.lese Λ v.orte) (armEnv nutz ρ) =
       semR O passes (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
@@ -369,7 +369,7 @@ macro "widerlege" h:ident : tactic => `(tactic| (
 
 theorem armWahlG_G {V : Vertrag D} {A : D.Lock → Prop} {mr l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     ArmsG A mr arms → BlockG A mr (armWahlG arms v).2.1
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => h.cons_inv.1
@@ -384,18 +384,18 @@ theorem grundWahlG_G {V : Vertrag D} {A : D.Lock → Prop} {mr l : Bool} {Γ : C
   | _, .cons _ rest, ⟨_ + 1, _⟩, h => grundWahlG_G rest _ h.cons_inv.2
 
 theorem armWahlG_G' {V : Vertrag D} {A : D.Lock → Prop} {mr l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
-    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : ArmsG A mr arms) :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option Ty} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : ArmsG A mr arms) :
     BlockG A mr b := by
   have h0 := armWahlG_G arms v h
   rw [hw] at h0
   exact h0
 
 theorem armWahlG_ohne' {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
-    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.ohneOrakel = true) :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option Ty} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.ohneOrakel = true) :
     b.ohneOrakel = true := by
   have h0 := armWahlG_ohneOrakel arms v h
   rw [hw] at h0

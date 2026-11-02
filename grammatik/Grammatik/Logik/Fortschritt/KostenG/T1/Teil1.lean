@@ -83,10 +83,10 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .wenn c a b => 1 + kostenExpr c + kostenExpr a + kostenExpr b
   | .eng e _ _ s => 1 + kostenExpr e + kostenExpr s
 
-def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :
+def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} :
     NutzlastExpr D Γ Λ c → Nat
   | .empty => 0
-  | .num e => kostenExpr e
+  | .val e => kostenExpr e
 end
 /-- Cost of call arguments: the sum, as `kosten.rs::ruf` adds each one. -/
 def kostenArgs {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} :
@@ -192,7 +192,7 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
       2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
 
 def kostenArms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0
   | .cons b rest => max (kostenBlock c pa b) (kostenArms c pa rest)
 
@@ -316,7 +316,7 @@ def rufeB (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .floatNarrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
 
 def rufeArms (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => rufeB Z ZS EW b && rufeArms Z ZS EW rest
 

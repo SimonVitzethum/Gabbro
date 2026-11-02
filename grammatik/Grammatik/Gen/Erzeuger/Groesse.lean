@@ -84,9 +84,9 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .wenn c a b => unendlich + 1 + groesseExpr c + groesseExpr a + groesseExpr b
   | _, _, _, .eng e _ _ s => unendlich + 1 + groesseExpr e + groesseExpr s
 
-def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → Nat
+def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, NutzlastExpr D Γ Λ o → Nat
   | _, _, _, .empty => 1
-  | _, _, _, .num e => 1 + groesseExpr e
+  | _, _, _, .val e => 1 + groesseExpr e
 end
 
 /-- The size of an argument list. -/
@@ -181,7 +181,7 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .exchange _ neu _ _ rest => unendlich + 1 + groesseExpr neu + groesseEnd rest
   | _, _, _, .ite c t e => unendlich + 1 + groesseExpr c + groesseEnd t + groesseEnd e
 
-def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
+def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → Nat
   | _, _, _, _, _, .nil => 1
   | _, _, _, _, _, .cons b rest => 1 + groesseBlock b + groesseArms rest

@@ -462,7 +462,7 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execEndH t σ ρ else execEndH e σ ρ
 
-def execArmsH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def execArmsH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
   | .cons b _, ⟨⟨0, _⟩, nutz⟩, σ, ρ => (execBlockH b σ (armEnv nutz ρ)).schrumpfArm _
   | .cons _ rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>

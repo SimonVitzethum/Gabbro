@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Kern.Syntax.Typen.Transport
 @[expose] public section
 
 
@@ -27,24 +28,10 @@ namespace Gabbro.Grammatik.Einbettung
 open Gabbro.Grammatik
 
 /-- **A type under the number maps**: signature numbers by `sn`, table numbers by `tn`. -/
-@[reducible] def tyN (sn tn : Nat → Nat) : Ty → Ty
-  | .int lo hi => .int lo hi
-  | .bool => .bool
-  | .opt n => .opt n
-  | .sum cs => .sum cs
-  | .why n => .why n
-  | .never => .never
-  | .fl lo hi => .fl lo hi
-  | .fnptr n => .fnptr (sn n)
-  | .ptr t rw => .ptr (tn t) rw
-  | .ref t => .ref (tn t)
-  | .arr τ n => .arr (tyN sn tn τ) n
-  | .str n => .str n
+@[reducible] def tyN (sn tn : Nat → Nat) : Ty → Ty := Ty.mapNumbers sn tn
 
 /-- Under the identity maps a type is itself. -/
-theorem tyN_id : ∀ τ : Ty, tyN (fun n => n) (fun n => n) τ = τ
-  | .int _ _ | .bool | .opt _ | .sum _ | .why _ | .never | .fl _ _ | .fnptr _ | .ptr _ _ | .ref _ | .str _ => rfl
-  | .arr τ n => by simp only [tyN, tyN_id τ]
+theorem tyN_id (τ : Ty) : tyN (fun n => n) (fun n => n) τ = τ := Ty.mapNumbers_id τ
 
 /-- **`D` inside `D'`.** -/
 structure Einbettung (D D' : Deklaration) where
@@ -147,19 +134,8 @@ variable (E : Einbettung D D')
 @[reducible] def tyE (τ : Ty) : Ty := tyN E.num E.tnum τ
 
 /-- A value of `D` as a value of the translated type: only a function pointer moves. -/
-def valE : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ)
-  | .int _ _, v => v
-  | .bool, v => v
-  | .opt _, v => v
-  | .sum _, v => v
-  | .why _, v => v
-  | .never, v => v
-  | .fl _ _, v => v
-  | .fnptr _, v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩
-  | .ptr _ _, v => v
-  | .ref _, v => v
-  | .arr τ _, v => fun j => valE τ (v j)
-  | .str _, v => v
+def valE : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ) :=
+  Val.relocate E.num E.tnum (fun _ v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩)
 
 /-- A result value. -/
 def ergE : (e : Option Ty) → ErgVal D e → ErgVal D' (e.map E.tyE)

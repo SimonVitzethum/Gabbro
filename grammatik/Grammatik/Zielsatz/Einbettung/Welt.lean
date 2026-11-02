@@ -26,6 +26,7 @@ variable {D D' : Deklaration}
 def _root_.Gabbro.Grammatik.Ty.zeigerfrei : Ty → Bool
   | .fnptr _ => false
   | .arr τ _ => τ.zeigerfrei
+  | .sum cs => cs.all fun | none => true | some τ => τ.zeigerfrei
   | _ => true
 
 /-- A value transported along a type equation. -/
@@ -93,19 +94,8 @@ def Rueck.zeiger (K : E.Rueck) (n : Nat) (f' : D'.Fn) (h' : D'.passt f' (E.num n
 variable (K : E.Rueck)
 
 /-- **A value of `D'` back in `D`**: a function pointer to its name in `D`, everything else as is. -/
-def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ
-  | .int _ _, v => v
-  | .bool, v => v
-  | .opt _, v => v
-  | .sum _, v => v
-  | .why _, v => v
-  | .never, v => v
-  | .fl _ _, v => v
-  | .fnptr n, v => K.zeiger n v.1 v.2
-  | .ptr _ _, v => v
-  | .ref _, v => v
-  | .arr τ _, v => fun j => valZ τ (v j)
-  | .str _, v => v
+def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ :=
+  Val.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2)
 
 /-- **A value of `D` beside a value of `D'`**: equal through the embedding, except that a head of
     `D` stands beside every function outside the image of its signature. -/

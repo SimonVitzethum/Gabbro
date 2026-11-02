@@ -119,7 +119,7 @@ def kTab : List (List Zeile) := [
     ⟨some 0, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- eng -/],
   -- NutzlastExpr
   [⟨none, false, false, []⟩ /- empty -/,
-    ⟨none, false, false, [(0, some 0, none)]⟩ /- num -/],
+    ⟨none, false, false, [(0, some 0, none)]⟩ /- val -/],
   -- Args
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(0, none, none), (2, none, none)]⟩ /- cons -/],

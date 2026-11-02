@@ -133,23 +133,48 @@ def uSumSchemas : List SItemTief → Except String (List (USum STyp))
     else uSumSchemas rest
   | _ :: rest => uSumSchemas rest
 
-/-- The current numeric payload gate validates the base before reading its bounds.
-    In particular, a range annotation cannot turn a bool, record or unknown name into an integer.
-    All numeric names, aliases and bounds still use the canonical result-type reader. -/
-def uSumPayload (alias : List (String × (Int × Int))) : STyp → Except String (Int × Int)
-  | .atom name => uErgBereich alias (.atom name)
-  | ty@(.range base _ _ _) =>
-    match uSumPayload alias base with
-    | .error e => .error e
-    | .ok _ => uErgBereich alias ty
-  | ty => .error ("tagged payload without G form: " ++ sTypText ty)
+/-- Standalone payload admission uses the canonical reader. Ranges require a
+    numeric base recursively, including inside arrays and named sum schemas. -/
+def uSumPayload (alias : List (String × (Int × Int))) : STyp → Except String Ty :=
+  uTyp alias []
 
-/-- Admission to the current numeric kernel. Typed schemas reach this explicit gate;
-    unsupported payloads never become payload-free variants or fabricated ranges. -/
-def uSums (alias : List (String × (Int × Int))) (items : List SItemTief) :
-    Except String (List USum) :=
-  match uSumSchemas items with
-  | .error e => .error e
-  | .ok schemas => schemas.mapM (USum.resolve (uSumPayload alias))
+/-- One dependency round. Failed resolutions stay pending rather than disappearing.
+    All declarations in a round see the same resolved type environment. -/
+def resolveSumRound (alias : List (String × (Int × Int))) (tabs : List UTab)
+    (known : List USum) : List (USum STyp) → List USum × List (USum STyp)
+  | [] => ([], [])
+  | schema :: rest =>
+    let (done, pending) := resolveSumRound alias tabs known rest
+    match schema.resolve (uTypIn alias tabs (known.map fun s => (s.name, Ty.sum s.spec))) with
+    | .ok value => (value :: done, pending)
+    | .error _ => (done, schema :: pending)
+
+/-- There are at most as many dependency layers as declarations. This bound comes
+    from the finite schema graph; recursive-by-value and unresolved names refuse. -/
+def resolveSums (alias : List (String × (Int × Int))) (tabs : List UTab) :
+    Nat → List (USum STyp) → List USum → Except String (List USum)
+  | _, [], known => .ok known
+  | 0, _ :: _, _ => .error "recursive or unresolved tagged payload type"
+  | n + 1, pending, known =>
+    let (done, next) := resolveSumRound alias tabs known pending
+    if done.isEmpty then
+      match pending with
+      | [] => .ok known
+      | schema :: _ =>
+        match schema.resolve (uTypIn alias tabs (known.map fun s => (s.name, Ty.sum s.spec))) with
+        | .error e => .error e
+        | .ok _ => .error "recursive or unresolved tagged payload type"
+    else resolveSums alias tabs n next (known ++ done)
+
+/-- Admit complete acyclic schemas, restoring declaration order after dependency
+    resolution so function/table sum identities keep their source positions. -/
+def uSums (alias : List (String × (Int × Int))) (items : List SItemTief)
+    (tabs : List UTab := []) : Except String (List USum) := do
+  let schemas ← uSumSchemas items
+  let resolved ← resolveSums alias tabs schemas.length schemas []
+  schemas.mapM fun schema =>
+    match resolved.find? (fun value => strEq value.name schema.name) with
+    | some value => .ok value
+    | none => .error "unresolved tagged payload type"
 
 end Gabbro.Grammatik.Parser.Uebersetze

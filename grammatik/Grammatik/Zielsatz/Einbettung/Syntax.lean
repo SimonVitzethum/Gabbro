@@ -124,11 +124,11 @@ theorem rufPasstE_fn (hS : E.SigTreu) {V : Vertrag D} {f : D.Fn} {Λ : List (Res
 
 theorem rufPasstE_nr (hS : E.SigTreu) {V : Vertrag D} {n : Nat} {Λ : List (Res D)}
     (h : RufPasst D V (D.sigNr n) Λ) :
-    RufPasst D' (E.vertragE V) (D'.sigNr (E.num n)) (Λ.map E.resE) := by
+    RufPasst D' (E.vertragE V) (D'.sigNr (E.val n)) (Λ.map E.resE) := by
   rw [hS.sigNr]; exact E.rufPasstE h
 
 theorem nachSigE_nr (hS : E.SigTreu) (n : Nat) (Λ : List (Res D)) :
-    (nachSig D (D.sigNr n) Λ).map E.resE = nachSig D' (D'.sigNr (E.num n)) (Λ.map E.resE) := by
+    (nachSig D (D.sigNr n) Λ).map E.resE = nachSig D' (D'.sigNr (E.val n)) (Λ.map E.resE) := by
   rw [hS.sigNr]; exact E.nachSigE _ Λ
 
 variable (E)
@@ -157,7 +157,7 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
         (Expr.thru (D := D') (exE p) (E.tab t) (E.tabNrE ht) (E.feld t f)
           (Expr.umTy (E.countE t) (exE i)) (E.darfE hL))
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D') (E.tab t) (E.tnum n) (E.tabNrE ht) rw
-  | _, _, _, .fnref f n h => .fnref (D := D') (E.fn f) (E.num n) ((E.passt f n).trans h)
+  | _, _, _, .fnref f n h => .fnref (D := D') (E.fn f) (E.val n) ((E.passt f n).trans h)
   | _, _, _, .refEq a b => .refEq (exE a) (exE b)
   | _, _, _, .slotRef r t ht ho f hL =>
       Expr.umTy (E.typ t f)
@@ -195,7 +195,9 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .none n => .none n
   | _, _, _, .some e => .some (exE e)
   | _, _, _, .istSome e => .istSome (exE e)
-  | _, _, _, .case cs i nutz => .case cs i (exN nutz)
+  | _, _, _, .case cs i nutz =>
+      .case (Ty.mapCases E.num E.tnum cs) ⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩
+        ((Ty.mapCases_get E.num E.tnum cs i).symm ▸ exN nutz)
   | _, _, _, .why n r => .why n r
   | _, _, _, .forallSlots t body hL =>
       Expr.forallSlots (D := D') (E.tab t) (Expr.umΓ (by rw [List.map_cons, E.count]; try rfl) (exE body)) (E.darfE hL)
@@ -219,10 +221,10 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .eng e lo hi s => .eng (exE e) lo hi (exE s)
 
 /-- A payload expression. -/
-def exN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →
-    NutzlastExpr D' (Γ.map E.tyE) (Λ.map E.resE) c
+def exN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option Ty} → NutzlastExpr D Γ Λ c →
+    NutzlastExpr D' (Γ.map E.tyE) (Λ.map E.resE) (c.map E.tyE)
   | _, _, _, .empty => .empty
-  | _, _, _, .num e => .num (exE e)
+  | _, _, _, .val e => .val (exE e)
 
 end
 
@@ -273,7 +275,7 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
           (by rw [gruendeE hS]; exact hr))
   | _, _, Λ, _, .callInd (n := n) p args hp hr =>
       Stmt.nachΛ (nachSigE_nr hS n Λ).symm
-        (.callInd (n := E.num n) (exE E p)
+        (.callInd (n := E.val n) (exE E p)
           (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args)) (rufPasstE_nr hS hp)
           (by rw [hS.sigNr]; exact hr))
   | _, _, _, _, .locks L hr body =>
@@ -317,7 +319,7 @@ def exB (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
         (by rw [← ergE_fn hS, he]; rfl) (rufPasstE_fn hS hp) (by rw [gruendeE hS]; exact hr)
         (Block.vorΛ (nachE hS f Λ) (exB hS rest))
   | _, _, Λ, _, .bindCallInd (n := n) p args he hp hr rest =>
-      .bindCallInd (n := E.num n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
+      .bindCallInd (n := E.val n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
         (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
         (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
         (Block.vorΛ (nachSigE_nr hS n Λ) (exB hS rest))
@@ -386,7 +388,7 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
       .awaits (E.glob g) (payload.map E.glob) (by rw [E.nutzlast, hp]) (E.gdarfE hL)
         (by rw [E.atomar]; exact hat) (Endblock.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (exEnd hS rest))
   | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest =>
-      .bindCallInd (n := E.num n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
+      .bindCallInd (n := E.val n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
         (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
         (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
         (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS rest))
@@ -398,12 +400,12 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
 
 /-- Arms (the arm scope `ArmCtx` is split on the case). -/
 def exArms (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs →
-      Arms D' (E.vertragE V) l (Γ.map E.tyE) (Λ.map E.resE) (Λ'.map E.resE) cs
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs →
+      Arms D' (E.vertragE V) l (Γ.map E.tyE) (Λ.map E.resE) (Λ'.map E.resE) (Ty.mapCases E.num E.tnum cs)
   | _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, .cons (c := none) b rest => .cons (c := none) (exB hS b) (exArms hS rest)
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest =>
-      .cons (c := some (lo, hi)) (exB hS b) (exArms hS rest)
+  | _, _, _, _, _, .cons (c := some τ) b rest =>
+      .cons (c := some (E.tyE τ)) (exB hS b) (exArms hS rest)
 
 /-- Reason arms. -/
 def exGArms (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →

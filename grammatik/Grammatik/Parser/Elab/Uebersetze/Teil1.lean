@@ -70,6 +70,10 @@ inductive USide
   /-- A number narrowed to `lo .. hi` where the guard of the branch it stands in says so (`Expr.eng`; the
       fallback is unreachable there): the binder of an `update` body. -/
   | eng : USide → Int → Int → USide
+  /-- Typed tagged payloads use the same value tree as arguments and array elements. -/
+  | truth : Bool → USide
+  | taggedEmpty : List (Option Ty) → Nat → USide
+  | taggedValue : List (Option Ty) → Nat → USide → USide
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -419,7 +423,7 @@ structure UWhy where
 
 /-- One ordered tagged schema. Source collection retains `STyp`; model admission resolves
     payloads to the current kernel's representation. No case or payload is discarded. -/
-structure USum (Payload : Type := Int × Int) where
+structure USum (Payload : Type := Ty) where
   name : String
   cases : List (String × Option Payload)
   deriving DecidableEq, Repr

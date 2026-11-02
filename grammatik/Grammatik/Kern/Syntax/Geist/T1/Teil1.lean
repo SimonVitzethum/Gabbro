@@ -177,7 +177,7 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
 
 /-- The G001 check over case arms. -/
 def g001Arms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => g001 b && g001Arms rest

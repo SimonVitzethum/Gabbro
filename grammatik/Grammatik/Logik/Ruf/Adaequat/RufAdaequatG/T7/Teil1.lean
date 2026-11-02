@@ -113,7 +113,7 @@ theorem AusSG.schrumpf {τ : Ty} {o o' : Ausgang V l (τ :: Γ)} (h : AusSG o o'
     AusSG o.schrumpf o'.schrumpf := by
   cases o <;> cases o' <;> simp_all [AusSG, Ausgang.schrumpf]
 
-theorem AusSG.schrumpfArm (c : Option (Int × Int)) {o o' : Ausgang V l (ArmCtx Γ c)}
+theorem AusSG.schrumpfArm (c : Option Ty) {o o' : Ausgang V l (ArmCtx Γ c)}
     (h : AusSG o o') : AusSG (o.schrumpfArm c) (o'.schrumpfArm c) := by
   cases c with
   | none => exact h

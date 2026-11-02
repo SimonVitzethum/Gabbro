@@ -111,11 +111,11 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_ants e) (ruEnd_ants t)
 
 theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).ants = arms.ants
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
 
 theorem ruGArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}

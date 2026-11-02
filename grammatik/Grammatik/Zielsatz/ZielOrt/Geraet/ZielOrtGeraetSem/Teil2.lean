@@ -188,7 +188,7 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
         Endblock.gOk_mono t h.2 (fun r h' => hr r (Or.inr h'))⟩
 
 theorem Arms.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.gOk K Rg = true → (∀ r ∈ a.regs, Rg' r = true) →
       a.gOk K' Rg' = true
   | .nil, _, _ => rfl
@@ -212,7 +212,7 @@ end Mono
 
 theorem armWahlG_gOk {V : Vertrag D} {K : Nat → Bool} {Rg : D.Reg → Bool} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.gOk K Rg = true → (armWahlG arms v).2.1.gOk K Rg = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by
@@ -223,9 +223,9 @@ theorem armWahlG_gOk {V : Vertrag D} {K : Nat → Bool} {Rg : D.Reg → Bool} {l
       exact armWahlG_gOk rest _ h.2
 
 theorem armWahlG_gOk' {V : Vertrag D} {K : Nat → Bool} {Rg : D.Reg → Bool} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
-    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.gOk K Rg = true) :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option Ty} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.gOk K Rg = true) :
     b.gOk K Rg = true := by
   have h0 := armWahlG_gOk arms v h
   rw [hw] at h0

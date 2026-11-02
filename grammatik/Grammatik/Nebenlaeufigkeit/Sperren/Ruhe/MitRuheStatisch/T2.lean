@@ -95,11 +95,11 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_mE A t) (ruEnd_mE A e)
 
 theorem ruArms_mArms (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     mArms A (ruArms arms) = mArms (mZ A) arms
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· && ·) (ruB_mB A b) (ruArms_mArms A rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· && ·) (ruB_mB A b) (ruArms_mArms A rest)
 
 theorem ruGArms_mGArms (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
@@ -219,7 +219,7 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle t h.1, mE_mono hle e h.2⟩
 
 theorem mArms_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     mArms A arms = true → mArms A' arms = true
   | _, _, _, _, _, .nil, _ => rfl
   | _, _, _, _, _, .cons b rest, h => by
@@ -364,7 +364,7 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact ⟨mE_und t h.1 h'.1, mE_und e h.2 h'.2⟩
 
 theorem mArms_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     mArms A arms = true → mArms B arms = true → mArms (mUnd A B) arms = true
   | _, _, _, _, _, .nil, _, _ => rfl
   | _, _, _, _, _, .cons b rest, h, h' => by

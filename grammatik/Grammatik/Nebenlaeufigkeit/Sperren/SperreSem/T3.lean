@@ -324,7 +324,7 @@ theorem semH_endeForm {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World
 
 /-- `execArmsH` runs the arm `armWahlG` selects. -/
 theorem execArmsH_wahl {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
       (σ : World D) (ρ : Env D Γ),
     execArmsH S O U passes R arms v σ ρ =
       (execBlockH S O U passes R (armWahlG arms v).2.1 σ

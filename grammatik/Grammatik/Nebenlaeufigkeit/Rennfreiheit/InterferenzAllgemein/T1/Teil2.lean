@@ -85,7 +85,7 @@ def KindEintrittAusGabel (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
 def AtomarAusgenommen (c : D.Tab ⊕ D.Glob) : Prop :=
   ∃ g : D.Glob, c = .inr g ∧ D.atomar g = true
 
-/-- Paarungsausnahme: der Traeger ist Nutzlast einer Veroeffentlichung -- die Paarung von
+/-- Paarungsausnahme: der Traeger ist Nutzlast D.Fn D.passt einer Veroeffentlichung -- die Paarung von
     `publishes` und `awaits` ueber `D.nutzlast` ordnet, nicht die gemeinsame Sperre. -/
 def PaarungAusgenommen (c : D.Tab ⊕ D.Glob) : Prop :=
   ∃ a p : D.Glob, c = .inr p ∧ p ∈ D.nutzlast a ∧ D.atomar a = true

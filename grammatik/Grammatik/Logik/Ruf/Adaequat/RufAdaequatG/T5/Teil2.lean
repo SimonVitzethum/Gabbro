@@ -106,10 +106,9 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         rw [hW] at hZ1
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
           (hsim _ _ _ _ hex M1 _ hZ1 (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1)))
-      | some lh =>
-        obtain ⟨lo, hi⟩ := lh
+      | some τ =>
         obtain ⟨M1, hs1, hZ1⟩ := w_tagSome (P := P) (O := O) (passes := passes) hZ.1
-          w arms rest k ρ rfl lo hi b nutz (by rw [hW]; exact hwahl)
+          w arms rest k ρ rfl τ b nutz (by rw [hW]; exact hwahl)
         rw [hW] at hZ1
         exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
           (hsim _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)
@@ -460,7 +459,7 @@ theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
           (hA.lauf (RufLaufG.einzeln hs1)))
 
 theorem armsRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsG A true arms → ∀ (v : Wert D (.sum cs)),
     SimRetB P O passes f fn caller rst rho s0 log A (armWahlG arms v).2.1
   | _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

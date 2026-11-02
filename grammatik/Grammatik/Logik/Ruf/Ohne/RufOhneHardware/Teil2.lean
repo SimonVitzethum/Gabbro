@@ -274,7 +274,7 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · exact Endblock.hardwareFrei_ok hR e' h.2 _ _ _ he
 
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.hardwareFrei = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) (e : Hardware D),
         execArms O passes R a v σ ρ ≠ .hardware e

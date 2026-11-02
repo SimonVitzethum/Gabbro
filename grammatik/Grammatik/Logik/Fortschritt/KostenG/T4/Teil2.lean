@@ -45,7 +45,7 @@ def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .floatNarrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
 
 def fremdArms (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0
   | .cons b rest => max (fremdBlock fa pa b) (fremdArms fa pa rest)
 

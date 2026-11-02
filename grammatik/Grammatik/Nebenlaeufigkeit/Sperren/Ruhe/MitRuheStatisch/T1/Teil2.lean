@@ -98,12 +98,12 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_gOk K Rg e) (ruEnd_gOk K Rg t)
 
 theorem ruArms_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}
-    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs), Arms.gOk (D := D.mitRuhe) K Rg (ruArms arms) = arms.gOk (kZ K) Rg
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest =>
       kongr₂ (· && ·) (ruB_gOk K Rg b) (ruArms_gOk K Rg rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· && ·) (ruB_gOk K Rg b) (ruArms_gOk K Rg rest)
 
 theorem ruGArms_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}

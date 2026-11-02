@@ -81,7 +81,7 @@ theorem zf_int {a b : Int} : (Ty.int a b).zeigerfrei = true := by rfl
 theorem zf_index {c : Int} : (Ty.index c).zeigerfrei = true := by rfl
 theorem zf_bool : Ty.bool.zeigerfrei = true := by rfl
 theorem zf_opt {n : Int} : (Ty.opt n).zeigerfrei = true := by rfl
-theorem zf_sum {cs : List (Option (Int × Int))} : (Ty.sum cs).zeigerfrei = true := by rfl
+theorem zf_sum {cs : List (Option Ty)} : (Ty.sum cs).zeigerfrei = true := by rfl
 theorem zf_why {n : Nat} : (Ty.why n).zeigerfrei = true := by rfl
 theorem zf_fl {lo hi : Int × Int} : (Ty.fl lo hi).zeigerfrei = true := by rfl
 theorem zf_ref {n : Nat} : (Ty.ref n).zeigerfrei = true := by rfl

@@ -186,7 +186,7 @@ def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
   | .floatOf _ _ _ rest => befB ebene imEwig rest
   | .floatNarrow _ _ _ sonst rest => befE ebene imEwig sonst ++ befB ebene imEwig rest
 
-def befArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (ebene imEwig : Bool) :
+def befArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (ebene imEwig : Bool) :
     Arms D V l Γ Λ Λ' cs → Befund D
   | .nil => {}
   | .cons b rest => befB ebene imEwig b ++ befArms ebene imEwig rest

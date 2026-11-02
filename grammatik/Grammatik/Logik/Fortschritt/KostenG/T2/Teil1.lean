@@ -57,7 +57,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
         all_goals simp_all [rufeB_alsBlock, rufeR]
       · cases e <;> try (simp only [EndEntfaltbar, Bool.false_eq_true] at hent; done)
         all_goals (simp only [potRest, kostenBlock_alsBlock, kostenEnd, kostenSonst]; omega)
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw =>
       kopfA
       · have h := rufeB_armWahlG Z ZS EW arms (eval σ₁ v σ₁ ρ) hok.1.1
         rw [hw] at h

@@ -424,8 +424,8 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       rw [hs]
       exact eng_kongr he _
 
-/-- Die Nutzlast liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
-theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+/-- Die Nutzlast D.Fn D.passt liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
+theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (nutz : NutzlastExpr D Γ Λ c) (os : List (D.Tab ⊕ D.Glob))
     (hsub : ∀ o ∈ nutz.orte, o ∈ os)
     (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
@@ -436,7 +436,7 @@ theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int 
     evalNutz σ₀ nutz σ ρ = evalNutz σ₀' nutz σ' ρ := by
   match nutz with
   | .empty => rfl
-  | .num e =>
+  | .val e =>
       have h := eval_liest_nur_orte e os
         (fun o ho => hsub o ho) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [evalNutz]

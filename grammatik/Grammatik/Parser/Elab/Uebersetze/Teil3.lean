@@ -112,18 +112,24 @@ def sTypText : STyp → String
     `lean_g.rs`). Named address spaces other than `normal`,
     rights other than `r`/`rw`, the optional index and every
     other shape are explicit errors. -/
-def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty
+def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) : STyp → Except String Ty
+  | .atom "bool" => .ok .bool
   | .atom a =>
-    match uTypName alias a with
-    | .ok (lo, hi) => .ok (.int lo hi)
-    | .error e => .error e
-  | .range _ lo hi o =>
-    match uSchranke alias lo, uSchranke alias hi with
-    | some a, some b => .ok (.int a (if o then b - 1 else b))
-    | _, _ => .error "type without G form"
+    match named.find? (fun entry => strEq entry.1 a) with
+    | some (_, τ) => .ok τ
+    | none =>
+      match uTypName alias a with
+      | .ok (lo, hi) => .ok (.int lo hi)
+      | .error e => .error e
+  | .range base lo hi o =>
+    match uTypIn alias tabs named base, uSchranke alias lo, uSchranke alias hi with
+    | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
+    | .error e, _, _ => .error e
+    | _, _, _ => .error "range requires an integer type and known bounds"
   | .index false t =>
     match uTabNr tabs t with
-    | .ok (_, c) => .ok (.index c)
+    | .ok (num, c) =>
+      if ((tabs[num]?).bind (·.von)).isSome then .ok (.ref num) else .ok (.index c)
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
     if !strEq raum "normal" then .error "space without G form"
@@ -137,7 +143,7 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
       | .error e => .error e
     else .error "pointer right without G form"
   | .array t n =>
-    match uTyp alias tabs t, uSchranke alias n with
+    match uTypIn alias tabs named t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
     | .error e, _ => .error e
     | _, none => .error "array length without G form"
@@ -146,6 +152,10 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     | some k => if 0 ≤ k then .ok (.str k.toNat) else .error "string of a negative maximum"
     | none => .error "string maximum without G form"
   | t => .error ("type without G form: " ++ sTypText t)
+
+/-- The canonical reader in a declaration environment without named value schemas. -/
+def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty :=
+  uTypIn alias tabs []
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit

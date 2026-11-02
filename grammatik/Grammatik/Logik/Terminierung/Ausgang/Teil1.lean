@@ -32,9 +32,9 @@ theorem ohneAus_schrumpf {l : Bool} {Γ : Ctx} {τ : Ty} {eb : Bool} :
   | .ok .., h | .zurueck .., h | .why .., h | .leave .., h | .next .., h | .logik _, h | .hardware _, h => h
 
 theorem ohneAus_schrumpfArm {l : Bool} {Γ : Ctx} {eb : Bool} :
-    ∀ (c : Option (Int × Int)) {a : Ausgang V l (ArmCtx Γ c)}, OhneAus eb a → OhneAus eb (a.schrumpfArm c)
+    ∀ (c : Option Ty) {a : Ausgang V l (ArmCtx Γ c)}, OhneAus eb a → OhneAus eb (a.schrumpfArm c)
   | Option.none, _, h => h
-  | Option.some (_, _), _, h => ohneAus_schrumpf h
+  | Option.some _, _, h => ohneAus_schrumpf h
 
 theorem ohneAus_mapWelt {l : Bool} {Γ : Ctx} {eb : Bool} (f : World D → World D) :
     ∀ {a : Ausgang V l Γ}, OhneAus eb a → OhneAus eb (a.mapWelt f)

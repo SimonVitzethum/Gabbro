@@ -10,9 +10,9 @@ namespace Gabbro.Grammatik
 
 /-- Case-list certificates for `Stmt.onTag`: one `CertSeq` per `sum` case,
     the case pinned in the constructor (the `Arms` correspondence). -/
-inductive CertArms2 (D : Deklaration) (V : Vertrag D) : List (Option (Int × Int)) → Type where
+inductive CertArms2 (D : Deklaration) (V : Vertrag D) : List (Option Ty) → Type where
   | nil : CertArms2 D V []
-  | cons (c : Option (Int × Int)) (b : CertSeq D V) {cs : List (Option (Int × Int))}
+  | cons (c : Option Ty) (b : CertSeq D V) {cs : List (Option Ty)}
     (rest : CertArms2 D V cs) : CertArms2 D V (c :: cs)
 
 /-- Reason-list certificates for `Stmt.onGrund`: one `CertSeq` per reason
@@ -31,7 +31,7 @@ inductive CertGrundArms2 (D : Deklaration) (V : Vertrag D) : Nat → Type where
 inductive CertStmt2 (D : Deklaration) (V : Vertrag D) where
   | assignThru (t : D.Tab) (f : D.Feld t) (n : Nat) (rw : Bool) (i e : CertExpr D)
   | callInd (f : D.Fn) (n : Nat) (Λc : List (Res D)) (hp : RufPasst D V (D.sigNr n) Λc)
-  | onTag (cs : List (Option (Int × Int))) (i : Nat) (p : Option (CertExpr D))
+  | onTag (cs : List (Option Ty)) (i : Nat) (p : Option (CertExpr D))
     (arms : CertArms2 D V cs)
   | onWhy (n r : Nat) (arms : CertGrundArms2 D V n)
 
@@ -40,7 +40,7 @@ inductive CertStmt2 (D : Deklaration) (V : Vertrag D) where
 /-- Case-list validity: each arm recomputes at its pinned case context
     (`ArmCtx`), the resource flow shared across arms. -/
 def certArms2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
-    (Λ Λ' : List (Res D)) : {cs : List (Option (Int × Int))} →
+    (Λ Λ' : List (Res D)) : {cs : List (Option Ty)} →
     CertArms2 D V cs → Prop
   | [], .nil => Λ = Λ'
   | _ :: _, .cons c b rest =>
@@ -56,7 +56,7 @@ def certGrundArms2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx
 
 /-- Arm validity as `Decidable`, by structural recursion. -/
 def decArms2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
-    (Λ Λ' : List (Res D)) {cs : List (Option (Int × Int))}
+    (Λ Λ' : List (Res D)) {cs : List (Option Ty)}
     (a : CertArms2 D V cs) : Decidable (certArms2Gueltig D V l Γ Λ Λ' a) :=
   match a with
   | .nil => inferInstanceAs (Decidable (Λ = Λ'))
@@ -67,7 +67,7 @@ def decArms2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
       certArms2Gueltig D V l Γ Λ Λ' rest))
 
 instance instDecArms2 (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
-    (Λ Λ' : List (Res D)) {cs : List (Option (Int × Int))}
+    (Λ Λ' : List (Res D)) {cs : List (Option Ty)}
     (a : CertArms2 D V cs) : Decidable (certArms2Gueltig D V l Γ Λ Λ' a) :=
   decArms2Gueltig D V l Γ Λ Λ' a
 
@@ -94,7 +94,7 @@ instance instDecGrundArms2 (D : Deklaration) (V : Vertrag D) (l : Bool)
     hypothesis is used: the head arm via `seq_sound`, the tail via the
     induction. -/
 theorem arms2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
-    (Λ Λ' : List (Res D)) {cs : List (Option (Int × Int))}
+    (Λ Λ' : List (Res D)) {cs : List (Option Ty)}
     (a : CertArms2 D V cs) (h : certArms2Gueltig D V l Γ Λ Λ' a) :
     ∃ _ : Arms D V l Γ Λ Λ' cs, True := by
   revert h
@@ -143,7 +143,7 @@ theorem grundArms2_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     Every hypothesis is used: the payload equations via `zeugnis_sound`,
     the length fact for the `Fin`, the check for the payload shape. -/
 theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
-    (cs : List (Option (Int × Int))) (i : Nat)
+    (cs : List (Option Ty)) (i : Nat)
     (p : Option (CertExpr D))
     (h : i < cs.length ∧ certCut3PayloadOk D Γ Λ cs[i]? p = true) :
     ∃ _ : Expr D Γ Λ (.sum cs), True := by
@@ -176,7 +176,7 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
         simp only [certCut3PayloadOk] at hp
         have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
         obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
-        exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.num ee),
+        exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.val ee),
           trivial⟩
 
 /-! ## Statement validity: every side condition recomputed -/
@@ -282,7 +282,7 @@ theorem callInd_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     scrutinee at exactly `cs`, the arm print to `Arms`. Every hypothesis
     is used. -/
 theorem onTag_sound (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
-    (Λ Λ' : List (Res D)) (cs : List (Option (Int × Int))) (i : Nat)
+    (Λ Λ' : List (Res D)) (cs : List (Option Ty)) (i : Nat)
     (p : Option (CertExpr D)) (arms : CertArms2 D V cs)
     (h : certStmt2Gueltig D V l Γ Λ Λ' (.onTag cs i p arms)) :
     ∃ _ : Stmt D V l Γ Λ Λ', True := by

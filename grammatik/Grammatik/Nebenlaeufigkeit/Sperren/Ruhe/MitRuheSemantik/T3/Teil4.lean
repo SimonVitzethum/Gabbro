@@ -269,16 +269,16 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, Λ, .ite c t e, σ, ρ =>
       execEnd_ru_ite (c := c) (t := t) (e := e) (σ := σ) (ρ := ρ) (ih_execEnd_ru_e := execEnd_ru e) (ih_execEnd_ru_t := execEnd_ru t) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ),
     execArms O.mitRuhe passes R' (ruArms arms) (valR (.sum cs) v) (worldR σ) (envR ρ) =
       ausR (execArms O passes R arms v σ ρ)
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => execBlock_ru b σ ρ
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
+  | _, _, _, _, _, .cons (c := some τ) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
       exact (congrArg Ausgang.schrumpf (execBlock_ru b σ (Env.cons nutz ρ))).trans (ausR_schrumpf _)
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArms_ru rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
+  | _, _, _, _, _, .cons (c := some τ) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArms_ru rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
 
 theorem execGrund_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}

@@ -116,10 +116,10 @@ theorem orte_exE : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .wenn c a b => by simp only [exE, Expr.orte, orte_exE c, orte_exE a, orte_exE b, List.map_append]
   | _, _, _, .eng e _ _ s => by simp only [exE, Expr.orte, orte_exE e, orte_exE s, List.map_append]
 
-theorem orteN_exN : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} (n : NutzlastExpr D Γ Λ c),
+theorem orteN_exN : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} (n : NutzlastExpr D Γ Λ c),
     (exN E n).orte = n.orte.map E.ortE
   | _, _, _, .empty => rfl
-  | _, _, _, .num e => orte_exE e
+  | _, _, _, .val e => orte_exE e
 
 end
 
@@ -226,7 +226,7 @@ def aparamsUm (a : D.Ax) (ρ : Env D (D.aparams a)) : Env D' (D'.aparams (E.ax a
 /-- **`f'` may stand where `D` calls `g`**: the image of `g`, or a function outside the image
     that conforms to the image of a signature whose head is `g`. -/
 def Konform (g : D.Fn) (f' : D'.Fn) : Prop :=
-  f' = E.fn g ∨ ∃ n, E.fnZ f' = none ∧ hZ.rep n = some g ∧ D'.passt f' (E.num n) = true
+  f' = E.fn g ∨ ∃ n, E.fnZ f' = none ∧ hZ.rep n = some g ∧ D'.passt f' (E.val n) = true
 
 section Konform
 

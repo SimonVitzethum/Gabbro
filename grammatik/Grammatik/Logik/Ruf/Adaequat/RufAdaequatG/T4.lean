@@ -171,7 +171,7 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .floatNarrow .., hb => absurd hb.gleitNarrow_inv.1 (by decide)
 
 theorem armsKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     ArmsG A false arms → ∀ (v : Wert D (.sum cs)),
     KeinRueckB O passes (armWahlG arms v).2.1
   | _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

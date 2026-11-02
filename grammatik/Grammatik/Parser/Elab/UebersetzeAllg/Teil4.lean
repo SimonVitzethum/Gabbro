@@ -79,12 +79,30 @@ def zahlVon {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
   | .ok w => w.zahl
   | .error e => .error e
 
+mutual
+
 /-- A value of any type (`LowWert`), in an `ensures` (`er` the result type) or a body (`er = none`): literals,
     parameters, statics, slot reads, `old` and `result`, the integer arithmetic, and the aggregate forms (arrays and
     strings by their type). One structural recursion, so that the lowering stays reducible. -/
 def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (er : Option Ty) : USide → Except String (LowWert u Γ Λ)
   | .lit n => .ok (LowSide.wert { range := (n, n), term := Expr.lit n })
+  | .truth b => .ok ⟨.bool, if b then Expr.tru else Expr.fls⟩
+  | .taggedEmpty cs i =>
+    if hi : i < cs.length then
+      match hc : cs.get ⟨i, hi⟩ with
+      | none => .ok ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hc.symm ▸ NutzlastExpr.empty)⟩
+      | some _ => .error "missing tagged payload"
+    else .error "case outside the tagged type"
+  | .taggedValue cs i value =>
+    if hi : i < cs.length then
+      match hc : cs.get ⟨i, hi⟩ with
+      | none => .error "extra tagged payload"
+      | some τ =>
+        match lowWertAtE u Γ Λ fn er τ value with
+        | .ok term => .ok ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hc.symm ▸ NutzlastExpr.val term)⟩
+        | .error e => .error e
+    else .error "case outside the tagged type"
   | .param p =>
     match lowParamWert u Γ Λ fn (if er.isSome then 1 else 0) p with
     | some r => r
@@ -175,12 +193,6 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .ok _ => .error "narrowing of a non-number"
     | .error e => .error e
 
-/-- A comparison side in `ensures`: literals, numeric parameters,
-    slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/
-def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (fn : UFn) (er : Option Ty) (s : USide) : Except String (LowSide u Γ Λ) :=
-  zahlVon (lowWertE u Γ Λ fn er s)
-
 /-- A value at the type `τ` (checking mode): an array literal element by element, everything else by `fitW`. -/
 def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty) :
     (τ : Ty) → USide → Except String (Expr (declOf u) Γ Λ τ)
@@ -193,6 +205,14 @@ def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (e
     match lowWertE u Γ Λ fn er s with
     | .ok w => fitW τ w
     | .error e => .error e
+
+end
+
+/-- A comparison side in `ensures`: literals, numeric parameters,
+    slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/
+def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option Ty) (s : USide) : Except String (LowSide u Γ Λ) :=
+  zahlVon (lowWertE u Γ Λ fn er s)
 
 /-- A value side in a body: the sides of an `ensures` without `old` and `result` (a body reads neither). -/
 def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))

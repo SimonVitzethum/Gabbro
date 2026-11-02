@@ -22,7 +22,7 @@ set_option maxRecDepth 100000
     the next binder name, separated by `ifElse`; the marker that closes the match is left to the caller. -/
 def lowArmsStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe u caller) :
     (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ →
-    (cs : List (Option (Int × Int))) → List String → List UStmt →
+    (cs : List (Option Ty)) → List String → List UStmt →
     Except String (Arms (declOf u) (verOf u caller) l Γ Λ Λ cs × List UStmt)
   | _, _, _, _, [], _, rest => .ok (Arms.nil, rest)
   | Γ, fn, Λ, pe, none :: cs', bs, rest =>
@@ -32,8 +32,8 @@ def lowArmsStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe
         | .ifElse :: r' =>
           (R.arms (l := l) Γ fn Λ pe (c' :: cs'') (bs.drop 1) r').bind fun (arms, r2) => .ok (Arms.cons b arms, r2)
         | _ => .error "lower: a match has fewer arms than cases"
-  | Γ, fn, Λ, pe, some (lo, hi) :: cs', bs, rest =>
-    (R.seq (l := l) (.int lo hi :: Γ) (fn.mitBindung (bs.headD "") (lo, hi)) Λ pe rest).bind fun (b, r) =>
+  | Γ, fn, Λ, pe, some τ :: cs', bs, rest =>
+    (R.seq (l := l) (τ :: Γ) (fn.mitTy (bs.headD "") τ) Λ pe rest).bind fun (b, r) =>
       match cs' with
       | [] => .ok (Arms.cons b Arms.nil, r)
       | c' :: cs'' => match r with

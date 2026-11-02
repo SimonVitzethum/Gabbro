@@ -205,9 +205,9 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
     | dannOnOptionNone l Γ Λ Λ' Λ'' n o pB a rest k ρ hhead σ₁ hs₁ hv neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannOnOptionNone (passes := p + j) (M.plus j) f l Γ Λ Λ' Λ'' n o pB a rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ hv neu hneu hΛ
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw neu hneu hΛ =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannOnTagSome (passes := p + j) (M.plus j) f l Γ Λ Λ' Λ'' cs v arms rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ lo hi b nutz hw neu hneu hΛ
+        exact RufSchrittG.dannOnTagSome (passes := p + j) (M.plus j) f l Γ Λ Λ' Λ'' cs v arms rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ τ b nutz hw neu hneu hΛ
     | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannOnTagNone (passes := p + j) (M.plus j) f l Γ Λ Λ' Λ'' cs v arms rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ b nutz hw neu hneu hΛ

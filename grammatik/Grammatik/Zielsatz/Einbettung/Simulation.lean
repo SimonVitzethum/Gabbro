@@ -37,7 +37,7 @@ variable (E : Einbettung D D')
 @[simp] theorem valE_int {a b : Int} (v : Wert D (.int a b)) : E.valE (.int a b) v = v := by rfl
 @[simp] theorem valE_bool (v : Wert D .bool) : E.valE .bool v = v := by rfl
 @[simp] theorem valE_opt {n : Int} (v : Wert D (.opt n)) : E.valE (.opt n) v = v := by rfl
-@[simp] theorem valE_sum {cs : List (Option (Int × Int))} (v : Wert D (.sum cs)) : E.valE (.sum cs) v = v := by rfl
+@[simp] theorem valE_sum {cs : List (Option Ty)} (v : Wert D (.sum cs)) : E.valE (.sum cs) v = v := by rfl
 @[simp] theorem valE_why {n : Nat} (v : Wert D (.why n)) : E.valE (.why n) v = v := by rfl
 @[simp] theorem valE_fl {lo hi : Int × Int} (v : Wert D (.fl lo hi)) : E.valE (.fl lo hi) v = v := by rfl
 

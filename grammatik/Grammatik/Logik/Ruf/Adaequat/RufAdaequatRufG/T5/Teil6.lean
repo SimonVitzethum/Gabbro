@@ -117,7 +117,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .floatNarrow e lo hi sonst rest, hb =>
       blockOkR_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
 theorem armsOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C mr arms → ∀ (v : Wert D (.sum cs)),
     SimOkBR P O passes f fn stapel rho s0 A R (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
@@ -249,7 +249,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       cases hl
 
 theorem armsAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C mr arms → ∀ (v : Wert D (.sum cs)),
     SimAbbBR P O passes f fn stapel rho s0 A R (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

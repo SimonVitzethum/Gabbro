@@ -61,8 +61,13 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | .some (.arm _ bnd (.block ss en)) =>
               match (match pl, bnd with
                   | .none, .none => some (ctxM, "")
-                  | .some (lo, hi), .some k =>
-                    some (uMitLokal ctxM k UParamArt.int (Ty.int lo hi) (ctxM.muts.filter (fun m => !strEq m k)), k)
+                  | .some τ, .some k =>
+                    let kind := match τ with
+                      | .bool => UParamArt.bool
+                      | .ref n => UParamArt.ref n
+                      | .sum cs => ((ctxM.sums.findIdx? (fun s => s.spec = cs)).map UParamArt.sum).getD .wert
+                      | _ => uArtVon τ
+                    some (uMitLokal ctxM k kind τ (ctxM.muts.filter (fun m => !strEq m k)), k)
                   | _, _ => none : Option (UCtx × String)) with
               | .none => .error "match arm payload without G form"
               | .some (cx, k) =>

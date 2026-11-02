@@ -46,9 +46,28 @@ def gleit : GleitOp → String
   | .mul => ".mul"
   | .div => ".div"
 
-/-- The cases of a tagged type. -/
-def faelle (cs : List (Option (Int × Int))) : String :=
-  "[" ++ String.intercalate ", " (cs.map fun | none => "none" | some p => s!"some {paar p}") ++ "]"
+mutual
+/-- A complete kernel type as Lean source, including nested payload schemas. -/
+def typ : Ty → String
+  | .int lo hi => s!"(.int {zahl lo} {zahl hi})"
+  | .bool => ".bool"
+  | .opt n => s!"(.opt {zahl n})"
+  | .sum cs => s!"(.sum {faelle cs})"
+  | .why n => s!"(.why {n})"
+  | .never => ".never"
+  | .fl lo hi => s!"(.fl {paar lo} {paar hi})"
+  | .fnptr n => s!"(.fnptr {n})"
+  | .ptr n rw => s!"(.ptr {n} {rw})"
+  | .ref n => s!"(.ref {n})"
+  | .arr τ n => s!"(.arr {typ τ} {n})"
+  | .str n => s!"(.str {n})"
+
+/-- Case order and complete payload types are printed verbatim. -/
+def faelle : List (Option Ty) → String
+  | [] => "[]"
+  | none :: cs => s!"(none :: {faelle cs})"
+  | some τ :: cs => s!"(some {typ τ} :: {faelle cs})"
+end
 
 /-- The numbers of the elements of the finite types of a declaration, as the witness file names them. -/
 structure Namen (D : Deklaration) where
@@ -126,9 +145,9 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .eng e lo hi s => do .ok s!"(Expr.eng (D := z.deklaration) {← drE N e} {zahl lo} {zahl hi} {← drE N s})"
 
 /-- A payload expression. -/
-def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option (Int × Int)} → NutzlastExpr D Γ Λ o → Except String String
+def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option Ty} → NutzlastExpr D Γ Λ o → Except String String
   | _, .empty => .ok s!"(NutzlastExpr.empty (D := z.deklaration))"
-  | _, .num e => do .ok s!"(NutzlastExpr.num (D := z.deklaration) {← drE N e})"
+  | _, .val e => do .ok s!"(NutzlastExpr.val (D := z.deklaration) {← drE N e})"
 
 /-- The arguments of a call. -/
 def drA (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τs : List Ty} → Args D Γ Λ τs → Except String String
@@ -213,7 +232,7 @@ def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .ite c t e => do .ok s!"(Endblock.ite (D := z.deklaration) {← drE N c} {← drEnd N t} {← drEnd N e})"
 
 /-- The arms of a `match` on a tagged value. -/
-def drArms (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → Except String String
+def drArms (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Except String String
   | _, .nil => .ok s!"(Arms.nil (D := z.deklaration))"
   | _, .cons b rest => do .ok s!"(Arms.cons (D := z.deklaration) {← drB N b} {← drArms N rest})"
 

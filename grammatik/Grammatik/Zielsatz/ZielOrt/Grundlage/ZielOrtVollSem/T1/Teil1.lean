@@ -78,7 +78,7 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .ite _ t e => e.vOk K && t.vOk K
 
 def Arms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
+    {cs : List (Option Ty)} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.vOk K && rest.vOk K
 
@@ -164,7 +164,7 @@ def programmImFragmentV (P : Programm D) (fs : List D.Fn) : Bool :=
 
 theorem armWahlG_vOk {V : Vertrag D} {K : Nat → Bool} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.vOk K = true → (armWahlG arms v).2.1.vOk K = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by
@@ -175,9 +175,9 @@ theorem armWahlG_vOk {V : Vertrag D} {K : Nat → Bool} {l : Bool} {Γ : Ctx}
       exact armWahlG_vOk rest _ h.2
 
 theorem armWahlG_vOk' {V : Vertrag D} {K : Nat → Bool} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
-    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.vOk K = true) :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option Ty} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.vOk K = true) :
     b.vOk K = true := by
   have h0 := armWahlG_vOk arms v h
   rw [hw] at h0
@@ -344,7 +344,7 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       exact ⟨Endblock.vOk_mono e h.1, Endblock.vOk_mono t h.2⟩
 
 theorem Arms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.vOk K = true → a.vOk K' = true
   | .nil, _ => rfl
   | .cons b rest, h => by

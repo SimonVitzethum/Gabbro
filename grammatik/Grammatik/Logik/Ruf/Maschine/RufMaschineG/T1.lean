@@ -330,9 +330,9 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     VALUE's payload feeds it (like `execArms`, but returning the chosen arm
     instead of running it). The `nil` case cannot fire (`Fin 0` is empty). -/
 def armWahlG {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) →
-      Σ c : Option (Int × Int), Block D V l (ArmCtx Γ c) Λ Λ' × Nutzlast c
+      Σ c : Option Ty, Block D V l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c
   | .nil, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
   | .cons b _, ⟨⟨0, _⟩, nutz⟩ => ⟨_, b, nutz⟩
   | .cons _ rest, ⟨⟨n + 1, h⟩, nutz⟩ =>

@@ -104,7 +104,7 @@ structure UCtx where
   /-- The unit's `tagged type` declarations, in order. -/
   sums : List USum := []
   /-- The result is a tagged type: its position and its specification. -/
-  resSum : Option (Nat × List (Option (Int × Int))) := none
+  resSum : Option (Nat × List (Option Ty)) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
   /-- The result is an aggregate value (`Ty.arr`, `Ty.str`): its type. -/
@@ -140,7 +140,7 @@ structure UFn where
   /-- The result is `option index into T`: the number and the count of `T` (then `res` is `none`). -/
   resOpt : Option (Nat × Int) := none
   /-- The result is a tagged type: its position and its specification (then `res` is `none`). -/
-  resSum : Option (Nat × List (Option (Int × Int))) := none
+  resSum : Option (Nat × List (Option Ty)) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
   /-- The result is an aggregate value: its type (then `res` is `none`). -/
@@ -184,7 +184,7 @@ def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
   | τ => { f with params := (x, τ) :: f.params, kinds := uArtVon τ :: f.kinds }
 
 /-- The scope after `let x` of a tagged value of the type at `num` with the specification `cs`. -/
-def UFn.mitSum (f : UFn) (x : String) (num : Nat) (cs : List (Option (Int × Int))) : UFn :=
+def UFn.mitSum (f : UFn) (x : String) (num : Nat) (cs : List (Option Ty)) : UFn :=
   { f with params := (x, Ty.sum cs) :: f.params, kinds := .sum num :: f.kinds }
 
 /-- The scope after `let x` of an option value over the table `num` of `cnt` slots. -/

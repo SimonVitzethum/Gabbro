@@ -136,7 +136,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001_korrekt_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_sonst := g001End_korrekt sonst)
 /-- Soundness for case arms. Every premise fires: `h`/`ho` fix the decision
     and the member, `htStmt`/`htEnd`/`htBlockSelf` discharge the legs. -/
-theorem g001Arms_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+theorem g001Arms_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → (h : g001Arms a = true) → (o : D.Tab ⊕ D.Glob) → (ho : o ∈ Extraktion.armsOrte a) →
     ¬ istGeist (D := D) o
   | .nil, zr_h, o, zr_ho =>

@@ -55,7 +55,9 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .none n => .none n
   | _, _, _, .some e => .some (ruE e)
   | _, _, _, .istSome e => .istSome (ruE e)
-  | _, _, _, .case cs i nutz => .case cs i (ruN nutz)
+  | _, _, _, .case cs i nutz =>
+      .case (Ty.mapCases (fun n => n + 1) id cs) ⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩
+        ((Ty.mapCases_get (fun n => n + 1) id cs i).symm ▸ ruN nutz)
   | _, _, _, .why n r => .why n r
   | _, _, _, .forallSlots t body hL => Expr.forallSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
   | _, _, _, .existsSlots t body hL => Expr.existsSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
@@ -77,10 +79,10 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .eng e lo hi s => .eng (ruE e) lo hi (ruE s)
 
 /-- A payload expression, translated. -/
-def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →
-    NutzlastExpr D.mitRuhe (Γ.map tyR) (Λ.map resR) c
+def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option Ty} → NutzlastExpr D Γ Λ c →
+    NutzlastExpr D.mitRuhe (Γ.map tyR) (Λ.map resR) (c.map tyR)
   | _, _, _, .empty => .empty
-  | _, _, _, .num e => .num (ruE e)
+  | _, _, _, .val e => .val (ruE e)
 
 end
 
@@ -226,12 +228,12 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
 
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs →
-      Arms D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR) (Λ'.map resR) cs
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs →
+      Arms D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR) (Λ'.map resR) (Ty.mapCases (fun n => n + 1) id cs)
   | _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, .cons (c := none) b rest => .cons (c := none) (ruB b) (ruArms rest)
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest =>
-      .cons (c := some (lo, hi)) (ruB b) (ruArms rest)
+  | _, _, _, _, _, .cons (c := some τ) b rest =>
+      .cons (c := some (tyR τ)) (ruB b) (ruArms rest)
 
 /-- Reason arms, translated. -/
 def ruGArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →

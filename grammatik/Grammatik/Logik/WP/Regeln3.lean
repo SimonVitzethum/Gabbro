@@ -53,26 +53,26 @@ theorem wpB_bindCallElse_spez {S : Spez D} (hR : Erfuellt S R) {Λ Λ' : List (R
   (wpB_bindCallElse O passes R f args he hp hr err rest Q σ ρ).2 (h _ (hR f _ _))
 
 /-- The arms of a `match` over a tagged value: the arm of the value's case. -/
-def wpArms {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
+def wpArms {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
     (v : Wert D (.sum cs)) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) : Prop :=
   Q (execArms O passes R arms v σ ρ)
 
 /-- The arm of case `0` is the first block, with the payload in front (if the case has one). -/
-theorem wpArms_null {Λ Λ' : List (Res D)} {c : Option (Int × Int)} {cs : List (Option (Int × Int))}
+theorem wpArms_null {Λ Λ' : List (Res D)} {c : Option Ty} {cs : List (Option Ty)}
     (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs) (h : 0 < (c :: cs).length)
-    (nutz : Nutzlast c) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
+    (nutz : Nutzlast D.Fn D.passt c) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
     wpArms O passes R (.cons b rest) ⟨⟨0, h⟩, nutz⟩ Q σ ρ ↔
       wpB O passes R b (fun o => Q (o.schrumpfArm c)) σ (armEnv nutz ρ) := Iff.rfl
 
 /-- The arm of case `i + 1` is the arm of case `i` among the rest. -/
-theorem wpArms_succ {Λ Λ' : List (Res D)} {c : Option (Int × Int)} {cs : List (Option (Int × Int))}
+theorem wpArms_succ {Λ Λ' : List (Res D)} {c : Option Ty} {cs : List (Option Ty)}
     (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs) (i : Nat) (h : i + 1 < (c :: cs).length)
-    (nutz : Nutzlast ((c :: cs).get ⟨i + 1, h⟩)) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
+    (nutz : Nutzlast D.Fn D.passt ((c :: cs).get ⟨i + 1, h⟩)) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
     wpArms O passes R (.cons b rest) ⟨⟨i + 1, h⟩, nutz⟩ Q σ ρ ↔
       wpArms O passes R rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ Q σ ρ := Iff.rfl
 
 /-- `match v { … }` over a tagged value. -/
-theorem wpS_onTag {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (v : Expr D Γ Λ (.sum cs))
+theorem wpS_onTag {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (v : Expr D Γ Λ (.sum cs))
     (arms : Arms D V l Γ Λ Λ' cs) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
     wpS O passes R (.onTag v arms) Q σ ρ ↔
       wpArms O passes R arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) Q (σ.lese Λ v.orte) ρ := Iff.rfl

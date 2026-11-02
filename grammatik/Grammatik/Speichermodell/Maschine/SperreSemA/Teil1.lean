@@ -321,7 +321,7 @@ theorem semHA_endeForm {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : Worl
 
 /-- `execArmsHA` runs the arm `armWahlG` selects. -/
 theorem execArmsHA_wahl {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
       (σ : World D) (ρ : Env D Γ),
     execArmsHA S O U A passes R arms v σ ρ =
       (execBlockHA S O U A passes R (armWahlG arms v).2.1 σ
@@ -410,12 +410,12 @@ theorem semHA_optNone {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (
   simp only [execStmtHA, hv]
   rfl
 
-theorem semHA_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semHA_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (lo hi : Int) (b : Block D V l (.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+    (τ : Ty) (b : Block D V l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
     (hw : armWahlG arms (eval (leseA A σ Λ v.orte) v (leseA A σ Λ v.orte) ρ) =
-      ⟨some (lo, hi), b, nutz⟩) :
+      ⟨some τ, b, nutz⟩) :
     semHA S O U A passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ =
       semHA S O U A passes R (.dann b (.schrumpf (.dann rest k))) (leseA A σ Λ v.orte)
         (armEnv nutz ρ) := by
@@ -424,10 +424,10 @@ theorem semHA_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × In
   rw [execArmsHA_wahl, hw]
   rfl
 
-theorem semHA_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semHA_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast none)
+    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
     (hw : armWahlG arms (eval (leseA A σ Λ v.orte) v (leseA A σ Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
     semHA S O U A passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ =
       semHA S O U A passes R (.dann b (.dann rest k)) (leseA A σ Λ v.orte) (armEnv nutz ρ) := by

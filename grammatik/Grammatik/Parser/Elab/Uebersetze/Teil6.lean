@@ -176,6 +176,40 @@ def uOpt (ctx : UCtx) (num : Nat) : SExpr → Except String UOpt
 
 /-- A tagged value read off an expression, with the position of its type: a variable, a payload-free case or a
     case with a payload. -/
+/-- A tagged payload retains its complete type. Literal truth values and typed locals
+    bypass the numeric expression gate; all arithmetic keeps its existing checks. -/
+def uPayload (ctx : UCtx) (τ : Ty) : SExpr → Except String USide
+  | .tru => if τ = .bool then .ok (.truth true) else .error "wrong tagged payload type"
+  | .fls => if τ = .bool then .ok (.truth false) else .error "wrong tagged payload type"
+  | .ext .text [text] [] => .ok (.text (text.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
+  | .variable x =>
+    match uParamNr ctx x with
+    | .ok _ => .ok (.param x)
+    | .error _ =>
+      match τ with
+      | .sum cs =>
+        match ctx.sums.find? (fun s => s.spec = cs) with
+        | none => .error "unknown nested tagged payload type"
+        | some s =>
+          match s.cases.findIdx? (fun c => strEq c.1 x && c.2.isNone) with
+          | some i => .ok (.taggedEmpty cs i)
+          | none => .error "unknown nested tagged case"
+      | _ => uWertBody ctx (.variable x)
+  | .call name [value] =>
+    match τ with
+    | .sum cs =>
+      match ctx.sums.find? (fun s => s.spec = cs) with
+      | none => .error "unknown nested tagged payload type"
+      | some s =>
+        match s.cases.findIdx? (fun c => strEq c.1 name),
+            (s.cases.find? (fun c => strEq c.1 name)).bind (·.2) with
+        | some i, some payloadTy => do
+          let payload ← uPayload ctx payloadTy value
+          pure (.taggedValue cs i payload)
+        | _, _ => .error "missing or extra nested tagged payload"
+    | _ => uWertBody ctx (.call name [value])
+  | e => uWertBody ctx e
+
 def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
   | .variable v =>
     match uParamNr ctx v with
@@ -203,9 +237,12 @@ def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
         match s.cases.findIdx? (fun x => strEq x.1 c) with
         | .none => .error "tagged value without G form"
         | .some i =>
-          match uWertBody ctx a with
-          | .error e => .error e
-          | .ok sd => .ok (.fall i (.some sd), k)
+          match (s.cases[i]?).bind (·.2) with
+          | none => .error "case has no payload"
+          | some τ =>
+            match uPayload ctx τ a with
+            | .error e => .error e
+            | .ok sd => .ok (.fall i (.some sd), k)
   | _ => .error "tagged value without G form"
 
 /-- A tagged value of the type at `sidx`. -/

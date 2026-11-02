@@ -106,7 +106,7 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .exchange _ _ _ _ rest => rest.ohneEwig
   | .ite _ t e => t.ohneEwig && e.ohneEwig
 
-def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.ohneEwig && rest.ohneEwig
@@ -287,7 +287,7 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, Endblock.execH_passes t h.1, Endblock.execH_passes e h.2]
 
 theorem Arms.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.ohneEwig = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
       execArmsH S O U n R a v σ ρ = execArmsH S O U m R a v σ ρ

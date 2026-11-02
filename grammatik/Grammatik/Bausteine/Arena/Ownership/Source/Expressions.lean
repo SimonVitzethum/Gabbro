@@ -51,10 +51,10 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .eng e _ _ s => requirements e ++ requirements s
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
 
-def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :
+def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} :
     NutzlastExpr D Γ Λ c → List (Requirement D Γ Λ)
   | .empty => []
-  | .num e => requirements e
+  | .val e => requirements e
 end
 
 def accessCheck {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (c : Context) (e : Expr D Γ Λ τ) : Bool :=

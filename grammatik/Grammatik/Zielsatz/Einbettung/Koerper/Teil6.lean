@@ -186,7 +186,7 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       sim_end_ite (c := c) (t := t) (e := e) (ih_sim_end_e := sim_end e) (ih_sim_end_t := sim_end t) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
 /-- **Arms beside their images.** -/
 theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → ∀ w : Wert D (.sum cs),
     E.KoerperSim hZ (fun Φ => execArmsHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U')
         (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') a w)
@@ -198,7 +198,7 @@ theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact ⟨M₁, o, hs, fun Φ hP => by
           simp only [execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hΦ Φ hP,
         by simp only [exArms, valE_sum, execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hR⟩
-  | .cons (c := some (lo, hi)) b _, ⟨⟨0, _⟩, nutz⟩ => by
+  | .cons (c := some τ) b _, ⟨⟨0, _⟩, nutz⟩ => by
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := sim_block b M σ σ' (Env.cons (τ := .int lo hi) nutz ρ)
         (Env.cons (τ := .int lo hi) nutz ρ') hM
@@ -213,7 +213,7 @@ theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := this M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by simp only [execArmsHA]; exact hΦ Φ hP,
         by simp only [exArms, valE_sum, execArmsHA]; exact hR⟩
-  | .cons (c := some (lo, hi)) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
+  | .cons (c := some τ) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
       have := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := this M σ σ' ρ ρ' hM hρ

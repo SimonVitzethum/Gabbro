@@ -185,7 +185,7 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_ohne t h.1, Endblock.execH_ohne e h.2] <;> rfl
 
 theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.ohneLocks = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
       execArmsH S O U passes R a v σ ρ = execArms O passes R a v σ ρ

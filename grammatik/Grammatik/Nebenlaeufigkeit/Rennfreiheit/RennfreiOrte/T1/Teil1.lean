@@ -79,7 +79,7 @@ variable {V : Vertrag D} {l : Bool}
 
 theorem all_armWahlG (P : Programm D) (C : D.Tab ⊕ D.Glob → Bool) {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     (armsOrteP P arms).all C = true → (blockOrteP P (armWahlG arms v).2.1).all C = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by
@@ -143,7 +143,7 @@ theorem schrittOrte {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
   cases hs with
   | g1 hs =>
     cases hs with
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw =>
       kopfO
       have h := all_armWahlG P C arms (eval σ₁ v σ₁ ρ) (by simp_all)
       rw [hw] at h

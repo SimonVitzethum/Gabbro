@@ -129,7 +129,7 @@ def seiteAltErg : USide → Bool
   | .old .. | .erg => true
   | .add a b | .sub a b | .mul a b | .band a b | .bor a b | .bxor a b | .div a b | .rem a b | .shl a b | .shr a b =>
     seiteAltErg a || seiteAltErg b
-  | .conv _ _ a | .neg a => seiteAltErg a
+  | .conv _ _ a | .neg a | .taggedValue _ _ a => seiteAltErg a
   | _ => false
 
 /-- `old(..)` or `result` inside a predicate. -/
@@ -214,7 +214,7 @@ structure UFnKopf where
   /-- The reason channel: the position of `R` among the unit's reasons and its number of cases. -/
   kanal : Option (Nat × Nat) := none
   /-- The result is a tagged type: its position and its specification. -/
-  resSum : Option (Nat × List (Option (Int × Int))) := none
+  resSum : Option (Nat × List (Option Ty)) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
   bits : List Nat := []

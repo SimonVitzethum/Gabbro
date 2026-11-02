@@ -79,10 +79,10 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .wenn c a b => kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruE_orte a)) (ruE_orte b)
   | _, _, _, .eng e _ _ s => kongr₂ (· ++ ·) (ruE_orte e) (ruE_orte s)
 
-theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte
   | _, _, _, .empty => rfl
-  | _, _, _, .num e => ruE_orte e
+  | _, _, _, .val e => ruE_orte e
 
 end
 theorem ruA_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs),
@@ -271,12 +271,12 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P e)) (ruEnd_orteP P t)
 
 theorem ruArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     armsOrteP P.mitRuhe (ruArms arms) = armsOrteP P arms
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest =>
       kongr₂ (· ++ ·) (ruB_orteP P b) (ruArms_orteP P rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_orteP P b) (ruArms_orteP P rest)
 
 theorem ruGArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
@@ -369,11 +369,11 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_regs e) (ruEnd_regs t)
 
 theorem ruArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).regs = arms.regs
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· ++ ·) (ruB_regs b) (ruArms_regs rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_regs b) (ruArms_regs rest)
 
 theorem ruGArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}

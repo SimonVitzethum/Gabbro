@@ -430,7 +430,7 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     · trivial
 
 theorem oarms_sound (hR : Respects A I.contracts R) (hO : GutO O) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} {k c c' : Context}
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
       {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ), k.references.length ≤ Γ.length →
         Holds A fr s0 c σ ρ → BPost A fr s0 out k c' (execArms O passes R arms v σ ρ)

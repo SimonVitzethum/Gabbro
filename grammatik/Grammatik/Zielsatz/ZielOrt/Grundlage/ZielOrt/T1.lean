@@ -225,7 +225,7 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .ite c t e => c.orte ++ endblockOrteP P e ++ endblockOrteP P t
 
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List (D.Tab ⊕ D.Glob)
   | .nil => []
   | .cons b rest => blockOrteP P b ++ armsOrteP P rest

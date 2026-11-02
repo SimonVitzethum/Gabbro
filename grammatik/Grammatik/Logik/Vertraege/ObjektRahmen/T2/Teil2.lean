@@ -353,7 +353,7 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj e hok.2 _ ρ hlen hinv)
 
 theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     ∀ (arms : Arms D V l Γ Λ Λ' cs), oA objs ps arms → ∀ (v : Wert D (.sum cs)) (σ : World D)
     (ρ : Env D Γ), LenOk ps Γ → ObjInv W ps ρ → ObjA W ps σ (execArms O passes R arms v σ ρ)
   | .cons b _, hok, ⟨⟨0, _⟩, nutz⟩, σ, ρ, hlen, hinv =>

@@ -59,7 +59,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 def tyInts : Ty → List Int
   | .int lo hi => [lo, hi]
   | .opt n => [n]
-  | .sum cs => cs.flatMap fun | none => [] | some (lo, hi) => [lo, hi]
+  | .sum cs => cs.flatMap fun | none => [] | some τ => tyInts τ
   | _ => []
 
 /-- The naturals a type names. -/
@@ -107,7 +107,7 @@ def Spez.werte (z : Spez) : List Int :=
   (([0, 1] : List Int) ++ z.typen.flatMap fun (τ : Ty) => match τ with | .int _ hi => [hi] | _ => []).eraseDups
 
 /-- The sum types of a specification: the case lists of its tagged types (and the empty list). -/
-def Spez.summen (z : Spez) : List (List (Option (Int × Int))) :=
+def Spez.summen (z : Spez) : List (List (Option Ty)) :=
   ([] :: z.typen.filterMap fun (τ : Ty) => match τ with | .sum cs => some cs | _ => none).eraseDups
 
 /-- The types a `let`-bound expression may have: the types the declaration names, the index of every table, `bool`. -/
@@ -233,8 +233,8 @@ def z11 : Spez where
 
 /-- 12 -- a tagged type and a reason as parameters. -/
 def z12 : Spez where
-  tabs := [{ count := 2, felder := [{ typ := .sum [none, some (0, 3)] }] }]
-  sigs := [{ params := [.sum [none, some (0, 3)], .why 2], schreibt := [0] }]
+  tabs := [{ count := 2, felder := [{ typ := .sum [none, some (.int 0 3)] }] }]
+  sigs := [{ params := [.sum [none, some (.int 0 3)], .why 2], schreibt := [0] }]
 
 /-- 13 -- an arena: a slot table, a used counter and a committed prefix. -/
 def z13 : Spez where

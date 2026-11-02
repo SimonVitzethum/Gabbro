@@ -187,7 +187,7 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .istSome (n := n) e, ρ =>
       congrArg (fun (x : Option (Zahl 0 (n - 1))) => x.isSome) (eval_ru σ₀ σ e ρ)
   | _, _, _, .case cs i nutz, ρ =>
-      congrArg (fun z => (⟨i, z⟩ : Σ i : Fin cs.length, Nutzlast (cs.get i)))
+      congrArg (fun z => (⟨i, z⟩ : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)))
         (evalNutz_ru σ₀ σ nutz ρ)
   | _, _, _, .why _ _, _ => rfl
   | _, _, _, .forallSlots t body _, ρ =>
@@ -251,11 +251,11 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       rw [eval_ru σ₀ σ s ρ]
       exact eng_kongr (eval_ru σ₀ σ e ρ) _
 
-theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),
     evalNutz (worldR σ₀) (ruN n) (worldR σ) (envR ρ) = evalNutz σ₀ n σ ρ
   | _, _, _, .empty, _ => rfl
-  | _, _, _, .num e, ρ => eval_ru σ₀ σ e ρ
+  | _, _, _, .val e, ρ => eval_ru σ₀ σ e ρ
 
 end
 theorem evalArgs_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty}

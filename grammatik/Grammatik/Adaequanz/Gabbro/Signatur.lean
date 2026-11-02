@@ -126,7 +126,7 @@ def tabelle : List Konstr := [
   ⟨"Expr", "wenn", ["Expr", "Expr", "Expr"], 0, 0⟩,
   ⟨"Expr", "eng", ["Expr", "Expr"], 0, 2⟩,
   ⟨"NutzlastExpr", "empty", [], 0, 0⟩,
-  ⟨"NutzlastExpr", "num", ["Expr"], 0, 0⟩,
+  ⟨"NutzlastExpr", "val", ["Expr"], 0, 0⟩,
   ⟨"Args", "nil", [], 0, 0⟩,
   ⟨"Args", "cons", ["Expr", "Args"], 0, 0⟩,
   ⟨"ErgExpr", "empty", [], 0, 0⟩,

@@ -288,7 +288,7 @@ theorem Endblock.execHA_gleich {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         Endblock.execHA_gleich e h3] <;> (try rfl)
 
 theorem Arms.execHA_gleich {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → (∀ c ∈ armsOrteP P a, ¬ T c) →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
       execArmsHA S O U A passes R a v σ ρ = execArmsHA S O U A' passes R a v σ ρ

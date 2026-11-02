@@ -400,25 +400,14 @@ def beqOptIntPair : Option (Int × Int) → Option (Int × Int) → Bool
   | some a, some b => beqIntPair a b
   | _, _ => false
 
-def beqOptIntPairList : List (Option (Int × Int)) →
-    List (Option (Int × Int)) → Bool
+def beqPayloads : List (Option Ty) →
+    List (Option Ty) → Bool
   | [], [] => true
-  | x :: xs, y :: ys => beqOptIntPair x y && beqOptIntPairList xs ys
+  | x :: xs, y :: ys => decide (x = y) && beqPayloads xs ys
   | _, _ => false
 
-/-- Shape equality on `Ty` as a `Bool` (kernel evaluation,
-    no nested `decide`). -/
-def beqTy : Ty → Ty → Bool
-  | .int a b, .int c d => a == c && b == d
-  | .bool, .bool => true
-  | .opt n, .opt m => n == m
-  | .sum cs, .sum ds => beqOptIntPairList cs ds
-  | .why n, .why m => n == m
-  | .never, .never => true
-  | .fl a b, .fl c d => beqIntPair a c && beqIntPair b d
-  | .fnptr n, .fnptr m => n == m
-  | .ptr t w, .ptr s v => t == s && w == v
-  | _, _ => false
+/-- Complete shape equality, including recursively typed payloads and arrays. -/
+def beqTy (a b : Ty) : Bool := decide (a = b)
 
 def beqUIdx : UIdx → UIdx → Bool
   | .lit a, .lit b => a == b
@@ -442,6 +431,9 @@ def beqUSide : USide → USide → Bool
     beqUSide a c && beqUSide b d
   | .neg a, .neg b => beqUSide a b
   | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
+  | .truth a, .truth b => a == b
+  | .taggedEmpty cs i, .taggedEmpty ds j => beqPayloads cs ds && i == j
+  | .taggedValue cs i a, .taggedValue ds j b => beqPayloads cs ds && i == j && beqUSide a b
   | _, _ => false
 
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -51,7 +51,7 @@ theorem uSumFaelle_nested_zeuge :
 
 theorem uSumFaelle_nested_resolved_zeuge :
     (uSumFaelle 100 nestedPayload).bind (USum.resolveCases (uSumPayload [])) =
-      .ok [("Data", some (3, 10)), ("Empty", none)] := by decide
+      .ok [("Data", some (.int 3 10)), ("Empty", none)] := by decide
 
 theorem uSumFaelle_bool_zeuge :
     uSumFaelle 100 [.ident "Flag", .zeichen "(", .wort "bool", .zeichen ")"] =
@@ -84,8 +84,7 @@ def taggedValueSchema : USum Ty :=
   { name := "Message", cases := [("Empty", none),
       ("Bytes", some (.arr (.int 0 255) 3)), ("Text", some (.str 8))] }
 
-/-- The canonical type elaborator can resolve complete aggregate schemas. The current
-    `Ty.sum` admission gate below still refuses to execute them as sum payloads. -/
+/-- The canonical type elaborator can resolve complete aggregate schemas. Typed sums retain the resolved aggregate payload types. -/
 theorem tagged_resolve_zeuge :
     taggedSourceSchema.resolve (uTyp [] []) = .ok taggedValueSchema := by decide
 
@@ -117,9 +116,8 @@ theorem uSumFaelle_trailing_tokens_refused :
       .ident "Discarded"] with | .error _ => true | .ok _ => false) = true := by decide
 
 /-- A failed payload resolver refuses the declaration, including a failure after a valid field. -/
-theorem tagged_unsupported_payload_refused :
-    taggedSourceSchema.resolve (uSumPayload []) = .error "tagged payload without G form: [u8; ..]" := by
-  decide
+theorem tagged_payload_resolved_zeuge :
+    taggedSourceSchema.resolve (uSumPayload []) = .ok taggedValueSchema := by decide
 
 def taggedItems (body : String) : List SItemTief :=
   [.typeT ["tagged"] "Message" [] [] (some (.raw body))]
@@ -130,11 +128,11 @@ theorem uSumSchemas_bool_zeuge :
 
 theorem uSums_numeric_zeuge :
     uSums [] (taggedItems "{ Data(u8), Empty }") =
-      .ok [{ name := "Message", cases := [("Data", some (0, 255)), ("Empty", none)] }] := by decide
+      .ok [{ name := "Message", cases := [("Data", some (.int 0 255)), ("Empty", none)] }] := by decide
 
 theorem uSums_alias_zeuge :
     uSums [("Code", (3, 10))] (taggedItems "{ Data(Code), Empty }") =
-      .ok [{ name := "Message", cases := [("Data", some (3, 10)), ("Empty", none)] }] := by decide
+      .ok [{ name := "Message", cases := [("Data", some (.int 3 10)), ("Empty", none)] }] := by decide
 
 theorem uSumSchemas_duplicate_refused :
     uSumSchemas (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" := rfl
@@ -170,30 +168,30 @@ theorem uSums_ranged_unknown_refused :
     (match uSums [] (taggedItems "{ Data(Undeclared in 0 .. 1) }") with
       | .error _ => true | .ok _ => false) = true := by decide
 
-theorem uSums_bool_still_refused :
+theorem uSums_bool_admitted_zeuge :
     (match uSums [] (taggedItems "{ Flag(bool), Empty }") with
-      | .error _ => true | .ok _ => false) = true := by decide
+      | .error _ => false | .ok _ => true) = true := by decide
 
-theorem uSums_array_still_refused :
+theorem uSums_array_admitted_zeuge :
     (match uSums [] (taggedItems "{ Bytes([u8; 3]), Empty }") with
-      | .error _ => true | .ok _ => false) = true := by decide
+      | .error _ => false | .ok _ => true) = true := by decide
 
 theorem uSums_reference_still_refused :
     (match uSums [] (taggedItems "{ Cell(index into Region), Empty }") with
       | .error _ => true | .ok _ => false) = true := by decide
 
-theorem uSums_string_still_refused :
+theorem uSums_string_admitted_zeuge :
     (match uSums [] (taggedItems "{ Text(string max 8), Empty }") with
-      | .error _ => true | .ok _ => false) = true := by decide
+      | .error _ => false | .ok _ => true) = true := by decide
 
 theorem uSums_record_still_refused :
     (match uSums [] (taggedItems "{ Record({ flag: bool }), Empty }") with
       | .error _ => true | .ok _ => false) = true := by decide
 
 /-- These are the actual exporter's declaration-admission path, not only schema-reader tests. -/
-theorem elabU_tagged_payload_refused :
-    elabU (taggedItems "{ Bytes([u8; 3]), Empty }") =
-      .error "tagged payload without G form: [u8; ..]" := by decide
+theorem elabU_tagged_payload_zeuge :
+    (elabU (taggedItems "{ Bytes([u8; 3]), Empty }")).map (·.sums) =
+      .ok [{ name := "Message", cases := [("Bytes", some (.arr (.int 0 255) 3)), ("Empty", none)] }] := by decide
 
 theorem elabU_tagged_duplicate_refused :
     elabU (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" := by decide

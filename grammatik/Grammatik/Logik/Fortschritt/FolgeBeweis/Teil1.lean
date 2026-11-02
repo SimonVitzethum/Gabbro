@@ -184,7 +184,7 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e t]
 
 theorem fB_armWahlG (e : Bool) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     fArms Φ e arms = true → fB Φ e false (armWahlG arms v).2.1 = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by

@@ -284,7 +284,7 @@ theorem lowerNutz_ok_empty (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat)
   by
   simp only [lowerNutz, Option.some.injEq] at h
   subst h
-  have e : ∀ u : Gabbro.Grammatik.Nutzlast none, (i : Int) + L * payOff none u = i := fun u => by simp only [payOff, Int.mul_zero, Int.add_zero]
+  have e : ∀ u : Gabbro.Grammatik.Nutzlast D.Fn D.passt none, (i : Int) + L * payOff none u = i := fun u => by simp only [payOff, Int.mul_zero, Int.add_zero]
   rw [e]
   exact frag_intc m rs r W (i : Int)
 
@@ -298,7 +298,7 @@ theorem lowerNutz_ok_num (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat)
     (cenv : List Reg)
     (r : Nat)
     (c0 : LR)
-    (h : lowerNutz lay cenv W L i (.num (lo := lo) (hi := hi) e : Gabbro.Grammatik.NutzlastExpr D Γ Λ (Option.some (lo, hi))) r = some c0)
+    (h : lowerNutz lay cenv W L i (.val (τ := .int lo hi) e : Gabbro.Grammatik.NutzlastExpr D Γ Λ (Option.some (.int lo hi))) r = some c0)
     (σ₀ : World D)
     (σ : World D)
     (ρ : Env D Γ)
@@ -308,7 +308,7 @@ theorem lowerNutz_ok_num (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat)
     (hE : EnvRep lay rs m cenv ρ)
     (hc : (∀ x ∈ cenv, x < r))
     (ih_lowerE_ok_e : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv e r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.int lo hi) (eval σ₀ e σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.int lo hi))
-    : Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff (Option.some (lo, hi)) (Gabbro.Grammatik.evalNutz σ₀ (.num (lo := lo) (hi := hi) e : Gabbro.Grammatik.NutzlastExpr D Γ Λ (Option.some (lo, hi))) σ ρ))) :=
+    : Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff (Option.some (.int lo hi)) (Gabbro.Grammatik.evalNutz σ₀ (.val (τ := .int lo hi) e : Gabbro.Grammatik.NutzlastExpr D Γ Λ (Option.some (.int lo hi))) σ ρ))) :=
   by
   simp only [lowerNutz] at h
   rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
@@ -425,7 +425,7 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
 
 /-- The payload of a `case` expression: the code computes the word of the value. -/
 theorem lowerNutz_ok (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat) :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Gabbro.Grammatik.Ty}
       (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (cenv : List Reg) (r : Nat) (c0 : LR),
       lowerNutz lay cenv W L i nutz r = some c0 →
       ∀ (σ₀ σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs),
@@ -433,8 +433,10 @@ theorem lowerNutz_ok (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat) :
         Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff c (Gabbro.Grammatik.evalNutz σ₀ nutz σ ρ)))
   | _, _, _, .empty, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc =>
       lowerNutz_ok_empty (lay := lay) (hL := hL) (W := W) (L := L) (i := i) (cenv := cenv) (r := r) (c0 := c0) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc)
-  | _, _, _, .num (lo := lo) (hi := hi) e, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc =>
-      lowerNutz_ok_num (lay := lay) (hL := hL) (W := W) (L := L) (i := i) (lo := lo) (hi := hi) (e := e) (cenv := cenv) (r := r) (c0 := c0) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc) (ih_lowerE_ok_e := fun lay hL => lowerE_ok lay hL e)
+  | _, _, _, .val (τ := τ) e, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
+      cases τ <;> try { simp only [lowerNutz, reduceCtorEq] at h }
+      rename_i lo hi
+      exact lowerNutz_ok_num (lay := lay) (hL := hL) (W := W) (L := L) (i := i) (lo := lo) (hi := hi) (e := e) (cenv := cenv) (r := r) (c0 := c0) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc) (ih_lowerE_ok_e := fun lay hL => lowerE_ok lay hL e)
 end
 
 end Gabbro.Code.Lower

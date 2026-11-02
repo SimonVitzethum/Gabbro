@@ -284,7 +284,7 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
 
 /-- The payload reads only its places: the second half of the stone. -/
 
-theorem evalNutz_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+theorem evalNutz_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (nutz : NutzlastExpr D Γ Λ c)
     (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
     (hS : ∀ t : D.Tab, ∀ k f, σ.slots t k f = σ'.slots t k f)
@@ -294,7 +294,7 @@ theorem evalNutz_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {c : Option (
     evalNutz σ₀ nutz σ ρ = evalNutz σ₀' nutz σ' ρ := by
   match nutz with
   | .empty => rfl
-  | .num e =>
+  | .val e =>
       have h := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [evalNutz]
       rw [h]

@@ -52,7 +52,7 @@ def lowStructL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn
 /-- The arms of a tagged match: one block per case of the specification, the payload of a case with one bound by
     the next binder name, separated by `ifElse`; the marker that closes the match is left to the caller. -/
 def lowArmsT {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn) (n : Nat)
-    (Λ : List (Res (declOf u))) (pe : AtTop u caller Λ) (cs : List (Option (Int × Int))) (bs : List String) (ss : List UStmt) :=
+    (Λ : List (Res (declOf u))) (pe : AtTop u caller Λ) (cs : List (Option Ty)) (bs : List String) (ss : List UStmt) :=
   (lowStufe u caller n).arms (l := l) Γ fn Λ pe cs bs ss
 
 /-- The arms of a reason match: `m` blocks, one per reason, separated by `ifElse`; the marker that closes the
@@ -77,7 +77,7 @@ def lowEndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : 
     (lowStufe u caller n).struct (l := l) Γ fn Λ pe s ss = lowStructL u caller Γ fn n Λ pe s ss := rfl
 
 @[simp] theorem lowStufe_arms (u : UProg) (caller : Fin u.fns.length) (n : Nat) {l : Bool} (Γ : Ctx) (fn : UFn)
-    (Λ : List (Res (declOf u))) (pe : AtTop u caller Λ) (cs : List (Option (Int × Int))) (bs : List String)
+    (Λ : List (Res (declOf u))) (pe : AtTop u caller Λ) (cs : List (Option Ty)) (bs : List String)
     (ss : List UStmt) :
     (lowStufe u caller n).arms (l := l) Γ fn Λ pe cs bs ss = lowArmsT u caller Γ fn n Λ pe cs bs ss := rfl
 

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Kern.Syntax.Typen.Transport
 
 @[expose] public section
 
@@ -11,19 +12,7 @@ namespace Gabbro.Grammatik
 /-! ## 1. Types, signatures, the declaration -/
 
 /-- Types of `D.mitRuhe`: function-pointer numbers shift by one. -/
-@[reducible] def tyR : Ty → Ty
-  | .int lo hi => .int lo hi
-  | .bool => .bool
-  | .opt n => .opt n
-  | .sum cs => .sum cs
-  | .why n => .why n
-  | .never => .never
-  | .fl lo hi => .fl lo hi
-  | .fnptr n => .fnptr (n + 1)
-  | .ptr t rw => .ptr t rw
-  | .ref t => .ref t
-  | .arr τ n => .arr (tyR τ) n
-  | .str n => .str n
+@[reducible] def tyR : Ty → Ty := Ty.mapNumbers (fun n => n + 1) id
 
 /-- A signature with its types shifted. -/
 def sigR {Tab Glob Lock Marke : Type} (S : Signatur Tab Glob Lock Marke) :
@@ -76,52 +65,18 @@ theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
     subst this; exact SigPasst.refl _ _
 
 /-- A value of `τ` as a value of the shifted `τ`. -/
-@[reducible] def valR : (τ : Ty) → Val D.Fn D.passt τ → Val (Option D.Fn) (passtM D) (tyR τ)
-  | .int _ _, v => v
-  | .bool, v => v
-  | .opt _, v => v
-  | .sum _, v => v
-  | .why _, v => v
-  | .never, v => v
-  | .fl _ _, v => v
-  | .fnptr _, v => ⟨some v.1, v.2⟩
-  | .ptr _ _, v => v
-  | .ref _, v => v
-  | .arr τ _, v => fun j => valR τ (v j)
-  | .str _, v => v
+@[reducible] def valR : (τ : Ty) → Val D.Fn D.passt τ → Val (Option D.Fn) (passtM D) (tyR τ) :=
+  Val.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩)
 
 /-- A value of the shifted `τ` as a value of `τ` (the root has number `0`,
     which no shifted pointer type names). -/
-def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.passt τ
-  | .int _ _, v => v
-  | .bool, v => v
-  | .opt _, v => v
-  | .sum _, v => v
-  | .why _, v => v
-  | .never, v => v
-  | .fl _ _, v => v
-  | .fnptr n, v => match v with
+def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.passt τ :=
+  Val.restrict (fun n => n + 1) id fun n v => match v with
     | ⟨some f, h⟩ => ⟨f, h⟩
-    | ⟨none, h⟩ => absurd h (by simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
-  not_false_eq_true])
-  | .ptr _ _, v => v
-  | .ref _, v => v
-  | .arr τ _, v => fun j => valZ τ (v j)
-  | .str _, v => v
+    | ⟨none, h⟩ => absurd h (by simp only [passtM, decide_false, Bool.false_eq_true] at h)
 
-theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v) = v
-  | .int _ _, _ => rfl
-  | .bool, _ => rfl
-  | .opt _, _ => rfl
-  | .sum _, _ => rfl
-  | .why _, _ => rfl
-  | .never, _ => rfl
-  | .fl _ _, _ => rfl
-  | .fnptr _, ⟨_, _⟩ => rfl
-  | .ptr _ _, _ => rfl
-  | .ref _, _ => rfl
-  | .arr τ _, v => funext fun j => valZ_valR τ (v j)
-  | .str _, _ => rfl
+theorem valZ_valR (τ : Ty) (v : Val D.Fn D.passt τ) : valZ τ (valR τ v) = v :=
+  Val.restrict_relocate (fun n => n + 1) id _ _ (fun _ _ => rfl) τ v
 
 theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), valR τ (valZ τ v) = v
   | .int _ _, _ => rfl

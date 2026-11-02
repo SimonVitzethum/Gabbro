@@ -120,7 +120,7 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
 def NutzlastExpr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
     NutzlastExpr D Γ Λ c → NutzlastExpr D Γ' Λ c
   | .empty => .empty
-  | .num e => .num (e.ren r)
+  | .val e => .val (e.ren r)
 end
 
 /-- Ein Ausdruck unter einem eingeschobenen Binder: dieselben Orte, dasselbe `Λ`. -/

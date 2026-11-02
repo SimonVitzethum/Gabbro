@@ -89,14 +89,14 @@ theorem mem_optS {E : Sz (SE D Γ Λ)} {i : Nat} {n : Int} {a : Expr D Γ Λ (.o
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
 /-- The sum-typed expressions of a stream. -/
-def sumS (E : Sz (SE D Γ Λ)) : Sz (Σ cs : List (Option (Int × Int)), Expr D Γ Λ (.sum cs)) := fun i =>
+def sumS (E : Sz (SE D Γ Λ)) : Sz (Σ cs : List (Option Ty), Expr D Γ Λ (.sum cs)) := fun i =>
   (E i).filterMap fun p => match p with
     | ⟨.sum cs, a⟩ => some ⟨cs, a⟩
     | _ => none
 
-theorem mem_sumS {E : Sz (SE D Γ Λ)} {i : Nat} {cs : List (Option (Int × Int))} {a : Expr D Γ Λ (.sum cs)}
+theorem mem_sumS {E : Sz (SE D Γ Λ)} {i : Nat} {cs : List (Option Ty)} {a : Expr D Γ Λ (.sum cs)}
     (h : (⟨.sum cs, a⟩ : SE D Γ Λ) ∈ E i) :
-    (⟨cs, a⟩ : Σ cs : List (Option (Int × Int)), Expr D Γ Λ (.sum cs)) ∈ sumS E i :=
+    (⟨cs, a⟩ : Σ cs : List (Option Ty), Expr D Γ Λ (.sum cs)) ∈ sumS E i :=
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
 /-- The reason-typed expressions of a stream. -/
@@ -124,9 +124,9 @@ theorem mem_varS {Γ : Ctx} {τ : Ty} (x : Var Γ τ) : (⟨τ, x⟩ : Σ τ, Va
   List.mem_filter.2 ⟨genVar_vollst Γ τ x, by simp only [decide_true]⟩
 
 /-- The payload expression of a sum case. -/
-def nutzS (E : Sz (SE D Γ Λ)) : (o : Option (Int × Int)) → Sz (NutzlastExpr D Γ Λ o)
+def nutzS (E : Sz (SE D Γ Λ)) : (o : Option Ty) → Sz (NutzlastExpr D Γ Λ o)
   | none => Sz.blatt [.empty]
-  | some (lo, hi) => Sz.knoten (Sz.map NutzlastExpr.num (tyS E (.int lo hi)))
+  | some τ => Sz.knoten (Sz.map NutzlastExpr.val (tyS E τ))
 
 /-! ## The clauses -/
 
