@@ -118,8 +118,8 @@ def foldHasFloat (ctx : UCtx) : Nat → SExpr → Bool
   | 0, _ => false
   | _ + 1, .float _ => true
   | _ + 1, .variable name =>
-    match (ctx.names.findIdx? (strEq · name)).bind (ctx.types[·]?) with
-    | some (.fl ..) => true
+    match uWertBody ctx (.variable name) with
+    | .ok side => (foldFloatType ctx side).any (fun ty => match ty with | .fl .. => true | _ => false)
     | _ => false
   | n + 1, .bin _ a b => foldHasFloat ctx n a || foldHasFloat ctx n b
   | n + 1, e@(.index a b) =>

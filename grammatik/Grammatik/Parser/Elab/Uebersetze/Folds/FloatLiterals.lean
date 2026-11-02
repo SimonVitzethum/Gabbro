@@ -40,6 +40,7 @@ def uFloatRational (text : String) : Except String (Int × Int) := do
   let whole := mantissa.takeWhile (· != '.')
   let fraction := (mantissa.drop whole.length).drop 1
   let some numerator := uFloatDigits (whole ++ fraction) | throw "float: malformed decimal literal"
+  if negative && numerator == 0 then throw "float: signed zero requires unary negation"
   let scale := exponent - (fraction.length : Int)
   let numerator : Int := if negative then -(numerator : Int) else (numerator : Int)
   pure (if scale < 0 then (numerator, (10 : Int)^(-scale).toNat)
