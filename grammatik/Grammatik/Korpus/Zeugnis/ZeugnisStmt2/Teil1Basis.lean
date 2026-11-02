@@ -179,7 +179,7 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
           obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
           exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.val ee),
             trivial⟩
-      | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ =>
+      | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ | prod _ _ =>
         cases p <;> simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
 
 end Gabbro.Grammatik
