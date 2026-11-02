@@ -356,7 +356,7 @@ theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
   unfold Akzeptiert at h
   unfold AkzeptiertX
   simp only [Bool.and_eq_true] at h ⊢
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, hReset⟩, h11⟩ := h
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩
 
 end Bool
