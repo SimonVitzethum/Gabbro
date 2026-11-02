@@ -36,7 +36,7 @@ namespace Gabbro.Grammatik
 /-- One traverse with an always-true invariant and always-`.ok`, always-preserving steps runs every
     index once, completes with `.ok`, and preserves the node cells. Proved by induction over the
     index list. `invCells` transports `cells` across the read-only invariant evaluation. -/
-theorem traverseLauf_all_okP {D : Deklaration} {V : vertrag D} {τ : Ty} {Γ : Ctx} {Λ : List (Res D)}
+theorem traverseLauf_all_okP {D : Deklaration} {V : Vertrag D} {τ : Ty} {Γ : Ctx} {Λ : List (Res D)}
     {l : Bool}
     (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
     (inv : World D → Env D Γ → World D × Bool)
@@ -211,7 +211,8 @@ theorem walkIte {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (tbl : Fin shape.arity → Wert D binding.entryTy)
     (oracle : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (ok : WalkRunOk binding code _ _ tbl _ oracle passes calls)
+    (leaf descend : Wert D binding.entryTy → Bool) (state : World D)
+    (ok : WalkRunOk binding code leaf descend tbl state oracle passes calls)
     {Γ : Ctx} (rename : WalkRen outer Γ)
     (path : List (Expr D Γ resources (.index shape.arity)))
     (level : Nat)
@@ -236,8 +237,7 @@ theorem walkIte {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
   simp only [execStmt]
   split
   · obtain ⟨σ', ρ', hvisit⟩ := ok.visitOk (binding.renameEntry rename) level (binding.fullPath path) (.var .here) _ _
-    simp only [hvisit]
-    exact ⟨_, _, rfl, fun nodev => (ok.visitPreserves (binding.renameEntry rename) level (binding.fullPath path) (.var .here) _ _ _ _ hvisit nodev).trans (hstab nodev)⟩
+    exact ⟨_, _, hvisit, fun nodev => (ok.visitPreserves (binding.renameEntry rename) level (binding.fullPath path) (.var .here) _ _ _ _ hvisit nodev).trans (hstab nodev)⟩
   · refine hotherwise _ _ ?_
     exact fun nodev => hstab nodev
 
@@ -250,7 +250,8 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (tbl : Fin shape.arity → Wert D binding.entryTy)
     (oracle : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (ok : WalkRunOk binding code _ _ tbl _ oracle passes calls)
+    (leaf descend : Wert D binding.entryTy → Bool) (state : World D)
+    (ok : WalkRunOk binding code leaf descend tbl state oracle passes calls)
     (level : Nat)
     (ih : ∀ {Γ' : Ctx} {loop' : Bool} (rename' : WalkRen outer Γ')
       (node' : Expr D Γ' resources (.index (D.count binding.nodes)))
@@ -270,7 +271,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             (.cons (.onOption (Expr.prodGet (.var .here) binding.child)
               (.cons (binding.expand guard code level
                 (fun x => .there (binding.renameEntry rename x)) (.var .here)
-                ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil)
+                ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil) .nil)
           σ ρ = .ok σ' ρ' ∧
         ∀ nodev, binding.entries σ' nodev = tbl := by
   intro σ ρ hstab
@@ -281,7 +282,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
           (.cons (.onOption (Expr.prodGet (.var .here) binding.child)
             (.cons (binding.expand guard code level
               (fun x => .there (binding.renameEntry rename x)) (.var .here)
-              ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) σ ρ =
+              ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil)) σ ρ =
       .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
     simp only [execStmt]
     split
@@ -325,7 +326,8 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (tbl : Fin shape.arity → Wert D binding.entryTy)
     (oracle : Orakel D) (passes : Nat)
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
-    (ok : WalkRunOk binding code _ _ tbl _ oracle passes calls) :
+    (leaf descend : Wert D binding.entryTy → Bool) (state : World D)
+    (ok : WalkRunOk binding code leaf descend tbl state oracle passes calls) :
     ∀ (level : Nat) {Γ : Ctx} {loop : Bool} (rename : WalkRen outer Γ)
       (node : Expr D Γ resources (.index (D.count binding.nodes)))
       (path : List (Expr D Γ resources (.index shape.arity)))
@@ -363,7 +365,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                 .nil) σ₂ ρ₂ = .ok σ' ρ' ∧
             ∀ nodev, binding.entries σ' nodev = tbl := by
         intro σ₂ ρ₂ hstab₂
-        refine walkIte binding code tbl oracle passes calls ok rename path 0 .nil ?_ σ₂ ρ₂ hstab₂
+        refine walkIte binding code tbl oracle passes calls leaf descend state ok rename path 0 .nil ?_ σ₂ ρ₂ hstab₂
         intro σ₃ ρ₃ hstab₃
         exact ⟨_, _, rfl, hstab₃⟩
       have hstep : ∃ (σ' : World D) (ρ' : Env D (.index (D.count binding.iterator) :: Γ)),
@@ -418,8 +420,8 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                 σ₃ ρ₃ = .ok σ' ρ' ∧
             ∀ nodev, binding.entries σ' nodev = tbl := by
           intro σ₃ ρ₃ hstab₃
-          refine walkDescendOk binding guard code tbl oracle passes calls ok level ih rename path σ₃ ρ₃ hstab₃
-        refine walkIte binding code tbl oracle passes calls ok rename path (level + 1) _ hotherwise σ₂ ρ₂ hstab₂
+          refine walkDescendOk binding guard code tbl oracle passes calls leaf descend state ok level ih rename path σ₃ ρ₃ hstab₃
+        refine walkIte binding code tbl oracle passes calls leaf descend state ok rename path (level + 1) _ hotherwise σ₂ ρ₂ hstab₂
       have hstep : ∃ (σ' : World D) (ρ' : Env D (.index (D.count binding.iterator) :: Γ)),
           execBlock oracle passes calls
             (WalkBinding.levelBody binding guard code (level + 1) rename node path
@@ -449,18 +451,18 @@ theorem walkExpand_correct {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (root : Expr D outer resources (.index (D.count binding.nodes)))
     (ok : WalkRunOk binding code leaf descend tbl state oracle passes calls) :
     (∃ (σ' : World D) (ρ' : Env D outer),
-      execBlock oracle passes calls (binding.walk guard code root) state env = .ok σ' ρ') ∧
+      execBlock oracle passes calls (binding.walk (loop := false) guard code root) state env = .ok σ' ρ') ∧
     (∀ (p : List (Fin shape.arity)) (m : Wert D binding.entryTy),
       (p, m) ∈ visitT (binding.tree state leaf descend) (shape.levels - 1) tbl ↔
       WalkHit (binding.tree state leaf descend) (shape.levels - 1) tbl p m) ∧
     (visitT (binding.tree state leaf descend) (shape.levels - 1) tbl).Pairwise
       (fun x y => x.1 ≠ y.1) := by
-  obtain ⟨σw, ρw, hw, _⟩ := walkExpand_ok binding guard code tbl oracle passes calls
-    ok (shape.levels - 1) (fun x => .there x) root []
+  obtain ⟨σw, ρw, hw, _⟩ := walkExpand_ok binding guard code tbl oracle passes calls leaf descend
+    state ok (loop := false) (shape.levels - 1) (fun x => .there x) root []
     (state.lese resources root.orte)
     (.cons (eval (state.lese resources root.orte) root (state.lese resources root.orte) env) env)
     ok.stable
-  have hwalk : execBlock oracle passes calls (binding.walk guard code root) state env =
+  have hwalk : execBlock oracle passes calls (binding.walk (loop := false) guard code root) state env =
       .ok σw ρw.tail := by
     simp only [WalkBinding.walk, execBlock, hw, Ausgang.schrumpf]
   obtain ⟨hmem, hnodup, _⟩ := walkMappings_correct (binding.tree state leaf descend) shape.levels
