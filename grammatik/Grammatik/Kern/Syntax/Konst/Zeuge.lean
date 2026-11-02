@@ -6,7 +6,7 @@ public import Grammatik.Kern.Syntax.Konst.ReinBBeweis
 public section
 namespace Gabbro.Grammatik.ConstWitness
 
-@[expose] def witnessD : Deklaration where
+@[expose, reducible] def witnessD : Deklaration where
   Tab := Empty
   decTab := inferInstance
   count := fun t => t.elim
@@ -34,7 +34,7 @@ namespace Gabbro.Grammatik.ConstWitness
   eigner := fun t => t.elim
   Fn := Fin 2
   sig := fun _ => 0
-  sigNr := fun _ => ⟨[], some (.int 3 3), 0, [], fun t => t.elim, fun g => g.elim, [], [], none⟩
+  sigNr := fun _ => ⟨[], some (.int 3 3), 0, [], fun t => t.elim, fun g => g.elim, [], [], none, {}⟩
   eigner_nie_erzeugt := fun _ t => t.elim
   Inv := Empty
   traeger := fun i => i.elim
@@ -56,12 +56,13 @@ namespace Gabbro.Grammatik.ConstWitness
   ggeteilt_bewacht := fun g => g.elim
 
 /-- Calls preserve the empty resource context. -/
-private theorem callFits (f g : witnessD.Fn) :
+theorem callFits (f g : witnessD.Fn) :
     RufPasst witnessD (vertragVon witnessD f) (witnessD.signatur g) [] where
   hw := fun t => t.elim
   hg := fun g => g.elim
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := fun l => l.elim
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (OwnerFlow.empty_of_empty _)
 
 /-- Two functions: the first calls the selected callee, the second adds literals. -/
 @[expose] def witnessP (callee : Fin 2) : Programm witnessD where
@@ -74,10 +75,10 @@ private theorem callFits (f g : witnessD.Fn) :
     else .ret (.val (.add (.lit 1) (.lit 2))) (List.Perm.refl _)
 
 /-- Closed metadata shared by the acyclic and recursive fixtures. -/
-@[expose] def fixture (callee : Fin 2) : ConstProgram where
+@[expose, reducible] def fixture (callee : Fin 2) : ConstProgram where
   D := witnessD
   P := witnessP callee
-  functions := [0, 1]
+  functions := [(0 : Fin 2), (1 : Fin 2)]
   functions_complete := by decide
   sourceId := fun f => f.val
   sourceId_injective := fun _ _ h => Fin.ext h
@@ -97,7 +98,7 @@ private theorem callFits (f g : witnessD.Fn) :
   emptyExit := fun _ => rfl
 
 /-- Fixture A has the edge f → g. -/
-@[expose] def fixtureA : ConstProgram := fixture 1
+@[expose, reducible] def fixtureA : ConstProgram := fixture 1
 
 /-- The leaf has rank zero and its caller rank one. -/
 @[expose] def rankA (f : fixtureA.D.Fn) : Nat := if f.val = 0 then 1 else 0
@@ -119,7 +120,7 @@ theorem constTermination_zeuge : ConstTermination fixtureA 1 :=
   constTerminationB_sound fixtureA 1 rankA constTerminationB_zeuge
 
 /-- Fixture C has the self edge f → f. -/
-@[expose] def fixtureC : ConstProgram := fixture 0
+@[expose, reducible] def fixtureC : ConstProgram := fixture 0
 
 set_option maxRecDepth 100000 in
 /-- A self edge is refused by the same concrete rank assignment. -/
