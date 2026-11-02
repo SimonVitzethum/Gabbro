@@ -39,6 +39,11 @@ inductive Ty where
   | arr (τ : Ty) (n : Nat)
   /-- `string max N` as a VALUE (lane 261, in G since 2026-10-25): at most `n` bytes. -/
   | str (n : Nat)
+  /-- A nominal PRODUCT (C01, typed records): the declaration number `name` and its ordered field
+      types. Two products of equal shape and different `name` are different types. Its value is the
+      heterogeneous tuple of the field values in declaration order (`ProdVal`); the empty product
+      has one value. New constructors go at the end, so cached names keep theirs. -/
+  | prod (name : Nat) (fields : List Ty)
   deriving Repr
 
 /- Decidable equality for nested payload schemas. Lean's deriving handler does not
@@ -120,6 +125,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .int _ _, .ref _ => isFalse (by intro h; cases h)
   | .int _ _, .arr _ _ => isFalse (by intro h; cases h)
   | .int _ _, .str _ => isFalse (by intro h; cases h)
+  | .int _ _, .prod _ _ => isFalse (by intro h; cases h)
   | .bool, .int _ _ => isFalse (by intro h; cases h)
   | .bool, .opt _ => isFalse (by intro h; cases h)
   | .bool, .sum _ => isFalse (by intro h; cases h)
@@ -131,6 +137,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .bool, .ref _ => isFalse (by intro h; cases h)
   | .bool, .arr _ _ => isFalse (by intro h; cases h)
   | .bool, .str _ => isFalse (by intro h; cases h)
+  | .bool, .prod _ _ => isFalse (by intro h; cases h)
   | .opt _, .int _ _ => isFalse (by intro h; cases h)
   | .opt _, .bool => isFalse (by intro h; cases h)
   | .opt _, .sum _ => isFalse (by intro h; cases h)
@@ -142,6 +149,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .opt _, .ref _ => isFalse (by intro h; cases h)
   | .opt _, .arr _ _ => isFalse (by intro h; cases h)
   | .opt _, .str _ => isFalse (by intro h; cases h)
+  | .opt _, .prod _ _ => isFalse (by intro h; cases h)
   | .sum _, .int _ _ => isFalse (by intro h; cases h)
   | .sum _, .bool => isFalse (by intro h; cases h)
   | .sum _, .opt _ => isFalse (by intro h; cases h)
@@ -153,6 +161,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .sum _, .ref _ => isFalse (by intro h; cases h)
   | .sum _, .arr _ _ => isFalse (by intro h; cases h)
   | .sum _, .str _ => isFalse (by intro h; cases h)
+  | .sum _, .prod _ _ => isFalse (by intro h; cases h)
   | .why _, .int _ _ => isFalse (by intro h; cases h)
   | .why _, .bool => isFalse (by intro h; cases h)
   | .why _, .opt _ => isFalse (by intro h; cases h)
@@ -164,6 +173,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .why _, .ref _ => isFalse (by intro h; cases h)
   | .why _, .arr _ _ => isFalse (by intro h; cases h)
   | .why _, .str _ => isFalse (by intro h; cases h)
+  | .why _, .prod _ _ => isFalse (by intro h; cases h)
   | .never, .int _ _ => isFalse (by intro h; cases h)
   | .never, .bool => isFalse (by intro h; cases h)
   | .never, .opt _ => isFalse (by intro h; cases h)
@@ -175,6 +185,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .never, .ref _ => isFalse (by intro h; cases h)
   | .never, .arr _ _ => isFalse (by intro h; cases h)
   | .never, .str _ => isFalse (by intro h; cases h)
+  | .never, .prod _ _ => isFalse (by intro h; cases h)
   | .fl _ _, .int _ _ => isFalse (by intro h; cases h)
   | .fl _ _, .bool => isFalse (by intro h; cases h)
   | .fl _ _, .opt _ => isFalse (by intro h; cases h)
@@ -186,6 +197,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .fl _ _, .ref _ => isFalse (by intro h; cases h)
   | .fl _ _, .arr _ _ => isFalse (by intro h; cases h)
   | .fl _ _, .str _ => isFalse (by intro h; cases h)
+  | .fl _ _, .prod _ _ => isFalse (by intro h; cases h)
   | .fnptr _, .int _ _ => isFalse (by intro h; cases h)
   | .fnptr _, .bool => isFalse (by intro h; cases h)
   | .fnptr _, .opt _ => isFalse (by intro h; cases h)
@@ -197,6 +209,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .fnptr _, .ref _ => isFalse (by intro h; cases h)
   | .fnptr _, .arr _ _ => isFalse (by intro h; cases h)
   | .fnptr _, .str _ => isFalse (by intro h; cases h)
+  | .fnptr _, .prod _ _ => isFalse (by intro h; cases h)
   | .ptr _, .int _ _ => isFalse (by intro h; cases h)
   | .ptr _, .bool => isFalse (by intro h; cases h)
   | .ptr _, .opt _ => isFalse (by intro h; cases h)
@@ -208,6 +221,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .ptr _, .ref _ => isFalse (by intro h; cases h)
   | .ptr _, .arr _ _ => isFalse (by intro h; cases h)
   | .ptr _, .str _ => isFalse (by intro h; cases h)
+  | .ptr _, .prod _ _ => isFalse (by intro h; cases h)
   | .ref _, .int _ _ => isFalse (by intro h; cases h)
   | .ref _, .bool => isFalse (by intro h; cases h)
   | .ref _, .opt _ => isFalse (by intro h; cases h)
@@ -219,6 +233,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .ref _, .ptr _ => isFalse (by intro h; cases h)
   | .ref _, .arr _ _ => isFalse (by intro h; cases h)
   | .ref _, .str _ => isFalse (by intro h; cases h)
+  | .ref _, .prod _ _ => isFalse (by intro h; cases h)
   | .arr _ _, .int _ _ => isFalse (by intro h; cases h)
   | .arr _ _, .bool => isFalse (by intro h; cases h)
   | .arr _ _, .opt _ => isFalse (by intro h; cases h)
@@ -230,6 +245,7 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .arr _ _, .ptr _ => isFalse (by intro h; cases h)
   | .arr _ _, .ref _ => isFalse (by intro h; cases h)
   | .arr _ _, .str _ => isFalse (by intro h; cases h)
+  | .arr _ _, .prod _ _ => isFalse (by intro h; cases h)
   | .str _, .int _ _ => isFalse (by intro h; cases h)
   | .str _, .bool => isFalse (by intro h; cases h)
   | .str _, .opt _ => isFalse (by intro h; cases h)
@@ -241,6 +257,28 @@ def Ty.decEq : (a b : Ty) → Decidable (a = b)
   | .str _, .ptr _ => isFalse (by intro h; cases h)
   | .str _, .ref _ => isFalse (by intro h; cases h)
   | .str _, .arr _ _ => isFalse (by intro h; cases h)
+  | .str _, .prod _ _ => isFalse (by intro h; cases h)
+  | .prod a0 a1, .prod b0 b1 => by
+      letI : Decidable (a1 = b1) := Ty.decFields a1 b1
+      if h0 : a0 = b0 then
+        subst b0
+        if h1 : a1 = b1 then
+          subst b1
+          exact isTrue rfl
+        else exact isFalse (fun h => h1 (by cases h; rfl))
+      else exact isFalse (fun h => h0 (by cases h; rfl))
+  | .prod _ _, .int _ _ => isFalse (by intro h; cases h)
+  | .prod _ _, .bool => isFalse (by intro h; cases h)
+  | .prod _ _, .opt _ => isFalse (by intro h; cases h)
+  | .prod _ _, .sum _ => isFalse (by intro h; cases h)
+  | .prod _ _, .why _ => isFalse (by intro h; cases h)
+  | .prod _ _, .never => isFalse (by intro h; cases h)
+  | .prod _ _, .fl _ _ => isFalse (by intro h; cases h)
+  | .prod _ _, .fnptr _ => isFalse (by intro h; cases h)
+  | .prod _ _, .ptr _ => isFalse (by intro h; cases h)
+  | .prod _ _, .ref _ => isFalse (by intro h; cases h)
+  | .prod _ _, .arr _ _ => isFalse (by intro h; cases h)
+  | .prod _ _, .str _ => isFalse (by intro h; cases h)
 termination_by a _ => sizeOf a
 
 def Ty.decCases : (as bs : List (Option Ty)) → Decidable (as = bs)
@@ -268,6 +306,21 @@ def Ty.decPayload : (a b : Option Ty) → Decidable (a = b)
       else exact isFalse (fun e => h (by cases e; rfl))
   | none, some _ | some _, none => isFalse (by intro h; cases h)
 termination_by a _ => sizeOf a
+
+def Ty.decFields : (as bs : List Ty) → Decidable (as = bs)
+  | [], [] => isTrue rfl
+  | a :: as, b :: bs => by
+      letI : Decidable (a = b) := Ty.decEq a b
+      letI : Decidable (as = bs) := Ty.decFields as bs
+      if h : a = b then
+        subst b
+        if ht : as = bs then
+          subst bs
+          exact isTrue rfl
+        else exact isFalse (fun h => ht (by cases h; rfl))
+      else exact isFalse (fun e => h (by cases e; rfl))
+  | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
+termination_by as _ => sizeOf as
 
 end
 

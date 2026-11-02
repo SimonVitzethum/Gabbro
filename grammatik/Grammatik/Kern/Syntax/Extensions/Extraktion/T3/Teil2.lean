@@ -447,6 +447,32 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
           σ₀ σ₀' σ σ' (.cons k ρ) hS hSG h0T h0G)
       simp only [eval]
       exact zaehleWahr_congr n _ _ hbody
+  | .prod _ args =>
+      simp only [eval]
+      induction args with
+      | nil => rfl
+      | cons e rest ih =>
+        have he := eval_liest_nur_orte e os
+          (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+          σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+        have hr := ih (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        simp only [evalProd]
+        rw [he, hr]
+  | .prodGet a _ =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (ho))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha]
+  | .prodSet a _ b =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hb := eval_liest_nur_orte b os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha, hb]
 
 /-- Die Nutzlast D.Fn D.passt liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
 theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}

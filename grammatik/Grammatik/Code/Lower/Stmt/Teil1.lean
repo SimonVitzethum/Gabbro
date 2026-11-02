@@ -179,7 +179,6 @@ def lowerElse (lay : Layout D) (cenv : List Reg) (fno n : Nat) (τ : GTy) (ca : 
         | none => none
       else none
   -- fallible indirect calls («C07») have no lowering yet: refused, never a fallback
-  | _, _, _, _, .callIndElse .., _, _, _ => none
   | _ => none
 
 variable {V : Vertrag D}

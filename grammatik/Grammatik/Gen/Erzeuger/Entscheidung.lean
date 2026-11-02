@@ -23,6 +23,16 @@ instance decAllTab [Aufz D] (P : D.Tab → Prop) [DecidablePred P] : Decidable (
 instance decAllGlob [Aufz D] (P : D.Glob → Prop) [DecidablePred P] : Decidable (∀ g, P g) :=
   decidable_of_iff (∀ g ∈ Aufz.glob (D := D), P g) ⟨fun h g => h g (Aufz.glob_mem g), fun h g _ => h g⟩
 
+instance decExTab [Aufz D] (P : D.Tab → Prop) [DecidablePred P] : Decidable (∃ t, P t) :=
+  decidable_of_iff (∃ t ∈ Aufz.tab (D := D), P t)
+    ⟨fun ⟨t, _, h⟩ => ⟨t, h⟩, fun ⟨t, h⟩ => ⟨t, Aufz.tab_mem t, h⟩⟩
+
+instance decEscrowReady [Aufz D] (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
+    Decidable (S.owner.EscrowReady (fun m => decide (m ∈ S.owner.inputs.map Prod.fst))
+      D.stufen (fun m => ∃ t, m ∈ D.eigner t) S.konsumiert) := by
+  unfold OwnerFlow.EscrowReady
+  exact inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+
 instance decAllLock [Aufz D] (P : D.Lock → Prop) [DecidablePred P] : Decidable (∀ l, P l) :=
   decidable_of_iff (∀ l ∈ Aufz.lock (D := D), P l) ⟨fun h l => h l (Aufz.lock_mem l), fun h l _ => h l⟩
 
@@ -55,7 +65,9 @@ instance decRufPasst [Aufz D] (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock 
     ((∀ t, S.schreibt t = true → V.schreibt t = true) ∧ (∀ g, S.gschreibt g = true → V.gschreibt g = true) ∧
       Untermulti (S.inputMarks.map (Res.vonMarke D)) Λ ∧ (∀ L, L ∈ S.haelt → Res.held L ∈ Λ) ∧
       (∀ L, Res.held L ∈ Λ → L ∉ S.haelt → ∃ c, S.boden = some c ∧ D.rang L < c) ∧
-      (∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c') ∧ S.owner = {})
+      (∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c') ∧
+      S.owner.EscrowReady (fun m => decide (m ∈ S.owner.inputs.map Prod.fst))
+        D.stufen (fun m => ∃ t, m ∈ D.eigner t) S.konsumiert)
     ⟨fun ⟨a, b, c, d, e, f, g⟩ => ⟨a, b, c, d, e, f, g⟩, fun h => ⟨h.hw, h.hg, h.hk, h.hh, h.hx, h.hb, h.ownerReady⟩⟩
 
 end Gabbro.Grammatik.Gen

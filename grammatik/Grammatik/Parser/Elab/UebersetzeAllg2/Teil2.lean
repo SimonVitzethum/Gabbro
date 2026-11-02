@@ -237,6 +237,10 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
           | .error e => .error e
           | .ok x => .ok (Expr.var x)
       | _ => .error "argument without G form"
+    | .wert, ty@(.prod ..) | .wert, ty@(.arr ..) | .wert, ty@(.str ..) =>
+      match a with
+      | .val source => lowWertAtE u Γ Λ fn none ty source
+      | _ => .error "aggregate argument without G form"
     | _, _ => .error "argument type without G form"
 
 /-- The argument list against kinds and recorded types. -/

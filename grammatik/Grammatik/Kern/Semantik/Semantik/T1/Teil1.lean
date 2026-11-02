@@ -1,21 +1,13 @@
 module
-
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Syntax.Typen.Fall
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut
-
 @[expose] public section
-
-
-
 namespace Gabbro.Grammatik
-
 variable {D : Deklaration}
-
 /-! ## 1. Welt und Sichtbereich -/
-
 /-- Ein Ereignis der Spur: ein Zugriff mit dem statischen `Λ` seiner Stelle und den
     dynamisch gehaltenen Sperren, oder das Nehmen und Geben einer Sperre. -/
 inductive Ereignis (D : Deklaration) where
@@ -32,7 +24,6 @@ inductive Ereignis (D : Deklaration) where
       (a `read` that returns the next bytes, a provider that gives a fresh cell, a register that moves). It
       touches no cell and records no lock. -/
   | fremd (q : D.Ax ⊕ D.Reg ⊕ D.Glob)
-
 /-- Die OFFENEN Sperren einer Spur: was genommen und nicht gegeben ist (neuestes zuerst). -/
 def offen : List (Ereignis D) → List D.Lock
   | [] => []
@@ -41,31 +32,23 @@ def offen : List (Ereignis D) → List D.Lock
   | .zugriff .. :: s => offen s
   | .gzugriff .. :: s => offen s
   | .fremd _ :: s => offen s
-
 /-- Die Welt: je Tabelle, Index und Feld ein Wert des erklaerten Typs; je Global einer; dazu
     die Spur dieses Fadens (neuestes zuerst). Die gehaltenen Sperren sind die offenen der Spur. -/
 structure World (D : Deklaration) where
   slots : ∀ t : D.Tab, Int → ∀ f : D.Feld t, Wert D (D.typ t f)
   globs : ∀ g : D.Glob, Wert D (D.gtyp g)
   spur : List (Ereignis D)
-
 def World.haelt (σ : World D) : List D.Lock := offen σ.spur
-
 def World.merke (σ : World D) (es : List (Ereignis D)) : World D := { σ with spur := es ++ σ.spur }
-
 /-- **Asking outside the program** records the question first (`Ereignis.fremd`): the world the machine answers in. -/
 def World.fragt (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : World D := σ.merke [.fremd q]
-
 /-- Die Lesungen eines Ausdrucks, als Ereignisse mit dem Stand der Sperren. -/
 def World.lese (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob)) : World D :=
   σ.merke (orte.map fun o => match o with
     | .inl t => Ereignis.zugriff t false Λ σ.haelt
     | .inr g => Ereignis.gzugriff g false Λ σ.haelt)
-
 def World.nimmt (σ : World D) (L : D.Lock) : World D := { σ with spur := .nimmt L σ.haelt :: σ.spur }
-
 def World.gibt (σ : World D) (L : D.Lock) : World D := { σ with spur := .gibt L :: σ.spur }
-
 /-- Ein Schreiben in einen Slot: alle anderen Orte bleiben -- der RAHMEN faellt hier aus. -/
 def World.storeSlot (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
     World D :=
@@ -75,57 +58,44 @@ def World.storeSlot (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wer
             exact if k' = k then (if hf : f' = f then (by subst hf; exact v) else σ.slots t' k' f')
                   else σ.slots t' k' f')
       else σ.slots t' k' f' }
-
 def World.storeGlob (σ : World D) (g : D.Glob) (v : Wert D (D.gtyp g)) : World D :=
   { σ with globs := fun g' =>
       if hg : g' = g then (by subst hg; exact v) else σ.globs g' }
-
 /-- Ein Schreiben MIT seinem Ereignis. -/
 def World.schreibSlot (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
     (v : Wert D (D.typ t f)) : World D :=
   (σ.storeSlot t k f v).merke [.zugriff t true Λ σ.haelt]
-
 def World.schreibGlob (σ : World D) (g : D.Glob) (Λ : List (Res D)) (v : Wert D (D.gtyp g)) : World D :=
   (σ.storeGlob g v).merke [.gzugriff g true Λ σ.haelt]
-
 /-- Die Bytes ab `k`, `n` Stueck, aus einem Bytefeld. -/
 def World.bytesAb (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) :
     Nat → Int → List Byte
   | 0, _ => []
   | n + 1, k => (cast (congrArg (Wert D) hf) (σ.slots t k f) : Wert D (.int 0 255)) :: σ.bytesAb t f hf n (k + 1)
-
 theorem World.bytesAb_length (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
     (n : Nat) (k : Int) : (σ.bytesAb t f hf n k).length = n := by
   induction n generalizing k with
   | zero => rfl
   | succ n ih => exact congrArg (· + 1) (ih (k + 1))
-
 /-- Die Bytes ab `k` schreiben, eines nach dem anderen, jedes mit seinem Ereignis. -/
 def World.schreibBytes (σ : World D) (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255)
     (Λ : List (Res D)) : Int → List Byte → World D
   | _, [] => σ
   | k, b :: bs => (σ.schreibSlot t Λ k f (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255)))).schreibBytes t f hf Λ (k + 1) bs
-
 /-- Die Belegung des Sichtbereichs. -/
 inductive Env (D : Deklaration) : Ctx → Type where
   | nil : Env D []
   | cons (v : Wert D τ) (ρ : Env D Γ) : Env D (τ :: Γ)
-
 def Env.get : Env D Γ → Var Γ τ → Wert D τ
   | .cons v _, .here => v
   | .cons _ ρ, .there x => ρ.get x
-
 def Env.set : Env D Γ → Var Γ τ → Wert D τ → Env D Γ
   | .cons _ ρ, .here, v => .cons v ρ
   | .cons w ρ, .there x, v => .cons w (ρ.set x v)
-
 def Env.tail : Env D (τ :: Γ) → Env D Γ
   | .cons _ ρ => ρ
-
 /-! ## 2. Die Orte eines Ausdrucks -- was er liest -/
-
 mutual
-
 /-- Die Traeger und Globale, die ein Ausdruck liest (statisch; eine Ueberdeckung, denn
     `&&` liest den rechten Operanden nicht immer -- mehr Ereignisse, alle bewacht). -/
 def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
@@ -161,25 +131,22 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .intBuiltin1 _ a => a.orte
   | .intBuiltin2 _ a b => a.orte ++ b.orte
   | .count _ body => body.orte
-
+  | .prod _ args => args.orte
+  | .prodGet v _ => v.orte
+  | .prodSet v _ e => v.orte ++ e.orte
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
   | .val e => e.orte
-
-end
 def Args.orte : Args D Γ Λ τs → List (D.Tab ⊕ D.Glob)
   | .nil => []
   | .cons e rest => e.orte ++ rest.orte
-
+end
 def ErgExpr.orte : ErgExpr D Γ Λ e → List (D.Tab ⊕ D.Glob)
   | .empty => []
   | .val e => e.orte
-
 /-! ## 3. Die Bedeutung eines Ausdrucks -- total -/
-
 /-- Ein Wahrheitswert, als `Bool` gelesen. -/
 def wahr? {D : Deklaration} (v : Wert D .bool) : Bool := v
-
 /-- Die Kette ueber ein `option index`-Feld, mit Treibstoff: `k` erreicht `ziel`, wenn eine
     Folge von hoechstens `fuel` Schritten dort ankommt. Total, weil der Treibstoff endlich ist. -/
 def kette (weiter : Int → Option (Zahl 0 (n - 1))) : Nat → Int → Int → Bool
@@ -189,9 +156,7 @@ def kette (weiter : Int → Option (Zahl 0 (n - 1))) : Nat → Int → Int → B
       match weiter k with
       | Option.none => false
       | Option.some m => kette weiter fuel m.n ziel
-
 mutual
-
 /-- `σ₀` ist die Welt beim EINTRITT (fuer `old(…)` in `ensures`); im Rumpf ist sie `σ`. -/
 def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D τ
   | .lit n, _, _ => ⟨n, Int.le_refl _, Int.le_refl _⟩
@@ -262,26 +227,27 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .intBuiltin1 op a, σ, ρ => evalIntBuiltin1 op (eval σ₀ a σ ρ)
   | .intBuiltin2 op a b, σ, ρ => evalIntBuiltin2 op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .count n body, σ, ρ => zaehleWahr n fun k => wahr? (eval σ₀ body σ (.cons k ρ))
-
+  | .prod _ args, σ, ρ => evalProd σ₀ args σ ρ
+  | .prodGet v i, σ, ρ => prodGetW i (eval σ₀ v σ ρ)
+  | .prodSet v i e, σ, ρ => prodSetW i (eval σ₀ v σ ρ) (eval σ₀ e σ ρ)
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast D.Fn D.passt c
   | .empty, _, _ => ()
   | .val e, σ, ρ => eval σ₀ e σ ρ
-
+/-- The tuple of the evaluated field arguments, in declaration order (C01). -/
+def evalProd (σ₀ : World D) : Args D Γ Λ fs → World D → Env D Γ → ProdVal D.Fn D.passt fs
+  | .nil, _, _ => ()
+  | .cons e rest, σ, ρ => (eval σ₀ e σ ρ, evalProd σ₀ rest σ ρ)
 end
-
 /-- Evaluation commutes with transport of the selected payload type. -/
 theorem evalNutz_cast {c c' : Option Ty} (h : c = c') (σ₀ σ : World D)
     (e : NutzlastExpr D Γ Λ c) (ρ : Env D Γ) :
     evalNutz σ₀ (h ▸ e) σ ρ = (h ▸ evalNutz σ₀ e σ ρ) := by
   cases h
   rfl
-
 def evalArgs (σ₀ : World D) : Args D Γ Λ τs → World D → Env D Γ → Env D τs
   | .nil, _, _ => .nil
   | .cons e rest, σ, ρ => .cons (eval σ₀ e σ ρ) (evalArgs σ₀ rest σ ρ)
-
 /-! ## 3. Die Ausgaenge -- genau zwei davon sind Fehler -/
-
 /-- Die Logik des Schreibers: eine Klausel, die er schrieb, gilt nicht. -/
 inductive Logik (D : Deklaration) where
   | vorbedingung (f : D.Fn)
@@ -311,7 +277,6 @@ inductive Logik (D : Deklaration) where
       existing no-logic-halt conclusion; only a named hardware-origin decoder
       violation may retain `Hardware.annahme`. -/
   | fremdAntwort (a : D.Ax)
-
 /-- Die Hardware: eine Annahme ueber die Maschine gilt nicht. -/
 inductive Hardware (D : Deklaration) where
   | annahme (a : D.Ax)
@@ -328,12 +293,10 @@ inductive Hardware (D : Deklaration) where
   | geraet (r : D.Reg)
   /-- Ein `awaits` sah die Veroeffentlichung nicht, die es erwartet: das Speichermodell (A10). -/
   | sichtbarkeit (a : D.Annahme)
-
 /-- Der Wert einer Antwort. -/
 def ErgVal (D : Deklaration) : Option Ty → Type
   | Option.none => Unit
   | Option.some τ => Wert D τ
-
 /-- **Der Ausgangstyp.** `l` sagt, ob `leave`/`next` moeglich sind (nur in einer Schleife). -/
 inductive Ausgang (V : Vertrag D) : Bool → Ctx → Type where
   | ok (σ : World D) (ρ : Env D Γ) : Ausgang V l Γ
@@ -343,9 +306,7 @@ inductive Ausgang (V : Vertrag D) : Bool → Ctx → Type where
   | next (h : l = true) (σ : World D) (ρ : Env D Γ) : Ausgang V l Γ
   | logik (e : Logik D) : Ausgang V l Γ
   | hardware (e : Hardware D) : Ausgang V l Γ
-
 variable {V : Vertrag D}
-
 /-- Ein Ausgang, der nicht `ok` ist -- was ein `Endblock` liefert. -/
 inductive EndAusgang (V : Vertrag D) : Bool → Ctx → Type where
   | zurueck (σ : World D) (v : ErgVal D V.erg) : EndAusgang V l Γ
@@ -354,16 +315,13 @@ inductive EndAusgang (V : Vertrag D) : Bool → Ctx → Type where
   | next (h : l = true) (σ : World D) (ρ : Env D Γ) : EndAusgang V l Γ
   | logik (e : Logik D) : EndAusgang V l Γ
   | hardware (e : Hardware D) : EndAusgang V l Γ
-
 /-- Was ein Ruf liefert -- im Vertrag des GERUFENEN. -/
 inductive RufAusgang {D : Deklaration} (f : D.Fn) : Type where
   | ok (σ : World D) (v : ErgVal D (D.erg f))
   | why (σ : World D) (r : Fin (D.gruende f))
   | logik (e : Logik D)
   | hardware (e : Hardware D)
-
 /-! ## 4. Das Orakel -- die Hardware, als Parameter -/
-
 /-- A float result against its declared range: finite and inside, or nothing. NaN and the
     infinities fail `gleitEndlich` and fall into the `none` branch -- the `logik bereich`
     outcome of a computed float (or a `narrow`'s `else`), and a refused register or axiom
@@ -372,14 +330,12 @@ def gleitPasst (lo hi : Int × Int) (x : GFloat) : Option (Gleit lo hi) :=
   if h : gleitEndlich x = true ∧ gleitLe (bruch lo) x = true ∧ gleitLe x (bruch hi) = true then
     some ⟨x, h.1, h.2.1, h.2.2⟩
   else Option.none
-
 /-- The payload of a `tagged` case against its declared payload: a bare case carries `0`
     (the C struct has no `last` member for it), a payload case a number in its range. -/
 def nutzPasst : (c : Option Ty) → Int → Option (Nutzlast D.Fn D.passt c)
   | Option.none, p => if p = 0 then some () else Option.none
   | Option.some (.int lo hi), p => if h : lo ≤ p ∧ p ≤ hi then some ⟨p, h.1, h.2⟩ else Option.none
   | Option.some _, _ => Option.none
-
 /-- Payload shapes supported by the existing integer foreign-answer boundary.
     Internal construction and matching support every `Ty`; structured foreign
     answers require the separate raw-answer migration. -/
@@ -387,23 +343,19 @@ def nutzWort : Option Ty → Prop
   | none => True
   | some (.int _ _) => True
   | some _ => False
-
 /-- Whole schemas admitted by the scalar foreign ABI and the compact lowering. -/
 def sumWort (cs : List (Option Ty)) : Bool :=
   cs.all fun c => match c with
     | none | some (.int _ _) => true
     | some _ => false
-
 theorem sumWort_get (cs : List (Option Ty)) (h : sumWort cs = true) (i : Fin cs.length) :
     nutzWort (cs.get i) := by
   have hi := List.all_eq_true.mp h (cs.get i) (List.get_mem cs i)
   cases hc : cs.get i with
   | none => trivial
   | some τ => cases τ <;> simp_all [nutzWort]
-
 /-- The number of `tagged` cases, as an `Int`. -/
 abbrev fallZahl (cs : List (Option Ty)) : Int := (cs.length : Int)
-
 theorem fall_marke_lt (cs : List (Option Ty)) (n : Int) (hk : 0 < cs.length) :
     (n % fallZahl cs).toNat < cs.length := by
   have h0 : (0 : Int) < fallZahl cs := by unfold fallZahl; omega
@@ -411,7 +363,6 @@ theorem fall_marke_lt (cs : List (Option Ty)) (n : Int) (hk : 0 < cs.length) :
   have h2 := Int.emod_lt_of_pos n h0
   unfold fallZahl at h1 h2 ⊢
   omega
-
 /-- **A raw word as a `tagged` value** (G1 repair, 2026-09-15). The emitter lays a `tagged`
     value out as `struct { T_marke marke; union { … } last; }` (`emit.rs`, `markiert`): the
     case number `marke` (a C `enum`, the cases numbered `0, 1, …` in declaration order) and
@@ -432,11 +383,9 @@ def summePasst (cs : List (Option Ty)) (n : Int) :
     (nutzPasst (cs.get i) (n / fallZahl cs)).map fun x => ⟨i, Fall.ofNutzlast _ _ _ _ x⟩
    else Option.none
   else Option.none
-
 /-- The width of the raw float word: the IEEE-754 binary64 bit pattern is an unsigned
     64-bit integer. -/
 abbrev gleitWortGrenze : Int := 18446744073709551616
-
 /-- **A raw word as a float** (G1 repair): the word is the IEEE-754 binary64 bit pattern
     (sign, exponent, significand; `Gleitkomma.ausBits`, the inverse of `zuBits` on
     well-formed triples), held against the declared range like a computed float
@@ -447,7 +396,6 @@ def gleitWortPasst (lo hi : Int × Int) (n : Int) : Option (Gleit lo hi) :=
   if 0 ≤ n ∧ n < gleitWortGrenze then
     gleitPasst lo hi (Gleitkomma.ausBits Gleitkomma.f64 n.toNat)
   else Option.none
-
 /-- **A raw word as a function pointer** (G1 repair): the word is a code address; the loaded
     image `z` (`Orakel.zeiger`) names the function at it, and its conformance to the declared
     `fnptr n` is held (`Deklaration.passt`). -/
@@ -455,7 +403,6 @@ def zeigerPasst (z : Int → Option D.Fn) (m : Nat) (n : Int) : Option {f : D.Fn
   match z n with
   | Option.some f => if h : D.passt f m = true then some ⟨f, h⟩ else Option.none
   | Option.none => Option.none
-
 /-- Ein rohes Ergebnis der Maschine, gegen einen Typ gehalten: passt es nicht, ist die
     Annahme widerlegt. **Every type has a real decoding** since 2026-09-15 (round-5 finding
     G1: `sum`, `fl` and `fnptr` answered `none` for EVERY raw word, so every call of an axiom
@@ -482,9 +429,9 @@ def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D �
   -- An aggregate is not one raw word: the checker admits no foreign or register answer of such a type.
   | .arr _ _, _ => Option.none
   | .str _, _ => Option.none
-
+  -- A product is not one raw word either (C01 stage 1): no foreign or register answer of product type.
+  | .prod _ _, _ => Option.none
 def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option (ErgVal D τ)
   | Option.none, _ => some ()
   | Option.some τ, n => einpassen z τ n
-
 end Gabbro.Grammatik

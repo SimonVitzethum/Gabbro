@@ -99,6 +99,9 @@ theorem constExprB_complete (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
       simp only [constExprB, constExprB_complete c h0, constExprB_complete c h1, Bool.and_self]
   | .pureCount h0 => by
       simp only [constExprB, constExprB_complete c h0, Bool.and_self]
+  | .pureProd h0 => by simp only [constExprB, constArgsB_complete c h0, Bool.and_self]
+  | .pureProdGet h0 => by simp only [constExprB, constExprB_complete c h0, Bool.and_self]
+  | .pureProdSet h0 h1 => by simp only [constExprB, constExprB_complete c h0, constExprB_complete c h1, Bool.and_self]
 theorem constPayloadB_complete (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} :
     ConstPayload c e → constPayloadB c e = true
   | .empty => by

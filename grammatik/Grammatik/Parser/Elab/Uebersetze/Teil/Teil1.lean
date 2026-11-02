@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
@@ -8,28 +7,20 @@ public import Grammatik.Kern.Syntax.Typen.Reason
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-
 @[expose] public section
-
-
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
-
 set_option maxRecDepth 100000
-
 /-- An index into a table: a literal or an index parameter. -/
 inductive UIdx
   | lit : Int → UIdx
   | param : String → UIdx
   deriving DecidableEq, Repr
-
 /-- C13: the closed integer builtins of the source (`+%`, `-%`, `*%`, `<<%`, `+|`, `clz`, `ctz`, `log2_floor`,
     `popcount`, `rotl`, `rotr`, `bswap`). The storage width `W` rides with the use (`USide.ib1/ib2`), read from the
     declaration, never from an interval. -/
 inductive UBi
   | addW | subW | mulW | shlW | addS | clz | ctz | log2Floor | popcount | rotl | rotr | bswap
   deriving DecidableEq, Repr
-
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
     read of an option field through a pointer (`slot`) or at a table (`tab`). -/
 inductive UOpt
@@ -41,9 +32,7 @@ inductive UOpt
   /-- An option static (`static mut frei : option index into T`). -/
   | glob : String → UOpt
   deriving DecidableEq, Repr
-
 mutual
-
 /-- One side of an `ensures` comparison: a literal, a numeric
     parameter, a slot read through a pointer parameter (`slot`)
     or at a table (`tab`), the entry value (`alt`), or the
@@ -106,6 +95,13 @@ inductive USide
   | zaehle : String → String → UEns → USide
   | zaehleBaum : String → String → String → Bool → UIdx → UEns → USide
   | zaehleFeld : USide → String → UEns → USide
+  /-- A product value: the declaration number, whether the source order differs from the
+      declaration order, and the fields in SOURCE order with their expected types. The lowering
+      elaborates every field and reorders into declaration order (`uRecordValues`); projections
+      and replacements resolve names against the nominal schema, never run-time strings. -/
+  | product : Nat → Bool → List (Ty × USide) → USide
+  | field : USide → String → USide
+  | replace : USide → String → USide → USide
   /-- Typed tagged payloads use the same value tree as arguments and array elements. -/
   | truth : Bool → USide
   | taggedEmpty : List (Option Ty) → Nat → USide
@@ -119,7 +115,6 @@ inductive USide
   | reason : Nat → Nat → USide
   | function : Nat → String → USide
   deriving DecidableEq, Repr
-
 /-- One `ensures` predicate: a comparison, truth values, or a
     boolean combination (the `tr_ensures` fragment). -/
 inductive UEns
@@ -158,9 +153,7 @@ inductive UEns
   | arrayElements : Bool → USide → String → UEns → UEns
   deriving DecidableEq, Repr
 end
-
 end
-
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
 inductive USVal
   | fall : Nat → Option USide → USVal
@@ -169,13 +162,11 @@ inductive USVal
   | slot : String → String → UIdx → USVal
   | tab : String → String → UIdx → USVal
   deriving DecidableEq, Repr
-
 /-- A value of a reason type `R`: a case `R::C` (its position) or a variable. -/
 inductive UGrund
   | fall : Nat → UGrund
   | var : String → UGrund
   deriving DecidableEq, Repr
-
 /-- A call argument: a pointer variable passed through
     (`var`), a fresh `rw`-to-`r` pointer to a table with the
     callee's rights (`freshPtr`, the pass-a-fresh-pointer idiom
@@ -194,7 +185,6 @@ inductive UArg
   /-- `&f` for a parameter of a pointer type: the function (`Expr.fnref`; that it conforms is the lowering's). -/
   | fnref : String → UArg
   deriving DecidableEq, Repr
-
 /-- The trailing return: nothing, or a value (a literal, a
     numeric parameter or a slot read). -/
 inductive URet
@@ -215,7 +205,6 @@ inductive URet
   /-- No trailing return: the body ends in a terminal `if`/`else` (`UStmt.ifEnde`, `Endblock.ite`). -/
   | keins : URet
   deriving DecidableEq, Repr
-
 /-- One body statement: a slot write through a pointer (`assign`)
     or at a table (`assignTab`), or a direct call. -/
 inductive UStmt
@@ -355,7 +344,6 @@ inductive UStmt
       constructor positions keep their names. -/
   | resetRange : String → USide → USide → UStmt
   deriving DecidableEq, Repr
-
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
 structure UTab where
@@ -397,7 +385,6 @@ structure UTab where
   breiten : List (String × Nat) := []
   space : Nat := 0
   deriving DecidableEq, Repr
-
 /-- One elaborated lock: rank and the guarded table names (the
     `LockModel` of `lean_g.rs`; the `held` budget travels
     nowhere, like `costs`). -/
@@ -411,19 +398,16 @@ structure ULock where
       release -- a duty of the user, not owed at a `return`). -/
   inv : Option UEns := none
   deriving DecidableEq, Repr
-
 /-- The type of a static: ONE value, an integer range, `bool`, or an aggregate (`Ty.arr`, `Ty.str`). -/
 inductive GTy
   | int : Int → Int → GTy
   | bool : GTy
   | wert : Ty → GTy
   deriving DecidableEq, Repr
-
 def GTy.toTy : GTy → Ty
   | .int lo hi => .int lo hi
   | .bool => .bool
   | .wert τ => τ
-
 /-- A constant initial value of an aggregate static: zero memory (`= 0`), a number, a truth value, the bytes of a
     string, or an array literal (`nil`/`cons`, element by element). -/
 inductive UKonst
@@ -435,8 +419,9 @@ inductive UKonst
   | cons : UKonst → UKonst → UKonst
   /-- A case of a tagged type: its position and its payload (`null` without one). -/
   | fall : Nat → UKonst → UKonst
+  /-- A product constant: the declaration number and every field constant in order. -/
+  | product : Nat → List UKonst → UKonst
   deriving DecidableEq, Repr
-
 /-- One elaborated static (`static [mut] n : T = init;`): `init` is its `sp0` value (a numeral, `0`/`1` for a
     `bool`). `var` is `mut`: only a `mut` static is written. -/
 structure UGlob where
@@ -467,7 +452,6 @@ structure UGlob where
   /-- Source placement; consumed only after image-layout correspondence is available. -/
   placement : Option ProfilBindung.PlatzEintrag := none
   deriving DecidableEq, Repr
-
 /-- A source reason declaration, retaining its resolved descriptor for the channel migration. -/
 structure UWhy where
   name : String
@@ -475,17 +459,14 @@ structure UWhy where
   /-- Absent only in manually supplied intermediate fixtures; never synthesized by source export. -/
   descriptor : Option ReasonSpec := none
   deriving DecidableEq, Repr
-
 /-- One ordered tagged schema. Source collection retains `STyp`; model admission resolves
     payloads to the current kernel's representation. No case or payload is discarded. -/
 structure USum (Payload : Type := Ty) where
   name : String
   cases : List (String × Option Payload)
   deriving DecidableEq, Repr
-
 /-- The complete ordered payload schema, independent of its resolution stage. -/
 def USum.spec {Payload : Type} (s : USum Payload) : List (Option Payload) := s.cases.map (·.2)
-
 /-- One invariant (`table T { .. invariant I cost .. runs .. : p; }` or `group G over { T, U } { invariant I .. }`,
     `D.Inv`): its name, its carriers -- tables and statics, by name (`D.traeger`) -- and its predicate over no parameter (`Programm.invariante`,
     read under the guards of its carriers, `invSicht`). -/
@@ -494,5 +475,4 @@ structure UInv where
   traeger : List String
   pred : UEns
   deriving DecidableEq, Repr
-
 end Gabbro.Grammatik.Parser.Uebersetze

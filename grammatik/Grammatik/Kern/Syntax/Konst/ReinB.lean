@@ -57,6 +57,9 @@ def constExprB (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {τ : Ty} : E
   | .intBuiltin1 op a => constExprB c a
   | .intBuiltin2 op a b => constExprB c a && constExprB c b
   | .count n body => constExprB c body
+  | .prod _ args => constArgsB c args
+  | .prodGet v _ => constExprB c v
+  | .prodSet v _ e => constExprB c v && constExprB c e
   | .glob .. => false
   | .slot .. => false
   | .thru .. => false

@@ -84,17 +84,21 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .intBuiltin1 _ a => "Expr.intBuiltin1" :: eE a
   | .intBuiltin2 _ a b => "Expr.intBuiltin2" :: (eE a ++ eE b)
   | .count _ body => "Expr.count" :: eE body
+  | .prod _ args => "Expr.prod" :: eA args
+  | .prodGet v _ => "Expr.prodGet" :: eE v
+  | .prodSet v _ e => "Expr.prodSet" :: (eE v ++ eE e)
 
 def eN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → List String
   | .empty => ["NutzlastExpr.empty"]
   | .val e => "NutzlastExpr.val" :: eE e
 
-end
-
 /-- The members of an argument list. -/
 def eA {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} : Args D Γ Λ τs → List String
   | .nil => ["Args.nil"]
   | .cons e rest => "Args.cons" :: (eE e ++ eA rest)
+
+end
+
 
 /-- The members of a returned value. -/
 def eR {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : ErgExpr D Γ Λ o → List String
@@ -214,6 +218,7 @@ def tyName : Ty → String
   | .ref _ => "Ty.ref"
   | .arr .. => "Ty.arr"
   | .str _ => "Ty.str"
+  | .prod _ fs => "Ty.prod" :: fs.foldl (fun acc ty => acc ++ tyName ty) []
 
 /-- The members a lowered program reaches: every function's body, and the types its parameters, results, table
     fields and statics have. -/

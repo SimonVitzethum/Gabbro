@@ -81,18 +81,21 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .intBuiltin1 _ a => ruE_orte a
   | _, _, _, .intBuiltin2 _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .count _ body => ruE_orte body
+  | _, _, _, .prod _ args => ruA_orte args
+  | _, _, _, .prodGet v _ => ruE_orte v
+  | _, _, _, .prodSet v _ e => kongr₂ (· ++ ·) (ruE_orte v) (ruE_orte e)
 
 theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte
   | _, _, _, .empty => rfl
   | _, _, _, .val e => ruE_orte e
 
-end
 theorem ruA_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs),
     (ruA a).orte = a.orte
   | _, _, _, .nil => rfl
   | _, _, _, .cons e rest => kongr₂ (· ++ ·) (ruE_orte e) (ruA_orte rest)
 
+end
 theorem ruErg_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {e : Option Ty} (a : ErgExpr D Γ Λ e),
     (ruErg a).orte = a.orte
   | _, _, _, .empty => rfl

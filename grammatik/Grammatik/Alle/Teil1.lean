@@ -1,6 +1,11 @@
 module
 
 public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Typen.ProduktZeuge
+public import Grammatik.Bausteine.Walk.Abbildung
+public import Grammatik.Bausteine.Walk.AbbildungZeuge
+public import Grammatik.Bausteine.Walk.BindingZeuge
+public import Grammatik.Bausteine.Walk.Correctness
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
@@ -13,6 +18,7 @@ public import Grammatik.Kern.Semantik.Semantik.EingebautZeuge
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
 public import Grammatik.Kern.Syntax.Zucker
+public import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 public import Grammatik.Kern.Syntax.Ziel
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
 public import Grammatik.Kern.Syntax.Koernung.Teil2
@@ -319,6 +325,7 @@ public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 public import Grammatik.Parser.Elab.UebersetzeAllg2
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Parser.Elab.Uebersetze.Records.Proben
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 public import Grammatik.Logik.Fortschritt.Fortschritt
 public import Grammatik.Logik.Fortschritt.FortschrittZeuge

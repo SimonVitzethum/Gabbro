@@ -85,9 +85,9 @@ end Gabbro.Grammatik.Parser
      `SExpr` does. Positions must be re-attached outside.
   2. `Klammer` vanishes: `(e)` parses to the inner tree. The printer
      re-parenthesises canonically, so `print_parse` still closes.
-  3. Call labels (`marken`, «B7») are accepted and dropped: `P(a: 1)`
-     parses to `ruf "P" [1]`. Rust keeps the key stream for the
-     record check (`m1::verbundwert`).
+  3. Call labels (`marken`, «B7») are retained as `ext label [name] [value]`
+     arguments. The record exporter checks their names and completeness before
+     arranging runtime fields; ordinary calls check labels against parameters.
   4. Floats keep canonical text (`gleit "0.0"`), not the `f64` bits,
      the dyadic flag or `rounded`-exactness `lex.rs`/`parse.rs`
      compute. Whether the literal is exact in its target type is an
