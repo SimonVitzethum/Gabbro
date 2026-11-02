@@ -332,7 +332,7 @@ def uFelder : List (String × (Int × Int)) → List String → List SFeld →
 
 /-- A table of `count` slots with its fields, its invariants and its tree edges. -/
 def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tnames : List String)
-    (n : String) (cnt : SExpr) (sh : Bool) (fds : List SFeld) (invs : List STabTeil) (kanten : List (String × String)) :
+    (n : String) (cnt : SExpr) (sh : Bool) (fds : List SFeld) (invs : List STabTeil) (kanten : List (String × String)) (o : Option String := none) :
     Except String UTab :=
   if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
   match uAnzahl consts cnt with
@@ -352,28 +352,29 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
             wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
             sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
             idxNamen := fs.filterMap (fun p => match p.2 with | .idx tn => some (p.1.1, tn) | _ => none),
-            kanten := kanten, shared := sh, breiten := uFeldBreiten alias fds }
+            kanten := kanten, shared := sh, breiten := uFeldBreiten alias fds, owner := o }
 
 /-- One table: `count` and one integer range per slot field.
-/// Invariants, `ops`, tree edges, the occupancy mark, an
-    `owner` mark, a `backed`/`shared` flag and a missing slot
-    are explicit errors (the refused arms of `read_table`). -/
+/// Invariants, `ops`, tree edges, the occupancy mark,
+    a `backed`/`shared` flag and a missing slot
+    are explicit errors (the refused arms of `read_table`).
+    The `owner` mark travels in `UTab.owner` (`D.eigner`/`braucht`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n .none (.some cnt) .none _ sh parts =>
+  | .tableT n .none (.some cnt) .none o sh parts =>
     -- `tree { parent p, child c }` names the fields `reaches … via` and the tree domains read; it adds no carrier
     match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
     | .tSlot fds :: invs => uTabelleSlots consts alias tnames n cnt sh fds invs
-        (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => []))
+        (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => [])) o
     | _ => .error "table without G form"
-  | .tableT n (.some p) .none .none _ sh (.tSlot fds :: invs) =>
+  | .tableT n (.some p) .none .none o sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uFelder alias tnames fds with
     | .error e => .error e
     | .ok fs =>
       if fs.all (fun p => match p.2 with | .zahl => true | _ => false) then
         .ok { name := n, count := 0, cols := fs.map (·.1), shared := sh, von := some p,
-               breiten := uFeldBreiten alias fds }
+               breiten := uFeldBreiten alias fds, owner := o }
       else .error "open table with a field other than a number without G form"
   | _ => .error "table without G form"
 

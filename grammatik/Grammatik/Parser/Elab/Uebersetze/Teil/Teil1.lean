@@ -370,6 +370,8 @@ structure UTab where
   shared : Bool := false
   /-- `table T from p`: the table is OPEN and `p` is its provider (`Deklaration.offen`/`anbieter`); its count is 0. -/
   von : Option String := none
+  /-- `table T owner m`: the owner mark guarding the table (`Deklaration.eigner`/`braucht`); `none` without one. -/
+  owner : Option String := none
   /-- The aggregate fields (`[T; N]`, `string max N`): the field name and its type. Like a bool field an aggregate
       field keeps its place in `cols` (placeholder range `0 .. 0`); its TYPE is the aggregate. -/
   werte : List (String × Ty) := []
