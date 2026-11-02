@@ -189,7 +189,8 @@ public import Grammatik.Code.Gate.Zeuge
 public import Grammatik.Hardware.Neutral
 public import Grammatik.Code.Gate.Maske
 public import Grammatik.Parser.Elab.UebersetzePipeline
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Refusals
+-- OPEN (C17): `Measures.Duties`/`Measures.Refusals` do not build yet; re-add this import when they do.
+-- public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Refusals
 public import Grammatik.Korpus.Programme.Einheit104
 public import Grammatik.Korpus.Programme.Einheit108
 public import Grammatik.Gen.Erzeuger.Grund

@@ -71,7 +71,7 @@ theorem guardedRights : ∀ w ∈ guardedWrites, w.Permitted (vertragVon guarded
 
 @[expose] def guardedEntry : World guardedD :=
   ({ slots := fun _ _ _ => ⟨0, by decide, by decide⟩,
-     globs := fun g => nomatch g, spur := [] } : World guardedD).nimmt ()
+     globs := (fun g => nomatch g), spur := [] } : World guardedD).nimmt ()
 
 @[expose] def guardedEnv : Env guardedD guardContext :=
   .cons ⟨0, by decide, by decide⟩
