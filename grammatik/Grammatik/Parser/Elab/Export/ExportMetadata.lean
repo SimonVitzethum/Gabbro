@@ -159,7 +159,7 @@ theorem check_clear (items : List SItemTief) (h : items.any itemMetadata = false
 theorem check_sound_zeuge :
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none,
-      [.gives (.ext .imp [] [.tru, .tru])]⟩
+      [.gives (.ext .imp [] [.tru, .tru])], []⟩
     check [.fnT sig body] = .ok () ∧
     check [.fnT {sig with klauseln := .cost (.lit 0) :: sig.klauseln} body] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
@@ -183,7 +183,7 @@ set_option maxRecDepth 100000 in
 theorem nested_duties_refused_zeuge :
     let held := SAnw.bind false "held" none (.call "Held" [.variable "L"])
     let body := SAnw.block [held] (some (.ret (some (.lit 42))))
-    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)]⟩
+    let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
     bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0) (some body)) = true ∧
@@ -210,9 +210,9 @@ theorem transT_bound (target : String) (translator : FnSig) (body : SAnw) (c : c
 
 set_option maxRecDepth 100000 in
 theorem library_zeuge :
-    let lib : FnSig := ⟨"library", "f", [], none, none, [.load ["P"]]⟩
-    let trans : FnSig := ⟨"impl", "build", [], none, none, []⟩
-    let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, []⟩
+    let lib : FnSig := ⟨"library", "f", [], none, none, [.load ["P"]], []⟩
+    let trans : FnSig := ⟨"impl", "build", [], none, none, [], []⟩
+    let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, [], []⟩
     let cbody := SAnw.block [.lcall ⟨["m"], ["f"], [], []⟩] (some (.ret (some (.lit 1))))
     check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)]⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
   exact ⟨rfl, rfl⟩
@@ -245,7 +245,7 @@ theorem reset_bound (n : Nat) (a : String) (r : Option (SExpr × SExpr)) : bodyM
 set_option maxRecDepth 100000 in
 theorem reset_zeuge :
     let body := SAnw.block [.reset "A" (some (.lit 1, .lit 2))] (some (.ret (some (.lit 23))))
-    let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, []⟩
+    let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, [], []⟩
     check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
   exact ⟨rfl, rfl⟩
 

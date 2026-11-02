@@ -14,6 +14,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 public import Grammatik.Parser.Elab.Konst.Export
+public import Grammatik.Parser.Elab.Generic.Expansion
 
 @[expose] public section
 
@@ -189,13 +190,16 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
 
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). The certified C02 expansion (`exportLibraryUnit`)
-    runs first, so a source program with a library call exports to an ordinary unit: `library`
+    follows generic monomorphisation, so a source program with a library call exports to an ordinary unit: `library`
     bodies elaborate as ordinary functions, translators are consumed, and calls expand into
     ordinary calls carrying the declared payload. -/
 def elabU : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
-    match Gabbro.Grammatik.Parser.exportLibraryUnit ms0 with
+    match Generic.expand ms0 with
+    | .error e => .error e
+    | .ok genericExpanded =>
+    match Gabbro.Grammatik.Parser.exportLibraryUnit genericExpanded with
     | .error e => .error e
     | .ok msE =>
     let blockiert := msE.find? (fun item => match item with

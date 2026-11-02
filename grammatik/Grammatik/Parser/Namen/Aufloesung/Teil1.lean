@@ -79,6 +79,31 @@ def Kontext.pfad (k : Kontext) : Pfad → Pfad
 def Kontext.nenntItem (k : Kontext) (p : Pfad) : Bool :=
   (aufloeseK k.q ⟨none, []⟩ k.von p).isSome
 
+/-- Explicit argument groups are resolved in the caller's scope before generic expansion. Paths
+    are kept whole; field names following `.`/`->` remain members rather than global references. -/
+def genericArgumentTokens (k : Kontext) : Nat → List Token → List Token
+  | 0, tokens => tokens
+  | _ + 1, [] => []
+  | fuel + 1, .zeichen dot :: field :: rest =>
+    if dot == "." || dot == "->" then
+      .zeichen dot :: field :: genericArgumentTokens k fuel rest
+    else .zeichen dot :: genericArgumentTokens k fuel (field :: rest)
+  | fuel + 1, token :: rest => match nameText token with
+    | some name =>
+      let (path, tail) := sammleSegmente rest [name]
+      let text := String.intercalate "::" path
+      let resolved := k.ref text
+      let head := if path.length == 1 && strEq resolved text then token else .ident resolved
+      head :: genericArgumentTokens k fuel tail
+    | none => token :: genericArgumentTokens k fuel rest
+
+def genericArgument (k : Kontext) (word : String) : String :=
+  match lex word with
+  | .error _ => word
+  | .ok tokens =>
+    let tokens := tokens.filter (fun | .ende => false | _ => true)
+    String.intercalate " " ((genericArgumentTokens k (tokens.length + 1) tokens).map zeigeTok)
+
 mutual
 /-- **An expression, resolved.** -/
 def aus (k : Kontext) : SExpr → SExpr
@@ -99,7 +124,7 @@ def aus (k : Kontext) : SExpr → SExpr
       | some c => .variable (schluessel k.q.namen c)
       | none => .why g f
   | .ext .instantiate (name :: words) xs =>
-    .ext .instantiate (k.ref name :: words) (ausL k xs)
+    .ext .instantiate (k.ref name :: words.map (genericArgument k)) (ausL k xs)
   | .ext .all (x :: d :: ns) xs => .ext .all (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .any (x :: d :: ns) xs => .ext .any (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .count (x :: d :: ns) xs => .ext .count (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
@@ -216,6 +241,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .child s => .child (anw k s)
   | .start fs => .start (fs.map k.ref)
   | .block ss e => .block (anwL k ss) (ende (k.mit (ss.flatMap gebunden)) e)
+  | .genericCall name words args => .genericCall (k.ref name) (words.map (genericArgument k)) (args.map (aus k))
   | .allocVon m x t a => .allocVon m x (typO k t) (k.ref a)
   | s => s
 def anwL (k : Kontext) : List SAnw → List SAnw
@@ -231,7 +257,11 @@ def sig (k : Kontext) (s : FnSig) : FnSig :=
     params := s.params.map fun (n, t) => (n, typ k' t)
     res := typO k' s.res
     fehler := s.fehler.map k.ref
-    klauseln := s.klauseln.map (klausel k') }
+    klauseln := s.klauseln.map (klausel k')
+    generics := s.generics.map fun
+      | .type n bounds => .type n (bounds.map k.ref)
+      | .constant n ty => .constant n (typ k' ty)
+      | .function n ty => .function n (typ k' ty) }
 
 mutual
 /-- A constant value, resolved. -/

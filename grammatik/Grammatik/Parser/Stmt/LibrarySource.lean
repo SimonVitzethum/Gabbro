@@ -142,7 +142,7 @@ def callFreeExpr : SExpr → Bool
   | .call "Some" [a] => callFreeExpr a
   | .call _ _ => false
   | .built _ _ => false
-  | .ext .call _ _ => false
+  | .ext .call _ _ | .ext .instantiate _ _ => false
   | .ext _ _ xs => callFreeExprs xs
   | .field a _ => callFreeExpr a
   | .index a i => callFreeExpr a && callFreeExpr i
@@ -166,7 +166,7 @@ def callFreeStmt : SAnw → Bool
   | .call _ _ | .lcall _ | .bindLib _ _ _ _ => false
   | .each _ _ _ _ _ _ _ _ | .loop _ _ | .retry _ _ => false
   | .emit _ _ _ | .await _ _ _ _ | .swap _ _ _ _ => false
-  | .alloc _ _ _ _ _ _ | .allocVon _ _ _ _ | .reset _ _ | .grow _ _ _ | .free _ => false
+  | .alloc _ _ _ _ _ _ | .allocVon _ _ _ _ | .reset _ _ | .grow _ _ _ | .free _ | .genericCall _ _ _ => false
   | .child _ | .start _ | .step _ _ | .shift _ _ _ | .locks _ _ _ | .watch _ _ => false
   | .bind _ _ _ e => callFreeExpr e
   | .bindElse _ _ e _ body => callFreeExpr e && callFreeStmt body

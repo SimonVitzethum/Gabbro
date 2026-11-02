@@ -32,8 +32,4 @@ def genericArguments : List Token → List String → List Token → List String
   | token :: rest, stack, current, done =>
     genericArguments rest stack (token :: current) done
 
-/-- A statement stores its pending expression in the ordinary call node under this unspellable
-    source name. Generic expansion consumes it before any ordinary call checking or lowering. -/
-def pendingGenericStatement : String := "$generic$pending"
-
 end Gabbro.Grammatik.Parser
