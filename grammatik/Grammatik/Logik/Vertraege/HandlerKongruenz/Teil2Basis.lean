@@ -87,7 +87,14 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
             (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
               (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
           h | ⟨m, h1, hE⟩
-        · rw [h]; exact Or.inl rfl
+        · rw [h]
+          cases R₂ g (σ.lese Λ (p.orte ++ args.orte))
+              (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+                (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          | ok σ' v => exact Or.inl rfl
+          | why σ' r => exact ((Endblock.kongruent hR err σ' _).schrumpf).zuAusgang
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .assignSlot .., _, _ => Or.inl rfl
   | .assignThru .., _, _ | .assignSlotRef .., _, _ => Or.inl rfl
