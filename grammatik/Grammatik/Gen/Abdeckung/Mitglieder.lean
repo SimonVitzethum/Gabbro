@@ -200,6 +200,7 @@ def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .retry .. => "Stmt.retry"
   | _, _, _, _, .forever .. => "Stmt.forever"
   | _, _, _, _, .axiomCall .. => "Stmt.axiomCall"
+  | _, _, _, _, .axiomCallElse .. => "Stmt.axiomCallElse"
   | _, _, _, _, .regWrite .. => "Stmt.regWrite"
   | _, _, _, _, .transition .. => "Stmt.transition"
   | _, _, _, _, .publish .. => "Stmt.publish"
@@ -222,6 +223,8 @@ def blockStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .bindCallElse _ _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => blockStmts rest
+  | _, _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest => blockStmts rest
+  | _, _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .regRead _ _ rest => blockStmts rest
   | _, _, _, _, .regReadElse _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .awaits _ _ _ _ _ rest => blockStmts rest
@@ -242,6 +245,8 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .bindCallElse _ _ _ _ _ err rest => endStmts rest
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest => endStmts rest
   | _, _, _, .regRead _ _ rest => endStmts rest
   | _, _, _, .regReadElse _ _ _ _ rest => endStmts rest
   | _, _, _, .awaits _ _ _ _ _ rest => endStmts rest
@@ -300,6 +305,11 @@ def stmtM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ 
   | l, _, Λ, _, .retWhy .. => zelle l Λ "Stmt.retWhy" ++ (resM Λ)
   | l, _, Λ, _, .leave _ => zelle l Λ "Stmt.leave" ++ (resM Λ)
   | l, _, Λ, _, .next _ => zelle l Λ "Stmt.next" ++ (resM Λ)
+  | l, _, Λ, _, .consumeTraverse .. => zelle l Λ "Stmt.consumeTraverse"
+  | l, _, Λ, _, .retScoped .. => zelle l Λ "Stmt.retScoped"
+  | l, _, Λ, _, .retWhyScoped .. => zelle l Λ "Stmt.retWhyScoped"
+  | l, _, Λ, _, .axiomCallElse _ _ args _ _ _ _ _ err =>
+    zelle l Λ "Stmt.axiomCallElse" ++ (argsM args ++ endM err ++ paare "Stmt.axiomCallElse" (endStmts err))
 
 def blockM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V l Γ Λ Λ' → List String
   | _, _, _, _, .nil => ["Block.nil"]
@@ -323,6 +333,10 @@ def blockM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V l Γ �
   | _, _, _, _, .floatLit _ _ _ rest => "Block.floatLit" :: "Ty.fl" :: blockM rest
   | _, _, _, _, .floatOf e _ _ rest => "Block.floatOf" :: "Ty.fl" :: exprM e ++ blockM rest
   | _, _, _, _, .floatNarrow e _ _ sonst rest => "Block.floatNarrow" :: "Ty.fl" :: exprM e ++ endM sonst ++ blockM rest ++ paare "Block.floatNarrow" (endStmts sonst)
+  | _, _, _, _, .narrowRequired e _ _ rest => "Block.narrowRequired" :: exprM e ++ blockM rest
+  | _, _, _, _, .bindAxiomOpt _ _ args _ _ _ _ rest => "Block.bindAxiomOpt" :: argsM args ++ blockM rest
+  | _, _, _, _, .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
+    "Block.bindAxiomOptElse" :: argsM args ++ endM err ++ blockM rest ++ paare "Block.bindAxiomOptElse" (endStmts err)
 
 def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ → List String
   | _, _, _, .ret e _ => "Endblock.ret" :: ergM e
@@ -346,6 +360,12 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
     "Endblock.narrow" :: exprM e ++ endM sonst ++ endM rest ++ paare "Endblock.narrow" (endStmts sonst)
   | _, _, _, .exchange _ neu _ _ rest => "Endblock.exchange" :: exprM neu ++ endM rest
   | _, _, _, .ite c t e => "Endblock.ite" :: exprM c ++ endM t ++ endM e
+  | _, _, _, .narrowRequired e _ _ rest => "Endblock.narrowRequired" :: exprM e ++ endM rest
+  | _, _, _, .retScoped .. => ["Endblock.retScoped"]
+  | _, _, _, .retWhyScoped .. => ["Endblock.retWhyScoped"]
+  | _, _, _, .bindAxiomOpt _ _ args _ _ _ _ rest => "Endblock.bindAxiomOpt" :: argsM args ++ endM rest
+  | _, _, _, .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
+    "Endblock.bindAxiomOptElse" :: argsM args ++ endM err ++ endM rest ++ paare "Endblock.bindAxiomOptElse" (endStmts err)
 
 def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String

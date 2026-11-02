@@ -73,7 +73,7 @@ theorem bindCallInd_sound_zeuge :
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
   ⟨.bindCallInd refLies 1 0 100 [Res.held (D := refD) ()] refHpLiesAt
-    (.lift .nil), by decide, MB, refB_erreicht, refB_schreibt⟩
+    (.lift .nil), by decide +kernel, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `gleit_sound`: the float addition over two
     variable reads in float bounds. -/
