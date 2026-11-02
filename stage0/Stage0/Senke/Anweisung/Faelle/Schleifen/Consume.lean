@@ -1,7 +1,7 @@
 /- Consuming traversal follows the current canonical fixed-sweep semantics. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
-@[expose] public section
+public section
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
