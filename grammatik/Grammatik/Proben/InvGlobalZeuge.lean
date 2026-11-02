@@ -118,6 +118,21 @@ theorem cg_global_wache_sichtbar :
     ∃ c ∈ cgD.traeger (), Sum.inl true ∈ Sum.elim cgD.braucht cgD.gbraucht c :=
   held_invSicht (D := cgD) () true (by decide)
 
+/- Explicit mixed-carrier evaluation, without adding the idle root. -/
+theorem cg_mixed_traeger_zeuge : cgD.traeger () = [Sum.inl (), Sum.inr ()] := rfl
+
+/-- The invariant guard component rejects a global writer with an empty held-lock set.
+    This evaluates the carrier/guard check directly; such a declaration cannot satisfy
+    `invarianten_gehalten`. -/
+theorem cg_missing_guard_refused_zeuge :
+    ((!((cgD.traeger ()).any (Sum.elim (cgD.schreibt CgFn.nurGlob)
+        (cgD.gschreibt CgFn.nurGlob)))) ||
+      (cgD.traeger ()).all (fun c =>
+        (Sum.elim cgD.braucht cgD.gbraucht c).all (fun w =>
+          match w with
+          | .inl L => decide (L ∈ ([] : List Bool))
+          | .inr _ => true))) = false := by decide
+
 theorem cg_mitRuhe_traeger : cgD.mitRuhe.traeger () = [Sum.inl (), Sum.inr ()] := rfl
 
 theorem cg_mitRuhe_ruhe_schuldet : schuldet (D := cgD.mitRuhe) none () = false := schuldet_ruhe (D := cgD) ()
