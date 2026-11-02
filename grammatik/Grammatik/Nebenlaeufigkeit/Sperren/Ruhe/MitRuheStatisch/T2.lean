@@ -27,6 +27,7 @@ theorem ruS_mS (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .locks L _ body => congrArg (A.sperre L && ·) (ruB_mB A body)
   | _, _, _, _, .breaking _ body => ruB_mB A body
   | _, _, _, _, .traverse _ _ body => ruB_mB A body
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => ruB_mB A body
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· && ·) (ruB_mB A body) (ruB_mB A ueber)
   | _, _, _, _, .forever _ _ body => ruB_mB A body
   | _, _, _, _, .axiomCall .. => rfl
@@ -37,6 +38,8 @@ theorem ruS_mS (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .retires .. => mS_nachΛ _ _ _
   | _, _, _, _, .ret .. => rfl
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -61,6 +64,7 @@ theorem ruB_mB (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .awaits _ _ _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
+  | _, _, _, _, .narrowRequired _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .check _ sonst rest => kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
   | _, _, _, _, .float _ _ _ _ _ rest => ruB_mB A rest
   | _, _, _, _, .floatLit _ _ _ rest => ruB_mB A rest
@@ -72,6 +76,8 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
     {Λ : List (Res D)} (e : Endblock D V l Γ Λ), mE A (ruEnd e) = mE (mZ A) e
   | _, _, _, .ret .. => rfl
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped .. => rfl
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_mS A s) (ruEnd_mE A rest)
@@ -91,6 +97,7 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (A.ind (n + 1) && ·) ((mE_umΛ _ _ _).trans (ruEnd_mE A rest))
   | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· && ·) (ruEnd_mE A sonst) (ruEnd_mE A rest)
+  | _, _, _, .narrowRequired _ _ _ rest => ruEnd_mE A rest
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_mE A rest
   | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_mE A t) (ruEnd_mE A e)
 
@@ -136,6 +143,7 @@ theorem mS_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
       simp only [mS, Bool.and_eq_true] at h ⊢; exact ⟨hle.2.2 L h.1, mB_mono hle body h.2⟩
   | _, _, _, _, .breaking _ body, h => mB_mono hle body h
   | _, _, _, _, .traverse _ _ body, h => mB_mono hle body h
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body, h => mB_mono hle body h
   | _, _, _, _, .retry _ _ body ueber, h => by
       simp only [mS, Bool.and_eq_true] at h ⊢; exact ⟨mB_mono hle body h.1, mB_mono hle ueber h.2⟩
   | _, _, _, _, .forever _ _ body, h => mB_mono hle body h
@@ -153,6 +161,8 @@ theorem mS_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, _, .retires .., _ => rfl
   | _, _, _, _, .ret .., _ => rfl
   | _, _, _, _, .retWhy .., _ => rfl
+  | _, _, _, _, .retScoped .., _ => rfl
+  | _, _, _, _, .retWhyScoped .., _ => rfl
   | _, _, _, _, .leave _, _ => rfl
   | _, _, _, _, .next _, _ => rfl
 
@@ -180,6 +190,8 @@ theorem mB_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, _, .exchange _ _ _ _ rest, h => mB_mono hle rest h
   | _, _, _, _, .narrow _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
+  | _, _, _, _, .narrowRequired _ _ _ rest, h => by
+      simp only [mB] at h ⊢; exact mB_mono hle rest h
   | _, _, _, _, .check _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
   | _, _, _, _, .float _ _ _ _ _ rest, h => mB_mono hle rest h
@@ -192,6 +204,8 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
     (e : Endblock D V l Γ Λ), mE A e = true → mE A' e = true
   | _, _, _, .ret .., _ => rfl
   | _, _, _, .retWhy .., _ => rfl
+  | _, _, _, .retScoped .., _ => rfl
+  | _, _, _, .retWhyScoped .., _ => rfl
   | _, _, _, .leave _, _ => rfl
   | _, _, _, .next _, _ => rfl
   | _, _, _, .cons s rest, h => by
@@ -214,6 +228,8 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨hle.2.1 n h.1, mE_mono hle rest h.2⟩
   | _, _, _, .narrow _ _ _ sonst rest, h => by
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mE_mono hle rest h.2⟩
+  | _, _, _, .narrowRequired _ _ _ rest, h => by
+      simp only [mE] at h ⊢; exact mE_mono hle rest h
   | _, _, _, .exchange _ _ _ _ rest, h => mE_mono hle rest h
   | _, _, _, .ite _ t e, h => by
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle t h.1, mE_mono hle e h.2⟩
@@ -267,6 +283,7 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       exact ⟨⟨h.1, h'.1⟩, mB_und body h.2 h'.2⟩
   | _, _, _, _, .breaking _ body, h, h' => mB_und body h h'
   | _, _, _, _, .traverse _ _ body, h, h' => mB_und body h h'
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body, h, h' => mB_und body h h'
   | _, _, _, _, .retry _ _ body ueber, h, h' => by
       simp only [mS, Bool.and_eq_true] at h h' ⊢
       exact ⟨mB_und body h.1 h'.1, mB_und ueber h.2 h'.2⟩
@@ -285,6 +302,8 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .retires .., _, _ => rfl
   | _, _, _, _, .ret .., _, _ => rfl
   | _, _, _, _, .retWhy .., _, _ => rfl
+  | _, _, _, _, .retScoped .., _, _ => rfl
+  | _, _, _, _, .retWhyScoped .., _, _ => rfl
   | _, _, _, _, .leave _, _, _ => rfl
   | _, _, _, _, .next _, _, _ => rfl
 
@@ -317,6 +336,9 @@ theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .narrow _ _ _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .narrowRequired _ _ _ rest, h, h' => by
+      simp only [mB] at h h' ⊢
+      exact mB_und rest h h'
   | _, _, _, _, .check _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mB_und rest h.2 h'.2⟩
@@ -331,6 +353,8 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e : Endblock D V l Γ Λ), mE A e = true → mE B e = true → mE (mUnd A B) e = true
   | _, _, _, .ret .., _, _ => rfl
   | _, _, _, .retWhy .., _, _ => rfl
+  | _, _, _, .retScoped .., _, _ => rfl
+  | _, _, _, .retWhyScoped .., _, _ => rfl
   | _, _, _, .leave _, _, _ => rfl
   | _, _, _, .next _, _, _ => rfl
   | _, _, _, .cons s rest, h, h' => by
@@ -358,6 +382,9 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | _, _, _, .narrow _ _ _ sonst rest, h, h' => by
       simp only [mE, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mE_und rest h.2 h'.2⟩
+  | _, _, _, .narrowRequired _ _ _ rest, h, h' => by
+      simp only [mE] at h h' ⊢
+      exact mE_und rest h h'
   | _, _, _, .exchange _ _ _ _ rest, h, h' => mE_und rest h h'
   | _, _, _, .ite _ t e, h, h' => by
       simp only [mE, Bool.and_eq_true] at h h' ⊢

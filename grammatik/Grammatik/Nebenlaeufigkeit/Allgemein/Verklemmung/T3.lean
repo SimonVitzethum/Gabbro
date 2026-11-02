@@ -47,6 +47,9 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse _ _ body, h => by
       simp only [mS]
       exact mB_boden body fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
+  | .consumeTraverse _ _ _ _ _ _ body, h => by
+      simp only [mS]
+      exact mB_boden body fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
   | .retry _ _ body ueber, h => by
       simp only [mS, Bool.and_eq_true]
       exact ⟨mB_boden body fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden],
@@ -68,6 +71,8 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .., _ => rfl
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
+  | .retScoped .., _ => rfl
+  | .retWhyScoped .., _ => rfl
   | .leave _, _ => rfl
   | .next _, _ => rfl
 
@@ -115,6 +120,9 @@ theorem mB_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [mB]
+      exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
   | .check _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
@@ -154,6 +162,8 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → Endblock.BodenOk b e → mE A e = true
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
+  | .retScoped .., _ => rfl
+  | .retWhyScoped .., _ => rfl
   | .leave _, _ => rfl
   | .next _, _ => rfl
   | .cons s rest, h => by
@@ -194,6 +204,9 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [mE, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
         mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
   | .exchange _ _ _ _ rest, h => by
       simp only [mE]
       exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
