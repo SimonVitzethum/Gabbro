@@ -150,7 +150,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | bool =>
     simp only [resetCarrierB, h]
     constructor
@@ -158,7 +158,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | opt n =>
     simp only [resetCarrierB, h]
     constructor
@@ -166,7 +166,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | sum cs =>
     simp only [resetCarrierB, h]
     constructor
@@ -174,7 +174,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | why n =>
     simp only [resetCarrierB, h]
     constructor
@@ -182,7 +182,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | never =>
     simp only [resetCarrierB, h]
     constructor
@@ -190,7 +190,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | fl _ =>
     simp only [resetCarrierB, h]
     constructor
@@ -198,7 +198,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | fnptr s =>
     simp only [resetCarrierB, h]
     constructor
@@ -206,7 +206,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | ptr t rw =>
     simp only [resetCarrierB, h]
     constructor
@@ -214,7 +214,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | ref t =>
     simp only [resetCarrierB, h]
     constructor
@@ -222,7 +222,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
   | arr elem n =>
     simp only [resetCarrierB, h, zeroAdmittingB_iff]
     constructor
@@ -239,7 +239,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       rw [h] at harr
       exact Ty.noConfusion harr
     · intro _
-      rfl
+      trivial
 
 /-- **The reset component decides its field** (`AkzeptiertSpec.reset`, C18). -/
 theorem resetB_iff {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :

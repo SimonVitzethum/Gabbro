@@ -85,8 +85,8 @@ def resetRangeExpr (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} {elem : T
     (i : Nat) : (k : Nat) → i + k ≤ len → Expr (declOf u) Γ Λ (.arr elem len)
   | 0, _ => base
   | k + 1, h =>
-    Expr.arrSet (resetRangeExpr u base zero i k (by omega)) (resetIdxExpr u (i + k) (by omega))
-      zero
+    Expr.arrSet (resetRangeExpr u base zero i k (by omega))
+      (resetIdxExpr (len := len) u (i + k) (by omega)) zero
 
 /-- One more updated index stays inside the range-store law (C18): setting `i + k` in the
     `k`-prefix gives the `(k + 1)`-prefix. -/
@@ -176,8 +176,9 @@ theorem resetRangeExpr_eval (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} 
     have e := ih hk
     simp only [resetRangeExpr, eval, e]
     funext j
-    have hidx : (eval σ₀ (resetIdxExpr u (i + k) (by omega)) σ ρ).fin.val = i + k := by
-      exact resetIdxExpr_val u (i + k) (by omega) σ₀ σ ρ
+    have hidx : (eval σ₀ (resetIdxExpr (len := len) u (i + k) (by omega)) σ ρ).fin.val
+        = i + k := by
+      exact resetIdxExpr_val (len := len) u (i + k) (by omega) σ₀ σ ρ
     exact arrSetW_resetFinW _ _ _ h _ _ hidx j
 
 /-- A selected index reads zero after the lowered reset (C18). -/
@@ -229,7 +230,7 @@ def lowResetRangeL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
                   if h0n : 0 ≤ sn.range.1 then
                     if hok : rangeOk len si.range.1.toNat sn.range.1.toNat = true then
                       have hElem : ZeroAdmitting elem := (zeroAdmittingB_iff).mp hz
-                      have hR := (rangeOk_iff).mp hok
+                      have _hr := (rangeOk_iff).mp hok
                       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
                         if hw : writesGAt u (fnAt u caller) g = true then
                           have hwV : (verOf u caller).gschreibt g = true := by
