@@ -106,15 +106,9 @@ public import Stage0.Zeugen.Annahme.RightsUnionWitness
 public import Stage0.Zeugen.Annahme.LibraryBindWitness
 public import Stage0.Zeugen.Ablehnung.ProfileWitness
 public import Stage0.Zeugen.Ablehnung.RequiresProfileWitness
-public import Stage0.Zeugen.Ablehnung.TestBuildWitness
+public import Stage0.Zeugen.Annahme.TestBuildWitness
 public import Stage0.Zeugen.Ablehnung.AlignmentWitness
 public import Stage0.Zeugen.Ablehnung.SectionWitness
 public import Stage0.Zeugen.Ablehnung.EntrustWitness
 
 @[expose] public section
-public import Stage0.Zeugen.ProfileWitness
-public import Stage0.Zeugen.RequiresProfileWitness
-public import Stage0.Zeugen.TestBuildWitness
-public import Stage0.Zeugen.AlignmentWitness
-public import Stage0.Zeugen.SectionWitness
-public import Stage0.Zeugen.EntrustWitness

@@ -160,8 +160,6 @@ public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Cover.Mitglieder
 public import Grammatik.Parser.Cover.Proben
 public import Grammatik.GabbroV.GvAtomKoerper
-public import Grammatik.Zielsatz.Atomar.BeweisAtomar
-public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Kern.Semantik.Syscall.SyscallArm
 public import Grammatik.Kern.Semantik.Syscall.SyscallArmLinux
 public import Grammatik.Kern.Semantik.Syscall.SyscallAllg
