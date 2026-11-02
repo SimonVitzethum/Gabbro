@@ -392,11 +392,11 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     | rueckGrund _ _ _ hhead => widerlegeK hhead
   | g5 hs =>
     cases hs with
-    | dannRegLies _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannExchange l2 Γ2 Λ2 Λ2' g neuE hw hL rest k ρ2 hhead σ₁ hs₁ σ₂ hs₂ neu hneu =>
+    | dannRegLies _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannExchange _ _ l2 Γ2 Λ2 Λ2' g neuE hw hL rest k ρ2 hhead σ₁ hs₁ σ₂ hs₂ neu hneu =>
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -406,7 +406,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hb.exchange_inv ho (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_exchange O passes R g neuE hw hL rest k (M.weltVon f) ρ)
-    | dannGleit l2 Γ2 Λ2 Λ2' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    | dannGleit _ _ l2 Γ2 Λ2 Λ2' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -415,7 +415,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hb.gleit_inv ho (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleit O passes R op a b lo hi rest k _ _ v hv)
-    | dannGleitLit l2 Γ2 Λ2 Λ2' q lo hi rest k ρ2 hhead v hv =>
+    | dannGleitLit _ _ l2 Γ2 Λ2 Λ2' q lo hi rest k ρ2 hhead v hv =>
       rw [hR] at hhead
       cases hhead
       obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
@@ -423,7 +423,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hb.gleitLit_inv ho (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleitLit O passes R q lo hi rest k _ _ v hv)
-    | dannGleitVon l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    | dannGleitVon _ _ l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -432,7 +432,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hb.gleitVon_inv ho (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleitVon O passes R e lo hi rest k _ _ v hv)
-    | dannGleitNarrowOk l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    | dannGleitNarrowOk _ _ l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -442,7 +442,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hr ho.2 (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleitNarrowOk O passes R e lo hi sonst rest k _ _ v hv)
-    | dannGleitNarrowElse l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ hn neu hneu =>
+    | dannGleitNarrowElse _ _ l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ hn neu hneu =>
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -454,14 +454,14 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
           (RestK.abbruch _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleitNarrowElse O passes R e lo hi sonst rest k _ _ hn)
-    | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannBindAxiomOpt _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannBindAxiomOptElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | dannBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
-    | rueckConsGrund _ _ _ _ hhead => widerlegeK hhead
-    | dannRetGrund _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomOpt _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomOptElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | rueckConsGrund _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannRetGrund _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | g6 hs =>
     cases hs with
     | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
