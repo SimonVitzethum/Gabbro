@@ -60,6 +60,10 @@ public import Grammatik.Bausteine.Arena.ArenaReset
 public import Grammatik.Bausteine.Arena.Ownership.Audit
 public import Grammatik.Kern.Syntax.Marken.Owner.Witness
 public import Grammatik.Kern.Syntax.Marken.Owner.ActivationWitness
+public import Grammatik.Kern.Syntax.Marken.Owner.Ledger
+public import Grammatik.Kern.Syntax.Marken.Owner.LedgerGX
+public import Grammatik.Kern.Syntax.Marken.Owner.Admission
+public import Grammatik.Kern.Syntax.Marken.Owner.LedgerZeuge
 public import Grammatik.Logik.Ruf.FremdRuf
 public import Grammatik.Zielsatz.Faeden.PoolSym
 public import Grammatik.Zielsatz.Eigenschaften.Masken
