@@ -21,10 +21,8 @@ theorem waehleMinimal_keinMitglied_zeuge :
 /-- Concrete all-false membership tests establish exhaustion. -/
 theorem waehleMinimal_alleFalsch_zeuge :
     waehleMinimal [1, 2, 3] (fun k => k == 4) = none := by
-  apply waehleMinimal_alleFalsch
-  intro v hv
-  simp only [List.mem_cons, List.mem_singleton] at hv
-  rcases hv with h | h | h <;> subst v <;> decide
+  exact waehleMinimal_alleFalsch (ks := [1, 2, 3])
+    (p := fun k : Nat => k == 4) (h := waehleMinimal_keinMitglied_zeuge)
 
 /-- Both directions of completeness hold on a populated domain. -/
 theorem waehleMinimal_vollstaendig_zeuge :

@@ -170,15 +170,15 @@ theorem oO_treu : TreuO oO := fun a => nomatch a
 /-- The object parameters: `aendern` has `(kp, k)` writable (index at bottom position 2,
     capability at 3) and `(wp, w)` read-only (0 and 1); `sicht` has `(p, k)` read-only. -/
 def objs : oD.Fn → List (ObjPar oD)
-  | .aendern => [⟨2, 3, OTab.T, true⟩, ⟨0, 1, OTab.T, false⟩]
-  | .sicht => [⟨0, 1, OTab.T, false⟩]
+  | .aendern => [⟨2, 3, OTab.T, true, true, 0, none⟩, ⟨0, 1, OTab.T, false, true, 0, none⟩]
+  | .sicht => [⟨0, 1, OTab.T, false, true, 0, none⟩]
 
 /-- **Both bodies keep the object discipline**, with faithful pairs. -/
 theorem zeuge_prog : ProgObjOk objs oP := by
   intro f
   cases f with
   | aendern =>
-      refine ⟨⟨⟨.there .here, rfl, ⟨2, 3, OTab.T, true⟩, by simp only [objs, List.mem_cons, ObjPar.mk.injEq, reduceCtorEq, Nat.reduceEqDiff, Bool.true_eq_false,
+      refine ⟨⟨⟨.there .here, rfl, ⟨2, 3, OTab.T, true, true, 0, none⟩, by simp only [objs, List.mem_cons, ObjPar.mk.injEq, reduceCtorEq, Nat.reduceEqDiff, Bool.true_eq_false,
   and_false, and_self, List.not_mem_nil, or_self, or_false], rfl, rfl, rfl⟩, trivial⟩,
         ?_, ?_⟩
       · intro op hop hrw

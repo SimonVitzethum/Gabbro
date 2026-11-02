@@ -55,17 +55,17 @@ def csElimBool : Empty → Bool := fun e => nomatch e
 /-- Signatures: the parameter and result ranges the probes claim. -/
 def csSig : CSFn → Signatur CSTab Empty Empty Empty
   | .fRet => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
-    csElimBool, [], [], none⟩
+    csElimBool, [], [], none, {}⟩
   | .fBind => ⟨[], some (.int 3 3), 0, [], fun _ => false,
-    csElimBool, [], [], none⟩
+    csElimBool, [], [], none, {}⟩
   | .fVar => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
-    csElimBool, [], [], none⟩
+    csElimBool, [], [], none, {}⟩
   | .fWenn => ⟨[.int 0 10], some (.int 0 10), 0, [], fun _ => false,
-    csElimBool, [], [], none⟩
+    csElimBool, [], [], none, {}⟩
   | .fSlot => ⟨[], none, 0, [], fun _ => true,
-    csElimBool, [], [], none⟩
+    csElimBool, [], [], none, {}⟩
   | .fDoppelt => ⟨[.int 0 1000], some (.int 0 2000), 0, [], fun _ => false,
-    csElimBool, [], [], none⟩
+    csElimBool, [], [], none, {}⟩
 
 /-- The demo declaration. -/
 def csD : Deklaration where
@@ -148,11 +148,11 @@ def csCertRet : CertEnd2 csD (csV .fRet) :=
 
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fRet) false [.int 0 10] [] csCertRet = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fRet) false [.int 0 10] [], True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertRet (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertRet (by decide +kernel)
 
 /-- Printer output for `let y : D3 = 1 + 2; return y;`, `D3 = 0 .. 3`. -/
 def csCertBind : CertEnd2 csD (csV .fBind) :=
