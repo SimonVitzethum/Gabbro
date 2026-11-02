@@ -140,6 +140,8 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
               | .error e => .error e
               | .ok (b, r) => (mkAllocBlock u caller Γ Λ t g fh ev0 voll b).bind fun blk => .ok (blk, r)
             | .ok (_, _) => .error "lower: an alloc is not closed"
+  | _, _, _, _, .bindOptBeg .. :: _ | _, _, _, _, .bindOptElseBeg .. :: _ =>
+    .error "optional bind: model lowering pending"
   | Γ, fn, Λ, pe, .allocReqBeg x an v :: rest =>
     (tabIdx u.tabs an).bind fun t =>
       (globIdx u.globs (an ++ "#used")).bind fun g =>

@@ -222,6 +222,8 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       else .error "lower: register read against its class"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
+  | _, _, _ + 1, .bindOptBeg .. :: _, _ | _, _, _ + 1, .bindOptElseBeg .. :: _, _ =>
+    .error "optional bind: model lowering pending"
   | _, _, _ + 1, .allocReqBeg .. :: _, _ =>
     .error "lower: an alloc without else at the top level of a body has no G form (Endblock lacks arenaAllocRequired)"
   | Γ, fn, n + 1, .ret v :: rest, r =>

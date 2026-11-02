@@ -137,6 +137,8 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
       else .error "lower: register read against its class"
   | _, _, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | _, _, _, _, .bindOptBeg .. :: _ | _, _, _, _, .bindOptElseBeg .. :: _ =>
+    .error "optional bind: model lowering pending"
   | _, _, _, _, .allocReqBeg .. :: _ =>
     .error "lower: an alloc without else in an else branch has no G form (Endblock lacks arenaAllocRequired)"
   | Γ, fn, Λ, pe, .bindAxElse y c args e :: rest => match lowAxKopf u caller Γ fn Λ c args with
