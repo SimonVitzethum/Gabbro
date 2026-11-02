@@ -61,7 +61,7 @@ theorem sim_end_retWhy {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     by simp only [exEnd, execEndHA]; exact ⟨hM, rfl⟩⟩
 
 set_option linter.unusedSectionVars false in
-theorem sim_end_retWhyScoped {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+theorem sim_end_retWhyScoped {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r)
     (R)
     : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhyScoped r R : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.retWhyScoped r R : Endblock D V l Γ Λ))) :=

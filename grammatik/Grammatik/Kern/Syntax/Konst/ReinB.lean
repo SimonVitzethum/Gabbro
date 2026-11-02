@@ -107,6 +107,9 @@ def constStmtB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λ
   | .retWhy .. => false
   | .leave .. => false
   | .next .. => false
+  | .consumeTraverse .. => false
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
   | .assignSlotRef .. => false
 def constBlockB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Block c.D V l Γ Λ Λout → Bool
   | .nil => true
@@ -122,6 +125,7 @@ def constBlockB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ �
   | .awaits .. => false
   | .exchange .. => false
   | .narrow .. => false
+  | .narrowRequired .. => false
   | .check .. => false
   | .float .. => false
   | .floatLit .. => false
@@ -136,6 +140,9 @@ def constEndB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ : L
   | .retWhy .. => false
   | .leave .. => false
   | .next .. => false
+  | .narrowRequired .. => false
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
   | .bindCallElse .. => false
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false

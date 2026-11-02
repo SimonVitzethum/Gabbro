@@ -49,7 +49,7 @@ namespace Gabbro.Grammatik
   | hardware (e : Hardware c.D) : RufErhaelt c σ (.hardware e)
 
 mutual
-theorem constStmtErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constStmtErhaelt (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Stmt c.D V l Γ [] []} (h : ConstStmt c body)
     (O : Orakel c.D) (p : Nat)
     (R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -90,7 +90,7 @@ theorem constStmtErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : C
     | logik _ => dsimp only; exact AusgangErhaelt.logik _
     | hardware _ => dsimp only; exact AusgangErhaelt.hardware _
   | .ret _ => by simp only [execStmt]; exact AusgangErhaelt.zurueck rfl rfl
-theorem constBlockErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constBlockErhaelt (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Block c.D V l Γ [] []} (h : ConstBlock c body)
     (O : Orakel c.D) (p : Nat)
     (R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -136,7 +136,7 @@ theorem constBlockErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : 
     | why _ r₁ _ _ => exact Fin.elim0 (Fin.cast hr r₁)
     | logik _ => dsimp only; exact AusgangErhaelt.logik _
     | hardware _ => dsimp only; exact AusgangErhaelt.hardware _
-theorem constEndErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constEndErhaelt (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Endblock c.D V l Γ []} (h : ConstEnd c body)
     (O : Orakel c.D) (p : Nat)
     (R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -187,7 +187,7 @@ theorem constEndErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ct
       exact constEndErhaelt c hyes O p R σ ρ hR
     · simp only [if_neg hcond]
       exact constEndErhaelt c hno O p R σ ρ hR
-theorem constArmsErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constArmsErhaelt (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {arms : Arms c.D V l Γ [] [] cs} (h : ConstArms c arms)
     (O : Orakel c.D) (p : Nat)
     (R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -204,7 +204,7 @@ theorem constArmsErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : C
     cases tag with
     | zero => simp only [execArms]; exact schrumpfArmErhaelt c (constBlockErhaelt c hbody O p R σ _ hR)
     | succ _ => simp only [execArms]; exact constArmsErhaelt c hrest O p R _ σ ρ hR
-theorem constReasonErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constReasonErhaelt (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {arms : GrundArms c.D V l Γ [] [] n} (h : ConstReasonArms c arms)
     (O : Orakel c.D) (p : Nat)
     (R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -223,7 +223,7 @@ theorem constReasonErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ :
 end
 
 /-- Shrinking preserves single-run frame. -/
-theorem schrumpfArmErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem schrumpfArmErhaelt (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {k : Option Ty} {o : Ausgang V l (ArmCtx Γ k)} {σ : World c.D}
     (h : AusgangErhaelt c σ o) : AusgangErhaelt c σ (o.schrumpfArm k) := by
   cases k with

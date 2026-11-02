@@ -347,7 +347,7 @@ theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
     GutAusgang W G σ (o.schrumpfArm c) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨_, _⟩ := p; exact h.schrumpf
+  | some _ => exact h.schrumpf
 
 theorem GutEnd.schrumpf {W G} {σ : World D} {o : EndAusgang V l (τ :: Γ)}
     (h : GutEnd W G σ o) : GutEnd W G σ o.schrumpf := by

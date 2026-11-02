@@ -252,7 +252,7 @@ theorem ObjA.schrumpfArm {Γ : Ctx} {σ : World D} (c : Option Ty)
     {o : Ausgang V l (ArmCtx Γ c)} (h : ObjA W ps σ o) : ObjA W ps σ (o.schrumpfArm c) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨_, _⟩ := p; exact h.schrumpf
+  | some _ => exact h.schrumpf
 
 theorem ObjA.gibt {Γ : Ctx} {σ : World D} (L : D.Lock) {o : Ausgang V l Γ}
     (h : ObjA W ps (σ.nimmt L) o) : ObjA W ps σ (o.mapWelt (·.gibt L)) := by

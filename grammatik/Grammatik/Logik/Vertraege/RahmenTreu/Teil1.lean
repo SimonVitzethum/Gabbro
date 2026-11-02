@@ -111,7 +111,7 @@ theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
     TreuAusgang W G σ (o.schrumpfArm c) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨_, _⟩ := p; exact h.schrumpf
+  | some _ => exact h.schrumpf
 
 theorem TreuEnd.schrumpf {W G} {σ : World D} {o : EndAusgang V l (τ :: Γ)}
     (h : TreuEnd W G σ o) : TreuEnd W G σ o.schrumpf := by

@@ -16,7 +16,8 @@ inductive ConstSourceExpr (c : ConstProgram) (locals : ConstLocals Γ) :
   | lit (n : Nat) : ConstSourceExpr c locals (.lit n) (.lit (Int.ofNat n))
   | tru : ConstSourceExpr c locals .tru .tru
   | fls : ConstSourceExpr c locals .fls .fls
-  | variable (found : (name, mutable, ⟨τ, x⟩) ∈ locals) :
+  | var {name : String} {mutable : Bool} {τ : Ty} {x : Var Γ τ}
+      (found : (name, mutable, (⟨τ, x⟩ : Sigma fun τ => Var Γ τ)) ∈ locals) :
       ConstSourceExpr c locals (.variable name) (.var x)
   | neg : ConstSourceExpr c locals source e →
       ConstSourceExpr c locals (.un "-" source) (.neg e)
@@ -38,7 +39,7 @@ inductive ConstSourceExpr (c : ConstProgram) (locals : ConstLocals Γ) :
   | lit => exact .pureLit
   | tru => exact .pureTru
   | fls => exact .pureFls
-  | variable => exact .pureVar
+  | var => exact .pureVar
   | neg _ ih => exact .pureNeg ih
   | boolNot _ ih => exact .pureNot ih
   | add _ _ ha hb => exact .pureAdd ha hb
