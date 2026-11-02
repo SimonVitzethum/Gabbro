@@ -79,3 +79,15 @@ theorem ownerInvG_erreichbar_zeuge : ∃ M : RufMaschineG D,
       mint_valid_zeuge M (.schritt _ _ _ .start hs)⟩
 
 end Gabbro.Grammatik.OwnerWitness
+
+namespace Gabbro.Grammatik.OwnerWitness
+
+/-- Preservation instantiated on the concrete unfolding and valid minted base. -/
+theorem ownerInvG_schritt_zeuge : ∃ M : RufMaschineG D,
+    RufSchrittG stepProgram stepOracle 0 stepStart 0 M ∧
+    OwnerInvG names minted stepStart [0] ∧ OwnerInvG names minted M [0] := by
+  obtain ⟨M, hs, _, _⟩ := ownerInvG_erreichbar_zeuge
+  have hi := ownerLedger_zeuge_valid stepStart [0]
+  exact ⟨M, hs, hi, ownerInvG_schritt hi hs⟩
+
+end Gabbro.Grammatik.OwnerWitness
