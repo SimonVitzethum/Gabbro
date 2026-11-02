@@ -22,14 +22,14 @@ open Gabbro.Grammatik Runner.IR
 variable {D : Deklaration}
 
 def isPtr : Ty → Bool
-  | .ptr _ _ => true
+  | .ptr _ => true
   | _ => false
 
 /-- A parameter type whose value is one word of the request. -/
 def wortTy : Ty → Bool
   | .int lo hi => decide (valueWords (.int lo hi) = 1)
   | .bool => true
-  | .ptr _ _ => true
+  | .ptr _ => true
   | _ => false
 
 /-- The arguments of a gate, the first into slot `d`, each next one a slot higher. A later argument's scratch slots
