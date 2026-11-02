@@ -34,6 +34,18 @@ def instanceClosure (dependencies : Instance → Except String (List Instance)) 
         instanceClosure dependencies n (pending ++ children) (seen ++ [next])
 termination_by fuel pending _ => (fuel, pending.length)
 
+/-- Structural compilation budget: declarations times distinct source instantiation
+sites plus one. Exhaustion refuses compilation; it never returns partial closure.
+Sites are canonical keys, counted once even when repeated in source. -/
+def structuralFuel (genericDeclarations : Nat) (sites : List Instance) : Nat :=
+  genericDeclarations * sites.eraseDups.length + 1
+
+/-- Frontend entry point with a fixed structural budget rather than caller fuel. -/
+def boundedInstanceClosure (genericDeclarations : Nat)
+    (dependencies : Instance → Except String (List Instance))
+    (sites : List Instance) : Except String (List Instance) :=
+  instanceClosure dependencies (structuralFuel genericDeclarations sites) sites []
+
 /-- Reject collisions before adding any generated declarations. -/
 def checkInstanceNames (sourceNames : List String) (instances : List Instance) :
     Except String Unit := do
