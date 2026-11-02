@@ -68,7 +68,9 @@ def platzI (ks : List (String × Nat)) (modul : List String) : SItemTief → Exc
     | none => .ok [⟨modul ++ [n], 1, sec, m⟩]
     | some e =>
       match ausrichtungWert ks e with
-      | some a =>\n        if ausrichtungB a then .ok [⟨modul ++ [n], a, sec, m⟩]\n        else .error "static alignment must be a positive power of two"
+      | some a =>
+        if ausrichtungB a then .ok [⟨modul ++ [n], a, sec, m⟩]
+        else .error "static alignment must be a positive power of two"
       | none => .error "static alignment is not a constant"
   | _ => .ok []
 /-- The list form. -/
