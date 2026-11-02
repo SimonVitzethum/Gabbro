@@ -105,6 +105,10 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => g001 body
   | .breaking _ body => g001 body
   | .traverse _ inv body => orteOk (D := D) inv.orte && g001 body
+  | .consumeTraverse _ member edge inv _ mass body =>
+      orteOk (D := D) (member.orte ++ edge.orte ++ inv.orte ++ mass.orte) && g001 body
+  | .retScoped e _ => orteOk (D := D) e.orte
+  | .retWhyScoped _ _ => true
   | .retry _ bis body ueber => orteOk (D := D) bis.orte && g001 body && g001 ueber
   | .forever _ inv body => orteOk (D := D) inv.orte && g001 body
   | .axiomCall _ args _ _ _ _ _ => orteOk (D := D) args.orte
@@ -140,6 +144,7 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       orteOk (D := D) ([.inr g] ++ neu.orte) && g001 rest
   | .narrow e _ _ sonst rest =>
       orteOk (D := D) e.orte && g001End sonst && g001 rest
+  | .narrowRequired e _ _ rest => orteOk (D := D) e.orte && g001 rest
   | .check c sonst rest =>
       orteOk (D := D) c.orte && g001End sonst && g001 rest
   | .float _ a b _ _ rest =>
@@ -155,6 +160,8 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
     Endblock D V l Γ Λ → Bool
   | _, _, _, .ret e _ => orteOk (D := D) e.orte
   | _, _, _, .retWhy _ _ => true
+  | _, _, _, .retScoped e _ => orteOk (D := D) e.orte
+  | _, _, _, .retWhyScoped _ _ => true
   | _, _, _, .leave _ => true
   | _, _, _, .next _ => true
   | _, _, _, .cons s rest => g001Stmt s && g001End rest
@@ -172,6 +179,7 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .bindCallInd p args _ _ _ rest =>
       orteOk (D := D) (p.orte ++ args.orte) && g001End rest
   | _, _, _, .narrow e _ _ sonst rest => orteOk (D := D) e.orte && g001End sonst && g001End rest
+  | _, _, _, .narrowRequired e _ _ rest => orteOk (D := D) e.orte && g001End rest
   | _, _, _, .exchange g neu _ _ rest => orteOk (D := D) ([.inr g] ++ neu.orte) && g001End rest
   | _, _, _, .ite c t e => orteOk (D := D) c.orte && g001End t && g001End e
 
