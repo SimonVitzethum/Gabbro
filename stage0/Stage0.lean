@@ -4,6 +4,7 @@ public import Stage0.Senke.Rueckkehr.InvariantProbe
 public import Stage0.SourceWitness
 public import Stage0.ArrayWitness
 public import Stage0.ResetWitness
+public import Stage0.Zeugen.BuiltinWitness
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
