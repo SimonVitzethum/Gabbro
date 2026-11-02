@@ -42,6 +42,10 @@ def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any f
   | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .drops _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
 
+/-- The closed C15 merge operators: storage expansion only binds these five. -/
+def accOperatorBound (m : String) : Bool :=
+  strEq m "max" || strEq m "min" || strEq m "add" || strEq m "or" || strEq m "and"
+
 def itemMetadata : SItemTief → Bool
   | .fnT sig body =>
     if sig.art == "library" then
@@ -71,6 +75,7 @@ def itemMetadata : SItemTief → Bool
   | .whyT .. => false
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
+  | .accT _ _ m p => p.isNone || !accOperatorBound m
   | _ => true
 
 def metadataReason : SItemTief → String
@@ -88,6 +93,9 @@ def metadataReason : SItemTief → String
   | .checkT c =>
     if c.sonde.isSome then "check counterprobe duties lack a checked source binding"
     else "check body duties lack a checked source binding"
+  | .accT _ _ m p =>
+    if !accOperatorBound m then "accumulator operator without G form"
+    else "accumulator without per cpu count without G form"
   | .fnT sig _ =>
     if sig.klauseln.any (fun | .cost _ => true | _ => false) then
       "declared costs lack a checked source-to-kostenPasst binding: " ++ sig.name
@@ -193,5 +201,16 @@ theorem checkT_zeuge :
     let bad : SCheck := ⟨"p", "c", [.variable "x"], ["g"], SAnw.block [] (some (.ret (some .tru))), [.tru], some ("probe", "expects")⟩
     check [.checkT good] = .ok () ∧ check [.checkT bad] = .error "source export: check counterprobe duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
+
+/-- C15 accumulators are bound by storage expansion. Admitted operators and per-cpu counts expand to private cells plus guarding locks (`uAkkuItem`, `uAkkuErweiterung` with neutral, range and count checked by name); any use in bodies or contracts stays refused (`uAkkuVerwendung`, `uAkkuFremdVerwendung` demand C08). Bad operators and missing counts keep the exact downstream refusals. -/
+theorem accT_bound (n : String) (t : STyp) (m : String) (p : Option SExpr) (o : accOperatorBound m = true) (e : p.isSome = true) : itemMetadata (.accT n t m p) = false := by
+  cases p with
+  | none => simp at e
+  | some _ => simp [itemMetadata, o]
+
+set_option maxRecDepth 100000 in
+theorem accT_zeuge :
+    check [.accT "c" (.atom "u32") "add" (some (.lit 2))] = .ok () ∧ check [.accT "c" (.atom "u32") "xor" (some (.lit 2))] = .error "source export: accumulator operator without G form" ∧ check [.accT "c" (.atom "u32") "add" none] = .error "source export: accumulator without per cpu count without G form" := by
+  exact ⟨rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
