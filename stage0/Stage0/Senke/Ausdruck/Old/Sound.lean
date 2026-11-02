@@ -253,6 +253,9 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
   | _, e@(.strWeit ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.wenn ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.count ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.prod ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.prodGet ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.prodSet ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.eng ..), d, code, top, lower, fits, saved, before, m, pc, pre => by
     subst e
     exact lowE_ok (reserved := layout.ensReserved) σ0 σ hWL hLay _ d code top lower fits m pc ρ
