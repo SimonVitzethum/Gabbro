@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Welt
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -285,9 +286,9 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       simp only [VRel, exE, eval, evalNutz_cast]
       change Val.restrictSum E.num E.tnum (fun n value => K.zeiger n value.1 value.2) cs
         ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
-          (Ty.mapCases_get E.num E.tnum cs i).symm ▸ evalNutz σ₀' (exN E nutz) σ' ρ'⟩ = _
+          Fall.ofNutzlast _ _ _ _ ((Ty.mapCases_get E.num E.tnum cs i).symm ▸ evalNutz σ₀' (exN E nutz) σ' ρ')⟩ = _
       rw [Val.restrictSum_mk]
-      exact congrArg (fun payload => (⟨i, payload⟩ : Wert D (.sum cs))) hn
+      exact congrArg (fun payload => (⟨i, Fall.ofNutzlast _ _ _ _ payload⟩ : Wert D (.sum cs))) hn
   | _, _, _, .why _ _, _, _, _ => rfl
   | _, _, _, .forallSlots t body _, ρ, ρ', hρ => by
       simp only [VRel]

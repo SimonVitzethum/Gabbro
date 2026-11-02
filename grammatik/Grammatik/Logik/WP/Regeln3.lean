@@ -1,5 +1,6 @@
 module
 public import Grammatik.Logik.WP.Regeln2
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -61,15 +62,16 @@ def wpArms {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ
 theorem wpArms_null {Λ Λ' : List (Res D)} {c : Option Ty} {cs : List (Option Ty)}
     (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs) (h : 0 < (c :: cs).length)
     (nutz : Nutzlast D.Fn D.passt c) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
-    wpArms O passes R (.cons b rest) ⟨⟨0, h⟩, nutz⟩ Q σ ρ ↔
-      wpB O passes R b (fun o => Q (o.schrumpfArm c)) σ (armEnv nutz ρ) := Iff.rfl
+    wpArms O passes R (.cons b rest) ⟨⟨0, h⟩, Fall.ofNutzlast _ _ _ _ nutz⟩ Q σ ρ ↔
+      wpB O passes R b (fun o => Q (o.schrumpfArm c)) σ (armEnv nutz ρ) := by
+  simp only [wpArms, execArms, Fall.to_of, wpB]
 
 /-- The arm of case `i + 1` is the arm of case `i` among the rest. -/
 theorem wpArms_succ {Λ Λ' : List (Res D)} {c : Option Ty} {cs : List (Option Ty)}
     (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs) (i : Nat) (h : i + 1 < (c :: cs).length)
     (nutz : Nutzlast D.Fn D.passt ((c :: cs).get ⟨i + 1, h⟩)) (Q : Ausgang V l Γ → Prop) (σ : World D) (ρ : Env D Γ) :
-    wpArms O passes R (.cons b rest) ⟨⟨i + 1, h⟩, nutz⟩ Q σ ρ ↔
-      wpArms O passes R rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ Q σ ρ := Iff.rfl
+    wpArms O passes R (.cons b rest) ⟨⟨i + 1, h⟩, Fall.ofNutzlast _ _ _ _ nutz⟩ Q σ ρ ↔
+      wpArms O passes R rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, Fall.ofNutzlast _ _ _ _ nutz⟩ Q σ ρ := Iff.rfl
 
 /-- `match v { … }` over a tagged value. -/
 theorem wpS_onTag {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (v : Expr D Γ Λ (.sum cs))

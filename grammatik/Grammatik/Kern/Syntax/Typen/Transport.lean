@@ -183,7 +183,7 @@ theorem Val.restrictSum_mk {F F' : Type} {p : F → Nat → Bool} {p' : F' → N
       Val.restrictSum sn tn pointer cs
         ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
           Fall.ofNutzlast F' p' _ _ ((Ty.mapCases_get sn tn cs i).symm ▸ v)⟩ =
-        ⟨i, Nutzlast.restrict sn tn pointer (cs.get i) v⟩
+        ⟨i, Fall.ofNutzlast F p cs i (Nutzlast.restrict sn tn pointer (cs.get i) v)⟩
   | [], i, _ => i.elim0
   | none :: _, ⟨0, _⟩, _ => rfl
   | some _ :: _, ⟨0, _⟩, _ => rfl

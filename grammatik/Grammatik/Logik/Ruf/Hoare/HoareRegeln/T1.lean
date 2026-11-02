@@ -16,6 +16,7 @@
 -/
 module
 public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -359,16 +360,14 @@ theorem armsOhneRuf_RunabhaengigAux {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     (k : Nat) (hk : k < (c :: cs').length)
     (nutz : Nutzlast D.Fn D.passt ((c :: cs').get ⟨k, hk⟩))
     (σ : World D) (ρ : Env D Γ) :
-    execArms O passes R₁ (Arms.cons b rest) ⟨⟨k, hk⟩, nutz⟩ σ ρ =
-    execArms O passes R₂ (Arms.cons b rest) ⟨⟨k, hk⟩, nutz⟩ σ ρ := by
+    execArms O passes R₁ (Arms.cons b rest) ⟨⟨k, hk⟩, Fall.ofNutzlast _ _ _ _ nutz⟩ σ ρ =
+    execArms O passes R₂ (Arms.cons b rest) ⟨⟨k, hk⟩, Fall.ofNutzlast _ _ _ _ nutz⟩ σ ρ := by
   cases k with
   | zero =>
       simp only [execArms, hb]
   | succ n =>
       have hk' : n < cs'.length := Nat.lt_of_succ_lt_succ hk
-      have heq : (c :: cs').get ⟨n + 1, hk⟩ = cs'.get ⟨n, hk'⟩ := by
-        simp only [List.get_cons_succ]
-      have htail := hr ⟨⟨n, hk'⟩, heq ▸ nutz⟩ σ ρ
+      have htail := hr ⟨⟨n, hk'⟩, Fall.ofNutzlast _ _ _ _ nutz⟩ σ ρ
       simp only [execArms]
       exact htail
 

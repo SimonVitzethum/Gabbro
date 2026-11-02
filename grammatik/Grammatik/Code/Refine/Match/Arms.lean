@@ -1,6 +1,7 @@
 module
 public import Grammatik.Code.Refine.Match.PayCode
 public import Grammatik.Code.Refine.Match.Scope
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -21,7 +22,7 @@ namespace Gabbro.Code.Lower
 variable [Conf]
 
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang EndAusgang RufAusgang
-  ErgVal ErgExpr execStmt execBlock execEnd execArms eval evalErg Zahl wahr? Nutzlast armEnv)
+  ErgVal ErgExpr execStmt execBlock execEnd execArms eval evalErg Zahl wahr? Nutzlast Fall armEnv)
 
 variable {D : Deklaration} {V : Vertrag D}
 
@@ -36,10 +37,10 @@ def garmT : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List
 theorem execArms_garmT (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
-      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (i : Fin cs.length) (nutz : Nutzlast D.Fn D.passt (cs.get i))
+      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (i : Fin cs.length) (nutz : Fall D.Fn D.passt cs i)
       (σ : World D) (ρ : Env D Γ),
       execArms O passes R arms ⟨i, nutz⟩ σ ρ
-        = (execBlock O passes R (garmT arms i) σ (armEnv nutz ρ)).schrumpfArm (cs.get i)
+        = (execBlock O passes R (garmT arms i) σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)).schrumpfArm (cs.get i)
   | _, _, _, _, _, .cons b _, ⟨0, _⟩, nutz, σ, ρ => rfl
   | _, _, _, _, _, .cons _ rest, ⟨i + 1, h⟩, nutz, σ, ρ =>
       execArms_garmT O passes R rest ⟨i, Nat.lt_of_succ_lt_succ h⟩ nutz σ ρ

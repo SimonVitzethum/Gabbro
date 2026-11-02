@@ -1,6 +1,7 @@
 module
 public import Grammatik.Code.Refine.Match.Arms
 public import Grammatik.Code.Refine.Match.Why
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -21,7 +22,7 @@ namespace Gabbro.Code.Lower
 variable [Conf]
 
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang EndAusgang RufAusgang
-  ErgVal ErgExpr execStmt execBlock execEnd execArms eval evalErg Zahl wahr? Nutzlast armEnv)
+  ErgVal ErgExpr execStmt execBlock execEnd execArms eval evalErg Zahl wahr? Nutzlast Fall armEnv)
 
 variable {D : Deklaration} {V : Vertrag D}
 
@@ -71,7 +72,7 @@ theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
   rw [execArms_garmT]
   -- the word, and the numbers about it
   have hev : ov.ev rsA = some (Val.ofInt (Ar.wid 0 (sumTop cs)) (packZ ⟨i, nutz⟩)) := hevA
-  have hcw : packZ (cs := cs) ⟨i, nutz⟩ = (i.val : Int) + (cs.length : Int) * payOff (cs.get i) nutz := rfl
+  have hcw : packZ (cs := cs) ⟨i, nutz⟩ = (i.val : Int) + (cs.length : Int) * payOff (cs.get i) (Fall.toNutzlast _ _ _ _ nutz) := rfl
   have hc0 := packZ_nonneg (cs := cs) ⟨i, nutz⟩
   have hc1 := packZ_lt (cs := cs) ⟨i, nutz⟩
   have hTW : sumTop cs < 2 ^ (Ar.wid 0 (sumTop cs)) := fits_hi_lt (Ar.wid_fits hfit)
@@ -133,7 +134,7 @@ theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lb
   have hlt1 : OpdLt ov si.r := fun x hx => Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le (hltA x hx) (Nat.le_succ _)) hsiR
   exact outok_mono hle2 _ (outok_lift hbr (fr_regs hagR) hstsi hc _
     (arm_ok lay hL cenv lv O passes R (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov (cs.get i)
-      (garmT arms i) nutz (IH i) (st.l + 1 + i.val) k si si' bi hlow M S fn hMi hk hlv hFn hCall σl ρ m _ ks dst
+      (garmT arms i) (Fall.toNutzlast _ _ _ _ nutz) (IH i) (st.l + 1 + i.val) k si si' bi hlow M S fn hMi hk hlv hFn hCall σl ρ m _ ks dst
       hRl' hE1 hW (fun x hx => Nat.lt_of_lt_of_le (hc x hx) hstsi) i.val i.isLt (by rw [← hcw]; exact hovS)
       hlt1 hTW (by rw [← hcw]; exact hc1) hLt))
 

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Syntax.Typen.Fall
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil1
 
 @[expose] public section
@@ -374,7 +375,7 @@ theorem Arms.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
   | .nil, ⟨⟨k, hk⟩, _⟩, _, _ => (Nat.not_lt_zero k hk).elim
   | .cons b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
       simp only [execArms]
-      exact (Block.kongruent hR b σ (armEnv nutz ρ)).schrumpfArm
+      exact (Block.kongruent hR b σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)).schrumpfArm
   | .cons b rest, ⟨⟨i + 1, hk⟩, nutz⟩, σ, ρ => by
       simp only [execArms]
       exact Arms.kongruent hR rest _ σ ρ

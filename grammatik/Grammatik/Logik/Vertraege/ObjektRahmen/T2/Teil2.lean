@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T1
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T2.Teil1
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 @[expose] public section
 
@@ -385,7 +386,7 @@ theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     ∀ (arms : Arms D V l Γ Λ Λ' cs), oA objs ps arms → ∀ (v : Wert D (.sum cs)) (σ : World D)
     (ρ : Env D Γ), LenOk ps Γ → ObjInv W ps ρ → ObjA W ps σ (execArms O passes R arms v σ ρ)
   | .cons b _, hok, ⟨⟨0, _⟩, nutz⟩, σ, ρ, hlen, hinv =>
-      (block_obj b hok.1 σ (armEnv nutz ρ) (hlen.arm _) (hinv.arm hlen nutz)).schrumpfArm _
+      (block_obj b hok.1 σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ) (hlen.arm _) (hinv.arm hlen (Fall.toNutzlast _ _ _ _ nutz))).schrumpfArm _
   | .cons _ rest, hok, ⟨⟨_ + 1, _⟩, _⟩, σ, ρ, hlen, hinv => arms_obj rest hok.2 _ σ ρ hlen hinv
 
 theorem grund_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :
