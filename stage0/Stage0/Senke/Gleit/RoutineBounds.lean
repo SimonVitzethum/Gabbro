@@ -93,6 +93,8 @@ theorem routineSpecialL_emission_zeuge (left right finite : Nat) :
   exact routineSpecialL_emission (FloatEmission.copy left) (FloatEmission.copy right)
     (FloatEmission.copy finite) (by decide)
 
+#print axioms routineUnpack_emission
+#print axioms routineClass_emission
 #print axioms routineSpecialL_emission
 #print axioms routineSpecialL_emission_zeuge
 end Gabbro.Stage0.Senke
