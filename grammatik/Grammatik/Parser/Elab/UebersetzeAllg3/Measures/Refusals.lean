@@ -142,4 +142,15 @@ theorem lowerAllg_measures_zeuge :
   ⟨(exported countdown countdown_lowered).property, by decide +kernel,
     countdown_accepted_zeuge, countdown_duty_zeuge⟩
 
+theorem lowerMeasures_denotes_zeuge :
+    (∃ c : Component countdown 0, countM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf countdown)) (env : Env (declOf countdown) ((declOf countdown).params 0)),
+        SourceValue (fnAt countdown 0) (fnAt countdown 0).measureConstants env (.variable "n")
+          (eval initial c.2.1 state env).n) ∧
+    AkzeptiertX countP (Cover.Differenz.sperrFamilie countdown) [0] [] [] [] = true ∧
+    ∀ passes Q S T, MassPflicht countP passes Q S T countM.mass (zykS countP [0]) 0 :=
+  ⟨lowerMeasures_denotes countdown countM 0 [.drops (.variable "n")] (.variable "n")
+      (.variable "n") rfl rfl rfl,
+    countdown_accepted_zeuge, countdown_duty_zeuge⟩
+
 end Gabbro.Grammatik.Parser.Measures.Fixtures

@@ -42,12 +42,20 @@ theorem countdown_duty_zeuge (passes : Nat) (Q : AxEns (declOf countdown))
       intro bad
       cases bad
     · subst n
-      change (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+      have safe : (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
         | .ok state' _ => .zurueck (A [] state') ()
         | .why _ reason => keinGrund (by rfl) reason
         | .logik error => .logik error
-        | .hardware error => .hardware error) ≠ EndAusgang.logik (.abstieg target)
-      exact call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+        | .hardware error => .hardware error) ≠
+          (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf countdown) 0) false [.int 0 1]) :=
+          call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+      intro bad
+      apply safe
+      cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+      | why world reason => exact Fin.elim0 reason
+      | _ => simpa [countP, program, countM, exported, execEndHA, execStmtHA, execBlockHA,
+          massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
+          leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
 
 /-- Both functions of the mutual cycle carry the same singleton tuple. -/
 theorem mutual_lengths_zeuge :
@@ -75,18 +83,34 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutual))
         cases bad
       · subst n
         first
-        | change (match R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+        | have safe : (match R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
             | .ok state' _ => .zurueck (A [] state') ()
             | .why _ reason => keinGrund (by rfl) reason
             | .logik error => .logik error
-            | .hardware error => .hardware error) ≠ EndAusgang.logik (.abstieg target)
-          exact call_continuation 1 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
-        | change (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+            | .hardware error => .hardware error) ≠
+              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutual) 0) false [.int 0 1]) :=
+              call_continuation 1 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+          intro bad
+          apply safe
+          cases hr : R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+          | why world reason => exact Fin.elim0 reason
+          | _ => simpa [mutualP, program, mutualM, exported, execEndHA, execStmtHA, execBlockHA,
+              massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
+              leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
+        | have safe : (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
             | .ok state' _ => .zurueck (A [] state') ()
             | .why _ reason => keinGrund (by rfl) reason
             | .logik error => .logik error
-            | .hardware error => .hardware error) ≠ EndAusgang.logik (.abstieg target)
-          exact call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+            | .hardware error => .hardware error) ≠
+              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutual) 0) false [.int 0 1]) :=
+              call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+          intro bad
+          apply safe
+          cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+          | why world reason => exact Fin.elim0 reason
+          | _ => simpa [mutualP, program, mutualM, exported, execEndHA, execStmtHA, execBlockHA,
+              massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
+              leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
 
 /-- The first call of this cycle is not in tail position; both calls really decrease the measure. -/
 theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
@@ -103,7 +127,7 @@ theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
       intro bad
       cases bad
     · subst n
-      change (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+      have safe : (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
         | .ok state' _ =>
           match R 0 (A [] state') (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
           | .ok state'' _ => .zurueck (A [] state'') ()
@@ -112,10 +136,24 @@ theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
           | .hardware error => .hardware error
         | .why _ reason => keinGrund (by rfl) reason
         | .logik error => .logik error
-        | .hardware error => .hardware error) ≠ EndAusgang.logik (.abstieg target)
-      apply call_continuation 0 rfl _ _ target (noDescent _ _ _ target)
-      intro state'
-      exact call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+        | .hardware error => .hardware error) ≠
+          (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf nonTail) 0) false [.int 0 1]) := by
+        apply call_continuation 0 rfl _ _ target (noDescent _ _ _ target)
+        intro state'
+        exact call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
+      intro bad
+      apply safe
+      cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+      | why world reason => exact Fin.elim0 reason
+      | ok world value =>
+        cases hs : R 0 (A [] world) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+        | why world' reason => exact Fin.elim0 reason
+        | _ => simpa [nonTailP, program, nonTailM, exported, execEndHA, execStmtHA, execBlockHA,
+            massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
+            leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr, hs] using bad
+      | _ => simpa [nonTailP, program, nonTailM, exported, execEndHA, execStmtHA, execBlockHA,
+          massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
+          leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
 
 /-- Acyclic source functions reuse the existing vacuous-cycle theorem, with their real exported measure. -/
 theorem acyclic_duty_zeuge (passes : Nat) (Q : AxEns (declOf acyclic))
