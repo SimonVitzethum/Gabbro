@@ -212,10 +212,6 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
-  | _, _, _, .bindCallIndElse .., lb, st, st', blks, hlt, h => by
-      simp only [lowerEnd, reduceCtorEq] at h
-  | _, _, _, .bindCallIndElse .., lb, st, st', blks, h => by
-      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regRead .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
