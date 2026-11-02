@@ -335,20 +335,21 @@ end Gabbro.Grammatik
 
     What is proved (no `sorry`):
 
-    - `Stmt.speicherfest`: the memory-preserving leaf test. The nine leaves
+    - `Stmt.speicherfest`: the memory-preserving leaf test. The eleven leaves
       whose every `some`-valued `execStmt` outcome keeps `speicher` (slots and
       globals) test true: `assignVar` and `regSchreib` (read into the
       environment / the device, trace grows, memory stands), `transition`
       (device mirror step, the world passes through untouched), `advances`
-      and `retires` (mark bookkeeping, `.ok` on the input world), `ret`
-      (reads only, `.zurueck` on the read world), `retGrund`, `leave`, `next`
+      and `retires` (mark bookkeeping, `.ok` on the input world), `ret` and
+      `retScoped` (reads only, `.zurueck` on the read world), `retGrund`,
+      `retWhyScoped`, `leave`, `next`
       (pass-through outcomes on the input world). Everything else tests false:
       the four writes (`assignSlot`, `assignDurch`, `assignGlob`,
       `schreibBytes`), the conditional write (`uebergang`), the oracle answer
-      (`axiomCall`), the global publish (`publish`), and all eleven compounds.
+      (`axiomCall`), the global publish (`publish`), and all twelve compounds.
     - `speicherfest_speicher`: firing evidence for a `speicherfest` leaf keeps
       live memory. Case analysis on the statement: excluded shapes die at the
-      test (`simp [Stmt.speicherfest] at hFest`); the nine included shapes
+      test (`simp [Stmt.speicherfest] at hFest`); the eleven included shapes
       compute through `execStmt` / `Ausgang.welt` / `Option.some.injEq` to a
       read-only or unchanged world, whose `speicher` is the input's by
       construction (`lese` / `merke` extend only the trace, §6).
@@ -361,7 +362,7 @@ end Gabbro.Grammatik
       `hBlattAll` application site whose fired leaf tests `speicherfest`
       discharges through this theorem instead of a posit.
 
-    Coverage (exactly): the nine memory-preserving leaf shapes, every thread,
+    Coverage (exactly): the eleven memory-preserving leaf shapes, every thread,
     every intermediate machine. Every premise is load-bearing: `O` / `passes`
     feed the firing in `hstep`; `Pre` / `Post` / `fn` name the conclusion;
     `hMem` bridges both iffs; `M₀` / `g` supply the two worlds; `s` / `ρ` /
@@ -385,7 +386,7 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- **Memory-preserving leaves.** The nine leaves whose every `some`-valued
+/-- **Memory-preserving leaves.** The eleven leaves whose every `some`-valued
     `execStmt` outcome keeps `speicher`: reads and pass-through outcomes only,
     never a slot / global write and never an oracle answer. -/
 def Stmt.speicherfest : Stmt D V l Γ Λ Λ' → Bool
@@ -396,6 +397,8 @@ def Stmt.speicherfest : Stmt D V l Γ Λ Λ' → Bool
   | .retires _ _ _ _ => true
   | .ret _ _ => true
   | .retWhy _ _ => true
+  | .retScoped _ _ => true
+  | .retWhyScoped _ _ => true
   | .leave _ => true
   | .next _ => true
   | _ => false

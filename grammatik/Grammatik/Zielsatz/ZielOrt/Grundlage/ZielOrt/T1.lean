@@ -156,6 +156,8 @@ def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .locks _ _ body => blockOrteP P body
   | .breaking _ body => blockOrteP P body
   | .traverse _ inv body => inv.orte ++ blockOrteP P body
+  | .consumeTraverse _ member edge inv _ mass body =>
+      member.orte ++ edge.orte ++ inv.orte ++ mass.orte ++ blockOrteP P body
   | .retry _ bis body ueber => bis.orte ++ blockOrteP P body ++ blockOrteP P ueber
   | .forever _ inv body => inv.orte ++ blockOrteP P body
   | .axiomCall _ args _ _ _ _ _ => args.orte
@@ -166,6 +168,8 @@ def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .retires _ _ _ _ => []
   | .ret e _ => e.orte
   | .retWhy _ _ => []
+  | .retScoped e _ => e.orte
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
 
@@ -190,6 +194,7 @@ def blockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ blockOrteP P rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
+  | .narrowRequired e _ _ rest => e.orte ++ blockOrteP P rest
   | .check c sonst rest =>
       c.orte ++ endblockOrteP P sonst ++ blockOrteP P rest
   | .float _ a b _ _ rest => a.orte ++ b.orte ++ blockOrteP P rest
@@ -202,6 +207,8 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
     Endblock D V l Γ Λ → List (D.Tab ⊕ D.Glob)
   | .ret e _ => e.orte
   | .retWhy _ _ => []
+  | .retScoped e _ => e.orte
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
   | .cons s rest => stmtOrteP P s ++ endblockOrteP P rest
@@ -221,6 +228,7 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrteP P rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
+  | .narrowRequired e _ _ rest => e.orte ++ endblockOrteP P rest
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrteP P rest
   | .ite c t e => c.orte ++ endblockOrteP P e ++ endblockOrteP P t
 

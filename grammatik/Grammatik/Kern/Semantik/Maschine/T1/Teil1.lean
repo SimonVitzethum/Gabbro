@@ -323,7 +323,7 @@ theorem keinRuf_gut : GutR (D := D) keinRuf := by
     (`ite`, calls, `locks`, loops, ...) open into further steps instead. -/
 def Stmt.istBlatt : Stmt D V l Γ Λ Λ' → Bool
   | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd ..
-  | .locks .. | .breaking .. | .traverse .. | .retry .. | .forever .. => false
+  | .locks .. | .breaking .. | .traverse .. | .consumeTraverse .. | .retry .. | .forever .. => false
   | _ => true
 
 /-- **Frame and trace of a LEAF, under held static holdings only.** A leaf
@@ -393,6 +393,11 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       exact gut_lese σ Λ _ e.orte_darf hh
   | .retWhy .., _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+  | .retScoped e _, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gut_lese σ Λ _ e.orte_darf hh
+  | .retWhyScoped .., _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .next _, _, σ, ρ, hh, σ', h => by
@@ -406,6 +411,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
   | .locks .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .breaking .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .traverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .consumeTraverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .retry .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .forever .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
 
