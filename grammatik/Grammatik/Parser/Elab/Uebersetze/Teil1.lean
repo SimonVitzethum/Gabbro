@@ -417,15 +417,15 @@ structure UWhy where
   descriptor : Option ReasonSpec := none
   deriving DecidableEq, Repr
 
-/-- A `tagged type` declaration: its cases in order, each with the range of its payload or none
-    (`Ty.sum` of their specifications). -/
-structure USum where
+/-- One ordered tagged schema. Source collection retains `STyp`; model admission resolves
+    payloads to the current kernel's representation. No case or payload is discarded. -/
+structure USum (Payload : Type := Int × Int) where
   name : String
-  cases : List (String × Option (Int × Int))
+  cases : List (String × Option Payload)
   deriving DecidableEq, Repr
 
-/-- The specification of a tagged type: the payload range of each case (`Ty.sum cs`). -/
-def USum.spec (s : USum) : List (Option (Int × Int)) := s.cases.map (·.2)
+/-- The complete ordered payload schema, independent of its resolution stage. -/
+def USum.spec {Payload : Type} (s : USum Payload) : List (Option Payload) := s.cases.map (·.2)
 
 /-- One `state S { transition t { f : A -> B } .. }` (`D.erlaubt`): its stages, numbered 0, 1, 2, .. in the order
     they are first written, and the allowed pairs (one per `transition` line, as stage numbers). The field it
