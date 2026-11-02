@@ -35,6 +35,7 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Gen.Text.Delab.Teil1
+public import Grammatik.Gen.Text.Delab.Teil1a
 
 @[expose] public section
 

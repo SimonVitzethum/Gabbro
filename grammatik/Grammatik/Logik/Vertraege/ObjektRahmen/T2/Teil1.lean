@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T1
+public import Grammatik.Logik.Vertraege.ObjektRahmen.T1a
 
 @[expose] public section
 

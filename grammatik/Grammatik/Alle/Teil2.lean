@@ -111,6 +111,7 @@ public import Grammatik.Speichermodell.Atomar.AtomarAkteur
 public import Grammatik.Speichermodell.Atomar.AtomarLauf
 public import Grammatik.Speichermodell.Atomar.AtomarW
 public import Grammatik.Speichermodell.Atomar.AtomarInv
+public import Grammatik.Speichermodell.Atomar.AtomarInva
 public import Grammatik.Speichermodell.Atomar.AtomarRuhe
 public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
 public import Grammatik.Speichermodell.Atomar.AtomarZiel
@@ -167,6 +168,7 @@ public import Grammatik.Code.Model.Witness
 public import Grammatik.Code.Refine.Expr
 public import Grammatik.Code.Refine.Calls.Func
 public import Grammatik.Code.Refine.Witness
+public import Grammatik.Code.Refine.Witnessa
 public import Grammatik.Code.Refine.WitnessC11
 public import Grammatik.Code.Conc.Present
 public import Grammatik.Code.Conc.Thread

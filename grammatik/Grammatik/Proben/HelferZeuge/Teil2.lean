@@ -33,6 +33,7 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Proben.HelferZeuge.Teil1
+public import Grammatik.Proben.HelferZeuge.Teil1a
 
 @[expose] public section
 

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Code.Lower.Stmt
 public import Grammatik.Code.Refine.Struct.Mono.Teil2
+public import Grammatik.Code.Refine.Struct.Mono.Teil2a
 
 @[expose] public section
 

@@ -47,6 +47,7 @@ public import Grammatik.Kern.Semantik.MaschinenKette.T1
 public import Grammatik.Kern.Semantik.MaschinenKette.T2
 public import Grammatik.Kern.Semantik.MaschinenKette.T3
 public import Grammatik.Kern.Semantik.MaschinenKette.T4
+public import Grammatik.Kern.Semantik.MaschinenKette.T4a
 public import Grammatik.Kern.Semantik.MaschinenKette.T5
 @[expose] public section
 

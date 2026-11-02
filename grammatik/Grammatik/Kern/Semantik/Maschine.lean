@@ -82,6 +82,7 @@ public import Grammatik.Kern.Semantik.Maschine.T4
 public import Grammatik.Kern.Semantik.Maschine.T5
 public import Grammatik.Kern.Semantik.Maschine.T6
 public import Grammatik.Kern.Semantik.Maschine.T7
+public import Grammatik.Kern.Semantik.Maschine.T7a
 public import Grammatik.Kern.Semantik.Maschine.T8
 public import Grammatik.Kern.Semantik.Maschine.T9
 @[expose] public section
