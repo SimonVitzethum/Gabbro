@@ -111,7 +111,7 @@ theorem zeroAdmittingB_iff {τ : Ty} : zeroAdmittingB τ = true ↔ ZeroAdmittin
     constructor
     · intro h; exact absurd h Bool.false_ne_true
     · intro h; cases h
-  | ptr t rw =>
+  | ptr cap =>
     simp only [zeroAdmittingB]
     constructor
     · intro h; exact absurd h Bool.false_ne_true
