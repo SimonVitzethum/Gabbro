@@ -20,6 +20,17 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C05 group invariants (cost/runs/by duties unbound), C11 `by consuming` traversal (current-state reselection open). Still
   refused at the gate, being opened: C14 profile/requires profile/when TESTBUILD/aligned/section/entrust; C12 named spaces,
   ownership rights, live-byte capabilities, entry handles; C09 owner flows; C18 allocation without else.
+  - **Stage-0 refusals with their missing step:**
+    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C11 `retScoped`/`retWhyScoped`: model semantics does not unwind crossed scopes yet (`R.scopes` ignored).
+    - C18 `narrowRequired`: lowering needs a runner stop for the `.logik .kapazitaet` case.
+    - C18 allocation without `else`: provider/memory-availability duties are OPEN in the model.
+    - C09 owner mint/handoff: `RufPasst.ownerReady` refuses non-empty owner flows; escrow simulation missing.
+    - C12 live byte capabilities and entry handles: need C01 value flow, C08 grant history, C09 loans, C08/C14 entry binding.
+    - C14 `profile`/`requires profile`: certificate transport to Stage-0 image correctness missing.
+    - C14 `aligned`/`section`: elaborated for globals; Stage-0 image placement (global base alignment, section policy, relocation) missing.
+    - C14 `entrust`: refused by the model (no isolation/call service).
+    - C11 `by consuming`: refused by design.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
