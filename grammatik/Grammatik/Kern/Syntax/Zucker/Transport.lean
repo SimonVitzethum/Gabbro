@@ -2,17 +2,17 @@ module
 
 public import Grammatik.Kern.Semantik.Semantik
 
-@[expose] public section
+public section
 
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
 /-- A value at an equal type. -/
-def Wert.umTyp {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
+@[expose] def Wert.umTyp {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
 
 /-- An expression at an equal type. -/
-def Expr.umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ) (e : Expr D Γ Λ τ) :
+@[expose] def Expr.umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ) (e : Expr D Γ Λ τ) :
     Expr D Γ Λ σ := h ▸ e
 
 @[simp] theorem Wert.umTyp_rfl {τ : Ty} (v : Wert D τ) : Wert.umTyp rfl v = v := rfl

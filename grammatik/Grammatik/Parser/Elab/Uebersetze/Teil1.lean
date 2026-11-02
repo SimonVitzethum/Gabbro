@@ -424,15 +424,6 @@ structure USum where
 /-- The specification of a tagged type: the payload range of each case (`Ty.sum cs`). -/
 def USum.spec (s : USum) : List (Option (Int × Int)) := s.cases.map (·.2)
 
-/-- One `state S { transition t { f : A -> B } .. }` (`D.erlaubt`): its stages, numbered 0, 1, 2, .. in the order
-    they are first written, and the allowed pairs (one per `transition` line, as stage numbers). The field it
-    governs is the field a `transition T.slots[i].f : A -> B;` statement is applied to (Simon, 2026-10-21). -/
-structure UZustand where
-  name : String
-  stufen : List String
-  paare : List (Nat × Nat)
-  deriving DecidableEq, Repr
-
 /-- One invariant (`table T { .. invariant I cost .. runs .. : p; }` or `group G over { T, U } { invariant I .. }`,
     `D.Inv`): its name, its carrier tables (`D.traeger`) and its predicate over no parameter (`Programm.invariante`,
     read under the guards of its carriers, `invSicht`). -/

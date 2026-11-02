@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Zucker.Transport
 
-@[expose] public section
+public section
 
 namespace Gabbro.Grammatik
 
@@ -34,26 +34,26 @@ inductive Frozen : TransitionWrite D Γ Λ → Prop where
       Frozen (.glob global numeric (.var source) (.var target) guard)
 
 /-- Write effects remain the ordinary function's permissions. -/
-def Permitted (V : Vertrag D) : TransitionWrite D Γ Λ → Prop
+@[expose] def Permitted (V : Vertrag D) : TransitionWrite D Γ Λ → Prop
   | .slot table .. => V.schreibt table = true
   | .glob global .. => V.gschreibt global = true
 
 /-- The source-state equality, read under the declaration's real guards. -/
-def sourceEq : TransitionWrite D Γ Λ → Expr D Γ Λ .bool
+@[expose] def sourceEq : TransitionWrite D Γ Λ → Expr D Γ Λ .bool
   | .slot table field numeric index source _ guard =>
       .eq ((Expr.slot table field index guard).umTyp numeric) source
   | .glob global numeric source _ guard =>
       .eq ((Expr.glob global guard).umTyp numeric) source
 
 /-- The target-state equality refers to captured parameters, never body locals. -/
-def targetEq : TransitionWrite D Γ Λ → Expr D Γ Λ .bool
+@[expose] def targetEq : TransitionWrite D Γ Λ → Expr D Γ Λ .bool
   | .slot table field numeric index _ target guard =>
       .eq ((Expr.slot table field index guard).umTyp numeric) target
   | .glob global numeric _ target guard =>
       .eq ((Expr.glob global guard).umTyp numeric) target
 
 /-- An ordinary checked store, with its existing range, effect and guard rules. -/
-def statement (write : TransitionWrite D Γ Λ) (right : write.Permitted V) :
+@[expose] def statement (write : TransitionWrite D Γ Λ) (right : write.Permitted V) :
     Stmt D V l Γ Λ Λ :=
   match write with
   | .slot table field numeric index _ target guard =>
@@ -64,17 +64,17 @@ def statement (write : TransitionWrite D Γ Λ) (right : write.Permitted V) :
 end TransitionWrite
 
 /-- The explicit clause and every entry-state equality are caller duties. -/
-def transitionRequires (writes : List (TransitionWrite D Γ Λ)) (clause : Expr D Γ Λ .bool) :
+@[expose] def transitionRequires (writes : List (TransitionWrite D Γ Λ)) (clause : Expr D Γ Λ .bool) :
     Expr D Γ Λ .bool :=
   writes.foldr (fun write rest => .and write.sourceEq rest) clause
 
 /-- The postcondition uses the same captured target values as the stores. -/
-def transitionEnsures (writes : List (TransitionWrite D Γ Λ)) : Expr D Γ Λ .bool :=
+@[expose] def transitionEnsures (writes : List (TransitionWrite D Γ Λ)) : Expr D Γ Λ .bool :=
   writes.foldr (fun write rest => .and write.targetEq rest) .tru
 
 /-- Ordered ordinary stores followed by the caller-selected continuation.
     With no writes this is a requires-only transition. -/
-def transitionEnd (V : Vertrag D) (writes : List (TransitionWrite D Γ Λ))
+@[expose] def transitionEnd (V : Vertrag D) (writes : List (TransitionWrite D Γ Λ))
     (rights : ∀ write ∈ writes, write.Permitted V) (rest : Endblock D V l Γ Λ) :
     Endblock D V l Γ Λ :=
   match writes with
@@ -84,7 +84,7 @@ def transitionEnd (V : Vertrag D) (writes : List (TransitionWrite D Γ Λ))
         (transitionEnd V tail (fun next member => rights next (List.mem_cons_of_mem _ member)) rest)
 
 /-- The generated function returns normally with exactly its required resources. -/
-def transitionReturn (V : Vertrag D) (void : V.erg = none) (resources : Λ.Perm V.ende) :
+@[expose] def transitionReturn (V : Vertrag D) (void : V.erg = none) (resources : Λ.Perm V.ende) :
     Endblock D V false Γ Λ :=
   .ret (by rw [void]; exact .empty) resources
 

@@ -6,7 +6,7 @@ public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.Teil6
+public import Grammatik.Parser.Elab.Uebersetze.Transition.Resolve
 
 @[expose] public section
 
@@ -117,17 +117,6 @@ def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except
           | none => .error "function pointer of no type")
     | _ => none
 
-/-- The state that declares the transition `von -> nach` (by stage names): exactly one, with the stage numbers. -/
-def uZustandVon (zs : List UZustand) (von nach : String) : Except String (String × Nat × Nat) :=
-  let treffer := zs.filterMap fun z =>
-    match z.stufen.findIdx? (strEq · von), z.stufen.findIdx? (strEq · nach) with
-    | some a, some c => if z.paare.contains (a, c) then some (z.name, a, c) else none
-    | _, _ => none
-  match treffer with
-  | [x] => .ok x
-  | [] => .error "transition not declared by a state"
-  | _ => .error "transition declared by two states"
-
 /-- The kind word of a statement, named in a refusal. -/
 def anwArt : SAnw → String
   | .bind .. => "let" | .bindElse .. => "let else" | .bindLib .. => "library let" | .set .. => "assignment"
@@ -163,13 +152,23 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     | .error e => .error e
     | .ok (.thru .., _, _, _) => .error "transition through a pointer without G form"
     | .ok (.tabelle _, tb, f, ix) =>
-      match uZustandVon ctx.zustaende von nach with
-      | .error e => .error e
-      | .ok (s, a, c) => .ok (.shiftTab tb f ix s (Int.ofNat a) (Int.ofNat c))
+      uTransitionAt ctx.zustaende tb f ix von nach
   | .reset a .none =>
     if ctx.tabs.any (fun x => x.arena && strEq x.name a) then .ok (.assignGlob (a ++ "#used") (.lit 0))
     else .error ("arena unknown: " ++ a)
   | .call c args =>
+    match uNamedTransition ctx.zustaende c with
+    | some (.error message) => .error message
+    | some (.ok (state, tr)) =>
+      if koepfe.any (fun head => strEq head.name c) then
+        .error "transition name conflicts with an ordinary function"
+      else if !args.isEmpty then .error "transition call takes no explicit arguments"
+      else if tr.primitive then .error "constant field transition requires an explicit target"
+      else
+        match uTransitionArguments tr.writes none with
+        | .error message => .error message
+        | .ok snapshots => .ok (.call (uTransitionFunction state tr.name) snapshots)
+    | none =>
     match uFnZeiger ctx koepfe c with
     | some (.error e) => .error e
     | some (.ok ziel) =>

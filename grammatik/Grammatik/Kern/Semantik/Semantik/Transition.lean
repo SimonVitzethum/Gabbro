@@ -4,7 +4,7 @@ public import Grammatik.Kern.Syntax.Zucker.Transition
 public import Grammatik.Kern.Syntax.Satz.T1
 public import Grammatik.Kern.Syntax.Koernung.Teil1
 
-@[expose] public section
+public section
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} {l : Bool}
@@ -13,7 +13,7 @@ namespace TransitionWrite
 
 /-- The specified effect uses entry snapshots, even for a later write.
     This is a relation's world expression, not another source execution path. -/
-def writtenWorld (write : TransitionWrite D Γ Λ) (entry : World D) (env : Env D Γ)
+@[expose] def writtenWorld (write : TransitionWrite D Γ Λ) (entry : World D) (env : Env D Γ)
     (state : World D) : World D :=
   match write with
   | .slot table field numeric index _ target _ =>
@@ -65,7 +65,7 @@ theorem writtenWorld_target (write : TransitionWrite D Γ Λ) (frozen : write.Fr
 
 /-- Later stores must preserve an earlier target. Distinct places discharge
     this obligation; aliases require an actual equal-result proof. -/
-def Preserves (earlier later : TransitionWrite D Γ Λ) (entry : World D) (env : Env D Γ) : Prop :=
+@[expose] def Preserves (earlier later : TransitionWrite D Γ Λ) (entry : World D) (env : Env D Γ) : Prop :=
   ∀ state, eval entry earlier.targetEq (later.writtenWorld entry env state) env =
     eval entry earlier.targetEq state env
 
@@ -73,7 +73,7 @@ end TransitionWrite
 
 /-- The specified post-world: source order, one fixed entry world and one
     captured environment throughout. It preserves the ordinary write trace. -/
-def transitionWorld (writes : List (TransitionWrite D Γ Λ)) (entry : World D)
+@[expose] def transitionWorld (writes : List (TransitionWrite D Γ Λ)) (entry : World D)
     (env : Env D Γ) (state : World D) : World D :=
   writes.foldl (fun state write => write.writtenWorld entry env state) state
 
