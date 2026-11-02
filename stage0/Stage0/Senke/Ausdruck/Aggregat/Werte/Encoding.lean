@@ -122,17 +122,21 @@ def encodeEnv (L : Lay D) : {Γ : Ctx} → Env D Γ → List Runner.W
 /-- Representation validity retains the target obligations of scalar references
     and IEEE values recursively through every aggregate element. Source ranges,
     string bounds and tag membership are already carried by `Wert`. -/
+mutual
 def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
   | .ref n, v => v.zelle < 2 ^ 64 ∧
       ∃ t, D.tabNr n = some t ∧ D.offen t = true ∧ (v.zelle : Int) < L.count t
   | .fl _ _, v => Gleitkomma.wf Gleitkomma.f64 v.x
   | .arr τ _, v => ∀ i, ValueValid L τ (v i)
+  | .prod _ fs, v => ProdValid L fs v
   | _, _ => True
 
 /-- Representation obligations for each field in declaration order. -/
 def ProdValid (L : Lay D) : (fs : List Ty) → ProdVal D.Fn D.passt fs → Prop
   | [], _ => True
   | τ :: rest, v => ValueValid L τ (ProdVal.hd v) ∧ ProdValid L rest (ProdVal.tl v)
+
+end
 
 /-- A typed field projects its representation obligations. -/
 theorem ProdValid.field {L : Lay D} {fs : List Ty} {σ : Ty}
