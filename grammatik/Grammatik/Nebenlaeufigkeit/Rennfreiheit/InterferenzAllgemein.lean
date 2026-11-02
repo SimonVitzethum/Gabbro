@@ -115,6 +115,7 @@ module
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T1
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T2
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3a
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T4
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T5
 @[expose] public section

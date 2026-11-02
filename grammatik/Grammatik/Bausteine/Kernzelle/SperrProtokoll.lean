@@ -4,6 +4,7 @@ public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Bausteine.Kernzelle.Verlauf
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3a
 
 @[expose] public section
 
