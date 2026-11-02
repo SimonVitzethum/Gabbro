@@ -56,6 +56,7 @@ def wordCompatB : Ty → Bool
     | 0 => true
     | 1 => wordCompatB τ
     | _ => false
+  | .prod .. => false
   | .str n => decide (n ≤ 1)
   | _ => true
 

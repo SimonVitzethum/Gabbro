@@ -17,6 +17,7 @@ def WordCompatible : Ty → Prop
     | 0 => True
     | 1 => WordCompatible τ
     | _ => False
+  | .prod .. => False
   | .str n => n ≤ 1
   | _ => True
 
@@ -27,6 +28,7 @@ theorem wordCompatB_sound : (τ : Ty) → wordCompatB τ = true → WordCompatib
   | .arr τ 0, _ => trivial
   | .arr τ 1, h => wordCompatB_sound τ h
   | .arr τ (n + 2), h => by simp only [wordCompatB] at h; cases h
+  | .prod .., h => by cases h
   | .str n, h => by
     simp only [wordCompatB, decide_eq_true_eq] at h; exact h
   | .int .., _ | .bool, _ | .why .., _ | .never, _ | .fl .., _ | .fnptr .., _
@@ -97,6 +99,7 @@ theorem ValueAt.word {m : Runner.Mem} {fp : Runner.W} {base : Nat} :
           ⟨value.1 ⟨0, by decide⟩, by simpa [encodeWords, elementEncoding] using value.2⟩
         exact ih _ compatible child
       | succ n => exact False.elim compatible
+  | prod name fs => intro v compatible; exact False.elim compatible
   | never => intro v; exact Empty.elim v
 
 theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
@@ -181,6 +184,7 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
     intro v w width encoded
     obtain ⟨short, word⟩ := encoded
     exact ⟨trivial, by simp [encodeWords, short, word]⟩
+  | prod name fs => intro v w width encoded; exact False.elim encoded
   | never => intro v; exact Empty.elim v
 
 theorem Ok.value [Kern] {m : Runner.Mem} {pc fp : Runner.W} {K d : Nat} {code : List II}
