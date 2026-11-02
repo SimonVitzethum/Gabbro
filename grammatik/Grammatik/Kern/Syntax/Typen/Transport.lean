@@ -17,7 +17,7 @@ def Ty.mapNumbers (sn tn : Nat → Nat) : Ty → Ty
   | .never => .never
   | .fl lo hi => .fl lo hi
   | .fnptr n => .fnptr (sn n)
-  | .ptr n rw => .ptr (tn n) rw
+  | .ptr ⟨space, rights, .table n⟩ => .ptr ⟨space, rights, .table (tn n)⟩
   | .ref n => .ref (tn n)
   | .arr τ n => .arr (Ty.mapNumbers sn tn τ) n
   | .str n => .str n
@@ -39,7 +39,8 @@ end
 
 mutual
 @[simp] theorem Ty.mapNumbers_id : ∀ τ : Ty, Ty.mapNumbers id id τ = τ
-  | .int _ _ | .bool | .opt _ | .why _ | .never | .fl _ _ | .fnptr _ | .ptr _ _ | .ref _ | .str _ => rfl
+  | .int _ _ | .bool | .opt _ | .why _ | .never | .fl _ _ | .fnptr _ | .ref _ | .str _ => rfl
+  | .ptr ⟨space, rights, .table n⟩ => rfl
   | .sum cs => congrArg Ty.sum (Ty.mapCases_id cs)
   | .arr τ n => congrArg (fun t => Ty.arr t n) (Ty.mapNumbers_id τ)
 termination_by τ => sizeOf τ
@@ -79,7 +80,7 @@ def Val.relocate {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Boo
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr n, v => pointer n v
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun i => Val.relocate sn tn pointer τ (v i)
   | .str _, v => v
@@ -119,7 +120,7 @@ def Val.restrict {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Boo
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr n, v => pointer n v
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun i => Val.restrict sn tn pointer τ (v i)
   | .str _, v => v
@@ -209,7 +210,7 @@ mutual
 theorem Val.restrict_relocate : ∀ (τ : Ty) (v : Val F p τ),
     Val.restrict sn tn backward τ (Val.relocate sn tn forward τ v) = v
   | .int _ _, _ | .bool, _ | .opt _, _ | .why _, _ | .never, _ | .fl _ _, _
-  | .ptr _ _, _ | .ref _, _ | .str _, _ => rfl
+  | .ptr _, _ | .ref _, _ | .str _, _ => rfl
   | .fnptr n, v => hleft n v
   | .arr τ _, v => funext fun i => Val.restrict_relocate sn tn forward backward hleft τ (v i)
   | .sum cs, v => Val.restrict_relocateSum sn tn forward backward hleft cs v
@@ -245,7 +246,7 @@ mutual
 theorem Val.relocate_restrict : ∀ (τ : Ty) (v : Val F' p' (Ty.mapNumbers sn tn τ)),
     Val.relocate sn tn forward τ (Val.restrict sn tn backward τ v) = v
   | .int _ _, _ | .bool, _ | .opt _, _ | .why _, _ | .never, _ | .fl _ _, _
-  | .ptr _ _, _ | .ref _, _ | .str _, _ => rfl
+  | .ptr _, _ | .ref _, _ | .str _, _ => rfl
   | .fnptr n, v => hright n v
   | .arr τ _, v => funext fun i => Val.relocate_restrict sn tn forward backward hright τ (v i)
   | .sum cs, v => Val.relocate_restrictSum sn tn forward backward hright cs v

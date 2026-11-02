@@ -57,7 +57,9 @@ def typ : Ty → String
   | .never => ".never"
   | .fl lo hi => s!"(.fl {paar lo} {paar hi})"
   | .fnptr n => s!"(.fnptr {n})"
-  | .ptr n rw => s!"(.ptr {n} {rw})"
+  | .ptr ⟨space, ⟨read, write, owner⟩, .table n⟩ =>
+      let own := match owner with | none => "none" | some k => s!"(some {k})"
+      s!"(.ptr ⟨{space}, ⟨{read}, {write}, {own}⟩, .table {n}⟩)"
   | .ref n => s!"(.ref {n})"
   | .arr τ n => s!"(.arr {typ τ} {n})"
   | .str n => s!"(.str {n})"
