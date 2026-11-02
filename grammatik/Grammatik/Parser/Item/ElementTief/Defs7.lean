@@ -75,10 +75,13 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
       | .wort s :: rest =>
         if strEq s "module" then parseModulTief f nach
         else if strEq s "use" then parseUseTief nach
-        else if strEq s "fn" then match parseFnSig f (letzteArt mods) nach with
+        else if strEq s "fn" then
+          if istAdaptKopf nach then match parseAdapt f (letzteArt mods) nach with
+            | .error e => .error e
+            | .ok (it, r) => .ok (it, r)
+          else match parseFnSig f (letzteArt mods) nach with
           | .error e => .error e
-          | .ok (sig, r) => parseFnRest f sig r
-        else if strEq s "translator" then parseTranslatorTief f nach
+          | .ok (sig, r) => parseFnRest f sig r        else if strEq s "translator" then parseTranslatorTief f nach
         else if strEq s "profile" then parseProfilTief f false rest
         else if strEq s "requires" then match rest with
           | .wort t :: rest' =>
@@ -130,6 +133,175 @@ def parseTopTief (toks : List Token) : Except String (List SItemTief) :=
   | .ok (its, [.ende]) => .ok its
   | .ok (_, _) => .error "trailing tokens"
   | .error e => .error e
+
+/-! ### Adapters `fn … from f` (`ABSTRACTION-SYNTAX-PLAN.md` §4.1) -/
+
+/-- Whether the tokens at depth 0 hold an adapter parameter: `..` before `,`/`)` or `-name`
+    before `,`/`)`. Ordinary parameters always carry a colon, so neither occurs there; the
+    variadic `...` (`..` before `.`) and negative numbers (`-` before a numeral) fall through. -/
+def istAdaptSeg : List Token → Nat → Bool
+  | [], _ => false
+  | .zeichen "(" :: rest, tiefe => istAdaptSeg rest (tiefe + 1)
+  | .zeichen "[" :: rest, tiefe => istAdaptSeg rest (tiefe + 1)
+  | .zeichen "{" :: rest, tiefe => istAdaptSeg rest (tiefe + 1)
+  | .zeichen ")" :: rest, tiefe =>
+    if tiefe == 0 then false else istAdaptSeg rest (tiefe - 1)
+  | .zeichen "]" :: rest, tiefe =>
+    if tiefe == 0 then false else istAdaptSeg rest (tiefe - 1)
+  | .zeichen "}" :: rest, tiefe =>
+    if tiefe == 0 then false else istAdaptSeg rest (tiefe - 1)
+  | .zeichen ".." :: rest, tiefe =>
+    if tiefe == 0 then match rest with
+      | .zeichen "," :: _ => true
+      | .zeichen ")" :: _ => true
+      | _ => istAdaptSeg rest tiefe
+    else istAdaptSeg rest tiefe
+  | .zeichen "-" :: rest, tiefe =>
+    if tiefe == 0 then match rest with
+      | t :: .zeichen "," :: _ => match nameText t with
+        | some _ => true
+        | none => istAdaptSeg rest tiefe
+      | t :: .zeichen ")" :: _ => match nameText t with
+        | some _ => true
+        | none => istAdaptSeg rest tiefe
+      | _ => istAdaptSeg rest tiefe
+    else istAdaptSeg rest tiefe
+  | _ :: rest, tiefe => istAdaptSeg rest tiefe
+
+/-- Whether `fn name (` opens adapter parameters (behind the `fn`). -/
+def istAdaptKopf : List Token → Bool
+  | .wort _ :: rest => match rest with
+    | t :: .zeichen "(" :: rest' => match nameText t with
+      | some _ => istAdaptSeg rest' 0
+      | none => false
+    | _ => false
+  | _ => false
+
+/-- One adapter parameter: `..`, `-x`, or a new `x : T`. -/
+def parseAdaptParamEinzel (f : Nat) (toks : List Token) :
+    Except String (SAdaptParam × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen ".." :: rest => .ok (.alle, rest)
+    | .zeichen "-" :: rest => match nimmName rest with
+      | .ok (n, r) => .ok (.ohne n, r)
+      | .error e => .error e
+    | _ => match nimmName toks with
+      | .error e => .error e
+      | .ok (n, r1) => match fordereZeichen ":" r1 with
+        | .error e => .error e
+        | .ok r2 => match parseTyp f r2 with
+          | .error e => .error e
+          | .ok (t, r) => .ok (.neu n t, r)
+
+/-- The adapter parameters after the opening `(`. -/
+def parseAdaptParamFolge (f : Nat) (toks : List Token) :
+    Except String (List SAdaptParam × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match parseAdaptParamEinzel f toks with
+    | .error e => .error e
+    | .ok (p, r1) => match r1 with
+      | .zeichen "," :: r2 => match r2 with
+        | .zeichen ")" :: _ => .ok ([p], r2)
+        | _ => match parseAdaptParamFolge f r2 with
+          | .error e => .error e
+          | .ok (ps, r) => .ok (p :: ps, r)
+      | _ => .ok ([p], r1)
+
+/-- The parameter list `( … )` of an adapter head. -/
+def parseAdaptParams (f : Nat) (toks : List Token) :
+    Except String (List SAdaptParam × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match fordereZeichen "(" toks with
+    | .error e => .error e
+    | .ok r => match r with
+      | .zeichen ")" :: r' => .ok ([], r')
+      | _ => match parseAdaptParamFolge f r with
+        | .error e => .error e
+        | .ok (ps, r') => match fordereZeichen ")" r' with
+          | .error e => .error e
+          | .ok r'' => .ok (ps, r'')
+
+/-- The optional `=> a [else (e) block]` behind the source. -/
+def parseAdaptBindung (f : Nat) (toks : List Token) :
+    Except String (Option String × Option (String × SAnw) × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "=>" :: rest => match nimmName rest with
+      | .error e => .error e
+      | .ok (a, r1) => match r1 with
+        | .wort "else" :: .zeichen "(" :: r2 => match nimmName r2 with
+          | .error e => .error e
+          | .ok (e, r3) => match fordereZeichen ")" r3 with
+            | .error e => .error e
+            | .ok r4 => match parseBlock f r4 with
+              | .error e => .error e
+              | .ok (b, r) => .ok (some a, some (e, b), r)
+        | _ => .ok (some a, none, r1)
+    | _ => .ok (none, none, toks)
+
+/-- The prelude `[ stmts ]` (absent: no statements). -/
+def parseAdaptVorspiel (f : Nat) (toks : List Token) :
+    Except String (List SAnw × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match toks with
+    | .zeichen "[" :: rest => parseVorFolge f rest
+    | _ => .ok ([], toks)
+where
+  parseVorFolge : Nat → List Token → Except String (List SAnw × List Token)
+    | 0, _ => .error "out of fuel"
+    | f + 1, .zeichen "]" :: rest => .ok ([], rest)
+    | _, [] => .error "prelude without ]"
+    | _, .ende :: _ => .error "prelude without ]"
+    | f + 1, toks => match parseStmt f toks with
+      | .error e => .error e
+      | .ok (s, rest) => match parseVorFolge f rest with
+        | .error e => .error e
+        | .ok (ss, r) => .ok (s :: ss, r)
+
+/-- An adapter item: `fn name(adaptparams) [-> T] [or R] from f [=> a [else (e) block]]
+    clauses [prelude] (block | ;)`. -/
+def parseAdapt (f : Nat) (art : String) (toks : List Token) :
+    Except String (SItemTief × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | f + 1 => match nimmWort "fn" toks with
+    | .error e => .error e
+    | .ok r1 => match nimmName r1 with
+      | .error e => .error e
+      | .ok (name, r2) => match parseAdaptParams f r2 with
+        | .error e => .error e
+        | .ok (ps, r3) => match parseErgebnis f r3 with
+          | .error e => .error e
+          | .ok (erg, fehler, r4) => match nimmWort "from" r4 with
+            | .error e => .error e
+            | .ok r5 => match nimmPfad r5 with
+              | .error e => .error e
+              | .ok (pfad, r6) => match r6 with
+                | .zeichen "::" :: .zeichen "[" :: _ =>
+                  .error "type arguments without G form"
+                | _ => match parseAdaptBindung f r6 with
+                  | .error e => .error e
+                  | .ok (geb, sonst, r7) => match parseKlauseln f r7 with
+                    | .error e => .error e
+                    | .ok (ks, r8) => match parseAdaptVorspiel f r8 with
+                      | .error e => .error e
+                      | .ok (vor, r9) =>
+                        let sig : FnSig :=
+                          { art, name, params := [], res := erg, fehler, klauseln := ks }
+                        let a : SAdapt :=
+                          { quelle := "::".intercalate pfad, gebunden := geb, sonst, vorspiel := vor }
+                        match r9 with
+                        | .zeichen "{" :: _ => match parseBlock f r9 with
+                          | .error e => .error e
+                          | .ok (b, r) => .ok (.adaptT sig ps a (some b), r)
+                        | .zeichen ";" :: rest => .ok (.adaptT sig ps a none, rest)
+                        | _ => .error "adapter without body"
 
 /-- Shape equality on program outcomes, as a `Bool`. -/
 def beqTopTief : Except String (List SItemTief) →

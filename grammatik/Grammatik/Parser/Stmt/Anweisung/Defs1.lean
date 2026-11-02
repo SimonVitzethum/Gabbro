@@ -183,6 +183,16 @@ def parseUebergang (f : Nat) (toks : List Token) :
               | .ok rest5 => .ok (.shift z von nach, rest5)
               | .error e => .error e
 
+/-- `;` or `?;` behind a call statement (`ABSTRACTION-SYNTAX-PLAN.md` §4.3): a trailing `?`
+    keeps the call and marks it for reason propagation (the desugarer replaces it by the
+    explicit `else` form); otherwise the plain call. -/
+def parseRufSchwanz (c : String) (args : List SExpr) : List Token → Except String (SAnw × List Token)
+  | .zeichen "?" :: .zeichen ";" :: rest => .ok (.callQ c args, rest)
+  | .zeichen "?" :: _ => .error "? without ;"
+  | toks => match fordereZeichen ";" toks with
+    | .ok rest => .ok (.call c args, rest)
+    | .error e => .error e
+
 /-- After the head word: a call through a path or a place, or an
     assignment (`parse.rs` `zuweisung_oder_ruf`). -/
 def parseKopfStmt (f : Nat) (toks : List Token) :
@@ -192,17 +202,11 @@ def parseKopfStmt (f : Nat) (toks : List Token) :
   | f + 1 => match parseKopf f toks with
     | .error e => .error e
     | .ok (e, rest) => match e with
-      | .call c args => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.call c args, rest')
-        | .error e => .error e
-      | .ext .call _ (callee :: args) => match fordereZeichen ";" rest with
-        | .ok rest' => .ok (.call (druck callee) args, rest')
-        | .error e => .error e
+      | .call c args => parseRufSchwanz c args rest
+      | .ext .call _ (callee :: args) => parseRufSchwanz (druck callee) args rest
       | _ => match rest with
         | .zeichen "(" :: _ => match parseArgs f rest.tail with
-          | .ok (args, rest') => match fordereZeichen ";" rest' with
-            | .ok rest'' => .ok (.call (druck e) args, rest'')
-            | .error e => .error e
+          | .ok (args, rest') => parseRufSchwanz (druck e) args rest'
           | .error e => .error e
         | .zeichen op :: _ =>
           if strEq op "=" || strEq op "+=" || strEq op "-=" ||
