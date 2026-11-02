@@ -39,8 +39,7 @@ def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String) (checks :
     if fns.any (fun n => strEq n g) || checks.any (fun n => strEq n g) then .ok g
     else .error ("unknown gate: " ++ g))
   let ctx : UCtx :=
-    { names := [], kinds := [], types := [], tabs := tabs, locks := [], held := [],
-      res := none, fname := c.cname, globs := globs }
+    { names := [], kinds := [], types := [], tabs := tabs, locks := [], held := [], res := none, fname := c.cname, globs := globs }
   let boeden ← uSeq (c.boden.map (uSichert ctx))
   .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde, probe := probeFnName c.cname }
 

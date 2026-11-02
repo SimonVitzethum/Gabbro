@@ -317,22 +317,14 @@ theorem elabU_verweigert_noch_zeuge :
 def w108items : List SItemTief :=
   [.modT "beispiel::disjoint_start_locks"
     [.tableT "T" .none (.some (.lit 4)) .none .none false
-      [.tSlot [{ fname := "v", ftyp := .atom "u32",
-                  pos := .none, bezug := .none, wo := .none,
-                  reserviert := false, byOps := false }]],
+      [.tSlot [{ fname := "v", ftyp := .atom "u32", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]],
     .fnT
-      { art := "impl", name := "read_a", params := [],
-        res := .some (.atom "u32"), fehler := .none,
-        klauseln := [.effs [.reads (.field (.variable "T") "slots")],
-                     .cost (.lit 4)] }
+      { art := "impl", name := "read_a", params := [], res := .some (.atom "u32"), fehler := .none, klauseln := [.effs [.reads (.field (.variable "T") "slots")], .cost (.lit 4)] }
       (.block []
         (.some (.ret (.some (.field
           (.index (.field (.variable "T") "slots") (.lit 0)) "v"))))),
     .fnT
-      { art := "impl", name := "read_c", params := [],
-        res := .some (.atom "u32"), fehler := .none,
-        klauseln := [.effs [.reads (.field (.variable "T") "slots")],
-                     .cost (.lit 4)] }
+      { art := "impl", name := "read_c", params := [], res := .some (.atom "u32"), fehler := .none, klauseln := [.effs [.reads (.field (.variable "T") "slots")], .cost (.lit 4)] }
       (.block []
         (.some (.ret (.some (.field
           (.index (.field (.variable "T") "slots") (.lit 1)) "v"))))),
@@ -343,14 +335,8 @@ def w108items : List SItemTief :=
 def w108prog : UProg :=
   { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], bools := [] }],
     locks := [],
-    fns := [{ name := "read_a", params := [], kinds := [],
-              res := .some (0, 4294967295), resBool := false,
-              held := [], puts := [], gives := [], body := [],
-              ret := .val (.tab "T" "v" (.lit 0)) },
-            { name := "read_c", params := [], kinds := [],
-              res := .some (0, 4294967295), resBool := false,
-              held := [], puts := [], gives := [], body := [],
-              ret := .val (.tab "T" "v" (.lit 1)) }],
+    fns := [{ name := "read_a", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) },
+            { name := "read_c", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }],
     roots := ["read_a", "read_c"] }
 
 /-- **108 elaborates**: `elabU` yields exactly the pasted program, the `concurrent` members as its thread

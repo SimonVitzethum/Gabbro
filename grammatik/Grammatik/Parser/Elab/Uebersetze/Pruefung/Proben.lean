@@ -15,8 +15,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 /-- The probe fixture: a check over one variable, one gate, one true floor. -/
 def probenCheck : SCheck :=
-  { cname := "p", claim := "c", misst := [.variable "x"], gates := ["g"],
-    canFail := .block [] (some (.ret (some .tru))), boden := [.tru], sonde := none }
+  { cname := "p", claim := "c", misst := [.variable "x"], gates := ["g"], canFail := .block [] (some (.ret (some .tru))), boden := [.tru], sonde := none }
 
 /-- The generated producer is named after its check. -/
 example : probeFnName "p" = "p#probe" := rfl
@@ -29,8 +28,7 @@ example : uMessOrt (.lit 3) = .error "measure without G form" := rfl
 
 /-- A well-formed check elaborates to its exact record, naming its probe. -/
 example : uCheck [] [] ["g"] ["p"] probenCheck =
-    .ok { name := "p", claim := "c", misst := [.variable "x"], tore := ["g"],
-          boeden := [.tru], sonde := none, probe := "p#probe" } := rfl
+    .ok { name := "p", claim := "c", misst := [.variable "x"], tore := ["g"], boeden := [.tru], sonde := none, probe := "p#probe" } := rfl
 
 /-- A gate that names neither a function nor a sibling check is refused. -/
 example : uCheck [] [] [] ["p"] { probenCheck with gates := ["h"] } =
@@ -38,8 +36,7 @@ example : uCheck [] [] [] ["p"] { probenCheck with gates := ["h"] } =
 
 /-- A duplicate check name is refused, never merged. -/
 def probenFn : SItemTief :=
-  .fnT { art := "impl", name := "g", params := [], res := none, fehler := none,
-    klauseln := [] } (.block [] none)
+  .fnT { art := "impl", name := "g", params := [], res := none, fehler := none, klauseln := [] } (.block [] none)
 
 example : uChecks [] [] [probenFn, .checkT probenCheck, .checkT probenCheck] =
     .error "duplicate check: p" := rfl

@@ -126,10 +126,7 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
         -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
         -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
         let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
-        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds,
-                     res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
-                     gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [],
-                     body := [], ret := .empty, boden := boden })
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
 
 /-- The names a unit declares as memory: tables, arenas, statics, atomics. -/
 def uSpeicherNamen (ms : List SItemTief) : List String :=
@@ -251,8 +248,7 @@ def elabU : List SItemTief → Except String UProg
     match uInvs consts alias tabs locks globs ms with
     | .error e => .error e
     | .ok invs =>
-    let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [],
-                                  res := none, fname := "transition", alias, lits := consts, globs }
+    let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs }
     match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
     | .error e => .error e
     | .ok zustaende =>
@@ -308,8 +304,7 @@ def elabU : List SItemTief → Except String UProg
       let u : UProg :=
         { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
           gestartet := gestartet,
-          axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
-                                          gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
+          axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
           zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
           exportGate := ExportMetadata.check ms0, checks := checks }
@@ -403,11 +398,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100),
-                term := Expr.thru (Expr.var Var.here)
-                  G104_referenz.GTab.Konto rfl
-                  G104_referenz.GKontoFeld.stand i
-                  G104_referenz.gDarf_einzahlen_Konto }
+          .ok { range := (0, 100), term := Expr.thru (Expr.var Var.here) G104_referenz.GTab.Konto rfl G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .tab b f ix =>
     if !(strEq b "Konto" && strEq f "stand") then .error "place without G form"
     else
@@ -417,10 +408,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100),
-                term := Expr.slot G104_referenz.GTab.Konto
-                  G104_referenz.GKontoFeld.stand i
-                  G104_referenz.gDarf_einzahlen_Konto }
+          .ok { range := (0, 100), term := Expr.slot G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .old b f ix =>
     if !((strEq b "k" || strEq b "Konto") && strEq f "stand") then
       .error "place without G form"
@@ -431,10 +419,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100),
-                term := Expr.oldS G104_referenz.GTab.Konto
-                  G104_referenz.GKontoFeld.stand i
-                  G104_referenz.gDarf_einzahlen_Konto }
+          .ok { range := (0, 100), term := Expr.oldS G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result in a body"
   | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. | .div .. | .rem .. | .shl .. | .shr .. | .neg .. =>
     .error "arithmetic without G form in the 104 lowering"

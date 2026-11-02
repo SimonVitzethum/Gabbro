@@ -187,17 +187,7 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
     sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) W.g hZW.erreicht
-  exact { hZW with
-    invRuhe := hInv.1
-    invSicht := hInv.2.1
-    sperrWechsel := hInv.2.2.1
-    sperrSicht := hInv.2.2.2
-    rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt =>
-      rennfreiGA hH.1 hvoll sp init hex (kVon P fs init) (fun t => hA.abg _)
-        (fun t => reachB_wurzel P fs _)
-        (fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt))
-        ms fs' n hl i j c hij hjn hfg hzi hzj hw hAt
-    keinKernHalt := kernHaltGA_gilt P O passes _ _ }
+  exact { hZW with invRuhe := hInv.1 invSicht := hInv.2.1 sperrWechsel := hInv.2.2.1 sperrSicht := hInv.2.2.2 rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt => rennfreiGA hH.1 hvoll sp init hex (kVon P fs init) (fun t => hA.abg _) (fun t => reachB_wurzel P fs _) (fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt)) ms fs' n hl i j c hij hjn hfg hzi hzj hw hAt keinKernHalt := kernHaltGA_gilt P O passes _ _ }
 
 /-- **Race freedom with shared atomics, on every run of W**: two accesses by different threads
     to a NON-atomic carrier, one a write, are ordered through a guard lock. -/
