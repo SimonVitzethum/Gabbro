@@ -293,17 +293,76 @@ theorem sigPasstB_ok {a b c : Nat} {rang : Fin c → Int} {S T : Signatur (Fin a
     | none => intro h1; cases h1
     | some c' => intro h1; exact ⟨c', rfl, of_decide_eq_true h1⟩
 
-/-- `f` conforms to the signature number `n` of the unit: a live number, and the signatures fit. -/
+/-- Conjunct normal form of one contract side: nested `.and` flattened
+    (mirrors `lowEnsList`, which conjoins the list right-nested). -/
+def uKonjunkte : UEns → List UEns
+  | .and a b => uKonjunkte a ++ uKonjunkte b
+  | e => [e]
+
+/-- Syntactic occurrence in a normalised list, decided. -/
+def ensEnthalten (sup : List UEns) (c : UEns) : Bool :=
+  decide (c ∈ sup)
+
+theorem ensEnthalten_ok {sup : List UEns} {c : UEns} (h : ensEnthalten sup c = true) : c ∈ sup :=
+  of_decide_eq_true h
+
+/-- The source inclusion the conformance Bool decides. -/
+def UEnsEinschluss (sup sub : List UEns) : Prop :=
+  ∀ c ∈ sub, c ∈ sup
+
+/-- The head (function or pointer type) behind signature number `n`:
+    functions first, then the pointer types (`sigFns`); out of range
+    carries no contract, like `dummySig`. -/
+def sigFnAt (u : UProg) (n : Nat) : UFn :=
+  if h : n < (sigFns u).length then (sigFns u).get ⟨n, h⟩
+  else { name := "", params := [], kinds := [], res := none, held := [], puts := [],
+    gives := [], body := [], ret := .empty }
+
+/-- **Contract conformance, decided** (C06, O43): every target-pre conjunct
+    occurs among the interface pre (contravariant: the interface pre implies
+    the target's), and every interface-post conjunct occurs among the target
+    post (covariant). Effects stay structural (`sigPasstB`); `costs` travels
+    nowhere, as at a function. A non-`.and` side is compared whole; sides that
+    name parameters differently refuse (positional normalisation is the next
+    step with the lowering bridge). -/
+def vertragPasstAt (u : UProg) (f : Fin u.fns.length) (n : Nat) : Bool :=
+  (((fnAt u f).needs.flatMap uKonjunkte).all (ensEnthalten ((sigFnAt u n).needs.flatMap uKonjunkte))) &&
+  (((sigFnAt u n).gives.flatMap uKonjunkte).all (ensEnthalten ((fnAt u f).gives.flatMap uKonjunkte)))
+
+theorem vertragPasstAt_ok (u : UProg) (f : Fin u.fns.length) (n : Nat)
+    (h : vertragPasstAt u f n = true) :
+    UEnsEinschluss ((sigFnAt u n).needs.flatMap uKonjunkte)
+      ((fnAt u f).needs.flatMap uKonjunkte) ∧
+    UEnsEinschluss ((fnAt u f).gives.flatMap uKonjunkte)
+      ((sigFnAt u n).gives.flatMap uKonjunkte) := by
+  unfold vertragPasstAt at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨hpre, hpost⟩ := h
+  refine ⟨fun c hc => ?_, fun c hc => ?_⟩
+  · have hm := (List.all_eq_true.mp hpre) c hc
+    exact ensEnthalten_ok hm
+  · have hm := (List.all_eq_true.mp hpost) c hc
+    exact ensEnthalten_ok hm
+
+/-- `f` conforms to the signature number `n` of the unit: a live number, the
+    signatures fit, and the contracts include (the proof travels with the
+    value: `D.passt f n = true` gains the contract part). -/
 def passtAt (u : UProg) (f : Fin u.fns.length) (n : Nat) : Bool :=
-  decide (n < (sigFns u).length) && sigPasstB (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n)
+  decide (n < (sigFns u).length) && sigPasstB (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n) &&
+  vertragPasstAt u f n
 
 theorem passtAt_ok (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f n = true) :
-    SigPasst (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n) :=
-  sigPasstB_ok (Bool.and_eq_true_iff.mp h).2
+    SigPasst (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n) ∧
+    UEnsEinschluss ((sigFnAt u n).needs.flatMap uKonjunkte) ((fnAt u f).needs.flatMap uKonjunkte) ∧
+    UEnsEinschluss ((fnAt u f).gives.flatMap uKonjunkte) ((sigFnAt u n).gives.flatMap uKonjunkte) := by
+  unfold passtAt at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨hlt, hsig⟩, hvertrag⟩ := h
+  exact ⟨sigPasstB_ok hsig, (vertragPasstAt_ok u f n hvertrag).1, (vertragPasstAt_ok u f n hvertrag).2⟩
 
 theorem passtAt_lt (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f n = true) :
     n < (sigFns u).length :=
-  of_decide_eq_true (Bool.and_eq_true_iff.mp h).1
+  of_decide_eq_true (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).1
 
 /-- `invarianten_gehalten` for the declaration of every `UProg`. -/
 theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
@@ -397,7 +456,7 @@ def declOf (u : UProg) : Deklaration where
   sig := fun f => f.val
   sigNr := sigAt u
   passt := passtAt u
-  passt_ok := passtAt_ok u
+  passt_ok := fun f n h => (passtAt_ok u f n h).1
   eigner_nie_erzeugt :=
     fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
   Inv := Fin u.invs.length

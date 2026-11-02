@@ -6,8 +6,10 @@
              behind the functions' (`UProg.ptrs`), at a parameter and at `let p : fn(..) = &f;`, and `&f` may be
              passed for such a parameter -- where `f` CONFORMS (`Deklaration.passt`, decided by `passtAt`).
              `p(..);` is `Stmt.callInd`, `let y = p(..);` is `Block.bindCallInd`/`Endblock.bindCallInd`, with
-             `RufPasst` against the pointer type decided (`rufPasstB`). A contract on a pointer type (a `requires`,
-             `             Held(..)` included, or an `ensures`) is refused (the model has none, TODO O43). An indirect call is an edge of the floor relation.
+             `RufPasst` against the pointer type decided (`rufPasstB`). A contract on a pointer type
+             (`needs`/`gives`) elaborates into the type (`UProg.ptrs`, C06); `Held(..)` and `locks` at the type
+             stay refused (no lock crosses an indirect call), and a nontrivial contract is refused at lowering
+             until the full O43 duty is bound (`ptrVertragGebunden`). An indirect call is an edge of the floor relation.
              A pointer type may carry a reason channel (`-> T or R`, «C07»): the name resolves against the unit
              reasons, and `let y = p(..) else (e) { .. };` is `Block.bindCallIndElse`/`Endblock.bindCallIndElse`.
 -/
@@ -91,16 +93,17 @@ def typ_ok : String :=
   "module m { impl fn g() { } impl fn f(p : fn() effects { } costs <= 1 ops) { } }"
 theorem typ_ok_stufe : stufe typ_ok = "OK" := by decide +kernel
 
-/-- An `ensures` on a pointer type: refused by name (the model's signatures carry no contract, TODO O43). -/
+/-- An `ensures` on a pointer type: elaborated into the type, refused at lowering
+    until the full O43 duty is bound (`ptrVertragGebunden`). -/
 def typ2_refused : String :=
   "module m { impl fn f(p : fn(a : u32) -> bool ensures result effects { } costs <= 3 ops, q : u8) { } }"
-theorem typ2_refused_stufe : stufe typ2_refused = "elab: contract on a function-pointer type without G form" := by
+theorem typ2_refused_stufe : stufe typ2_refused = "lower: contract on a function-pointer type without bound O43 duty" := by
   decide +kernel
 
 /-- ... and a `requires`. -/
 def typ3_refused : String :=
   "module m { impl fn f(p : fn(a : u32 in 0 .. 9) requires a > 0 effects { } costs <= 3 ops) { } }"
-theorem typ3_refused_stufe : stufe typ3_refused = "elab: contract on a function-pointer type without G form" := by
+theorem typ3_refused_stufe : stufe typ3_refused = "lower: contract on a function-pointer type without bound O43 duty" := by
   decide +kernel
 
 /-- **A call through a parameter**, and `&g` passed for it: `g` conforms (same parameters, no writes). -/
