@@ -118,7 +118,7 @@ def ghost : OwnerBindings D.Marke := [⟨10, true, 0⟩]
 def renamedGhost : OwnerBindings D.Marke := [⟨11, true, 0⟩]
 
 def handoff : OwnerFlow D.Marke := { moves := [⟨true, 0, some 1⟩] }
-def scoped : OwnerFlow D.Marke := { loans := [(true, 0)] }
+def scopedLoan : OwnerFlow D.Marke := { loans := [(true, 0)] }
 
 /-- A guard witness is not a mint/source simulation: it only instantiates the
     existing canonical read and write constructors under the interpreted mark. -/

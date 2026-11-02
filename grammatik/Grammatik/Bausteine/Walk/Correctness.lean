@@ -380,7 +380,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       intro Γ loop rename node path σ ρ hstab
       have hexpand : binding.expand guard code (level + 1) rename node path =
           binding.expandLevel guard code (level + 1) rename node path
-            (some (fun {Δ} rename child prefix => binding.expand guard code level rename child prefix)) := rfl
+            (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)) := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
       refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl nodev)
         (fun σ₁ ρ₁ => ok.invOk rename (level + 1) path σ₁ ρ₁) ?_ _ σ ρ hstab
@@ -401,7 +401,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                 (code.visit (binding.renameEntry rename) (level + 1)
                   (binding.fullPath path) (.var .here))
                 (binding.otherwise code rename path
-                  (some (fun {Δ} rename child prefix => binding.expand guard code level rename child prefix))))
+                  (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx))))
               σ₂ ρ₂ = .ok σ' ρ' ∧
             ∀ nodev, binding.entries σ' nodev = tbl nodev := by
         intro σ₂ ρ₂ hstab₂
@@ -411,7 +411,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
               execBlock oracle passes calls
                 (binding.otherwise code rename path
-                  (some (fun {Δ} rename child prefix => binding.expand guard code level rename child prefix)))
+                  (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)))
                 σ₃ ρ₃ = .ok σ' ρ' ∧
             ∀ nodev, binding.entries σ' nodev = tbl nodev := by
           intro σ₃ ρ₃ hstab₃
@@ -420,7 +420,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       have hstep : ∃ (σ' : World D) (ρ' : Env D (.index (D.count binding.iterator) :: Γ)),
           execBlock oracle passes calls
             (WalkBinding.levelBody binding guard code (level + 1) rename node path
-              (some (fun {Δ} rename child prefix => binding.expand guard code level rename child prefix)))
+              (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)))
             (((fun state env => let invariant := code.invariant rename (level + 1) path
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1) (.cons k ρ₁) =

@@ -23,22 +23,22 @@ structure WalkCode {D : Deklaration} {shape : WalkShape} (binding : WalkBinding 
     List (Expr D Γ resources (.index shape.arity)) → Expr D Γ resources binding.entryTy → Block D V true Γ resources resources
 
 /-- The bounded index of one generated level, cast to the walker's index type. -/
-def WalkBinding.levelIndex {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
-    {outer Γ : Ctx} {resources : List (Res D)} (binding : WalkBinding D shape) :
+def WalkBinding.levelIndex {D : Deklaration} {shape : WalkShape}
+    {Γ : Ctx} {resources : List (Res D)} (binding : WalkBinding D shape) :
     Expr D (.index (D.count binding.iterator) :: Γ) resources (.index shape.arity) :=
   cast (congrArg (Expr D (.index (D.count binding.iterator) :: Γ) resources)
     (congrArg Ty.index binding.count)) (Expr.var .here)
 
 /-- The outer scope embedded beneath generated index and entry binders. -/
-def WalkBinding.renameEntry {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
-    {outer Γ : Ctx} {resources : List (Res D)} (binding : WalkBinding D shape)
+def WalkBinding.renameEntry {D : Deklaration} {shape : WalkShape}
+    {outer Γ : Ctx} (binding : WalkBinding D shape)
     (rename : WalkRen outer Γ) :
     WalkRen outer (binding.entryTy :: .index (D.count binding.iterator) :: Γ) :=
   fun x => .there (.there (rename x))
 
 /-- The complete root-to-entry path at one generated level, in declaration order. -/
-def WalkBinding.fullPath {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
-    {outer Γ : Ctx} {resources : List (Res D)} (binding : WalkBinding D shape)
+def WalkBinding.fullPath {D : Deklaration} {shape : WalkShape}
+    {Γ : Ctx} {resources : List (Res D)} (binding : WalkBinding D shape)
     (path : List (Expr D Γ resources (.index shape.arity))) :
     List (Expr D (binding.entryTy :: .index (D.count binding.iterator) :: Γ) resources
       (.index shape.arity)) :=
@@ -61,7 +61,7 @@ def WalkBinding.otherwise {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     .cons (.ite (code.descend (binding.renameEntry rename) (.var .here))
       (.cons (.onOption (.prodGet (.var .here) binding.child)
         (.cons (recurse (fun x => .there (binding.renameEntry rename x)) (.var .here)
-          ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil
+          ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil) .nil
 
 /-- One generated level: traverse bounded indices, capture the containing entry once, test leaf first,
     then descend conditionally through the checked optional child. A last-level pass has no down branch. -/
@@ -104,7 +104,7 @@ def WalkBinding.expand {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
   | 0, _, _, rename, node, path => binding.expandLevel guard code 0 rename node path none
   | level + 1, _, _, rename, node, path =>
     binding.expandLevel guard code (level + 1) rename node path
-      (some (fun {Δ} rename child prefix => binding.expand guard code level rename child prefix))
+      (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx))
 
 /-- Capture the root once before entering any generated loop. -/
 def WalkBinding.walk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
