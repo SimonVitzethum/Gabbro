@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Kern.Syntax.Profil.Speicher
 public import Grammatik.Parser.Elab.Uebersetze.Teil3
 
 @[expose] public section
@@ -31,10 +32,19 @@ def uRotEin : String → Option UBi
   | "rotr" => some .rotr
   | _ => none
 
-/-- C13: the declared STORAGE width in bits of an operand, where the declaration names it: a parameter or a `let`
-    local at a bare unsigned word (`UCtx.bits`), a conversion `T(e)` to an unsigned range `0 .. 2^W - 1`, or a
-    wrapping builtin of such operands. Every other operand (a field, a static, an alias) has no width here, and the
-    builtin over it is refused: the width is never read off the interval the checker computed. -/
+/-- C13: the declared storage width of the field `f` of a table, where it is a bare unsigned word. -/
+def uFeldBreite (tb : UTab) (f : String) : Option Nat :=
+  (tb.breiten.find? (fun p => strEq p.1 f)).map (·.2)
+
+/-- C13: the declared STORAGE width in bits of an operand, where the declaration names it:
+    * a parameter or a `let` local at a bare unsigned word (`UCtx.bits`);
+    * a static of a bare unsigned word (`UGlob.breite`);
+    * a field of a table or arena read through a pointer parameter or by the table's name (`UTab.breiten`);
+    * a conversion `T(e)` where `T` is a builtin word or an alias of one (`uSpeicherBreite`: the width of the
+      declaration, never the width the range of `T` fits);
+    * a wrapping builtin of such operands.
+    Every other operand has no width here, and the builtin over it is refused: the width is never read off the
+    interval the checker computed. -/
 def uBreite (ctx : UCtx) : SExpr → Option Nat
   | .variable p =>
     match uParamNr ctx p with
@@ -42,19 +52,62 @@ def uBreite (ctx : UCtx) : SExpr → Option Nat
       match ctx.bits[j]? with
       | some w => if 0 < w then some w else none
       | none => none
-    | .error _ => none
+    | .error _ =>
+      match ctx.globs.find? (fun g => strEq g.name p) with
+      | some g => if 0 < g.breite then some g.breite else none
+      | none => none
+  | .field (.index (.field (.variable b) s) _) f =>
+    if !strEq s "slots" then none
+    else
+      match uParamNr ctx b with
+      | .ok j =>
+        match uArtBei ctx.kinds j with
+        | .ok (.ptr num _) => (ctx.tabs[num]?).bind (fun tb => uFeldBreite tb f)
+        | _ => none
+      | .error _ => (ctx.tabs.find? (fun x => strEq x.name b)).bind (fun tb => uFeldBreite tb f)
+  | .index (.variable b) _ =>
+    match ctx.tabs.find? (fun x => strEq x.name b) with
+    | some tb => if tb.arena then uFeldBreite tb "wert" else none
+    | none => none
   | .call f [_] =>
-    match uTypName ctx.alias f with
-    | .ok (lo, hi) =>
-      if lo == 0 && decide (1 ≤ hi) && decide ((2 : Int) ^ Nat.log2 (hi + 1).toNat = hi + 1) then
-        some (Nat.log2 (hi + 1).toNat)
-      else none
-    | .error _ => none
+    match uSpeicherBreite ctx.alias (.atom f) with
+    | 0 => none
+    | w + 1 => some (w + 1)
   | .bin op a b =>
     match uBinEin op with
     | some .shlW => uBreite ctx a
     | some .addW | some .subW | some .mulW => (uBreite ctx a).orElse fun _ => uBreite ctx b
     | _ => none
   | _ => none
+
+/-- C13: the declared STORAGE type of the operand of `sizeof`: a type name (a builtin word or an alias of one), or a
+    place with a declared storage width (`uBreite`: a parameter, a static, a field). A place of any other type, an
+    aggregate, a pointer and everything unresolved has none, and `sizeof` of it is refused. Where the checked source
+    type is at hand (a parameter, a type name) the storage must carry it (`SpTy.passt`). -/
+def uSpTy (ctx : UCtx) : SExpr → Option SpTy
+  | .variable t =>
+    match uParamNr ctx t with
+    | .ok j =>
+      match uBreite ctx (.variable t), ctx.types[j]? with
+      | some w, some τ => if (SpTy.wort w).passt τ then some (.wort w) else none
+      | _, _ => none
+    | .error _ =>
+      match uBreite ctx (.variable t) with
+      | some w => some (.wort w)
+      | none =>
+        match ctx.globs.find? (fun g => strEq g.name t) with
+        | some _ => none
+        | none =>
+          match uSpeicherBreite ctx.alias (.atom t), uTypName ctx.alias t with
+          | 0, _ => none
+          | w + 1, .ok (lo, hi) => if (SpTy.wort (w + 1)).passt (.int lo hi) then some (.wort (w + 1)) else none
+          | _, .error _ => none
+  | e => (uBreite ctx e).map SpTy.wort
+
+/-- C13: `sizeof(e)` in bytes: the size of the declared storage type, only for a valid resolved one. -/
+def uGroesse (ctx : UCtx) (e : SExpr) : Option Nat :=
+  match uSpTy ctx e with
+  | some sp => if sp.gueltig then some sp.bytes else none
+  | none => none
 
 end Gabbro.Grammatik.Parser.Uebersetze

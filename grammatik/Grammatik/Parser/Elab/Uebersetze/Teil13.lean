@@ -185,7 +185,7 @@ def elabU : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
     let consts := uConstsRech (uKonstFns ms0) ms0 []
-    let alias := uAliase consts ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
+    let alias := uAliase consts ms0 ++ uAliasBreiten ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
     match uRestFehler ms0 with
     | .error e => .error e
     | .ok _ =>
@@ -356,6 +356,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
   | .eng .. => .error "narrowing without G form in the 104 lowering"
   | .ib1 .. | .ib2 .. => .error "builtin without G form in the 104 lowering"
+  | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i", "b"] p with

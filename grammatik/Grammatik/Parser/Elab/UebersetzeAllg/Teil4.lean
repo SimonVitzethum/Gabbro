@@ -181,6 +181,7 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     | .ok x => (lowIb1 bi w x).map LowSide.wert
   | .ib2 bi w a b =>
     (lowZwei (lowIb2 bi w) (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
+  | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count is read only in a comparison of a predicate"
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
     slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/

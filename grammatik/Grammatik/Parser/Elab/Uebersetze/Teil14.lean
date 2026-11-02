@@ -42,7 +42,7 @@ def lowerSichertEin (tabs : List UTab) (names : List String)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
   | .held .. => .error "held predicate without G form in the 104 lowering"
   | .imp .. => .error "implication without G form in the 104 lowering"
-  | .reach .. | .member .. | .filtered .. | .arrayElements .. | .zaehle .. => .error "source relation without G form in the 104 lowering"
+  | .reach .. | .member .. | .filtered .. | .arrayElements .. => .error "source relation without G form in the 104 lowering"
   | .istSome .. => .error "option test without G form in the 104 lowering"
 
 /-- The `ensures` conjunction in `einzahlen` (empty is `.tru`,
@@ -349,6 +349,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
   | .eng .. => .error "narrowing without G form in the 104 lowering"
   | .ib1 .. | .ib2 .. => .error "builtin without G form in the 104 lowering"
+  | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with

@@ -30,6 +30,21 @@ theorem alleIndizes_length_le (n : Nat) : (alleIndizes (n : Int)).length ≤ n :
   have h3 := h2 (n : Int).toNat
   omega
 
+/-- The index domain is EXACT: there are exactly `n` indices `0 ..< n` (the cardinality of every finite count
+    domain: a table's slots, a fixed array's indices; a tree domain filters these by `reaches`). -/
+theorem alleIndizes_length (n : Nat) : (alleIndizes (n : Int)).length = n := by
+  unfold alleIndizes
+  rw [Int.toNat_natCast]
+  have h := List.filterMap_length_eq_length
+    (f := fun (k : Nat) => if h : ((k : Nat) : Int) ≤ (n : Int) - 1 then
+      some (⟨((k : Nat) : Int), by omega, h⟩ : Zahl 0 ((n : Int) - 1)) else none) (l := List.range n)
+  rw [List.length_range] at h
+  refine h.mpr ?_
+  intro k hk
+  have hk' : k < n := List.mem_range.mp hk
+  have hle : ((k : Nat) : Int) ≤ (n : Int) - 1 := by omega
+  simp only [hle, ↓reduceDIte, Option.isSome_some]
+
 /-- The count fold: how many of the indices `0 ..< n` satisfy `p`, with the bound `count ≤ n`. -/
 def zaehleWahr (n : Nat) (p : Zahl 0 ((n : Int) - 1) → Bool) : Zahl 0 (n : Int) :=
   ⟨(((alleIndizes (n : Int)).filter p).length : Nat), by omega,

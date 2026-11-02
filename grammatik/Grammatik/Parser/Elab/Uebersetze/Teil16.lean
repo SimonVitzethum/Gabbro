@@ -35,8 +35,6 @@ def beqUEns : UEns → UEns → Bool
   | .filtered a t x f r s b, .filtered c u y g v z d =>
       a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
   | .istSome o m, .istSome p n => o == p && m == n
-  | .zaehle o l t x b s, .zaehle o' l' t' x' b' s' =>
-      strEq o o' && l == l' && strEq t t' && strEq x x' && beqUEns b b' && beqUSide s s'
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool
@@ -212,7 +210,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabs with
-  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _, idxNamen := _ }] => w
+  | [{ name := _, count := _, cols := [(_, w)], bools := _, arena := _, opts := _, shared := _, von := _, werte := _, wraps := _, sumNamen := _, sumFelder := _, kanten := _, idxNamen := _, breiten := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

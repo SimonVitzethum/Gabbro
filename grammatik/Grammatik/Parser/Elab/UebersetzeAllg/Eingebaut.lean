@@ -5,7 +5,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 @[expose] public section
 
 /-
-  C13: the lowering of the closed integer builtins (`USide.ib1/ib2`) and of the count fold (`UEns.zaehle`) to the
+  C13: the lowering of the closed integer builtins (`USide.ib1/ib2`) and of the count fold (`USide.zaehle*`) to the
   typed G terms `Expr.intBuiltin1/2` and `Expr.count`.
 
   Every check the model's typing needs is made HERE, before a term is built: the operand range inside the declared
@@ -153,6 +153,17 @@ def lowIb2 {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (bi : UBi) (W : N
 /-- The body of a count under the binder of the table's own count `a`, as a body under the binder `0 ..< b`. -/
 def umIdx {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {a b : Int} (h : a = b)
     (e : Expr D (Ty.index a :: Γ) Λ .bool) : Expr D (Ty.index b :: Γ) Λ .bool := h ▸ e
+
+/-- C13: a count as a lowered number: `0 .. n`, the bound carried by `Expr.count`. -/
+def LowSide.zaehleVon (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (n : Nat)
+    (body : Expr (declOf u) (Ty.index (n : Int) :: Γ) Λ .bool) : LowSide u Γ Λ :=
+  { range := (0, (n : Int)), term := Expr.count (D := declOf u) n body }
+
+/-- Whether a side holds a count at the arithmetic layer the exporter reads (`uZSeite`: `+ - *`). -/
+def usideHatZaehle : USide → Bool
+  | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => true
+  | .add a b | .sub a b | .mul a b => usideHatZaehle a || usideHatZaehle b
+  | _ => false
 
 /-- A comparison of two sided numbers (the integer branch of `lowCmp`). -/
 def lowVglSeiten {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (op : String) (s1 s2 : LowSide u Γ Λ) :

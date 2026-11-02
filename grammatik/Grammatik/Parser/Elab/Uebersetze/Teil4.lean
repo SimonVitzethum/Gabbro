@@ -191,6 +191,11 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
           | some w => .ok (.ib2 bi w x y)
           | none => .error "builtin of unknown width"
     | none => blatt (.call f [a, b])
+  -- C13: `sizeof(e)` is the declared storage size of `e`, a literal only once it is resolved (`uGroesse`)
+  | .built "sizeof" [a] =>
+    match uGroesse ctx a with
+    | some n => .ok (.lit (Int.ofNat n))
+    | none => .error "sizeof without a resolved declared size"
   | .built "lenof" [a] =>
     match uRechne ctx blatt a with
     | .error e => .error e

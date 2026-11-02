@@ -408,6 +408,24 @@ def uAliase (consts : List (String × Int)) : List SItemTief → List (String ×
     | .error _ => uAliase consts rest
   | _ :: rest => uAliase consts rest
 
+/-- C13: the storage width in bits of a builtin unsigned word name (`0` for every other name). -/
+def uAtomBreite (a : String) : Nat :=
+  if strEq a "u8" then 8 else if strEq a "u16" then 16
+  else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
+
+/-- C13: the declared storage width of every `type A = uN [in lo .. hi];` alias, as the entries `A#bits` of the alias
+    scope (`#` never occurs in a source name, so they shadow nothing): `(A#bits, (W, W))`. The width of a type
+    name is the width the declaration chose, never the width its range happens to fit. -/
+def uAliasBreiten : List SItemTief → List (String × (Int × Int))
+  | [] => []
+  | .typeT _ n _ _ (.some (.range (.atom w) _ _ _)) :: rest =>
+    if 0 < uAtomBreite w then (n ++ "#bits", ((uAtomBreite w : Int), (uAtomBreite w : Int))) :: uAliasBreiten rest
+    else uAliasBreiten rest
+  | .typeT _ n _ _ (.some (.atom w)) :: rest =>
+    if 0 < uAtomBreite w then (n ++ "#bits", ((uAtomBreite w : Int), (uAtomBreite w : Int))) :: uAliasBreiten rest
+    else uAliasBreiten rest
+  | _ :: rest => uAliasBreiten rest
+
 /-! ## Compile-time constants
 
     `const N : T = e;` where `e` is an expression over literals, earlier constants, `+ - * / % & | ^ << >>`,

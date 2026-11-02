@@ -158,6 +158,26 @@ def uFeldTyp (alias : List (String × (Int × Int))) : STyp → Except String (I
     | _, _ => .error "field type without G form"
   | t => .error ("field type without G form: " ++ sTypText t)
 
+/-- C13: the declared STORAGE width in bits of a type as written: a builtin unsigned word (with or without a range),
+    a `wrapping` field of one, or an alias of one (`uAliasBreiten`); `0` for everything else. It is the width the
+    declaration chose, never the width the range of the type happens to fit. -/
+def uSpeicherBreite (alias : List (String × (Int × Int))) : STyp → Nat
+  | .atom a =>
+    if 0 < uAtomBreite a then uAtomBreite a
+    else
+      match uSuch "type" alias (a ++ "#bits") with
+      | .ok (w, _) => w.toNat
+      | .error _ => 0
+  | .range t _ _ _ => uSpeicherBreite alias t
+  | .wrap t => uSpeicherBreite alias t
+  | _ => 0
+
+/-- C13: the widths of the fields of a table, for the fields of a bare unsigned word type. -/
+def uFeldBreiten (alias : List (String × (Int × Int))) (fds : List SFeld) : List (String × Nat) :=
+  fds.filterMap fun fd =>
+    let w := uSpeicherBreite alias fd.ftyp
+    if 0 < w then some (fd.fname, w) else none
+
 mutual
 /-- A constant row folded at its element type: numbers by the constant evaluator, nested rows element by element. -/
 def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int)) :
@@ -275,7 +295,7 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
             wraps := fs.filterMap (fun p => match p.2 with | .wrap m => some (p.1.1, m) | _ => none),
             sumNamen := fs.filterMap (fun p => match p.2 with | .summe a => some (p.1.1, a) | _ => none),
             idxNamen := fs.filterMap (fun p => match p.2 with | .idx tn => some (p.1.1, tn) | _ => none),
-            kanten := kanten, shared := sh }
+            kanten := kanten, shared := sh, breiten := uFeldBreiten alias fds }
 
 /-- One table: `count` and one integer range per slot field.
 /// Invariants, `ops`, tree edges, the occupancy mark, an
@@ -295,7 +315,8 @@ def uTabelle (consts : List (String × Int))
     | .error e => .error e
     | .ok fs =>
       if fs.all (fun p => match p.2 with | .zahl => true | _ => false) then
-        .ok { name := n, count := 0, cols := fs.map (·.1), shared := sh, von := some p }
+        .ok { name := n, count := 0, cols := fs.map (·.1), shared := sh, von := some p,
+               breiten := uFeldBreiten alias fds }
       else .error "open table with a field other than a number without G form"
   | _ => .error "table without G form"
 

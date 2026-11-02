@@ -42,7 +42,7 @@ def lowerSichertLies (tabs : List UTab) (names : List String)
   | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
   | .held .. => .error "held predicate without G form in the 104 lowering"
   | .imp .. => .error "implication without G form in the 104 lowering"
-  | .reach .. | .member .. | .filtered .. | .arrayElements .. | .zaehle .. => .error "source relation without G form in the 104 lowering"
+  | .reach .. | .member .. | .filtered .. | .arrayElements .. => .error "source relation without G form in the 104 lowering"
   | .istSome .. => .error "option test without G form in the 104 lowering"
 
 def lowerSichertListeLies (tabs : List UTab) (names : List String)
