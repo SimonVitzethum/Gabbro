@@ -125,6 +125,14 @@ def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i =
     rw [hv] at hm
     simp only [reduceCtorEq] at hm
 
+/-- Pointer interfaces carry no lowered contract until the full O43 duty is
+    bound (candidate table, structural `SigPasst`, interface caller duty and
+    `PtrVerfeinert` in `LogikPflicht`). A nontrivial `needs`/`gives` on a
+    pointer type is an explicit refusal here, never a silent `trivial`: the
+    export admits the target only where the full duty is proved. -/
+def ptrVertragGebunden (u : UProg) : Bool :=
+  u.ptrs.all fun p => p.needs.isEmpty && p.gives.isEmpty
+
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it. -/
 def lowerAllg (u : UProg) :
@@ -137,6 +145,7 @@ def lowerAllg (u : UProg) :
   match h : lowerEach u (List.finRange u.fns.length) with
   | .error e => .error e
   | .ok _ =>
+    if ptrVertragGebunden u then
     have w : ∀ f : Fin u.fns.length,
         ∃ v, lowerFnAt u f = .ok v := fun f =>
       lowerEach_all_ok u (List.finRange u.fns.length) f
@@ -145,6 +154,7 @@ def lowerAllg (u : UProg) :
       (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
       (fun i => lowerInvGut u i (wI i)),
       List.finRange u.fns.length)
+    else .error "contract on a function-pointer type without bound O43 duty"
 
 /-! ## 104 pins on the generically lowered program -/
 
