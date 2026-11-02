@@ -1,9 +1,7 @@
-/-
-  File:      stage0/Stage0/Senke/Ausdruck/Satz.lean
-  Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
--/
+/- Generic expression correctness, mutual with payloads and product fields. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.ProdSet
+public import Stage0.Senke.Ausdruck.Aggregat.ProdArgsOk
 public import Stage0.Senke.Ausdruck.Referenz.Lesen
 public import Stage0.Senke.Ausdruck.Gleit.Fall
 public import Stage0.Senke.Ausdruck.Lesen
@@ -14,8 +12,6 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
-public import Stage0.Senke.Ausdruck.Aggregat.ProdGet
-public import Stage0.Senke.Ausdruck.Aggregat.Array
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
@@ -38,16 +34,9 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
 
 
 namespace Gabbro.Stage0.Senke
-
 open Gabbro.Grammatik Runner.IR Runner.Mem
-
 set_option linter.unusedSectionVars false
-
-variable [Kern]
-
-variable {D : Deklaration} {L : Lay D}
-
-variable {reserved : Nat}
+variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
 mutual
 theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
@@ -357,7 +346,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .some e, d, c, top, h, hK, m, pc, ρ, hp =>
     some_ok e (fun d ca ta ha ht m pc hp => lowE_ok σ₀ σ hWL hLay e d ca ta ha ht m pc ρ hp) h hK hp
   | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp =>
-    istSome_ok e (fun ce te he hte m pc hp => ihe ce te he hte m pc ρ hp) h hK hp
+    istSome_ok e (fun ce te he hte m pc hp => lowE_ok σ₀ σ hWL hLay e d ce te he hte m pc ρ hp) h hK hp
   | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     exact globalValueC_ok h hK hWL hp
@@ -449,16 +438,18 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp =>
         (lowE_ok σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp
-  | _, _, .prod .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prod name args, d, c, top, h, hK, m, pc, ρ, hp => by
+    exact prod_ok args (lowE_ok_args σ₀ σ hWL hLay args ρ)
+      (by simpa only [lowE_prod] using h) hK hp
   | _, _, .prodGet v i, d, c, top, h, hK, m, pc, ρ, hp =>
     prodGet_ok i v
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
       h hK hp
-| _, _, .prodSet v i e, d, c, top, h, hK, m, pc, ρ, hp =>
-  prodSet_ok i v e
-    (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
-    (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay e _ ca ta ha hta m pc ρ hp)
-    h hK hp
+  | _, _, .prodSet v i e, d, c, top, h, hK, m, pc, ρ, hp =>
+    prodSet_ok i v e
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay e _ ca ta ha hta m pc ρ hp)
+      h hK hp
   | _, _, .intBuiltin2 op a b, d, c, top, h, hK, m, pc, ρ, hp =>
     intBuiltin2L_ok op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
       (fun q ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
@@ -470,6 +461,15 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
     => by simp [lowE_eqs] at h
+theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) :
+    {Γ : Ctx} → {fs : List Ty} → (args : Args D Γ Λ fs) → (ρ : Env D Γ) →
+      ProdFieldsOk L σ₀ σ fp K reserved W ρ args
+  | _, _, .nil, _ => trivial
+  | _, _, .cons e rest, ρ =>
+    ⟨(fun d c top h hK m pc hp => lowE_ok σ₀ σ hWL hLay e d c top h hK m pc ρ hp),
+      lowE_ok_args σ₀ σ hWL hLay rest ρ⟩
+
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
@@ -480,9 +480,8 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (lit32_nat (by omega)) (by omega)).mono (fun w hw => by
-      simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw))
+      simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw)
   | _, some τ, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
-    have ihe := lowE_ok σ₀ σ hWL hLay e d
     cases τ with
     | int lo hi =>
       simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -492,7 +491,7 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (by simp only [packSum, bin2] at hK; omega)
         (fun m pc hp => (lowE_ok σ₀ σ hWL hLay e d ce te he
           (by simp only [packSum, bin2] at hK; omega) m pc ρ hp).word trivial) hp
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ => by
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ => by
       have hnone : lowN L (reserved := reserved) tag e d = none := rfl
       rw [hnone] at h
       cases h

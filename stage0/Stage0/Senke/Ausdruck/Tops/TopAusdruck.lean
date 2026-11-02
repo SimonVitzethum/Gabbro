@@ -305,7 +305,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · exact reachL_top _ _ _ h
     · cases h
   | _, _, .count .., d, c, top, h => (countL_bounds h).1
-  | _, _, .prod .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prod _ args, d, c, top, h => lowE_top_prod d _ c top h
   | _, _, .prodGet v i, d, c, top, h => lowE_top_prodGet i v d c top h
   | _, _, .prodSet v i e, d, c, top, h => lowE_top_prodSet i d _ _ c top h
   | _, _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h

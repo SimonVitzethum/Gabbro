@@ -41,6 +41,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Layout
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
+public import Stage0.Senke.Ausdruck.Aggregat.ProdArgs
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinCode
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
@@ -206,7 +207,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
   | Γ, _, .count n body, d => countL (frei Γ reserved) d n (lowE L (reserved := reserved) body (d + 3))
-  | _, _, .prod .., _ => none
+  | _, _, .prod _ args, d => prodL d (lowA L (reserved := reserved) args d)
   | _, _, .prodGet (r := name) v i, d => prodGetL (name := name) i d (lowE L (reserved := reserved) v d)
   | _, _, .prodSet (r := name) v i e, d => prodSetL (name := name) i d (lowE L (reserved := reserved) v d) (lowE L (reserved := reserved) e (d + valueWords (.prod name _)))
   | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
@@ -228,7 +229,29 @@ def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option Ty} 
       let ce ← lowE L (reserved := reserved) e d
       pure (packSum d lo tag ce)
   | _, _ => none
+
+/-- Traverse the actual argument spine in the expression's mutual recursion. -/
+def lowA (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {fs : List Ty}
+    (args : Args D Γ Λ fs) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
+  match fs, args with
+  | _, .nil => some ([], d)
+  | _, @Args.cons _ _ _ τ _ e rest => do
+    let head ← lowE L (reserved := reserved) e d
+    let tail ← lowA L (reserved := reserved) rest (d + valueWords τ)
+    pure (head.1 ++ tail.1, max head.2 tail.2)
 end
+
+/-- The structural compiler traversal is the parameterized product traversal. -/
+theorem lowA_eq_prodArgsL {Λ : List (Res D)} {Γ : Ctx} {reserved : Nat} :
+    ∀ {fs} (args : Args D Γ Λ fs) d,
+    lowA L (reserved := reserved) args d = prodArgsL (lowE L (reserved := reserved)) args d
+  | _, .nil, _ => rfl
+  | _, @Args.cons _ _ _ τ fs e rest, d => by
+    change (do
+      let head ← lowE L (reserved := reserved) e d
+      let tail ← lowA L (reserved := reserved) rest (d + valueWords τ)
+      pure (head.1 ++ tail.1, max head.2 tail.2)) = _
+    rw [lowA_eq_prodArgsL rest]
 
 /-! ## Values in words -/
 
