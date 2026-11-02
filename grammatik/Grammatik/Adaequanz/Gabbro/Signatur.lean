@@ -162,6 +162,7 @@ def tabelle : List Konstr := [
   ⟨"Stmt", "leave", [], 1, 0⟩,
   ⟨"Stmt", "next", [], 1, 0⟩,
   ⟨"Stmt", "assignSlotRef", ["Expr", "Expr"], 4, 2⟩,
+  ⟨"Stmt", "callIndElse", ["Expr", "Args", "Endblock"], 3, 0⟩,
   ⟨"Block", "nil", [], 0, 0⟩,
   ⟨"Block", "cons", ["Stmt", "Block"], 0, 0⟩,
   ⟨"Block", "bind", ["Expr", "Block"], 0, 0⟩,
@@ -180,6 +181,7 @@ def tabelle : List Konstr := [
   ⟨"Block", "floatLit", ["Block"], 0, 3⟩,
   ⟨"Block", "floatOf", ["Expr", "Block"], 0, 2⟩,
   ⟨"Block", "floatNarrow", ["Expr", "Endblock", "Block"], 0, 2⟩,
+  ⟨"Block", "bindCallIndElse", ["Expr", "Args", "Endblock", "Block"], 3, 0⟩,
   ⟨"Endblock", "ret", ["ErgExpr"], 1, 0⟩,
   ⟨"Endblock", "retWhy", [], 1, 1⟩,
   ⟨"Endblock", "leave", [], 1, 0⟩,
@@ -197,6 +199,7 @@ def tabelle : List Konstr := [
   ⟨"Endblock", "narrow", ["Expr", "Endblock", "Endblock"], 0, 2⟩,
   ⟨"Endblock", "exchange", ["Expr", "Endblock"], 2, 1⟩,
   ⟨"Endblock", "ite", ["Expr", "Endblock", "Endblock"], 0, 0⟩,
+  ⟨"Endblock", "bindCallIndElse", ["Expr", "Args", "Endblock", "Endblock"], 3, 0⟩,
   ⟨"Arms", "nil", [], 0, 0⟩,
   ⟨"Arms", "cons", ["Block", "Arms"], 0, 0⟩,
   ⟨"GrundArms", "nil", [], 0, 0⟩,
@@ -216,19 +219,19 @@ set_option maxRecDepth 8000
 /-- The rows of a family. -/
 def zeilen (f : String) : List Konstr := tabelle.filter (·.familie == f)
 
-/-- 133 constructors: `Expr` 60, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 28, `Block` 18, `Endblock` 17,
+/-- 136 constructors: `Expr` 60, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 29, `Block` 19, `Endblock` 18,
     `Arms` 2, `GrundArms` 2. -/
-theorem anzahl_konstruktoren : tabelle.length = 133 ∧
+theorem anzahl_konstruktoren : tabelle.length = 136 ∧
     ["Expr", "NutzlastExpr", "Args", "ErgExpr", "Stmt", "Block", "Endblock", "Arms", "GrundArms"].map
-      (fun f => (zeilen f).length) = [60, 2, 2, 2, 28, 18, 17, 2, 2] := by decide
+      (fun f => (zeilen f).length) = [60, 2, 2, 2, 29, 19, 18, 2, 2] := by decide
 
 /-- The arity histogram: how many constructors have 0, 1, 2, 3 children. -/
-theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [27, 34, 52, 20] := by
+theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [27, 34, 52, 21] := by
   decide
 
 /-- The premises (each one local refusal cell of Theorem 4) and the child positions (each one "child of the wrong
     sort or index" refusal cell). -/
-theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 149 ∧
-    (tabelle.map (·.kinder.length)).sum = 198 := by decide
+theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 158 ∧
+    (tabelle.map (·.kinder.length)).sum = 209 := by decide
 
 end Gabbro.Grammatik.Adaequanz.GabbroSig
