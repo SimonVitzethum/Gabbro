@@ -9,7 +9,7 @@ module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Semantik.Evaluation.Ueberlauf
-public import Grammatik.Kern.Syntax.Bits.T2.Teil1
+public import Grammatik.Kern.Syntax.Extensions.Bits.T2.Teil1
 
 @[expose] public section
 

@@ -59,7 +59,7 @@ public import Grammatik.Kern.Semantik.Syscall.SyscallPaarung
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
 public import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ressourceninvariante.Teil2
-public import Grammatik.Kern.Syntax.Zucker.Konstanten
+public import Grammatik.Kern.Syntax.Extensions.Zucker.Konstanten
 public import Grammatik.Bausteine.Arena.Bibliothek
 public import Grammatik.Nebenlaeufigkeit.Allgemein.WacheGlobal
 public import Grammatik.Nebenlaeufigkeit.Allgemein.StabilBewacht.Teil2

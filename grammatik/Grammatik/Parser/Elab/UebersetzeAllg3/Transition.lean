@@ -8,7 +8,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
-public import Grammatik.Kern.Syntax.Zucker.TransitionShift
+public import Grammatik.Kern.Syntax.Extensions.Zucker.TransitionShift
 
 @[expose] public section
 
