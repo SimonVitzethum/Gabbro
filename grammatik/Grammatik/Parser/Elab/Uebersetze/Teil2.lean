@@ -9,6 +9,7 @@ import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Data
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 @[expose] public section
 
@@ -276,6 +277,10 @@ structure UProg where
   ptrKeys : List String := []
   /-- Original-source duty check, consumed by the actual new lowering branches. -/
   exportGate : Except String Unit := .ok ()
+  /-- The unit's declared checks (C16): elaborated records of every `check` item,
+      with each `can_fail` body lowered into its generated Boolean producer in
+      `fns` (named by the check's `probe` field). -/
+  checks : List UCheck := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare

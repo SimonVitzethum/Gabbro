@@ -18,6 +18,8 @@ public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
 public import Grammatik.Bausteine.Arena.ArenaStaticReset
+public import Grammatik.Kern.Syntax.Satz.Pruefung
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 
 @[expose] public section
 
@@ -63,6 +65,10 @@ structure Einheit (D : Deklaration) where
   sp0 : Speicher D
   gestartet : List (Σ w : D.Fn, Env D (D.params w)) := []
   arenen : List (ArenaOwnership.Body.ArenaIface D) := []
+  /-- The unit's declared checks (C16): kernel descriptors of every `check` item,
+      elaborated by the exporter (`UCheck.probe` names the generated producer).
+      Default `[]`: a unit without a check is the unit of before. -/
+  pruefungen : List (CheckDecl D) := []
 
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
@@ -153,7 +159,7 @@ def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop 
     axiom whose result is `never` (`antworten`, since 2026-09-15, W1); every function an
     interrupt handler's call graph reaches takes only locks declared `masks irqs` (`masken`,
     since 2026-09-26, Opus agent H: the Rust `H102`); every declared static array admits
-    zero (`reset`, since C18: no `fnptr`/`ref`/`ptr` zero, no floats). -/
+    zero (`reset`, since C18: no `fnptr`/`ref`/`ptr` zero, no floats); declared checks require exact expansion, read-only frames and gate consumption (`pruef`). -/
 structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
@@ -168,6 +174,9 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   masken : MaskenDisziplin P fs
   -- checked static-array reset admission (C18): every declared static array admits zero
   reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
+  -- the declared checks (C16, 2026-11-02): the admitted checks of this value
+  checks : List (CheckDecl D) := []
+  pruef : CheckAdmission P fs checks
 
 end Pruefer
 

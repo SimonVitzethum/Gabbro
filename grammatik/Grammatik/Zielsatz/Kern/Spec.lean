@@ -42,8 +42,10 @@
   (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
       lock-free starts, pool safety, write separation, answer sites, masking discipline, and since 2026-10-24 the
-      ownership judgment of every arena in `E.arenen` with plain allocator words; beside it `BesitzStart E`: every
-      arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
+       ownership judgment of every arena in `E.arenen` with plain allocator words, and since 2026-11-02 the
+       declared-check admission (`CheckAdmission`: probe/gate expansion, read-only frame, gate consumption,
+       distinct names); beside it `BesitzStart E`: every
+       arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
       `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
       enumerations (finite declarations only).
   (b) `NutzerPflichtA E` -- the user's logic: every body, SEQUENTIALLY, at every `forever` budget, against every
@@ -94,6 +96,10 @@
   * `zeit` -- a frame with a finite call tree takes at most `kostenTief` own steps while active. --.
   * `folge` -- the order of calls in every thread's call log, for every order specification the program passes
     (Folge.lean). --.
+  * `pruefstand` (`CheckTreueG`, C16, 2026-11-02) -- check evidence and its consumption: every completed probe
+    measurement carries its verdict and floor outcomes as a report, each live or consumed Duty has exactly one
+    corresponding completed report, and a consuming gate discharges that same report once; the prose claim is a
+    label and proves nothing. (a), (b).
   * on the thread machine: `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei` (dormant and joining threads hold
     nothing), `keineVerklemmung`/`keinZyklus` with join waits, `fortschritt` with the join wait, `spawnSicht` (a
     spawn leaves the G state alone, the new thread holds nothing, every free lock and closed invariant holds).
@@ -234,6 +240,9 @@
     `N484`); the merge discipline of per-core cells beyond reading them (OFFEN O17); linked units sharing an atomic
     across the link; the publish/await hand-off of an unguarded PLAIN payload (refused);
   * floats beyond the kernel IEEE model (that the FPU computes it is `gleitkomma_ieee`, a hardware fact);
+  * that a prose `claim` is true, or that one successful sample proves it (C16, 2026-11-02): a `false` verdict
+    or floor outcome is a completed measurement with a negative verdict, and an unrun counterprobe is
+    unmeasured, never passed;
   * an invariant inside a running writer or false in the start memory or reading carriers (tables or globals) outside its declared
     `traeger`; a lock invariant inside its holder's section (claimed: no other thread observes it there);
   * interrupt handlers beyond `KernPlan`: re-entry, handler-on-handler preemption, a thrown entry without `via idt`,
@@ -270,3 +279,4 @@ module
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 public import Grammatik.Zielsatz.Kern.Spec.Teil2
 public import Grammatik.Zielsatz.Kern.Spec.Teil3
+public import Grammatik.Zielsatz.Kern.Spec.Teil4

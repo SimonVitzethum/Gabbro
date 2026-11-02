@@ -155,7 +155,10 @@ def verbindeP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Programm D :=
   mitRumpf E₁.P (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f)
 
 /-- **The linked unit** `verbinde e E₁ E₂`: the linked program, the (shared) lock invariants,
-    initial memory and axiom ensures, and BOTH units' declared starts and run-time roots. -/
+    initial memory and axiom ensures, and BOTH units' declared starts, run-time roots
+    and arenas. Declared checks are NOT linked: the linked unit carries none
+    (`pruefungen` defaults to `[]`); linked check admission is the open remainder
+    (C16: cross-unit gate consumption and name separation). -/
 def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   P := verbindeP e E₁ E₂
   S := E₁.S

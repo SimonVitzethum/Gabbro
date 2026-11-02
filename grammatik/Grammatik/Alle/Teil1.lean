@@ -156,6 +156,7 @@ public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben10
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben11
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben15
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben16

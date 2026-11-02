@@ -58,7 +58,7 @@ theorem erstAblehnung_104_zeuge :
 
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
-    `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
+    `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`, `checkT`) except the
     kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`, `reason`, `syscall` gates and their bindings, `device`). -/
 def istGegenstand : SItemTief → Bool
   | .constT .. => false
@@ -83,6 +83,7 @@ def istGegenstand : SItemTief → Bool
   | .specT .. => false
   | .asmT .. => false
   | .axiomT _ _ _ .none _ _ => false
+  | .checkT .. => false
   | _ => true
 
 /-- **One off-fragment item fails the item check.** By cases over all
@@ -114,7 +115,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
     cases q with
     | none => simp only [istGegenstand, Bool.false_eq_true] at he
     | some _ => rfl
-  | checkT _ => rfl
+  | checkT _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | atomT _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | rcuT _ _ _ => rfl
   | groupT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
@@ -156,6 +157,7 @@ def istAngenommen : SItemTief → Bool
   | .specT .. => true
   | .asmT .. => true
   | .axiomT _ _ _ .none _ _ => true
+  | .checkT .. => true
   | _ => false
 
 /-- **An accepted head steps past the item check.** The mirror of
@@ -187,7 +189,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
     cases q with
     | none => rfl
     | some _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | checkT _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | checkT _ => rfl
   | atomT _ _ _ _ _ => rfl
   | rcuT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | groupT _ _ _ => rfl
@@ -234,7 +236,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     cases q with
     | none => simp only [istAngenommen, Bool.true_eq_false] at ha
     | some _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | checkT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | checkT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
   | atomT _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
   | rcuT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | groupT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
