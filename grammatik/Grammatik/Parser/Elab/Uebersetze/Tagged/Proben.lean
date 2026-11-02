@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil13
+public import Grammatik.Parser.Elab.UebersetzeSum
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -199,5 +200,69 @@ theorem elabU_tagged_duplicate_refused :
 theorem elabU_tagged_shape_refused :
     elabU [.typeT ["tagged"] "Message" [] [] none] =
       .error "tagged declaration without G form" := by decide
+
+
+namespace TypedPayload
+
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+def sums : List USum :=
+  [{ name := "Message", cases := [("Empty", none), ("Flag", some .bool),
+      ("Count", some (.int 0 255)), ("Bytes", some (.arr (.int 0 255) 2)),
+      ("Text", some (.str 8)), ("Nested", some (.sum [none, some .bool]))] }]
+
+def unit : UProg := { tabs := [], locks := [], fns := [], sums := sums }
+def scope : UFn :=
+  { name := "fixture", params := [], kinds := [], res := none, held := [], puts := [],
+    gives := [], body := [], ret := .empty }
+
+/-- The actual tagged lowering path accepts complete record-free payloads. -/
+theorem lower_bool_zeuge :
+    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 (some (.truth true))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
+theorem lower_scalar_zeuge :
+    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 2 (some (.lit 37))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
+theorem lower_array_zeuge :
+    (match lowSVal unit [] [] scope 0 0 (by decide)
+      (.fall 3 (some (.arrCons (.lit 7) (.arrCons (.lit 9) .arrNil)))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
+theorem lower_string_zeuge :
+    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 4 (some (.text [65, 66]))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
+theorem lower_nested_sum_zeuge :
+    (match lowSVal unit [] [] scope 0 0 (by decide)
+      (.fall 5 (some (.taggedValue [none, some .bool] 1 (.truth false)))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
+theorem lower_missing_payload_refused :
+    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 none) with
+      | .ok _ => false | .error _ => true) = true := by decide
+
+theorem lower_extra_payload_refused :
+    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 0 (some (.lit 1))) with
+      | .ok _ => false | .error _ => true) = true := by decide
+
+theorem lower_wrong_payload_refused :
+    (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 (some (.lit 1))) with
+      | .ok _ => false | .error _ => true) = true := by decide
+
+/-- Dependency resolution preserves source order even for a forward reference. -/
+theorem nested_schema_export_zeuge :
+    uSums [] [.typeT ["tagged"] "Outer" [] [] (some (.raw "{ Wrap(Inner) }")),
+      .typeT ["tagged"] "Inner" [] [] (some (.raw "{ Flag(bool), Empty }"))] =
+      .ok [{ name := "Outer", cases := [("Wrap", some (.sum [some .bool, none]))] },
+        { name := "Inner", cases := [("Flag", some .bool), ("Empty", none)] }] := by decide
+
+theorem recursive_schema_refused :
+    (match uSums [] [.typeT ["tagged"] "Recursive" [] []
+        (some (.raw "{ Wrap(Recursive) }"))] with
+      | .ok _ => false | .error _ => true) = true := by decide
+
+end TypedPayload
 
 end Gabbro.Grammatik.Parser.Uebersetze
