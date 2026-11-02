@@ -280,7 +280,7 @@ def EffGut : SEffekt → Prop
   | .locks sh p => gut p = true ∧ (sh = false → ∀ ts, druckToks p ≠ .wort "shared" :: ts)
   | .takes p => gut p = true
   | .posts p => gut p = true
-  | .param _ | .instance _ _ => False
+  | .param _ | .instanceEffects _ _ => False
   | _ => True
 
 /-- What follows an effect arm: `,` or `}`. -/
@@ -353,7 +353,7 @@ theorem effekt_rund (e : SEffekt) (he : EffGut e) (R : List Token) (hR : EffFolg
     simp only [parseEffekt, (by decide : strEq "pure" "reads" = false), (by decide : strEq "pure" "writes" = false), (by decide : strEq "pure" "locks" = false), (by decide : strEq "pure" "masks" = false), (by decide : strEq "pure" "allocs" = false), (by decide : strEq "pure" "consumes" = false), (by decide : strEq "pure" "publishes" = false), (by decide : strEq "pure" "diverges" = false), (by decide : strEq "pure" "pure" = true), Bool.false_eq_true, ite_false, ite_true]
 
   | param _ => cases he
-  | instance _ _ => cases he
+  | instanceEffects _ _ => cases he
 
 theorem effekte_rund : ∀ (es : List SEffekt) (R : List Token) (F : Nat), es ≠ [] → (∀ e ∈ es, EffGut e) →
     8 * (druckEffekte es).length + 41 ≤ F →

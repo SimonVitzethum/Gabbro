@@ -50,7 +50,7 @@ def parseEffekt (f : Nat) (toks : List Token) :
     | .ident n :: .zeichen "[" :: rest => do
       let (ts, r) ← parseSpecTypes f rest
       let r ← fordereZeichen "]" r
-      return (.instance n ts, r)
+      return (.instanceEffects n ts, r)
     | .ident n :: rest => .ok (.param n, rest)
     | _ => .error "effect expected"
 

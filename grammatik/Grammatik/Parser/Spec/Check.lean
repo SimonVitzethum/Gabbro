@@ -25,34 +25,35 @@ def checkGroup (items : List SItemTief) (g : Group) : Except String Unit := do
 
 /-- The six independent conformance checks after substituting the instance. -/
 def checkFunction (items : List SItemTief) (gs : List Group) (ins : List Instance)
-    (g : Group) (i : Instance) (abstract concrete : FnSig) : Except String Unit := do
+    (g : Group) (i : Instance) (specification implementation : FnSig) : Except String Unit := do
   let env := g.types.zip i.types
-  if abstract.params.length != concrete.params.length ||
-      !beqSTypList (abstract.params.map fun p => substituteType env p.2)
-        (concrete.params.map Prod.snd) ||
-      !beqSTypOpt (abstract.res.map (substituteType env)) concrete.res ||
-      !beqOptWort abstract.fehler concrete.fehler then
+  if specification.params.length != implementation.params.length ||
+      !beqSTypList (specification.params.map fun p => canonicalType items 128 (substituteType env p.2))
+        (implementation.params.map fun p => canonicalType items 128 p.2) ||
+      !beqSTypOpt (specification.res.map fun t => canonicalType items 128 (substituteType env t))
+        (implementation.res.map (canonicalType items 128)) ||
+      !beqOptWort specification.fehler implementation.fehler then
     throw "spec.signature"
-  if !uniqueNames (concrete.params.map Prod.fst) then throw "spec.signature.parameters"
-  let rename := (concrete.params.map Prod.fst).zip (abstract.params.map fun p => SExpr.variable p.1)
+  if !uniqueNames (implementation.params.map Prod.fst) then throw "spec.signature.parameters"
+  let rename := (implementation.params.map Prod.fst).zip (specification.params.map fun p => SExpr.variable p.1)
   let specs := items.filterMap fun | .specT s p => some (s.name, s.params.map Prod.fst, p) | _ => none
-  if !predicateSubset (predicates specs false rename concrete) (predicates specs false [] abstract) then
+  if !predicateSubset (predicates specs false rename implementation) (predicates specs false [] specification) then
     throw "spec.requires"
-  if !predicateSubset (predicates specs true [] abstract) (predicates specs true rename concrete) then
+  if !predicateSubset (predicates specs true [] specification) (predicates specs true rename implementation) then
     throw "spec.ensures"
-  if (concrete.klauseln.any fun | .refs _ => true | _ => false) then
+  if (implementation.klauseln.any fun | .refs _ => true | _ => false) then
     throw "spec.implementation.refines"
-  if (concrete.klauseln.filter fun | .effs _ => true | _ => false).length != 1 then
+  if (implementation.klauseln.filter fun | .effs _ => true | _ => false).length != 1 then
     throw "spec.effects.required"
-  let promised ← expandEffects gs ins env (g.effects.zip i.effects) 1000 (functionEffects abstract)
-  let actual ← expandEffects gs ins [] [] 1000 (functionEffects concrete)
+  let promised ← expandEffects items gs ins env (g.effects.zip i.effects) 1000 (functionEffects specification)
+  let actual ← expandEffects items gs ins [] [] 1000 (functionEffects implementation)
   if !(actual.map (renameEffect rename)).all (fun e => promised.any (beqSEffekt e)) then
     throw "spec.effects"
-  match cost items concrete, cost items abstract with
+  match cost items implementation, cost items specification with
   | some a, some b => if a > b then throw "spec.cost"
   | _, _ => throw "spec.cost.required"
 
-/-- A group instance implements exactly its abstract functions and no other item. -/
+/-- A group instance implements exactly its specification functions and no other item. -/
 def checkInstance (items : List SItemTief) (gs : List Group) (ins : List Instance)
     (i : Instance) : Except String Unit := do
   let some g := gs.find? (fun g => strEq g.name i.group)
@@ -61,9 +62,9 @@ def checkInstance (items : List SItemTief) (gs : List Group) (ins : List Instanc
     throw "spec.arguments"
   -- Effect arguments are concrete: unbound parameters and unknown/cyclic instances refuse here too.
   for es in i.effects do
-    let _ ← expandEffects gs ins [] [] 1000 es
+    let _ ← expandEffects items gs ins [] [] 1000 es
   let fs ← i.functions.mapM fun
-    | .fnT s _ => pure s
+    | .fnT s _ => if strEq s.art "impl" || strEq s.art "" then pure s else throw "spec.implementation.kind"
     | _ => throw "spec.implementation.item"
   if !uniqueNames (fs.map (·.name)) then throw "spec.function.duplicate"
   for s in g.functions do
@@ -80,7 +81,7 @@ def check (items : List SItemTief) : Except String Unit := do
   if !uniqueNames (gs.map (·.name)) then throw "spec.duplicate"
   for g in gs do checkGroup items g
   for i in ins do
-    if (ins.filter fun j => strEq j.group i.group && beqSTypList j.types i.types).length != 1 then
+    if (ins.filter fun j => strEq j.group i.group && beqSTypList (j.types.map (canonicalType items 128)) (i.types.map (canonicalType items 128))).length != 1 then
       throw "spec.implementation.duplicate"
     checkInstance items gs ins i
 

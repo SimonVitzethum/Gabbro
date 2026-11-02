@@ -34,7 +34,7 @@ def druckEffekt : SEffekt → List Token
   | .loops => [.wort "diverges"]
   | .pure => [.wort "pure"]
   | .param n => [nameTok n]
-  | .instance n ts => [nameTok n, .zeichen "["] ++
+  | .instanceEffects n ts => [nameTok n, .zeichen "["] ++
       (ts.flatMap fun t => druckTyp t ++ [.zeichen ","]).dropLast ++ [.zeichen "]"]
 
 def druckEffekte : List SEffekt → List Token

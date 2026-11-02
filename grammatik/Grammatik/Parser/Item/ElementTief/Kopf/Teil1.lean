@@ -32,7 +32,7 @@ inductive SEffekt
   | loops : SEffekt
   | pure : SEffekt
   | param : String → SEffekt
-  | instance : String → List STyp → SEffekt
+  | instanceEffects : String → List STyp → SEffekt
   deriving Repr
 
 mutual
@@ -47,7 +47,7 @@ def beqSEffekt : SEffekt → SEffekt → Bool
   | .loops, .loops => true
   | .pure, .pure => true
   | .param a, .param b => strEq a b
-  | .instance a ts, .instance b us => strEq a b && beqSTypList ts us
+  | .instanceEffects a ts, .instanceEffects b us => strEq a b && beqSTypList ts us
   | _, _ => false
 def beqSEffektList : List SEffekt → List SEffekt → Bool
   | [], [] => true

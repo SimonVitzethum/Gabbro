@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
+public import Grammatik.Parser.Spec.Expand
 
 @[expose] public section
 
@@ -183,7 +184,9 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
     fragment (tables, locks, `impl` functions). -/
 def elabU : List SItemTief → Except String UProg
   | items =>
-    let ms0 := uMembers items
+    match Spec.prepare (uMembers items) with
+    | .error e => .error e
+    | .ok ms0 =>
     let consts := uConstsRech (uKonstFns ms0) ms0 []
     let alias := uAliase consts ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
     match uRestFehler ms0 with

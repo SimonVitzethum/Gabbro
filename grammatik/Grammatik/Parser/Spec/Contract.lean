@@ -29,6 +29,20 @@ def instances (items : List SItemTief) : List Instance := items.filterMap fun
   | .implGroupT name types effects functions => some ⟨name, types, effects, functions⟩
   | _ => none
 
+/-- Type aliases are transparent for instance selection and uniqueness. -/
+def canonicalType (items : List SItemTief) : Nat → STyp → STyp
+  | 0, t => t
+  | f + 1, .atom n =>
+    match items.find? (fun | .typeT _ m [] [] (some _) => strEq m n | _ => false) with
+    | some (.typeT _ _ _ _ (some t)) => canonicalType items f t
+    | _ => .atom n
+  | f + 1, .ptr s r t => .ptr s r (canonicalType items f t)
+  | f + 1, .array t n => .array (canonicalType items f t) n
+  | f + 1, .range t lo hi b => .range (canonicalType items f t) lo hi b
+  | f + 1, .wrap t => .wrap (canonicalType items f t)
+  | f + 1, .embed t p s => .embed (canonicalType items f t) p s
+  | _, t => t
+
 /-- A spec type parameter denotes a whole type, recursively in structured types. -/
 def substituteType (env : List (String × STyp)) : STyp → STyp
   | .atom n => ((env.find? fun p => strEq p.1 n).map Prod.snd).getD (.atom n)
@@ -88,7 +102,7 @@ def cost (items : List SItemTief) (s : FnSig) : Option Int :=
 
 /-- Effects of a referenced instance use that instance's substituted abstract bounds.
     Fuel refuses cyclic instance-effect declarations; no unresolved effect reaches export. -/
-def expandEffects (gs : List Group) (ins : List Instance)
+def expandEffects (items : List SItemTief) (gs : List Group) (ins : List Instance)
     (types : List (String × STyp)) (env : List (String × List SEffekt)) :
     Nat → List SEffekt → Except String (List SEffekt)
   | 0, _ => .error "spec.effects.cycle"
@@ -96,17 +110,17 @@ def expandEffects (gs : List Group) (ins : List Instance)
     let lists ← es.mapM fun e => match e with
       | .pure => pure []
       | .param n => match env.find? (fun p => strEq p.1 n) with
-        | some (_, actual) => expandEffects gs ins types [] f actual
+        | some (_, actual) => expandEffects items gs ins types [] f actual
         | none => .error ("spec.effects.parameter: " ++ n)
-      | .instance n ts => do
+      | .instanceEffects n ts => do
         let ts := ts.map (substituteType types)
         let some g := gs.find? (fun g => strEq g.name n)
           | .error ("spec.effects.unknown: " ++ n)
-        let [i] := ins.filter (fun i => strEq i.group n && beqSTypList i.types ts)
-          | .error ("spec.effects.instance: " ++ n)
+        let [i] := ins.filter (fun i => strEq i.group n && beqSTypList (i.types.map (canonicalType items 128)) (ts.map (canonicalType items 128)))
+          | .error ("spec.effects.instanceEffects: " ++ n)
         if g.types.length != ts.length || g.effects.length != i.effects.length then
           .error "spec.arguments"
-        else expandEffects gs ins (g.types.zip ts) (g.effects.zip i.effects) f
+        else expandEffects items gs ins (g.types.zip ts) (g.effects.zip i.effects) f
           (g.functions.flatMap functionEffects)
       | e => pure [e]
     return lists.flatten
