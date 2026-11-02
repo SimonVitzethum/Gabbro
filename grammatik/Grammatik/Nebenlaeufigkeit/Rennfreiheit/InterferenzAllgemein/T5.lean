@@ -321,12 +321,12 @@ theorem evalProd_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty
     (hG : ∀ g : D.Glob, σ.globs g = σ'.globs g)
     (h0S : ∀ t : D.Tab, ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
     (h0G : ∀ g : D.Glob, σ₀.globs g = σ₀'.globs g) :
-    evalProd σ₀ args σ ρ = evalProd σ₀' args σ' ρ := by
-  induction args with
-  | nil => rfl
-  | cons e rest ih =>
+    evalProd σ₀ args σ ρ = evalProd σ₀' args σ' ρ :=
+  match args with
+  | .nil => rfl
+  | .cons e rest => by
       have he := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
-      have hr := ih
+      have hr := evalProd_liest_nur_speicher rest σ₀ σ₀' σ σ' ρ hS hG h0S h0G
       simp only [evalProd]
       rw [he, hr]
 

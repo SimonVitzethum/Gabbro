@@ -447,6 +447,9 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp =>
         (lowE_ok σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp
+  | _, _, .prod .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prodGet .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prodSet .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
   | _, _, .intBuiltin2 op a b, d, c, top, h, hK, m, pc, ρ, hp =>
     intBuiltin2L_ok op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
       (fun q ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)

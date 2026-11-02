@@ -231,7 +231,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       match uRechne ctx blatt i with
       | .error e => .error e
       | .ok y => .ok (.idx x y)
-  /-- A field projection from a by-value product (`p.f`): the base elaborates first, then the
+  /- A field projection from a by-value product (`p.f`): the base elaborates first, then the
       nominal position is resolved from the schema. -/
   | .field base field =>
     match blatt (.field base field) with
@@ -240,7 +240,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       match uRechne ctx blatt base with
       | .error _ => .error original
       | .ok value => .ok (.field value field)
-  /-- An `old` view that is not a carrier read may project a record field of the old value. -/
+  /- An `old` view that is not a carrier read may project a record field of the old value. -/
   | .old base =>
     match blatt (.old base) with
     | .ok value => .ok value
@@ -248,7 +248,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       match uRechne ctx blatt base with
       | .error e => .error e
       | .ok value => uOldRecord value
-  /-- A record constructor would need the labelled-call surface form, which the parser does not
+  /- A record constructor would need the labelled-call surface form, which the parser does not
       provide on this branch: refuse by name instead of misreading positional arguments. -/
   | .call name args =>
     match ctx.records.find? (fun schema => strEq schema.name name) with

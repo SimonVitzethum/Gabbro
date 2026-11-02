@@ -36,18 +36,18 @@ theorem evalArgsMit_stimmt {τs : List Ty}
     (σ₀ σ : World D) (ρ : Env D Γ) (as : Args D Γ Λ τs) (ρ' : Env D τs)
     (hstim : ∀ {t} (e : Expr D Γ Λ t), aus e = .val (eval σ₀ e σ ρ))
     (h : evalArgsMit aus as = .inl ρ') :
-    evalArgs σ₀ as σ ρ = ρ' := by
-  induction as with
-  | nil =>
+    evalArgs σ₀ as σ ρ = ρ' :=
+  match as, ρ', h with
+  | .nil, _, h => by
       simp only [evalArgsMit] at h
       cases h
       rfl
-  | cons e rest ih =>
+  | .cons e rest, _, h => by
       simp only [evalArgsMit, hstim] at h
       obtain ⟨vs, hs⟩ := evalArgsMit_ok aus rest (fun e => ⟨_, hstim e⟩)
       simp only [hs] at h
       cases h
-      exact congrArg (Env.cons (eval σ₀ e σ ρ)) (ih _ hs)
+      exact congrArg (Env.cons (eval σ₀ e σ ρ)) (evalArgsMit_stimmt aus σ₀ σ ρ rest _ hstim hs)
 
 /-- Agreement end to end: what today's fault-free argument list carries is what
     `evalArgs` of `Semantik.lean` computes. -/

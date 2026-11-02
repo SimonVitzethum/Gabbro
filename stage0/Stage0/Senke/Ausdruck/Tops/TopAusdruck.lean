@@ -280,6 +280,9 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · exact reachL_top _ _ _ h
     · cases h
   | _, _, .count .., d, c, top, h => (countL_bounds h).1
+  | _, _, .prod .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prodGet .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prodSet .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
   | _, _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h
   | _, _, .intBuiltin1 op a, d, c, top, h => BitBuiltin.unary_top op h
   | _, _, .oldG .., _, _, _, h
