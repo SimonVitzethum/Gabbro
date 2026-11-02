@@ -172,46 +172,6 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
   worte a' ha' := by
     obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
     exact hA.worte a ha
-  reset := fun g elem len harr => by
-    have hT : tyR (D.gtyp g) = .arr elem len := harr
-    cases hτ : D.gtyp g with
-    | int lo hi =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | bool =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | opt n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | sum cs =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | why n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | never =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | fl _ =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | fnptr n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | ptr t rw =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | ref t =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | arr elem' len' =>
-      simp only [tyR] at hT
-      cases hT
-      exact zeroAdmitting_tyR (hA.reset g elem' len' hτ)
-    | str n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
   akku := Kernzelle.accumulatorAdmission_mitRuhe P hvoll hA.abg hA.akku
   reset := fun g elem len harr => by
     have hT : tyR (D.gtyp g) = .arr elem len := harr
@@ -240,7 +200,7 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
     | fnptr n =>
       simp only [tyR] at hT
       exact Ty.noConfusion hT
-    | ptr t rw =>
+    | ptr cap =>
       simp only [tyR] at hT
       exact Ty.noConfusion hT
     | ref t =>
