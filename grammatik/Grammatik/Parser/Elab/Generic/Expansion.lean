@@ -145,4 +145,3 @@ theorem expand_ordinary (source target : List SItemTief) (h : expand source = .o
       | true => simp [expand, hs, he, hg] at h
 
 end Gabbro.Grammatik.Parser.Generic
-

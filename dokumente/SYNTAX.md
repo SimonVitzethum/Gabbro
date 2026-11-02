@@ -790,7 +790,7 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 
 ```ebnf
 fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
-           "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+           "fn" ident [ "[" gparams "]" ] "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
            (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
            [ "payload" path ]
            (* «E2» (§7.1): only on a `library fn` (`P043` without it) -- the payload
@@ -827,6 +827,13 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "diverg
               or falls to the closing `}` which is SUGAR for `return;`. `"=" pred` only for
               `spec fn`. «E2» (§7.1): a `library fn` takes the `endblock` and nothing else
               (`P044`) -- it IS safe Gabbro, not a foreign promise. *)
+gparams  = gparam { "," gparam } ;
+gparam   = ident [ ":" ident { "+" ident } ]
+         | ident ":" "const" typeexpr
+         | ident ":" intword                         (* shorthand, e.g. `N: u64` *)
+         | ident ":" fnptr ;
+gcall    = path "::" "[" garg { "," garg } "]" "(" [ arglist ] ")" ;
+garg     = typeexpr | constexpr ;
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
@@ -844,6 +851,37 @@ eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks"
    body, `allocs m` demands `m` in Λ at every `return`, and `return` demands multiset EQUALITY
    between Λ and the `allocs` list: linear, not affine. *)
 ```
+
+**Generic functions (Lean frontend, check model A).** For example:
+
+```gabbro
+fn identity[T](x: T) -> T { let copy: T = x; return copy; }
+fn byte_use(x: u8) -> u8 {
+    let value = identity::[u8](x);
+    return value;
+}
+fn limit[N: u64]() -> u64 { return N; }
+```
+
+Calls supply all translation-time arguments explicitly; generic functions do not infer them from
+ordinary call arguments. Constants also accept `N: const u64` and declared integer ranges. Each constant
+argument passes the existing bounded C17 evaluator. Parameter types, result types, local annotations,
+contracts, effects and complete bodies are substituted before the library expansion in `elabU`.
+The resulting functions and direct calls use only the ordinary G export and lowering rules. Every
+instance retains its own declared contracts; no contract is derived or bypassed.
+
+Instances are collected transitively, repeated keys are shared, templates are removed, and generated
+names are deterministic with a declaration-collision check. A structural source budget refuses an
+expanding instance set rather than truncating it. Changing arguments along a recursive cycle is refused;
+recursion at the same instance does not create another copy.
+
+This frontend implementation parses spec bounds and static function parameter declarations but refuses
+their instantiation until the corresponding conformance rule is available. Function literal arguments,
+generic prototypes, generic predicate/assembly bodies and generic translators are also refused. The
+Rust frontend has not yet been migrated to these forms. The connected Lean source/export/lowering
+witnesses are in `Parser/Elab/Generic/PipelineWitness.lean`. Successful expansion still requires
+the ordinary export and lowering checks.
+
 
 **`effects` is NOT fail-open.** A function **without** `effects` over a body
 derives it (lane 191: the derived hull is checked exactly like a written
