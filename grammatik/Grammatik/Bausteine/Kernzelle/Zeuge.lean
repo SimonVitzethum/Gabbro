@@ -204,9 +204,6 @@ theorem minFalle_zeuge : min (50 : Int) 0 = 0 := minStartBeiNullFalle 50 (by dec
 /-- The named trap: `and` started at `0` drags every result to `0`. -/
 theorem andFalle_zeuge : 12 &&& 0 = 0 := andStartBeiNullFalle 12
 
-/-- The named trap: `and` started at `0` drags every result to `0`. -/
-theorem andFalle_zeuge : 12 &&& 0 = 0 := andStartBeiNullFalle 12
-
 /-! ## 4. A full-program fixture: two `or` cells, admitted -/
 
 /-- The three generated functions: query, update, reduction. -/

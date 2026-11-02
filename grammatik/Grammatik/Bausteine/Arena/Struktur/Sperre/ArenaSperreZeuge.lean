@@ -51,7 +51,7 @@ theorem fgdarfL (g : FDL.Glob) : gdarf FDL g HL := by
 
 /-- The payload `7`, at the payload field's declared type. -/
 def siebenL : Expr FDL [] HL (FDL.typ FAL.tab FAL.feld) :=
-  Expr.umTyp (show Ty.int 0 255 = FDL.typ FAL.tab FAL.feld from by decide)
+  Expr.umTyp (show Ty.int 0 255 = FDL.typ FAL.tab FAL.feld from by decide +kernel)
     (Expr.widen (by decide) (by decide) (Expr.lit 7))
 
 abbrev GL1 : Ctx := [Ty.index (FDL.count FAL.tab)]
@@ -138,11 +138,11 @@ theorem wert_schreib {A : FreiForm FDL} (L : LinkFeld A) (σ : World FDL) (Λ : 
 
 /-- The index `2` and the value `2` of the stray store. -/
 def idx2L : Expr FDL [] HL (Ty.index (FDL.count FAL.tab)) :=
-  Expr.umTyp (show Ty.int 0 3 = Ty.index (FDL.count FAL.tab) from by decide)
+  Expr.umTyp (show Ty.int 0 3 = Ty.index (FDL.count FAL.tab) from by decide +kernel)
     (Expr.widen (by decide) (by decide) (Expr.lit 2))
 
 def val2L : Expr FDL [] HL (FDL.typ FAL.tab LLL.f) :=
-  Expr.umTyp (show Ty.int 0 4 = FDL.typ FAL.tab LLL.f from by decide)
+  Expr.umTyp (show Ty.int 0 4 = FDL.typ FAL.tab LLL.f from by decide +kernel)
     (Expr.widen (by decide) (by decide) (Expr.lit 2))
 
 theorem idx2L_n (σ : World FDL) (ρ : Env FDL []) : (eval σ idx2L σ ρ).n = 2 := by rfl
