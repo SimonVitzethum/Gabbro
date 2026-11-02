@@ -399,10 +399,12 @@ def ende (k : Kontext) : Option SEnde → Option SEnde
   | some (.ret e) => some (.ret (ausO k e))
   | e => e
 
-/-- Resolve the target and the ordinary arguments; the compile-time input remains byte-for-token exact. -/
+/-- Resolve the target and the ordinary arguments; the compile-time input remains byte-for-token exact.
+    Paths resolve as paths: the library qualifier and the qualified function name each become their
+    item key (`k.pfad` is the singleton key, as for every other resolved path). -/
 def libraryCall (k : Kontext) (c : SLibraryCall) : SLibraryCall :=
-  { c with library := k.ref c.library
-           function := k.ref (c.library ++ "::" ++ c.function)
+  { c with library := k.pfad c.library
+           function := k.pfad (c.library ++ c.function)
            args := c.args.map (aus k) }
 
 mutual

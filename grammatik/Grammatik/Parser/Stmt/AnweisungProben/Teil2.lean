@@ -92,7 +92,7 @@ theorem s35_lex :
     lex "@spirv#kernel(n) { dispatch 0 };" = .ok st35 := by
   decide
 theorem s35 : beqTopStmt (parseTopStmt st35)
-    (.ok (.lcall ⟨"spirv", "kernel", [.variable "n"], [.wort "dispatch", .num 0]⟩)) = true := by
+    (.ok (.lcall ⟨["spirv"], ["kernel"], [.variable "n"], [.wort "dispatch", .num 0]⟩)) = true := by
   decide
 -- SYNTAX.md §7 (the library-call example). Rust: `LibraryCall`
 -- in statement position: the argument and balanced region tokens are retained.

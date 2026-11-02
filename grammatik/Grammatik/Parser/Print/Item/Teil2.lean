@@ -148,7 +148,7 @@ def druckItem : SItemTief → List Token
         | some m => [.wort "endian", .wort m]
         | none => []) ++ [.zeichen "{"] ++ druckFelder fs ++ [.zeichen "}"])
   | .transT g sig b =>
-    ([.wort "translator", nameTok sig.name, .wort "for", nameTok g, .zeichen "("] ++ druckParams sig.params ++
+    ([.wort "translator", nameTok sig.name, .wort "for"] ++ rohToks g ++ [.zeichen "("] ++ druckParams sig.params ++
       [.zeichen ")"] ++
       (match sig.res with
         | some ty => [.zeichen "->"] ++ druckTyp ty

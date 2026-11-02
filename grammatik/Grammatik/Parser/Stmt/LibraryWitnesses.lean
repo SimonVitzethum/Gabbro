@@ -65,7 +65,7 @@ def translationItems (reverse : Bool) : List SItemTief :=
 def translationMembers (reverse : Bool) : List SItemTief :=
   Aufloesung.loeseL (Aufloesung.quelle (translationItems reverse)) [] (translationItems reverse)
 
-def translationCall : SLibraryCall := ⟨"sample", "consume", [], [.num 3, .num 5]⟩
+def translationCall : SLibraryCall := ⟨["sample"], ["consume"], [], [.num 3, .num 5]⟩
 
 def translationCaller : FnSig :=
   { art := "impl", name := "caller", params := [], res := none, fehler := none, klauseln := [] }
@@ -200,7 +200,7 @@ theorem translation_decoder_refusals_zeuge :
 /-- Reordering ordinary arguments or changing a region preserves its token kinds and changes the
     source call's identity. Both call forms share that identity; nested regions survive printing. -/
 theorem library_lossless_zeuge :
-    let call : SLibraryCall := ⟨"sample", "consume", [.lit 7, .variable "n"],
+    let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7, .variable "n"],
       [.zeichen "{", .num 3, .zeichen "}", .text "5"]⟩
     beqTopStmt (parseTopStmt (druckAnw (.lcall call))) (.ok (.lcall call)) = true ∧
     beqTopStmt (parseTopStmt (druckAnw (.bindLib false "x" none call)))
@@ -211,11 +211,11 @@ theorem library_lossless_zeuge :
 
 /-- The generic round-trip theorems apply jointly to a call with an actual argument and region. -/
 theorem library_round_zeuge :
-    let call : SLibraryCall := ⟨"sample", "consume", [.lit 7], [.num 3]⟩
+    let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7], [.num 3]⟩
     LibraryCallGut call ∧ AnwBein (.lcall call) ∧ AnwBein (.bindLib false "value" none call) := by
-  let call : SLibraryCall := ⟨"sample", "consume", [.lit 7], [.num 3]⟩
+  let call : SLibraryCall := ⟨["sample"], ["consume"], [.lit 7], [.num 3]⟩
   have good : LibraryCallGut call := by
-    constructor
+    refine ⟨by decide, by decide, ?_, ?_⟩
     · intro value member
       simp only [call, List.mem_cons, List.not_mem_nil, or_false] at member
       subst value
@@ -226,8 +226,8 @@ theorem library_round_zeuge :
 
 /-- Two source occurrences keep distinct regions; selecting one cannot reuse the other's input. -/
 theorem library_site_identity_zeuge :
-    let first : SLibraryCall := ⟨"sample", "consume", [], [.num 3, .num 5]⟩
-    let second : SLibraryCall := ⟨"sample", "consume", [], [.num 2, .num 7]⟩
+    let first : SLibraryCall := ⟨["sample"], ["consume"], [], [.num 3, .num 5]⟩
+    let second : SLibraryCall := ⟨["sample"], ["consume"], [], [.num 2, .num 7]⟩
     let body := SAnw.block [.lcall first, .lcall second] none
     (libraryCallAt [0] body).map (fun call => beqSLibraryCall call first) = some true ∧
     (libraryCallAt [1] body).map (fun call => beqSLibraryCall call second) = some true ∧

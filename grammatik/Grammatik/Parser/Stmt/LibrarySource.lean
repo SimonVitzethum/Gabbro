@@ -39,12 +39,18 @@ structure ULibrary where
   deriving Repr
 
 /-- Resolve exactly one library function and exactly one translator. Never choose the first
-    matching declaration or reconstruct an argument from its position. Payload typing and execution
-    still require a certificate; this operation alone cannot enable a source export. -/
+    matching declaration or reconstruct an argument from its position. The call carries resolved
+    paths: after `loeseL` the function path is the singleton item key, so the qualifier that
+    disambiguated it is compared whole. Empty paths (unproducible by the reader) refuse by name.
+    Payload typing and execution still require a certificate; this operation alone cannot enable
+    a source export. -/
 def libraryDecl (members : List SItemTief) (call : SLibraryCall) : Except String ULibrary := do
+  if call.library.isEmpty then throw "C02: library call without library path"
+  if call.function.isEmpty then throw "C02: library call without function path"
+  let wanted := "::".intercalate call.function
   let functions := members.zipIdx |>.filterMap fun (item, index) => match item with
     | .fnT sig body =>
-      if strEq sig.art "library" && strEq sig.name call.function then some (sig, body, index) else none
+      if strEq sig.art "library" && strEq sig.name wanted then some (sig, body, index) else none
     | _ => none
   let (sig, body, functionIndex) ← match functions with
     | [entry] => .ok entry
@@ -52,7 +58,7 @@ def libraryDecl (members : List SItemTief) (call : SLibraryCall) : Except String
     | _ => .error "C02: library function is ambiguous"
   let translators := members.zipIdx |>.filterMap fun (item, index) => match item with
     | .transT target translator body =>
-      if strEq target sig.name then some (translator, body, index) else none
+      if strEq target wanted then some (translator, body, index) else none
     | _ => none
   let (translator, translatorBody, translatorIndex) ← match translators with
     | [entry] => .ok entry

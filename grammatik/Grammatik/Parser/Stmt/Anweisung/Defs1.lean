@@ -18,15 +18,16 @@ def parseWeiter (f : Nat) (toks : List Token) :
       | .ok rest' => .ok (.next l, rest')
       | .error e => .error e
 
-/-- `@lib#fn(args) { region }`: retain ordered expressions and the balanced input tokens. -/
+/-- `@lib#fn(args) { region }`: retain ordered expressions and the balanced input tokens.
+    Both names are `::` paths (`nimmPfad`); the reader never produces an empty path. -/
 def parseLibRuf (f : Nat) (toks : List Token) :
     Except String (SLibraryCall × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .zeichen "@" :: rest => match nimmName rest with
+    | .zeichen "@" :: rest => match nimmPfad rest with
       | .ok (l, rest') => match fordereZeichen "#" rest' with
-        | .ok rest'' => match nimmName rest'' with
+        | .ok rest'' => match nimmPfad rest'' with
           | .ok (g, rest3) => match fordereZeichen "(" rest3 with
             | .ok rest4 => match parseArgs f rest4 with
               | .ok (args, rest5) => match fordereZeichen "{" rest5 with

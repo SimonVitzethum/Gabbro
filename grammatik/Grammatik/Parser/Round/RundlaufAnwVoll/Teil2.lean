@@ -272,21 +272,43 @@ def LibraryRegionGut (tokens : List Token) : Prop :=
 /-- Empty input is a printable region. -/
 theorem libraryRegionGut_nil : LibraryRegionGut [] := by intro rest; rfl
 
-/-- A library call is printable when its expressions have their ordinary round-trip legs and
-    its retained region is balanced. No argument or input token is replaced by a placeholder. -/
+/-- A library call is printable when its paths are non-empty (the reader never produces an
+    empty path), its expressions have their ordinary round-trip legs and its retained region is
+    balanced. No argument or input token is replaced by a placeholder. -/
 def LibraryCallGut (c : SLibraryCall) : Prop :=
-  (∀ x ∈ c.args, LegsB (fb x) x ∧ gut x = true) ∧ LibraryRegionGut c.region
+  c.library ≠ [] ∧ c.function ≠ [] ∧
+    (∀ x ∈ c.args, LegsB (fb x) x ∧ gut x = true) ∧ LibraryRegionGut c.region
+
+/-- `nimmPfad` reads a printed path and stops before a non-`::` follow (the path twin of
+    `nimmPfad_pfad`, proved here because the item round trip may not be imported). -/
+theorem nimmPfad_pfadToks (p : List String) (R : List Token) (hp : p ≠ [])
+    (hR : ∀ r, R ≠ .zeichen "::" :: r) :
+    nimmPfad (pfadToks p ++ R) = .ok (p, R) := by
+  match p, hp with
+  | [a], _ => simp only [nimmPfad, pfadToks, List.cons_append, List.nil_append, nameText_nameTok, sammleSeg_stop2 [a] R hR]
+  | a :: b :: cs, _ =>
+    have := sammleSeg_pfad (b :: cs) [a] R (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) hR
+    simp only [pfadToks, List.cons_append, List.nil_append, List.singleton_append] at this ⊢
+    simp only [nimmPfad, nameText_nameTok, this]
 
 theorem libRuf_rund (c : SLibraryCall) (hc : LibraryCallGut c)
     (rest : List Token) (F : Nat) (hF : 6 * (druckToksListe c.args).length + 37 ≤ F) :
     parseLibRuf F (druckLibraryCall c ++ rest) = .ok (c, rest) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  have hA := argsM c.args (.zeichen "{" :: (c.region ++ .zeichen "}" :: rest)) F' hc.1 (by omega)
-  have hR := hc.2 rest
-  cases c
-  simp only [List.append_assoc, List.singleton_append] at hA
-  simp only [druckLibraryCall, parseLibRuf, List.append_assoc, List.cons_append, List.nil_append,
-    nimmName, nameText_nameTok, fordereZeichen, strEq_self, ↓reduceIte, hA, hR]
+  obtain ⟨hlne, hfnne, hargs, hreg⟩ := hc
+  cases c with
+  | mk library function args region =>
+    have hA := argsM args (.zeichen "{" :: (region ++ .zeichen "}" :: rest)) F' hargs (by omega)
+    simp only [List.append_assoc, List.singleton_append] at hA
+    have hR := hreg rest
+    have hL := nimmPfad_pfadToks library (.zeichen "#" :: (pfadToks function ++ .zeichen "(" ::
+      (druckToksListe args ++ .zeichen ")" :: .zeichen "{" :: (region ++ .zeichen "}" :: rest)))) hlne
+      (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e)
+    have hFn := nimmPfad_pfadToks function (.zeichen "(" :: (druckToksListe args ++ .zeichen ")" ::
+      .zeichen "{" :: (region ++ .zeichen "}" :: rest))) hfnne
+      (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e)
+    simp only [druckLibraryCall, parseLibRuf, List.append_assoc, List.cons_append, List.nil_append,
+      fordereZeichen, strEq_self, ↓reduceIte, hL, hFn, hA, hR]
 
 theorem anw_lcall (c : SLibraryCall) (hc : LibraryCallGut c) : AnwBein (.lcall c) := by
   intro rest F _ hF

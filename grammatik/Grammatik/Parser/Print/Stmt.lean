@@ -77,9 +77,10 @@ def druckWurzeln : List String → List Token
   | [p] => rohToks p
   | p :: ps => rohToks p ++ [.zeichen ","] ++ druckWurzeln ps
 
-/-- Print the actual arguments and retained input, with no synthesized argument values. -/
+/-- Print the actual arguments and retained input, with no synthesized argument values.
+    Paths print as `::` segments (`pfadToks`), the inverse of `nimmPfad` in `parseLibRuf`. -/
 def druckLibraryCall (c : SLibraryCall) : List Token :=
-  [.zeichen "@", nameTok c.library, .zeichen "#", nameTok c.function, .zeichen "("] ++
+  [.zeichen "@"] ++ pfadToks c.library ++ [.zeichen "#"] ++ pfadToks c.function ++ [.zeichen "("] ++
     druckToksListe c.args ++ [.zeichen ")", .zeichen "{"] ++ c.region ++ [.zeichen "}"]
 
 mutual

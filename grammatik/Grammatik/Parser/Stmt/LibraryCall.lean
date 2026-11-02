@@ -6,18 +6,19 @@ public import Grammatik.Parser.Expr.Typ
 
 namespace Gabbro.Grammatik.Parser
 
-/-- A lossless library call. The region is the balanced token sequence inside the outer braces;
-    its nested braces and token kinds are retained, without rendering and re-lexing the input.
-    Resolution rewrites paths and ordinary arguments, never the translator's input tokens. -/
+/-- A lossless library call. The library and function names are `::` paths (one segment for
+    an unqualified spelling); resolution rewrites each into its item key, never the translator's
+    input tokens. The region is the balanced token sequence inside the outer braces; its nested
+    braces and token kinds are retained, without rendering and re-lexing the input. -/
 structure SLibraryCall where
-  library : String
-  function : String
+  library : List String
+  function : List String
   args : List SExpr
   region : List Token
   deriving Repr
 
 def beqSLibraryCall (a b : SLibraryCall) : Bool :=
-  strEq a.library b.library && strEq a.function b.function &&
+  beqWorte a.library b.library && beqWorte a.function b.function &&
     beqSExprList a.args b.args && decide (a.region = b.region)
 
 /-- Collect a brace-balanced region, excluding its outer delimiters. Unlike `nimmBereich`,
