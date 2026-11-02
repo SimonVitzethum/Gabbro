@@ -113,12 +113,13 @@ theorem n1_ziel_atomar (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : 
 /-- **Non-degenerate: `konfig` is an admitted shared atomic** -- atomic, unguarded, read by
     `hauptA`'s footprint while `kern` writes it, in no contract. -/
 theorem n1_konfig_geteilt : GeteiltV nP n1ws (.inr NGlob.konfig) := by
-  refine ⟨⟨⟨_, rfl, rfl⟩, ⟨(fun (L : nD.Lock) _ => nomatch L), fun h => ?_⟩⟩, fun g => ?_⟩
+  refine ⟨⟨⟨_, rfl, rfl⟩, ⟨(fun (L : nD.Lock) _ => nomatch L), fun h => ?_⟩⟩, fun g => ?_, fun i _ => ?_⟩
   · have := h NFn.hauptA List.mem_cons_self NFn.kern
       (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
       (Or.inl (fun e => by cases e)) NFn.hauptA NFn.kern .wurzel (istIn_iff.mp (by decide)) .wurzel
     exact Bool.noConfusion this
   · cases g <;> exact ⟨List.not_mem_nil, List.not_mem_nil, List.not_mem_nil⟩
+  · cases i
 
 /-- **Non-degenerate: W's stale read happens on a covered run.** After `kern` wrote
     `konfig := 3`, W lets `hauptA` store the INITIAL `konfig` (0) into `tabA[0]`, where G on the

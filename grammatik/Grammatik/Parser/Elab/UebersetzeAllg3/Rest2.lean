@@ -196,7 +196,10 @@ theorem lowerInvGut_orte (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerIn
   intro c hc
   obtain ⟨hok, hr⟩ := lowerInvGut_facts u i h
   unfold invReadsOk at hr
-  have hc' : c ∈ invTraeger u i := of_decide_eq_true (List.all_eq_true.mp hr c hc)
+  have hc' : c ∈ invTraeger u i := by
+    have := List.all_eq_true.mp hr c hc
+    simp only [decide_eq_true_eq] at this
+    exact this
   show c ∈ traegerD u i
   rw [traegerD_of_ok u i hok]
   exact hc'

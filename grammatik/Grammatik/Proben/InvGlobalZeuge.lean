@@ -83,7 +83,7 @@ def cgD : Deklaration where
   Annahme := Unit
   a10 := ()
   geteilt_bewacht := fun _ _ => by decide
-  invarianten_gehalten := fun _ _ _ _ _ L _ => by cases L <;> decide
+  invarianten_gehalten := fun _ _ _ _ _ L _ => by cases L <;> simp [cgSig]
   ggeteilt_bewacht := fun _ _ => Or.inl (by decide)
 
 /-! ## 1. Who owes the invariant -/
@@ -103,11 +103,11 @@ theorem cg_nurGlob_schreibt_nur_global :
 
 /-- The writer of the global holds the TABLE's lock (the group's guard set). -/
 theorem cg_nurGlob_haelt_tabellensperre : false ∈ cgD.haelt CgFn.nurGlob :=
-  inv_schreiber_sperren CgFn.nurGlob () cg_schuldet_glob (Sum.inl ()) (by decide) false (by decide)
+  inv_schreiber_sperren (D := cgD) CgFn.nurGlob () cg_schuldet_glob (Sum.inl ()) (by decide) false (by decide)
 
 /-- The writer of the table holds the GLOBAL's lock. -/
 theorem cg_nurTab_haelt_globalsperre : true ∈ cgD.haelt CgFn.nurTab :=
-  inv_schreiber_sperren CgFn.nurTab () cg_schuldet_tab (Sum.inr ()) (by decide) true (by decide)
+  inv_schreiber_sperren (D := cgD) CgFn.nurTab () cg_schuldet_tab (Sum.inr ()) (by decide) true (by decide)
 
 /-! ## 3. The read set and the idle root -/
 
@@ -116,11 +116,11 @@ theorem cg_invSicht : invSicht cgD () = [Res.held false, Res.held true] := rfl
 /-- The guard of the GLOBAL carrier is in the invariant's read set. -/
 theorem cg_global_wache_sichtbar :
     ∃ c ∈ cgD.traeger (), Sum.inl true ∈ Sum.elim cgD.braucht cgD.gbraucht c :=
-  held_invSicht () true (by decide)
+  held_invSicht (D := cgD) () true (by decide)
 
 theorem cg_mitRuhe_traeger : cgD.mitRuhe.traeger () = [Sum.inl (), Sum.inr ()] := rfl
 
-theorem cg_mitRuhe_ruhe_schuldet : schuldet (D := cgD.mitRuhe) none () = false := schuldet_ruhe ()
+theorem cg_mitRuhe_ruhe_schuldet : schuldet (D := cgD.mitRuhe) none () = false := schuldet_ruhe (D := cgD) ()
 
 theorem cg_mitRuhe_invSicht :
     (invSicht cgD ()).map resR = invSicht cgD.mitRuhe () := invSicht_map ()
