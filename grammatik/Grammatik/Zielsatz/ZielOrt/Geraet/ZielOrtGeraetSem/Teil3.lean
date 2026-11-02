@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem.Teil2
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem.Teil2a
 
 @[expose] public section
 
