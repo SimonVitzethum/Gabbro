@@ -135,6 +135,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       exact blockSG body hb ho _ _ _ h
   | _, _, _, _, _, .traverse .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .consumeTraverse .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .retry .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .forever .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .axiomCall .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
@@ -144,6 +145,8 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       exact ⟨h1, h1.evalErg e ρ⟩
   | _, _, _, _, _, .retWhy .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retScoped .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retWhyScoped .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .leave .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .next .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
@@ -201,6 +204,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSG rest hr ho.2 _ _ _ h1)
       · exact EndSG.zuAusgang (endSG sonst hs ho.1 _ _ _ h1)
+  | _, _, _, _, _, .narrowRequired _ _ _ _, hb, _ => by cases hb
   | _, _, _, Λ₀, _, .check c sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
@@ -260,6 +264,8 @@ theorem endSG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       simp only [execEnd]
       exact ⟨h1, h1.evalErg e ρ⟩
   | _, _, _, .retWhy .., he, _ => by cases he
+  | _, _, _, .retScoped .., he, _ => by cases he
+  | _, _, _, .retWhyScoped .., he, _ => by cases he
   | _, _, _, .leave .., he, _ => by cases he
   | _, _, _, .next .., he, _ => by cases he
   | _, _, _, .cons s rest, he, ho => by
@@ -284,9 +290,10 @@ theorem endSG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       simp only [execEnd]
       rw [h1.eval e]
       exact EndSG.schrumpf (endSG rest hr ho _ _ _ h1)
+  | _, _, _, .narrowRequired _ _ _ _, he, _ => by cases he
 
 theorem armsSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     ArmsG A mr arms → arms.ohneOrakel = true → ∀ (v : Wert D (.sum cs)),
     SGB O passes (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

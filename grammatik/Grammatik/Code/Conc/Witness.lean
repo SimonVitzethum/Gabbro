@@ -94,7 +94,7 @@ def cLay : Layout cD where
   shared := fun _ => true
   fno := fun _ => 0
 
-def vC : Vertrag cD := ⟨fun _ => true, fun _ => true, none, 0, [], [], none⟩
+def vC : Vertrag cD := ⟨fun _ => true, fun _ => true, none, 0, [], [], none, {}⟩
 
 theorem pow_pos' [Conf] : (0 : Int) < 2 ^ Conf.wbits := by exact_mod_cast Nat.two_pow_pos _
 

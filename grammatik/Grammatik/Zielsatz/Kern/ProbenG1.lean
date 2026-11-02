@@ -26,10 +26,7 @@
   its call is the named stop `HaltArt.nieZurueck`, not a hardware stop.
 -/
 module
-public import Grammatik.Zielsatz.Kern.SpecProben
-public import Grammatik.Zielsatz.Kern.Akzeptiert
-public import Grammatik.Logik.Vertraege.EinpassenVoll
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -60,6 +57,10 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+import all Init.Data.Repr
 @[expose] public section
 
 
@@ -70,7 +71,7 @@ open Gabbro.Grammatik
 /-! ## 1. The declaration -/
 
 /-- The cases of `holen`'s result: `ok (0 .. 10)` and a bare `err`. -/
-abbrev g1Fall : List (Option (Int × Int)) := [some (0, 10), none]
+abbrev g1Fall : List (Option Ty) := [some (.int 0 10), none]
 
 /-- `holen`'s result: `ok (0 .. 10) | err` -- a payload case and a bare case. -/
 abbrev g1Erg : Ty := .sum g1Fall
@@ -84,49 +85,49 @@ def g1Sig : Signatur Empty Empty Empty Empty where
   erg := none
   gruende := 0
   haelt := []
-  schreibt := fun e => nomatch e
-  gschreibt := fun e => nomatch e
+  schreibt := fun e => (nomatch e)
+  gschreibt := fun e => (nomatch e)
   konsumiert := []
   produziert := []
 
 def g1D : Deklaration where
   Tab := Empty
   decTab := inferInstance
-  count := fun e => nomatch e
-  Feld := fun e => nomatch e
-  decFeld := fun e => nomatch e
-  typ := fun e => nomatch e
-  erlaubt := fun e => nomatch e
+  count := fun e => (nomatch e)
+  Feld := fun e => (nomatch e)
+  decFeld := fun e => (nomatch e)
+  typ := fun e => (nomatch e)
+  erlaubt := fun e => (nomatch e)
   tabNr := fun _ => none
   Glob := Empty
   decGlob := inferInstance
-  gtyp := fun e => nomatch e
-  nutzlast := fun e => nomatch e
-  atomar := fun e => nomatch e
-  geteilt := fun e => nomatch e
-  ggeteilt := fun e => nomatch e
+  gtyp := fun e => (nomatch e)
+  nutzlast := fun e => (nomatch e)
+  atomar := fun e => (nomatch e)
+  geteilt := fun e => (nomatch e)
+  ggeteilt := fun e => (nomatch e)
   Lock := Empty
   decLock := inferInstance
-  rang := fun e => nomatch e
-  maskiert := fun e => nomatch e
+  rang := fun e => (nomatch e)
+  maskiert := fun e => (nomatch e)
   Marke := Empty
   decMarke := inferInstance
-  stufen := fun e => nomatch e
-  braucht := fun e => nomatch e
-  gbraucht := fun e => nomatch e
-  eigner := fun e => nomatch e
+  stufen := fun e => (nomatch e)
+  braucht := fun e => (nomatch e)
+  gbraucht := fun e => (nomatch e)
+  eigner := fun e => (nomatch e)
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => g1Sig
-  eigner_nie_erzeugt := fun _ t => nomatch t
+  eigner_nie_erzeugt := fun _ t => (nomatch t)
   Inv := Empty
-  traeger := fun e => nomatch e
+  traeger := fun e => (nomatch e)
   invs := []
   Ax := Unit
   aparams := fun _ => []
   aerg := fun _ => some g1Erg
-  aschreibt := fun _ e => nomatch e
-  agschreibt := fun _ e => nomatch e
+  aschreibt := fun _ e => (nomatch e)
+  agschreibt := fun _ e => (nomatch e)
   Reg := Unit
   rtyp := fun _ => g1Temp
   rklasse := fun _ => .r
@@ -134,9 +135,9 @@ def g1D : Deklaration where
   rzusage := fun _ _ => true
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun e => nomatch e
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  geteilt_bewacht := fun e => (nomatch e)
+  invarianten_gehalten := fun _ i => (nomatch i)
+  ggeteilt_bewacht := fun e => (nomatch e)
 
 instance g1D_fn_deq : DecidableEq g1D.Fn := inferInstanceAs (DecidableEq Unit)
 
@@ -158,14 +159,14 @@ def g1RegStmt : Stmt g1D (vertragVon g1D g1Haupt) false [] [] [] :=
 /-- **Probe G1-A**: probe A's contract (`ensures false`) behind one call of an axiom with an
     `ok | err` result. -/
 def g1PA : Programm g1D where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons g1AxStmt (.ret .empty List.Perm.nil)
 
 /-- **Probe G1-R**: probe A's contract behind one read of a float register. -/
 def g1PR : Programm g1D where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons g1RegStmt (.ret .empty List.Perm.nil)
@@ -188,7 +189,7 @@ def g1O (w t : Int) : Orakel g1D where
   wirkt := fun _ σ _ => (σ, w)
   regLies := fun _ _ => t
   regSchreib := fun _ _ => ()
-  sichtbar := fun e => nomatch e
+  sichtbar := fun e => (nomatch e)
 
 theorem g1O_gut (w t : Int) : GutO (g1O w t) := fun _ σ _ =>
   ⟨Rahmen.refl _ _ σ, rfl, fun _ _ =>
@@ -241,7 +242,7 @@ theorem g1O_schief_vertrag (Q : AxEns g1D) (t : Int) : AxVertragO Q (g1O 3 t) :=
 theorem g1_holen_dekodiert (v : Wert g1D g1Erg) (t : Int) (σ : World g1D) :
     axiomAntwort (g1O (summeRoh g1Fall v) t) g1Holen σ .nil = (σ.fragt (.inl g1Holen), some v) := by
   show (σ.fragt (.inl g1Holen), summePasst g1Fall (summeRoh g1Fall v)) = (σ.fragt (.inl g1Holen), some v)
-  exact congrArg (Prod.mk (σ.fragt (.inl g1Holen))) (summePasst_voll g1Fall v)
+  exact congrArg (Prod.mk (σ.fragt (.inl g1Holen))) (summePasst_voll g1Fall v (by decide))
 
 /-! ## 4. Both directions -/
 
@@ -319,7 +320,7 @@ theorem g1PR_lauf (S : SperrInv g1D) (σ : World g1D) :
 theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     (hQ : ∃ (v : Wert g1D g1Erg) (σ₀ : World g1D), E.Q g1Holen σ₀ v = true) :
     ¬ NutzerPflicht E := by
-  obtain ⟨P, S, Q, st, s⟩ := E
+  obtain ⟨P, S, Q, st, s, _, _, _⟩ := E
   obtain rfl : P = g1PA := hP
   intro h
   obtain ⟨v, σ₀, hq⟩ := hQ

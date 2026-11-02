@@ -87,9 +87,9 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .intBuiltin2 _ a b => unendlich + 1 + groesseExpr a + groesseExpr b
   | _, _, _, .count _ body => unendlich + 1 + groesseExpr body
 
-def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → Nat
+def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, NutzlastExpr D Γ Λ o → Nat
   | _, _, _, .empty => 1
-  | _, _, _, .num e => 1 + groesseExpr e
+  | _, _, _, .val e => 1 + groesseExpr e
 end
 
 /-- The size of an argument list. -/
@@ -122,6 +122,9 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
   | _, _, _, _, .locks _ _ body => 1 + groesseBlock body
   | _, _, _, _, .breaking _ body => 1 + groesseBlock body
   | _, _, _, _, .traverse _ inv body => 1 + groesseExpr inv + groesseBlock body
+  | _, _, _, _, .consumeTraverse _ member edge inv bound mass body =>
+      unendlich + 1 + groesseExpr member + groesseExpr edge + groesseExpr inv +
+        Zahlen.kost bound + groesseExpr mass + groesseBlock body
   | _, _, _, _, .retry n bis body ueb =>
     1 + Zahlen.kostN n + groesseExpr bis + groesseBlock body + groesseBlock ueb
   | _, _, _, _, .forever _ inv body => 1 + groesseExpr inv + groesseBlock body
@@ -133,6 +136,8 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
   | _, _, _, _, .retires _ _ _ _ => 1
   | _, _, _, _, .ret e _ => 1 + groesseErg e
   | _, _, _, _, .retWhy _ _ => 1
+  | _, _, _, _, .retScoped e _ => unendlich + 1 + groesseErg e
+  | _, _, _, _, .retWhyScoped _ _ => unendlich + 1
   | _, _, _, _, .leave _ => 1
   | _, _, _, _, .next _ => 1
 
@@ -153,6 +158,9 @@ def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V 
   | _, _, _, _, .narrow e lo' hi' sonst rest =>
     1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' + Zahlen.kostT (.int lo' hi') + groesseEnd sonst +
       groesseBlock rest
+  | _, _, _, _, .narrowRequired e lo' hi' rest =>
+    unendlich + 1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' +
+      Zahlen.kostT (.int lo' hi') + groesseBlock rest
   | _, _, _, _, .check c sonst rest => 1 + groesseExpr c + groesseEnd sonst + groesseBlock rest
   | _, _, _, _, .float _ a b lo hi rest =>
     1 + groesseExpr a + groesseExpr b + groessePaar lo + groessePaar hi + Zahlen.kostT (.fl lo hi) + groesseBlock rest
@@ -167,6 +175,10 @@ def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V 
 def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ → Nat
   | _, _, _, .ret e _ => 1 + groesseErg e
   | _, _, _, .retWhy _ _ => 1
+  | _, _, _, .retScoped e _ => unendlich + 1 + groesseErg e
+  | _, _, _, .retWhyScoped _ _ => unendlich + 1
+  | _, _, _, .retScoped e _ => 1 + groesseErg e
+  | _, _, _, .retWhyScoped _ _ => 1
   | _, _, _, .leave _ => 1
   | _, _, _, .next _ => 1
   | _, _, _, .cons s rest => 1 + groesseStmt s + groesseEnd rest
@@ -181,10 +193,11 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
   -- the end-block forms of stage 0 are not drawn yet (TODO.md): their size lies beyond every bound
   | _, _, _, .narrow e _ _ sonst rest => unendlich + 1 + groesseExpr e + groesseEnd sonst + groesseEnd rest
+  | _, _, _, .narrowRequired e _ _ rest => unendlich + 1 + groesseExpr e + groesseEnd rest
   | _, _, _, .exchange _ neu _ _ rest => unendlich + 1 + groesseExpr neu + groesseEnd rest
   | _, _, _, .ite c t e => unendlich + 1 + groesseExpr c + groesseEnd t + groesseEnd e
 
-def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
+def groesseArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → Nat
   | _, _, _, _, _, .nil => 1
   | _, _, _, _, _, .cons b rest => 1 + groesseBlock b + groesseArms rest

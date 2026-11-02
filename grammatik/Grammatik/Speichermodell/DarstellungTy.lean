@@ -127,7 +127,7 @@ theorem encN_lt {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
   | never => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | fl _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | fnptr _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
-  | ptr _ _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | ptr _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | ref _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | arr _ _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | str _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
@@ -184,7 +184,7 @@ theorem decN_encN {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty
   | fnptr _ =>
       simp only [tyLo, encN, Gabbro.Grammatik.encW]
       rfl
-  | ptr _ _ =>
+  | ptr _ =>
       simp only [tyLo, encN, Gabbro.Grammatik.encW]
       rfl
   | ref _ =>

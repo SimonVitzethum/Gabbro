@@ -126,6 +126,8 @@ def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
   | _, _, _, _, .forever _ inv body, _, c =>
     let kk := loopCtx c (assignsB body)
     if checkExpression A kk inv && backB kk (chkB body kk kk) then some (some kk) else none
+  -- the C11 consuming loop has no ownership judgment yet: refused, never passed
+  | _, _, _, _, .consumeTraverse .., _, _ => none
   | _, _, _, _, .axiomCall a args _ _ _ _ _, _, c =>
     if decide (AxiomFree A a) && checkArguments A c args then some (some c) else none
   | _, _, _, _, .regWrite _ _ e, _, c => if checkExpression A c e then some (some c) else none
@@ -136,6 +138,9 @@ def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
   | _, _, _, _, .retires .., _, c => some (some c)
   | _, _, _, _, .ret e _, _, c => if out.check A c e then some none else none
   | _, _, _, _, .retWhy _ _, _, c => if finish c none then some none else none
+  -- scoped returns have no ownership judgment yet: refused, never passed
+  | _, _, _, _, .retScoped _ _, _, _ => none
+  | _, _, _, _, .retWhyScoped _ _, _, _ => none
   | _, _, _, _, .leave _, k, c => if exitsB k c then some none else none
   | _, _, _, _, .next _, k, c => if exitsB k c then some none else none
   | _, _, _, _, .assignSlotRef r t _ _ _ e _ _, _, c =>
@@ -198,6 +203,8 @@ def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
       else if exprGlob e == some A.kopf then mapR Context.drop (lst1B rest k c.bindFresh Γ.length)
       else none) else none
     orElseR shaped generic
+  -- required narrowing has no ownership judgment yet: refused, never passed
+  | _, _, _, _, .narrowRequired _ _ _ _, _, _ => none
   | _, _, _, _, .check cond sonst rest, k, c =>
     if checkExpression A c cond && chkE sonst k c then chkB rest k c else none
   | _, _, _, _, .float _ a b _ _ rest, k, c =>
@@ -243,11 +250,14 @@ def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l 
         (sigIface A I fs n).2)
   -- the end-block forms of stage 0 have no ownership judgment yet (`OE`, TODO.md): refused, never passed
   | _, _, _, .narrow .., _, _ => false
+  | _, _, _, .narrowRequired .., _, _ => false
+  | _, _, _, .retScoped .., _, _ => false
+  | _, _, _, .retWhyScoped .., _, _ => false
   | _, _, _, .exchange .., _, _ => false
   | _, _, _, .ite .., _, _ => false
 
 def chkArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → (k c : Context) → Out
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → (k c : Context) → Out
   | _, _, _, _, _, .nil, _, _ => some none
   | _, _, _, _, ca :: _, .cons b rest, k, c =>
     joinR (mapR (fun c1 => armDrop c1 ca) (chkB b k (armBind c ca))) (chkArms rest k c)

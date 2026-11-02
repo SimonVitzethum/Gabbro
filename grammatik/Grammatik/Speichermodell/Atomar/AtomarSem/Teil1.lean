@@ -122,6 +122,10 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       traverseLauf (fun σ ρ => execBlockHA body σ ρ)
         (fun σ ρ => let σ := leseA A σ Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (alleIndizes (D.count t)) σ ρ
+  | .consumeTraverse t _ _ inv _ _ body, σ, ρ =>
+      traverseLauf (fun σ ρ => execBlockHA body σ ρ)
+        (fun σ ρ => let σ := leseA A σ Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
+        (alleIndizes (D.count t)) σ ρ
   | .retry n bis body ueberlauf, σ, ρ =>
       retryLauf (fun σ ρ => execBlockHA body σ ρ)
         (fun σ ρ => let σ := leseA A σ Λ bis.orte; (σ, wahr? (eval σ bis σ ρ)))
@@ -152,6 +156,8 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let σ := leseA A σ Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhy r _, σ, _ => .why σ r
+  | .retScoped e _, σ, ρ => let σ := leseA A σ Λ e.orte; .zurueck σ (evalErg σ e σ ρ)
+  | .retWhyScoped r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
 
@@ -228,6 +234,11 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlockHA rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEndHA sonst σ ρ).zuAusgang
+  | .narrowRequired e lo' hi' rest, σ, ρ =>
+      let σ := leseA A σ Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlockHA rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else .logik .kapazitaet
   | .check c sonst rest, σ, ρ =>
       let σ := leseA A σ Λ c.orte
       if wahr? (eval σ c σ ρ) then execBlockHA rest σ ρ else (execEndHA sonst σ ρ).zuAusgang
@@ -257,6 +268,8 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := leseA A σ Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhy r _, σ, _ => .why σ r
+  | .retScoped e _, σ, ρ => let σ := leseA A σ Λ e.orte; .zurueck σ (evalErg σ e σ ρ)
+  | .retWhyScoped r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
   | .cons s rest, σ, ρ =>
@@ -330,6 +343,11 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEndHA rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEndHA sonst σ ρ)
+  | .narrowRequired e lo' hi' rest, σ, ρ =>
+      let σ := leseA A σ Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEndHA rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else .logik .kapazitaet
   | .exchange g neu _ _ rest, σ, ρ =>
       let σ := leseA A σ Λ (.inr g :: neu.orte)
       let alt := σ.globs g
@@ -338,7 +356,7 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := leseA A σ Λ c.orte
       if wahr? (eval σ c σ ρ) then execEndHA t σ ρ else execEndHA e σ ρ
 
-def execArmsHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def execArmsHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
   | .cons b _, ⟨⟨0, _⟩, nutz⟩, σ, ρ => (execBlockHA b σ (armEnv nutz ρ)).schrumpfArm _
   | .cons _ rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>

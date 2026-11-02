@@ -187,6 +187,9 @@ theorem stmtS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ Λ)
       stm (sTraverse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) <|
         Sz.mem_bindR (mem_tyS hi) (mem_ofTy hb) <| Sz.mem_pure _) (by omega)
     · glfertig
+  | consumeTraverse _ _ _ _ _ _ _ => simp only [groesseStmt] at hu; omega
+  | retScoped _ _ => simp only [groesseStmt] at hu; omega
+  | retWhyScoped _ _ => simp only [groesseStmt] at hu; omega
   | retry n bis body ueb =>
     simp only [groesseStmt] at hu hE hB hO
     obtain ⟨bis', hbis, ⟨_, _⟩⟩ := hE _ bis (by omega)

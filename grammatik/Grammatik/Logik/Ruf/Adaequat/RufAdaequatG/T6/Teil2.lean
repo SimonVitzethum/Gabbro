@@ -20,6 +20,7 @@ def Stmt.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .locks _ _ body => body.ohneOrakel
   | .breaking _ body => body.ohneOrakel
   | .traverse _ _ body => body.ohneOrakel
+  | .consumeTraverse _ _ _ _ _ _ body => body.ohneOrakel
   | .retry _ _ body u => body.ohneOrakel && u.ohneOrakel
   | .forever _ _ body => body.ohneOrakel
   | .axiomCall .. => false
@@ -40,6 +41,7 @@ def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .awaits .. => false
   | .exchange _ _ _ _ rest => rest.ohneOrakel
   | .narrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .narrowRequired _ _ _ rest => rest.ohneOrakel
   | .check _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
   | .float _ _ _ _ _ rest => rest.ohneOrakel
   | .floatLit _ _ _ rest => rest.ohneOrakel
@@ -50,6 +52,8 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.ohneOrakel && rest.ohneOrakel
@@ -63,11 +67,12 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .awaits .. => false
   | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
   | .narrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
+  | .narrowRequired _ _ _ rest => rest.ohneOrakel
   | .exchange _ _ _ _ rest => rest.ohneOrakel
   | .ite _ t e => t.ohneOrakel && e.ohneOrakel
 
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.ohneOrakel && rest.ohneOrakel
 
@@ -79,7 +84,7 @@ def GrundArms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
 end
 /-- `armWahlG` selects an oracle-free arm of oracle-free arms. -/
 theorem armWahlG_ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.ohneOrakel = true → (armWahlG arms v).2.1.ohneOrakel = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by

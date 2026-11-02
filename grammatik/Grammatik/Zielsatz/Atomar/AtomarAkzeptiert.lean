@@ -33,6 +33,7 @@ public import Grammatik.Zielsatz.Atomar.AtomarInvarianten
 public import Grammatik.Zielsatz.Atomar.AtomarMasken
 public import Grammatik.Zielsatz.Atomar.AtomarPflicht
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -77,19 +78,31 @@ section Spec
 
 variable [DecidableEq D.Fn]
 
-/-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.** -/
+/-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.**
+    The checks ride along unchanged (the admission is over the same program). -/
 theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    (h : AkzeptiertSpec P S fs ws) : AkzeptiertSpecX P S fs ws [] :=
+    {A : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A) :
+    AkzeptiertSpecX P S fs ws [] A :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
-    h.einzeln, h.renn, h.antworten, h.masken, (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    h.einzeln, h.renn, h.antworten, h.masken, (fun _ h => nomatch h), (fun _ h => nomatch h), h.bibliothek,
+    h.akku, h.checks, h.pruef, h.reset⟩
 
 /-- **The ownership judgment added to the checker's facts**: the facts of `AkzeptiertSpecX` that
     do not read the arenas hold for every arena list. -/
 theorem AkzeptiertSpecX.mitBesitz {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    {B B' : List (ArenaOwnership.Body.ArenaIface D)} (h : AkzeptiertSpecX P S fs ws B)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (h : AkzeptiertSpecX P S fs ws B A)
     (hb : ∀ a ∈ B', ArenaOwnership.Body.Checked P a.A a.I)
-    (hw : ∀ a ∈ B', ArenaOwnership.Machine.ArenaPlain a.A) : AkzeptiertSpecX P S fs ws B' :=
+    (hw : ∀ a ∈ B', ArenaOwnership.Machine.ArenaPlain a.A) : AkzeptiertSpecX P S fs ws B' A :=
   { h with besitz := hb, worte := hw }
+
+/-- **The accumulator admission added to the checker's facts**: the facts of `AkzeptiertSpecX`
+    that do not read the accumulators hold for every accumulator list. -/
+theorem AkzeptiertSpecX.mitAkku {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A A' : List (Kernzelle.AccumulatorDecl D)}
+    (h : AkzeptiertSpecX P S fs ws B A)
+    (ha : Kernzelle.AccumulatorAdmission P fs A') : AkzeptiertSpecX P S fs ws B A' :=
+  { h with akku := ha }
 
 variable {P : Programm D} {S : SperrInv D} {Q : AxEns D} {fs ws : List D.Fn}
 
@@ -107,7 +120,8 @@ theorem fragX_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (h : programmImFragmentG P fs 
 /-- **An admitted shared atomic is stable nowhere**: it is not a signature-guarded carrier
     (unguarded), not thread-local (`lokW` is `Getrennt`, which is `GetrenntR` on closed graphs),
     and in no lock's carriers (`sperrOrte`). -/
-theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B)
+theorem geteiltV_nicht_stabil (hvoll : ∀ g : D.Fn, g ∈ fs) {B : List (ArenaOwnership.Body.ArenaIface D)}
+    {A : List (Kernzelle.AccumulatorDecl D)} (hA : AkzeptiertSpecX P S fs ws B A)
     {c : D.Tab ⊕ D.Glob} (hc : GeteiltV P ws c) (f : D.Fn) (Λ : List (Res D)) :
     c ∉ stabilS P S (lokW P fs ws) f Λ := by
   obtain ⟨⟨_, hB, hR⟩, _⟩ := hc
@@ -150,7 +164,8 @@ structure ZielAtomar (P : Programm D) (S : SperrInv D) (O : Orakel D) (passes : 
     satisfies `ZielAtomar` over `GeteiltV`. -/
 theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
-    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (ord : D.Glob → Ordnung) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init) :
     ∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W →
@@ -185,22 +200,13 @@ theorem ziel_atomar_spec (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : L
     sp init hH.1 hH.2.1 hH.2.2 hN.2.2 hS hvoll (fun t => hA.abg _)
     (fun t => reachB_wurzel P fs _) hTA hTV hTS hTO (fragX_ok hvoll hA.frag hA.fuss) hA.fuss
     hlokK hK hI hIG hZ.req hZ.sperren hex (fun t => (hW t).2) W.g hZW.erreicht
-  exact { hZW with
-    invRuhe := hInv.1
-    invSicht := hInv.2.1
-    sperrWechsel := hInv.2.2.1
-    sperrSicht := hInv.2.2.2
-    rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt =>
-      rennfreiGA hH.1 hvoll sp init hex (kVon P fs init) (fun t => hA.abg _)
-        (fun t => reachB_wurzel P fs _)
-        (fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt))
-        ms fs' n hl i j c hij hjn hfg hzi hzj hw hAt
-    keinKernHalt := kernHaltGA_gilt P O passes _ _ }
+  exact { hZW with invRuhe := hInv.1 invSicht := hInv.2.1 sperrWechsel := hInv.2.2.1 sperrSicht := hInv.2.2.2 rennfrei := fun ms fs' n hl _ i j c hij hjn hfg hzi hzj hw hAt => rennfreiGA hH.1 hvoll sp init hex (kVon P fs init) (fun t => hA.abg _) (fun t => reachB_wurzel P fs _) (fun c hB hAt => schreibGetrenntK_of hZ hA.einzeln hB hAt (hA.renn c hB hAt)) ms fs' n hl i j c hij hjn hfg hzi hzj hw hAt keinKernHalt := kernHaltGA_gilt P O passes _ _ }
 
 /-- **Race freedom with shared atomics, on every run of W**: two accesses by different threads
     to a NON-atomic carrier, one a write, are ordered through a guard lock. -/
 theorem rennfrei_atomar_spec (P : Programm D) (S : SperrInv D) {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn) {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B)
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn) {B : List (ArenaOwnership.Body.ArenaIface D)}
+    {A : List (Kernzelle.AccumulatorDecl D)} (hA : AkzeptiertSpecX P S fs ws B A)
     (O : Orakel D) (hO : GutO O) (passes : Nat) (ord : D.Glob → Ordnung) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (Ws : Nat → RufMaschineW D) (ts : Nat → Faden) (n : Nat)
@@ -254,7 +260,7 @@ theorem vertragsFreiB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) {c : D.Tab ⊕ D.Glob}
   refine ⟨fun g => ?_, fun i hi hc => ?_⟩
   · have h1 := (List.all_eq_true.mp hg) g (hvoll g)
     simp only [Bool.and_eq_true, Bool.not_eq_true'] at h1
-    obtain ⟨⟨h1, h2⟩, h3⟩ := h1
+    obtain ⟨⟨⟨h1, h2⟩, h3⟩ := h1
     refine ⟨fun hc => ?_, fun hc => ?_, fun hc => ?_⟩
     · rw [istIn_iff.mpr hc] at h1; cases h1
     · rw [istIn_iff.mpr hc] at h2; cases h2
@@ -276,12 +282,14 @@ def fussWXB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
         geteiltVB P fs c) &&
     ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || getrenntW P fs ws c)
 
-/-- **The checker with the atomic rely**: `Akzeptiert` with `fussWXB` in place of `fussWB`. -/
+/-- **The checker with the atomic rely**: `Akzeptiert` with `fussWXB` in place of `fussWB`.
+    The C02 library conjunct rides along unchanged (`libraryB_immer`). -/
 def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
+    (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs
+    antwortenB P fs && maskenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs cs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
@@ -309,18 +317,23 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
         cases this
     · exact Or.inl (by simp only [Bool.or_true])
 
-/-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. -/
+/-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. The value
+    carries the Bool's checks. The reverse (`akzeptiertX_of_spec` below) needs only
+    `FussSX`-completeness of `fussWXB` (`fussWXB_vollstaendig`), proved here from the
+    decided thread-locality, the guard table and the admitted shared atomics. -/
 theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : AkzeptiertX P S fs ls cs ws = true) :
-    AkzeptiertSpecX P S fs ws [] := by
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D))
+    {checks : List (CheckDecl D)} (h : AkzeptiertX P S fs ls cs ws aks checks = true) :
+    AkzeptiertSpecX P S fs ws [] aks := by
   unfold AkzeptiertX at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact ⟨h1, hAbg, fussWXB_ok hvoll hAbg h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
     (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
-    (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    (fun _ h => nomatch h), (fun _ h => nomatch h), (libraryB_iff _ _).mp h11,
+    (Kernzelle.accumulatorB_iff hvoll hcs).mp h12, checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h13, (resetB_iff hcs).mp h14⟩
 
 /-- The old footprint component implies the new one. -/
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by
@@ -333,13 +346,85 @@ theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = tr
   exact Or.inl h2
 
 /-- **EMBEDDING, as Bools: every unit the goal's checker accepts, `AkzeptiertX` accepts.** -/
-theorem akzeptiertX_of_akzeptiert (h : Akzeptiert P S fs ls cs ws = true) :
-    AkzeptiertX P S fs ls cs ws = true := by
+theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
+    {checks : List (CheckDecl D)} (h : Akzeptiert P S fs ls cs ws aks checks = true) :
+    AkzeptiertX P S fs ls cs ws aks checks = true := by
   unfold Akzeptiert at h
   unfold AkzeptiertX
   simp only [Bool.and_eq_true] at h ⊢
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
-  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, hReset⟩, h11⟩, h12⟩, h13⟩ := h
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, hReset⟩
+
+/-- A contract-free carrier decides `vertragsFreiB`: no `requires`, no `ensures`, no
+    owed invariant mentions it. Needs no member list: the decided conjunction runs
+    over the given one. -/
+theorem vertragsFreiB_vollstaendig {c : D.Tab ⊕ D.Glob}
+    (h : VertragsFrei P c) : vertragsFreiB P fs c = true := by
+  unfold vertragsFreiB
+  refine List.all_eq_true.mpr fun g _ => ?_
+  obtain ⟨h1, h2, h3⟩ := h g
+  have e1 : !(istIn (P.requires g).orte c) = true := by
+    cases he : istIn (P.requires g).orte c with
+    | true => exact absurd (istIn_iff.mp he) h1
+    | false => rfl
+  have e2 : !(istIn (P.ensures g).orte c) = true := by
+    cases he : istIn (P.ensures g).orte c with
+    | true => exact absurd (istIn_iff.mp he) h2
+    | false => rfl
+  have e3 : !(istIn (invOrteP P g) c) = true := by
+    cases he : istIn (invOrteP P g) c with
+    | true => exact absurd (istIn_iff.mp he) h3
+    | false => rfl
+  simp only [Bool.and_eq_true]
+  exact ⟨⟨e1, e2⟩, e3⟩
+
+/-- **The footprint component with the admitted shared atomics is complete**: from
+    `FussSX` over the admitted shared atomics, every footprint carrier is decided --
+    signature-guarded or thread-local, lock-guarded, or an admitted shared atomic. -/
+theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hF : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f) : fussWXB P S fs ws = true := by
+  unfold fussWXB
+  refine List.all_eq_true.mpr fun f _ => ?_
+  rw [Bool.and_eq_true]
+  have e : ∀ c : D.Tab ⊕ D.Glob, getrenntW P fs ws c = lokW P fs ws c :=
+    fun c => congrFun (getrenntW_eq_lokW hvoll) c
+  refine ⟨List.all_eq_true.mpr fun c hc => ?_, List.all_eq_true.mpr fun c hc => ?_⟩
+  · rcases (hF f).1 c hc with h | ⟨L, hB, hL⟩ | hGt
+    · rw [(e c).symm] at h
+      simp only [Bool.or_eq_true]
+      exact Or.inl (Or.inl ((Bool.or_eq_true).mp h))
+    · simp only [Bool.or_eq_true]
+      exact Or.inl (Or.inr (List.any_eq_true.mpr ⟨L, waechterVon_mem.mpr hB, istIn_iff.mpr hL⟩))
+    · obtain ⟨⟨ha, hG⟩, hV⟩ := hGt
+      have hempty : waechterVon c = [] :=
+        List.eq_nil_iff_forall_not_mem.mpr (fun L hL => hG L (waechterVon_mem.mp hL))
+      have hg : geteiltVB P fs c = true := by
+        unfold geteiltVB
+        simp only [Bool.and_eq_true]
+        refine ⟨⟨atomarB_iff.mpr ha, ?_⟩, vertragsFreiB_vollstaendig hV⟩
+        rw [hempty]
+        rfl
+      simp only [Bool.or_eq_true]
+      exact Or.inr hg
+  · have h := (hF f).2 c hc
+    rw [(e c).symm] at h
+    exact h
+
+/-- **The reverse direction**: `AkzeptiertSpecX` gives `AkzeptiertX`, at the value's own
+    checks. The footprint needs exactly the completeness above; every other component
+    already decides both ways. The arena fields are dropped: the Bool has none. -/
+theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : List (ArenaOwnership.Body.ArenaIface D)}
+    {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks) :
+    AkzeptiertX P S fs ls cs ws aks h.checks = true := by
+  unfold AkzeptiertX
+  simp only [Bool.and_eq_true]
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, fussWXB_vollstaendig hvoll h.fuss⟩,
+    (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
+    wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
+    (rennB_iff hvoll hcs).mpr h.renn⟩, (antwortenB_iff hvoll).mpr h.antworten⟩,
+    (maskenB_iff hvoll).mpr h.masken⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku⟩,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩, (resetB_iff hcs).mpr h.reset⟩
 
 end Bool
 

@@ -43,6 +43,9 @@ def stmtKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => blockKanten body
   | .breaking _ body => blockKanten body
   | .traverse _ _ body => blockKanten body
+  | .consumeTraverse _ _ _ _ _ _ body => blockKanten body
+  | .retScoped _ _ => []
+  | .retWhyScoped _ _ => []
   | .retry _ _ body ueber => blockKanten body ++ blockKanten ueber
   | .forever _ _ body => blockKanten body
   | .axiomCall _ _ _ _ _ _ _ => []
@@ -53,6 +56,8 @@ def stmtKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires _ _ _ _ => []
   | .ret _ _ => []
   | .retWhy _ _ => []
+  | .retScoped _ _ => []
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
 
@@ -76,6 +81,7 @@ def blockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .exchange _ _ _ _ rest => blockKanten rest
   | .narrow _ _ _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
+  | .narrowRequired _ _ _ rest => blockKanten rest
   | .check _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
   | .float _ _ _ _ _ rest => blockKanten rest
@@ -89,6 +95,8 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List D.Fn
   | .ret _ _ => []
   | .retWhy _ _ => []
+  | .retScoped _ _ => []
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
   | .cons s rest => stmtKanten s ++ endblockKanten rest
@@ -104,12 +112,13 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => endblockKanten rest
   | .bindCallInd _ _ _ _ _ rest => endblockKanten rest
   | .narrow _ _ _ sonst rest => endblockKanten sonst ++ endblockKanten rest
+  | .narrowRequired _ _ _ rest => endblockKanten rest
   | .exchange _ _ _ _ rest => endblockKanten rest
   | .ite _ t e => endblockKanten e ++ endblockKanten t
 
 /-- Die direkten Rufe der Fallunterscheidung. -/
 def armsKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List D.Fn
   | .nil => []
   | .cons b rest => blockKanten b ++ armsKanten rest

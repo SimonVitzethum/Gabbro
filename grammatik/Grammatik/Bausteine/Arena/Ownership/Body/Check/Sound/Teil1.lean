@@ -124,7 +124,7 @@ variable {A : FreiForm D} {I : Interfaces A} {fs : List D.Fn} {V : Vertrag D} {o
 
 /-! ## 2. Weakening the arms -/
 
-theorem OArms.weaken : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem OArms.weaken : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {k c c' z : Context} {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' → Weaker z c' →
       OArms A I out k c arms z
   | _, _, _, _, _, _, _, _, _, _, .nil, _ => OArms.nil

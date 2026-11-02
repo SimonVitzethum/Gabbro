@@ -82,6 +82,10 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execStmt]
       exact traverseLauf_obj hlen _ _ (fun σ ρ h => block_obj body hok σ ρ (hlen.cons _) h)
         (fun _ _ => slotRahmen_gleich rfl) _ σ ρ hinv
+  | .consumeTraverse t member edge inv bound mass body, hok, σ, ρ, hlen, hinv => by
+      simp only [execStmt]
+      exact traverseLauf_obj hlen _ _ (fun σ ρ h => block_obj body hok σ ρ (hlen.cons _) h)
+        (fun _ _ => slotRahmen_gleich rfl) _ σ ρ hinv
   | .retry n bis body ueberlauf, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
       exact retryLauf_obj _ _ _ (fun σ ρ h => block_obj body hok.1 σ ρ hlen h)
@@ -117,6 +121,12 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execStmt]
       exact slotRahmen_gleich rfl
   | .retWhy .., _, σ, ρ, _, _ => by
+      simp only [execStmt]
+      exact SlotRahmen.refl _ _
+  | .retScoped e _, _, σ, ρ, _, _ => by
+      simp only [execStmt]
+      exact slotRahmen_gleich rfl
+  | .retWhyScoped .., _, σ, ρ, _, _ => by
       simp only [execStmt]
       exact SlotRahmen.refl _ _
   | .leave _, _, σ, ρ, _, hinv => by
@@ -216,6 +226,12 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       · exact ObjA.vor (slotRahmen_gleich rfl)
           (block_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · exact ObjA.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv).zuAusgang
+  | .narrowRequired e lo' hi' rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execBlock]
+      split
+      · exact ObjA.vor (slotRahmen_gleich rfl)
+          (block_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
   | .check c sonst rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
@@ -253,6 +269,12 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEnd]
       exact slotRahmen_gleich rfl
   | .retWhy .., _, σ, ρ, _, _ => by
+      simp only [execEnd]
+      exact SlotRahmen.refl _ _
+  | .retScoped e _, _, σ, ρ, _, _ => by
+      simp only [execEnd]
+      exact slotRahmen_gleich rfl
+  | .retWhyScoped .., _, σ, ρ, _, _ => by
       simp only [execEnd]
       exact SlotRahmen.refl _ _
   | .leave _, _, σ, ρ, _, hinv => by
@@ -342,6 +364,12 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · exact ObjE.vor (slotRahmen_gleich rfl)
           (end_obj rest hok.2 _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj sonst hok.1 _ ρ hlen hinv)
+  | .narrowRequired e lo' hi' rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · exact ObjE.vor (slotRahmen_gleich rfl)
+          (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
   | .exchange g neu hw hL rest, hok, σ, ρ, hlen, hinv => by
       simp only [execEnd]
       exact ObjE.vor (slotRahmen_gleich rfl)
@@ -353,7 +381,7 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       · exact ObjE.vor (slotRahmen_gleich rfl) (end_obj e hok.2 _ ρ hlen hinv)
 
 theorem arms_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     ∀ (arms : Arms D V l Γ Λ Λ' cs), oA objs ps arms → ∀ (v : Wert D (.sum cs)) (σ : World D)
     (ρ : Env D Γ), LenOk ps Γ → ObjInv W ps ρ → ObjA W ps σ (execArms O passes R arms v σ ρ)
   | .cons b _, hok, ⟨⟨0, _⟩, nutz⟩, σ, ρ, hlen, hinv =>

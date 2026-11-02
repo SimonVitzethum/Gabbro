@@ -62,7 +62,7 @@ def uBreite (ctx : UCtx) : SExpr → Option Nat
       match uParamNr ctx b with
       | .ok j =>
         match uArtBei ctx.kinds j with
-        | .ok (.ptr num _) => (ctx.tabs[num]?).bind (fun tb => uFeldBreite tb f)
+        | .ok (.ptr ⟨_, _, .table num⟩) => (ctx.tabs[num]?).bind (fun tb => uFeldBreite tb f)
         | _ => none
       | .error _ => (ctx.tabs.find? (fun x => strEq x.name b)).bind (fun tb => uFeldBreite tb f)
   | .index (.variable b) _ =>

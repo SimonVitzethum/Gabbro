@@ -210,7 +210,8 @@ theorem pool_abgelehnt_einmal_ok : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHau
   mP_akzeptiert
 
 /-- The refusal at the specification: no `AkzeptiertSpec` for the doubled `hauptB`. -/
-theorem pool_abgelehnt_spec : ¬ AkzeptiertSpec mP mSI mFs [mHauptB, mHauptB] := fun h =>
+theorem pool_abgelehnt_spec {A : List (Kernzelle.AccumulatorDecl mD)} :
+    ¬ AkzeptiertSpec mP mSI mFs [mHauptB, mHauptB] A := fun h =>
   absurd (h.einzeln mHauptB (List.Sublist.refl _)) pool_abgelehnt.2.2.2
 
 /-- **The footprint component pairs OCCURRENCES** (fix lane F10, `Getrennt` with
@@ -246,7 +247,7 @@ theorem pool_schreibt_nicht_voll :
     rw [hw] at e
     exact List.not_mem_nil e
   have hAt : ¬ AtomarAusgenommen (.inl MTab.privA : mD.Tab ⊕ mD.Glob) := fun ⟨g, _, _⟩ =>
-    nomatch g
+    (nomatch g)
   refine ⟨hpool, hB, hAt, rfl, fun g hg => ?_⟩
   exact pool_schreibt_nicht (init := fun _ => ⟨mPruefeA, .nil⟩) (t := 0) rfl hpool hB hAt
     (by unfold kVon; exact hg)

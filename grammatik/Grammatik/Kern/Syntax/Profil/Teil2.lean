@@ -210,11 +210,13 @@ theorem bindung_fuegt_nichts_hinzu_zeuge (m : ModusBelegung)
      exactly the half delivered.
    - Same-name checking as `Bool`: no `pruefeName` boolean is provided, since
      content equality over prose `Prop`s is not computable; the name half of
-     `Profil.gut` is only stated, not decided.
-   - No wiring into the program theorem: `profil_modell` builds the mode
-     assignment, but no goal theorem takes the profile as its assumption set
-     yet -- that is the E6 remainder (library call syntax, translator
-     declarations live in other lanes).
+     `Profil.gut` is only stated, not decided. (C14: the free-entry case now
+     asks equivalence at every world; the source-derived identity of an
+     `assume` is decided over the finite registry of `Parser/Profil/Register`.)
+   - Wiring into the program theorem (C14): `Zielsatz/Projekte/Profil.lean`
+     states `GabbroZielProfil` for the selected unit; the free-prose entries
+     stay outside Lean (named by their registry entry, never `erfuellt = True`
+     as a proof of hardware).
    - Free-prose assumptions carry no falsifier probe here: the entry stores
      the claim as a field, but the manifest/probe bookkeeping of §0c point 5
      is not modelled.

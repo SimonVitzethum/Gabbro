@@ -88,7 +88,9 @@ def uSumPlatz (ctx : UCtx) (e : SExpr) : Except String (USVal × Nat) :=
     | none => .error "match without G form"
     | some (_, k) =>
       match b with
-      | .thru p => .ok (.slot p f ix, k)
+      | .thru p => do
+        uReadThrough ctx p
+        pure (.slot p f ix, k)
       | .tabelle t => .ok (.tab t f ix, k)
 
 

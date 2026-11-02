@@ -18,6 +18,8 @@ theorem kostenBlock_alsBlock :
       kostenBlock c pa e.alsBlock.2 = kostenSonst c pa e
   | _, _, .ret _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
   | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
+  | _, _, .retScoped _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
+  | _, _, .retWhyScoped _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .leave _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .next _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .cons s rest => by
@@ -42,6 +44,8 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .narrowRequired _ _ _ rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .ite _ t _ => by
@@ -53,6 +57,8 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
       rufeB Z ZS EW e.alsBlock.2 = rufeE Z ZS EW e
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -77,6 +83,8 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .narrowRequired _ _ _ rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .ite _ t _ => by
@@ -87,7 +95,7 @@ end Positiv
 
 theorem kostenBlock_armWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     kostenBlock c pa (armWahlG arms v).2.1 ≤ kostenArms c pa arms
   | _, .nil, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩ => by
@@ -98,7 +106,7 @@ theorem kostenBlock_armWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : 
 
 theorem rufeB_armWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     rufeArms Z ZS EW arms = true → rufeB Z ZS EW (armWahlG arms v).2.1 = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by
@@ -140,6 +148,7 @@ theorem alleIndizes_length_toNat (n : Int) : (alleIndizes n).length ≤ n.toNat 
   rw [List.length_range] at h
   exact h
 
+set_option hygiene false in
 /-! ## 5. One own step of the head
 
     Every step of thread `f` is one of three kinds (`schrittArt`):
@@ -155,7 +164,6 @@ theorem alleIndizes_length_toNat (n : Int) : (alleIndizes n).length ≤ n.toNat 
     `ZS = fun _ => false` an indirect-call push falls in (B) only
     vacuously: its residue fails `rufeR`. -/
 
-set_option hygiene false in
 /-- Case (A) of `schrittArt`: rewrite the new head and the old head into
     their residues and unfold the costs. -/
 macro "kopfA" : tactic => `(tactic| (

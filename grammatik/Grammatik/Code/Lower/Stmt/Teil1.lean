@@ -46,10 +46,10 @@ def cvtM (τ : GTy) (o : Opd) (r : Nat) : Option LR :=
   match τ with
   | .bool => some ([.cast r .zext (.int 1) (.int 8) o], .reg r, r + 1)
   | .int lo hi => if Ar.Fits lo hi 128 then some ([], o, r) else none
-  | .ptr _ _ => some ([], o, r)
+  | .ptr _ => some ([], o, r)
   | .opt n => if Ar.Fits (-1) (n - 1) 128 then some ([], o, r) else none
   | .why n => if Ar.Fits 0 ((n : Int) - 1) 128 then some ([], o, r) else none
-  | .sum cs => if Ar.Fits 0 (sumTop cs) 128 then some ([], o, r) else none
+  | .sum cs => if supp (.sum cs) then some ([], o, r) else none
   | _ => none
 
 /-- `store` of a value (already in its memory image) to a pointer operand. -/

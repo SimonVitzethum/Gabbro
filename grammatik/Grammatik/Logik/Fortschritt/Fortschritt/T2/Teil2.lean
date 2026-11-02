@@ -176,8 +176,8 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             match hw : armWahlG arms (eval ((M.weltVon t).lese Λ v.orte) v
                 ((M.weltVon t).lese Λ v.orte) ρ) with
             | ⟨none, b', nutz⟩ => exact fort_schritt (w_tagNone rfl v arms rest k ρ hx b' nutz hw hΛ)
-            | ⟨some (lo, hi), b', nutz⟩ =>
-                exact fort_schritt (w_tagSome rfl v arms rest k ρ hx lo hi b' nutz hw hΛ)
+            | ⟨some τ, b', nutz⟩ =>
+                exact fort_schritt (w_tagSome rfl v arms rest k ρ hx τ b' nutz hw hΛ)
         | onWhy r arms => exact fort_schritt (w_grund rfl r arms rest k ρ hx hΛ)
         | call g args hp hr => exact fort_schritt (w_rufDann rfl g args hp hr rest k ρ hx hΛ)
         | callInd p args hp hr =>

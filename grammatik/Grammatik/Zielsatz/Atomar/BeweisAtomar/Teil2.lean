@@ -124,7 +124,8 @@ variable [DecidableEq D.Fn]
     carrier is signature-guarded, lock-protected or thread-local (`FussS`), so no carrier is read
     by one start while another writes it without a guard. -/
 theorem geteiltA_leer {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hA : AkzeptiertSpec P S fs ws) (c : D.Tab ⊕ D.Glob) : ¬ GeteiltA P ws c := by
+    {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs ws A) (c : D.Tab ⊕ D.Glob) : ¬ GeteiltA P ws c := by
   rintro ⟨_, hB, hR⟩
   apply hR
   intro w₁ hw₁ w₂ hw₂ hne f g hf hcf hg
@@ -143,7 +144,8 @@ theorem geteiltA_leer {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
   · exact lokal ((hA.fuss f).2 c hc)
 
 theorem geteiltV_leer {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hA : AkzeptiertSpec P S fs ws) (c : D.Tab ⊕ D.Glob) : ¬ GeteiltV P ws c :=
+    {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs ws A) (c : D.Tab ⊕ D.Glob) : ¬ GeteiltV P ws c :=
   fun h => geteiltA_leer hvoll hA c h.1
 
 end Einbettung
@@ -154,9 +156,11 @@ end Einbettung
     (`fadenErreichbarX_of`), and such a unit has no admitted shared atomic (`geteiltV_leer`), so
     `ZielFX` there is `ZielF` (`zielF_of_X`). Since 2026-10-24 for every unit of before: one
     without an arena (`hB`); `Pruefer.alsX` adds the ownership acceptance, which such a unit passes.
+    Since 2026-11-02 (C15) for every unit without an accumulator (`hA`); `Pruefer.alsX` adds the
+    accumulator admission and neutral initialization, which such a unit passes vacuously.
     On a unit WITH an arena the statement of before is `gabbro_ziel_sc` (proved directly). -/
 theorem gabbro_ziel_sc_aus (h : GabbroZiel) (C : Pruefer) (D : Deklaration) [DecidableEq D.Fn]
-    (E : Einheit D) (hB : E.arenen = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
+    (E : Einheit D) (hB : E.arenen = []) (hA : E.akku = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock)
     (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
@@ -164,7 +168,7 @@ theorem gabbro_ziel_sc_aus (h : GabbroZiel) (C : Pruefer) (D : Deklaration) [Dec
     (hK : FadenErreichbar E.P.mitRuhe O.mitRuhe passes (FadenStart E.P.mitRuhe sp init lebt0) K) :
     ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K := by
   have hA0 := C.korrekt E fs ls cs hC
-  have hZ := h C.alsX D E fs ls cs (C.alsX_akzeptiert hB hC) (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
+  have hZ := h C.alsX D E fs ls cs (C.alsX_akzeptiert hB hA hC) (nutzerPflichtA_of_akzeptiert fs.2 hA0 hN) O hH passes sp
     init hL lebt0 K (fadenErreichbarX_of hK)
   refine zielF_of_X ?_ hZ
   exact fun c => geteiltV_leer fs.2 hA0 c
@@ -178,12 +182,16 @@ variable [DecidableEq D.Fn] {E₁ E₂ : Einheit D} {e : D.Fn → Bool}
 /-- **The linked unit is accepted by the checker of before**, from two units each accepted WITH
     the rely: the link check's `lok` makes every carrier a function relies on without a lock
     thread-local over the composed hulls -- shared atomics included -- so the linked footprints
-    need no rely. The per-body components are each unit's own. -/
+    need no rely. The per-body components are each unit's own; the link check's `pruef`
+    carries both units' declared checks. -/
 theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    {B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)} (hA₁ : AkzeptiertSpecX E₁.P E₁.S fs E₁.ws B₁)
-    (hA₂ : AkzeptiertSpecX E₂.P E₂.S fs E₂.ws B₂)
+    {B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)}
+    {A₁ A₂ : List (Kernzelle.AccumulatorDecl D)}
+    (hA₁ : AkzeptiertSpecX E₁.P E₁.S fs E₁.ws B₁ A₁)
+    (hA₂ : AkzeptiertSpecX E₂.P E₂.S fs E₂.ws B₂ A₂)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs e E₁ E₂) :
-    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws := by
+    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws
+      (verbinde e E₁ E₂).akku := by
   have hH := huelle_of_reach (e := e) (E₁ := E₁) (E₂ := E₂) hvoll hS.keinRueckruf
   have hfrag : ∀ f, ((teilP e E₁ E₂ f).rumpf f).gOk
       (kandB (teilP e E₁ E₂ f) fs (fussOrteG (teilP e E₁ E₂ f) f)) (fun _ => true) = true := by
@@ -199,7 +207,7 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, hS.akku, E₁.pruefungen ++ E₂.pruefungen, hS.pruef, hA₁.reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
       (kandB (verbindeP e E₁ E₂) fs (fussOrteG (verbindeP e E₁ E₂) f)) (fun _ => true) = true
@@ -265,7 +273,7 @@ theorem nutzerTeil_of_A {eigen : D.Fn → Bool} {E : Einheit D} (h : NutzerTeilA
 
 /-- On a unit the checker of before accepts, its duty of before is its rely duty. -/
 theorem nutzerTeilA_of {eigen : D.Fn → Bool} {E : Einheit D} {fs : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec E.P E.S fs E.ws) (h : NutzerTeil eigen E) :
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec E.P E.S fs E.ws E.akku) (h : NutzerTeil eigen E) :
     NutzerTeilA eigen E :=
   ⟨⟨fun pa f hf => ⟨koerperGutSA_of_frei (akzeptiert_liest_nicht_geteilt hvoll hA f)
       (h.logik.1 pa f hf).1,
@@ -282,9 +290,25 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
     hV hS
   -- the linked unit without its arenas: the linked statement claims no ownership
   let E : Einheit D := { verbinde e E₁ E₂ with arenen := [] }
+  have hAS₁ : Kernzelle.AkkuStart E₁ E₁.akku := (C.korrekt E₁ fs ls cs h₁).2.2
+  have hAS₂ : Kernzelle.AkkuStart E₂ E₂.akku := (C.korrekt E₂ fs ls cs h₂).2.2
+  have hAS : Kernzelle.AkkuStart E E.akku := by
+    intro a ha hok i
+    have hakku : E.akku = E₁.akku ++ E₂.akku := rfl
+    have hsp : E.sp0 = E₁.sp0 := rfl
+    rw [hakku] at ha
+    rcases List.mem_append.mp ha with h1 | h2
+    · rw [hsp]
+      exact hAS₁ a h1 hok i
+    · rw [hsp, hV.speicher]
+      exact hAS₂ a h2 hok i
+  have hBStart : Kernzelle.akkuStartB E E.akku = true :=
+    Kernzelle.akkuStartB_vollst hA.akku hAS
   have hB : akzeptiertX_pruefer.akzeptiert E fs.1 ls.1 cs.1 = true :=
     (Bool.and_eq_true _ _).mpr
-      ⟨akzeptiertX_of_akzeptiert ((akzeptiert_iff fs.2 ls.2 cs.2).mpr hA), besitzB_leer rfl⟩
+      ⟨(Bool.and_eq_true _ _).mpr
+        ⟨akzeptiertX_of_akzeptiert (spec_akzeptiert fs.2 ls.2 cs.2 (h := hA)), besitzB_leer rfl⟩,
+      hBStart⟩
   have hN : NutzerPflichtA (verbinde e E₁ E₂) := nutzerPflichtA_of_akzeptiert fs.2 hA
     (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂))
   exact gabbro_ziel akzeptiertX_pruefer D E fs ls cs hB ⟨hN.logik, ⟨hN.start.sperren, hN.start.req⟩⟩
@@ -292,7 +316,8 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
 
 /-- **THE LINKED STATEMENT OF BEFORE, DERIVED**, for two units of before (no arena, `hB₁`, `hB₂`). -/
 theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : Deklaration)
-    [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (hB₁ : E₁.arenen = []) (hB₂ : E₂.arenen = []) (e : D.Fn → Bool)
+    [DecidableEq D.Fn] (E₁ E₂ : Einheit D) (hB₁ : E₁.arenen = []) (hB₂ : E₂.arenen = [])
+    (hA₁ : E₁.akku = []) (hA₂ : E₂.akku = []) (e : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (h₁ : C.akzeptiert E₁ fs.1 ls.1 cs.1 = true) (h₂ : C.akzeptiert E₂ fs.1 ls.1 cs.1 = true)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs.1 e E₁ E₂) (hN₁ : NutzerTeil e E₁)
@@ -306,7 +331,7 @@ theorem gabbro_ziel_verbund_sc_aus (h : GabbroZielVerbund) (C : Pruefer) (D : De
       (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K := by
   have hA₁ := C.korrekt E₁ fs ls cs h₁
   have hA₂ := C.korrekt E₂ fs ls cs h₂
-  have hZ := h C.alsX D E₁ E₂ e fs ls cs (C.alsX_akzeptiert hB₁ h₁) (C.alsX_akzeptiert hB₂ h₂) hV hS (nutzerTeilA_of fs.2 hA₁ hN₁)
+  have hZ := h C.alsX D E₁ E₂ e fs ls cs (C.alsX_akzeptiert hB₁ hA₁ h₁) (C.alsX_akzeptiert hB₂ hA₂ h₂) hV hS (nutzerTeilA_of fs.2 hA₁ hN₁)
     (nutzerTeilA_of fs.2 hA₂ hN₂) hQ O hH passes sp init hL lebt0 K (fadenErreichbarX_of hK)
   refine zielF_of_X ?_ hZ
   exact fun c => geteiltV_leer fs.2 (akzeptiertSpec_verbinde fs.2 hA₁ hA₂ hV hS) c

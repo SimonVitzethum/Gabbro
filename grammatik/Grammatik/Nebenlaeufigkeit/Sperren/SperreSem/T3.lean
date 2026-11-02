@@ -205,6 +205,8 @@ theorem Endblock.execBlockH_alsBlock :
       execBlockH S O U passes R e.alsBlock.2 σ ρ = (execEndH S O U passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
   | _, _, .retWhy _ _, _, _ => rfl
+  | _, _, .retScoped _ _, _, _ => rfl
+  | _, _, .retWhyScoped _ _, _, _ => rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by
@@ -285,6 +287,12 @@ theorem Endblock.execBlockH_alsBlock :
       · rw [Endblock.execBlockH_alsBlock rest]
         cases execEndH S O U passes R rest _ _ <;> rfl
       · rfl
+  | _, _, .narrowRequired e lo' hi' rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
   | _, _, .exchange g neu hw hL rest, σ, ρ => by
       simp only [Endblock.alsBlock, execBlockH, execEndH]
       rw [Endblock.execBlockH_alsBlock rest]
@@ -324,7 +332,7 @@ theorem semH_endeForm {Λ : List (Res D)} (e : Endblock D V l Γ Λ) (σ : World
 
 /-- `execArmsH` runs the arm `armWahlG` selects. -/
 theorem execArmsH_wahl {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
       (σ : World D) (ρ : Env D Γ),
     execArmsH S O U passes R arms v σ ρ =
       (execBlockH S O U passes R (armWahlG arms v).2.1 σ

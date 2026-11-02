@@ -155,7 +155,7 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
 
 theorem NutzlastExpr.orte_darf : (e : NutzlastExpr D Γ Λ c) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .empty, _, h => by simp only [NutzlastExpr.orte, List.not_mem_nil] at h
-  | .num e, o, h => e.orte_darf o h
+  | .val e, o, h => e.orte_darf o h
 end
 theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ o
   | .nil, _, h => by simp only [orte, List.not_mem_nil] at h
@@ -219,6 +219,7 @@ mutual
 theorem Stmt.held_mono : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
   | .assignSlot .., L, h | .assignThru .., L, h | .assignSlotRef .., L, h | .assignGlob .., L, h | .putBytes .., L, h
   | .assignVar .., L, h | .shift .., L, h | .locks .., L, h | .traverse .., L, h
+  | .consumeTraverse .., L, h | .retScoped .., L, h | .retWhyScoped .., L, h
   | .retry .., L, h | .forever .., L, h | .axiomCall .., L, h | .regWrite .., L, h
   | .transition .., L, h | .publish .., L, h | .ret .., L, h | .retWhy .., L, h
   | .leave .., L, h | .next .., L, h => h
@@ -241,7 +242,7 @@ theorem Block.held_mono : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ 
   | .cons s rest, L, h => s.held_mono L (rest.held_mono L h)
   | .bind _ rest, L, h | .bindAxiom _ _ _ _ _ _ _ rest, L, h | .regRead _ _ rest, L, h
   | .regReadElse _ _ _ _ rest, L, h | .awaits _ _ _ _ _ rest, L, h | .exchange _ _ _ _ rest, L, h
-  | .narrow _ _ _ _ rest, L, h | .check _ _ rest, L, h | .float _ _ _ _ _ rest, L, h
+  | .narrow _ _ _ _ rest, L, h | .narrowRequired _ _ _ rest, L, h | .check _ _ rest, L, h | .float _ _ _ _ _ rest, L, h
   | .floatLit _ _ _ rest, L, h | .floatOf _ _ _ rest, L, h | .floatNarrow _ _ _ _ rest, L, h =>
       rest.held_mono L h
   | .bindCall f _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
@@ -261,6 +262,7 @@ mutual
 theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
   | .assignSlot .., _ | .assignThru .., _ | .assignSlotRef .., _ | .assignGlob .., _ | .putBytes .., _
   | .assignVar .., _ | .shift .., _ | .locks .., _ | .traverse .., _
+  | .consumeTraverse .., _ | .retScoped .., _ | .retWhyScoped .., _
   | .retry .., _ | .forever .., _ | .axiomCall .., _ | .regWrite .., _
   | .transition .., _ | .publish .., _ | .ret .., _ | .retWhy .., _
   | .leave .., _ | .next .., _ => Iff.rfl
@@ -288,7 +290,7 @@ theorem Block.held_iff : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ �
   | .cons s rest, L => (rest.held_iff L).trans (s.held_iff L)
   | .bind _ rest, L | .bindAxiom _ _ _ _ _ _ _ rest, L | .regRead _ _ rest, L
   | .regReadElse _ _ _ _ rest, L | .awaits _ _ _ _ _ rest, L | .exchange _ _ _ _ rest, L
-  | .narrow _ _ _ _ rest, L | .check _ _ rest, L | .float _ _ _ _ _ rest, L
+  | .narrow _ _ _ _ rest, L | .narrowRequired _ _ _ rest, L | .check _ _ rest, L | .float _ _ _ _ _ rest, L
   | .floatLit _ _ _ rest, L | .floatOf _ _ _ rest, L | .floatNarrow _ _ _ _ rest, L =>
       rest.held_iff L
   | .bindCall f _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
@@ -340,7 +342,7 @@ theorem GutAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
   intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
-theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
+theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
     {o : Ausgang V l (ArmCtx Γ c)} (h : GutAusgang W G σ o) :
     GutAusgang W G σ (o.schrumpfArm c) := by
   cases c with

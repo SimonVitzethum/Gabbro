@@ -48,7 +48,7 @@ open Gabbro.Grammatik
   eigner := fun _ => []
   Fn := Bool
   sig := fun _ => 0
-  sigNr := fun _ => ⟨[], none, 0, [], fun _ => true, fun g => g.elim, [], [], none⟩
+  sigNr := fun _ => ⟨[], none, 0, [], fun _ => true, fun g => g.elim, [], [], none, {}⟩
   eigner_nie_erzeugt := fun _ _ _ _ h => nomatch h
   Inv := Empty
   traeger := fun i => i.elim
@@ -128,13 +128,14 @@ theorem az_aendert : ∃ M1, RufErreichbarGX aP oG 0 (fun _ => False) aM0 M1 ∧
 def aL : AdressLayout aD := ⟨fun _ => 0, fun _ => 100, fun _ => 8, fun _ _ => 0, fun _ _ => 4, fun g => g.elim, fun g => g.elim⟩
 
 theorem aL_ok : LayoutOk aL where
-  geschlossen := fun _ _ => rfl
+  tabellenRaum := fun _ => ⟨by decide, rfl⟩
   offen := fun _ h => by simp only [Bool.false_eq_true] at h
   feld := fun _ _ => by simp only [aL, Nat.zero_add, Nat.reduceLeDiff]
   felder := fun _ _ _ h => absurd rfl h
   tabellen := fun _ _ _ h => absurd rfl h
   tabGlob := fun _ g => g.elim
   globale := fun g => g.elim
+  globalerRaum := fun g => g.elim
 
 /-- **The leg on (A)**: the changed cell is in its extent, and its byte 108 lies in the region of `T`. -/
 theorem az_bereich : ∃ M1, RufErreichbarGX aP oG 0 (fun _ => False) aM0 M1 ∧

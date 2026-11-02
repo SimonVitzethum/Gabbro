@@ -88,6 +88,12 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001Stmt_korrekt_breaking (i := i) (body := body) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_body := g001_korrekt body)
   | .traverse t inv body, zr_h, o, zr_ho =>
       g001Stmt_korrekt_traverse (t := t) (inv := inv) (body := body) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_body := g001_korrekt body)
+  | .consumeTraverse t member edge inv bound mass body, zr_h, o, zr_ho =>
+      g001Stmt_korrekt_consumeTraverse (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_body := g001_korrekt body)
+  | .retScoped e R, zr_h, o, zr_ho =>
+      g001Stmt_korrekt_retScoped (e := e) (R := R) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
+  | .retWhyScoped r R, zr_h, o, zr_ho =>
+      g001Stmt_korrekt_retWhyScoped (r := r) (R := R) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .retry n bis body ueber, zr_h, o, zr_ho =>
       g001Stmt_korrekt_retry (n := n) (bis := bis) (body := body) (ueber := ueber) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_body := g001_korrekt body) (ih_g001_korrekt_ueber := g001_korrekt ueber)
   | .forever a inv body, zr_h, o, zr_ho =>
@@ -124,6 +130,8 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001_korrekt_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
   | .narrow e lo' hi' sonst rest, zr_h, o, zr_ho =>
       g001_korrekt_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_sonst := g001End_korrekt sonst)
+  | .narrowRequired e lo' hi' rest, zr_h, o, zr_ho =>
+      g001_korrekt_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
   | .check c sonst rest, zr_h, o, zr_ho =>
       g001_korrekt_check (c := c) (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_sonst := g001End_korrekt sonst)
   | .float op a b lo hi rest, zr_h, o, zr_ho =>
@@ -136,7 +144,7 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001_korrekt_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_sonst := g001End_korrekt sonst)
 /-- Soundness for case arms. Every premise fires: `h`/`ho` fix the decision
     and the member, `htStmt`/`htEnd`/`htBlockSelf` discharge the legs. -/
-theorem g001Arms_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+theorem g001Arms_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → (h : g001Arms a = true) → (o : D.Tab ⊕ D.Glob) → (ho : o ∈ Extraktion.armsOrte a) →
     ¬ istGeist (D := D) o
   | .nil, zr_h, o, zr_ho =>
@@ -162,6 +170,10 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       g001End_korrekt_ret (e := e) (zz1 := zz1) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .retWhy zz1 zz2, zr_h, o, zr_ho =>
       g001End_korrekt_retWhy (zz1 := zz1) (zz2 := zz2) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
+  | .retScoped e R, zr_h, o, zr_ho =>
+      g001End_korrekt_retScoped (e := e) (R := R) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
+  | .retWhyScoped zz1 R, zr_h, o, zr_ho =>
+      g001End_korrekt_retWhyScoped (zz1 := zz1) (R := R) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .leave zz1, zr_h, o, zr_ho =>
       g001End_korrekt_leave (zz1 := zz1) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .next zz1, zr_h, o, zr_ho =>
@@ -188,6 +200,8 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       g001End_korrekt_bindCallInd (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .narrow e lo' hi' sonst rest, zr_h, o, zr_ho =>
       g001End_korrekt_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_sonst := g001End_korrekt sonst) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .narrowRequired e lo' hi' rest, zr_h, o, zr_ho =>
+      g001End_korrekt_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .exchange g neu hw hL rest, zr_h, o, zr_ho =>
       g001End_korrekt_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .ite c t e, zr_h, o, zr_ho =>

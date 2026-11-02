@@ -32,7 +32,7 @@ def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
   match paramPos fn.params b with
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num _) =>
+    | some (.ptr ⟨0, ⟨true, _, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then .ok ⟨num, h⟩
       else .error "pointer table unknown"
     | _ => .error "place without G form"
@@ -50,7 +50,7 @@ def lowParamSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr _ _) => .error "pointer as value without G form"
+    | some (.ptr _) => .error "pointer as value without G form"
     | some _ =>
       match fn.params[j]? with
       | some (_, .int a b) =>
@@ -64,14 +64,14 @@ def lowParamSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     goal into the field type, where the constructor fits). -/
 def durchTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (num : Nat) (w : Bool) (h : num < u.tabs.length)
-    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr num w))
+    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr (.table num (true, w))))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
       Res.von (declOf u) wdd ∈ Λ) :
     Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2) := by
   rw [← fh.hint]
   exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
-    (tabNr_some u num h) fh.idx i hL
+    (capTab_some u num h) fh.idx i hL
 
 /-- A `slot` term at its recorded range. -/
 def slotTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -100,12 +100,12 @@ def lowDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num w) =>
+    | some (.ptr (.table num (true, w))) =>
       if h : num < u.tabs.length then
         match fieldHit u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
-          match lowVar Γ (sh + j) (.ptr num w) with
+          match lowVar Γ (sh + j) (.ptr (.table num (true, w))) with
           | .error e => .error e
           | .ok v =>
             match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
@@ -238,12 +238,12 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num w) =>
+    | some (.ptr (.table num (true, w))) =>
       if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
-          match lowVar Γ (sh + j) (.ptr num w) with
+          match lowVar Γ (sh + j) (.ptr (.table num (true, w))) with
           | .error e => .error e
           | .ok v =>
             match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
@@ -254,7 +254,7 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                 .ok (by
                   rw [← fh.hbool]
                   exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
-                    (tabNr_some u num h) fh.idx i hL)
+                    (capTab_some u num h) fh.idx i hL)
               else .error "access without held guard"
       else .error "pointer table unknown"
     | _ => .error "place without G form"
@@ -295,7 +295,7 @@ def resultKind (fn : UFn) : Ty → Except String UParamArt
     match fn.resWhy with
     | some (num, count) => if n == count then .ok (.why num) else .error "result reason count mismatch"
     | none => .error "result reason identity missing"
-  | .ptr num writable => .ok (.ptr num writable)
+  | .ptr cap => .ok (.ptr cap)
   | .fnptr num => .ok (.fnptr num)
   | .ref num => .ok (.ref num)
   | _ => .error "quantifier beside a result of this type without G form"
@@ -437,6 +437,20 @@ def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
           | .error error => .error error
           | .ok reference => .ok ⟨.ref region, Expr.var reference⟩
         else .error "source export: reference origin disagrees with its declared region")
+    | _, some (_, τ) =>
+      match τ with
+      | .int .. | .ref _ => none
+      | _ => some (match lowVar Γ (sh + j) τ with
+        | .error e => .error e
+        | .ok v => .ok ⟨τ, Expr.var v⟩)
     | _, _ => none
+
+/-- A named function uses the declaration's existing signature-conformance check. -/
+def lowFnRef (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (signature : Nat) (name : String) :
+    Except String (Expr (declOf u) Γ Λ (.fnptr signature)) := do
+  let target ← fnIdx u.fns name
+  if fits : (declOf u).passt target signature = true then
+    pure (Expr.fnref (D := declOf u) target signature fits)
+  else .error "function does not conform to the pointer type"
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg

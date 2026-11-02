@@ -226,6 +226,7 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       stmtRetR_breaking (i := i) (body := body) (hs := hs) (ih_blockRetR_body := blockRetR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .traverse t inv body, hs =>
       stmtRetR_traverse (t := t) (inv := inv) (body := body) (hs := hs) (ih_blockRetR_body := blockRetR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, _, .consumeTraverse .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .retry n bis body ueber, hs =>
       stmtRetR_retry (n := n) (bis := bis) (body := body) (ueber := ueber) (hs := hs) (ih_blockRetR_body := blockRetR body) (ih_blockRetR_ueber := blockRetR ueber) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .forever a inv body, hs =>
@@ -235,6 +236,8 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       stmtRetR_ret (e := e) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .retWhy r hperm, zzh1 =>
       stmtRetR_retWhy (r := r) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .retWhyScoped .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .leave .., _ => by
       intro log σ ρ E _ hex
       simp only [Ausgang.ende?, execStmt, reduceCtorEq] at hex
@@ -269,6 +272,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blockRetR_exchange (g := g) (neuE := neuE) (hw := hw) (hL := hL) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .narrow e lo' hi' sonst rest, hb =>
       blockRetR_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (ih_alsRetR_sonst := alsRetR sonst) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, _, .narrowRequired _ _ _ _, hb => by cases hb
   | _, _, _, _, .check c sonst rest, hb =>
       blockRetR_check (c := c) (sonst := sonst) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (ih_alsRetR_sonst := alsRetR sonst) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .float op a b lo hi rest, hb =>
@@ -286,12 +290,15 @@ theorem endRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       endRetR_ret (e := e) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, .retWhy r hperm, zzh1 =>
       endRetR_retWhy (r := r) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .retScoped .., he => by cases he
+  | _, _, _, .retWhyScoped .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he =>
       endRetR_cons (s := s) (rest := rest) (he := he) (ih_stmtRetR_s := stmtRetR s) (ih_endRetR_rest := endRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, .bind e rest, he =>
       endRetR_bind (e := e) (rest := rest) (he := he) (ih_endRetR_rest := endRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 /-- A covered end block run as a BLOCK (the residue of an `else` branch
     or of the reason block of `let … else`, `Endblock.alsBlock`) ends the
     frame on the machine as the end block does. -/
@@ -302,14 +309,17 @@ theorem alsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       alsRetR_ret (e := e) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, .retWhy r hperm, zzh1 =>
       alsRetR_retWhy (r := r) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .retScoped .., he => by cases he
+  | _, _, _, .retWhyScoped .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he =>
       alsRetR_cons (s := s) (rest := rest) (he := he) (ih_stmtRetR_s := stmtRetR s) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, .bind e rest, he =>
       alsRetR_bind (e := e) (rest := rest) (he := he) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
+  | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 theorem armsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C true arms → ∀ (v : Wert D (.sum cs)),
     SimRetBR P O passes f fn caller rst rho s0 A R ziel zielG (armWahlG arms v).2.1
   | _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

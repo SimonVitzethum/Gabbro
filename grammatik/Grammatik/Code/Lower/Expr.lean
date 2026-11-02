@@ -69,14 +69,14 @@ def loadG (τ : GTy) (p : Opd) (r : Nat) : Option LR :=
   | .bool =>
       some ([.load r (.int 8) p, .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)],
             .reg (r + 1), r + 2)
-  | .ptr _ _ => some ([.load r .ptr p], .reg r, r + 1)
+  | .ptr _ => some ([.load r .ptr p], .reg r, r + 1)
   | .opt n =>
       if Ar.Fits (-1) (n - 1) 128 then some ([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1) else none
   | .why n =>
       if Ar.Fits 0 ((n : Int) - 1) 128 then
         some ([.load r (.int (Ar.wid 0 ((n : Int) - 1))) p], .reg r, r + 1) else none
   | .sum cs =>
-      if Ar.Fits 0 (sumTop cs) 128 then
+      if supp (.sum cs) then
         some ([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1) else none
   | _ => none
 
@@ -428,21 +428,23 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
           | none => none
       | none => none
   | _, _, _, .case cs i nutz, r =>
-      if Ar.Fits 0 (sumTop cs) 128 then lowerNutz lay cenv (Ar.wid 0 (sumTop cs)) cs.length i.val nutz r
+      if Gabbro.Grammatik.sumWort cs && decide (Ar.Fits 0 (sumTop cs) 128) then lowerNutz lay cenv (Ar.wid 0 (sumTop cs)) cs.length i.val nutz r
       else none
   | _, _, _, _, _ => none
 
 /-- The payload of a `case` expression, packed into the word of the value (`i` is the case number). -/
 def lowerNutz (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
-    {Γ : Ctx} → {Λ : List (Gabbro.Grammatik.Res D)} → {c : Option (Int × Int)} →
+    {Γ : Ctx} → {Λ : List (Gabbro.Grammatik.Res D)} → {c : Option Gabbro.Grammatik.Ty} →
       Gabbro.Grammatik.NutzlastExpr D Γ Λ c → Nat → Option LR
   | _, _, _, .empty, r => some ([], .int W (i : Int), r)
-  | _, _, _, .num (lo := lo) (hi := hi) e, r =>
+  | _, _, some (.int lo hi), .val e, r =>
       match lowerE lay cenv e r with
       | some (ce, oe, r1) =>
           match numCode lo hi W L i oe r1 with
           | (cn, on, r2) => some (ce ++ cn, on, r2)
       | none => none
+
+  | _, _, some _, .val _, _ => none
 
 end
 

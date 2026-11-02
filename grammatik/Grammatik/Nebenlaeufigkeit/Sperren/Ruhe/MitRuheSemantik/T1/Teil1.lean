@@ -195,9 +195,11 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .some e, ρ => congrArg Option.some (eval_ru σ₀ σ e ρ)
   | _, _, _, .istSome (n := n) e, ρ =>
       congrArg (fun (x : Option (Zahl 0 (n - 1))) => x.isSome) (eval_ru σ₀ σ e ρ)
-  | _, _, _, .case cs i nutz, ρ =>
-      congrArg (fun z => (⟨i, z⟩ : Σ i : Fin cs.length, Nutzlast (cs.get i)))
-        (evalNutz_ru σ₀ σ nutz ρ)
+  | _, _, _, .case cs i nutz, ρ => by
+      simp only [eval, ruE, evalNutz_cast]
+      rw [evalNutz_ru σ₀ σ nutz ρ]
+      exact (Val.relocateSum_mk (fun n => n + 1) id
+        (fun _ v => ⟨some v.1, v.2⟩) cs i (evalNutz σ₀ nutz σ ρ)).symm
   | _, _, _, .why _ _, _ => rfl
   | _, _, _, .forallSlots t body _, ρ =>
       congrArg (fun p => (alleIndizes (D.count t)).all p)
@@ -276,11 +278,11 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       refine zaehleWahr_congr n _ _ (fun k _ => ?_)
       exact congrArg wahr? (eval_ru σ₀ σ body (Env.cons k ρ))
 
-theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),
-    evalNutz (worldR σ₀) (ruN n) (worldR σ) (envR ρ) = evalNutz σ₀ n σ ρ
+    evalNutz (worldR σ₀) (ruN n) (worldR σ) (envR ρ) = nutzR c (evalNutz σ₀ n σ ρ)
   | _, _, _, .empty, _ => rfl
-  | _, _, _, .num e, ρ => eval_ru σ₀ σ e ρ
+  | _, _, _, .val e, ρ => eval_ru σ₀ σ e ρ
 
 end
 theorem evalArgs_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty}
@@ -327,6 +329,7 @@ def logikR : Logik D → Logik D.mitRuhe
   | .abstieg f => .abstieg (some f)
   | .vorzustand => .vorzustand
   | .bereich => .bereich
+  | .kapazitaet => .kapazitaet
 
 /-- A hardware outcome, translated. -/
 def hwR : Hardware D → Hardware D.mitRuhe

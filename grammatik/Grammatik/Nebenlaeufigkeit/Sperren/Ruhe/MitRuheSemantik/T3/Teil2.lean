@@ -65,6 +65,21 @@ theorem execStmt_ru_ret {V : Vertrag D}
   rfl
 
 set_option linter.unusedSectionVars false in
+theorem execStmt_ru_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : execStmt O.mitRuhe passes R' (ruS (.retScoped e R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.retScoped e R : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS, execStmt]
+  erw [ruErg_orte, lese_worldR, evalErg_ru]
+  rfl
+
+set_option linter.unusedSectionVars false in
 theorem execBlock_ru_cons {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
@@ -428,6 +443,34 @@ theorem execBlock_ru_narrow {V : Vertrag D}
       (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))).trans
       (ausR_schrumpf _)
   · erw [dif_neg hc, dif_neg hc, ← endR_zuAusgang, ih_execEnd_ru_sonst _ ρ]
+
+set_option linter.unusedSectionVars false in
+theorem execBlock_ru_narrowRequired {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlock_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execBlock O.mitRuhe passes R' (ruB rest) (worldR σ) (envR ρ) = ausR (execBlock O passes R rest σ ρ))
+    : execBlock O.mitRuhe passes R' (ruB (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  simp only [ruB, execBlock]
+  simp only [ruE_orte, lese_worldR, eval_ru, valR_int]
+  by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
+  · erw [dif_pos hc, dif_pos hc]
+    exact (congrArg Ausgang.schrumpf (ih_execBlock_ru_rest _
+      (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))).trans
+      (ausR_schrumpf _)
+  · erw [dif_neg hc, dif_neg hc]
+    exact Or.inl rfl
 
 end Haupt
 end Gabbro.Grammatik

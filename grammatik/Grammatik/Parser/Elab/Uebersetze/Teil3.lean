@@ -61,9 +61,12 @@ def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) 
           match uKonstBinde k.params vals with
           | none => none
           | some binds =>
-            match uKonstWert k.erg.1 k.erg.2 fns binds f k.rumpf with
-            | some v => ok v
-            | none => none
+            match k.erg, k.rumpf with
+            | .int kl kh, .block [] (some (.ret (some expression))) =>
+              match uKonstWert kl kh fns binds f expression with
+              | some v => ok v
+              | none => none
+            | _, _ => none
     | _ => none
 
 /-- The constant scope of a unit: in source order, each constant may use the ones before it. A literal
@@ -107,37 +110,63 @@ def sTypText : STyp → String
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
 
+/-- Normalize the complete table access rights. Owner flow is still refused by name. -/
+def uTableRight (text : String) : Except String (Bool × Bool) :=
+  match DataRights.decode (fun _ => none) text with
+  | some rights =>
+    if rights.owner.isNone then .ok (rights.read, rights.write)
+    else .error ("pointer rights require checked owner flow: " ++ text)
+  | none => .error ("pointer rights without checked data/owner form: " ++ text)
+
+/-- Export retains both flags and cannot erase an owner identity. -/
+theorem uTableRight_sound (text : String) (access : Bool × Bool) (h : uTableRight text = .ok access) :
+    ∃ rights : DataRights, DataRights.decode (fun _ => none) text = some rights ∧
+      (rights.read, rights.write) = access ∧ rights.owner = none := by
+  cases hd : DataRights.decode (fun _ => none) text with
+  | none => simp [uTableRight, hd] at h
+  | some rights =>
+    cases ho : rights.owner with
+    | none =>
+      have he : (rights.read, rights.write) = access := by
+        simpa [uTableRight, hd, ho] using h
+      exact ⟨rights, hd, he, ho⟩
+    | some owner => simp [uTableRight, hd, ho] at h
+
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). Named address spaces other than `normal`,
-    rights other than `r`/`rw`, the optional index and every
+    rights outside owner-free data access unions, the optional index and every
     other shape are explicit errors. -/
-def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty
+def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) : STyp → Except String Ty
+  | .atom "bool" => .ok .bool
   | .atom a =>
-    match uTypName alias a with
-    | .ok (lo, hi) => .ok (.int lo hi)
-    | .error e => .error e
-  | .range _ lo hi o =>
-    match uSchranke alias lo, uSchranke alias hi with
-    | some a, some b => .ok (.int a (if o then b - 1 else b))
-    | _, _ => .error "type without G form"
+    match named.find? (fun entry => strEq entry.1 a) with
+    | some (_, τ) => .ok τ
+    | none =>
+      match uTypName alias a with
+      | .ok (lo, hi) => .ok (.int lo hi)
+      | .error e => .error e
+  | .range base lo hi o =>
+    match uTypIn alias tabs named base, uSchranke alias lo, uSchranke alias hi with
+    | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
+    | .error e, _, _ => .error e
+    | _, _, _ => .error "range requires an integer type and known bounds"
   | .index false t =>
     match uTabNr tabs t with
-    | .ok (_, c) => .ok (.index c)
+    | .ok (num, c) =>
+      if ((tabs[num]?).bind (·.von)).isSome then .ok (.ref num) else .ok (.index c)
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
     if !strEq raum "normal" then .error "space without G form"
-    else if strEq rechte "rw" || strEq rechte "own" then
-      match uTabNr tabs t with
-      | .ok (num, _) => .ok (.ptr num true)
-      | .error e => .error e
-    else if strEq rechte "r" then
-      match uTabNr tabs t with
-      | .ok (num, _) => .ok (.ptr num false)
-      | .error e => .error e
-    else .error "pointer right without G form"
+    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+    else do
+      let access ← uTableRight rechte
+      let (num, _) ← uTabNr tabs t
+      pure (.ptr (.table num access))
+  | .ptr _ _ _ => .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+  | .entry _ _ => .error "entry handle requires C08/C14 binding and C09 forwarding flow"
   | .array t n =>
-    match uTyp alias tabs t, uSchranke alias n with
+    match uTypIn alias tabs named t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
     | .error e, _ => .error e
     | _, none => .error "array length without G form"
@@ -146,6 +175,25 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     | some k => if 0 ≤ k then .ok (.str k.toNat) else .error "string of a negative maximum"
     | none => .error "string maximum without G form"
   | t => .error ("type without G form: " ++ sTypText t)
+
+/-- The canonical reader in a declaration environment without named value schemas. -/
+def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty :=
+  uTypIn alias tabs []
+
+/-- Collect constant functions independently of their statement body shape. -/
+def uKonstFns : List SItemTief → List UKonstFn
+  | [] => []
+  | .fnT sig body :: rest =>
+    if strEq sig.art "const" then
+      match sig.res with
+      | some result =>
+        match uTyp [] [] result, sig.params.mapM (fun (n, ty) => (uTyp [] [] ty).map (fun t => (n, t))) with
+        | .ok resultType, .ok parameters =>
+          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFns rest
+        | _, _ => uKonstFns rest
+      | none => uKonstFns rest
+    else uKonstFns rest
+  | _ :: rest => uKonstFns rest
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit

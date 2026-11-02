@@ -9,6 +9,7 @@ import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Data
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 @[expose] public section
 
@@ -44,7 +45,7 @@ def UReg.ty (g : UReg) : Ty := bif g.bool then .bool else .int g.lo g.hi
     parameter stays recognizable after `Ty.index` unfolds it to
     `.int 0 (n - 1)`). -/
 inductive UParamArt
-  | ptr : Nat → Bool → UParamArt
+  | ptr : DataCapTy → UParamArt
   | index : Nat → UParamArt
   | int : UParamArt
   /-- A truth value: a `bool` parameter or a `let` of a truth value (`Ty.bool` in the context). -/
@@ -106,7 +107,7 @@ structure UCtx where
   /-- The unit's `tagged type` declarations, in order. -/
   sums : List USum := []
   /-- The result is a tagged type: its position and its specification. -/
-  resSum : Option (Nat × List (Option (Int × Int))) := none
+  resSum : Option (Nat × List (Option Ty)) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
   /-- The result is an aggregate value (`Ty.arr`, `Ty.str`): its type. -/
@@ -142,7 +143,7 @@ structure UFn where
   /-- The result is `option index into T`: the number and the count of `T` (then `res` is `none`). -/
   resOpt : Option (Nat × Int) := none
   /-- The result is a tagged type: its position and its specification (then `res` is `none`). -/
-  resSum : Option (Nat × List (Option (Int × Int))) := none
+  resSum : Option (Nat × List (Option Ty)) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
   /-- The result is an aggregate value: its type (then `res` is `none`). -/
@@ -164,6 +165,13 @@ structure UFn where
   decreases : Option UMeasure := none
   /-- Checked scalar constants in the declaration's entry scope. -/
   measureConstants : List (String × Int) := []
+  /-- The unit's type aliases in the declaration's entry scope: what a conversion `T(e)`
+      in `decreases` resolves against (the same table `uRechne` reads as `ctx.alias`). -/
+  measureTypes : List (String × (Int × Int)) := []
+  /-- The linear marks the function consumes (`effects { consumes m }`, C16). -/
+  nimmt : List String := []
+  /-- The linear marks the function produces (`effects { allocs m }`, C16). -/
+  gibt : List String := []
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
@@ -190,7 +198,7 @@ def UFn.mitTy (f : UFn) (x : String) : Ty → UFn
   | τ => { f with params := (x, τ) :: f.params, kinds := uArtVon τ :: f.kinds }
 
 /-- The scope after `let x` of a tagged value of the type at `num` with the specification `cs`. -/
-def UFn.mitSum (f : UFn) (x : String) (num : Nat) (cs : List (Option (Int × Int))) : UFn :=
+def UFn.mitSum (f : UFn) (x : String) (num : Nat) (cs : List (Option Ty)) : UFn :=
   { f with params := (x, Ty.sum cs) :: f.params, kinds := .sum num :: f.kinds }
 
 /-- The scope after `let x` of an option value over the table `num` of `cnt` slots. -/
@@ -276,6 +284,14 @@ structure UProg where
   ptrKeys : List String := []
   /-- Original-source duty check, consumed by the actual new lowering branches. -/
   exportGate : Except String Unit := .ok ()
+  /-- The unit's declared checks (C16): elaborated records of every `check` item,
+      with each `can_fail` body lowered into its generated Boolean producer in
+      `fns` (named by the check's `probe` field). -/
+  checks : List UCheck := []
+  /-- The declaration's mark table (C16): the names of the `linear`-flagged type items in
+      declaration order, then every check's Duty (`dutyName`), deduplicated. Every `nimmt`/`gibt`
+      of every function must name a member (`uMarkenPruef`). -/
+  marken : List String := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -442,37 +458,18 @@ def uAliasBreiten : List SItemTief → List (String × (Int × Int))
     guessing a wrap. Anything else (an array constant, a call of a non-const function, a value outside
     its type) makes the constant UNKNOWN: a use of it is then an error ("name unknown"). -/
 
-/-- A `const fn` for the evaluator: parameter names with their ranges, the result range and the
-    returned expression. -/
+/-- A constant function retains its source signature and statement body. -/
 structure UKonstFn where
   name : String
-  params : List (String × (Int × Int))
-  erg : Int × Int
-  rumpf : SExpr
+  params : List (String × Ty)
+  erg : Ty
+  rumpf : SAnw
+  signature : FnSig
 
-/-- The range of a declared parameter/result type of a `const fn`: a builtin word or a literal range. -/
-def uKonstBereich : STyp → Option (Int × Int)
-  | .atom a => (uTypName [] a).toOption
-  | .range _ lo hi o =>
-    match uSchranke [] lo, uSchranke [] hi with
-    | some a, some b => some (a, if o then b - 1 else b)
-    | _, _ => none
-  | _ => none
-
-/-- The `const fn`s of a unit that the evaluator can run. -/
-def uKonstFns : List SItemTief → List UKonstFn
-  | [] => []
-  | .fnT { art := "const", name, params, res := some r, fehler := .none, klauseln := _ }
-      (.block [] (.some (.ret (.some e)))) :: rest =>
-    match uKonstBereich r, params.mapM (fun (n, ty) => (uKonstBereich ty).map (fun b => (n, b))) with
-    | some rb, some ps => { name, params := ps, erg := rb, rumpf := e } :: uKonstFns rest
-    | _, _ => uKonstFns rest
-  | _ :: rest => uKonstFns rest
-
-/-- The values of a call bound to the parameters, each inside its parameter's range. -/
-def uKonstBinde : List (String × (Int × Int)) → List Int → Option (List (String × Int))
+/-- Bind integer arguments only when their checked parameter types admit them. -/
+def uKonstBinde : List (String × Ty) → List Int → Option (List (String × Int))
   | [], [] => some []
-  | (n, (pl, ph)) :: ps, v :: vs =>
+  | (n, .int pl ph) :: ps, v :: vs =>
     if pl ≤ v ∧ v ≤ ph then (uKonstBinde ps vs).map (fun r => (n, v) :: r) else none
   | _, _ => none
 

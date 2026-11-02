@@ -250,12 +250,16 @@ def Stmt.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
     Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | _ => false
 
-def Endblock.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+def Endblock.istRueck {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .cons s _ => s.istRueck
   | _ => false
 

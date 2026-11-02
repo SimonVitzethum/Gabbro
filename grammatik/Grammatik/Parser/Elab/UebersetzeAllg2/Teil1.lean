@@ -116,9 +116,11 @@ theorem nach_eq (u : UProg) (i : Fin u.fns.length)
     nach (declOf u) i L = L := by
   have hK := sigKonsumiert_nil u i
   have hP := sigProduziert_nil u i
-  unfold nach nachSig
+  unfold nach nachSig Signatur.inputMarks Signatur.outputMarks
+  rw [OwnerFlow.empty_of_empty ((declOf u).signatur i).owner]
   rw [hK, hP]
-  simp only [List.foldl_nil, List.map_nil, List.append_nil]
+  change L ++ [] = L
+  exact List.append_nil L
 
 /-- The body context is the declared parameter list. -/
 theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
@@ -135,8 +137,9 @@ theorem anfangRes_eq (u : UProg) (c : Fin u.fns.length) :
   have h2 : ((declOf u).signatur c).konsumiert = [] :=
     sigKonsumiert_nil u c
   show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
-  unfold Signatur.anfang
-  rw [h1, h2, List.map_nil, List.append_nil]
+  unfold Signatur.anfang Signatur.inputMarks
+  rw [h1, h2, OwnerFlow.empty_of_empty ((declOf u).signatur c).owner]
+  rfl
 
 /-- The held resources are the contract end. -/
 theorem endeRes_eq (u : UProg) (c : Fin u.fns.length) :
@@ -171,9 +174,9 @@ def lowWertAt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     else .error "value outside range"
 
 /-- A `durch` write at its recorded range. -/
-def assignDurchStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+def assignDurchStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
-    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
+    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (read, true))))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
@@ -185,7 +188,7 @@ def assignDurchStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
     show Expr (declOf u) Γ Λ (typAt u t fh.idx)
     rw [fh.hint]
     exact e
-  exact Stmt.assignThru (D := declOf u) p t ht fh.idx i e2 hw hL
+  exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) fh.idx i e2 hw hL
 
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -204,9 +207,9 @@ def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))
   exact Stmt.assignSlot (D := declOf u) t fh.idx i e2 hw hL
 
 /-- A `durch` write into a BOOL field. -/
-def assignDurchStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+def assignDurchStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
-    (bh : BoolHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
+    (bh : BoolHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (read, true))))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ .bool)
@@ -218,7 +221,7 @@ def assignDurchStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
     show Expr (declOf u) Γ Λ (typAt u t bh.idx)
     rw [bh.hbool]
     exact e
-  exact Stmt.assignThru (D := declOf u) p t ht bh.idx i e2 hw hL
+  exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) bh.idx i e2 hw hL
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -246,12 +249,12 @@ def lowAssignDurchL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num true) =>
+    | some (.ptr ⟨0, ⟨read, true, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         match fieldHit u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
-          match lowVar Γ j (.ptr num true) with
+          match lowVar Γ j (.ptr (.table num (read, true))) with
           | .error e => .error e
           | .ok pv =>
             match lowIdx u Γ Λ
@@ -361,9 +364,9 @@ def lowAssignTabL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) 
           else .error "access without held guard"
 
 /-- An option write through a pointer into an option field, at the field's type `opt n`. -/
-def assignDurchStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+def assignDurchStmtO {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length) (oh : OptHit u t)
-    (p : Expr (declOf u) Γ Λ (.ptr t.val true)) (ht : (declOf u).tabNr t.val = some t)
+    (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (read, true)))) (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t))) (e : Expr (declOf u) Γ Λ (.opt oh.n))
     (hw : V.schreibt t = true) (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     Stmt (declOf u) V l Γ Λ Λ := by
@@ -371,7 +374,7 @@ def assignDurchStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u
     show Expr (declOf u) Γ Λ (typAt u t oh.idx)
     rw [oh.hopt]
     exact e
-  exact Stmt.assignThru (D := declOf u) p t ht oh.idx i e2 hw hL
+  exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) oh.idx i e2 hw hL
 
 /-- An option write at a table into an option field. -/
 def assignSlotStmtO {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -393,12 +396,12 @@ def lowAssignDurchOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num true) =>
+    | some (.ptr ⟨0, ⟨read, true, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         match fieldHitO u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok oh =>
-          match lowVar Γ j (.ptr num true) with
+          match lowVar Γ j (.ptr (.table num (read, true))) with
           | .error e => .error e
           | .ok pv =>
             match lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix with

@@ -94,8 +94,8 @@ theorem slot_hat_waechter {t : D.Tab} {f : D.Feld t} {i : Expr D Γ Λ (.index (
     {hL : darf D t Λ} (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .slot t f i hL) : darf D t Λ := hL
 
 /-- Ein Zugriff DURCH einen Zeiger steht unter denselben Waechtern («SG-8»). -/
-theorem zeiger_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr n rw)}
-    {ht : D.tabNr n = some t} {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
+theorem zeiger_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (true, rw) space))}
+    {ht : D.capTab space n = some t} {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
     (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .thru p t ht f i hL) : darf D t Λ := hL
 
 /-- Eine Bytelesung liegt in der Tabelle: `hi + n ≤ count` («SG-16»). -/
@@ -109,7 +109,7 @@ theorem zuweisung_hat_recht {t : D.Tab} {f : D.Feld t} {i} {e} {hw : V.schreibt 
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignSlot t f i e hw hL) : V.schreibt t = true := hw
 
 /-- Eine Zuweisung DURCH einen Zeiger verlangt einen `rw`-Zeiger UND das Schreibrecht. -/
-theorem zeiger_schreibt_mit_recht {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr n true)}
+theorem zeiger_schreibt_mit_recht {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (read, true) space))}
     {ht} {i} {e} {hw : V.schreibt t = true} {hL}
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignThru p t ht f i e hw hL) : V.schreibt t = true := hw
 
@@ -150,14 +150,14 @@ theorem rueckgabe_bilanziert {e : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
     Schreibrechte des Gerufenen stehen im eigenen Vertrag. -/
 theorem ruf_hat_alles {f : D.Fn} {args} {hp : RufPasst D V (D.signatur f) Λ} {hr}
     (_s : Stmt D V l Γ Λ (nach D f Λ)) (_h : _s = .call f args hp hr) :
-    Untermulti ((D.konsumiert f).map (Res.vonMarke D)) Λ ∧
+    Untermulti ((D.signatur f).inputMarks.map (Res.vonMarke D)) Λ ∧
     (∀ L, L ∈ D.haelt f → Res.held L ∈ Λ) ∧
     (∀ t, D.schreibt f t = true → V.schreibt t = true) := ⟨hp.hk, hp.hh, hp.hw⟩
 
 /-- Ein Ruf DURCH einen Funktionszeiger hat dasselbe in der Hand («B8»). -/
 theorem zeigerruf_hat_alles {p : Expr D Γ Λ (.fnptr n)} {args} {hp : RufPasst D V (D.sigNr n) Λ} {hr}
     (_s : Stmt D V l Γ Λ (nachSig D (D.sigNr n) Λ)) (_h : _s = .callInd p args hp hr) :
-    Untermulti ((D.sigNr n).konsumiert.map (Res.vonMarke D)) Λ ∧
+    Untermulti ((D.sigNr n).inputMarks.map (Res.vonMarke D)) Λ ∧
     (∀ t, (D.sigNr n).schreibt t = true → V.schreibt t = true) := ⟨hp.hk, hp.hw⟩
 
 /-- Ein Registerschreiben steht an einem Register schreibbarer Klasse (`R005`/`R006`). -/
@@ -179,11 +179,11 @@ theorem uebergang_erklaert {t : D.Tab} {f : D.Feld t} {hτ : D.typ t f = .int lo
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .shift t f hτ i von nach hn he hw hL) :
     D.erlaubt t f von nach = true := he
 
-/-- Eine Veroeffentlichung nimmt GENAU die erklaerte Nutzlast mit (`V001`-`V004`). -/
+/-- Eine Veroeffentlichung nimmt GENAU die erklaerte Nutzlast D.Fn D.passt mit (`V001`-`V004`). -/
 theorem publish_paart {g : D.Glob} {e} {payload : List D.Glob} {hp : payload = D.nutzlast g} {hw} {hL}
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .publish g e payload hp hw hL) : payload = D.nutzlast g := hp
 
-/-- Ein `awaits` nimmt dieselbe Nutzlast entgegen. -/
+/-- Ein `awaits` nimmt dieselbe Nutzlast D.Fn D.passt entgegen. -/
 theorem awaits_paart {g : D.Glob} {payload : List D.Glob} {hp : payload = D.nutzlast g} {hL} {hat} {rest}
     (_b : Block D V l Γ Λ Λ') (_h : _b = .awaits g payload hp hL hat rest) : payload = D.nutzlast g := hp
 

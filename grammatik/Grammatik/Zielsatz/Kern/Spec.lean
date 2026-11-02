@@ -13,6 +13,10 @@
   claimed by this preparatory stage. The authorized channel migration must extend `KopfHalt`, `InvAmGrundG`,
   `InvGutGrund` and foreign-answer admission to every admitted open code and every checked structured field,
   retaining the same named assumptions and user duties; it remains required before C03 is complete.
+  C03 TYPED SOURCE SCHEMAS. Tagged collection now retains complete parsed payload types and resolves every
+  present payload at an explicit kernel-admission gate. The kernel is still numeric-only at that gate;
+  reading a bool, record, array, string or reference schema does not enable its execution as a sum payload.
+  This source-stage refactoring does not yet change the domain or meaning of the goal statements below.
 
   THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
   `Classical.choice`, `Quot.sound`):
@@ -32,6 +36,19 @@
   * `GabbroZielWarten` -- a waiting bound: on every run of the ticket lock a thread standing at `locks L` takes `L`
     within `wartezeit` scheduler steps, under four named premises of the run (`gabbro_ziel_warten`, proof in
     Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
+  * `GabbroZielProfil` (C14, 2026-11-02) -- the same conclusion over a SELECTED, profile-bound unit
+    (`ProfilEinheit`: the unit with its build mode, the ORIGINAL parsed items and the image's section policy;
+    Zielsatz/Projekte/Profil.lean). MEANING CHANGE, two points. (1) Assumption provenance: (c) is stated through
+    the named components of `HardwareAnnahmen` (`GutO`, `RegLokal`, `AxVertragO`; `hardware_iff_komponenten`) and
+    the profile supplies exactly these (`profilAnnahmen_iff`): it adds no software and no unlisted assumption, a
+    linked library requires profile entries by name and adds none (`bindung_fuegt_nichts_hinzu_bindung`); the
+    free prose of an `assume` stays outside Lean. (2) The statement is about the unit a build mode selects out of
+    the original items (`when TESTBUILD`, shipping or test; each mode is its own instance), (a) gains the
+    structural admission of the selection/profile-binding/placement certificate (`profilAkzeptiert`), which is
+    COMPUTED from the original items, never carried. The statements above are unchanged. Proof
+    `gabbro_ziel_profil` (= `gabbro_ziel` on `PE.E`). Not claimed: that `PE.E` is the translation of the selected
+    tree (the source-to-unit pipeline's correspondence), the layout/startup/relocation proofs that discharge
+    static placement, an entry/service binding or a guest boundary (C08/C12 services, still refused).
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool, not the Rust checker, and no
   bridge from the model to a binary is built (THE READING, below).
@@ -39,11 +56,12 @@
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
   lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time
   roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
-  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
+  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`; the atomic checker also requires static-array reset admission
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
-      lock-free starts, pool safety, write separation, answer sites, masking discipline, and since 2026-10-24 the
+      lock-free starts, pool safety, write separation, answer sites, masking discipline, the C02 library binding
+      (generated programs are ordinary; source certificates in `Uebersetzung.lean`), and since 2026-10-24 the
       ownership judgment of every arena in `E.arenen` with plain allocator words; beside it `BesitzStart E`: every
-      arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
+      declared-check admission (`CheckAdmission`); arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
       `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
       enumerations (finite declarations only).
   (b) `NutzerPflichtA E` -- the user's logic: every body, SEQUENTIALLY, at every `forever` budget, against every
@@ -68,7 +86,17 @@
   * `speicherSicher` (`SpurInv`) -- every recorded access carries its carrier's guards, whose locks are held. (c).
   * `speicherAdressen` -- if foreign code writes inside the declared extents (`ImBereichO`, inside the leg), every
     cell the run changed lies in its extent and, under every correct byte layout (`AdressLayout`, `LayoutOk`), with
-    all its bytes in its table's region; different cells share no byte (Speichermodell/Adressen/). (c).
+    all its bytes in its table's region; different cells share no byte (Speichermodell/Adressen/). Addresses
+    distinguish backing-region identities from the finite declared nominal data spaces. Tables and globals
+    realize their declared spaces; every open extent retains its own backing identity even when several
+    extents inhabit one nominal space. Names imply neither physical separation nor a check/copy snapshot.
+    Separation remains a separate `LayoutOk` obligation. This generalizes the former fixed space-0/nonzero
+    interpretation without removing `ImBereichO` or the outside-write/extent guarantees. (c).
+    Table capabilities now retain these nominal spaces and independent read/write flags. Every admitted
+    dereference resolves the exact table in a registered space; stores still require the signature's write
+    frame and the table's guards. Write-only access does not grant reads. Owner identities are retained in
+    types but are not usable without the separately checked ownership flow. Live byte grants and restricted
+    entry handles remain outside this table-only stage; no lifetime or code/data provenance claim is added.
   * `rennfrei` (`RennfreiBisGA`) -- two accesses of different threads to a non-atomic carrier, one a write, are
     lock-ordered, on every run with racing atomics. (a), (c).
   * `schwach` (`SchwachX`) -- every step of the weak machine W is a GX step, its presented memory G's outside the
@@ -94,6 +122,10 @@
   * `zeit` -- a frame with a finite call tree takes at most `kostenTief` own steps while active. --.
   * `folge` -- the order of calls in every thread's call log, for every order specification the program passes
     (Folge.lean). --.
+  * `pruefstand` (`CheckTreueG`, C16, 2026-11-02) -- check evidence and its consumption: every completed probe
+    measurement carries its verdict and floor outcomes as a report, each live or consumed Duty has exactly one
+    corresponding completed report, and a consuming gate discharges that same report once; the prose claim is a
+    label and proves nothing. (a), (b).
   * on the thread machine: `schlafendUnberuehrt`, `schlafendFrei`, `joinFrei` (dormant and joining threads hold
     nothing), `keineVerklemmung`/`keinZyklus` with join waits, `fortschritt` with the join wait, `spawnSicht` (a
     spawn leaves the G state alone, the new thread holds nothing, every free lock and closed invariant holds).
@@ -148,6 +180,13 @@
   the second case of `GabbroZielLeben`.
 
   THE READING -- not premises, assumptions of reading the statements as statements about the BINARY:
+  * C02 translators use exact source-bound map correspondence, in addition to output typing
+    (`Logik/Vertraege/Uebersetzung.lean`). Compile-time row collections are immutable by-value
+    arrays, not runtime table capabilities. The goal applies to the generated accepted ordinary
+    program; a translation certificate alone does not establish payload initialization, library
+    call expansion or image correspondence. Those source cases remain refused until their generic
+    bridges are connected. This strengthens the former output-only translation promise and adds
+    no hardware assumption or change to the existing G/GX safety, contract, call-log or time legs.
   * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is the LLVM path
     (`gabbro build`: checker, LLVM IR from `llvm.rs`, `opt`, `llc`, `ld.lld`); the bridge is translation validation
     (source -> model -> final machine bytes, checked in Lean; dokumente/PLAN-TRANSLATION-VALIDATION.md), which is
@@ -213,6 +252,31 @@
   the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time is a premise: that the checker's `held <= N ops`
   bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
 
+  PER-CORE ACCUMULATORS (2026-11-02, C15 concurrency/link/export slice; a reviewed change
+  of meaning in the sense of §1, staged beside the goal). One `accumulates` declaration
+  becomes N private global cells with one exclusive lock each, a core-query binding and
+  generated update/reduction functions. The checker admits the descriptor, the neutral
+  initialization at the start memory and the storage/contract shape (`AccumulatorAdmission`
+  in (a) with the Bool `accumulatorB`, `AkkuStart` beside it); the core identity provenance,
+  the range facts and the quiescence condition are source-derived user duties in (b). The
+  operators, neutral elements and fold/permutation/RMW laws are proved on the typed encodings
+  (`Bausteine/Kernzelle`); the sampled fold equals the contribution fold under a proved
+  quiescent history (`ruhigFalte`). Since this slice: each cell is proved guarded by its
+  exclusive lock, so the ordinary race leg covers accumulator cells with no per-core
+  exemption (`SperrProtokoll.akkuRennfreiAbgedeckt`; group invariants and `KernHaltEA`
+  still apply); the quiescent collapse to the completed fold and the neutral-start RMW
+  chain are proved at the ghost level with the staged added conjunct `AkkuZielErweitert`
+  beside `ZielX`/`ZielFX`; the admission and neutral initialization cross separately
+  compiled units through the link check (`SchnittstelleSpec.akku`, `BindeSpec.akku` with
+  `akkuStart`, decided by the link Bools); the elaborator expands admitted declarations
+  (`max`/`min`/`add`/`or` over integer ranges with a positive constant `per cpu` count) to
+  guarded storage while updates, reads and the core query stay refused (they need the C08
+  core-query contract); a full-program admission is witnessed on a non-degenerate two-cell
+  fixture (`akkuProgramm_zeuge`). What is NOT claimed yet: the run-level existence of such
+  a history for every reachable machine (needs the GX replay of the update stores), so the
+  goal has no accumulator leg yet; any race exemption or universal quiescence (existing
+  race/time qualifications are retained).
+
   NOT CLAIMED:
   * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
     with local transfer to the selected target's concrete contract is now part of (b) (`LogikPflicht(A)`),
@@ -231,9 +295,20 @@
   * reads in their extents as a statement about runs (they are, by the index types); globals and registers have no
     index;
   * that W is exactly the C11 model; a contract, `requires`, `ensures` or invariant over a shared atomic (refused,
-    `N484`); the merge discipline of per-core cells beyond reading them (OFFEN O17); linked units sharing an atomic
-    across the link; the publish/await hand-off of an unguarded PLAIN payload (refused);
+    `N484`); linked units sharing an atomic across the link; the publish/await hand-off of an
+    unguarded PLAIN payload (refused);
+  * the run-level cell/history correspondence of per-core cells and their quiescent reduction
+    (OFFEN O17; staged in C15, 2026-11-02: the descriptor, neutral initialization and admission
+    are checked in (a) (`AccumulatorAdmission`, `AkkuStart`), per-cell guardedness and the
+    ghost-level quiescent reduction are proved (`SperrProtokoll`, `AkkuZielErweitert`), the
+    admission crosses the link (`SchnittstelleSpec.akku`, `BindeSpec.akku/akkuStart`) and
+    admitted declarations expand to guarded storage, but updates, reads and the core query
+    are still refused at elaboration (they need C08) and the goal has no accumulator leg
+    yet);
   * floats beyond the kernel IEEE model (that the FPU computes it is `gleitkomma_ieee`, a hardware fact);
+  * that a prose `claim` is true, or that one successful sample proves it (C16, 2026-11-02): a `false` verdict
+    or floor outcome is a completed measurement with a negative verdict, and an unrun counterprobe is
+    unmeasured, never passed;
   * an invariant inside a running writer or false in the start memory or reading carriers (tables or globals) outside its declared
     `traeger`; a lock invariant inside its holder's section (claimed: no other thread observes it there);
   * interrupt handlers beyond `KernPlan`: re-entry, handler-on-handler preemption, a thrown entry without `via idt`,
@@ -248,6 +323,15 @@
   * ownership beyond the arenas the unit declares (`E.arenen`): an arena whose allocator words are atomic, an
     arena not empty in the start memory, a start handed an allocation (each refused by the checker's
     `BesitzStart`/`worte`), and what a foreign body does to an arena beyond `GutO`;
+  * C09 nominal-owner mint provenance and call-scoped owner-mark transfers/loans on canonical G/GX.
+    `Signatur.owner` now contributes exact owner inputs to `Signatur.anfang`, owner outputs to
+    `Vertrag.ende`, and both inventories to `nachSig`; pointer conformance preserves the same flow.
+    This changes the typed entry/exit resource inventory, not the oracle assumptions. Canonical calls
+    still require an empty owner flow (`RufPasst.ownerReady`) until checked dynamic escrow replay is
+    connected. `Kern/Syntax/Marken/Owner` supplies linear ghost bindings and bookkeeping over the existing
+    grant/escrow ledger, with permanent spent authority. No `OwnerInvG/GX` or owner provenance/lifetime leg
+    is yet claimed by `Ziel(X/FX)`. The authorized stronger goal still needs C08 software-call execution,
+    root/start admission and reachable-step/frame replay. No new source case is admitted by this work;
   * for threads spawned at run time: arguments per spawn, a root `requires` holding only at the spawn world,
     `old`-reads at the spawn world, the end of a join wait, the child's stack, a failing spawn, the lowering of the
     spawn;
@@ -267,6 +351,38 @@
 -/
 module
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 public import Grammatik.Zielsatz.Kern.Spec.Teil2
 public import Grammatik.Zielsatz.Kern.Spec.Teil3
+public import Grammatik.Zielsatz.Kern.Spec.Teil4

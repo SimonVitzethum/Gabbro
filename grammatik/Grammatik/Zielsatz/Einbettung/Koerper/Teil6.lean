@@ -47,15 +47,15 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_onOption (n := n) (o := o) (p := p) (a := a) (ih_sim_block_a := sim_block a) (ih_sim_block_p := sim_block p) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .onTag v arms => by
       intro M σ σ' ρ ρ' hM hρ
-      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
-        (v.orte)
-      have hev0 := E.frei_alle hZ (@hev) hρ
-      obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_arms arms (eval σ₁ v σ₁ ρ) M₁ σ₁ _ ρ ρ' hI hρ
+      obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE) v.orte
+      let w' := eval (leseA A' σ' (Λ.map E.resE) (v.orte.map E.ortE)) (exE E v)
+        (leseA A' σ' (Λ.map E.resE) (v.orte.map E.ortE)) ρ'
+      have hv : E.valZ hZ _ w' = eval σ₁ v σ₁ ρ := E.valZ_vrel hZ _ (hev v ρ ρ' hρ)
+      obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := sim_arms arms w' M₁ σ₁ _ ρ ρ' hI hρ
       refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2)]
-        exact hΦ2 Φ hP
-      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
-        exact hR
+        simpa only [hv] using hΦ2 Φ hP
+      · simpa only [exS, execStmtHA, Einbettung.orte_exE] using hR
   | .onWhy r arms => by
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
@@ -65,7 +65,7 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2)]
         exact hΦ2 Φ hP
-      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_why]
+      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_why]
         exact hR
   | .call f args hp hr =>
       sim_stmt_call (f := f) (args := args) (hp := hp) (hr := hr) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
@@ -77,6 +77,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_breaking (i := i) (body := body) (ih_sim_block_body := sim_block body) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .traverse t inv body =>
       sim_stmt_traverse (t := t) (inv := inv) (body := body) (ih_sim_block_body := sim_block body) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .consumeTraverse t member edge inv bound mass body =>
+      sim_stmt_consumeTraverse (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (ih_sim_block_body := sim_block body) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .retry n bis body ueber =>
       sim_stmt_retry (n := n) (bis := bis) (body := body) (ueber := ueber) (ih_sim_block_body := sim_block body) (ih_sim_block_ueber := sim_block ueber) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .forever a inv body =>
@@ -95,8 +97,12 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_retires (m := m) (s := s) (h := h) (a := a) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .ret e hΛ =>
       sim_stmt_ret (e := e) (hΛ := hΛ) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .retScoped e R =>
+      sim_stmt_retScoped (e := e) (R := R) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .retWhy r hΛ =>
       sim_stmt_retWhy (r := r) (hΛ := hΛ) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .retWhyScoped r R =>
+      sim_stmt_retWhyScoped (r := r) (R := R) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .leave h =>
       sim_stmt_leave (h := h) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .next h =>
@@ -134,6 +140,8 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       sim_block_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .narrow e lo' hi' sonst rest =>
       sim_block_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (ih_sim_block_rest := sim_block rest) (ih_sim_end_sonst := sim_end sonst) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .narrowRequired e lo' hi' rest =>
+      sim_block_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .check c sonst rest =>
       sim_block_check (c := c) (sonst := sonst) (rest := rest) (ih_sim_block_rest := sim_block rest) (ih_sim_end_sonst := sim_end sonst) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .float op a b lo hi rest =>
@@ -152,8 +160,12 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       (execEndHA S' O' U' A' passes R' (exEnd hS b))
   | .ret e hΛ =>
       sim_end_ret (e := e) (hΛ := hΛ) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .retScoped e R =>
+      sim_end_retScoped (e := e) (R := R) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .retWhy r hΛ =>
       sim_end_retWhy (r := r) (hΛ := hΛ) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .retWhyScoped r R =>
+      sim_end_retWhyScoped (r := r) (R := R) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .leave h =>
       sim_end_leave (h := h) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .next h =>
@@ -182,43 +194,49 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       sim_end_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .narrow e lo' hi' sonst rest =>
       sim_end_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (ih_sim_end_rest := sim_end rest) (ih_sim_end_sonst := sim_end sonst) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .narrowRequired e lo' hi' rest =>
+      sim_end_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .ite c t e =>
       sim_end_ite (c := c) (t := t) (e := e) (ih_sim_end_e := sim_end e) (ih_sim_end_t := sim_end t) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
 /-- **Arms beside their images.** -/
 theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
-    (a : Arms D V l Γ Λ Λ' cs) → ∀ w : Wert D (.sum cs),
+    {cs : List (Option Ty)} :
+    (a : Arms D V l Γ Λ Λ' cs) → ∀ w' : Wert D' (E.tyE (.sum cs)),
     E.KoerperSim hZ (fun Φ => execArmsHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U')
-        (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') a w)
-      (execArmsHA S' O' U' A' passes R' (exArms hS a) (E.valE _ w))
+        (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') a (E.valZ hZ (.sum cs) w'))
+      (execArmsHA S' O' U' A' passes R' (exArms hS a) w')
   | .nil, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
   | .cons (c := none) b _, ⟨⟨0, _⟩, nutz⟩ => by
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := sim_block b M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by
-          simp only [execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hΦ Φ hP,
-        by simp only [exArms, valE_sum, execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hR⟩
-  | .cons (c := some (lo, hi)) b _, ⟨⟨0, _⟩, nutz⟩ => by
+          simp only [valZ, Val.restrict, Val.restrictSum, execArmsHA, armEnv, Ausgang.schrumpfArm]
+          exact hΦ Φ hP,
+        by simp only [exArms, execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hR⟩
+  | .cons (c := some τ) b _, ⟨⟨0, _⟩, nutz⟩ => by
       intro M σ σ' ρ ρ' hM hρ
-      obtain ⟨M₁, o, hs, hΦ, hR⟩ := sim_block b M σ σ' (Env.cons (τ := .int lo hi) nutz ρ)
-        (Env.cons (τ := .int lo hi) nutz ρ') hM
-        (E.envR_cons hZ (τ := .int lo hi) (τ' := .int lo hi) hρ nutz nutz rfl rfl)
+      obtain ⟨M₁, o, hs, hΦ, hR⟩ := sim_block b M σ σ'
+        (Env.cons (τ := τ) (E.valZ hZ τ nutz) ρ) (Env.cons (τ := E.tyE τ) nutz ρ') hM
+        (E.envR_cons hZ hρ (E.valZ hZ τ nutz) nutz rfl (E.vrel_valZ hZ τ nutz))
       exact ⟨M₁, o.schrumpf, hs, fun Φ hP => by
-          simp only [execArmsHA, armEnv, Ausgang.schrumpfArm]; exact congrArg Ausgang.schrumpf (hΦ Φ hP),
-        by simp only [exArms, valE_sum, execArmsHA, armEnv, Ausgang.schrumpfArm]
+          simp only [valZ, Val.restrict, Val.restrictSum, execArmsHA, armEnv, Ausgang.schrumpfArm]
+          exact congrArg Ausgang.schrumpf (hΦ Φ hP),
+        by simp only [exArms, execArmsHA, armEnv, Ausgang.schrumpfArm]
            exact E.ausRel_schrumpf hR⟩
   | .cons (c := none) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
-      have := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
+      have ih := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       intro M σ σ' ρ ρ' hM hρ
-      obtain ⟨M₁, o, hs, hΦ, hR⟩ := this M σ σ' ρ ρ' hM hρ
-      exact ⟨M₁, o, hs, fun Φ hP => by simp only [execArmsHA]; exact hΦ Φ hP,
-        by simp only [exArms, valE_sum, execArmsHA]; exact hR⟩
-  | .cons (c := some (lo, hi)) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
-      have := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
+      obtain ⟨M₁, o, hs, hΦ, hR⟩ := ih M σ σ' ρ ρ' hM hρ
+      exact ⟨M₁, o, hs, fun Φ hP => by
+          simpa only [valZ, Val.restrict, Val.restrictSum, execArmsHA] using hΦ Φ hP,
+        by simpa only [exArms, execArmsHA] using hR⟩
+  | .cons (c := some τ) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
+      have ih := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       intro M σ σ' ρ ρ' hM hρ
-      obtain ⟨M₁, o, hs, hΦ, hR⟩ := this M σ σ' ρ ρ' hM hρ
-      exact ⟨M₁, o, hs, fun Φ hP => by simp only [execArmsHA]; exact hΦ Φ hP,
-        by simp only [exArms, valE_sum, execArmsHA]; exact hR⟩
+      obtain ⟨M₁, o, hs, hΦ, hR⟩ := ih M σ σ' ρ ρ' hM hρ
+      exact ⟨M₁, o, hs, fun Φ hP => by
+          simpa only [valZ, Val.restrict, Val.restrictSum, execArmsHA] using hΦ Φ hP,
+        by simpa only [exArms, execArmsHA] using hR⟩
 
 /-- **Reason arms beside their images.** -/
 theorem sim_grund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :

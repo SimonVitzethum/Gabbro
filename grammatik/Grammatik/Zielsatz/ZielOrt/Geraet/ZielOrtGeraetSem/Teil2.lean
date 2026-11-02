@@ -39,6 +39,9 @@ theorem Stmt.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .traverse _ _ body, h, hr => by
       simp only [Stmt.gOk, Stmt.regs] at h hr ⊢
       exact Block.gOk_mono body h hr
+  | .consumeTraverse _ _ _ _ _ _ body, h, hr => by
+      simp only [Stmt.gOk, Stmt.regs] at h hr ⊢
+      exact Block.gOk_mono body h hr
   | .retry _ _ body ueber, h, hr => by
       simp only [Stmt.gOk, Stmt.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Block.gOk_mono body h.1 (fun r h' => hr r (Or.inl h')),
@@ -64,6 +67,8 @@ theorem Stmt.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .retires .., _, _ => rfl
   | .ret .., _, _ => rfl
   | .retWhy .., _, _ => rfl
+  | .retScoped .., _, _ => rfl
+  | .retWhyScoped .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
 
@@ -114,6 +119,9 @@ theorem Block.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
+  | .narrowRequired _ _ _ rest, h, hr => by
+      simp only [Block.gOk, Block.regs] at h hr ⊢
+      exact Block.gOk_mono rest h hr
   | .check _ sonst rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
@@ -137,6 +145,8 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       e.gOk K' Rg' = true
   | .ret .., _, _ => rfl
   | .retWhy .., _, _ => rfl
+  | .retScoped .., _, _ => rfl
+  | .retWhyScoped .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
   | .cons s rest, h, hr => by
@@ -179,6 +189,9 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono sonst h.1 (fun r h' => hr r (Or.inl h')),
         Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
+  | .narrowRequired _ _ _ rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
+      exact Endblock.gOk_mono rest h hr
   | .exchange _ _ _ _ rest, h, hr => by
       simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
       exact Endblock.gOk_mono rest h hr
@@ -188,7 +201,7 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
         Endblock.gOk_mono t h.2 (fun r h' => hr r (Or.inr h'))⟩
 
 theorem Arms.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.gOk K Rg = true → (∀ r ∈ a.regs, Rg' r = true) →
       a.gOk K' Rg' = true
   | .nil, _, _ => rfl
@@ -212,7 +225,7 @@ end Mono
 
 theorem armWahlG_gOk {V : Vertrag D} {K : Nat → Bool} {Rg : D.Reg → Bool} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.gOk K Rg = true → (armWahlG arms v).2.1.gOk K Rg = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by
@@ -223,9 +236,9 @@ theorem armWahlG_gOk {V : Vertrag D} {K : Nat → Bool} {Rg : D.Reg → Bool} {l
       exact armWahlG_gOk rest _ h.2
 
 theorem armWahlG_gOk' {V : Vertrag D} {K : Nat → Bool} {Rg : D.Reg → Bool} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
-    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.gOk K Rg = true) :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option Ty} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.gOk K Rg = true) :
     b.gOk K Rg = true := by
   have h0 := armWahlG_gOk arms v h
   rw [hw] at h0

@@ -81,7 +81,6 @@ theorem zf_int {a b : Int} : (Ty.int a b).zeigerfrei = true := by rfl
 theorem zf_index {c : Int} : (Ty.index c).zeigerfrei = true := by rfl
 theorem zf_bool : Ty.bool.zeigerfrei = true := by rfl
 theorem zf_opt {n : Int} : (Ty.opt n).zeigerfrei = true := by rfl
-theorem zf_sum {cs : List (Option (Int × Int))} : (Ty.sum cs).zeigerfrei = true := by rfl
 theorem zf_why {n : Nat} : (Ty.why n).zeigerfrei = true := by rfl
 theorem zf_fl {lo hi : Int × Int} : (Ty.fl lo hi).zeigerfrei = true := by rfl
 theorem zf_ref {n : Nat} : (Ty.ref n).zeigerfrei = true := by rfl
@@ -211,7 +210,7 @@ theorem sim_stmt_assignSlot {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   refine ⟨M₁, .ok (σ₁.schreibSlot t Λ (eval σ₁ i σ₁ ρ).n f (eval σ₁ e σ₁ ρ)) ρ, hs,
     fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, castW_index_n, valE_index_n]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, castW_index_n, valE_index_n]
     exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.vrel_um hZ (E.typ t f) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
@@ -226,7 +225,7 @@ theorem sim_stmt_assignVar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
   have hev0 := E.frei_alle hZ (@hev) hρ
   refine ⟨M₁, .ok σ₁ (ρ.set x (eval σ₁ e σ₁ ρ)), hs, fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
     exact ⟨hI, E.envR_set hZ ρ ρ' x _ _ hρ (hev e ρ ρ' hρ)⟩
 
 set_option linter.unusedSectionVars false in
@@ -240,7 +239,7 @@ theorem sim_stmt_assignThru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     (e)
     (hw)
     (hL)
-    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _))) :=
+    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
   obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
@@ -249,7 +248,7 @@ theorem sim_stmt_assignThru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   refine ⟨M₁, .ok (σ₁.schreibSlot t Λ (eval σ₁ i σ₁ ρ).n f (eval σ₁ e σ₁ ρ)) ρ, hs,
     fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
     exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.vrel_um hZ (E.typ t f) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
@@ -272,7 +271,7 @@ theorem sim_stmt_assignSlotRef {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List 
   refine ⟨M₁, .ok (σ₁.schreibSlot t Λ ((eval σ₁ r σ₁ ρ).zelle : Int) f (eval σ₁ e σ₁ ρ)) ρ, hs,
     fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, zelle_valE]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, zelle_valE]
     exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.vrel_um hZ (E.typ t f) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
@@ -289,7 +288,7 @@ theorem sim_stmt_assignGlob {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   have hev0 := E.frei_alle hZ (@hev) hρ
   refine ⟨M₁, .ok (σ₁.schreibGlob g Λ (eval σ₁ e σ₁ ρ)) ρ, hs, fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
     exact ⟨hI.schreibGlob E g Λ _ _ _ (E.vrel_um hZ (E.gtyp g) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
@@ -315,7 +314,7 @@ theorem sim_stmt_putBytes {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   refine ⟨M₁, .ok (σ₁.schreibBytes t f hf Λ (eval σ₁ i σ₁ ρ).n (zahlZuBytes n (eval σ₁ e σ₁ ρ).n)) ρ,
     hs, fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
     exact ⟨hI.schreibBytes E t f hf _ Λ _ _ _, hρ⟩
 
 set_option linter.unusedSectionVars false in
@@ -345,13 +344,13 @@ theorem sim_stmt_shift {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       hs, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ hP]
       rw [if_pos hc]
-    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
       rw [if_pos (hn'.trans hc)]
       exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.zahl_cast_wert hZ hτ ((E.typ t f).trans (by rw [hτ])) (E.typ t f) _), hρ⟩
   · refine ⟨M₁, .logik .vorzustand, hs, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ hP]
       rw [if_neg hc]
-    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
       rw [if_neg (fun h' => hc (hn'.symm.trans h'))]
       exact ⟨logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
 
@@ -373,13 +372,13 @@ theorem sim_stmt_ite {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
     refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hb, Bool.false_eq_true, ↓reduceIte]
       exact hΦ2 Φ hP
-    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, Bool.false_eq_true, ↓reduceIte]
+    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, Bool.false_eq_true, ↓reduceIte]
       exact hR
   · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_t M₁ σ₁ _ ρ ρ' hI hρ
     refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hb, ↓reduceIte]
       exact hΦ2 Φ hP
-    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, ↓reduceIte]
+    · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, ↓reduceIte]
       exact hR
 
 set_option linter.unusedSectionVars false in
@@ -402,7 +401,7 @@ theorem sim_stmt_onOption {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       refine ⟨M₂, o', teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hv]
         exact hΦ2 Φ hP
-      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_opt, hv]
+      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_opt, hv]
         exact hR
   | some k =>
       obtain ⟨M₂, o', hs2, hΦ2, hR⟩ := ih_sim_block_p M₁ σ₁ _ (Env.cons (τ := Ty.index n) k ρ)
@@ -410,7 +409,7 @@ theorem sim_stmt_onOption {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       refine ⟨M₂, o'.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execStmtHA, hΦ Φ (passt_teil hP hs2), hv]
         exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
-      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_opt, hv]
+      · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_opt, hv]
         exact E.ausRel_schrumpf hR
 
 end Sim

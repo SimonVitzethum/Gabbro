@@ -467,14 +467,14 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only [lowerE, reduceCtorEq] at h
 
 theorem lowerNutz_mono (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Gabbro.Grammatik.Ty}
       (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (r : Nat) (c0 : LR),
       lowerNutz lay cenv W L i nutz r = some c0 → r ≤ c0.2.2
   | _, _, _, .empty, r, c0, h => by
       simp only [lowerNutz, Option.some.injEq] at h
       subst h
       exact Nat.le_refl _
-  | _, _, _, .num (lo := lo) (hi := hi) e, r, c0, h => by
+  | _, _, _, .val (τ := .int lo hi) e, r, c0, h => by
       simp only [lowerNutz] at h
       rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
       · simp only [he, reduceCtorEq] at h

@@ -52,7 +52,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz.BudgetZeuge
   { bD with
     Fn := Bool
     sig := fun _ => 0
-    sigNr := fun _ => ⟨[.bool], none, 0, [], fun t => t.elim, fun g => g.elim, [], [], none⟩
+    sigNr := fun _ => ⟨[.bool], none, 0, [], fun t => t.elim, fun g => g.elim, [], [], none, {}⟩
     passt := fun _ n => decide (0 = n)
     passt_ok := by
       intro f n h
@@ -143,7 +143,7 @@ theorem terminating_classes_zeuge :
     klasse program [false, true] (fun _ => false) true = .endet := by decide
 
 theorem accepted_zeuge :
-    Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [false, true] [] [] [false] = true := by
+    Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [false, true] [] [] [false] [] = true := by
   decide
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn

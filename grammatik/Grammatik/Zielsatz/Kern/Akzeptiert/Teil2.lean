@@ -1,10 +1,43 @@
 module
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil1
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 
 @[expose] public section
 
@@ -22,7 +55,7 @@ theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
   unfold poolSicherWB PoolSicherW PoolSicher
   simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
   constructor
-  · rintro ⟨⟨h1, h2⟩, h3⟩
+  · rintro ⟨⟨⟨⟨h1, h2⟩, h3⟩
     refine ⟨h1, h2, fun f hf c hc => ?_⟩
     have h4 := (List.all_eq_true.mp h3) f (hvoll f)
     rw [hf] at h4
@@ -103,38 +136,55 @@ theorem maskenB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) : maskenB P fs = true ↔ M
 theorem maskenB_ohne (h : ∀ f, P.unterbricht f = false) : maskenB P fs = true :=
   List.all_eq_true.mpr fun w _ => by rw [h w]; rfl
 
-/-- **`Akzeptiert` decides exactly `AkzeptiertSpec`** (given complete member
-    lists). -/
-theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
-    Akzeptiert P S fs ls cs ws = true ↔ AkzeptiertSpec P S fs ws := by
+/-- **The member carriers, split into tables and statics.** Every table of a
+    complete carrier list is in the table projection, and likewise for statics. -/
+theorem tabsOf_voll {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (t : D.Tab) : t ∈ tabsOf cs :=
+  List.mem_filterMap.mpr ⟨.inl t, hcs _, rfl⟩
+
+theorem globsOf_voll {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (g : D.Glob) : g ∈ globsOf cs :=
+  List.mem_filterMap.mpr ⟨.inr g, hcs _, rfl⟩
+
+/-- **`Akzeptiert` gives exactly `AkzeptiertSpec`** (given complete member
+    lists): the forward direction. The value carries the Bool's checks. -/
+theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D)) {checks : List (CheckDecl D)}
+    (h : Akzeptiert P S fs ls cs ws aks checks = true) :
+    AkzeptiertSpec P S fs ws aks := by
+  unfold Akzeptiert at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩ := h
+  exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
+    (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
+    (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
+    (resetB_iff hcs).mp h11, (libraryB_iff _ _).mp h12, (Kernzelle.accumulatorB_iff hvoll hcs).mp h13, checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14⟩
+
+/-- **An `AkzeptiertSpec` value is accepted by `Akzeptiert` at its own checks**:
+    the reverse direction. -/
+theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks} :
+    Akzeptiert P S fs ls cs ws aks h.checks = true := by
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
-  constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩
-    exact { frag := h1, abg := (abgAlleB_iff hvoll).mp h2, fuss := (fussWB_iff hvoll).mp h3, stufen := (stufenB_iff hvoll).mp h4, sperrOrte := (sperrOrteB_iff hls).mp h5, wurzeln := wurzelnB_iff.mp h6, einzeln := (einzelnPoolB_iff hvoll hcs).mp h7, renn := (rennB_iff hvoll hcs).mp h8, antworten := (antwortenB_iff hvoll).mp h9, masken := (maskenB_iff hvoll).mp h10, reset := (resetB_iff hcs).mp h11 }
-  · intro h
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
-      (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
-      wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
-      (rennB_iff hvoll hcs).mpr h.renn⟩,
-      (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
-      (resetB_iff hcs).mpr h.reset⟩
-
-theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :
-    AkzeptiertSpec P S fs ws :=
-  (akzeptiert_iff hvoll hls hcs).mp h
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
+    (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
+    wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
+    (rennB_iff hvoll hcs).mpr h.renn⟩,
+    (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
+    (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku⟩,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩
 
 end Komponenten
 
 end Akzeptiert
 
 /-- **The concrete checker is a `Pruefer`**: its Bool is `Akzeptiert`, and
-    its soundness obligation against `AkzeptiertSpec` is `akzeptiert_iff`. -/
+    its soundness obligation against `AkzeptiertSpec` is `akzeptiertSpec_of`.
+    The Bool runs on the unit's declared checks (`E.pruefungen`). -/
 def akzeptiert_pruefer : Pruefer where
-  akzeptiert := fun E fs ls cs => Akzeptiert E.P E.S fs ls cs E.ws
-  korrekt := fun _ fs ls cs h => akzeptiertSpec_of fs.2 ls.2 cs.2 h
+  akzeptiert := fun E fs ls cs => Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen
+  korrekt := fun _ fs ls cs h => akzeptiertSpec_of fs.2 ls.2 cs.2 _ h
 
 section Start
 
@@ -226,7 +276,8 @@ theorem schreibGetrenntK_of (hZ : StartZulaessig P S fs ws sp init) (hP : Einzel
 
 /-- No thread starts holding a lock by signature, and none starts with
     reasons. -/
-theorem wurzel_of (hA : AkzeptiertSpec P S fs ws) (hZ : StartZulaessig P S fs ws sp init)
+theorem wurzel_of {A : List (Kernzelle.AccumulatorDecl D)} (hA : AkzeptiertSpec P S fs ws A)
+    (hZ : StartZulaessig P S fs ws sp init)
     (t : Faden) : D.haelt (init t).1 = [] ∧ D.gruende (init t).1 = 0 := by
   rcases hZ.wurzel t with h | h
   · exact hA.wurzeln _ h
@@ -235,8 +286,8 @@ theorem wurzel_of (hA : AkzeptiertSpec P S fs ws) (hZ : StartZulaessig P S fs ws
 /-- **`Akzeptiert_ok` -- the checker's facts and an admitted start give every
     decidable premise of the flagships**, with the call graphs computed
     from the program (`kVon`). -/
-theorem Akzeptiert_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws)
-    (hZ : StartZulaessig P S fs ws sp init) :
+theorem Akzeptiert_ok (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs ws A) (hZ : StartZulaessig P S fs ws sp init) :
     programmImFragmentG P fs = true ∧
     (∀ t, AbgK P fs (kVon P fs init t)) ∧
     (∀ t, kVon P fs init t (init t).1 = true) ∧
@@ -259,7 +310,8 @@ theorem Akzeptiert_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S 
     `rennfrei_g_voll`; unguarded carriers that are not atomic -- publish
     payloads included (2026-09-15) -- write separation (`renn`) over the
     computed call graphs, `rennfrei_ungeschuetzt`. -/
-theorem rennfreiBis_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws)
+theorem rennfreiBis_of (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs ws A)
     (hZ : StartZulaessig P S fs ws sp init) {O : Orakel D} (hO : GutO O) (passes : Nat)
     (M : RufMaschineG D) : RennfreiBis P O passes (RufStartG P sp init) M := by
   obtain ⟨-, hAbg, hW, -, -, -, -, hex, -, -, hsep⟩ := Akzeptiert_ok hvoll hA hZ
@@ -378,7 +430,8 @@ end Tafel
 #print axioms Gabbro.Grammatik.antwortenB_iff
 #print axioms Gabbro.Grammatik.maskenB_iff
 #print axioms Gabbro.Grammatik.maskenB_ohne
-#print axioms Gabbro.Grammatik.akzeptiert_iff
+#print axioms Gabbro.Grammatik.akzeptiertSpec_of
+#print axioms Gabbro.Grammatik.spec_akzeptiert
 #print axioms Gabbro.Grammatik.akzeptiert_pruefer
 #print axioms Gabbro.Grammatik.ruheB_iff
 #print axioms Gabbro.Grammatik.getrenntK_of

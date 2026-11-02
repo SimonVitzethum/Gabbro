@@ -1,18 +1,14 @@
 module
-
 public import Grammatik.Code.Refine.Struct.Mono
 public import Grammatik.Code.Refine.Struct.Shape.Teil2
-
+public import Grammatik.Code.Refine.Struct.Shape.Teil4
 @[expose] public section
-
 namespace Gabbro.Code.Lower
 variable [Conf]
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 variable {D : Deklaration}
 variable {V : Vertrag D}
-
 mutual
-
 theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ')
       (lb k : Lbl) (st st' : St) (blks : List Block),
@@ -21,13 +17,15 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerS_shape_assignSlot (lay := lay) (cenv := cenv) (lv := lv) (t := t) (f := f) (i := i) (e := e) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, .assignThru p t zz1 f i e zz2 zz3, lb, k, st, st', blks, h =>
       lowerS_shape_assignThru (lay := lay) (cenv := cenv) (lv := lv) (p := p) (t := t) (zz1 := zz1) (f := f) (i := i) (e := e) (zz2 := zz2) (zz3 := zz3) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
+  | _, _, _, _, .assignSlotRef .., lb, k, st, st', blks, h => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .assignGlob g e zz1 zz2, lb, k, st, st', blks, h =>
       lowerS_shape_assignGlob (lay := lay) (cenv := cenv) (lv := lv) (g := g) (e := e) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, Gabbro.Grammatik.Stmt.assignVar (τ := τ) x e, lb, k, st, st', blks, h =>
       lowerS_shape_GabbroGrammatikStmtassignVar (lay := lay) (cenv := cenv) (lv := lv) (τ := τ) (x := x) (e := e) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, .ite c tb eb, lb, k, st, st', blks, h =>
       lowerS_shape_ite (lay := lay) (cenv := cenv) (lv := lv) (c := c) (tb := tb) (eb := eb) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (ih_lowerB_shape_tb := lowerB_shape lay cenv lv tb) (ih_lowerB_shape_eb := lowerB_shape lay cenv lv eb)
-  | _, _, _, _, .ret e _, lb, k, st, st', blks, h => by
+  | _, _, _, _, .ret e _, lb, k, st, st', blks, h | _, _, _, _, .retScoped e _, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       exact lowerRet_shape lay cenv V.gruende e lb st st' blks h
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, h => by
@@ -110,40 +108,12 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
-  | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, h => by
-      simp only [lowerS] at h
-      by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
-      · simp only [hc, and_self, if_true] at h
-        rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
-          _ | ⟨cv, ov, r1⟩
-        · simp only [hv, reduceCtorEq] at h
-        have m1 := cvtG_mono hv
-        simp only [hv] at h
-        rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
-        · simp only [hb, reduceCtorEq] at h
-        have m2 := bindCode_mono hb
-        simp only [hb] at h
-        rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
-          _ | ⟨bb, s1⟩
-        · simp only [hb2, reduceCtorEq] at h
-        have S2 := lowerB_shape lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ s1 bb hb2
-        simp only [hb2] at h
-        have := Option.some.inj h
-        simp only [Prod.mk.injEq] at this
-        obtain ⟨rfl, rfl⟩ := this
-        refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
-        · intro b hb
-          simp only [List.mem_cons] at hb
-          rcases hb with rfl | rfl | rfl | rfl | hb
-          · rfl
-          · rfl
-          · rfl
-          · rfl
-          · exact S2.2.1 b hb
-        · have a2 := S2.2.2
-          simp only at m1 m2 a2 ⊢
-          omega
-      · simp only [hc, ↓reduceIte, reduceCtorEq] at h
+  | _, _, _, _, .traverse t inv body, lb, k, st, st', blks, h =>
+      lowerS_shape_traverse (lay := lay) (cenv := cenv) (lv := lv) (t := t) (inv := inv) (body := body) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
+        (ih_lowerB_shape_body := fun a st1 st1' bb hk => lowerB_shape lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) st1 st1' bb hk)
+  | _, _, _, _, .consumeTraverse t member edge inv bound mass body, lb, k, st, st', blks, h =>
+      lowerS_shape_consumeTraverse (lay := lay) (cenv := cenv) (lv := lv) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
+        (ih_lowerB_shape_body := fun a st1 st1' bb hk => lowerB_shape lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) st1 st1' bb hk)
   | _, _, _, _, .retry n bis body ueb, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       by_cases hc : retryOk n = true
@@ -193,7 +163,7 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .retires .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
-  | _, _, _, _, .retWhy r _, lb, k, st, st', blks, h => by
+  | _, _, _, _, .retWhy r _, lb, k, st, st', blks, h | _, _, _, _, .retWhyScoped r _, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       exact lowerWhy_shape V.gruende V.erg r.val lb st st' blks h
   | _, _, _, _, .leave .., lb, k, st, st', blks, h => by
@@ -204,7 +174,6 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨⟨_, _, rfl, rfl⟩, by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq], Nat.le_refl _⟩
-
 theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Gabbro.Grammatik.Block D V l Γ Λ Λ')
       (lb k : Lbl) (st st' : St) (blks : List Block),
@@ -285,6 +254,9 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .exchange .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, k, st, st', blks, h =>
+      lowerB_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
+        (ih_lowerB_shape_rest := fun a st1 st1' br hk => lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k st1 st1' br hk)
   | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, st, st', blks,
       h => by
       simp only [lowerB] at h
@@ -336,12 +308,11 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
-
 theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ)
       (lb : Lbl) (st st' : St) (blks : List Block),
       lowerEnd lay cenv lv b lb st = some (blks, st') → Shape lb st st' blks
-  | _, _, _, .ret e _, lb, st, st', blks, h => by
+  | _, _, _, .ret e _, lb, st, st', blks, h | _, _, _, .retScoped e _, lb, st, st', blks, h => by
       simp only [lowerEnd] at h
       exact lowerRet_shape lay cenv V.gruende e lb st st' blks h
   | _, _, _, .cons s rest, lb, st, st', blks, h =>
@@ -372,7 +343,7 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · have a2 := S2.2.2
         simp only at m1 m2 a2 ⊢
         omega
-  | _, _, _, .retWhy r _, lb, st, st', blks, h => by
+  | _, _, _, .retWhy r _, lb, st, st', blks, h | _, _, _, .retWhyScoped r _, lb, st, st', blks, h => by
       simp only [lowerEnd] at h
       exact lowerWhy_shape V.gruende V.erg r.val lb st st' blks h
   | _, _, _, .leave .., lb, st, st', blks, h => by
@@ -383,29 +354,35 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨⟨_, _, rfl, rfl⟩, by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq], Nat.le_refl _⟩
+  | _, _, _, .bindCallElse .., lb, st, st', blks, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .narrow .., lb, st, st', blks, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .exchange .., lb, st, st', blks, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .ite .., lb, st, st', blks, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindCall .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .regRead .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .regReadElse .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .awaits .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .bindCallInd .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
+  | _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, st, st', blks, h =>
+      lowerEnd_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h)
+        (ih_lowerEnd_shape_rest := fun a st1 st1' br hk => lowerEnd_shape lay (a :: cenv) lv rest (st.l + 2) st1 st1' br hk)
 /-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
 theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
     (ov : Opd) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
       (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Lbl) (st st' : St) (blks : List Block),
       lowerAr lay cenv lv top W L ov arms lb k st = some (blks, st') →
       (∀ b ∈ blks, b.phis = []) ∧ st.r ≤ st'.r
@@ -430,7 +407,9 @@ theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top 
       · have a1 := S1.2.2
         have a2 := S2.2
         omega
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, st, st', blks, h => by
+  | _, _, _, _, _, .cons (c := some τ) b rest, lb, k, st, st', blks, h => by
+      cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
+      rename_i lo hi
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h
@@ -461,7 +440,6 @@ theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top 
         have a2 := S2.2
         simp only at m1 m2 a1 a2 ⊢
         omega
-
 /-- The arms of a `match` on a reason: no phis, the register counter does not fall. -/
 theorem lowerGA_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -489,7 +467,5 @@ theorem lowerGA_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · have a1 := S1.2.2
         have a2 := S2.2
         omega
-
 end
-
 end Gabbro.Code.Lower

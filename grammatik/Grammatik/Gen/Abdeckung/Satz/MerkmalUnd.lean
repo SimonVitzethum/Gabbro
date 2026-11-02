@@ -74,6 +74,7 @@ theorem mS_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
       simp only [mS, mB_und A B body, Merkmal.und_ruf, Merkmal.und_ind, Merkmal.und_sperre, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .breaking _ body => by simp only [mS, mB_und A B body]
   | .traverse _ _ body => by simp only [mS, mB_und A B body]
+  | .consumeTraverse _ _ _ _ _ _ body => by simp only [mS, mB_und A B body]
   | .retry _ _ body ueber => by
       simp only [mS, mB_und A B body, mB_und A B ueber, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .forever _ _ body => by simp only [mS, mB_und A B body]
@@ -91,6 +92,8 @@ theorem mS_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .retires .. => rfl
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
 
@@ -116,6 +119,8 @@ theorem mB_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .exchange _ _ _ _ rest => by simp only [mB, mB_und A B rest]
   | .narrow _ _ _ sonst rest => by
       simp only [mB, mE_und A B sonst, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  | .narrowRequired _ _ _ rest => by
+      simp only [mB, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .check _ sonst rest => by
       simp only [mB, mE_und A B sonst, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .float _ _ _ _ _ rest => by simp only [mB, mB_und A B rest]
@@ -125,7 +130,7 @@ theorem mB_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
       simp only [mB, mE_und A B sonst, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 theorem mArms_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : (a : Arms D V l Γ Λ Λ' cs) → mArms (A.und B) a = (mArms A a && mArms B a)
+    {cs : List (Option Ty)} : (a : Arms D V l Γ Λ Λ' cs) → mArms (A.und B) a = (mArms A a && mArms B a)
   | .nil => rfl
   | .cons b rest => by
       simp only [mArms, mB_und A B b, mArms_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
@@ -140,6 +145,8 @@ theorem mE_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Lis
     (e : Endblock D V l Γ Λ) → mE (A.und B) e = (mE A e && mE B e)
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
   | .cons s rest => by
@@ -160,6 +167,8 @@ theorem mE_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : Lis
       simp only [mE, mE_und A B rest, Merkmal.und_ruf, Merkmal.und_ind, Merkmal.und_sperre, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .narrow _ _ _ sonst rest => by
       simp only [mE, mE_und A B sonst, mE_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
+  | .narrowRequired _ _ _ rest => by
+      simp only [mE, mE_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
   | .exchange _ _ _ _ rest => by simp only [mE, mE_und A B rest]
   | .ite _ t e => by
       simp only [mE, mE_und A B t, mE_und A B e, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
@@ -184,6 +193,7 @@ theorem mS_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => by simp only [mS, mB_top body]; rfl
   | .breaking _ body => by simp only [mS, mB_top body]
   | .traverse _ _ body => by simp only [mS, mB_top body]
+  | .consumeTraverse _ _ _ _ _ _ body => by simp only [mS, mB_top body]
   | .retry _ _ body ueber => by simp only [mS, mB_top body, mB_top ueber, Bool.and_self]
   | .forever _ _ body => by simp only [mS, mB_top body]
   | .assignSlot .. => rfl
@@ -200,6 +210,8 @@ theorem mS_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .. => rfl
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
 
@@ -218,13 +230,14 @@ theorem mB_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits _ _ _ _ _ rest => by simp only [mB, mB_top rest]
   | .exchange _ _ _ _ rest => by simp only [mB, mB_top rest]
   | .narrow _ _ _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
+  | .narrowRequired _ _ _ rest => by simp only [mB, mB_top rest, Bool.and_self]
   | .check _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
   | .float _ _ _ _ _ rest => by simp only [mB, mB_top rest]
   | .floatLit _ _ _ rest => by simp only [mB, mB_top rest]
   | .floatOf _ _ _ rest => by simp only [mB, mB_top rest]
   | .floatNarrow _ _ _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
 
-theorem mArms_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+theorem mArms_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → mArms Merkmal.top a = true
   | .nil => rfl
   | .cons b rest => by simp only [mArms, mB_top b, mArms_top rest, Bool.and_self]
@@ -238,6 +251,8 @@ theorem mE_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → mE Merkmal.top e = true
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
   | .cons s rest => by simp only [mE, mS_top s, mE_top rest, Bool.and_self]
@@ -251,6 +266,7 @@ theorem mE_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => by simp only [mE, mE_top rest]
   | .bindCallInd _ _ _ _ _ rest => by simp only [mE, mE_top rest]; rfl
   | .narrow _ _ _ sonst rest => by simp only [mE, mE_top sonst, mE_top rest, Bool.and_self]
+  | .narrowRequired _ _ _ rest => by simp only [mE, mE_top rest, Bool.and_self]
   | .exchange _ _ _ _ rest => by simp only [mE, mE_top rest]
   | .ite _ t e => by simp only [mE, mE_top t, mE_top e, Bool.and_self]
 

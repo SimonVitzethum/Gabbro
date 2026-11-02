@@ -80,12 +80,12 @@ theorem lowE_literal_boundaries_zeuge :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.slot t f i hL) d =
     (do let ci' ← lowE L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci') := rfl
 
-@[lowE_eqs] theorem lowE_thru (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t) (f : D.Feld t)
+@[lowE_eqs] theorem lowE_thru (p : Expr D Γ Λ (.ptr (.table n (true, rw) space))) (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
       (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.thru p t ht f i hL) d =
     (do let ci' ← lowE L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci') := rfl
 
-@[lowE_eqs] theorem lowE_ptrOf (t : D.Tab) (n : Nat) (ht : D.tabNr n = some t) (rw : Bool) :
+@[lowE_eqs] theorem lowE_ptrOf (t : D.Tab) (n : Nat) (ht : D.capTab space n = some t) (rw : Bool × Bool) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.ptrOf t n ht rw) d =
     (some ([ci 1 d 0 0], d + 1)) := by rfl
 
@@ -282,7 +282,7 @@ theorem lowE_literal_boundaries_zeuge :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.refEq a b) d =
     wordL 14 d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1)) := by rfl
 
-@[lowE_eqs] theorem lowE_slotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
+@[lowE_eqs] theorem lowE_slotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.capTab space n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (hL : darf D t Λ) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.slotRef r t ht ho f hL) d =
     (do let cr ← lowE L (reserved := reserved) r (d + valueWords (D.typ t f)); slotValueC L t f d cr) := rfl

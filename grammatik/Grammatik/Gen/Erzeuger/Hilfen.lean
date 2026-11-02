@@ -46,7 +46,7 @@ structure OUnter {V : Vertrag D} (O : Orakel V) (K : Nat) : Prop where
 /-! ## Matchers on an optional or integer type -/
 
 /-- The bounds of an integer type. -/
-def tySchranken : Ty → Option (Int × Int)
+def tySchranken : Ty → Option Ty
   | .int lo hi => some (lo, hi)
   | _ => none
 
@@ -78,15 +78,17 @@ theorem mem_mitSome {R : Type} {o : Option Ty} {f : ∀ {τ : Ty}, o = some τ �
 
 /-! ## The pointer-with-write-right view -/
 
-/-- The expressions of type `ptr n true`. -/
-def ptrTS {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) : Sz (Σ n : Nat, Expr D Γ Λ (.ptr n true)) := fun i =>
+/-- Writable capabilities include write-only table views. -/
+def ptrTS {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) :
+    Sz (Σ (space n : Nat) (read : Bool), Expr D Γ Λ (.ptr (.table n (read, true) space))) := fun i =>
   (E i).filterMap fun p => match p with
-    | ⟨.ptr n true, a⟩ => some ⟨n, a⟩
+    | ⟨.ptr ⟨space, ⟨read, true, none⟩, .table n⟩, a⟩ => some ⟨space, n, read, a⟩
     | _ => none
 
-theorem mem_ptrTS {Γ : Ctx} {Λ : List (Res D)} {E : Sz (SE D Γ Λ)} {i : Nat} {n : Nat}
-    {a : Expr D Γ Λ (.ptr n true)} (h : (⟨.ptr n true, a⟩ : SE D Γ Λ) ∈ E i) :
-    (⟨n, a⟩ : Σ n : Nat, Expr D Γ Λ (.ptr n true)) ∈ ptrTS E i :=
+theorem mem_ptrTS {Γ : Ctx} {Λ : List (Res D)} {E : Sz (SE D Γ Λ)} {i space n : Nat} {read : Bool}
+    {a : Expr D Γ Λ (.ptr (.table n (read, true) space))}
+    (h : (⟨.ptr (.table n (read, true) space), a⟩ : SE D Γ Λ) ∈ E i) :
+    (⟨space, n, read, a⟩ : Σ (space n : Nat) (read : Bool), Expr D Γ Λ (.ptr (.table n (read, true) space))) ∈ ptrTS E i :=
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
 /-! ## Arguments and results -/
@@ -132,13 +134,13 @@ variable {V : Vertrag D}
 
 /-- The arms of a tag type: the head block fixes the resources after the arms, the rest must end there too. -/
 def armsS (O : Orakel V) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) :
-    (cs : List (Option (Int × Int))) → Sz (Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs)
+    (cs : List (Option Ty)) → Sz (Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs)
   | [] => Sz.blatt [⟨Λ, .nil⟩]
   | c :: cs => Sz.knoten (Sz.bindR (Sz.pure ()) (fun m => O.bl l (ArmCtx Γ c) Λ m) fun _ p =>
       Sz.bind (fun j => ofTy (armsS O l Γ Λ cs j) p.1) fun r => Sz.pure ⟨p.1, .cons p.2 r⟩)
 
 theorem mem_armsS {O : Orakel V} {K : Nat} (hO : OUnter O K) {l : Bool} :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option (Int × Int))} {Λ' : List (Res D)}
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option Ty)} {Λ' : List (Res D)}
       (a : Arms D V l Γ Λ Λ' cs), groesseArms a ≤ K →
       (⟨Λ', a⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs) ∈ armsS O l Γ Λ cs (groesseArms a)
   | _, _, _, _, .nil, _ => Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])

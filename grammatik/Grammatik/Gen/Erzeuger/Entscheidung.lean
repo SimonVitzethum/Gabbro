@@ -53,9 +53,9 @@ instance decRufPasst [Aufz D] (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock 
     Decidable (RufPasst D V S Λ) :=
   decidable_of_iff
     ((∀ t, S.schreibt t = true → V.schreibt t = true) ∧ (∀ g, S.gschreibt g = true → V.gschreibt g = true) ∧
-      Untermulti (S.konsumiert.map (Res.vonMarke D)) Λ ∧ (∀ L, L ∈ S.haelt → Res.held L ∈ Λ) ∧
+      Untermulti (S.inputMarks.map (Res.vonMarke D)) Λ ∧ (∀ L, L ∈ S.haelt → Res.held L ∈ Λ) ∧
       (∀ L, Res.held L ∈ Λ → L ∉ S.haelt → ∃ c, S.boden = some c ∧ D.rang L < c) ∧
-      (∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c'))
-    ⟨fun ⟨a, b, c, d, e, f⟩ => ⟨a, b, c, d, e, f⟩, fun h => ⟨h.hw, h.hg, h.hk, h.hh, h.hx, h.hb⟩⟩
+      (∀ c, V.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c') ∧ S.owner = {})
+    ⟨fun ⟨a, b, c, d, e, f, g⟩ => ⟨a, b, c, d, e, f, g⟩, fun h => ⟨h.hw, h.hg, h.hk, h.hh, h.hx, h.hb, h.ownerReady⟩⟩
 
 end Gabbro.Grammatik.Gen

@@ -67,7 +67,7 @@ open Gabbro.Grammatik
 
 /-- `g1D` whose one axiom returns `fn(sig 5)`: no function has signature 5 (`sig = 0`). -/
 def w1D : Deklaration :=
-  { g1D with aerg := fun _ => some (.fnptr 5), anbieter := fun _ => none, anbieter_passt := fun _ _ h => nomatch h }
+  { g1D with aerg := fun _ => some (.fnptr 5), anbieter := fun _ => none, anbieter_passt := fun _ _ h => (nomatch h) }
 
 instance w1D_fn_deq : DecidableEq w1D.Fn := inferInstanceAs (DecidableEq Unit)
 
@@ -87,7 +87,7 @@ def w1Stmt : Stmt w1D (vertragVon w1D ()) false [] [] [] :=
 
 /-- **The round-6 probe**: probe A's contract behind `let p = hol();`. -/
 def w1P : Programm w1D where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons w1Stmt (.ret .empty List.Perm.nil)
@@ -98,7 +98,7 @@ theorem w1_ants : (w1P.rumpf ()).ants = [.inl ()] := by rfl
 
 /-- **No lock family, function list or start list makes the probe meet `AkzeptiertSpec`**:
     its one answer site is an axiom at an empty type that is not `never`. -/
-theorem w1_spec_nicht (S : SperrInv w1D) (fs ws : List w1D.Fn) : ¬ AkzeptiertSpec w1P S fs ws :=
+theorem w1_spec_nicht (S : SperrInv w1D) (fs ws : List w1D.Fn) {A : List (Kernzelle.AccumulatorDecl w1D)} : ¬ AkzeptiertSpec w1P S fs ws A :=
   fun h => by
     rcases h.antworten () (.inl ()) (by rw [w1_ants]; exact List.mem_singleton_self _) with e | e
     · cases e
@@ -138,7 +138,7 @@ instance w1rD_fn_deq : DecidableEq w1rD.Fn := inferInstanceAs (DecidableEq Unit)
 
 /-- `if true { let t = temp; }` over the empty register. -/
 def w1rP : Programm w1rD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons (.ite .tru (.regRead () rfl .nil) .nil) (.ret .empty List.Perm.nil)
@@ -160,12 +160,12 @@ theorem w1r_bool : Akzeptiert w1rP w1rS [()] [] [] [()] = false := by decide
 
 /-- `g1D` whose axiom returns `.why 0`. -/
 def w1gD : Deklaration :=
-  { g1D with aerg := fun _ => some (.why 0), anbieter := fun _ => none, anbieter_passt := fun _ _ h => nomatch h }
+  { g1D with aerg := fun _ => some (.why 0), anbieter := fun _ => none, anbieter_passt := fun _ _ h => (nomatch h) }
 
 instance w1gD_fn_deq : DecidableEq w1gD.Fn := inferInstanceAs (DecidableEq Unit)
 
 def w1gP : Programm w1gD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons (.ite .tru (.bindAxiom (τ := .why 0) () .nil rfl (fun e => nomatch e)
@@ -180,7 +180,7 @@ theorem w1g_bool : Akzeptiert w1gP w1gS [()] [] [] [()] = false := by decide
 
 /-- `g1D` whose axiom returns `never`. -/
 def w1vD : Deklaration :=
-  { g1D with aerg := fun _ => some .never, anbieter := fun _ => none, anbieter_passt := fun _ _ h => nomatch h }
+  { g1D with aerg := fun _ => some .never, anbieter := fun _ => none, anbieter_passt := fun _ _ h => (nomatch h) }
 
 instance w1vD_fn_deq : DecidableEq w1vD.Fn := inferInstanceAs (DecidableEq Unit)
 
@@ -189,7 +189,7 @@ def w1vKopf : Block w1vD (vertragVon w1vD ()) false [] [] [] :=
     (fun e => nomatch e) (fun e => nomatch e) .nil
 
 def w1vP : Programm w1vD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons (.ite .tru w1vKopf .nil) (.ret .empty List.Perm.nil)

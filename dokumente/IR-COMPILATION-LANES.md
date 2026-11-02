@@ -2133,6 +2133,15 @@ proofs; `crates/gabbro-check/src/kbedingung.rs` and D265–D268 in `saetze.rs` a
 the current structural contract to port. Software minter behavior belongs to
 user logic under C08, despite the historical “named assumption” documentation.
 
+C09 resource-interface integration: `Signatur.owner` is preserved by pointer
+conformance, idle-root lifting and declaration embedding. `Signatur.anfang`,
+`Vertrag.ende`, `RufPasst.hk` and `nachSig` use its exact input/output inventories
+alongside ordinary marks. This changes the typed entry/exit inventory read by
+`Spec.lean`, without adding mint authority to hardware assumptions. Until the
+canonical escrow simulation is proved, `RufPasst.ownerReady` explicitly refuses
+nonempty flows. Call-log entry serials distinguish repeated activations at the
+same depth; binding a push/pop to a serial is not yet `OwnerInvG/GX` preservation.
+
 **C10 — shared reader/writer locks and full RCU.**
 
 Present boundary: `Stmt.locks` and `Res.held` are exclusive; `Stmt.observes` in
@@ -2385,6 +2394,24 @@ well-typed **wrong** translator output, reordered arguments, changed translator
 body under the same name, omitted field, escaping mutable alias and wrong profile.
 
 **C12 — safe spaces, rights, byte slices and entry handles.**
+
+Implementation continuation (2026-11-02, not built by the implementation agent):
+`Ty.ptr` now has one table-capability descriptor containing a nominal space,
+independent read/write flags, retained owner identity and table target. Reads
+and writes resolve the same guarded carrier through a registered-space lookup;
+write-only stores use the ordinary statement semantics and write frame. The
+exporter preserves both flags, and argument re-views can only attenuate access
+without changing target, space or owner. Separation still compares underlying
+tables, including write-only views and differently labelled aliases. Declaration
+embeddings preserve the nominal-space registry and each table's space.
+The old normal readable `ptr n rw` cases specialize to the same values, stores,
+reads and footprints. Source export still refuses named spaces lacking a checked
+binding. Live byte targets are not introduced until C01 value flow, C08 grant
+generations/history and C09 loans are integrated; entry handles likewise require
+the checked C08/C14 binding and C09 forwarding flow. Both refusals name the missing
+interface. `Spec.lean` documents this table-only stage without claiming live grant
+provenance or lifetime. Kernel/source witnesses have been added but not measured;
+the lead must compile the migration and check `gabbro_ziel`'s axioms.
 
 `Ty.ptr n rw` currently has `Unit` values; `Ty.ref n` has cell-number values.
 Neither describes a live byte extent. `Parser/Expr/Typ.parseRechte` retains a

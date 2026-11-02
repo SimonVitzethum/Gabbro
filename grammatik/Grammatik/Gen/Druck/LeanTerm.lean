@@ -46,9 +46,30 @@ def gleit : GleitOp → String
   | .mul => ".mul"
   | .div => ".div"
 
-/-- The cases of a tagged type. -/
-def faelle (cs : List (Option (Int × Int))) : String :=
-  "[" ++ String.intercalate ", " (cs.map fun | none => "none" | some p => s!"some {paar p}") ++ "]"
+mutual
+/-- A complete kernel type as Lean source, including nested payload schemas. -/
+def typ : Ty → String
+  | .int lo hi => s!"(.int {zahl lo} {zahl hi})"
+  | .bool => ".bool"
+  | .opt n => s!"(.opt {zahl n})"
+  | .sum cs => s!"(.sum {faelle cs})"
+  | .why n => s!"(.why {n})"
+  | .never => ".never"
+  | .fl lo hi => s!"(.fl {paar lo} {paar hi})"
+  | .fnptr n => s!"(.fnptr {n})"
+  | .ptr ⟨space, ⟨read, write, owner⟩, .table n⟩ =>
+      let own := match owner with | none => "none" | some k => s!"(some {k})"
+      s!"(.ptr ⟨{space}, ⟨{read}, {write}, {own}⟩, .table {n}⟩)"
+  | .ref n => s!"(.ref {n})"
+  | .arr τ n => s!"(.arr {typ τ} {n})"
+  | .str n => s!"(.str {n})"
+
+/-- Case order and complete payload types are printed verbatim. -/
+def faelle : List (Option Ty) → String
+  | [] => "[]"
+  | none :: cs => s!"(none :: {faelle cs})"
+  | some τ :: cs => s!"(some {typ τ} :: {faelle cs})"
+end
 
 /-- A closed integer builtin (lane C13). -/
 def ib : {ts : List Ty} → {τ : Ty} → IntBuiltin ts τ → String
@@ -90,7 +111,7 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .glob g _ => .ok s!"(Expr.glob (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {bew})"
   | _, .slot t f i _ => do .ok s!"(Expr.slot (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
   | _, .thru p t _ f i _ => do .ok s!"(Expr.thru (D := z.deklaration) {← drE N p} {fin (N.tab t) "z.tabs.length"} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
-  | _, .ptrOf t n _ rw => .ok s!"(Expr.ptrOf (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {n} {bew} {rw})"
+  | _, .ptrOf (space := space) t n _ rw => .ok s!"(Expr.ptrOf (D := z.deklaration) (space := {space}) {fin (N.tab t) "z.tabs.length"} {n} {bew} ({rw.1}, {rw.2}))"
   | _, .refEq a b => do .ok s!"(Expr.refEq (D := z.deklaration) {← drE N a} {← drE N b})"
   | _, .slotRef r t _ _ f _ => do .ok s!"(Expr.slotRef (D := z.deklaration) {← drE N r} {fin (N.tab t) "z.tabs.length"} {bew} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {bew})"
   | _, .fnref f n _ => .ok s!"(Expr.fnref (D := z.deklaration) {fin (N.fn f) "z.fns.length"} {n} {bew})"
@@ -146,9 +167,9 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .count n body => do .ok s!"(Expr.count (D := z.deklaration) {n} {← drE N body})"
 
 /-- A payload expression. -/
-def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option (Int × Int)} → NutzlastExpr D Γ Λ o → Except String String
+def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option Ty} → NutzlastExpr D Γ Λ o → Except String String
   | _, .empty => .ok s!"(NutzlastExpr.empty (D := z.deklaration))"
-  | _, .num e => do .ok s!"(NutzlastExpr.num (D := z.deklaration) {← drE N e})"
+  | _, .val e => do .ok s!"(NutzlastExpr.val (D := z.deklaration) {← drE N e})"
 
 /-- The arguments of a call. -/
 def drA (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τs : List Ty} → Args D Γ Λ τs → Except String String
@@ -178,6 +199,7 @@ def drS (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .locks L _ body => do .ok s!"(Stmt.locks (D := z.deklaration) {fin (N.lock L) "z.locks.length"} {bew} {← drB N body})"
   | .breaking i body => do .ok s!"(Stmt.breaking (D := z.deklaration) {fin (N.inv i) "z.invs.length"} {← drB N body})"
   | .traverse t inv body => do .ok s!"(Stmt.traverse (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {← drE N inv} {← drB N body})"
+  | .consumeTraverse t member edge inv bound mass body => do .ok s!"(Stmt.consumeTraverse (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {← drE N member} {← drE N edge} {← drE N inv} {zahl bound} {← drE N mass} {← drB N body})"
   | .retry n bis body ueberlauf => do .ok s!"(Stmt.retry (D := z.deklaration) {n} {← drE N bis} {← drB N body} {← drB N ueberlauf})"
   | .forever a inv body => do .ok s!"(Stmt.forever (D := z.deklaration) {fin (N.annahme a) "(z.annahmen + 1)"} {← drE N inv} {← drB N body})"
   | .axiomCall a args _ _ _ _ _ => do .ok s!"(Stmt.axiomCall (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew})"
@@ -188,6 +210,8 @@ def drS (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .retires m s _ a => .ok s!"(Stmt.retires (D := z.deklaration) {fin (N.marke m) "z.marken.length"} {s} {bew} {fin (N.annahme a) "(z.annahmen + 1)"})"
   | .ret e _ => do .ok s!"(Stmt.ret (D := z.deklaration) {← drR N e} {bew})"
   | .retWhy r _ => .ok s!"(Stmt.retWhy (D := z.deklaration) {fin r.val "_"} {bew})"
+  | .retScoped e _ => do .ok s!"(Stmt.retScoped (D := z.deklaration) {← drR N e} {bew})"
+  | .retWhyScoped r _ => .ok s!"(Stmt.retWhyScoped (D := z.deklaration) {fin r.val "_"} {bew})"
   | .leave _ => .ok s!"(Stmt.leave (D := z.deklaration) {bew})"
   | .next _ => .ok s!"(Stmt.next (D := z.deklaration) {bew})"
 
@@ -206,6 +230,7 @@ def drB (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .awaits g _ _ _ _ rest => do .ok s!"(Block.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drB N rest})"
   | .exchange g neu _ _ rest => do .ok s!"(Block.exchange (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N neu} {bew} {bew} {← drB N rest})"
   | .narrow e lo' hi' sonst rest => do .ok s!"(Block.narrow (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N sonst} {← drB N rest})"
+  | .narrowRequired e lo' hi' rest => do .ok s!"(Block.narrowRequired (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drB N rest})"
   | .check c sonst rest => do .ok s!"(Block.check (D := z.deklaration) {← drE N c} {← drEnd N sonst} {← drB N rest})"
   | .float op a b lo hi rest => do .ok s!"(Block.float (D := z.deklaration) {gleit op} {← drE N a} {← drE N b} {paar lo} {paar hi} {← drB N rest})"
   | .floatLit q lo hi rest => do .ok s!"(Block.floatLit (D := z.deklaration) {paar q} {paar lo} {paar hi} {← drB N rest})"
@@ -216,6 +241,8 @@ def drB (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
 def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Except String String
   | .ret e _ => do .ok s!"(Endblock.ret (D := z.deklaration) {← drR N e} {bew})"
   | .retWhy r _ => .ok s!"(Endblock.retWhy (D := z.deklaration) {fin r.val "_"} {bew})"
+  | .retScoped e _ => do .ok s!"(Endblock.retScoped (D := z.deklaration) {← drR N e} {bew})"
+  | .retWhyScoped r _ => .ok s!"(Endblock.retWhyScoped (D := z.deklaration) {fin r.val "_"} {bew})"
   | .leave _ => .ok s!"(Endblock.leave (D := z.deklaration) {bew})"
   | .next _ => .ok s!"(Endblock.next (D := z.deklaration) {bew})"
   | .cons s rest => do .ok s!"(Endblock.cons (D := z.deklaration) {← drS N s} {← drEnd N rest})"
@@ -229,11 +256,12 @@ def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .awaits g _ _ _ _ rest => do .ok s!"(Endblock.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drEnd N rest})"
   | .bindCallInd p args _ _ _ rest => do .ok s!"(Endblock.bindCallInd (D := z.deklaration) {← drE N p} {← drA N args} {bew} {bew} {bew} {← drEnd N rest})"
   | .narrow e lo' hi' sonst rest => do .ok s!"(Endblock.narrow (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N sonst} {← drEnd N rest})"
+  | .narrowRequired e lo' hi' rest => do .ok s!"(Endblock.narrowRequired (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N rest})"
   | .exchange g neu _ _ rest => do .ok s!"(Endblock.exchange (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N neu} {bew} {bew} {← drEnd N rest})"
   | .ite c t e => do .ok s!"(Endblock.ite (D := z.deklaration) {← drE N c} {← drEnd N t} {← drEnd N e})"
 
 /-- The arms of a `match` on a tagged value. -/
-def drArms (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → Except String String
+def drArms (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Except String String
   | _, .nil => .ok s!"(Arms.nil (D := z.deklaration))"
   | _, .cons b rest => do .ok s!"(Arms.cons (D := z.deklaration) {← drB N b} {← drArms N rest})"
 

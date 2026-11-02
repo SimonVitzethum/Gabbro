@@ -21,8 +21,8 @@ variable {D : Deklaration}
 /-! ## 1. The thread facts from the checker and the runtime -/
 
 def threadFacts_of [DecidableEq D.Fn] {P : Programm D} {S : SperrInv D} {A : FreiForm D} {fs ws : List D.Fn}
-    {B : List (ArenaIface D)} {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
-    (hA : AkzeptiertSpecX P S fs ws B) (hZ : StartZulaessig P S fs ws sp init) (hp : ArenaPlain A) :
+    {B : List (ArenaIface D)} {Ak : List (Kernzelle.AccumulatorDecl D)} {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
+    (hA : AkzeptiertSpecX P S fs ws B Ak) (hZ : StartZulaessig P S fs ws sp init) (hp : ArenaPlain A) :
     ThreadFacts P A fs init := by
   have hLeer : ∀ t, D.haelt (init t).1 = [] := fun t => by
     rcases hZ.wurzel t with h | h

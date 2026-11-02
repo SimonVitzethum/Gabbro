@@ -207,7 +207,7 @@ theorem assignSlot_neu (O : Orakel D) (passes : Nat)
 theorem assignDurch_neu (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat}
-    {p : Expr D Γ Λ (.ptr n true)} {t : D.Tab} {ht : D.tabNr n = some t}
+    {p : Expr D Γ Λ (.ptr (.table n (read, true) space))} {t : D.Tab} {ht : D.capTab space n = some t}
     {f : D.Feld t}
     {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
     {hw : V.schreibt t = true} {hL : darf D t Λ}

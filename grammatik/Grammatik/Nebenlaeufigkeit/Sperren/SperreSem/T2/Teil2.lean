@@ -41,6 +41,12 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
         (fun σ ρ => execBlock O passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
+  | .consumeTraverse t member edge inv bound mass body, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH S O U passes R body σ ρ) =
+        (fun σ ρ => execBlock O passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execH_ohne body h σ ρ]
   | .retry n bis body ueber, h, σ, ρ => by
       simp only [Stmt.ohneLocks, Bool.and_eq_true] at h
       simp only [execStmtH, execStmt]
@@ -72,6 +78,8 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .., _, _, _ => rfl
   | .ret .., _, _, _ => rfl
   | .retWhy .., _, _, _ => rfl
+  | .retScoped .., _, _, _ => rfl
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -117,6 +125,9 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
+  | .narrowRequired e lo' hi' rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
   | .check c sonst rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
@@ -140,6 +151,8 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       execEndH S O U passes R b σ ρ = execEnd O passes R b σ ρ
   | .ret .., _, _, _ => rfl
   | .retWhy .., _, _, _ => rfl
+  | .retScoped .., _, _, _ => rfl
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, h, σ, ρ => by
@@ -177,6 +190,9 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>
         rfl
+  | .narrowRequired e lo' hi' rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
   | .exchange g neu hw hL rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h]
@@ -185,7 +201,7 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_ohne t h.1, Endblock.execH_ohne e h.2] <;> rfl
 
 theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.ohneLocks = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
       execArmsH S O U passes R a v σ ρ = execArms O passes R a v σ ρ

@@ -32,9 +32,9 @@ def QUnter (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (k : Nat) : Prop :=
 
 
 /-- The expression of a sum payload. -/
-def _root_.Gabbro.Grammatik.NutzlastExpr.teile {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List (SE D Γ Λ)
+def _root_.Gabbro.Grammatik.NutzlastExpr.teile {o : Option Ty} : NutzlastExpr D Γ Λ o → List (SE D Γ Λ)
   | .empty => []
-  | .num e => [⟨_, e⟩]
+  | .val e => [⟨_, e⟩]
 
 /-- The immediate subexpressions of an expression in its own context (the quantifier bodies are in another one). -/
 def _root_.Gabbro.Grammatik.Expr.teile {τ : Ty} : Expr D Γ Λ τ → List (SE D Γ Λ)
@@ -63,7 +63,7 @@ def TeileIn (E : Sz (SE D Γ Λ)) {τ : Ty} (e : Expr D Γ Λ τ) : Prop :=
 def QTeileIn (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) {τ : Ty} (e : Expr D Γ Λ τ) : Prop :=
   ∀ x ∈ e.qteil, x.2 ∈ Q x.1 (groesseExpr x.2.2) (groesseExpr x.2.2)
 
-theorem nutz_teile_kleiner {o : Option (Int × Int)} (x : NutzlastExpr D Γ Λ o) :
+theorem nutz_teile_kleiner {o : Option Ty} (x : NutzlastExpr D Γ Λ o) :
     ∀ y ∈ x.teile, groesseExpr y.2 < groesseNutz x := by
   cases x <;> simp only [NutzlastExpr.teile, List.not_mem_nil, groesseNutz, Nat.lt_one_iff, false_implies, implies_true, List.mem_cons, or_false, forall_eq, Nat.lt_add_left_iff_pos, Nat.lt_add_one]
 
@@ -88,15 +88,15 @@ theorem mem_dif {P : Prop} [Decidable P] {α : Type} {g : P → α} (h : P) :
 theorem groesseExpr_pos {τ : Ty} (e : Expr D Γ Λ τ) : 1 ≤ groesseExpr e := by
   cases e <;> simp only [groesseExpr, unendlich] <;> omega
 
-theorem mem_nutzS {E : Sz (SE D Γ Λ)} {o : Option (Int × Int)} (x : NutzlastExpr D Γ Λ o)
+theorem mem_nutzS {E : Sz (SE D Γ Λ)} {o : Option Ty} (x : NutzlastExpr D Γ Λ o)
     (hE : ∀ y ∈ x.teile, y ∈ E (groesseExpr y.2)) : x ∈ nutzS E o (groesseNutz x) := by
   cases x with
   | empty => exact Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
-  | num e =>
+  | val e =>
     simp only [groesseNutz]
     have he : (⟨_, e⟩ : SE D Γ Λ) ∈ E (groesseExpr e) := hE ⟨_, e⟩ (by simp only [NutzlastExpr.teile, List.mem_cons, List.not_mem_nil, or_false])
-    have hm : NutzlastExpr.num e ∈ nutzS E (some (_, _)) (groesseExpr e + 1) :=
-      Sz.mem_knoten (Sz.mem_map (f := NutzlastExpr.num) (mem_tyS he))
+    have hm : NutzlastExpr.val e ∈ nutzS E (some _) (groesseExpr e + 1) :=
+      Sz.mem_knoten (Sz.mem_map (f := NutzlastExpr.val) (mem_tyS he))
     exact Sz.mem_cast hm (by omega)
 
 /-- Close `x ∈ exprS ...` from `hc : x ∈ clause k`. -/
@@ -147,11 +147,13 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
         (Sz.mem_wenn ht (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f))
           (Sz.mem_bind (mem_tyS hi) (Sz.mem_wenn hL (Sz.mem_pure _)))))))) (by omega)
   | ptrOf t n ht rw =>
+    have hs := (Deklaration.capTab_sound ht).2.1
+    subst hs
     simp only [groesseExpr] at hu ⊢
     ausd (gPtrOf (D := D) (Γ := Γ) (Λ := Λ)),
       Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := n) rfl (by omega))
         (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) (Sz.mem_wenn ht (Sz.mem_bind
-          (Sz.mem_wahl (by cases rw <;> simp only [List.mem_cons, Bool.false_eq_true, List.not_mem_nil, or_false, or_true, Bool.true_eq_false, or_self])) (Sz.mem_pure _)))))) (by omega)
+          (Sz.mem_wahl (by rcases rw with ⟨read, write⟩; cases read <;> cases write <;> decide)) (Sz.mem_pure _)))))) (by omega)
   | fnref f n hn =>
     simp only [groesseExpr]
     ausd (gFnref (D := D) (Γ := Γ) (Λ := Λ)),

@@ -5087,3 +5087,20 @@ membership in the carrier list. Old table-only cases are the `.inl` lifts of the
 * Not done here: the Stage-0 return epilogue for owed invariants (`Senke/Funktion.lowFun`), Programm-level
   witnesses (restoration on reason returns, a two-thread guarded observation) and a generator family over global
   carriers.
+C14, source-bound profile, build selection, placement and userspace entry (2026-11-02), grammatik side, not yet
+built by the owner of the build:
+`Parser/Profil/Register.lean` reads the `profile`/`requires profile` blocks and the `assume` registry off the
+original tree, decodes the five keyed modes with a closed decoder, and admits the whole binding with `bindungB`
+(one profile, agreeing modes, resolved assumptions, covered library requirements). The keyed half is a
+`Profil D`/`Bibliothek D`, so `modusProfil_modell` (`profil_modell`) and `bindung_fuegt_nichts_hinzu_bindung` apply
+unchanged; `Kern/Syntax/Profil` now compares free entries at every world. `Parser/Profil/Auswahl.lean` is the
+build selection (`BauModus`, `waehleL`, the `Selection` certificate, `waehleL_gatefrei`, `waehleL_id`, the reserved
+`TESTBUILD` name) and `Pipeline.lean` the translation in a mode (`uebersetzeWahl`, equal to `uebersetzeAllg` on a
+gate- and profile-free unit). `Speichermodell/Adressen/Platzierung.lean` and `Parser/Profil/Platzierung.lean` carry
+static alignment and section (`PlatzOk`, `platzB`, `platzOk_von_platzB`); the elaborator keeps refusing placement
+until the IR layout proofs consume it. `Zielsatz/Projekte/Profil.lean` states `GabbroZielProfil` over a
+`ProfilEinheit` (meaning change described in the header of `Spec.lean`) and proves it from `gabbro_ziel`;
+`Parser/Profil/Eintritt.lean` admits dispatch-only userspace entries and refuses every source `entrust` until a
+proved isolation service has a form. Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
+Open: the entry/service correspondence and the guest service (C08/C12), function-tail gates, the `Verbund` profile
+transport, and the layout/startup/relocation proofs of placement.

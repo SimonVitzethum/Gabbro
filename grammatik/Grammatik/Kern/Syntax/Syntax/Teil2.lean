@@ -23,11 +23,11 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       Expr Γ Λ (D.typ t f)
   /-- `p->f`, `p[i].f` -- ein Zugriff DURCH einen Zeiger auf Traeger `n`: derselbe Zugriff wie
       `slot`, mit denselben Waechtern; der Zeiger ist die Faehigkeit, `t` zu nennen (M3). -/
-  | thru (p : Expr Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t) (f : D.Feld t)
+  | thru (p : Expr Γ Λ (.ptr (.table n (true, rw) space))) (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
       (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
   /-- Der Zeiger auf einen Traeger -- die einzige Adresse, die es gibt: die eines DEKLARIERTEN
       Dings. Es gibt keine Adresse eines Ausdrucks (`SYNTAX.md` §4, `fnvalue`). -/
-  | ptrOf (t : D.Tab) (n : Nat) (ht : D.tabNr n = some t) (rw : Bool) : Expr Γ Λ (.ptr n rw)
+  | ptrOf (t : D.Tab) (n : Nat) (ht : D.capTab space n = some t) (rw : Bool × Bool) : Expr Γ Λ (.ptr (.table n rw space))
   /-- `&f` -- the function pointer: a function that CONFORMS to the pointer type («B8»; structural
       since 2026-10-21, `Deklaration.passt`). -/
   | fnref (f : D.Fn) (n : Nat) (h : D.passt f n = true) : Expr Γ Λ (.fnptr n)
@@ -85,7 +85,7 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   | none (n : Int) : Expr Γ Λ (.opt n)
   | some (e : Expr Γ Λ (.index n)) : Expr Γ Λ (.opt n)
   | istSome (e : Expr Γ Λ (.opt n)) : Expr Γ Λ .bool
-  | case (cs : List (Option (Int × Int))) (i : Fin cs.length)
+  | case (cs : List (Option Ty)) (i : Fin cs.length)
       (nutz : NutzlastExpr Γ Λ (cs.get i)) : Expr Γ Λ (.sum cs)
   | why (n : Nat) (r : Fin n) : Expr Γ Λ (.why n)
   /-- `forall k in slots of T : pred` / `elems of` / `queue` -- der Binder traegt den Index. -/
@@ -141,9 +141,9 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       binder carries the index, the result is at most `n`. -/
   | count (n : Nat) (body : Expr (.index (n : Int) :: Γ) Λ .bool) : Expr Γ Λ (.int 0 (n : Int))
 
-inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
+inductive NutzlastExpr : Ctx → List (Res D) → Option Ty → Type where
   | empty : NutzlastExpr Γ Λ none
-  | num (e : Expr Γ Λ (.int lo hi)) : NutzlastExpr Γ Λ (some (lo, hi))
+  | val (e : Expr Γ Λ τ) : NutzlastExpr Γ Λ (some τ)
 
 end
 
@@ -170,8 +170,8 @@ mutual
 inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
-  /-- `p->f = e;` -- Schreiben DURCH einen `rw`-Zeiger (`R002`/`R003`: kein `w` ohne Recht). -/
-  | assignThru (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
+  /-- A store requires write permission independently of read permission, plus the contract frame and guards. -/
+  | assignThru (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab) (ht : D.capTab space n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
@@ -230,7 +230,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | transition (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (m : D.Reg)
       (hm : D.spiegel r = some m) (hl : (D.rklasse m).lesbar = true) (maske bits : Int) :
       Stmt l Γ Λ Λ
-  /-- `A = e publishes { p, q };` -- die Nutzlast ist die erklaerte (`V001`-`V004` als Form);
+  /-- `A = e publishes { p, q };` -- die Nutzlast D.Fn D.passt ist die erklaerte (`V001`-`V004` als Form);
       die Sichtbarkeit ist das Speichermodell, Annahme A10. -/
   | publish (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (payload : List D.Glob)
       (hp : payload = D.nutzlast g) (hw : V.gschreibt g = true) (hL : gdarf D g Λ) : Stmt l Γ Λ Λ
@@ -248,6 +248,26 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       Stmt l Γ Λ Λ
+  /-- `traverse ... by consuming` (C11): consuming loop over the finite domain
+      of `t` with current-state selection. `member` tests membership of a
+      represented index in the CURRENT world, `edge` the declared edge relation
+      between two represented indices, `inv` the loop invariant, `mass` the
+      strictly falling measure over `0 .. bound`, and `body` the pass over the
+      selected index; the body's declared `touches ... consumes` performs the
+      actual removal. Re-selection runs in the post-body world; empty selection
+      terminates only by selector completeness (minimality/decrease proof open). -/
+  | consumeTraverse (t : D.Tab)
+      (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+      (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+      (inv : Expr D Γ Λ .bool) (bound : Int)
+      (mass : Expr D Γ Λ (.int 0 bound))
+      (body : Block true (.index (D.count t) :: Γ) Λ Λ) : Stmt l Γ Λ Λ
+  /-- `return [v]` through locally acquired scopes (C11): exact residual
+      `V.ende` plus `R.scopes` to close innermost first. Placeholder keeps
+      the immediate value pop; unwinding each scope with its owed invariant
+      (`GRest.rueckBereit`) is OPEN. -/
+  | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
+  | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ
@@ -318,6 +338,12 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       `else`-Zweig. -/
   | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock l Γ Λ)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  /-- `narrowRequired x to lo .. hi` (C11): the same typed narrowing as
+      `narrow`, with a logical failure instead of a source `else`. Out of
+      range is `Logik.kapazitaet`, excluded by the caller's capacity duty;
+      the supplied `else` semantics of `narrow` is unchanged. -/
+  | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+      (rest : Block l (.int lo' hi' :: Γ) Λ Λ') : Block l Γ Λ Λ'
 
 inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
@@ -385,8 +411,17 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hL : gdarf D g Λ) (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
   /-- `if c { … } else { … }` as the last statement of a body, both branches ending (stage 0, 2026-10-26). -/
   | ite (c : Expr D Γ Λ .bool) (t e : Endblock l Γ Λ) : Endblock l Γ Λ
+  /-- `narrowRequired x to lo .. hi` at the top level of a body (C11):
+      `Block.narrowRequired` with an end-block rest; out of range is
+      `Logik.kapazitaet`, never a clipped value. -/
+  | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+      (rest : Endblock l (.int lo' hi' :: Γ) Λ) : Endblock l Γ Λ
+  /-- `return [v]` through scopes at the top level of a body (C11):
+      `Stmt.retScoped` in end-block position; same placeholder status. -/
+  | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
+  | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
 
-inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
+inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option Ty) → Type where
   | nil : Arms l Γ Λ Λ []
   | cons (b : Block l (ArmCtx Γ c) Λ Λ') (rest : Arms l Γ Λ Λ' cs) : Arms l Γ Λ Λ' (c :: cs)
 

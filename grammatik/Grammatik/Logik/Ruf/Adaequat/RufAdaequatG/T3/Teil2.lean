@@ -102,11 +102,10 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         obtain ⟨M2, hr2, hZ2, ho2⟩ := hsim _ _ _ _ hex M1 _ hZ1
           (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
         exact ⟨M2, RufLaufG.schritt hs1 hr2, hZ2, by rw [ho2, (Erw.lese _ _ _).offen]⟩
-      | some lh =>
-        obtain ⟨lo, hi⟩ := lh
+      | some τ =>
         obtain ⟨w', hw'⟩ := schrumpf_ok hex
         obtain ⟨M1, hs1, hZ1⟩ := w_tagSome (P := P) (O := O) (passes := passes) hZ.1
-          v arms rest k ρ rfl lo hi b nutz (by rw [hW]; exact hwahl)
+          v arms rest k ρ rfl τ b nutz (by rw [hW]; exact hwahl)
         rw [hW] at hZ1
         obtain ⟨M2, hr2, hZ2, ho2⟩ := hsim _ _ _ _ hw' M1 _ hZ1
           (heldGenau_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
@@ -156,6 +155,7 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         hΛ (hA.lauf (RufLaufG.einzeln hs1))
       exact ⟨M2, RufLaufG.schritt hs1 hr2, hZ2, ho2⟩
   | _, _, _, _, _, .traverse .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .consumeTraverse .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .retry .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .forever .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
@@ -163,6 +163,8 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ σ' ρ ρ' hex
       simp only [execStmt, reduceCtorEq] at hex
   | _, _, _, _, _, .retWhy .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retScoped .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retWhyScoped .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .leave .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .next .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
@@ -296,6 +298,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         exact ⟨M3, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
           by rw [ho2, (Erw.lese _ _ _).offen]⟩
       · exact absurd hex (zuAusgang_ne_ok _ _ _)
+  | _, _, _, _, _, .narrowRequired _ _ _ _, hb => by cases hb
   | _, _, _, _, _, .check c sonst rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.pruefung_inv.2.1
@@ -379,7 +382,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · exact absurd hex (zuAusgang_ne_ok _ _ _)
 
 theorem armsOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsG A mr arms → ∀ (v : Wert D (.sum cs)),
     SimOkB P O passes f fn stapel rho s0 log A (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

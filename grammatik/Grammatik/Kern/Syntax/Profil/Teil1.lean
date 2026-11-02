@@ -108,14 +108,17 @@ def einigung {D : Deklaration} (P : Profil D) : Prop :=
     istModus a k v → istModus b k w → v = w
 
 /-- Same-named entries carry identical content: keyed entries agree in class,
-    key and value; free entries agree in class and on their prose claim at one
-    witness world. -/
+    key and value; free entries agree in class and their prose claim is
+    equivalent at EVERY world (C14: the former `∃ σ` compared the two claims at
+    one existential witness only, which proves no identity). Source-derived
+    assumption identity is the registry of `Parser/Profil/Register.lean`; this
+    relation is only the semantic clause for the free predicates that remain. -/
 def namensGleichheitAux (D : Deklaration) :
     AnnahmeEintrag D → AnnahmeEintrag D → Prop
   | .modus n c k v, .modus n' c' k' v' =>
       n = n' ∧ c = c' ∧ k = k' ∧ v = v'
   | .frei n c p, .frei n' c' p' =>
-      n = n' ∧ c = c' ∧ ∃ σ : World D, (p σ ↔ p' σ)
+      n = n' ∧ c = c' ∧ ∀ σ : World D, (p σ ↔ p' σ)
   | _, _ => False
 
 /-- Same-named entries carry identical content. -/

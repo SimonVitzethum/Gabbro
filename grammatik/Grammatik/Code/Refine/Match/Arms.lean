@@ -26,7 +26,7 @@ open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang
 variable {D : Deklaration} {V : Vertrag D}
 
 /-- Arm number `i` of the arms of a match on a tagged value, as a block. -/
-def garmT : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+def garmT : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Gabbro.Grammatik.Ty)} →
     Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs → (i : Fin cs.length) →
       Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ (cs.get i)) Λ Λ'
   | _, _, _, _, _, .cons b _, ⟨0, _⟩ => b
@@ -35,8 +35,8 @@ def garmT : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List
 /-- The source runs the arm the case number names, in the environment its payload extends. -/
 theorem execArms_garmT (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
-      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (i : Fin cs.length) (nutz : Nutzlast (cs.get i))
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
+      (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (i : Fin cs.length) (nutz : Nutzlast D.Fn D.passt (cs.get i))
       (σ : World D) (ρ : Env D Γ),
       execArms O passes R arms ⟨i, nutz⟩ σ ρ
         = (execBlock O passes R (garmT arms i) σ (armEnv nutz ρ)).schrumpfArm (cs.get i)
@@ -49,27 +49,29 @@ theorem execArms_garmT (O : Orakel D) (passes : Nat)
 def ArmBOk (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    (c : Option (Int × Int)) → Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ' → Prop
+    (c : Option Gabbro.Grammatik.Ty) → Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ' → Prop
   | none, b => BOk lay cenv lv O passes R b
-  | some (_, _), b => ∀ a, BOk lay (a :: cenv) lv O passes R b
+  | some _, b => ∀ a, BOk lay (a :: cenv) lv O passes R b
 
 /-- **What the lowering made of one arm**, case `c`, entry label `lb`, from state `s` to state `s'`. -/
 def ArmLow (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat) (ov : Opd)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    (c : Option (Int × Int)) → Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ' →
+    (c : Option Gabbro.Grammatik.Ty) → Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ' →
       Lbl → Lbl → St → List Block → St → Prop
   | none, b, lb, k, s, bi, s' => lowerB lay cenv lv b lb k s = some (bi, s')
-  | some (lo, hi), b, lb, k, s, bi, s' =>
+  | some (.int lo hi), b, lb, k, s, bi, s' =>
       ∃ (cp : List Instr) (op : Opd) (r1 : Nat) (cb : List Instr) (a : Reg) (r2 : Nat) (bb : List Block)
         (s1 : St),
         payCode top W L lo hi ov s.r = some (cp, op, r1) ∧ bindCode (.int lo hi) op r1 = some (cb, a, r2) ∧
         lowerB lay (a :: cenv) lv b s.l k ⟨r2, s.l + 1⟩ = some (bb, s1) ∧
         bi = ⟨lb, [], cp ++ cb, .jmp s.l⟩ :: bb ∧ s' = s1
 
+  | some _, _, _, _, _, _, _ => False
+
 /-- **Arm `i` inside the lowering of all arms.** -/
 theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
     (ov : Opd) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
       (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Nat) (s s' : St) (blks : List Block),
       lowerAr lay cenv lv top W L ov arms lb k s = some (blks, s') →
       ∀ i : Fin cs.length, ∃ (bi : List Block) (si si' : St),
@@ -87,7 +89,9 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨b1, s, s1, hb, fun x hx => List.mem_append_left _ hx, Nat.le_refl _, G.2⟩
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, s, s', blks, h, ⟨0, hi'⟩ => by
+  | _, _, _, _, _, .cons (c := some τ) b rest, lb, k, s, s', blks, h, ⟨0, hi'⟩ => by
+      cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
+      rename_i lo hi
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov s.r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h
@@ -123,7 +127,9 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       show ArmLow lay cenv lv top W L ov _ (garmT rest ⟨i, Nat.lt_of_succ_lt_succ hi⟩) (lb + (i + 1)) k si bi si'
       rw [e]
       exact hbi
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, s, s', blks, h, ⟨i + 1, hi'⟩ => by
+  | _, _, _, _, _, .cons (c := some τ) b rest, lb, k, s, s', blks, h, ⟨i + 1, hi'⟩ => by
+      cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
+      rename_i lo hi
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov s.r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h
@@ -154,14 +160,15 @@ theorem lowerAr_get (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
 
 /-- The entry block of an arm is found and has no phis. -/
 theorem armlow_kok (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat) (ov : Opd)
-    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Option (Int × Int))
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Option Gabbro.Grammatik.Ty)
     (b : Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ') (lb k : Lbl) (s s' : St)
     (bi : List Block) (M : Modl) (fn : Nat) (hlow : ArmLow lay cenv lv top W L ov c b lb k s bi s')
     (hMi : InM M fn bi) : KOk M fn lb := by
   cases c with
   | none => exact kok_of_shape (lowerB_shape lay cenv lv b lb k s s' bi hlow) hMi
   | some p =>
-      obtain ⟨lo, hi⟩ := p
+      cases p <;> try exact hlow.elim
+      rename_i lo hi
       obtain ⟨cp, op, r1, cb, a, r2, bb, s1, hp, hb, hb1, rfl, hs'⟩ := hlow
       exact ⟨_, hMi _ (List.mem_cons_self ..), rfl⟩
 
@@ -170,8 +177,8 @@ theorem armlow_kok (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : I
 theorem arm_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (top : Int) (W L : Nat) (ov : Opd)
-    (c : Option (Int × Int)) (b : Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ')
-    (nutz : Nutzlast c) (IHb : ArmBOk lay cenv lv O passes R c b)
+    (c : Option Gabbro.Grammatik.Ty) (b : Gabbro.Grammatik.Block D V l (Gabbro.Grammatik.ArmCtx Γ c) Λ Λ')
+    (nutz : Nutzlast D.Fn D.passt c) (IHb : ArmBOk lay cenv lv O passes R c b)
     (lb k : Lbl) (s s' : St) (bi : List Block) (hlow : ArmLow lay cenv lv top W L ov c b lb k s bi s')
     (M : Modl) (S : Sees) (fn : Nat) (hMi : InM M fn bi) (hk : KOk M fn k) (hlv : LvOk M fn lv)
     (hFn : FnOk lay M) (hCall : CallRef lay M S R)
@@ -186,7 +193,8 @@ theorem arm_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl 
   | none =>
       exact IHb lb k s s' bi hlow M S fn hMi hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
   | some p =>
-      obtain ⟨lo, hi⟩ := p
+      cases p <;> try exact hlow.elim
+      rename_i lo hi
       obtain ⟨cp, op, r1, cb, a, r2, bb, s1, hp, hb, hb1, rfl, hs'⟩ := hlow
       subst hs'
       have S1 := lowerB_shape lay (a :: cenv) lv b s.l k ⟨r2, s.l + 1⟩ s' bb hb1

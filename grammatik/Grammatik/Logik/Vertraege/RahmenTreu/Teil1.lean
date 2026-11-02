@@ -106,7 +106,7 @@ theorem TreuAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
   intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
-theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
+theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
     {o : Ausgang V l (ArmCtx Γ c)} (h : TreuAusgang W G σ o) :
     TreuAusgang W G σ (o.schrumpfArm c) := by
   cases c with

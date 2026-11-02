@@ -53,19 +53,19 @@ theorem korpus109_nutzer : Zielsatz.NutzerPflicht kE :=
 
 /-- No axiom, no register, no global: the oracle is empty. -/
 def kO : Orakel kD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
-  regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  wirkt := fun a => (nomatch a)
+  regLies := fun r => (nomatch r)
+  regSchreib := fun r _ => (nomatch r)
+  sichtbar := fun g => (nomatch g)
 
-theorem kO_gut : GutO kO := fun a => nomatch a
+theorem kO_gut : GutO kO := fun a => (nomatch a)
 
 theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ => nomatch g)⟩
 
 theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
 
 theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [KLock.l, KLock.m] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] = true; exact kP_akzeptiert)
+  (by show Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] [] = true; exact kP_akzeptiert)
 
 /-- **The goal theorem on `beispiele/109`**: for every oracle meeting (c), every
     budget, every runtime start meeting (d), and every reachable machine of

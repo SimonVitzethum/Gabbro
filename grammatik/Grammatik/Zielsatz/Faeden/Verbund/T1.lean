@@ -16,7 +16,8 @@
     leaves (`abg_verbinde`: every edge of an owner's view is an edge of the linked program,
     `kante_teil`, and the linked graph is closed, `reachB_ruft` -- the fixpoint of
     `erreichB` is reached within `fs.length` rounds, `erreichB_stabil`, a counting argument).
-    The three whole-program components (thread-locality, write separation, pool safety) are
+    The whole-program components (thread-locality, write separation, pool safety, and the
+    composed check admission) are
     the link check's, over the COMPOSED hulls: the linked graph of a root lies in its composed
     hull (`huelle_of_reach`, from `KeinRueckruf`).
   * (b) `nutzerPflicht_verbinde`: the linked user duty is the two units' duties over the bodies
@@ -67,6 +68,7 @@ theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' :
   | _, _, _, _, .locks _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .breaking _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .traverse _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .retry _ _ body ueber => by
       simp only [stmtOrteP, blockOrteP_mitRumpf body, blockOrteP_mitRumpf ueber]
   | _, _, _, _, .forever _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
@@ -78,6 +80,8 @@ theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' :
   | _, _, _, _, .retires _ _ _ _ => rfl
   | _, _, _, _, .ret _ _ => rfl
   | _, _, _, _, .retWhy _ _ => rfl
+  | _, _, _, _, .retScoped _ _ => rfl
+  | _, _, _, _, .retWhyScoped _ _ => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -102,6 +106,8 @@ theorem blockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' 
   | _, _, _, _, .exchange _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .narrow _ _ _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .narrowRequired _ _ _ rest => by
+      simp only [blockOrteP, blockOrteP_mitRumpf rest]
   | _, _, _, _, .check _ sonst rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf sonst, blockOrteP_mitRumpf rest]
   | _, _, _, _, .float _ _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
@@ -114,6 +120,8 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
     (e : Endblock D V l Γ Λ), endblockOrteP (mitRumpf P r) e = endblockOrteP P e
   | _, _, _, .ret _ _ => rfl
   | _, _, _, .retWhy _ _ => rfl
+  | _, _, _, .retScoped _ _ => rfl
+  | _, _, _, .retWhyScoped _ _ => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => by
@@ -133,12 +141,14 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
   | _, _, _, .bindCallInd _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]; rfl
   | _, _, _, .narrow _ _ _ sonst rest => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf sonst, endblockOrteP_mitRumpf rest]
+  | _, _, _, .narrowRequired _ _ _ rest => by
+      simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
   | _, _, _, .exchange _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
   | _, _, _, .ite _ t e => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf t, endblockOrteP_mitRumpf e]
 
 theorem armsOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (a : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (a : Arms D V l Γ Λ Λ' cs),
     armsOrteP (mitRumpf P r) a = armsOrteP P a
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons b rest => by

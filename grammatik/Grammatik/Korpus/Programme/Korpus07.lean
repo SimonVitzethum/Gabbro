@@ -79,77 +79,77 @@ def kSigLeer : Signatur Empty Empty Empty Empty where
   erg := none
   gruende := 0
   haelt := []
-  schreibt := fun e => nomatch e
-  gschreibt := fun e => nomatch e
+  schreibt := fun e => (nomatch e)
+  gschreibt := fun e => (nomatch e)
   konsumiert := []
   produziert := []
 
 def kD : Deklaration where
   Tab := Empty
   decTab := inferInstance
-  count := fun e => nomatch e
-  Feld := fun e => nomatch e
-  decFeld := fun e => nomatch e
-  typ := fun e => nomatch e
+  count := fun e => (nomatch e)
+  Feld := fun e => (nomatch e)
+  decFeld := fun e => (nomatch e)
+  typ := fun e => (nomatch e)
   erlaubt := fun _ _ _ _ => false
   tabNr := fun _ => none
   Glob := Empty
   decGlob := inferInstance
-  gtyp := fun e => nomatch e
-  nutzlast := fun e => nomatch e
-  atomar := fun e => nomatch e
-  geteilt := fun e => nomatch e
-  ggeteilt := fun e => nomatch e
+  gtyp := fun e => (nomatch e)
+  nutzlast := fun e => (nomatch e)
+  atomar := fun e => (nomatch e)
+  geteilt := fun e => (nomatch e)
+  ggeteilt := fun e => (nomatch e)
   Lock := Empty
   decLock := inferInstance
-  rang := fun e => nomatch e
-  maskiert := fun e => nomatch e
+  rang := fun e => (nomatch e)
+  maskiert := fun e => (nomatch e)
   Marke := Empty
   decMarke := inferInstance
-  stufen := fun e => nomatch e
-  braucht := fun e => nomatch e
-  gbraucht := fun e => nomatch e
-  eigner := fun e => nomatch e
+  stufen := fun e => (nomatch e)
+  braucht := fun e => (nomatch e)
+  gbraucht := fun e => (nomatch e)
+  eigner := fun e => (nomatch e)
   Fn := Empty
-  sig := fun e => nomatch e
+  sig := fun e => (nomatch e)
   sigNr := fun _ => kSigLeer
-  eigner_nie_erzeugt := fun _ t _ _ _ => nomatch t
+  eigner_nie_erzeugt := fun _ t _ _ _ => (nomatch t)
   Inv := Empty
-  traeger := fun i => nomatch i
+  traeger := fun i => (nomatch i)
   invs := []
   Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  aparams := fun e => (nomatch e)
+  aerg := fun e => (nomatch e)
+  aschreibt := fun e => (nomatch e)
+  agschreibt := fun e => (nomatch e)
   Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  rtyp := fun e => (nomatch e)
+  rklasse := fun e => (nomatch e)
+  spiegel := fun e => (nomatch e)
+  rzusage := fun e => (nomatch e)
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun e => nomatch e
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  geteilt_bewacht := fun e => (nomatch e)
+  invarianten_gehalten := fun _ i => (nomatch i)
+  ggeteilt_bewacht := fun e => (nomatch e)
 
 instance : DecidableEq kD.Fn := inferInstanceAs (DecidableEq Empty)
 instance : DecidableEq kD.Lock := inferInstanceAs (DecidableEq Empty)
 
 /-- The attempted program: no functions, so no bodies and no contracts. -/
 def kP : Programm kD where
-  invariante := fun i => nomatch i
-  requires := fun f => nomatch f
-  ensures := fun f => nomatch f
-  rumpf := fun f => nomatch f
+  invariante := fun i => (nomatch i)
+  requires := fun f => (nomatch f)
+  ensures := fun f => (nomatch f)
+  rumpf := fun f => (nomatch f)
 
 /-- The attempted lock family: no locks, trivially true. -/
 def kSI : SperrInv kD where
-  orte := fun e => nomatch e
+  orte := fun e => (nomatch e)
   inv := fun _ _ => true
 
 def kSlotsLeer : ∀ t : kD.Tab, Int → ∀ f : kD.Feld t, Wert kD (kD.typ t f) :=
-  fun t => nomatch t
+  fun t => (nomatch t)
 
 def kSp : Speicher kD :=
   ⟨kSlotsLeer, fun e => nomatch e⟩
@@ -162,16 +162,16 @@ def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [], kSp, [], []⟩
 theorem korpus07_nutzer_leer : Zielsatz.NutzerPflicht kE := by
   refine ⟨⟨?_, ?_, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, ⟨?_, ?_⟩⟩
   · intro _ f
-    exact nomatch f
+    exact (nomatch f)
   · intro _ _ _ _
     rfl
   · intro e
-    exact nomatch e
+    exact (nomatch e)
   · intro a ha
     cases ha
 
 /-- The checker verdict on the empty program. -/
-theorem kP_akzeptiert : Akzeptiert kP kSI [] [] [] [] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI [] [] [] [] [] = true := by decide
 
 /-! ## The blockage, restated on the model (the source side is a reading) -/
 
@@ -181,11 +181,11 @@ theorem kP_akzeptiert : Akzeptiert kP kSI [] [] [] [] = true := by decide
     WHICH premise fails on WHICH term -- the existential over `Q07.Tab`
     fails on every `t`, because there is none. -/
 theorem offen07_kein_zeuge : ¬ ∃ _t : kD.Tab, True :=
-  fun ⟨t, _⟩ => nomatch t
+  fun ⟨t, _⟩ => (nomatch t)
 
 /-- No function exists, so none writes anything: the second half of the
     non-degeneracy clause is vacuous too. -/
-theorem offen07_kein_schreiber (f : kD.Fn) : False := nomatch f
+theorem offen07_kein_schreiber (f : kD.Fn) : False := (nomatch f)
 
 /-- Named open premise: G forms for `entry`/`boot` hardware, `walk` types
     and `format` layouts (language extension). No model repair can close

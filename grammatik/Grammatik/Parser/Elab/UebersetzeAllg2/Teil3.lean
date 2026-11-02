@@ -221,10 +221,10 @@ def lowAssignDurchW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
   | .error _ => none
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num true) =>
+    | some (.ptr ⟨0, ⟨read, true, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         (fieldHitW u ⟨num, h⟩ fname).map fun fi =>
-          match lowVar Γ j (.ptr num true), lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix,
+          match lowVar Γ j (.ptr (.table num (read, true))), lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix,
               lowWertAtE u Γ Λ fn none ((declOf u).typ ⟨num, h⟩ fi) v with
           | .ok pv, .ok i, .ok e =>
             if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ then
@@ -233,7 +233,7 @@ def lowAssignDurchW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
                   show (vertragVon (declOf u) caller).schreibt ⟨num, h⟩ = true
                   rw [vSchreibt_eq u caller ⟨num, h⟩]
                   exact hw
-                .ok (Stmt.assignThru (D := declOf u) (Expr.var pv) ⟨num, h⟩ (tabNr_some u num h) fi i e hwV hL)
+                .ok (Stmt.assignThru (D := declOf u) (Expr.var pv) ⟨num, h⟩ (capTab_some u num h) fi i e hwV hL)
               else .error "write without right"
             else .error "access without held guard"
           | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e
@@ -390,15 +390,15 @@ theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.t
   unfold rufPasstB at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
   obtain ⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩ := h
-  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_⟩
+  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, OwnerFlow.empty_of_empty S.owner⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
   · rcases hg g (List.mem_finRange g) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
-  · have : S.konsumiert = [] := by
-      cases hk : S.konsumiert with
+  · have : S.inputMarks = [] := by
+      cases hk : S.inputMarks with
       | nil => rfl
       | cons m _ => exact m.1.elim
     rw [this]; exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩

@@ -88,7 +88,7 @@ instance zD_fn_deq' : DecidableEq zD.Fn := inferInstanceAs (DecidableEq ZFn)
     declared bodies would never run). -/
 def Erfuellbar {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D) (fs : Aufzaehlung D.Fn) :
     Prop :=
-  AkzeptiertSpec E.P E.S fs.1 E.ws ∧ NutzerPflicht E ∧ (∃ O : Orakel D, HardwareAnnahmen O E.Q) ∧
+  AkzeptiertSpec E.P E.S fs.1 E.ws E.akku ∧ NutzerPflicht E ∧ (∃ O : Orakel D, HardwareAnnahmen O E.Q) ∧
     ∃ (sp : Speicher D.mitRuhe)
       (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)),
       Laufzeit E sp init ∧ ∀ w ∈ E.ws, ∃ t : Faden, (init t).1 = some w
@@ -122,7 +122,7 @@ def f1Crash {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false �
     stop no clause of (b) constrained -- so this program met (b), passed the checker with
     `haupt` declared and running, and `gabbro_ziel` certified it. -/
 def f1P : Programm zD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf f := .cons f1Crash (paP.rumpf f)
@@ -146,21 +146,23 @@ def tabelle_widerlegt : Prop := NutzerWiderlegt ivPschlecht
     that one declared start reaches in its footprint and ANOTHER declared start writes. -/
 def ungeschuetzt_abgelehnt : Prop :=
   ∀ (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
+    (A : List (Kernzelle.AccumulatorDecl D))
     (w₁ w₂ : D.Fn) (c : D.Tab ⊕ D.Glob),
     w₁ ∈ ws → w₂ ∈ ws → w₁ ≠ w₂ → c ∈ fussOrte P w₁ → TraegerSchreibt w₂ c = true →
-    (∀ L, ¬ Bewacht c L) → ¬ AkzeptiertSpec P S fs ws
+    (∀ L, ¬ Bewacht c L) → ¬ AkzeptiertSpec P S fs ws A
 
 /-- **Two declared starts writing one unguarded carrier fail (a)**, for every program --
     whether or not anything reads the carrier (the race fix of 2026-09-14), and whether or
     not it is a publish payload (verdict P3, 2026-09-15). Only `atomic` globals are exempt. -/
 def zwei_schreiber_abgelehnt : Prop :=
   ∀ (D : Deklaration) [DecidableEq D.Fn] (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
+    (A : List (Kernzelle.AccumulatorDecl D))
     (w₁ w₂ : D.Fn) (c : D.Tab ⊕ D.Glob),
     w₁ ∈ ws → w₂ ∈ ws → w₁ ≠ w₂ → TraegerSchreibt w₁ c = true → TraegerSchreibt w₂ c = true →
-    (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ AkzeptiertSpec P S fs ws
+    (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → ¬ AkzeptiertSpec P S fs ws A
 
 theorem zwei_schreiber_abgelehnt_gilt : zwei_schreiber_abgelehnt := by
-  intro D _ P S fs ws w₁ w₂ c h₁ h₂ hne hw₁ hw₂ hB hA hS
+  intro D _ P S fs ws A w₁ w₂ c h₁ h₂ hne hw₁ hw₂ hB hA hS
   have := (hS.renn c hB hA w₁ h₁ w₂ h₂ hne w₁ (reachB_wurzel P fs w₁) hw₁ w₂
     (reachB_wurzel P fs w₂)).1
   rw [hw₂] at this

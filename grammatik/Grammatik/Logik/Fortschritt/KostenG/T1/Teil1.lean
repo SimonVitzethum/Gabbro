@@ -86,10 +86,10 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .intBuiltin2 op a b => op.arbeit + kostenExpr a + kostenExpr b
   | .count n body => 1 + n * (kostenExpr body + 1)
 
-def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} :
+def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} :
     NutzlastExpr D Γ Λ c → Nat
   | .empty => 0
-  | .num e => kostenExpr e
+  | .val e => kostenExpr e
 end
 /-- Cost of call arguments: the sum, as `kosten.rs::ruf` adds each one. -/
 def kostenArgs {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} :
@@ -152,6 +152,9 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .breaking _ body => 1 + kostenBlock c pa body
   | .traverse t inv body =>
       2 + (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2)
+  | .consumeTraverse t member edge inv _ mass body =>
+      2 + (D.count t).toNat * (kostenBlock c pa body + kostenExpr member +
+        kostenExpr edge + kostenExpr inv + kostenExpr mass + 2)
   | .retry n bis body ueber =>
       2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
   | .forever _ inv body => 2 + pa * (kostenBlock c pa body + kostenExpr inv + 2)
@@ -163,6 +166,8 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .retires _ _ _ _ => 1
   | .ret e _ => 1 + kostenErg e
   | .retWhy _ _ => 1
+  | .retScoped e _ => 1 + kostenErg e
+  | .retWhyScoped _ _ => 1
   | .leave _ => 1
   | .next _ => 1
 
@@ -186,6 +191,7 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenBlock c pa rest
   | .narrow e _ _ sonst rest =>
       2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
+  | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenBlock c pa rest + 1)
   | .check b sonst rest =>
       1 + kostenExpr b + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest)
   | .float _ a b _ _ rest => 2 + kostenExpr a + kostenExpr b + kostenBlock c pa rest
@@ -195,7 +201,7 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
       2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
 
 def kostenArms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0
   | .cons b rest => max (kostenBlock c pa b) (kostenArms c pa rest)
 
@@ -208,6 +214,8 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret e _ => 1 + kostenErg e
   | .retWhy _ _ => 1
+  | .retScoped e _ => 1 + kostenErg e
+  | .retWhyScoped _ _ => 1
   | .leave _ => 1
   | .next _ => 1
   | .cons s rest => entfZ s + kostenStmt c pa s + kostenEnd c pa rest
@@ -225,6 +233,7 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .bindCallInd p args _ _ _ rest => 5 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
   -- unfolded into block position like the other compound end forms: the unfold step and the block's price
   | .narrow e _ _ sonst rest => 5 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
+  | .narrowRequired e _ _ rest => 5 + kostenExpr e + (kostenSonst c pa rest + 1)
   | .exchange _ neu _ _ rest => 5 + kostenExpr neu + kostenSonst c pa rest
   | .ite b t e => 4 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
 
@@ -237,6 +246,8 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret e _ => 2 + kostenErg e
   | .retWhy _ _ => 2
+  | .retScoped e _ => 2 + kostenErg e
+  | .retWhyScoped _ _ => 2
   | .leave _ => 2
   | .next _ => 2
   | .cons s rest => kostenStmt c pa s + kostenSonst c pa rest
@@ -253,6 +264,7 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
   | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
+  | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenSonst c pa rest + 1)
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest
   -- run as `Block.check b e t` (`Endblock.alsBlock`)
   | .ite b t e => 1 + kostenExpr b + max (kostenSonst c pa e + 1) (kostenSonst c pa t)
@@ -278,6 +290,7 @@ def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .locks _ _ body => rufeB Z ZS EW body
   | .breaking _ body => rufeB Z ZS EW body
   | .traverse _ _ body => rufeB Z ZS EW body
+  | .consumeTraverse _ _ _ _ _ _ body => rufeB Z ZS EW body
   | .retry _ _ body ueber => rufeB Z ZS EW body && rufeB Z ZS EW ueber
   | .forever _ _ body => EW && rufeB Z ZS EW body
   | .assignSlot .. => true
@@ -294,6 +307,8 @@ def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .retires .. => true
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -312,6 +327,7 @@ def rufeB (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .awaits _ _ _ _ _ rest => rufeB Z ZS EW rest
   | .exchange _ _ _ _ rest => rufeB Z ZS EW rest
   | .narrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
+  | .narrowRequired _ _ _ rest => rufeB Z ZS EW rest
   | .check _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
   | .float _ _ _ _ _ rest => rufeB Z ZS EW rest
   | .floatLit _ _ _ rest => rufeB Z ZS EW rest
@@ -319,7 +335,7 @@ def rufeB (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .floatNarrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
 
 def rufeArms (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => rufeB Z ZS EW b && rufeArms Z ZS EW rest
 
@@ -332,6 +348,8 @@ def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => rufeS Z ZS EW s && rufeE Z ZS EW rest
@@ -345,6 +363,7 @@ def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .awaits _ _ _ _ _ rest => rufeE Z ZS EW rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => ZS n && rufeE Z ZS EW rest
   | .narrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
+  | .narrowRequired _ _ _ rest => rufeE Z ZS EW rest
   | .exchange _ _ _ _ rest => rufeE Z ZS EW rest
   | .ite _ t e => rufeE Z ZS EW e && rufeE Z ZS EW t
 end

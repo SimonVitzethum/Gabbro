@@ -145,7 +145,10 @@ theorem eHp (caller callee : eD.Fn) (hw : ∀ t, (eD.signatur callee).schreibt t
   hw := hw
   hg := fun g => nomatch g
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
+  hk := by
+    unfold Signatur.inputMarks
+    rw [hk, OwnerFlow.empty_of_empty (eD.signatur callee).owner]
+    exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := RufPasst.hh_von (by
     intro L
     rw [hh]

@@ -187,6 +187,34 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
+  -- the C11 consuming traversal lowers like `traverse` (a counter register, four fixed
+  -- blocks, the lowered body): the current-state re-selection, minimal selection, strict measure
+  -- fall and removal duty are OPEN in G (the placeholder runs the same fixed sweep), and admission
+  -- still refuses the form; `member`/`edge`/`bound`/`mass` are ignored here as in `execStmt`
+  | _, _, _, _, .consumeTraverse t _ _ _ _ _ body, lb, k, s =>
+      if 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128 then
+        match cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg s.r) (s.r + 1) with
+        | some (cv, ov, r1) =>
+            match bindCode (.int 0 (D.count t - 1)) ov r1 with
+            | some (cb, a, r2) =>
+                match lowerB lay (a :: cenv) (k, s.l + 2) body (s.l + 3) (s.l + 2) ⟨r2, s.l + 4⟩ with
+                | some (bb, s1) =>
+                    some (⟨lb, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.int (Ar.wid 0 (D.count t)) 0)
+                            (.int (Ar.wid 0 (D.count t)) 0)], .jmp s.l⟩ ::
+                          ⟨s.l, [], [], .brc .ult (Ar.wid 0 (D.count t)) (.reg s.r)
+                            (.int (Ar.wid 0 (D.count t)) (D.count t)) (s.l + 1) k⟩ ::
+                          ⟨s.l + 1, [], cv ++ cb, .jmp (s.l + 3)⟩ ::
+                          ⟨s.l + 2, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.reg s.r)
+                            (.int (Ar.wid 0 (D.count t)) 1)], .jmp s.l⟩ :: bb, s1)
+                | none => none
+            | none => none
+        | none => none
+      else none
+  -- the C11 scoped returns lower like `ret`/`retWhy` (the immediate value/reason pop): the scope
+  -- evidence `R` is ignored here as in `execStmt`; unwinding each crossed scope with its owed
+  -- invariant (`GRest.rueckBereit`, `cleanupB`) is OPEN, and admission still refuses the form
+  | _, _, _, _, .retScoped e _, lb, k, s => lowerRet lay cenv V.gruende e lb s
+  | _, _, _, _, .retWhyScoped r _, lb, k, s => lowerWhy V.gruende V.erg r.val lb s
   | _, _, _, _, _, _, _, _ => none
 
 def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
@@ -252,10 +280,32 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .check c sonst rest, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerEnd lay cenv lv sonst s.l ⟨r1, s.l + 2⟩ with
+          match lowerEnd lay cenv lv sonst s.l s with
           | some (be, s1) =>
               match lowerB lay cenv lv rest (s.l + 1) k s1 with
               | some (br, s2) => some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ :: (be ++ br), s2)
+              | none => none
+          | none => none
+      | none => none
+  -- the C11 required narrowing lowers like `narrow`, with the failure leg replaced by an
+  -- unreachable trap: out of range is `Logik.kapazitaet`, excluded by the caller's capacity duty,
+  -- so every FAILED run refines vacuously and the success leg keeps the exact `narrow` blocks
+  | _, _, _, _, Gabbro.Grammatik.Block.narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, k, s =>
+      match lowerE lay cenv (Expr.and (Expr.le (Expr.lit lo') e) (Expr.le e (Expr.lit hi'))) s.r with
+      | some (cc, oc, r1) =>
+          match lowerE lay cenv e r1 with
+          | some (ce, oe, r2) =>
+              match cvtG (.int lo hi) (.int lo' hi') oe r2 with
+              | some (cv, ov, r3) =>
+                  match bindCode (.int lo' hi') ov r3 with
+                  | some (cb, a, r4) =>
+                      match lowerB lay (a :: cenv) lv rest (s.l + 2) k ⟨r4, s.l + 3⟩ with
+                      | some (br, s2) =>
+                          some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ ::
+                            ⟨s.l + 1, [], ce ++ cv ++ cb, .jmp (s.l + 2)⟩ ::
+                            ⟨s.l, [], [], .dead⟩ :: br, s2)
+                      | none => none
+                  | none => none
               | none => none
           | none => none
       | none => none
@@ -278,7 +328,7 @@ def lowerGA (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     first computes it (`payCode`) and makes it a new local, then runs its body; an arm without one is
     just its body. -/
 def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat) (ov : Opd) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Gabbro.Grammatik.Ty)} →
       Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs → Lbl → Lbl → St → Option (List Block × St)
   | _, _, _, _, _, .nil, _, _, s => some ([], s)
   | _, _, _, _, _, .cons (c := c) b rest, lb, k, s =>
@@ -290,7 +340,7 @@ def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W 
               | some (b2, s2) => some (b1 ++ b2, s2)
               | none => none
           | none => none
-      | some (lo, hi), b =>
+      | some (.int lo hi), b =>
           match payCode top W L lo hi ov s.r with
           | some (cp, op, r1) =>
               match bindCode (.int lo hi) op r1 with
@@ -303,12 +353,15 @@ def lowerAr (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W 
                   | none => none
               | none => none
           | none => none
+      | some _, _ => none
 
 def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Gabbro.Grammatik.Endblock D V l Γ Λ →
       Lbl → St → Option (List Block × St)
   | _, _, _, .ret e _, lb, s => lowerRet lay cenv V.gruende e lb s
   | _, _, _, .retWhy r _, lb, s => lowerWhy V.gruende V.erg r.val lb s
+  | _, _, _, .retScoped e _, lb, s => lowerRet lay cenv V.gruende e lb s
+  | _, _, _, .retWhyScoped r _, lb, s => lowerWhy V.gruende V.erg r.val lb s
   | _, _, _, .leave _, lb, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, .next _, lb, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, .cons st rest, lb, s =>
@@ -325,6 +378,27 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
           | some (cb, a, r2) =>
               match lowerEnd lay (a :: cenv) lv rest s.l ⟨r2, s.l + 1⟩ with
               | some (b2, s2) => some (⟨lb, [], ce ++ cb, .jmp s.l⟩ :: b2, s2)
+              | none => none
+          | none => none
+      | none => none
+  -- the C11 required narrowing at the top level of a body: the same typed narrowing with the
+  -- failure leg replaced by an unreachable trap, like `Block.narrowRequired` above
+  | _, _, _, Gabbro.Grammatik.Endblock.narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, s =>
+      match lowerE lay cenv (Expr.and (Expr.le (Expr.lit lo') e) (Expr.le e (Expr.lit hi'))) s.r with
+      | some (cc, oc, r1) =>
+          match lowerE lay cenv e r1 with
+          | some (ce, oe, r2) =>
+              match cvtG (.int lo hi) (.int lo' hi') oe r2 with
+              | some (cv, ov, r3) =>
+                  match bindCode (.int lo' hi') ov r3 with
+                  | some (cb, a, r4) =>
+                      match lowerEnd lay (a :: cenv) lv rest (s.l + 2) ⟨r4, s.l + 3⟩ with
+                      | some (br, s2) =>
+                          some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ ::
+                            ⟨s.l + 1, [], ce ++ cv ++ cb, .jmp (s.l + 2)⟩ ::
+                            ⟨s.l, [], [], .dead⟩ :: br, s2)
+                      | none => none
+                  | none => none
               | none => none
           | none => none
       | none => none

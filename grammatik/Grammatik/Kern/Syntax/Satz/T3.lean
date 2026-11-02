@@ -146,6 +146,7 @@ def Stmt.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .locks L _ body => decide (c ≤ D.rang L) && body.ueberBoden c
   | .breaking _ body => body.ueberBoden c
   | .traverse _ _ body => body.ueberBoden c
+  | .consumeTraverse _ _ _ _ _ _ body => body.ueberBoden c
   | .retry _ _ body ueber => body.ueberBoden c && ueber.ueberBoden c
   | .forever _ _ body => body.ueberBoden c
   | _ => true
@@ -165,6 +166,7 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .narrowRequired _ _ _ rest => rest.ueberBoden c
   | .check _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .float _ _ _ _ _ rest => rest.ueberBoden c
   | .floatLit _ _ _ rest => rest.ueberBoden c
@@ -175,6 +177,8 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.ueberBoden c && rest.ueberBoden c
@@ -188,10 +192,11 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .bindCallInd _ _ _ _ _ rest => rest.ueberBoden c
   | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .narrowRequired _ _ _ rest => rest.ueberBoden c
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .ite _ t e => t.ueberBoden c && e.ueberBoden c
 
-def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (c : Int) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.ueberBoden c && rest.ueberBoden c
@@ -210,7 +215,7 @@ abbrev Block.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (bo : Option 
     (b : Block D V l Γ Λ Λ') : Prop := ∀ c, bo = some c → b.ueberBoden c = true
 abbrev Endblock.BodenOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bo : Option Int)
     (b : Endblock D V l Γ Λ) : Prop := ∀ c, bo = some c → b.ueberBoden c = true
-abbrev Arms.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+abbrev Arms.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (bo : Option Int) (a : Arms D V l Γ Λ Λ' cs) : Prop := ∀ c, bo = some c → a.ueberBoden c = true
 abbrev GrundArms.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (bo : Option Int) (a : GrundArms D V l Γ Λ Λ' n) : Prop := ∀ c, bo = some c → a.ueberBoden c = true

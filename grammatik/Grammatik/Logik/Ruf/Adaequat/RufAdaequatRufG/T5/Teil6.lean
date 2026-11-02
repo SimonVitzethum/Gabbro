@@ -62,6 +62,7 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       stmtOkR_breaking (i := i) (body := body) (hs := hs) (ih_blockOkR_body := blockOkR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .traverse t inv body, hs =>
       stmtOkR_traverse (t := t) (inv := inv) (body := body) (hs := hs) (ih_blockOkR_body := blockOkR body) (ih_blockAbbR_body := blockAbbR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
+  | _, _, _, _, _, .consumeTraverse .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .retry n bis body ueber, hs =>
       stmtOkR_retry (n := n) (bis := bis) (body := body) (ueber := ueber) (hs := hs) (ih_blockOkR_body := blockOkR body) (ih_blockOkR_ueber := blockOkR ueber) (ih_blockAbbR_body := blockAbbR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .forever a inv body, hs =>
@@ -73,6 +74,8 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .retWhy .., _ => by
       intro log σ σ' ρ ρ' hex
       simp only [execStmt, reduceCtorEq] at hex
+  | _, _, _, _, _, .retScoped .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retWhyScoped .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .leave .., _ => by
       intro log σ σ' ρ ρ' hex
       simp only [execStmt, reduceCtorEq] at hex
@@ -106,6 +109,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blockOkR_exchange (g := g) (neuE := neuE) (hw := hw) (hL := hL) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .narrow e lo' hi' sonst rest, hb =>
       blockOkR_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
+  | _, _, _, _, _, .narrowRequired _ _ _ _, hb => by cases hb
   | _, _, _, _, _, .check c sonst rest, hb =>
       blockOkR_check (c := c) (sonst := sonst) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .float op a b lo hi rest, hb =>
@@ -117,7 +121,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .floatNarrow e lo hi sonst rest, hb =>
       blockOkR_floatNarrow (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
 theorem armsOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C mr arms → ∀ (v : Wert D (.sum cs)),
     SimOkBR P O passes f fn stapel rho s0 A R (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
@@ -180,6 +184,7 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       stmtAbbR_breaking (i := i) (body := body) (hs := hs) (ih_blockAbbR_body := blockAbbR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, l0, _, _, _, .traverse t inv body, zzh1 =>
       stmtAbbR_traverse (t := t) (inv := inv) (body := body) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
+  | _, _, _, _, _, .consumeTraverse .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .retry n bis body ueber, hs =>
       stmtAbbR_retry (n := n) (bis := bis) (body := body) (ueber := ueber) (hs := hs) (ih_blockOkR_body := blockOkR body) (ih_blockAbbR_body := blockAbbR body) (ih_blockAbbR_ueber := blockAbbR ueber) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, l0, _, _, _, .forever a inv body, zzh1 =>
@@ -191,6 +196,8 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .retWhy .., _ => by
       intro hl log σ σ' ρ ρ' w hex
       simp only [Ausgang.abb?, execStmt, reduceCtorEq] at hex
+  | _, _, _, _, _, .retScoped .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retWhyScoped .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .leave h, zzh1 =>
       stmtAbbR_leave (h := h) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .next h, zzh1 =>
@@ -231,6 +238,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have h0 := hb.narrow_inv.2.2.2
       subst h0
       cases hl
+  | _, _, _, _, _, .narrowRequired _ _ _ _, hb => by cases hb
   | _, _, _, _, _, .check .., hb => by
       intro hl
       have h0 := hb.pruefung_inv.2.2.2
@@ -249,7 +257,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       cases hl
 
 theorem armsAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C mr arms → ∀ (v : Wert D (.sum cs)),
     SimAbbBR P O passes f fn stapel rho s0 A R (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

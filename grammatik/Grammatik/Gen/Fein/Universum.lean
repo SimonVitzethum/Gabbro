@@ -10,8 +10,7 @@
   the table off the model again at every build and stops the build when they differ.
 -/
 module
-public import Grammatik.Gen.Fein.Zellen
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -42,6 +41,8 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Fein.Zellen
+import all Init.Data.Repr
 @[expose] public section
 
 
@@ -122,7 +123,7 @@ def kTab : List (List Zeile) := [
     ⟨some 0, false, false, [(0, some 1, none)]⟩ /- count -/],
   -- NutzlastExpr
   [⟨none, false, false, []⟩ /- empty -/,
-    ⟨none, false, false, [(0, some 0, none)]⟩ /- num -/],
+    ⟨none, false, false, [(0, some 0, none)]⟩ /- val -/],
   -- Args
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(0, none, none), (2, none, none)]⟩ /- cons -/],

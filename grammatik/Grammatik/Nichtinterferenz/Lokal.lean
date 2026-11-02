@@ -45,6 +45,8 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .locks _ _ body => nB S Ax body
   | .breaking _ body => nB S Ax body
   | .traverse _ inv body => inv.orte.all S && nB S Ax body
+  | .consumeTraverse _ member edge inv _ mass body =>
+      member.orte.all S && edge.orte.all S && inv.orte.all S && mass.orte.all S && nB S Ax body
   | .retry _ bis body ueber => bis.orte.all S && nB S Ax body && nB S Ax ueber
   | .forever _ inv body => inv.orte.all S && nB S Ax body
   | .axiomCall a args _ _ _ _ _ => Ax a && args.orte.all S
@@ -55,6 +57,8 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .retires .. => true
   | .ret e _ => e.orte.all S
   | .retWhy .. => true
+  | .retScoped e _ => e.orte.all S
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -74,6 +78,7 @@ def nB (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .awaits g _ _ _ _ rest => S (.inr g) && nB S Ax rest
   | .exchange g neu _ _ rest => S (.inr g) && neu.orte.all S && nB S Ax rest
   | .narrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nB S Ax rest
+  | .narrowRequired e _ _ rest => e.orte.all S && nB S Ax rest
   | .check c sonst rest => c.orte.all S && nE S Ax sonst && nB S Ax rest
   | .float _ a b _ _ rest => a.orte.all S && b.orte.all S && nB S Ax rest
   | .floatLit _ _ _ rest => nB S Ax rest
@@ -84,6 +89,8 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret e _ => e.orte.all S
   | .retWhy .. => true
+  | .retScoped e _ => e.orte.all S
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => nS S Ax s && nE S Ax rest
@@ -98,11 +105,12 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .awaits g _ _ _ _ rest => S (.inr g) && nE S Ax rest
   | .bindCallInd p args _ _ _ rest => p.orte.all S && args.orte.all S && nE S Ax rest
   | .narrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nE S Ax rest
+  | .narrowRequired e _ _ rest => e.orte.all S && nE S Ax rest
   | .exchange g neu _ _ rest => S (.inr g) && neu.orte.all S && nE S Ax rest
   | .ite c t e => c.orte.all S && nE S Ax e && nE S Ax t
 
 def nA (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => nB S Ax b && nA S Ax rest
 

@@ -119,7 +119,10 @@ theorem vHp (caller callee : vD.Fn) (hw : ∀ t, (vD.signatur callee).schreibt t
   hw := hw
   hg := fun g => nomatch g
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
+  hk := by
+    unfold Signatur.inputMarks
+    rw [hk, OwnerFlow.empty_of_empty (vD.signatur callee).owner]
+    exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl]⟩
   hh := RufPasst.hh_von (by
     intro L
     rw [hh]
@@ -220,9 +223,7 @@ theorem vP_fuss : fussOrtB vP vFs = true := by decide
 /-- The oracle: sets the slot to `true`, records the write. -/
 def vO : Orakel vD where
   wirkt := fun _ σ _ =>
-    ({ slots := fun _ _ _ => true
-       globs := fun g => nomatch g
-       spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0)
+    ({ slots := fun _ _ _ => true, globs := (fun g => (nomatch g)), spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0)
   regLies := fun r => nomatch r
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g => nomatch g
@@ -231,9 +232,7 @@ theorem vO_gut : GutO vO := by
   intro a σ ρ
   cases a
   have hW : vO.wirkt () σ ρ =
-      ({ slots := fun _ _ _ => true
-         globs := fun g => nomatch g
-         spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0) := rfl
+      ({ slots := fun _ _ _ => true, globs := (fun g => (nomatch g)), spur := axiomSpur [()] [] () [Res.held ()] σ.haelt ++ σ.spur }, 0) := rfl
   refine ⟨?_, ?_, ?_⟩
   · constructor
     · intro t ht

@@ -44,7 +44,11 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
     In particular a pointer is a declared carrier capability, never an integer address. -/
 def expression (u : UProg) (ty : Ty) (arg : SExpr)
     (accepted : uStartArg u.tabs ty arg = true) : Expr (declOf u) [] [] ty := by
-  cases ty <;> cases arg <;> simp only [uStartArg] at accepted
+  cases ty
+  case ptr cap =>
+    rcases cap with ⟨space, ⟨read, write, owner⟩, target⟩
+    cases space <;> cases owner <;> cases target
+  all_goals cases arg <;> simp only [uStartArg] at accepted
   all_goals try contradiction
   case int.lit lo hi n =>
     have h := of_decide_eq_true accepted
@@ -58,10 +62,10 @@ def expression (u : UProg) (ty : Ty) (arg : SExpr)
   case bool.tru => exact .tru
   case bool.fls => exact .fls
   case opt.call n name args => exact .none n
-  case ptr.fnref n rw name =>
+  case ptr.fnref read write n name =>
     by_cases hn : n < u.tabs.length
     · exact Expr.ptrOf (D := declOf u) (⟨n, hn⟩ : Fin u.tabs.length) n
-        (by simp only [declOf, dite_eq_left hn]) rw
+        (by simp only [declOf, dite_eq_left hn]) (read, write)
     · have hh : u.tabs[n]? = none := List.getElem?_eq_none (by omega)
       simp only [hh, Bool.false_eq_true] at accepted
 

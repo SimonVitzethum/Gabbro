@@ -146,6 +146,35 @@ theorem sim_stmt_traverse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
     (Einbettung.alleIndizes_bild (D' := D') (E.count t)) M σ σ' ρ ρ' hM hρ
 
 set_option linter.unusedSectionVars false in
+theorem sim_stmt_consumeTraverse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (t)
+    (member)
+    (edge)
+    (inv)
+    (bound)
+    (mass)
+    (body)
+    (ih_sim_block_body : E.KoerperSim hZ (fun Φ => execBlockHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') body) (execBlockHA S' O' U' A' passes R' (exB hS body)))
+    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  have hsb := E.koerperSim_block_um hZ S' O' U' A' passes R'
+    (show (Ty.index (D.count t) :: Γ).map E.tyE = Ty.index (D'.count (E.tab t)) :: Γ.map E.tyE by
+      rw [List.map_cons, E.count]) _ _ (ih_sim_block_body)
+  have hi := E.pruef_sim hZ T hB.havocA hB.atom inv
+  exact E.traverse_sim (l := l) _ _ _ _ hsb hi
+    (fun k => castW (D := D') (show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by
+      rw [E.count]) k)
+    (fun k => ⟨(show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by rw [E.count]).symm,
+      castW_symm (D := D') (τ := Ty.index (D'.count (E.tab t))) (σ := Ty.index (D.count t)) _ k⟩)
+    (alleIndizes (D.count t))
+    (alleIndizes (D'.count (E.tab t)))
+    (Einbettung.alleIndizes_bild (D' := D') (E.count t)) M σ σ' ρ ρ' hM hρ
+
+set_option linter.unusedSectionVars false in
 theorem sim_stmt_retry {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (n)
     (bis)
@@ -258,7 +287,7 @@ theorem sim_stmt_publish {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D
   have hev0 := E.frei_alle hZ (@hev) hρ
   refine ⟨M₁, .ok (σ₁.schreibGlob g Λ (eval σ₁ e σ₁ ρ)) ρ, hs, fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
     exact ⟨hI.schreibGlob E g Λ _ _ _ (E.vrel_um hZ (E.gtyp g) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
@@ -301,10 +330,38 @@ theorem sim_stmt_ret {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   · exact ⟨hI, he⟩
 
 set_option linter.unusedSectionVars false in
+theorem sim_stmt_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retScoped e R : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.retScoped e R : Stmt D V l Γ Λ _))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T hM hB.havocA hB.atom Λ (Λ.map E.resE)
+    e.orte (E.exErg e).orte (E.orte_exErg e).symm
+  have hev0 := E.frei_alle hZ (@hev) hρ
+  have he := E.evalErg_exErg hZ hI.treu hI.treu e ρ ρ' hρ
+  refine ⟨M₁, .zurueck σ₁ (evalErg σ₁ e σ₁ ρ), hs, fun Φ hP => ?_, ?_⟩
+  · simp only [execStmtHA, hΦ Φ hP]
+  · exact ⟨hI, he⟩
+
+set_option linter.unusedSectionVars false in
 theorem sim_stmt_retWhy {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r)
     (hΛ)
     : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhy r hΛ : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.retWhy r hΛ : Stmt D V l Γ Λ _))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execStmtHA],
+    by simp only [exS, execStmtHA]; exact ⟨hM, rfl⟩⟩
+
+set_option linter.unusedSectionVars false in
+theorem sim_stmt_retWhyScoped {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (r)
+    (R)
+    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhyScoped r R : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.retWhyScoped r R : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
   exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execStmtHA],
@@ -371,7 +428,7 @@ theorem sim_block_bind {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   refine ⟨M₂, o.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
   · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2)]
     exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
-  · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+  · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
     exact E.ausRel_schrumpf hR
 
 set_option linter.unusedSectionVars false in

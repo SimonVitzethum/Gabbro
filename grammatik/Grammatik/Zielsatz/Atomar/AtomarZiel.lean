@@ -24,6 +24,7 @@ module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Faeden.Ruhe.Teil3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -139,9 +140,11 @@ theorem fussSX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs
         exact h3.imp id (lokW_mitRuhe P hvoll hAbg)
 
 /-- **Transfer of the checker's facts with the rely to `P.mitRuhe`.** -/
-theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hA : AkzeptiertSpecX P S fs ws B) :
-    AkzeptiertSpecX P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (B.map (·.mitRuhe)) where
+theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
+    {A : List (Kernzelle.AccumulatorDecl D)} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hA : AkzeptiertSpecX P S fs ws B A) :
+    AkzeptiertSpecX P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (B.map (·.mitRuhe))
+      (A.map Kernzelle.AccumulatorDecl.mitRuhe) where
   frag := frag_mitRuhe P hA.frag
   abg := abg_mitRuhe P hvoll hA.abg
   fuss := fussSX_mitRuhe P hvoll hA.abg hA.fuss
@@ -169,6 +172,50 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)} (h
   worte a' ha' := by
     obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
     exact hA.worte a ha
+  akku := Kernzelle.accumulatorAdmission_mitRuhe P hvoll hA.abg hA.akku
+  reset := fun g elem len harr => by
+    have hT : tyR (D.gtyp g) = .arr elem len := harr
+    cases hτ : D.gtyp g with
+    | int lo hi =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | bool =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | opt n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | sum cs =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | why n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | never =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | fl _ =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | fnptr n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | ptr cap =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | ref t =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | arr elem' len' =>
+      simp only [tyR] at hT
+      cases hT
+      exact zeroAdmitting_tyR (hA.reset g elem' len' hτ)
+    | str n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+
+  checks := hA.checks.map CheckDecl.mitRuhe
+  pruef := CheckAdmission.mitRuhe P hvoll hA.abg hA.pruef
 
 end Transfer
 
@@ -204,29 +251,42 @@ theorem besitzB_leer {E : Einheit D} {fs : List D.Fn} (hB : E.arenen = []) : bes
 
 end Besitz
 
-/-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. -/
+/-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. The Bool runs
+    on the unit's declared checks (`E.pruefungen`). -/
 def akzeptiertX_pruefer : PrueferX where
-  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws && besitzB E fs
-  korrekt := fun _ fs ls cs h => by
-    have h := (Bool.and_eq_true _ _).mp h
-    obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 h.2
-    exact ⟨(akzeptiertSpecX_of fs.2 ls.2 cs.2 h.1).mitBesitz hb hw, hs⟩
-
-/-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
-    (`akzeptiertSpecX_of_spec`, `besitzB_sound`). -/
-def Pruefer.alsX (C : Pruefer) : PrueferX where
-  akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && besitzB E fs
+  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws E.akku E.pruefungen && besitzB E fs &&
+    Kernzelle.akkuStartB E E.akku
   korrekt := fun E fs ls cs h => by
     have h := (Bool.and_eq_true _ _).mp h
-    obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 h.2
-    exact ⟨(akzeptiertSpecX_of_spec (C.korrekt E fs ls cs h.1)).mitBesitz hb hw, hs⟩
+    obtain ⟨hX, hStart⟩ := h
+    have hX' := (Bool.and_eq_true _ _).mp hX
+    obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hX'.2
+    exact ⟨(akzeptiertSpecX_of fs.2 ls.2 cs.2 E.akku hX'.1).mitBesitz hb hw,
+      hs, Kernzelle.akkuStartB_sound hStart⟩
 
-/-- On a unit without an arena -- every unit of before -- `Pruefer.alsX` decides as the checker. -/
+/-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
+    (`akzeptiertSpecX_of_spec`, `besitzB_sound`). The checks ride along through
+    `C.korrekt` (the lifted checker judges the unit's declared checks). -/
+def Pruefer.alsX (C : Pruefer) : PrueferX where
+  akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && besitzB E fs &&
+    Kernzelle.akkuStartB E E.akku
+  korrekt := fun E fs ls cs h => by
+    have h := (Bool.and_eq_true _ _).mp h
+    obtain ⟨hC, hStart⟩ := h
+    have hC' := (Bool.and_eq_true _ _).mp hC
+    obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 hC'.2
+    exact ⟨(akzeptiertSpecX_of_spec (C.korrekt E fs ls cs hC'.1)).mitBesitz hb hw, hs,
+      Kernzelle.akkuStartB_sound hStart⟩
+
+/-- On a unit without an arena and without an accumulator -- every unit of before --
+    `Pruefer.alsX` decides as the checker. -/
 theorem Pruefer.alsX_akzeptiert (C : Pruefer) {D : Deklaration} [DecidableEq D.Fn] {E : Einheit D}
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hB : E.arenen = [])
+    (hA : E.akku = [])
     (h : C.akzeptiert E fs ls cs = true) : C.alsX.akzeptiert E fs ls cs = true := by
-  show (C.akzeptiert E fs ls cs && besitzB E fs) = true
-  rw [h, besitzB_leer hB]; rfl
+  show (C.akzeptiert E fs ls cs && besitzB E fs && Kernzelle.akkuStartB E E.akku) = true
+  rw [h, besitzB_leer hB, hA]
+  exact Kernzelle.akkuStartB_leer E
 
 /-- **THE GOAL WITH SHARED ATOMICS.** For every checker `C` for the rely, every declaration and
     unit `E` it accepts, the user's logic with the rely (bodies against every answer a shared

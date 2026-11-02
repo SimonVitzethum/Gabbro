@@ -48,6 +48,7 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
         exact Nat.mul_le_mul_left _ (by omega)
       simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .callInd .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .consumeTraverse .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .retry .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .forever .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .axiomCall .., h => by simp only [spiegelS, Bool.false_eq_true] at h
@@ -65,6 +66,8 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
   | .publish .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .ret .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .retWhy .., _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
+  | .retScoped .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .retWhyScoped .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .leave _, _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .next _, _ => by simp only [kostenStmt, kostenKS, zusatzS]; omega
 
@@ -111,6 +114,9 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa sonst h.1
       have h2 := spiegel_block c pa rest h.2
       simp only [kostenBlock, kostenKB, zusatzB]; omega
+  | .narrowRequired _ _ _ rest, h => by
+      have h1 := spiegel_block c pa rest h
+      simp only [kostenBlock, kostenKB, zusatzB]; omega
   | .check _ sonst rest, h => by
       simp only [spiegelB, Bool.and_eq_true] at h
       have h1 := spiegel_sonst c pa sonst h.1
@@ -132,7 +138,7 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       simp only [kostenBlock, kostenKB, zusatzB]; omega
 
 theorem spiegel_arms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (arms : Arms D V l Γ Λ Λ' cs) → spiegelArms arms = true →
       kostenArms c pa arms ≤ kostenKArms c arms + zusatzArms arms
   | .nil, _ => by simp only [kostenArms, kostenKArms, zusatzArms]; omega
@@ -191,6 +197,12 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .bindCallInd .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .narrow .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .narrowRequired .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .retScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .retWhyScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .exchange .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .ite .., h => by simp only [spiegelE, Bool.false_eq_true] at h
 
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} :
@@ -230,6 +242,12 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bindCallInd .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .narrow .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .narrowRequired .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .retScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .retWhyScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .exchange .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .ite .., h => by simp only [spiegelE, Bool.false_eq_true] at h
 end
 /-- **TARGET 3 over a frame.** For a body in the mirrored forms, the own
     steps of its frame are at most the checker's number of the body plus
@@ -336,7 +354,7 @@ theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : 
   | .retWhy _ _ => rfl
 
 theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
-    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {arms : Arms D V l Γ Λ Λ' cs} : ArmsR A C mr arms → rufeArms Z (fun _ => false) true arms = true
   | .nil => rfl
   | .cons _ _ hb hr => by

@@ -48,12 +48,12 @@ def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num true) =>
+    | some (.ptr ⟨0, ⟨read, true, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok bh =>
-          match lowVar Γ j (.ptr num true) with
+          match lowVar Γ j (.ptr (.table num (read, true))) with
           | .error e => .error e
           | .ok pv =>
             match lowIdx u Γ Λ
@@ -143,64 +143,37 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
       (Expr (declOf u) Γ Λ t)
   | a =>
     match k, t with
-    | .ptr num w, .ptr n w' =>
-      match a with
-      | .var p =>
-        if hN : n = num then
-          if hW : w' = w then
-            match paramPos fn.params p with
+    | .ptr cap, .ptr ⟨0, ⟨read, write, none⟩, .table n⟩ =>
+      let target := DataCapTy.table n (read, write)
+      if hK : cap = target then
+        match a with
+        | .var name =>
+          match paramPos fn.params name with
+          | .error e => .error e
+          | .ok j =>
+            match fn.kinds[j]? with
+            | some (.ptr source) =>
+              if source = target then
+                match lowVar Γ j (.ptr target) with
+                | .error e => .error e
+                | .ok x => .ok (Expr.var x)
+              else .error "pointer argument requires an explicit checked attenuation"
+            | _ => .error "pointer argument without G form"
+        | .freshPtr name descriptor =>
+          if descriptor = target then
+            match tabIdx u.tabs name with
             | .error e => .error e
-            | .ok j =>
-              match fn.kinds[j]? with
-              | some (.ptr num2 w2) =>
-                if hC : num2 = num then
-                  if w2 = w then
-                    match lowVar Γ j
-                        (.ptr n w') with
-                    | .error e => .error e
-                    | .ok x => .ok (Expr.var x)
-                  else
-                    if h : num < u.tabs.length then
-                      have eP : Expr (declOf u) Γ
-                          Λ (.ptr n w') := by
-                        rw [hN, hW]
-                        exact Expr.ptrOf (D := declOf u) ⟨num, h⟩
-                          num (tabNr_some u num h) w
-                      .ok eP
-                    else .error "pointer table unknown"
-                else .error "argument of foreign table"
-              | _ => .error "pointer argument without G form"
-          else .error "argument type without G form"
-        else .error "argument type without G form"
-      | .freshPtr tname w2 =>
-        if hN : n = num then
-          if hW : w' = w then
-            if hW2 : w2 = w then
-              match tabIdx u.tabs tname with
-              | .error e => .error e
-              | .ok ft =>
-                if hT : ft.val = num then
-                  have hTlt : num < u.tabs.length := by
-                    rw [← hT]
-                    exact ft.isLt
-                  have hE : (⟨num, hTlt⟩ :
-                      Fin u.tabs.length) = ft := by
-                    apply Fin.ext
-                    show num = ft.val
-                    exact hT.symm
-                  have ht : (declOf u).tabNr num = some ft := by
-                    rw [← hE]
-                    exact tabNr_some u num hTlt
-                  have eP : Expr (declOf u) Γ
-                      Λ (.ptr n w') := by
-                    rw [hN, hW]
-                    exact Expr.ptrOf (D := declOf u) ft num ht w
-                  .ok eP
-                else .error "argument of foreign table"
-            else .error "argument right without G form"
-          else .error "argument type without G form"
-        else .error "argument type without G form"
-      | .val _ | .bval _ | .oval _ | .gval _ | .fnref _ => .error "value for pointer without G form"
+            | .ok ft =>
+              if hT : ft.val = n then
+                have hn : n < u.tabs.length := hT ▸ ft.isLt
+                have ht : (declOf u).tabNr n = some ft := by
+                  have he : (⟨n, hn⟩ : Fin u.tabs.length) = ft := Fin.ext hT.symm
+                  simpa only [he] using tabNr_some u n hn
+                .ok (Expr.ptrOf (D := declOf u) ft n (Deklaration.capTab_of ht rfl (by decide)) (read, write))
+              else .error "argument of foreign table"
+          else .error "argument capability without G form"
+        | _ => .error "value for pointer without G form"
+      else .error "argument capability without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>
@@ -255,12 +228,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
       | _ => .error "argument without G form"
     | .fnptr _, .fnptr m =>
       match a with
-      | .fnref f =>
-        match fnIdx u.fns f with
-        | .error e => .error e
-        | .ok g =>
-          if h : (declOf u).passt g m = true then .ok (Expr.fnref (D := declOf u) g m h)
-          else .error "function does not conform to the pointer type"
+      | .fnref f => lowFnRef u Γ Λ m f
       | .var p =>
         match paramPos fn.params p with
         | .error e => .error e
@@ -295,9 +263,10 @@ def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn
 /-- No consumed marks at a call (`RufPasst.hk`). -/
 theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
     (Λ : List (Res (declOf u))) :
-    Untermulti (((declOf u).signatur callee).konsumiert.map
+    Untermulti (((declOf u).signatur callee).inputMarks.map
       (Res.vonMarke (declOf u))) Λ := by
-  rw [sigKonsumiert_nil u callee]
+  unfold Signatur.inputMarks
+  rw [sigKonsumiert_nil u callee, OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner]
   show Untermulti ([] : List (Res (declOf u))) Λ
   exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
 
@@ -433,9 +402,7 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
               rw [sigGSchreibt_eq u callee g] at hg0
               rw [vGSchreibt_eq u caller g]
               exact hG g hg0
-            .ok { callee := callee, args := a,
-                  hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx,
-                          hb := rufHb_ok u caller callee hB } }
+            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner } }
           else .error "call: a held lock does not rank below the callee's floor"
          else .error "call: the caller's lock floor is above the callee's"
         else .error "call without held guard"

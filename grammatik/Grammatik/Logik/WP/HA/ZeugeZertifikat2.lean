@@ -91,7 +91,7 @@ inductive GFn where
   deriving DecidableEq
 
 def gSig_erster_frei_belegen : Signatur GTab Empty GLock Empty where
-  params := [.ptr 0 true]
+  params := [.ptr (.table 0 (true, true))]
   erg := none
   gruende := 0
   haelt := [GLock.K]
@@ -150,7 +150,7 @@ abbrev gD : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-abbrev gCtx_erster_frei_belegen : Ctx := [.ptr 0 true]
+abbrev gCtx_erster_frei_belegen : Ctx := [.ptr (.table 0 (true, true))]
 def g_erster_frei_belegen : gD.Fn := GFn.erster_frei_belegen
 
 abbrev gL_erster_frei_belegen : List (Res gD) := [Res.held (D := gD) GLock.K]

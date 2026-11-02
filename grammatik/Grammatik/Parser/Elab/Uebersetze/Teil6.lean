@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil5Rest
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Payload
 
 @[expose] public section
 
@@ -31,16 +32,37 @@ where
     | .effs _ :: _ => true
     | _ :: rest => uHatWirkung rest
 
-/-- The expression of a `decreases` clause, `none` for every other clause. -/
+/-- Select the original decreases expression. -/
 def dropsOf : SKlausel → Option SExpr
   | .drops e => some e
   | _ => none
 
+/-- Every conversion in a collected measure names a type of the unit's alias scope;
+    a call to anything else is a call and stays refused, including below arithmetic. -/
+def uMeasureCheck (alias : List (String × (Int × Int))) : UMeasure → Except String Unit
+  | .conv f a =>
+    match uTypName alias f with
+    | .ok _ => uMeasureCheck alias a
+    | .error _ => .error "unsupported call in decreases"
+  | .bin _ a b =>
+    match uMeasureCheck alias a with
+    | .ok _ => uMeasureCheck alias b
+    | .error e => .error e
+  | .un _ a => uMeasureCheck alias a
+  | _ => .ok ()
+
 /-- Collect exactly one written measure. The surface grammar has one expression, not a tuple. -/
-def uMeasureClause (ks : List SKlausel) : Except String (Option UMeasure) :=
+def uMeasureClause (alias : List (String × (Int × Int))) (ks : List SKlausel) :
+    Except String (Option UMeasure) :=
   match ks.filterMap dropsOf with
   | [] => .ok none
-  | [e] => (uMeasureSource e).map some
+  | [e] =>
+    match uMeasureSource e with
+    | .ok m =>
+      match uMeasureCheck alias m with
+      | .ok _ => .ok (some m)
+      | .error err => .error err
+    | .error err => .error err
   | _ => .error "duplicate or ambiguous decreases clause"
 
 /-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`,
@@ -95,9 +117,12 @@ def elabKopf (_consts : List (String × Int))
     let params := uOhneGriffe devs params0
     -- a `fn` without a kind word and with a body is an implemented function, like `impl fn` (the checker's
     -- `None | Some(Impl)`)
-    if !(strEq art "impl" || strEq art "") then .error "fn is not impl"
+    -- A `library fn` is an ordinary implemented function: its body elaborates like `impl`. The
+    -- payload calling convention lives in the CALLERS, expanded by `exportLibraryUnit` before the
+    -- lowering runs; the certificate side is `TranslationDecl`/`LibraryExpansion`.
+    if !(strEq art "impl" || strEq art "" || strEq art "library") then .error "fn is not impl"
     else
-      match uMeasureClause klauseln, uOhneKlauselForm klauseln with
+      match uMeasureClause alias klauseln, uOhneKlauselForm klauseln with
       | .error e, _ => .error e
       | _, .error e => .error e
       | .ok _, .ok _ =>
@@ -130,7 +155,7 @@ def elabKopf (_consts : List (String × Int))
               -- it inside the body, and an access whose guard is not held is refused by the LOWERING
               -- (`access without held guard`), so nothing is claimed here.
               let puts := uEindeutig eff.puts
-              let kopf := { kopf with gputs := uEindeutig eff.gputs }
+              let kopf := { kopf with gputs := uEindeutig eff.gputs, nimmt := uEindeutig eff.nimmt, gibt := uEindeutig eff.gibt }
               match res with
               | .none => .ok (kopf, puts)
               | .some (.atom "bool") =>
@@ -169,23 +194,6 @@ def elabKopf (_consts : List (String × Int))
                 | .ok r =>
                   .ok ({ kopf with res := .some r }, puts)
 
-/-- An option value of the table `num`: `None`, `Some(i)`, or what `uOptEin` reads (its table must be `num`). -/
-def uOpt (ctx : UCtx) (num : Nat) : SExpr → Except String UOpt
-  | .call "None" [] => .ok .nichts
-  | .call "Some" [a] =>
-    match ctx.tabs[num]? with
-    | .none => .error "option table unknown"
-    | .some tb =>
-      match uIndex ctx tb.name num a with
-      | .error e => .error e
-      | .ok ix => .ok (.etwas ix)
-  | e =>
-    match uOptEin ctx e with
-    | .error x => .error x
-    | .ok (o, m) => if m == num then .ok o else .error "option of a foreign table"
-
-/-- A tagged value read off an expression, with the position of its type: a variable, a payload-free case or a
-    case with a payload. -/
 def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
   | .variable v =>
     match uParamNr ctx v with
@@ -213,9 +221,12 @@ def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
         match s.cases.findIdx? (fun x => strEq x.1 c) with
         | .none => .error "tagged value without G form"
         | .some i =>
-          match uWertBody ctx a with
-          | .error e => .error e
-          | .ok sd => .ok (.fall i (.some sd), k)
+          match (s.cases[i]?).bind (·.2) with
+          | none => .error "case has no payload"
+          | some τ =>
+            match uPayload ctx τ a with
+            | .error e => .error e
+            | .ok sd => .ok (.fall i (.some sd), k)
   | _ => .error "tagged value without G form"
 
 /-- A tagged value of the type at `sidx`. -/
@@ -230,24 +241,27 @@ def uSVal (ctx : UCtx) (sidx : Nat) (e : SExpr) : Except String USVal :=
     parameter, a value otherwise. -/
 def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
     Except String UArg
-  | .ptr num w, .variable p =>
+  | .ptr cap, .variable p =>
     match uParamNr ctx p with
     | .error e => .error e
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr num2 w2) =>
-        if num == num2 then
-          if w == w2 then .ok (.var p)
-          else
+      | .ok (.ptr source) =>
+        if source = cap then .ok (.var p)
+        else if source.attenuates cap then
+          match cap.target with
+          | .table num =>
             match tabs[num]? with
-            | .some tb => .ok (.freshPtr tb.name w)
-            | .none => .error "pointer table unknown"
-        else .error "argument of foreign table"
+            | some tb => .ok (.freshPtr tb.name cap)
+            | none => .error "pointer table unknown"
+        else .error "pointer argument would widen rights, owner, space or target"
       | _ => .error "pointer argument without G form"
-  | .ptr num w, .fnref t =>
-    match tabs[num]? with
-    | .some tb => if strEq tb.name t then .ok (.freshPtr tb.name w) else .error "argument of foreign table"
-    | .none => .error "pointer table unknown"
+  | .ptr cap, .fnref t =>
+    match cap.target with
+    | .table num =>
+      match tabs[num]? with
+      | some tb => if strEq tb.name t then .ok (.freshPtr tb.name cap) else .error "argument of foreign table"
+      | none => .error "pointer table unknown"
   | .index num, a =>
     match tabs[num]? with
     | .none => .error "index table unknown"

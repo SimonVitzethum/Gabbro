@@ -27,6 +27,7 @@ def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
       [PCAtom.take L] ++ blockAtome tabs globs body ++ [PCAtom.rel L]
   | .breaking _ body => blockAtome tabs globs body
   | .traverse _ _ body => blockAtome tabs globs body
+  | .consumeTraverse _ _ _ _ _ _ body => blockAtome tabs globs body
   | .retry _ _ body ueber =>
       blockAtome tabs globs body ++ blockAtome tabs globs ueber
   | .forever _ _ body => blockAtome tabs globs body
@@ -60,6 +61,10 @@ def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.retWhy _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.retScoped _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.retWhyScoped _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.leave _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.next _) =>
@@ -87,6 +92,7 @@ def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .exchange _ _ _ _ rest => blockAtome tabs globs rest
   | .narrow _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
+  | .narrowRequired _ _ _ rest => blockAtome tabs globs rest
   | .check _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
   | .float _ _ _ _ _ rest => blockAtome tabs globs rest
@@ -102,6 +108,8 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
     Endblock D V l Γ Λ → List (PCAtom D)
   | .ret _ _ => []
   | .retWhy _ _ => []
+  | .retScoped _ _ => []
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
   | .cons s rest => stmtAtome tabs globs s ++ endblockAtome tabs globs rest
@@ -118,13 +126,14 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .bindCallInd _ _ _ _ _ rest => endblockAtome tabs globs rest
   | .narrow _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
+  | .narrowRequired _ _ _ rest => endblockAtome tabs globs rest
   | .exchange _ _ _ _ rest => endblockAtome tabs globs rest
   | .ite _ t e => endblockAtome tabs globs e ++ endblockAtome tabs globs t
 
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List (PCAtom D)
   | .nil => []
   | .cons b rest => blockAtome tabs globs b ++ armsAtome tabs globs rest

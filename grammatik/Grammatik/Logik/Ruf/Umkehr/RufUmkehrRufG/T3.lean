@@ -71,12 +71,12 @@ theorem semK_optNone {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.
   rw [semK_dann O passes R (.cons _ rest), nachK_cons, semK_dann]
   simp only [execStmt, hv]
 
-theorem semK_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semK_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (lo hi : Int) (b : Block D V l (.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+    (τ : Ty) (b : Block D V l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) =
-      ⟨some (lo, hi), b, nutz⟩) :
+      ⟨some τ, b, nutz⟩) :
     semK O passes R (.dann b (.schrumpf (.dann rest k))) (σ.lese Λ v.orte) (armEnv nutz ρ) =
       semK O passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
   rw [semK_dann O passes R (.cons _ rest), nachK_cons]
@@ -84,10 +84,10 @@ theorem semK_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int
   rw [execArms_wahl, hw]
   exact (semK_dann O passes R b _ _ _).trans (nachK_schrumpf O passes R _ _).symm
 
-theorem semK_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semK_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast none)
+    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
     semK O passes R (.dann b (.dann rest k)) (σ.lese Λ v.orte) (armEnv nutz ρ) =
       semK O passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
@@ -157,6 +157,8 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.kOk = e.kOk
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -177,6 +179,8 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
 
   | _, _, .bindCallInd .. => rfl
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]

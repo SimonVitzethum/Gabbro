@@ -130,7 +130,7 @@ theorem endG_R {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
 
 theorem armsG_R {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop}
     (hV : ∀ c, V.boden = some c → ∀ L, A L → c ≤ D.rang L) :
-    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {arms : Arms D V l Γ Λ Λ' cs}, ArmsG A mr arms → ArmsR A C mr arms
   | _, _, _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, _, _, .cons b rest hb hr => .cons b rest (blockG_R hV hb) (armsG_R hV hr)

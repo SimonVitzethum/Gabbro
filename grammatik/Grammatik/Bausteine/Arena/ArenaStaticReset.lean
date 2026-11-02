@@ -111,7 +111,7 @@ theorem zeroAdmittingB_iff {τ : Ty} : zeroAdmittingB τ = true ↔ ZeroAdmittin
     constructor
     · intro h; exact absurd h Bool.false_ne_true
     · intro h; cases h
-  | ptr t rw =>
+  | ptr cap =>
     simp only [zeroAdmittingB]
     constructor
     · intro h; exact absurd h Bool.false_ne_true
@@ -144,7 +144,7 @@ def zeroValue {F : Type} {passt : F → Nat → Bool} : (τ : Ty) → ZeroAdmitt
   | .never, h => absurd h (by intro h; cases h)
   | .fl _ _, h => absurd h (by intro h; cases h)
   | .fnptr _, h => absurd h (by intro h; cases h)
-  | .ptr _ _, h => absurd h (by intro h; cases h)
+  | .ptr _, h => absurd h (by intro h; cases h)
   | .ref _, h => absurd h (by intro h; cases h)
 
 /-- The range store as a pure update: `zero` at every index of

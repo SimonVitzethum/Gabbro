@@ -1,15 +1,40 @@
 module
-
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
-import all Init.Data.String.Defs
-import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil14
-
 @[expose] public section
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
@@ -145,7 +170,7 @@ def lowerSaetzeLies (tabs : List UTab) (names : List String)
     `ensures` and bodies). -/
 def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
     (b2 : UKoerpLies) : Programm G104_referenz.gD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => Expr.tru
   ensures
     | G104_referenz.GFn.einzahlen => e1
@@ -161,7 +186,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [], exportGate := _ } =>
+  | { tabs := [tab], locks := [lock], fns := [fe, fl], roots := [], hands := [], globs := [], axs := [], annahmen := [], gestartet := [], whys := [], sums := [], regs := [], invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [], exportGate := _, checks := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "program shape without G form"
@@ -325,34 +350,15 @@ def items104 : List SItemTief :=
     .typeT [] "Stand" [] []
       (.some (.range (.atom "u32") (.lit 0) (.lit 100) false)),
     .tableT "Konto" .none (.some (.variable "NKONTO")) .none .none false
-      [.tSlot [{ fname := "stand", ftyp := .atom "Stand",
-                  pos := .none, bezug := .none, wo := .none,
-                  reserviert := false, byOps := false }]],
+      [.tSlot [{ fname := "stand", ftyp := .atom "Stand", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]],
     .lockT "M" [.variable "stand"] (.lit 0)
       (.some (.lit 50)) .none .none .none,
     .fnT
-      { art := "impl", name := "einzahlen",
-        params := [("k", .ptr "normal" "rw" (.atom "Konto")),
-          ("i", .index false "Konto"), ("b", .atom "Betrag")],
-        res := .none, fehler := .none,
-        klauseln := [.needs (.call "Held" [.variable "M"]),
-          .gives (.bin "<=" (.old uStand104) uStand104),
-          .effs [.reads (.field (.variable "k") "slots"),
-            .writes (.field (.variable "k") "slots"),
-            .locks false (.variable "M")],
-          .cost (.lit 16)] }
+      { art := "impl", name := "einzahlen", params := [("k", .ptr "normal" "rw" (.atom "Konto")), ("i", .index false "Konto"), ("b", .atom "Betrag")], res := .none, fehler := .none, klauseln := [.needs (.call "Held" [.variable "M"]), .gives (.bin "<=" (.old uStand104) uStand104), .effs [.reads (.field (.variable "k") "slots"), .writes (.field (.variable "k") "slots"), .locks false (.variable "M")], .cost (.lit 16)] }
       (.block [.set uStand104 "=" (.lit 100),
         .call "lies" [.variable "k", .variable "i"]] .none),
     .fnT
-      { art := "impl", name := "lies",
-        params := [("k", .ptr "normal" "r" (.atom "Konto")),
-          ("i", .index false "Konto")],
-        res := .some (.atom "Stand"), fehler := .none,
-        klauseln := [.needs (.call "Held" [.variable "M"]),
-          .gives (.bin "==" .res uStand104),
-          .effs [.reads (.field (.variable "k") "slots"),
-            .locks false (.variable "M")],
-          .cost (.lit 8)] }
+      { art := "impl", name := "lies", params := [("k", .ptr "normal" "r" (.atom "Konto")), ("i", .index false "Konto")], res := .some (.atom "Stand"), fehler := .none, klauseln := [.needs (.call "Held" [.variable "M"]), .gives (.bin "==" .res uStand104), .effs [.reads (.field (.variable "k") "slots"), .locks false (.variable "M")], .cost (.lit 8)] }
       (.block [] (.some (.ret (.some uStand104))))]]
 
 theorem u104parse : beqTopTief (parseTopTief tt104) (.ok items104) = true := by
@@ -363,32 +369,7 @@ theorem u104parse : beqTopTief (parseTopTief tt104) (.ok items104) = true := by
 /-- The elaborated 104 program (`u104elab` checks it against
     the elaborator). -/
 def uExp104 : UProg :=
-  { tabs := [{ name := "Konto", count := 2,
-                   cols := [("stand", (0, 100))], breiten := [("stand", 32)] }],
-    locks := [{ name := "M", rank := 0, guard := ["Konto"] }],
-    fns := [
-      { name := "einzahlen",
-        params := [("k", .ptr 0 true), ("i", .index 2),
-          ("b", .int 0 10)],
-        kinds := [.ptr 0 true, .index 0, .int],
-        res := .none,
-        held := ["M"], puts := ["Konto"],
-        gives := [.cmp "<="
-          (.old "k" "stand" (.param "i"))
-          (.slot "k" "stand" (.param "i"))],
-        body := [.assign "k" "stand" (.param "i") (.lit 100),
-          .call "lies" [.freshPtr "Konto" false,
-            .val (.param "i")]],
-        ret := .empty, boden := some 1 },
-      { name := "lies",
-        params := [("k", .ptr 0 false), ("i", .index 2)],
-        kinds := [.ptr 0 false, .index 0],
-        res := .some (0, 100),
-        held := ["M"], puts := [],
-        gives := [.cmp "==" .erg
-          (.slot "k" "stand" (.param "i"))],
-        body := [],
-        ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }], exportGate := ExportMetadata.check (uMembers items104) }
+{ tabs := [{ name := "Konto", count := 2, cols := [("stand", (0, 100))], breiten := [("stand", 32)] }], locks := [{ name := "M", rank := 0, guard := ["Konto"] }], fns := [ { name := "einzahlen", params := [("k", .ptr (.table 0 (true, true))), ("i", .index 2), ("b", .int 0 10)], kinds := [.ptr (.table 0 (true, true)), .index 0, .int], res := .none, held := ["M"], puts := ["Konto"], gives := [.cmp "<=" (.old "k" "stand" (.param "i")) (.slot "k" "stand" (.param "i"))], body := [.assign "k" "stand" (.param "i") (.lit 100), .call "lies" [.freshPtr "Konto" (.table 0 (true, false)), .val (.param "i")]], ret := .empty, boden := some 1 }, { name := "lies", params := [("k", .ptr (.table 0 (true, false))), ("i", .index 2)], kinds := [.ptr (.table 0 (true, false)), .index 0], res := .some (0, 100), held := ["M"], puts := [], gives := [.cmp "==" .erg (.slot "k" "stand" (.param "i"))], body := [], ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }], exportGate := ExportMetadata.check (uMembers items104) }
 
 /-! ## Shape equality on U (Bool pins, like `beqTopTief`) -/
 
@@ -400,50 +381,11 @@ def beqOptIntPair : Option (Int × Int) → Option (Int × Int) → Bool
   | some a, some b => beqIntPair a b
   | _, _ => false
 
-def beqOptIntPairList : List (Option (Int × Int)) →
-    List (Option (Int × Int)) → Bool
+def beqPayloads : List (Option Ty) →
+    List (Option Ty) → Bool
   | [], [] => true
-  | x :: xs, y :: ys => beqOptIntPair x y && beqOptIntPairList xs ys
+  | x :: xs, y :: ys => decide (x = y) && beqPayloads xs ys
   | _, _ => false
 
-/-- Shape equality on `Ty` as a `Bool` (kernel evaluation,
-    no nested `decide`). -/
-def beqTy : Ty → Ty → Bool
-  | .int a b, .int c d => a == c && b == d
-  | .bool, .bool => true
-  | .opt n, .opt m => n == m
-  | .sum cs, .sum ds => beqOptIntPairList cs ds
-  | .why n, .why m => n == m
-  | .never, .never => true
-  | .fl a b, .fl c d => beqIntPair a c && beqIntPair b d
-  | .fnptr n, .fnptr m => n == m
-  | .ptr t w, .ptr s v => t == s && w == v
-  | _, _ => false
-
-def beqUIdx : UIdx → UIdx → Bool
-  | .lit a, .lit b => a == b
-  | .param a, .param b => strEq a b
-  | _, _ => false
-
-def beqUSide : USide → USide → Bool
-  | .lit a, .lit b => a == b
-  | .param a, .param b => strEq a b
-  | .slot a f x, .slot b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .tab a f x, .tab b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .old a f x, .old b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .erg, .erg => true
-  | .glob a, .glob b => strEq a b
-  | .add a b, .add c d | .sub a b, .sub c d | .mul a b, .mul c d
-  | .band a b, .band c d | .bor a b, .bor c d | .bxor a b, .bxor c d
-  | .div a b, .div c d | .rem a b, .rem c d | .shl a b, .shl c d | .shr a b, .shr c d =>
-    beqUSide a c && beqUSide b d
-  | .neg a, .neg b => beqUSide a b
-  | .ib1 o w a, .ib1 p v b => o == p && w == v && beqUSide a b
-  | .ib2 o w a b, .ib2 p v c d => o == p && w == v && beqUSide a c && beqUSide b d
-  | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
-  | _, _ => false
-
-end Gabbro.Grammatik.Parser.Uebersetze
+/-- Complete shape equality, including recursively typed payloads and arrays. -/
+def beqTy (a b : Ty) : Bool := decide (a = b)

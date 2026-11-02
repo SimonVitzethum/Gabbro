@@ -18,7 +18,7 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
   (hFS : ∀ (f : D.Fn), FussSX P S lok Tg f) {M : RufMaschineG D} {u : Faden}
   (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
   (hRS : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel) (hSG : SperrInvG S M)
-  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -30,12 +30,12 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
                 (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
-  (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (lo hi : Int)
-  (b : Block D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+  (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (τ : Ty)
+  (b : Block D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
-      (⟨some (lo, hi), (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+      (⟨some τ, (b, nutz)⟩ :
+        (c : Option Ty) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
   FadenSA P O passes Q S lok Tg m zyk
       ({ speicher := M.speicher,
@@ -46,11 +46,11 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
                     { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                       rest :=
                         (⟨l,
-                            (⟨Ty.int lo hi :: Γ,
+                            (⟨τ :: Γ,
                                 (⟨Λ, (armEnv nutz ρ, GRest.dann b (GRest.dann rest k).schrumpf)⟩ :
                                   (Λ : List (Res D)) ×
-                                    Env D (Ty.int lo hi :: Γ) ×
-                                      GRest D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ)⟩ :
+                                    Env D (τ :: Γ) ×
+                                      GRest D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ)⟩ :
                               (Γ : Ctx) ×
                                 (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                           (l : Bool) ×
@@ -68,11 +68,11 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
                     { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                       rest :=
                         (⟨l,
-                            (⟨Ty.int lo hi :: Γ,
+                            (⟨τ :: Γ,
                                 (⟨Λ, (armEnv nutz ρ, GRest.dann b (GRest.dann rest k).schrumpf)⟩ :
                                   (Λ : List (Res D)) ×
-                                    Env D (Ty.int lo hi :: Γ) ×
-                                      GRest D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ)⟩ :
+                                    Env D (τ :: Γ) ×
+                                      GRest D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ)⟩ :
                               (Γ : Ctx) ×
                                 (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                           (l : Bool) ×
@@ -91,11 +91,11 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
                       { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                         rest :=
                           (⟨l,
-                              (⟨Ty.int lo hi :: Γ,
+                              (⟨τ :: Γ,
                                   (⟨Λ, (armEnv nutz ρ, GRest.dann b (GRest.dann rest k).schrumpf)⟩ :
                                     (Λ : List (Res D)) ×
-                                      Env D (Ty.int lo hi :: Γ) ×
-                                        GRest D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ)⟩ :
+                                      Env D (τ :: Γ) ×
+                                        GRest D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ)⟩ :
                                 (Γ : Ctx) ×
                                   (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                             (l : Bool) ×
@@ -115,12 +115,12 @@ theorem akteurSA_dannOnTagSome {D : Deklaration} {P : Programm D} {O : Orakel D}
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨hks, hss, hrest⟩ := okS_dann_cons hok
   simp only [stmtOrteP, List.append_subset] at hss
-  have hw' : armWahlG arms (eval σ v σ ρ) = ⟨some (lo, hi), b, nutz⟩ := by
+  have hw' : armWahlG arms (eval σ v σ ρ) = ⟨some τ, b, nutz⟩ := by
     rw [eval_gleichAuf v (fun _ h => List.mem_append_right _ h) hg ρ]; exact hw
   exact ⟨σ, Nat.le_refl _, GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
     ⟨armWahlG_gOk' arms _ hw' hks, fun _ h => hss.2 (armWahlG_orteP' arms _ hw' h), hrest⟩,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
-      rw [semHA_tagSome S O' U A passes R v arms rest k σ0 ρ lo hi b nutz
+      rw [semHA_tagSome S O' U A passes R v arms rest k σ0 ρ τ b nutz
         (by rw [hσ0]; exact hw'), hσ0] <;> rfl)⟩
 
 set_option maxHeartbeats 4000000 in
@@ -134,7 +134,7 @@ theorem akteurSA_dannOnTagNone {D : Deklaration} {P : Programm D} {O : Orakel D}
   (hFS : ∀ (f : D.Fn), FussSX P S lok Tg f) {M : RufMaschineG D} {u : Faden}
   (hF : FadenSA P O passes Q S lok Tg m zyk (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
   (hRS : RahmenStapelS P S lok M.speicher (RufSchluesselG (M.faeden u).kopf) (M.faeden u).stapel) (hSG : SperrInvG S M)
-  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -147,11 +147,11 @@ theorem akteurSA_dannOnTagNone {D : Deklaration} {P : Programm D} {O : Orakel D}
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
   (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (b : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ')
-  (nutz : Nutzlast none)
+  (nutz : Nutzlast D.Fn D.passt none)
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
       (⟨none, (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+        (c : Option Ty) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
   FadenSA P O passes Q S lok Tg m zyk
       ({ speicher := M.speicher,

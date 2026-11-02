@@ -63,6 +63,7 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .locks L _ body => A.sperre L && mB A body
   | .breaking _ body => mB A body
   | .traverse _ _ body => mB A body
+  | .consumeTraverse _ _ _ _ _ _ body => mB A body
   | .retry _ _ body ueber => mB A body && mB A ueber
   | .forever _ _ body => mB A body
   | .assignSlot .. => true
@@ -79,6 +80,8 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retires .. => true
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -97,6 +100,7 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => mB A rest
   | .exchange _ _ _ _ rest => mB A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mB A rest
+  | .narrowRequired _ _ _ rest => mB A rest
   | .check _ sonst rest => mE A sonst && mB A rest
   | .float _ _ _ _ _ rest => mB A rest
   | .floatLit _ _ _ rest => mB A rest
@@ -104,7 +108,7 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .floatNarrow _ _ _ sonst rest => mE A sonst && mB A rest
 
 def mArms (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => mB A b && mArms A rest
 
@@ -117,6 +121,8 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => mS A s && mE A rest
@@ -130,6 +136,7 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => mE A rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mE A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mE A rest
+  | .narrowRequired _ _ _ rest => mE A rest
   | .exchange _ _ _ _ rest => mE A rest
   | .ite _ t e => mE A t && mE A e
 end
@@ -199,7 +206,7 @@ theorem mB_alsBlock (A : Merkmal D) :
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A t, Bool.and_comm]
 
 theorem mB_armWahlG (A : Merkmal D) {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     mArms A arms = true → mB A (armWahlG arms v).2.1 = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by
@@ -229,9 +236,9 @@ theorem abbruch_iff {Γ Γ' : Ctx} {Λ Λk : List (Res D)} (e : Endblock D V l �
 
 end Hilfen
 
+set_option hygiene false in
 /-! ## 3. Every rule, classified -/
 
-set_option hygiene false in
 /-- Case (A) of `schrittMerk`: a head-local step. -/
 macro "kopfM" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self],
@@ -267,7 +274,7 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
   cases hs with
   | g1 hs =>
     cases hs with
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw =>
       kopfM
       have h := mB_armWahlG A arms (eval σ₁ v σ₁ ρ) hok.1.1
       rw [hw] at h

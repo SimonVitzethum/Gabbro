@@ -36,22 +36,22 @@ theorem lea_step {m : Runner.Mem} {pc fp : Runner.W} {K d a : Nat} (hc : CodeAt 
 
 /-- Arguments whose words agree apart from pointers. -/
 theorem argsW_ptr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs) →
-    (∀ i, i < τs.length → f i = g i ∨ ∃ n rw, τs[i]? = some (.ptr n rw)) → ArgsW L f ρ → ArgsW L g ρ
+    (∀ i, i < τs.length → f i = g i ∨ ∃ cap, τs[i]? = some (.ptr cap)) → ArgsW L f ρ → ArgsW L g ρ
   | [], .nil, _, _ => trivial
   | τ :: τs, .cons _ ρ, he, h => by
     simp only [ArgsW] at h ⊢
     refine ⟨?_, argsW_ptr ρ (fun i hi => by
-      rcases he (i + 1) (by simp; omega) with e | ⟨n, rw, e⟩
+      rcases he (i + 1) (by simp; omega) with e | ⟨cap, e⟩
       · exact .inl e
-      · exact .inr ⟨n, rw, by simpa using e⟩) h.2⟩
-    rcases he 0 (by simp) with e | ⟨n, rw, e⟩
+      · exact .inr ⟨cap, by simpa using e⟩) h.2⟩
+    rcases he 0 (by simp) with e | ⟨cap, e⟩
     · rw [← e]; exact h.1
     · simp only [List.length_cons, Nat.lt_add_one_iff, List.getElem?_cons_zero, Option.some.injEq] at e
       subst e; simp only [isPtr, if_true]
 
 /-- A word whose bytes and readability are kept reads the same. -/
 theorem ptrParam_spec {τs : List Ty} {j n : Nat} {rw : Bool} (h : ptrParam τs = some (j, n, rw)) :
-    j < τs.length ∧ τs[j]? = some (.ptr n rw) := by
+    j < τs.length ∧ τs[j]? = some (.ptr (.table n (true, rw))) := by
   simp only [ptrParam] at h
   split at h
   · next j' hj =>

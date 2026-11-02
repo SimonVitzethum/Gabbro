@@ -158,8 +158,13 @@ def gutTafel (z : Zelle) : Bool := !z.schlecht
 theorem einsatz_akzeptiert (e : Einsatz) : akzeptiert Einsatz.Hat gutTafel e ↔ e.gueltig = true := by
   letI := e.aufz
   letI := e.zahlen
-  rw [Einsatz.gueltig, akzeptiertX_zellen e.P e.S e.fs e.ls e.cs e.ws e.hvoll e.hls e.hcs]
-  simp only [akzeptiert, Einsatz.Hat, Einsatz.zellen, gutTafel, Bool.not_eq_true']
+  rw [Einsatz.gueltig, akzeptiertX_zellen e.P e.S e.fs e.ls e.cs e.ws [] e.hvoll e.hls e.hcs]
+  constructor
+  · intro h
+    refine ⟨?_, Kernzelle.accumulatorB_leer⟩
+    simpa only [akzeptiert, Einsatz.Hat, Einsatz.zellen, gutTafel, Bool.not_eq_true'] using h
+  · intro h
+    simpa only [akzeptiert, Einsatz.Hat, Einsatz.zellen, gutTafel, Bool.not_eq_true'] using h.1
 
 theorem Einsatz.im_universum (e : Einsatz) {z : Zelle} (h : e.Hat z) : z ∈ zellAlle := by
   letI := e.aufz

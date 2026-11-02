@@ -5,13 +5,42 @@
              Split from `UebersetzeAllg2` (which keeps the single statements and calls); same namespace.
 -/
 module
+
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
 public import Grammatik.Parser.Namen.Oeffentlich
 import all Init.Data.Repr
-import all Init.Data.String.Defs
-import all Init.Data.String.Basic
 @[expose] public section
 
 
@@ -280,7 +309,7 @@ structure LowStufe (u : UProg) (caller : Fin u.fns.length) where
   struct : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ × List UStmt)
   arms : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ →
-    (cs : List (Option (Int × Int))) → List String → List UStmt →
+    (cs : List (Option Ty)) → List String → List UStmt →
     Except String (Arms (declOf u) (verOf u caller) l Γ Λ Λ cs × List UStmt)
   garms : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → (m : Nat) →
     List UStmt → Except String (GrundArms (declOf u) (verOf u caller) l Γ Λ Λ m × List UStmt)

@@ -57,11 +57,11 @@ variable (passes : Nat)
 def ergWert {τ : Ty} {e : Option Ty} (he : e = some τ) (v : ErgVal D e) : Wert D τ := by
   subst he; exact v
 
-/-- Die Nutzlast eines Falls in den Sichtbereich seines Arms. -/
-def armEnv {c : Option (Int × Int)} (nutz : Nutzlast c) (ρ : Env D Γ) : Env D (ArmCtx Γ c) :=
+/-- Die Nutzlast D.Fn D.passt eines Falls in den Sichtbereich seines Arms. -/
+def armEnv {c : Option Ty} (nutz : Nutzlast D.Fn D.passt c) (ρ : Env D Γ) : Env D (ArmCtx Γ c) :=
   match c, nutz with
   | Option.none, _ => ρ
-  | Option.some (_, _), v => .cons v ρ
+  | Option.some _, v => .cons v ρ
 
 def evalErg (σ₀ : World D) : ErgExpr D Γ Λ e → World D → Env D Γ → ErgVal D e
   | .empty, _, _ => ()
@@ -105,7 +105,7 @@ def roh : {τ : Ty} → Wert D τ → Int
   | .never, v => v.elim
   | .fl _ _, v => gleitRoh v.x
   | .fnptr _, _ => 0
-  | .ptr _ _, _ => 0
+  | .ptr _, _ => 0
   | .ref _, v => (v.zelle : Int)
   -- an aggregate has no raw word (the checker writes none to a register)
   | .arr _ _, _ => 0

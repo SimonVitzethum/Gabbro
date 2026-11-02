@@ -97,7 +97,7 @@ theorem execStmtHA_ru_assignThru {V : Vertrag D}
     (hL)
     (σ : World D)
     (ρ : Env D Γ)
-    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]
@@ -405,6 +405,36 @@ theorem execStmtHA_ru_traverse {V : Vertrag D}
     (ρ : Env D Γ)
     (ih_execBlockHA_ru_body : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB body) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R body σ ρ))
     : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.traverse t inv body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.traverse t inv body : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS, execStmtHA]
+  have hL := traverseLauf_rel (l := l) (fun σ ρ => execBlockHA S O U A passes R body σ ρ)
+    (fun σ ρ => execBlockHA S.mitRuhe O' U' A' passes R' (ruB body) σ ρ)
+    (fun σ ρ => (leseA A σ Λ inv.orte, wahr? (eval (leseA A σ Λ inv.orte) inv (leseA A σ Λ inv.orte) ρ)))
+    (fun σ ρ => (leseA A' σ (Λ.map resR) (ruE inv).orte,
+      wahr? (eval (leseA A' σ (Λ.map resR) (ruE inv).orte) (ruE inv)
+        (leseA A' σ (Λ.map resR) (ruE inv).orte) ρ)))
+    (fun σ ρ => ih_execBlockHA_ru_body σ ρ)
+    (fun σ ρ => by simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_bool, wahr?])
+    (alleIndizes (D.count t)) σ ρ
+  rw [map_valR_int] at hL
+  exact hL
+
+set_option linter.unusedSectionVars false in
+theorem execStmtHA_ru_consumeTraverse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (t)
+    (member)
+    (edge)
+    (inv)
+    (bound)
+    (mass)
+    (body)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlockHA_ru_body : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB body) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R body σ ρ))
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmtHA]
   have hL := traverseLauf_rel (l := l) (fun σ ρ => execBlockHA S O U A passes R body σ ρ)

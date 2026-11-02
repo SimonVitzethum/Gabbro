@@ -174,7 +174,7 @@ theorem tabelle_widerlegt_gilt : tabelle_widerlegt := by
 /-! ## 2. Refutations of (a) -/
 
 theorem ungeschuetzt_abgelehnt_gilt : ungeschuetzt_abgelehnt := by
-  intro D _ P S fs ws w₁ w₂ c h₁ h₂ hne hc hw hB hA
+  intro D _ P S fs ws A w₁ w₂ c h₁ h₂ hne hc hw hB hA
   rcases (hA.fuss w₁).1 c hc with h | ⟨L, hL, _⟩
   · rcases Bool.or_eq_true_iff.mp h with h | h
     · obtain ⟨L, hL, _⟩ := sigB_ok h
@@ -210,11 +210,11 @@ theorem register_ohne_traeger_konstant {D : Deklaration} {O : Orakel D} (h : Reg
     refused (`zwei_schreiber_abgelehnt_gilt`). Before 2026-09-15 `ws = []` was a free knob:
     the statement then accepted `akP3` and simply did not say which starts were its own. -/
 theorem akD_kein_zweiter_schreiber (E : Einheit akD) (fs : List akD.Fn)
-    (hA : AkzeptiertSpec E.P E.S fs E.ws) {sp : Speicher akD.mitRuhe}
+    (hA : AkzeptiertSpec E.P E.S fs E.ws E.akku) {sp : Speicher akD.mitRuhe}
     {init : Faden → Σ f : akD.mitRuhe.Fn, Env akD.mitRuhe (akD.mitRuhe.params f)}
     (hL : Laufzeit E sp init) : ¬ ∃ t u, (init t).1 = some akA ∧ (init u).1 = some akB := by
   rintro ⟨t, u, ht, hu⟩
-  exact zwei_schreiber_abgelehnt_gilt akD E.P E.S fs E.ws akA akB (.inl ())
+  exact zwei_schreiber_abgelehnt_gilt akD E.P E.S fs E.ws E.akku akA akB (.inl ())
     (laufzeit_nur_erklaert hL t akA ht) (laufzeit_nur_erklaert hL u akB hu) (by decide) rfl rfl
     (fun _ h => absurd h List.not_mem_nil) (fun ⟨_, h, _⟩ => by cases h) hA
 
@@ -249,7 +249,7 @@ theorem mE_nutzerPflicht : NutzerPflicht mE :=
       rcases ha with rfl | rfl <;> rfl⟩⟩
 
 theorem zweiFaeden_erfuellbar_gilt : zweiFaeden_erfuellbar :=
-  ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll mP_akzeptiert,
+  ⟨⟨mFs, mFs_voll⟩, akzeptiertSpec_of mFs_voll mLocks_voll mCs_voll [] mP_akzeptiert,
     mE_nutzerPflicht, ⟨mO, mO_gut, mO_lokal, axVertragO_wahr mO⟩,
     speicherR mSp, _, laufzeit_initRuhe mE, initRuhe_laeuft mE rfl⟩
 
@@ -275,7 +275,7 @@ theorem zCs_voll : ∀ c : zD.Tab ⊕ zD.Glob, c ∈ ([.inl ()] : List (zD.Tab �
   intro c
   rcases c with ⟨⟩ | e
   · exact List.mem_singleton_self _
-  · exact nomatch e
+  · exact (nomatch e)
 
 theorem zInvGutS {P : Programm zD} {passes : Nat} {Q : AxEns zD} {S : SperrInv zD} (f : zD.Fn) :
     InvGutS P passes Q S f := by
@@ -303,14 +303,14 @@ theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHa
 /-- **Probe B satisfies every premise group with `haupt` as a DECLARED start** (it runs on
     thread 0; the root on every other thread). -/
 theorem probeB_erfuellbar_haupt : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
-  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPB_akzeptiert,
+  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPB_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEB,
     initRuhe_laeuft zEB rfl⟩
 
 theorem probeC_erfuellbar_haupt : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
-  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPC_akzeptiert,
+  ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll [] zPC_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
       zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEC rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEC,
@@ -346,7 +346,7 @@ theorem gabbro_ziel_zeuge : ∃ (sp : Speicher mD.mitRuhe)
     decide
   · exact gabbro_ziel_g akzeptiert_pruefer mD mE ⟨mFs, mFs_voll⟩ ⟨[()], mLocks_voll⟩
       ⟨mCs, mCs_voll⟩
-      (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true; exact mP_akzeptiert)
+      (by show Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true; exact mP_akzeptiert)
       mE_nutzerPflicht mO ⟨mO_gut, mO_lokal, axVertragO_wahr mO⟩ 0 _ _ hL M1
       (.schritt _ _ _ .start s1)
 

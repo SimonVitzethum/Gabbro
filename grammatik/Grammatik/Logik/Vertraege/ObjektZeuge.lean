@@ -56,7 +56,7 @@ inductive OFn where
 /-- `fn aendern(kp : ptr<normal, rw> T, k : index T, wp : ptr<normal, r> T, w : index T)
     effects { writes kp }`. -/
 def sigAendern : Signatur OTab Empty Empty Empty where
-  params := [.ptr 0 true, .index 4, .ptr 0 false, .index 4]
+  params := [.ptr (.table 0 (true, true)), .index 4, .ptr (.table 0 (true, false)), .index 4]
   erg := none
   gruende := 0
   haelt := []
@@ -67,7 +67,7 @@ def sigAendern : Signatur OTab Empty Empty Empty where
 
 /-- `fn sicht(p : ptr<normal, r> T, k : index T) -> index T` -- a re-view at one table. -/
 def sigSicht : Signatur OTab Empty Empty Empty where
-  params := [.ptr 0 false, .index 4]
+  params := [.ptr (.table 0 (true, false)), .index 4]
   erg := some (.index 4)
   gruende := 0
   haelt := []

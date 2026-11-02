@@ -50,6 +50,11 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
       simp only [execStmt] at he
       exact traverseLauf_ohneHardware _ _
         (fun σ ρ e => Block.hardwareFrei_ok hR body h σ ρ e) _ σ ρ e' he
+  | .consumeTraverse t member edge inv bound mass body, h, σ, ρ, e', he => by
+      simp only [Stmt.hardwareFrei] at h
+      simp only [execStmt] at he
+      exact traverseLauf_ohneHardware _ _
+        (fun σ ρ e => Block.hardwareFrei_ok hR body h σ ρ e) _ σ ρ e' he
   | .retry n bis body ueber, h, σ, ρ, e', he => by
       simp only [Stmt.hardwareFrei, Bool.and_eq_true] at h
       simp only [execStmt] at he
@@ -94,6 +99,8 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
   | .retires .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .ret .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .retWhy .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retScoped .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retWhyScoped .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .leave .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .next .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
 
@@ -161,6 +168,12 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
       split at he
       · exact Block.hardwareFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_hardware he)
       · exact Endblock.hardwareFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_hardware he)
+  | .narrowRequired x lo' hi' rest, h, σ, ρ, e, he => by
+      simp only [Block.hardwareFrei] at h
+      simp only [execBlock] at he
+      split at he
+      · exact Block.hardwareFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_hardware he)
+      · cases he
   | .check c sonst rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
@@ -197,6 +210,8 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       ∀ (σ : World D) (ρ : Env D Γ) (e : Hardware D), execEnd O passes R b σ ρ ≠ .hardware e
   | .ret .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .retWhy .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .retScoped .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .retWhyScoped .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .leave .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .next .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .cons s rest, h, σ, ρ, e, he => by
@@ -262,6 +277,12 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       split at he
       · exact Endblock.hardwareFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_hardware he)
       · exact Endblock.hardwareFrei_ok hR sonst h.1 _ _ _ he
+  | .narrowRequired x lo' hi' rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
+      · cases he
   | .exchange g neu hw hL rest, h, σ, ρ, e, he => by
       simp only [Endblock.hardwareFrei] at h
       simp only [execEnd] at he
@@ -274,7 +295,7 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · exact Endblock.hardwareFrei_ok hR e' h.2 _ _ _ he
 
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.hardwareFrei = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) (e : Hardware D),
         execArms O passes R a v σ ρ ≠ .hardware e

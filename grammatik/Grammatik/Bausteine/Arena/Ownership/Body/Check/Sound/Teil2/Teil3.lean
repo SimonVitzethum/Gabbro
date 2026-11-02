@@ -261,7 +261,7 @@ theorem chkArms_sound_ca
     (hc : c.bounded)
     (ih_chkB_sound_b : ∀ (k : Context), ∀ (c : Context), k.bounded → c.bounded → Supports (OB A I out k c b) (chkB A I fs out b k c))
     (ih_chkArms_sound_rest : ∀ (k : Context), ∀ (c : Context), k.bounded → c.bounded → Supports (OArms A I out k c rest) (chkArms A I fs out rest k c))
-    : Supports (OArms A I out k c (.cons b rest : Arms D V l Γ Λ Λ' (ca :: zz1 : List (Option (Int × Int))))) (chkArms A I fs out (.cons b rest : Arms D V l Γ Λ Λ' (ca :: zz1 : List (Option (Int × Int)))) k c) :=
+    : Supports (OArms A I out k c (.cons b rest : Arms D V l Γ Λ Λ' (ca :: zz1 : List (Option Ty)))) (chkArms A I fs out (.cons b rest : Arms D V l Γ Λ Λ' (ca :: zz1 : List (Option Ty))) k c) :=
   by
   simp only [chkArms]
   exact supports_join

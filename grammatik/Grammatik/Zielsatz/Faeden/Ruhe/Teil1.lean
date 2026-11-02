@@ -1,8 +1,7 @@
 module
-
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
-
+import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 @[expose] public section
 
 
@@ -47,6 +46,7 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .locks _ _ body => ruB_ants body
   | _, _, _, _, .breaking _ body => ruB_ants body
   | _, _, _, _, .traverse _ _ body => ruB_ants body
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => ruB_ants body
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_ants body) (ruB_ants ueber)
   | _, _, _, _, .forever _ _ body => ruB_ants body
   | _, _, _, _, .axiomCall .. => rfl
@@ -57,6 +57,8 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .retires .. => ants_nachΛ _ _
   | _, _, _, _, .ret .. => rfl
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -79,6 +81,7 @@ theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .awaits _ _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
+  | _, _, _, _, .narrowRequired _ _ _ rest => ruB_ants rest
   | _, _, _, _, .check _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
   | _, _, _, _, .float _ _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .floatLit _ _ _ rest => ruB_ants rest
@@ -90,6 +93,8 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
     (e : Endblock D V l Γ Λ), (ruEnd e).ants = e.ants
   | _, _, _, .ret .. => rfl
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped .. => rfl
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_ants s) (ruEnd_ants rest)
@@ -107,15 +112,16 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_umΛ _ _).trans (ruEnd_ants rest)
   | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest)
+  | _, _, _, .narrowRequired _ _ _ rest => ruEnd_ants rest
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_ants e) (ruEnd_ants t)
 
 theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).ants = arms.ants
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
 
 theorem ruGArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -135,12 +141,14 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .int _ _, _ => Iff.rfl
   | .bool, _ => Iff.rfl
   | .opt _, _ => Iff.rfl
-  | .sum _, _ => Iff.rfl
+  | .sum cs, _ => by
+      change sumWort (Ty.mapCases (fun n => n + 1) id cs) = true ↔ sumWort cs = true
+      rw [sumWort_mapCases]
   | .why _, _ => Iff.rfl
   | .never, _ => Iff.rfl
   | .fl _ _, _ => Iff.rfl
   | .fnptr _, _ => Iff.rfl
-  | .ptr _ _, _ => Iff.rfl
+  | .ptr _, _ => Iff.rfl
   | .ref _, _ => Iff.rfl
   | .arr _ _, _ => Iff.rfl
   | .str _, _ => Iff.rfl
@@ -171,7 +179,7 @@ theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .never => by simp only
   | .fl _ _ => by simp only [reduceCtorEq]
   | .fnptr _ => by simp only [reduceCtorEq]
-  | .ptr _ _ => by simp only [reduceCtorEq]
+  | .ptr _ => by simp only [reduceCtorEq]
   | .ref _ => by simp only [reduceCtorEq]
   | .arr _ _ => by simp only [reduceCtorEq]
   | .str _ => by simp only [reduceCtorEq]
@@ -418,41 +426,6 @@ theorem stufen_mitRuhe (h : StufenM P) : StufenM P.mitRuhe
       show mE (bodenM (some f)) (P.mitRuhe.rumpf (some f)) = true
       rw [rumpf_mitRuhe_mE]
       exact h f
-
-/-- **Transfer of the checker's facts to `P.mitRuhe`.** -/
-theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws) :
-    AkzeptiertSpec P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) where
-  frag := frag_mitRuhe P hA.frag
-  abg := abg_mitRuhe P hvoll hA.abg
-  fuss := fussS_mitRuhe P hvoll hA.abg hA.fuss
-  stufen := stufen_mitRuhe P hA.stufen
-  sperrOrte := fun L c hc => (bewacht_mitRuhe (D := D) c L).mpr (hA.sperrOrte L c hc)
-  wurzeln := fun w' hw' => by
-    obtain ⟨w, hw, rfl⟩ := mem_wsRuhe.mp hw'
-    exact hA.wurzeln w hw
-  einzeln := einzelnPool_mitRuhe P hvoll hA.abg hA.einzeln
-  renn := fun c hB hAt => schreibGetrennt_mitRuhe P hvoll hA.abg
-    (hA.renn c (fun L hL => hB L ((bewacht_mitRuhe (D := D) c L).mpr hL)) hAt)
-  antworten
-    | none, _, hx => absurd hx List.not_mem_nil
-    | some f, x, hx => (stelleOk_mitRuhe (D := D) x).mpr
-        (hA.antworten f x (by rw [← rumpf_mitRuhe_ants P f]; exact hx))
-  masken
-    | none, hw, _, _ => Bool.noConfusion hw
-    | some w, hw, f', hf' => by
-        obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
-        rw [rumpf_mitRuhe_mE]
-        exact hA.masken w hw f hf
-  reset := fun g elem len harr => by
-    have hT : tyR (D.gtyp g) = .arr elem len := harr
-    revert hT
-    cases hτ : D.gtyp g with
-    | arr elem' len' =>
-      intro hT
-      simp only [tyR] at hT
-      cases hT
-      exact zeroAdmitting_tyR (hA.reset g _ _ hτ)
-    | _ => intro hT; simp [tyR] at hT
 
 end Transfer
 end Gabbro.Grammatik

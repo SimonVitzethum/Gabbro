@@ -160,7 +160,7 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp only [certCut3PayloadOk] at hp
           have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
           obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
-          exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.num ee),
+          exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.val ee),
             trivial⟩
   | why n r =>
     simp only [certCut3Ok] at h
@@ -211,7 +211,7 @@ example : ¬ certCut3Ok TestD [] []
 /-- The `zahl` case: `fall` at index `0` with a payload that recomputes the
     cased range. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
-  cut3_sound (.case [some (0, 0)] 0 (some (.lit 0))) () (by decide)
+  cut3_sound (.case [some (.int 0 0)] 0 (some (.lit 0))) () (by decide)
 
 /-- The caseless arm: `fall` at index `0` with no payload. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
@@ -219,7 +219,7 @@ example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
 
 /-- FORGED payload: the `zahl` arm carries `1`, cased at `(0, 0)`. -/
 example : ¬ certCut3Ok TestD [] []
-    (.case [some (0, 0)] 0 (some (.lit 1))) := by decide
+    (.case [some (.int 0 0)] 0 (some (.lit 1))) := by decide
 
 /-- `grund 1 of 2` elaborates to `Expr.grund`. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
@@ -259,7 +259,7 @@ example : ¬ certCut3Ok TestD [] []
     index shape, guard); the pointer itself travels as proof. Every other
     arm needs nothing (`Unit`). -/
 def Cut4Ptr (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut4 D → Type
-  | .thru _ _ n _ => Σ rw : Bool, Expr D Γ Λ (.ptr n rw)
+  | .thru t _ n _ => Σ rw : Bool, Expr D Γ Λ (.ptr (.table n (true, rw) (D.tableSpace t)))
   | _ => Unit
 
 /-- CUT-4 remainder soundness: a valid remainder print elaborates to the
@@ -272,7 +272,7 @@ theorem cut4_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   cases c with
   | ptrOf t n rw =>
     simp only [certCut4Ok] at h
-    exact ⟨.ptr n rw, Expr.ptrOf t n h rw, trivial⟩
+    exact ⟨.ptr (.table n (true, rw) (D.tableSpace t)), Expr.ptrOf t n h (true, rw), trivial⟩
   | fnref f n =>
     simp only [certCut4Ok] at h
     exact ⟨.fnptr n, Expr.fnref f n h, trivial⟩
@@ -297,7 +297,7 @@ example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
     guard recompute; the pointer travels as proof. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [Res.held ()] τ, True :=
   cut4_sound (.thru () () 0 (.wide 0 10 (.lit 3)))
-    ⟨true, Expr.ptrOf () 0 rfl true⟩ (by decide)
+    ⟨true, Expr.ptrOf () 0 rfl (true, true)⟩ (by decide)
 
 /-- FORGED signature: the nullary function claimed at signature `1` -- the
     signature equation fails, so the print is provably not valid. -/

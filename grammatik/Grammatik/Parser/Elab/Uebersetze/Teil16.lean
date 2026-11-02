@@ -1,41 +1,45 @@
 module
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
-import all Init.Data.String.Defs
-import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil15
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
-def beqUEns : UEns → UEns → Bool
-  | .cmp o a b, .cmp p c d =>
-    strEq o p && beqUSide a c && beqUSide b d
-  | .tru, .tru => true
-  | .fls, .fls => true
-  | .and a b, .and c d => beqUEns a c && beqUEns b d
-  | .or a b, .or c d => beqUEns a c && beqUEns b d
-  | .not a, .not b => beqUEns a b
-  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .globB a, .globB b => strEq a b
-  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
-  | .ergB, .ergB => true
-  | .held a, .held b => strEq a b
-  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
-  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
-  | .member t a, .member u b => strEq t u && a == b
-  | .arrayElements a source x body, .arrayElements b target y other =>
-      a == b && beqUSide source target && strEq x y && beqUEns body other
-  | .filtered a t x f r s b, .filtered c u y g v z d =>
-      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
-  | .istSome o m, .istSome p n => o == p && m == n
-  | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool
   | [], [] => true
@@ -44,7 +48,7 @@ def beqUEnsList : List UEns → List UEns → Bool
 
 def beqUArg : UArg → UArg → Bool
   | .var a, .var b => strEq a b
-  | .freshPtr a w, .freshPtr b v => strEq a b && w == v
+  | .freshPtr a w, .freshPtr b v => strEq a b && decide (w = v)
   | .val a, .val b => beqUSide a b
   | .fnref a, .fnref b => strEq a b
   | _, _ => false
@@ -102,7 +106,7 @@ def beqUStmtList : List UStmt → List UStmt → Bool
   | _, _ => false
 
 def beqUParamArt : UParamArt → UParamArt → Bool
-  | .ptr a w, .ptr b v => a == b && w == v
+  | .ptr a, .ptr b => decide (a = b)
   | .index a, .index b => a == b
   | .int, .int => true
   | _, _ => false
@@ -174,7 +178,8 @@ def beqUFn : UFn → UFn → Bool
     beqUEnsList a.gives b.gives &&
     beqUStmtList a.body b.body && beqURet a.ret b.ret && a.boden == b.boden &&
     beqUEnsList a.needs b.needs && decide (a.decreases = b.decreases) &&
-    decide (a.measureConstants = b.measureConstants)
+    decide (a.measureConstants = b.measureConstants) &&
+    decide (a.measureTypes = b.measureTypes)
 
 def beqUFnList : List UFn → List UFn → Bool
   | [], [] => true
@@ -250,10 +255,10 @@ theorem u104data :
     r4D.typ () () = .int 0 100 ∧
     uRang104 uExp104 = 0 ∧
     r4D.rang () = 0 ∧
-    uParams104 uExp104 "einzahlen" = [.ptr 0 true, .index 2, .int 0 10] ∧
-    r4D.params r4Ein = [.ptr 0 true, .index 2, .int 0 10] ∧
-    uParams104 uExp104 "lies" = [.ptr 0 false, .index 2] ∧
-    r4D.params r4Lies = [.ptr 0 false, .index 2] ∧
+    uParams104 uExp104 "einzahlen" = [.ptr (.table 0 (true, true)), .index 2, .int 0 10] ∧
+    r4D.params r4Ein = [.ptr (.table 0 (true, true)), .index 2, .int 0 10] ∧
+    uParams104 uExp104 "lies" = [.ptr (.table 0 (true, false)), .index 2] ∧
+    r4D.params r4Lies = [.ptr (.table 0 (true, false)), .index 2] ∧
     uHeld104 uExp104 "einzahlen" = ["M"] ∧
     r4D.haelt r4Ein = [()] ∧
     uSchreibt104 uExp104 "einzahlen" = ["Konto"] ∧

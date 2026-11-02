@@ -35,7 +35,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
         | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr _ _) => .error "pointer as value without G form"
+      | .ok (.ptr _) => .error "pointer as value without G form"
       | .ok .bool => .error "truth value as a number"
       | .ok (.ref _) => .error "reference as a number"
       | .ok _ => .ok (.param p)
@@ -106,6 +106,8 @@ structure UFnKopf where
   resTy : Option Ty := none
   /-- The tables a foreign body writes (`ext`). -/
   puts : List String := []
+  nimmt : List String := []
+  gibt : List String := []
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
@@ -144,15 +146,11 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
       | .ok ty => .ok (n, ty, .int)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
-    else if strEq rechte "rw" || strEq rechte "own" then
-      match uTabNr tabs t with
-      | .error e => .error e
-      | .ok (num, _) => .ok (n, .ptr num true, .ptr num true)
-    else if strEq rechte "r" then
-      match uTabNr tabs t with
-      | .error e => .error e
-      | .ok (num, _) => .ok (n, .ptr num false, .ptr num false)
-    else .error "pointer right without G form"
+    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+    else do
+      let access ← uTableRight rechte
+      let (num, _) ← uTabNr tabs t
+      pure (n, .ptr (.table num access), .ptr (.table num access))
   | (n, .index false t) =>
     match uTabNr tabs t with
     | .error e => .error e
@@ -243,7 +241,7 @@ def uSchreibtOrt (kopf : UFnKopf) (tabs : List UTab) : SExpr →
       match uStelle kopf.names b with
       | .ok j =>
         match uArtBei kopf.kinds j with
-        | .ok (.ptr num _) =>
+        | .ok (.ptr ⟨_, _, .table num⟩) =>
           match tabs[num]? with
           | .some tb => .ok tb.name
           | .none => .error "pointer table unknown"
@@ -262,6 +260,8 @@ structure UEffekte where
   locks : List String
   puts : List String
   gputs : List String := []
+  nimmt : List String := []
+  gibt : List String := []
 
 /-- A written name is a static when it is no parameter and no table. -/
 def uIstGlobName (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) (g : String) : Bool :=
@@ -311,6 +311,17 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
   | .reads _ :: rest => uEffekteAux kopf tabs locks globs rest
   | .pure :: rest => uEffekteAux kopf tabs locks globs rest
   | .loops :: rest => uEffekteAux kopf tabs locks globs rest
+| .allocs m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with gibt := m :: r.gibt }
+  | .takes (.variable m) :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with nimmt := m :: r.nimmt }
   | _ :: _ => .error "effect without G form"
+
+end Gabbro.Grammatik.Parser.Uebersetze
+
 
 end Gabbro.Grammatik.Parser.Uebersetze

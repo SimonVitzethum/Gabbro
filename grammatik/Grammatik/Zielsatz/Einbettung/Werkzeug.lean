@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Schleifen
+import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 @[expose] public section
 
 
@@ -84,15 +85,15 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
       · simp only [einpassen, h1, dite_true, and_self]; rfl
       · by_cases h2 : n < 0 <;> (simp only [einpassen, h1, h2, dite_false, ite_true, ite_false, not_false_eq_true]) <;> rfl
   | .sum cs, _, n => by
-      show summePasst cs n = Option.map _ (summePasst cs n)
-      cases summePasst cs n <;> rfl
+      exact summePasst_relocate E.num E.tnum
+        (fun _ v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩) cs n
   | .why m, _, n => by by_cases h : 0 ≤ n ∧ n < m <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
   | .never, _, n => rfl
   | .fl lo hi, _, n => by
       show gleitWortPasst lo hi n = Option.map _ (gleitWortPasst lo hi n)
       cases gleitWortPasst lo hi n <;> rfl
   | .fnptr _, h, _ => absurd h (by simp only [Ty.zeigerfrei, Bool.false_eq_true, not_false_eq_true])
-  | .ptr t rw, _, n => rfl
+  | .ptr ⟨space, rights, .table t⟩, _, n => rfl
   | .ref t, _, n => by by_cases h : 0 ≤ n <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
   | .arr _ _, _, _ => rfl
   | .str _, _, _ => rfl

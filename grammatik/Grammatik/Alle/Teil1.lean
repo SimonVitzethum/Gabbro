@@ -3,6 +3,8 @@ module
 public import Grammatik.Kern.Syntax.Typen.Teil2
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil3
+public import Grammatik.Kern.Syntax.Syntax.Teil4
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut
 public import Grammatik.Kern.Semantik.Semantik.EingebautZeuge
@@ -68,6 +70,10 @@ public import Grammatik.Proben.AuditW5
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
 public import Grammatik.Logik.Vertraege.Uebersetzung
+public import Grammatik.Parser.Stmt.LibraryFixtures
+public import Grammatik.Parser.Stmt.LibraryCertificates
+public import Grammatik.Parser.Stmt.LibraryWitnesses
+public import Grammatik.Parser.Stmt.LibraryExport
 public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
@@ -156,6 +162,7 @@ public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben10
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben11
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben15
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben16
@@ -231,6 +238,13 @@ public import Grammatik.Isabelle.Table_Ops_Erhaltung
 public import Grammatik.Isabelle.Absenkung_Parametrisch
 public import Grammatik.Isabelle.Intervall_Aussen
 public import Grammatik.Isabelle.AccumulatesMonoid
+public import Grammatik.Bausteine.Kernzelle.Operator
+public import Grammatik.Bausteine.Kernzelle.Belegung
+public import Grammatik.Bausteine.Kernzelle.Verlauf
+public import Grammatik.Bausteine.Kernzelle.Zulassung
+public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
+public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
+public import Grammatik.Bausteine.Kernzelle.Zeuge
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert
@@ -333,3 +347,5 @@ public import Grammatik.Korpus.Programme.Korpus59
 public import Grammatik.Korpus.Programme.Korpus109
 public import Grammatik.Korpus.Programme.Korpus125
 public import Grammatik.Bausteine.Arena.ArenaDyn
+public import Grammatik.Kern.Syntax.Konst.Rang
+public import Grammatik.Kern.Syntax.Konst.Zeuge

@@ -169,6 +169,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       exact blockSGK body hb ho _ _ _ h
   | _, _, _, _, _, .traverse .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .consumeTraverse .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .retry .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .forever .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .axiomCall .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
@@ -177,7 +178,13 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
       exact ⟨h1, h1.evalErg e ρ⟩
+  | _, _, _, Λ₀, _, .retScoped e R, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execStmt]
+      exact ⟨h1, h1.evalErg e ρ⟩
   | _, _, _, _, _, .retWhy .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .retWhyScoped .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .leave .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .next .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
 
@@ -262,6 +269,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       split
       · exact AusSG.schrumpf (blockSGK rest hr ho.2 _ _ _ h1)
       · exact EndSG.zuAusgang (endSGK sonst hs ho.1 _ _ _ h1)
+  | _, _, _, _, _, .narrowRequired _ _ _ _, hb, _ => by cases hb
   | _, _, _, Λ₀, _, .check c sonst rest, hb, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
@@ -320,7 +328,13 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       have h1 := h.lese Λ₀ e.orte
       simp only [execEnd]
       exact ⟨h1, h1.evalErg e ρ⟩
+  | _, _, Λ₀, .retScoped e R, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ e.orte
+      simp only [execEnd]
+      exact ⟨h1, h1.evalErg e ρ⟩
   | _, _, _, .retWhy .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
+  | _, _, _, .retWhyScoped .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
   | _, _, _, .leave .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
   | _, _, _, .next .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
   | _, _, _, .cons s rest, he, ho => by
@@ -345,9 +359,10 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       simp only [execEnd]
       rw [h1.eval e]
       exact EndSG.schrumpf (endSGK rest hr ho _ _ _ h1)
+  | _, _, _, .narrowRequired _ _ _ _, he, _ => by cases he
 
 theorem armsSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     ArmsR A C mr arms → arms.kOk = true → ∀ (v : Wert D (.sum cs)),
     SGBK O passes R (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

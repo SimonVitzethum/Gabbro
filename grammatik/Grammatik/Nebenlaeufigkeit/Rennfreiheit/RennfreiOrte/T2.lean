@@ -93,6 +93,12 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .retWhy .., _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨[], rfl, evOk_nil⟩
+  | .retScoped e _, _, hC, σ, ρ, _, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
+  | .retWhyScoped .., _, _, σ, ρ, _, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact ⟨[], rfl, evOk_nil⟩
   | .leave _, _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨[], rfl, evOk_nil⟩
@@ -108,6 +114,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .locks .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .breaking .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .traverse .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .consumeTraverse .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .retry .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .forever .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
 

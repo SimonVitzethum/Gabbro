@@ -33,6 +33,7 @@ variable {D : Deklaration}
 def Endblock.istRet {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret _ _ => true
+  | .retScoped _ _ => true
   | _ => false
 
 /-- The residue is an end block that is a `return`. -/
@@ -83,7 +84,7 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | dannOnOptionNone l Γ Λ Λ' Λ'' n o p a rest k ρ hhead σ₁ hs₁ hv neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw neu hneu hΛ =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
     | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw neu hneu hΛ =>

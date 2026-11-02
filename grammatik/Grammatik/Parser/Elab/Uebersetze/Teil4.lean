@@ -37,7 +37,7 @@ def uZugriff (ctx : UCtx) : SExpr →
       match uParamNr ctx b with
       | .ok j =>
         match uArtBei ctx.kinds j with
-        | .ok (.ptr num _) =>
+        | .ok (.ptr ⟨_, _, .table num⟩) =>
           match ctx.tabs[num]? with
           | .none => .error "pointer table unknown"
           | .some tb =>
@@ -96,7 +96,17 @@ def uGrenzwort (ctx : UCtx) : SExpr → Option Int
 /-- An error of the place reader that names a premise of the model (the read is outside the table, or the guard
     is not held), not a missing form: it must reach the verdict, not be masked by the leaf's own message. -/
 def uPraemisse (e : String) : Bool :=
-  strEq e "index outside count" || strEq e "access without held guard"
+  strEq e "index outside count" || strEq e "access without held guard" ||
+    strEq e "read through pointer without read right"
+
+/-- Reading a place through a parameter needs read permission, including in contracts and old views. -/
+def uReadThrough (ctx : UCtx) (name : String) : Except String Unit := do
+  let j ← uParamNr ctx name
+  let kind ← uArtBei ctx.kinds j
+  match kind with
+  | .ptr ⟨_, ⟨true, _, none⟩, _⟩ => .ok ()
+  | .ptr _ => .error "read through pointer without read right"
+  | _ => .error "place without G form"
 
 /-- `a[i]` reads a CARRIER (a table's or an arena's slot, `T.slots[i]`, `p.slots[i]`, `A[i]`), not an aggregate value. -/
 def uTraegerIndex (ctx : UCtx) : SExpr → Bool
@@ -237,7 +247,7 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
         | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr _ _) => .error "pointer in a compare without G form"
+      | .ok (.ptr _) => .error "pointer in a compare without G form"
       | .ok .bool => .error "truth value as a number"
       | .ok _ => .ok (.param p)
       | .error e => .error e
@@ -248,7 +258,9 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
   | .old o =>
     match uZugriff ctx o with
     | .error e => .error e
-    | .ok (.thru b, _, f, ix) => .ok (.old b f ix)
+    | .ok (.thru b, _, f, ix) => do
+      uReadThrough ctx b
+      pure (.old b f ix)
     | .ok (.tabelle b, _, f, ix) => .ok (.old b f ix)
   | e =>
     match uGrenzwort ctx e with
@@ -256,7 +268,8 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .none =>
       match uZugriff ctx e with
       | .error x => .error (if uPraemisse x then x else "compare side without G form")
-      | .ok (.thru b, tb, f, ix) =>
+      | .ok (.thru b, tb, f, ix) => do
+        uReadThrough ctx b
         if uBoolFeld ctx tb f then .error "bool field as a number"
         else if (uOptFeld ctx tb f).isSome then .error "option field as a number" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
@@ -301,7 +314,9 @@ def uOptEin (ctx : UCtx) : SExpr → Except String (UOpt × Nat)
       | .none => .error "match without G form"
       | .some m =>
         match b with
-        | .thru p => .ok (.slot p f ix, m)
+        | .thru p => do
+          uReadThrough ctx p
+          pure (.slot p f ix, m)
         | .tabelle t => .ok (.tab t f ix, m)
 
 /-- Resolve an index against its declared table; do not erase a foreign table identity. -/
@@ -403,7 +418,7 @@ def uArrayBodyTypes : Nat → SAnw → List STyp
   | 0, _ => []
   | fuel + 1, statement =>
     match statement with
-    | .bind _ _ annotation _ | .bindLib _ _ annotation _ _ => annotation.toList
+    | .bind _ _ annotation _ | .bindLib _ _ annotation _ => annotation.toList
     | .bindElse _ annotation _ _ body => annotation.toList ++ uArrayBodyTypes fuel body
     | .cond _ yes branches no => uArrayBodyTypes fuel yes ++ branches.flatMap (uArrayBodyTypes fuel) ++
         no.toList.flatMap (uArrayBodyTypes fuel)

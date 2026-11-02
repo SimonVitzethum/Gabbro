@@ -8,7 +8,8 @@
   index `index (D.count t)`. `ObjPar` names such a pair: `idx` (the index parameter),
   `cap` (the capability), both counted from the BOTTOM of the context (`Var.unten`), so a
   position stays the same under every `let` a body pushes; `rw` is the right of the
-  capability (`own` travels as read-write, `lean_g.rs::param_ty`). In an environment `ρ`
+  capability's ordinary write flag. Exclusive owner rights are refused by the Lean exporter
+  until checked ownership flow is connected. In an environment `ρ`
   the pair names the object `⟨tab, value of idx⟩` (`ObjPar.obj`). The identity is a VALUE
   the caller chooses -- which the type alone could not say (slice 2's obstruction 1).
 
@@ -115,18 +116,21 @@ theorem Env.unten_set : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ)
 /-! ## 2. Object parameters, the objects of a call frame, the declared frame -/
 
 /-- **An object parameter**: the index parameter at bottom position `idx` together with the
-    capability at bottom position `cap`, on table `tab`, with right `rw` (writable or `own`). -/
+    capability at bottom position `cap`, on table `tab`, with ordinary write flag `rw`. -/
 structure ObjPar (D : Deklaration) where
   idx : Nat
   cap : Nat
   tab : D.Tab
   rw : Bool
+  read : Bool := true
+  space : Nat := 0
+  owner : Option Nat := none
 
 /-- The pair is faithful to the context: the index has the generated index type of its
     table, and the capability is a pointer to that table with the pair's right. -/
 def ObjParTreu (D : Deklaration) (Γ : Ctx) (op : ObjPar D) : Prop :=
   Γ.reverse[op.idx]? = some (.index (D.count op.tab)) ∧
-    ∃ n, Γ.reverse[op.cap]? = some (.ptr n op.rw) ∧ D.tabNr n = some op.tab
+    ∃ n, Γ.reverse[op.cap]? = some (.ptr ⟨op.space, ⟨op.read, op.rw, op.owner⟩, .table n⟩) ∧ D.tabNr n = some op.tab
 
 /-- The object the pair names in an environment: its table, at the value of its index. -/
 def ObjPar.obj {Γ : Ctx} (op : ObjPar D) (ρ : Env D Γ) : Option (Obj D) :=
@@ -139,7 +143,7 @@ def objVon {Γ : Ctx} (ps : List (ObjPar D)) (ρ : Env D Γ) : Fin ps.length →
 /-- Which object parameters count for separation. -/
 def rwVon (ps : List (ObjPar D)) : Fin ps.length → Bool := fun i => (ps.get i).rw
 
-/-- **`ObjGetrennt` on a call frame**: the objects the writable-or-`own` parameters name differ
+/-- **`ObjGetrennt` on a call frame**: the objects the writable parameters name differ
     from every other parameter's object. -/
 def ObjGetrennt {Γ : Ctx} (ps : List (ObjPar D)) (ρ : Env D Γ) : Prop :=
   ObjGetrenntL (rwVon ps) (objVon ps ρ)
@@ -190,11 +194,11 @@ def LenOk (ps : List (ObjPar D)) (Γ : Ctx) : Prop := ∀ op ∈ ps, op.rw = tru
 theorem LenOk.cons {ps : List (ObjPar D)} {Γ : Ctx} (h : LenOk ps Γ) (τ : Ty) : LenOk ps (τ :: Γ) :=
   fun op hop hrw => by have := h op hop hrw; simp only [List.length_cons]; omega
 
-theorem LenOk.arm {ps : List (ObjPar D)} {Γ : Ctx} (h : LenOk ps Γ) (c : Option (Int × Int)) :
+theorem LenOk.arm {ps : List (ObjPar D)} {Γ : Ctx} (h : LenOk ps Γ) (c : Option Ty) :
     LenOk ps (ArmCtx Γ c) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨lo, hi⟩ := p; exact h.cons _
+  | some p => exact h.cons _
 
 section Inv
 variable {W : D.Tab → Int → Prop} {ps : List (ObjPar D)}
@@ -213,10 +217,10 @@ theorem ObjInv.tail {τ : Ty} {Γ : Ctx} {ρ : Env D (τ :: Γ)} (h : ObjInv W p
   fun op hop hrw k hk => h op hop hrw k (Env.unten_tail_some ρ hk)
 
 theorem ObjInv.arm {Γ : Ctx} {ρ : Env D Γ} (hlen : LenOk ps Γ) (h : ObjInv W ps ρ)
-    {c : Option (Int × Int)} (nutz : Nutzlast c) : ObjInv W ps (armEnv nutz ρ) := by
+    {c : Option Ty} (nutz : Nutzlast D.Fn D.passt c) : ObjInv W ps (armEnv nutz ρ) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨lo, hi⟩ := p; exact h.cons hlen _
+  | some p => exact h.cons hlen _
 
 end Inv
 /-! ## 3. The object discipline of a body -/
@@ -275,6 +279,7 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .locks _ _ body => oB body
   | .breaking _ body => oB body
   | .traverse _ _ body => oB body
+  | .consumeTraverse _ _ _ _ _ _ body => oB body
   | .retry _ _ body ueber => oB body ∧ oB ueber
   | .forever _ _ body => oB body
   | .axiomCall a .. => KeinTabAx a
@@ -285,6 +290,8 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .retires .. => True
   | .ret .. => True
   | .retWhy .. => True
+  | .retScoped .. => True
+  | .retWhyScoped .. => True
   | .leave _ => True
   | .next _ => True
 
@@ -302,6 +309,7 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .awaits _ _ _ _ _ rest => oB rest
   | .exchange _ _ _ _ rest => oB rest
   | .narrow _ _ _ sonst rest => oE sonst ∧ oB rest
+  | .narrowRequired _ _ _ rest => oB rest
   | .check _ sonst rest => oE sonst ∧ oB rest
   | .float _ _ _ _ _ rest => oB rest
   | .floatLit _ _ _ rest => oB rest
@@ -311,6 +319,8 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
 def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Prop
   | .ret .. => True
   | .retWhy .. => True
+  | .retScoped .. => True
+  | .retWhyScoped .. => True
   | .leave _ => True
   | .next _ => True
   | .cons s rest => oS s ∧ oE rest
@@ -324,10 +334,11 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .awaits _ _ _ _ _ rest => oE rest
   | .bindCallInd .. => False
   | .narrow _ _ _ sonst rest => oE sonst ∧ oE rest
+  | .narrowRequired _ _ _ rest => oE rest
   | .exchange _ _ _ _ rest => oE rest
   | .ite _ t e => oE t ∧ oE e
 
-def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Prop
   | .nil => True
   | .cons b rest => oB b ∧ oA rest
@@ -455,7 +466,7 @@ theorem ObjE.zuAusgang {Γ : Ctx} {σ : World D} {o : EndAusgang V l Γ} (h : Ob
   cases o <;> simp only [ObjE, ObjA, EndAusgang.zuAusgang] at h ⊢
   all_goals exact h
 
-theorem ObjA.schrumpfArm {Γ : Ctx} {σ : World D} (c : Option (Int × Int))
+theorem ObjA.schrumpfArm {Γ : Ctx} {σ : World D} (c : Option Ty)
     {o : Ausgang V l (ArmCtx Γ c)} (h : ObjA W ps σ o) : ObjA W ps σ (o.schrumpfArm c) := by
   cases c with
   | none => exact h

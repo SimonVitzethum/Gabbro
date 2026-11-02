@@ -42,6 +42,11 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       rw [show (fun σ ρ => execBlockH (SperrInv.leer D) O U passes R body σ ρ) =
         (fun σ ρ => execBlock O passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execH_leer body σ ρ]
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ => by
+      simp only [execStmtH, execStmt]
+      rw [show (fun σ ρ => execBlockH (SperrInv.leer D) O U passes R body σ ρ) =
+        (fun σ ρ => execBlock O passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execH_leer body σ ρ]
   | .retry n bis body ueber, σ, ρ => by
       simp only [execStmtH, execStmt]
       rw [show (fun σ ρ => execBlockH (SperrInv.leer D) O U passes R body σ ρ) =
@@ -71,6 +76,8 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .., _, _ => rfl
   | .ret .., _, _ => rfl
   | .retWhy .., _, _ => rfl
+  | .retScoped .., _, _ => rfl
+  | .retWhyScoped .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
 
@@ -102,6 +109,8 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .narrow e lo' hi' sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
+  | .narrowRequired e lo' hi' rest, σ, ρ => by
+      simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .check c sonst rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
   | .float op a b lo hi rest, σ, ρ => by
@@ -118,6 +127,8 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       execEndH (SperrInv.leer D) O U passes R b σ ρ = execEnd O passes R b σ ρ
   | .ret .., _, _ => rfl
   | .retWhy .., _, _ => rfl
+  | .retScoped .., _, _ => rfl
+  | .retWhyScoped .., _, _ => rfl
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
   | .cons s rest, σ, ρ => by
@@ -142,13 +153,15 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .narrow e lo' hi' sonst rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
+  | .narrowRequired e lo' hi' rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .exchange g neu hw hL rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .ite c t e, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer t, Endblock.execH_leer e] <;> rfl
 
 theorem Arms.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
       execArmsH (SperrInv.leer D) O U passes R a v σ ρ = execArms O passes R a v σ ρ
   | .nil, ⟨⟨k, hk⟩, _⟩, _, _ => (Nat.not_lt_zero k hk).elim
@@ -188,6 +201,7 @@ def Stmt.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ
   | .locks .. => false
   | .breaking _ body => body.ohneLocks
   | .traverse _ _ body => body.ohneLocks
+  | .consumeTraverse _ _ _ _ _ _ body => body.ohneLocks
   | .retry _ _ body ueber => body.ohneLocks && ueber.ohneLocks
   | .forever _ _ body => body.ohneLocks
   | _ => true
@@ -206,6 +220,7 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
   | .awaits _ _ _ _ _ rest => rest.ohneLocks
   | .exchange _ _ _ _ rest => rest.ohneLocks
   | .narrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .narrowRequired _ _ _ rest => rest.ohneLocks
   | .check _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .float _ _ _ _ _ rest => rest.ohneLocks
   | .floatLit _ _ _ rest => rest.ohneLocks
@@ -215,6 +230,8 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
 def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.ohneLocks && rest.ohneLocks
@@ -228,10 +245,11 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .awaits _ _ _ _ _ rest => rest.ohneLocks
   | .bindCallInd _ _ _ _ _ rest => rest.ohneLocks
   | .narrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
+  | .narrowRequired _ _ _ rest => rest.ohneLocks
   | .exchange _ _ _ _ rest => rest.ohneLocks
   | .ite _ t e => t.ohneLocks && e.ohneLocks
 
-def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.ohneLocks && rest.ohneLocks

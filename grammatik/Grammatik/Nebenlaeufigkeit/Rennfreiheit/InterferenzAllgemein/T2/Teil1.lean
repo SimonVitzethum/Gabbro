@@ -59,7 +59,7 @@ theorem atomarAusgenommen_entlaedt (c : D.Tab ⊕ D.Glob)
     Geteilt c = true ∧ (S ∨ AtomarAusgenommen (D := D) c ∨ P) :=
   ⟨hT, Or.inr (Or.inl hA)⟩
 
-/-- **Paarung entlaedt.** Nutzlast einer Veroeffentlichung braucht kein
+/-- **Paarung entlaedt.** Nutzlast D.Fn D.passt einer Veroeffentlichung braucht kein
     Sperrargument und keine Atomarseite: die rechte Seite der Disjunktion steht von
     vornherein, gleichgueltig was links (`S`, `A`) stuende. -/
 theorem paarungAusgenommen_entlaedt (c : D.Tab ⊕ D.Glob)

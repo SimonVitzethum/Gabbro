@@ -148,9 +148,9 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .intBuiltin2 _ a b => "Expr.intBuiltin2" :: "Ty.int" :: exprM a ++ exprM b
   | _, _, _, .count _ body => "Expr.count" :: "Ty.int" :: exprM body
 
-def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → List String
+def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, NutzlastExpr D Γ Λ o → List String
   | _, _, _, .empty => ["NutzlastExpr.empty"]
-  | _, _, _, .num e => "NutzlastExpr.num" :: exprM e
+  | _, _, _, .val e => "NutzlastExpr.val" :: exprM e
 end
 
 /-- The members of an argument list. -/
@@ -196,6 +196,7 @@ def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .locks .. => "Stmt.locks"
   | _, _, _, _, .breaking .. => "Stmt.breaking"
   | _, _, _, _, .traverse .. => "Stmt.traverse"
+  | _, _, _, _, .consumeTraverse .. => "Stmt.consumeTraverse"
   | _, _, _, _, .retry .. => "Stmt.retry"
   | _, _, _, _, .forever .. => "Stmt.forever"
   | _, _, _, _, .axiomCall .. => "Stmt.axiomCall"
@@ -206,6 +207,8 @@ def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .retires .. => "Stmt.retires"
   | _, _, _, _, .ret .. => "Stmt.ret"
   | _, _, _, _, .retWhy .. => "Stmt.retWhy"
+  | _, _, _, _, .retScoped .. => "Stmt.retScoped"
+  | _, _, _, _, .retWhyScoped .. => "Stmt.retWhyScoped"
   | _, _, _, _, .leave .. => "Stmt.leave"
   | _, _, _, _, .next .. => "Stmt.next"
 
@@ -224,6 +227,7 @@ def blockStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .awaits _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .exchange _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .narrow _ _ _ _ rest => blockStmts rest
+  | _, _, _, _, .narrowRequired _ _ _ rest => blockStmts rest
   | _, _, _, _, .check _ _ rest => blockStmts rest
   | _, _, _, _, .float _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .floatLit _ _ _ rest => blockStmts rest
@@ -243,15 +247,18 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .awaits _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => endStmts rest
   | _, _, _, .narrow _ _ _ _ rest => endStmts rest
+  | _, _, _, .narrowRequired _ _ _ rest => endStmts rest
   | _, _, _, .exchange _ _ _ _ rest => endStmts rest
   | _, _, _, .ite .. => []
   | _, _, _, .ret .. => []
   | _, _, _, .retWhy .. => []
+  | _, _, _, .retScoped .. => []
+  | _, _, _, .retWhyScoped .. => []
   | _, _, _, .leave .. => []
   | _, _, _, .next .. => []
 
 /-- The statements directly in the arms of a tag match. -/
-def armsStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
+def armsStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String
   | _, _, _, _, _, .nil => []
   | _, _, _, _, _, .cons b rest => blockStmts b ++ armsStmts rest
@@ -340,7 +347,7 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
   | _, _, _, .exchange _ neu _ _ rest => "Endblock.exchange" :: exprM neu ++ endM rest
   | _, _, _, .ite c t e => "Endblock.ite" :: exprM c ++ endM t ++ endM e
 
-def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
+def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String
   | _, _, _, _, _, .nil => ["Arms.nil"]
   | _, _, _, _, _, .cons b rest => "Arms.cons" :: blockM b ++ armsM rest

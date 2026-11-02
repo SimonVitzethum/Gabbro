@@ -72,7 +72,9 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .none n => .none n
   | _, _, _, .some e => .some (ruE e)
   | _, _, _, .istSome e => .istSome (ruE e)
-  | _, _, _, .case cs i nutz => .case cs i (ruN nutz)
+  | _, _, _, .case cs i nutz =>
+      .case (Ty.mapCases (fun n => n + 1) id cs) ⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩
+        ((Ty.mapCases_get (fun n => n + 1) id cs i).symm ▸ ruN nutz)
   | _, _, _, .why n r => .why n r
   | _, _, _, .forallSlots t body hL => Expr.forallSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
   | _, _, _, .existsSlots t body hL => Expr.existsSlots (D := D.mitRuhe) t (ruE body) (darfR hL)
@@ -97,10 +99,10 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .count n body => .count n (ruE body)
 
 /-- A payload expression, translated. -/
-def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →
-    NutzlastExpr D.mitRuhe (Γ.map tyR) (Λ.map resR) c
+def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option Ty} → NutzlastExpr D Γ Λ c →
+    NutzlastExpr D.mitRuhe (Γ.map tyR) (Λ.map resR) (c.map tyR)
   | _, _, _, .empty => .empty
-  | _, _, _, .num e => .num (ruE e)
+  | _, _, _, .val e => .val (ruE e)
 
 end
 
@@ -150,6 +152,8 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
       .locks L (fun M hM => hr M (held_mem_map.mp hM)) (ruB body)
   | _, _, _, _, .breaking i body => .breaking i (ruB body)
   | _, _, _, _, .traverse t inv body => .traverse t (ruE inv) (ruB body)
+  | _, _, _, _, .consumeTraverse t member edge inv bound mass body =>
+      .consumeTraverse t (ruE member) (ruE edge) (ruE inv) bound (ruE mass) (ruB body)
   | _, _, _, _, .retry n bis body ueber => .retry n (ruE bis) (ruB body) (ruB ueber)
   | _, _, _, _, .forever a inv body => .forever a (ruE inv) (ruB body)
   | _, _, _, _, .axiomCall a args h hw hg hd hgd =>
@@ -165,6 +169,10 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
       Stmt.nachΛ (by rw [erase_map_rm]; rfl) (.retires (V := vertragR V) m s (mem_map_rm.mpr h) a)
   | _, _, _, _, .ret e hΛ => .ret (ruErg e) ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map resR).trans (by rw [ende_map]))
+  | _, _, _, _, .retScoped e R =>
+      .retScoped (ruErg e) ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
+  | _, _, _, _, .retWhyScoped r R =>
+      .retWhyScoped r ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
   | _, _, _, _, .leave h => .leave h
   | _, _, _, _, .next h => .next h
 
@@ -200,6 +208,7 @@ def ruB {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .awaits g payload hp hL hat rest => .awaits g payload hp (gdarfR hL) hat (ruB rest)
   | _, _, _, _, .exchange g neu hw hL rest => .exchange g (ruE neu) hw (gdarfR hL) (ruB rest)
   | _, _, _, _, .narrow e lo' hi' sonst rest => .narrow (ruE e) lo' hi' (ruEnd sonst) (ruB rest)
+  | _, _, _, _, .narrowRequired e lo' hi' rest => .narrowRequired (ruE e) lo' hi' (ruB rest)
   | _, _, _, _, .check c sonst rest => .check (ruE c) (ruEnd sonst) (ruB rest)
   | _, _, _, _, .float op a b lo hi rest => .float op (ruE a) (ruE b) lo hi (ruB rest)
   | _, _, _, _, .floatLit q lo hi rest => .floatLit q lo hi (ruB rest)
@@ -212,6 +221,10 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
     Endblock D V l Γ Λ → Endblock D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR)
   | _, _, _, .ret e hΛ => .ret (ruErg e) ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map resR).trans (by rw [ende_map]))
+  | _, _, _, .retScoped e R =>
+      .retScoped (ruErg e) ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
+  | _, _, _, .retWhyScoped r R =>
+      .retWhyScoped r ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
   | _, _, _, .leave h => .leave h
   | _, _, _, .next h => .next h
   | _, _, _, .cons s rest => .cons (ruS s) (ruEnd rest)
@@ -241,17 +254,18 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
         (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
         (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd rest))
   | _, _, _, .narrow e lo' hi' sonst rest => .narrow (ruE e) lo' hi' (ruEnd sonst) (ruEnd rest)
+  | _, _, _, .narrowRequired e lo' hi' rest => .narrowRequired (ruE e) lo' hi' (ruEnd rest)
   | _, _, _, .exchange g neu hw hL rest => .exchange g (ruE neu) hw (gdarfR hL) (ruEnd rest)
   | _, _, _, .ite c t e => .ite (ruE c) (ruEnd t) (ruEnd e)
 
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs →
-      Arms D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR) (Λ'.map resR) cs
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs →
+      Arms D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR) (Λ'.map resR) (Ty.mapCases (fun n => n + 1) id cs)
   | _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, .cons (c := none) b rest => .cons (c := none) (ruB b) (ruArms rest)
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest =>
-      .cons (c := some (lo, hi)) (ruB b) (ruArms rest)
+  | _, _, _, _, _, .cons (c := some τ) b rest =>
+      .cons (c := some (tyR τ)) (ruB b) (ruArms rest)
 
 /-- Reason arms, translated. -/
 def ruGArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {n : Nat} →

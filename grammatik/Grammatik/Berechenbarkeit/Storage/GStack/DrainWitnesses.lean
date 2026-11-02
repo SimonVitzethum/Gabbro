@@ -56,7 +56,7 @@ theorem conditional_class_zeuge : klasse program [()] (fun _ => false) () = .bed
 
 theorem core_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
-      [.inl (), .inr 0, .inr 1, .inr 2, .inr 3] [()] = true := by decide +kernel
+      [.inl (), .inr 0, .inr 1, .inr 2, .inr 3] [()] [] = true := by decide +kernel
 
 theorem program_return_zeuge (O : Orakel FD)
     (R : ∀ f : FD.Fn, World FD → Env FD (FD.params f) → RufAusgang f) :

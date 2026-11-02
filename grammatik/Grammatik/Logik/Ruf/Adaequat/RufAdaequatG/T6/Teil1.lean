@@ -100,11 +100,14 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .locks _ _ body, hs => .locks _ _ _ (blockG_ohneRuf body hs.locks_inv.2)
   | _, _, _, _, _, .breaking _ body, hs => .breaking _ _ (blockG_ohneRuf body hs.breaking_inv)
   | _, _, _, _, _, .traverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .consumeTraverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret e hΛ, _ => .ret e hΛ
   | _, _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .retWhyScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .leave .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .next .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
@@ -131,6 +134,7 @@ theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .narrow _ _ _ sonst rest, hb =>
       .narrow _ _ _ _ _ (endG_ohneRuf sonst hb.narrow_inv.2.2.1)
         (blockG_ohneRuf rest hb.narrow_inv.2.1)
+  | _, _, _, _, _, .narrowRequired _ _ _ _, hb => by cases hb
   | _, _, _, _, _, .check _ sonst rest, hb =>
       .check _ _ _ (endG_ohneRuf sonst hb.pruefung_inv.2.2.1)
         (blockG_ohneRuf rest hb.pruefung_inv.2.1)
@@ -149,14 +153,17 @@ theorem endG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
     EndG A e → EndOhneRuf e
   | _, _, _, .ret e hΛ, _ => .ret e hΛ
   | _, _, _, .retWhy .., he => by cases he
+  | _, _, _, .retScoped .., he => by cases he
+  | _, _, _, .retWhyScoped .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he =>
       .cons _ _ (stmtG_ohneRuf s he.cons_inv.1) (endG_ohneRuf rest he.cons_inv.2.1)
   | _, _, _, .bind _ rest, he => .bind _ _ (endG_ohneRuf rest he.bind_inv)
+  | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 
 theorem armsG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
-    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs), ArmsG A mr arms → ArmsOhneRuf arms
   | _, _, _, _, _, _, .nil, _ => .nil
   | _, _, _, _, _, _, .cons b rest, ha =>

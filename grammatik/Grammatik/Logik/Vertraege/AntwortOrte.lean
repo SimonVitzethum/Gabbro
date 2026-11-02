@@ -49,6 +49,7 @@ def Stmt.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => body.ants
   | .breaking _ body => body.ants
   | .traverse _ _ body => body.ants
+  | .consumeTraverse _ _ _ _ _ _ body => body.ants
   | .retry _ _ body ueber => body.ants ++ ueber.ants
   | .forever _ _ body => body.ants
   | .axiomCall a .. => [.inl a]
@@ -71,6 +72,7 @@ def Block.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits _ _ _ _ _ rest => rest.ants
   | .exchange _ _ _ _ rest => rest.ants
   | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
+  | .narrowRequired _ _ _ rest => rest.ants
   | .check _ sonst rest => sonst.ants ++ rest.ants
   | .float _ _ _ _ _ rest => rest.ants
   | .floatLit _ _ _ rest => rest.ants
@@ -81,6 +83,8 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List (D.Ax ⊕ D.Reg)
   | .ret .. => []
   | .retWhy .. => []
+  | .retScoped .. => []
+  | .retWhyScoped .. => []
   | .leave .. => []
   | .next .. => []
   | .cons s rest => s.ants ++ rest.ants
@@ -94,11 +98,12 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => rest.ants
   | .bindCallInd _ _ _ _ _ rest => rest.ants
   | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
+  | .narrowRequired _ _ _ rest => rest.ants
   | .exchange _ _ _ _ rest => rest.ants
   | .ite _ t e => e.ants ++ t.ants
 
 def Arms.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
+    {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
   | .nil => []
   | .cons b rest => b.ants ++ rest.ants
 
@@ -131,6 +136,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.ants = e.ants
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -154,6 +161,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
@@ -187,7 +196,7 @@ section Wahl
 variable {V : Vertrag D} {l : Bool}
 
 theorem ants_armWahlG (C : D.Ax ⊕ D.Reg → Bool) {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.ants.all C = true → (armWahlG arms v).2.1.ants.all C = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by
@@ -210,9 +219,9 @@ theorem ants_grundWahlG (C : D.Ax ⊕ D.Reg → Bool) {Γ : Ctx} {Λ Λ' : List 
 
 end Wahl
 
+set_option hygiene false in
 /-! ## 3. Every rule keeps the site bound -/
 
-set_option hygiene false in
 /-- A head-local step. -/
 macro "kopfAnt" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩
@@ -243,7 +252,7 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
   cases hs with
   | g1 hs =>
     cases hs with
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw =>
       kopfAnt
       have h := ants_armWahlG C arms (eval σ₁ v σ₁ ρ) (by simp_all)
       rw [hw] at h

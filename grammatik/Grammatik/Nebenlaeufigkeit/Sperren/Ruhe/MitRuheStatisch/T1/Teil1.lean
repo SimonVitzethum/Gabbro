@@ -82,10 +82,10 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .intBuiltin2 _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .count _ body => ruE_orte body
 
-theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
+theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte
   | _, _, _, .empty => rfl
-  | _, _, _, .num e => ruE_orte e
+  | _, _, _, .val e => ruE_orte e
 
 end
 theorem ruA_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (a : Args D Γ Λ τs),
@@ -190,6 +190,10 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .locks _ _ body => ruB_orteP P body
   | _, _, _, _, .breaking _ body => ruB_orteP P body
   | _, _, _, _, .traverse _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
+  | _, _, _, _, .consumeTraverse _ member edge inv _ mass body =>
+      kongr₂ (· ++ ·) (ruE_orte member)
+        (kongr₂ (· ++ ·) (ruE_orte edge)
+          (kongr₂ (· ++ ·) (ruE_orte inv) (kongr₂ (· ++ ·) (ruE_orte mass) (ruB_orteP P body))))
   | _, _, _, _, .retry _ bis body ueber =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte bis) (ruB_orteP P body)) (ruB_orteP P ueber)
   | _, _, _, _, .forever _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
@@ -201,6 +205,8 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .retires .. => orteP_nachΛ _ _ _
   | _, _, _, _, .ret e _ => ruErg_orte e
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped e _ => ruErg_orte e
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -235,6 +241,8 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (fun x y => (Sum.inr g :: x) ++ y) (ruE_orte neu) (ruB_orteP P rest)
   | _, _, _, _, .narrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
+  | _, _, _, _, .narrowRequired e _ _ rest =>
+      kongr₂ (· ++ ·) (ruE_orte e) (ruB_orteP P rest)
   | _, _, _, _, .check c sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
   | _, _, _, _, .float _ a b _ _ rest =>
@@ -249,6 +257,8 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     endblockOrteP P.mitRuhe (ruEnd e) = endblockOrteP P e
   | _, _, _, .ret e _ => ruErg_orte e
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped e _ => ruErg_orte e
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_orteP P s) (ruEnd_orteP P rest)
@@ -276,18 +286,20 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
         ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
   | _, _, _, .narrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruEnd_orteP P rest)
+  | _, _, _, .narrowRequired e _ _ rest =>
+      kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P rest)
   | _, _, _, .exchange g neu _ _ rest =>
       kongr₂ (fun x y => (Sum.inr g :: x) ++ y) (ruE_orte neu) (ruEnd_orteP P rest)
   | _, _, _, .ite c t e =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P e)) (ruEnd_orteP P t)
 
 theorem ruArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     armsOrteP P.mitRuhe (ruArms arms) = armsOrteP P arms
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest =>
       kongr₂ (· ++ ·) (ruB_orteP P b) (ruArms_orteP P rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_orteP P b) (ruArms_orteP P rest)
 
 theorem ruGArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
@@ -380,11 +392,11 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_regs e) (ruEnd_regs t)
 
 theorem ruArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).regs = arms.regs
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· ++ ·) (ruB_regs b) (ruArms_regs rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_regs b) (ruArms_regs rest)
 
 theorem ruGArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}

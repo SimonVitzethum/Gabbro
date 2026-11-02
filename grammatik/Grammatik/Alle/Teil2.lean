@@ -58,6 +58,12 @@ public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschZeuge
 public import Grammatik.Bausteine.Schablonen.SchablonenStapel
 public import Grammatik.Bausteine.Arena.ArenaReset
 public import Grammatik.Bausteine.Arena.Ownership.Audit
+public import Grammatik.Kern.Syntax.Marken.Owner.Witness
+public import Grammatik.Kern.Syntax.Marken.Owner.ActivationWitness
+public import Grammatik.Kern.Syntax.Marken.Owner.Ledger
+public import Grammatik.Kern.Syntax.Marken.Owner.LedgerGX
+public import Grammatik.Kern.Syntax.Marken.Owner.Admission
+public import Grammatik.Kern.Syntax.Marken.Owner.LedgerZeuge
 public import Grammatik.Logik.Ruf.FremdRuf
 public import Grammatik.Zielsatz.Faeden.PoolSym
 public import Grammatik.Zielsatz.Eigenschaften.Masken
@@ -78,6 +84,9 @@ public import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeGebunden
 public import Grammatik.Speichermodell.Adressen.Bereich
 public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Speichermodell.Adressen.AdressZeuge
+public import Grammatik.Speichermodell.Adressen.NamedSpaces
+public import Grammatik.Speichermodell.Adressen.Capabilities
+public import Grammatik.Parser.Elab.Proben.Capabilities
 public import Grammatik.Speichermodell.Maschine.Sicht
 public import Grammatik.Speichermodell.Maschine.MaschineW
 public import Grammatik.Speichermodell.Maschine.DRF
@@ -158,6 +167,7 @@ public import Grammatik.Code.Model.Witness
 public import Grammatik.Code.Refine.Expr
 public import Grammatik.Code.Refine.Calls.Func
 public import Grammatik.Code.Refine.Witness
+public import Grammatik.Code.Refine.WitnessC11
 public import Grammatik.Code.Conc.Present
 public import Grammatik.Code.Conc.Thread
 public import Grammatik.Code.Conc.GXStep
@@ -189,8 +199,7 @@ public import Grammatik.Code.Gate.Zeuge
 public import Grammatik.Hardware.Neutral
 public import Grammatik.Code.Gate.Maske
 public import Grammatik.Parser.Elab.UebersetzePipeline
--- OPEN (C17): `Measures.Duties`/`Measures.Refusals` do not build yet; re-add this import when they do.
--- public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Refusals
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Refusals
 public import Grammatik.Korpus.Programme.Einheit104
 public import Grammatik.Korpus.Programme.Einheit108
 public import Grammatik.Gen.Erzeuger.Grund
@@ -322,3 +331,15 @@ public import Grammatik.Logik.WP.HA.ZeugeZertifikat2
 public import Grammatik.Logik.WP.HA.ZeugeZertifikat3
 public import Grammatik.Logik.WP.HA.ZeugeZertifikat4
 public import Grammatik.Logik.WP.HA.Zertifikat
+public import Grammatik.Parser.Profil.Register
+public import Grammatik.Parser.Profil.RegisterZeuge
+public import Grammatik.Parser.Profil.Auswahl
+public import Grammatik.Parser.Profil.Pipeline
+public import Grammatik.Parser.Profil.AuswahlZeuge
+public import Grammatik.Speichermodell.Adressen.Platzierung
+public import Grammatik.Parser.Profil.Platzierung
+public import Grammatik.Parser.Profil.PlatzierungZeuge
+public import Grammatik.Zielsatz.Projekte.Profil
+public import Grammatik.Zielsatz.Projekte.ProfilZeuge
+public import Grammatik.Parser.Profil.Eintritt
+public import Grammatik.Parser.Profil.EintrittZeuge
