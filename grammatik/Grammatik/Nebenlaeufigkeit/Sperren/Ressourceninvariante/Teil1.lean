@@ -42,12 +42,14 @@ variable {D : Deklaration}
       other than the releaser keeps its trace (contradiction with
       post-freedom), so the releaser itself held `L` -- and `hRelease`
       concludes `inv` at the post-machine directly.
-    - `leaf`: if the stepping thread holds `L`, held locks are preserved
-      (`blatt_brav`, so `offen` is unchanged) -- contradiction with
-      post-freedom. Otherwise the thread does not hold `L`: `L`-freedom
-      pushes back, the induction hypothesis gives `inv` at the pre-memory,
-      and `blatt_erhaelt_slots` plus locality (`hLokal`) move it to the
-      post-memory.
+     - `leaf`: if the stepping thread holds `L`, the leaf moved it from held
+       to free -- a release like an explicit `rel`, so `hRelease` concludes
+       `inv` at the post-machine (this covers scoped returns, which unwind
+       scopes: every released lock carries exactly the invariant duty of a
+       normal release, no weaker statement). Otherwise the thread does not
+       hold `L`: `L`-freeness pushes back, the induction hypothesis gives
+       `inv` at the pre-memory, and `blatt_erhaelt_slots` plus locality
+       (`hLokal`) move it to the post-memory.
 
     Every premise is used: `hO` (leaf preservation and the oracle frame),
     `hGuard` (leaf preservation), `hLokal` (leaf transfer), `hStart`
@@ -73,28 +75,17 @@ theorem csl_ressourceninvariante
       exact hStart
   | step M M' pc pc' f hreachM hs ih =>
       intro hfree'
+      have hs' := hs
       cases hs with
       | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' _ hstep _ _ _ _ _ _ _ _ =>
           show inv σ'.speicher
-          have hbrav := blatt_brav O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
-          -- OPEN (C11): `hopenf` below is the pre-C11 lock equality, false
-          -- for a scoped return (it unwinds scopes). The `hLf` case needs
-          -- the release-aware argument (a scope release of `L` must meet
-          -- `hRelease` like an explicit `rel`); `hbrav` is kept for the
-          -- push-back direction (`BravRet.mem`). Lead decision pending.
-          have hopenf : offen σ'.spur = offen (M.spuren f) := by
-            have e1 : σ'.haelt = offen σ'.spur := rfl
-            have e2 : (M.weltVon f).haelt = offen (M.spuren f) := rfl
-            rw [← e1, ← e2]
-            exact hbrav.1
+          -- A leaf that moves `L` from held to free is a release like an
+          -- explicit `rel`: it meets `hRelease` (C11, lead 2026-11-02: every
+          -- lock a scoped return releases carries exactly the invariant duty
+          -- of a normal release, no weaker statement). Otherwise freeness
+          -- pushes back and locality moves the induction hypothesis over.
           by_cases hLf : L ∈ offen (M.spuren f)
-          ·
-            have hcon : L ∈ offen σ'.spur := hopenf ▸ hLf
-            have hff : L ∉ offen σ'.spur := by
-              have h := hfree' f
-              simp only [genUpdate_self] at h
-              exact h
-            exact absurd hcon hff
+          · exact hRelease M pc f _ _ hreachM hs' hLf (hfree' f)
           ·
             have hfreeM : ∀ g, L ∉ offen (M.spuren g) := by
               intro g
@@ -175,5 +166,46 @@ theorem refB_prog_kein_rel (f : Faden) (n : Nat) (L' : refD.Lock) :
 /-- The witness guard: `konto` is guarded by its lock. -/
 theorem refInv81_guard : Sum.inl () ∈ refD.braucht () :=
   List.mem_singleton.mpr rfl
+
+/-- On the reference run, a counter `1` on thread 1 means only the take
+    fired: memory is still the start memory. A `rel` never fires
+    (`refB_prog_kein_rel`); a `leaf` fires only at counter `1`, whose
+    atom is the writing leaf, so no leaf lands at counter `≤ 1` either.
+    `take` keeps memory. -/
+theorem pc1_speicher_le (M : GenMaschine refD) (pc : PCStand)
+    (hreach : PCReach refP refO 0 refB_prog (GenStart refSp0) M pc)
+    (hle : pc 1 ≤ 1) : M.speicher = refSp0 := by
+  induction hreach with
+  | start => intro _; rfl
+  | step M M' pc pc' f hreachM hs ih =>
+      intro hle'
+      cases hs with
+      | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkein Λa cs hpc hΛa hmark hcar =>
+          by_cases hf : f = 1
+          · subst hf
+            have hpre : pc 1 = 0 := by
+              rw [pcAdvance_self pc 1] at hle'
+              omega
+            have eprog : refB_prog 1 =
+                [PCAtom.take (), PCAtom.leaf [Res.held (D := refD) ()] [Sum.inl (())]] := rfl
+            rw [eprog, hpre, List.getElem?_cons_zero] at hpc
+            simp only [Option.some.injEq, reduceCtorEq] at hpc
+          · have e : refB_prog f = [] := by
+              simp only [refB_prog]
+            rw [e] at hpc
+            simp only [List.length_nil, Nat.not_lt_zero, not_false_eq_true,
+              getElem?_neg, reduceCtorEq] at hpc
+      | take L' hself _ _ _ =>
+          show M.speicher = refSp0
+          have hpre : pc 1 ≤ 1 := by
+            by_cases hf : f = 1
+            · subst hf
+              rw [pcAdvance_self pc 1] at hle'
+              omega
+            · rw [pcAdvance_noteq pc f 1 (Ne.symm hf)] at hle'
+              exact hle'
+          exact ih hpre
+      | rel L' _ hpc =>
+          exact False.elim (refB_prog_kein_rel f (pc f) L' hpc)
 
 end Gabbro.Grammatik
