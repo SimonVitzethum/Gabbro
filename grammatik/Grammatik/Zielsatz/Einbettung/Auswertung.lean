@@ -267,8 +267,14 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .istSome a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
       simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
-  | _, _, _, .case _ _ nutz, ρ, ρ', hρ => by
-      simp only [VRel]; simp only [exE, eval]; rw [evalNutz_exN h₀ h nutz ρ ρ' hρ]; rfl
+  | _, _, _, .case cs i nutz, ρ, ρ', hρ => by
+      have hn := E.nrel_valZ K (cs.get i) _ _ (evalNutz_exN h₀ h nutz ρ ρ' hρ)
+      simp only [VRel, exE, eval, evalNutz_cast]
+      change Val.restrictSum E.num E.tnum (fun n value => K.zeiger n value.1 value.2) cs
+        ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
+          (Ty.mapCases_get E.num E.tnum cs i).symm ▸ evalNutz σ₀' (exN E nutz) σ' ρ'⟩ = _
+      rw [Val.restrictSum_mk]
+      exact congrArg (fun payload => (⟨i, payload⟩ : Wert D (.sum cs))) hn
   | _, _, _, .why _ _, _, _, _ => rfl
   | _, _, _, .forallSlots t body _, ρ, ρ', hρ => by
       simp only [VRel]

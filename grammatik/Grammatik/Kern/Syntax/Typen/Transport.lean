@@ -171,6 +171,32 @@ theorem Val.relocateSum_mk {F F' : Type} {p : F → Nat → Bool} {p' : F' → N
       (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (some (Ty.mapNumbers sn tn τ) :: Ty.mapCases sn tn cs))))
       (Val.relocateSum_mk sn tn pointer cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v)
 
+/-- Restrict an optional payload through the same signature representatives. -/
+def Nutzlast.restrict {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F' // p' f (sn n) = true} → {f : F // p f n = true}) :
+    (c : Option Ty) → Nutzlast F' p' (c.map (Ty.mapNumbers sn tn)) → Nutzlast F p c
+  | none, v => v
+  | some τ, v => Val.restrict sn tn pointer τ v
+
+/-- Restriction retains the tag and consumes exactly its complete mapped payload. -/
+theorem Val.restrictSum_mk {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F' // p' f (sn n) = true} → {f : F // p f n = true}) :
+    ∀ (cs : List (Option Ty)) (i : Fin cs.length)
+      (v : Nutzlast F' p' ((cs.get i).map (Ty.mapNumbers sn tn))),
+      Val.restrictSum sn tn pointer cs
+        ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
+          (Ty.mapCases_get sn tn cs i).symm ▸ v⟩ =
+        ⟨i, Nutzlast.restrict sn tn pointer (cs.get i) v⟩
+  | [], i, _ => i.elim0
+  | none :: _, ⟨0, _⟩, _ => rfl
+  | some _ :: _, ⟨0, _⟩, _ => rfl
+  | c :: cs, ⟨i + 1, hi⟩, v => by
+    let lift (z : Val F p (.sum cs)) : Val F p (.sum (c :: cs)) := ⟨z.1.succ, z.2⟩
+    cases c <;> exact congrArg lift
+      (Val.restrictSum_mk sn tn pointer cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v)
+
 section Inverse
 variable {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
   (sn tn : Nat → Nat)

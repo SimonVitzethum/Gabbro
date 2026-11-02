@@ -199,6 +199,13 @@ theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.V
   | .arr τ _, _, _, h => funext fun j => valZ_vrel τ (h j)
   | .str _, _, _, h => by subst h; rfl
 
+/-- Restricting related payloads returns the complete source payload. -/
+theorem nrel_valZ : ∀ (c : Option Ty) (v : Nutzlast D.Fn D.passt c)
+    (v' : Nutzlast D'.Fn D'.passt (c.map E.tyE)), E.NRel K c v v' →
+      Nutzlast.restrict E.num E.tnum (fun n value => K.zeiger n value.1 value.2) c v' = v
+  | none, v, v', _ => by cases v; cases v'; rfl
+  | some τ, _, _, h => E.valZ_vrel K τ h
+
 /-- The value relation names exactly the unique source produced by restriction.
     For sums this recursively compares the active tag and the complete payload;
     foreign function representatives inside a payload remain visible. -/
