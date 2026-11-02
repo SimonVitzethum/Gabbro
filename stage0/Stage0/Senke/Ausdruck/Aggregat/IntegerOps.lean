@@ -5,7 +5,7 @@
 -/
 module
 public import Stage0.Senke.Ausdruck.Top
-public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift

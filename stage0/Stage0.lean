@@ -8,7 +8,7 @@ public import Stage0.Zeugen.BuiltinWitness
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
-public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Ausdruck.Top
 public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Satz
@@ -28,8 +28,8 @@ public import Stage0.Senke.BildLese
 public import Stage0.Senke.BildSatz
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.MainEnv
-public import Stage0.Senke.Ausdruck.FnptrProben
-public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes

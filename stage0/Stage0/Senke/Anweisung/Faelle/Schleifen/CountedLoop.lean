@@ -1,6 +1,6 @@
 /- Instruction bounds for the actual counter control flow. -/
 module
-public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted.Teil3
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime.Teil2
 @[expose] public section

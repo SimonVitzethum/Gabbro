@@ -1,6 +1,6 @@
 /- A jointly inhabited statement simulation: a real frame, function code, world and two condition checks. -/
 module
-public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 @[expose] public section
 
 

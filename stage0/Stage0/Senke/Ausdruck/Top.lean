@@ -7,7 +7,7 @@ module
 public import Stage0.Senke.Ausdruck.Gleit.Grenze
 public import Stage0.Senke.Ausdruck.Gleichungen
 public import Stage0.Senke.Ausdruck.Sim
-public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Welt.Spans.CellCode
 @[expose] public section
 
