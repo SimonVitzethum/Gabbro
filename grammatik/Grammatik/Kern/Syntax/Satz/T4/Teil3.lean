@@ -17,17 +17,23 @@ set_option linter.unusedSectionVars false
 
 /-! The exact-held-set forms (no extra lock, `HeldGenau`), with their old names. -/
 
-theorem stmt_gut (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
+theorem stmt_gut (s : Stmt D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : s.ScopesOk) (hresid : ResidHeld V Λ) :
     GutAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ) :=
-  stmt_gutB O passes R hR hO none (bodenUnter_none _) s σ ρ (fun _ h => nomatch h) (heldB_of_genau none hh)
+  stmt_gutB O passes R hR hO none (bodenUnter_none _) s σ ρ (fun _ h => nomatch h) hscope hresid
+    (heldB_of_genau none hh)
 
-theorem block_gut (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
+theorem block_gut (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
     GutAusgang V.schreibt V.gschreibt σ (execBlock O passes R b σ ρ) :=
-  block_gutB O passes R hR hO none (bodenUnter_none _) b σ ρ (fun _ h => nomatch h) (heldB_of_genau none hh)
+  block_gutB O passes R hR hO none (bodenUnter_none _) b σ ρ (fun _ h => nomatch h) hscope hresid
+    (heldB_of_genau none hh)
 
-theorem end_gut (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
+theorem end_gut (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
     GutEnd V.schreibt V.gschreibt σ (execEnd O passes R b σ ρ) :=
-  end_gutB O passes R hR hO none (bodenUnter_none _) b σ ρ (fun _ h => nomatch h) (heldB_of_genau none hh)
+  end_gutB O passes R hR hO none (bodenUnter_none _) b σ ρ (fun _ h => nomatch h) hscope hresid
+    (heldB_of_genau none hh)
 
 end Rumpf
 /-! ### Der Ruf, bis hinauf zum Programm -/
@@ -79,10 +85,13 @@ theorem gut_foldl_lese {W G} (P : Programm D) (f : D.Fn) :
 
 /-- **Rahmen und Spur eines Rufs, bis hinauf zum Programm**: auf jeder Rekursionstiefe haelt
     `rufAt` Rahmen und Spur des Gerufenen -- Induktion ueber die Tiefe, mit `end_gut` fuer
-    den Rumpf. Die einzige Praemisse ist die Hardware (H1) -- and, since the
-    held-set relaxation (2026-09-13), that every body respects its function's
-    lock floor (`StufenOk`, trivial without floors: `stufenOk_ohne`). -/
-theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (hP : StufenOk P) :
+    den Rumpf. Premises are the hardware (H1) -- and, since the held-set
+    relaxation (2026-09-13), that every body respects its function's lock
+    floor (`StufenOk`, trivial without floors: `stufenOk_ohne`), and, since
+    the scoped-return release (C11), that every scoped return spares the
+    residual and respects the floor (`ScopesOkProg`). -/
+theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (hP : StufenOk P)
+    (hS : ScopesOkProg P) :
     ∀ fuel, GutR (rufAt P O passes fuel) := by
   intro fuel
   induction fuel with
@@ -96,10 +105,12 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
       · simp only [RufAusgang.welt, reduceCtorEq] at h
       · have hb := end_gutB O passes (rufAt P O passes n) ih hO (D.signatur f).boden
           (bodenUnter_refl _) (P.rumpf f)
-          (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ (hP f) (g0.heldB hh)
+          (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ (hP f) (by exact hS f)
+          (residHeld_anfang (D.signatur f)) (g0.heldB hh)
         split at h
         · rename_i σ2 v hs
-          have g2 : Gut (D.schreibt f) (D.gschreibt f) _ σ2 := hb σ2 (by rw [hs]; rfl)
+          have hbb := hb σ2 (by rw [hs]; rfl); rw [hs] at hbb
+          have g2 : Gut (D.schreibt f) (D.gschreibt f) _ σ2 := hbb.toGut_entry (g0.heldB hh)
           have hh2 : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ2.haelt :=
             g2.heldB (g0.heldB hh)
           have g3 : Gut (D.schreibt f) (D.gschreibt f) σ2 _ :=
@@ -116,7 +127,8 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
               exact ((g0.trans g2).trans g3).trans g4
         · rename_i σ2 r hs
           simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
-          exact g0.trans (hb _ (by rw [hs]; rfl))
+          have hbb := hb _ (by rw [hs]; rfl); rw [hs] at hbb
+          exact g0.transRetV hbb
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · simp only [RufAusgang.welt, reduceCtorEq] at h
@@ -127,9 +139,11 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
     tut keinen Zugriff ohne die Waechter seines Traegers -- fuer jedes Programm, jede Tiefe,
     jede Welt; die Hardware haelt ihr `effects` (H1). -/
 theorem exec_gut (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O) (hP : StufenOk P)
-    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
+    (hS : ScopesOkProg P)
+    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
     GutAusgang V.schreibt V.gschreibt σ (exec P O passes fuel V b σ ρ) :=
-  block_gut O passes _ (rufAt_gut P O passes hO hP fuel) hO b σ ρ hh
+  block_gut O passes _ (rufAt_gut P O passes hO hP hS fuel) hO b σ ρ hh hscope hresid
 
 
 end Gabbro.Grammatik
