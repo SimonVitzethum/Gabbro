@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Marken.Owner.Fixture
+public import Grammatik.Kern.Syntax.Marken.Owner.Escrow
 
 @[expose] public section
 
@@ -112,12 +113,69 @@ theorem owner_nachSig_from_input_zeuge :
       decide)
     ⟨(), by decide⟩ (by decide : Res.marke true 1 ∈ nachSig D handoffSignature [Res.marke true 0])
 
-/-- Static metadata is not yet an admitted canonical owner call. -/
-theorem nonempty_call_refused : ¬ RufPasst D contract handoffSignature [Res.marke true 0] := by
+/-- The handoff flow is escrow-ready: valid over its mentioned identity,
+    disjoint from ordinary consumption, with a declared eigner. -/
+theorem escrow_handoff_ready_zeuge :
+    handoffSignature.owner.EscrowReady
+      (fun m => decide (m ∈ handoffSignature.owner.inputs.map Prod.fst))
+      D.stufen (fun m => ∃ t, m ∈ D.eigner t) handoffSignature.konsumiert := by
+  have e : (fun m => decide (m ∈ handoffSignature.owner.inputs.map Prod.fst)) = id := by
+    funext m
+    cases m <;> rfl
+  rw [e]
+  refine ⟨validB_iff_zeuge.2, ?_, ?_⟩
+  · intro p hp
+    have hk : handoffSignature.konsumiert = [] := rfl
+    rw [hk] at hp
+    exact (List.not_mem_nil p hp).elim
+  · intro m hm
+    have hm' : m = true := by
+      simpa [handoffSignature, handoff, OwnerFlow.inputs] using hm
+    subst hm'
+    exact ⟨(), by decide⟩
+
+/-- Static metadata IS now an admitted canonical owner call: with the input
+    in hand, the escrow-ready handoff fits the contract. -/
+theorem escrow_call_admitted_zeuge :
+    RufPasst D contract handoffSignature [Res.marke true 0] where
+  hw := fun t h => h
+  hg := fun g => nomatch g
+  hk := by
+    have hi : handoffSignature.inputMarks = [(true, 0)] := rfl
+    rw [hi]
+    exact ⟨[Res.marke true 0], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun L => nomatch L
+  hx := fun L => nomatch L
+  hb := by intro c h; cases h
+  ownerReady := escrow_handoff_ready_zeuge
+
+/-- Without the input in hand the same call is refused: the escrow cannot
+    move a binding the caller does not hold. -/
+theorem escrow_call_missing_input_refused :
+    ¬ RufPasst D contract handoffSignature [] := by
   intro h
-  have he := congrArg OwnerFlow.inputs h.ownerReady
-  have impossible : [(true, 0)] = ([] : List (Bool × Nat)) := he
-  cases impossible
+  exact (List.not_mem_nil _ (h.owner_input_available (by decide))).elim
+
+/-- The admitted call conserves owners: no duplication, and every returned
+    owner has an explicit input. -/
+theorem escrow_outputs_conserve_zeuge :
+    (handoffSignature.owner.outputs.map Prod.fst).Nodup ∧
+      (∀ m s, (m, s) ∈ handoffSignature.owner.outputs →
+        ∃ before, (m, before) ∈ handoffSignature.owner.inputs) :=
+  ⟨(OwnerFlow.escrow_outputs_conserve escrow_handoff_ready_zeuge).1,
+    fun m s hm => (OwnerFlow.escrow_outputs_conserve escrow_handoff_ready_zeuge).2.1 m s hm⟩
+
+/-- A moved owner can come back at the return: from the grandchild frame the
+    transfer to the child frame succeeds with a fresh grant. -/
+theorem escrow_move_return_exists_zeuge :
+    ∃ s' t', OwnerState.transfer names movedTwice grandchild child movedTwiceToken =
+      some (s', t') := by
+  have hown := (OwnerState.transfer_grant mint_grant_zeuge.1 two_call_handoff).2.1
+  obtain ⟨ledger', h', he⟩ := ArenaOwnership.State.move_exists hown.2.2 rfl
+  have hne : grandchild ≠ child := by decide
+  refine ⟨_, _, ?_⟩
+  unfold OwnerState.transfer
+  rw [if_pos ⟨hown, hne⟩, he]
 
 theorem pointer_flow_mismatch_refused : ¬ SigPasst D.rang handoffSignature (D.signatur 0) := by
   intro h
