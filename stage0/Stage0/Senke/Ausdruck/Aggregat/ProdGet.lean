@@ -47,6 +47,18 @@ theorem wordsAt_product_field {L : Lay D} {name : Nat} {fs : List Ty} {τ : Ty}
   have selected := (wordsAt_append (encodeWords L τ (prodGetW i v)) after).mp input.2
   simpa only [offset] using selected.1
 
+/-- The field span fits whenever the operand reserves its complete value.
+    `lowE_top` currently proves only `d < top`; the full operand bound
+    must be established before product projection can be enabled. -/
+theorem prodGet_fieldBound {name : Nat} {fs : List Ty} {τ : Ty}
+    (i : FieldAt fs τ) {d top K : Nat}
+    (operand : d + valueWords (.prod name fs) ≤ top) (hK : top ≤ K) :
+    d + productOffset i + valueWords τ ≤ K := by
+  have field := productOffset_bound i
+  simp only [valueWords] at operand
+  have width : productWords fs ≤ max 1 (productWords fs) := Nat.le_max_right _ _
+  omega
+
 /-- Static projection transport, pending the compiler frame-span bound. -/
 theorem prodGet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
