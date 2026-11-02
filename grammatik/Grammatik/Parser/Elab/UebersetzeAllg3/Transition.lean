@@ -91,7 +91,7 @@ theorem transCast_heq {α β : Sort _} (h : α = β) (x : α) : HEq (transCast h
               rfl
             if hd : (∀ wdd ∈ (declOf u).gbraucht g, Res.von (declOf u) wdd ∈ resOf u c) then
               .ok ⟨TransitionWrite.glob g hg (Expr.var sv) (Expr.var tv) hd,
-                TransitionWrite.Frozen.glob g hg sv tv hd, hwV⟩
+                TransitionWrite.Frozen.glob (D := declOf u) (Λ := resOf u c) g hg sv tv hd, hwV⟩
             else .error "access without held guard"
           else .error "write without right"
       | _ => .error "transition endpoints require an integer global"
@@ -119,7 +119,7 @@ theorem transCast_heq {α β : Sort _} (h : α = β) (x : α) : HEq (transCast h
                 exact hw
               have numeric : (declOf u).typ t fh.idx = .int fh.range.1 fh.range.2 := fh.hint
               .ok ⟨TransitionWrite.slot t fh.idx numeric (Expr.var iv) (Expr.var sv) (Expr.var tv) hL,
-                TransitionWrite.Frozen.slot t fh.idx numeric iv sv tv hL, hwV⟩
+                TransitionWrite.Frozen.slot (D := declOf u) (Λ := resOf u c) t fh.idx numeric iv sv tv hL, hwV⟩
             else .error "write without right"
           else .error "access without held guard"
 
@@ -175,9 +175,9 @@ theorem transCast_heq {α β : Sort _} (h : α = β) (x : α) : HEq (transCast h
                       exact hw
                     have numeric : (declOf u).typ t fh.idx = .int fh.range.1 fh.range.2 := fh.hint
                     .ok { table := t, field := fh.idx, lo := fh.range.1, hi := fh.range.2,
-                      numeric := numeric, index := iv, source := a, target := b,
-                      sourceRange := ha, targetRange := hb, erlaubt := he, right := hwV,
-                      guard := hL }
+                          numeric := numeric, index := iv, source := a, target := b,
+                          sourceRange := ha, targetRange := hb, erlaubt := he, right := hwV,
+                          guard := hL }
                   else .error "write without right"
                 else .error "access without held guard"
               else .error "constant transition edge is not in the state graph"
@@ -189,7 +189,6 @@ theorem transCast_heq {α β : Sort _} (h : α = β) (x : α) : HEq (transCast h
 theorem transitionResPerm (u : UProg) (c : Fin u.fns.length) :
     (resOf u c).Perm (vertragVon (declOf u) c).ende := by
   rw [endeRes_eq u c]
-  exact List.Perm.refl _
 
 /-- The lowered types are the declaration's, in the lowering's own context. -/
 theorem transitionReqEq (u : UProg) (c : Fin u.fns.length) :

@@ -36,7 +36,7 @@ theorem lock_effect_does_not_acquire_zeuge :
 
 @[expose] def atomicCtx : UCtx :=
   { ctx with globs := { name := "A", ty := .int 0 2, init := 0, var := true,
-      atomic := true, shared := true } :: ctx.globs }
+             atomic := true, shared := true } :: ctx.globs }
 
 theorem shared_atomic_precondition_refused_zeuge :
     refused (uZustand "S" [{ ordered with voraus := some (.bin "==" (.variable "A") (.lit 0)) }]
@@ -79,7 +79,7 @@ theorem unbound_capture_refused_zeuge :
   let fns := [caller, generated]
   let regiert ← (uRegiert fns [state]).toOption
   pure (uMitBoden { tabs := ctx.tabs, locks := ctx.locks, globs := ctx.globs,
-    fns := fns, zustaende := [state], regiert := regiert })
+                    fns := fns, zustaende := [state], regiert := regiert })
 
 @[expose] def candidateCallLowers (tr : STrans) (callerHeld : List String := ["L"])
     (relative : Option UIdx := none) : Bool :=

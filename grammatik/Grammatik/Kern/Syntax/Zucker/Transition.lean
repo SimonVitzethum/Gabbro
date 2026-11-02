@@ -122,7 +122,7 @@ structure TransitionExpansion (P : Programm D) (function : D.Fn) where
       two expressions live at provably equal types. -/
   ensures_exact : HEq (P.ensures function) (transitionEnsures writes)
   body_exact : P.rumpf function = transitionEnd (vertragVon D function) writes rights
-    (transitionReturn (vertragVon D function) result_none (by rw [resources]; exact List.Perm.refl _))
+    (transitionReturn (vertragVon D function) result_none (by rw [resources]))
 
 /-- Transport an expansion built in a context and resource list that are only
     propositionally equal to the function's (the lowering builds it over the
@@ -138,12 +138,11 @@ structure TransitionExpansion (P : Programm D) (function : D.Fn) where
     (ensures_exact : HEq (P.ensures function) (transitionEnsures writes))
     (body_exact : HEq (P.rumpf function) (transitionEnd (vertragVon D function) writes rights
       (transitionReturn (vertragVon D function) result_none
-        (by rw [resources]; exact List.Perm.refl _)))) :
+        (by rw [resources])))) :
     TransitionExpansion P function := by
   subst hΓ
   subst hΛ
-  exact { writes, clause, frozen, rights, result_none, resources, ensures_exact,
-    requires_exact := eq_of_heq requires_exact, body_exact := eq_of_heq body_exact }
+  exact { writes, clause, frozen, rights, result_none, resources, ensures_exact, requires_exact := eq_of_heq requires_exact, body_exact := eq_of_heq body_exact }
 
 
 end Gabbro.Grammatik

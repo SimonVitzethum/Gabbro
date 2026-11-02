@@ -70,7 +70,7 @@ theorem TransitionShiftExpansion.call_correct {P : Programm D} {f : D.Fn}
   simp only [execEnd, hWorld] at bodyRun
   obtain ⟨returnValue, returnRun⟩ := transitionReturn_world (V := vertragVon D f)
     (Γ := D.params f) (Λ := Signatur.anfang D (D.signatur f)) expansion.result_none
-    (by rw [expansion.resources]; exact List.Perm.refl _)
+    (by rw [expansion.resources])
     O passes (rufAt P O passes fuel) world env
   rw [returnRun] at bodyRun
   cases bodyRun

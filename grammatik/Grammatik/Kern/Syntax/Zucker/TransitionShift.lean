@@ -58,7 +58,7 @@ structure TransitionShiftExpansion (P : Programm D) (function : D.Fn) where
   ensures_exact : HEq (P.ensures function) (transitionEnsures [shift.write])
   body_exact : P.rumpf function = .cons shift.statement
     (transitionReturn (vertragVon D function) result_none
-      (by rw [resources]; exact List.Perm.refl _))
+      (by rw [resources]))
 
 /-- Transport a shift expansion built in a context and resource list that are
     only propositionally equal to the function's. -/
@@ -71,11 +71,10 @@ structure TransitionShiftExpansion (P : Programm D) (function : D.Fn) where
     (ensures_exact : HEq (P.ensures function) (transitionEnsures [shift.write]))
     (body_exact : HEq (P.rumpf function) (Endblock.cons shift.statement
       (transitionReturn (vertragVon D function) result_none
-        (by rw [resources]; exact List.Perm.refl _)))) :
+        (by rw [resources])))) :
     TransitionShiftExpansion P function := by
   subst hΓ
   subst hΛ
-  exact { shift, clause, result_none, resources, ensures_exact,
-    requires_exact := eq_of_heq requires_exact, body_exact := eq_of_heq body_exact }
+  exact { shift, clause, result_none, resources, ensures_exact, requires_exact := eq_of_heq requires_exact, body_exact := eq_of_heq body_exact }
 
 end Gabbro.Grammatik

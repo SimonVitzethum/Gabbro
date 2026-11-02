@@ -97,9 +97,9 @@ structure UTransitionFragment where
   | .relative _ => throw "transition target scope unresolved"
   | .glob global =>
     pure { params := endpoints, kinds := [.int, .int],
-      sourceEq := [.cmp "==" (.glob global) (.param source)],
-      gives := [.cmp "==" (.glob global) (.param target)],
-      body := [.assignGlob global (.param target)] }
+           sourceEq := [.cmp "==" (.glob global) (.param source)],
+           gives := [.cmp "==" (.glob global) (.param target)],
+           body := [.assignGlob global (.param target)] }
   | .slot table field _ =>
     let numbered ← uTabNr tabs table
     let index := uTransitionIndexName position
@@ -108,16 +108,16 @@ structure UTransitionFragment where
       (match write.source, write.target with
       | .lit a, .lit b =>
         pure { params := [(index, Ty.index numbered.2)], kinds := [.index numbered.1],
-          sourceEq := [.cmp "==" (.tab table field frozen) (.lit a)],
-          gives := [.cmp "==" (.tab table field frozen) (.lit b)],
-          body := [.shiftTab table field frozen state a b] }
+               sourceEq := [.cmp "==" (.tab table field frozen) (.lit a)],
+               gives := [.cmp "==" (.tab table field frozen) (.lit b)],
+               body := [.shiftTab table field frozen state a b] }
       | _, _ => throw "constant transition edge expected")
     else
       pure { params := (index, Ty.index numbered.2) :: endpoints,
-        kinds := .index numbered.1 :: [.int, .int],
-        sourceEq := [.cmp "==" (.tab table field frozen) (.param source)],
-        gives := [.cmp "==" (.tab table field frozen) (.param target)],
-        body := [.assignTab table field frozen (.param target)] }
+             kinds := .index numbered.1 :: [.int, .int],
+             sourceEq := [.cmp "==" (.tab table field frozen) (.param source)],
+             gives := [.cmp "==" (.tab table field frozen) (.param target)],
+             body := [.assignTab table field frozen (.param target)] }
 
 /-- Generate the ordinary function of a declaration. The typed lowering
     (`lowTransitionAt`) accepts a function of this name only if it is exactly
@@ -129,11 +129,11 @@ structure UTransitionFragment where
   let fragments ← uSeq (((List.range tr.writes.length).zip tr.writes).map fun (j, w) =>
     uTransitionFragment tabs globs state (uTransitionShift tr) j w)
   pure { name := uTransitionFunction state tr.name,
-    params := fragments.flatMap (·.params), kinds := fragments.flatMap (·.kinds), res := none,
-    held := tr.held, puts := tr.puts, gputs := tr.gputs,
-    needs := uTransitionAssumptions tr ++ fragments.flatMap (·.sourceEq),
-    gives := fragments.flatMap (·.gives),
-    body := fragments.flatMap (·.body), ret := .empty }
+         params := fragments.flatMap (·.params), kinds := fragments.flatMap (·.kinds), res := none,
+         held := tr.held, puts := tr.puts, gputs := tr.gputs,
+         needs := uTransitionAssumptions tr ++ fragments.flatMap (·.sourceEq),
+         gives := fragments.flatMap (·.gives),
+         body := fragments.flatMap (·.body), ret := .empty }
 
 /-- Every nonprimitive declaration gets its own function, including an
     unused declaration. No reachable support function is omitted by demand. -/

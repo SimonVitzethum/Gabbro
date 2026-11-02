@@ -45,7 +45,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
   | e =>
     match uZugriff ctx e with
     | .ok (.tabelle _, table, field, index) => .ok (.slot table field index)
-    | .ok (.thru ..) => .error "transition through a pointer without G form"
+    | .ok (.thru _, _, _, _) => .error "transition through a pointer without G form"
     | .error message => .error message
 
 /-- A clause-bearing declaration must explicitly grant every store.
@@ -114,8 +114,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
     throw "transition store omitted from declared effects"
   if !writes.isEmpty && tr.wirkung.any (fun | .pure => true | _ => false) then
     throw "pure transition declares a store"
-  pure { name := tr.tname, writes, clause := clauses.foldr UEns.and .tru,
-    held := ctx.held, puts := uEindeutig effects.puts, gputs := uEindeutig effects.gputs, primitive }
+  pure { name := tr.tname, writes, clause := clauses.foldr UEns.and .tru, held := ctx.held, puts := uEindeutig effects.puts, gputs := uEindeutig effects.gputs, primitive }
 
 /-- Preserve every named declaration. The edge graph holds the clause-free
     constant edges (raw shifts) and the single constant edges of clause

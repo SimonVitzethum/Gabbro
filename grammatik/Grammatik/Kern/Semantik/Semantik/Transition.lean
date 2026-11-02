@@ -68,6 +68,7 @@ theorem writtenWorld_target (write : TransitionWrite D Γ Λ) (frozen : write.Fr
   | slotConst table field numeric index source target sourceRange targetRange guard =>
       simp [constEdge, targetEq, eval_umTyp, eval, writtenWorld, schreibSlot_slots_same,
         Wert.umTyp_hin_her, wahr?]
+      exact Wert.umTyp_umTyp_n _ _ _
 
 /-- Later stores must preserve an earlier target. Distinct places discharge
     this obligation; aliases require an actual equal-result proof. -/
@@ -137,7 +138,7 @@ theorem transitionWorld_targets (writes : List (TransitionWrite D Γ Λ))
       obtain ⟨head, tailIndependent⟩ := List.pairwise_cons.mp independent
       intro target member
       rcases List.mem_cons.mp member with same | member
-      · subst same
+      · rw [same]
         change wahr? (eval entry write.targetEq
           (transitionWorld tail entry env (write.writtenWorld entry env state)) env) = true
         rw [transitionWorld_preserves tail write entry env head]
@@ -196,7 +197,7 @@ theorem TransitionExpansion.body_correct {P : Programm D} {function : D.Fn}
     (entry state : World D) (env : Env D (D.params function)) :
     execEnd O passes R (P.rumpf function) state env =
       execEnd O passes R (transitionReturn (vertragVon D function) expansion.result_none
-        (by rw [expansion.resources]; exact List.Perm.refl _))
+        (by rw [expansion.resources] : (Signatur.anfang D (D.signatur function)).Perm (vertragVon D function).ende))
         (transitionWorld expansion.writes entry env state) env := by
   rw [expansion.body_exact]
   exact transitionEnd_correct expansion.writes expansion.frozen expansion.rights _
@@ -212,7 +213,7 @@ theorem TransitionExpansion.correct {P : Programm D} {function : D.Fn}
       (fun earlier later => earlier.Preserves later entry env)) :
     execEnd O passes R (P.rumpf function) entry env =
       execEnd O passes R (transitionReturn (vertragVon D function) expansion.result_none
-        (by rw [expansion.resources]; exact List.Perm.refl _))
+        (by rw [expansion.resources] : (Signatur.anfang D (D.signatur function)).Perm (vertragVon D function).ende))
         (transitionWorld expansion.writes entry env entry) env ∧
     Rahmen (D.schreibt function) (D.gschreibt function) entry
       (transitionWorld expansion.writes entry env entry) ∧

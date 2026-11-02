@@ -43,11 +43,9 @@ theorem transition_call_inversion (P : Programm D) (O : Orakel D) (passes fuel :
       · split at success
         · cases success
         · cases success
-          exact ⟨bodyWorld, bodyValue, bodyRun,
-            (invariantReads_memory P (D.invs.filter (schuldet f))
-              (bodyWorld.lese (vertragVon D f).ende (P.ensures f).orte)).1,
-            (invariantReads_memory P (D.invs.filter (schuldet f))
-              (bodyWorld.lese (vertragVon D f).ende (P.ensures f).orte)).2⟩
+          refine ⟨_, _, by assumption, ?_, ?_⟩
+          · exact (invariantReads_memory P _ _).1
+          · exact (invariantReads_memory P _ _).2
     · cases success
     · rename_i impossible _ _ _; exact absurd impossible (by decide)
     · rename_i impossible _ _ _; exact absurd impossible (by decide)
@@ -88,8 +86,9 @@ theorem TransitionExpansion.call_correct {P : Programm D} {f : D.Fn}
   have preRelation := (transitionRequires_iff expansion.writes expansion.clause
     checked checked env).mp (by rw [← expansion.requires_exact]; exact pre)
   rw [expansion.body_correct O passes (rufAt P O passes fuel) checked checked env] at bodyRun
-  obtain ⟨returnValue, returnRun⟩ := transitionReturn_world expansion.result_none
-    (by rw [expansion.resources]; exact List.Perm.refl _)
+  obtain ⟨returnValue, returnRun⟩ := transitionReturn_world (V := vertragVon D f)
+    (Λ := Signatur.anfang D (D.signatur f)) expansion.result_none
+    (by rw [expansion.resources])
     O passes (rufAt P O passes fuel) (transitionWorld expansion.writes checked env checked) env
   rw [returnRun] at bodyRun
   cases bodyRun
