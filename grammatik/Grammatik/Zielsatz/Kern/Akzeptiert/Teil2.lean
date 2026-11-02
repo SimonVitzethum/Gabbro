@@ -112,10 +112,7 @@ theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   simp only [Bool.and_eq_true]
   constructor
   · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩
-    exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
-      (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
-      (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
-      (resetB_iff hcs).mp h11⟩
+    exact { frag := h1, abg := (abgAlleB_iff hvoll).mp h2, fuss := (fussWB_iff hvoll).mp h3, stufen := (stufenB_iff hvoll).mp h4, sperrOrte := (sperrOrteB_iff hls).mp h5, wurzeln := wurzelnB_iff.mp h6, einzeln := (einzelnPoolB_iff hvoll hcs).mp h7, renn := (rennB_iff hvoll hcs).mp h8, antworten := (antwortenB_iff hvoll).mp h9, masken := (maskenB_iff hvoll).mp h10, reset := (resetB_iff hcs).mp h11 }
   · intro h
     exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
       (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
