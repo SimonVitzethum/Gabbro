@@ -136,9 +136,11 @@ theorem layU_in (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (h :
     have h2 := col_le u tor b t f
     simp only [Lay.elem]
     constructor
-    · simp only [layU, globEnd_one, alignUp_one]; omega
+    · have lower := globEnd_ge (List.finRange u.globs.length) b (globSz u)
+        (fun g => wordAlign (globAlign u g))
+      simp only [layU]; omega
     · omega
   · have hg := globStarts_bounds (List.finRange u.globs.length) b (globSz u)
-      (fun _ => 1) g _ (globStartOf_mem _ _ _ _ g (by simp))
+      (fun g => wordAlign (globAlign u g)) g _ (globStartOf_mem _ _ _ _ g (by simp))
     simp only [layU, globEnd_one, globSz] at *
     omega

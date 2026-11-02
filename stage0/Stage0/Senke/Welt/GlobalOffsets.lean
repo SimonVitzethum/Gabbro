@@ -63,6 +63,14 @@ theorem globStarts_bounds {G : Type} (gs : List G) (o : Nat)
         simp only [globEnd]
         omega
 
+/-- Every later start is at least the end of the preceding global. -/
+theorem globStarts_step {G : Type} (g : G) (gs : List G) (o : Nat)
+    (sz alignment : G → Nat) (h : G) (t : Nat)
+    (ht : (h, t) ∈ globStarts gs
+      (alignUp o (alignment g) + sz g) sz alignment) :
+    alignUp o (alignment g) + sz g ≤ t :=
+  (globStarts_bounds gs _ sz alignment h t ht).1
+
 theorem globStarts_disjoint {G : Type} (gs : List G) (o : Nat)
     (sz alignment : G → Nat) (g h : G) (s t : Nat)
     (hg : (g, s) ∈ globStarts gs o sz alignment)
