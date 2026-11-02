@@ -98,7 +98,7 @@ theorem w1_ants : (w1P.rumpf ()).ants = [.inl ()] := by rfl
 
 /-- **No lock family, function list or start list makes the probe meet `AkzeptiertSpec`**:
     its one answer site is an axiom at an empty type that is not `never`. -/
-theorem w1_spec_nicht (S : SperrInv w1D) (fs ws : List w1D.Fn) : ¬ AkzeptiertSpec w1P S fs ws :=
+theorem w1_spec_nicht (S : SperrInv w1D) (fs ws : List w1D.Fn) {A : List (Kernzelle.AccumulatorDecl w1D)} : ¬ AkzeptiertSpec w1P S fs ws A :=
   fun h => by
     rcases h.antworten () (.inl ()) (by rw [w1_ants]; exact List.mem_singleton_self _) with e | e
     · cases e

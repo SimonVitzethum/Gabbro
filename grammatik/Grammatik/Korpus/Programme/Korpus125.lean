@@ -238,7 +238,7 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts
     `lese_schreibe`, `setze_null` (the `concurrent` members). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true := by decide
 
 /-! ## 3. The blocking facts, proved -/
 
@@ -384,7 +384,7 @@ theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g σ σ' _
 theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
 
 theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [QLock.w] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] = true; exact kP_akzeptiert)
+  (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true; exact kP_akzeptiert)
 
 /-- **The goal theorem on the 125 program** -- `gabbro_ziel` with
     the concrete checker. -/

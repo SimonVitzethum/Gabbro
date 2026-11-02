@@ -231,6 +231,12 @@ public import Grammatik.Isabelle.Table_Ops_Erhaltung
 public import Grammatik.Isabelle.Absenkung_Parametrisch
 public import Grammatik.Isabelle.Intervall_Aussen
 public import Grammatik.Isabelle.AccumulatesMonoid
+public import Grammatik.Bausteine.Kernzelle.Operator
+public import Grammatik.Bausteine.Kernzelle.Belegung
+public import Grammatik.Bausteine.Kernzelle.Verlauf
+public import Grammatik.Bausteine.Kernzelle.Zulassung
+public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
+public import Grammatik.Bausteine.Kernzelle.Zeuge
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert

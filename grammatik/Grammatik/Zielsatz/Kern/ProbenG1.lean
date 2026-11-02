@@ -319,7 +319,7 @@ theorem g1PR_lauf (S : SperrInv g1D) (σ : World g1D) :
 theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     (hQ : ∃ (v : Wert g1D g1Erg) (σ₀ : World g1D), E.Q g1Holen σ₀ v = true) :
     ¬ NutzerPflicht E := by
-  obtain ⟨P, S, Q, st, s⟩ := E
+  obtain ⟨P, S, Q, st, s, _, _, _⟩ := E
   obtain rfl : P = g1PA := hP
   intro h
   obtain ⟨v, σ₀, hq⟩ := hQ

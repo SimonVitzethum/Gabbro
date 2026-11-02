@@ -163,7 +163,8 @@ variable [DecidableEq D.Fn]
 /-- **Every unit the goal's checker accepts reads no shared atomic**: an unguarded footprint
     carrier of an accepted unit is thread-local (`fuss`), and so not shared. -/
 theorem akzeptiert_liest_nicht_geteilt {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws) (f : D.Fn) :
+    {A : List (Kernzelle.AccumulatorDecl D)}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws A) (f : D.Fn) :
     LiestNicht P (GeteiltA P ws) f := by
   intro c hc ⟨_, hB, hG⟩
   have hc' : c ∈ fussOrte P f := fuss_rumpf P f hc
@@ -179,7 +180,8 @@ theorem akzeptiert_liest_nicht_geteilt {P : Programm D} {S : SperrInv D} {fs ws 
 
 /-- **On every accepted unit the two obligations are EQUIVALENT.** -/
 theorem logikPflichtA_iff_akzeptiert {P : Programm D} {S : SperrInv D} {Q : AxEns D}
-    {fs ws : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws) :
+    {fs ws : List D.Fn} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws A) :
     LogikPflichtA P S Q (GeteiltA P ws) ↔ LogikPflicht P S Q :=
   ⟨logikPflicht_of_A, logikPflichtA_of_frei (akzeptiert_liest_nicht_geteilt hvoll hA)⟩
 
@@ -188,7 +190,7 @@ theorem nutzerPflicht_of_A {E : Einheit D} (h : NutzerPflichtA E) : NutzerPflich
   ⟨logikPflicht_of_A h.logik, h.start⟩
 
 theorem nutzerPflichtA_of_akzeptiert {E : Einheit D} {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hA : AkzeptiertSpec E.P E.S fs E.ws) (h : NutzerPflicht E) : NutzerPflichtA E :=
+    (hA : AkzeptiertSpec E.P E.S fs E.ws E.akku) (h : NutzerPflicht E) : NutzerPflichtA E :=
   ⟨(logikPflichtA_iff_akzeptiert hvoll hA).mpr h.logik, h.start⟩
 
 end Akzeptiert

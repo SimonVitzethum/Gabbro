@@ -147,15 +147,18 @@ end Teil
 
 /-! ## The linked unit is accepted -/
 
-/-- **Each unit checked alone and the link check give the whole program's acceptance.** -/
+/-- **Each unit checked alone and the link check give the whole program's acceptance.**
+    The accumulator admission does not cross the link yet (C15 staging); the conclusion
+    carries it vacuously. -/
 theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     {B : Einheit D} {ps : List (Projekt D)} (hne : ps ≠ []) (hD : Deckend ps)
     (hV : ∀ p ∈ ps, Passend B p)
-    (hA : ∀ p ∈ ps, AkzeptiertSpecX p.E.P p.E.S fs p.E.ws p.E.arenen) (hL : BindeSpec fs B ps) :
+    (hA : ∀ p ∈ ps, AkzeptiertSpecX p.E.P p.E.S fs p.E.ws p.E.arenen p.E.akku) (hL : BindeSpec fs B ps) :
     AkzeptiertSpecX (komponiere B ps).P (komponiere B ps).S fs (komponiere B ps).ws
-      (komponiere B ps).arenen := by
+      (komponiere B ps).arenen (komponiere B ps).akku := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
-  refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_⟩
+  refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_,
+    Kernzelle.accumulatorAdmission_leer _ _⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -214,11 +217,12 @@ theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D
   exact ⟨hAbg, fussWXB_ok hvoll hAbg h2, (einzelnPoolB_iff hvoll hcs).mp h3, (rennB_iff hvoll hcs).mp h4,
     (maskenB_iff hvoll).mp h5, fun a ha f _ => (checked_iff _ _ _).mp (hb a ha) f, hs⟩
 
-/-- **The checker that decides the specification**: accepts exactly what `AkzeptiertSpecX` and the
-    ownership start establish (the strongest checker the statement admits). -/
+/-- **The checker that decides the specification**: accepts exactly what `AkzeptiertSpecX`, the
+    ownership start and neutral initialization establish (the strongest checker the statement admits). -/
 noncomputable def specPruefer : PrueferX where
   akzeptiert := fun E fs _ _ =>
-    @decide (AkzeptiertSpecX E.P E.S fs E.ws E.arenen ∧ BesitzStart E) (Classical.propDecidable _)
+    @decide (AkzeptiertSpecX E.P E.S fs E.ws E.arenen E.akku ∧ BesitzStart E ∧
+      Kernzelle.AkkuStart E E.akku) (Classical.propDecidable _)
   korrekt := fun _ _ _ _ h => @of_decide_eq_true _ (Classical.propDecidable _) h
 
 /-- **GABBRO_ZIEL FOR SEPARATELY CHECKED UNITS, ANY NUMBER, EVERY LEG.** -/
@@ -245,11 +249,13 @@ def GabbroZielVerbundN : Prop :=
 /-- **PROVED.** -/
 theorem gabbro_ziel_verbund_n : GabbroZielVerbundN := by
   intro C D _ B ps fs ls cs hC hV hne hD hDS hL hN O hH passes sp init hLz lebt0 K hK
-  have hA : ∀ p ∈ ps, AkzeptiertSpecX p.E.P p.E.S fs.1 p.E.ws p.E.arenen :=
+  have hA : ∀ p ∈ ps, AkzeptiertSpecX p.E.P p.E.S fs.1 p.E.ws p.E.arenen p.E.akku :=
     fun p hp => (C.korrekt p.E fs ls cs (hC p hp)).1
   have hK' : specPruefer.akzeptiert (komponiere B ps) fs.1 ls.1 cs.1 = true :=
     @decide_eq_true _ (Classical.propDecidable _)
-      ⟨akzeptiertSpecX_komponiere fs.2 hne hD hV hA hL, hL.besitzStart⟩
+      ⟨akzeptiertSpecX_komponiere fs.2 hne hD hV hA hL, hL.besitzStart,
+       fun a ha => absurd ha (by show a ∉ ([] : List (Kernzelle.AccumulatorDecl D));
+         exact List.not_mem_nil a)⟩
   exact gabbro_ziel specPruefer D (komponiere B ps) fs ls cs hK'
     (nutzerPflichtA_komponiere hV hne hD hDS hN) O hH passes sp init hLz lebt0 K hK
 
@@ -281,19 +287,23 @@ theorem lokW_ohne_wurzeln [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (
 /-- **A unit without roots and arenas is accepted alone** whenever the unit it is cut from is: what
     depends on roots holds vacuously, the rest is per body. -/
 theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.Fn}
-    (hA : AkzeptiertSpecX E.P E.S fs E.ws E.arenen) :
+    (hA : AkzeptiertSpecX E.P E.S fs E.ws E.arenen E.akku)
+    (hAS : Kernzelle.AkkuStart E E.akku) :
     specPruefer.akzeptiert { E with starts := [], gestartet := [], arenen := [] } fs [] [] = true := by
   have hws : ({ E with starts := [], gestartet := [], arenen := [] } : Einheit D).ws = [] := rfl
+  have hakku : ({ E with starts := [], gestartet := [], arenen := [] } : Einheit D).akku = E.akku := rfl
   refine @decide_eq_true _ (Classical.propDecidable _) ⟨⟨hA.frag, hA.abg, (fun f => ?_), hA.stufen,
     hA.sperrOrte, (fun w h => by rw [hws] at h; cases h), (fun _ h => ?_),
     (fun _ _ _ w h => by rw [hws] at h; cases h), hA.antworten,
-    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h)⟩,
-    ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩⟩
+    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), hA.akku⟩,
+    ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩, ?_⟩
   · show FussSX E.P E.S (lokW E.P fs []) _ f
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by
       rw [lokW_ohne_wurzeln, Bool.or_true]⟩
   · rw [hws] at h
     exact absurd h (by simp only [Mehrfach, List.sublist_nil, reduceCtorEq, not_false_eq_true])
+  · rw [hakku]
+    exact hAS
 
 /-- **The witness of `gabbro_ziel_verbund_n`**: every unit the checker of the specification accepts,
     cut at any boundary into two units checked ALONE -- the first the unit, the second its other
@@ -301,7 +311,8 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
     linked program. -/
 theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
-    (hA : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen) (hBS : BesitzStart E)
+    (hA : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku) (hBS : BesitzStart E)
+    (hAS : Kernzelle.AkkuStart E E.akku)
     (hN : NutzerTeilO ⟨fun _ => true, fun _ => true, E⟩)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
@@ -319,8 +330,8 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     intro p hp
     simp only [schnitt, List.mem_cons, List.not_mem_nil, or_false] at hp
     rcases hp with rfl | rfl
-    · exact @decide_eq_true _ (Classical.propDecidable _) ⟨hA, hBS⟩
-    · exact ohne_wurzeln_akzeptiert hA
+    · exact @decide_eq_true _ (Classical.propDecidable _) ⟨hA, hBS, hAS⟩
+    · exact ohne_wurzeln_akzeptiert hA hAS
   have hL' : BindeSpec fs.1 E (schnitt E eigen) := by
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [hkomp]
     · exact hA.abg

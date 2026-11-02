@@ -120,7 +120,8 @@ theorem fussWAB_of_fussWB (h : fussWB P S fs ws = true) : fussWAB P S fs ws = tr
   exact Or.inl h2
 
 /-- **EMBEDDING: every program the goal's checker accepts, `AkzeptiertA` accepts.** -/
-theorem akzeptiertA_of_akzeptiert (h : Akzeptiert P S fs ls cs ws = true) :
+theorem akzeptiertA_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
+    (h : Akzeptiert P S fs ls cs ws aks = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
   unfold AkzeptiertA

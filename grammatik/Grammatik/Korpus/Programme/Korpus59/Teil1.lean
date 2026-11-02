@@ -323,7 +323,7 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts
     `takt_verteiler`, `ruf_verteiler` (the two entry dispatch roots). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] [] = true := by decide
 
 /-! ## 3. The user obligations -/
 

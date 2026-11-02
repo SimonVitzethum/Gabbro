@@ -420,8 +420,10 @@ theorem stufen_mitRuhe (h : StufenM P) : StufenM P.mitRuhe
       exact h f
 
 /-- **Transfer of the checker's facts to `P.mitRuhe`.** -/
-theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws) :
-    AkzeptiertSpec P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) where
+theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs ws A) :
+    AkzeptiertSpec P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws)
+      (A.map Kernzelle.AccumulatorDecl.mitRuhe) where
   frag := frag_mitRuhe P hA.frag
   abg := abg_mitRuhe P hvoll hA.abg
   fuss := fussS_mitRuhe P hvoll hA.abg hA.fuss
@@ -483,6 +485,7 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
     | str n =>
       simp only [tyR] at hT
       exact Ty.noConfusion hT
+  akku := Kernzelle.accumulatorAdmission_mitRuhe P hvoll hA.abg hA.akku
 
 end Transfer
 end Gabbro.Grammatik

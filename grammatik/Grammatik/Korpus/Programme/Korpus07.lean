@@ -171,7 +171,7 @@ theorem korpus07_nutzer_leer : Zielsatz.NutzerPflicht kE := by
     cases ha
 
 /-- The checker verdict on the empty program. -/
-theorem kP_akzeptiert : Akzeptiert kP kSI [] [] [] [] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI [] [] [] [] [] = true := by decide
 
 /-! ## The blockage, restated on the model (the source side is a reading) -/
 

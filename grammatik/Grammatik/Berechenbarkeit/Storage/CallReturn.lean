@@ -143,7 +143,7 @@ theorem terminating_classes_zeuge :
     klasse program [false, true] (fun _ => false) true = .endet := by decide
 
 theorem accepted_zeuge :
-    Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [false, true] [] [] [false] = true := by
+    Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [false, true] [] [] [false] [] = true := by
   decide
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.CallReturn

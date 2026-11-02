@@ -344,6 +344,10 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
   -- G form yet (the model's foreign bodies carry no caller duty)
   | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
+  -- `accumulates` (C15): the descriptor is `Kernzelle.AccumulatorDecl`, but lowering needs the
+  -- core-query contract (C08) and the per-cell lock protocol -- still refused, by name below in
+  -- `GvParserFragment.istGegenstand` and here
+  | .accT .. :: _ => .error "item without G form"
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/

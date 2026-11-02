@@ -18,8 +18,8 @@ theorem akzeptiert_mitRuhe {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :
     Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) = true :=
-  (akzeptiert_iff (fsRuhe_voll hvoll) hls hcs).mpr
-    (akzeptiertSpec_mitRuhe P hvoll (akzeptiertSpec_of hvoll hls hcs h))
+  (akzeptiert_iff (fsRuhe_voll hvoll) hls hcs []).mpr
+    (akzeptiertSpec_mitRuhe P hvoll (akzeptiertSpec_of hvoll hls hcs [] h))
 
 /-- **The root is an idle start of `P.mitRuhe`.** -/
 theorem ruhig_mitRuhe : Ruhig P.mitRuhe (fsRuhe fs) none :=

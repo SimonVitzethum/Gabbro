@@ -332,10 +332,11 @@ def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
 
 /-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** -/
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
+    (aks : List (Kernzelle.AccumulatorDecl D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && resetB cs
+    antwortenB P fs && maskenB P fs && resetB cs && Kernzelle.accumulatorB P fs cs aks
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 

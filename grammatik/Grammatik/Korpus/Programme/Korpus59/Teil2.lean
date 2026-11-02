@@ -81,7 +81,7 @@ theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ =>
 theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
 
 theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [KLock.takt, KLock.ring] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] = true; exact kP_akzeptiert)
+  (by show Akzeptiert kP kSI kFs [KLock.takt, KLock.ring] kCs [kTaktVert, kRufVert] [] = true; exact kP_akzeptiert)
 
 /-- **The goal theorem on `beispiele/59`**: for every oracle meeting (c), every
     budget, every runtime start meeting (d), and every reachable machine of

@@ -213,6 +213,19 @@
   the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time is a premise: that the checker's `held <= N ops`
   bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
 
+  PER-CORE ACCUMULATORS (2026-11-02, C15 scalar/initialization stage; a reviewed change of
+  meaning in the sense of §1, not yet a goal leg). One `accumulates` declaration becomes N
+  private global cells with one exclusive lock each, a core-query binding and generated
+  update/reduction functions. The checker admits the descriptor, the neutral initialization
+  at the start memory and the storage/contract shape (`AccumulatorAdmission` in (a) with the
+  Bool `accumulatorB`, `AkkuStart` beside it); the core identity provenance, the range facts
+  and the quiescence condition are source-derived user duties in (b). The operators, neutral
+  elements and fold/permutation/RMW laws are proved on the typed encodings
+  (`Bausteine/Kernzelle`); the sampled fold equals the contribution fold under a proved
+  quiescent history (`ruhigFalte`). What is NOT claimed yet: updates lower (the elaborator
+  still refuses `accT`), the cells' run-level history correspondence, and any race exemption
+  or universal quiescence (existing race/time qualifications are retained).
+
   NOT CLAIMED:
   * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
     with local transfer to the selected target's concrete contract is now part of (b) (`LogikPflicht(A)`),
@@ -231,8 +244,13 @@
   * reads in their extents as a statement about runs (they are, by the index types); globals and registers have no
     index;
   * that W is exactly the C11 model; a contract, `requires`, `ensures` or invariant over a shared atomic (refused,
-    `N484`); the merge discipline of per-core cells beyond reading them (OFFEN O17); linked units sharing an atomic
-    across the link; the publish/await hand-off of an unguarded PLAIN payload (refused);
+    `N484`); linked units sharing an atomic across the link; the publish/await hand-off of an
+    unguarded PLAIN payload (refused);
+  * the run-level cell/history correspondence of per-core cells and their quiescent reduction
+    (OFFEN O17; staged in C15, 2026-11-02: the descriptor, neutral initialization and admission
+    are checked in (a) (`AccumulatorAdmission`, `AkkuStart`), semantic query, range and
+    quiescence facts are source-derived user duties in (b), but updates are still refused at
+    elaboration and the goal has no accumulator leg yet);
   * floats beyond the kernel IEEE model (that the FPU computes it is `gleitkomma_ieee`, a hardware fact);
   * an invariant inside a running writer or false in the start memory or reading carriers (tables or globals) outside its declared
     `traeger`; a lock invariant inside its holder's section (claimed: no other thread observes it there);

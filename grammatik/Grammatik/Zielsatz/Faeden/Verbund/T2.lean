@@ -146,11 +146,14 @@ theorem mem_ws_verbinde {w : D.Fn} (h : w ∈ (verbinde e E₁ E₂).ws) : w ∈
   · exact Or.inr (Or.inl (Or.inr h))
 
 /-- **The linked unit is accepted**: the per-unit verdicts carry every per-body component,
-    the link check carries the three whole-program components over the composed hulls. -/
+    the link check carries the three whole-program components over the composed hulls.
+    The accumulator admission does not cross the link yet (C15 staging: link transport
+    needs accumulator clauses in the link check); the conclusion carries it vacuously. -/
 theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
-    (hA₁ : AkzeptiertSpec E₁.P E₁.S fs E₁.ws) (hA₂ : AkzeptiertSpec E₂.P E₂.S fs E₂.ws)
+    {A₁ A₂ : List (Kernzelle.AccumulatorDecl D)}
+    (hA₁ : AkzeptiertSpec E₁.P E₁.S fs E₁.ws A₁) (hA₂ : AkzeptiertSpec E₂.P E₂.S fs E₂.ws A₂)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs e E₁ E₂) :
-    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws := by
+    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws [] := by
   have hH := huelle_of_reach (e := e) (E₁ := E₁) (E₂ := E₂) hvoll hS.keinRueckruf
   have hfrag : ∀ f, ((teilP e E₁ E₂ f).rumpf f).gOk
       (kandB (teilP e E₁ E₂ f) fs (fussOrteG (teilP e E₁ E₂ f) f)) (fun _ => true) = true := by
@@ -166,7 +169,7 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, Kernzelle.accumulatorAdmission_leer _ _⟩
   · -- frag
     refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
@@ -277,7 +280,7 @@ theorem gabbro_ziel_verbund_sc : GabbroZielVerbundSC := by
   have hA := akzeptiertSpec_verbinde fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
     hV hS
   have hB : akzeptiert_pruefer.akzeptiert (verbinde e E₁ E₂) fs.1 ls.1 cs.1 = true :=
-    (akzeptiert_iff fs.2 ls.2 cs.2).mpr hA
+    (akzeptiert_iff fs.2 ls.2 cs.2 []).mpr hA
   exact gabbro_ziel_sc akzeptiert_pruefer D (verbinde e E₁ E₂) fs ls cs hB
     (nutzerPflicht_verbinde hV hQ hN₁ hN₂) O hH passes sp init hL lebt0 K hK
 

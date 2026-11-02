@@ -18,6 +18,7 @@ public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
 public import Grammatik.Bausteine.Arena.ArenaStaticReset
+public import Grammatik.Bausteine.Kernzelle.Zulassung
 
 @[expose] public section
 
@@ -53,6 +54,11 @@ def Aufzaehlung (α : Type) : Type := {l : List α // ∀ a, a ∈ l}
       the ownership interface of every function (`ArenaIface`: which parameter is handed which
       allocation, which result returns one). Default `[]`: a unit without an arena is the unit of
       before.
+    * `akku` (NEW 2026-11-02, C15 scalar/initialization stage) -- the unit's per-core
+      accumulators (`AccumulatorDecl`: core count, width, signedness, range, operator, private
+      cells and locks, core-query and generated update/reduction functions). Default `[]`: a
+      unit without an accumulator is the unit of before (the elaborator still refuses `accT`,
+      so every elaborated unit has `akku = []`).
     The exporter's output is exactly one such value; a different `starts` (say `[]`) is a
     DIFFERENT program, whose run the statement then describes (`laufzeit_nur_erklaert`). -/
 structure Einheit (D : Deklaration) where
@@ -63,6 +69,7 @@ structure Einheit (D : Deklaration) where
   sp0 : Speicher D
   gestartet : List (Σ w : D.Fn, Env D (D.params w)) := []
   arenen : List (ArenaOwnership.Body.ArenaIface D) := []
+  akku : List (Kernzelle.AccumulatorDecl D) := []
 
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
@@ -153,8 +160,8 @@ def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop 
     axiom whose result is `never` (`antworten`, since 2026-09-15, W1); every function an
     interrupt handler's call graph reaches takes only locks declared `masks irqs` (`masken`,
     since 2026-09-26, Opus agent H: the Rust `H102`); every declared static array admits
-    zero (`reset`, since C18: no `fnptr`/`ref`/`ptr` zero, no floats). -/
-structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
+    zero (`reset`, since C18: no `fnptr`/`ref`/`ptr` zero, no floats); accumulator admission is required (C15). -/
+structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)\n    (A : List (Kernzelle.AccumulatorDecl D)) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
   fuss : ∀ f, FussS P S (lokW P fs ws) f
@@ -168,6 +175,15 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   masken : MaskenDisziplin P fs
   -- checked static-array reset admission (C18): every declared static array admits zero
   reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
+  -- the accumulator admission (C15, 2026-11-02)
+  akku : Kernzelle.AccumulatorAdmission P fs A
+
+/-- **The accumulator admission added to the checker's facts**: the facts of `AkzeptiertSpec`
+    that do not read the accumulators hold for every accumulator list. -/
+theorem AkzeptiertSpec.mitAkku {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
+    {A A' : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A)
+    (ha : Kernzelle.AccumulatorAdmission P fs A') : AkzeptiertSpec P S fs ws A' :=
+  { h with akku := ha }
 
 end Pruefer
 
@@ -179,7 +195,7 @@ structure Pruefer where
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 E.ws
+    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 E.ws E.akku
 
 /-! ## (b) What the user proves -/
 
