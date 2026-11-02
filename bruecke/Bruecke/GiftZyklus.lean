@@ -62,17 +62,17 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Bruecke
 
 def uZ : UProg :=
-  { tabs := [{ name := "T", count := 2, cols := [("v", (0, 10))] }],
+  { tabs := [{ name := "T", count := 2, cols := [("v", (0, 10))], breiten := [] }],
     locks := [],
     fns := [
       { name := "f", params := [], kinds := [], res := none, held := [], puts := [],
         gives := [.cmp "==" (.tab "T" "v" (.lit 1)) (.lit 5)], body := [.call "g" []],
-        ret := .empty },
+        ret := .empty, decreases := none, measureConstants := [] },
       { name := "g", params := [], kinds := [], res := none, held := [], puts := [],
         gives := [.cmp "==" (.tab "T" "v" (.lit 0)) (.lit 7)], body := [.call "h" []],
-        ret := .empty },
+        ret := .empty, decreases := none, measureConstants := [] },
       { name := "h", params := [], kinds := [], res := none, held := [], puts := [],
-        gives := [.fls], body := [.call "h" []], ret := .empty }] }
+        gives := [.fls], body := [.call "h" []], ret := .empty, decreases := none, measureConstants := [] }] }
 
 theorem low_some : (lowerAllg uZ).toOption.isSome = true := by decide
 

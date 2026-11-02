@@ -262,7 +262,20 @@ theorem bruecke_logik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
       have h := r.isLt
       have h0 : (declOf u).gruende f = 0 := sigGruende_null u S.ohneGrund f
       omega⟩,
-   fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
+   fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by
+     unfold ReqAmEintritt
+     rw [lowerAllg_requires u P fs S.ohneReq hlow]
+     rfl) (by
+       unfold lowerAllg at hlow
+       split at hlow
+       · cases hlow
+       · split at hlow
+         · cases hlow
+         · split at hlow
+           · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq hlow
+             intro n
+             rfl
+           · cases hlow)⟩
 
 /-- **PREMISE (b) OF THE GOAL THEOREM, FROM GABBROV** -- for a unit whose program is the Lean
     parser's lowering of its source text: the bodies' logic from the duties (S3), the start from
@@ -273,7 +286,7 @@ theorem bruecke_nutzer {P : Programm (declOf u)} {fs : List (declOf u).Fn}
       meetsU u (wfU u) (fnAt u c) body)
     (E : Zielsatz.Einheit (declOf u)) (hP : E.P = P) (hS : E.S = SperrInv.leer (declOf u))
     (hQ : E.Q = axWahr (declOf u)) : Zielsatz.NutzerPflicht E := by
-  obtain ⟨EP, ES, EQ, st, sp, ge⟩ := E
+  obtain ⟨EP, ES, EQ, st, sp, ge, arenen, akku, pruefungen⟩ := E
   simp only at hP hS hQ
   subst hP hS hQ
   exact ⟨bruecke_logik hlow S rk hR hZ,
