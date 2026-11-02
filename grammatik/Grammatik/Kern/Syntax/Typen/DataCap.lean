@@ -58,8 +58,9 @@ theorem attenuates_trans_zeuge :
     let source : DataCapTy := ⟨2, ⟨true, true, some 3⟩, .table 7⟩
     let middle : DataCapTy := ⟨2, ⟨true, false, some 3⟩, .table 7⟩
     let target : DataCapTy := ⟨2, ⟨false, false, some 3⟩, .table 7⟩
-    source.attenuates target = true :=
-  attenuates_trans _ _ _ rfl rfl
+    source.attenuates target = true := by
+  intro source middle target
+  exact attenuates_trans source middle target rfl rfl
 
 theorem write_only_zeuge :
     (table 0 (false, true)).rights.read = false ∧

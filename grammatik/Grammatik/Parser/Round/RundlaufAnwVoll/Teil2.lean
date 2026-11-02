@@ -298,7 +298,7 @@ theorem libRuf_rund (c : SLibraryCall) (hc : LibraryCallGut c)
   obtain ⟨hlne, hfnne, hargs, hreg⟩ := hc
   cases c with
   | mk library function args region =>
-    have hA := argsM args (.zeichen "{" :: (region ++ .zeichen "}" :: rest)) F' hargs (by omega)
+    have hA := argsM args (.zeichen "{" :: (region ++ .zeichen "}" :: rest)) F' hargs (by simp only at hF; omega)
     simp only [List.append_assoc, List.singleton_append] at hA
     have hR := hreg rest
     have hL := nimmPfad_pfadToks library (.zeichen "#" :: (pfadToks function ++ .zeichen "(" ::
@@ -315,10 +315,12 @@ theorem anw_lcall (c : SLibraryCall) (hc : LibraryCallGut c) : AnwBein (.lcall c
   simp only [fbA, druckAnw, druckLibraryCall, List.length_append, List.length_cons, List.length_nil] at hF
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 2 := ⟨F - 2, by omega⟩
   have hL := libRuf_rund c hc (.zeichen ";" :: rest) F' (by omega)
-  change parseStmt (F' + 2) (druckLibraryCall c ++ .zeichen ";" :: rest) = _
-  have hHead : ∃ tail, druckLibraryCall c ++ .zeichen ";" :: rest = .zeichen "@" :: tail :=
-    ⟨_, by simp only [druckLibraryCall, List.cons_append, List.nil_append]⟩
-  obtain ⟨tail, hHead⟩ := hHead
+  rw [show druckAnw (.lcall c) ++ rest = druckLibraryCall c ++ .zeichen ";" :: rest by
+    simp only [druckAnw, List.append_assoc, List.singleton_append]]
+  have hHead : druckLibraryCall c ++ .zeichen ";" :: rest = .zeichen "@" :: (pfadToks c.library ++
+      [.zeichen "#"] ++ pfadToks c.function ++ [.zeichen "("] ++ druckToksListe c.args ++
+      [.zeichen ")", .zeichen "{"] ++ c.region ++ [.zeichen "}"] ++ .zeichen ";" :: rest) := by
+    simp only [druckLibraryCall, List.append_assoc, List.singleton_append, List.cons_append, List.nil_append]
   rw [hHead, parseStmt_at, ← hHead]
   simp only [parseLibStmt, hL, fordereZeichen, strEq_self, ↓reduceIte]
 
@@ -337,7 +339,6 @@ theorem anw_bindLib (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp
   obtain ⟨F'', hF''⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega⟩
   have hL := libRuf_rund c hc (.zeichen ";" :: rest) F' (by split at hF <;> simp_all only [List.length_cons, List.length_nil, Nat.reduceAdd] <;> omega)
   subst hF''
-  simp only [List.append_assoc, List.singleton_append] at hL
   simp only [druckLibraryCall, List.append_assoc, List.cons_append, List.nil_append] at hL ⊢
   simp only [parseLetNach, List.append_assoc, List.cons_append, List.nil_append, parseLetLib, bind, Except.bind,
     hL, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
