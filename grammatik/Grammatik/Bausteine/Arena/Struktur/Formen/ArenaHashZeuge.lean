@@ -108,7 +108,7 @@ def LL3 : LinkFeld FA3 where
 def HB3 : BucketKopf FA3 where
   bt := true
   hf := 0
-  hty := by decide
+  hty := by decide +kernel
   hbt := by decide
 
 /-- A clamped number, so that a value can be named without a proof. -/

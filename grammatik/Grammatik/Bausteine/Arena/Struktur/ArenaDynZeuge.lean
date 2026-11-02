@@ -307,7 +307,7 @@ theorem fgdarf (g : FD.Glob) : gdarf FD g ([] : List (Res FD)) := by
 
 /-- The payload `7`, at the payload field's declared type. -/
 def sieben : Expr FD [] [] (FD.typ FA.tab FA.feld) :=
-  Expr.umTyp (show Ty.int 0 255 = FD.typ FA.tab FA.feld from by decide)
+  Expr.umTyp (show Ty.int 0 255 = FD.typ FA.tab FA.feld from by decide +kernel)
     (Expr.widen (by decide) (by decide) (Expr.lit 7))
 
 /-- **`alloc` from the free list, executed, on the real world `w0`:** slot `1` comes off the free list, the free list is
