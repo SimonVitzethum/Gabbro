@@ -48,3 +48,16 @@ theorem uebernahmeE_zeuge :
     (fun _ => True) (fun _ => True) (fun _ h => h)
 
 end Gabbro.Code.Lower.WitC11
+
+namespace Gabbro.Code.Lower.WitC11
+open Gabbro.Grammatik
+open Gabbro.Grammatik.Einbettung
+
+/-- The added callback is foreign to the source and restricts to the real wipe function. -/
+theorem rueckruf_echt_zeuge :
+    fixtureEmbedding.fnZ (.inr ()) = none ∧
+      (erweitert Wit.wD Wit.WFn.wipe).passt (.inr ()) 2 = true ∧
+      fixtureRueck.rep 2 = some Wit.WFn.wipe :=
+  rueckruf_echt Wit.wD Wit.WFn.wipe fixtureAntwortFrei 2 rfl
+
+end Gabbro.Code.Lower.WitC11
