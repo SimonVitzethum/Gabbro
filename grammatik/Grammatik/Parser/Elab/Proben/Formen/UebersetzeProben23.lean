@@ -1,10 +1,10 @@
 /-
   File:      Grammatik/Parser/Elab/Proben/UebersetzeProben23.lean
   Subject:   Track P: `alloc` and `start`. `let i = alloc A (v) else { .. };` is the sugar `Block.arenaAlloc`
-             (`ArenaZucker`: a `narrow` of the counter, the store, the bump), in a nested block only (`Endblock`
-             lacks the former, recorded as a model gap); the rest reads `i` as an index into the arena.
-             `start { f, g };` leaves no G term: its roots travel as `UProg.gestartet` (`Einheit.gestartet`),
-             judged by the checker Bool as pool routines; a start under a held lock has no representation.
+              (`ArenaZucker`: a `narrow` of the counter, the store, the bump), and at the end of a body
+              `Endblock.arenaAlloc`; the rest reads `i` as an index into the arena.
+              `start { f, g };` leaves no G term: its roots travel as `UProg.gestartet` (`Einheit.gestartet`),
+              judged by the checker Bool as pool routines; a start under a held lock has no representation.
 -/
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
