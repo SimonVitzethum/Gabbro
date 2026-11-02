@@ -208,10 +208,15 @@ theorem layU_dis (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) :
       simp [globSz]
     cases c with
     | glob g =>
-      have hg := take_mul8 _ globals g.val
+      have hg := Nat.dvd_iff_mod_eq_zero.mp ((glob_grid
+        (List.finRange u.globs.length) 0 (globSz u) (globAlign u) (by simp)
+        (by intro g; simp [globSz])).1 g _
+        (globStartOf_mem _ _ _ _ g (by simp)))
       simp [Zelle.adr, layU, alignUp_one, Nat.add_mod, hg]
     | elem t f k =>
-      have hg := sum_mul8 _ globals
+      have hg := Nat.dvd_iff_mod_eq_zero.mp ((glob_grid
+        (List.finRange u.globs.length) 0 (globSz u) (globAlign u) (by simp)
+        (by intro g; simp [globSz])).2)
       have ht := take_mul8 ((List.finRange u.tabs.length).map (tabSz u))
         (by intro x hx; obtain ⟨t, _, rfl⟩ := List.mem_map.mp hx; exact tabSz_mul8 u t) t.val
       have hf := take_mul8 ((List.finRange (fieldCount u t)).map (colSz u t))

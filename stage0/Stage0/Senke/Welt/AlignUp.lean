@@ -65,4 +65,14 @@ theorem aligned_abs_zeuge :
     (24 ∣ 48 + alignUp 9 (wordAlign 24)) := by
   decide
 
+/-- Relative offsets retain the grid even when the loader base is four. -/
+theorem relative_grid_zeuge :
+    (0 + alignUp 9 (wordAlign 8)) % 8 = 0 % 8 ∧
+    (0 + alignUp 9 (wordAlign 16)) % 8 = 0 % 8 ∧
+    (0 + alignUp 9 (wordAlign 24)) % 8 = 0 % 8 ∧
+    (4 + alignUp 9 (wordAlign 8)) % 8 = 4 % 8 ∧
+    (4 + alignUp 9 (wordAlign 16)) % 8 = 4 % 8 ∧
+    (4 + alignUp 9 (wordAlign 24)) % 8 = 4 % 8 := by
+  decide
+
 end Gabbro.Stage0.Senke
