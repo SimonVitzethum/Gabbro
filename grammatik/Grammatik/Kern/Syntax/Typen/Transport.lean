@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Typen.Teil1
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 @[expose] public section
 
@@ -80,7 +81,6 @@ def Val.relocate {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Boo
   | .ref _, v => v
   | .arr τ _, v => fun i => Val.relocate sn tn pointer τ (v i)
   | .str _, v => v
-termination_by τ _ => sizeOf τ
 
 /-- Transport the selected case, retaining exactly its tag and full payload. -/
 def Val.relocateSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
@@ -98,7 +98,6 @@ def Val.relocateSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → 
   | some _ :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
     let tail := Val.relocateSum sn tn pointer cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩
     ⟨tail.1.succ, tail.2⟩
-termination_by cs _ => sizeOf cs
 end
 
 mutual
@@ -120,7 +119,6 @@ def Val.restrict {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Boo
   | .ref _, v => v
   | .arr τ _, v => fun i => Val.restrict sn tn pointer τ (v i)
   | .str _, v => v
-termination_by τ _ => sizeOf τ
 
 /-- Pull back the full active payload without inspecting inactive cases. -/
 def Val.restrictSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
@@ -137,7 +135,6 @@ def Val.restrictSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → 
   | some _ :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
     let tail := Val.restrictSum sn tn pointer cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩
     ⟨tail.1.succ, tail.2⟩
-termination_by cs _ => sizeOf cs
 end
 
 /-- Transport a complete optional payload under the same pointer map as its sum. -/
@@ -153,9 +150,10 @@ theorem Val.relocateSum_mk {F F' : Type} {p : F → Nat → Bool} {p' : F' → N
     (sn tn : Nat → Nat)
     (pointer : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true}) :
     ∀ (cs : List (Option Ty)) (i : Fin cs.length) (v : Nutzlast F p (cs.get i)),
-      Val.relocateSum sn tn pointer cs ⟨i, v⟩ =
+      Val.relocateSum sn tn pointer cs ⟨i, Fall.ofNutzlast F p cs i v⟩ =
         ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
-          (Ty.mapCases_get sn tn cs i).symm ▸ Nutzlast.relocate sn tn pointer (cs.get i) v⟩
+          Fall.ofNutzlast F' p' _ _
+            ((Ty.mapCases_get sn tn cs i).symm ▸ Nutzlast.relocate sn tn pointer (cs.get i) v)⟩
   | [], i, _ => i.elim0
   | none :: _, ⟨0, _⟩, _ => rfl
   | some _ :: _, ⟨0, _⟩, _ => rfl
@@ -184,8 +182,8 @@ theorem Val.restrictSum_mk {F F' : Type} {p : F → Nat → Bool} {p' : F' → N
       (v : Nutzlast F' p' ((cs.get i).map (Ty.mapNumbers sn tn))),
       Val.restrictSum sn tn pointer cs
         ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
-          (Ty.mapCases_get sn tn cs i).symm ▸ v⟩ =
-        ⟨i, Nutzlast.restrict sn tn pointer (cs.get i) v⟩
+          Fall.ofNutzlast F' p' _ _ ((Ty.mapCases_get sn tn cs i).symm ▸ v)⟩ =
+        ⟨i, Fall.ofNutzlast F p cs i (Nutzlast.restrict sn tn pointer (cs.get i) v)⟩
   | [], i, _ => i.elim0
   | none :: _, ⟨0, _⟩, _ => rfl
   | some _ :: _, ⟨0, _⟩, _ => rfl
@@ -210,7 +208,6 @@ theorem Val.restrict_relocate : ∀ (τ : Ty) (v : Val F p τ),
   | .fnptr n, v => hleft n v
   | .arr τ _, v => funext fun i => Val.restrict_relocate sn tn forward backward hleft τ (v i)
   | .sum cs, v => Val.restrict_relocateSum sn tn forward backward hleft cs v
-termination_by τ _ => sizeOf τ
 
 /-- The inverse also preserves the complete active tag/payload pair. -/
 theorem Val.restrict_relocateSum : ∀ (cs : List (Option Ty)) (v : Val F p (.sum cs)),
@@ -225,7 +222,6 @@ theorem Val.restrict_relocateSum : ∀ (cs : List (Option Ty)) (v : Val F p (.su
       ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩
     let lift (z : Val F p (.sum cs)) : Val F p (.sum (c :: cs)) := ⟨z.1.succ, z.2⟩
     cases c <;> exact congrArg lift ih
-termination_by cs _ => sizeOf cs
 end
 
 end Inverse
@@ -246,7 +242,6 @@ theorem Val.relocate_restrict : ∀ (τ : Ty) (v : Val F' p' (Ty.mapNumbers sn t
   | .fnptr n, v => hright n v
   | .arr τ _, v => funext fun i => Val.relocate_restrict sn tn forward backward hright τ (v i)
   | .sum cs, v => Val.relocate_restrictSum sn tn forward backward hright cs v
-termination_by τ _ => sizeOf τ
 
 theorem Val.relocate_restrictSum : ∀ (cs : List (Option Ty))
     (v : Val F' p' (.sum (Ty.mapCases sn tn cs))),
@@ -266,7 +261,6 @@ theorem Val.relocate_restrictSum : ∀ (cs : List (Option Ty))
       (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (some (Ty.mapNumbers sn tn τ) :: Ty.mapCases sn tn cs))))
       (Val.relocate_restrictSum sn tn forward backward hright cs
         ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
-termination_by cs _ => sizeOf cs
 end
 
 end RightInverse

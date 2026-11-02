@@ -218,12 +218,13 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
 
 
 /-- Lower a tagged payload through the same expression recursion. -/
-def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option (Int × Int)} (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
-  match c, e, d with
-  | _, .empty, d => some ([ci 1 d tag 0], d + 1)
-  | some (lo, _), .num e, d => do
+def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option Ty} (e : NutzlastExpr D Γ Λ c) (d : Nat) (reserved : Nat := 0) : Option (List II × Nat) :=
+  match c, e with
+  | _, .empty => some ([ci 1 d tag 0], d + 1)
+  | some (.int lo _), .val e => do
       let ce ← lowE L (reserved := reserved) e d
       pure (packSum d lo tag ce)
+  | _, _ => none
 end
 
 /-! ## Values in words -/

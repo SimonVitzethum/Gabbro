@@ -84,7 +84,7 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .ite _ t e => max (counterDepthE e) (counterDepthE t)
 
 def counterDepthA {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil => 0
   | .cons b rest => max (counterDepthB b) (counterDepthA rest)
 

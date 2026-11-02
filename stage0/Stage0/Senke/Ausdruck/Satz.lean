@@ -460,7 +460,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     => by simp [lowE_eqs] at h
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) (tag : Nat) (htag : tag < 256) :
-    {Γ : Ctx} → {a : Option (Int × Int)} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
+    {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
     (c : List II) → (top : Nat) → lowN L (reserved := reserved) tag nutz d = some (c, top) → top ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff a (evalNutz σ₀ nutz σ ρ)))
@@ -468,14 +468,20 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact (const_ok hp (lit32_nat (by omega)) (by omega)).mono (fun w hw => by
-      simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw)
-  | _, _, .num e, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
-    exact packSum_ok (by simp only [packSum, bin2] at hK; omega) htag
-      (by simp only [packSum, bin2] at hK; omega)
-      (fun m pc hp => (lowE_ok σ₀ σ hWL hLay e d ce te he
-        (by simp only [packSum, bin2] at hK; omega) m pc ρ hp).word trivial) hp
+      simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw))
+  | _, some τ, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
+    cases τ with
+    | int lo hi =>
+      simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+      exact packSum_ok (by simp only [packSum, bin2] at hK; omega) htag
+        (by simp only [packSum, bin2] at hK; omega)
+        (fun m pc hp => (lowE_ok σ₀ σ hWL hLay e d ce te he
+          (by simp only [packSum, bin2] at hK; omega) m pc ρ hp).word trivial) hp
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ => by
+      have hnone : lowN L (reserved := reserved) tag e d = none := rfl
+      rw [hnone] at h
+      cases h
 end
 end Gabbro.Stage0.Senke

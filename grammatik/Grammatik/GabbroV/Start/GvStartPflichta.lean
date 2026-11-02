@@ -53,6 +53,7 @@ public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Typen.Fall
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Maschine
@@ -103,11 +104,11 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
   | .str _, .null => some ⟨[], Nat.zero_le _⟩
   | .opt _, .null => some none
   | .sum cs, .fall k p =>
-    if h : k < cs.length then (nutzKonst (cs.get ⟨k, h⟩) p).map (⟨⟨k, h⟩, ·⟩) else none
+    if h : k < cs.length then (nutzKonst (cs.get ⟨k, h⟩) p).map (⟨⟨k, h⟩, Fall.ofNutzlast _ _ _ _ ·⟩) else none
   -- zero memory of a tagged value: the first case, its payload zero
   | .sum cs, .null =>
     if h : 0 < cs.length then
-      (nutzKonst (cs.get ⟨0, h⟩) .null).map (⟨⟨0, h⟩, ·⟩)
+      (nutzKonst (cs.get ⟨0, h⟩) .null).map (⟨⟨0, h⟩, Fall.ofNutzlast _ _ _ _ ·⟩)
     else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .arr τ n, k =>

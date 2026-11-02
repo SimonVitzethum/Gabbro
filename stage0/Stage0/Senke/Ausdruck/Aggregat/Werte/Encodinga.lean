@@ -1,5 +1,6 @@
 /- Canonical value words, shared by frames, world storage and call boundaries. -/
 module
+public import Grammatik.Kern.Syntax.Typen.Fall
 public import Stage0.Senke.Welt.Lay
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
 public import Stage0.Senke.Ausdruck.Aggregat.Wert
@@ -34,13 +35,14 @@ theorem wordsAt_append {m : Runner.Mem} {fp : Runner.W} {base : Nat} (xs ys : Li
       simpa only [List.getElem_append_right (by omega : xs.length ≤ i)] using read
 
 /-- The payload's distance from the lower bound; a bare arm has offset zero. -/
-def sumOff : (c : Option (Int × Int)) → Nutzlast c → Nat
+def sumOff : (c : Option Ty) → Nutzlast D.Fn D.passt c → Nat
   | none, _ => 0
-  | some (lo, _), v => (v.n - lo).toNat
+  | some (.int lo _), v => (v.n - lo).toNat
+  | some _, _ => 0
 
 /-- The representation shared by frames, tables and globals. -/
-def sumN {cs : List (Option (Int × Int))} (v : Wert D (.sum cs)) : Nat :=
-  v.1.val + 256 * sumOff (cs.get v.1) v.2
+def sumN {cs : List (Option Ty)} (v : Wert D (.sum cs)) : Nat :=
+  v.1.val + 256 * sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)
 
 /-- The number of an option: `-1` for absent, the index otherwise. -/
 def optN {n : Int} : Option (Zahl 0 (n - 1)) → Int

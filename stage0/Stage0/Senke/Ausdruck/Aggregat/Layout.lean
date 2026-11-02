@@ -14,16 +14,18 @@ def integerWords (lo hi : Int) : Nat :=
   max 1 (max (((hi.toNat.log2 + if lo < 0 then 1 else 0) / 64) + 1) (((-lo - 1).toNat.log2 + 1) / 64 + 1))
 
 /-- A sum fits one word: eight tag bits and a 56-bit unsigned payload offset. -/
-def sumFits (cs : List (Option (Int × Int))) : Bool :=
-  decide (cs.length ≤ 256) && cs.all (fun c => match c with
+def sumFits (cs : List (Option Ty)) : Bool :=
+  decide (cs.length ≤ 256) && cs.all fun c => match c with
     | none => true
-    | some (lo, hi) => decide (hi - lo < 2 ^ 56))
+    | some (.int lo hi) => decide (hi - lo < 2 ^ 56)
+    | some _ => false
 
 /-- Largest payload offset, independently of the tag's width. -/
-def sumPayloadWords (cs : List (Option (Int × Int))) : Nat :=
+def sumPayloadWords (cs : List (Option Ty)) : Nat :=
   cs.foldl (fun width c => max width (match c with
     | none => 0
-    | some (lo, hi) => integerWords 0 (hi - lo))) 0
+    | some (.int lo hi) => integerWords 0 (hi - lo)
+    | some _ => 0)) 0
 
 /-- Canonical width in runner words, including the empty value's zero marker.
     Long strings contain length followed by one word per byte, padded with zero.

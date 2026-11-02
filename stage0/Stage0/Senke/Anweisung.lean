@@ -246,7 +246,7 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
     are measured from the end of the entire dispatch. The empty case is unreachable. -/
 def lowTags (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
     Arms D V l Γ Λ Λ' cs → Nat → (reserved : Nat := 0) → Option (List II × Nat)
   | _, Γ, _, _, _, .nil, _, reserved => some ([], (frei Γ reserved) + 3)
   | _, Γ, _, _, c :: _, .cons b rest, k, reserved => if k < 256 then do

@@ -1,5 +1,6 @@
 /- Canonical value words, shared by frames, world storage and call boundaries. -/
 module
+public import Grammatik.Kern.Syntax.Typen.Fall
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encodinga
 public import Stage0.Senke.Welt.Lay
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
@@ -26,7 +27,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .fnptr _, v => [BitVec.ofNat 64 (L.fa v.1)]
   | .sum cs, v => if sumFits cs then [BitVec.ofNat 64 (sumN v)] else
       integerEncoding (integerWords 0 (cs.length - 1)) v.1.val ++
-        integerEncoding (sumPayloadWords cs) (sumOff (cs.get v.1) v.2)
+        integerEncoding (sumPayloadWords cs) (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2))
   | .arr τ n, v => if n = 0 then [0] else elementEncoding n (fun i => encodeWords L τ (v i))
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++

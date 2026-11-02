@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Logik.Vertraege.EinpassenVoll.Teil1
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 @[expose] public section
 
@@ -60,10 +61,10 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
       · rintro ⟨hs, c, hc, hb⟩
         obtain ⟨i, rfl⟩ := List.get_of_mem hc
         obtain ⟨x, _⟩ := (nutzBar_iff _).mp hb
-        exact ⟨(⟨i, x⟩ : Wert D (.sum cs)), hs⟩
+        exact ⟨(⟨i, Fall.ofNutzlast _ _ _ _ x⟩ : Wert D (.sum cs)), hs⟩
       · rintro ⟨⟨i, x⟩, hs⟩
         exact ⟨hs, cs.get i, List.get_mem cs i,
-          (nutzBar_iff _).mpr ⟨x, sumWort_get cs hs i⟩⟩
+          (nutzBar_iff _).mpr ⟨Fall.toNutzlast _ _ _ _ x, sumWort_get cs hs i⟩⟩
   | .why n => by
       simp only [antwortTyB, decide_eq_true_eq]
       constructor

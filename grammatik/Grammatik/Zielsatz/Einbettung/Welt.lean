@@ -29,14 +29,12 @@ def _root_.Gabbro.Grammatik.Ty.zeigerfrei : Ty → Bool
   | .arr τ _ => τ.zeigerfrei
   | .sum cs => Ty.casesZeigerfrei cs
   | _ => true
-termination_by τ => sizeOf τ
 
 /-- Sum traversal for the same pointer-free predicate, without a depth bound. -/
 def _root_.Gabbro.Grammatik.Ty.casesZeigerfrei : List (Option Ty) → Bool
   | [] => true
   | none :: cs => Ty.casesZeigerfrei cs
   | some τ :: cs => τ.zeigerfrei && Ty.casesZeigerfrei cs
-termination_by cs => sizeOf cs
 end
 
 @[simp] theorem _root_.Gabbro.Grammatik.Ty.casesZeigerfrei_eq_all (cs : List (Option Ty)) :

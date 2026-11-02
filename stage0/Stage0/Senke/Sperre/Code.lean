@@ -106,7 +106,7 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .awaits _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .exchange _ _ _ _ r => retFreiB r
   | _, _, _, _, _ => false
-def retFreiArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+def retFreiArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
     Arms D V l Γ Λ Λ' cs → Bool
   | _, _, _, _, _, .nil => true
   | _, _, _, _, _, .cons b rest => retFreiB b && retFreiArms rest

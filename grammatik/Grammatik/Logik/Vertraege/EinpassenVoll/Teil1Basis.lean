@@ -1,4 +1,5 @@
 module
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
@@ -36,13 +37,13 @@ theorem nutzPasst_wort (c : Option Ty) (n : Int) (v : Nutzlast D.Fn D.passt c)
   | some τ => cases τ <;> first | trivial | cases h
 
 /-- **The raw word of a `tagged` value**: `marke + |cases| * last`. -/
-def summeRoh (cs : List (Option Ty)) (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
+def summeRoh (cs : List (Option Ty)) (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) :
     Int :=
-  (v.1.val : Int) + fallZahl cs * nutzRoh (cs.get v.1) v.2
+  (v.1.val : Int) + fallZahl cs * nutzRoh (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)
 
 /-- **Every `tagged` value is the decoding of its raw word.** -/
 theorem summePasst_voll (cs : List (Option Ty))
-    (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) (hv : sumWort cs = true) : summePasst cs (summeRoh cs v) = some v := by
+    (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) (hv : sumWort cs = true) : summePasst cs (summeRoh cs v) = some v := by
   have hk : (0 : Int) < fallZahl cs := by
     have := v.1.2
     unfold fallZahl
@@ -56,11 +57,11 @@ theorem summePasst_voll (cs : List (Option Ty))
     unfold summeRoh
     rw [Int.add_mul_emod_self_left]
     exact Int.emod_eq_of_lt hi0 hi1
-  have hdiv : summeRoh cs v / fallZahl cs = nutzRoh (cs.get v.1) v.2 := by
+  have hdiv : summeRoh cs v / fallZahl cs = nutzRoh (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2) := by
     unfold summeRoh
     rw [Int.add_mul_ediv_left _ _ (Int.ne_of_gt hk), Int.ediv_eq_zero_of_lt hi0 hi1, Int.zero_add]
   rw [summePasst_eq cs _ v.1 _ hv hmod hdiv, nutzPasst_nutzRoh _ _ (sumWort_get cs hv v.1)]
-  rfl
+  simp only [Fall.of_to]
 
 /-! ## 2. Floats -/
 

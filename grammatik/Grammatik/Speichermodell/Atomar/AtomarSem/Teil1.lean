@@ -2,6 +2,7 @@ module
 public import Grammatik.Speichermodell.Atomar.AtomarSem.Teil1Basis
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 @[expose] public section
 
@@ -317,7 +318,7 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
 
 def execArmsHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
-  | .cons b _, ⟨⟨0, _⟩, nutz⟩, σ, ρ => (execBlockHA b σ (armEnv nutz ρ)).schrumpfArm _
+  | .cons b _, ⟨⟨0, _⟩, nutz⟩, σ, ρ => (execBlockHA b σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)).schrumpfArm _
   | .cons _ rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArmsHA rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
 

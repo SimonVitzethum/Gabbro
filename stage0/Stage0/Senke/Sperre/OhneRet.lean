@@ -5,6 +5,7 @@
 -/
 module
 public import Stage0.Senke.Sperre.Code
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -22,11 +23,11 @@ def istZ {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Bool
 theorem istZ_schrumpf {l : Bool} {Γ : Ctx} {τ : Ty} (o : Ausgang V l (τ :: Γ)) : istZ o.schrumpf = istZ o := by
   cases o <;> rfl
 
-theorem istZ_schrumpfArm {l : Bool} {Γ : Ctx} (c : Option (Int × Int))
+theorem istZ_schrumpfArm {l : Bool} {Γ : Ctx} (c : Option Ty)
     (o : Ausgang V l (ArmCtx Γ c)) : istZ (o.schrumpfArm c) = istZ o := by
   cases c with
   | none => rfl
-  | some p => rcases p with ⟨lo, hi⟩; exact istZ_schrumpf o
+  | some _ => exact istZ_schrumpf o
 
 theorem istZ_mapWelt {l : Bool} {Γ : Ctx} (g : World D → World D) (o : Ausgang V l Γ) :
     istZ (o.mapWelt g) = istZ o := by
@@ -176,13 +177,13 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .narrow .., h, _, _ | _, _, _, _, .check .., h, _, _ | _, _, _, _, .float .., h, _, _
   | _, _, _, _, .floatNarrow .., h, _, _ => by simp [retFreiB] at h
 theorem retFreiArms_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) →
+    {cs : List (Option Ty)} → (arms : Arms D V l Γ Λ Λ' cs) →
     retFreiArms arms = true → ∀ v σ ρ, istZ (execArms O passes R arms v σ ρ) = false
   | _, _, _, _, _, .nil, _, ⟨i, _⟩, _, _ => Fin.elim0 i
   | _, _, _, _, _, .cons b rest, h, ⟨⟨0, _⟩, nutz⟩, σ, ρ => by
     simp only [retFreiArms, Bool.and_eq_true] at h
     simp only [execArms]
-    have hb := retFreiB_istZ b h.1 σ (armEnv nutz ρ)
+    have hb := retFreiB_istZ b h.1 σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)
     exact (istZ_schrumpfArm _ _).trans hb
   | _, _, _, _, _, .cons _ rest, h, ⟨⟨i + 1, _⟩, nutz⟩, σ, ρ => by
     simp only [retFreiArms, Bool.and_eq_true] at h
