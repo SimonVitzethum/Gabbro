@@ -242,4 +242,256 @@ theorem translation_measure_zeuge (passes : Nat) (Q : AxEns (declOf (translation
       (translationDeclaration true).translator :=
   translation_measure (translationDeclaration true) passes Q S T
 
+/-! ## Qualified source paths, payloads, expansion and admission witnesses -/
+
+/-- A qualified library call prints and parses back with its paths intact. -/
+theorem library_qualifiziert_rund_zeuge :
+    let call : SLibraryCall := ⟨["m", "lib"], ["f"], [.lit 7], [.num 3]⟩
+    beqTopStmt (parseTopStmt (druckAnw (.lcall call))) (.ok (.lcall call)) = true := by
+  decide +kernel
+
+/-- A qualified translator target parses to its joined path. -/
+def ttQual : List Token :=
+  [.wort "translator", .ident "build", .wort "for", .ident "a", .zeichen "::", .ident "sum",
+   .zeichen "(", .ident "region", .zeichen ":", .ident "SumTab",
+   .zeichen ")", .zeichen "->", .ident "SumTab", .wort "effects",
+   .zeichen "{", .wort "pure", .zeichen "}", .wort "costs",
+   .zeichen "<=", .num 8, .wort "ops", .wort "decreases",
+   .ident "region", .zeichen ".", .ident "v", .zeichen "{",
+   .wort "return", .ident "region", .zeichen ";", .zeichen "}",
+   .ende]
+theorem tQual : beqTopTief (parseTopTief ttQual)
+    (.ok [.transT "a::sum"
+      { art := "", name := "build",
+        params := [("region", .atom "SumTab")],
+        res := .some (.atom "SumTab"), fehler := .none,
+        klauseln := [.effs [.pure], .cost (.lit 8),
+          .drops (.field (.variable "region") "v")] }
+      (.block [] (.some (.ret (.some (.variable "region")))))]) = true := by
+  decide
+
+/-- Two modules with same-named libraries; the top-level caller qualifies module `a`. -/
+def translationQualText : String :=
+  "module a { table Rows count 2 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 2]) -> [u8 in 0 .. 10; 2] " ++
+  "effects { pure } { return region; } } " ++
+  "module b { table Rows count 2 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 2]) -> [u8 in 0 .. 10; 2] " ++
+  "effects { pure } { return region; } } " ++
+  "impl fn caller() { @a#consume() { 3 5 }; return; }"
+
+def translationQualTokens : List Token := (lexL translationQualText.toList).toOption.getD []
+
+def translationQualItems : List SItemTief := (parseTopTief translationQualTokens).toOption.getD []
+
+def translationQualMembers : List SItemTief :=
+  Aufloesung.loeseL (Aufloesung.quelle translationQualItems) [] translationQualItems
+
+/-- The resolved call: the qualifier joins the function path into the unique item key. -/
+def translationQualCall : SLibraryCall := ⟨["a"], ["a::consume"], [], [.num 3, .num 5]⟩
+
+def translationQualCaller : FnSig :=
+  { art := "impl", name := "caller", params := [], res := none, fehler := none, klauseln := [] }
+
+def translationQualCallerBody : SAnw := .block [.lcall translationQualCall] (some (.ret none))
+
+/-- The exact caller is at member 6 (two opened modules) and its call at statement path `[0]`. -/
+def translationQualSource : LibrarySource where
+  characters := translationQualText.toList
+  tokens := translationQualTokens
+  items := translationQualItems
+  lexed := rfl
+  parsed := rfl
+  callerIndex := 6
+  caller := translationQualCaller
+  callerBody := translationQualCallerBody
+  atCaller := rfl
+  path := [0]
+  call := translationQualCall
+  atCall := rfl
+
+theorem translation_qual_library_zeuge :
+    (libraryDecl translationQualMembers translationQualCall).toOption.isSome = true := by
+  decide +kernel
+
+def translationQualLibrary : ULibrary :=
+  (libraryDecl translationQualMembers translationQualCall).toOption.get translation_qual_library_zeuge
+
+def translationQualUnit : UProg :=
+  (elabU (pre108 (translatorItems translationQualMembers translationQualLibrary))).toOption.getD
+    { tabs := [], locks := [], fns := [] }
+
+theorem translation_qual_lower_zeuge :
+    (lowerAllg translationQualUnit).toOption.isSome = true := by
+  decide +kernel
+
+def translationQualLowered :
+    Programm (declOf translationQualUnit) × List (declOf translationQualUnit).Fn :=
+  (lowerAllg translationQualUnit).toOption.get translation_qual_lower_zeuge
+
+/-- Joint qualified declaration fixture: the qualifier selects module `a` through typed export,
+    bounded call graph and immutable by-value array signature. -/
+def translationQualDeclaration : TranslationDecl translationQualSource translationQualUnit where
+  library := translationQualLibrary
+  resolved := except_ok_get translation_qual_library_zeuge
+  elaborated := by decide +kernel
+  program := translationQualLowered.1
+  functions := translationQualLowered.2
+  lowered := except_ok_get translation_qual_lower_zeuge
+  translator := ⟨0, by decide +kernel⟩
+  translatorName := by rfl
+  schema := translationSchema
+  parameters := by rfl
+  outputType := translationSchema.ty
+  result := by rfl
+  immutable := .arr _ _ (.int _ _)
+  noCalls := by decide +kernel
+  noIndirectCalls := by decide +kernel
+  bounded := by decide +kernel
+  noCycle := by
+    intro callee
+    rcases callee with ⟨index, bound⟩
+    have zero : index = 0 := by
+      change index < 1 at bound
+      omega
+    subst index
+    decide +kernel
+
+def translationQualInput : Wert (declOf translationQualUnit) translationSchema.ty :=
+  fun index => ([⟨3, by decide, by decide⟩, ⟨5, by decide, by decide⟩] : List (Zahl 0 10)).get index
+
+/-- A complete exact-execution certificate for the qualified selection. -/
+def translationQualCertificate : TranslationCertificate translationQualDeclaration where
+  input := translationQualInput
+  decoded := by rfl
+  output := translationQualInput
+  fuel := 1
+  execution := by
+    intro oracle passes world
+    rfl
+
+/-- The same members select module `b` under its qualifier. -/
+theorem translation_qual_b_zeuge :
+    (libraryDecl translationQualMembers ⟨["b"], ["b::consume"], [], [.num 3, .num 5]⟩).toOption.isSome = true := by
+  decide +kernel
+
+/-- An unknown qualifier refuses: no declaration matches. -/
+theorem translation_qual_unbekannt_zeuge :
+    (libraryDecl translationQualMembers ⟨["x"], ["consume"], [], [.num 3, .num 5]⟩).toOption.isNone = true := by
+  decide +kernel
+
+/-- An empty path refuses by name: the reader never produces one. -/
+theorem translation_leer_verweigert_zeuge :
+    (libraryDecl translationQualMembers ⟨[], ["a::consume"], [], []⟩).toOption.isNone = true := by
+  decide +kernel
+
+/-- Two library functions under one key refuse as ambiguous, never by first match. -/
+def doppeltMembers : List SItemTief :=
+  [.fnT { art := "library", name := "consume", params := [], res := none, fehler := none, klauseln := [] } (.block [] none),
+   .fnT { art := "library", name := "consume", params := [], res := none, fehler := none, klauseln := [] } (.block [] none)]
+theorem translation_doppelt_verweigert_zeuge :
+    (libraryDecl doppeltMembers ⟨["m"], ["consume"], [], []⟩).toOption.isNone = true := by
+  decide
+
+/-- A library function without a translator refuses: selection stays unique and total. -/
+def ohneTranslatorMembers : List SItemTief :=
+  [.fnT { art := "library", name := "solo", params := [], res := none, fehler := none, klauseln := [.load ["Rows"]] } (.block [] none)]
+theorem translation_ohne_translator_zeuge :
+    (libraryDecl ohneTranslatorMembers ⟨["m"], ["solo"], [], []⟩).toOption.isNone = true := by
+  decide
+
+/-- The per-site payload of the identity translation: site `[0]`, content the certified output. -/
+def translationPayload : LibraryPayload (translationCertificate false) where
+  site := [0]
+  amStandort := rfl
+  inhalt := (translationCertificate false).output
+  vollstaendig := rfl
+
+/-- Every payload row is the certified row. -/
+theorem translationPayload_zeilen_zeuge :
+    (translationPayload.inhalt ⟨0, by decide⟩).n = 3 ∧ (translationPayload.inhalt ⟨1, by decide⟩).n = 5 := by
+  constructor <;> rfl
+
+/-- Payloads are per site: this one is not at site `[1]`. -/
+theorem translationPayload_standort_zeuge : translationPayload.site ≠ [1] := by decide
+
+/-- The certified `lcall` expansion: ordinary call, payload last, caller arity met. -/
+def translationExpansion : LibraryExpansion translationPayload where
+  nutzlastArg := .variable "sample_payload_0"
+  aufruf := .call "consume" (translationCall.args ++ [.variable "sample_payload_0"])
+  erweitert := Or.inl rfl
+  stelligkeit := by decide +kernel
+
+/-- The certified `bindLib` expansion: the ordinary call value bound as usual. -/
+def translationExpansionBind : LibraryExpansion translationPayload where
+  nutzlastArg := .variable "sample_payload_0"
+  aufruf := .bind false "value" none (.call "consume" (translationCall.args ++ [.variable "sample_payload_0"]))
+  erweitert := Or.inr ⟨false, "value", (none : Option STyp), rfl⟩
+  stelligkeit := by decide +kernel
+
+/-- Both expansions are ordinary: no library construct remains for the lowering. -/
+theorem translationExpansion_ohne_zeuge :
+    ohneBibliothekAnw translationExpansion.aufruf = true ∧
+    ohneBibliothekAnw translationExpansionBind.aufruf = true :=
+  ⟨libraryExpansion_ohneBibliothek translationExpansion,
+   libraryExpansion_ohneBibliothek translationExpansionBind⟩
+
+/-- The pre-expansion gate refuses products under the C01 name and callees under the C17 name. -/
+theorem torZurErweiterung_zeuge :
+    torZurErweiterung true true = .ok () ∧
+    torZurErweiterung false true = .error produktZeilenVerweigert ∧
+    torZurErweiterung true false = .error allgemeineAbbildungVerweigert := by
+  exact ⟨rfl, rfl, rfl⟩
+
+/-- The generated translator program is library-closed. -/
+theorem translation_libraryB_zeuge :
+    Gabbro.Grammatik.Zielsatz.libraryB (translationLowered false).1
+      (translationLowered false).2 = true := rfl
+
+/-- The library admission holds on the generated program, through the checker binding. -/
+theorem translation_libraryAdmission_zeuge :
+    Gabbro.Grammatik.Zielsatz.LibraryAdmission (translationLowered false).1 :=
+  (Gabbro.Grammatik.Zielsatz.libraryB_iff _ _).mp translation_libraryB_zeuge
+
+/-- A recursive translator: its body calls itself, so no certificate path exists (C17). -/
+def translationRekText : String :=
+  "module sample { table Rows count 1 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 1]) -> [u8 in 0 .. 10; 1] " ++
+  "effects { pure } { return build(region); } impl fn caller() { @sample#consume() { 3 }; return; } }"
+
+def translationRekTokens : List Token := (lexL translationRekText.toList).toOption.getD []
+
+def translationRekItems : List SItemTief := (parseTopTief translationRekTokens).toOption.getD []
+
+def translationRekMembers : List SItemTief :=
+  Aufloesung.loeseL (Aufloesung.quelle translationRekItems) [] translationRekItems
+
+theorem translation_rek_library_zeuge :
+    (libraryDecl translationRekMembers ⟨["sample"], ["consume"], [], [.num 3]⟩).toOption.isSome = true := by
+  decide +kernel
+
+def translationRekLibrary : ULibrary :=
+  (libraryDecl translationRekMembers ⟨["sample"], ["consume"], [], [.num 3]⟩).toOption.get
+    translation_rek_library_zeuge
+
+def translationRekUnit : UProg :=
+  (elabU (pre108 (translatorItems translationRekMembers translationRekLibrary))).toOption.getD
+    { tabs := [], locks := [], fns := [] }
+
+theorem translation_rek_lower_zeuge : (lowerAllg translationRekUnit).toOption.isSome = true := by
+  decide +kernel
+
+def translationRekLowered :
+    Programm (declOf translationRekUnit) × List (declOf translationRekUnit).Fn :=
+  (lowerAllg translationRekUnit).toOption.get translation_rek_lower_zeuge
+
+/-- The recursive body calls, so `TranslationDecl.noCalls` is unprovable: the general-map path
+    is refused under `allgemeineAbbildungVerweigert`. -/
+theorem translation_rek_verweigert_zeuge :
+    ((befund translationRekLowered.1 ⟨0, by decide +kernel⟩).rufe == []) = false := by
+  decide +kernel
+
 end Gabbro.Grammatik.Uebersetzung
