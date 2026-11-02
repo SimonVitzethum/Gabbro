@@ -17,12 +17,32 @@ def parseSpecNames : Nat → List Token → Except String (List String × List T
         return (n :: ns, tail)
       | _ => return ([n], r)
 
+/-- One optional predicate clause, preserving the EBNF order without a second clause reader. -/
+def parseSpecPredicates (word : String) (f : Nat) (ts : List Token) :
+    Except String (List SExpr × List Token) :=
+  if istWort word ts then parsePredListe f ts.tail else .ok ([], ts)
+
+/-- A spec function has exactly the §5.1 head: optional requires/ensures, then effects and costs. -/
+def parseSpecFunction (f : Nat) (ts : List Token) : Except String (FnSig × List Token) := do
+  let r ← nimmWort "fn" ts
+  let (name, r) ← nimmName r
+  let (params, r) ← parseParams f r
+  let (res, fehler, r) ← parseErgebnis f r
+  let (needs, r) ← parseSpecPredicates "requires" f r
+  let (gives, r) ← parseSpecPredicates "ensures" f r
+  if !istWort "effects" r then throw "spec.effects.required"
+  let (effects, r) ← parseKlausel f r
+  if !istWort "costs" r then throw "spec.cost.required"
+  let (cost, r) ← parseKlausel f r
+  return ({ art := "spec", name, params, res, fehler,
+            klauseln := needs.map .needs ++ gives.map .gives ++ effects ++ cost }, r)
+
 /-- Abstract functions have no body and require explicit effects and costs. -/
 def parseSpecFunctions : Nat → List Token → Except String (List FnSig × List Token)
   | 0, _ => .error "spec.functions: out of fuel"
   | _ + 1, .zeichen "}" :: rest => .ok ([], rest)
   | f + 1, ts => do
-      let (s, r) ← parseFnSig f "spec" ts
+      let (s, r) ← parseSpecFunction f ts
       let r ← fordereZeichen ";" r
       let (ss, r) ← parseSpecFunctions f r
       return (s :: ss, r)

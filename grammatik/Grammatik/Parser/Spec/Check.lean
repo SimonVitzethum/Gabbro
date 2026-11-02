@@ -20,6 +20,15 @@ def checkGroup (items : List SItemTief) (g : Group) : Except String Unit := do
     if (s.klauseln.filter fun | .effs _ => true | _ => false).length != 1 then
       throw "spec.effects.required"
     if (cost items s).isNone then throw "spec.cost.required"
+    for e in functionEffects s do
+      match e with
+      | .param n => if !(g.effects.any (strEq n)) then throw "spec.effects.parameter"
+      | .instanceEffects n ts =>
+        let some other := (groups items).find? (fun h => strEq h.name n)
+          | throw "spec.effects.unknown"
+        if other.types.length != ts.length then throw "spec.arguments"
+      | _ => pure ()
+
     if (predicates specs false [] s ++ predicates specs true [] s).any hasHeld then
       throw "spec.held"
 

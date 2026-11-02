@@ -26,6 +26,7 @@ def Walk.call (w : Walk) (locals : Locals) (name : String)
   else if types.isSome || (groups w.source).any (fun g => name.startsWith (g.name ++ "::")) then
     .error "spec.output.call"
   else .ok name
+
 mutual
 def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SExpr
   | 0, _ => .error "spec.expansion.fuel"
@@ -40,7 +41,16 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
       let args ← args.mapM recur
       return .call (← w.call locals name (some types) args) args
     | .ext .inst _ _ => throw "spec.call.arguments"
-    | .field x n => return .field (← recur x) n
+    | .field x n =>
+      let x ← recur x
+      match x with
+      | .index (.variable table) i =>
+        if !(locals.any fun p => strEq p.1 table) && w.source.any (fun
+            | .tableT t _ _ _ _ _ _ => strEq t table
+            | _ => false) then
+          return .field (.index (.field (.variable table) "slots") i) n
+        else return .field x n
+      | _ => return .field x n
     | .index x i => return .index (← recur x) (← recur i)
     | .arrow x n => return .arrow (← recur x) n
     | .un op x => return .un op (← recur x)
@@ -106,7 +116,8 @@ def bindings (items : List SItemTief) (locals : Locals) : SAnw → Locals
 
 /-- Raw headers have their own ordinary elaborators. Refuse an abstract call hidden there. -/
 def Walk.raw (w : Walk) (s : String) : Except String String :=
-  if (groups w.source).any (fun g => (s.splitOn (g.name ++ "::")).length > 1) then
+  let compact := String.ofList (s.toList.filter fun c => c != ' ' && c != '\t' && c != '\n' && c != '\r')
+  if (groups w.source).any (fun g => (compact.splitOn (g.name ++ "::")).length > 1) then
     .error "spec.call.raw.header"
   else .ok s
 

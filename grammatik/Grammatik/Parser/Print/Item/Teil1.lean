@@ -18,7 +18,7 @@ def druckPred (e : SExpr) : List Token :=
   | .ext k _ _ =>
     match k with
     | .text => druckToks e
-    | .call => druckToks e
+    | .call | .inst => druckToks e
     | _ => (druckToks e).drop 1 |>.dropLast
   | _ => druckToks e
 

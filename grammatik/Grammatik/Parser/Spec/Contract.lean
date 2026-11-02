@@ -38,6 +38,7 @@ def canonicalType (items : List SItemTief) : Nat → STyp → STyp
     | _ => .atom n
   | f + 1, .ptr s r t => .ptr s r (canonicalType items f t)
   | f + 1, .array t n => .array (canonicalType items f t) n
+  | f + 1, .range (.atom "u32") (.lit 0) (.lit 4294967295) false => .atom "u32"
   | f + 1, .range t lo hi b => .range (canonicalType items f t) lo hi b
   | f + 1, .wrap t => .wrap (canonicalType items f t)
   | f + 1, .embed t p s => .embed (canonicalType items f t) p s
@@ -117,7 +118,7 @@ def expandEffects (items : List SItemTief) (gs : List Group) (ins : List Instanc
         let some g := gs.find? (fun g => strEq g.name n)
           | .error ("spec.effects.unknown: " ++ n)
         let [i] := ins.filter (fun i => strEq i.group n && beqSTypList (i.types.map (canonicalType items 128)) (ts.map (canonicalType items 128)))
-          | .error ("spec.effects.instanceEffects: " ++ n)
+          | .error ("spec.effects.instance: " ++ n)
         if g.types.length != ts.length || g.effects.length != i.effects.length then
           .error "spec.arguments"
         else expandEffects items gs ins (g.types.zip ts) (g.effects.zip i.effects) f

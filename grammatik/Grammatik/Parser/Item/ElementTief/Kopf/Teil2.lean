@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Stmt.Anweisung
-public import Grammatik.Parser.Item.ElementTief.Kopf.Teil1
+public import Grammatik.Parser.Item.ElementTief.Kopf.Structures
 
 @[expose] public section
 

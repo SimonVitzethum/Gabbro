@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Spec.Expand
+public import Grammatik.Parser.Elab.Uebersetze.Teil13
 
 @[expose] public section
 
@@ -47,6 +48,9 @@ theorem shape_inferred_call_zeuge :
 theorem shape_explicit_call_zeuge :
     resolveCall shape [] "Shape::area" (some [.index false "Circles"]) [.variable "c"] =
       .ok "$spec$0$area" := by rfl
+
+/-- The actual elaborator sees the instantiated program, including the arithmetic implementation. -/
+theorem shape_elaboration_zeuge : (Uebersetze.elabU shape).toOption.isSome = true := by rfl
 
 theorem shape_expansion_zeuge : (expand shape).toOption.isSome = true := by rfl
 
@@ -144,5 +148,35 @@ theorem explicit_statement_resolution_zeuge :
 
 theorem normalized_conjunctions_zeuge :
     predicateSubset (conjuncts (.bin "&&" .tru .fls)) (conjuncts (.bin "&&" .fls .tru)) = true := by rfl
+
+theorem duplicate_impl_ignores_effect_arguments_zeuge :
+    check [shapeSpec, shapeImpl,
+      .implGroupT "Shape" [.index false "Circles"] [[]] [.fnT areaImpl areaBody]] =
+      .error "spec.implementation.duplicate" := by rfl
+
+theorem duplicate_function_zeuge :
+    check [shapeSpec, .implGroupT "Shape" [.index false "Circles"] [[.reads (.variable "Circles")]]
+      [.fnT areaImpl areaBody, .fnT areaImpl areaBody]] = .error "spec.function.duplicate" := by rfl
+
+theorem undeclared_effect_parameter_zeuge :
+    check [.specGroupT "Shape" ["T"] ["Other"] [areaSpec]] = .error "spec.effects.parameter" := by rfl
+
+theorem missing_effect_bound_zeuge :
+    check [.specGroupT "Shape" ["T"] ["E"]
+      [{ areaSpec with klauseln := [.gives (.bin ">=" .res (.lit 1)), .cost (.lit 50)] }]] =
+      .error "spec.effects.required" := by rfl
+
+theorem missing_cost_bound_zeuge :
+    check [.specGroupT "Shape" ["T"] ["E"]
+      [{ areaSpec with klauseln := [.gives (.bin ">=" .res (.lit 1)), .effs [.param "E"]] }]] =
+      .error "spec.cost.required" := by rfl
+
+theorem instance_effects_zeuge :
+    expandEffects shape (groups shape) (instances shape) [] [] 1000
+      [.instanceEffects "Shape" [.index false "Circles"]] = .ok [.reads (.variable "Circles")] := by rfl
+
+theorem bare_u32_normalization_zeuge :
+    beqSTyp (canonicalType [] 128 (.range (.atom "u32") (.lit 0) (.lit 4294967295) false))
+      (.atom "u32") = true := by rfl
 
 end Gabbro.Grammatik.Parser.Spec

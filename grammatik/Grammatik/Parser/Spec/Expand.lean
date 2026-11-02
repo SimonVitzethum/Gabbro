@@ -42,4 +42,3 @@ def prepare (items : List SItemTief) : Except String (List SItemTief) :=
   else .ok items
 
 end Gabbro.Grammatik.Parser.Spec
-
