@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Bausteine.Arena.Ownership.Body.Forms
 public import Grammatik.Bausteine.Arena.Ownership.Body.Sound.Teil1
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 @[expose] public section
 
@@ -438,7 +439,7 @@ theorem oarms_sound (hR : Respects A I.contracts R) (hO : GutO O) :
   | _, _, _, _, _, _, _, _, _, .cons (ca := ca) b rest hb hw hr, ⟨⟨0, _⟩, nutz⟩, σ, ρ, hk, h => by
     simp only [execArms]
     exact BPost.weaken _ hw (BPost.schrumpfArm hk ca _
-      (ob_sound hR hO hb _ _ (Nat.le_trans hk (armCtx_length _ ca)) (h.arm ca nutz)))
+      (ob_sound hR hO hb _ _ (Nat.le_trans hk (armCtx_length _ ca)) (h.arm ca (Fall.toNutzlast _ _ _ _ nutz))))
   | _, _, _, _, _, _, _, _, _, .cons b rest hb hw hr, ⟨⟨i + 1, hi⟩, nutz⟩, σ, ρ, hk, h => by
     simp only [execArms]
     exact oarms_sound hR hO hr _ σ ρ hk h
