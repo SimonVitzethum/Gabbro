@@ -328,3 +328,5 @@ public import Grammatik.Parser.Profil.AuswahlZeuge
 public import Grammatik.Speichermodell.Adressen.Platzierung
 public import Grammatik.Parser.Profil.Platzierung
 public import Grammatik.Parser.Profil.PlatzierungZeuge
+public import Grammatik.Zielsatz.Projekte.Profil
+public import Grammatik.Zielsatz.Projekte.ProfilZeuge

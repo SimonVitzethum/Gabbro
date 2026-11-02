@@ -25,6 +25,19 @@
   * `GabbroZielWarten` -- a waiting bound: on every run of the ticket lock a thread standing at `locks L` takes `L`
     within `wartezeit` scheduler steps, under four named premises of the run (`gabbro_ziel_warten`, proof in
     Zielsatz/Atomar/BeweisWarten.lean). See WAITING below.
+  * `GabbroZielProfil` (C14, 2026-11-02) -- the same conclusion over a SELECTED, profile-bound unit
+    (`ProfilEinheit`: the unit with its build mode, the ORIGINAL parsed items and the image's section policy;
+    Zielsatz/Projekte/Profil.lean). MEANING CHANGE, two points. (1) Assumption provenance: (c) is stated through
+    the named components of `HardwareAnnahmen` (`GutO`, `RegLokal`, `AxVertragO`; `hardware_iff_komponenten`) and
+    the profile supplies exactly these (`profilAnnahmen_iff`): it adds no software and no unlisted assumption, a
+    linked library requires profile entries by name and adds none (`bindung_fuegt_nichts_hinzu_bindung`); the
+    free prose of an `assume` stays outside Lean. (2) The statement is about the unit a build mode selects out of
+    the original items (`when TESTBUILD`, shipping or test; each mode is its own instance), (a) gains the
+    structural admission of the selection/profile-binding/placement certificate (`profilAkzeptiert`), which is
+    COMPUTED from the original items, never carried. The statements above are unchanged. Proof
+    `gabbro_ziel_profil` (= `gabbro_ziel` on `PE.E`). Not claimed: that `PE.E` is the translation of the selected
+    tree (the source-to-unit pipeline's correspondence), the layout/startup/relocation proofs that discharge
+    static placement, an entry/service binding or a guest boundary (C08/C12 services, still refused).
   What may be said: "the goal theorem is proved over the model, with witnesses and non-degeneracy". What may NOT be
   said: "Gabbro is verified" -- the checker inside the statement is the Lean Bool, not the Rust checker, and no
   bridge from the model to a binary is built (THE READING, below).
