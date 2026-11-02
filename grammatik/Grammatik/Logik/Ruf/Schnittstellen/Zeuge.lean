@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Ruf.Schnittstellen.Kandidaten
+public import Grammatik.Logik.Ruf.Schnittstellen.Einschluss
 public import Grammatik.Logik.Ruf.Schnittstellen.Lokal
 public import Grammatik.Logik.Ruf.Schnittstellen.Rufstelle
 public import Grammatik.Logik.Ruf.Schnittstellen.Hoare
@@ -204,6 +205,51 @@ theorem stronger_interface_post_refused : ¬ PtrVerfeinert strongerInterfacePost
   change false = true at hp
   cases hp
 
+/-- A target whose requires is stronger than the interface pre is refused:
+    `true` needs `5 ≤ x` but the interface only promises `3 ≤ x`
+    (counterexample `x = 4`). -/
+def strongerTargetPre : Programm decl :=
+  { prog with requires := fun f => if f then .le (.lit 5) (.var .here) else prog.requires f }
+
+theorem stronger_target_pre_refused : ¬ PtrVerfeinert strongerTargetPre := by
+  intro h
+  have hr := (h true 0 rfl).1 entry (.cons ⟨4, by decide, by decide⟩ .nil) rfl
+  change false = true at hr
+  cases hr
+
+/-- Reversed implication is refused, both ways. The target pre does not imply
+    the interface pre (`x = 1` satisfies `true`'s requires but not the
+    interface `3 ≤ x`) ... -/
+theorem reversed_pre_refused :
+    ¬ (∀ (s0 : World decl) (ρ : Env decl sig.params),
+      ReqAmEintritt prog true s0 (umsig pointer.property ρ) →
+      (prog.ptrVertrag 0).preHolds s0 ρ) := by
+  intro h
+  have hr := h entry (.cons ⟨1, by decide, by decide⟩ .nil) rfl
+  change false = true at hr
+  cases hr
+
+/-- ... and the interface post does not imply the target ensures (`x = 4`
+    satisfies the interface `param ≤ result` but not `true`'s equality). -/
+theorem reversed_post_refused :
+    ¬ (∀ (s0 s1 : World decl) (ρ : Env decl sig.params) (v : ErgVal decl (decl.erg true)),
+      (prog.ptrVertrag 0).postHolds s0 s1 ρ (ptrResult pointer.property v) →
+      EnsAmRueck prog true s0 s1 (umsig pointer.property ρ) v) := by
+  intro h
+  have hp := h entry later arguments ⟨4, by decide, by decide⟩ rfl
+  change false = true at hp
+  cases hp
+
+/-- The conjunct reformulation fires on the jointly inhabited fixture: every
+    interface-pre conjunct (here: the single `3 ≤ x`) implies the selected
+    target's requires. -/
+theorem refinement_konjunkt_zeuge :
+    (∀ (s0 : World decl) (ρ : Env decl sig.params),
+      (∀ c ∈ konjunkte ((prog.ptrVertrag 0).pre), wahr? (eval s0 c s0 ρ) = true) →
+      ReqAmEintritt prog true s0 (umsig pointer.property ρ)) :=
+  ((ptrZielVerfeinert_konjunkt prog true 0 pointer.property).mp
+    (refinement true 0 pointer.property)).1
+
 /-- A contract-respecting abstract handler; it is not a source interpreter. -/
 def handler (f : decl.Fn) (σ : World decl) (ρ : Env decl (decl.params f)) : RufAusgang f :=
   .ok σ (ρ.get .here)
@@ -318,3 +364,7 @@ end Gabbro.Grammatik.C06
 #print axioms Gabbro.Grammatik.abgK_indirekt_schliesst
 #print axioms Gabbro.Grammatik.C06.ptrPre_prefix_zeuge
 #print axioms Gabbro.Grammatik.C06.ptrVertragsFreiB_zeuge
+#print axioms Gabbro.Grammatik.C06.stronger_target_pre_refused
+#print axioms Gabbro.Grammatik.C06.reversed_pre_refused
+#print axioms Gabbro.Grammatik.C06.reversed_post_refused
+#print axioms Gabbro.Grammatik.C06.refinement_konjunkt_zeuge
