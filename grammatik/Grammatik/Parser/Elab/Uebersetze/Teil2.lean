@@ -442,37 +442,18 @@ def uAliasBreiten : List SItemTief → List (String × (Int × Int))
     guessing a wrap. Anything else (an array constant, a call of a non-const function, a value outside
     its type) makes the constant UNKNOWN: a use of it is then an error ("name unknown"). -/
 
-/-- A `const fn` for the evaluator: parameter names with their ranges, the result range and the
-    returned expression. -/
+/-- A constant function retains its source signature and statement body. -/
 structure UKonstFn where
   name : String
-  params : List (String × (Int × Int))
-  erg : Int × Int
-  rumpf : SExpr
+  params : List (String × Ty)
+  erg : Ty
+  rumpf : SAnw
+  signature : FnSig
 
-/-- The range of a declared parameter/result type of a `const fn`: a builtin word or a literal range. -/
-def uKonstBereich : STyp → Option (Int × Int)
-  | .atom a => (uTypName [] a).toOption
-  | .range _ lo hi o =>
-    match uSchranke [] lo, uSchranke [] hi with
-    | some a, some b => some (a, if o then b - 1 else b)
-    | _, _ => none
-  | _ => none
-
-/-- The `const fn`s of a unit that the evaluator can run. -/
-def uKonstFns : List SItemTief → List UKonstFn
-  | [] => []
-  | .fnT { art := "const", name, params, res := some r, fehler := .none, klauseln := _ }
-      (.block [] (.some (.ret (.some e)))) :: rest =>
-    match uKonstBereich r, params.mapM (fun (n, ty) => (uKonstBereich ty).map (fun b => (n, b))) with
-    | some rb, some ps => { name, params := ps, erg := rb, rumpf := e } :: uKonstFns rest
-    | _, _ => uKonstFns rest
-  | _ :: rest => uKonstFns rest
-
-/-- The values of a call bound to the parameters, each inside its parameter's range. -/
-def uKonstBinde : List (String × (Int × Int)) → List Int → Option (List (String × Int))
+/-- Bind integer arguments only when their checked parameter types admit them. -/
+def uKonstBinde : List (String × Ty) → List Int → Option (List (String × Int))
   | [], [] => some []
-  | (n, (pl, ph)) :: ps, v :: vs =>
+  | (n, .int pl ph) :: ps, v :: vs =>
     if pl ≤ v ∧ v ≤ ph then (uKonstBinde ps vs).map (fun r => (n, v) :: r) else none
   | _, _ => none
 

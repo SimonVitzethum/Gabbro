@@ -185,6 +185,11 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
 def elabU : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
+    if ms0.any (fun item => match item with
+      | .fnT sig body => strEq sig.art "const" && (match body with
+        | .block [] (some (.ret (some _))) => false
+        | _ => true)
+      | _ => false) then .error "const function with a block body: stage 3 evaluator pending" else
     let consts := uConstsRech (uKonstFns ms0) ms0 []
     let alias := uAliase consts ms0 ++ uAliasBreiten ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
     match uRestFehler ms0 with
