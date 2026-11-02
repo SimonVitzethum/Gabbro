@@ -86,6 +86,15 @@ theorem routineAlignL_emission_zeuge (left right : Nat) :
       (fun j => some ([ci 2 j right 0], j + 1))) 1747 44 :=
   routineAlignL_emission (FloatEmission.copy left) (FloatEmission.copy right) (by decide)
 
+/-- The ordered branch has a smaller standalone ceiling than the complete
+    two-direction selection, for the same retained input slots. -/
+theorem routineDirectionalL_emission_zeuge (large small : Nat) :
+    FloatEmission (fun d => routineDirectionalL d
+      (fun j => some ([ci 2 j large 0], j + 1))
+      (fun j => some ([ci 2 j small 0], j + 1))) 853 43 :=
+  routineDirectionalL_emission (FloatEmission.copy large) (FloatEmission.copy small) (by decide)
+
+#print axioms routineDirectionalL_emission_zeuge
 #print axioms routineAlignL_emission
 #print axioms routineAlignL_emission_zeuge
 end Gabbro.Stage0.Senke
