@@ -61,8 +61,8 @@ def akkuGueltig : AccOperator → Int → Int → Nat → Prop
 theorem neutralBewohnt {op : AccOperator} {lo hi : Int} {w : Nat}
     (h : akkuGueltig op lo hi w) : lo ≤ neutralInt op lo hi w ∧ neutralInt op lo hi w ≤ hi := by
   cases op with
-  | max => exact ⟨by omega, h⟩
-  | min => exact ⟨h, by omega⟩
+  | max => exact ⟨Int.le_refl _, h⟩
+  | min => exact ⟨h, Int.le_refl _⟩
   | add => exact ⟨h.2.1, h.2.2⟩
   | or => exact ⟨h.2.2.1, h.2.2.2.1⟩
   | and => exact ⟨h.2.2.2.2.1, h.2.2.2.2.2⟩
@@ -82,6 +82,7 @@ theorem musterBereich (w x : Nat) (hw : 1 ≤ w) (hx : x < 2 ^ w) :
   unfold musterAlsInt
   simp only [Nat.add_sub_cancel]
   rw [h2]
+  have hc : ((2 ^ k : Nat) : Int) = (2 : Int) ^ k := Int.natCast_pow 2 k
   split
   · constructor <;> omega
   · constructor <;> omega
@@ -188,7 +189,8 @@ theorem addKetteGleichSumme (z : Int) (xs : List Int) :
   | cons x xs ih =>
       simp only [rmwKette, List.sum_cons]
       rw [ih]
-      exact (Int.add_assoc z x xs.sum).symm
+      show z + x + xs.sum = z + (x + xs.sum)
+      exact Int.add_assoc z x xs.sum
 
 /-- Under the prefix duty the chain stays in range. -/
 theorem addKetteImBereich {lo hi z : Int} {xs : List Int}
@@ -229,9 +231,9 @@ theorem addNichtnegGenuegt {lo hi z : Int} {xs : List Int}
 
 /-! ## 4. The named traps -/
 
-/-- The named trap: `min` started at `0` drags every result to `0`
+/-- The named trap: `min` started at `0` drags every nonnegative result to `0`
     (the word case of `min_mit_null_start_zieht_auf_null`). -/
-theorem minStartBeiNullFalle (T : Int) : min T 0 = 0 := by
+theorem minStartBeiNullFalle (T : Int) (hT : 0 ≤ T) : min T 0 = 0 := by
   omega
 
 /-- The named trap: `and` started at `0` drags every result to `0`. -/

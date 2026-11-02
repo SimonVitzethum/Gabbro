@@ -99,7 +99,7 @@ theorem output_bounded {isOwner : Marke → Bool} {stages : Marke → Nat}
     | none => simp [hs] at he
     | some stage =>
       have e : (x.mark, stage) = (m, s) := by simpa [hs] using he
-      cases e
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj e
       have hb : x.before ≤ stage ∧ stage < stages x.mark := by
         simpa only [hs, Option.all_some, decide_eq_true_eq] using (hv.2.1 x hx).2.2
       exact ⟨(hv.2.1 x hx).1, hb.2⟩
@@ -128,9 +128,11 @@ theorem outputs_map {α β : Type} (f : α → β) (F : OwnerFlow α) :
   unfold map outputs
   rw [List.map_append]
   congr 1
-  induction F.moves with
-  | nil => rfl
-  | cons x xs ih => cases x.after <;> simp_all
+  rw [List.filterMap_map, List.map_filterMap]
+  congr 1
+  funext x
+  simp only [Function.comp_apply]
+  cases x.after <;> rfl
 
 /-- With no nominal identity in the source type, every owner interface is empty. -/
 theorem empty_of_empty (F : OwnerFlow Empty) : F = {} := by

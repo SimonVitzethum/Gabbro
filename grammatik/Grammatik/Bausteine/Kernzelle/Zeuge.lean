@@ -199,7 +199,7 @@ theorem zBreit_abgelehnt : akkuBreitePasstB true 0 200 8 = false := by decide
 theorem zUndNeutral_abgelehnt : akkuGueltigB .and 0 100 8 = false := by decide
 
 /-- The named trap: `min` started at `0` drags every result to `0`. -/
-theorem minFalle_zeuge : min (50 : Int) 0 = 0 := minStartBeiNullFalle 50
+theorem minFalle_zeuge : min (50 : Int) 0 = 0 := minStartBeiNullFalle 50 (by decide)
 
 /-- The named trap: `and` started at `0` drags every result to `0`. -/
 theorem andFalle_zeuge : 12 &&& 0 = 0 := andStartBeiNullFalle 12

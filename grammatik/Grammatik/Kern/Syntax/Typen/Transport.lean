@@ -21,14 +21,12 @@ def Ty.mapNumbers (sn tn : Nat → Nat) : Ty → Ty
   | .ref n => .ref (tn n)
   | .arr τ n => .arr (Ty.mapNumbers sn tn τ) n
   | .str n => .str n
-termination_by τ => sizeOf τ
 
 /-- The same traversal on case lists; order and payload presence are preserved. -/
 def Ty.mapCases (sn tn : Nat → Nat) : List (Option Ty) → List (Option Ty)
   | [] => []
   | none :: cs => none :: Ty.mapCases sn tn cs
   | some τ :: cs => some (Ty.mapNumbers sn tn τ) :: Ty.mapCases sn tn cs
-termination_by cs => sizeOf cs
 end
 
 @[simp] theorem Ty.mapCases_length (sn tn : Nat → Nat) (cs : List (Option Ty)) :
@@ -43,14 +41,12 @@ mutual
   | .ptr ⟨space, rights, .table n⟩ => rfl
   | .sum cs => congrArg Ty.sum (Ty.mapCases_id cs)
   | .arr τ n => congrArg (fun t => Ty.arr t n) (Ty.mapNumbers_id τ)
-termination_by τ => sizeOf τ
 
 @[simp] theorem Ty.mapCases_id : ∀ cs : List (Option Ty), Ty.mapCases id id cs = cs
   | [] => rfl
   | none :: cs => congrArg (none :: ·) (Ty.mapCases_id cs)
   | some τ :: cs => by
     simp only [Ty.mapCases, Ty.mapNumbers_id τ, Ty.mapCases_id cs]
-termination_by cs => sizeOf cs
 end
 
 /-- Select the same complete payload after renaming declaration identities. -/
