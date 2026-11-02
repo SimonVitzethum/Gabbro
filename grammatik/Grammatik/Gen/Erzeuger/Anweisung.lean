@@ -91,6 +91,13 @@ def sCallInd : Sz (SS D V l Γ Λ) :=
     Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn ((D.sigNr n).gruende = 0) fun hr =>
       Sz.bind (argsS E (D.sigNr n).params) fun args => Sz.pure ⟨nachSig D (D.sigNr n) Λ, .callInd p args hp hr⟩)
 
+def sCallIndElse : Sz (SS D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ => mitSome (D.sigNr n).erg fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn (0 < (D.sigNr n).gruende) fun hr =>
+      Sz.bindR (argsS E (D.sigNr n).params)
+        (fun m => O.en l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args err =>
+        Sz.pure ⟨nachSig D (D.sigNr n) Λ, .callIndElse p args he hp hr err⟩)
+
 def sLocks : Sz (SS D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.lock) fun L =>
     Sz.wenn (∀ M, Res.held M ∈ Λ → D.rang M < D.rang L) fun hr =>
@@ -170,6 +177,6 @@ def stmtS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D
   Sz.alle [sAssignSlot E, sAssignThru E, sAssignGlob E, sPutBytes E, sAssignVar E, sShift E, sIte E Bs,
     sOnOption O E Bs, sOnTag O E, sOnWhy O E, sCall E, sCallInd E, sLocks O, sBreaking Bs, sTraverse O E,
     sRetry O E Bs, sForever O E, sAxiomCall E, sRegWrite E, sTransition, sPublish E, sAdvances, sRetires, sRet E,
-    sRetWhy, sLeave, sNext, sAssignSlotRef E]
+    sRetWhy, sLeave, sNext, sAssignSlotRef E, sCallIndElse O E]
 
 end Gabbro.Grammatik.Gen

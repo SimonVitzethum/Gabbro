@@ -193,6 +193,7 @@ def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .onWhy .. => "Stmt.onWhy"
   | _, _, _, _, .call .. => "Stmt.call"
   | _, _, _, _, .callInd .. => "Stmt.callInd"
+  | _, _, _, _, .callIndElse .. => "Stmt.callIndElse"
   | _, _, _, _, .locks .. => "Stmt.locks"
   | _, _, _, _, .breaking .. => "Stmt.breaking"
   | _, _, _, _, .traverse .. => "Stmt.traverse"
@@ -219,6 +220,7 @@ def blockStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .bind _ rest => blockStmts rest
   | _, _, _, _, .bindCall _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest => blockStmts rest
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .bindCallElse _ _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => blockStmts rest
@@ -246,6 +248,7 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .regReadElse _ _ _ _ rest => endStmts rest
   | _, _, _, .awaits _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => endStmts rest
+  | _, _, _, .bindCallIndElse _ _ _ _ _ _ rest => endStmts rest
   | _, _, _, .narrow _ _ _ _ rest => endStmts rest
   | _, _, _, .narrowRequired _ _ _ rest => endStmts rest
   | _, _, _, .exchange _ _ _ _ rest => endStmts rest
@@ -284,6 +287,7 @@ def stmtM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l Γ Λ 
   | l, _, Λ, _, .onWhy r arms => zelle l Λ "Stmt.onWhy" ++ (exprM r ++ grundArmsM arms ++ resM Λ ++ paare "Stmt.onWhy" (grundArmsStmts arms))
   | l, _, Λ, _, .call f args _ _ => zelle l Λ "Stmt.call" ++ ("Deklaration.sigNr" :: argsM args ++ rufM V (D.signatur f) Λ ++ resM Λ)
   | l, _, Λ, _, .callInd p args _ _ => zelle l Λ "Stmt.callInd" ++ ("Deklaration.sigNr" :: passtM ++ exprM p ++ argsM args ++ resM Λ)
+  | l, _, Λ, _, .callIndElse p args _ _ _ err => zelle l Λ "Stmt.callIndElse" ++ ("Deklaration.sigNr" :: passtM ++ exprM p ++ argsM args ++ endM err ++ resM Λ ++ paare "Stmt.callIndElse" (endStmts err))
   | l, _, Λ, _, .locks _ _ body => zelle l Λ "Stmt.locks" ++ ("Deklaration.rang" :: blockM body ++ resM Λ ++ paare "Stmt.locks" (blockStmts body))
   | l, _, Λ, _, .breaking _ body => zelle l Λ "Stmt.breaking" ++ ("Deklaration.traeger" :: blockM body ++ resM Λ ++ paare "Stmt.breaking" (blockStmts body))
   | l, _, Λ, _, .traverse _ inv body => zelle l Λ "Stmt.traverse" ++ (exprM inv ++ blockM body ++ resM Λ ++ paare "Stmt.traverse" (blockStmts body))
@@ -307,6 +311,8 @@ def blockM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V l Γ �
   | _, _, _, _, .bind e rest => "Block.bind" :: exprM e ++ blockM rest
   | l, _, Λ, _, .bindCall f args _ _ _ rest => "Block.bindCall" :: argsM args ++ rufM V (D.signatur f) Λ ++ blockM rest
   | l, _, Λ, _, .bindCallInd p args _ _ _ rest => "Block.bindCallInd" :: passtM ++ exprM p ++ argsM args ++ blockM rest
+  | l, _, Λ, _, .bindCallIndElse p args _ _ _ err rest =>
+    zelle l Λ "Block.bindCallIndElse" ++ ("Deklaration.sigNr" :: passtM ++ exprM p ++ argsM args ++ endM err ++ blockM rest ++ paare "Block.bindCallIndElse" (endStmts err))
   | l, _, Λ, _, .bindCallElse f args _ _ _ err rest =>
     zelle l Λ "Block.bindCallElse" ++ (argsM args ++ rufM V (D.signatur f) Λ ++ endM err ++ blockM rest ++ paare "Block.bindCallElse" (endStmts err))
   | _, _, _, _, .bindAxiom _ args _ _ _ _ _ rest => "Block.bindAxiom" :: argsM args ++ blockM rest
@@ -342,6 +348,8 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
     "Endblock.regReadElse" :: "Deklaration.rzusage" :: klasseM (D.rklasse r) ++ exprM z ++ endM sonst ++ endM rest
   | _, _, _, .awaits _ _ _ _ _ rest => "Endblock.awaits" :: endM rest
   | _, _, _, .bindCallInd p args _ _ _ rest => "Endblock.bindCallInd" :: passtM ++ exprM p ++ argsM args ++ endM rest
+  | _, _, _, .bindCallIndElse p args _ _ _ err rest =>
+    "Endblock.bindCallIndElse" :: "Deklaration.sigNr" :: passtM ++ exprM p ++ argsM args ++ endM err ++ endM rest
   | _, _, _, .narrow e _ _ sonst rest =>
     "Endblock.narrow" :: exprM e ++ endM sonst ++ endM rest ++ paare "Endblock.narrow" (endStmts sonst)
   | _, _, _, .exchange _ neu _ _ rest => "Endblock.exchange" :: exprM neu ++ endM rest

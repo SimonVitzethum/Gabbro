@@ -74,6 +74,21 @@ theorem blockS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ
         mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
         Sz.mem_bindR hargs hr' <| Sz.mem_pure _) (by omega)
     · glfertig
+  | bindCallIndElse p args he hp hr err rest =>
+    simp only [groesseBlock] at hu hE hS hB hN hO
+    obtain ⟨p', hpp, ⟨_, _⟩⟩ := hE _ p (by omega)
+    obtain ⟨err', herrm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ err (by omega)
+    obtain ⟨rest', hr'm, ⟨_, _, _, _, _, _⟩⟩ := hO.bl _ _ _ _ rest (by omega)
+    obtain ⟨args', hargs, ⟨_, _⟩⟩ := argsS_rep hE _ args (by omega)
+    refine ⟨.bindCallIndElse p' args' he hp hr err' rest', ?_, ?_⟩
+    · simp only [groesseBlock]
+      have hr' := hr'm (groesseBlock rest' + 0) (by omega)
+      have herr := herrm (groesseEnd err' + (0 + (groesseBlock rest' + 0))) (by omega)
+      blk (bBindCallIndElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+        mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+        Sz.mem_bindR hargs herr <|
+        Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
+    · glfertig
   | bindCallElse f args he hp hr err rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO
     obtain ⟨err', herrm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ err (by omega)
@@ -389,6 +404,21 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
       blk (eBindCallInd O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
         mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
         Sz.mem_bindR hargs hr' <| Sz.mem_pure _) (by omega)
+    · glfertig
+  | bindCallIndElse p args he hp hr err rest =>
+    simp only [groesseEnd] at hu hE hS hO
+    obtain ⟨p', hpp, ⟨_, _⟩⟩ := hE _ p (by omega)
+    obtain ⟨err', herrm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ err (by omega)
+    obtain ⟨rest', hr'm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ rest (by omega)
+    obtain ⟨args', hargs, ⟨_, _⟩⟩ := argsS_rep hE _ args (by omega)
+    refine ⟨.bindCallIndElse p' args' he hp hr err' rest', ?_, ?_⟩
+    · simp only [groesseEnd]
+      have hr' := hr'm (groesseEnd rest' + 0) (by omega)
+      have herr := herrm (groesseEnd err' + (0 + (groesseEnd rest' + 0))) (by omega)
+      blk (eBindCallIndElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+        mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+        Sz.mem_bindR hargs herr <|
+        Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
     · glfertig
   | narrow _ _ _ _ _ => simp only [groesseEnd] at hu; omega
   | narrowRequired _ _ _ _ => simp only [groesseEnd] at hu; omega
