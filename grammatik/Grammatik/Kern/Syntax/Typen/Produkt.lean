@@ -39,6 +39,12 @@ inductive FieldAt.Disj : {fs : List Ty} → {σ τ : Ty} → FieldAt fs σ → F
       FieldAt.Disj (FieldAt.tail i : FieldAt (ρ :: rest) σ)
         (FieldAt.tail j : FieldAt (ρ :: rest) τ)
 
+/-- A field position transported along a type map (idle-root renaming, relocation). -/
+def FieldAt.mapTy (f : Ty → Ty) : {fs : List Ty} → {σ : Ty} → FieldAt fs σ →
+    FieldAt (fs.map f) (f σ)
+  | _, _, .head => .head
+  | _, _, .tail i => .tail (FieldAt.mapTy f i)
+
 section Werte
 
 variable {F : Type} {passt : F → Nat → Bool}

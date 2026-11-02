@@ -277,6 +277,36 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
         zaehleWahr n (fun k => wahr? (eval σ₀ body σ (Env.cons k ρ)))
       refine zaehleWahr_congr n _ _ (fun k _ => ?_)
       exact congrArg wahr? (eval_ru σ₀ σ body (Env.cons k ρ))
+  | _, _, _, .prod r args, ρ => by
+      show evalProd (worldR σ₀) (ruA args) (worldR σ) (envR ρ) = _
+      rw [evalProd_ru σ₀ σ args ρ]
+      rfl
+  | _, _, _, .prodGet v i, ρ => by
+      show prodGetW (FieldAt.mapTy tyR i) (eval (worldR σ₀) (ruE v) (worldR σ) (envR ρ)) = _
+      rw [eval_ru σ₀ σ v ρ]
+      show prodGetW (FieldAt.mapTy tyR i)
+          (ProdVal.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩) _
+            (eval σ₀ v σ ρ)) = _
+      exact ProdVal.relocate_get _ _ _ _ _ i _
+  | _, _, _, .prodSet v i e, ρ => by
+      show prodSetW (FieldAt.mapTy tyR i) (eval (worldR σ₀) (ruE v) (worldR σ) (envR ρ))
+        (eval (worldR σ₀) (ruE e) (worldR σ) (envR ρ)) = _
+      rw [eval_ru σ₀ σ v ρ, eval_ru σ₀ σ e ρ]
+      show prodSetW (FieldAt.mapTy tyR i)
+          (ProdVal.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩) _
+            (eval σ₀ v σ ρ))
+          (Val.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩) _ (eval σ₀ e σ ρ)) = _
+      exact (ProdVal.relocate_set _ _ _ _ _ i _ _).symm
+
+/-- Field arguments evaluate to the relocated tuple (C01): the idle root shifts
+    every field value through the same signature-aware map as `Val.relocate`. -/
+theorem evalProd_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
+    (args : Args D Γ Λ fs) (ρ : Env D Γ),
+    evalProd (worldR σ₀) (ruA args) (worldR σ) (envR ρ) =
+      ProdVal.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩) fs (evalProd σ₀ args σ ρ)
+  | _, _, _, .nil, _ => rfl
+  | _, _, _, .cons e rest, ρ =>
+      ProdVal.pcons_congr (eval_ru σ₀ σ e ρ) (evalProd_ru σ₀ σ rest ρ)
 
 theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),

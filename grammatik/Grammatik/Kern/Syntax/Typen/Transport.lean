@@ -266,6 +266,29 @@ theorem Val.restrict_relocateSum : ∀ (cs : List (Option Ty)) (v : Val F p (.su
     cases c <;> exact congrArg lift ih
 termination_by cs _ => sizeOf cs
 
+/-- Transport commutes with field reads: reading after transport is transport after reading. -/
+theorem ProdVal.relocate_get {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true}) :
+    ∀ (fs : List Ty) {σ : Ty} (i : FieldAt fs σ) (v : ProdVal F p fs),
+      prodGetW (FieldAt.mapTy (Ty.mapNumbers sn tn) i)
+        (ProdVal.relocate sn tn pointer fs v) =
+        Val.relocate sn tn pointer σ (prodGetW i v)
+  | _, _, .head, _ => rfl
+  | _, _, .tail i, v => ProdVal.relocate_get sn tn pointer _ i v.2
+
+/-- Transport commutes with field replacement. -/
+theorem ProdVal.relocate_set {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true}) :
+    ∀ (fs : List Ty) {σ : Ty} (i : FieldAt fs σ) (v : ProdVal F p fs) (x : Val F p σ),
+      ProdVal.relocate sn tn pointer fs (prodSetW i v x) =
+        prodSetW (FieldAt.mapTy (Ty.mapNumbers sn tn) i)
+          (ProdVal.relocate sn tn pointer fs v) (Val.relocate sn tn pointer σ x)
+  | _, _, .head, _, _ => rfl
+  | _, _, .tail i, v, x => ProdVal.pcons_congr rfl
+      (ProdVal.relocate_set sn tn pointer _ i v.2 x)
+
 /-- The left inverse also preserves whole product values, field by field. -/
 theorem ProdVal.restrict_relocate : ∀ (fs : List Ty) (v : ProdVal F p fs),
     ProdVal.restrict sn tn backward fs (ProdVal.relocate sn tn forward fs v) = v

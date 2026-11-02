@@ -97,6 +97,9 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .intBuiltin1 op a => .intBuiltin1 (ibR op) (ruE a)
   | _, _, _, .intBuiltin2 op a b => .intBuiltin2 (ibR op) (ruE a) (ruE b)
   | _, _, _, .count n body => .count n (ruE body)
+  | _, _, _, .prod r args => .prod r (ruA args)
+  | _, _, _, .prodGet v i => .prodGet (ruE v) (FieldAt.mapTy tyR i)
+  | _, _, _, .prodSet v i e => .prodSet (ruE v) (FieldAt.mapTy tyR i) (ruE e)
 
 /-- A payload expression, translated. -/
 def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option Ty} → NutzlastExpr D Γ Λ c →
@@ -104,13 +107,13 @@ def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option Ty} → NutzlastExp
   | _, _, _, .empty => .empty
   | _, _, _, .val e => .val (ruE e)
 
-end
-
 /-- Arguments, translated. -/
 def ruA : {Γ : Ctx} → {Λ : List (Res D)} → {τs : List Ty} → Args D Γ Λ τs →
     Args D.mitRuhe (Γ.map tyR) (Λ.map resR) (τs.map tyR)
   | _, _, _, .nil => .nil
   | _, _, _, .cons e rest => .cons (ruE e) (ruA rest)
+
+end
 
 /-- A result expression, translated. -/
 def ruErg : {Γ : Ctx} → {Λ : List (Res D)} → {e : Option Ty} → ErgExpr D Γ Λ e →
