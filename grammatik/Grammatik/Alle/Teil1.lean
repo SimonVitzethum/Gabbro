@@ -347,3 +347,5 @@ public import Grammatik.Korpus.Programme.Korpus59
 public import Grammatik.Korpus.Programme.Korpus109
 public import Grammatik.Korpus.Programme.Korpus125
 public import Grammatik.Bausteine.Arena.ArenaDyn
+public import Grammatik.Kern.Syntax.Konst.Rang
+public import Grammatik.Kern.Syntax.Konst.Zeuge
