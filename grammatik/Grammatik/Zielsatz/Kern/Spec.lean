@@ -201,6 +201,11 @@
   bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
 
   NOT CLAIMED:
+  * typed function-pointer interface pre/post contracts: `CallContract` and `PtrVerfeinert` state O43,
+    with local transfer to the selected target's concrete contract. The whole-body interface caller duty,
+    prefix replay through havoc/atomic rely, and its inclusion in (b) remain required before source activation.
+    `Programm.ptrVertrag` alone does not strengthen `NutzerPflicht(A)` or `VertragAmOrtG`; pointer contract
+    clauses remain refused by the source exporter. Existing concrete target contracts are still claimed;
   * a waiting bound without the four premises of WAITING (in particular the hold time derived from the program), a
     time bound for `forever` or recursion, termination of `umgebung`/`bedingt` beyond the budget
     (whether a `leave` guard or a base path is ever taken is the program's question); `GabbroZielLeben` claims that a
