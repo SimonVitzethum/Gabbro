@@ -7,7 +7,7 @@ public import Stage0.Senke.Sperre.Satz
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Narrow
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Literal
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
-public import Stage0.Senke.Anweisung.Option
+public import Stage0.Senke.Anweisung.Bindung.Option
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Why
 public import Stage0.Senke.Anweisung.Faelle.CallElse
 public import Stage0.Senke.Anweisung.Faelle.Fnptr

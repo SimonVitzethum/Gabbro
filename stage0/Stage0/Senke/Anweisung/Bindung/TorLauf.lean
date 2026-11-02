@@ -6,7 +6,7 @@
              below `s` changed.
 -/
 module
-public import Stage0.Senke.Anweisung.Pruefung
+public import Stage0.Senke.Anweisung.Bindung.Pruefung
 public import Stage0.Senke.Anweisung.Puffer.Tor
 @[expose] public section
 

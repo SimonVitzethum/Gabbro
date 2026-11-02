@@ -1,8 +1,8 @@
 /- Continuation types for case proofs; the dispatcher keeps the original theorem statements. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Rueckgabe
-public import Stage0.Senke.Anweisung.Tor
-public import Stage0.Senke.Anweisung.Fnptr
+public import Stage0.Senke.Anweisung.Bindung.Tor
+public import Stage0.Senke.Anweisung.Bindung.Fnptr
 @[expose] public section
 
 
