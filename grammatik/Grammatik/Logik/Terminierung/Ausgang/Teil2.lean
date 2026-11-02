@@ -53,6 +53,16 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
       · rename_i hf _ _ _ r _; exact keinGrundSig hf hr r
       · trivial
       · trivial
+  | _, _, _, _, .callIndElse p args _ _ hr err, eb, _, h, σ, ρ => by
+      simp only [execStmt, indSonst]
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
+      obtain ⟨f, hf⟩ := pv
+      simp only
+      split
+      · trivial
+      · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.2 _ _))
+      · trivial
+      · trivial
   | _, _, _, _, .locks _ _ body, eb, _, h, σ, ρ => by
       teile
       exact ohneAus_mapWelt _ (ohneAus_execBlock body eb h _ _)
@@ -113,6 +123,17 @@ theorem ohneAus_execBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b
       split
       · exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
       · rename_i hf _ _ _ r _; exact keinGrundSig hf hr r
+      · trivial
+      · trivial
+  | _, _, _, _, .bindCallIndElse p args _ _ hr err rest, eb, h, σ, ρ => by
+      teile
+      simp only [execBlock, indSonst]
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
+      obtain ⟨f, hf⟩ := pv
+      simp only
+      split
+      · exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
+      · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.1.2 _ _))
       · trivial
       · trivial
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest, eb, h, σ, ρ => by
@@ -280,6 +301,17 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
       split
       · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
       · rename_i hf _ _ _ r _; exact keinGrundSig hf hr r
+      · trivial
+      · trivial
+  | _, _, _, .bindCallIndElse p args _ _ hr err rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd, indSonstE]
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
+      obtain ⟨f, hf⟩ := pv
+      simp only
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
+      · exact endOhneAus_schrumpf (ohneAus_execEnd err eb h.1.2 _ _)
       · trivial
       · trivial
   | _, _, _, .narrow _ _ _ sonst rest, eb, h, σ, ρ => by

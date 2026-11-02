@@ -31,6 +31,7 @@ def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bind _ rest => fremdBlock fa pa rest
   | .bindCall _ _ _ _ _ rest => fremdBlock fa pa rest
   | .bindCallInd _ _ _ _ _ rest => fremdBlock fa pa rest
+  | .bindCallIndElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdBlock fa pa rest
   | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdBlock fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
@@ -74,6 +75,7 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
   | .awaits _ _ _ _ _ rest => fremdEnd fa pa rest
   | .bindCallInd _ _ _ _ _ rest => fremdEnd fa pa rest
+  | .bindCallIndElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdEnd fa pa rest
   | .narrow _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
   | .narrowRequired _ _ _ rest => fremdEnd fa pa rest
   | .exchange _ _ _ _ rest => fremdEnd fa pa rest

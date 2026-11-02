@@ -148,6 +148,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       no cost field). Counted without a callee here and EXCLUDED from the
       bound: the cost engine runs the gates with `ZS = fun _ => false` (see CUTS). -/
   | .callInd p args _ _ => 1 + kostenExpr p + kostenArgs args
+  | .callIndElse p args _ _ _ err => 1 + kostenExpr p + kostenArgs args + (kostenSonst c pa err + 2)
   | .locks _ _ body => 2 + kostenBlock c pa body
   | .breaking _ body => 1 + kostenBlock c pa body
   | .traverse t inv body =>
@@ -179,6 +180,8 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenBlock c pa rest
   | .bindCallInd p args _ _ _ rest =>
       2 + kostenExpr p + kostenArgs args + kostenBlock c pa rest
+  | .bindCallIndElse p args _ _ _ err rest =>
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
   | .bindCallElse g args _ _ _ err rest =>
       2 + kostenArgs args + c g + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest

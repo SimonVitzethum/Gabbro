@@ -58,6 +58,7 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .onWhy _ arms => oG arms
   | .call f args _ _ => ObjRufOk objs ps f args
   | .callInd .. => False
+  | .callIndElse .. => False
   | .locks _ _ body => oB body
   | .breaking _ body => oB body
   | .traverse _ _ body => oB body
@@ -83,6 +84,7 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .bind _ rest => oB rest
   | .bindCall f args _ _ _ rest => ObjRufOk objs ps f args ∧ oB rest
   | .bindCallInd .. => False
+  | .bindCallIndElse .. => False
   | .bindCallElse f args _ _ _ err rest => ObjRufOk objs ps f args ∧ oE err ∧ oB rest
   | .bindAxiom a _ _ _ _ _ _ rest => KeinTabAx a ∧ oB rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oB rest
@@ -115,6 +117,7 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .regReadElse _ _ _ sonst rest => oE sonst ∧ oE rest
   | .awaits _ _ _ _ _ rest => oE rest
   | .bindCallInd .. => False
+  | .bindCallIndElse .. => False
   | .narrow _ _ _ sonst rest => oE sonst ∧ oE rest
   | .narrowRequired _ _ _ rest => oE rest
   | .exchange _ _ _ _ rest => oE rest
