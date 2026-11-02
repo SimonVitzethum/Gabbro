@@ -316,10 +316,7 @@ def zARumpfF : Endblock zAD (vertragVon zAD zAF) false [] [] :=
     what `reachB` needs; the callee writes nothing and takes no lock. -/
 def zARumpfU : Endblock zAD (vertragVon zAD zAU) false [Ty.int 0 255] [] :=
   .bindCall zAQ Args.nil rfl
-    { hw := fun t _ => nomatch t
-      hg := fun g h => by simp at h
-      hk := ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
-      hh := fun L h => absurd h (List.not_mem_nil _) } rfl
+    { hw := fun t _ => nomatch t, hg := fun g h => by simp at h, hk := ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩, hh := fun L h => absurd h (List.not_mem_nil _) } rfl
     (.ret .empty (List.Perm.refl _))
 
 /-- The fixture program: trivial bodies, no contracts. -/
