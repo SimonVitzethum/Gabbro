@@ -1,17 +1,12 @@
 /- Field-list layout for heterogeneous products, with an empty-product marker. -/
 module
-public import Grammatik.Kern.Syntax.Typen.Produkt
+public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
-
-/-- Static word offset of a typed field. -/
-def productOffset : {fs : List Ty} → {σ : Ty} → FieldAt fs σ → Nat
-  | _, _, .head => 0
-  | _, _, .tail (τ := τ) i => valueWords τ + productOffset i
 
 @[simp] theorem encodeProductFields_nil (L : Lay D) (v : ProdVal D.Fn D.passt []) :
     encodeProductFields L [] v = [] := rfl

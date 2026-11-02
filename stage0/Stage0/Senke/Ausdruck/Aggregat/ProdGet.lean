@@ -7,13 +7,6 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
 
-/-- Static projection uses the shared forward copy, which permits overlapping
-    spans when the destination precedes the source. -/
-def prodGetL {fs : List Ty} {τ : Ty} (i : FieldAt fs τ) (d : Nat)
-    (a : Option (List Runner.IR.II × Nat)) : Option (List Runner.IR.II × Nat) := do
-  let ca ← a
-  pure (ca.1 ++ copyWords (valueWords τ) d (d + productOffset i), ca.2)
-
 /-- The selected field is a contiguous span at its statically computed offset. -/
 theorem encodeProductFields_field_split (L : Lay D) {fs : List Ty} {τ : Ty}
     (i : FieldAt fs τ) (v : ProdVal D.Fn D.passt fs) :
