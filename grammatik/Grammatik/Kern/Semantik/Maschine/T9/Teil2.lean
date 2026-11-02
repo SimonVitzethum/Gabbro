@@ -48,6 +48,8 @@ theorem speicherfest_speicher
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | callInd p args hp hr =>
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
+  | callIndElse p args he hp hr err =>
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | locks L hr body =>
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | breaking i body =>

@@ -268,6 +268,13 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (`GRest.rueckBereit`) is OPEN. -/
   | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
   | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
+  /-- `p(a, b); else (e) { … };` -- fallible call through a function pointer («C07»):
+      nonempty channel (`hr`); normal return drops the value, a reason runs `err` bound.
+      Sugar over `Block.bindCallIndElse` with an empty success tail; no source form yet. -/
+  | callIndElse (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ)) :
+      Stmt l Γ Λ (nachSig D (D.sigNr n) Λ)
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ
@@ -344,6 +351,13 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       the supplied `else` semantics of `narrow` is unchanged. -/
   | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
       (rest : Block l (.int lo' hi' :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  /-- `let x = p(a, b) else (e) { … };` -- fallible call through a function pointer («C07»):
+      `bindCallElse` over the pointer type `(D.sigNr n)`; nonempty channel (`hr`), value by
+      `SigPasst.erg` into `rest`, reason by `SigPasst.gruende` into `err`. No source form yet. -/
+  | bindCallIndElse (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (rest : Block l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ') : Block l Γ Λ Λ'
 
 inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
@@ -420,6 +434,12 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       `Stmt.retScoped` in end-block position; same placeholder status. -/
   | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
   | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
+  /-- `let x = p(a, b) else (e) { … };` at the top level of a body: `Block.bindCallIndElse`
+      with an end-block rest («C07»). -/
+  | bindCallIndElse (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (rest : Endblock l (τ :: Γ) (nachSig D (D.sigNr n) Λ)) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option Ty) → Type where
   | nil : Arms l Γ Λ Λ []
