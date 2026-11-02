@@ -255,6 +255,7 @@ public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
 public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.Zeuge
+public import Grammatik.Bausteine.Kernzelle.KernzelleZeugen
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert
