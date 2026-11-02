@@ -9,13 +9,13 @@ def withMeasure (measure : UMeasure) : UProg :=
   { countdown with fns := [{function "countdown" "countdown" with decreases := some measure}] }
 
 theorem duplicate_clause_zeuge :
-    uMeasureClause [.drops (.variable "n"), .drops (.lit 0)] =
+    uMeasureClause [] [.drops (.variable "n"), .drops (.lit 0)] =
       .error "duplicate or ambiguous decreases clause" := by decide +kernel
 
-theorem hidden_old_zeuge : uMeasureClause [.drops (.bin "+" (.lit 1) (.old (.variable "GLOBAL")))] =
+theorem hidden_old_zeuge : uMeasureClause [] [.drops (.bin "+" (.lit 1) (.old (.variable "GLOBAL")))] =
     .error "old-state read in decreases" := by decide +kernel
 
-theorem unsupported_call_zeuge : uMeasureClause [.drops (.bin "+" (.lit 1) (.call "helper" [.variable "n"]))] =
+theorem unsupported_call_zeuge : uMeasureClause [] [.drops (.bin "+" (.lit 1) (.call "helper" [.variable "n"]))] =
     .error "unsupported call in decreases" := by decide +kernel
 
 theorem hidden_global_zeuge :
@@ -149,7 +149,7 @@ theorem lowerMeasures_denotes_zeuge :
           (eval initial c.2.1 state env).n) ∧
     AkzeptiertX countP (Cover.Differenz.sperrFamilie countdown) [0] [] [] [] = true ∧
     ∀ passes Q S T, MassPflicht countP passes Q S T countM.mass (zykS countP [0]) 0 :=
-  ⟨lowerMeasures_denotes countdown countM 0 [.drops (.variable "n")] (.variable "n")
+  ⟨lowerMeasures_denotes countdown countM 0 [] [.drops (.variable "n")] (.variable "n")
       (.variable "n") rfl rfl rfl,
     countdown_accepted_zeuge, countdown_duty_zeuge⟩
 

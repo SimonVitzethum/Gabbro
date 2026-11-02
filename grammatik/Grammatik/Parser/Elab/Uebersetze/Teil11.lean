@@ -95,7 +95,7 @@ def elabUFunktion (consts : List (String × Int))
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>
-      match uMeasureClause sig.klauseln with
+      match uMeasureClause alias sig.klauseln with
       | .error e => .error e
       | .ok decreases =>
         .ok { name := sig.name,
