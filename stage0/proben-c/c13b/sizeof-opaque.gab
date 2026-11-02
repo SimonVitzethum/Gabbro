@@ -1,0 +1,7 @@
+// An opaque type carries no layout, so its size cannot be answered.
+module c13b_sizeof_opaque {
+opaque type Token;
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    return sizeof(Token);
+}
+}

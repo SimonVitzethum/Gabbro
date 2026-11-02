@@ -1,0 +1,10 @@
+// Wrapping add on the partial limb width u12 wraps modulo 4096: 4095 +% 1 is 0.
+module c13a_add_limb {
+impl fn main() -> u8 effects { pure } {
+    let a : u12 = 4095;
+    let b : u12 = 1;
+    let s : u12 = a +% b;
+    if s == 0 { return 13; }
+    return 99;
+}
+}

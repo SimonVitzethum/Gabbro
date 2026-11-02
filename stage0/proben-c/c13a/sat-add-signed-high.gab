@@ -1,0 +1,10 @@
+// Saturating add on i8 clamps at the top: 120 +| 10 is 127.
+module c13a_sat_sigh {
+impl fn main() -> u8 effects { pure } {
+    let a : i8 = 120;
+    let b : i8 = 10;
+    let s : i8 = a +| b;
+    if s == 127 { return 41; }
+    return 0;
+}
+}

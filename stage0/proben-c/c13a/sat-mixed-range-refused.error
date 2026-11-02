@@ -1,0 +1,1 @@
+refused: saturating `+|` needs one shared integer range, and 0 .. 10 with 20 .. 30 is not one

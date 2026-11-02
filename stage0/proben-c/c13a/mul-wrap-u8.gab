@@ -1,0 +1,8 @@
+// Wrapping multiply on u8 wraps modulo 256: 200 *% 2 is 144.
+module c13a_mul_wrap {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 200;
+    let b : u8 = 2;
+    return a *% b;
+}
+}

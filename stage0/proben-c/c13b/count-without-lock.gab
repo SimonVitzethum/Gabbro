@@ -1,0 +1,14 @@
+// The count predicate reads lock-guarded Vault without holding its lock.
+module c13b_count_without_lock {
+table Vault count 3 { slot { flag : bool, } }
+lock P protects { Vault } rank 1;
+impl fn main() -> u32 in 0 .. 3
+    effects { reads Vault, reads Vault.slots, writes Vault.slots }
+{
+    Vault.slots[0].flag = true;
+    Vault.slots[1].flag = false;
+    Vault.slots[2].flag = true;
+    let n = count k in slots of Vault : Vault.slots[k].flag;
+    return n;
+}
+}

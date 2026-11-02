@@ -1,0 +1,10 @@
+// Rotate left on u16: rotl(4660, 4) is 9025, nibbles of 0x1234 move to 0x2341.
+module c13a_rotl_wide {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 = 4660;
+    let k : u16 in 0 .. 15 = 4;
+    let y : u16 = rotl(x, k);
+    if y == 9025 { return 78; }
+    return 0;
+}
+}

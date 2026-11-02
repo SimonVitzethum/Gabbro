@@ -1,0 +1,28 @@
+count-all: count over slots where every slot matches; expects 4
+count-none: count over slots where no slot matches; expects 0
+count-mixed-neg: count with a negated predicate over mixed truth values; expects 3
+count-param: count predicate capturing a function parameter (taken and score >= limit); expects 2
+count-global: count predicate reading an immutable static threshold; expects 2
+count-nested-shadow: nested count whose inner binder shadows the outer one; expects 2
+count-locked: count over a lock-guarded table inside the lock; expects 2
+count-ensures: count restated in a helper ensures clause; expects 2
+count-as-bound: count narrowed into range and used as an array index; expects 30
+sizeof-scalar: sizeof of the u32 type; expects 4
+sizeof-array-place: sizeof of a three-byte local array; expects 3
+sizeof-array-type: sizeof of the [u32; 4] type; expects 16
+sizeof-record-tight: sizeof of a two-byte record needing no padding; expects 2
+sizeof-record-padded: sizeof of a byte-plus-word record with alignment padding; expects 8
+sizeof-format-packed: sizeof of a packed two-field wire format; expects 6
+lenof-literal: lenof of a two-byte string literal; expects 2
+lenof-concat: lenof after string concatenation; expects 5
+aligned-true: aligned holds for 16 to 8; expects 1
+aligned-false: aligned fails for 18 to 8; expects 0
+aligned-zero: aligned holds for 0 to 8; expects 1
+aligned-var: aligned holds for a computed local (7 + 9) to 8; expects 1
+aligned-requires: aligned in a requires clause over a page-aligned argument; expects 5
+count-cross-table: refused, a count ranges over one table only but the predicate reads a second table
+count-threads: refused, threads names no slot count so the count has no bound
+sizeof-opaque: refused, an opaque type has no layout so sizeof has no value
+aligned-zero-align: refused, alignment 0 is not a positive alignment
+aligned-nonconst: refused, the alignment must be a compile-time constant
+count-without-lock: refused, the count predicate reads a lock-guarded table without holding its lock

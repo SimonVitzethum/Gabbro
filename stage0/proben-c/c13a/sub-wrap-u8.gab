@@ -1,0 +1,8 @@
+// Wrapping subtract on u8 wraps under zero: 3 -% 5 is 254.
+module c13a_sub_wrap {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 3;
+    let b : u8 = 5;
+    return a -% b;
+}
+}

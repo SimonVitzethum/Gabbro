@@ -1,0 +1,7 @@
+// Count trailing zeros on u8 at the top bit: ctz(128) is 7.
+module c13a_ctz_top {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 in 1 .. 255 = 128;
+    return ctz(x);
+}
+}

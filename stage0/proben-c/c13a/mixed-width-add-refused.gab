@@ -1,0 +1,8 @@
+// Wrapping add over two different widths has no single wrap point.
+module c13a_mixed_width {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 1;
+    let b : u16 = 2;
+    return a +% b;
+}
+}
