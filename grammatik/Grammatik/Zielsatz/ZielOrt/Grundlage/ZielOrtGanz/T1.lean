@@ -250,6 +250,7 @@ theorem blatt_logik (P : Programm D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | callInd => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | locks => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | breaking => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | traverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | retry => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | forever => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
