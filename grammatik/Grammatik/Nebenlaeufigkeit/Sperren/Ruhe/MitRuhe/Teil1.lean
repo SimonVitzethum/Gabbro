@@ -78,21 +78,12 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.pa
 theorem valZ_valR (τ : Ty) (v : Val D.Fn D.passt τ) : valZ τ (valR τ v) = v :=
   Val.restrict_relocate (fun n => n + 1) id _ _ (fun _ _ => rfl) τ v
 
-theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), valR τ (valZ τ v) = v
-  | .int _ _, _ => rfl
-  | .bool, _ => rfl
-  | .opt _, _ => rfl
-  | .sum _, _ => rfl
-  | .why _, _ => rfl
-  | .never, _ => rfl
-  | .fl _ _, _ => rfl
-  | .fnptr n, ⟨some f, h⟩ => rfl
-  | .fnptr n, ⟨none, h⟩ => absurd h (by simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
-  not_false_eq_true])
-  | .ptr _ _, _ => rfl
-  | .ref _, _ => rfl
-  | .arr τ _, v => funext fun j => valR_valZ τ (v j)
-  | .str _, _ => rfl
+theorem valR_valZ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)) : valR τ (valZ τ v) = v :=
+  Val.relocate_restrict (fun n => n + 1) id _ _ (fun n v => by
+    obtain ⟨f, h⟩ := v
+    cases f with
+    | some f => rfl
+    | none => simp [passtM] at h) τ v
 
 /-- **`D` plus the runtime's idle root.** Every carrier, lock, mark,
     invariant, axiom and register is `D`'s; field, global, axiom and

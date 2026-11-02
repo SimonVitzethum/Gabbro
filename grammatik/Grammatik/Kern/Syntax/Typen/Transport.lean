@@ -179,4 +179,70 @@ end
 
 end Inverse
 
+section RightInverse
+variable {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+  (sn tn : Nat → Nat)
+  (forward : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true})
+  (backward : ∀ n, {f : F' // p' f (sn n) = true} → {f : F // p f n = true})
+  (hright : ∀ n v, forward n (backward n v) = v)
+
+mutual
+/-- A signature-wise right inverse also preserves nested tagged values. -/
+theorem Val.relocate_restrict : ∀ (τ : Ty) (v : Val F' p' (Ty.mapNumbers sn tn τ)),
+    Val.relocate sn tn forward τ (Val.restrict sn tn backward τ v) = v
+  | .int _ _, _ | .bool, _ | .opt _, _ | .why _, _ | .never, _ | .fl _ _, _
+  | .ptr _ _, _ | .ref _, _ | .str _, _ => rfl
+  | .fnptr n, v => hright n v
+  | .arr τ _, v => funext fun i => Val.relocate_restrict sn tn forward backward hright τ (v i)
+  | .sum cs, v => Val.relocate_restrictSum sn tn forward backward hright cs v
+termination_by τ _ => sizeOf τ
+
+theorem Val.relocate_restrictSum : ∀ (cs : List (Option Ty))
+    (v : Val F' p' (.sum (Ty.mapCases sn tn cs))),
+    Val.relocateSum sn tn forward cs (Val.restrictSum sn tn backward cs v) = v
+  | [], ⟨i, _⟩ => i.elim0
+  | none :: _, ⟨⟨0, _⟩, _⟩ => rfl
+  | some τ :: _, ⟨⟨0, _⟩, v⟩ => by
+    apply Sigma.ext rfl
+    exact heq_of_eq (Val.relocate_restrict sn tn forward backward hright τ v)
+  | none :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
+    congrArg (fun z : Val F' p' (.sum (Ty.mapCases sn tn cs)) =>
+      (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (none :: Ty.mapCases sn tn cs))))
+      (Val.relocate_restrictSum sn tn forward backward hright cs
+        ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+  | some τ :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
+    congrArg (fun z : Val F' p' (.sum (Ty.mapCases sn tn cs)) =>
+      (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (some (Ty.mapNumbers sn tn τ) :: Ty.mapCases sn tn cs))))
+      (Val.relocate_restrictSum sn tn forward backward hright cs
+        ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+termination_by cs _ => sizeOf cs
+end
+
+end RightInverse
+
+namespace TypedPayloadTransport
+
+def schema : Ty := .sum [some (.arr (.sum [none, some (.fnptr 3)]) 1)]
+def value : Val Bool (fun _ _ => true) schema :=
+  ⟨⟨0, by decide⟩, fun _ => ⟨⟨1, by decide⟩, ⟨true, rfl⟩⟩⟩
+
+def forward (n : Nat) (v : {f : Bool // (fun _ _ => true) f n = true}) :
+    {f : Bool // (fun _ _ => true) f (n + 1) = true} := ⟨v.1, rfl⟩
+def backward (n : Nat) (v : {f : Bool // (fun _ _ => true) f (n + 1) = true}) :
+    {f : Bool // (fun _ _ => true) f n = true} := ⟨v.1, rfl⟩
+
+theorem restrict_relocate_zeuge :
+    Val.restrict (fun n => n + 1) id backward schema
+      (Val.relocate (fun n => n + 1) id forward schema value) = value :=
+  Val.restrict_relocate (fun n => n + 1) id forward backward (fun _ _ => rfl) schema value
+
+theorem relocate_restrict_zeuge :
+    Val.relocate (fun n => n + 1) id forward schema
+      (Val.restrict (fun n => n + 1) id backward schema
+        (Val.relocate (fun n => n + 1) id forward schema value)) =
+      Val.relocate (fun n => n + 1) id forward schema value :=
+  Val.relocate_restrict (fun n => n + 1) id forward backward (fun _ _ => rfl) schema _
+
+end TypedPayloadTransport
+
 end Gabbro.Grammatik

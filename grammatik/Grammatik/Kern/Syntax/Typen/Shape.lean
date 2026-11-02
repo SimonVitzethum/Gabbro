@@ -4,30 +4,27 @@ module
 
 namespace Gabbro.Grammatik
 
-/-- Die Typen der Kernsprache. -/
+/-- The types of the kernel language. -/
 inductive Ty where
-  /-- `intty "in" range` -- eine Zahl in `lo .. hi`. -/
+  /-- An integer in the inclusive range `lo .. hi`. -/
   | int (lo hi : Int)
   | bool
-  /-- `option index into T` -- abwesend, oder ein Index in `0 ..< n`. -/
+  /-- Absent, or an index in `0 ..< n`. -/
   | opt (n : Int)
   /-- A closed tagged type, with a complete optional payload type for each case. -/
   | sum (cases : List (Option Ty))
-  /-- `reason` -- `n` Gruende. -/
+  /-- A closed reason family with `n` cases; channel migration is separate. -/
   | why (n : Nat)
-  /-- `never` -- der Typ ohne Wert: die Antwort einer `divergent`/`prim` Funktion. -/
+  /-- The empty result type of a divergent function. -/
   | never
-  /-- `f32`/`f64 in lo .. hi` («F») -- die Schranken als Brueche `(z, n)`, weil `0.5` eine
-      Schranke ist. Der Wert ist eine ENDLICHE Gleitkommazahl der Maschine im Bereich. -/
+  /-- A finite IEEE value between rational bounds. -/
   | fl (lo hi : Int × Int)
   /-- `fn(…) -> T effects {…} costs …` -- a function pointer («B8»): the value is a function whose
       own signature CONFORMS to signature number `sig` (`Deklaration.passt`, `SigPasst`; structural
       since 2026-10-21). -/
   | fnptr (sig : Nat)
-  /-- `ptr<space, rights> T` -- ein Zeiger auf den Traeger Nummer `t` (M3). Der Wert ist die
-      FAEHIGKEIT, `t` anzusprechen; jeder Zugriff hindurch braucht die Waechter von `t`
-      wie ein direkter. Zwei Zeiger auf `t` sind damit zwei Namen fuer EINE Welt unter EINEM
-      Waechter -- der Alias kostet keine Sicherheit, nur Logik (§15.8). -/
+  /-- A capability for carrier `t`. Every access requires its existing guards;
+      another capability for the same carrier grants no independent protection. -/
   | ptr (t : Nat) (rw : Bool)
   /-- `index into T` at an open table `T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
       `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
