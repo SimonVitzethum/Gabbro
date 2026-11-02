@@ -227,10 +227,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             exact ⟨_, _, rfl, fun nodev => hstab nodev⟩
         | some c =>
             simp only [hchild]
-            have hstabRec : ∀ nodev, binding.entries
-                ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) nodev = tbl :=
-              fun nodev => hstab nodev
-            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (loop' := true) (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ hstabRec
+            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (loop' := true) (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ (fun nodev => hstab nodev)
             simp only [execBlock, hrec]
             exact ⟨_, _, rfl, hc3⟩
       obtain ⟨σ', ρ', honOpt, hcOpt⟩ := honOpt
