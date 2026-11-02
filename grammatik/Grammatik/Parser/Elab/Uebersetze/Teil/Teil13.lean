@@ -117,14 +117,14 @@ def uZeigerAnw : Nat → SAnw → List String
 /-- A pointer type of the unit as a head (named `fn#j`) and an elaborated signature with an empty body. -/
 def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) (zeiger : List String)
-    (zb j : Nat) (raw : String) : Except String (UFnKopf × UFn) :=
+    (zb j : Nat) (raw : String) (eigner : List String := []) : Except String (UFnKopf × UFn) :=
   match uZeigerSig raw with
   | .error e => .error e
   | .ok sig =>
     match uZeigerVertrag sig.klauseln with
     | .error e => .error e
     | .ok _ =>
-      match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb with
+      match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb (eigner := eigner) with
       | .error e => .error e
       | .ok (kopf0, schreibt) =>
         let name := "fn#" ++ toString j
@@ -225,6 +225,10 @@ def elabUroh : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok globs0 =>
     let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
+    -- C12: the resolved owner namespace for `own@m` rights: the `linear` type
+    -- names and every table's `owner` mark, deduplicated. Bare `own` stays
+    -- refused: it is the consumes/allocs sugar and needs the C09 flow.
+    let eigner := uOhneDoppelte ((ms.filterMap fun | .typeT flags n _ _ _ => if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++ (ms.filterMap fun | .tableT _ _ _ _ o _ _ => o | _ => none))
     let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
     match uSeq ((ms.filter (fun
         | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias tnames)) with
@@ -300,17 +304,17 @@ def elabUroh : List SItemTief → Except String UProg
     let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
     let zb := fnItems.length + transitionFns.length
     match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
-        elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r)) with
+        elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r (eigner := eigner))) with
     | .error e => .error e
     | .ok zeigerPaare =>
-    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces)) with
+    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces eigner)) with
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
-    match uSeq ((ms.filterMap uFremdSig).map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
+    match uSeq ((ms.filterMap uFremdSig).map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig (eigner := eigner))) with
     | .error e => .error e
     | .ok axKoepfe0 =>
-    match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys globs)) with
+    match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner))) with
     | .error e => .error e
     | .ok gateKoepfe =>
     let axKoepfe := axKoepfe0 ++ gateKoepfe
@@ -327,7 +331,7 @@ def elabUroh : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok probeFns =>
     match uSeq (fnItems.map (fun (s, b) =>
-        elabUFunktion (spaces := spaces) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+        elabUFunktion (spaces := spaces) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
           (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
           (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e
@@ -352,7 +356,7 @@ def elabUroh : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces }
+        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, eigner := eigner }
       .ok (uMitBoden u)
 
 /-- The elaborator over the Phase-1-sugared unit: `entzuckere` (adapters, `?`) runs first on

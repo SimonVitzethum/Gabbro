@@ -133,24 +133,26 @@ def uParamBreite : STyp → Nat
     else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
   | _ => 0
 
-/-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
+/-- A parameter with its kind (the `param_ty` of `lean_g.rs`). `own@m` rights
+    resolve against the unit's declared owner namespace (`eigner`); the space
+    rule is unchanged (only `normal` travels here). -/
 def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])
-    (whys : List UWhy := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) :
+    (whys : List UWhy := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (eigner : List String := []) :
     String × STyp → Except String (String × Ty × UParamArt)
   | (n, .raw r) =>
     match zeiger.findIdx? (strEq · r) with
     | .some j => .ok (n, Ty.fnptr (zb + j), .fnptr (zb + j))
     | .none =>
-      match uTyp alias tabs (spaces := spaces) (.raw r) with
+      match uTyp alias tabs (spaces := spaces) (eigner := eigner) (.raw r) with
       | .error e => .error e
       | .ok ty => .ok (n, ty, .int)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
     else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
-      let access ← uTableRight rechte
+      let rights ← uTableRight eigner rechte
       let (num, _) ← uTabNr tabs t
-      pure (n, .ptr (.table num access), .ptr (.table num access))
+      pure (n, .ptr ⟨0, rights, .table num⟩, .ptr ⟨0, rights, .table num⟩)
   | (n, .index false t) =>
     match uTabNr tabs t with
     | .error e => .error e
@@ -173,11 +175,11 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
         | .some w => .ok (n, Ty.why w.cases.length, UParamArt.why k)
         | .none => .error ("reason unknown: " ++ a)
       | .none =>
-      match uTyp alias tabs (spaces := spaces) (.atom a) with
+      match uTyp alias tabs (spaces := spaces) (eigner := eigner) (.atom a) with
       | .error e => .error e
       | .ok ty => .ok (n, ty, .int)
   | (n, t) =>
-    match uTyp alias tabs (spaces := spaces) t with
+    match uTyp alias tabs (spaces := spaces) (eigner := eigner) t with
     | .error e => .error e
     | .ok ty => .ok (n, ty, uArtVon ty)
 

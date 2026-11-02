@@ -300,6 +300,12 @@ structure UProg where
       of every function must name a member (`uMarkenPruef`). -/
   marken : List String := []
   spaces : List String := ["normal"]
+  /-- The unit's declared owner namespace (C12): the `linear` type names and the
+      tables' `owner` marks, deduplicated, in declaration order. `own@m` in a
+      pointer's rights resolves against it; the `D.Marke` correspondence itself
+      (`ownerNr`/`eigner` over a nontrivial `Marke`) waits for the C09 signature
+      flow. -/
+  eigner : List String := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
