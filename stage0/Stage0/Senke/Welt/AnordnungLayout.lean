@@ -121,18 +121,21 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     cases c' with
     | glob g' =>
       change Fin u.globs.length at g'
-      have hgg : g.val = g'.val := stretch_eq ((List.finRange u.globs.length).map (globSz u))
-        g.val g'.val (x - b) (by simpa using g.isLt) (by simpa using g'.isLt)
-        (by simp only [Zelle.adr, layU, alignUp_one] at x1; omega)
-        (by simp only [Zelle.adr, Zelle.bytes, layU, alignUp_one] at x1; simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz]; omega)
-        (by simp only [Zelle.adr, layU, alignUp_one] at x2; omega)
-        (by simp only [Zelle.adr, Zelle.bytes, layU, alignUp_one] at x2; simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz]; omega)
-      exact congrArg Zelle.glob (Fin.ext hgg)
+      by_cases eq : g = g'
+      · subst g'; rfl
+      · have sep := globStarts_disjoint (List.finRange u.globs.length) b (globSz u)
+          (fun g => wordAlign (globAlign u g)) g g' _ _
+          (globStartOf_mem _ _ _ _ g (by simp))
+          (globStartOf_mem _ _ _ _ g' (by simp)) eq
+        simp only [Zelle.adr, Zelle.bytes, layU] at x1 x2
+        simp only [globSz] at sep
+        rcases sep with sep | sep <;> omega
     | elem t f k =>
-      have hg := take_sum_add ((List.finRange u.globs.length).map (globSz u)) g.val (by simpa using g.isLt)
-      simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz] at hg
+      have hg := (globStarts_bounds (List.finRange u.globs.length) b (globSz u)
+        (fun g => wordAlign (globAlign u g)) g _
+        (globStartOf_mem _ _ _ _ g (by simp))).2
+      simp only [globSz] at hg
       simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU, alignUp_one] at x1 x2
-      unfold globsSz at *
       omega
   | elem t f k =>
     change Fin u.tabs.length at t
@@ -140,10 +143,11 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     cases c' with
     | glob g =>
       change Fin u.globs.length at g
-      have hg := take_sum_add ((List.finRange u.globs.length).map (globSz u)) g.val (by simpa using g.isLt)
-      simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz] at hg
+      have hg := (globStarts_bounds (List.finRange u.globs.length) b (globSz u)
+        (fun g => wordAlign (globAlign u g)) g _
+        (globStartOf_mem _ _ _ _ g (by simp))).2
+      simp only [globSz] at hg
       simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU, alignUp_one] at x1 x2
-      unfold globsSz at *
       omega
     | elem t' f' k' =>
       change Fin u.tabs.length at t'
@@ -158,13 +162,15 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
       change (((List.finRange (fieldCount u t')).map (colSz u t')).take f'.val).sum + colSz u t' f' ≤ tabSz u t' at sum2
       simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU, alignUp_one] at x1 x2
       have ht : t.val = t'.val := stretch_eq ((List.finRange u.tabs.length).map (tabSz u)) t.val t'.val
-        (x - (b + globsSz u)) (by simp) (by simp)
+        (x - (globEnd (List.finRange u.globs.length) b (globSz u)
+          (fun g => wordAlign (globAlign u g)))) (by simp) (by simp)
         (by omega) (by simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta]; change _ < _ + tabSz u t; omega)
         (by omega) (by simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta]; change _ < _ + tabSz u t'; omega)
       have eqt : t = t' := Fin.ext ht
       subst t'
       have hf : f.val = f'.val := stretch_eq ((List.finRange (fieldCount u t)).map (colSz u t)) f.val f'.val
-        (x - (b + globsSz u + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum))
+        (x - (globEnd (List.finRange u.globs.length) b (globSz u)
+          (fun g => wordAlign (globAlign u g)) + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum))
         (by simp) (by simp) (by omega) (by simp; omega) (by omega) (by simp; omega)
       have eqf : f = f' := Fin.ext hf
       subst f'
