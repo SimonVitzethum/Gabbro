@@ -419,7 +419,6 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
         else none
       else none
     | _, _ => none
-  | _, _, _, .narrowRequired .., reserved => none
   -- C11 execEnd has the same placeholder as execStmt; it ignores R.scopes.
   -- Keep both scoped returns refused until scope unwinding is modelled.
   | _, _, _, .retScoped .., reserved => none
