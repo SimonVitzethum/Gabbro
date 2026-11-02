@@ -7,7 +7,7 @@
   `t .. t+15` are scratch. `mulLimb_run` proves its effect equals `mulStepW` on the slot words.
 -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulWord
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulWord
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.AddChain
 @[expose] public section
 

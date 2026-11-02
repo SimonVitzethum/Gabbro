@@ -10,7 +10,7 @@ module
 public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulRun
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
 @[expose] public section

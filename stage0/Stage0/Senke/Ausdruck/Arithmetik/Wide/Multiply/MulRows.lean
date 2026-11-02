@@ -8,7 +8,7 @@
   digit `k-1`. The accumulator then holds `X * Y mod 2^(64k)`.
 -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulChain
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulChain
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Compare
 @[expose] public section
 

@@ -7,7 +7,7 @@
   same `sumDig`/`carryAt` chain as addition, with the multiplicand digits scaled by `x`.
 -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulBlock
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulBlock
 @[expose] public section
 
 
