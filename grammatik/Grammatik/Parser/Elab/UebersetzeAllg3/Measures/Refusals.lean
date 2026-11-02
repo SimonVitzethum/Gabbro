@@ -289,4 +289,54 @@ theorem shr_range_zeuge :
     (lowerMeasures (withMeasure (.bin ">>" (.variable "n") (.lit 4097)))).toOption.isSome = false := by
   decide +kernel
 
+/-- A conversion through a built-in width lowers with an empty footprint. -/
+def convU : UProg := withMeasure (.conv "u8" (.variable "n"))
+theorem convLowered : (lowerAllg convU).toOption.isSome = true := by decide +kernel
+def convM := (exported convU convLowered).val
+theorem convSource : SourceTuple convU 0 (convM.mass 0) := convM.source 0
+theorem convDenotes :
+    ∃ c : Component convU 0, convM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf convU)) (env : Env (declOf convU) ((declOf convU).params 0)),
+        SourceValue (fnAt convU 0) (fnAt convU 0).measureConstants env
+          (.call "u8" [.variable "n"]) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes convU convM 0 [] [.drops (.call "u8" [.variable "n"])]
+    (.call "u8" [.variable "n"]) (.conv "u8" (.variable "n")) rfl rfl rfl
+
+/-- A conversion through a unit alias lowers once the alias scope travels with the function. -/
+def convAliasU : UProg := { countdown with fns :=
+  [{function "countdown" "countdown" with decreases := some (.conv "A" (.variable "n")),
+      measureTypes := [("A", (0, 7))]}] }
+theorem convAliasLowered : (lowerAllg convAliasU).toOption.isSome = true := by decide +kernel
+def convAliasM := (exported convAliasU convAliasLowered).val
+theorem convAliasSource : SourceTuple convAliasU 0 (convAliasM.mass 0) := convAliasM.source 0
+theorem convAliasDenotes :
+    ∃ c : Component convAliasU 0, convAliasM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf convAliasU))
+        (env : Env (declOf convAliasU) ((declOf convAliasU).params 0)),
+        SourceValue (fnAt convAliasU 0) (fnAt convAliasU 0).measureConstants env
+          (.call "A" [.variable "n"]) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes convAliasU convAliasM 0 [("A", (0, 7))]
+    [.drops (.call "A" [.variable "n"])]
+    (.call "A" [.variable "n"]) (.conv "A" (.variable "n")) rfl rfl rfl
+
+/-- Collection admits a conversion only when its head names a type of the alias scope. -/
+theorem conv_collect_zeuge :
+    uMeasureClause [("A", (0, 7))] [.drops (.call "A" [.variable "n"])] =
+      .ok (some (.conv "A" (.variable "n"))) := by decide +kernel
+
+/-- Collection refuses a conversion whose head names no type, like any other call. -/
+theorem conv_unknown_zeuge :
+    uMeasureClause [] [.drops (.call "A" [.variable "n"])] =
+      .error "unsupported call in decreases" := by decide +kernel
+
+/-- A conversion whose operand lies outside the target range is refused, never guessed. -/
+theorem conv_range_zeuge :
+    (lowerMeasures (withMeasure (.conv "i1" (.variable "n")))).toOption.isSome = false := by
+  decide +kernel
+
+/-- A call that names no type is refused at lowering too, never read as a conversion. -/
+theorem conv_call_zeuge :
+    (lowerMeasures (withMeasure (.conv "helper" (.variable "n")))).toOption.isSome = false := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Measures.Fixtures

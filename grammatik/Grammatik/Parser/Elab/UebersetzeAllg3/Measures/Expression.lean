@@ -44,6 +44,7 @@ def parameter (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (na
         else .error "entry parameter mismatch in decreases"
       | _ => .error "decreases parameter is not an integer"
 
+mutual
 /-- Source arithmetic is lowered compositionally with the existing typed arithmetic operators.
     Unsupported operators and calls are explicit refusals, including calls hidden below arithmetic. -/
 def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) :
@@ -140,8 +141,25 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
              denotes := fun entry state env => SourceValue.neg op hs (x.denotes entry state env) }
     else throw "unsupported unary operator in decreases"
   | .old _ => .error "old-state read in decreases"
-  | .call _ _ => .error "unsupported call in decreases"
+  | .call f args => lowerConvCall u Γ Λ fn f args
   | _ => .error "unsupported expression or storage read in decreases"
+/-- A conversion `T(e)`: the head must name a type of the declaration's entry alias scope,
+    and the operand must fit its range; anything else stays a refused call. -/
+def lowerConvCall (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (f : String) :
+    (args : List SExpr) → Except String (Expression u Γ Λ fn (.call f args))
+  | [a] => do
+    let x ← lowerExpression u Γ Λ fn a
+    match uTypName fn.measureTypes f with
+    | .ok (lo, hi) =>
+      match h : LowSide.conv lo hi x.side with
+      | .ok s => pure { side := s,
+          footprint := conv_orte x.footprint h,
+          denotes := fun entry state env => conv_denotes h a f entry state env
+            (x.denotes entry state env) }
+      | .error e => .error e
+    | .error _ => .error "unsupported call in decreases"
+  | _ => .error "unsupported call in decreases"
+end
 
 /-- Successful lowering preserves the written source expression in every world and entry environment. -/
 theorem lowerExpression_denotes (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
