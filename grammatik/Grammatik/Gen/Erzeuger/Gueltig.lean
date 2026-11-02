@@ -244,30 +244,35 @@ theorem gueltig_oder_nicht (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
 
 /-! ## The unreduced statement: programs with every contract -/
 
-/-- The valid programs among ALL programs (bodies of size at most `nb`, contracts of size at most `nc`). -/
+/-- Valid programs over a fixed pointer-interface family (bodies bounded by
+    `nb`, concrete contracts bounded by `nc`). -/
 def genGueltigAlle (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
-    (ws : List D.Fn) (nb nc : Nat) : Sz (Programm D) := fun k =>
-  (progS nb nc k).filter fun P => AkzeptiertX P S fs ls cs ws
+    (ws : List D.Fn) (nb nc k : Nat)
+    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)) :
+    List (Programm D) :=
+  (progS nb nc k ptrs).filter fun P => AkzeptiertX P S fs ls cs ws
 
 /-- **(C) for every program, contracts included.** -/
 theorem gueltigAlle_vollst {nb nc : Nat} (P : Programm D) (hv : AkzeptiertX P S fs ls cs ws = true)
     (hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb)
     (hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc)
     (hi : ∀ i, groesseExpr (P.invariante i) ≤ nc) (hu : groesseProg P < unendlich) :
-    P ∈ genGueltigAlle S fs ls cs ws nb nc (groesseProg P) :=
+    P ∈ genGueltigAlle S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag :=
   List.mem_filter.2 ⟨progS_vollst nb nc P hb hc hi hu, hv⟩
 
-/-- The single-fault programs of component `c` among ALL programs. -/
+/-- Single-fault programs of component `c` over a fixed interface family. -/
 def genBadAlle (c : Fin 10) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (cs : List (D.Tab ⊕ D.Glob))
-    (ws : List D.Fn) (nb nc : Nat) : Sz (Programm D) := fun k =>
-  (progS nb nc k).filter fun P => decide (NurAn c P S fs ls cs ws)
+    (ws : List D.Fn) (nb nc k : Nat)
+    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)) :
+    List (Programm D) :=
+  (progS nb nc k ptrs).filter fun P => decide (NurAn c P S fs ls cs ws)
 
 /-- **(C) for every single-fault program, contracts included.** -/
 theorem badAlle_vollst {c : Fin 10} {nb nc : Nat} (P : Programm D) (hv : NurAn c P S fs ls cs ws)
     (hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb)
     (hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc)
     (hi : ∀ i, groesseExpr (P.invariante i) ≤ nc) (hu : groesseProg P < unendlich) :
-    P ∈ genBadAlle c S fs ls cs ws nb nc (groesseProg P) :=
+    P ∈ genBadAlle c S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag :=
   List.mem_filter.2 ⟨progS_vollst nb nc P hb hc hi hu, decide_eq_true hv⟩
 
 end Gabbro.Grammatik.Gen
