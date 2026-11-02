@@ -232,4 +232,13 @@ theorem groupT_zeuge :
     check [.groupT "G" ["T"] [⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" ∧ check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
 
+/-- C12 remains table-only: named spaces have no checked source binding,
+    owner rights require C09 flow, live bytes require C01/C08/C09, and entry
+    handles require C08/C14 binding plus C09 forwarding. Do not erase these
+    duties merely because table capability descriptors exist in the model. -/
+theorem capability_unbound_zeuge :
+    typeMetadata (.ptr "guest" "r" (.atom "T")) = true ∧
+    typeMetadata (.entry "main" none) = true := by
+  exact ⟨rfl, rfl⟩
+
 end Gabbro.Grammatik.Parser.ExportMetadata
