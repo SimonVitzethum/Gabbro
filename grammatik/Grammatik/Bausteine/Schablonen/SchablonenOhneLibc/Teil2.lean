@@ -3,6 +3,7 @@ module
 public import Grammatik.Bausteine.Schablonen.ZeugeTorModell
 public import Grammatik.Kern.Semantik.Syscall.Syscall
 public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil1
+public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil1a
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
