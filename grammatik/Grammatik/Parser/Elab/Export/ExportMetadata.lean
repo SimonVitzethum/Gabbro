@@ -8,7 +8,10 @@ namespace Gabbro.Grammatik.Parser.ExportMetadata
 
 def typeMetadata : STyp → Bool
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
-  | .ptr space _ ty => space != "normal" || typeMetadata ty
+  | .ptr _ rights (.atom target) =>
+      !(rights.splitOn "+").all (fun right => right == "r" || right == "w" || right == "rw") ||
+        target == "u8"
+  | .ptr .. => true
   | .range ty _ _ _ | .array ty _ => typeMetadata ty
   | _ => false
 
@@ -243,7 +246,7 @@ theorem groupT_zeuge :
     handles require C08/C14 binding plus C09 forwarding. Do not erase these
     duties merely because table capability descriptors exist in the model. -/
 theorem capability_unbound_zeuge :
-    typeMetadata (.ptr "guest" "r" (.atom "T")) = true ∧
+    typeMetadata (.ptr "guest" "own@holder" (.atom "T")) = true ∧
     typeMetadata (.entry "main" none) = true := by
   exact ⟨rfl, rfl⟩
 /-- Required allocation remains refused: arenaAllocRequired has no connected
@@ -299,5 +302,15 @@ theorem tableSpace_zeuge :
     itemMetadata (.tableT "T" (some "provider") (some (.lit 2)) none (some "Data") false []) = true ∧
     itemMetadata (.tableT "T" none (some (.lit 2)) (some "place") (some "Data") false []) = true := by
   exact ⟨rfl, rfl, rfl⟩
+
+theorem namedPointer_bound (space target : String) :
+    typeMetadata (.ptr space "r" (.atom target)) = (target == "u8") := by rfl
+
+theorem namedPointer_zeuge :
+    typeMetadata (.ptr "sharedData" "r" (.atom "T")) = false ∧
+    typeMetadata (.ptr "sharedData" "x" (.atom "T")) = true ∧
+    typeMetadata (.ptr "sharedData" "rw" (.atom "u8")) = true ∧
+    typeMetadata (.ptr "sharedData" "r" (.raw "T")) = true := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata

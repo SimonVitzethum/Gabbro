@@ -50,4 +50,17 @@ def output : Emitted text 64 := candidate.toOption.get candidate_present
 theorem accepted_image : emit text 64 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
 
+def pointerText : String :=
+  "module named_space_pointer_probe { table T count 2 owner sharedData { slot { v : u32 in 0 .. 100, } } impl fn main(p : ptr<sharedData, r> T) -> u32 in 0 .. 100 effects { reads p.slots } { return p.slots[0].v; } }"
+
+def pointerCandidate : Except String (Emitted pointerText 64) := emit pointerText 64
+
+theorem pointer_candidate_present : pointerCandidate.toOption.isSome = true := by decide +kernel
+
+def pointerOutput : Emitted pointerText 64 :=
+  pointerCandidate.toOption.get pointer_candidate_present
+
+theorem pointer_accepted_image : emit pointerText 64 = .ok pointerOutput :=
+  Gabbro.Grammatik.except_ok_get pointer_candidate_present
+
 end Gabbro.Stage0.NamedSpaceWitness
