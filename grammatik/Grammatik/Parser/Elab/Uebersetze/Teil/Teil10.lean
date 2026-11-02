@@ -291,6 +291,8 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                   | .error err => .error err
                   | .ok (ys, cE) => .ok ([UStmt.bindElse y c xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
   | f + 1, ctx, .bindElse .. :: _ => .error "let else without G form"
+  | _ + 1, _, .bindAxiomOpt .. :: _ => .error "optional bind: export pending"
+  | _ + 1, _, .bindAxiomOptElse .. :: _ => .error "optional bind: export pending"
   | f + 1, ctx, .alloc mu x t an v (.some (.block ss e)) :: rest =>
     if mu || t.isSome then .error "alloc binding without G form"
     else
