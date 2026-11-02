@@ -42,7 +42,7 @@ def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String) (checks :
     { names := [], kinds := [], types := [], tabs := tabs, locks := [], held := [],
       res := none, fname := c.cname, globs := globs }
   let boeden ← uSeq (c.boden.map (uSichert ctx))
-  .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde, probe := probeFnName c.cname }
+  .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde, probe := probeFnName c.cname, duty := dutyName c.cname }
 
 def uChecksAux (tabs : List UTab) (globs : List UGlob) (fns namen bekannt : List String) :
     List SCheck → Except String (List UCheck)
