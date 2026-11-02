@@ -110,8 +110,9 @@ structure Signatur (Tab Glob Lock Marke : Type) where
     `T`'s; it requires only locks `T` requires; a lock `T` requires and `S` does not stays held
     by the caller through the call and ranks below `S`'s floor; `T`'s floor is at most `S`'s.
     So everything a call through the pointer establishes for `T` (`RufPasst`) holds for `S`
-    (`RufPasst.vonPasst`). The model has no contract on a signature: `requires`/`ensures` are
-    the program's, per function, and stay with the function actually called. -/
+    (`RufPasst.vonPasst`). This judgment is structural only. Typed interface predicates
+    live in `Programm.ptrVertrag`; their logical refinement is a separate user duty.
+    Concrete `requires`/`ensures` stay with the function actually called. -/
 structure SigPasst {Tab Glob Lock Marke : Type} (rang : Lock → Int)
     (S T : Signatur Tab Glob Lock Marke) : Prop where
   params : S.params = T.params

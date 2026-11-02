@@ -394,6 +394,19 @@ def ErgCtx (Γ : Ctx) : Option Ty → Ctx
   | none => Γ
   | some τ => τ :: Γ
 
+/-- A typed interface contract. Expressions live beside `Programm`, after
+    `Expr` exists, so structural signatures remain independent of expressions.
+    The postcondition covers normal returns and sees the original arguments
+    together with the optional result; `old` uses the entry world. -/
+structure CallContract (S : Signatur D.Tab D.Glob D.Lock D.Marke) where
+  pre : Expr D S.params (Signatur.anfang D S) .bool
+  post : Expr D (ErgCtx S.params S.erg) (Vertrag.vonSig D S).ende .bool
+
+/-- Absence of predicate clauses means two true predicates. Target admission
+    still owes refinement: this default never discharges a target's requires. -/
+def CallContract.trivial (S : Signatur D.Tab D.Glob D.Lock D.Marke) : CallContract D S :=
+  ⟨.tru, .tru⟩
+
 def invSicht (i : D.Inv) : List (Res D) :=
   (D.traeger i).foldr (fun t acc => (D.braucht t).map (Res.von D) ++ acc) []
 
@@ -411,5 +424,9 @@ structure Programm where
       running on its core (`KernPlan`, `Zielsatz/Spec.lean`). Default: no handler, so every
       program written before this field is the program of before. -/
   unterbricht : D.Fn → Bool := fun _ => false
+  /-- Contracts of function-pointer interfaces. Every admitted target needs
+      `PtrVerfeinert`; structural `Deklaration.passt_ok` alone proves no
+      implication between these predicates and concrete function contracts. -/
+  ptrVertrag : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)
 
 end Gabbro.Grammatik
