@@ -27,4 +27,5 @@
 module
 
 public import Grammatik.Korpus.Programme.Korpus59.Teil1
+public import Grammatik.Korpus.Programme.Korpus59.Teil1a
 public import Grammatik.Korpus.Programme.Korpus59.Teil2
