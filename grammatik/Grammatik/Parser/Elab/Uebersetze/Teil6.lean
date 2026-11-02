@@ -31,13 +31,19 @@ where
     | .effs _ :: _ => true
     | _ :: rest => uHatWirkung rest
 
-/-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`, `decreases`,
+/-- Collect exactly one written measure. The surface grammar has one expression, not a tuple. -/
+def uMeasureClause (ks : List SKlausel) : Except String (Option UMeasure) :=
+  match ks.filterMap (fun | .drops e => some e | _ => none) with
+  | [] => .ok none
+  | [e] => (uMeasureSource e).map some
+  | _ => .error "duplicate or ambiguous decreases clause"
+
+/-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`,
     `by`, `advances`, `retires`. `costs`, `section` and `payload` travel nowhere and are ignored, like in
     `lean_g.rs`; so is `deadline <= n ops arch X falsifier p` (with its `arch` word): the date is owed to the
     machine and discharged by a probe, so the clause is dropped like `costs` (lane 255 of the exporter). -/
 def uOhneKlauselForm : List SKlausel → Except String Unit
   | [] => .ok ()
-  | .drops _ :: _ => .error "clause without G form"
   | .moves _ _ :: _ => .error "clause without G form"
   | .quits _ :: _ => .error "clause without G form"
   | _ :: rest => uOhneKlauselForm rest
@@ -86,9 +92,10 @@ def elabKopf (_consts : List (String × Int))
     -- `None | Some(Impl)`)
     if !(strEq art "impl" || strEq art "") then .error "fn is not impl"
     else
-      match uOhneKlauselForm klauseln with
-      | .error e => .error e
-      | .ok _ =>
+      match uMeasureClause klauseln, uOhneKlauselForm klauseln with
+      | .error e, _ => .error e
+      | _, .error e => .error e
+      | .ok _, .ok _ =>
         match uSeq (params.map (uParam alias tabs sums whys zeiger zb)) with
         | .error e => .error e
         | .ok ps =>

@@ -9,6 +9,7 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
 
 @[expose] public section
 
@@ -173,10 +174,9 @@ def lowerAllg (u : UProg) :
         ∃ v, lowerFnAt u f = .ok v := fun f =>
       lowerEach_all_ok u (List.finRange u.fns.length) f
         (List.mem_finRange f) h
-    .ok (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
+    Measures.checkedProgram u (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
       (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
-      (fun i => lowerInvGut u i (wI i)),
-      List.finRange u.fns.length)
+      (fun i => lowerInvGut u i (wI i)))
 
 /-- The lowered invariant at an index known good: `U003` holds and it reads only declared carriers. -/
 theorem lowerInvGut_facts (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i = .ok v) :

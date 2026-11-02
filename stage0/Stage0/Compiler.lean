@@ -2,6 +2,7 @@ module
 public import Stage0.Frontend.Elaboration
 public import Stage0.Frontend.ArrayConstants
 public import Stage0.Frontend.Initializers
+public import Stage0.Frontend.Measures
 public import Stage0.Senke.Ausdruck.Old.Source
 @[expose] public section
 
@@ -31,6 +32,16 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   initializerExports : Frontend.checkInitializers (uMembers (pre108 source.items)) unit = .ok ()
   constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.items)) = .ok ()
   metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.items))
+  /-- The exact source-derived measure, checked by generic lowering at entry parameters/resources. -/
+  measures : {exported : Measures.Export unit // Measures.lowerMeasures unit = .ok exported} :=
+    Measures.checkedExport unit (by
+      obtain ⟨raw, fs, lowered, _⟩ := lowered
+      obtain ⟨exported, origin, _⟩ := Measures.lowerAllg_measures unit raw fs lowered
+      exact ⟨exported, origin⟩)
+  /-- Cycle lengths are checked on the final program, after old-state restoration. -/
+  measureLengths : Measures.cycleLengths unit program measures.val.mass = true :=
+    Frontend.compiled_measure_lengths (uMembers (pre108 source.items)) unit program
+      measures.val measures.property lowered
 
 /-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
 def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
@@ -67,7 +78,10 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
               match ha : OldSource.accepts unit program with
               | .error e => throw e
               | .ok false => throw "refused by the checker (AkzeptiertX)"
-              | .ok true => pure ⟨source, unit, main, program, elaborated, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down, hi, hc, rfl⟩
+              | .ok true => pure { source, unit, main, program, elaborated,
+                  entry := hm, lowered := ⟨raw, fs, hl, hr⟩, accepted := ha,
+                  arrayConstants := arrays.down, initializerExports := hi,
+                  constantExports := hc, metadata := rfl }
 
 /-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
     certified declaration permutation, and the identical
@@ -109,12 +123,42 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
       OldSource.restore original result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
     (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
-    result.unit.exportGate = ExportMetadata.check original
+    result.unit.exportGate = ExportMetadata.check original ∧
+    Measures.lowerMeasures result.unit = .ok result.measures.val ∧
+    (∀ f, Measures.SourceTuple result.unit f (result.measures.val.mass f)) ∧
+    Measures.cycleLengths result.unit result.program result.measures.val.mass = true
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
-    result.accepted, result.arrayConstants, result.metadata⟩
+    result.accepted, result.arrayConstants, result.metadata, result.measures.property,
+    result.measures.val.source, result.measureLengths⟩
+
+/-- The optional termination certificate uses the final compiled program and its exact source
+    measure. The user supplies the existing duty; ordinary compilation and depth fuel are unchanged. -/
+theorem Compiled.termination {text : String} {options : Profil.Options} (result : Compiled text options)
+    (E : Zielsatz.Einheit (declOf result.unit)) (program : E.P = result.program)
+    (duty : Measures.Obligations result.unit E result.measures.val)
+    (C : Zielsatz.PrueferX) (ls : Zielsatz.Aufzaehlung (declOf result.unit).Lock)
+    (cs : Zielsatz.Aufzaehlung ((declOf result.unit).Tab ⊕ (declOf result.unit).Glob))
+    (accepted : C.akzeptiert E (List.finRange result.unit.fns.length) ls.1 cs.1 = true)
+    (user : Zielsatz.NutzerPflichtA E) (passes : Nat) (O : Orakel (declOf result.unit))
+    (hardware : Zielsatz.HardwareAnnahmen O E.Q)
+    (sp : Speicher (declOf result.unit).mitRuhe)
+    (init : Faden → Σ f : (declOf result.unit).mitRuhe.Fn,
+      Env (declOf result.unit).mitRuhe ((declOf result.unit).mitRuhe.params f))
+    (runtime : Zielsatz.Laufzeit E sp init) (alive : Faden → Bool)
+    (run : FadenLaufX E.P.mitRuhe O.mitRuhe passes (Zielsatz.GeteiltV E.P E.ws))
+    (initial : run.K 0 = FadenStart E.P.mitRuhe sp init alive) (thread : Faden) :
+    (∃ N, ∀ j, N ≤ j → run.akt j ≠ some thread) ∧
+      ((∀ w, (init thread).1 = some w →
+          klasse E.P (List.finRange result.unit.fns.length) result.measures.val.mass.hat w = .endet) →
+        ∀ j, ¬ Zielsatz.HaltBenannt O.mitRuhe passes (run.K j).m .budget thread) := by
+  have lengths : Measures.cycleLengths result.unit E.P result.measures.val.mass = true := by
+    rw [program]
+    exact result.measureLengths
+  exact Measures.source_termination result.unit E result.measures.val result.measures.property
+    lengths duty C ls cs accepted user passes O hardware sp init runtime alive run initial thread
 
 end Gabbro.Stage0
