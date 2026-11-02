@@ -408,6 +408,8 @@ theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top 
         have a2 := S2.2
         omega
   | _, _, _, _, _, .cons (c := some τ) b rest, lb, k, st, st', blks, h => by
+      have ihb := fun cenv => lowerB_shape lay cenv lv b
+      have ihr := lowerAr_shape lay cenv lv top W L ov rest
       cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
       rename_i lo hi
       simp only [lowerAr] at h
@@ -421,11 +423,11 @@ theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top 
       simp only [hb] at h
       rcases hb1 : lowerB lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ with _ | ⟨bb, s1⟩
       · simp only [hb1, reduceCtorEq] at h
-      have S1 := lowerB_shape lay (a :: cenv) lv b st.l k ⟨r2, st.l + 1⟩ s1 bb hb1
+      have S1 := ihb (a :: cenv) st.l k ⟨r2, st.l + 1⟩ s1 bb hb1
       simp only [hb1] at h
       rcases hr : lowerAr lay cenv lv top W L ov rest (lb + 1) k s1 with _ | ⟨b2, s2⟩
       · simp only [hr, reduceCtorEq] at h
-      have S2 := lowerAr_shape lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2 hr
+      have S2 := ihr (lb + 1) k s1 s2 b2 hr
       simp only [hr, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       refine ⟨?_, ?_⟩

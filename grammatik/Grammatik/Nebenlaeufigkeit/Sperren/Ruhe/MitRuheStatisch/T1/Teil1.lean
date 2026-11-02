@@ -49,15 +49,16 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .forever _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
   | _, _, _, _, .axiomCall _ args _ _ _ _ _ => ruA_orte args
   | _, _, _, _, .axiomCallElse e args _ _ _ _ _ _ err => by
+      have ih0 := ruEnd_orteP P err
       cases e with
       | none =>
           simp only [ruS, stmtOrteP]
           exact (orteP_nachΛ _ _ _).trans
-            (kongr₂ (· ++ ·) (ruA_orte args) ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
+            (kongr₂ (· ++ ·) (ruA_orte args) ((orteP_umΛ _ _ _).trans (ih0)))
       | some _ =>
           simp only [ruS, stmtOrteP]
           exact (orteP_nachΛ _ _ _).trans
-            (kongr₂ (· ++ ·) (ruA_orte args) ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
+            (kongr₂ (· ++ ·) (ruA_orte args) ((orteP_umΛ _ _ _).trans (ih0)))
   | _, _, _, _, .regWrite _ _ e => ruE_orte e
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish _ e _ _ _ _ => ruE_orte e
@@ -93,29 +94,32 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P err)) (ruB_orteP P rest)
   | _, _, _, _, .bindAxiomOpt e _ args _ _ _ _ rest => by
+      have ih0 := ruB_orteP P rest
       cases e with
       | none =>
           simp only [ruB, blockOrteP]
           exact kongr₂ (· ++ ·) (ruA_orte args)
-            ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
+            ((orteP_vorΛ _ _ _).trans (ih0))
       | some _ =>
           simp only [ruB, blockOrteP]
           exact kongr₂ (· ++ ·) (ruA_orte args)
-            ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
+            ((orteP_vorΛ _ _ _).trans (ih0))
   | _, _, _, _, .bindAxiomOptElse e _ args _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_orteP P err
+      have ih1 := ruB_orteP P rest
       cases e with
       | none =>
           simp only [ruB, blockOrteP]
           exact kongr₂ (· ++ ·)
             (kongr₂ (· ++ ·) (ruA_orte args)
-              ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
-            ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
+              ((orteP_umΛ _ _ _).trans (ih0)))
+            ((orteP_vorΛ _ _ _).trans (ih1))
       | some _ =>
           simp only [ruB, blockOrteP]
           exact kongr₂ (· ++ ·)
             (kongr₂ (· ++ ·) (ruA_orte args)
-              ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
-            ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
+              ((orteP_umΛ _ _ _).trans (ih0)))
+            ((orteP_vorΛ _ _ _).trans (ih1))
   | _, _, _, _, .regRead _ _ rest => ruB_orteP P rest
   | _, _, _, _, .regReadElse _ _ zusage sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte zusage) (ruEnd_orteP P sonst))
@@ -161,29 +165,32 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P err)) (ruEnd_orteP P rest)
   | _, _, _, .bindAxiomOpt e _ args _ _ _ _ rest => by
+      have ih0 := ruEnd_orteP P rest
       cases e with
       | none =>
           simp only [ruEnd, endblockOrteP]
           exact kongr₂ (· ++ ·) (ruA_orte args)
-            ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
+            ((orteP_umΛ _ _ _).trans (ih0))
       | some _ =>
           simp only [ruEnd, endblockOrteP]
           exact kongr₂ (· ++ ·) (ruA_orte args)
-            ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
+            ((orteP_umΛ _ _ _).trans (ih0))
   | _, _, _, .bindAxiomOptElse e _ args _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_orteP P err
+      have ih1 := ruEnd_orteP P rest
       cases e with
       | none =>
           simp only [ruEnd, endblockOrteP]
           exact kongr₂ (· ++ ·)
             (kongr₂ (· ++ ·) (ruA_orte args)
-              ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
-            ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
+              ((orteP_umΛ _ _ _).trans (ih0)))
+            ((orteP_umΛ _ _ _).trans (ih1))
       | some _ =>
           simp only [ruEnd, endblockOrteP]
           exact kongr₂ (· ++ ·)
             (kongr₂ (· ++ ·) (ruA_orte args)
-              ((orteP_umΛ _ _ _).trans (ruEnd_orteP P err)))
-            ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
+              ((orteP_umΛ _ _ _).trans (ih0)))
+            ((orteP_umΛ _ _ _).trans (ih1))
   | _, _, _, .regRead _ _ rest => ruEnd_orteP P rest
   | _, _, _, .regReadElse _ _ zusage sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte zusage) (ruEnd_orteP P sonst))
