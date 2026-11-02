@@ -307,8 +307,9 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
     · exact Or.inl (by simp only [Bool.or_true])
 
 /-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. The value
-    carries the Bool's checks. (The reverse direction is open: it needs
-    `FussSX`-completeness of `fussWXB`, which no chain uses yet.) -/
+    carries the Bool's checks. The reverse (`akzeptiertX_of_spec` below) needs only
+    `FussSX`-completeness of `fussWXB` (`fussWXB_vollstaendig`), proved here from the
+    decided thread-locality, the guard table and the admitted shared atomics. -/
 theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
     (h : AkzeptiertX P S fs ls cs ws checks = true) :
@@ -343,6 +344,77 @@ theorem akzeptiertX_of_akzeptiert {checks : List (CheckDecl D)}
   simp only [Bool.and_eq_true] at h ⊢
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩ := h
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩
+
+/-- A contract-free carrier decides `vertragsFreiB`: no `requires`, no `ensures`, no
+    owed invariant mentions it. Needs no member list: the decided conjunction runs
+    over the given one. -/
+theorem vertragsFreiB_vollstaendig {c : D.Tab ⊕ D.Glob}
+    (h : VertragsFrei P c) : vertragsFreiB P fs c = true := by
+  unfold vertragsFreiB
+  refine List.all_eq_true.mpr fun g _ => ?_
+  obtain ⟨h1, h2, h3⟩ := h g
+  have e1 : !(istIn (P.requires g).orte c) = true := by
+    cases he : istIn (P.requires g).orte c with
+    | true => exact absurd (istIn_iff.mp he) h1
+    | false => rfl
+  have e2 : !(istIn (P.ensures g).orte c) = true := by
+    cases he : istIn (P.ensures g).orte c with
+    | true => exact absurd (istIn_iff.mp he) h2
+    | false => rfl
+  have e3 : !(istIn (invOrteP P g) c) = true := by
+    cases he : istIn (invOrteP P g) c with
+    | true => exact absurd (istIn_iff.mp he) h3
+    | false => rfl
+  simp only [Bool.and_eq_true]
+  exact ⟨⟨e1, e2⟩, e3⟩
+
+/-- **The footprint component with the admitted shared atomics is complete**: from
+    `FussSX` over the admitted shared atomics, every footprint carrier is decided --
+    signature-guarded or thread-local, lock-guarded, or an admitted shared atomic. -/
+theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hF : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f) : fussWXB P S fs ws = true := by
+  unfold fussWXB
+  refine List.all_eq_true.mpr fun f _ => ?_
+  rw [Bool.and_eq_true]
+  have e : ∀ c : D.Tab ⊕ D.Glob, getrenntW P fs ws c = lokW P fs ws c :=
+    fun c => congrFun (getrenntW_eq_lokW hvoll) c
+  refine ⟨List.all_eq_true.mpr fun c hc => ?_, List.all_eq_true.mpr fun c hc => ?_⟩
+  · rcases (hF f).1 c hc with h | ⟨L, hB, hL⟩ | hGt
+    · rw [(e c).symm] at h
+      simp only [Bool.or_eq_true]
+      exact Or.inl (Or.inl ((Bool.or_eq_true).mp h))
+    · simp only [Bool.or_eq_true]
+      exact Or.inl (Or.inr (List.any_eq_true.mpr ⟨L, waechterVon_mem.mpr hB, istIn_iff.mpr hL⟩))
+    · obtain ⟨⟨ha, hG⟩, hV⟩ := hGt
+      have hempty : waechterVon c = [] :=
+        List.eq_nil_iff_forall_not_mem.mpr (fun L hL => hG L (waechterVon_mem.mp hL))
+      have hg : geteiltVB P fs c = true := by
+        unfold geteiltVB
+        simp only [Bool.and_eq_true]
+        refine ⟨⟨atomarB_iff.mpr ha, ?_⟩, vertragsFreiB_vollstaendig hV⟩
+        rw [hempty]
+        rfl
+      simp only [Bool.or_eq_true]
+      exact Or.inr hg
+  · have h := (hF f).2 c hc
+    rw [(e c).symm] at h
+    exact h
+
+/-- **The reverse direction**: `AkzeptiertSpecX` gives `AkzeptiertX`, at the value's own
+    checks. The footprint needs exactly the completeness above; every other component
+    already decides both ways. The arena fields are dropped: the Bool has none. -/
+theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : List (ArenaOwnership.Body.ArenaIface D)}
+    (h : AkzeptiertSpecX P S fs ws B) :
+    AkzeptiertX P S fs ls cs ws h.checks = true := by
+  unfold AkzeptiertX
+  simp only [Bool.and_eq_true]
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, fussWXB_vollstaendig hvoll h.fuss⟩,
+    (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
+    wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
+    (rennB_iff hvoll hcs).mpr h.renn⟩, (antwortenB_iff hvoll).mpr h.antworten⟩,
+    (maskenB_iff hvoll).mpr h.masken⟩,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩
 
 end Bool
 
