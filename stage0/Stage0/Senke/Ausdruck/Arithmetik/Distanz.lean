@@ -1,6 +1,6 @@
 /- Saturating signed alignment with an exact Euclidean quotient and tail. -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Ausrichtung
+public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Ausrichtung
 public import Stage0.Senke.Ausdruck.Gleit.Skalieren.Teil6
 @[expose] public section
 

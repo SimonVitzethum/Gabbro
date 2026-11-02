@@ -2,7 +2,7 @@
    This fragment requires an exact word-sized sum. Wide exponent differences
    still need a precision-preserving continuation before add/sub can be enabled. -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Signifikand
+public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Signifikand
 public import Stage0.Senke.Ausdruck.Arithmetik.AddSub
 public import Stage0.Senke.Ausdruck.Gleit.RundCode
 @[expose] public section

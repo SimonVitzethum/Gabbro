@@ -1,7 +1,7 @@
 /- Connected finite operand decoding using only integer S0 instructions.
    The hidden bit is absent at exponent zero, including signed zero. -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Felder
+public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Felder
 @[expose] public section
 
 
