@@ -8,7 +8,7 @@ public import Stage0.Zeugen.Annahme.BuiltinWitness
 public import Stage0.Zeugen.Annahme.StateWitness
 public import Stage0.Zeugen.Annahme.ReturnCleanupWitness
 public import Stage0.Zeugen.Annahme.ResetWholeWitness
-public import Stage0.Zeugen.Ablehnung.CapacityRequiredWitness
+public import Stage0.Zeugen.Annahme.CapacityRequiredWitness
 public import Stage0.Zeugen.Ablehnung.ConsumingTraversalWitness
 public import Stage0.Zeugen.Ablehnung.OwnerMintWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness

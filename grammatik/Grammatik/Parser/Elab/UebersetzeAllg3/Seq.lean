@@ -140,6 +140,14 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
               | .error e => .error e
               | .ok (b, r) => (mkAllocBlock u caller Γ Λ t g fh ev0 voll b).bind fun blk => .ok (blk, r)
             | .ok (_, _) => .error "lower: an alloc is not closed"
+  | Γ, fn, Λ, pe, .allocReqBeg x an v :: rest =>
+    (tabIdx u.tabs an).bind fun t =>
+      (globIdx u.globs (an ++ "#used")).bind fun g =>
+        (fieldHit u t "wert").bind fun fh =>
+          (lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v).bind fun ev0 =>
+            match R.seq (l := l) (Ty.index ((declOf u).count t) :: Γ) (fn.mitIndex x t.val ((declOf u).count t)) Λ pe rest with
+            | .error e => .error e
+            | .ok (b, r) => (mkAllocRequiredBlock u caller Γ Λ t g fh ev0 b).bind fun blk => .ok (blk, r)
   | Γ, fn, Λ, pe, .narrowBeg x lo hi :: rest =>
     (paramPos fn.params x).bind fun j => match fn.params[j]? with
       | some (_, .int l1 h1) =>

@@ -38,12 +38,21 @@ namespace Gabbro.Stage0.CapacityRequiredWitness
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
+/-- A required allocation: the success path of the `else` form, with `stopC 107`
+    on capacity exhaustion (the Stage-0 shape of `narrowRequired`, which
+    `Block.arenaAllocRequired` unfolds to). A full arena is `Logik.kapazitaet`,
+    excluded by the caller's `KoerperGutS/SA` duty; the static arena commits
+    all its slots. -/
 def text : String :=
   "module capacity_probe { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { let i = alloc A (0); return 23; } }"
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_refused :
-    emit text 64 = .error "alloc without else without G form" := by decide +kernel
+theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+
+def output : Emitted text 64 := candidate.toOption.get candidate_present
+
+theorem accepted_image : emit text 64 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
 
 end Gabbro.Stage0.CapacityRequiredWitness

@@ -315,6 +315,22 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                     (ctx.muts.filter (fun m => !strEq m x))) rest with
                 | .error err => .error err
                 | .ok (xs, cE) => .ok ([UStmt.allocBeg x an sv] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
+  | f + 1, ctx, .alloc mu x t an v .none :: rest =>
+    if mu || t.isSome then .error "alloc binding without G form"
+    else
+      match ctx.tabs.findIdx? (fun y => y.arena && strEq y.name an) with
+      | .none => .error ("arena unknown: " ++ an)
+      | .some num =>
+        match ctx.tabs[num]? with
+        | .none => .error "arena unknown"
+        | .some tb =>
+          match uWertBody ctx v with
+          | .error err => .error err
+          | .ok sv =>
+            match uAnwReihe tabs koepfe f (uMitLokal ctx x (UParamArt.index num) (Ty.index tb.count)
+                (ctx.muts.filter (fun m => !strEq m x))) rest with
+            | .error err => .error err
+            | .ok (xs, cE) => .ok ([UStmt.allocReqBeg x an sv] ++ xs, cE)
   | f + 1, ctx, .alloc .. :: _ => .error "alloc without else without G form"
   | f + 1, ctx, .allocVon mu x t tn :: rest =>
     -- `let r = alloc T;` is the call of `T`'s provider (`Block.alloc`, Zucker.lean): `let r = p();`

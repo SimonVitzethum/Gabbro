@@ -222,6 +222,8 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       else .error "lower: register read against its class"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
+  | _, _, _ + 1, .allocReqBeg .. :: _, _ =>
+    .error "lower: an alloc without else at the top level of a body has no G form (Endblock lacks arenaAllocRequired)"
   | Γ, fn, n + 1, .ret v :: rest, r =>
     match lowRetStmt (l := false) u caller Γ fn (resOf u caller) (some ⟨rfl⟩) v with
     | .error e => .error e
