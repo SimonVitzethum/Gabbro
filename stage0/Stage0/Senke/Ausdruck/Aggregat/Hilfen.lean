@@ -221,6 +221,16 @@ def prodGetL {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ) (d : Nat)
   pure (ca.1 ++ copyWords (valueWords τ) d (d + productOffset i),
     max (max ca.2 (d + valueWords (.prod name fs))) (d + valueWords τ))
 
+/-- Replacement evaluates its operands in disjoint spans, then copies the new
+    field into its static slot within the product. -/
+def prodSetL {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ) (d : Nat)
+    (v e : Option (List II × Nat)) : Option (List II × Nat) := do
+  let cv ← v
+  let ce ← e
+  let src := d + valueWords (.prod name fs)
+  pure (cv.1 ++ ce.1 ++ copyWords (valueWords σ) (d + productOffset i) src,
+    max (max cv.2 ce.2) (src + valueWords σ))
+
 /-- General array selection reserves the entire array before evaluating the
     index and uses the shared physical span transport for the selected value. -/
 def arrGetL (τ : Ty) (n d : Nat) (a b : Option (List II × Nat)) : Option (List II × Nat) :=
