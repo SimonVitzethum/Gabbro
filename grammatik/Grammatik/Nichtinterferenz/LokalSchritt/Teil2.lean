@@ -45,6 +45,14 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       generalize eval _ p _ ρ = x
       obtain ⟨g, hg⟩ := x
       exact KRel.push _ _ _ _ _ _ _ _ rfl hsp
+  | bindCallIndElse p args he hp hr err rest =>
+      simp only [nB, Bool.and_eq_true] at hb
+      simp only [kDann]
+      have h1 := hW.lese Λ (p.orte ++ args.orte)
+      rw [h1.eval p (alle_von hST hb.1.1.1) ρ, h1.evalArgs args (alle_von hST hb.1.1.2) ρ]
+      generalize eval _ p _ ρ = x
+      obtain ⟨g, hg⟩ := x
+      exact KRel.push _ _ _ _ _ _ _ _ rfl hsp
   | bindCallElse g args he hp hr err rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]

@@ -201,6 +201,7 @@ theorem kEntf_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
   | traverse t inv body => exact KRel.lokal _ _ _ _ _ rfl hsp
   | retry n bis body ueber => exact KRel.lokal _ _ _ _ _ rfl hsp
   | forever a inv body => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | callIndElse p args he hp hr err => exact KRel.lokal _ _ _ _ _ rfl hsp
   | _ => exact KRel.none_l _
 
 include hAx in
@@ -318,6 +319,11 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.none_l _
   | bindCallInd p args he' hp hr rest =>
+      simp only [kEnde]
+      split
+      · exact KRel.lokal _ _ _ _ _ rfl hsp
+      · exact KRel.none_l _
+  | bindCallIndElse p args he' hp hr err rest =>
       simp only [kEnde]
       split
       · exact KRel.lokal _ _ _ _ _ rfl hsp

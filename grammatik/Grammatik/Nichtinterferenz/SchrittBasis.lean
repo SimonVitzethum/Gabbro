@@ -216,6 +216,8 @@ def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.para
       kLokal st f rho ρ (.wieder n bis body ueber (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .forever a inv body, rest, k =>
       kLokal st f rho ρ (.ewig a passes inv body (.dann rest k)) spur sp
+  | _, _, Λ, _, _, ρ, .callIndElse p args he hp hr err, rest, k =>
+      kLokal st f rho ρ (.dann (.bindCallIndElse p args he hp hr err .nil) (.dann rest k)) spur sp
   | _, _, _, _, _, _, _, _, _ => none
 
 
