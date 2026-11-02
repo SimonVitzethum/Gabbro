@@ -37,6 +37,9 @@ def constStmtCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {�
   | .leave .. => []
   | .next .. => []
   | .assignSlotRef .. => []
+  | .consumeTraverse .. => []
+  | .retScoped .. => []
+  | .retWhyScoped .. => []
 def constBlockCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Block c.D V l Γ Λ Λout → List c.D.Fn
   | .nil => []
   | .cons stmt rest => constStmtCalls c stmt ++ constBlockCalls c rest
@@ -56,6 +59,7 @@ def constBlockCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {
   | .floatLit .. => []
   | .floatOf .. => []
   | .floatNarrow .. => []
+  | .narrowRequired .. => []
 def constEndCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ : List (Res c.D)} : Endblock c.D V l Γ Λ → List c.D.Fn
   | .ret value h => []
   | .cons stmt rest => constStmtCalls c stmt ++ constEndCalls c rest
@@ -74,6 +78,9 @@ def constEndCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ
   | .bindCallInd .. => []
   | .narrow .. => []
   | .exchange .. => []
+  | .narrowRequired .. => []
+  | .retScoped .. => []
+  | .retWhyScoped .. => []
 def constArmsCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} : Arms c.D V l Γ Λ Λout cs → List c.D.Fn
   | .nil => []
   | .cons body rest => constBlockCalls c body ++ constArmsCalls c rest
