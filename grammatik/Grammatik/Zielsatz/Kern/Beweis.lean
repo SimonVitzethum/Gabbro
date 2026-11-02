@@ -72,7 +72,7 @@
 module
 public import Grammatik.Zielsatz.Faeden.RuheNutzer
 public import Grammatik.Zielsatz.Faeden.Ruhe
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 public import Grammatik.Logik.Fortschritt.Fortschritt
 public import Grammatik.Zielsatz.Eigenschaften.Masken

@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
 
 @[expose] public section

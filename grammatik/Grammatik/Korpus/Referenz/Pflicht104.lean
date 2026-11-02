@@ -46,7 +46,7 @@ public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 import all Init.Data.Repr

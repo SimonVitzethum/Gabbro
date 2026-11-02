@@ -278,7 +278,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.ZaehleZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil2
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 public import Grammatik.Kern.Semantik.Durchgaenge
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
@@ -287,7 +287,7 @@ public import Grammatik.Korpus.Referenz.Pflicht104
 public import Grammatik.Korpus.Programme.GenOblig108
 public import Grammatik.Korpus.Referenz.Pflicht108
 public import Grammatik.Proben.ProbeD
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGrund
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtGrund
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
