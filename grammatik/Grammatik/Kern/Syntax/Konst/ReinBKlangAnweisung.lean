@@ -13,77 +13,77 @@ private theorem emptyResources (c : ConstProgram) (rs : List (Res c.D)) : rs = [
 /-- Accepted `constStmtB` cases, as equations proved once (no unfolding at use sites). -/
 private theorem constStmtB_eq_assignVar (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (x : Var Γ τ) (e : Expr c.D Γ Λ τ) :
-    constStmtB c (.assignVar x e) = constExprB c e := by simp only [constStmtB]
+    constStmtB c (V := V) (l := l) (.assignVar x e) = constExprB c e := by simp only [constStmtB]
 
 private theorem constStmtB_eq_ite (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (co : Expr c.D Γ Λ .bool) (yes no : Block c.D V l Γ Λ Λout) :
-    constStmtB c (.ite co yes no) = (constExprB c co && constBlockB c yes && constBlockB c no) := by
+    constStmtB c (V := V) (l := l) (.ite co yes no) = (constExprB c co && constBlockB c yes && constBlockB c no) := by
   simp only [constStmtB]
 
 private theorem constStmtB_eq_onOption (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (v : Expr c.D Γ Λ (.opt n)) (p : Block c.D V l (.index n :: Γ) Λ Λout)
     (a : Block c.D V l Γ Λ Λout) :
-    constStmtB c (.onOption v p a) = (constExprB c v && constBlockB c p && constBlockB c a) := by
+    constStmtB c (V := V) (l := l) (.onOption v p a) = (constExprB c v && constBlockB c p && constBlockB c a) := by
   simp only [constStmtB]
 
 private theorem constStmtB_eq_onTag (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} (v : Expr c.D Γ Λ (.sum cs))
     (arms : Arms c.D V l Γ Λ Λout cs) :
-    constStmtB c (.onTag v arms) = (constExprB c v && constArmsB c arms) := by simp only [constStmtB]
+    constStmtB c (V := V) (l := l) (.onTag v arms) = (constExprB c v && constArmsB c arms) := by simp only [constStmtB]
 
 private theorem constStmtB_eq_onWhy (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {n : Nat} (r : Expr c.D Γ Λ (.why n))
     (arms : GrundArms c.D V l Γ Λ Λout n) :
-    constStmtB c (.onWhy r arms) = (constExprB c r && constReasonArmsB c arms) := by simp only [constStmtB]
+    constStmtB c (V := V) (l := l) (.onWhy r arms) = (constExprB c r && constReasonArmsB c arms) := by simp only [constStmtB]
 
 private theorem constStmtB_eq_ret (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (v : ErgExpr c.D Γ Λ V.erg) (h : Λ.Perm V.ende) :
-    constStmtB c (.ret v h) = constResultB c v := by simp only [constStmtB]
+    constStmtB c (V := V) (l := l) (.ret v h) = constResultB c v := by simp only [constStmtB]
 
 private theorem constStmtB_eq_call (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (f : c.D.Fn) (args : Args c.D Γ Λ (c.D.params f))
     (hp : RufPasst c.D V (c.D.signatur f) Λ) (hr : c.D.gruende f = 0) :
-    constStmtB c (.call f args hp hr) = constArgsB c args := by simp only [constStmtB]
+    constStmtB c (V := V) (l := l) (.call f args hp hr) = constArgsB c args := by simp only [constStmtB]
 
 /-- Accepted `constBlockB` cases, as equations proved once. -/
 private theorem constBlockB_eq_cons (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λmid Λout : List (Res c.D)} (s : Stmt c.D V l Γ Λ Λmid) (r : Block c.D V l Γ Λmid Λout) :
-    constBlockB c (.cons s r) = (constStmtB c s && constBlockB c r) := by simp only [constBlockB]
+    constBlockB c (V := V) (l := l) (.cons s r) = (constStmtB c s && constBlockB c r) := by simp only [constBlockB]
 
 private theorem constBlockB_eq_bind (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (v : Expr c.D Γ Λ τ) (r : Block c.D V l (τ :: Γ) Λ Λout) :
-    constBlockB c (.bind v r) = (constExprB c v && constBlockB c r) := by simp only [constBlockB]
+    constBlockB c (V := V) (l := l) (.bind v r) = (constExprB c v && constBlockB c r) := by simp only [constBlockB]
 
 private theorem constBlockB_eq_bindCall (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (f : c.D.Fn) (args : Args c.D Γ Λ (c.D.params f))
     (he : c.D.erg f = some τ) (hp : RufPasst c.D V (c.D.signatur f) Λ) (hr : c.D.gruende f = 0)
     (r : Block c.D V l (τ :: Γ) (nach c.D f Λ) Λout) :
-    constBlockB c (.bindCall f args he hp hr r) = (constArgsB c args && constBlockB c r) := by
+    constBlockB c (V := V) (l := l) (.bindCall f args he hp hr r) = (constArgsB c args && constBlockB c r) := by
   simp only [constBlockB]
 
 /-- Accepted `constEndB` cases, as equations proved once. -/
 private theorem constEndB_eq_ret (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (v : ErgExpr c.D Γ Λ V.erg) (h : Λ.Perm V.ende) :
-    constEndB c (.ret v h) = constResultB c v := by simp only [constEndB]
+    constEndB c (V := V) (l := l) (.ret v h) = constResultB c v := by simp only [constEndB]
 
 private theorem constEndB_eq_cons (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λmid : List (Res c.D)} (s : Stmt c.D V l Γ Λ Λmid) (r : Endblock c.D V l Γ Λmid) :
-    constEndB c (.cons s r) = (constStmtB c s && constEndB c r) := by simp only [constEndB]
+    constEndB c (V := V) (l := l) (.cons s r) = (constStmtB c s && constEndB c r) := by simp only [constEndB]
 
 private theorem constEndB_eq_bind (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (v : Expr c.D Γ Λ τ) (r : Endblock c.D V l (τ :: Γ) Λ) :
-    constEndB c (.bind v r) = (constExprB c v && constEndB c r) := by simp only [constEndB]
+    constEndB c (V := V) (l := l) (.bind v r) = (constExprB c v && constEndB c r) := by simp only [constEndB]
 
 private theorem constEndB_eq_ite (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (co : Expr c.D Γ Λ .bool) (yes no : Endblock c.D V l Γ Λ) :
-    constEndB c (.ite co yes no) = (constExprB c co && constEndB c yes && constEndB c no) := by
+    constEndB c (V := V) (l := l) (.ite co yes no) = (constExprB c co && constEndB c yes && constEndB c no) := by
   simp only [constEndB]
 
 private theorem constEndB_eq_bindCall (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (f : c.D.Fn) (args : Args c.D Γ Λ (c.D.params f))
     (he : c.D.erg f = some τ) (hp : RufPasst c.D V (c.D.signatur f) Λ) (hr : c.D.gruende f = 0)
     (r : Endblock c.D V l (τ :: Γ) (nach c.D f Λ)) :
-    constEndB c (.bindCall f args he hp hr r) = (constArgsB c args && constEndB c r) := by
+    constEndB c (V := V) (l := l) (.bindCall f args he hp hr r) = (constArgsB c args && constEndB c r) := by
   simp only [constEndB]
 
 set_option maxHeartbeats 6000000 in
