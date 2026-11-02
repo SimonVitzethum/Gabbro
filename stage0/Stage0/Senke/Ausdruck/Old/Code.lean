@@ -1,7 +1,7 @@
 /- Complete entry snapshots below the immutable postcondition parameter environment. -/
 module
 public import Stage0.Senke.Ausdruck.Satz
-public import Stage0.Senke.Ausdruck.Old.Environment
+public import Stage0.Senke.Ausdruck.Old.Column
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
 @[expose] public section
 
@@ -26,7 +26,8 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, .oldG g _ => [.glob g]
   | _, .oldS t f i _ => match entryIndex i with
     | some k => [.elem t f k.toNat]
-    | none => []
+    | none => if EntrySnapshots.columnFits t f then
+        oldCells i ++ EntrySnapshots.column t f 0 (D.count t).toNat else []
   | _, .widen _ _ e | _, .not e | _, .neg e => oldCells e
   | _, .add a b | _, .sub a b | _, .mul a b | _, .eq a b | _, .lt a b | _, .le a b
   | _, .and a b | _, .or a b => oldCells a ++ oldCells b
