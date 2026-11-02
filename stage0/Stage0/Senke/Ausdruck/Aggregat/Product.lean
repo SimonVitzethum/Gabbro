@@ -8,22 +8,10 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
 
-/-- Products concatenate field spans without an empty-value marker. -/
-def productWords : List Ty → Nat
-  | [] => 0
-  | τ :: rest => valueWords τ + productWords rest
-
 /-- Static word offset of a typed field. -/
 def productOffset : {fs : List Ty} → {σ : Ty} → FieldAt fs σ → Nat
   | _, _, .head => 0
   | _, _, .tail (τ := τ) i => valueWords τ + productOffset i
-
-/-- Encode fields in declaration order. -/
-def encodeProductFields (L : Lay D) : (fs : List Ty) →
-    ProdVal D.Fn D.passt fs → List Runner.W
-  | [], _ => []
-  | τ :: rest, v => encodeWords L τ (ProdVal.hd v) ++
-      encodeProductFields L rest (ProdVal.tl v)
 
 @[simp] theorem encodeProductFields_nil (L : Lay D) (v : ProdVal D.Fn D.passt []) :
     encodeProductFields L [] v = [] := rfl
@@ -51,11 +39,6 @@ theorem productWords_pos_of_ne_nil {fs : List Ty} (h : fs ≠ []) :
     have := valueWords_pos τ
     simp only [productWords]
     omega
-
-/-- An empty product carries a zero marker; other products concatenate fields. -/
-def encodeProduct (L : Lay D) (fs : List Ty)
-    (v : ProdVal D.Fn D.passt fs) : List Runner.W :=
-  if fs = [] then [0] else encodeProductFields L fs v
 
 theorem encodeProduct_length (L : Lay D) (fs : List Ty)
     (v : ProdVal D.Fn D.passt fs) :

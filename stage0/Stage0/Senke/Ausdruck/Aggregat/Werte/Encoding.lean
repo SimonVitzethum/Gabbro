@@ -1,6 +1,7 @@
 /- Canonical value words, shared by frames, world storage and call boundaries. -/
 module
 public import Grammatik.Kern.Syntax.Typen.Fall
+public import Grammatik.Kern.Syntax.Typen.Produkt
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encodinga
 public import Stage0.Senke.Welt.Lay
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
@@ -15,6 +16,7 @@ variable {D : Deklaration}
 
 /-- The unique canonical word sequence of a model value. Reference validity, floating
     well-formedness and world permissions remain separate proof obligations. -/
+mutual
 def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .int lo hi, v => integerEncoding (integerWords lo hi) v.n
   | .bool, v => [if wahr? (D := D) v then 1 else 0]
@@ -28,6 +30,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .sum cs, v => if sumFits cs then [BitVec.ofNat 64 (sumN v)] else
       integerEncoding (integerWords 0 (cs.length - 1)) v.1.val ++
         integerEncoding (sumPayloadWords cs) (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2))
+  | .prod _ fs, v => encodeProduct L fs v
   | .arr τ n, v => if n = 0 then [0] else elementEncoding n (fun i => encodeWords L τ (v i))
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++
@@ -36,20 +39,53 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .ptr _, _ => [0]
   | .never, v => nomatch v
 
+/-- Encode heterogeneous fields in declaration order. -/
+def encodeProductFields (L : Lay D) : (fs : List Ty) →
+    ProdVal D.Fn D.passt fs → List Runner.W
+  | [], _ => []
+  | τ :: rest, v => encodeWords L τ (ProdVal.hd v) ++
+      encodeProductFields L rest (ProdVal.tl v)
+
+/-- Empty products retain the canonical zero marker. -/
+def encodeProduct (L : Lay D) (fs : List Ty)
+    (v : ProdVal D.Fn D.passt fs) : List Runner.W :=
+  if fs = [] then [0] else encodeProductFields L fs v
+end
+
 /-- Width is determined entirely by the declared type, never by runtime contents. -/
 theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     (encodeWords L τ v).length = valueWords τ := by
-  induction τ with
-  | arr τ n ih =>
+  cases τ with
+  | arr τ n =>
     simp only [encodeWords]
     split
     · next hn => subst n; simp [valueWords]
     · next hn =>
-      rw [elementEncoding_length n (valueWords τ) _ (fun i => ih (v i))]
+      rw [elementEncoding_length n (valueWords τ) _ (fun i => encodeWords_length L τ (v i))]
       have := valueWords_pos τ
       simp only [valueWords]
       have : 1 ≤ n * valueWords τ := Nat.mul_pos (by omega) (by omega)
       omega
+  | prod name fs =>
+    have fields : ∀ (vs : ProdVal D.Fn D.passt fs),
+        (encodeProductFields L fs vs).length = productWords fs := by
+      induction fs with
+      | nil => intro vs; rfl
+      | cons σ rest ih =>
+        intro vs
+        simp only [encodeProductFields, List.length_append, productWords]
+        rw [encodeWords_length L σ (ProdVal.hd vs), ih]
+    simp only [encodeWords, encodeProduct, valueWords]
+    split
+    · next h => subst fs; rfl
+    · next h =>
+      rw [fields]
+      cases fs with
+      | nil => exact False.elim (h rfl)
+      | cons σ rest =>
+        have := valueWords_pos σ
+        simp only [productWords]
+        omega
   | str n =>
     simp only [encodeWords, valueWords]
     split
@@ -68,6 +104,8 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     · simp [integerEncoding_length]
   | never => exact Empty.elim v
   | _ => simp [encodeWords, integerEncoding_length, valueWords]
+
+termination_by sizeOf τ
 
 /-- Typed parameters use the same tail-first order as lexical variable offsets.
     Starts and ordinary calls therefore share one encoded parameter sequence. -/
