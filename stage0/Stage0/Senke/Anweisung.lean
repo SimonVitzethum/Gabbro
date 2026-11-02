@@ -206,6 +206,12 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) err
       pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
     else none
+  | _, Γ, _, _, .narrowRequired (lo := lo') (hi := hi') e low high rest, reserved =>
+    if inW lo' hi' && inW low low && inW high high then do
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
+      pure (narrowC ((frei Γ reserved)) low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max (frei Γ reserved + 1) cr.2)))
+    else none
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
@@ -322,6 +328,12 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
       let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
       let cx ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) err
       pure (narrowC ((frei Γ reserved)) low high ce.1 cx.1 cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max cx.2 cr.2)))
+    else none
+  | _, Γ, _, .narrowRequired (lo := lo') (hi := hi') e low high rest, reserved =>
+    if inW lo' hi' && inW low low && inW high high then do
+      let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
+      let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+      pure (narrowC ((frei Γ reserved)) low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max (frei Γ reserved + 1) cr.2)))
     else none
   | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))

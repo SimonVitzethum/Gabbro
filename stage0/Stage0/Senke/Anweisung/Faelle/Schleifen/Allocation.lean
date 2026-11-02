@@ -61,6 +61,7 @@ def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => counterDepthB rest
   | .exchange _ _ _ _ rest => counterDepthB rest
   | .narrow _ _ _ sonst rest => max (counterDepthE sonst) (counterDepthB rest)
+  | .narrowRequired _ _ _ rest => counterDepthB rest
   | .check _ sonst rest => max (counterDepthE sonst) (counterDepthB rest)
   | .float _ _ _ _ _ rest => counterDepthB rest
   | .floatLit _ _ _ rest => counterDepthB rest
@@ -86,6 +87,7 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => counterDepthE rest
   | .bindCallInd _ _ _ _ _ rest => counterDepthE rest
   | .narrow _ _ _ sonst rest => max (counterDepthE sonst) (counterDepthE rest)
+  | .narrowRequired _ _ _ rest => counterDepthE rest
   | .exchange _ _ _ _ rest => counterDepthE rest
   | .ite _ t e => max (counterDepthE e) (counterDepthE t)
 
