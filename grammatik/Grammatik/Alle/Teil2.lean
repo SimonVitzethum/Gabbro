@@ -31,6 +31,7 @@ public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkFallSchleife
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeBaum
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeSchleife
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombia
 public import Grammatik.Bausteine.Arena.Struktur.ArenaBaumUnter
 public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashForm
 public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaHashZug

@@ -17,6 +17,7 @@
 -/
 module
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombia
 public import Grammatik.Bausteine.Arena.Struktur.Formen.ArenaSibZug
 @[expose] public section
 
