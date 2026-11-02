@@ -83,7 +83,7 @@ def globAlign (u : UProg) (g : Fin u.globs.length) : Nat :=
   ((globAt u g).placement.map (·.ausrichtung)).getD 1
 
 def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
-    (align : Fin u.globs.length → Nat := fun _ => 1) : Lay (declOf u) where
+    (align : Fin u.globs.length → Nat := globAlign u) : Lay (declOf u) where
   ga g := globStartOf (List.finRange u.globs.length) b (globSz u) align g
   col t f := globEnd (List.finRange u.globs.length) b (globSz u) align + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
     (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum
