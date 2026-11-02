@@ -5,7 +5,6 @@ public import Grammatik.Kern.Syntax.Typen.ProduktZeuge
 public import Grammatik.Bausteine.Walk.Abbildung
 public import Grammatik.Bausteine.Walk.AbbildungZeuge
 public import Grammatik.Bausteine.Walk.BindingZeuge
-public import Grammatik.Bausteine.Walk.Correctness
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
