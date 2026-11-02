@@ -97,9 +97,9 @@ def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
 /-- The words of the locks after the tables, three each. -/
 theorem layU_sync (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : LaySync (layU u tor b) := by
   refine ⟨fun Lk => ?_, fun Lk Lk' hne => ?_⟩
-  · have := Lk.isLt; simp only [layU, alignUp_one]; omega
+  · have := Lk.isLt; simp only [layU, globEnd_one, alignUp_one]; omega
   · have : Lk.val ≠ Lk'.val := fun h => hne (Fin.ext h)
-    simp only [layU, alignUp_one]; omega
+    simp only [layU, globEnd_one, alignUp_one]; omega
 
 /-- A part of a sum and the next summand lie inside the sum. -/
 theorem take_sum_add (xs : List Nat) (i : Nat) (hi : i < xs.length) : (xs.take i).sum + xs[i] ≤ xs.sum := by
@@ -121,7 +121,7 @@ theorem colSz_ge (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) 
 
 theorem col_le (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) :
     (layU u tor b).col t f + colSz u t f ≤ (layU u tor b).hi := by
-  simp only [layU, alignUp_one, tabsSz]
+  simp only [layU, globEnd_one, alignUp_one, tabsSz]
   have h1 := take_sum_add ((List.finRange (fieldCount u t)).map (colSz u t)) f.val (by simp)
   have h2 := take_sum_add ((List.finRange u.tabs.length).map (tabSz u)) t.val (by simp)
   simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta] at h1 h2
@@ -136,24 +136,9 @@ theorem layU_in (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (h :
     have h2 := col_le u tor b t f
     simp only [Lay.elem]
     constructor
-    · simp only [layU, alignUp_one]; omega
+    · simp only [layU, globEnd_one, alignUp_one]; omega
     · omega
-  · have hg := take_sum_add ((List.finRange u.globs.length).map (globSz u)) g.val (by simpa using g.isLt)
-    simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk] at hg
-    change (((List.finRange u.globs.length).map (globSz u)).take g.val).sum + globSz u g ≤ _ at hg
-    simp only [layU, alignUp_one, globsSz, globSz] at *
+  · have hg := globStarts_bounds (List.finRange u.globs.length) b (globSz u)
+      (fun _ => 1) g _ (globStartOf_mem _ _ _ _ g (by simp))
+    simp only [layU, globEnd_one, globSz] at *
     omega
-
-/-! ## No two cells share a word -/
-
-theorem take_sum_mono : (xs : List Nat) → (i j : Nat) → i ≤ j → (xs.take i).sum ≤ (xs.take j).sum
-  | [], _, _, _ => by simp
-  | _ :: _, 0, _, _ => by simp
-  | _ :: _, _ + 1, 0, h => by omega
-  | x :: xs, i + 1, j + 1, h => by
-    simp only [List.take_succ_cons, List.sum_cons]
-    have := take_sum_mono xs i j (by omega)
-    omega
-
-
-end Gabbro.Stage0.Senke
