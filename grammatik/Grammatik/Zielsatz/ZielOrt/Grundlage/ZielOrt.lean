@@ -52,5 +52,6 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T1
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T2
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T3
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt.T3a
 @[expose] public section
 
