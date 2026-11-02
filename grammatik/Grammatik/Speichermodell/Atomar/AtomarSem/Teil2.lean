@@ -80,6 +80,15 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       rw [show (fun σ ρ => execBlockHA S O U A passes R body σ ρ) =
         (fun σ ρ => execBlockH S O U passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execHA_frei body h2 σ ρ]
+  | .consumeTraverse t member edge inv bound mass body, hT, σ, ρ => by
+      have h1 : ∀ x ∈ inv.orte, ¬ T x := fun x h => hT x (by
+        simp only [stmtOrteP, List.mem_append, h, true_or, or_true])
+      have h2 : ∀ x ∈ blockOrteP P body, ¬ T x := fun x h => hT x (by
+        simp only [stmtOrteP, List.mem_append, h, or_true])
+      simp only [execStmtHA, execStmtH, leseA_frei hA h1]
+      rw [show (fun σ ρ => execBlockHA S O U A passes R body σ ρ) =
+        (fun σ ρ => execBlockH S O U passes R body σ ρ) from
+          funext fun σ => funext fun ρ => Block.execHA_frei body h2 σ ρ]
   | .retry n bis body ueber, hT, σ, ρ => by
       have h1 : ∀ x ∈ bis.orte, ¬ T x := fun x h => hT x (by simp only [stmtOrteP, List.append_assoc, List.mem_append, h, true_or])
       have h2 : ∀ x ∈ blockOrteP P body, ¬ T x := fun x h => hT x (by simp only [stmtOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
@@ -114,6 +123,10 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .retWhy .., _, _, _ => rfl
+  | .retScoped e _, hT, σ, ρ => by
+      simp only [stmtOrteP] at hT
+      simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -179,6 +192,10 @@ theorem Block.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
+  | .narrowRequired e lo' hi' rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or])
+      have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, or_true])
+      simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2] <;> (try rfl)
   | .check c sonst rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ c.orte, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, or_true])
@@ -210,6 +227,10 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [endblockOrteP] at hT
       simp only [execEndHA, execEndH, leseA_frei hA hT] <;> (try rfl)
   | .retWhy .., _, _, _ => rfl
+  | .retScoped e _, hT, σ, ρ => by
+      simp only [endblockOrteP] at hT
+      simp only [execEndHA, execEndH, leseA_frei hA hT] <;> (try rfl)
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, hT, σ, ρ => by
@@ -265,6 +286,10 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       have h3 : ∀ x ∈ endblockOrteP P sonst, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
         Endblock.execHA_frei sonst h3] <;> (try rfl)
+  | .narrowRequired e lo' hi' rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, or_true])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
   | .exchange g neu _ _ rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ Sum.inr g :: neu.orte, ¬ T x := fun x h => hT x (by
         simp only [List.mem_cons] at h; rcases h with h | h <;> simp only [endblockOrteP, List.cons_append, h, List.mem_cons, List.mem_append, true_or, or_true])

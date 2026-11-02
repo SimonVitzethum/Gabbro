@@ -46,6 +46,31 @@ theorem g001_korrekt_bindAxiomElse {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   · exact ih_g001_korrekt_rest h1.2 o ho'
 
 set_option linter.unusedSectionVars false in
+theorem g001_korrekt_narrowRequired {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (zr_h : g001 (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ') = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.blockOrte (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ'))
+    (ih_g001_korrekt_rest : ∀ (h : g001 rest = true), ∀ (o : D.Tab ⊕ D.Glob), ∀ (ho : o ∈ Extraktion.blockOrte rest), ¬ istGeist (D := D) o)
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) e.orte && g001 rest) = true := h
+  have ho' : o ∈ e.orte ∨ o ∈ Extraktion.blockOrte rest := by
+    simpa [Extraktion.blockOrte] using ho
+  have h1 : ((orteOk (D := D) e.orte) = true) ∧ ((g001 rest) = true) :=
+    Bool.and_eq_true_iff.mp h0
+  rcases ho' with ho' | ho'
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+  · exact ih_g001_korrekt_rest h1.2 o ho'
+
+set_option linter.unusedSectionVars false in
 theorem g001_korrekt_regRead {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (r)
     (hk)
@@ -412,6 +437,36 @@ theorem g001End_korrekt_retWhy {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (zr_h : g001End (.retWhy zz1 zz2 : Endblock D V l Γ Λ) = true)
     (o : D.Tab ⊕ D.Glob)
     (zr_ho : o ∈ Extraktion.endblockOrte (.retWhy zz1 zz2 : Endblock D V l Γ Λ))
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have ho' : o ∈ ([] : List (D.Tab ⊕ D.Glob)) := by simpa [Extraktion.endblockOrte] using ho
+  exact (List.not_mem_nil ho').elim
+
+set_option linter.unusedSectionVars false in
+theorem g001End_korrekt_retScoped {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e)
+    (R)
+    (zr_h : g001End (.retScoped e R : Endblock D V l Γ Λ) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.endblockOrte (.retScoped e R : Endblock D V l Γ Λ))
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) e.orte) = true := h
+  have ho' : o ∈ e.orte := by
+    simpa [Extraktion.endblockOrte] using ho
+  exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
+
+set_option linter.unusedSectionVars false in
+theorem g001End_korrekt_retWhyScoped {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (zz1)
+    (R)
+    (zr_h : g001End (.retWhyScoped zz1 R : Endblock D V l Γ Λ) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.endblockOrte (.retWhyScoped zz1 R : Endblock D V l Γ Λ))
     : ¬ istGeist (D := D) o :=
   by
   revert zr_h zr_ho

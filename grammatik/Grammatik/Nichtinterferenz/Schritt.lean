@@ -210,6 +210,8 @@ def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.para
       kLokal st f rho ρ (.dann body (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .traverse t inv body, rest, k =>
       kLokal st f rho ρ (.trav t inv body (alleIndizes (D.count t)) (.dann rest k)) spur sp
+  | _, _, _, _, _, ρ, .consumeTraverse t member edge inv bound mass body, rest, k =>
+      kLokal st f rho ρ (.trav t inv body (alleIndizes (D.count t)) (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .retry n bis body ueber, rest, k =>
       kLokal st f rho ρ (.wieder n bis body ueber (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .forever a inv body, rest, k =>
@@ -281,6 +283,10 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.narrow e lo' hi' sonst rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
       else none
+  | l, _, Λ, ρ, .narrowRequired e lo' hi' rest =>
+      if l = false then
+        kLokal st f rho ρ (.dann (Endblock.narrowRequired e lo' hi' rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
+      else none
   | l, _, Λ, ρ, .exchange g neu hw hL rest =>
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.exchange g neu hw hL rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
@@ -292,7 +298,11 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)
+  | _, _, Λ, ρ, .retScoped e _ =>
+      let σ₁ := (sp.welt spur).lese Λ e.orte
+      kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)
   | _, _, _, _, .retWhy r _ => kPopGrund st f spur sp r
+  | _, _, _, _, .retWhyScoped r _ => kPopGrund st f spur sp r
   | _, _, _, _, _ => none
 
 /-- A `dann` residue. -/
@@ -357,6 +367,11 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       if h : lo' ≤ (eval σ₁ e σ₁ ρ).n ∧ (eval σ₁ e σ₁ ρ).n ≤ hi' then
         kLokal st f rho (.cons (show Wert D (.int lo' hi') from ⟨(eval σ₁ e σ₁ ρ).n, h.1, h.2⟩) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
       else kLokal st f rho ρ (.dann sonst.alsBlock.2 (.abbruch k)) σ₁.spur sp
+  | _, _, Λ, _, ρ, .narrowRequired e lo' hi' rest, k =>
+      let σ₁ := (sp.welt spur).lese Λ e.orte
+      if h : lo' ≤ (eval σ₁ e σ₁ ρ).n ∧ (eval σ₁ e σ₁ ρ).n ≤ hi' then
+        kLokal st f rho (.cons (show Wert D (.int lo' hi') from ⟨(eval σ₁ e σ₁ ρ).n, h.1, h.2⟩) ρ) (.dann rest (.schrumpf k)) σ₁.spur sp
+      else none
   | _, _, Λ, _, ρ, .check c sonst rest, k =>
       let σ₁ := (sp.welt spur).lese Λ c.orte
       if wahr? (eval σ₁ c σ₁ ρ) = true then kLokal st f rho ρ (.dann rest k) σ₁.spur sp

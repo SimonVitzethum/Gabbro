@@ -33,6 +33,7 @@ variable {D : Deklaration}
 def Endblock.istRet {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret _ _ => true
+  | .retScoped _ _ => true
   | _ => false
 
 /-- The residue is an end block that is a `return`. -/

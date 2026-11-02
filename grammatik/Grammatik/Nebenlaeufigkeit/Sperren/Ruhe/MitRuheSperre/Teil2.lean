@@ -289,6 +289,36 @@ theorem execStmtH_ru_traverse {V : Vertrag D}
   exact hL
 
 set_option linter.unusedSectionVars false in
+theorem execStmtH_ru_consumeTraverse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (t)
+    (member)
+    (edge)
+    (inv)
+    (bound)
+    (mass)
+    (body)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlockH_ru_body : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockH S.mitRuhe O' U' passes R' (ruB body) (worldR σ) (envR ρ)) (execBlockH S O U passes R body σ ρ))
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS, execStmtH]
+  have hL := traverseLauf_rel (l := l) (fun σ ρ => execBlockH S O U passes R body σ ρ)
+    (fun σ ρ => execBlockH S.mitRuhe O' U' passes R' (ruB body) σ ρ)
+    (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
+    (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
+      wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv)
+        (σ.lese (Λ.map resR) (ruE inv).orte) ρ)))
+    (fun σ ρ => ih_execBlockH_ru_body σ ρ)
+    (fun σ ρ => by simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?])
+    (alleIndizes (D.count t)) σ ρ
+  rw [map_valR_int] at hL
+  exact hL
+
+set_option linter.unusedSectionVars false in
 theorem execStmtH_ru_retry {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
@@ -412,6 +442,22 @@ theorem execStmtH_ru_ret {V : Vertrag D}
     (σ : World D)
     (ρ : Env D Γ)
     : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.ret e hΛ : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.ret e hΛ : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  refine Or.inl ?_
+  simp only [ruS, execStmtH]
+  erw [ruErg_orte, lese_worldR, evalErg_ru]
+  rfl
+
+set_option linter.unusedSectionVars false in
+theorem execStmtH_ru_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.retScoped e R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.retScoped e R : Stmt D V l Γ Λ _) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]

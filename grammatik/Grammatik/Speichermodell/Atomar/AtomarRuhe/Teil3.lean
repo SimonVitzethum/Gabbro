@@ -104,6 +104,33 @@ theorem execBlockHA_ru_narrow {V : Vertrag D}
     exact EndRel.zuAusgang (ih_execEndHA_ru_sonst _ ρ)
 
 set_option linter.unusedSectionVars false in
+theorem execBlockHA_ru_narrowRequired {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlockHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB rest) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R rest σ ρ))
+    : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  simp only [ruB, execBlockHA]
+  simp only [ruE_orte, leseA_worldR hA, eval_ru, valR_int]
+  by_cases hc : lo' ≤ (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ∧
+      (eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n ≤ hi'
+  · erw [dif_pos hc, dif_pos hc]
+    exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest _
+      (Env.cons (⟨(eval (leseA A σ Λ e.orte) e (leseA A σ Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))
+  · erw [dif_neg hc, dif_neg hc]
+    exact Or.inl rfl
+
+set_option linter.unusedSectionVars false in
 theorem execBlockHA_ru_check {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
@@ -238,6 +265,22 @@ theorem execEndHA_ru_ret {V : Vertrag D}
     (σ : World D)
     (ρ : Env D Γ)
     : EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd (.ret e hΛ : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndHA S O U A passes R (.ret e hΛ : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  refine Or.inl ?_
+  simp only [ruEnd, execEndHA]
+  erw [ruErg_orte, leseA_worldR hA, evalErg_ru]
+  rfl
+
+set_option linter.unusedSectionVars false in
+theorem execEndHA_ru_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd (.retScoped e R : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndHA S O U A passes R (.retScoped e R : Endblock D V l Γ Λ) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruEnd, execEndHA]

@@ -35,7 +35,6 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 @[expose] public section
 
-
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
@@ -246,6 +245,10 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       traverseLauf (fun σ ρ => execBlockH body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (alleIndizes (D.count t)) σ ρ
+  | .consumeTraverse t _ _ inv _ _ body, σ, ρ =>
+      traverseLauf (fun σ ρ => execBlockH body σ ρ)
+        (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
+        (alleIndizes (D.count t)) σ ρ
   | .retry n bis body ueberlauf, σ, ρ =>
       retryLauf (fun σ ρ => execBlockH body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ bis.orte; (σ, wahr? (eval σ bis σ ρ)))
@@ -276,6 +279,8 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhy r _, σ, _ => .why σ r
+  | .retScoped e _, σ, ρ => let σ := σ.lese Λ e.orte; .zurueck σ (evalErg σ e σ ρ)
+  | .retWhyScoped r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
 
@@ -352,6 +357,11 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlockH rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEndH sonst σ ρ).zuAusgang
+  | .narrowRequired e lo' hi' rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlockH rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else .logik .kapazitaet
   | .check c sonst rest, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execBlockH rest σ ρ else (execEndH sonst σ ρ).zuAusgang
@@ -381,6 +391,8 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhy r _, σ, _ => .why σ r
+  | .retScoped e _, σ, ρ => let σ := σ.lese Λ e.orte; .zurueck σ (evalErg σ e σ ρ)
+  | .retWhyScoped r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
   | .cons s rest, σ, ρ =>
@@ -454,6 +466,11 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let v := eval σ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEndH rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
       else (execEndH sonst σ ρ)
+  | .narrowRequired e lo' hi' rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEndH rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else .logik .kapazitaet
   | .exchange g neu _ _ rest, σ, ρ =>
       let σ := σ.lese Λ (.inr g :: neu.orte)
       let alt := σ.globs g

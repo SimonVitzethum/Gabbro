@@ -33,6 +33,7 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
       simp only [Stmt.kOk, Stmt.vOk] at h ⊢
       exact Block.vOk_of_kOk body h
   | .traverse .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .consumeTraverse .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .retry .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .forever .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .callInd .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
@@ -51,6 +52,8 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .retires .., _ => rfl
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
+  | .retScoped .., _ => rfl
+  | .retWhyScoped .., h => by simp only [Stmt.kOk, Endblock.kOk, Bool.false_eq_true] at h
   | .leave .., _ => rfl
   | .next .., _ => rfl
 
@@ -79,6 +82,9 @@ theorem Block.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .narrow _ _ _ sonst rest, h => by
       simp only [Block.kOk, Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_of_kOk sonst h.1, Block.vOk_of_kOk rest h.2⟩
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [Block.kOk, Block.vOk] at h ⊢
+      exact Block.vOk_of_kOk rest h
   | .check _ sonst rest, h => by
       simp only [Block.kOk, Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_of_kOk sonst h.1, Block.vOk_of_kOk rest h.2⟩
@@ -99,6 +105,8 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     (e : Endblock D V l Γ Λ) → e.kOk = true → e.vOk K = true
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
+  | .retScoped .., _ => rfl
+  | .retWhyScoped .., h => by simp only [Stmt.kOk, Endblock.kOk, Bool.false_eq_true] at h
   | .leave .., _ => rfl
   | .next .., _ => rfl
   | .cons s rest, h => by
@@ -119,6 +127,9 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   | .narrow _ _ _ sonst rest, h => by
       simp only [Endblock.kOk, Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_of_kOk sonst h.1, Endblock.vOk_of_kOk rest h.2⟩
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [Endblock.kOk, Endblock.vOk] at h ⊢
+      exact Endblock.vOk_of_kOk rest h
   | .exchange _ _ _ _ rest, h => by
       simp only [Endblock.kOk, Endblock.vOk] at h ⊢
       exact Endblock.vOk_of_kOk rest h

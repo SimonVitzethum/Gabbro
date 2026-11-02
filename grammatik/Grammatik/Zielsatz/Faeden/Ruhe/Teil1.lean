@@ -47,6 +47,7 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .locks _ _ body => ruB_ants body
   | _, _, _, _, .breaking _ body => ruB_ants body
   | _, _, _, _, .traverse _ _ body => ruB_ants body
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => ruB_ants body
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_ants body) (ruB_ants ueber)
   | _, _, _, _, .forever _ _ body => ruB_ants body
   | _, _, _, _, .axiomCall .. => rfl
@@ -57,6 +58,8 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .retires .. => ants_nachΛ _ _
   | _, _, _, _, .ret .. => rfl
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -79,6 +82,7 @@ theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .awaits _ _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
+  | _, _, _, _, .narrowRequired _ _ _ rest => ruB_ants rest
   | _, _, _, _, .check _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruB_ants rest)
   | _, _, _, _, .float _ _ _ _ _ rest => ruB_ants rest
   | _, _, _, _, .floatLit _ _ _ rest => ruB_ants rest
@@ -90,6 +94,8 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
     (e : Endblock D V l Γ Λ), (ruEnd e).ants = e.ants
   | _, _, _, .ret .. => rfl
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped .. => rfl
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_ants s) (ruEnd_ants rest)
@@ -107,6 +113,7 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_umΛ _ _).trans (ruEnd_ants rest)
   | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest)
+  | _, _, _, .narrowRequired _ _ _ rest => ruEnd_ants rest
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_ants e) (ruEnd_ants t)
 

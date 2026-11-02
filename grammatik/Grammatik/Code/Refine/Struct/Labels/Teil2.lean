@@ -30,6 +30,10 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .ret e _, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
       exact lowerRet_lbl lay cenv V.gruende e lb st st' blks h
+  | _, _, _, _, .retScoped .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .retWhyScoped .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, hlt, h => by
@@ -154,6 +158,8 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .locks .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .consumeTraverse .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .traverse t _ body, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
@@ -323,6 +329,8 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .narrowRequired .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerB, reduceCtorEq] at h
 
 theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ)
@@ -331,6 +339,10 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .ret e _, lb, st, st', blks, hlt, h => by
       simp only [lowerEnd] at h
       exact lowerRet_lbl lay cenv V.gruende e lb st st' blks h
+  | _, _, _, .retScoped .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .retWhyScoped .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .cons s rest, lb, st, st', blks, hlt, h =>
       lowerEnd_lbl_cons (lay := lay) (cenv := cenv) (lv := lv) (s := s) (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h) (ih_lowerS_lbl_s := lowerS_lbl lay cenv lv s) (ih_lowerEnd_lbl_rest := lowerEnd_lbl lay cenv lv rest)
   | _, _, _, Gabbro.Grammatik.Endblock.bind (τ := τ) e rest, lb, st, st', blks, hlt, h => by
@@ -359,6 +371,14 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
+  | _, _, _, .bindCallElse .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .narrow .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .exchange .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .ite .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindCall .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, hlt, h => by
@@ -376,6 +396,8 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .bindCallInd .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .narrowRequired .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
 
 /-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i` (below `st.l`), the counter

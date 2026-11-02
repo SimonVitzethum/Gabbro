@@ -163,6 +163,21 @@ theorem execEnd_ru_ret {V : Vertrag D}
   rfl
 
 set_option linter.unusedSectionVars false in
+theorem execEnd_ru_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : execEnd O.mitRuhe passes R' (ruEnd (.retScoped e R : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.retScoped e R : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEnd]
+  erw [ruErg_orte, lese_worldR, evalErg_ru]
+  rfl
+
+set_option linter.unusedSectionVars false in
 theorem execEnd_ru_cons {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

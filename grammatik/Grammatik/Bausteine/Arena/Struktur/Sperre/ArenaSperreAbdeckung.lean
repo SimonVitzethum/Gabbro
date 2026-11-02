@@ -34,6 +34,7 @@ mutual
 def Stmt.schleifenfrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .ite _ t e => t.schleifenfrei && e.schleifenfrei
   | .traverse .. => false
+  | .consumeTraverse .. => false
   | .retry .. => false
   | .forever .. => false
   | _ => true
@@ -41,12 +42,14 @@ def Stmt.schleifenfrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
 def Block.schleifenfrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Bool
   | .cons s rest => s.schleifenfrei && rest.schleifenfrei
   | .narrow _ _ _ sonst rest => sonst.schleifenfrei && rest.schleifenfrei
+  | .narrowRequired _ _ _ rest => rest.schleifenfrei
   | .check _ sonst rest => sonst.schleifenfrei && rest.schleifenfrei
   | .bind _ rest => rest.schleifenfrei
   | _ => true
 
 def Endblock.schleifenfrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .cons s rest => s.schleifenfrei && rest.schleifenfrei
+  | .narrowRequired _ _ _ rest => rest.schleifenfrei
   | _ => true
 
 end

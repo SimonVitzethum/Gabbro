@@ -108,6 +108,8 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       exact execBlockH_ru body σ ρ
   | l, _, Λ, _, .traverse t inv body, σ, ρ =>
       execStmtH_ru_traverse (t := t) (inv := inv) (body := body) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_body := execBlockH_ru body) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | l, _, Λ, _, .consumeTraverse t member edge inv bound mass body, σ, ρ =>
+      execStmtH_ru_consumeTraverse (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_body := execBlockH_ru body) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .retry n bis body ueber, σ, ρ =>
       execStmtH_ru_retry (n := n) (bis := bis) (body := body) (ueber := ueber) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_body := execBlockH_ru body) (ih_execBlockH_ru_ueber := execBlockH_ru ueber) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .forever a inv body, σ, ρ =>
@@ -131,7 +133,10 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       rfl
   | _, _, Λ, _, .ret e hΛ, σ, ρ =>
       execStmtH_ru_ret (e := e) (hΛ := hΛ) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, _, .retScoped e R, σ, ρ =>
+      execStmtH_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, _, _, .retWhy .., σ, ρ => Or.inl rfl
+  | _, _, _, _, .retWhyScoped .., σ, ρ => Or.inl rfl
   | _, _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, _, .next _, σ, ρ => Or.inl rfl
 
@@ -164,6 +169,8 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       execBlockH_ru_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .narrow e lo' hi' sonst rest, σ, ρ =>
       execBlockH_ru_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (ih_execEndH_ru_sonst := execEndH_ru sonst) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, _, .narrowRequired e lo' hi' rest, σ, ρ =>
+      execBlockH_ru_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .check c sonst rest, σ, ρ =>
       execBlockH_ru_check (c := c) (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (ih_execEndH_ru_sonst := execEndH_ru sonst) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .float op a b lo hi rest, σ, ρ =>
@@ -180,7 +187,10 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
       (execEndH S O U passes R e σ ρ)
   | _, _, Λ, .ret e hΛ, σ, ρ =>
       execEndH_ru_ret (e := e) (hΛ := hΛ) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, .retScoped e R, σ, ρ =>
+      execEndH_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, _, .retWhy .., σ, ρ => Or.inl rfl
+  | _, _, _, .retWhyScoped .., σ, ρ => Or.inl rfl
   | _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, .next _, σ, ρ => Or.inl rfl
   | _, _, _, .cons s rest, σ, ρ =>
@@ -205,6 +215,8 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
       execEndH_ru_bindCallInd (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .narrow e lo' hi' sonst rest, σ, ρ =>
       execEndH_ru_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (ih_execEndH_ru_sonst := execEndH_ru sonst) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, .narrowRequired e lo' hi' rest, σ, ρ =>
+      execEndH_ru_narrowRequired (e := e) (lo' := lo') (hi' := hi') (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .exchange g neu hw hL rest, σ, ρ =>
       execEndH_ru_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .ite c t e, σ, ρ =>

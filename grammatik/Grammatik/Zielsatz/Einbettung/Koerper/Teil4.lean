@@ -56,6 +56,41 @@ theorem sim_block_narrow {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       exact E.endRel_zuAusgang hR
 
 set_option linter.unusedSectionVars false in
+theorem sim_block_narrowRequired {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ Λ' : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (ih_sim_block_rest : E.KoerperSim hZ (fun Φ => execBlockHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') rest) (execBlockHA S' O' U' A' passes R' (exB hS rest)))
+    : E.KoerperSim hZ (fun Φ => execBlockHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ')) (execBlockHA S' O' U' A' passes R' (exB hS (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ'))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
+    (e.orte)
+  have hev0 := E.frei_alle hZ (@hev) hρ
+  by_cases hc : lo' ≤ (eval σ₁ e σ₁ ρ).n ∧ (eval σ₁ e σ₁ ρ).n ≤ hi'
+  · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_rest M₁ σ₁ _ (Env.cons (τ := .int lo' hi') ⟨(eval σ₁ e σ₁ ρ).n, hc.1, hc.2⟩ ρ) (Env.cons (τ := .int lo' hi') ⟨(eval σ₁ e σ₁ ρ).n, hc.1, hc.2⟩ ρ') hI
+      (E.envR_cons hZ hρ _ _ rfl rfl)
+    refine ⟨M₂, o.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
+    · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2)]
+      rw [dif_pos hc]
+      exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
+    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
+      rw [dif_pos hc]
+      exact E.ausRel_schrumpf hR
+  · refine ⟨M₁, .logik .kapazitaet, hs, fun Φ hP => ?_, ?_⟩
+    · simp only [execBlockHA, hΦ Φ hP]
+      rw [dif_neg hc]
+    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
+      rw [dif_neg hc]
+      exact ⟨logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
+
+set_option linter.unusedSectionVars false in
 theorem sim_block_check {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (c)
     (sonst)
@@ -221,10 +256,38 @@ theorem sim_end_ret {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   · exact ⟨hI, he⟩
 
 set_option linter.unusedSectionVars false in
+theorem sim_end_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retScoped e R : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.retScoped e R : Endblock D V l Γ Λ))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval' hZ T hM hB.havocA hB.atom Λ (Λ.map E.resE)
+    e.orte (E.exErg e).orte (E.orte_exErg e).symm
+  have hev0 := E.frei_alle hZ (@hev) hρ
+  have he := E.evalErg_exErg hZ hI.treu hI.treu e ρ ρ' hρ
+  refine ⟨M₁, .zurueck σ₁ (evalErg σ₁ e σ₁ ρ), hs, fun Φ hP => ?_, ?_⟩
+  · simp only [execEndHA, hΦ Φ hP]
+  · exact ⟨hI, he⟩
+
+set_option linter.unusedSectionVars false in
 theorem sim_end_retWhy {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r)
     (hΛ)
     : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhy r hΛ : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.retWhy r hΛ : Endblock D V l Γ Λ))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execEndHA],
+    by simp only [exEnd, execEndHA]; exact ⟨hM, rfl⟩⟩
+
+set_option linter.unusedSectionVars false in
+theorem sim_end_retWhyScoped {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (r)
+    (R)
+    : E.EndSim hZ (fun Φ => execEndHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhyScoped r R : Endblock D V l Γ Λ)) (execEndHA S' O' U' A' passes R' (exEnd hS (.retWhyScoped r R : Endblock D V l Γ Λ))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
   exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execEndHA],

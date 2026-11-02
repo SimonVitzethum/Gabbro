@@ -412,6 +412,20 @@ theorem RufPasst.vonPasst {D : Deklaration} {V : Vertrag D} {S T : Signatur D.Ta
 
 /-! ## 2. Sichtbereich und Variablen -/
 
+/-- C11 scoped-return evidence (`RueckRessourcen`): the exact residual
+    `V.ende` plus the list of locally acquired scopes to close, innermost
+    first. Exact return is the empty-cleanup case (`scopes = []`); one
+    return API is kept by the new `retScoped` constructors beside the old
+    `ret`. Calls inherit held resources but never acquire permission to
+    release the caller's signature locks; owner marks are never cleanup and
+    a returned capability never borrows a scope about to end. The check that
+    `scopes` is exactly the crossed lexical scopes in reverse order lives in
+    `AkzeptiertSpec(X)`/`Akzeptiert` and is OPEN, as is the scope-indexed
+    `cleanupB` traversal. -/
+structure RueckRessourcen (D : Deklaration) (V : Vertrag D) (Λ : List (Res D)) where
+  scopes : List D.Lock
+  genau : Λ.Perm (V.ende ++ scopes.map Res.held)
+
 abbrev Ctx := List Ty
 
 inductive Var : Ctx → Ty → Type where

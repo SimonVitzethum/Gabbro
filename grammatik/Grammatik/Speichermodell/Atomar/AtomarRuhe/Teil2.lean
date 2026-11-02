@@ -149,6 +149,22 @@ theorem execStmtHA_ru_ret {V : Vertrag D}
   rfl
 
 set_option linter.unusedSectionVars false in
+theorem execStmtHA_ru_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.retScoped e R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.retScoped e R : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  refine Or.inl ?_
+  simp only [ruS, execStmtHA]
+  erw [ruErg_orte, leseA_worldR hA, evalErg_ru]
+  rfl
+
+set_option linter.unusedSectionVars false in
 theorem execBlockHA_ru_cons {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

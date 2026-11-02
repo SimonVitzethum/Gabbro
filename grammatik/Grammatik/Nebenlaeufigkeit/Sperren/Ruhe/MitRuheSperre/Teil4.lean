@@ -103,6 +103,22 @@ theorem execEndH_ru_ret {V : Vertrag D}
   rfl
 
 set_option linter.unusedSectionVars false in
+theorem execEndH_ru_retScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.retScoped e R : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.retScoped e R : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  refine Or.inl ?_
+  simp only [ruEnd, execEndH]
+  erw [ruErg_orte, lese_worldR, evalErg_ru]
+  rfl
+
+set_option linter.unusedSectionVars false in
 theorem execEndH_ru_cons {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
@@ -444,6 +460,32 @@ theorem execEndH_ru_narrow {V : Vertrag D}
       (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))
   · erw [dif_neg hc, dif_neg hc]
     exact ih_execEndH_ru_sonst _ ρ
+
+set_option linter.unusedSectionVars false in
+theorem execEndH_ru_narrowRequired {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndH]
+  simp only [ruE_orte, lese_worldR, eval_ru, valR_int]
+  by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
+  · erw [dif_pos hc, dif_pos hc]
+    exact EndRel.schrumpf (ih_execEndH_ru_rest _
+      (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))
+  · erw [dif_neg hc, dif_neg hc]
+    exact Or.inl rfl
 
 end Haupt
 end Gabbro.Grammatik

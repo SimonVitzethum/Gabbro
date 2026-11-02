@@ -9,7 +9,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-- **Firing a memory-preserving leaf keeps live memory.** From the firing
-    evidence alone: excluded shapes die at the `speicherfest` test, the nine
+    evidence alone: excluded shapes die at the `speicherfest` test, the eleven
     included shapes compute to a read-only or unchanged world. -/
 theorem speicherfest_speicher
     (O : Orakel D) (passes : Nat)
@@ -54,6 +54,8 @@ theorem speicherfest_speicher
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | traverse t inv body =>
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
+  | consumeTraverse t member edge inv bound mass body =>
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | retry n bis body ueberlauf =>
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | forever a inv body =>
@@ -83,6 +85,14 @@ theorem speicherfest_speicher
       subst hstep
       rfl
   | retWhy r hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retScoped e hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retWhyScoped r hΛ =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl

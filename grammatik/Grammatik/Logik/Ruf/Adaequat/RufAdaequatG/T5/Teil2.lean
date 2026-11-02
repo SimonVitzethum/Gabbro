@@ -145,6 +145,7 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
         (blockRet body hb _ _ _ _ hex M1 _ hZ1 hΛ (hA.lauf (RufLaufG.einzeln hs1)))
   | _, _, _, _, .traverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .consumeTraverse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
@@ -158,6 +159,8 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
   | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .retWhyScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .leave .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .next .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
 
@@ -288,6 +291,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
               (by rw [Endblock.execBlock_alsBlock, zuAusgang_zurueck hex]; rfl) M1 _ hZ1
               (heldGenau_lese _ hΛ)
             (hA.lauf (RufLaufG.einzeln hs1)))
+  | _, _, _, _, .narrowRequired _ _ _ _, hb => by cases hb
   | _, _, _, _, .check c sonst rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       obtain ⟨_, hr, hs, _⟩ := hb.pruefung_inv
@@ -390,6 +394,8 @@ theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
   | _, _, _, .retWhy .., he => by cases he
+  | _, _, _, .retScoped .., he => by cases he
+  | _, _, _, .retWhyScoped .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he => by
@@ -416,6 +422,7 @@ theorem endRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
         (endRet rest hr _ _ _ _ (endSchrumpf_zurueck hex) M1 hZ1 (heldGenau_lese _ hΛ)
           (hA.lauf (RufLaufG.einzeln hs1)))
+  | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 
 /-- A covered end block run as a BLOCK (the residue of an `else` branch,
     `Endblock.alsBlock`) returns on the machine as the end block does. -/
@@ -434,6 +441,8 @@ theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       rw [hW] at hG
       exact ⟨M1, RufLaufG.einzeln hs1, hG⟩
   | _, _, _, .retWhy .., he => by cases he
+  | _, _, _, .retScoped .., he => by cases he
+  | _, _, _, .retWhyScoped .., he => by cases he
   | _, _, _, .leave .., he => by cases he
   | _, _, _, .next .., he => by cases he
   | _, _, _, .cons s rest, he => by
@@ -458,6 +467,7 @@ theorem alsRet : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact gepoppt_vor P O passes f fn caller rst rho s0 log hs1
         (alsRet rest hr _ _ _ _ (schrumpf_zurueck hex) M1 _ hZ1 (heldGenau_lese _ hΛ)
           (hA.lauf (RufLaufG.einzeln hs1)))
+  | _, _, _, .narrowRequired _ _ _ _, he => by cases he
 
 theorem armsRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),

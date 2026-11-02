@@ -30,6 +30,7 @@ def Stmt.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .locks _ _ body => body.vOk K
   | .breaking _ body => body.vOk K
   | .traverse _ _ body => body.vOk K
+  | .consumeTraverse _ _ _ _ _ _ body => body.vOk K
   | .retry _ _ body ueber => body.vOk K && ueber.vOk K
   | .forever _ _ body => body.vOk K
   | .callInd (n := n) .. => K n
@@ -51,6 +52,7 @@ def Block.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .awaits .. => false
   | .exchange _ _ _ _ rest => rest.vOk K
   | .narrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
+  | .narrowRequired _ _ _ rest => rest.vOk K
   | .check _ sonst rest => sonst.vOk K && rest.vOk K
   | .float _ _ _ _ _ rest => rest.vOk K
   | .floatLit _ _ _ rest => rest.vOk K
@@ -74,6 +76,7 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .awaits .. => false
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.vOk K
   | .narrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
+  | .narrowRequired _ _ _ rest => rest.vOk K
   | .exchange _ _ _ _ rest => rest.vOk K
   | .ite _ t e => e.vOk K && t.vOk K
 
@@ -227,6 +230,9 @@ theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .traverse _ _ body, h => by
       simp only [Stmt.vOk] at h ⊢
       exact Block.vOk_mono body h
+  | .consumeTraverse _ _ _ _ _ _ body, h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Block.vOk_mono body h
   | .retry _ _ body ueber, h => by
       simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Block.vOk_mono body h.1, Block.vOk_mono ueber h.2⟩
@@ -251,6 +257,8 @@ theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .retires .., _ => rfl
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
+  | .retScoped .., _ => rfl
+  | .retWhyScoped .., _ => rfl
   | .leave .., _ => rfl
   | .next .., _ => rfl
 
@@ -287,6 +295,9 @@ theorem Block.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | .narrow _ _ _ sonst rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono sonst h.1, Block.vOk_mono rest h.2⟩
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
   | .check _ sonst rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono sonst h.1, Block.vOk_mono rest h.2⟩
@@ -307,6 +318,8 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
     (e : Endblock D V l Γ Λ) → e.vOk K = true → e.vOk K' = true
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
+  | .retScoped .., _ => rfl
+  | .retWhyScoped .., _ => rfl
   | .leave .., _ => rfl
   | .next .., _ => rfl
   | .cons s rest, h => by
@@ -336,6 +349,9 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .narrow _ _ _ sonst rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono sonst h.1, Endblock.vOk_mono rest h.2⟩
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
   | .exchange _ _ _ _ rest, h => by
       simp only [Endblock.vOk] at h ⊢
       exact Endblock.vOk_mono rest h

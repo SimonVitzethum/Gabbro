@@ -187,6 +187,10 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
+  -- the C11 forms have no lowering yet: refused, never a fallback
+  | _, _, _, _, .consumeTraverse .., _, _, _ => none
+  | _, _, _, _, .retScoped .., _, _, _ => none
+  | _, _, _, _, .retWhyScoped .., _, _, _ => none
   | _, _, _, _, _, _, _, _ => none
 
 def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
@@ -252,13 +256,15 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .check c sonst rest, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerEnd lay cenv lv sonst s.l ⟨r1, s.l + 2⟩ with
+          match lowerEnd lay cenv lv sonst s.l s with
           | some (be, s1) =>
               match lowerB lay cenv lv rest (s.l + 1) k s1 with
               | some (br, s2) => some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ :: (be ++ br), s2)
               | none => none
           | none => none
       | none => none
+  -- required narrowing has no lowering yet: refused, never a fallback
+  | _, _, _, _, .narrowRequired _ _ _ _, _, _, _ => none
   | _, _, _, _, _, _, _, _ => none
 
 /-- The arms of a `match` on a reason: arm `i` is lowered at label `lb + i`, one after the other. -/
@@ -309,6 +315,8 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       Lbl → St → Option (List Block × St)
   | _, _, _, .ret e _, lb, s => lowerRet lay cenv V.gruende e lb s
   | _, _, _, .retWhy r _, lb, s => lowerWhy V.gruende V.erg r.val lb s
+  | _, _, _, .retScoped _ _, _, _ => none
+  | _, _, _, .retWhyScoped _ _, _, _ => none
   | _, _, _, .leave _, lb, s => some ([⟨lb, [], [], .jmp lv.1⟩], s)
   | _, _, _, .next _, lb, s => some ([⟨lb, [], [], .jmp lv.2⟩], s)
   | _, _, _, .cons st rest, lb, s =>
@@ -328,6 +336,8 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
               | none => none
           | none => none
       | none => none
+  -- required narrowing has no lowering yet: refused, never a fallback
+  | _, _, _, .narrowRequired _ _ _ _, _, _ => none
   | _, _, _, _, _, _ => none
 
 end

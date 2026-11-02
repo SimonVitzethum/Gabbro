@@ -328,6 +328,31 @@ theorem g001End_korrekt_narrow {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   · exact ih_g001End_korrekt_rest h1.2 o ho'
 
 set_option linter.unusedSectionVars false in
+theorem g001End_korrekt_narrowRequired {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (zr_h : g001End (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Endblock D V l Γ Λ) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.endblockOrte (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Endblock D V l Γ Λ))
+    (ih_g001End_korrekt_rest : ∀ (h : g001End rest = true), ∀ (o : D.Tab ⊕ D.Glob), ∀ (ho : o ∈ Extraktion.endblockOrte rest), ¬ istGeist (D := D) o)
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) e.orte && g001End rest) = true := h
+  have ho' : o ∈ e.orte ∨ o ∈ Extraktion.endblockOrte rest := by
+    simpa [Extraktion.endblockOrte] using ho
+  have h1 : ((orteOk (D := D) e.orte) = true) ∧ ((g001End rest) = true) :=
+    Bool.and_eq_true_iff.mp h0
+  rcases ho' with ho' | ho'
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+  · exact ih_g001End_korrekt_rest h1.2 o ho'
+
+set_option linter.unusedSectionVars false in
 theorem g001End_korrekt_exchange {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (g)
     (neu)

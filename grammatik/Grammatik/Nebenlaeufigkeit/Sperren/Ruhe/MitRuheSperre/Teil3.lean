@@ -377,6 +377,33 @@ theorem execBlockH_ru_narrow {V : Vertrag D}
     exact EndRel.zuAusgang (ih_execEndH_ru_sonst _ ρ)
 
 set_option linter.unusedSectionVars false in
+theorem execBlockH_ru_narrowRequired {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_lo}
+    {zi_hi}
+    (e)
+    (lo')
+    (hi')
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlockH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockH S.mitRuhe O' U' passes R' (ruB rest) (worldR σ) (envR ρ)) (execBlockH S O U passes R rest σ ρ))
+    : AusRelRu (execBlockH S.mitRuhe O' U' passes R' (ruB (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockH S O U passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  simp only [ruB, execBlockH]
+  simp only [ruE_orte, lese_worldR, eval_ru, valR_int]
+  by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
+  · erw [dif_pos hc, dif_pos hc]
+    exact AusRelRu.schrumpf (ih_execBlockH_ru_rest _
+      (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))
+  · erw [dif_neg hc, dif_neg hc]
+    exact Or.inl rfl
+
+set_option linter.unusedSectionVars false in
 theorem execBlockH_ru_check {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

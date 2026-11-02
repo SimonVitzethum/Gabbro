@@ -67,6 +67,8 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .narrow _ _ _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
+  | _, _, e, .narrowRequired _ _ _ rest, w, w', hw, h => by
+      simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .check _ sonst rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
   | _, _, e, .float _ _ _ _ _ rest, w, w', hw, h => by
@@ -85,6 +87,10 @@ theorem fE_mono {l : Bool} :
   | _, _, e, .ret _ _, w, w', hw, h => by
       simp only [fE, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢; exact h.imp id hw
   | _, _, e, .retWhy _ _, w, w', hw, h => by
+      simp only [fE, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢; exact h.imp id hw
+  | _, _, e, .retScoped _ _, w, w', hw, h => by
+      simp only [fE, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢; exact h.imp id hw
+  | _, _, e, .retWhyScoped _ _, w, w', hw, h => by
       simp only [fE, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢; exact h.imp id hw
   | _, _, _, .leave _, _, _, _, _ => rfl
   | _, _, _, .next _, _, _, _, _ => rfl
@@ -116,6 +122,8 @@ theorem fE_mono {l : Bool} :
       exact ⟨h.1.imp id hw, h.2⟩
   | _, _, e, .narrow _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
+  | _, _, e, .narrowRequired _ _ _ rest, w, w', hw, h => by
+      simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .exchange _ _ _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .ite _ t _, w, w', hw, h => by
@@ -154,6 +162,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
       fB Φ e w b.alsBlock.2 = fE Φ e w b
   | _, _, .ret _ _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_true, fE]
   | _, _, .retWhy _ _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_true, fE]
+  | _, _, .retScoped _ _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_true, fE]
+  | _, _, .retWhyScoped _ _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_true, fE]
   | _, _, .leave _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_self, fE]
   | _, _, .next _, w => by simp only [Endblock.alsBlock, fB, fS, Bool.and_self, fE]
   | _, _, .cons s rest, w => by
@@ -177,6 +187,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .bindCallInd p args he hp hr rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .narrow _ _ _ sonst rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .narrowRequired _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .exchange _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]

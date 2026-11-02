@@ -248,6 +248,26 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       Stmt l Γ Λ Λ
+  /-- `traverse ... by consuming` (C11): consuming loop over the finite domain
+      of `t` with current-state selection. `member` tests membership of a
+      represented index in the CURRENT world, `edge` the declared edge relation
+      between two represented indices, `inv` the loop invariant, `mass` the
+      strictly falling measure over `0 .. bound`, and `body` the pass over the
+      selected index; the body's declared `touches ... consumes` performs the
+      actual removal. Re-selection runs in the post-body world; empty selection
+      terminates only by selector completeness (minimality/decrease proof open). -/
+  | consumeTraverse (t : D.Tab)
+      (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+      (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+      (inv : Expr D Γ Λ .bool) (bound : Int)
+      (mass : Expr D Γ Λ (.int 0 bound))
+      (body : Block true (.index (D.count t) :: Γ) Λ Λ) : Stmt l Γ Λ Λ
+  /-- `return [v]` through locally acquired scopes (C11): exact residual
+      `V.ende` plus `R.scopes` to close innermost first. Placeholder keeps
+      the immediate value pop; unwinding each scope with its owed invariant
+      (`GRest.rueckBereit`) is OPEN. -/
+  | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
+  | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ
@@ -318,6 +338,12 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       `else`-Zweig. -/
   | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock l Γ Λ)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  /-- `narrowRequired x to lo .. hi` (C11): the same typed narrowing as
+      `narrow`, with a logical failure instead of a source `else`. Out of
+      range is `Logik.kapazitaet`, excluded by the caller's capacity duty;
+      the supplied `else` semantics of `narrow` is unchanged. -/
+  | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+      (rest : Block l (.int lo' hi' :: Γ) Λ Λ') : Block l Γ Λ Λ'
 
 inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
@@ -385,6 +411,15 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hL : gdarf D g Λ) (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
   /-- `if c { … } else { … }` as the last statement of a body, both branches ending (stage 0, 2026-10-26). -/
   | ite (c : Expr D Γ Λ .bool) (t e : Endblock l Γ Λ) : Endblock l Γ Λ
+  /-- `narrowRequired x to lo .. hi` at the top level of a body (C11):
+      `Block.narrowRequired` with an end-block rest; out of range is
+      `Logik.kapazitaet`, never a clipped value. -/
+  | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+      (rest : Endblock l (.int lo' hi' :: Γ) Λ) : Endblock l Γ Λ
+  /-- `return [v]` through scopes at the top level of a body (C11):
+      `Stmt.retScoped` in end-block position; same placeholder status. -/
+  | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
+  | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []

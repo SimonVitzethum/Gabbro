@@ -54,3 +54,4 @@ module
 
 public import Grammatik.Bausteine.Arena.ArenaZucker.Teil1
 public import Grammatik.Bausteine.Arena.ArenaZucker.Teil2
+public import Grammatik.Bausteine.Arena.ArenaZucker.Teil3

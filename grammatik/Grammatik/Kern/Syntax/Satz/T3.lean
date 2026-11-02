@@ -146,6 +146,7 @@ def Stmt.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .locks L _ body => decide (c ≤ D.rang L) && body.ueberBoden c
   | .breaking _ body => body.ueberBoden c
   | .traverse _ _ body => body.ueberBoden c
+  | .consumeTraverse _ _ _ _ _ _ body => body.ueberBoden c
   | .retry _ _ body ueber => body.ueberBoden c && ueber.ueberBoden c
   | .forever _ _ body => body.ueberBoden c
   | _ => true
@@ -165,6 +166,7 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .narrowRequired _ _ _ rest => rest.ueberBoden c
   | .check _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .float _ _ _ _ _ rest => rest.ueberBoden c
   | .floatLit _ _ _ rest => rest.ueberBoden c
@@ -175,6 +177,8 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.ueberBoden c && rest.ueberBoden c
@@ -188,6 +192,7 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c
   | .bindCallInd _ _ _ _ _ rest => rest.ueberBoden c
   | .narrow _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
+  | .narrowRequired _ _ _ rest => rest.ueberBoden c
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .ite _ t e => t.ueberBoden c && e.ueberBoden c
 
