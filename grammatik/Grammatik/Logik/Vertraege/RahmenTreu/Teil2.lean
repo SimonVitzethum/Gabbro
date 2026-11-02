@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
+public import Grammatik.Logik.Vertraege.RahmenTreu.Teil4
 
 @[expose] public section
 
@@ -75,8 +76,9 @@ theorem stmt_treu :
       split at h
       · rename_i σ1 v hR1
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-        exact hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        exact hl.trans (Treu.weiter hp.hw hp.hg h2)
       · rename_i σ1 r _; exact keinGrund hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -90,8 +92,9 @@ theorem stmt_treu :
       · rename_i σ1 v hR1
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-        exact hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        exact hl.trans (Treu.weiter hp.hw hp.hg h2)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -193,8 +196,9 @@ theorem block_treu :
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
       split at h
       · rename_i σ1 v hR1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
         exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrund hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -209,8 +213,9 @@ theorem block_treu :
       · rename_i σ1 v hR1
         have g2 := block_treu rest σ1 (.cons (ergWert (ergSig hf he) v) ρ)
         replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
         exact g1.trans (g2.schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -225,13 +230,15 @@ theorem block_treu :
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
       split at h
       · rename_i σ1 v hR1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
         exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
       · rename_i σ1 r hR1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
-        exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuAusgang.vorRet g1 ((end_treu err σ1 _).schrumpf.zuAusgang)) σ' h
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, σ', h => by
@@ -416,8 +423,9 @@ theorem end_treu :
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
       split at h
       · rename_i σ1 v hR1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
         exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrund hr r
       · simp only [EndAusgang.welt, reduceCtorEq] at h
@@ -427,13 +435,15 @@ theorem end_treu :
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
       split at h
       · rename_i σ1 v hR1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
         exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
       · rename_i σ1 r hR1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)))
-        exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
+        have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuEnd.vorRet g1 ((end_treu err σ1 _).schrumpf)) σ' h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, σ', h => by
@@ -541,8 +551,9 @@ theorem end_treu :
       · rename_i σ1 v hR1
         have g2 := end_treu rest σ1 (.cons (ergWert (ergSig hf he) v) ρ)
         replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-          (hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)))
+        have h2 := hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)
+        rw [hR1] at h2
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
         exact g1.trans (g2.schrumpf σ' h)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [EndAusgang.welt, reduceCtorEq] at h

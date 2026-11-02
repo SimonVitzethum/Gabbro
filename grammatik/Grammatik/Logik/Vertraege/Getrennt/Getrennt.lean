@@ -198,7 +198,7 @@ theorem getrennt_lesesicht_bleibt (R : ∀ f : D.Fn, World D → Env D (D.params
     {t : D.Tab} (ht : traegerVon D ((D.params f).get j) = some t)
     (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (h : (R f σ ρ).welt = some σ') :
     ∀ k (fld : D.Feld t), σ'.slots t k fld = σ.slots t k fld :=
-  (hR f σ ρ σ' h).1.1 t (getrennt_nicht_geschrieben hG hW j hj ht)
+  (TreuR.rahmen hR h).1 t (getrennt_nicht_geschrieben hG hW j hj ht)
 
 /-- **The same at the model's call, `rufAt`, at every depth and every world** (no lock
     premise: `rufAt_treu`). -/

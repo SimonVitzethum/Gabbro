@@ -210,9 +210,11 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
-  -- the C11 scoped returns lower like `ret`/`retWhy` (the immediate value/reason pop): the scope
-  -- evidence `R` is ignored here as in `execStmt`; unwinding each crossed scope with its owed
-  -- invariant (`GRest.rueckBereit`, `cleanupB`) is OPEN, and admission still refuses the form
+  -- the C11 scoped returns lower like `ret`/`retWhy` (the immediate value/reason pop): scopes are
+  -- ghost at IR level (as are `locks`: no runtime release to emit); `execStmt` releases them via
+  -- foldl `gibt` and the refinement keeps `Rep` through the fold (`Rep.gibt_foldl`). Unwinding each
+  -- crossed scope with its owed invariant (`GRest.rueckBereit`, `cleanupB`) is OPEN, and admission
+  -- still refuses the form
   | _, _, _, _, .retScoped e _, lb, k, s => lowerRet lay cenv V.gruende e lb s
   | _, _, _, _, .retWhyScoped r _, lb, k, s => lowerWhy V.gruende V.erg r.val lb s
   | _, _, _, _, _, _, _, _ => none

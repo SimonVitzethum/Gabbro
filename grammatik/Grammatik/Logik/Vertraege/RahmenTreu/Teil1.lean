@@ -80,6 +80,11 @@ theorem Treu.weiter {W W' : D.Tab → Bool} {G G' : D.Glob → Bool} {a b : Worl
     (hW : ∀ t, W t = true → W' t = true) (hG : ∀ g, G g = true → G' g = true)
     (h : Treu W G a b) : Treu W' G' a b := ⟨h.1.weiter hW hG, h.2⟩
 
+/-- A releasing frame widens like a plain one (frame-only). -/
+theorem TreuRet.weiter {W W' : D.Tab → Bool} {G G' : D.Glob → Bool} {a b : World D}
+    (hW : ∀ t, W t = true → W' t = true) (hG : ∀ g, G g = true → G' g = true)
+    (h : TreuRet W G a b) : TreuRet W' G' a b := ⟨h.1.weiter hW hG, h.2⟩
+
 /-- Asking outside the program changes no cell and no lock. -/
 theorem treu_fragt {W G} (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Treu W G σ (σ.fragt q) :=
   ⟨rahmen_gleich rfl rfl, rfl⟩
@@ -419,74 +424,5 @@ include hR hO
 set_option linter.unusedSectionVars false
 
 end Rumpf
-
-/-- Joint frame for the two exits of an indirect else-call («C07»): the pointer is
-    evaluated once in the recorded world `s0`, the actual conforming function runs
-    under its transported caller duty, and both continuations see the transported
-    value (`runOk`) or reason (`runWhy`). The three `*_treu` cases instantiate it
-    with their runners. -/
-theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    (hR : TreuR R)
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
-    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
-    (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
-    (σ s0 : World D) (ρ : Env D Γ)
-    (hl : Treu V.schreibt V.gschreibt σ s0)
-    (ok : World D → Wert D τ → Ausgang V l Γ)
-    (why : World D → Fin (D.sigNr n).gruende → Ausgang V l Γ)
-    (runOk : ∀ σ1 v, TreuAusgang V.schreibt V.gschreibt σ1 (ok σ1 v))
-    (runWhy : ∀ σ1 r, TreuAusgang V.schreibt V.gschreibt σ1 (why σ1 r))
-    (σ' : World D) (h : (indSonst R p args he hr s0 ρ ok why).welt = some σ') :
-    Treu V.schreibt V.gschreibt σ σ' := by
-  simp only [indSonst] at h
-  generalize hpv : eval s0 p s0 ρ = pv at h
-  obtain ⟨f, hf⟩ := pv
-  simp only at h
-  split at h
-  · rename_i σ1 v hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runOk σ1 (ergWert (ergSig hf he) v) σ' h)
-  · rename_i σ1 r hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runWhy σ1 (grundSig hf r) σ' h)
-  · simp only [Ausgang.welt, reduceCtorEq] at h
-  · simp only [Ausgang.welt, reduceCtorEq] at h
-
-/-- Joint frame for the two exits of an indirect else-call at the end of a body («C07»):
-    the `TreuEnd` variant of `indSonst_treu`, for the `end_treu` case. -/
-theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    (hR : TreuR R)
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
-    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
-    (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
-    (σ s0 : World D) (ρ : Env D Γ)
-    (hl : Treu V.schreibt V.gschreibt σ s0)
-    (ok : World D → Wert D τ → EndAusgang V l Γ)
-    (why : World D → Fin (D.sigNr n).gruende → EndAusgang V l Γ)
-    (runOk : ∀ σ1 v, TreuEnd V.schreibt V.gschreibt σ1 (ok σ1 v))
-    (runWhy : ∀ σ1 r, TreuEnd V.schreibt V.gschreibt σ1 (why σ1 r))
-    (σ' : World D) (h : (indSonstE R p args he hr s0 ρ ok why).welt = some σ') :
-    Treu V.schreibt V.gschreibt σ σ' := by
-  simp only [indSonstE] at h
-  generalize hpv : eval s0 p s0 ρ = pv at h
-  obtain ⟨f, hf⟩ := pv
-  simp only at h
-  split at h
-  · rename_i σ1 v hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runOk σ1 (ergWert (ergSig hf he) v) σ' h)
-  · rename_i σ1 r hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runWhy σ1 (grundSig hf r) σ' h)
-  · simp only [EndAusgang.welt, reduceCtorEq] at h
-  · simp only [EndAusgang.welt, reduceCtorEq] at h
 
 end Gabbro.Grammatik
