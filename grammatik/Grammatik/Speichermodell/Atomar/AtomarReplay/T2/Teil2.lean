@@ -74,6 +74,7 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [stmtOrteP, lese_nil]
       exact Nat.le_refl _
   | axiomCall => simp only [Stmt.istAxiom, Bool.true_eq_false] at ha
+  | axiomCallElse => simp only [Stmt.istAxiom, Bool.true_eq_false] at ha
   | ret e hp => simp only [execStmt, reduceCtorEq] at h
   | retWhy r hp => simp only [execStmt, reduceCtorEq] at h
   | leave hl => simp only [execStmt, reduceCtorEq] at h
