@@ -1,5 +1,5 @@
 /-
-  File:      stage0/Stage0/Senke/Anweisung/Puffer.lean
+  File:      stage0/Stage0/Senke/Anweisung/Puffer/Basis.lean
   Subject:   A gate's buffer: packing the byte field of a table into words of the frame (`pack1_ok`, `packJ_ok`,
              `packI_ok`: word `i` is `packV` of the cells' words) and unpacking it into the cells after the call
              (`unpackK_ok`: cell `k` gets `byteOf` the buffer).

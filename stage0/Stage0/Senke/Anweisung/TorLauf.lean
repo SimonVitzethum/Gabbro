@@ -7,7 +7,7 @@
 -/
 module
 public import Stage0.Senke.Anweisung.Pruefung
-public import Stage0.Senke.Anweisung.PufferTor
+public import Stage0.Senke.Anweisung.Puffer.Tor
 @[expose] public section
 
 

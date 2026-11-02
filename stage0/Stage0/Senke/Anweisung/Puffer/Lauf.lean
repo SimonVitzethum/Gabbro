@@ -1,11 +1,11 @@
 /-
-  File:      stage0/Stage0/Senke/Anweisung/PufferLauf.lean
+  File:      stage0/Stage0/Senke/Anweisung/Puffer/Lauf.lean
   Subject:   The steps around a gate's buffer: `lea` of the buffer into the pointer's register (`lea_step`), arguments
              whose pointer word changed (`argsW_ptr`), a word whose bytes are kept (`rd64_keep`), and where the
              pointer parameter is (`ptrParam_spec`).
 -/
 module
-public import Stage0.Senke.Anweisung.Puffer
+public import Stage0.Senke.Anweisung.Puffer.Basis
 @[expose] public section
 
 

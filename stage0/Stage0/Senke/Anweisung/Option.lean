@@ -5,7 +5,7 @@
 -/
 module
 public import Stage0.Senke.Anweisung.Simulation
-public import Stage0.Senke.Anweisung.Puffer
+public import Stage0.Senke.Anweisung.Puffer.Basis
 @[expose] public section
 
 

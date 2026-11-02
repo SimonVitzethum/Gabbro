@@ -1,12 +1,12 @@
 /-
-  File:      stage0/Stage0/Senke/Anweisung/PufferTor.lean
+  File:      stage0/Stage0/Senke/Anweisung/Puffer/Tor.lean
   Subject:   **A gate with a buffer** (`torPuf_ok`): the arguments, the byte field packed into the frame from slot `B`,
              its address into the pointer's register, zeros, the number, the kernel (`TorOK.puf`), and -- for a
              writable buffer -- the bytes back into the field. Afterwards the memory holds the oracle's world and slot
              `s` the kernel's word.
 -/
 module
-public import Stage0.Senke.Anweisung.PufferLauf
+public import Stage0.Senke.Anweisung.Puffer.Lauf
 @[expose] public section
 
 

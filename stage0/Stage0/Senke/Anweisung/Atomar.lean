@@ -8,7 +8,7 @@
 module
 public import Stage0.Senke.Anweisung.Simulation
 public import Stage0.Senke.Welt.WordCell
-public import Stage0.Senke.Anweisung.Puffer
+public import Stage0.Senke.Anweisung.Puffer.Basis
 public import Stage0.Senke.Sperre.Nimm
 public import Stage0.Senke.Anweisung
 @[expose] public section
