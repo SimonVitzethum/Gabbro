@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung.Teil8
+public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung.A.Teil8
 
 @[expose] public section
 
