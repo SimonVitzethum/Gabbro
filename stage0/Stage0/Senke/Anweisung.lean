@@ -144,6 +144,9 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
   | _, _, _, _, .consumeTraverse .., reserved => none
+  -- C11 execStmt still ignores R.scopes: scope unwinding and invariant
+  -- restoration are OPEN in Kern/Semantik/Semantik/T2/Teil2.lean.
+  -- Keep both scoped returns refused until the canonical semantics is complete.
   | _, _, _, _, .retScoped .., reserved => none
   | _, _, _, _, .retWhyScoped .., reserved => none
   | _, _, _, _, _, reserved => none
@@ -354,6 +357,8 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
       else none
     | _, _ => none
   | _, _, _, .narrowRequired .., reserved => none
+  -- C11 execEnd has the same placeholder as execStmt; it ignores R.scopes.
+  -- Keep both scoped returns refused until scope unwinding is modelled.
   | _, _, _, .retScoped .., reserved => none
   | _, _, _, .retWhyScoped .., reserved => none
   | _, _, _, _, reserved => none
