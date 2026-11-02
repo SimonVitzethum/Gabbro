@@ -53,6 +53,13 @@ structure Kontext where
   q : Quelle
   von : Pfad
   lok : List String
+  /-- Checked module instances override keys without changing lexical lookup or local binders. -/
+  keys : List (Pfad × String) := []
+
+def Kontext.key (k : Kontext) (path : Pfad) : String :=
+  match k.keys.find? (fun entry => entry.1 == path) with
+  | some entry => entry.2
+  | none => schluessel k.q.namen path
 
 /-- The context with more locals in scope. -/
 def Kontext.mit (k : Kontext) (xs : List String) : Kontext := { k with lok := xs ++ k.lok }
@@ -66,11 +73,11 @@ def gift (s : String) : String := "?" ++ s
 def Kontext.ref (k : Kontext) (s : String) : String :=
   if k.lok.any (strEq · s) then s else
   match aufloeseK k.q ⟨none, []⟩ k.von (segmente s) with
-  | some c => schluessel k.q.namen c
+  | some c => k.key c
   | none => if k.q.namen.any (fun q => strEq (letzter q) (letzter (segmente s))) then gift s else s
 
 /-- The key of an item declared here. -/
-def Kontext.eigen (k : Kontext) (n : String) : String := schluessel k.q.namen (k.von ++ [n])
+def Kontext.eigen (k : Kontext) (n : String) : String := k.key (k.von ++ [n])
 
 /-- A written path (`concurrent`, `dispatch`): one segment, its item's key. -/
 def Kontext.pfad (k : Kontext) : Pfad → Pfad
@@ -127,7 +134,7 @@ def aus (k : Kontext) : SExpr → SExpr
     -- `R::F` with `R` an item (a reason) is a ground; `m::x` with `m` a module is a place path.
     if k.lok.any (strEq · g) || k.nenntItem [g] then .why (k.ref g) f
     else match aufloeseK k.q ⟨none, []⟩ k.von [g, f] with
-      | some c => .variable (schluessel k.q.namen c)
+      | some c => .variable (k.key c)
       | none => .why g f
   | .ext .instantiate (name :: words) xs =>
     .ext .instantiate (k.ref name :: words.map (genericArgument k)) (ausL k xs)

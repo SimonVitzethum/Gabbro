@@ -29,6 +29,8 @@ structure Environment where
   constantFunctions : List Uebersetze.UKonstFn
   aliases : List (String × (Int × Int))
   globals : List String := []
+  /-- Module substitution precedes function instantiation and therefore retains applications. -/
+  deferApplications : Bool := false
 
 def tokens (text : String) : Except String (List Token) :=
   match lex text with
