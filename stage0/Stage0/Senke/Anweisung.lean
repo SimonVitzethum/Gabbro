@@ -278,7 +278,6 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     else none
   -- IEEE arithmetic needs its software algorithms and proofs.
   | _, _, _, _, .float .., reserved => none
-  | _, _, _, _, .narrowRequired .., reserved => none
   | _, _, _, _, _, reserved => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
