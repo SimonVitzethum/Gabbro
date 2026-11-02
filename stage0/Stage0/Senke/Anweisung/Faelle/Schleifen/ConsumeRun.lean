@@ -156,7 +156,11 @@ theorem consumeTraverse_case_zeuge [Kern] (good : Bool) :
     (by cases good <;> decide +kernel) (by cases good <;> decide +kernel)
     within (memory good) 0 initial .nil (pre good) (by decide) (by decide)
     (surroundings good) (head good) (world_at good)
-    (by intro j hj; have e : j = 3 := by simpa using hj; subst j; decide)
+    (by
+      intro j hj
+      have e : j = 3 := by simpa using hj
+      subst j
+      decide)
   simpa using h
 
 /-- The two actual stores remove both members and preserve the sentinel. -/
