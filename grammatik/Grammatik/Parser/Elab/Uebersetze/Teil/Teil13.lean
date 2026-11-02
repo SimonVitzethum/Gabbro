@@ -91,19 +91,11 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
     some ({ art := "extern", name := n, params := ps, res, fehler := .none, klauseln := [.effs effs] }, false)
   | _ => none
 
-/-- The elaborator: a parsed surface tree to the exported
-    fragment (tables, locks, `impl` functions). The declaration expansion (`exportDeclarationUnit`)
-    follows generic monomorphisation, so a source program with a library call exports to an ordinary unit: `library`
-    bodies elaborate as ordinary functions, translators are consumed, and calls expand into
-    ordinary calls carrying the declared payload. -/
-def elabUroh : List SItemTief → Except String UProg
-  | items =>
-    match Modules.prepare items with
-    | .error e => .error e
-    | .ok (genericExpanded, staticRequirements) =>
-    match Gabbro.Grammatik.Parser.exportDeclarationUnit genericExpanded with
-    | .error e => .error e
-    | .ok msE =>
+/-- Elaborate the ordinary declarations produced by the shared preparation path, preserving
+    every static callback requirement through the final canonical conformance check. -/
+def elabUroh (items : List SItemTief) (staticRequirements : List (STyp × String)) :
+    Except String UProg :=
+    let msE := items
     match uRestFehler msE with
     | .error e => .error e
     | .ok _ =>
@@ -261,13 +253,11 @@ def elabUroh : List SItemTief → Except String UProg
       | .error error => .error error
       | .ok () => .ok u
 
-/-- The elaborator over the Phase-1-sugared unit: `entzuckere` (adapters, `?`) runs first on
-    the flattened members, so machine G never sees the new syntax. On units without the new
-    forms it is the identity and `elabU` is `elabUroh`. -/
-def elabU : List SItemTief → Except String UProg
-  | items => match entzuckere (uMembers items) with
-    | .error e => .error e
-    | .ok msZ => elabUroh msZ
+/-- The shared preparation preserves lexical module scopes, expands adapters and `?` over
+    concrete module members, and retains static requirements through generic expansion. -/
+def elabU (items : List SItemTief) : Except String UProg := do
+  let (members, requirements) ← Modules.prepare items
+  elabUroh members requirements
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 

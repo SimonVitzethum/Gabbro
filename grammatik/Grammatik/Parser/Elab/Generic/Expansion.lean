@@ -2,6 +2,7 @@ module
 public import Grammatik.Parser.Elab.Generic.Body
 public import Grammatik.Parser.Elab.Generic.Parametricity
 public import Grammatik.Parser.SourceFolds.Range
+public import Grammatik.Parser.TaggedDispatch.Frontend
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -98,6 +99,24 @@ def expandSpecificationContracts (specs : List (String × List String × SExpr))
     let clauses ← Uebersetze.uSpecKlauseln ctx (sig.params.map Prod.fst) sig.klauseln
     pure { sig with klauseln := clauses }
 
+/-- Run the canonical spec/dyn/library visitors over ordinary declarations and pending literal
+    bodies together. The temporary item view shares the canonical traversal; only the final
+    append binds literals in the output, after every spec call has been resolved. -/
+def expandDeclarationsBeforeLiterals (sourceNames : List String) (ordinary : List SItemTief)
+    (literals : List (FnSig × SAnw)) : Except String (List SItemTief) := do
+  let literals ← uniqueLiterals sourceNames literals
+  let names := literals.map (fun literal => literal.1.name)
+  let visited ← exportDeclarationUnit
+    (ordinary ++ literals.map (fun (sig, body) => .fnT sig body))
+  let literals := visited.filterMap fun
+    | .fnT sig body => if names.contains sig.name then some (sig, body) else none
+    | _ => none
+  if literals.length != names.length then throw "function-literal-expansion: missing literal body"
+  let ordinary := visited.filter fun
+    | .fnT sig _ => !names.contains sig.name
+    | _ => true
+  appendLiterals (sourceNames ++ ordinary.filterMap sourceName) ordinary literals
+
 /-- The output retains every ordinary item and appends exactly the closed, deterministically named
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
 def expandTemplatesWithRequirements (source : List SItemTief)
@@ -142,7 +161,7 @@ def expandTemplatesWithRequirements (source : List SItemTief)
     | item => pure item
   let literals ← literals.mapM fun (sig, body) => do
     pure (← expandSpecificationContracts specs sig, body)
-  let target ← appendLiterals (names ++ instances.map instanceName) ordinary literals
+  let target ← expandDeclarationsBeforeLiterals (names ++ instances.map instanceName) ordinary literals
   pure (target, requirements)
 
 /-- Generic syntax belongs to ordinary function bodies in this implementation. -/
@@ -150,47 +169,41 @@ def genericHeader : SItemTief → Bool
   | .fnT sig _ | .protoT sig | .specT sig _ | .asmT sig _ | .transT _ sig _ => !sig.generics.isEmpty
   | _ => false
 
-/-- Successful expansion removes all generic declarations. The check is a refusal gate, never
-    an unchecked fallback; ordinary units retain their exact original frontend path. -/
-def expandWithRequirements (source : List SItemTief) :
+/-- The one expansion candidate path, including units without generic declarations. -/
+def expandRawWithRequirements (source : List SItemTief) (literals : List (FnSig × SAnw)) :
     Except String (List SItemTief × List (STyp × String)) := do
-  if source.any genericHeader then
-    let (target, requirements) ← expandTemplatesWithRequirements source
-    if target.any genericHeader then throw "generic expansion left a template declaration"
-    pure (target, requirements)
-  else pure (source, [])
+  if source.any genericHeader || !literals.isEmpty then
+    expandTemplatesWithRequirements source literals
+  else pure (← exportDeclarationUnit source, [])
+
+/-- Module literals contribute dependencies during instance closure and are materialized only
+    after the shared declaration pass has expanded all specification calls. -/
+def expandWithLiterals (source : List SItemTief) (literals : List (FnSig × SAnw)) :
+    Except String (List SItemTief × List (STyp × String)) := do
+  let (target, requirements) ← expandRawWithRequirements source literals
+  if target.any genericHeader then throw "generic expansion left a template declaration"
+  pure (target, requirements)
+
+def expandWithRequirements (source : List SItemTief) :
+    Except String (List SItemTief × List (STyp × String)) :=
+  expandWithLiterals source []
 
 def expand (source : List SItemTief) : Except String (List SItemTief) :=
   (expandWithRequirements source).map Prod.fst
 
-/-- Module literals contribute generic dependencies now, but are materialized only after generic
-    functions and spec contracts, just like function-argument literals. -/
-def expandWithLiterals (source : List SItemTief) (literals : List (FnSig × SAnw)) :
-    Except String (List SItemTief × List (STyp × String)) := do
-  if literals.isEmpty then expandWithRequirements source else
-    let (target, requirements) ← expandTemplatesWithRequirements source literals
-    if target.any genericHeader then throw "generic expansion left a template declaration"
-    pure (target, requirements)
-
-/-- Model A's generic syntactic guarantee: the actual exporter receives ordinary declarations.
-    Their safety and contracts are checked by the unchanged G elaboration and checker. -/
+/-- The actual exporter receives ordinary declarations. Their safety and contracts are checked
+    by the unchanged G elaboration and checker; a residual template is always a refusal. -/
 theorem expand_ordinary (source target : List SItemTief) (h : expand source = .ok target) :
     target.any genericHeader = false := by
-  cases hs : source.any genericHeader with
-  | false =>
-    simp [expand, expandWithRequirements, hs] at h
-    cases h
-    exact hs
-  | true =>
-    cases he : expandTemplatesWithRequirements source with
-    | error error => simp [expand, expandWithRequirements, hs, he] at h
-    | ok result =>
-      rcases result with ⟨result, requirements⟩
-      cases hg : result.any genericHeader with
-      | false =>
-        simp [expand, expandWithRequirements, hs, he, hg] at h
-        cases h
-        exact hg
-      | true => simp [expand, expandWithRequirements, hs, he, hg] at h
+  cases he : expandRawWithRequirements source [] with
+  | error error => simp [expand, expandWithRequirements, expandWithLiterals, he] at h
+  | ok result =>
+    rcases result with ⟨result, requirements⟩
+    cases hg : result.any genericHeader with
+    | false =>
+      simp [expand, expandWithRequirements, expandWithLiterals, he, hg] at h
+      cases h
+      exact hg
+    | true => simp [expand, expandWithRequirements, expandWithLiterals, he, hg] at h
 
 end Gabbro.Grammatik.Parser.Generic

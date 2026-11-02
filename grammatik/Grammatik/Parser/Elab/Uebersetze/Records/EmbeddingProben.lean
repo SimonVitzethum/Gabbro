@@ -17,12 +17,12 @@ theorem flat_expansion_zeuge :
       .ok ["x", "y", "mass"] := rfl
 
 theorem embedding_collision_zeuge :
-    (expandRecord 7 declarations [] "Collision").toBool = false := rfl
+    expandRecord 7 declarations [] "Collision" = .error "record embedding: duplicate field" := rfl
 
 theorem embedding_nonrecord_zeuge :
-    (expandRecord 7 declarations [] "Bad").toBool = false := rfl
+    expandRecord 7 declarations [] "Bad" = .error "record embedding: non-record target" := rfl
 
 theorem embedding_recursive_zeuge :
-    (expandRecord 7 declarations [] "Cycle").toBool = false := rfl
+    expandRecord 7 declarations [] "Cycle" = .error "record embedding: recursive embedding" := rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -71,6 +71,12 @@ theorem definition_scope_zeuge :
         strEq sig.name (memberName ["client", "A", "read"]) && strEq name "definition::K"
       | _ => false) = .ok true := by decide +kernel
 
+/-- The actual exporter also retains the definition-site constant; flattening modules before
+    instantiation would lose the template's lexical scope and cannot satisfy this statement. -/
+theorem definition_scope_exporter_zeuge :
+    (exportedSource lexicalSource).map (fun unit => unit.fns.map (fun fn => (fn.name, fn.ret))) =
+      .ok [(memberName ["client", "A", "read"], .val (.lit 3))] := by decide +kernel
+
 /-- Static callbacks become direct calls; their requirements are retained for SigPasst. -/
 def callbackSource : String :=
   "fn twice(x: u8) -> u8 effects {} costs <= 3 ops { return x; } " ++
@@ -104,5 +110,30 @@ def callbackForwardSource : String :=
 theorem module_callback_forwarding_zeuge :
     ((parsedSource callbackForwardSource).bind prepare).map (fun result =>
       (existingForms result.1, result.2.length)) = .ok (true, 2) := by decide +kernel
+
+/-- One source exercises all four phases: a generative module calls a bounded generic function,
+    that instance resolves a spec call, and the pending callback literal is appended last. -/
+def completeOrderSource : String :=
+  "spec Copy[T] { fn copy(x: T) -> T effects {} costs <= 8 ops; } " ++
+  "impl Copy[u8] { fn copy(x: u8) -> u8 effects {} costs <= 3 ops { return x; } } " ++
+  "fn copy_value[T: Copy](x: T) -> T { let value = Copy::copy(x); return value; } " ++
+  "module callback[g: fn(u8) -> u8 effects {} costs <= 8 ops] { " ++
+  "fn run(x: u8) -> u8 { let value = copy_value::[u8](x); let answer = g(value); return answer; } } " ++
+  "use A = callback::[fn(x: u8) -> u8 effects {} costs <= 3 ops { return x; }];"
+
+theorem complete_expansion_order_zeuge :
+    (preparedSource completeOrderSource).map (fun items => items.filterMap fun
+      | .fnT sig _ => some sig.name
+      | _ => none) = .ok ["$spec$0$copy", memberName ["A", "run"],
+        Generic.instanceName ⟨"copy_value", ["u8"]⟩,
+        Generic.literalName "fn ( x : u8 ) -> u8 effects { } costs <= 3 ops { return x ; }"] :=
+      by decide +kernel
+
+theorem complete_order_spec_call_zeuge :
+    (preparedSource completeOrderSource).map (fun items => items.any fun
+      | .fnT sig body => strEq sig.name (Generic.instanceName ⟨"copy_value", ["u8"]⟩) &&
+          beqSAnw body (.block [.bind false "value" none (.call "$spec$0$copy" [.variable "x"])]
+            (some (.ret (some (.variable "value")))))
+      | _ => false) = .ok true := by decide +kernel
 
 end Gabbro.Grammatik.Parser.Modules

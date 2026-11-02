@@ -1026,17 +1026,19 @@ Static function arguments are ordinary global function paths or function literal
 own parameter and local scopes and captures nothing from the enclosing function. A free name that is
 not a global item is refused as `function-literal-capture: <name>`. State must be passed explicitly.
 Identical literal syntax shares a deterministic, collision-checked top-level function. After parametric
-module instantiation and name resolution, generic functions are instantiated and their calls rewritten; spec calls in their contracts
-are expanded by the existing canonical rule, then literals become ordinary named functions.
+module instantiation and name resolution, generic functions are instantiated and their calls rewritten.
+The shared declaration pass expands spec calls in ordinary functions and pending literal bodies;
+literals become ordinary named functions only after that pass.
 Generic calls inside literal bodies participate in the same finite instance closure.
 
 Inside an instance, `g(...)` becomes a direct call to its concrete argument. The generated function
 takes no runtime callback parameter. Before export succeeds, each argument passes the canonical
 `SigPasst` decision against the declared `fnptr` type, including parameter/result types, reason channels,
 write permissions and locks. A mismatch is refused as `static-function-signature-mismatch: <name>`.
-The actual function's contracts still govern every direct call. Until O43 supplies contract conformance,
-a nontrivial `requires` or `ensures` on the parameter's pointer type retains the existing refusal
-`contract on a function-pointer type without G form`; specialization does not bypass it.
+The actual function's contracts still govern every direct call. The Lean frontend also checks
+nontrivial interface contracts with C06's shared conjunct-inclusion gate: the interface precondition
+includes the actual function's precondition, and the actual postcondition includes the interface
+postcondition. A failed inclusion uses the same mismatch refusal; specialization cannot bypass it.
 
 Generic prototypes, generic predicate/assembly bodies and generic translators are still
 refused. The Rust frontend has not yet been migrated to these forms. The Lean source/export/lowering

@@ -1,16 +1,18 @@
 module
 public import Grammatik.Parser.Elab.Modules.Expansion
 public import Grammatik.Parser.Elab.SourceNormalization
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Modules
 
-/-- The prescribed frontend order: modules, generic functions, specification contracts, then
+/-- The prescribed frontend order: modules, generic functions, specification calls, then
     named literals. Module static-function requirements travel with the same unit to SigPasst. -/
 def prepareRaw (items : List SItemTief) :
     Except String (List SItemTief × List (STyp × String)) := do
   let modules ← expandWithRequirements items
   let members := Uebersetze.uMembers modules.items
   let members := if syntaxList items then UebersetzeAllg2.normTopU32 members else members
+  let members ← Uebersetze.entzuckere members
   let (target, requirements) ← Generic.expandWithLiterals members modules.literals
   pure (target, modules.requirements ++ requirements)
 

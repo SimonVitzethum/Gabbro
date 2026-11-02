@@ -19,18 +19,24 @@ def functionArgument (word : String) : Except String (String × SFunctionArgumen
     | _ => true).map zeigeTok)
   pure (canonical, argument)
 
-/-- Literals are materialized after instance closure. Repeated identical literals are shared;
-    a user item with a generated name is always an error, including an unused source template. -/
-def appendLiterals (sourceNames : List String) (ordinary : List SItemTief)
-    (literals : List (FnSig × SAnw)) : Except String (List SItemTief) := do
+/-- Validate the reserved names and share identical pending literals before any body visitor.
+    The result remains signature/body pairs until the final materialization phase. -/
+def uniqueLiterals (sourceNames : List String) (literals : List (FnSig × SAnw)) :
+    Except String (List (FnSig × SAnw)) := do
   let mut seen : List String := []
-  let mut generated := []
+  let mut unique := []
   for (sig, body) in literals do
     if sourceNames.contains sig.name then
       throw "function-literal-name-collision: generated literal name is already declared"
     if !seen.contains sig.name then
-      generated := generated ++ [.fnT sig body]
+      unique := unique ++ [(sig, body)]
       seen := seen ++ [sig.name]
-  pure (ordinary ++ generated)
+  pure unique
+
+/-- Only the final phase inserts literal declarations, after their calls and contracts expand. -/
+def appendLiterals (sourceNames : List String) (ordinary : List SItemTief)
+    (literals : List (FnSig × SAnw)) : Except String (List SItemTief) := do
+  let literals ← uniqueLiterals sourceNames literals
+  pure (ordinary ++ literals.map (fun (sig, body) => .fnT sig body))
 
 end Gabbro.Grammatik.Parser.Generic

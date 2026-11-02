@@ -100,10 +100,27 @@ theorem nonconforming_callback_refused_zeuge :
       "fn entry() { apply_all::[wrong](); } }") =
       .error "static-function-signature-mismatch: wrong" := by decide +kernel
 
-theorem nontrivial_parameter_contract_refused_zeuge :
-    expandedSource ("module callbacks { fn apply_all[g: fn(u32) -> u32 " ++
-      "requires false effects {} costs <= 8 ops]() {} }") =
-      .error "contract on a function-pointer type without G form" := by decide +kernel
+/-- C06 retains nontrivial static interfaces; conformance is checked on concrete arguments. -/
+theorem nontrivial_parameter_contract_preserved_zeuge :
+    staticParameterType {} (.raw "fn(u32) -> u32 requires false effects {} costs <= 8 ops") =
+      .ok (.raw "fn ( u32 ) -> u32 requires false effects { } costs <= 8 ops") := by decide +kernel
+
+/-- The same parsed callback and interface contract reach the actual exporter. -/
+def contractedCallbackSource (post : String) : String :=
+  "module callbacks { fn actual(x: u8) -> u8 requires x >= 1 " ++
+  "ensures result >= 1 effects {} costs <= 3 ops { return x; } " ++
+  "fn apply[g: fn(x: u8) -> u8 requires x >= 1 ensures " ++ post ++
+  " effects {} costs <= 8 ops]() {} fn entry() { apply::[actual](); } }"
+
+theorem matching_parameter_contract_zeuge :
+    (exportedSource (contractedCallbackSource "result >= 1")).map (fun unit =>
+      (unit.ptrs.length, unit.fns.map (·.name))) =
+      .ok (0, ["actual", "entry", instanceName ⟨"apply", ["actual"]⟩]) := by decide +kernel
+
+/-- Structural equality cannot silently admit a stronger interface postcondition. -/
+theorem nonconforming_parameter_contract_refused_zeuge :
+    exportedSource (contractedCallbackSource "result >= 2") =
+      .error "static-function-signature-mismatch: actual" := by decide +kernel
 
 /-- A literal's parameters shadow global items with the same spelling during name resolution. -/
 theorem own_binder_is_not_capture_zeuge :
