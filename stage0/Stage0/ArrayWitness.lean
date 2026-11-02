@@ -32,7 +32,7 @@ theorem image_bound : Runner.Prog.IMG + output.image.bytes.length < 2 ^ 64 := by
 
 attribute [irreducible] output
 
-def members := uMembers (pre108 output.compiled.source.items)
+def members := uMembers (pre108 output.compiled.source.prepared.selected)
 
 theorem first_present : (members[0]?).isSome = true := by decide +kernel
 

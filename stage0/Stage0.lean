@@ -112,3 +112,9 @@ public import Stage0.Zeugen.SectionWitness
 public import Stage0.Zeugen.EntrustWitness
 
 @[expose] public section
+public import Stage0.Zeugen.ProfileWitness
+public import Stage0.Zeugen.RequiresProfileWitness
+public import Stage0.Zeugen.TestBuildWitness
+public import Stage0.Zeugen.AlignmentWitness
+public import Stage0.Zeugen.SectionWitness
+public import Stage0.Zeugen.EntrustWitness
