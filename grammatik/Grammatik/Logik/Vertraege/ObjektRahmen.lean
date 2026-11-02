@@ -42,6 +42,7 @@
 
 module
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T1
+public import Grammatik.Logik.Vertraege.ObjektRahmen.T1a
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T2
 public import Grammatik.Logik.Vertraege.ObjektRahmen.T3
 @[expose] public section
