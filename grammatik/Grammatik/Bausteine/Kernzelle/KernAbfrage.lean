@@ -91,7 +91,7 @@ theorem kernAbfrageHerkunftB_iff {D : Deklaration} {q : D.Ax} :
   · rintro ⟨h1, h2⟩
     refine ⟨h1, ?_⟩
     match hq : D.axBeleg q with
-    | none => simp only [hq, Option.isSome_none] at h2
+    | none => rw [hq] at h2; exact absurd h2 (by decide)
     | some w => exact ⟨w, hq⟩
   · rintro ⟨h1, w, hw⟩
     refine ⟨h1, ?_⟩

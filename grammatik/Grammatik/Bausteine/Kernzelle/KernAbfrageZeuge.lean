@@ -188,7 +188,7 @@ theorem qGestaltB : kernAbfrageGestaltB qD qAX 2 qATabs qAGlobs = true := by dec
 /-- The core-query shape holds: no params, answer `0 .. 1`, no channel,
     no writes. -/
 theorem qGestalt : KernAbfrageGestalt qD qAX 2 :=
-  (kernAbfrageGestaltB_iff (fun t => nomatch t) qAGlobs_voll).mp qGestaltB
+  (kernAbfrageGestaltB_iff (tabs := qATabs) (fun t => nomatch t) qAGlobs_voll).mp qGestaltB
 
 /-- The provenance holds on the fixture, decided: hardware with a named
     witness, the one hardware premise beside `AxVertragO`. -/
@@ -205,7 +205,7 @@ theorem qBindetB : bindetAxE qAX (qAP.rumpf qQ) = true := by decide
 /-- **The connected core query `_zeuge`**: shape, hardware provenance and
     the wrapper's foreign bind. -/
 theorem kernAbfrage_zeuge : KernAbfrageVerbunden qAP qA qAX :=
-  (kernAbfrageEinzelB_iff (fun t => nomatch t) qAGlobs_voll).mp (by decide)
+  (kernAbfrageEinzelB_iff (tabs := qATabs) (fun t => nomatch t) qAGlobs_voll).mp (by decide)
 
 /-! ## 3. The identity and the quiescent reduction -/
 

@@ -26,12 +26,10 @@ variable [DecidableEq D.Ax]
     some `bindAxiom`/`bindAxiomOpt` (plain, `else`, or top-level) of exactly
     `q` occurs. -/
 
-variable (q : D.Ax)
-
 mutual
 
 /-- Some statement binds the core-query axiom. -/
-def bindetAxS {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def bindetAxS (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .ite _ t e => bindetAxB q t || bindetAxB q e
   | .onOption _ p a => bindetAxB q p || bindetAxB q a
@@ -68,7 +66,7 @@ def bindetAxS {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .callIndElse _ _ _ _ _ err => bindetAxE q err
 
 /-- Some block binds the core-query axiom. -/
-def bindetAxB {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def bindetAxB (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Bool
   | .nil => false
   | .cons s rest => bindetAxS q s || bindetAxB q rest
@@ -97,19 +95,19 @@ def bindetAxB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .floatNarrow _ _ _ sonst rest => bindetAxE q sonst || bindetAxB q rest
 
 /-- Some tagged arm binds the core-query axiom. -/
-def bindetAxArms {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def bindetAxArms (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => false
   | .cons b rest => bindetAxB q b || bindetAxArms q rest
 
 /-- Some reason arm binds the core-query axiom. -/
-def bindetAxGArms {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def bindetAxGArms (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {n : Nat} : GrundArms D V l Γ Λ Λ' n → Bool
   | .nil => false
   | .cons b rest => bindetAxB q b || bindetAxGArms q rest
 
 /-- Some top-level body binds the core-query axiom. -/
-def bindetAxE {V : Vertrag D} {l : Bool} {Γ : Ctx}
+def bindetAxE (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret _ _ => false
   | .retWhy _ _ => false
