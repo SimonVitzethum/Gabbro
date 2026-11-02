@@ -102,12 +102,12 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D)) :
     AkzeptiertX P S fs ls cs ws aks = true ↔
       (∀ c, komp P S fs ls cs ws c = true) ∧
-        Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true := by
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true ∧ resetB cs = true := by
   unfold AkzeptiertX
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩, h10⟩
-    refine ⟨?_, h10⟩
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩, h10⟩, hr⟩
+    refine ⟨?_, h10, hr⟩
     intro c
     rcases c with ⟨n, hn⟩
     match n, hn with
@@ -122,8 +122,8 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     | 8, _ => exact h8
     | 9, _ => exact h9
     | n + 10, hn => exact absurd hn (by omega)
-  · rintro ⟨h, h10⟩
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩, libraryB_immer _ _⟩, h10⟩
+  · rintro ⟨h, h10, hr⟩
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩, libraryB_immer _ _⟩, h10⟩, hr⟩
 
 /-- **Refused only by component `c`**: `c` is false, the other nine components are true. -/
 def NurAn (c : Fin 10) (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -243,12 +243,12 @@ theorem bad_alle (hvoll : ∀ g : D.Fn, g ∈ fs) {c : Fin 10} (h : Haut D) (hv 
 
 /-- A program is valid iff no component refuses it; refused by at least one iff `¬ valid`. -/
 theorem gueltig_oder_nicht (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) :
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hr : resetB cs = true) :
     AkzeptiertX P S fs ls cs ws = true ∨ ∃ c, komp P S fs ls cs ws c = false := by
   by_cases h : AkzeptiertX P S fs ls cs ws = true
   · exact Or.inl h
   · right
-    refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws []).2 ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer⟩)
+    refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws []).2 ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr⟩)
     cases hc : komp P S fs ls cs ws c
     · exact absurd ⟨c, hc⟩ hn
     · rfl
