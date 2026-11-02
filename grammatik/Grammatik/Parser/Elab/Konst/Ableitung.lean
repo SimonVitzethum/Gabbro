@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Konst.Dispatch
+public import Grammatik.Parser.Elab.Uebersetze.Teil9
 
 @[expose] public section
 
@@ -50,6 +51,10 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       ConstSourceEnd c locals (.cond source yes [] (some no)) (.ite test yesBody noBody)
   | dispatch (value : ConstSourceExpr c locals source e)
       (arms : ConstSourceTagArms c locals sources branches)
+      (canonicalNames : List String)
+      (indices : ∀ i arm, sources[i]? = some arm →
+        ∃ label binder armBody, arm = .arm label binder armBody ∧
+          canonicalNames.findIdx? (fun name => strEq name label) = some i)
       (tail : ConstSourceEnd c locals (.block rest ending) body) :
       ConstSourceEnd c locals (.block (.cases source sources :: rest) ending)
         (.cons (.onTag e branches) body)
@@ -95,7 +100,7 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
   | bind value _ ih => exact .bind value.rein ih
   | condChain condition _ _ hy hn => exact .ite condition.rein hy hn
   | cond condition _ _ hy hn => exact .ite condition.rein hy hn
-  | dispatch v a _ ih => exact .cons (.onTag v.rein a.rein) ih
+  | dispatch v a _ _ _ ih => exact .cons (.onTag v.rein a.rein) ih
   | option v p a _ ih => exact .cons (.onOption v.rein p.rein a.rein) ih
   | reason v a _ ih => exact .cons (.onWhy v.rein a.rein) ih
   | binding _ _ arguments he hp hr resourceEq body _ ih =>
