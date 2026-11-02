@@ -6,7 +6,7 @@
 module
 public import Stage0.Senke.Ausdruck.Tops.Top
 public import Stage0.Senke.Ausdruck.Wort.Wort
-public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Ring

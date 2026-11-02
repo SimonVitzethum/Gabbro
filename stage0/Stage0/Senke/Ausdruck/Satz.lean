@@ -12,13 +12,13 @@ public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
-public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Array
-public import Stage0.Senke.Ausdruck.Aggregat.IntegerOps
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Builtin
-public import Stage0.Senke.Ausdruck.Aggregat.StringOps
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
 public import Stage0.Senke.Ausdruck.Option
 public import Stage0.Senke.Ausdruck.Wort.Bytes
 public import Stage0.Senke.Ausdruck.Quant.Satz

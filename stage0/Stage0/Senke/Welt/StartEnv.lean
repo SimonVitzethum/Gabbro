@@ -3,7 +3,7 @@
 module
 public import Stage0.StartArgument
 public import Stage0.Senke.Welt.StartBytes
-public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 @[expose] public section
 
 

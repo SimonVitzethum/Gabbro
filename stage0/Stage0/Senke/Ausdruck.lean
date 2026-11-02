@@ -38,7 +38,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
 public import Stage0.Senke.Ausdruck.Aggregat.Kopie
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
-public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place

@@ -8,7 +8,7 @@
 -/
 module
 public import Mathlib.Tactic.Linarith
-public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Limbs
 @[expose] public section
 
