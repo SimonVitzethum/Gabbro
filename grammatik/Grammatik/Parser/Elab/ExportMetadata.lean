@@ -232,4 +232,9 @@ theorem groupT_zeuge :
     check [.groupT "G" ["T"] [⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" ∧ check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
 
+/-- A nonempty reset range carries no unbound metadata. -/
+theorem reset_bound_zeuge :
+    bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
+  reset_bound 2 "A" (some (.lit 1, .lit 2))
+
 end Gabbro.Grammatik.Parser.ExportMetadata
