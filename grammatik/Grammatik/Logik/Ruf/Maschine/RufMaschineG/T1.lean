@@ -22,6 +22,7 @@
 -/
 module
 public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Kern.Syntax.Typen.Fall
 public import Grammatik.Logik.Vertraege.VertragOrtB
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 @[expose] public section
@@ -362,9 +363,9 @@ def armWahlG {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) →
       Σ c : Option Ty, Block D V l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c
   | .nil, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
-  | .cons b _, ⟨⟨0, _⟩, nutz⟩ => ⟨_, b, nutz⟩
+  | .cons b _, ⟨⟨0, _⟩, nutz⟩ => ⟨_, b, Fall.toNutzlast _ _ _ _ nutz⟩
   | .cons _ rest, ⟨⟨n + 1, h⟩, nutz⟩ =>
-      armWahlG rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, by simpa using nutz⟩
+      armWahlG rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
 
 /-- Arm selection for `onGrund`: the VALUE's index chooses the arm
     (like `execGrund`, but returning the chosen arm instead of running it). -/

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Typen.Fall
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut
 
@@ -234,7 +235,7 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .none _, _, _ => Option.none
   | .some e, σ, ρ => Option.some (eval σ₀ e σ ρ)
   | .istSome e, σ, ρ => (eval σ₀ e σ ρ).isSome
-  | .case cs i nutz, σ, ρ => ⟨i, evalNutz σ₀ nutz σ ρ⟩
+  | .case cs i nutz, σ, ρ => ⟨i, Fall.ofNutzlast _ _ _ _ (evalNutz σ₀ nutz σ ρ)⟩
   | .why _ r, _, _ => r
   | .forallSlots t body _, σ, ρ =>
       (alleIndizes (D.count t)).all fun k => wahr? (eval σ₀ body σ (.cons k ρ))
@@ -418,11 +419,11 @@ theorem fall_marke_lt (cs : List (Option Ty)) (n : Int) (hk : 0 < cs.length) :
     range. A syscall's `ok value | reason r` is such a sum; its generated errno decoding
     (`dekodiere`, Syscall.lean) is the emitted C that forms the pair. -/
 def summePasst (cs : List (Option Ty)) (n : Int) :
-    Option (Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :=
+    Option (Val D.Fn D.passt (.sum cs)) :=
   if sumWort cs = true then
    if hk : 0 < cs.length then
     let i : Fin cs.length := ⟨(n % fallZahl cs).toNat, fall_marke_lt cs n hk⟩
-    (nutzPasst (cs.get i) (n / fallZahl cs)).map fun x => ⟨i, x⟩
+    (nutzPasst (cs.get i) (n / fallZahl cs)).map fun x => ⟨i, Fall.ofNutzlast _ _ _ _ x⟩
    else Option.none
   else Option.none
 
