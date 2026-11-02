@@ -13,6 +13,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Teil17
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+public import Grammatik.Parser.Elab.Konst.Export
 
 @[expose] public section
 
@@ -196,11 +197,17 @@ def elabU : List SItemTief → Except String UProg
     match Gabbro.Grammatik.Parser.exportLibraryUnit ms0 with
     | .error e => .error e
     | .ok msE =>
-    if msE.any (fun item => match item with
+    let blockiert := msE.find? (fun item => match item with
       | .fnT sig body => strEq sig.art "const" && (match body with
         | .block [] (some (.ret (some _))) => false
         | _ => true)
-      | _ => false) then .error "const function with a block body: stage 3 evaluator pending" else
+      | _ => false)
+    if blockiert.isSome then
+      (match (uKonstFns msE).find? (fun k => match k.rumpf with
+        | .block [] (some (.ret (some _))) => false
+        | _ => true) with
+      | some k => Gabbro.Grammatik.Parser.Konst.Export.constBlockVerweigerung k
+      | _ => .error "const function with a block body: certified evaluation unavailable") else
     let consts := uConstsRech (uKonstFns msE) msE []
     let alias := uAliase consts msE ++ uAliasBreiten msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
     match uRestFehler msE with

@@ -349,3 +349,8 @@ public import Grammatik.Korpus.Programme.Korpus125
 public import Grammatik.Bausteine.Arena.ArenaDyn
 public import Grammatik.Kern.Syntax.Konst.Rang
 public import Grammatik.Kern.Syntax.Konst.Zeuge
+public import Grammatik.Kern.Syntax.Konst.Auswertung
+public import Grammatik.Kern.Syntax.Konst.Rahmen
+public import Grammatik.Kern.Syntax.Konst.Kongruenz
+public import Grammatik.Kern.Syntax.Konst.Zertifikat
+public import Grammatik.Kern.Syntax.Konst.AuswertungZeuge
