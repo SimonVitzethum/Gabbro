@@ -228,7 +228,34 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
   | f + 1, ctx, .bindElse y t (.call c args) e (.block ss en) :: rest =>
     if t.isSome then .error "let else with a type without G form"
     else
-      match uRuf ctx tabs koepfe c args with
+      match uFnZeiger ctx koepfe c with
+      | some (.error err) => .error err
+      | some (.ok ziel) =>
+        -- a `let .. else` through a function-pointer local («C07»): the reason channel is the
+        -- pointer type's (`ziel`), never a direct target's; a foreign head has no indirect form.
+        match uRuf ctx tabs koepfe ziel.name args with
+        | .error err => .error err
+        | .ok (callee, xs) =>
+          match callee.kanal with
+          | .none => .error "let else of a call without a reason channel"
+          | .some (num, cnt) =>
+            if callee.ext then .error "let else of an indirect call without G form"
+            else
+              match uWertArt callee with
+              | .none => .error "let else of a call without a value"
+              | .some (k, ty) =>
+                match uAnwReihe tabs koepfe f (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
+                    (ctx.muts.filter (fun m => !strEq m e))) ss with
+                | .error err => .error err
+                | .ok (ebody, ctxEB) =>
+                  match uEndeStmt ctxEB en with
+                  | .error err => .error err
+                  | .ok endS =>
+                    match uAnwReihe tabs koepfe f (uMitLokal ctx y k ty (ctx.muts.filter (fun m => !strEq m y))) rest with
+                    | .error err => .error err
+                    | .ok (ys, cE) => .ok ([UStmt.bindCallIndElse y c ziel.name xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
+      | none =>
+       match uRuf ctx tabs koepfe c args with
       | .error err => .error err
       | .ok (callee, xs) =>
         match callee.kanal with

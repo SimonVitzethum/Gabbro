@@ -138,6 +138,34 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 exact e
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr e')
             else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, n + 1, .bindCallIndElse x p _ args e :: rest, r =>
+    match lowZeigerN u Γ fn p with
+    | .error e => .error e
+    | .ok ⟨m, v⟩ =>
+      match lowRufKopfN u caller Γ fn (resOf u caller) m args with
+      | .error e => .error e
+      | .ok k =>
+        if hr : 0 < ((declOf u).sigNr m).gruende then
+          withErgN u m fun τ hE =>
+            match lowEndL (l := false) u caller (Ty.why (((declOf u).sigNr m).gruende) :: Γ)
+                (fn.mitWhy e 0 (((declOf u).sigNr m).gruende)) blockFuel (resOf u caller) (some ⟨rfl⟩) rest with
+            | .error err => .error err
+            | .ok (errb, .blkEnd :: rest') =>
+              match lowBodyF u caller (τ :: Γ) (fn.mitTy x τ) n rest' r with
+              | .error err => .error err
+              | .ok ee =>
+                have errb' : Endblock (declOf u) (verOf u caller) false
+                    (Ty.why (((declOf u).sigNr m).gruende) :: Γ)
+                    (nachSig (declOf u) ((declOf u).sigNr m) (resOf u caller)) := by
+                  rw [nachSigAt_eq u m (resOf u caller)]
+                  exact errb
+                have ee' : Endblock (declOf u) (verOf u caller) false (τ :: Γ)
+                    (nachSig (declOf u) ((declOf u).sigNr m) (resOf u caller)) := by
+                  rw [nachSigAt_eq u m (resOf u caller)]
+                  exact ee
+                .ok (Endblock.bindCallIndElse (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr errb' ee')
+            | .ok (_, _) => .error "lower: a let else is not closed"
+        else .error "lower: let else of a call without a reason channel"
   | Γ, fn, n + 1, .tausch x a v zweige neu :: rest, r =>
     match globIdx u.globs a with
     | .error e => .error e

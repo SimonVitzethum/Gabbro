@@ -366,8 +366,8 @@ def directFloor (u : UProg) (f : UFn) : Option Int :=
     | .lockBeg n => optMin acc (lockRank u n)
     | _ => acc) none
 
-/-- The functions a function calls directly: a call statement, a call bound by `let`, and a call bound by
-    `let .. else (e) { .. }` (`bindElse`). -/
+/-- The functions a function calls directly: a call statement, a call bound by `let`, a call bound by
+    `let .. else (e) { .. }` (`bindElse`), and an indirect call bound by `let .. else` (`bindCallIndElse`). -/
 def callNames (f : UFn) : List String :=
   f.body.filterMap fun st => match st with
     | .call c _ => some c
@@ -375,6 +375,7 @@ def callNames (f : UFn) : List String :=
     | .bindElse _ c _ _ => some c
     | .callInd _ c _ => some c
     | .bindCallInd _ _ c _ => some c
+    | .bindCallIndElse _ _ c _ _ => some c
     | _ => none
 
 /-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/

@@ -61,7 +61,9 @@ def uZeigerVertrag : List SKlausel → Except String Unit
   | .gives _ :: _ => .error "contract on a function-pointer type without G form"
   | _ :: rest => uZeigerVertrag rest
 
-/-- The text of a pointer type as a function head (`FnSig`, art `impl`, no name). -/
+/-- The text of a pointer type as a function head (`FnSig`, art `impl`, no name). A reason channel
+    (`-> T or R`) is admitted («C07»): the name resolves against the unit's reasons in `elabKopf` (unknown
+    reasons and empty channels are refused there), and `elabZeigerTyp` carries the case count as `gruende`. -/
 def uZeigerSig (raw : String) : Except String FnSig :=
   match lex raw with
   | .error _ => .error "pointer type unreadable"
@@ -71,13 +73,12 @@ def uZeigerSig (raw : String) : Except String FnSig :=
     | .ok (ps, r1) =>
       match parseErgebnis 10000 r1 with
       | .error e => .error e
-      | .ok (_, some _, _) => .error "pointer type with a reason channel without G form"
-      | .ok (erg, none, r2) =>
+      | .ok (erg, fehler, r2) =>
         match parseKlauseln 10000 r2 with
         | .error e => .error e
         | .ok (ks, r3) =>
           if !(r3.all (fun t => match t with | .ende => true | _ => false)) then .error "pointer type without G form"
-          else .ok { art := "impl", name := "", params := ps, res := erg, fehler := none, klauseln := ks }
+          else .ok { art := "impl", name := "", params := ps, res := erg, fehler := fehler, klauseln := ks }
   | .ok _ => .error "pointer type without G form"
 
 /-- The texts of the pointer types a surface type list names (`fn (` raw types). -/
@@ -130,7 +131,7 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
         -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
         -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
         let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
-        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
 
 /-- The names a unit declares as memory: tables, arenas, statics, atomics. -/
 def uSpeicherNamen (ms : List SItemTief) : List String :=

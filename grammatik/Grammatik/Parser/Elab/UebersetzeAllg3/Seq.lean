@@ -165,6 +165,26 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
                 exact b
               .ok (Block.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, Λ, pe, .bindCallIndElse x p _ args e :: rest =>
+    (lowZeigerN u Γ fn p).bind fun ⟨m, v⟩ =>
+      (lowRufKopfN u caller Γ fn Λ m args).bind fun k =>
+        if hr : 0 < ((declOf u).sigNr m).gruende then
+          withErgN u m fun τ hE =>
+            match R.ende (l := l) (Ty.why (((declOf u).sigNr m).gruende) :: Γ) (fn.mitWhy e 0 (((declOf u).sigNr m).gruende)) Λ pe rest with
+            | .error err => .error err
+            | .ok (errb, .blkEnd :: rest') => match R.seq (l := l) (τ :: Γ) (fn.mitTy x τ) Λ pe rest' with
+              | .error err => .error err
+              | .ok (b, r) =>
+                have errb' : Endblock (declOf u) (verOf u caller) l (Ty.why (((declOf u).sigNr m).gruende) :: Γ)
+                    (nachSig (declOf u) ((declOf u).sigNr m) Λ) := by
+                  rw [nachSigAt_eq u m Λ]
+                  exact errb
+                have b' : Block (declOf u) (verOf u caller) l (τ :: Γ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) Λ := by
+                  rw [nachSigAt_eq u m Λ]
+                  exact b
+                .ok (Block.bindCallIndElse (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr errb' b', r)
+            | .ok (_, _) => .error "lower: a let else is not closed"
+        else .error "lower: let else of a call without a reason channel"
   | Γ, fn, Λ, pe, .tausch x a v zweige neu :: rest =>
     (globIdx u.globs a).bind fun g => if hw : (verOf u caller).gschreibt g = true then
       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
