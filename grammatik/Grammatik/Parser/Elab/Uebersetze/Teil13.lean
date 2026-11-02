@@ -43,7 +43,10 @@ def uZeigerParams : Nat → Nat → List Token → Except String (List (String �
     | .ok _ => .error "pointer type parameters without G form"
 
 /-- A contract on a pointer type: refused (the model's signatures carry none, TODO O43; `N589` in the checker).
-    `requires Held(..)` is refused too: no lock crosses an indirect call. -/
+    `requires Held(..)` is refused too: no lock crosses an indirect call. The lowering guard
+    `ptrVertragGebunden` in `UebersetzeAllg3.Rest2` repeats this refusal at `lowerAllg`: a nontrivial
+    `needs`/`gives` on a pointer type never silently becomes `trivial`; the export admits the target
+    only where the full O43 duty (`PtrVerfeinert`, candidate table, interface caller duty) is bound. -/
 def uZeigerVertrag : List SKlausel → Except String Unit
   | [] => .ok ()
   | .needs .tru :: rest => uZeigerVertrag rest

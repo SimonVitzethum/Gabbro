@@ -16,7 +16,9 @@ theorem lowerAllg_measures (u : UProg) (P : Programm (declOf u)) (fs : List (dec
   · cases lowered
   · split at lowered
     · cases lowered
-    · exact checkedProgram_export u _ P fs lowered
+    · split at lowered
+      · exact checkedProgram_export u _ P fs lowered
+      · cases lowered
 
 /-- The generated user duty is the existing `MassPflicht`, for every pass grant and every function.
     This proposition is deliberately not discharged by the structural checker. -/

@@ -6,11 +6,11 @@
              * `hautS` -- the SKELETONS (`Haut D`: the bodies and the handler flags), exhaustive by size, with the
                contracts true (`Haut.programm`): the workhorse that reaches the larger sizes. Every body is drawn
                from the table of its function (`genT`), so the generator knows no function by name.
-             * `progS` -- ALL programs: the skeleton and, per position, any contract expression of the table of
-               its context. The unreduced statement; its size grows with every contract position.
+             * `progS` -- all programs over an explicit pointer-interface family: the skeleton and, per concrete
+               contract position, any expression of its context. The size grows with every variable position.
 
-             Both are by exact size and complete: a program of bounded pieces is in the stream of its size
-             (`hautS_vollst`, `progS_vollst`).
+             Both are by exact size and complete over their input data: a program of bounded pieces is in the
+             stream of its size and its own interface family (`hautS_vollst`, `progS_vollst`).
 -/
 module
 public import Grammatik.Gen.Erzeuger.Knoten
@@ -193,20 +193,26 @@ def ensS (f : D.Fn) (n : Nat) : Sz (Expr D (ErgCtx (D.params f) (D.erg f)) (vert
 def invS (i : D.Inv) (n : Nat) : Sz (Expr D [] (invSicht D i) .bool) :=
   tyS (tab (genE n n [] (invSicht D i))) .bool
 
-/-- The size of a program: the skeleton and every contract and invariant. -/
+/-- The variable size over a fixed interface family: the skeleton, concrete
+    function contracts and invariants. Interface predicates are input data. -/
 def groesseProg (P : Programm D) : Nat :=
   groesseHaut P.haut + (Aufz.inv.map fun i => groesseExpr (P.invariante i)).sum +
     (Aufz.fn.map fun f => groesseExpr (P.requires f) + groesseExpr (P.ensures f)).sum
 
-/-- **ALL programs of exact size `k`**: the skeleton (bodies of size at most `nb`) and every contract and invariant
-    of size at most `nc`. -/
-def progS (nb nc : Nat) : Sz (Programm D) :=
-  Sz.bind (hautS (fun _ _ => true) nb) fun h =>
+/-- **All programs of exact size `k` over `ptrs`**: bodies of size at most
+    `nb`, concrete contracts and invariants of size at most `nc`. A total
+    interface family over signature numbers is fixed input, as is `D`;
+    an arbitrary function over `Nat` cannot be enumerated by a finite bucket. -/
+def progS (nb nc k : Nat)
+    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)) :
+    List (Programm D) :=
+  (Sz.bind (hautS (fun _ _ => true) nb) fun h =>
     Sz.bind (piS (fun i => invS i nc) Aufz.inv) fun is =>
       Sz.bind (piS (fun f => reqS f nc) Aufz.fn) fun rs =>
         Sz.bind (piS (fun f => ensS f nc) Aufz.fn) fun es =>
           Sz.pure { invariante := fun i => is i (Aufz.inv_mem i), requires := fun f => rs f (Aufz.fn_mem f),
-                    ensures := fun f => es f (Aufz.fn_mem f), rumpf := h.rumpf, unterbricht := h.unterbricht }
+                    ensures := fun f => es f (Aufz.fn_mem f), rumpf := h.rumpf,
+                    unterbricht := h.unterbricht, ptrVertrag := ptrs }) k
 
 theorem le_summe {α : Type} {l : List α} {a : α} (f : α → Nat) (h : a ∈ l) : f a ≤ (l.map f).sum := by
   induction l with
@@ -222,12 +228,13 @@ theorem summe_add {α : Type} (l : List α) (f g : α → Nat) :
   | nil => rfl
   | cons a as ih => simp only [List.map_cons, List.sum_cons]; rw [ih]; omega
 
-/-- **Completeness of the programs**: a program whose bodies have size at most `nb` and whose contracts have size
-    at most `nc` is in the stream of its size. -/
+/-- **Completeness for every interface family**: a program whose bodies have
+    size at most `nb` and concrete contracts at most `nc` occurs in the stream
+    over its own interface family, including nontrivial pointer predicates. -/
 theorem progS_vollst (nb nc : Nat) (P : Programm D) (hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb)
     (hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc)
     (hi : ∀ i, groesseExpr (P.invariante i) ≤ nc) (hu : groesseProg P < unendlich) :
-    P ∈ progS nb nc (groesseProg P) := by
+    P ∈ progS nb nc (groesseProg P) P.ptrVertrag := by
   have hH : groesseHaut P.haut ≤ groesseProg P := by unfold groesseProg; omega
   have hI : (Aufz.inv.map fun i => groesseExpr (P.invariante i)).sum ≤ groesseProg P := by
     unfold groesseProg; omega
@@ -265,7 +272,7 @@ theorem progS_vollst (nb nc : Nat) (P : Programm D) (hb : ∀ f, groesseEnd (P.r
           Sz.bind (piS (fun f => ensS f nc) Aufz.fn) fun es =>
             Sz.pure ({ invariante := fun i => is i (Aufz.inv_mem i), requires := fun f => rs f (Aufz.fn_mem f),
                        ensures := fun f => es f (Aufz.fn_mem f), rumpf := h.rumpf,
-                       unterbricht := h.unterbricht } : Programm D))
+                       unterbricht := h.unterbricht, ptrVertrag := P.ptrVertrag } : Programm D))
     hh (Sz.mem_bind his (Sz.mem_bind hreq (Sz.mem_bind hens (Sz.mem_pure _))))
   have hs : groesseProg P = groesseHaut P.haut + ((Aufz.inv.map fun i => groesseExpr (P.invariante i)).sum +
       (((Aufz.fn.map fun f => groesseExpr (P.requires f)).sum + ((Aufz.fn.map fun f => groesseExpr (P.ensures f)).sum +

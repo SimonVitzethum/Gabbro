@@ -263,6 +263,14 @@ end
 
 /-! ## 5. The program, the oracle, the lock invariants -/
 
+/-- Transport a typed interface contract with the same expression/resource
+    translation as concrete contracts. Pointer signature numbers shift by one. -/
+def ruCallContract (S : Signatur D.Tab D.Glob D.Lock D.Marke)
+    (C : CallContract D S) : CallContract D.mitRuhe (sigR S) where
+  pre := Expr.umΛ (anfang_map S) (ruE C.pre)
+  post := Expr.umΓ (ergCtx_map S.params S.erg)
+    (Expr.umΛ (ende_map (Vertrag.vonSig D S)) (ruE C.post))
+
 /-- **`P` over `D.mitRuhe`**: every function `some f` is `f` translated;
     the idle root `none` has `requires true`, `ensures true`, body
     `return`. -/
@@ -282,6 +290,9 @@ def Programm.mitRuhe (P : Programm D) : Programm D.mitRuhe where
   unterbricht
     | none => false
     | some f => P.unterbricht f
+  ptrVertrag
+    | 0 => CallContract.trivial D.mitRuhe (sigNrM D 0)
+    | n + 1 => ruCallContract (D.sigNr n) (P.ptrVertrag n)
 
 /-- The member list of `D.mitRuhe`'s functions: the root, then `fs`. -/
 def fsRuhe (fs : List D.Fn) : List D.mitRuhe.Fn := none :: fs.map some
