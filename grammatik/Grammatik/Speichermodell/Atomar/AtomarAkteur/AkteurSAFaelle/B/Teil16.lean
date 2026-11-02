@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Speichermodell.Atomar.AtomarReplay
-public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.Teil15
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.B.Teil15
 
 @[expose] public section
 
