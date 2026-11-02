@@ -72,6 +72,7 @@ public import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
 public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
 public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeGleich
 public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeZeuge
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.PreservationZeugen
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwSchritt
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwRang
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwOrdnung

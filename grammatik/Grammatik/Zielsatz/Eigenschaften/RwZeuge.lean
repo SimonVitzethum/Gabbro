@@ -26,6 +26,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeZeuge
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.PreservationZeugen
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwRang
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 @[expose] public section

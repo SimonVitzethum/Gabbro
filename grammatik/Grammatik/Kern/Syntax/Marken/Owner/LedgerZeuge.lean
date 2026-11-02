@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Marken.Owner.Ledger
 public import Grammatik.Kern.Syntax.Marken.Owner.Witness
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
 
 @[expose] public section
 
@@ -43,5 +44,50 @@ theorem ownerLedger_zeuge_run (P : Programm D) (O : Orakel D) (passes : Nat)
     (threads : List Faden) : OwnerInvG names minted M threads :=
   ownerInvG_erreichbar names minted P O passes (RufStartG P sp init) threads
     mint_valid_zeuge M hr
+
+end Gabbro.Grammatik.OwnerWitness
+
+namespace Gabbro.Grammatik.OwnerWitness
+
+private def stepProgram : Programm D where
+  invariante := fun i => nomatch i
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ => .cons (.ite .tru .nil .nil) (.ret .empty List.Perm.nil)
+
+private def stepOracle : Orakel D where
+  wirkt := fun _ w _ => (w, .empty)
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+private def stepStore : Speicher D :=
+  ⟨fun _ _ _ => ⟨0, by decide, by decide⟩, fun g => nomatch g⟩
+private def stepInit : Faden → Σ f : D.Fn, Env D (D.params f) := fun _ => ⟨0, .nil⟩
+private abbrev stepStart := RufStartG stepProgram stepStore stepInit
+
+/-- One executed unfolding preserves the minted owner on a reachable machine. -/
+theorem ownerInvG_erreichbar_zeuge : ∃ M : RufMaschineG D,
+    RufSchrittG stepProgram stepOracle 0 stepStart 0 M ∧
+    RufErreichbarG stepProgram stepOracle 0 stepStart M ∧
+    OwnerInvG names minted M [0] := by
+  obtain ⟨M, hs, _⟩ := w_endeEntf (P := stepProgram) (O := stepOracle)
+    (passes := 0) (M := stepStart) (f := 0) rfl
+    (.ite .tru .nil .nil) (.ret .empty List.Perm.nil) .nil rfl rfl
+  exact ⟨M, hs, .schritt _ _ _ .start hs,
+    ownerInvG_erreichbar names minted stepProgram stepOracle 0 stepStart [0]
+      mint_valid_zeuge M (.schritt _ _ _ .start hs)⟩
+
+end Gabbro.Grammatik.OwnerWitness
+
+namespace Gabbro.Grammatik.OwnerWitness
+
+/-- Preservation instantiated on the concrete unfolding and valid minted base. -/
+theorem ownerInvG_schritt_zeuge : ∃ M : RufMaschineG D,
+    RufSchrittG stepProgram stepOracle 0 stepStart 0 M ∧
+    OwnerInvG names minted stepStart [0] ∧ OwnerInvG names minted M [0] := by
+  obtain ⟨M, hs, _, _⟩ := ownerInvG_erreichbar_zeuge
+  have hi := ownerLedger_zeuge_valid stepStart [0]
+  exact ⟨M, hs, hi, ownerInvG_schritt hi hs⟩
 
 end Gabbro.Grammatik.OwnerWitness
