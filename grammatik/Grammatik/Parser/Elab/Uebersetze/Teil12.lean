@@ -214,10 +214,14 @@ def uRegiert (fns : List UFn) : Except String (List (String × String × String)
 
 /-! ## Invariants -/
 
-/-- The predicate of an invariant over its carriers: no parameter, the guards of the carriers held. -/
+/-- The predicate of an invariant over its carriers: no parameter, the guards of the carriers held. Each
+    carrier name resolves to exactly ONE carrier, a table (without arena form) or a static (C05); a name that
+    names neither, or both, is refused. The predicate's reads are checked against exactly this declared set
+    where the invariant is lowered (`UebersetzeAllg2.lowerInvAt`). -/
 def uInv (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (traeger : List String) (g : SGruppenInv) : Except String UInv :=
-  if !traeger.all (fun c => tabs.any (fun t => strEq t.name c && !t.arena)) then .error "invariant carrier without G form"
+  if !traeger.all (fun c => (tabs.any (fun t => strEq t.name c && !t.arena)) != (globs.any (fun x => strEq x.name c)))
+  then .error "invariant carrier without G form, or ambiguous"
   else
     let held := (locks.filter (fun l => l.guard.any (fun c => traeger.any (strEq · c)))).map (·.name)
     let ctx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held, res := none, fname := g.name,
@@ -253,11 +257,12 @@ def uInvs (consts : List (String × Int)) (alias : List (String × (Int × Int))
     | _ => []
   uSeq (ausTab ++ ausGruppe)
 
-/-- `U003`: a function that writes a carrier of an invariant holds (by `requires Held(..)`) every lock that
-    guards a carrier of it -- it owes the invariant at its `return` and reads all of them there. -/
+/-- `U003`: a function that writes a carrier of an invariant -- a table (`puts`) or a static (`gputs`) -- holds
+    (by `requires Held(..)`) every lock that guards a carrier of it -- it owes the invariant at its `return`
+    and reads all of them there. -/
 def uU003 (locks : List ULock) (fns : List UFn) (invs : List UInv) : Bool :=
   invs.all fun i => fns.all fun f =>
-    !(f.puts.any (fun t => i.traeger.any (strEq · t))) ||
+    !((f.puts ++ f.gputs).any (fun t => i.traeger.any (strEq · t))) ||
     (locks.filter (fun l => l.guard.any (fun c => i.traeger.any (strEq · c)))).all
       (fun l => f.held.any (strEq · l.name))
 

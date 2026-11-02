@@ -189,24 +189,36 @@ def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
 /-- The invariant at an index. -/
 def invAt (u : UProg) (i : Fin u.invs.length) : UInv := u.invs.get i
 
-/-- The carrier tables of an invariant, by name. -/
-def invTraeger (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
-  (invAt u i).traeger.filterMap fun n => (tabIdx u.tabs n).toOption
+/-- The carriers of an invariant, by name: a table, else a static (C05). `uInv` resolves every name to exactly
+    one carrier, so for an elaborated unit nothing is dropped. -/
+def invTraeger (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
+  (invAt u i).traeger.filterMap fun n =>
+    match (tabIdx u.tabs n).toOption with
+    | some t => some (.inl t)
+    | none => (globIdx u.globs n).toOption.map .inr
 
-/-- `U003` at an invariant, decided over the elaborated functions: a writer of a carrier holds every lock that
-    guards a carrier (the elaborator refuses a unit where it fails, `uU003`). -/
+/-- `U003` at an invariant, decided over the elaborated functions: a writer of a carrier (a table through
+    `writesAt`, a static through `writesGAt`) holds every lock that guards a carrier (the elaborator refuses a
+    unit where it fails, `uU003`, and so does the lowering, `lowerInvAt`). -/
 def invOkB (u : UProg) (i : Fin u.invs.length) : Bool :=
   (u.fns ++ u.ptrs).all fun f =>
-    !((invTraeger u i).any (writesAt u f)) ||
-    (invTraeger u i).all fun t => (needsAt u t).all fun w =>
+    !((invTraeger u i).any (Sum.elim (writesAt u f) (writesGAt u f))) ||
+    (invTraeger u i).all fun c => (Sum.elim (needsAt u) (gneedsAt u) c).all fun w =>
       match w with
       | .inl L => decide (L ∈ heldAt u f)
       | .inr _ => true
 
-/-- The carriers of an invariant in the declaration: its tables where `U003` holds (always, for an elaborated
-    unit), none otherwise -- so `invarianten_gehalten` holds for every `UProg`. -/
-def traegerD (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length) :=
+/-- The carriers of an invariant in the declaration: its carriers where `U003` holds (always, for a lowered
+    unit: `lowerInvAt` refuses otherwise), none otherwise -- so `invarianten_gehalten` holds for every `UProg`.
+    The fallback is never reached by a unit that lowers (`traegerD_of_ok`, `lowerInvAt_facts`). -/
+def traegerD (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
   if invOkB u i then invTraeger u i else []
+
+/-- Where `U003` holds, the declared carriers are ALL the invariant's carriers. -/
+theorem traegerD_of_ok (u : UProg) (i : Fin u.invs.length) (h : invOkB u i = true) :
+    traegerD u i = invTraeger u i := by
+  unfold traegerD
+  rw [if_pos h]
 
 /-- The signature of an elaborated function. -/
 def mkSig (u : UProg) (f : UFn) :
@@ -295,14 +307,16 @@ theorem passtAt_lt (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f
 
 /-- `invarianten_gehalten` for the declaration of every `UProg`. -/
 theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
-    (h : (traegerD u i).any (sigAt u n).schreibt = true) (t : Fin u.tabs.length) (ht : t ∈ traegerD u i)
-    (L : Fin u.locks.length) (hL : Sum.inl L ∈ needsAt u t) : L ∈ (sigAt u n).haelt := by
-  unfold traegerD at h ht
+    (h : (traegerD u i).any (Sum.elim (sigAt u n).schreibt (sigAt u n).gschreibt) = true)
+    (c : Fin u.tabs.length ⊕ Fin u.globs.length) (hc : c ∈ traegerD u i)
+    (L : Fin u.locks.length) (hL : Sum.inl L ∈ Sum.elim (needsAt u) (gneedsAt u) c) :
+    L ∈ (sigAt u n).haelt := by
+  unfold traegerD at h hc
   cases hok : invOkB u i with
-  | false => rw [hok] at ht; simp only [Bool.false_eq_true, ↓reduceIte, List.not_mem_nil] at ht
+  | false => rw [hok] at hc; simp only [Bool.false_eq_true, ↓reduceIte, List.not_mem_nil] at hc
   | true =>
-    rw [hok] at h ht
-    simp only [if_true] at h ht
+    rw [hok] at h hc
+    simp only [if_true] at h hc
     by_cases hn : n < (sigFns u).length
     · have hs : sigAt u n = mkSig u ((sigFns u).get ⟨n, hn⟩) := by unfold sigAt; rw [dif_pos hn]
       rw [hs] at h ⊢
@@ -310,15 +324,18 @@ theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
       have hf := List.all_eq_true.mp hok ((sigFns u).get ⟨n, hn⟩) (List.get_mem _ _)
       simp only [Bool.or_eq_true, Bool.not_eq_true'] at hf
       rcases hf with hf | hf
-      · have h' : (invTraeger u i).any (writesAt u ((sigFns u).get ⟨n, hn⟩)) = true := h
+      · have h' : (invTraeger u i).any (Sum.elim (writesAt u ((sigFns u).get ⟨n, hn⟩))
+            (writesGAt u ((sigFns u).get ⟨n, hn⟩))) = true := h
         rw [hf] at h'
         cases h'
-      · have ht' := List.all_eq_true.mp hf t ht
-        have hw := List.all_eq_true.mp ht' (Sum.inl L) hL
+      · have hc' := List.all_eq_true.mp hf c hc
+        have hw := List.all_eq_true.mp hc' (Sum.inl L) hL
         exact of_decide_eq_true hw
     · have hs : sigAt u n = dummySig u := by unfold sigAt; rw [dif_neg hn]
       rw [hs] at h
-      simp only [dummySig, List.any_eq_true, Bool.false_eq_true, and_false, exists_false] at h
+      simp only [List.any_eq_true] at h
+      obtain ⟨x, _, hx⟩ := h
+      cases x <;> simp only [dummySig, Sum.elim_inl, Sum.elim_inr, Bool.false_eq_true] at hx
 
 /-- A non-empty emptiness test means a non-empty list. -/
 theorem notEmpty_ne_nil (l : List α) (h : (!l.isEmpty) = true) :

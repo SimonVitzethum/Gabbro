@@ -202,9 +202,17 @@ theorem eigner_ok (n : Nat) (t : Fin z.tabs.length) (m : Fin z.marken.length) (s
   simp only [hown] at this
   exact absurd this (by simp only [Bool.not_true, Bool.false_eq_true, not_false_eq_true])
 
-theorem inv_ok (n : Nat) (i : Fin z.invs.length) (h : (z.traeger i).any (z.sigNr n).schreibt = true)
-    (t : Fin z.tabs.length) (ht : t ∈ z.traeger i) (L : Fin z.locks.length) (hL : Sum.inl L ∈ z.braucht t) :
+theorem inv_ok (n : Nat) (i : Fin z.invs.length)
+    (h : ((z.traeger i).map Sum.inl : List (Fin z.tabs.length ⊕ Fin z.globs.length)).any
+      (Sum.elim (z.sigNr n).schreibt (z.sigNr n).gschreibt) = true)
+    (c : Fin z.tabs.length ⊕ Fin z.globs.length) (hc : c ∈ (z.traeger i).map Sum.inl)
+    (L : Fin z.locks.length) (hL : Sum.inl L ∈ Sum.elim z.braucht z.gbraucht c) :
     L ∈ (z.sigNr n).haelt := by
+  obtain ⟨t, ht, rfl⟩ := List.mem_map.1 hc
+  have h' : (z.traeger i).any (z.sigNr n).schreibt = true := by
+    rw [List.any_map] at h
+    exact h
+  have hL' : Sum.inl L ∈ z.braucht t := hL
   show L ∈ z.haelt n
   unfold haelt
   refine List.mem_filter.2 ⟨List.mem_finRange L, ?_⟩
@@ -213,9 +221,9 @@ theorem inv_ok (n : Nat) (i : Fin z.invs.length) (h : (z.traeger i).any (z.sigNr
   unfold brauchtFuerInv
   refine List.any_eq_true.2 ⟨i, List.mem_finRange i, ?_⟩
   simp only [Bool.and_eq_true]
-  refine ⟨h, List.any_eq_true.2 ⟨t, ht, ?_⟩⟩
+  refine ⟨h', List.any_eq_true.2 ⟨t, ht, ?_⟩⟩
   unfold hatLock
-  exact List.any_eq_true.2 ⟨_, hL, decide_eq_true rfl⟩
+  exact List.any_eq_true.2 ⟨_, hL', decide_eq_true rfl⟩
 
 /-- **The declaration of a specification.** -/
 def deklaration : Deklaration where
@@ -250,7 +258,7 @@ def deklaration : Deklaration where
   sigNr := z.sigNr
   eigner_nie_erzeugt := fun n t m s h => z.eigner_ok n t m s h
   Inv := Fin z.invs.length
-  traeger := z.traeger
+  traeger := fun i => (z.traeger i).map Sum.inl
   invs := List.finRange z.invs.length
   Ax := Fin z.axs.length
   aparams := fun a => (z.axs.get a).params
@@ -275,7 +283,7 @@ def deklaration : Deklaration where
     intro hb
     simp only [hb, List.isEmpty_nil, Bool.not_true, Bool.and_false] at h
     exact absurd h (by simp only [Bool.false_eq_true, not_false_eq_true])
-  invarianten_gehalten := fun n i h t ht L hL => z.inv_ok n i h t ht L hL
+  invarianten_gehalten := fun n i h c hc L hL => z.inv_ok n i h c hc L hL
   ggeteilt_bewacht := fun g h => by
     by_cases hb : z.gbraucht g = []
     · right

@@ -220,8 +220,8 @@ end Gabbro.Grammatik
     invariant's carrier list -- the CSL coverage side condition, per thread, no run
     reasoning); the guard fact `Sum.inl L ∈ D.braucht t` is consumed there.
 
-    Scope, honestly narrowed: U003 (`Syntax.lean`:181-182) quantifies over TABLE carriers
-    (`D.traeger : Inv → List Tab`) only -- globals have no `schuldet` coverage, so the
+    Scope, honestly narrowed: `wache_aus_schuld` discharges the watch of TABLE carriers (U003 now also covers
+    the global carriers of an invariant, `D.traeger : Inv → List (Tab ⊕ Glob)`; the global discharge is not done here), so the
     derived watch (`wache_aus_schuld`) and the named `hinv_aus_disziplin` are TABLE-scoped.
     Shared globals stay on the §13-§15 exception track (`AtomarAusgenommen` via A10
     machine ordering, `PaarungAusgenommen` via publishes/awaits); the general per-carrier
