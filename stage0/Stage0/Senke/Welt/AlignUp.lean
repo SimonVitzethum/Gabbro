@@ -38,4 +38,16 @@ theorem alignUp_dvd (a n : Nat) (hn : 0 < n) : n ∣ alignUp a n := by
     rw [Nat.mul_succ]
     omega
 
+/-- Round a requested alignment up to the storage word grid. -/
+def wordAlign (n : Nat) : Nat := 8 * ((n + 7) / 8)
+
+/-- Relative padding preserves the common word grid, including zero alignment. -/
+theorem alignUp_word_grid (off n : Nat) (h : 8 ∣ off) :
+    8 ∣ alignUp off (wordAlign n) := by
+  by_cases hz : wordAlign n = 0
+  · simpa [hz] using h
+  · obtain ⟨k, hk⟩ := alignUp_dvd off (wordAlign n) (by omega)
+    refine ⟨((n + 7) / 8) * k, ?_⟩
+    simpa [wordAlign, Nat.mul_assoc] using hk
+
 end Gabbro.Stage0.Senke
