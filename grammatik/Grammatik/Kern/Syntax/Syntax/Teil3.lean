@@ -347,6 +347,18 @@ theorem verbrauchWahl_map {α β : Type} (f : α → β) (ks : List α)
       (verbrauchWahl ks p e same).map f :=
   verbrauchWahlAux_map f ks ks p p' e e' same same' hp he hsame (fun k hk => hk)
 
+/-- Pointwise-equal predicates count alike across a value map (`all`). -/
+theorem map_all_beibehalt {α β : Type} (f : α → β) (l : List α)
+    (p : α → Bool) (p' : β → Bool)
+    (h : ∀ x ∈ l, p' (f x) = p x) :
+    ((l.map f).all p') = (l.all p) := by
+  induction l with
+  | nil => rfl
+  | cons x xs ih =>
+      have hx : p' (f x) = p x := h x List.mem_cons_self
+      have ih' := ih (fun y hy => h y (List.mem_cons_of_mem _ hy))
+      simp only [List.map_cons, List.all_cons, hx, ih']
+
 #print axioms waehleMinimal_istMitglied
 #print axioms waehleMinimal_keinMitglied
 #print axioms waehleMinimal_alleFalsch
@@ -365,5 +377,6 @@ theorem verbrauchWahl_map {α β : Type} (f : α → β) (ks : List α)
 #print axioms istMinimalVerbrauch_map
 #print axioms verbrauchWahlAux_map
 #print axioms verbrauchWahl_map
+#print axioms map_all_beibehalt
 
 end Gabbro.Grammatik
