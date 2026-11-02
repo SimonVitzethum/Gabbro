@@ -239,6 +239,8 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
       exact ⟨_, rfl, hg, Nat.le_refl _⟩
   | ret e hp => simp only [execStmt] at h; cases h
   | retWhy r hp => simp only [execStmt] at h; cases h
+  | retScoped => simp only [execStmt] at h; cases h
+  | retWhyScoped => simp only [execStmt] at h; cases h
   | leave h' => simp only [execStmt] at h; cases h
   | next h' => simp only [execStmt] at h; cases h
   | axiomCall => simp only [Stmt.kOk, Bool.false_eq_true] at hk
