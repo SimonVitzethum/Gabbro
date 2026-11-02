@@ -98,7 +98,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (ρ : Env D Γ)
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .verbrauch t member edge inv bound mass body
-          rest k⟩)
+          (rest + 1) k⟩)
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ inv.orte)
       (hw : wahr? (eval σ₁ inv σ₁ ρ) = true)
       (σ₂ : World D) (hs₂ : σ₂ = σ₁.lese Λ (member.orte ++ edge.orte))
