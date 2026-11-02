@@ -149,7 +149,17 @@ def translationCertificate (reverse : Bool) : TranslationCertificate (translatio
   decoded := by cases reverse <;> rfl
   output := translationOutput reverse
   fuel := 1
-  execution := by intro oracle passes world; cases reverse <;> rfl
+  execution := by
+    intro oracle passes world
+    cases reverse <;> first
+      | rfl
+      | apply congrArg (RufAusgang.ok world)
+        funext index
+        rcases index with ⟨position, bound⟩
+        have choices : position = 0 ∨ position = 1 := by
+          change position < 2 at bound
+          omega
+        rcases choices with rfl | rfl <;> rfl
 
 theorem translation_result_unique_zeuge :
     ((translationCertificate false).output ⟨0, by decide⟩).n = 3 ∧
