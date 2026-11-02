@@ -21,9 +21,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 def artPtrB (fn : UFn) : Bool :=
   (List.range fn.kinds.length).all fun j =>
     match fn.kinds[j]? with
-    | some (.ptr num _) =>
+    | some (.ptr ⟨0, ⟨true, _, none⟩, .table num⟩) =>
       match fn.params[j]? with
-      | some (_, .ptr num' _) => num' == num
+      | some (_, .ptr ⟨0, ⟨true, _, none⟩, .table num'⟩) => num' == num
       | _ => false
     | _ => true
 
