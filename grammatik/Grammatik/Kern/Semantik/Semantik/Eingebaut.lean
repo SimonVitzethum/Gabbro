@@ -8,7 +8,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
-public import Grammatik.Kern.Semantik.Ueberlauf
+public import Grammatik.Kern.Semantik.Evaluation.Ueberlauf
 public import Grammatik.Kern.Syntax.Bits.T2.Teil1
 
 @[expose] public section

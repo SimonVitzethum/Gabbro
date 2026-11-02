@@ -19,14 +19,14 @@ public import Grammatik.Kern.Semantik.Geraet
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Unterbrechung
 public import Grammatik.Korpus.Zeugnis.Zeugnis
 public import Grammatik.Kern.Semantik.Budget
-public import Grammatik.Kern.Semantik.Terminierung
+public import Grammatik.Kern.Semantik.Evaluation.Terminierung
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 public import Grammatik.Logik.Vertraege.Komposition
 public import Grammatik.Kern.Syntax.Fehler
 public import Grammatik.Kern.Semantik.Erhaltung
 public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Marken.Teil2
-public import Grammatik.Kern.Semantik.Fristlauf
+public import Grammatik.Kern.Semantik.Evaluation.Fristlauf
 public import Grammatik.Kern.Semantik.Adressraum
 public import Grammatik.Nebenlaeufigkeit.Allgemein.LesenStabil
 public import Grammatik.Kern.Semantik.Maschine
@@ -43,7 +43,7 @@ public import Grammatik.Korpus.Referenz.ReferenzB
 public import Grammatik.Logik.Ruf.Hoare.HoareRegeln
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Kern.Semantik.Syscall.Syscall
-public import Grammatik.Kern.Semantik.Ueberlauf
+public import Grammatik.Kern.Semantik.Evaluation.Ueberlauf
 public import Grammatik.Kern.Syntax.Profil.Teil2
 public import Grammatik.Kern.Syntax.Profil.Speicher
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Schiebung
@@ -277,7 +277,7 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.EingebautLesen
 public import Grammatik.Parser.Elab.UebersetzeAllg.ZaehleZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil2
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
-public import Grammatik.Kern.Semantik.Durchgaenge
+public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2

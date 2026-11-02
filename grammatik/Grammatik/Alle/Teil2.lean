@@ -79,7 +79,7 @@ public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 public import Grammatik.Zielsatz.Eigenschaften.RwZeuge
 public import Grammatik.Zielsatz.Eigenschaften.RwZeugeLeser
 public import Grammatik.Zielsatz.Faeden.PoolZeuge
-public import Grammatik.Kern.Semantik.GanzzahlMatch
+public import Grammatik.Kern.Semantik.Evaluation.GanzzahlMatch
 public import Grammatik.Zielsatz.Eigenschaften.Divergenz
 public import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeGebunden
 public import Grammatik.Speichermodell.Adressen.Bereich

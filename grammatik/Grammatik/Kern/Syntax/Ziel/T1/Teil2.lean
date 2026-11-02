@@ -5,7 +5,7 @@ public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 public import Grammatik.Logik.Vertraege.Komposition
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt.Teil2
-public import Grammatik.Kern.Semantik.Fristlauf
+public import Grammatik.Kern.Semantik.Evaluation.Fristlauf
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Semantik.MaschinenKette
 public import Grammatik.Kern.Syntax.Extraktion
