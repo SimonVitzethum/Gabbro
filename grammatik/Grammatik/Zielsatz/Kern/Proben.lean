@@ -243,7 +243,7 @@ theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) (h1 : E.gestartet = []
 
 theorem mE_nutzerPflicht : NutzerPflicht mE :=
   ⟨⟨fun passes f => ⟨mP_koerper_alle passes f, mP_inv_alle passes f,
-      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
+      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_ohneZiele (fun _ _ => rfl)⟩,
     ⟨fun L => by cases L; decide, fun a ha => by
       simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩

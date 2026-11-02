@@ -82,4 +82,10 @@ theorem ptrVerfeinert_trivial {P : Programm D}
   rw [hp n]
   exact ⟨fun s ρ _ => hreq f s _, fun _ _ _ _ _ _ => rfl⟩
 
+/-- **O43 holds vacuously when no function conforms to any pointer type**: a
+    declaration whose `passt` admits no target has no pointer target to refine. -/
+theorem ptrVerfeinert_ohneZiele {P : Programm D} (h : ∀ f n, D.passt f n = false) :
+    PtrVerfeinert P :=
+  fun f n hf => absurd ((h f n).symm.trans hf) Bool.false_ne_true
+
 end Gabbro.Grammatik

@@ -117,6 +117,8 @@ def mD : Deklaration where
   Fn := MFn
   sig := mSigOf
   sigNr := mSigNr
+  passt := fun _ _ => false
+  passt_ok := fun _ _ h => absurd h Bool.false_ne_true
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Unit
   traeger := fun _ => [.inl .privA]
