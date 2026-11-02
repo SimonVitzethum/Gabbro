@@ -3,6 +3,7 @@ module
 
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
 public import Grammatik.Parser.Item.ElementTief.FunctionArguments
+public import Grammatik.Parser.Namen.References
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -185,17 +186,6 @@ def klausel (k : Kontext) : SKlausel → SKlausel
   | .load p => .load (k.pfad p)
   | .effs es => .effs (es.map (effekt k))
   | c => c
-
-/-- The names a statement binds for the statements after it. -/
-def gebunden : SAnw → List String
-  | .bind _ x _ _ => [x]
-  | .bindElse x _ _ _ _ => [x]
-  | .bindLib _ x _ _ => [x]
-  | .alloc _ x _ _ _ _ => [x]
-  | .allocVon _ x _ _ => [x]
-  | .await x _ _ _ => [x]
-  | .swap x _ _ _ => [x]
-  | _ => []
 
 /-- An ender, resolved. -/
 def ende (k : Kontext) : Option SEnde → Option SEnde

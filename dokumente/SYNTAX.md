@@ -833,7 +833,8 @@ gparam   = ident [ ":" ident { "+" ident } ]
          | ident ":" intword                         (* shorthand, e.g. `N: u64` *)
          | ident ":" fnptr ;
 gcall    = path "::" "[" garg { "," garg } "]" "(" [ arglist ] ")" ;
-garg     = typeexpr | constexpr ;
+garg     = typeexpr | constexpr | path | fnlit ;
+fnlit    = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract endblock ;
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
@@ -861,6 +862,14 @@ fn byte_use(x: u8) -> u8 {
     return value;
 }
 fn limit[N: u64]() -> u64 { return N; }
+fn apply_all[g: fn(u32 in 0 .. 1000) -> u32 effects {} costs <= 8 ops]() {
+    let doubled = g(7);
+}
+fn use_callback() {
+    apply_all::[fn(x: u32 in 0 .. 1000) -> u32 effects {} costs <= 3 ops {
+        return x * 2;
+    }]();
+}
 ```
 
 Calls supply all translation-time arguments explicitly; generic functions do not infer them from
@@ -875,12 +884,26 @@ names are deterministic with a declaration-collision check. A structural source 
 expanding instance set rather than truncating it. Changing arguments along a recursive cycle is refused;
 recursion at the same instance does not create another copy.
 
-This frontend implementation parses spec bounds and static function parameter declarations but refuses
-their instantiation until the corresponding conformance rule is available. Function literal arguments,
-generic prototypes, generic predicate/assembly bodies and generic translators are also refused. The
-Rust frontend has not yet been migrated to these forms. The connected Lean source/export/lowering
-witnesses are in `Parser/Elab/Generic/PipelineWitness.lean`. Successful expansion still requires
-the ordinary export and lowering checks.
+Static function arguments are ordinary global function paths or function literals. A literal has its
+own parameter and local scopes and captures nothing from the enclosing function. A free name that is
+not a global item is refused as `function-literal-capture: <name>`. State must be passed explicitly.
+Identical literal syntax shares a deterministic, collision-checked top-level function. After module
+resolution, generic functions are instantiated and their calls rewritten; spec calls in their contracts
+are expanded by the existing canonical rule, then literals become ordinary named functions.
+Generic calls inside literal bodies participate in the same finite instance closure.
+
+Inside an instance, `g(...)` becomes a direct call to its concrete argument. The generated function
+takes no runtime callback parameter. Before export succeeds, each argument passes the canonical
+`SigPasst` decision against the declared `fnptr` type, including parameter/result types, reason channels,
+write permissions and locks. A mismatch is refused as `static-function-signature-mismatch: <name>`.
+The actual function's contracts still govern every direct call. Until O43 supplies contract conformance,
+a nontrivial `requires` or `ensures` on the parameter's pointer type retains the existing refusal
+`contract on a function-pointer type without G form`; specialization does not bypass it.
+
+Spec bounds, generic prototypes, generic predicate/assembly bodies and generic translators are still
+refused. The Rust frontend has not yet been migrated to these forms. The Lean source/export/lowering
+witnesses are in `Parser/Elab/Generic/PipelineWitness.lean` and `FunctionWitness.lean`. Successful
+expansion still requires the ordinary export and lowering checks; witnesses require Lean checking.
 
 
 **`effects` is NOT fail-open.** A function **without** `effects` over a body

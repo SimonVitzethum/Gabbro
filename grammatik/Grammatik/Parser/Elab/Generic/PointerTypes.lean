@@ -105,6 +105,6 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
         -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
         -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
         let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
-        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
 
 end Gabbro.Grammatik.Parser.Uebersetze

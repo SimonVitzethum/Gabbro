@@ -18,7 +18,17 @@ def parseFunctionArgument (fuel : Nat) (tokens : List Token) :
   | .wort "fn" :: rest =>
     let (sig, remaining) ← parseFnSig fuel "" (.wort "fn" :: .ident "$literal" :: rest)
     if sig.fehler.isSome then throw "function literal cannot declare a reason channel"
+    if !(sig.klauseln.any (fun | .effs _ => true | _ => false)) ||
+        !(sig.klauseln.any (fun | .cost _ => true | _ => false)) then
+      throw "function literal requires effects and costs"
+    if sig.klauseln.any (fun
+        | .needs _ | .gives _ | .effs _ | .cost _ => false
+        | _ => true) then
+      throw "function literal clause is not part of fncontract"
     let (body, remaining) ← parseBlock fuel remaining
+    match body with
+    | .block _ (some _) => pure ()
+    | _ => throw "function literal requires an endblock"
     match remaining with
     | [.ende] => pure (.literal sig body)
     | _ => throw "function literal has trailing tokens"
@@ -34,9 +44,11 @@ def literalLocals : SAnw → List String
   | .bind _ n _ _ | .bindLib _ n _ _ | .allocVon _ n _ _ | .await n _ _ _ |
     .swap n _ _ _ => [n]
   | .bindElse n _ _ _ body => n :: literalLocals body
-  | .alloc _ n _ _ _ body => n :: body.toList.flatMap literalLocals
+  | .alloc _ n _ _ _ body => n :: (match body with
+      | some body => literalLocals body
+      | none => [])
   | .cond _ yes branches no => literalLocals yes ++ branches.flatMap literalLocals ++
-      no.toList.flatMap literalLocals
+      (match no with | some body => literalLocals body | none => [])
   | .cases _ arms => arms.flatMap literalLocals
   | .arm _ binder body => binder.toList ++ literalLocals body
   | .each binder _ _ _ _ _ _ body => binder :: literalLocals body

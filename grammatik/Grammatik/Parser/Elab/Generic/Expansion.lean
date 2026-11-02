@@ -85,6 +85,17 @@ def checkRecursion (env : Environment) : Nat → List Instance → Instance → 
       for child in children do
         checkRecursion env fuel (key :: ancestors) child
 
+/-- Reuse the canonical specification-call expansion after monomorphisation and before literal
+    materialization. Only the spec table and parameter names are read by uSpecKlauseln. -/
+def expandSpecificationContracts (specs : List (String × List String × SExpr))
+    (sig : FnSig) : Except String FnSig := do
+  if specs.isEmpty then pure sig else
+    let ctx : Uebersetze.UCtx :=
+      { names := sig.params.map Prod.fst, kinds := [], types := [], tabs := [], locks := [],
+        held := [], res := none, fname := sig.name, alias := [], lits := [], specs }
+    let clauses ← Uebersetze.uSpecKlauseln ctx (sig.params.map Prod.fst) sig.klauseln
+    pure { sig with klauseln := clauses }
+
 /-- The output retains every ordinary item and appends exactly the closed, deterministically named
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
 def expandTemplatesWithRequirements (source : List SItemTief) :
@@ -115,7 +126,15 @@ def expandTemplatesWithRequirements (source : List SItemTief) :
     SItemTief.fnT sig body)
   let literals := results.flatMap (fun result => result.1.2.1)
   let requirements := results.flatMap (fun result => result.1.2.2)
-  let target ← appendLiterals (names ++ instances.map instanceName) (ordinary ++ generated) literals
+  let specs := ordinary.filterMap fun
+    | .specT sig predicate => some (sig.name, sig.params.map Prod.fst, predicate)
+    | _ => none
+  let ordinary ← (ordinary ++ generated).mapM fun
+    | .fnT sig body => return .fnT (← expandSpecificationContracts specs sig) body
+    | item => pure item
+  let literals ← literals.mapM fun (sig, body) => do
+    pure (← expandSpecificationContracts specs sig, body)
+  let target ← appendLiterals (names ++ instances.map instanceName) ordinary literals
   pure (target, requirements)
 
 /-- Generic syntax belongs to ordinary function bodies in this implementation. -/
