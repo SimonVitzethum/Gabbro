@@ -123,7 +123,6 @@ theorem ob_cons_inv : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c1 
   | _, _, _, _, _, _, _, _, .awaits .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .exchange .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .narrow .. => by intro he; cases he
-  | _, _, _, _, _, _, _, _, .narrowRequired .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .check .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .float .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .floatLit .. => by intro he; cases he

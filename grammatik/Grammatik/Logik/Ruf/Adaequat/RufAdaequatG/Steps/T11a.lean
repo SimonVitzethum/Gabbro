@@ -91,97 +91,176 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | g1 hs =>
     cases hs with
     | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-    | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
+    | ruf =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueck =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
     | endeEntf _ _ _ _ _ _ _ _ hhead => (rw [hR] at hhead; cases hhead; exact Or.inr ⟨_, rufUpdateG_self _ _ _⟩)
     | endeForm _ _ _ _ _ _ hent hhead => (rw [hR] at hhead; cases hhead; exact absurd hent (by simp only [EndEntfaltbar, Bool.false_eq_true, not_false_eq_true]))
-    | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-    | dannLeer _ _ _ _ _ hhead => kopfweg
-    | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
-    | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
-    | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
-    | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
+    | dannBlatt =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeer =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannIteWahr =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannIteFalsch =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnOptionSome =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnOptionNone =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnTagSome =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnTagNone =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannNarrowOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeBindAxiom =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g2 hs =>
     cases hs with
-    | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | freiGib _ _ _ _ _ _ hhead => kopfweg
-    | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
-    | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
-    | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | dannNarrowElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannPruefWahr =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannPruefFalsch =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBreaking =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLocks =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | freiGib =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | schrumpfVergiss =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannTrav =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | travNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | travFort =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | travDone =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRetry =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederUeber =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederWeiter =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederSchritt =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederFort =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannForever =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | ewigWeiter =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | ewigFort =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rufDann =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g3 hs =>
     cases hs with
-    | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
-    | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+    | dannCallInd =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rufCallInd =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCall =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCallInd =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCallElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCallIndElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannCallIndElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeaveTrav =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannNextTrav =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeaveWieder =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannNextWieder =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeaveEwig =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g4 hs =>
     cases hs with
-    | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
-    | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
-    | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
-    | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
-    | rueckGrund _ _ _ hhead => kopfweg
+    | dannNextEwig =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelDannLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelDannNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelSchrumpfLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelSchrumpfNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelFreiLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelFreiNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelAbbruchLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelAbbruchNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRet =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckCons =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRetBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckConsBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g5 hs =>
     cases hs with
-    | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
-    | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
-    | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
-    | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rueckConsGrund _ _ _ _ hhead => kopfweg
-    | dannRetGrund _ _ _ _ _ hhead => kopfweg
+    | dannRegLies =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRegLiesElseWahr =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRegLiesElseFalsch =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannAwaits =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannExchange =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleit =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitLit =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitVon =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitNarrowOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitNarrowElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindAxiom =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindAxiomElseOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindAxiomElseGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckConsGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRetGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g6 hs =>
     cases hs with
-    | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | endeBindAxiomElseOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeBindAxiomElseGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
 
 /-- At a head `dann (traverse …; rest) k` every step of `f` is a bare lock
     step or the read-free unfold `dannTrav`. -/
@@ -201,97 +280,177 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | g1 hs =>
     cases hs with
     | blatt _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-    | ruf _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rueck _ _ hpop _ _ _ _ _ hhead => kopfweg
-    | endeEntf _ _ _ _ _ _ _ _ hhead => kopfweg
-    | endeForm _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBlatt _ _ _ _ _ _ _ _ _ hleaf hhead _ _ _ _ hstep => kopfweg
-    | dannLeer _ _ _ _ _ hhead => kopfweg
-    | dannIteWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannIteFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannOnOptionSome _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannOnOptionNone _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannOnTagSome _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ _ _ hw => kopfweg
-    | dannOnTagNone _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ _ hw => kopfweg
-    | dannOnGrund _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ _ hw => kopfweg
-    | endeBind _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannBind _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
+    | ruf =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueck =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeEntf =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeForm =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBlatt =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeer =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannIteWahr =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannIteFalsch =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnOptionSome =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnOptionNone =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnTagSome =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnTagNone =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannOnGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannNarrowOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeBindAxiom =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g2 hs =>
     cases hs with
-    | dannNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannPruefWahr _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannPruefFalsch _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannBreaking _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannLocks _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | freiGib _ _ _ _ _ _ hhead => kopfweg
-    | schrumpfVergiss _ _ _ _ _ _ _ hhead => kopfweg
+    | dannNarrowElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannPruefWahr =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannPruefFalsch =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBreaking =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLocks =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | freiGib =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | schrumpfVergiss =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
     | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => (rw [hR] at hhead; cases hhead; exact Or.inr ⟨_, rufUpdateG_self _ _ _⟩)
-    | travNext _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | travFort _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | travDone _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | wiederUeber _ _ _ _ _ _ _ _ hhead => kopfweg
-    | wiederWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | wiederSchritt _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | wiederFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | ewigWeiter _ _ _ _ _ _ _ _ _ hhead _ hs₁ hw => kopfweg
-    | ewigFort _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | travNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | travFort =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | travDone =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRetry =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederUeber =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederWeiter =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederSchritt =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | wiederFort =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannForever =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | ewigWeiter =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | ewigFort =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rufDann =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g3 hs =>
     cases hs with
-    | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
-    | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
+    | dannCallInd =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rufCallInd =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCall =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCallInd =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCallElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindCallIndElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannCallIndElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeaveTrav =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannNextTrav =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeaveWieder =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannNextWieder =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannLeaveEwig =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g4 hs =>
     cases hs with
-    | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
-    | peelDannLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelDannNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelFreiLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelFreiNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => kopfweg
-    | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannRet _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
-    | rueckCons _ _ hpop _ _ _ _ _ _ hhead => kopfweg
-    | dannRetBind _ _ _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
-    | rueckConsBind _ _ _ _ _ _ _ hhead _ _ hpop => kopfweg
-    | rueckGrund _ _ _ hhead => kopfweg
+    | dannNextEwig =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelDannLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelDannNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelSchrumpfLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelSchrumpfNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelFreiLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelFreiNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelAbbruchLeave =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | peelAbbruchNext =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRet =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckCons =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRetBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckConsBind =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g5 hs =>
     cases hs with
-    | dannRegLies _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
-    | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hs₁ hw => kopfweg
-    | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ hs₁ => kopfweg
-    | dannExchange _ _ _ _ _ _ hw _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleit _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleitLit _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannGleitVon _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
-    | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | rueckConsGrund _ _ _ _ hhead => kopfweg
-    | dannRetGrund _ _ _ _ _ hhead => kopfweg
+    | dannRegLies =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRegLiesElseWahr =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRegLiesElseFalsch =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannAwaits =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannExchange =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleit =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitLit =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitVon =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitNarrowOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannGleitNarrowElse =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindAxiom =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindAxiomElseOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannBindAxiomElseGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | rueckConsGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | dannRetGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
   | g6 hs =>
     cases hs with
-    | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
-    | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | endeBindAxiomElseOk =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
+    | endeBindAxiomElseGrund =>
+      (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); kopfweg
 
 
 end Gabbro.Grammatik

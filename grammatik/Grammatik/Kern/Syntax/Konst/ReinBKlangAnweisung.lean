@@ -92,8 +92,10 @@ theorem constStmtB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ 
     {Λ Λout : List (Res c.D)} (e : Stmt c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
     (hacc : constStmtB c e = true) : ConstStmt c (hΛout ▸ hΛ ▸ e) :=
   match Λ, Λout, e, hΛ, hΛout, hacc with
-  | _, _, .assignVar x e, rfl, rfl, hacc => by
-      simp only [constStmtB_eq_assignVar] at hacc
+  | _, _, .assignVar x e, hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
+      rw [constStmtB_eq_assignVar (Λout := [])] at hacc
       exact .assignVar (constExprB_sound c e hacc)
   | _, _, .ite condition yes no, rfl, rfl, hacc => by
       simp only [constStmtB_eq_ite, Bool.and_eq_true] at hacc
@@ -113,61 +115,109 @@ theorem constStmtB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ 
       simp only [constStmtB_eq_onWhy, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .onWhy (constExprB_sound c reason h0) (constReasonArmsB_soundGen c arms rfl rfl h1)
-  | _, _, .ret value hperm, rfl, rfl, hacc => by
-      simp only [constStmtB_eq_ret] at hacc
+  | _, _, .ret value hperm, hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
+      rw [constStmtB_eq_ret (Λout := [])] at hacc
       exact .ret (constResultB_sound c value hacc)
-  | _, _, .call f args hp hr, rfl, heq, hacc => by
-      simp only [constStmtB_eq_call] at hacc
+  | _, _, .call f args hp hr, hΛ, heq, hacc => by
+      try subst hΛ
+      rw [constStmtB_eq_call (Λout := [])] at hacc
       exact ConstStmt.call f args hp hr heq (constArgsB_sound c args hacc)
-  | _, _, .assignSlot .., rfl, rfl, hacc => by
+  | _, _, .assignSlot .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_assignSlot] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .assignThru .., rfl, rfl, hacc => by
+  | _, _, .assignThru .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_assignThru] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .assignGlob .., rfl, rfl, hacc => by
+  | _, _, .assignGlob .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_assignGlob] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .putBytes .., rfl, rfl, hacc => by
+  | _, _, .putBytes .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_putBytes] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .shift .., rfl, rfl, hacc => by
+  | _, _, .shift .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_shift] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .callInd .., rfl, _, hacc => by
+  | _, _, .callInd .., hΛ, _, hacc => by
+      try subst hΛ
       rw [constStmtB_absage_callInd] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .callIndElse .., rfl, _, hacc => by
+  | _, _, .callIndElse .., hΛ, _, hacc => by
+      try subst hΛ
       rw [constStmtB_absage_callIndElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .locks .., rfl, rfl, hacc => by
+  | _, _, .locks .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_locks] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .breaking .., rfl, rfl, hacc => by
+  | _, _, .breaking .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_breaking] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .traverse .., rfl, rfl, hacc => by
+  | _, _, .traverse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_traverse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .retry .., rfl, rfl, hacc => by
+  | _, _, .retry .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_retry] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .forever .., rfl, rfl, hacc => by
+  | _, _, .forever .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_forever] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .axiomCall .., rfl, rfl, hacc => by
+  | _, _, .axiomCall .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_axiomCall] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .axiomCallElse .., rfl, _, hacc => by
+  | _, _, .axiomCallElse .., hΛ, _, hacc => by
+      try subst hΛ
       rw [constStmtB_absage_axiomCallElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .regWrite .., rfl, rfl, hacc => by
+  | _, _, .regWrite .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_regWrite] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .transition .., rfl, rfl, hacc => by
+  | _, _, .transition .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_transition] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .publish .., rfl, rfl, hacc => by
+  | _, _, .publish .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_publish] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .advances .., rfl, _, hacc => by
+  | _, _, .advances .., hΛ, _, hacc => by
+      try subst hΛ
       rw [constStmtB_absage_advances] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .retires .., rfl, _, hacc => by
+  | _, _, .retires .., hΛ, _, hacc => by
+      try subst hΛ
       rw [constStmtB_absage_retires] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .retWhy .., rfl, rfl, hacc => by
+  | _, _, .retWhy .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_retWhy] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .leave .., rfl, rfl, hacc => by
+  | _, _, .leave .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_leave] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .next .., rfl, rfl, hacc => by
+  | _, _, .next .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_next] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .assignSlotRef .., rfl, rfl, hacc => by
+  | _, _, .assignSlotRef .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_assignSlotRef] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .consumeTraverse .., rfl, rfl, hacc => by
+  | _, _, .consumeTraverse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_consumeTraverse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .retScoped .., rfl, rfl, hacc => by
+  | _, _, .retScoped .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constStmtB_absage_retScoped] at hacc; exact absurd hacc Bool.false_ne_true
   | _, _, .retWhyScoped .., rfl, rfl, hacc => by
       rw [constStmtB_absage_retWhyScoped] at hacc; exact absurd hacc Bool.false_ne_true
@@ -175,10 +225,12 @@ theorem constBlockB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ
     {Λ Λout : List (Res c.D)} (e : Block c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
     (hacc : constBlockB c e = true) : ConstBlock c (hΛout ▸ hΛ ▸ e) :=
   match Λ, Λout, e, hΛ, hΛout, hacc with
-  | _, _, .nil, rfl, rfl, hacc => by
+  | _, _, .nil, hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       exact .nil
-  | _, _, .cons stmt rest, rfl, rfl, hacc => by
-      have hmid : _ = (_ : List (Res c.D)) := emptyResources c _
+  | _, _, .cons (Λ' := Λm) stmt rest, rfl, rfl, hacc => by
+      have hmid : Λm = [] := emptyResources c Λm
       simp only [constBlockB_eq_cons, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       have hs := constStmtB_soundGen c stmt rfl hmid h0
@@ -195,39 +247,73 @@ theorem constBlockB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ
       obtain ⟨h0, h1⟩ := hacc
       exact ConstBlock.bindCall f args he hp hr hcall rest
         (constArgsB_sound c args h0) (constBlockB_soundGen c rest hcall rfl h1)
-  | _, _, .bindCallInd .., rfl, rfl, hacc => by
+  | _, _, .bindCallInd .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindCallInd] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .bindCallIndElse .., rfl, rfl, hacc => by
+  | _, _, .bindCallIndElse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindCallIndElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .bindCallElse .., rfl, rfl, hacc => by
+  | _, _, .bindCallElse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindCallElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .bindAxiom .., rfl, rfl, hacc => by
+  | _, _, .bindAxiom .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindAxiom] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .bindAxiomElse .., rfl, rfl, hacc => by
+  | _, _, .bindAxiomElse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindAxiomElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .bindAxiomOpt .., rfl, rfl, hacc => by
+  | _, _, .bindAxiomOpt .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindAxiomOpt] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .bindAxiomOptElse .., rfl, rfl, hacc => by
+  | _, _, .bindAxiomOptElse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_bindAxiomOptElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .regRead .., rfl, rfl, hacc => by
+  | _, _, .regRead .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_regRead] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .regReadElse .., rfl, rfl, hacc => by
+  | _, _, .regReadElse .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_regReadElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .awaits .., rfl, rfl, hacc => by
+  | _, _, .awaits .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_awaits] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .exchange .., rfl, rfl, hacc => by
+  | _, _, .exchange .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_exchange] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .narrow .., rfl, rfl, hacc => by
+  | _, _, .narrow .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_narrow] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .narrowRequired .., rfl, rfl, hacc => by
+  | _, _, .narrowRequired .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_narrowRequired] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .check .., rfl, rfl, hacc => by
+  | _, _, .check .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_check] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .float .., rfl, rfl, hacc => by
+  | _, _, .float .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_float] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .floatLit .., rfl, rfl, hacc => by
+  | _, _, .floatLit .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_floatLit] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, _, .floatOf .., rfl, rfl, hacc => by
+  | _, _, .floatOf .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       rw [constBlockB_absage_floatOf] at hacc; exact absurd hacc Bool.false_ne_true
   | _, _, .floatNarrow .., rfl, rfl, hacc => by
       rw [constBlockB_absage_floatNarrow] at hacc; exact absurd hacc Bool.false_ne_true
@@ -235,11 +321,12 @@ theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ :
     {Λ : List (Res c.D)} (e : Endblock c.D V l Γ Λ) (hΛ : Λ = [])
     (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) :=
   match Λ, e, hΛ, hacc with
-  | _, .ret value hperm, rfl, hacc => by
+  | _, .ret value hperm, hΛ, hacc => by
+      try subst hΛ
       simp only [constEndB_eq_ret] at hacc
       exact .ret (constResultB_sound c value hacc)
-  | _, .cons stmt rest, rfl, hacc => by
-      have hmid : _ = (_ : List (Res c.D)) := emptyResources c _
+  | _, .cons (Λ' := Λm) stmt rest, rfl, hacc => by
+      have hmid : Λm = [] := emptyResources c Λm
       simp only [constEndB_eq_cons, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       have hs := constStmtB_soundGen c stmt rfl hmid h0
@@ -261,39 +348,56 @@ theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ :
       obtain ⟨h0, h1⟩ := hacc
       exact ConstEnd.bindCall f args he hp hr hcall rest
         (constArgsB_sound c args h0) (constEndB_soundGen c rest hcall h1)
-  | _, .retWhy .., rfl, hacc => by
+  | _, .retWhy .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_retWhy] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .leave .., rfl, hacc => by
+  | _, .leave .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_leave] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .next .., rfl, hacc => by
+  | _, .next .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_next] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .narrowRequired .., rfl, hacc => by
+  | _, .narrowRequired .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_narrowRequired] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .retScoped .., rfl, hacc => by
+  | _, .retScoped .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_retScoped] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .retWhyScoped .., rfl, hacc => by
+  | _, .retWhyScoped .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_retWhyScoped] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindCallElse .., rfl, hacc => by
+  | _, .bindCallElse .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindCallElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindAxiom .., rfl, hacc => by
+  | _, .bindAxiom .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindAxiom] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindAxiomElse .., rfl, hacc => by
+  | _, .bindAxiomElse .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindAxiomElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindAxiomOpt .., rfl, hacc => by
+  | _, .bindAxiomOpt .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindAxiomOpt] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindAxiomOptElse .., rfl, hacc => by
+  | _, .bindAxiomOptElse .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindAxiomOptElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .regRead .., rfl, hacc => by
+  | _, .regRead .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_regRead] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .regReadElse .., rfl, hacc => by
+  | _, .regReadElse .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_regReadElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .awaits .., rfl, hacc => by
+  | _, .awaits .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_awaits] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindCallInd .., rfl, hacc => by
+  | _, .bindCallInd .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindCallInd] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .bindCallIndElse .., rfl, hacc => by
+  | _, .bindCallIndElse .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_bindCallIndElse] at hacc; exact absurd hacc Bool.false_ne_true
-  | _, .narrow .., rfl, hacc => by
+  | _, .narrow .., hΛ, hacc => by
+      try subst hΛ
       rw [constEndB_absage_narrow] at hacc; exact absurd hacc Bool.false_ne_true
   | _, .exchange .., rfl, hacc => by
       rw [constEndB_absage_exchange] at hacc; exact absurd hacc Bool.false_ne_true
@@ -302,7 +406,9 @@ theorem constArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ 
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constArmsB c e = true) :
     ConstArms c (hΛout ▸ hΛ ▸ e) :=
   match Λ, Λout, cs, e, hΛ, hΛout, hacc with
-  | _, _, _, .nil, rfl, rfl, hacc => by
+  | _, _, _, .nil, hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       exact .nil
   | _, _, _, .cons body rest, rfl, rfl, hacc => by
       simp only [constArmsB, Bool.and_eq_true] at hacc
@@ -313,7 +419,9 @@ theorem constReasonArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constReasonArmsB c e = true) :
     ConstReasonArms c (hΛout ▸ hΛ ▸ e) :=
   match Λ, Λout, n, e, hΛ, hΛout, hacc with
-  | _, _, _, .nil, rfl, rfl, hacc => by
+  | _, _, _, .nil, hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
       exact .nil
   | _, _, _, .cons body rest, rfl, rfl, hacc => by
       simp only [constReasonArmsB, Bool.and_eq_true] at hacc
