@@ -1,0 +1,9 @@
+// Byte swap on u16: bswap(4660) is 13330, 0x1234 becomes 0x3412.
+module c13a_swap_two {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 = 4660;
+    let y : u16 = bswap(x);
+    if y == 13330 { return 61; }
+    return 0;
+}
+}

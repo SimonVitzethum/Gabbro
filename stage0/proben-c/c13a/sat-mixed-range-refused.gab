@@ -1,0 +1,8 @@
+// Saturating add over two different ranges has no single clamp interval.
+module c13a_sat_mixed {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 in 0 .. 10 = 5;
+    let b : u8 in 20 .. 30 = 25;
+    return a +| b;
+}
+}

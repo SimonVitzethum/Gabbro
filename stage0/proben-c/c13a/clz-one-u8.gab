@@ -1,0 +1,7 @@
+// Count leading zeros on u8 at one: clz(1) is 7.
+module c13a_clz_one {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 in 1 .. 255 = 1;
+    return clz(x);
+}
+}

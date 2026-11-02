@@ -1,0 +1,7 @@
+// Floor binary logarithm on u16: log2_floor(1000) is 9.
+module c13a_log_mid {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 in 1 .. 65535 = 1000;
+    return log2_floor(x);
+}
+}

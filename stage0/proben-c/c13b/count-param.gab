@@ -1,0 +1,23 @@
+// A parameter captured in the predicate: taken slots with score at least the limit.
+module c13b_count_param {
+table Seats count 4 { slot { taken : bool, score : u32 in 0 .. 100, } }
+impl fn tally(limit : u32 in 0 .. 100) -> u32 in 0 .. 4
+    effects { reads Seats.slots }
+{
+    let n = count k in slots of Seats : Seats.slots[k].taken && Seats.slots[k].score >= limit;
+    return n;
+}
+impl fn main() -> u32 in 0 .. 4
+    effects { reads Seats.slots, writes Seats.slots }
+{
+    Seats.slots[0].taken = true;
+    Seats.slots[0].score = 70;
+    Seats.slots[1].taken = true;
+    Seats.slots[1].score = 30;
+    Seats.slots[2].taken = false;
+    Seats.slots[2].score = 90;
+    Seats.slots[3].taken = true;
+    Seats.slots[3].score = 50;
+    return tally(50);
+}
+}

@@ -1,0 +1,19 @@
+// A count in a contract: the helper promises its answer equals the count over the slots.
+module c13b_count_ensures {
+table T count 3 { slot { flag : bool, } }
+impl fn howmany() -> u32 in 0 .. 3
+    effects { reads T.slots }
+    ensures result == count k in slots of T : T.slots[k].flag
+{
+    let n = count k in slots of T : T.slots[k].flag;
+    return n;
+}
+impl fn main() -> u32 in 0 .. 3
+    effects { reads T.slots, writes T.slots }
+{
+    T.slots[0].flag = true;
+    T.slots[1].flag = false;
+    T.slots[2].flag = true;
+    return howmany();
+}
+}

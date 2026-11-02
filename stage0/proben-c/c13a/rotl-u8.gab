@@ -1,0 +1,8 @@
+// Rotate left on u8: rotl(129, 1) is 3, the top bit wraps to the bottom.
+module c13a_rotl_one {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 129;
+    let k : u8 in 0 .. 7 = 1;
+    return rotl(x, k);
+}
+}

@@ -1,0 +1,14 @@
+// Counting over slots: no slot satisfies the predicate, so the count is zero.
+module c13b_count_none {
+table Flags count 4 { slot { flag : bool, } }
+impl fn main() -> u32 in 0 .. 4
+    effects { reads Flags.slots, writes Flags.slots }
+{
+    Flags.slots[0].flag = false;
+    Flags.slots[1].flag = false;
+    Flags.slots[2].flag = false;
+    Flags.slots[3].flag = false;
+    let n = count k in slots of Flags : Flags.slots[k].flag;
+    return n;
+}
+}

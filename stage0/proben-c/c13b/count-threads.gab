@@ -1,0 +1,8 @@
+// A count needs a bounded domain; threads names no slot count.
+module c13b_count_threads {
+table Seats count 8 { slot { taken : bool, } }
+impl fn main() -> u32 in 0 .. 8 effects { pure } {
+    let n = count k in threads : k == k;
+    return n;
+}
+}

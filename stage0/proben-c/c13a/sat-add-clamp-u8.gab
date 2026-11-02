@@ -1,0 +1,8 @@
+// Saturating add on u8 clamps at the top: 250 +| 10 is 255.
+module c13a_sat_top {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 250;
+    let b : u8 = 10;
+    return a +| b;
+}
+}

@@ -1,0 +1,7 @@
+// Population count on u16: popcount(43690) is 8, the alternating bits of 0xAAAA.
+module c13a_pop_alt {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 = 43690;
+    return popcount(x);
+}
+}

@@ -1,0 +1,8 @@
+// Wrapping add on u8 wraps modulo 256: 250 +% 10 is 4.
+module c13a_add_wrap {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 250;
+    let b : u8 = 10;
+    return a +% b;
+}
+}

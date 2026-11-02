@@ -1,0 +1,17 @@
+// A guarded count: the table is lock-protected and the count runs inside the lock.
+module c13b_count_locked {
+table Vault count 3 { slot { flag : bool, } }
+lock P protects { Vault } rank 1;
+impl fn main() -> u32 in 0 .. 3
+    effects { reads Vault, reads Vault.slots, writes Vault.slots, locks P }
+{
+    let mut n : u32 in 0 .. 3 = 0;
+    locks P {
+        Vault.slots[0].flag = true;
+        Vault.slots[1].flag = false;
+        Vault.slots[2].flag = true;
+        n = count k in slots of Vault : Vault.slots[k].flag;
+    }
+    return n;
+}
+}
