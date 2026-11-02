@@ -193,6 +193,7 @@ def itemName : SItemTief → Option String
   | .transT _ s _ => some s.name
   | .gateT it => itemName it
   | .pubT it => itemName it
+  | .adaptT s _ _ _ => some s.name
   | _ => none
 
 mutual

@@ -80,6 +80,19 @@ def syscall (k : Kontext) (c : SSyscall) : SSyscall :=
     gate := { pre := c.gate.pre.map (aus k'), post := c.gate.post.map (aus k'),
               uses := c.gate.uses.map (effekt k'), cost := ausO k' c.gate.cost } }
 
+/-- An adapter parameter, resolved: only a new parameter carries a type. -/
+def adaptParam (k : Kontext) : SAdaptParam → SAdaptParam
+  | .neu n t => .neu n (typ k t)
+  | p => p
+
+/-- An adapter head, resolved: the declared name, the source path and the clauses. The new
+    parameters scope the clauses; the body (resolved by the caller) additionally sees the
+    bound answer name. Kept source parameters are NOT in scope here: a use that collides
+    with an item name is poisoned (`Kontext.ref`), every other use resolves after expansion. -/
+def adaptSig (k : Kontext) (s : FnSig) (neu : List String) : FnSig :=
+  let k' := k.mit neu
+  { (sig k s) with klauseln := s.klauseln.map (klausel k') }
+
 /-- **An item, resolved** in its module: its own key and every name it writes. Item kinds without a G
     form pass unchanged (the elaborator refuses them). -/
 def item (k : Kontext) : SItemTief → SItemTief
@@ -111,6 +124,14 @@ def item (k : Kontext) : SItemTief → SItemTief
     .devT (k.eigen n) (ps.map fun (x, t) => (x, typ k t)) sp (ms.map (gerTeil (k.mit (ps.map Prod.fst))))
   | .groupT n ns is => .groupT (k.eigen n) (ns.map k.ref) (is.map (inv k))
   | .stateT n ts => .stateT (k.eigen n) (ts.map (trans k))
+  | .adaptT s ps a b =>
+    let neu := ps.filterMap fun | .neu n _ => some n | _ => none
+    let ak := k.mit neu
+    .adaptT (adaptSig k s neu) (ps.map (adaptParam k))
+      { quelle := k.ref a.quelle, gebunden := a.gebunden,
+        sonst := a.sonst.map fun (e, blk) => (e, anw ak blk),
+        vorspiel := anwL ak a.vorspiel }
+      (b.map (anw (k.mit (neu ++ a.gebunden.toList))))
   | .pubT it => item k it
   | it => it
 

@@ -170,6 +170,7 @@ def deklName : SItemTief → Option String
   | .assumT n _ _ _ => some n
   | .atomT n _ _ _ _ => some n
   | .lockT n _ _ _ _ _ _ => some n
+  | .adaptT s _ _ _ => some s.name
   | _ => none
 
 mutual
