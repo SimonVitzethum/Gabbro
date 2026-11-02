@@ -306,7 +306,7 @@ x86-64 runner model against the CPU run on Simon's x86-64 machine (`PLAN-SELF-HO
   | `instrumente/pruefe-lean.py` | the Lean model and stage 0 (`stage0/`) | `lake build` of both, `gabbro_ziel` on the standard axioms only, no `sorry`/`admit`/`native_decide`/`axiom`, layout |
   | `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm`, the reference programs as binaries on x86_64 and aarch64 with the same result |
   | `instrumente/pruefe-pruefer.py` | the Rust checker | `cargo test --workspace --no-fail-fast`, sentence register, identifiers assigned once |
-  | `instrumente/pruefe-gabbrov.py` | GabbroV | `lake build`, proofs without `sorry`, `gabbro prove` GREEN, no GREEN without Lean |
+  | `instrumente/pruefe-gabbrov.py` | GabbroV | `lake build`, proofs without `sorry`, `gabbro prove` GREEN, no GREEN without Lean, the bridge `bruecke/` built on the standard axioms |
 
   Exit code `0` measured and green, `1` measured and red, `2` nothing or not everything measured — that is not a
   green. A fifth guardian is not built: a new check becomes a test in `cargo test`, a Lean theorem, or a stage

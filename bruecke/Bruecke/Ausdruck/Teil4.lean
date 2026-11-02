@@ -13,10 +13,97 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg}
 
+/-! ## 5. One `ensures` clause, as the duty file states it -/
+
+theorem oldName_inj : ∀ a < 9, ∀ b < 9, oldName a = oldName b → a = b := by decide
+
+theorem oldName_ne_result : ∀ a, oldName a ≠ "result" := by
+  intro a
+  match a with
+  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 => decide
+  | _ + 8 => simp [oldName]
+
+/-- The binding `clauseAux` builds: the `n`th, `n+1`st, … `old` name bound to the value its read
+    has in the entry state. -/
+def oldsBind (s : Gabbro.Body.State) : List Gabbro.Body.Expr → Nat → Gabbro.Body.Binding →
+    Gabbro.Body.Binding
+  | [], _, β => β
+  | o :: os, n, β =>
+      oldsBind s os (n + 1) (Gabbro.Body.bindLocal β (oldName n) ((Gabbro.Body.eval s o).getD .absent))
+
+/-- The end of a clause: evaluated in the exit world under the built binding (with `result`
+    bound to the answer, where the clause names it). -/
+def Schluss (t : Gabbro.Body.Expr) (uses : Bool) (s' : Gabbro.Body.State)
+    (r : Option Gabbro.Body.Value) (β : Gabbro.Body.Binding) : Prop :=
+  if uses then ∃ v, r = some v ∧
+      Gabbro.Body.eval ⟨s'.world, Gabbro.Body.bindLocal β "result" v⟩ t = some (.bool true)
+  else Gabbro.Body.eval ⟨s'.world, β⟩ t = some (.bool true)
+
+/-- Where every `old` read evaluates, the universally bound `old` values of `clauseAux` ARE those
+    values. -/
+theorem clauseAux_iff (t : Gabbro.Body.Expr) (uses : Bool) (s s' : Gabbro.Body.State)
+    (r : Option Gabbro.Body.Value) :
+    ∀ (olds : List Gabbro.Body.Expr) (n : Nat) (β : Gabbro.Body.Binding),
+      (∀ o ∈ olds, ∃ v, Gabbro.Body.eval s o = some v) →
+      (clauseAux t uses s s' r olds n β ↔ Schluss t uses s' r (oldsBind s olds n β))
+  | [], n, β, _ => by
+      unfold clauseAux Schluss oldsBind
+      cases uses <;> simp
+  | o :: os, n, β, hev => by
+      obtain ⟨v, hv⟩ := hev o (List.mem_cons_self ..)
+      have ih := clauseAux_iff t uses s s' r os (n + 1)
+        (Gabbro.Body.bindLocal β (oldName n) v) (fun o' h => hev o' (List.mem_cons_of_mem _ h))
+      simp only [clauseAux, oldsBind, hv, Option.getD_some]
+      constructor
+      · intro h; exact ih.mp (h v rfl)
+      · intro h ov hov; cases hov; exact ih.mpr h
+
+theorem oldsBind_fremd (s : Gabbro.Body.State) (m : String) :
+    ∀ (olds : List Gabbro.Body.Expr) (n : Nat) (β : Gabbro.Body.Binding),
+      (∀ i, i < olds.length → m ≠ oldName (n + i)) → oldsBind s olds n β m = β m
+  | [], _, _, _ => rfl
+  | o :: os, n, β, h => by
+      simp only [oldsBind]
+      rw [oldsBind_fremd s m os (n + 1) _ (fun i hi => by
+        have := h (i + 1) (by simp; omega)
+        rwa [show n + (i + 1) = n + 1 + i by omega] at this)]
+      exact Gabbro.Body.bindLocal_elsewhere _ _ _ _ (by simpa using h 0 (by simp))
+
+theorem oldsBind_hier (s : Gabbro.Body.State) :
+    ∀ (olds : List Gabbro.Body.Expr) (n : Nat) (β : Gabbro.Body.Binding) (i : Nat)
+      (hi : i < olds.length), n + olds.length ≤ 9 →
+      oldsBind s olds n β (oldName (n + i)) = (Gabbro.Body.eval s olds[i]).getD .absent
+  | [], _, _, _, hi, _ => by simp at hi
+  | o :: os, n, β, 0, _, hn => by
+      simp only [oldsBind, Nat.add_zero]
+      rw [oldsBind_fremd s _ os (n + 1) _ (fun i hi h => by
+        have := oldName_inj n (by simp at hn; omega) (n + 1 + i) (by simp at hn; omega) h
+        omega)]
+      simp
+  | o :: os, n, β, i + 1, hi, hn => by
+      simp only [oldsBind]
+      rw [show n + (i + 1) = n + 1 + i by omega]
+      exact oldsBind_hier s os (n + 1) _ i (by simpa using hi) (by simp at hn; omega)
+      
+/-- No parameter is called `result` or `old#…` -- the names a clause binds on top of the entry
+    binding. Checked per unit. -/
+def NamenFrei (fn : UFn) : Prop :=
+  ∀ q ∈ fn.params, q.1 ≠ "result" ∧ ∀ i, q.1 ≠ oldName i
+
+theorem LRel.ueber {D : Deklaration} {Γ : Ctx} {fn : UFn} {sh : Nat} {ρ : Env D Γ}
+    {β β' : Gabbro.Body.Binding} (hN : NamenFrei fn) (h : LRel fn sh ρ β)
+    (hβ : ∀ p, p ≠ "result" → (∀ i, p ≠ oldName i) → β' p = β p) : LRel fn sh ρ β' := by
+  intro p j hj
+  obtain ⟨τ, hτ⟩ := paramPos_name _ _ _ hj
+  have hm : (p, τ) ∈ fn.params := List.mem_of_getElem? hτ
+  obtain ⟨h1, h2⟩ := hN _ hm
+  rw [hβ p h1 h2]
+  exact h p j hj
+
 /-- **One clause of a promise**: the Prop the duty file states (`clauseProp`) holds exactly when
     the lowered G predicate is true -- over the entry world `σ₀`, the exit world `σ'` and the
     `ensures` environment `E` (the answer first, where there is one). -/
-theorem clause_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option (Int × Int)}
+theorem clause_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
     (hA : ArtStimmt fn) (hT : TabEindeutig u) (hN : NamenFrei fn)
     {e : UEns} {x : Gabbro.Body.Expr} {A : Acc} (hx : ensExpr u fn {} e = some (x, A))
     {g : Expr (declOf u) Γ Λ .bool} (hg : lowEns u Γ Λ fn er e = .ok g)
@@ -77,7 +164,7 @@ theorem clause_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Opti
 /-- The `old` reads of every clause fit the nine names the printer has (`oldName`). Checked
     per unit. -/
 def OldsKurz (u : UProg) (fn : UFn) : Prop :=
-  ∀ e ∈ fn.sichert, match ensExpr u fn {} e with
+  ∀ e ∈ fn.gives, match ensExpr u fn {} e with
     | some (_, A) => A.olds.length ≤ 9
     | none => True
 
@@ -94,7 +181,7 @@ theorem chain_iff (wf : Prop) : ∀ (ps : List Prop), chain wf ps ↔ wf ∧ ∀
       rw [andAll_iff]
 
 /-- **All clauses of a promise** against the lowered conjunction. -/
-theorem ensList_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option (Int × Int)}
+theorem ensList_iff {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
     (hA : ArtStimmt fn) (hT : TabEindeutig u) (hN : NamenFrei fn)
     (σ₀ σ' : World (declOf u)) (E : Env (declOf u) Γ) (s s' : Gabbro.Body.State)
     (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) E s.local')

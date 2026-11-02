@@ -1,6 +1,7 @@
 module
 
 public import Bruecke.Ausdruck
+public import Grammatik.Parser.Elab.UebersetzeAllg3
 
 @[expose] public section
 
@@ -23,46 +24,70 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
-/-- The function-level views of the `Λ`-general readers (`Λ := resOf u c`). -/
+/-- The function-level views of the scope- and `Λ`-general readers: the parameters of `c` as the
+    scope (`Γ := ctxOf u c`, `fn := fnAt u c`), its held list (`Λ := resOf u c`), outside a loop. -/
 def lowCallArgOne (u : UProg) (c : Fin u.fns.length) (k : UParamArt) (t : Ty) (a : UArg) :
     Except String (Expr (declOf u) (ctxOf u c) (resOf u c) t) :=
-  lowCallArgOneL u c (resOf u c) k t a
+  lowCallArgOneL u c (ctxOf u c) (fnAt u c) (resOf u c) k t a
 
 def lowCallArgsAux (u : UProg) (c : Fin u.fns.length) (ks : List UParamArt) (ts : List Ty)
     (as : List UArg) : Except String (Args (declOf u) (ctxOf u c) (resOf u c) ts) :=
-  lowCallArgsAuxL u c (resOf u c) ks ts as
+  lowCallArgsAuxL u c (ctxOf u c) (fnAt u c) (resOf u c) ks ts as
 
 def castNachStmt (u : UProg) (caller callee : Fin u.fns.length)
     (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
       (resOf u caller) (nach (declOf u) callee (resOf u caller))) :
     Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
       (resOf u caller) (resOf u caller) :=
-  castNachStmtL u caller callee (resOf u caller) s
+  castNachStmtL u caller callee (ctxOf u caller) (resOf u caller) s
+
+abbrev StmtC (u : UProg) (c : Fin u.fns.length) :=
+  Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)
+
+def lowStmt (u : UProg) (c : Fin u.fns.length) (st : UStmt) : Except String (StmtC u c) :=
+  lowStmtL u c (ctxOf u c) (fnAt u c) (resOf u c) st
+
+def lowAssignDurch (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UIdx) (v : USide) :
+    Except String (StmtC u c) :=
+  lowAssignDurchL u c (ctxOf u c) (fnAt u c) (resOf u c) b fname ix v
+
+def lowAssignTab (u : UProg) (c : Fin u.fns.length) (b fname : String) (ix : UIdx) (v : USide) :
+    Except String (StmtC u c) :=
+  lowAssignTabL u c (ctxOf u c) (fnAt u c) (resOf u c) b fname ix v
+
+def lowCall (u : UProg) (c : Fin u.fns.length) (cname : String) (args : List UArg) :
+    Except String (StmtC u c) :=
+  lowCallL u c (ctxOf u c) (fnAt u c) (resOf u c) cname args
+
+/-- The trailing return of `c`, in the scope of its parameters. -/
+def lowEndF (u : UProg) (c : Fin u.fns.length) (r : URet) :
+    Except String (Endblock (declOf u) (verOf u c) false (ctxOf u c) (resOf u c)) :=
+  lowEnd u c (ctxOf u c) (fnAt u c) r
 
 /-! ## 1. The writes: the lowering's casts are the constructors -/
 
 theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
-    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.wert true))
-    (ht : (declOf u).tabNr t.wert = some t)
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
+    (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
-    (e : Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
     (hw : V.schreibt t = true)
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
-      assignDurchStmt u Γ Λ V t fh p ht i e hw hL =
-        Stmt.assignDurch (D := declOf u) p t ht fh.idx i e2 hw hL :=
+      assignDurchStmt (l := false) u Γ Λ V t fh p ht i e hw hL =
+        Stmt.assignThru (D := declOf u) p t ht fh.idx i e2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
 
 theorem assignSlotStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (V : Vertrag (declOf u)) (t : Fin u.tabellen.length)
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
     (fh : FieldHit u t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
-    (e : Expr (declOf u) Γ Λ (.int fh.weit.1 fh.weit.2))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
     (hw : V.schreibt t = true)
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     ∃ e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx), HEq e2 e ∧
-      assignSlotStmt u Γ Λ V t fh i e hw hL =
+      assignSlotStmt (l := false) u Γ Λ V t fh i e hw hL =
         Stmt.assignSlot (D := declOf u) t fh.idx i e2 hw hL :=
   ⟨_, mpr_heq _ _, rfl⟩
 
@@ -82,7 +107,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
       (∀ ρB : Gabbro.Body.Env, Gabbro.Body.step ρB bst s =
         .running ⟨Gabbro.Body.store s.world (.slot cn k fld) val, s.local'⟩) ∧
       WRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
-      (fnAt u c).schreibt.any (· == cn) = true := by
+      (fnAt u c).puts.any (· == cn) = true := by
   unfold lowAssignDurch lowAssignDurchL at h
   split at h
   · cases h
@@ -123,14 +148,14 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                       have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                       have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                       have hx : valOf ((declOf u).typ ⟨num, hlt⟩ fh.idx) (eval σl e2 σl ρ) =
-                          valOf (.int fh.weit.1 fh.weit.2) (eval σl e σl ρ) :=
+                          valOf (.int fh.range.1 fh.range.2) (eval σl e σl ρ) :=
                         valOf_eval_heq (fh.hint) e2 e he2 σl σl ρ
                       refine ⟨_, (tabAt u ⟨num, hlt⟩).name, (eval σl i σl ρ).n, fname,
                         valOf _ (eval σl e2 σl ρ), rfl, ?_, ?_, ?_⟩
                       · intro ρB
                         simp only [Gabbro.Body.step]
                         rw [hk, hv, ← hx]
-                      · exact wrel_slots u rfl (wrel_store u hWl _ ⟨num, hlt⟩ (hT _) fname fh hfh _ _)
+                      · exact wrel_slots u rfl (wrel_store u hWl _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh _ _)
                       · exact hw
                   · cases h
                 · cases h
@@ -152,7 +177,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {
       (∀ ρB : Gabbro.Body.Env, Gabbro.Body.step ρB bst s =
         .running ⟨Gabbro.Body.store s.world (.slot cn k fld) val, s.local'⟩) ∧
       WRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
-      (fnAt u c).schreibt.any (· == cn) = true := by
+      (fnAt u c).puts.any (· == cn) = true := by
   unfold lowAssignTab lowAssignTabL at h
   split at h
   · cases h
@@ -185,7 +210,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {
                 have hv := lowWertAt_sim he hsv hA hT σl σl ρ s.world s.local' hWl hL
                 have hk := lowIdx_sim hi σl σl ρ s.world s.local' hL
                 have hx : valOf ((declOf u).typ t fh.idx) (eval σl e2 σl ρ) =
-                    valOf (.int fh.weit.1 fh.weit.2) (eval σl e σl ρ) :=
+                    valOf (.int fh.range.1 fh.range.2) (eval σl e σl ρ) :=
                   valOf_eval_heq (fh.hint) e2 e he2 σl σl ρ
                 refine ⟨_, b, (eval σl i σl ρ).n, fname, valOf _ (eval σl e2 σl ρ), rfl, ?_, ?_, ?_⟩
                 · intro ρB
@@ -211,7 +236,7 @@ theorem execStmt_heq {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
 theorem castNachStmt_heq (caller callee : Fin u.fns.length)
     (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
       (resOf u caller) (nach (declOf u) callee (resOf u caller))) :
-    HEq (castNachStmtL u caller callee (resOf u caller) s) s := by
+    HEq (castNachStmtL u caller callee (ctxOf u caller) (resOf u caller) s) s := by
   unfold castNachStmtL; exact mp_heq _ _
 
 /-- The Body values of a G environment, in order. -/
@@ -278,7 +303,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
           · rename_i j hj
             split at h
             · rename_i num2 w2 hp
-              obtain ⟨w3, hw3⟩ := hA j num2 w2 hp
+              obtain ⟨w3, hw3⟩ := hA.1 j num2 w2 hp
               have hab := lrel_ptr c hL p j hj num2 w3 hw3
               have goal : Gabbro.Body.eval s (.name p) = some .absent := by
                 simp only [Gabbro.Body.eval, hab]
@@ -287,9 +312,16 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
             · cases h
         · cases h
       · cases h
-    · split at h <;> cases h
-    · cases h
-    · cases h
+    all_goals first
+      | (cases h; done)
+      | (repeat' split at h
+         all_goals first
+           | (cases h; done)
+           | (rename_i hx
+              cases h
+              simp only [Gabbro.Body.eval]
+              rw [hL p _ ‹paramPos (fnAt u c).params p = .ok _›, Nat.zero_add, nthVal_lowVar _ _ _ _ ρ hx]
+              try rfl))
   | freshPtr tname w2 =>
     simp only [argExpr] at hb
     cases hq : ptrParam u (fnAt u c) tname with
@@ -320,9 +352,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
       split at h
       · repeat' split at h
         all_goals first | (cases h; exact goal) | cases h
-      · split at h <;> cases h
-      · cases h
-      · cases h
+      all_goals first | (cases h; done) | (split at h <;> cases h)
   | val sd =>
     simp only [argExpr] at hb
     simp only [lowCallArgOne, lowCallArgOneL] at h
@@ -359,7 +389,8 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
         cases h
         cases s
         exact lowWertAt_sim he' hb hA hT σ₀ σ ρ _ _ hW hL
-    · cases h
+    all_goals cases h
+  | bval _ | oval _ | gval _ | fnref _ => simp [argExpr] at hb
 
 /-- **The argument list.** -/
 theorem lowCallArgsAux_sim (c : Fin u.fns.length)

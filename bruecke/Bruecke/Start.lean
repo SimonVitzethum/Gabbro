@@ -68,9 +68,11 @@ namespace Gabbro.Bruecke
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 
-/-- **The parser's lowering writes no `requires`** (`progOfFn`: `requires := fun _ => .tru`), for
-    every program it accepts -- so the second half of `StartPflicht` costs nothing there. -/
+/-- **The parser's lowering writes no `requires` for a function without `requires` predicates**
+    (`progOfFn`: `requires := reqOf ..`, which is `.tru` when `needs` is empty, `reqOf_leer`) -- so
+    the second half of `StartPflicht` costs nothing there. -/
 theorem lowerAllg_requires (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
+    (hn : ∀ f : Fin u.fns.length, (fnAt u f).needs = [])
     (h : lowerAllg u = .ok (P, fs)) : ∀ f, P.requires f = .tru := by
   unfold lowerAllg at h
   split at h
@@ -81,6 +83,6 @@ theorem lowerAllg_requires (u : UProg) (P : Programm (declOf u)) (fs : List (dec
       injection h1 with h2 h3
       subst h2
       intro f
-      rfl
+      simp only [progOfFn, reqOf, hn f, ↓reduceIte]
 
 end Gabbro.Bruecke

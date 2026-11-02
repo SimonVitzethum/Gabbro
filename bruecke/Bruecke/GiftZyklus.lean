@@ -62,17 +62,17 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Bruecke
 
 def uZ : UProg :=
-  { tabellen := [{ name := "T", count := 2, felder := [("v", (0, 10))] }],
-    sperren := [],
+  { tabs := [{ name := "T", count := 2, cols := [("v", (0, 10))] }],
+    locks := [],
     fns := [
-      { name := "f", params := [], parten := [], ergebnis := none, held := [], schreibt := [],
-        sichert := [.cmp "==" (.tab "T" "v" (.lit 1)) (.lit 5)], saetze := [.call "g" []],
-        rueck := .empty },
-      { name := "g", params := [], parten := [], ergebnis := none, held := [], schreibt := [],
-        sichert := [.cmp "==" (.tab "T" "v" (.lit 0)) (.lit 7)], saetze := [.call "h" []],
-        rueck := .empty },
-      { name := "h", params := [], parten := [], ergebnis := none, held := [], schreibt := [],
-        sichert := [.fls], saetze := [.call "h" []], rueck := .empty }] }
+      { name := "f", params := [], kinds := [], res := none, held := [], puts := [],
+        gives := [.cmp "==" (.tab "T" "v" (.lit 1)) (.lit 5)], body := [.call "g" []],
+        ret := .empty },
+      { name := "g", params := [], kinds := [], res := none, held := [], puts := [],
+        gives := [.cmp "==" (.tab "T" "v" (.lit 0)) (.lit 7)], body := [.call "h" []],
+        ret := .empty },
+      { name := "h", params := [], kinds := [], res := none, held := [], puts := [],
+        gives := [.fls], body := [.call "h" []], ret := .empty }] }
 
 theorem low_some : (lowerAllg uZ).toOption.isSome = true := by decide
 
@@ -111,13 +111,13 @@ theorem wf_t0 : wfU uZ t0 := by
     by_cases hv : fld = "v"
     · subst hv
       have e : sh = .intIn 0 10 := by
-        have h2 : ((uZ.tabellen.get ⟨0, by decide⟩).felder.find? (fun q => q.1 == "v")).map
+        have h2 : ((uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == "v")).map
             (fun q => Gabbro.Body.Shape.intIn q.2.1 q.2.2) = some (.intIn 0 10) := rfl
         rw [h2] at hf
         exact (Option.some.inj hf).symm
       subst e
       rfl
-    · have h2 : (uZ.tabellen.get ⟨0, by decide⟩).felder.find? (fun q => q.1 == fld) = none := by
+    · have h2 : (uZ.tabs.get ⟨0, by decide⟩).cols.find? (fun q => q.1 == fld) = none := by
         show [("v", ((0 : Int), (10 : Int)))].find? (fun q => q.1 == fld) = none
         simp only [List.find?]
         have : ("v" == fld) = false := by simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hv e.symm
@@ -138,7 +138,7 @@ theorem h_unhaltbar (ρ : Gabbro.Body.Env)
     writing it, and at the zero state it is 0. -/
 theorem g_unhaltbar (ρ : Gabbro.Body.Env)
     (hc : Gabbro.Body.Contract ρ "g" (preProp (wfU uZ) fnG) (postP uZ fnG))
-    (hf : Gabbro.Body.Frame ρ "g" fnG.schreibt) : False := by
+    (hf : Gabbro.Body.Frame ρ "g" fnG.puts) : False := by
   have := hc t0 ⟨wf_t0, rfl⟩
   have hw : (ρ "g" t0).1.world (.slot "T" 0 "v") = .int 0 :=
     hf t0 _ (by simp [fnG, uZ, Gabbro.Body.Place.carrier])
@@ -181,11 +181,11 @@ def vF : (declOf uZ).Feld tT := ⟨0, by decide⟩
 
 theorem typZ : ∀ (t : (declOf uZ).Tab) (f : (declOf uZ).Feld t), (declOf uZ).typ t f = .int 0 10 := by
   intro t f
-  have ht : t = tT := Fin.ext (by have := t.isLt; simp [uZ] at this; show t.wert = 0; omega)
+  have ht : t = tT := Fin.ext (by have := t.isLt; simp [uZ] at this; show t.val = 0; omega)
   subst ht
   have hf : f = vF := Fin.ext (by
-    have h1 : f.wert < 1 := f.isLt
-    show f.wert = 0
+    have h1 : f.val < 1 := f.isLt
+    show f.val = 0
     omega)
   subst hf
   rfl
@@ -236,9 +236,9 @@ theorem rz_nlogik (f : (declOf uZ).Fn) (σ : World (declOf uZ)) (ρ : Env (declO
     split <;> (intro h; cases h)
   · intro h; cases h
 
-theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of lowZ
+theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of stimmigZ.ohneReq lowZ
 
-theorem tabZ : tabIdx uZ.tabellen "T" = .ok tT := rfl
+theorem tabZ : tabIdx uZ.tabs "T" = .ok tT := rfl
 
 theorem feldZ : ∃ fh : FieldHit uZ tT, fieldHit uZ tT "v" = .ok fh ∧ fh.idx = vF :=
   ⟨_, rfl, rfl⟩
@@ -284,59 +284,53 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   intro hK
   obtain ⟨b0, hb0, hPb⟩ := gesenktZ.rumpf fI
   change lowBody uZ fI [.call "g" []] .empty = .ok b0 at hb0
-  rw [lowBody_cons fI .empty (.call "g" []) [] (fun g => by simp)] at hb0
-  split at hb0
-  · cases hb0
-  · rename_i gst hgst
-    split at hb0
-    · cases hb0
-    · rename_i rest hrest
-      cases hb0
-      have hx : stmtBody uZ (fnAt uZ fI) (.call "g" []) =
-          some (.call "g" [] [] (.lit (.bool true))) := rfl
-      let ρ₀ : Env (declOf uZ) (ctxOf uZ fI) := .nil
-      have hW0 : WRel uZ σ7 (eintritt uZ fI σ7 .nil).world := wrel_enc uZ σ7 _
-      have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
-        simp [fnAt, fI, uZ, paramPos] at hj
-      obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
-        lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen O0 0 RZ σ7 ρ₀ _ hW0 hL0
-      have hcallee : callee = gI := by
-        rcases callee with ⟨_ | _ | _ | n, hc⟩
-        · simp [fnAt, uZ] at hname
-        · rfl
-        · simp [fnAt, uZ] at hname
-        · exact absurd hc (by simp [uZ])
-      subst hcallee
-      have h7 : ((σr.slots tT 0 vF : Zahl 0 10)).n = 7 := by rw [hsl]; rfl
-      have hR : RZ gI σr envA = .ok σr () := by
-        unfold RZ; rw [dif_pos rfl]; simp only [h7, ↓reduceIte]
-      rcases hcases with ⟨σ', v, hR', hex⟩ | ⟨e, hR', _⟩ | ⟨e, hR', _⟩
-      · rw [hR] at hR'
-        cases hR'
-        have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
-          simp only [execEnd, hex]
-        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEnd uZ fI .empty = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
-          (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
-        have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
-          (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl
-        have hmain := (zurueck_heq (ctxParams_eq uZ fI).symm _ _ hX σ'' v'').mpr (hrun.trans hend)
-        have hens := (hK O0 rahmenO0 regLokal0 RZ rz_respektiert rz_ohneV σ7 .nil
-          (reqAmEintritt_wahr gesenktZ fI σ7 .nil)).1 σ'' v'' hmain
-        let s1 : Gabbro.Body.State := ⟨enc uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
-        have hW1 : WRel uZ σ'' s1.world := wrel_enc uZ σ'' _
-        have hpost := (post_iff gesenktZ fI (stimmigZ.art fI) stimmigZ.tab (stimmigZ.frei fI)
-          (stimmigZ.olds fI) (stimmigZ.post fI) (stimmigZ.boolErg fI) stimmigZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
-          (eintritt_lrel fI σ7 .nil) hW1).mpr hens
-        have h1 := platz hW1 1
-        have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by rw [hsl'', hsl]; rfl
-        rw [h0] at h1
-        simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr,
-          clauseProp, clauseAux, chain, andAll, resultClause, fnAt, fI, uZ, Gabbro.Body.eval,
-          Gabbro.Body.binop, s1] at hpost h1
-        rw [hpost.2] at h1
-        cases h1
-      · rw [hR] at hR'; cases hR'
-      · rw [hR] at hR'; cases hR'
+  obtain ⟨gst, rest, hgst, hrest, rfl⟩ := lowBody_cons_ok fI .empty (.call "g" []) [] rfl hb0
+  simp only [lowBody, List.length_nil, lowBodyF] at hrest
+  have hx : stmtBody uZ (fnAt uZ fI) (.call "g" []) =
+      some (.call "g" [] [] (.lit (.bool true))) := rfl
+  let ρ₀ : Env (declOf uZ) (ctxOf uZ fI) := .nil
+  have hW0 : WRel uZ σ7 (eintritt uZ fI σ7 .nil).world := wrel_enc uZ σ7 _
+  have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
+    simp [fnAt, fI, uZ, paramPos] at hj
+  obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
+    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen O0 0 RZ σ7 ρ₀ _ hW0 hL0
+  have hcallee : callee = gI := by
+    rcases callee with ⟨_ | _ | _ | n, hc⟩
+    · simp [fnAt, uZ] at hname
+    · rfl
+    · simp [fnAt, uZ] at hname
+    · exact absurd hc (by simp [uZ])
+  subst hcallee
+  have h7 : ((σr.slots tT 0 vF : Zahl 0 10)).n = 7 := by rw [hsl]; rfl
+  have hR : RZ gI σr envA = .ok σr () := by
+    unfold RZ; rw [dif_pos rfl]; simp only [h7, ↓reduceIte]
+  rcases hcases with ⟨σ', v, hR', hex⟩ | ⟨e, hR', _⟩ | ⟨e, hR', _⟩
+  · rw [hR] at hR'
+    cases hR'
+    have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
+      simp only [execEnd, hex]
+    obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEndF uZ fI .empty = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .empty = some [])
+      (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
+    have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
+      (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl
+    have hmain := (zurueck_heq (ctxParams_eq uZ fI).symm _ _ hX σ'' v'').mpr (hrun.trans hend)
+    have hens := (hK O0 rahmenO0 regLokal0 RZ rz_respektiert rz_ohneV σ7 .nil
+      (reqAmEintritt_wahr gesenktZ fI σ7 .nil)).1 σ'' v'' hmain
+    let s1 : Gabbro.Body.State := ⟨enc uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
+    have hW1 : WRel uZ σ'' s1.world := wrel_enc uZ σ'' _
+    have hpost := (post_iff gesenktZ fI (stimmigZ.art fI) stimmigZ.tab (stimmigZ.frei fI)
+      (stimmigZ.olds fI) (stimmigZ.post fI) (stimmigZ.boolErg fI) stimmigZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
+      (eintritt_lrel fI σ7 .nil) hW1).mpr hens
+    have h1 := platz hW1 1
+    have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by rw [hsl'', hsl]; rfl
+    rw [h0] at h1
+    simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr,
+      clauseProp, clauseAux, chain, andAll, resultClause, fnAt, fI, uZ, Gabbro.Body.eval,
+      Gabbro.Body.binop, s1] at hpost h1
+    rw [hpost.2] at h1
+    cases h1
+  · rw [hR] at hR'; cases hR'
+  · rw [hR] at hR'; cases hR'
 
 #print axioms alle_pflichten
 #print axioms nicht_koerperGutR

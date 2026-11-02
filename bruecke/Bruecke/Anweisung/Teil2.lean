@@ -12,6 +12,40 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg}
 
+/-- No aggregate field: the value writers answer nothing, and the statement reader takes the number
+    writers. -/
+theorem lowStmt_assign (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : String) (ix : UIdx)
+    (v : USide) : lowStmt u c (.assign b f ix v) = lowAssignDurch u c b f ix v := by
+  have hn : lowAssignDurchW (l := false) u c (ctxOf u c) (fnAt u c) (resOf u c) b f ix v = none := by
+    unfold lowAssignDurchW
+    split
+    · rfl
+    · split
+      · rename_i num _
+        split
+        · rename_i hlt
+          rw [fieldHitW_none (hT.2 ⟨num, hlt⟩)]
+          rfl
+        · rfl
+      · rfl
+  simp only [lowStmt, lowStmtL, hn, Option.getD_none]
+  rfl
+
+theorem lowStmt_assignTab (hT : TabEindeutig u) (c : Fin u.fns.length) (b f : String) (ix : UIdx)
+    (v : USide) : lowStmt u c (.assignTab b f ix v) = lowAssignTab u c b f ix v := by
+  have hn : lowAssignTabW (l := false) u c (ctxOf u c) (fnAt u c) (resOf u c) b f ix v = none := by
+    unfold lowAssignTabW
+    split
+    · rfl
+    · rename_i t _
+      rw [fieldHitW_none (hT.2 t)]
+      rfl
+  simp only [lowStmt, lowStmtL, hn, Option.getD_none]
+  rfl
+
+theorem lowStmt_call (c : Fin u.fns.length) (g : String) (as : List UArg) :
+    lowStmt u c (.call g as) = lowCall u c g as := rfl
+
 /-- The callee's LRel in its Body entry state. -/
 theorem lrel_bindAll {D : Deklaration} {Γ : Ctx} (fn : UFn) (ρ : Env D Γ)
     (hN : NamenEindeutig fn) (hl : fn.params.length = Γ.length) :
@@ -75,6 +109,35 @@ theorem preExpr_wahr {D : Deklaration} {Γ : Ctx} (fn : UFn) (ρ : Env D Γ) (β
     obtain ⟨_, _, rfl⟩ := he
     rfl
 
+/-- What a lowered call head says: the callee is the one the name finds, the arguments are the
+    lowered argument list, and the callee writes no table the caller does not. -/
+theorem lowRufKopf_ok {c : Fin u.fns.length} {Γ : Ctx} {fn : UFn} {Λ : List (Res (declOf u))}
+    {cname : String} {args : List UArg} {k : RufKopf u c Γ Λ}
+    (h : lowRufKopf u c Γ fn Λ cname args = .ok k) :
+    fnIdx u.fns cname = .ok k.callee ∧
+      lowCallArgsAuxL u c Γ fn Λ (fnAt u k.callee).kinds ((declOf u).params k.callee) args = .ok k.args ∧
+      (∀ t, writesAt u (fnAt u k.callee) t = true → writesAt u (fnAt u c) t = true) := by
+  unfold lowRufKopf at h
+  split at h
+  · cases h
+  · rename_i callee hc
+    split at h
+    · cases h
+    · rename_i a ha
+      split at h
+      · rename_i hW
+        split at h
+        · split at h
+          · split at h
+            · split at h
+              · cases h
+                exact ⟨hc, ha, hW⟩
+              · cases h
+            · cases h
+          · cases h
+        · cases h
+      · cases h
+
 /-- **A direct call.** On the G side the call asks the handler `R` for the callee at the read
     world `σr` with the evaluated arguments `envA`, and takes its answer; on the Body side the step
     asks the environment for the callee at the entry state `⟨s.world, bindAll … (envVals envA) …⟩`
@@ -106,69 +169,73 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
   unfold lowCall lowCallL at h
   split at h
   · cases h
-  · rename_i callee hcallee
+  · rename_i k hk
+    obtain ⟨hcallee, ha, hWr⟩ := lowRufKopf_ok hk
+    obtain ⟨callee, a, hp⟩ := k
     split at h
+    · rename_i hr
+      cases h
+      -- the Body side
+      have hfs : fnSuch u cname = some (fnAt u callee) := fnIdx_find _ _ _ hcallee
+      simp only [stmtBody, hfs] at hb
+      cases hes : argsExpr u (fnAt u c) args with
+      | none => rw [hes] at hb; cases hb
+      | some es =>
+        rw [hes] at hb
+        simp only [Option.some.injEq] at hb
+        subst hb
+        let σr := σ.lese (resOf u c) a.orte
+        have hWr' : WRel u σr s.world := wrel_slots u rfl hW
+        have hev := lowCallArgsAux_sim c hA hT (hN c) σr σr ρ s hWr' hL _ _ _ a es ha hes
+        have hlen : (fnAt u callee).params.length = ((declOf u).params callee).length := by
+          rw [params_eq]; simp
+        have hLc := lrel_bindAll (fnAt u callee) (evalArgs σr a σr ρ) (hN callee) hlen
+        have hpre := preExpr_wahr (fnAt u callee) (evalArgs σr a σr ρ) _ s.world (hN callee)
+          (params_eq u callee) hLc
+        refine ⟨callee, σr, evalArgs σr a σr ρ, (fnIdx_name _ _ _ hcallee).symm, hfs, rfl,
+          fun ρB => ?_, hLc, hpre, ?_, hWr⟩
+        · simp only [Gabbro.Body.step, hev, hpre]
+        · rw [execStmt_heq O passes R (nach_eq u callee (resOf u c)).symm _ _
+            (castNachStmt_heq c callee _) σ ρ]
+          simp only [execStmt]
+          cases hR : R callee σr (evalArgs σr a σr ρ) with
+          | ok σ' v => exact .inl ⟨σ', v, rfl, rfl⟩
+          | why σ' r => exact absurd r.isLt (by simp only at hr; omega)
+          | logik e => exact .inr (.inl ⟨e, rfl, rfl⟩)
+          | hardware e => exact .inr (.inr ⟨e, rfl, rfl⟩)
     · cases h
-    · rename_i a ha
-      split at h
-      · rename_i hWr
-        split at h
-        · rename_i hH
-          split at h
-          · rename_i hX
-            cases h
-            -- the Body side
-            have hfs : fnSuch u cname = some (fnAt u callee) := fnIdx_find _ _ _ hcallee
-            simp only [stmtBody, hfs] at hb
-            cases hes : argsExpr u (fnAt u c) args with
-            | none => rw [hes] at hb; cases hb
-            | some es =>
-              rw [hes] at hb
-              simp only [Option.some.injEq] at hb
-              subst hb
-              let σr := σ.lese (resOf u c) a.orte
-              have hWr' : WRel u σr s.world := wrel_slots u rfl hW
-              have hev := lowCallArgsAux_sim c hA hT (hN c) σr σr ρ s hWr' hL _ _ _ a es ha hes
-              have hlen : (fnAt u callee).params.length = ((declOf u).params callee).length := by
-                rw [params_eq]; simp
-              have hLc := lrel_bindAll (fnAt u callee) (evalArgs σr a σr ρ) (hN callee) hlen
-              have hpre := preExpr_wahr (fnAt u callee) (evalArgs σr a σr ρ) _ s.world (hN callee)
-                (params_eq u callee) hLc
-              refine ⟨callee, σr, evalArgs σr a σr ρ, (fnIdx_name _ _ _ hcallee).symm, hfs, rfl,
-                fun ρB => ?_, hLc, hpre, ?_, hWr⟩
-              · simp only [Gabbro.Body.step, hev, hpre]
-              · rw [execStmt_heq O passes R (nach_eq u callee (resOf u c)).symm _ _
-                  (castNachStmt_heq c callee _) σ ρ]
-                simp only [execStmt]
-                cases hR : R callee σr (evalArgs σr a σr ρ) with
-                | ok σ' v => exact .inl ⟨σ', v, rfl, rfl⟩
-                | why σ' r => exact absurd r.isLt (by have := sigGruende_zero u callee; omega)
-                | logik e => exact .inr (.inl ⟨e, rfl, rfl⟩)
-                | hardware e => exact .inr (.inr ⟨e, rfl, rfl⟩)
-          · cases h
-        · cases h
-      · cases h
 
 /-- A statement the bridge accepts is not a `locks` marker (the bridge refuses them by name). -/
 theorem stmtBody_nomark (f : UFn) (st : UStmt) (h : (stmtBody u f st).isSome = true) :
-    ∀ g, st ≠ UStmt.sperrtAuf g := by
+    ∀ g, st ≠ UStmt.lockBeg g := by
   intro g e
   subst e
   simp [stmtBody] at h
 
-/-- The cons step of the body reader for a statement that opens no `locks` block. -/
-theorem lowBody_cons (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List UStmt)
-    (h : ∀ g, s ≠ UStmt.sperrtAuf g) :
-    lowBody u c (s :: ss) r =
-      (match lowStmt u c s with
-       | .error e => .error e
-       | .ok st =>
-         match lowBody u c ss r with
-         | .error e => .error e
-         | .ok e => .ok (Endblock.cons st e)) := by
-  cases s with
-  | sperrtAuf g => exact absurd rfl (h g)
-  | _ => rfl
+/-- The cons step of the body reader for a statement the bridge accepts (a write or a direct
+    call: the reader's last case, one statement and the rest). -/
+theorem lowBody_cons_ok (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List UStmt)
+    (h : (stmtBody u (fnAt u c) s).isSome = true) {b0 : Endblock (declOf u) (verOf u c) false
+      (ctxOf u c) (resOf u c)} (hb : lowBody u c (s :: ss) r = .ok b0) :
+    ∃ st e, lowStmt u c s = .ok st ∧ lowBody u c ss r = .ok e ∧ b0 = Endblock.cons st e := by
+  have key : ∀ n, lowBodyF u c (ctxOf u c) (fnAt u c) (n + 1) (s :: ss) r = .ok b0 →
+      ∃ st e, lowStmt u c s = .ok st ∧ lowBodyF u c (ctxOf u c) (fnAt u c) n ss r = .ok e ∧
+        b0 = Endblock.cons st e := by
+    intro n hn
+    cases s
+    case assign | assignTab | call =>
+      rw [lowBodyF] at hn
+      all_goals first | (intros; contradiction) | skip
+      split at hn
+      · cases hn
+      · rename_i st hst
+        split at hn
+        · cases hn
+        · rename_i e he
+          cases hn
+          exact ⟨st, e, hst, he, rfl⟩
+    all_goals simp [stmtBody] at h
+  exact key _ hb
 
 theorem stmtsBody_isSome {f : UFn} {ss : List UStmt} {bs : List Gabbro.Body.Stmt}
     (h : stmtsBody u f ss = some bs) : ∀ st ∈ ss, (stmtBody u f st).isSome = true := by

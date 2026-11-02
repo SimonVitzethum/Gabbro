@@ -48,8 +48,8 @@ example : zuBody u ein = some einzahlen_body := rfl
 example : zuBody u lies = some lies_body := rfl
 example : preExpr ein = einzahlen_pre := rfl
 example : preExpr lies = lies_pre := rfl
-example : ein.schreibt = einzahlen_writes := rfl
-example : lies.schreibt = lies_writes := rfl
+example : ein.puts = einzahlen_writes := rfl
+example : lies.puts = lies_writes := rfl
 
 example : (fun s s' r => (postU u wellFormed ein s s' r).getD False) = einzahlen_post := rfl
 example : (fun s s' r => (postU u wellFormed lies s s' r).getD False) = lies_post := rfl
@@ -61,7 +61,7 @@ example : meetsU u wellFormed lies ((zuBody u lies).getD []) = lies_meets_statem
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit104.E4 :=
-  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Einheit104.low4)
+  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ (by decide) Gabbro.Grammatik.Einheit104.low4)
 
 /-! BRIDGE-CLOSED beispiele/0104-referenz.gab nutzer_bruecke
 
@@ -114,7 +114,7 @@ theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.G
     (fs : List (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u).Fn),
     Gabbro.Grammatik.Parser.UebersetzeAllg2.lowerAllg u = .ok (P, fs) ∧ Stimmig u ∧ Rang u (rangAuto u) ∧
     (∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧ meetsU u (wfU u) (fnAt u c) body) ∧
-    ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).saetze :=
+    ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).body :=
   ⟨u, _, _, Gabbro.Grammatik.Einheit104.low4, stimmig, rang, meets_alle,
     ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" false, .val (.param "i")], by decide⟩⟩
 

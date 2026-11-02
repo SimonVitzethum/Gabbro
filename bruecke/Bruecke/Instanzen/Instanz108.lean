@@ -39,8 +39,8 @@ example : zuBody u ra = some read_a_body := rfl
 example : zuBody u rc = some read_c_body := rfl
 example : preExpr ra = read_a_pre := rfl
 example : preExpr rc = read_c_pre := rfl
-example : ra.schreibt = read_a_writes := rfl
-example : rc.schreibt = read_c_writes := rfl
+example : ra.puts = read_a_writes := rfl
+example : rc.puts = read_c_writes := rfl
 example : (fun s s' r => (postU u wellFormed ra s s' r).getD False) = read_a_post := rfl
 example : (fun s s' r => (postU u wellFormed rc s s' r).getD False) = read_c_post := rfl
 example : preProp wellFormed ra = read_a_requires := rfl
@@ -50,7 +50,7 @@ example : meetsU u wellFormed rc ((zuBody u rc).getD []) = read_c_meets_statemen
 
 /-- S4 (start part): the start obligation of the chain's unit holds by the shape of the lowering. -/
 theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit108.E8 :=
-  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ Gabbro.Grammatik.Einheit108.low8)
+  startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires _ _ _ (by decide) Gabbro.Grammatik.Einheit108.low8)
 
 /-! BRIDGE-CLOSED beispiele/0108-disjoint-start-locks.gab nutzer_bruecke
 

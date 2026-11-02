@@ -26,28 +26,30 @@ variable {u : UProg}
 structure Gesenkt (u : UProg) (P : Programm (declOf u)) : Prop where
   req : ∀ f, P.requires f = .tru
   ens : ∀ f, ∃ e0, lowEnsList u (ErgCtx (ctxOf u f) (verOf u f).erg) (resOf u f) (fnAt u f)
-      (fnAt u f).ergebnis (fnAt u f).sichert = .ok e0 ∧ HEq (P.ensures f) e0
-  rumpf : ∀ f, ∃ b0, lowBody u f (fnAt u f).saetze (fnAt u f).rueck = .ok b0 ∧ HEq (P.rumpf f) b0
+      (fnAt u f).ergTy (fnAt u f).gives = .ok e0 ∧ HEq (P.ensures f) e0
+  rumpf : ∀ f, ∃ b0, lowBody u f (fnAt u f).body (fnAt u f).ret = .ok b0 ∧ HEq (P.rumpf f) b0
 
-theorem lowerFnAt_ok (c : Fin u.fns.length) {v : EnsTy u c × RumpTy u c}
+theorem lowerFnAt_ok (c : Fin u.fns.length) {v : EnsTy u c × RumpTy u c × ReqTy u c}
     (h : lowerFnAt u c = .ok v) :
     ∃ e0 b0, lowEnsList u (ErgCtx (ctxOf u c) (verOf u c).erg) (resOf u c) (fnAt u c)
-      (fnAt u c).ergebnis (fnAt u c).sichert = .ok e0 ∧
-      lowBody u c (fnAt u c).saetze (fnAt u c).rueck = .ok b0 ∧ HEq v.1 e0 ∧ HEq v.2 b0 := by
+      (fnAt u c).ergTy (fnAt u c).gives = .ok e0 ∧
+      lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0 ∧ HEq v.1 e0 ∧ HEq v.2.1 b0 := by
   unfold lowerFnAt at h
   split at h
   · cases h
-  · rename_i e0 he0
-    split at h
+  · split at h
     · cases h
-    · rename_i b0 hb0
-      cases h
-      refine ⟨e0, b0, he0, hb0, ?_, ?_⟩
-      · dsimp only; exact mpr2_heq _ _ _
-      · dsimp only; exact mpr2_heq _ _ _
+    · rename_i e0 he0
+      split at h
+      · cases h
+      · rename_i b0 hb0
+        cases h
+        refine ⟨e0, b0, he0, hb0, ?_, ?_⟩
+        · dsimp only; exact mpr2_heq _ _ _
+        · dsimp only; exact mpr2_heq _ _ _
 
 theorem lowerAtPair_eq (f : Fin u.fns.length) (h : ∃ v, lowerFnAt u f = .ok v)
-    {v : EnsTy u f × RumpTy u f} (hv : lowerFnAt u f = .ok v) : lowerAtPair u f h = v := by
+    {v : EnsTy u f × RumpTy u f × ReqTy u f} (hv : lowerFnAt u f = .ok v) : lowerAtPair u f h = v := by
   unfold lowerAtPair
   split
   · rename_i v' hv'
@@ -60,30 +62,33 @@ theorem lowerAtPair_eq (f : Fin u.fns.length) (h : ∃ v, lowerFnAt u f = .ok v)
 
 /-- **What `lowerAllg` says about the program it answers.** -/
 theorem gesenkt_of {P : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (hn : ∀ f : Fin u.fns.length, (fnAt u f).needs = [])
     (h : lowerAllg u = .ok (P, fs)) : Gesenkt u P := by
-  have hreq := lowerAllg_requires u P fs h
+  have hreq := lowerAllg_requires u P fs hn h
   unfold lowerAllg at h
   split at h
   · cases h
-  · rename_i hall
-    injection h with h1
-    injection h1 with h2 h3
-    subst h2
-    refine ⟨hreq, fun f => ?_, fun f => ?_⟩
-    · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
-      obtain ⟨v, hv⟩ := w
-      obtain ⟨e0, b0, he, hb, he', _⟩ := lowerFnAt_ok f hv
-      refine ⟨e0, he, ?_⟩
-      show HEq (lowerAtPair u f _).1 e0
-      rw [lowerAtPair_eq f _ hv]
-      exact he'
-    · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
-      obtain ⟨v, hv⟩ := w
-      obtain ⟨e0, b0, he, hb, _, hb'⟩ := lowerFnAt_ok f hv
-      refine ⟨b0, hb, ?_⟩
-      show HEq (lowerAtPair u f _).2 b0
-      rw [lowerAtPair_eq f _ hv]
-      exact hb'
+  · split at h
+    · cases h
+    · rename_i hall
+      injection h with h1
+      injection h1 with h2 h3
+      subst h2
+      refine ⟨hreq, fun f => ?_, fun f => ?_⟩
+      · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
+        obtain ⟨v, hv⟩ := w
+        obtain ⟨e0, b0, he, hb, he', _⟩ := lowerFnAt_ok f hv
+        refine ⟨e0, he, ?_⟩
+        show HEq (lowerAtPair u f _).1 e0
+        rw [lowerAtPair_eq f _ hv]
+        exact he'
+      · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
+        obtain ⟨v, hv⟩ := w
+        obtain ⟨e0, b0, he, hb, _, hb'⟩ := lowerFnAt_ok f hv
+        refine ⟨b0, hb, ?_⟩
+        show HEq (lowerAtPair u f _).2.1 b0
+        rw [lowerAtPair_eq f _ hv]
+        exact hb'
 
 /-! ## The answer and the `ensures` environment -/
 
@@ -114,17 +119,23 @@ theorem eval_heq2 {D : Deklaration} {Γ₁ Γ₂ : Ctx} {Λ₁ Λ₂ : List (Res
     eval σ₀ e₁ σ ρ₁ = eval σ₀ e₂ σ ρ₂ := by
   subst hΓ; subst hΛ; cases he; cases hρ; rfl
 
-/-- Without a `bool` result the result type is the recorded range. -/
-theorem ergTy_of {f : UFn} (h : f.ergBool = false) :
-    f.ergTy = f.ergebnis.map fun r => Ty.int r.1 r.2 := by
-  unfold UFn.ergTy; rw [h]; rfl
+/-- The results the bridge speaks about: none or a number (no `bool`, aggregate, option, tagged or
+    reason result). -/
+def ErgSchlicht (f : UFn) : Prop :=
+  f.resBool = false ∧ f.resTy = none ∧ f.resOpt = none ∧ f.resSum = none ∧ f.resWhy = none
 
-theorem isSome_erg (f : Fin u.fns.length) (hb : (fnAt u f).ergBool = false) :
-    ((declOf u).erg f).isSome = (fnAt u f).ergebnis.isSome := by
-  rw [erg_eq, ergTy_of hb]; simp
+/-- With a number result or none, the result type is the recorded range. -/
+theorem ergTy_of {f : UFn} (h : ErgSchlicht f) :
+    f.ergTy = f.res.map fun r => Ty.int r.1 r.2 := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := h
+  simp [UFn.ergTy, h1, h2, h3, h4, h5]
+
+theorem isSome_erg (f : Fin u.fns.length) :
+    ((declOf u).erg f).isSome = (fnAt u f).ergTy.isSome := by
+  rw [erg_eq]
 
 /-- The answer clause of the promise holds for every typed answer. -/
-theorem resultClause_wahr (f : Fin u.fns.length) (hb : (fnAt u f).ergBool = false) :
+theorem resultClause_wahr (f : Fin u.fns.length) (hb : ErgSchlicht (fnAt u f)) :
     ∀ v : ErgVal (declOf u) ((declOf u).erg f),
       ∀ q ∈ (resultClause (fnAt u f) (ergValOf ((declOf u).erg f) v)).toList, q := by
   have he := (erg_eq u f).trans (ergTy_of hb)
@@ -132,7 +143,7 @@ theorem resultClause_wahr (f : Fin u.fns.length) (hb : (fnAt u f).ergBool = fals
   generalize (declOf u).erg f = e
   intro he v q hq
   subst he
-  cases hr : (fnAt u f).ergebnis with
+  cases hr : (fnAt u f).res with
   | none => simp [resultClause, hr] at hq
   | some lr =>
     simp only [resultClause, hr, Option.map_some, Option.toList_some, List.mem_singleton] at hq
@@ -144,7 +155,7 @@ theorem resultClause_wahr (f : Fin u.fns.length) (hb : (fnAt u f).ergBool = fals
     exact ⟨(v : Zahl lo hi).n, rfl, v.lo_le, v.le_hi⟩
 
 /-- Every clause of the promise is in the fragment. Checked per unit. -/
-def PostDef (u : UProg) (fn : UFn) : Prop := ∀ e ∈ fn.sichert, (ensExpr u fn {} e).isSome = true
+def PostDef (u : UProg) (fn : UFn) : Prop := ∀ e ∈ fn.gives, (ensExpr u fn {} e).isSome = true
 
 theorem ensList_some (fn : UFn) (s s' : Gabbro.Body.State) (r : Option Gabbro.Body.Value) :
     ∀ es : List UEns, (∀ e ∈ es, (ensExpr u fn {} e).isSome = true) →
@@ -167,7 +178,7 @@ def wfU (u : UProg) (s : Gabbro.Body.State) : Prop := Gabbro.Body.WF (shapeOfU u
 theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.length)
     (hA : ArtStimmt (fnAt u f)) (hT : TabEindeutig u) (hN : NamenFrei (fnAt u f))
     (hO : OldsKurz u (fnAt u f)) (hD : PostDef u (fnAt u f))
-    (hBE : (fnAt u f).ergBool = false) (hBT : ∀ t : Fin u.tabellen.length, (tabAt u t).bools = [])
+    (hBE : ErgSchlicht (fnAt u f)) (hBT : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
     (σ₀ σ' : World (declOf u)) (ρ : Env (declOf u) ((declOf u).params f))
     (v : ErgVal (declOf u) ((declOf u).erg f)) (s s' : Gabbro.Body.State)
     (hW₀ : WRel u σ₀ s.world) (hL₀ : LRel (fnAt u f) 0 ρ s.local') (hW : WRel u σ' s'.world) :
@@ -179,16 +190,16 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
   let E₀ : Env (declOf u) (ErgCtx (ctxOf u f) (verOf u f).erg) :=
     cast (congrArg (Env (declOf u)) (ensCtx_eq u f).symm) E
   have hE : HEq E₀ E := cast_heq _ _
-  have hL : LRel (fnAt u f) (if (fnAt u f).ergebnis.isSome then 1 else 0) E₀ s.local' := by
+  have hL : LRel (fnAt u f) (if (fnAt u f).ergTy.isSome then 1 else 0) E₀ s.local' := by
     intro p j hj
-    rw [nthVal_heq (ensCtx_eq u f) E₀ E hE, ← isSome_erg f hBE, nthVal_ergEnv]
+    rw [nthVal_heq (ensCtx_eq u f) E₀ E hE, ← isSome_erg f, nthVal_ergEnv]
     exact (hL₀ p j hj).trans (by rw [Nat.zero_add])
-  have her : (fnAt u f).ergebnis.isSome = true →
+  have her : (fnAt u f).ergTy.isSome = true →
       ergValOf ((declOf u).erg f) v = some (nthVal E₀ 0) := by
     intro h
     rw [nthVal_heq (ensCtx_eq u f) E₀ E hE]
-    exact ergValOf_nth _ v ρ (by rw [isSome_erg f hBE]; exact h)
-  have hcl := ensList_iff hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).sichert cs e0
+    exact ergValOf_nth _ v ρ (by rw [isSome_erg f]; exact h)
+  have hcl := ensList_iff hA hT hN σ₀ σ' E₀ s s' hW₀ hL hW _ her (fnAt u f).gives cs e0
     hO hcs he0
   have hev : eval σ₀ (P.ensures f) σ' E = eval σ₀ e0 σ' E₀ :=
     eval_heq2 (ensCtx_eq u f).symm (endeRes_eq u f).symm _ _ hPe E E₀ hE.symm σ₀ σ'
@@ -212,20 +223,19 @@ theorem post_iff {P : Programm (declOf u)} (G : Gesenkt u P) (f : Fin u.fns.leng
 def endBody (u : UProg) (fn : UFn) : URet → Option (List Gabbro.Body.Stmt)
   | .empty => some []
   | .val v => (sideExpr u fn v).map (fun e => [.ret (some e)])
-  | .bool _ => none
+  | _ => none
 
 theorem zuBody_eq (fn : UFn) : zuBody u fn =
-    match stmtsBody u fn fn.saetze with
+    match stmtsBody u fn fn.body with
     | none => none
-    | some ss => (endBody u fn fn.rueck).map (ss ++ ·) := by
+    | some ss => (endBody u fn fn.ret).map (ss ++ ·) := by
   unfold zuBody
-  cases stmtsBody u fn fn.saetze with
+  cases stmtsBody u fn fn.body with
   | none => rfl
   | some ss =>
-    cases fn.rueck with
-    | empty => simp [endBody]
-    | val v => simp only [endBody, Option.map_map]; rfl
-    | bool _ => simp [endBody]
+    cases fn.ret
+    case val v => simp only [endBody, Option.map_map]; rfl
+    all_goals simp [endBody]
 
 theorem ergValOf_heq {D : Deklaration} {e₁ e₂ : Option Ty} (h : e₁ = e₂) (x₁ : ErgVal D e₁)
     (x₂ : ErgVal D e₂) (hx : HEq x₁ x₂) : ergValOf e₁ x₁ = ergValOf e₂ x₂ := by
@@ -248,7 +258,7 @@ theorem ergValOf_none {D : Deklaration} {e : Option Ty} (x : ErgVal D e) (h : e 
     same state with the same answer. -/
 theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
     {eb : Endblock (declOf u) (verOf u c) false (ctxOf u c) (resOf u c)} {eB : List Gabbro.Body.Stmt}
-    (h : lowEnd u c r = .ok eb) (hb : endBody u (fnAt u c) r = some eB)
+    (h : lowEndF u c r = .ok eb) (hb : endBody u (fnAt u c) r = some eB)
     (hA : ArtStimmt (fnAt u c)) (hT : TabEindeutig u)
     (O : Orakel (declOf u)) (passes : Nat)
     (R : ∀ f : (declOf u).Fn, World (declOf u) → Env (declOf u) ((declOf u).params f) → RufAusgang f)
@@ -257,25 +267,26 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
     ∃ σ' v, execEnd O passes R eb σ ρ = .zurueck σ' v ∧ σ'.slots = σ.slots ∧
       ∀ ρB : Gabbro.Body.Env, Gabbro.Body.finalState (Gabbro.Body.exec ρB eB s) = some s ∧
         Gabbro.Body.finalValue (Gabbro.Body.exec ρB eB s) = ergValOf (verOf u c).erg v := by
-  cases r with
-  | bool _ => simp [endBody] at hb
-  | empty =>
+  cases r
+  case empty =>
     simp only [endBody, Option.some.injEq] at hb
     subst hb
-    revert h
-    simp only [lowEnd]
-    split
-    · rename_i hE
-      intro h
+    simp only [lowEndF, lowEnd] at h
+    split at h
+    · cases h
+    · rename_i E hE
       cases h
       refine ⟨_, _, rfl, rfl, fun ρB => ⟨rfl, ?_⟩⟩
-      have he : (verOf u c).erg = none := by
-        show (vertragVon (declOf u) c).erg = none
-        rw [vErg_eq u c, hE]
-      rw [ergValOf_none _ he]
-      rfl
-    · intro h; cases h
-  | val sd =>
+      simp only [lowErg] at hE
+      split at hE
+      · rename_i hErg
+        have he : (verOf u c).erg = none := by
+          show (vertragVon (declOf u) c).erg = none
+          rw [vErg_eq u c, hErg]
+        rw [ergValOf_none _ he]
+        rfl
+      · cases hE
+  case val sd =>
     simp only [endBody] at hb
     cases hs : sideExpr u (fnAt u c) sd with
     | none => rw [hs] at hb; cases hb
@@ -283,29 +294,33 @@ theorem lowEnd_sim (c : Fin u.fns.length) {r : URet}
       rw [hs] at hb
       simp only [Option.map_some, Option.some.injEq] at hb
       subst hb
-      revert h
-      simp only [lowEnd]
-      split
-      · rename_i lo hi hE
-        split
-        · intro h; cases h
-        · rename_i ve hve
-          intro h
-          cases h
-          refine ⟨_, _, rfl, rfl, fun ρB => ?_⟩
-          obtain ⟨sw, sl⟩ := s
-          have herg : (verOf u c).erg = some (.int lo hi) := by
-            show (vertragVon (declOf u) c).erg = _
-            rw [vErg_eq u c, hE]
-          generalize hσl : σ.lese _ _ = σl
-          have hWl : WRel u σl sw := by rw [← hσl]; exact wrel_slots u rfl hW
-          have hv := lowWertAt_sim hve hs hA hT σl σl ρ sw sl hWl hL
-          rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.wert (D := declOf u) ve) σl ρ)
-            (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
-          simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState,
-            Gabbro.Body.finalValue]
-          trivial
-      · intro h; cases h
-      · intro h; cases h
+      simp only [lowEndF, lowEnd] at h
+      split at h
+      · cases h
+      · rename_i E hE
+        cases h
+        simp only [lowErg] at hE
+        split at hE
+        · rename_i lo hi hErg
+          split at hE
+          · cases hE
+          · rename_i ve hve
+            cases hE
+            refine ⟨_, _, rfl, rfl, fun ρB => ?_⟩
+            obtain ⟨sw, sl⟩ := s
+            have herg : (verOf u c).erg = some (.int lo hi) := by
+              show (vertragVon (declOf u) c).erg = _
+              rw [vErg_eq u c, hErg]
+            generalize hσl : σ.lese _ _ = σl
+            have hWl : WRel u σl sw := by rw [← hσl]; exact wrel_slots u rfl hW
+            have hv := lowWertAt_sim hve hs hA hT σl σl ρ sw sl hWl hL
+            rw [ergValOf_heq herg _ (evalErg σl (ErgExpr.val (D := declOf u) ve) σl ρ)
+              (evalErg_heq herg _ _ (mpr3_heq _ _ _ _) _ _ _)]
+            simp only [Gabbro.Body.exec, Gabbro.Body.step, hv, Gabbro.Body.finalState,
+              Gabbro.Body.finalValue]
+            trivial
+        · cases hE
+        · cases hE
+  all_goals simp [endBody] at hb
 
 end Gabbro.Bruecke

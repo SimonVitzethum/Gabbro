@@ -16,7 +16,7 @@ The rule ids are cited from source comments and other documents and are never re
 | `instrumente/pruefe-lean.py` | the Lean model (`grammatik/`) and stage 0 (`stage0/`) | `lake build` of both · `gabbro_ziel` and its siblings depend on exactly `propext`, `Classical.choice`, `Quot.sound` (`NachpruefungZiel.lean`) · no `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`, no `axiom` outside `teile/kein-sorry-allowlist.txt` · at most 20 entries per folder · the stage-0 probes `stage0/proben/` print what they must |
 | `instrumente/pruefe-llvm.py` | the LLVM compiler | `cargo test --test llvm` (IR, refusals `Y101`–`Y106`, model-coverage register, noalias, the Lean certificate elaborating with plain `lean`) · four programs through `teile/baue-llvm.sh` (`opt -O3`, `llc`, `ld.lld`, static, no INTERP/NEEDED) on x86_64 and aarch64 (qemu) with the same, expected exit code |
 | `instrumente/pruefe-pruefer.py` | the checker (Rust) | `cargo test --workspace --no-fail-fast` (poison probes, examples, tutorial, grammar and word tables, doc code blocks, certificates) · sentence register `teile/saetze.py` (60 codes without a sentence is the booked ratchet; a sentence for a rule that does not exist is always red) · every code issued from one place (`teile/kennungen.py`) |
-| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build` without `sorryAx` · the person's proofs and the GabbroV files carry no `sorry`/`axiom` · `gabbro prove` GREEN on the four proof units · `cargo test -p gabbro-cli --test beweismessung` (no GREEN unless Lean checked something) |
+| `instrumente/pruefe-gabbrov.py` | GabbroV (`programmlogik/`) | `lake build` without `sorryAx` · the person's proofs and the GabbroV files carry no `sorry`/`axiom` · `gabbro prove` GREEN on the four proof units · `cargo test -p gabbro-cli --test beweismessung` (no GREEN unless Lean checked something) · the bridge `bruecke/`: its duty files equal the printer, `lake build` green, every bridge theorem on the three standard axioms |
 
 ```bash
 ./instrumente/abnahme.py                 # all four, one after the other
@@ -38,7 +38,6 @@ results, not guarded values.
 replaces the `.olean` files running `lean` processes read). An agent gets its own working directory.
 
 ### Known open items of the guardians
-* `bruecke/` is not measured: its `lake build` fails on a missing `mathlib` manifest entry.
 * `pruefe-gabbrov.py` covers four proof units; the tree-wide duty run (`gabbro prove` over every unit)
   and the obligation-manifest completeness comparison (E1) are not wired in.
 * The mutation run over the checker (388 anchors, 34 measured nothing at the last run) is retired and

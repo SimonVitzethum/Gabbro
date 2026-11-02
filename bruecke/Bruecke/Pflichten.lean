@@ -33,14 +33,14 @@ def fnSuch (u : UProg) (n : String) : Option UFn := u.fns.find? (fun f => f.name
 /-- The name of the table a pointer parameter points at. -/
 def ptrTab (u : UProg) (f : UFn) (p : String) : Option String :=
   match f.params.find? (fun q => q.1 == p) with
-  | some (_, .ptr t _) => (u.tabellen[t]?).map (·.name)
+  | some (_, .ptr t _) => (u.tabs[t]?).map (·.name)
   | _ => none
 
 /-- The pointer parameter of `f` that points at the table `tab` -- only when there is exactly one
     (a call that passes "a pointer to `tab`" names no variable in `UArg.freshPtr`). -/
 def ptrParam (u : UProg) (f : UFn) (tab : String) : Option String :=
   match f.params.filter (fun q => match q.2 with
-      | .ptr t _ => (u.tabellen[t]?).map (·.name) == some tab
+      | .ptr t _ => (u.tabs[t]?).map (·.name) == some tab
       | _ => false) with
   | [q] => some q.1
   | _ => none
@@ -51,7 +51,7 @@ def idxExpr : UIdx → Expr
   | .lit n => .lit (.int n)
   | .param p => .name p
 
-/-- One side of a comparison. `alt` (the entry value) is handled by the caller (`altSides`), and
+/-- One side of a comparison. `old` (the entry value) is handled by the caller (`altSides`), and
     reads here as the `old#i` binder it is numbered to. -/
 def oldName : Nat → String
   | 0 => "old#1" | 1 => "old#2" | 2 => "old#3" | 3 => "old#4" | 4 => "old#5" | 5 => "old#6"
@@ -61,7 +61,7 @@ def oldName : Nat → String
 def slotPlace (u : UProg) (f : UFn) : USide → Option Expr
   | .slot p fld i => (ptrTab u f p).map (fun t => .place t (idxExpr i) fld)
   | .tab t fld i => some (.place t (idxExpr i) fld)
-  | .alt p fld i => (ptrTab u f p).map (fun t => .place t (idxExpr i) fld)
+  | .old p fld i => (ptrTab u f p).map (fun t => .place t (idxExpr i) fld)
   | _ => none
 
 /-- Two operands under one Body operator (both must have a Body form). -/
@@ -70,7 +70,7 @@ def binE (op : BinOp) : Option Expr → Option Expr → Option Expr
   | _, _ => none
 
 /-- A side outside an `ensures` (a call argument, a returned value, an assigned value): no
-    `alt`, no `erg`. Integer arithmetic and the bit operations are Body's `bin` (`binop`: exact
+    `old`, no `erg`. Integer arithmetic and the bit operations are Body's `bin` (`binop`: exact
     integers, the masks over non-negative operands); an integer conversion `T(e)` is a WIDENING, so
     it leaves the number alone and reads as its operand (P2 wall 2). -/
 def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
@@ -78,7 +78,7 @@ def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .param p => some (.name p)
   | .slot p fld i => slotPlace u f (.slot p fld i)
   | .tab t fld i => slotPlace u f (.tab t fld i)
-  | .alt .. => none
+  | .old .. => none
   | .erg => none
   | .add a b => binE .add (sideExpr u f a) (sideExpr u f b)
   | .sub a b => binE .sub (sideExpr u f a) (sideExpr u f b)
@@ -87,6 +87,7 @@ def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .band a b => binE .band (sideExpr u f a) (sideExpr u f b)
   | .bor a b => binE .bor (sideExpr u f a) (sideExpr u f b)
   | .bxor a b => binE .bxor (sideExpr u f a) (sideExpr u f b)
+  | _ => none
 
 /-- An `ensures` side, numbering the `old(..)` reads met so far: the term, the reads in order,
     whether `result` occurs. -/
@@ -95,8 +96,8 @@ structure Acc where
   result : Bool := false
 
 def ensSide (u : UProg) (f : UFn) (a : Acc) : USide → Option (Expr × Acc)
-  | .alt p fld i =>
-      (slotPlace u f (.alt p fld i)).map (fun pl => (.name (oldName a.olds.length), { a with olds := a.olds ++ [pl] }))
+  | .old p fld i =>
+      (slotPlace u f (.old p fld i)).map (fun pl => (.name (oldName a.olds.length), { a with olds := a.olds ++ [pl] }))
   | .erg => some (.name "result", { a with result := true })
   -- Arithmetic INSIDE an `ensures` side has no bridge form yet (the `old`/`result` numbering would
   -- have to thread through the operands): REFUSED by name, so `postU` is `none` and the duty is
@@ -139,6 +140,7 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
   -- so `postU` is `none` and the duty is false, never weaker. (A unit with a bool field or a bool
   -- result is refused up front by `stimmigB`'s `keinBoolB`.)
   | .slotB .. | .tabB .. => none
+  | _ => none
 
 /-! ## 2. Shapes, the precondition, the frame -/
 
@@ -165,12 +167,12 @@ def slotShape (ts : List UTab) (c : String) (fld : String) : Option Shape :=
   match ts with
   | [] => none
   | t :: rest =>
-      if c = t.name then (t.felder.find? (fun q => q.1 == fld)).map (fun q => .intIn q.2.1 q.2.2)
+      if c = t.name then (t.cols.find? (fun q => q.1 == fld)).map (fun q => .intIn q.2.1 q.2.2)
       else slotShape rest c fld
 
 def shapeOfU (u : UProg) : Typing := fun p =>
   match p with
-  | .slot c _ fld => slotShape u.tabellen c fld
+  | .slot c _ fld => slotShape u.tabs c fld
   | _ => none
 
 /-! ## 3. The body -/
@@ -179,6 +181,7 @@ def argExpr (u : UProg) (f : UFn) : UArg → Option Expr
   | .var p => some (.name p)
   | .freshPtr tab _ => (ptrParam u f tab).map (fun p => .name p)
   | .val s => sideExpr u f s
+  | _ => none
 
 def argsExpr (u : UProg) (f : UFn) : List UArg → Option (List Expr)
   | [] => some []
@@ -193,11 +196,11 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
       | _, _ => none
   | .assignTab t fld i v => (sideExpr u f v).map (fun ve => .assign t (idxExpr i) fld ve)
-  | .assignB .. | .assignTabB .. | .sperrtAuf _ | .sperrtZu => none
   | .call g as =>
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))
       | _, _ => none
+  | _ => none
 
 def stmtsBody (u : UProg) (f : UFn) : List UStmt → Option (List Stmt)
   | [] => some []
@@ -208,13 +211,13 @@ def stmtsBody (u : UProg) (f : UFn) : List UStmt → Option (List Stmt)
 
 /-- **`zuBody`** -- the body of `f` as `Gabbro.Body` sees it. `none` = outside the fragment. -/
 def zuBody (u : UProg) (f : UFn) : Option (List Stmt) :=
-  match stmtsBody u f f.saetze with
+  match stmtsBody u f f.body with
   | none => none
   | some ss =>
-      match f.rueck with
+      match f.ret with
       | .empty => some ss
       | .val v => (sideExpr u f v).map (fun e => ss ++ [Stmt.ret (some e)])
-      | .bool _ => none
+      | _ => none
 
 /-! ## 4. The postcondition -/
 
@@ -238,7 +241,7 @@ def ensClause (u : UProg) (f : UFn) (e : UEns) (s s' : State) (r : Option Value)
 
 /-- The answer clause: the declared range of the result. -/
 def resultClause (f : UFn) (r : Option Value) : Option Prop :=
-  f.ergebnis.map (fun lr => ∃ x, r = some (.int x) ∧ lr.1 ≤ x ∧ x ≤ lr.2)
+  f.res.map (fun lr => ∃ x, r = some (.int x) ∧ lr.1 ≤ x ∧ x ≤ lr.2)
 
 /-- All clauses of the promise beyond well-formedness, in the printer's order. `False`-free:
     a clause outside the fragment makes `ensList` answer `none`. -/
@@ -261,7 +264,7 @@ def chain (wf : Prop) : List Prop → Prop
 /-- **The promise of `f`** -- `_post` of the duty file. `none` = a clause is outside the
     fragment. -/
 def postU (u : UProg) (wf : State → Prop) (f : UFn) (s s' : State) (r : Option Value) : Option Prop :=
-  match ensList u f s s' r f.sichert with
+  match ensList u f s s' r f.gives with
   | none => none
   | some cs => some (chain (wf s') ((resultClause f r).toList ++ cs))
 
@@ -282,7 +285,7 @@ def sortDedup : List String → List String
 
 /-- The callees of the body, in the printer's order (sorted by name, each once). -/
 def calleesOf (f : UFn) : List String :=
-  sortDedup (f.saetze.filterMap (fun s => match s with | .call g _ => some g | _ => none))
+  sortDedup (f.body.filterMap (fun s => match s with | .call g _ => some g | _ => none))
 
 /-- The callee hypotheses in front of the turnstile: contract and frame of every callee. -/
 def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop → Prop
@@ -290,7 +293,7 @@ def hyps (u : UProg) (wf : State → Prop) (ρ : Env) : List String → Prop →
   | g :: gs, c =>
       match fnSuch u g with
       | some gf => Contract ρ g (preProp wf gf) (fun s s' r => (postU u wf gf s s' r).getD False) →
-                   Frame ρ g gf.schreibt → hyps u wf ρ gs c
+                   Frame ρ g gf.puts → hyps u wf ρ gs c
       | none => False
 
 /-- **`meets`** -- what a person proves about `f` (`_meets_statement`). -/

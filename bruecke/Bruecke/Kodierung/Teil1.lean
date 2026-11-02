@@ -80,7 +80,7 @@ theorem nthVal_lowVar {D : Deklaration} : ∀ (Γ : Ctx) (j : Nat) (τ : Ty) (x 
       split at h
       · rename_i hστ
         subst hστ
-        have h' : (Except.ok Var.hier : Except String (Var (σ :: Γ) σ)) = .ok x := h
+        have h' : (Except.ok Var.here : Except String (Var (σ :: Γ) σ)) = .ok x := h
         simp only [Except.ok.injEq] at h'
         subst h'
         cases ρ with
@@ -283,16 +283,20 @@ theorem fieldAtPos_name : ∀ (fs : List (String × (Int × Int))) (n : String) 
         simp only [Bool.false_eq_true, ↓reduceIte]
         exact fieldAtPos_name rest n w h
 
-theorem fieldHit_name (u : UProg) (t : Fin u.tabellen.length) (fld : String) (fh : FieldHit u t)
-    (h : fieldHit u t fld = .ok fh) : ((tabAt u t).felder[fh.idx.wert]?).map (·.1) = some fld := by
+theorem fieldHit_name (u : UProg) (t : Fin u.tabs.length) (fld : String) (fh : FieldHit u t)
+    (h : fieldHit u t fld = .ok fh) : ((tabAt u t).cols[fh.idx.val]?).map (·.1) = some fld := by
   unfold fieldHit at h
   split at h
   · cases h
   · rename_i w hw
     dsimp only at h
     split at h
-    · cases h
-      exact fieldAtPos_name _ _ _ hw
+    · split at h
+      · split at h
+        · cases h
+          exact fieldAtPos_name _ _ _ hw
+        · cases h
+      · cases h
     · cases h
 
 /-! ## 4. Worlds, through the declaration's names -/
@@ -304,7 +308,7 @@ variable (u : UProg)
     in the declaration. -/
 def slotWert (σ : World (declOf u)) (c : String) (k : Int) (fld : String) :
     Option Gabbro.Body.Value :=
-  match tabIdx u.tabellen c with
+  match tabIdx u.tabs c with
   | .ok t =>
     match fieldHit u t fld with
     | .ok fh => some (valOf ((declOf u).typ t fh.idx) (σ.slots t k fh.idx))
@@ -353,9 +357,9 @@ theorem enc_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WRel u 
   | global n => rfl
 
 /-- Every declared field holds a number in its recorded range. -/
-theorem valOf_feld (t : Fin u.tabellen.length) (fh : FieldHit u t) (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
-    ∃ n, valOf ((declOf u).typ t fh.idx) x = .int n ∧ fh.weit.1 ≤ n ∧ n ≤ fh.weit.2 := by
-  have h : (declOf u).typ t fh.idx = .int fh.weit.1 fh.weit.2 := fh.hint
+theorem valOf_feld (t : Fin u.tabs.length) (fh : FieldHit u t) (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
+    ∃ n, valOf ((declOf u).typ t fh.idx) x = .int n ∧ fh.range.1 ≤ n ∧ n ≤ fh.range.2 := by
+  have h : (declOf u).typ t fh.idx = .int fh.range.1 fh.range.2 := fh.hint
   revert x
   rw [h]
   intro x
@@ -365,7 +369,7 @@ theorem valOf_feld (t : Fin u.tabellen.length) (fh : FieldHit u t) (x : Wert (de
     at the named place. Two Body places that decode to one G slot are one place (the lookups
     find a table and a field by the name they carry). -/
 theorem wrel_store {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u σ w)
-    (c : String) (t : Fin u.tabellen.length) (ht : tabIdx u.tabellen c = .ok t)
+    (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
     (fld : String) (fh : FieldHit u t) (hf : fieldHit u t fld = .ok fh) (k : Int)
     (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
     WRel u (σ.storeSlot t k fh.idx x)
@@ -413,7 +417,7 @@ theorem wrel_store {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u 
   · cases hv
 
 theorem wrel_lies_k {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u σ w)
-    (c : String) (t : Fin u.tabellen.length) (ht : tabIdx u.tabellen c = .ok t)
+    (c : String) (t : Fin u.tabs.length) (ht : tabIdx u.tabs c = .ok t)
     (fld : String) (fh : FieldHit u t) (hf : fieldHit u t fld = .ok fh) (k : Int) :
     w (.slot c k fld) = valOf ((declOf u).typ t fh.idx) (σ.slots t k fh.idx) := by
   apply hW
@@ -423,7 +427,7 @@ theorem wrel_lies_k {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u
     first field by the name. -/
 theorem slotShape_tabIdx : ∀ (ts : List UTab) (c fld : String) (sh : Gabbro.Body.Shape),
     slotShape ts c fld = some sh → ∃ t : Fin ts.length, tabIdx ts c = .ok t ∧
-      ((ts.get t).felder.find? (fun q => q.1 == fld)).map (fun q => Gabbro.Body.Shape.intIn q.2.1 q.2.2) = some sh
+      ((ts.get t).cols.find? (fun q => q.1 == fld)).map (fun q => Gabbro.Body.Shape.intIn q.2.1 q.2.2) = some sh
   | [], _, _, _, h => by simp [slotShape] at h
   | x :: rest, c, fld, sh, h => by
       unfold slotShape at h

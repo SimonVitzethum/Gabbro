@@ -1,6 +1,7 @@
 module
 public import Bruecke.Quelle
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2
+public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -41,7 +42,7 @@ start list), and a unit without an entry keeps none. -/
 
 namespace Gabbro.Bruecke
 
-open Gabbro.Grammatik.Parser.UebersetzeProben2
+open Gabbro.Grammatik.Parser.UebersetzeProben2 Gabbro.Grammatik.Parser.UebersetzeProben3
 
 theorem entry_ist_start :
     (uOf entry1_ok).map (fun u => (startsAllg u).length) = some 1 := by decide +kernel

@@ -33,10 +33,10 @@ variable {u : UProg}
 theorem realisiert_alle (S : Stimmig u)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body)
-    (hlow : ∀ c : Fin u.fns.length, ∃ b0, lowBody u c (fnAt u c).saetze (fnAt u c).rueck = .ok b0)
+    (hlow : ∀ c : Fin u.fns.length, ∃ b0, lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0)
     (rk : String → Nat) (hR : Rang u rk) :
     ∃ ρ : Gabbro.Body.Env, ∀ n gf, fnSuch u n = some gf →
-      Gabbro.Body.Contract ρ n (preProp (wfU u) gf) (postP u gf) ∧ Gabbro.Body.Frame ρ n gf.schreibt := by
+      Gabbro.Body.Contract ρ n (preProp (wfU u) gf) (postP u gf) ∧ Gabbro.Body.Frame ρ n gf.puts := by
   let K := (u.fns.map (fun f => rk f.name)).foldr max 0 + 1
   obtain ⟨ρ, hρ⟩ := realisiert S hZ hlow rk hR K
   refine ⟨ρ, fun n gf hgf => hρ n gf hgf ?_⟩
@@ -87,10 +87,10 @@ theorem tabEnv_treu {A : List Eintrag} (hA : Schluessel A) (ρP : Gabbro.Body.En
 
 theorem tabEnv_gut {A : List Eintrag} (hG : ∀ e ∈ A, EintragGut u e) (ρP : Gabbro.Body.Env)
     (hP : ∀ n gf, fnSuch u n = some gf →
-      Gabbro.Body.Contract ρP n (preProp (wfU u) gf) (postP u gf) ∧ Gabbro.Body.Frame ρP n gf.schreibt) :
+      Gabbro.Body.Contract ρP n (preProp (wfU u) gf) (postP u gf) ∧ Gabbro.Body.Frame ρP n gf.puts) :
     ∀ n gf, fnSuch u n = some gf →
       Gabbro.Body.Contract (tabEnv A ρP) n (preProp (wfU u) gf) (postP u gf) ∧
-      Gabbro.Body.Frame (tabEnv A ρP) n gf.schreibt := by
+      Gabbro.Body.Frame (tabEnv A ρP) n gf.puts := by
   intro n gf hgf
   refine ⟨fun t ht => ?_, fun t p hp => ?_⟩
   · by_cases hex : ∃ e ∈ A, e.name = n ∧ e.ein = t
@@ -169,19 +169,19 @@ theorem lauf_P {P : Programm (declOf u)} {fs : List (declOf u).Fn}
         R g σr envA = .logik e) ∧
     (∀ σ' v, execEnd (V := vertragVon (declOf u) c) O' passes R (P.rumpf c) σ ρ = .zurueck σ' v →
       EnsAmRueck P c σ σ' ρ v) := by
-  have G := gesenkt_of hlow
+  have G := gesenkt_of S.ohneReq hlow
   have hlowAll : ∀ c : Fin u.fns.length, ∃ b0,
-      lowBody u c (fnAt u c).saetze (fnAt u c).rueck = .ok b0 :=
+      lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0 :=
     fun c => (G.rumpf c).imp fun _ h => h.1
   obtain ⟨ρP, hP⟩ := realisiert_alle S hZ hlowAll rk hR
   obtain ⟨b0, hb0, hPb⟩ := G.rumpf c
   obtain ⟨body, hbody, hmeets⟩ := hZ c
   rw [zuBody_eq] at hbody
-  cases hbs : stmtsBody u (fnAt u c) (fnAt u c).saetze with
+  cases hbs : stmtsBody u (fnAt u c) (fnAt u c).body with
   | none => rw [hbs] at hbody; cases hbody
   | some bs =>
   rw [hbs] at hbody
-  cases heB : endBody u (fnAt u c) (fnAt u c).rueck with
+  cases heB : endBody u (fnAt u c) (fnAt u c).ret with
   | none => rw [heB] at hbody; cases hbody
   | some eB =>
   rw [heB] at hbody
@@ -230,7 +230,7 @@ theorem bruecke_koerperGutR {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   intro passes c O' _ _ R hRR hOV σ ρ _
   have hl := lauf_P hlow S rk hR hZ c O' passes R hRR σ ρ
   refine ⟨hl.2, fun g h => ?_⟩
-  rw [torRuf_eq (gesenkt_of hlow) R] at h
+  rw [torRuf_eq (gesenkt_of S.ohneReq hlow) R] at h
   obtain ⟨g0, σr, envA, hR0⟩ := hl.1 _ h
   exact hOV g0 σr envA _ hR0 g rfl
 
@@ -256,10 +256,11 @@ theorem bruecke_logik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     Zielsatz.LogikPflicht P (SperrInv.leer (declOf u)) (axWahr (declOf u)) :=
   ⟨fun passes f => ⟨koerperGutS_leer ⟨koerperGutRQ_of_R _ (bruecke_koerperGutR hlow S rk hR hZ passes f),
       bruecke_keineLogik hlow S rk hR hZ passes _ f⟩,
-    invGutS_leer rfl f,
+    invGutS_leer (show List.finRange u.invs.length = [] from
+      List.eq_nil_of_length_eq_zero (by rw [List.length_finRange, S.ohneInv]; rfl)) f,
     fun _ _ _ _ _ _ _ _ _ _ _ _ _ r _ => by
       have h := r.isLt
-      have h0 : (declOf u).gruende f = 0 := sigGruende_zero u f
+      have h0 : (declOf u).gruende f = 0 := sigGruende_null u S.ohneGrund f
       omega⟩,
    fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
 
@@ -276,6 +277,6 @@ theorem bruecke_nutzer {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   simp only at hP hS hQ
   subst hP hS hQ
   exact ⟨bruecke_logik hlow S rk hR hZ,
-    startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires u _ fs hlow)⟩
+    startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires u _ fs S.ohneReq hlow)⟩
 
 end Gabbro.Bruecke

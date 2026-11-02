@@ -12,13 +12,17 @@ Stages:
      statement is closed by the generator or proved by a person, and Lean really checked it.
   4. `cargo test -p gabbro-cli --test beweismessung`: `prove` can never say GREEN without Lean
      having checked something.
+  5. The bridge (`bruecke/`): every duty file its `Duty` library imports equals what
+     `gabbro pflichten --lean` prints for its unit, `lake build` there is green, and every
+     `#print axioms` of a bridge theorem names exactly `propext`, `Classical.choice`, `Quot.sound`.
 
-Exit 0 green, 1 red, 2 nothing measured. `bruecke/` is NOT measured here: its manifest is
-broken (`lake build` there fails on the missing `mathlib` entry), see `TODO.md`."""
+Exit 0 green, 1 red, 2 nothing measured."""
 import os, pathlib, re, subprocess, sys
 
 W = pathlib.Path(__file__).resolve().parent.parent
 P = W / "programmlogik"
+B = W / "bruecke"
+STANDARD = {"propext", "Classical.choice", "Quot.sound"}
 ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 # proof file -> the unit it is held against
@@ -85,10 +89,47 @@ def stufe_tor():
     return ok
 
 
+def duty_name(datei):
+    """`crate::lean::module_name`: `Duty` and the file stem in upper camel case."""
+    s, gross = "Duty", True
+    for ch in pathlib.Path(datei).stem:
+        if ch.isascii() and ch.isalnum():
+            s += ch.upper() if gross else ch; gross = False
+        else:
+            gross = True
+    return s
+
+
+def stufe_bruecke():
+    g = W / "target/debug/gabbro"
+    if not B.is_dir() or not g.is_file():
+        print("  5 bruecke:  NICHT GEMESSEN (bruecke/ oder target/debug/gabbro fehlt)"); return None
+    wurzeln = re.findall(r'"Duty\.(\w+)"', (B / "lakefile.toml").read_text(encoding="utf-8"))
+    einheiten = {duty_name(f.name): f"beispiele/{f.name}" for f in (W / "beispiele").glob("*.gab")}
+    abweichend = []
+    for name in wurzeln:
+        datei = P / "Duty" / f"{name}.lean"
+        q = subprocess.run([str(g), "pflichten", "--lean", einheiten.get(name, "?")], cwd=W, env=ENV,
+                           capture_output=True, text=True, timeout=600)
+        if q.returncode != 0 or not datei.is_file() or datei.read_text(encoding="utf-8") != q.stdout:
+            abweichend.append(name)
+    p = subprocess.run(["lake", "build"], cwd=B, env=ENV, capture_output=True, text=True, timeout=3600)
+    aus = p.stdout + p.stderr
+    jobs = re.findall(r"Build completed successfully \((\d+) jobs\)", aus)
+    saetze = re.findall(r"Bruecke/\S+: '([^']+)' depends on axioms: \[([^\]]*)\]", aus)
+    fremd = [n for n, ax in saetze if set(a.strip() for a in ax.split(",")) != STANDARD]
+    ok = p.returncode == 0 and bool(jobs) and bool(saetze) and not fremd and bool(wurzeln) and not abweichend
+    print(f"  5 bruecke:  {'ok' if ok else 'ROT'} ({jobs[-1] + ' Jobs' if jobs else 'kein Abschluss'}, "
+          f"{len(saetze)} Saetze geprueft, {len(fremd)} mit anderen Axiomen, "
+          f"{len(wurzeln) - len(abweichend)} von {len(wurzeln)} Duty-Dateien gleich dem Drucker)")
+    for x in (fremd + abweichend)[:10]: print("     ", x)
+    return ok
+
+
 def main():
     if not P.is_dir(): print("ABBRUCH: programmlogik/ fehlt -- nichts gemessen"); return 2
     print("== Wächter 4: GabbroV ==")
-    erg = [stufe_bau(), stufe_sorry(), stufe_prove(), stufe_tor()]
+    erg = [stufe_bau(), stufe_sorry(), stufe_prove(), stufe_tor(), stufe_bruecke()]
     if False in erg: print("== GABBROV: ROT =="); return 1
     if None in erg: print("== GABBROV: TEILMESSUNG =="); return 2
     print("== GABBROV: GRUEN =="); return 0

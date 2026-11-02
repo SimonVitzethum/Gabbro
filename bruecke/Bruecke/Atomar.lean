@@ -26,9 +26,12 @@ variable {u : UProg}
 
 instance (u : UProg) : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
 
-/-- The parser's declaration has no atomic global. -/
-theorem declOf_kein_atomar (u : UProg) : ∀ g : (declOf u).Glob, (declOf u).atomar g = false :=
-  fun g => nomatch g
+/-- A unit without statics has no atomic global. -/
+theorem declOf_kein_atomar (u : UProg) (h : u.globs = []) :
+    ∀ g : (declOf u).Glob, (declOf u).atomar g = false := fun g => by
+  have h1 : g.val < u.globs.length := g.isLt
+  have h2 : u.globs.length = 0 := by rw [h]; rfl
+  omega
 
 /-- **PREMISE (b) WITH THE ATOMIC RELY, FROM GABBROV.** -/
 theorem bruecke_nutzerA {P : Programm (declOf u)} {fs : List (declOf u).Fn}
@@ -37,7 +40,7 @@ theorem bruecke_nutzerA {P : Programm (declOf u)} {fs : List (declOf u).Fn}
       meetsU u (wfU u) (fnAt u c) body)
     (E : Zielsatz.Einheit (declOf u)) (hP : E.P = P) (hS : E.S = SperrInv.leer (declOf u))
     (hQ : E.Q = axWahr (declOf u)) : Zielsatz.NutzerPflichtA E :=
-  Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u)
+  Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u S.ohneGlob)
     (bruecke_nutzer hlow S rk hR hZ E hP hS hQ)
 
 #print axioms bruecke_nutzerA

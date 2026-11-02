@@ -13,8 +13,52 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable {u : UProg}
 
+theorem ergFind_none {fn : UFn} (hA : ArtStimmt fn) : fn.params.find? (·.1 == "#erg") = none :=
+  List.find?_eq_none.mpr fun q hq => by
+    have := hA.2.2 q hq
+    simp only [ParamSchlicht, Bool.and_eq_true, bne_iff_ne, ne_eq] at this
+    simpa using this.2
+
+/-- An `ensures` side with a Body form lowers to a number (`old(..)`, `result` and every side of
+    `lowWertE_sim`). -/
+theorem lowWertEns_int {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {er : Option Ty}
+    {sd : USide} {wv : LowWert u Γ Λ} {a a' : Acc} {x : Gabbro.Body.Expr}
+    (h : lowWertE u Γ Λ fn er sd = .ok wv) (hb : ensSide u fn a sd = some (x, a'))
+    (hA : ArtStimmt fn) (hT : TabEindeutig u) (σ₀ : World (declOf u)) (ρ : Env (declOf u) Γ)
+    (s₀ : Gabbro.Body.State) (hW₀ : WRel u σ₀ s₀.world)
+    (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
+    ∃ ls : LowSide u Γ Λ, wv = ls.wert := by
+  by_cases hold : ∃ b f ix, sd = .old b f ix
+  · obtain ⟨b, f, ix, rfl⟩ := hold
+    simp only [lowWertE] at h
+    cases hr : lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix with
+    | error e => simp [hr, Except.map] at h
+    | ok ls =>
+      simp only [hr, Except.map, Except.ok.injEq] at h
+      exact ⟨ls, h.symm⟩
+  · by_cases herg : sd = .erg
+    · subst herg
+      simp only [lowWertE] at h
+      split at h
+      · split at h
+        · cases h
+        · rename_i v _
+          cases h
+          exact ⟨{ range := (_, _), term := Expr.var v }, rfl⟩
+      · split at h
+        · split at h
+          · cases h
+          · rename_i v _
+            cases h
+            exact ⟨{ range := (_, _), term := Expr.var v }, rfl⟩
+        · cases h
+      · cases h
+    · obtain ⟨hs, _⟩ := ensSide_sonst hb (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
+      obtain ⟨ls, hls, _⟩ := lowWertE_sim h hs hA hT σ₀ σ₀ ρ s₀.world s₀.local' hW₀ hL₀
+      exact ⟨ls, hls⟩
+
 theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
-    {er : Option (Int × Int)} {sd : USide} {ls : LowSide u Γ Λ} {a a' A : Acc}
+    {er : Option Ty} {sd : USide} {ls : LowSide u Γ Λ} {a a' A : Acc}
     {x : Gabbro.Body.Expr}
     (h : lowSideEns u Γ Λ fn er sd = .ok ls) (hb : ensSide u fn a sd = some (x, a'))
     (hpre : Vor a' A) (hA : ArtStimmt fn) (hT : TabEindeutig u)
@@ -22,69 +66,69 @@ theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (w : Gabbro.Body.World) (β : Gabbro.Body.Binding)
     (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local')
     (hW : WRel u σ w) (hB : EnsBind fn er ρ s₀ A β) :
-    Gabbro.Body.eval ⟨w, β⟩ x = some (valOf (.int ls.weit.1 ls.weit.2) (eval σ₀ ls.term σ ρ)) := by
-  cases sd with
-  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at hb
-  | lit n =>
-    simp only [lowSideEns] at h; cases h
-    simp only [ensSide, sideExpr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, _⟩ := hb
-    rfl
-  | param p =>
-    simp only [lowSideEns] at h
-    simp only [ensSide, sideExpr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨rfl, _⟩ := hb
-    simp only [Gabbro.Body.eval]
-    rw [lowParamSide_sim h σ₀ σ ρ β hB.par]
-  | slot b f ix =>
-    simp only [lowSideEns] at h
-    obtain ⟨c, hc, hv⟩ := lowDurch_sim h hA hT σ₀ σ ρ w β hW hB.par
-    simp only [ensSide, sideExpr, slotPlace, hc, Option.map_some, Option.some.injEq,
-      Prod.mk.injEq] at hb
-    obtain ⟨rfl, _⟩ := hb
-    exact hv
-  | tab b f ix =>
-    simp only [lowSideEns] at h
-    simp only [ensSide, sideExpr, slotPlace, Option.map_some, Option.some.injEq,
-      Prod.mk.injEq] at hb
-    obtain ⟨rfl, _⟩ := hb
-    exact lowTabRead_sim h σ₀ σ ρ w β hW hB.par
-  | alt b f ix =>
-    simp only [lowSideEns] at h
-    simp only [ensSide] at hb
-    cases hc : ptrTab u fn b with
-    | none => simp [slotPlace, hc] at hb
-    | some c =>
-      simp only [slotPlace, hc, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨⟨l, hl⟩, _⟩ := hpre
-      have hlen : a.olds.length < A.olds.length := by
-        rw [hl]; simp
-      have hget : A.olds[a.olds.length] = .place c (idxExpr ix) f := by
-        simp only [hl, List.append_assoc]
-        simp
-      have ho := hB.old a.olds.length hlen
-      rw [hget] at ho
-      have hv := lowAltRead_sim h hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀ hL₀
-      simp only [Gabbro.Body.eval]
-      cases s₀ with
-      | mk w₀ β₀ =>
-        rw [hv] at ho
-        exact ho.symm
-  | erg =>
-    simp only [lowSideEns] at h
-    split at h
-    · rename_i _ lo hi
-      split at h
-      · cases h
-      · rename_i v hv
-        cases h
-        simp only [ensSide, Option.some.injEq, Prod.mk.injEq] at hb
+    Gabbro.Body.eval ⟨w, β⟩ x = some (valOf (.int ls.range.1 ls.range.2) (eval σ₀ ls.term σ ρ)) := by
+  by_cases hold : ∃ b f ix, sd = .old b f ix
+  · obtain ⟨b, f, ix, rfl⟩ := hold
+    cases hr : lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix with
+    | error e => simp [lowSideEns, zahlVon, lowWertE, hr, Except.map] at h
+    | ok ls' =>
+      simp only [lowSideEns, zahlVon, lowWertE, hr, Except.map, LowSide.wert, LowWert.zahl,
+        Except.ok.injEq] at h
+      subst h
+      simp only [ensSide] at hb
+      cases hc : ptrTab u fn b with
+      | none => simp [slotPlace, hc] at hb
+      | some c =>
+        simp only [slotPlace, hc, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨⟨l, hl⟩, _⟩ := hpre
+        have hlen : a.olds.length < A.olds.length := by
+          rw [hl]; simp
+        have hget : A.olds[a.olds.length] = .place c (idxExpr ix) f := by
+          simp only [hl, List.append_assoc]
+          simp
+        have ho := hB.old a.olds.length hlen
+        rw [hget] at ho
+        have hv := lowAltRead_sim hr hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀ hL₀
         simp only [Gabbro.Body.eval]
-        rw [hB.res (hpre.2 rfl), nthVal_lowVar Γ 0 _ v ρ hv]
-        rfl
-    · cases h
+        cases s₀ with
+        | mk w₀ β₀ =>
+          rw [hv] at ho
+          exact ho.symm
+  · by_cases herg : sd = .erg
+    · subst herg
+      cases hw : lowWertE u Γ Λ fn er .erg with
+      | error e => simp [lowSideEns, zahlVon, hw] at h
+      | ok wv =>
+        simp only [lowSideEns, zahlVon, hw] at h
+        simp only [lowWertE] at hw
+        split at hw
+        · split at hw
+          · cases hw
+          · rename_i v hv
+            cases hw
+            simp only [LowWert.zahl, Except.ok.injEq] at h
+            subst h
+            simp only [ensSide, Option.some.injEq, Prod.mk.injEq] at hb
+            obtain ⟨rfl, rfl⟩ := hb
+            simp only [Gabbro.Body.eval]
+            rw [hB.res (hpre.2 rfl), nthVal_lowVar Γ 0 _ v ρ hv]
+            rfl
+        all_goals first
+          | (cases hw; done)
+          | (split at hw
+             · rename_i hfind
+               rw [ergFind_none hA] at hfind
+               cases hfind
+             · cases hw)
+    · obtain ⟨hs, rfl⟩ := ensSide_sonst hb (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
+      cases hw : lowWertE u Γ Λ fn er sd with
+      | error e => simp [lowSideEns, zahlVon, hw] at h
+      | ok wv =>
+        obtain ⟨ls', rfl, he⟩ := lowWertE_sim hw hs hA hT σ₀ σ ρ w β hW hB.par
+        simp only [lowSideEns, zahlVon, hw, LowSide.wert, LowWert.zahl, Except.ok.injEq] at h
+        subst h
+        exact he
 
 theorem opOf_some {op : String} {o : Gabbro.Body.BinOp} (h : opOf op = some o) :
     (op = "==" ∧ o = .eq) ∨ (op = "<" ∧ o = .lt) ∨ (op = "<=" ∧ o = .le) := by
@@ -93,7 +137,7 @@ theorem opOf_some {op : String} {o : Gabbro.Body.BinOp} (h : opOf op = some o) :
 
 /-- **An `ensures` predicate**: its Body term, under the clause binding, is the G truth value. -/
 theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
-    {er : Option (Int × Int)} (hA : ArtStimmt fn) (hT : TabEindeutig u)
+    {er : Option Ty} (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
     (w : Gabbro.Body.World) (β : Gabbro.Body.Binding) (A : Acc)
     (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local')
@@ -120,24 +164,31 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           obtain ⟨rfl, rfl⟩ := hb
           simp only [lowEns, lowCmp] at h
           split at h
-          · cases h
-          · rename_i s1 hs1
-            split at h
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
+          · split at h
             · cases h
-            · rename_i s2 hs2
-              have p1 := (ensSide_vor hr).trans hpre
-              have e1 := lowSideEns_sim hs1 hl p1 hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
-              have e2 := lowSideEns_sim hs2 hr hpre hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
-              rcases opOf_some hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+            · rename_i s1 hs1
+              split at h
               · cases h
-                simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
-                simp [Grammatik.eval, wahr?]
-              · cases h
-                simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
-                simp [Grammatik.eval, wahr?]
-              · cases h
-                simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
-                simp [Grammatik.eval, wahr?]
+              · rename_i s2 hs2
+                have p1 := (ensSide_vor hr).trans hpre
+                have e1 := lowSideEns_sim hs1 hl p1 hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
+                have e2 := lowSideEns_sim hs2 hr hpre hA hT σ₀ σ ρ s₀ w β hW₀ hL₀ hW hB
+                rcases opOf_some hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+                · cases h
+                  simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
+                  simp [Grammatik.eval, wahr?]
+                · cases h
+                  simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
+                  simp [Grammatik.eval, wahr?]
+                · cases h
+                  simp only [Gabbro.Body.eval, e1, e2, valOf_int, Gabbro.Body.binop]
+                  simp [Grammatik.eval, wahr?]
         · cases hb
       · cases hb
   | .and x y, a, a', z, g, hb, h, hpre => by
@@ -204,14 +255,14 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
 
 /-- What a lowered side adds to the accumulator: `old` reads that evaluate in the entry state,
     and `result` only where the function has one. -/
-def Zuwachs (s₀ : Gabbro.Body.State) (er : Option (Int × Int)) (a a' : Acc) : Prop :=
+def Zuwachs (s₀ : Gabbro.Body.State) (er : Option Ty) (a a' : Acc) : Prop :=
   (∀ o ∈ a'.olds, o ∈ a.olds ∨ ∃ v, Gabbro.Body.eval s₀ o = some v) ∧
   (a'.result = true → a.result = true ∨ er.isSome = true)
 
-theorem Zuwachs.refl (s₀ : Gabbro.Body.State) (er : Option (Int × Int)) (a : Acc) :
+theorem Zuwachs.refl (s₀ : Gabbro.Body.State) (er : Option Ty) (a : Acc) :
     Zuwachs s₀ er a a := ⟨fun _ h => .inl h, .inl⟩
 
-theorem Zuwachs.trans {s₀ : Gabbro.Body.State} {er : Option (Int × Int)} {a b c : Acc}
+theorem Zuwachs.trans {s₀ : Gabbro.Body.State} {er : Option Ty} {a b c : Acc}
     (_hv : Vor a b) (h1 : Zuwachs s₀ er a b) (h2 : Zuwachs s₀ er b c) : Zuwachs s₀ er a c := by
   refine ⟨fun o ho => ?_, fun h => ?_⟩
   · rcases h2.1 o ho with hb | hv'
@@ -222,63 +273,54 @@ theorem Zuwachs.trans {s₀ : Gabbro.Body.State} {er : Option (Int × Int)} {a b
     · exact .inr he
 
 theorem ensSide_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
-    {er : Option (Int × Int)} {sd : USide} {ls : LowSide u Γ Λ} {a a' : Acc}
+    {er : Option Ty} {sd : USide} {ls : LowSide u Γ Λ} {a a' : Acc}
     {x : Gabbro.Body.Expr}
     (h : lowSideEns u Γ Λ fn er sd = .ok ls) (hb : ensSide u fn a sd = some (x, a'))
     (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
     (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     Zuwachs s₀ er a a' := by
-  cases sd with
-  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at hb
-  | alt b f ix =>
-    simp only [lowSideEns] at h
-    simp only [ensSide] at hb
-    cases hc : ptrTab u fn b with
-    | none => simp [slotPlace, hc] at hb
-    | some c =>
-      simp only [slotPlace, hc, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
-      refine ⟨fun o ho => ?_, fun hr => .inl hr⟩
-      simp only [List.mem_append, List.mem_singleton] at ho
-      rcases ho with ho | rfl
-      · exact .inl ho
-      · have hv := lowAltRead_sim h hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀ hL₀
-        cases s₀
-        exact .inr ⟨_, hv⟩
-  | erg =>
-    simp only [lowSideEns] at h
-    split at h
-    · rename_i _ lo hi
+  by_cases hold : ∃ b f ix, sd = .old b f ix
+  · obtain ⟨b, f, ix, rfl⟩ := hold
+    cases hr : lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix with
+    | error e => simp [lowSideEns, zahlVon, lowWertE, hr, Except.map] at h
+    | ok ls' =>
+      simp only [ensSide] at hb
+      cases hc : ptrTab u fn b with
+      | none => simp [slotPlace, hc] at hb
+      | some c =>
+        simp only [slotPlace, hc, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        refine ⟨fun o ho => ?_, fun hr => .inl hr⟩
+        simp only [List.mem_append, List.mem_singleton] at ho
+        rcases ho with ho | rfl
+        · exact .inl ho
+        · have hv := lowAltRead_sim hr hA hT c hc σ₀ σ ρ s₀.world s₀.local' hW₀ hL₀
+          cases s₀
+          exact .inr ⟨_, hv⟩
+  · by_cases herg : sd = .erg
+    · subst herg
       simp only [ensSide, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
-      exact ⟨fun o ho => .inl ho, fun _ => .inr rfl⟩
-    · cases h
-  | lit n =>
-    simp only [ensSide, sideExpr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
-  | param p =>
-    simp only [ensSide, sideExpr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-    obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
-  | slot b f ix =>
-    simp only [ensSide, sideExpr] at hb
-    cases hp : slotPlace u fn (.slot b f ix) with
-    | none => rw [hp] at hb; cases hb
-    | some pl =>
-      rw [hp] at hb
-      simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
-  | tab b f ix =>
-    simp only [ensSide, sideExpr] at hb
-    cases hp : slotPlace u fn (.tab b f ix) with
-    | none => rw [hp] at hb; cases hb
-    | some pl =>
-      rw [hp] at hb
-      simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨_, rfl⟩ := hb; exact Zuwachs.refl _ _ _
+      refine ⟨fun o ho => .inl ho, fun _ => .inr ?_⟩
+      cases hw : lowWertE u Γ Λ fn er .erg with
+      | error e => simp [lowSideEns, zahlVon, hw] at h
+      | ok wv =>
+        simp only [lowWertE] at hw
+        split at hw
+        · first | rfl | simp_all
+        all_goals first
+          | (cases hw; done)
+          | (split at hw
+             · rename_i hfind
+               rw [ergFind_none hA] at hfind
+               cases hfind
+             · cases hw)
+    · obtain ⟨_, rfl⟩ := ensSide_sonst hb (fun b f ix e => hold ⟨b, f, ix, e⟩) herg
+      exact Zuwachs.refl _ _ _
 
 theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
-    {er : Option (Int × Int)} (hA : ArtStimmt fn) (hT : TabEindeutig u)
+    {er : Option Ty} (hA : ArtStimmt fn) (hT : TabEindeutig u)
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (s₀ : Gabbro.Body.State)
     (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Expr} {g : Expr (declOf u) Γ Λ .bool},
@@ -299,14 +341,21 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           obtain ⟨rfl, rfl⟩ := hb
           simp only [lowEns, lowCmp] at h
           split at h
-          · cases h
-          · rename_i s1 hs1
-            split at h
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
+          · split at h
             · cases h
-            · rename_i s2 hs2
-              exact Zuwachs.trans (ensSide_vor hl)
-                (ensSide_zuwachs hs1 hl hA hT σ₀ σ ρ s₀ hW₀ hL₀)
-                (ensSide_zuwachs hs2 hr hA hT σ₀ σ ρ s₀ hW₀ hL₀)
+            · rename_i s1 hs1
+              split at h
+              · cases h
+              · rename_i s2 hs2
+                exact Zuwachs.trans (ensSide_vor hl)
+                  (ensSide_zuwachs hs1 hl hA hT σ₀ σ ρ s₀ hW₀ hL₀)
+                  (ensSide_zuwachs hs2 hr hA hT σ₀ σ ρ s₀ hW₀ hL₀)
         · cases hb
       · cases hb
   | .and x y, a, a', z, g, hb, h => by
@@ -361,92 +410,5 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i gx hgx
           exact ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ x hx hgx
       · cases hb
-
-/-! ## 5. One `ensures` clause, as the duty file states it -/
-
-theorem oldName_inj : ∀ a < 9, ∀ b < 9, oldName a = oldName b → a = b := by decide
-
-theorem oldName_ne_result : ∀ a, oldName a ≠ "result" := by
-  intro a
-  match a with
-  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 => decide
-  | _ + 8 => simp [oldName]
-
-/-- The binding `clauseAux` builds: the `n`th, `n+1`st, … `old` name bound to the value its read
-    has in the entry state. -/
-def oldsBind (s : Gabbro.Body.State) : List Gabbro.Body.Expr → Nat → Gabbro.Body.Binding →
-    Gabbro.Body.Binding
-  | [], _, β => β
-  | o :: os, n, β =>
-      oldsBind s os (n + 1) (Gabbro.Body.bindLocal β (oldName n) ((Gabbro.Body.eval s o).getD .absent))
-
-/-- The end of a clause: evaluated in the exit world under the built binding (with `result`
-    bound to the answer, where the clause names it). -/
-def Schluss (t : Gabbro.Body.Expr) (uses : Bool) (s' : Gabbro.Body.State)
-    (r : Option Gabbro.Body.Value) (β : Gabbro.Body.Binding) : Prop :=
-  if uses then ∃ v, r = some v ∧
-      Gabbro.Body.eval ⟨s'.world, Gabbro.Body.bindLocal β "result" v⟩ t = some (.bool true)
-  else Gabbro.Body.eval ⟨s'.world, β⟩ t = some (.bool true)
-
-/-- Where every `old` read evaluates, the universally bound `old` values of `clauseAux` ARE those
-    values. -/
-theorem clauseAux_iff (t : Gabbro.Body.Expr) (uses : Bool) (s s' : Gabbro.Body.State)
-    (r : Option Gabbro.Body.Value) :
-    ∀ (olds : List Gabbro.Body.Expr) (n : Nat) (β : Gabbro.Body.Binding),
-      (∀ o ∈ olds, ∃ v, Gabbro.Body.eval s o = some v) →
-      (clauseAux t uses s s' r olds n β ↔ Schluss t uses s' r (oldsBind s olds n β))
-  | [], n, β, _ => by
-      unfold clauseAux Schluss oldsBind
-      cases uses <;> simp
-  | o :: os, n, β, hev => by
-      obtain ⟨v, hv⟩ := hev o (List.mem_cons_self ..)
-      have ih := clauseAux_iff t uses s s' r os (n + 1)
-        (Gabbro.Body.bindLocal β (oldName n) v) (fun o' h => hev o' (List.mem_cons_of_mem _ h))
-      simp only [clauseAux, oldsBind, hv, Option.getD_some]
-      constructor
-      · intro h; exact ih.mp (h v rfl)
-      · intro h ov hov; cases hov; exact ih.mpr h
-
-theorem oldsBind_fremd (s : Gabbro.Body.State) (m : String) :
-    ∀ (olds : List Gabbro.Body.Expr) (n : Nat) (β : Gabbro.Body.Binding),
-      (∀ i, i < olds.length → m ≠ oldName (n + i)) → oldsBind s olds n β m = β m
-  | [], _, _, _ => rfl
-  | o :: os, n, β, h => by
-      simp only [oldsBind]
-      rw [oldsBind_fremd s m os (n + 1) _ (fun i hi => by
-        have := h (i + 1) (by simp; omega)
-        rwa [show n + (i + 1) = n + 1 + i by omega] at this)]
-      exact Gabbro.Body.bindLocal_elsewhere _ _ _ _ (by simpa using h 0 (by simp))
-
-theorem oldsBind_hier (s : Gabbro.Body.State) :
-    ∀ (olds : List Gabbro.Body.Expr) (n : Nat) (β : Gabbro.Body.Binding) (i : Nat)
-      (hi : i < olds.length), n + olds.length ≤ 9 →
-      oldsBind s olds n β (oldName (n + i)) = (Gabbro.Body.eval s olds[i]).getD .absent
-  | [], _, _, _, hi, _ => by simp at hi
-  | o :: os, n, β, 0, _, hn => by
-      simp only [oldsBind, Nat.add_zero]
-      rw [oldsBind_fremd s _ os (n + 1) _ (fun i hi h => by
-        have := oldName_inj n (by simp at hn; omega) (n + 1 + i) (by simp at hn; omega) h
-        omega)]
-      simp
-  | o :: os, n, β, i + 1, hi, hn => by
-      simp only [oldsBind]
-      rw [show n + (i + 1) = n + 1 + i by omega]
-      exact oldsBind_hier s os (n + 1) _ i (by simpa using hi) (by simp at hn; omega)
-      
-/-- No parameter is called `result` or `old#…` -- the names a clause binds on top of the entry
-    binding. Checked per unit. -/
-def NamenFrei (fn : UFn) : Prop :=
-  ∀ q ∈ fn.params, q.1 ≠ "result" ∧ ∀ i, q.1 ≠ oldName i
-
-theorem LRel.ueber {D : Deklaration} {Γ : Ctx} {fn : UFn} {sh : Nat} {ρ : Env D Γ}
-    {β β' : Gabbro.Body.Binding} (hN : NamenFrei fn) (h : LRel fn sh ρ β)
-    (hβ : ∀ p, p ≠ "result" → (∀ i, p ≠ oldName i) → β' p = β p) : LRel fn sh ρ β' := by
-  intro p j hj
-  obtain ⟨τ, hτ⟩ := paramPos_name _ _ _ hj
-  have hm : (p, τ) ∈ fn.params := List.mem_of_getElem? hτ
-  obtain ⟨h1, h2⟩ := hN _ hm
-  rw [hβ p h1 h2]
-  exact h p j hj
 
 end Gabbro.Bruecke

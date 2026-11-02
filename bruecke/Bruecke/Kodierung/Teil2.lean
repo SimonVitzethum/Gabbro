@@ -16,9 +16,9 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 variable (u : UProg)
 
-theorem fieldHit_of (t : Fin u.tabellen.length) (fld : String) (w : Int × Int)
-    (hB : (tabAt u t).bools = [])
-    (h : fieldAtPos (tabAt u t).felder fld = some w) : ∃ fh, fieldHit u t fld = .ok fh ∧ fh.weit = w := by
+theorem fieldHit_of (t : Fin u.tabs.length) (fld : String) (w : Int × Int)
+    (hB : (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = [])
+    (h : fieldAtPos (tabAt u t).cols fld = some w) : ∃ fh, fieldHit u t fld = .ok fh ∧ fh.range = w := by
   unfold fieldHit
   split
   · rename_i h'; rw [h] at h'; cases h'
@@ -26,25 +26,29 @@ theorem fieldHit_of (t : Fin u.tabellen.length) (fld : String) (w : Int × Int)
     rw [h] at h'
     cases h'
     have hnb : ∀ f : Fin (fieldCount u t), boolFeldAt u t f = false := by
-      intro f; unfold boolFeldAt; rw [hB]; cases (tabAt u t).felder[f.wert]? <;> simp
-    rw [dif_pos (hnb _)]
+      intro f; unfold boolFeldAt; rw [hB.1]; cases (tabAt u t).cols[f.val]? <;> simp
+    have hno : ∀ f : Fin (fieldCount u t), optFeldAt u t f = none := by
+      intro f; unfold optFeldAt optNumAt; rw [hB.2.1]; cases (tabAt u t).cols[f.val]? <;> simp
+    have hnw : ∀ f : Fin (fieldCount u t), wertFeldAt u t f = none := by
+      intro f; unfold wertFeldAt; rw [hB.2.2]; cases (tabAt u t).cols[f.val]? <;> simp
+    rw [dif_pos (hnb _), dif_pos (hno _), dif_pos (hnw _)]
     exact ⟨_, rfl, rfl⟩
 
 /-- **A related world is well-typed** (the duty file's `wellFormed`, hypothesis `U2`). -/
 theorem wf_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World}
-    (hB : ∀ t : Fin u.tabellen.length, (tabAt u t).bools = []) (hW : WRel u σ w) :
+    (hB : ∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = []) (hW : WRel u σ w) :
     Gabbro.Body.WF (shapeOfU u) w := by
   intro p sh hp
   cases p with
   | slot c k fld =>
-    obtain ⟨t, ht, hf⟩ := slotShape_tabIdx u.tabellen c fld sh hp
-    cases hq : (u.tabellen.get t).felder.find? (fun q => q.1 == fld) with
+    obtain ⟨t, ht, hf⟩ := slotShape_tabIdx u.tabs c fld sh hp
+    cases hq : (u.tabs.get t).cols.find? (fun q => q.1 == fld) with
     | none => rw [hq] at hf; cases hf
     | some q =>
       rw [hq] at hf
       simp only [Option.map_some, Option.some.injEq] at hf
       subst hf
-      have hfa : fieldAtPos (tabAt u t).felder fld = some q.2 := by
+      have hfa : fieldAtPos (tabAt u t).cols fld = some q.2 := by
         rw [fieldAtPos_find]; simp only [tabAt]; rw [hq]; rfl
       obtain ⟨fh, hfh, hw⟩ := fieldHit_of u t fld q.2 (hB t) hfa
       rw [wrel_lies_k u hW c t ht fld fh hfh k]

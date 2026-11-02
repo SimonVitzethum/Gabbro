@@ -74,27 +74,36 @@ def uOf (src : String) : Option UProg :=
   | .ok ⟨u, _, _⟩ => some u
   | .error _ => none
 
-/-- Every declared field's range contains 0: the zero memory exists. -/
+/-- No static, no option or aggregate field, and every declared field's range contains 0: the zero
+    memory exists. -/
 def nullB (u : UProg) : Bool :=
-  u.tabellen.all fun t => t.felder.all fun f => decide (f.2.1 ≤ 0) && decide (0 ≤ f.2.2)
+  u.globs.isEmpty && u.tabs.all fun t => t.opts.isEmpty && t.werte.isEmpty &&
+    t.cols.all fun f => decide (f.2.1 ≤ 0) && decide (0 ≤ f.2.2)
 
-theorem null_bereich {u : UProg} (h : nullB u = true) (t : Fin u.tabellen.length)
+theorem nullB_globs {u : UProg} (h : nullB u = true) : u.globs = [] := by
+  simp only [nullB, Bool.and_eq_true] at h
+  exact List.isEmpty_iff.mp h.1
+
+theorem nullB_tab {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length) :
+    (tabAt u t).opts = [] ∧ (tabAt u t).werte = [] := by
+  simp only [nullB, Bool.and_eq_true, List.all_eq_true] at h
+  have := (h.2 _ (List.get_mem _ _ : tabAt u t ∈ u.tabs)).1
+  exact ⟨List.isEmpty_iff.mp this.1, List.isEmpty_iff.mp this.2⟩
+
+theorem null_bereich {u : UProg} (h : nullB u = true) (t : Fin u.tabs.length)
     (f : Fin (fieldCount u t)) (w : Int × Int) (hw : fieldRangeO u t f = some w) :
     w.1 ≤ 0 ∧ 0 ≤ w.2 := by
   unfold fieldRangeO at hw
-  cases hf : (tabAt u t).felder[f.wert]? with
+  cases hf : (tabAt u t).cols[f.val]? with
   | none => rw [hf] at hw; simp at hw
   | some e =>
     rw [hf] at hw
     simp only [Option.map_some, Option.some.injEq] at hw
     subst hw
-    have hte : tabAt u t ∈ u.tabellen := List.get_mem _ _
-    have hfe : e ∈ (tabAt u t).felder := List.mem_of_getElem? hf
-    unfold nullB at h
-    rw [List.all_eq_true] at h
-    have h1 := h _ hte
-    rw [List.all_eq_true] at h1
-    have h2 := h1 _ hfe
+    have hte : tabAt u t ∈ u.tabs := List.get_mem _ _
+    have hfe : e ∈ (tabAt u t).cols := List.mem_of_getElem? hf
+    simp only [nullB, Bool.and_eq_true, List.all_eq_true] at h
+    have h2 := (h.2 _ hte).2 _ hfe
     simpa using h2
 
 /-- The zero memory of the parser's declaration. -/
@@ -106,17 +115,27 @@ def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
     · rw [if_pos hbf]
       exact (false : Bool)
     · rw [if_neg hbf]
+      have hp := nullB_tab h t
+      have ho : optFeldAt u t f = none := by
+        unfold optFeldAt optNumAt; rw [hp.1]; split <;> rfl
+      have hw' : wertFeldAt u t f = none := by
+        unfold wertFeldAt; rw [hp.2]; split <;> rfl
+      rw [ho, hw']
       cases hw : fieldRangeO u t f with
       | none => exact (⟨0, Int.le_refl _, Int.le_refl _⟩ : Zahl 0 0)
       | some w =>
         have := null_bereich h t f w hw
         exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
-  globs := fun g => nomatch g
+  globs := fun g => by
+    exfalso
+    have h1 : g.val < u.globs.length := g.isLt
+    have h2 : u.globs.length = 0 := by rw [nullB_globs h]; rfl
+    omega
 
 /-- The declared thread roots of a unit: the dispatch targets of its `entry` items, each a
     parameterless function (the front end refuses any other), started with the empty environment. -/
 def startsAllg (u : UProg) : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)) :=
-  u.wurzeln.filterMap fun n =>
+  u.roots.filterMap fun n =>
     match fnIdx u.fns n with
     | .error _ => none
     | .ok i =>
@@ -192,7 +211,7 @@ theorem nutzerA_aus_quelle {src : String} (hp : Pflichten src) {u : UProg}
     (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
     ∃ hn : nullB u = true, Zielsatz.NutzerPflichtA (einheitAllg u P hn) := by
   obtain ⟨hn, hb⟩ := nutzer_aus_quelle hp h
-  exact ⟨hn, Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u) hb⟩
+  exact ⟨hn, Zielsatz.nutzerPflichtA_ohne_atomar (declOf_kein_atomar u (nullB_globs hn)) hb⟩
 
 #print axioms nutzer_aus_quelle
 #print axioms nutzerA_aus_quelle
@@ -216,12 +235,13 @@ theorem pflichten_null {src : String} (hp : Pflichten src) {u : UProg} {P : Prog
 def aufzFn (u : UProg) : Zielsatz.Aufzaehlung (declOf u).Fn := ⟨List.finRange u.fns.length, List.mem_finRange⟩
 
 /-- The enumeration of the locks. -/
-def aufzLock (u : UProg) : Zielsatz.Aufzaehlung (declOf u).Lock := ⟨List.finRange u.sperren.length, List.mem_finRange⟩
+def aufzLock (u : UProg) : Zielsatz.Aufzaehlung (declOf u).Lock := ⟨List.finRange u.locks.length, List.mem_finRange⟩
 
 /-- The enumeration of the carriers of a unit with no tables and no globals: none. -/
-def aufzTraegerLeer (u : UProg) (ht : u.tabellen = []) : Zielsatz.Aufzaehlung ((declOf u).Tab ⊕ (declOf u).Glob) :=
+def aufzTraegerLeer (u : UProg) (ht : u.tabs = []) (hg : u.globs = []) :
+    Zielsatz.Aufzaehlung ((declOf u).Tab ⊕ (declOf u).Glob) :=
   ⟨[], fun c => match c with
-    | .inl t => absurd (t : Fin u.tabellen.length).isLt (by simp [ht])
-    | .inr g => nomatch g⟩
+    | .inl t => absurd (t : Fin u.tabs.length).isLt (by simp [ht])
+    | .inr g => absurd (g : Fin u.globs.length).isLt (by simp [hg])⟩
 
 end Gabbro.Bruecke

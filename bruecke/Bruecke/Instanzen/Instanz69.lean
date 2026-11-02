@@ -1,6 +1,37 @@
 module
 public import Bruecke.Quelle
 public import Duty.Duty0069IntegerConversion
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 
@@ -35,7 +66,7 @@ def zeilen : List (List Char) :=
    "ed the token before that rule\n".toList,
    "// could ever apply (`P002`, reproduced against the unchange".toList,
    "d checker in\n".toList,
-   "// `messung/K3-BEFUND.md` §4.1); no corpus site had ever nee".toList,
+   "// `dokumente/CHECKER.md` §4.1); no corpus site had ever nee".toList,
    "ded one, which is exactly why a\n".toList,
    "// form that was documented and unreachable could stand this".toList,
    " long.\n".toList,
@@ -77,18 +108,18 @@ def zeilen : List (List Char) :=
 
 def quelle : String := String.ofList zeilen.flatten
 
-def toks : List Token := [Gabbro.Grammatik.Parser.Token.wort "module", Gabbro.Grammatik.Parser.Token.ident "beispiel", Gabbro.Grammatik.Parser.Token.zeichen "::", Gabbro.Grammatik.Parser.Token.ident "umwandlung", Gabbro.Grammatik.Parser.Token.zeichen "{", Gabbro.Grammatik.Parser.Token.wort "impl", Gabbro.Grammatik.Parser.Token.wort "fn", Gabbro.Grammatik.Parser.Token.ident "kombiniert", Gabbro.Grammatik.Parser.Token.zeichen "(", Gabbro.Grammatik.Parser.Token.ident "a", Gabbro.Grammatik.Parser.Token.zeichen ":", Gabbro.Grammatik.Parser.Token.wort "u32", Gabbro.Grammatik.Parser.Token.zeichen ",", Gabbro.Grammatik.Parser.Token.ident "b", Gabbro.Grammatik.Parser.Token.zeichen ":", Gabbro.Grammatik.Parser.Token.wort "u32", Gabbro.Grammatik.Parser.Token.zeichen ")", Gabbro.Grammatik.Parser.Token.zeichen "->", Gabbro.Grammatik.Parser.Token.wort "u64", Gabbro.Grammatik.Parser.Token.wort "effects", Gabbro.Grammatik.Parser.Token.zeichen "{", Gabbro.Grammatik.Parser.Token.wort "pure", Gabbro.Grammatik.Parser.Token.zeichen "}", Gabbro.Grammatik.Parser.Token.wort "costs", Gabbro.Grammatik.Parser.Token.zeichen "<=", Gabbro.Grammatik.Parser.Token.zahl 5, Gabbro.Grammatik.Parser.Token.wort "ops", Gabbro.Grammatik.Parser.Token.zeichen "{", Gabbro.Grammatik.Parser.Token.wort "return", Gabbro.Grammatik.Parser.Token.wort "u64", Gabbro.Grammatik.Parser.Token.zeichen "(", Gabbro.Grammatik.Parser.Token.ident "a", Gabbro.Grammatik.Parser.Token.zeichen ")", Gabbro.Grammatik.Parser.Token.zeichen "|", Gabbro.Grammatik.Parser.Token.wort "u64", Gabbro.Grammatik.Parser.Token.zeichen "(", Gabbro.Grammatik.Parser.Token.ident "b", Gabbro.Grammatik.Parser.Token.zeichen ")", Gabbro.Grammatik.Parser.Token.zeichen ";", Gabbro.Grammatik.Parser.Token.zeichen "}", Gabbro.Grammatik.Parser.Token.zeichen "}", Gabbro.Grammatik.Parser.Token.ende]
+def toks : List Token := [Gabbro.Grammatik.Parser.Token.wort "module", Gabbro.Grammatik.Parser.Token.ident "beispiel", Gabbro.Grammatik.Parser.Token.zeichen "::", Gabbro.Grammatik.Parser.Token.ident "umwandlung", Gabbro.Grammatik.Parser.Token.zeichen "{", Gabbro.Grammatik.Parser.Token.wort "impl", Gabbro.Grammatik.Parser.Token.wort "fn", Gabbro.Grammatik.Parser.Token.ident "kombiniert", Gabbro.Grammatik.Parser.Token.zeichen "(", Gabbro.Grammatik.Parser.Token.ident "a", Gabbro.Grammatik.Parser.Token.zeichen ":", Gabbro.Grammatik.Parser.Token.wort "u32", Gabbro.Grammatik.Parser.Token.zeichen ",", Gabbro.Grammatik.Parser.Token.ident "b", Gabbro.Grammatik.Parser.Token.zeichen ":", Gabbro.Grammatik.Parser.Token.wort "u32", Gabbro.Grammatik.Parser.Token.zeichen ")", Gabbro.Grammatik.Parser.Token.zeichen "->", Gabbro.Grammatik.Parser.Token.wort "u64", Gabbro.Grammatik.Parser.Token.wort "effects", Gabbro.Grammatik.Parser.Token.zeichen "{", Gabbro.Grammatik.Parser.Token.wort "pure", Gabbro.Grammatik.Parser.Token.zeichen "}", Gabbro.Grammatik.Parser.Token.wort "costs", Gabbro.Grammatik.Parser.Token.zeichen "<=", Gabbro.Grammatik.Parser.Token.num 5, Gabbro.Grammatik.Parser.Token.wort "ops", Gabbro.Grammatik.Parser.Token.zeichen "{", Gabbro.Grammatik.Parser.Token.wort "return", Gabbro.Grammatik.Parser.Token.wort "u64", Gabbro.Grammatik.Parser.Token.zeichen "(", Gabbro.Grammatik.Parser.Token.ident "a", Gabbro.Grammatik.Parser.Token.zeichen ")", Gabbro.Grammatik.Parser.Token.zeichen "|", Gabbro.Grammatik.Parser.Token.wort "u64", Gabbro.Grammatik.Parser.Token.zeichen "(", Gabbro.Grammatik.Parser.Token.ident "b", Gabbro.Grammatik.Parser.Token.zeichen ")", Gabbro.Grammatik.Parser.Token.zeichen ";", Gabbro.Grammatik.Parser.Token.zeichen "}", Gabbro.Grammatik.Parser.Token.zeichen "}", Gabbro.Grammatik.Parser.Token.ende]
 
-def items : List SItemTief := [Gabbro.Grammatik.Parser.SItemTief.modulT "beispiel::umwandlung" [Gabbro.Grammatik.Parser.SItemTief.funktionT { art := "impl", name := "kombiniert", params := [("a", Gabbro.Grammatik.Parser.STyp.atom "u32"), ("b", Gabbro.Grammatik.Parser.STyp.atom "u32")], ergebnis := some (Gabbro.Grammatik.Parser.STyp.atom "u64"), fehler := none, klauseln := [Gabbro.Grammatik.Parser.SKlausel.wirkung [Gabbro.Grammatik.Parser.SEffekt.rein], Gabbro.Grammatik.Parser.SKlausel.kosten (Gabbro.Grammatik.Parser.SExpr.lit 5)] } (Gabbro.Grammatik.Parser.SAnw.block [] (some (Gabbro.Grammatik.Parser.SEnde.ret (some (Gabbro.Grammatik.Parser.SExpr.bin "|" (Gabbro.Grammatik.Parser.SExpr.ruf "u64" [Gabbro.Grammatik.Parser.SExpr.variable "a"]) (Gabbro.Grammatik.Parser.SExpr.ruf "u64" [Gabbro.Grammatik.Parser.SExpr.variable "b"]))))))]]
+def items : List SItemTief := [Gabbro.Grammatik.Parser.SItemTief.modT "beispiel::umwandlung" [Gabbro.Grammatik.Parser.SItemTief.fnT { art := "impl", name := "kombiniert", params := [("a", Gabbro.Grammatik.Parser.STyp.atom "u32"), ("b", Gabbro.Grammatik.Parser.STyp.atom "u32")], res := some (Gabbro.Grammatik.Parser.STyp.atom "u64"), fehler := none, klauseln := [Gabbro.Grammatik.Parser.SKlausel.effs [Gabbro.Grammatik.Parser.SEffekt.pure], Gabbro.Grammatik.Parser.SKlausel.cost (Gabbro.Grammatik.Parser.SExpr.lit 5)] } (Gabbro.Grammatik.Parser.SAnw.block [] (some (Gabbro.Grammatik.Parser.SEnde.ret (some (Gabbro.Grammatik.Parser.SExpr.bin "|" (Gabbro.Grammatik.Parser.SExpr.call "u64" [Gabbro.Grammatik.Parser.SExpr.variable "a"]) (Gabbro.Grammatik.Parser.SExpr.call "u64" [Gabbro.Grammatik.Parser.SExpr.variable "b"]))))))]]
 
-def u : UProg := { tabellen := [], sperren := [], fns := [{ name := "kombiniert", params := [("a", Gabbro.Grammatik.Ty.int 0 4294967295), ("b", Gabbro.Grammatik.Ty.int 0 4294967295)], parten := [Gabbro.Grammatik.Parser.Uebersetze.UParamArt.int, Gabbro.Grammatik.Parser.Uebersetze.UParamArt.int], ergebnis := some (0, 18446744073709551615), held := [], schreibt := [], sichert := [], saetze := [], rueck := Gabbro.Grammatik.Parser.Uebersetze.URet.wert (Gabbro.Grammatik.Parser.Uebersetze.USide.bor (Gabbro.Grammatik.Parser.Uebersetze.USide.conv 0 18446744073709551615 (Gabbro.Grammatik.Parser.Uebersetze.USide.param "a")) (Gabbro.Grammatik.Parser.Uebersetze.USide.conv 0 18446744073709551615 (Gabbro.Grammatik.Parser.Uebersetze.USide.param "b"))) }] }
+def u : UProg := { tabs := [], locks := [], fns := [{ name := "kombiniert", params := [("a", Gabbro.Grammatik.Ty.int 0 4294967295), ("b", Gabbro.Grammatik.Ty.int 0 4294967295)], kinds := [Gabbro.Grammatik.Parser.Uebersetze.UParamArt.int, Gabbro.Grammatik.Parser.Uebersetze.UParamArt.int], res := some (0, 18446744073709551615), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := [], gputs := [], gives := [], needs := [], body := [], ret := Gabbro.Grammatik.Parser.Uebersetze.URet.val (Gabbro.Grammatik.Parser.Uebersetze.USide.bor (Gabbro.Grammatik.Parser.Uebersetze.USide.conv 0 18446744073709551615 (Gabbro.Grammatik.Parser.Uebersetze.USide.param "a")) (Gabbro.Grammatik.Parser.Uebersetze.USide.conv 0 18446744073709551615 (Gabbro.Grammatik.Parser.Uebersetze.USide.param "b"))), boden := none }], axs := [], annahmen := [], whys := [], sums := [], gestartet := [], roots := [], hands := [], globs := [], regs := [], invs := [], zustaende := [], regiert := [], ptrs := [], ptrKeys := [], exportGate := Except.error "source export: declared costs lack a checked source-to-kostenPasst binding: kombiniert" }
 
 set_option maxHeartbeats 4000000 in
 theorem lex_ok : lexL zeilen.flatten = .ok toks := by decide +kernel
 
-theorem parse_ok : parseTopTief toks = .ok items := rfl
+private theorem parse_ok : parseTopTief toks = .ok items := rfl
 
-theorem elab_ok : elabU (pre108 items) = .ok u := rfl
+private theorem elab_ok : elabU (pre108 items) = .ok u := rfl
 
 theorem low_ok : (lowerAllg u).toOption.isSome = true := by decide +kernel
 
@@ -136,7 +167,7 @@ def kombiniert : UFn := u.fns[0]'(by decide)
 
 example : zuBody u kombiniert = some kombiniert_body := rfl
 example : preExpr kombiniert = kombiniert_pre := rfl
-example : kombiniert.schreibt = kombiniert_writes := rfl
+example : kombiniert.puts = kombiniert_writes := rfl
 example : (fun s s' r => (postU u wellFormed kombiniert s s' r).getD False) = kombiniert_post := rfl
 example : meetsU u wellFormed kombiniert ((zuBody u kombiniert).getD []) = kombiniert_meets_statement := rfl
 
@@ -166,10 +197,10 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
 def P69 : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u) :=
   ((lowerAllg u).toOption.get low_ok).1
 
-theorem ht : u.tabellen = [] := rfl
+theorem ht : u.tabs = [] := rfl
 
 theorem akz69 : akzeptiert_pruefer.akzeptiert (einheitAllg u P69 (pflichten_null pflichten uebersetzt))
-    (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht).1 = true := by decide
+    (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht rfl).1 = true := by decide
 
 #print axioms pflichten
 #print axioms nutzer

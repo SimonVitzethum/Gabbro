@@ -18,20 +18,26 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
-def artB (fn : UFn) : Bool :=
-  (List.range fn.parten.length).all fun j =>
-    match fn.parten[j]? with
+def artPtrB (fn : UFn) : Bool :=
+  (List.range fn.kinds.length).all fun j =>
+    match fn.kinds[j]? with
     | some (.ptr num _) =>
       match fn.params[j]? with
       | some (_, .ptr num' _) => num' == num
       | _ => false
     | _ => true
 
-def tabB (u : UProg) : Bool :=
-  (List.finRange u.tabellen.length).all fun t =>
-    match tabIdx u.tabellen (tabAt u t).name with
+def artB (fn : UFn) : Bool :=
+  artPtrB fn && fn.kinds.all ArtSchlicht && fn.params.all ParamSchlicht
+
+def tabEindB (u : UProg) : Bool :=
+  (List.finRange u.tabs.length).all fun t =>
+    match tabIdx u.tabs (tabAt u t).name with
     | .ok t' => t' == t
     | .error _ => false
+
+def tabB (u : UProg) : Bool :=
+  tabEindB u && u.tabs.all (fun t => t.werte.isEmpty)
 
 def namenB (fn : UFn) : Bool := decide (fn.params.map (·.1)).Nodup
 
@@ -41,23 +47,26 @@ def freiB (fn : UFn) : Bool :=
   fn.params.all fun q => decide (q.1 ≠ "result") && decide (q.1 ∉ oldNamen)
 
 def oldsB (u : UProg) (fn : UFn) : Bool :=
-  fn.sichert.all fun e =>
+  fn.gives.all fun e =>
     match ensExpr u fn {} e with
     | some (_, A) => decide (A.olds.length ≤ 9)
     | none => true
 
-def postB (u : UProg) (fn : UFn) : Bool := fn.sichert.all fun e => (ensExpr u fn {} e).isSome
+def postB (u : UProg) (fn : UFn) : Bool := fn.gives.all fun e => (ensExpr u fn {} e).isSome
 
 def schreibtB (u : UProg) (fn : UFn) : Bool :=
-  fn.schreibt.all fun w => u.tabellen.any (·.name == w)
+  fn.puts.all fun w => u.tabs.any (·.name == w)
 
-/-- No `bool` field and no `bool` result: the bridge speaks about numbers only (Body's shapes are
-    `intIn`), so a unit with a truth-valued place is REFUSED here, by name, and `Pflichten` is false. -/
+/-- No `bool`, option or aggregate field and no `bool` result: the bridge speaks about numbers only
+    (Body's shapes are `intIn`), so a unit with such a place is REFUSED here, by name, and
+    `Pflichten` is false. -/
 def keinBoolB (u : UProg) : Bool :=
-  u.tabellen.all (fun t => t.bools.isEmpty) && u.fns.all (fun f => !f.ergBool)
+  u.tabs.all (fun t => t.bools.isEmpty && t.opts.isEmpty && t.werte.isEmpty) &&
+    u.fns.all (fun f => !f.resBool && f.resTy.isNone && f.resOpt.isNone && f.resSum.isNone && f.resWhy.isNone)
 
 def stimmigB (u : UProg) : Bool :=
-  keinBoolB u && tabB u && u.fns.all fun fn =>
+  keinBoolB u && tabB u && u.fns.all (fun fn => fn.needs.isEmpty && fn.gruende == 0) && u.invs.isEmpty && u.globs.isEmpty &&
+    u.fns.all fun fn =>
     artB fn && namenB fn && freiB fn && oldsB u fn && postB u fn && schreibtB u fn
 
 theorem oldName_mem : ∀ i, oldName i ∈ oldNamen := by
@@ -68,10 +77,10 @@ theorem oldName_mem : ∀ i, oldName i ∈ oldNamen := by
 
 variable {u : UProg}
 
-theorem artB_ok {fn : UFn} (h : artB fn = true) : ArtStimmt fn := by
+theorem artPtrB_ok {fn : UFn} (h : artPtrB fn = true) : ArtStimmtPtr fn := by
   intro j num w hp
-  have hj : j < fn.parten.length := by
-    rcases Nat.lt_or_ge j fn.parten.length with h' | h'
+  have hj : j < fn.kinds.length := by
+    rcases Nat.lt_or_ge j fn.kinds.length with h' | h'
     · exact h'
     · rw [List.getElem?_eq_none h'] at hp; cases hp
   have := List.all_eq_true.mp h j (List.mem_range.mpr hj)
@@ -84,7 +93,12 @@ theorem artB_ok {fn : UFn} (h : artB fn = true) : ArtStimmt fn := by
     simpa using this
   · cases this
 
-theorem tabB_ok (h : tabB u = true) : TabEindeutig u := by
+theorem artB_ok {fn : UFn} (h : artB fn = true) : ArtStimmt fn := by
+  simp only [artB, Bool.and_eq_true, List.all_eq_true] at h
+  exact ⟨artPtrB_ok h.1.1, h.1.2, h.2⟩
+
+theorem tabEindB_ok (h : tabEindB u = true) :
+    ∀ t : Fin u.tabs.length, tabIdx u.tabs (tabAt u t).name = .ok t := by
   intro t
   have := List.all_eq_true.mp h t (List.mem_finRange t)
   split at this
@@ -93,6 +107,12 @@ theorem tabB_ok (h : tabB u = true) : TabEindeutig u := by
     have : t' = t := by simpa using this
     rw [this]
   · cases this
+
+theorem tabB_ok (h : tabB u = true) : TabEindeutig u := by
+  simp only [tabB, Bool.and_eq_true] at h
+  refine ⟨tabEindB_ok h.1, fun t => ?_⟩
+  have := List.all_eq_true.mp h.2 (tabAt u t) (List.get_mem _ _)
+  exact List.isEmpty_iff.mp this
 
 theorem freiB_ok {fn : UFn} (h : freiB fn = true) : NamenFrei fn := by
   intro q hq
@@ -118,7 +138,7 @@ theorem postB_ok {fn : UFn} (h : postB u fn = true) : PostDef u fn :=
   fun e he => List.all_eq_true.mp h e he
 
 theorem schreibtB_ok {fn : UFn} (h : schreibtB u fn = true) :
-    ∀ w ∈ fn.schreibt, ∃ t : Fin u.tabellen.length, (tabAt u t).name = w := by
+    ∀ w ∈ fn.puts, ∃ t : Fin u.tabs.length, (tabAt u t).name = w := by
   intro w hw
   have := List.all_eq_true.mp h w hw
   obtain ⟨x, hx, hxw⟩ := List.any_eq_true.mp this
@@ -127,25 +147,37 @@ theorem schreibtB_ok {fn : UFn} (h : schreibtB u fn = true) :
 
 /-- **The name conditions, decided.** -/
 theorem keinBoolB_ok (h : keinBoolB u = true) :
-    (∀ t : Fin u.tabellen.length, (tabAt u t).bools = []) ∧ (∀ c : Fin u.fns.length, (fnAt u c).ergBool = false) := by
+    (∀ t : Fin u.tabs.length, (tabAt u t).bools = [] ∧ (tabAt u t).opts = [] ∧ (tabAt u t).werte = []) ∧
+      (∀ c : Fin u.fns.length, ErgSchlicht (fnAt u c)) := by
   simp only [keinBoolB, Bool.and_eq_true] at h
   obtain ⟨h1, h2⟩ := h
   refine ⟨fun t => ?_, fun c => ?_⟩
   · have := List.all_eq_true.mp h1 (tabAt u t) (List.get_mem _ _)
-    exact List.isEmpty_iff.mp this
+    simp only [Bool.and_eq_true, List.isEmpty_iff] at this
+    exact ⟨this.1.1, this.1.2, this.2⟩
   · have := List.all_eq_true.mp h2 (fnAt u c) (List.get_mem _ _)
-    simpa using this
+    simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, Option.isNone_iff_eq_none] at this
+    exact ⟨this.1.1.1.1, this.1.1.1.2, this.1.1.2, this.1.2, this.2⟩
 
 theorem stimmig_of (h : stimmigB u = true) : Stimmig u := by
   simp only [stimmigB, Bool.and_eq_true] at h
-  obtain ⟨⟨hk, ht⟩, hf⟩ := h
+  obtain ⟨⟨⟨⟨⟨hk, ht⟩, hq⟩, hi⟩, hg⟩, hf⟩ := h
   have hc : ∀ c : Fin u.fns.length, (artB (fnAt u c) && namenB (fnAt u c) && freiB (fnAt u c) &&
       oldsB u (fnAt u c) && postB u (fnAt u c) && schreibtB u (fnAt u c)) = true :=
     fun c => List.all_eq_true.mp hf _ (List.get_mem _ _)
   simp only [Bool.and_eq_true] at hc
   exact ⟨(keinBoolB_ok hk).1, (keinBoolB_ok hk).2, tabB_ok ht, fun c => artB_ok (hc c).1.1.1.1.1, fun c => (of_decide_eq_true (hc c).1.1.1.1.2 : ((fnAt u c).params.map (·.1)).Nodup),
     fun c => freiB_ok (hc c).1.1.1.2, fun c => oldsB_ok (hc c).1.1.2, fun c => postB_ok (hc c).1.2,
-    fun c => schreibtB_ok (hc c).2⟩
+    fun c => schreibtB_ok (hc c).2,
+    fun c => by
+      have := List.all_eq_true.mp hq (fnAt u c) (List.get_mem _ _)
+      simp only [Bool.and_eq_true, List.isEmpty_iff] at this
+      exact this.1,
+    fun g hg => by
+      have := List.all_eq_true.mp hq g hg
+      simp only [Bool.and_eq_true, beq_iff_eq] at this
+      exact this.2,
+    List.isEmpty_iff.mp hi, List.isEmpty_iff.mp hg⟩
 
 /-! ## The rank -/
 
@@ -154,7 +186,7 @@ def tiefe (u : UProg) : Nat → String → Nat
   | 0, _ => 0
   | k + 1, n =>
     match fnSuch u n with
-    | some f => (f.saetze.map fun st => match st with
+    | some f => (f.body.map fun st => match st with
         | .call g _ => tiefe u k g + 1
         | _ => 0).foldr max 0
     | none => 0
@@ -164,7 +196,7 @@ def rangAuto (u : UProg) : String → Nat := tiefe u (u.fns.length + 1)
 
 def rangB (u : UProg) (rk : String → Nat) : Bool :=
   (List.finRange u.fns.length).all fun c =>
-    (fnAt u c).saetze.all fun st =>
+    (fnAt u c).body.all fun st =>
       match st with
       | .call g _ => decide (rk g < rk (fnAt u c).name)
       | _ => true

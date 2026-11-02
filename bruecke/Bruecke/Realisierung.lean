@@ -38,16 +38,13 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
     {g : Stmt (declOf u) (verOf u c) false (ctxOf u c) (resOf u c) (resOf u c)}
     (h : lowStmt u c st = .ok g) {bst : Gabbro.Body.Stmt}
     (hb : stmtBody u (fnAt u c) st = some bst) :
-    (∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).schreibt) ∨
+    (∃ cn idx fld ve, bst = .assign cn idx fld ve ∧ cn ∈ (fnAt u c).puts) ∨
     (∃ cname ps es pre gf, bst = .call cname ps es pre ∧ fnSuch u cname = some gf ∧
-      ∀ w ∈ gf.schreibt, w ∈ (fnAt u c).schreibt) := by
-  cases st with
-  | assignB _ _ _ _ => simp [stmtBody] at hb
-  | assignTabB _ _ _ _ => simp [stmtBody] at hb
-  | sperrtAuf _ => simp [stmtBody] at hb
-  | sperrtZu => simp [stmtBody] at hb
-  | assign b fname ix v =>
-    simp only [lowStmt, lowAssignDurch, lowAssignDurchL] at h
+      ∀ w ∈ gf.puts, w ∈ (fnAt u c).puts) := by
+  cases st
+  case assign b fname ix v =>
+    rw [lowStmt_assign S.tab] at h
+    simp only [lowAssignDurch, lowAssignDurchL] at h
     split at h
     · cases h
     · rename_i j hj
@@ -69,8 +66,9 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
             exact ⟨_, _, _, _, rfl, any_mem hw⟩
         · cases h
       · cases h
-  | assignTab b fname ix v =>
-    simp only [lowStmt, lowAssignTab, lowAssignTabL] at h
+  case assignTab b fname ix v =>
+    rw [lowStmt_assignTab S.tab] at h
+    simp only [lowAssignTab, lowAssignTabL] at h
     split at h
     · cases h
     · rename_i t ht
@@ -89,32 +87,29 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
         unfold writesAt at hw'
         rw [show (tabAt u t).name = b from hn] at hw'
         exact ⟨_, _, _, _, rfl, any_mem hw'⟩
-  | call cname args =>
-    simp only [lowStmt, lowCall, lowCallL] at h
+  case call cname args =>
+    rw [lowStmt_call] at h
+    unfold lowCall lowCallL at h
     split at h
     · cases h
-    · rename_i callee hcallee
-      split at h
-      · cases h
-      · rename_i a ha
-        split at h
-        · rename_i hWr
-          right
-          have hfs : fnSuch u cname = some (fnAt u callee) := fnIdx_find _ _ _ hcallee
-          simp only [stmtBody, hfs] at hb
-          cases hes : argsExpr u (fnAt u c) args with
-          | none => rw [hes] at hb; cases hb
-          | some es =>
-            rw [hes] at hb
-            cases hb
-            refine ⟨_, _, _, _, _, rfl, hfs, fun w hw => ?_⟩
-            obtain ⟨t, rfl⟩ := S.schreibt callee w hw
-            have h1 : writesAt u (fnAt u callee) t = true := by
-              unfold writesAt; exact List.any_eq_true.mpr ⟨_, hw, by simp⟩
-            have h2 := hWr t h1
-            unfold writesAt at h2
-            exact any_mem h2
-        · cases h
+    · rename_i k hk
+      obtain ⟨hcallee, _, hWr⟩ := lowRufKopf_ok hk
+      right
+      have hfs : fnSuch u cname = some (fnAt u k.callee) := fnIdx_find _ _ _ hcallee
+      simp only [stmtBody, hfs] at hb
+      cases hes : argsExpr u (fnAt u c) args with
+      | none => rw [hes] at hb; cases hb
+      | some es =>
+        rw [hes] at hb
+        cases hb
+        refine ⟨_, _, _, _, _, rfl, hfs, fun w hw => ?_⟩
+        obtain ⟨t, rfl⟩ := S.schreibt k.callee w hw
+        have h1 : writesAt u (fnAt u k.callee) t = true := by
+          unfold writesAt; exact List.any_eq_true.mpr ⟨_, hw, by simp⟩
+        have h2 := hWr t h1
+        unfold writesAt at h2
+        exact any_mem h2
+  all_goals simp [stmtBody] at hb
 
 /-! ## 2. The Body frame of a body -/
 
@@ -124,16 +119,10 @@ theorem lowBody_stmts (c : Fin u.fns.length) (r : URet) : ∀ (ss : List UStmt)
     lowBody u c ss r = .ok b0 → ∀ st ∈ ss, ∃ g, lowStmt u c st = .ok g
   | [], _, _, _, st, hm => absurd hm List.not_mem_nil
   | s :: ss, b0, hsome, h, st, hm => by
-      rw [lowBody_cons c r s ss (stmtBody_nomark _ s (hsome s List.mem_cons_self))] at h
-      split at h
-      · cases h
-      · rename_i g hg
-        split at h
-        · cases h
-        · rename_i rest hrest
-          rcases List.mem_cons.mp hm with rfl | hm
-          · exact ⟨g, hg⟩
-          · exact lowBody_stmts c r ss rest (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hrest st hm
+      obtain ⟨g, rest, hg, hrest, rfl⟩ := lowBody_cons_ok c r s ss (hsome s List.mem_cons_self) h
+      rcases List.mem_cons.mp hm with rfl | hm
+      · exact ⟨g, hg⟩
+      · exact lowBody_stmts c r ss rest (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hrest st hm
 
 theorem step_assign (ρ : Gabbro.Body.Env) (cn : String) (idx : Gabbro.Body.Expr) (fld : String)
     (ve : Gabbro.Body.Expr) (t : Gabbro.Body.State) :
@@ -181,9 +170,9 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
     ∀ (ss : List UStmt) (bs : List Gabbro.Body.Stmt),
       (∀ st ∈ ss, ∃ g, lowStmt u c st = .ok g) → stmtsBody u (fnAt u c) ss = some bs →
       (∀ cname gf, fnSuch u cname = some gf → (∃ args, UStmt.call cname args ∈ ss) →
-        Gabbro.Body.Frame ρ cname gf.schreibt) →
+        Gabbro.Body.Frame ρ cname gf.puts) →
       ∀ t s', Gabbro.Body.finalState (Gabbro.Body.exec ρ (bs ++ eB) t) = some s' →
-        ∀ p, p.carrier ∉ (fnAt u c).schreibt → s'.world p = t.world p
+        ∀ p, p.carrier ∉ (fnAt u c).puts → s'.world p = t.world p
   | [], bs, _, hbs, _, t, s', h, p, _ => by
       simp only [stmtsBody, Option.some.injEq] at hbs
       subst hbs
@@ -209,12 +198,8 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
             rw [e]
             exact hcn
         · have hcall : ∃ args, UStmt.call cname args ∈ st :: ss := by
-            cases st with
-            | assignB _ _ _ _ => simp [stmtBody] at hx
-            | assignTabB _ _ _ _ => simp [stmtBody] at hx
-            | sperrtAuf _ => simp [stmtBody] at hx
-            | sperrtZu => simp [stmtBody] at hx
-            | call cn args =>
+            cases st
+            case call cn args =>
               simp only [stmtBody] at hx
               split at hx
               · rename_i gf' es' _ _
@@ -222,16 +207,17 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
                 cases hx
                 exact ⟨args, List.mem_cons_self ..⟩
               · cases hx
-            | assign b f ix v =>
+            case assign b f ix v =>
               simp only [stmtBody] at hx
               split at hx
               · simp only [Option.some.injEq] at hx; cases hx
               · cases hx
-            | assignTab b f ix v =>
+            case assignTab b f ix v =>
               simp only [stmtBody] at hx
               cases hsv : sideExpr u (fnAt u c) v with
               | none => rw [hsv] at hx; cases hx
               | some ve => rw [hsv] at hx; simp at hx
+            all_goals simp [stmtBody] at hx
           rcases step_call ρ cname ps es pre t with hs | ⟨t', ht', hs⟩
           · simp [List.cons_append, Gabbro.Body.exec, hs, Gabbro.Body.finalState] at h
           · simp only [List.cons_append, Gabbro.Body.exec, hs] at h
@@ -245,7 +231,7 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
 /-- **The call graph has a rank**: every call goes to a name of strictly smaller rank. Checked
     per unit (`rangB`). -/
 def Rang (u : UProg) (rk : String → Nat) : Prop :=
-  ∀ c : Fin u.fns.length, ∀ cname args, UStmt.call cname args ∈ (fnAt u c).saetze →
+  ∀ c : Fin u.fns.length, ∀ cname args, UStmt.call cname args ∈ (fnAt u c).body →
     rk cname < rk (fnAt u c).name
 
 /-- The promise of `gf` as the duty file states it. -/
@@ -256,12 +242,12 @@ def postP (u : UProg) (gf : UFn) : Gabbro.Body.State → Gabbro.Body.State →
 /-- `ρ` keeps contract and frame of every function of rank below `k`. -/
 def Realisiert (u : UProg) (rk : String → Nat) (k : Nat) (ρ : Gabbro.Body.Env) : Prop :=
   ∀ n gf, fnSuch u n = some gf → rk n < k →
-    Gabbro.Body.Contract ρ n (preProp (wfU u) gf) (postP u gf) ∧ Gabbro.Body.Frame ρ n gf.schreibt
+    Gabbro.Body.Contract ρ n (preProp (wfU u) gf) (postP u gf) ∧ Gabbro.Body.Frame ρ n gf.puts
 
 theorem hyps_elim (wf : Gabbro.Body.State → Prop) (ρ : Gabbro.Body.Env) : ∀ (gs : List String) (C : Prop),
     (∀ g ∈ gs, ∃ gf, fnSuch u g = some gf ∧
       Gabbro.Body.Contract ρ g (preProp wf gf) (fun s s' r => (postU u wf gf s s' r).getD False) ∧
-      Gabbro.Body.Frame ρ g gf.schreibt) → hyps u wf ρ gs C → C
+      Gabbro.Body.Frame ρ g gf.puts) → hyps u wf ρ gs C → C
   | [], C, _, h => h
   | g :: gs, C, hg, h => by
       obtain ⟨gf, hgf, hc, hfr⟩ := hg g (List.mem_cons_self ..)
@@ -290,21 +276,16 @@ theorem mem_sortDedup {y : String} : ∀ {l : List String}, y ∈ sortDedup l �
       · exact List.mem_cons_of_mem _ (mem_sortDedup h)
 
 theorem mem_calleesOf {f : UFn} {g : String} (h : g ∈ calleesOf f) :
-    ∃ args, UStmt.call g args ∈ f.saetze := by
+    ∃ args, UStmt.call g args ∈ f.body := by
   have h' := mem_sortDedup h
   rw [List.mem_filterMap] at h'
   obtain ⟨st, hst, hg⟩ := h'
-  cases st with
-  | call cn args =>
+  cases st
+  case call cn args =>
     simp only [Option.some.injEq] at hg
     subst hg
     exact ⟨args, hst⟩
-  | assign a b c d => simp at hg
-  | assignTab a b c d => simp at hg
-  | assignB a b c d => simp at hg
-  | assignTabB a b c d => simp at hg
-  | sperrtAuf a => simp at hg
-  | sperrtZu => simp at hg
+  all_goals simp at hg
 
 theorem stmtsBody_mem {f : UFn} : ∀ {ss : List UStmt} {bs : List Gabbro.Body.Stmt},
     stmtsBody u f ss = some bs → ∀ st ∈ ss, ∃ x, stmtBody u f st = some x
@@ -339,7 +320,7 @@ theorem fnSuch_mem {n : String} {gf : UFn} (h : fnSuch u n = some gf) :
 theorem realisiert (S : Stimmig u)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body)
-    (hlow : ∀ c : Fin u.fns.length, ∃ b0, lowBody u c (fnAt u c).saetze (fnAt u c).rueck = .ok b0)
+    (hlow : ∀ c : Fin u.fns.length, ∃ b0, lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0)
     (rk : String → Nat) (hR : Rang u rk) : ∀ k, ∃ ρ, Realisiert u rk k ρ
   | 0 => ⟨fun _ t => (t, none), fun _ _ _ h => absurd h (Nat.not_lt_zero _)⟩
   | k + 1 => by
@@ -365,11 +346,11 @@ theorem realisiert (S : Stimmig u)
         obtain ⟨body, hbody, hmeets⟩ := hZ c
         obtain ⟨b0, hb0⟩ := hlow c
         rw [zuBody_eq] at hbody
-        cases hbs : stmtsBody u (fnAt u c) (fnAt u c).saetze with
+        cases hbs : stmtsBody u (fnAt u c) (fnAt u c).body with
         | none => rw [hbs] at hbody; cases hbody
         | some bs =>
           rw [hbs] at hbody
-          cases heB : endBody u (fnAt u c) (fnAt u c).rueck with
+          cases heB : endBody u (fnAt u c) (fnAt u c).ret with
           | none => rw [heB] at hbody; cases hbody
           | some eB =>
             rw [heB] at hbody
@@ -378,16 +359,15 @@ theorem realisiert (S : Stimmig u)
               rw [zuBody_eq, hbs, heB]; rfl
             -- the callees: found, of smaller rank, so kept by `ρk`
             have hcallee : ∀ cn gf', fnSuch u cn = some gf' →
-                (∃ args, UStmt.call cn args ∈ (fnAt u c).saetze) →
+                (∃ args, UStmt.call cn args ∈ (fnAt u c).body) →
                 Gabbro.Body.Contract ρk cn (preProp (wfU u) gf') (postP u gf') ∧
-                Gabbro.Body.Frame ρk cn gf'.schreibt := fun cn gf' hgf' ⟨args, hm⟩ =>
+                Gabbro.Body.Frame ρk cn gf'.puts := fun cn gf' hgf' ⟨args, hm⟩ =>
               hk cn gf' hgf' (by have := hR c cn args hm; rw [hname] at this; omega)
             have heBr : ∀ x ∈ eB, ∃ e, x = .ret (some e) := by
               intro x hx
-              cases hr : (fnAt u c).rueck with
-              | empty => rw [hr] at heB; simp [endBody] at heB; subst heB; cases hx
-              | bool _ => rw [hr] at heB; simp [endBody] at heB
-              | val v =>
+              cases hr : (fnAt u c).ret
+              case empty => rw [hr] at heB; simp [endBody] at heB; subst heB; cases hx
+              case val v =>
                 rw [hr] at heB
                 simp only [endBody] at heB
                 cases hs : sideExpr u (fnAt u c) v with
@@ -397,6 +377,7 @@ theorem realisiert (S : Stimmig u)
                   simp only [Option.map_some, Option.some.injEq] at heB
                   subst heB
                   simp at hx; exact ⟨e, hx⟩
+              all_goals (rw [hr] at heB; simp [endBody] at heB)
             constructor
             · intro t hpre
               rw [hρ' t]
