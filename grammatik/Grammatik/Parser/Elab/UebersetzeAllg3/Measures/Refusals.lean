@@ -196,4 +196,61 @@ theorem rem_zero_zeuge :
     (lowerMeasures (withMeasure (.bin "%" (.variable "n") (.lit 0)))).toOption.isSome = false := by
   decide +kernel
 
+/-- Bitwise and over non-negative ranges lowers with an empty footprint. -/
+def andU : UProg := withMeasure (.bin "&" (.variable "n") (.lit 1))
+theorem andLowered : (lowerAllg andU).toOption.isSome = true := by decide +kernel
+def andM := (exported andU andLowered).val
+theorem andSource : SourceTuple andU 0 (andM.mass 0) := andM.source 0
+theorem andDenotes :
+    ∃ c : Component andU 0, andM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf andU)) (env : Env (declOf andU) ((declOf andU).params 0)),
+        SourceValue (fnAt andU 0) (fnAt andU 0).measureConstants env
+          (.bin "&" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes andU andM 0 [] [.drops (.bin "&" (.variable "n") (.lit 1))]
+    (.bin "&" (.variable "n") (.lit 1)) (.bin "&" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A bit operation over a negative range is refused, never guessed. -/
+theorem and_negative_zeuge :
+    (lowerMeasures (withMeasure (.bin "&" (.bin "-" (.lit 0) (.variable "n"))
+      (.variable "n")))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Bitwise or over non-negative ranges lowers with an empty footprint. -/
+def orU : UProg := withMeasure (.bin "|" (.variable "n") (.lit 1))
+theorem orLowered : (lowerAllg orU).toOption.isSome = true := by decide +kernel
+def orM := (exported orU orLowered).val
+theorem orSource : SourceTuple orU 0 (orM.mass 0) := orM.source 0
+theorem orDenotes :
+    ∃ c : Component orU 0, orM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf orU)) (env : Env (declOf orU) ((declOf orU).params 0)),
+        SourceValue (fnAt orU 0) (fnAt orU 0).measureConstants env
+          (.bin "|" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes orU orM 0 [] [.drops (.bin "|" (.variable "n") (.lit 1))]
+    (.bin "|" (.variable "n") (.lit 1)) (.bin "|" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A bitwise or over a negative range is refused, never guessed. -/
+theorem or_negative_zeuge :
+    (lowerMeasures (withMeasure (.bin "|" (.bin "-" (.lit 0) (.variable "n"))
+      (.lit 1)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Bitwise xor over non-negative ranges lowers with an empty footprint. -/
+def xorU : UProg := withMeasure (.bin "^" (.variable "n") (.lit 1))
+theorem xorLowered : (lowerAllg xorU).toOption.isSome = true := by decide +kernel
+def xorM := (exported xorU xorLowered).val
+theorem xorSource : SourceTuple xorU 0 (xorM.mass 0) := xorM.source 0
+theorem xorDenotes :
+    ∃ c : Component xorU 0, xorM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf xorU)) (env : Env (declOf xorU) ((declOf xorU).params 0)),
+        SourceValue (fnAt xorU 0) (fnAt xorU 0).measureConstants env
+          (.bin "^" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes xorU xorM 0 [] [.drops (.bin "^" (.variable "n") (.lit 1))]
+    (.bin "^" (.variable "n") (.lit 1)) (.bin "^" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A bitwise xor over a negative range is refused, never guessed. -/
+theorem xor_negative_zeuge :
+    (lowerMeasures (withMeasure (.bin "^" (.bin "-" (.lit 0) (.variable "n"))
+      (.lit 1)))).toOption.isSome = false := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Measures.Fixtures

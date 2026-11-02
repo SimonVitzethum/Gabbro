@@ -2,6 +2,7 @@ module
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil1
 public import Grammatik.Logik.Terminierung.Mass
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Values
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.ValuesBits
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Measures
@@ -84,6 +85,33 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     | .ok s => pure { side := s,
         footprint := rest_orte x.footprint y.footprint h,
         denotes := fun entry state env => rest_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
+  | .bin "&" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.and x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := band_orte x.footprint y.footprint h,
+        denotes := fun entry state env => band_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
+  | .bin "|" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.or x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := bor_orte x.footprint y.footprint h,
+        denotes := fun entry state env => bor_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
+  | .bin "^" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.xoder x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := bxor_orte x.footprint y.footprint h,
+        denotes := fun entry state env => bxor_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
   | .un op a => do
