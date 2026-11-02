@@ -125,22 +125,32 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     exact routineChooseL_ok zero (fun _ => ih ha (by omega)) (fun _ => high)
 
 /-- Count the zeros before the leading bit. Zero's result is 64. -/
+def routineLeadingZerosWord (a : Runner.W) : Runner.W :=
+  if a == 0 then 64 else 63 - routineTopWordAux 6 a
+
 def routineLeadingZerosL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   routineChooseL d (fun j => wordK 14 j (a j) 0)
     (fun j => some ([ci 1 j 64 0], j + 1))
     (fun j => wordL 4 j (some ([ci 1 j 63 0], j + 1)) (routineTopAuxL a 6 (j + 1)))
 
+theorem routineLeadingZerosL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {a : Nat → Option (List II × Nat)} {av : Runner.W}
+    (ha : WordCode (L := L) ρ W a av) :
+    WordCode (L := L) ρ W (fun d => routineLeadingZerosL d a) (routineLeadingZerosWord av) :=
+  routineChooseL_ok (WordCode.bin ha (WordCode.const 0 (by decide))
+    (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256))
+    (fun _ => WordCode.const 64 (by decide))
+    (fun _ => WordCode.bin (WordCode.const 63 (by decide)) (routineTopAuxL_ok ha 6 (by decide))
+      (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256))
+
 theorem routineLeadingZerosL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
     (ha : WordCode (L := L) ρ W a av) :
     WordCode (L := L) ρ W (fun d => routineLeadingZerosL d a)
       (BitVec.ofNat 64 (64 - bitlen av.toNat)) := by
-  have zero := WordCode.bin ha (WordCode.const 0 (by decide))
-    (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have result := routineChooseL_ok zero (fun _ => WordCode.const 64 (by decide))
-    (fun _ => WordCode.bin (WordCode.const 63 (by decide)) (routineTopAuxL_ok ha 6 (by decide))
-      (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256))
+  have result := routineLeadingZerosL_word ha
+  dsimp only [routineLeadingZerosWord] at result
   by_cases hz : av = 0
   · subst av
     simpa only [beq_self_eq_true, ite_true, BitVec.toNat_zero,
@@ -182,6 +192,7 @@ theorem routineTopAuxL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → P
 #print axioms routineTopNat_bounds
 #print axioms routineTopWordAux_canonical
 #print axioms routineTopAuxL_ok
+#print axioms routineLeadingZerosL_word
 #print axioms routineLeadingZerosL_ok
 #print axioms routineLeadingZeros_zeuge
 #print axioms routineTopAuxL_ok_zeuge
