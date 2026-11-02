@@ -28,7 +28,7 @@ public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Marken.Teil2
 public import Grammatik.Kern.Semantik.Evaluation.Fristlauf
 public import Grammatik.Kern.Semantik.Adressraum
-public import Grammatik.Nebenlaeufigkeit.Allgemein.LesenStabil
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.LesenStabil
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Semantik.MaschinenKette
 public import Grammatik.Logik.Vertraege.QLeer
@@ -46,7 +46,7 @@ public import Grammatik.Kern.Semantik.Syscall.Syscall
 public import Grammatik.Kern.Semantik.Evaluation.Ueberlauf
 public import Grammatik.Kern.Syntax.Profil.Teil2
 public import Grammatik.Kern.Syntax.Profil.Speicher
-public import Grammatik.Nebenlaeufigkeit.Allgemein.Schiebung
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.Schiebung
 public import Grammatik.Nebenlaeufigkeit.Sperren.FremdSperre
 public import Grammatik.Kern.Syntax.Bits
 public import Grammatik.Nebenlaeufigkeit.Sperren.RessourcenBlatt.Teil3
@@ -281,7 +281,7 @@ public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil2
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.MehrfadenLauf
 public import Grammatik.Korpus.Programme.GenOblig104
 public import Grammatik.Korpus.Referenz.Pflicht104
 public import Grammatik.Korpus.Programme.GenOblig108
@@ -301,7 +301,7 @@ public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Zielsatz.Kern.SpecProben
 public import Grammatik.Zielsatz.Faeden.RuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
-public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.FadenMaschine
 public import Grammatik.Zielsatz.Faeden.Faeden
 public import Grammatik.Zielsatz.Eigenschaften.BudgetZeuge
 public import Grammatik.Zielsatz.Eigenschaften.Invarianten

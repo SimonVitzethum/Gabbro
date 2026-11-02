@@ -17,7 +17,7 @@
 -/
 module
 public import Grammatik.Logik.Fortschritt.Fortschritt
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.MehrfadenLauf
 @[expose] public section
 
 

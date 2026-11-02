@@ -29,7 +29,7 @@
 -/
 module
 public import Grammatik.Zielsatz.Eigenschaften.Invarianten
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.MehrfadenLauf
 @[expose] public section
 
 

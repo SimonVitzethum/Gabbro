@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Fortschritt.Lebendigkeit
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.MehrfadenLauf
 public import Grammatik.Logik.Fortschritt.LebendigkeitZeuge.Teil1
 
 @[expose] public section

@@ -4,7 +4,7 @@ public import Grammatik.Kern.Syntax.Marken.Owner.Activation
 public import Grammatik.Kern.Syntax.Marken.Owner.InvocationFlow
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T2
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T3
-public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.FadenMaschine
 
 @[expose] public section
 

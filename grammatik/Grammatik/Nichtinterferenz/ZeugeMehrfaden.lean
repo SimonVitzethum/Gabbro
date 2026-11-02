@@ -22,7 +22,7 @@
 -/
 module
 public import Grammatik.Nichtinterferenz.Fluss
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.MehrfadenLauf
 @[expose] public section
 
 
