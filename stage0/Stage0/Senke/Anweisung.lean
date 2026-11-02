@@ -277,6 +277,10 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       else none
     else none
   -- IEEE arithmetic needs its software algorithms and proofs.
+  -- All four IEEE binary64 operations remain refused: Runner.IR.op has no float
+  -- arithmetic instruction; integer opcodes 3–6 do not implement gleitRechne.
+  -- floatLit materialises rounded bits, while floatOf uses software conversion;
+  -- neither supplies a verified binary-operation lowering for this arm.
   | _, _, _, _, .float .., reserved => none
   | _, _, _, _, .narrowRequired .., reserved => none
   | _, _, _, _, _, reserved => none
