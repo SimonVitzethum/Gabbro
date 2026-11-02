@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Konst.Rang
+public import Grammatik.Kern.Syntax.Konst.ReinBBeweisVoll
 
 public section
 namespace Gabbro.Grammatik.ConstWitness
