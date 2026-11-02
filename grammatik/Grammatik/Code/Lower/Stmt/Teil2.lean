@@ -309,6 +309,8 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
               | none => none
           | none => none
       | none => none
+  -- fallible indirect calls («C07») have no lowering yet: refused, never a fallback
+  | _, _, _, _, .bindCallIndElse .., _, _, _ => none
   | _, _, _, _, _, _, _, _ => none
 
 /-- The arms of a `match` on a reason: arm `i` is lowered at label `lb + i`, one after the other. -/
@@ -402,6 +404,8 @@ def lowerEnd (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
               | none => none
           | none => none
       | none => none
+  -- fallible indirect calls («C07») have no lowering yet: refused, never a fallback
+  | _, _, _, .bindCallIndElse .., _, _ => none
   | _, _, _, _, _, _ => none
 
 end

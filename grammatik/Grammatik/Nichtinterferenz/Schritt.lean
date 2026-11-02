@@ -97,6 +97,11 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.bindCallInd p args he hp hr rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
       else none
+  | l, _, Λ, ρ, .bindCallIndElse p args he hp hr err rest =>
+      if l = false then
+        kLokal st f rho ρ (.dann (Endblock.bindCallIndElse p args he hp hr err rest).alsBlock.2
+          (.abbruch (Λk := Λ) .leer)) spur sp
+      else none
   | l, _, Λ, ρ, .narrow e lo' hi' sonst rest =>
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.narrow e lo' hi' sonst rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
@@ -138,6 +143,11 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
       match eval s0 p s0 ρ with
       | ⟨g, hg⟩ => kPush P st f rho ρ (.wartet rest k) g (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
+  | _, _, Λ, _, ρ, .bindCallIndElse (n := n) p args _ _ _ err rest, k =>
+      let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
+      match eval s0 p s0 ρ with
+      | ⟨g, hg⟩ => kPush P st f rho ρ (.wartetSonst (D.sigNr n).gruende err rest k) g
+          (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
   | _, _, Λ, _, ρ, .bindCallElse g args _ _ _ err rest, k =>
       let s0 := (sp.welt spur).lese Λ args.orte
       kPush P st f rho ρ (.wartetSonst (D.gruende g) err rest k) g (evalArgs s0 args s0 ρ) s0.spur sp

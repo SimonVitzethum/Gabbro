@@ -42,6 +42,7 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .onWhy r arms => r.orte.all S && nG S Ax arms
   | .call _ args _ _ => args.orte.all S
   | .callInd p args _ _ => p.orte.all S && args.orte.all S
+  | .callIndElse p args _ _ _ err => p.orte.all S && args.orte.all S && nE S Ax err
   | .locks _ _ body => nB S Ax body
   | .breaking _ body => nB S Ax body
   | .traverse _ inv body => inv.orte.all S && nB S Ax body
@@ -69,6 +70,7 @@ def nB (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .bind e rest => e.orte.all S && nB S Ax rest
   | .bindCall _ args _ _ _ rest => args.orte.all S && nB S Ax rest
   | .bindCallInd p args _ _ _ rest => p.orte.all S && args.orte.all S && nB S Ax rest
+  | .bindCallIndElse p args _ _ _ err rest => p.orte.all S && args.orte.all S && nE S Ax err && nB S Ax rest
   | .bindCallElse _ args _ _ _ err rest => args.orte.all S && nE S Ax err && nB S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nB S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nB S Ax rest
@@ -104,6 +106,7 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
       (D.rtraeger r).all S && zusage.orte.all S && nE S Ax sonst && nE S Ax rest
   | .awaits g _ _ _ _ rest => S (.inr g) && nE S Ax rest
   | .bindCallInd p args _ _ _ rest => p.orte.all S && args.orte.all S && nE S Ax rest
+  | .bindCallIndElse p args _ _ _ err rest => p.orte.all S && args.orte.all S && nE S Ax err && nE S Ax rest
   | .narrow e _ _ sonst rest => e.orte.all S && nE S Ax sonst && nE S Ax rest
   | .narrowRequired e _ _ rest => e.orte.all S && nE S Ax rest
   | .exchange g neu _ _ rest => S (.inr g) && neu.orte.all S && nE S Ax rest

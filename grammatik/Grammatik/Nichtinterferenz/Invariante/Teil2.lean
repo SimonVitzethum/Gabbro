@@ -54,6 +54,11 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       split
       · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
       · exact KErgOk.none
+  | bindCallIndElse p args he' hp hr err rest =>
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩ | (simp only [GRest.nR]; exact ⟨by rw [nB_alsBlock]; exact he, trivial⟩)) _ _
+      · exact KErgOk.none
   | narrow e lo' hi' sonst rest =>
       try simp only [kEnde]
       split
@@ -112,6 +117,12 @@ theorem kDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
       split
       try simp only [kDann]
       exact KErgOk.push hst _ _ _ (by first | exact ⟨hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.2, hk⟩)) _ _ _ _
+  | bindCallIndElse p args he hp hr err rest =>
+      simp only [nB, Bool.and_eq_true] at hb
+      try simp only [kDann]
+      split
+      try simp only [kDann]
+      exact KErgOk.push hst _ _ _ (by first | exact ⟨hb.1.2, hb.2, hk⟩ | (simp only [GRest.nR]; exact ⟨hb.1.2, hb.2, hk⟩)) _ _ _ _
   | bindCallElse g args he hp hr err rest =>
       simp only [nB, Bool.and_eq_true] at hb
       try simp only [kDann]

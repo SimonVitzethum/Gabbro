@@ -151,6 +151,30 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
       rcases List.mem_cons.mp hc with rfl | hc
       · exact ⟨hk, rfl⟩
       · exact hst c hc
+    | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+        hrho neu hneu =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_,
+        ⟨Or.inr (Or.inr ⟨_, _, _, _, _, _, err, rest, k, ρ, rfl, ergSig hg he,
+          (D.passt_sig hg).gruende⟩), hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
+    | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+        hrho neu hneu =>
+      obtain ⟨hk, _, hst, hkt⟩ := h
+      rw [hhead] at hk
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, rfl, ?_,
+        ⟨Or.inr (Or.inr ⟨_, _, _, _, _, _, err, .nil, (.dann rest k), ρ, rfl, ergSig hg he,
+          (D.passt_sig hg).gruende⟩), hkt⟩⟩
+      intro c hc
+      rcases List.mem_cons.mp hc with rfl | hc
+      · exact ⟨hk, rfl⟩
+      · exact hst c hc
     -- a leaf in a block: it ended normally, so it was no return
     | _ => kopfLokal
   | g4 hs =>

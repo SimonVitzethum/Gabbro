@@ -36,6 +36,7 @@ def Block.terminal {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bindCall _ _ _ _ _ rest => rest.terminal
   | .bindCallInd _ _ _ _ _ rest => rest.terminal
   | .bindCallElse _ _ _ _ _ _ rest => rest.terminal
+  | .bindCallIndElse _ _ _ _ _ _ rest => rest.terminal
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.terminal
   | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => rest.terminal
   | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.terminal
@@ -84,6 +85,8 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
   | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .bindCallInd p args he hp hr rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]

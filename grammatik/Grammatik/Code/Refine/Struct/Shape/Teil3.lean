@@ -104,6 +104,8 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerS_shape_call (lay := lay) (cenv := cenv) (lv := lv) (f := f) (args := args) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, .callInd .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .callIndElse .., lb, k, st, st', blks, h => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, h => by
@@ -237,6 +239,8 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         simp only at m1 m2 a2 ⊢
         omega
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h => by
+      simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindCallIndElse .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h =>
       bindCallElse_shape lay cenv lv f args he hp hr err rest lb k st st' blks
