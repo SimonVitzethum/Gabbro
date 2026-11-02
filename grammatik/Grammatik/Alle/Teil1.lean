@@ -351,6 +351,7 @@ public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
 public import Grammatik.Logik.Ruf.RufLogikZeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Zeuge
+public import Grammatik.Logik.Ruf.Schnittstellen.Bruecke
 public import Grammatik.Logik.Ruf.Schnittstellen.SchnittstellenZeugen
 public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
 public import Grammatik.Logik.Ruf.Schnittstellen.Pruefung
