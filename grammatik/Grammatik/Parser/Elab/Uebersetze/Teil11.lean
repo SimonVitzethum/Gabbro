@@ -70,9 +70,7 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
     (regs : List UReg := []) (zustaende : List UZustand := [])
     (specs : List (String × List String × SExpr) := []) (arrKonst : List (String × USide) := []) : UCtx :=
-  { names := kopf.names, kinds := kopf.kinds,
-    types := kopf.types, tabs := tabs, locks := locks,
-    held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
+  { names := kopf.names, kinds := kopf.kinds, types := kopf.types, tabs := tabs, locks := locks, held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
     fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
     resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2),
     zustaende, specs, arrKonst }
@@ -98,13 +96,7 @@ def elabUFunktion (consts : List (String × Int))
       match uMeasureClause sig.klauseln with
       | .error e => .error e
       | .ok decreases =>
-        .ok { name := sig.name,
-              params := kopf.names.zip kopf.types,
-              kinds := kopf.kinds,
-              res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
-              resWhy := kopf.resWhy, resTy := kopf.resTy,
-              gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
-              puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r,
+        .ok { name := sig.name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r,
               decreases, measureConstants := if decreases.isSome then consts else [] }
 
 /-- The payload of an `atomic` item: statics named bare (a table payload, `T.slots`, has no form: `D.nutzlast`
@@ -162,8 +154,7 @@ def uSumTabs (sums : List USum) : List UTab → Except String (List UTab)
           | some k, some sm => .ok (f, k, sm.spec)
           | _, _ => .error ("type unknown: " ++ a)) with
     | .ok ts, .ok fs =>
-      .ok ({ t with werte := t.werte ++ fs.map (fun (f, _, sp) => (f, Ty.sum sp)),
-                    sumFelder := fs.map (fun (f, k, _) => (f, k)) } :: ts)
+      .ok ({ t with werte := t.werte ++ fs.map (fun (f, _, sp) => (f, Ty.sum sp)), sumFelder := fs.map (fun (f, k, _) => (f, k)) } :: ts)
     | .error e, _ | _, .error e => .error e
 
 /-- The range of a column: an `index into T` field reads `0 .. count T - 1`. -/
@@ -276,10 +267,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         | .ok k =>
         match uGlobs consts alias rest with
         | .error e => .error e
-        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh,
-                           optName := match t with | .index true tn => some tn | _ => none,
-                           sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none,
-                           breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
+        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh, optName := match t with | .index true tn => some tn | _ => none, sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
@@ -298,8 +286,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         | .ok ty =>
           match uGlobs consts alias rest with
           | .error e => .error e
-          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true,
-                             nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
+          | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true, nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
   | _ :: rest => uGlobs consts alias rest
 
 /-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
@@ -323,8 +310,7 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
           | .error e => .error e
           | .ok (ts, gs) =>
             if 0 < h then
-              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true,
-                       breiten := (let w := uSpeicherBreite alias t; if 0 < w then [("wert", w)] else []) } :: ts,
+              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true, breiten := (let w := uSpeicherBreite alias t; if 0 < w then [("wert", w)] else []) } :: ts,
                    { name := n ++ "#used", ty := GTy.int 0 h, init := 0, var := true } :: gs)
             else .error "arena of no slots"
   | _ :: rest => uArenen consts alias rest
@@ -443,8 +429,7 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
       match uEffekteAux kopf tabs [] globs es with
       | .error e => .error e
       | .ok eff =>
-        uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts),
-                                 gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
+        uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts), gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
     else .error "foreign fn effect without G form"
   | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
   | .arch _ :: rest => uAxKlauseln kopf tabs globs rest

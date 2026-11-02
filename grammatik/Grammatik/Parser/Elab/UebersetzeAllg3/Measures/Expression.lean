@@ -44,8 +44,7 @@ def parameter (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (na
     match hc : fn.measureConstants.filter (fun p => p.1 == name) with
     | [(n, z)] =>
       if hn : n = name then
-        .ok { side := ⟨(z, z), Expr.lit z⟩, footprint := rfl,
-              denotes := fun _ _ _ => SourceValue.constant name z hp (by simpa only [hn] using hc) }
+        .ok { side := ⟨(z, z), Expr.lit z⟩, footprint := rfl, denotes := fun _ _ _ => SourceValue.constant name z hp (by simpa only [hn] using hc) }
       else .error "ambiguous constant in decreases"
     | _ => .error "unknown or ambiguous entry name in decreases"
   | some j =>
@@ -58,8 +57,7 @@ def parameter (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (na
           match hv : lowVar Γ j (.int lo hi) with
           | .error error => .error error
           | .ok v =>
-            .ok { side := ⟨(lo, hi), Expr.var v⟩, footprint := rfl,
-                  denotes := fun _ _ _ => SourceValue.parameter name j lo hi v
+            .ok { side := ⟨(lo, hi), Expr.var v⟩, footprint := rfl, denotes := fun _ _ _ => SourceValue.parameter name j lo hi v
                     (by simpa only [hn] using ht) hv }
         else .error "entry parameter mismatch in decreases"
       | _ => .error "decreases parameter is not an integer"
@@ -68,33 +66,24 @@ def parameter (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (na
     Unsupported operators and calls are explicit refusals, including calls hidden below arithmetic. -/
 def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) :
     (source : SExpr) → Except String (Expression u Γ Λ fn source)
-  | .lit n => .ok { side := ⟨(Int.ofNat n, Int.ofNat n), Expr.lit (Int.ofNat n)⟩,
-      footprint := rfl, denotes := fun _ _ _ => SourceValue.literal n }
+  | .lit n => .ok { side := ⟨(Int.ofNat n, Int.ofNat n), Expr.lit (Int.ofNat n)⟩, footprint := rfl, denotes := fun _ _ _ => SourceValue.literal n }
   | .variable name => parameter u Γ Λ fn name
   | .bin "+" a b => do
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
-    pure { side := x.side.plus y.side,
-           footprint := by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl,
-           denotes := fun entry state env => SourceValue.add (x.denotes entry state env) (y.denotes entry state env) }
+    pure { side := x.side.plus y.side, footprint := (by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl), denotes := fun entry state env => SourceValue.add (x.denotes entry state env) (y.denotes entry state env) }
   | .bin "-" a b => do
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
-    pure { side := x.side.minus y.side,
-           footprint := by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl,
-           denotes := fun entry state env => SourceValue.sub (x.denotes entry state env) (y.denotes entry state env) }
+    pure { side := x.side.minus y.side, footprint := (by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl), denotes := fun entry state env => SourceValue.sub (x.denotes entry state env) (y.denotes entry state env) }
   | .bin "*" a b => do
     let x ← lowerExpression u Γ Λ fn a
     let y ← lowerExpression u Γ Λ fn b
-    pure { side := x.side.times y.side,
-           footprint := by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl,
-           denotes := fun entry state env => SourceValue.mul (x.denotes entry state env) (y.denotes entry state env) }
+    pure { side := x.side.times y.side, footprint := (by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl), denotes := fun entry state env => SourceValue.mul (x.denotes entry state env) (y.denotes entry state env) }
   | .un op a => do
     if hs : op = "-" ∨ op = "-()" then
       let x ← lowerExpression u Γ Λ fn a
-      pure { side := x.side.minusEins,
-             footprint := x.footprint,
-             denotes := fun entry state env => SourceValue.neg op hs (x.denotes entry state env) }
+      pure { side := x.side.minusEins, footprint := x.footprint, denotes := fun entry state env => SourceValue.neg op hs (x.denotes entry state env) }
     else throw "unsupported unary operator in decreases"
   | .old _ => .error "old-state read in decreases"
   | .call _ _ => .error "unsupported call in decreases"

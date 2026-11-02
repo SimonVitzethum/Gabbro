@@ -8,7 +8,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
     equality, preserving the existing decidable equality of `UFn` without a classical instance. -/
 inductive UMeasure
   | lit : Nat → UMeasure
-  | variable : String → UMeasure
+  | «variable» : String → UMeasure
   | bin : String → UMeasure → UMeasure → UMeasure
   | un : String → UMeasure → UMeasure
   deriving DecidableEq, Repr
@@ -29,29 +29,34 @@ def uMeasureSource : SExpr → Except String UMeasure
   | .call _ _ => .error "unsupported call in decreases"
   | _ => .error "unsupported expression or storage read in decreases"
 
-/-- This intermediate retains the original source expression exactly, rather than a guessed parameter. -/
-theorem uMeasureSource_exact (source : SExpr) (measure : UMeasure)
-    (lowered : uMeasureSource source = .ok measure) : measure.source = source := by
-  induction source generalizing measure with
-  | lit n => cases lowered; rfl
-  | variable name => cases lowered; rfl
-  | bin op a b iha ihb =>
-    cases ha : uMeasureSource a with
-    | error error => simp only [uMeasureSource, ha, bind, Except.bind] at lowered; cases lowered
-    | ok x =>
-      cases hb : uMeasureSource b with
-      | error error => simp only [uMeasureSource, ha, hb, bind, Except.bind] at lowered; cases lowered
-      | ok y =>
-        simp only [uMeasureSource, ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at lowered
+/-- This intermediate retains the original source expression exactly, rather than a guessed parameter.
+    (Structural recursion on the operands: `SExpr` is nested, so `induction` does not apply.) -/
+theorem uMeasureSource_exact : ∀ (source : SExpr) (measure : UMeasure),
+    uMeasureSource source = .ok measure → measure.source = source
+  | .lit n, measure, lowered => by
+      simp only [uMeasureSource, Except.ok.injEq] at lowered; subst lowered; rfl
+  | .variable name, measure, lowered => by
+      simp only [uMeasureSource, Except.ok.injEq] at lowered; subst lowered; rfl
+  | .bin op a b, measure, lowered => by
+      cases ha : uMeasureSource a with
+      | error error => simp only [uMeasureSource, ha, bind, Except.bind] at lowered; cases lowered
+      | ok x =>
+        cases hb : uMeasureSource b with
+        | error error => simp only [uMeasureSource, ha, hb, bind, Except.bind] at lowered; cases lowered
+        | ok y =>
+          simp only [uMeasureSource, ha, hb, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at lowered
+          subst measure
+          simp only [UMeasure.source, uMeasureSource_exact a x ha, uMeasureSource_exact b y hb]
+  | .un op a, measure, lowered => by
+      cases ha : uMeasureSource a with
+      | error error => simp only [uMeasureSource, ha, bind, Except.bind] at lowered; cases lowered
+      | ok x =>
+        simp only [uMeasureSource, ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at lowered
         subst measure
-        simp only [UMeasure.source, iha _ ha, ihb _ hb]
-  | un op a ih =>
-    cases ha : uMeasureSource a with
-    | error error => simp only [uMeasureSource, ha, bind, Except.bind] at lowered; cases lowered
-    | ok x =>
-      simp only [uMeasureSource, ha, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at lowered
-      subst measure
-      simp only [UMeasure.source, ih _ ha]
-  | _ => cases lowered
+        simp only [UMeasure.source, uMeasureSource_exact a x ha]
+  | .float _, _, lowered | .tru, _, lowered | .fls, _, lowered | .field _ _, _, lowered
+  | .index _ _, _, lowered | .arrow _ _, _, lowered | .call _ _, _, lowered | .fnref _, _, lowered
+  | .built _ _, _, lowered | .old _, _, lowered | .res, _, lowered | .why _ _, _, lowered
+  | .ext _ _ _, _, lowered => by simp [uMeasureSource] at lowered
 
 end Gabbro.Grammatik.Parser.Uebersetze

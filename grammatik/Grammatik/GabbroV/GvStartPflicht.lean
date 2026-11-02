@@ -363,9 +363,7 @@ theorem gv_lowerAllg_requires (u : UProg) (P : Programm (declOf u))
   · cases h
   split at h
   · cases h
-  · injection h with h1
-    injection h1 with h2 h3
-    subst h2
+  · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
     intro f
     dsimp only [progOfFn]
     exact reqOf_leer u _ f (hn _ (List.get_mem u.fns f))

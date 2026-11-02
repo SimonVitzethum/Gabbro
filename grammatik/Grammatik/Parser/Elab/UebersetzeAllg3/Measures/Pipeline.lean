@@ -11,18 +11,17 @@ open Uebersetze UebersetzeAllg UebersetzeAllg2 Zielsatz
 theorem lowerAllg_measures (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
     (lowered : lowerAllg u = .ok (P, fs)) :
     ∃ exported, lowerMeasures u = .ok exported ∧ cycleLengths u P exported.mass = true := by
-  cases hi : lowerInvs u (List.finRange u.invs.length) with
-  | error error => simp only [lowerAllg, hi, reduceCtorEq] at lowered
-  | ok value =>
-    cases hf : lowerEach u (List.finRange u.fns.length) with
-    | error error => simp only [lowerAllg, hi, hf, reduceCtorEq] at lowered
-    | ok value =>
-      exact checkedProgram_export u _ P fs (by simpa only [lowerAllg, hi, hf] using lowered)
+  unfold lowerAllg at lowered
+  split at lowered
+  · cases lowered
+  · split at lowered
+    · cases lowered
+    · exact checkedProgram_export u _ P fs lowered
 
 /-- The generated user duty is the existing `MassPflicht`, for every pass grant and every function.
     This proposition is deliberately not discharged by the structural checker. -/
 def Obligations (u : UProg) (E : Einheit (declOf u)) (exported : Export u) : Prop :=
-  ∀ passes f, MassPflicht E.P passes E.Q E.S (GeteiltV E.P E.ws)
+  ∀ passes f, MassPflicht E.P passes E.Q E.S (GeteiltV (D := declOf u) E.P E.ws)
     exported.mass (zykS E.P (List.finRange u.fns.length)) f
 
 /-- The original-source measure retains its value under the idle-root declaration embedding. -/
@@ -45,7 +44,7 @@ theorem source_termination (u : UProg) (E : Einheit (declOf u)) (exported : Expo
     (sp : Speicher (declOf u).mitRuhe)
     (init : Faden → Σ f : (declOf u).mitRuhe.Fn, Env (declOf u).mitRuhe ((declOf u).mitRuhe.params f))
     (runtime : Laufzeit E sp init) (alive : Faden → Bool)
-    (run : FadenLaufX E.P.mitRuhe O.mitRuhe passes (GeteiltV E.P E.ws))
+    (run : FadenLaufX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D := declOf u) E.P E.ws))
     (initial : run.K 0 = FadenStart E.P.mitRuhe sp init alive) (thread : Faden) :
     (∃ N, ∀ j, N ≤ j → run.akt j ≠ some thread) ∧
       ((∀ w, (init thread).1 = some w →

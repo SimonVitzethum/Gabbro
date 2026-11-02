@@ -19,7 +19,7 @@ private theorem call_continuation {D : Deklaration} {V : Vertrag D} {l : Bool} {
       | .hardware error => .hardware error) ≠ EndAusgang.logik (.abstieg target) := by
   cases out with
   | ok state value => exact rest state
-  | why state reason => exact (Nat.not_lt_zero _ (hr ▸ reason.isLt)).elim
+  | why state reason => have := reason.isLt; omega
   | logik error => intro bad; apply safe; cases bad; rfl
   | hardware error => intro bad; cases bad
 
@@ -60,12 +60,12 @@ theorem countdown_duty_zeuge (passes : Nat) (Q : AxEns (declOf countdown))
 /-- Both functions of the mutual cycle carry the same singleton tuple. -/
 theorem mutual_lengths_zeuge :
     ∀ f g, zykS mutualP [0, 1] f g = true → (mutualM.mass f).length = (mutualM.mass g).length :=
-  cycleLengths_sound mutual mutualP mutualM.mass cycleLengths_sound_zeuge
+  cycleLengths_sound mutualU mutualP mutualM.mass cycleLengths_sound_zeuge
 
 /-- Every function of the mutual cycle discharges the duty; both positive-entry calls pass `0`. -/
-theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutual))
-    (S : SperrInv (declOf mutual)) (T : (declOf mutual).Tab ⊕ (declOf mutual).Glob → Prop)
-    (f : (declOf mutual).Fn) :
+theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutualU))
+    (S : SperrInv (declOf mutualU)) (T : (declOf mutualU).Tab ⊕ (declOf mutualU).Glob → Prop)
+    (f : (declOf mutualU).Fn) :
     MassPflicht mutualP passes Q S T mutualM.mass (zykS mutualP [0, 1]) f := by
   rcases f with ⟨index, bound⟩
   have casesF : index = 0 ∨ index = 1 := by change index < 2 at bound; omega
@@ -88,7 +88,7 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutual))
             | .why _ reason => keinGrund (by rfl) reason
             | .logik error => .logik error
             | .hardware error => .hardware error) ≠
-              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutual) 0) false [.int 0 1]) :=
+              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutualU) 0) false [.int 0 1]) :=
               call_continuation 1 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
           intro bad
           apply safe
@@ -102,7 +102,7 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutual))
             | .why _ reason => keinGrund (by rfl) reason
             | .logik error => .logik error
             | .hardware error => .hardware error) ≠
-              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutual) 0) false [.int 0 1]) :=
+              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutualU) 0) false [.int 0 1]) :=
               call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
           intro bad
           apply safe

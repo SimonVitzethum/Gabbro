@@ -7,10 +7,10 @@ open Uebersetze UebersetzeAllg UebersetzeAllg2
 
 /-- Clause collection preserves the one original expression exactly, including operator spelling. -/
 theorem uMeasureClause_exact (clauses : List SKlausel) (source : SExpr) (measure : UMeasure)
-    (written : clauses.filterMap (fun | .drops e => some e | _ => none) = [source])
+    (written : clauses.filterMap dropsOf = [source])
     (collected : uMeasureClause clauses = .ok (some measure)) : measure.source = source := by
   unfold uMeasureClause at collected
-  rw [written] at collected
+  simp only [written] at collected
   cases hs : uMeasureSource source with
   | error error => simp only [hs, Except.map, reduceCtorEq] at collected
   | ok term =>
@@ -33,9 +33,7 @@ theorem elabUFunktion_measure (consts : List (String × Int))
   | error error => simp only [elabUFunktion, hh, reduceCtorEq] at lowered
   | ok pair =>
     rcases pair with ⟨head, writes⟩
-    let ctx := {uCtxVon alias consts tabs locks globs head sig.name assumptions whys sums registers states specs arrays with
-      zeiger := pointers, zeigerBasis := base}
-    cases hb : elabFn ctx heads sig.klauseln body with
+    cases hb : elabFn { uCtxVon alias consts tabs locks globs head sig.name assumptions whys sums registers states specs arrays with zeiger := pointers, zeigerBasis := base } heads sig.klauseln body with
     | error error => simp only [elabUFunktion, hh, hb, reduceCtorEq] at lowered
     | ok parts =>
       rcases parts with ⟨gives, needs, statements, returned⟩
@@ -44,12 +42,12 @@ theorem elabUFunktion_measure (consts : List (String × Int))
       | ok measure =>
         simp only [elabUFunktion, hh, hb, hm, Except.ok.injEq] at lowered
         subst fn
-        exact ⟨hm, rfl⟩
+        exact ⟨rfl, rfl⟩
 
 /-- Connect the original clause to the typed exported tuple and its source denotation. -/
 theorem lowerMeasures_denotes (u : UProg) (exported : Export u) (f : (declOf u).Fn)
     (clauses : List SKlausel) (source : SExpr) (measure : UMeasure)
-    (written : clauses.filterMap (fun | .drops e => some e | _ => none) = [source])
+    (written : clauses.filterMap dropsOf = [source])
     (collected : uMeasureClause clauses = .ok (some measure))
     (entry : (fnAt u f).decreases = some measure) :
     ∃ c : Component u f, exported.mass f = [c] ∧

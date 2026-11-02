@@ -69,6 +69,8 @@ theorem lowerMeasures_absent (u : UProg) (exported : Export u) (f : (declOf u).F
   have h := exported.source f
   simpa only [SourceTuple, absent] using h
 
+instance (u : UProg) : DecidableEq (declOf u).Fn := inferInstanceAs (DecidableEq (Fin u.fns.length))
+
 /-- Check equal tuple lengths on cycles using every function, including functions without clauses. -/
 def cycleLengths (u : UProg) (P : Programm (declOf u)) (m : Mass (declOf u)) : Bool :=
   (List.finRange u.fns.length).all fun f => (List.finRange u.fns.length).all fun g =>
@@ -91,6 +93,17 @@ def checkedProgram (u : UProg) (P : Programm (declOf u)) :
     if cycleLengths u P exported.mass then .ok (P, List.finRange u.fns.length)
     else .error "differing decreases tuple lengths in a recursion cycle"
 
+/-- The measure gate passes its program through unchanged. -/
+theorem checkedProgram_eq {u : UProg} {P Q : Programm (declOf u)} {fs : List (declOf u).Fn}
+    (h : checkedProgram u P = .ok (Q, fs)) : Q = P ∧ fs = List.finRange u.fns.length := by
+  unfold checkedProgram at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+      exact ⟨rfl, rfl⟩
+    · cases h
+
 /-- Successful assembly of a program carries a successful exact measure export. -/
 theorem checkedProgram_export (u : UProg) (P Q : Programm (declOf u)) (fs : List (declOf u).Fn)
     (checked : checkedProgram u P = .ok (Q, fs)) :
@@ -99,21 +112,21 @@ theorem checkedProgram_export (u : UProg) (P Q : Programm (declOf u)) (fs : List
   cases hm : lowerMeasures u with
   | error error => simp only [hm, reduceCtorEq] at checked
   | ok exported =>
-    rw [hm] at checked
+    simp only [hm] at checked
     split at checked
-    next good =>
+    · rename_i good
       have same : P = Q := congrArg Prod.fst (Except.ok.inj checked)
-      exact ⟨exported, hm, same ▸ good⟩
-    next => contradiction
+      exact ⟨exported, rfl, same ▸ good⟩
+    · cases checked
 
 /-- Extract checked data by computation; the failure branch contradicts lowering success. -/
 def checkedExport (u : UProg) (success : ∃ exported, lowerMeasures u = .ok exported) :
     {exported : Export u // lowerMeasures u = .ok exported} :=
   match hm : lowerMeasures u with
-  | .ok exported => ⟨exported, hm⟩
-  | .error _ => by
+  | .ok exported => ⟨exported, rfl⟩
+  | .error _ => False.elim (by
     obtain ⟨exported, he⟩ := success
     rw [he] at hm
-    cases hm
+    cases hm)
 
 end Gabbro.Grammatik.Parser.Measures

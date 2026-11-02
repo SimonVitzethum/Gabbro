@@ -31,9 +31,14 @@ where
     | .effs _ :: _ => true
     | _ :: rest => uHatWirkung rest
 
+/-- The expression of a `decreases` clause, `none` for every other clause. -/
+def dropsOf : SKlausel → Option SExpr
+  | .drops e => some e
+  | _ => none
+
 /-- Collect exactly one written measure. The surface grammar has one expression, not a tuple. -/
 def uMeasureClause (ks : List SKlausel) : Except String (Option UMeasure) :=
-  match ks.filterMap (fun | .drops e => some e | _ => none) with
+  match ks.filterMap dropsOf with
   | [] => .ok none
   | [e] => (uMeasureSource e).map some
   | _ => .error "duplicate or ambiguous decreases clause"
@@ -117,9 +122,7 @@ def elabKopf (_consts : List (String × Int))
             | .error e => .error e
             | .ok kn =>
             let kopf : UFnKopf :=
-              { name, names, kinds, types, res := .none,
-                bits := params.map (fun p => uParamBreite p.2),
-                held := uEindeutig held, kanal := kn, griffe := uGriffe devs 0 params0 }
+              { name, names, kinds, types, res := .none, bits := params.map (fun p => uParamBreite p.2), held := uEindeutig held, kanal := kn, griffe := uGriffe devs 0 params0 }
             match uEffekte kopf tabs locks globs klauseln with
             | .error e => .error e
             | .ok eff =>

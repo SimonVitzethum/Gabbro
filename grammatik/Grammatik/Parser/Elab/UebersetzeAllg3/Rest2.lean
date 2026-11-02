@@ -84,8 +84,7 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
 
 /-- The function of no parameter in whose scope an invariant is read. -/
 def leerFn : UFn :=
-  { name := "", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [],
-    ret := .empty }
+  { name := "", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [], ret := .empty }
 
 /-- A lowered invariant reads only its declared carriers: every carrier its predicate reads is one of the
     invariant's carriers (tables and statics, C05) -- `InvTraeger` of the exported unit, decided. -/
@@ -217,9 +216,7 @@ theorem lowerAllg_traeger (u : UProg) (P : Programm (declOf u)) (fs : List (decl
   next x hI =>
     split at h
     · cases h
-    · injection h with h1
-      injection h1 with h2 h3
-      subst h2
+    · obtain ⟨rfl, -⟩ := Measures.checkedProgram_eq h
       have wI : ∀ j : Fin u.invs.length, ∃ v, lowerInvAt u j = .ok v := fun j =>
         lowerInvs_all_ok u (List.finRange u.invs.length) j (List.mem_finRange j) hI
       dsimp only [progOfFn]

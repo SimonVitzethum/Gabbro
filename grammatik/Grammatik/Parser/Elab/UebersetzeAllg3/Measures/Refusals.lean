@@ -26,7 +26,7 @@ theorem negative_measure_zeuge :
     (lowerMeasures (withMeasure (.un "-" (.lit 1)))).toOption.isSome = false := by decide +kernel
 
 def unequalCycle : UProg :=
-  { mutual with fns := [function "left" "right", {function "right" "left" with decreases := none}] }
+  { mutualU with fns := [function "left" "right", {function "right" "left" with decreases := none}] }
 
 /-- A missing clause in one member of an actual mutual cycle is not guessed from its parameters. -/
 theorem differing_cycle_lengths_zeuge : (lowerAllg unequalCycle).toOption.isSome = false := by decide +kernel
