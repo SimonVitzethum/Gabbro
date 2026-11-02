@@ -1,11 +1,11 @@
 module
 
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil16Basis
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil15
 
 @[expose] public section
 
-public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil16Basis
 
 namespace Gabbro.Grammatik.ArenaOwnership.Machine
 open Source Body

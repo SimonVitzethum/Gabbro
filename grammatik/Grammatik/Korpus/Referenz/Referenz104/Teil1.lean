@@ -1,11 +1,11 @@
 module
 
+public import Grammatik.Korpus.Referenz.Referenz104.Teil1Basis
 public import Grammatik.Logik.Fortschritt.KostenGZeuge
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 
 @[expose] public section
 
-public import Grammatik.Korpus.Referenz.Referenz104.Teil1Basis
 
 namespace Gabbro.Grammatik
 /-- The translated program. -/

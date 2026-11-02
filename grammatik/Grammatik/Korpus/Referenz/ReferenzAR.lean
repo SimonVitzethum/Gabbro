@@ -15,10 +15,10 @@
   `axiomCall` leaf, whose oracle writes slot `0 := 100`.
 -/
 module
+public import Grammatik.Korpus.Referenz.ReferenzARBasis
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 @[expose] public section
 
-public import Grammatik.Korpus.Referenz.ReferenzARBasis
 
 namespace Gabbro.Grammatik
 /-! ## 3. Oracle, memory, declared axiom ensures -/

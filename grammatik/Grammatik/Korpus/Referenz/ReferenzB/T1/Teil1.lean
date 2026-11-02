@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Korpus.Referenz.ReferenzB.T1.Teil1Basis
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 
@@ -7,7 +8,6 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 
 
 
-public import Grammatik.Korpus.Referenz.ReferenzB.T1.Teil1Basis
 
 namespace Gabbro.Grammatik
 
