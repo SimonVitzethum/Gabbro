@@ -8,6 +8,23 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil1
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
+/-- A builtin, translated: widths and ranges are numbers, so `tyR` leaves its types alone. -/
+def ibR {ts : List Ty} {τ : Ty} : IntBuiltin ts τ → IntBuiltin (ts.map tyR) (tyR τ)
+  | .addW w => .addW w
+  | .subW w => .subW w
+  | .mulW w => .mulW w
+  | .shlW w => .shlW w
+  | .addS lo hi => .addS lo hi
+  | .clz w => .clz w
+  | .ctz w => .ctz w
+  | .log2Floor w => .log2Floor w
+  | .popcount w => .popcount w
+  | .rotl w => .rotl w
+  | .rotr w => .rotr w
+  | .bswap16 => .bswap16
+  | .bswap32 => .bswap32
+  | .bswap64 => .bswap64
+
 mutual
 
 /-- **An expression of `D` as an expression of `D.mitRuhe`**: the same
@@ -75,6 +92,9 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .strWeit m e => .strWeit m (ruE e)
   | _, _, _, .wenn c a b => .wenn (ruE c) (ruE a) (ruE b)
   | _, _, _, .eng e lo hi s => .eng (ruE e) lo hi (ruE s)
+  | _, _, _, .intBuiltin1 op a => .intBuiltin1 (ibR op) (ruE a)
+  | _, _, _, .intBuiltin2 op a b => .intBuiltin2 (ibR op) (ruE a) (ruE b)
+  | _, _, _, .count n body => .count n (ruE body)
 
 /-- A payload expression, translated. -/
 def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

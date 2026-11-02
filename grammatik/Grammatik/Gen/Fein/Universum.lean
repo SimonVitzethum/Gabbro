@@ -116,7 +116,10 @@ def kTab : List (List Zeile) := [
     ⟨some 1, false, false, [(0, none, none), (0, none, none)]⟩ /- strLt -/,
     ⟨none, false, false, [(0, none, none)]⟩ /- strWeit -/,
     ⟨none, false, false, [(0, some 1, none), (0, none, none), (0, none, none)]⟩ /- wenn -/,
-    ⟨some 0, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- eng -/],
+    ⟨some 0, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- eng -/,
+    ⟨none, false, false, [(0, none, none)]⟩ /- intBuiltin1 -/,
+    ⟨none, false, false, [(0, none, none), (0, none, none)]⟩ /- intBuiltin2 -/,
+    ⟨some 0, false, false, [(0, some 1, none)]⟩ /- count -/],
   -- NutzlastExpr
   [⟨none, false, false, []⟩ /- empty -/,
     ⟨none, false, false, [(0, some 0, none)]⟩ /- num -/],

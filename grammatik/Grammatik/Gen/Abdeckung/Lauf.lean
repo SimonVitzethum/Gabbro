@@ -86,6 +86,9 @@ def G_AGGREGAT : String :=
 def G_WENN : String :=
   "the conditional and the narrowed value (THEOREM-MAP 103): the generator gives it the size `unendlich` and never draws it"
 
+def G_BUILTIN : String :=
+  "closed integer builtins and the count fold (lane C13): the generator gives them the size `unendlich` and never draws them"
+
 def G_ENDFORM : String :=
   "end-block forms (THEOREM-MAP 102): the generator gives them the size `unendlich` and never draws them; each " ++
   "unfolds to its block form (`Endblock.alsBlock`), whose cells are drawn"
@@ -175,6 +178,9 @@ def bekannteLuecken : List (String × String) :=
    ("Expr.strWeit", G_AGGREGAT),
    ("Expr.wenn", G_WENN),
    ("Expr.eng", G_WENN),
+   ("Expr.intBuiltin1", G_BUILTIN),
+   ("Expr.intBuiltin2", G_BUILTIN),
+   ("Expr.count", G_BUILTIN),
   ]
 
 /-- The members that are execution residues of the replay machine G: not terms of a program. -/

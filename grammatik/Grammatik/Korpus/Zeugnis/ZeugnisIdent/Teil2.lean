@@ -228,6 +228,9 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
   | .strWeit _ _ => by simp only [printInt]
   | .wenn _ _ _ => by simp only [printInt]
   | .eng _ _ _ _ => by simp only [printInt]
+  | .intBuiltin1 _ _ => by simp only [printInt]
+  | .intBuiltin2 _ _ _ => by simp only [printInt]
+  | .count _ _ => by simp only [printInt]
 
 /-- Term identity at int type: the task's proposed shape
     (`print_elab (e : CheckedExpr) : elab (print e) = some e`).

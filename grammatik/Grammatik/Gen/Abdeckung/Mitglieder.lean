@@ -144,6 +144,9 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .strWeit _ s => "Expr.strWeit" :: "Ty.str" :: exprM s
   | _, _, _, .wenn c a b => "Expr.wenn" :: exprM c ++ exprM a ++ exprM b
   | _, _, _, .eng e _ _ s => "Expr.eng" :: exprM e ++ exprM s
+  | _, _, _, .intBuiltin1 _ a => "Expr.intBuiltin1" :: "Ty.int" :: exprM a
+  | _, _, _, .intBuiltin2 _ a b => "Expr.intBuiltin2" :: "Ty.int" :: exprM a ++ exprM b
+  | _, _, _, .count _ body => "Expr.count" :: "Ty.int" :: exprM body
 
 def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → List String
   | _, _, _, .empty => ["NutzlastExpr.empty"]

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+public import Grammatik.Kern.Semantik.Semantik.Eingebaut
 
 @[expose] public section
 
@@ -155,6 +156,9 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .strWeit _ s => s.orte
   | .wenn c a b => c.orte ++ a.orte ++ b.orte
   | .eng e _ _ s => e.orte ++ s.orte
+  | .intBuiltin1 _ a => a.orte
+  | .intBuiltin2 _ a b => a.orte ++ b.orte
+  | .count _ body => body.orte
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
@@ -173,11 +177,6 @@ def ErgExpr.orte : ErgExpr D Γ Λ e → List (D.Tab ⊕ D.Glob)
 
 /-- Ein Wahrheitswert, als `Bool` gelesen. -/
 def wahr? {D : Deklaration} (v : Wert D .bool) : Bool := v
-
-/-- Alle Indizes `0 ..< n`, als Werte des Indextyps. -/
-def alleIndizes (n : Int) : List (Zahl 0 (n - 1)) :=
-  (List.range n.toNat).filterMap fun (k : Nat) =>
-    if h : ((k : Nat) : Int) ≤ n - 1 then some ⟨((k : Nat) : Int), by omega, h⟩ else none
 
 /-- Die Kette ueber ein `option index`-Feld, mit Treibstoff: `k` erreicht `ziel`, wenn eine
     Folge von hoechstens `fuel` Schritten dort ankommt. Total, weil der Treibstoff endlich ist. -/
@@ -258,6 +257,9 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .eng e lo' hi' s, σ, ρ =>
       let v := eval σ₀ e σ ρ
       if h : lo' ≤ v.n ∧ v.n ≤ hi' then ⟨v.n, h.1, h.2⟩ else eval σ₀ s σ ρ
+  | .intBuiltin1 op a, σ, ρ => evalIntBuiltin1 op (eval σ₀ a σ ρ)
+  | .intBuiltin2 op a b, σ, ρ => evalIntBuiltin2 op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
+  | .count n body, σ, ρ => zaehleWahr n fun k => wahr? (eval σ₀ body σ (.cons k ρ))
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
   | .empty, _, _ => ()

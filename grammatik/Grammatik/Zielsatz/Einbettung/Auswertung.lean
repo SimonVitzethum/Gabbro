@@ -137,6 +137,19 @@ theorem bytesAb_treu {s : Speicher D} {σ' : World D'} (h : E.Treu K s σ') (σ 
       subst hs
       exact E.byte_treu K _ _ (E.typ t f) (h.1 t k f) hf hf'
 
+/-- A builtin with one operand commutes with the embedding: the image operation is the same operation. -/
+theorem vrel_ib1 {τ1 τ : Ty} (op : IntBuiltin [τ1] τ) (x : Wert D τ1) (x' : Wert D' (E.tyE τ1))
+    (hx : E.VRel K τ1 x x') :
+    E.VRel K τ (evalIntBuiltin1 op x) (evalIntBuiltin1 (E.ibE op) x') := by
+  cases op <;> (simp only [VRel] at hx ⊢; subst hx; rfl)
+
+/-- A builtin with two operands commutes with the embedding. -/
+theorem vrel_ib2 {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (x : Wert D τ1) (y : Wert D τ2)
+    (x' : Wert D' (E.tyE τ1)) (y' : Wert D' (E.tyE τ2)) (hx : E.VRel K τ1 x x')
+    (hy : E.VRel K τ2 y y') :
+    E.VRel K τ (evalIntBuiltin2 op x y) (evalIntBuiltin2 (E.ibE op) x' y') := by
+  cases op <;> (simp only [VRel] at hx hy ⊢; subst hx; subst hy; rfl)
+
 /-! ## The commutation -/
 
 variable {σ₀ σ : World D} {σ₀' σ' : World D'}
@@ -377,6 +390,23 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
       show (if h : _ then _ else _) = (if h : _ then _ else _)
       first | rw [← hs] | rw [hs]
       first | exact eng_kongr he _ | exact eng_kongr he.symm _
+  | _, _, _, .intBuiltin1 op a, ρ, ρ', hρ => by
+      have ha := eval_exE h₀ h a ρ ρ' hρ
+      simp only [exE, eval]
+      exact E.vrel_ib1 K op _ _ ha
+  | _, _, _, .intBuiltin2 op a b, ρ, ρ', hρ => by
+      have ha := eval_exE h₀ h a ρ ρ' hρ; have hb := eval_exE h₀ h b ρ ρ' hρ
+      simp only [exE, eval]
+      exact E.vrel_ib2 K op _ _ _ _ ha hb
+  | _, _, _, .count n body, ρ, ρ', hρ => by
+      simp only [VRel]
+      simp only [exE, eval]
+      show _ = zaehleWahr n (fun k => wahr? (eval σ₀ body σ (.cons k ρ)))
+      refine zaehleWahr_congr n _ _ (fun k _ => ?_)
+      have hk := eval_exE h₀ h body (.cons k ρ) (.cons k ρ')
+        (E.envR_cons K (τ := Ty.index (n : Int)) (τ' := Ty.index (n : Int)) hρ k k rfl rfl)
+      simp only [VRel] at hk
+      exact congrArg wahr? hk
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :

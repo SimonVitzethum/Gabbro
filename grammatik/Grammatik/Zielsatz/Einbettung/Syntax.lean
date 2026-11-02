@@ -139,6 +139,23 @@ def varE : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Var (Γ.map E.tyE) (E.tyE 
   | _, _, .here => .here
   | _, _, .there x => .there (varE x)
 
+/-- A builtin of `D` as a builtin of `D'`: widths and ranges are numbers, so `tyE` leaves its types alone. -/
+def ibE {ts : List Ty} {τ : Ty} : IntBuiltin ts τ → IntBuiltin (ts.map E.tyE) (E.tyE τ)
+  | .addW w => .addW w
+  | .subW w => .subW w
+  | .mulW w => .mulW w
+  | .shlW w => .shlW w
+  | .addS lo hi => .addS lo hi
+  | .clz w => .clz w
+  | .ctz w => .ctz w
+  | .log2Floor w => .log2Floor w
+  | .popcount w => .popcount w
+  | .rotl w => .rotl w
+  | .rotr w => .rotr w
+  | .bswap16 => .bswap16
+  | .bswap32 => .bswap32
+  | .bswap64 => .bswap64
+
 mutual
 
 /-- **An expression of `D` as an expression of `D'`.** -/
@@ -217,6 +234,9 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .strWeit m e => .strWeit m (exE e)
   | _, _, _, .wenn c a b => .wenn (exE c) (exE a) (exE b)
   | _, _, _, .eng e lo hi s => .eng (exE e) lo hi (exE s)
+  | _, _, _, .intBuiltin1 op a => .intBuiltin1 (ibE E op) (exE a)
+  | _, _, _, .intBuiltin2 op a b => .intBuiltin2 (ibE E op) (exE a) (exE b)
+  | _, _, _, .count n body => .count n (exE body)
 
 /-- A payload expression. -/
 def exN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option (Int × Int)} → NutzlastExpr D Γ Λ c →

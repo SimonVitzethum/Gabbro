@@ -50,6 +50,23 @@ def gleit : GleitOp → String
 def faelle (cs : List (Option (Int × Int))) : String :=
   "[" ++ String.intercalate ", " (cs.map fun | none => "none" | some p => s!"some {paar p}") ++ "]"
 
+/-- A closed integer builtin (lane C13). -/
+def ib : {ts : List Ty} → {τ : Ty} → IntBuiltin ts τ → String
+  | _, _, .addW w => s!"(IntBuiltin.addW {w})"
+  | _, _, .subW w => s!"(IntBuiltin.subW {w})"
+  | _, _, .mulW w => s!"(IntBuiltin.mulW {w})"
+  | _, _, .shlW w => s!"(IntBuiltin.shlW {w})"
+  | _, _, .addS lo hi => s!"(IntBuiltin.addS {zahl lo} {zahl hi})"
+  | _, _, .clz w => s!"(IntBuiltin.clz {w})"
+  | _, _, .ctz w => s!"(IntBuiltin.ctz {w})"
+  | _, _, .log2Floor w => s!"(IntBuiltin.log2Floor {w})"
+  | _, _, .popcount w => s!"(IntBuiltin.popcount {w})"
+  | _, _, .rotl w => s!"(IntBuiltin.rotl {w})"
+  | _, _, .rotr w => s!"(IntBuiltin.rotr {w})"
+  | _, _, .bswap16 => "IntBuiltin.bswap16"
+  | _, _, .bswap32 => "IntBuiltin.bswap32"
+  | _, _, .bswap64 => "IntBuiltin.bswap64"
+
 /-- The numbers of the elements of the finite types of a declaration, as the witness file names them. -/
 structure Namen (D : Deklaration) where
   tab : D.Tab → Nat
@@ -124,6 +141,9 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .strWeit m e => do .ok s!"(Expr.strWeit (D := z.deklaration) {m} {← drE N e})"
   | _, .wenn c a b => do .ok s!"(Expr.wenn (D := z.deklaration) {← drE N c} {← drE N a} {← drE N b})"
   | _, .eng e lo hi s => do .ok s!"(Expr.eng (D := z.deklaration) {← drE N e} {zahl lo} {zahl hi} {← drE N s})"
+  | _, .intBuiltin1 op a => do .ok s!"(Expr.intBuiltin1 (D := z.deklaration) {ib op} {← drE N a})"
+  | _, .intBuiltin2 op a b => do .ok s!"(Expr.intBuiltin2 (D := z.deklaration) {ib op} {← drE N a} {← drE N b})"
+  | _, .count n body => do .ok s!"(Expr.count (D := z.deklaration) {n} {← drE N body})"
 
 /-- A payload expression. -/
 def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option (Int × Int)} → NutzlastExpr D Γ Λ o → Except String String

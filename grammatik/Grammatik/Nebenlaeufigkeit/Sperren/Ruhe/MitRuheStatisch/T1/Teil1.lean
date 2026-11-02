@@ -78,6 +78,9 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .strWeit _ e => ruE_orte e
   | _, _, _, .wenn c a b => kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruE_orte a)) (ruE_orte b)
   | _, _, _, .eng e _ _ s => kongr₂ (· ++ ·) (ruE_orte e) (ruE_orte s)
+  | _, _, _, .intBuiltin1 _ a => ruE_orte a
+  | _, _, _, .intBuiltin2 _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
+  | _, _, _, .count _ body => ruE_orte body
 
 theorem ruN_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c), (ruN n).orte = n.orte

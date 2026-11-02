@@ -143,6 +143,7 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .arrNil | .arrCons .. | .arrSet .. | .strLit .. | .strCat .. => none
   | .arrGet .. | .strLen .. => none
   | .strGet .. | .strEq .. | .strLt .. | .strWeit .. | .wenn .. | .eng .. => none
+  | .intBuiltin1 .. | .intBuiltin2 .. | .count .. => none
 
 /-- The computational elaborator: from a printed certificate back to a
     CHECKED term. Every side condition `certRange` recomputes is rechecked
