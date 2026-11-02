@@ -211,29 +211,31 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       simp only [execBlock]
       split
       · rename_i σ1 v ha
+        have ihr := fun ρ' => block_obj rest hok.2 σ1 ρ'
         cases e with
         | none =>
             simp only [Ausgang.weiterOpt] at *
             exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
-              (block_obj rest hok.2 σ1 _ hlen hinv)
+              (ihr _ hlen hinv)
         | some τ =>
             simp only [Ausgang.weiterOpt] at *
             exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
-              (block_obj rest hok.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+              (ihr _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
       · rename_i σ1 v ha
+        have ihr := fun ρ' => block_obj rest hok.2.2 σ1 ρ'
         cases e with
         | none =>
             simp only [Ausgang.weiterOpt] at *
             exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
-              (block_obj rest hok.2.2 σ1 _ hlen hinv)
+              (ihr _ hlen hinv)
         | some τ =>
             simp only [Ausgang.weiterOpt] at *
             exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
-              (block_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+              (ihr _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · rename_i σ1 r ha
         exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
             (by rw [← axiomAntwortSonst_fst, ha]))
@@ -384,29 +386,31 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEnd]
       split
       · rename_i σ1 v ha
+        have ihr := fun ρ' => end_obj rest hok.2 σ1 ρ'
         cases e with
         | none =>
             simp only [EndAusgang.weiterOpt] at *
             exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
-              (end_obj rest hok.2 σ1 _ hlen hinv)
+              (ihr _ hlen hinv)
         | some τ =>
             simp only [EndAusgang.weiterOpt] at *
             exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
-              (end_obj rest hok.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+              (ihr _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, hok, σ, ρ, hlen, hinv => by
       simp only [execEnd]
       split
       · rename_i σ1 v ha
+        have ihr := fun ρ' => end_obj rest hok.2.2 σ1 ρ'
         cases e with
         | none =>
             simp only [EndAusgang.weiterOpt] at *
             exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
-              (end_obj rest hok.2.2 σ1 _ hlen hinv)
+              (ihr _ hlen hinv)
         | some τ =>
             simp only [EndAusgang.weiterOpt] at *
             exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
-              (end_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+              (ihr _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · rename_i σ1 r ha
         exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
             (by rw [← axiomAntwortSonst_fst, ha]))
