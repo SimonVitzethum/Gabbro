@@ -241,8 +241,7 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
   | sum cs =>
-      have hf : Ar.Fits 0 (sumTop cs) 128 := by simpa [supp] using hs
-      refine ⟨([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1), by simp only [loadG, hf, ↓reduceIte], ?_⟩
+      refine ⟨([.load r (.int (Ar.wid 0 (sumTop cs))) p], .reg r, r + 1), by simp only [loadG, hs, ↓reduceIte], ?_⟩
       apply frag_one
       have hl' : m.load b o (.int (Ar.wid 0 (sumTop cs))) = some (encR lay (.sum cs) v) := by
         simpa [memTy, regTy, encM] using hl

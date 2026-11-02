@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 
 @[expose] public section
 
@@ -38,24 +39,6 @@ theorem nutzPasst_wort (c : Option Ty) (n : Int) (v : Nutzlast D.Fn D.passt c)
 def summeRoh (cs : List (Option Ty)) (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
     Int :=
   (v.1.val : Int) + fallZahl cs * nutzRoh (cs.get v.1) v.2
-
-/-- `summePasst` through its two digits. -/
-theorem summePasst_eq (cs : List (Option Ty)) (n : Int) (i : Fin cs.length) (p : Int)
-    (hs : sumWort cs = true) (hi : n % fallZahl cs = (i.val : Int)) (hp : n / fallZahl cs = p) :
-    summePasst cs n = (nutzPasst (cs.get i) p).map fun x => ⟨i, x⟩ := by
-  have hk : 0 < cs.length := Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
-  unfold summePasst
-  rw [if_pos hs, dif_pos hk]
-  dsimp only
-  rw [hp]
-  generalize hI : (⟨(n % fallZahl cs).toNat, fall_marke_lt cs n hk⟩ : Fin cs.length) = I
-  have e : I = i := by
-    rw [← hI]
-    apply Fin.ext
-    show (n % fallZahl cs).toNat = i.val
-    rw [hi, Int.toNat_natCast]
-  subst e
-  rfl
 
 /-- **Every `tagged` value is the decoding of its raw word.** -/
 theorem summePasst_voll (cs : List (Option Ty))

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
+import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 
 @[expose] public section
 
@@ -135,7 +136,9 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .int _ _, _ => Iff.rfl
   | .bool, _ => Iff.rfl
   | .opt _, _ => Iff.rfl
-  | .sum _, _ => Iff.rfl
+  | .sum cs, _ => by
+      change sumWort (Ty.mapCases (fun n => n + 1) id cs) = true ↔ sumWort cs = true
+      rw [sumWort_mapCases]
   | .why _, _ => Iff.rfl
   | .never, _ => Iff.rfl
   | .fl _ _, _ => Iff.rfl

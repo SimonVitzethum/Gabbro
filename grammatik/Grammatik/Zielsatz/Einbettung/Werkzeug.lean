@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Schleifen
+import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 @[expose] public section
 
 
@@ -84,8 +85,8 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
       · simp only [einpassen, h1, dite_true, and_self]; rfl
       · by_cases h2 : n < 0 <;> (simp only [einpassen, h1, h2, dite_false, ite_true, ite_false, not_false_eq_true]) <;> rfl
   | .sum cs, _, n => by
-      show summePasst cs n = Option.map _ (summePasst cs n)
-      cases summePasst cs n <;> rfl
+      exact summePasst_relocate E.num E.tnum
+        (fun _ v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩) cs n
   | .why m, _, n => by by_cases h : 0 ≤ n ∧ n < m <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
   | .never, _, n => rfl
   | .fl lo hi, _, n => by
