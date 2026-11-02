@@ -210,9 +210,9 @@ theorem ants_grundWahlG (C : D.Ax ⊕ D.Reg → Bool) {Γ : Ctx} {Λ Λ' : List 
 
 end Wahl
 
+set_option hygiene false in
 /-! ## 3. Every rule keeps the site bound -/
 
-set_option hygiene false in
 /-- A head-local step. -/
 macro "kopfAnt" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩

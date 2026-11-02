@@ -102,9 +102,9 @@ theorem all_grundWahlG (P : Programm D) (C : D.Tab ⊕ D.Glob → Bool) {Γ : Ct
       exact all_grundWahlG P C rest _ h.2
 
 end Wahl
+set_option hygiene false in
 /-! ## 2. Every rule keeps the read bound -/
 
-set_option hygiene false in
 /-- Case (A) of `schrittOrte`: a head-local step. -/
 macro "kopfO" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self],

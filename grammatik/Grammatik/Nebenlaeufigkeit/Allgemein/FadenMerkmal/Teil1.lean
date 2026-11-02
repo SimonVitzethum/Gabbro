@@ -229,9 +229,9 @@ theorem abbruch_iff {Γ Γ' : Ctx} {Λ Λk : List (Res D)} (e : Endblock D V l �
 
 end Hilfen
 
+set_option hygiene false in
 /-! ## 3. Every rule, classified -/
 
-set_option hygiene false in
 /-- Case (A) of `schrittMerk`: a head-local step. -/
 macro "kopfM" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], by dsimp only; rw [rufUpdateG_self],
