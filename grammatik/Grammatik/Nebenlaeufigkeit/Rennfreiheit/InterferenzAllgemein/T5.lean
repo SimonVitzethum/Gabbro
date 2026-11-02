@@ -298,6 +298,37 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
           hS hG h0S h0G)
       simp only [eval]
       exact zaehleWahr_congr n _ _ hbody
+  | .prod _ args =>
+      have ha := evalProd_liest_nur_speicher args σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      exact ha
+  | .prodGet a _ =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha]
+  | .prodSet a _ b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+
+/-- The field arguments read only memory: the product half of the stone. -/
+
+theorem evalProd_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
+    (args : Args D Γ Λ fs)
+    (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hG : ∀ g : D.Glob, σ.globs g = σ'.globs g)
+    (h0S : ∀ t : D.Tab, ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
+    (h0G : ∀ g : D.Glob, σ₀.globs g = σ₀'.globs g) :
+    evalProd σ₀ args σ ρ = evalProd σ₀' args σ' ρ := by
+  induction args with
+  | nil => rfl
+  | cons e rest ih =>
+      have he := eval_liest_nur_speicher e σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hr := ih
+      simp only [evalProd]
+      rw [he, hr]
 
 /-- The payload reads only its places: the second half of the stone. -/
 

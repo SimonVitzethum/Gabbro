@@ -40,6 +40,7 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .ref _ => true
   | .arr _ _ => false
   | .str _ => false
+  | .prod _ _ => false
 
 /-- An answer class is not empty, decided (a call without a result always answers). -/
 def antwortB (fs : List D.Fn) : Option Ty → Bool
@@ -87,6 +88,7 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
   | .ref _ => ⟨fun _ => ⟨(Val.vonZelle 0 : Wert D (.ref _)), trivial⟩, fun _ => rfl⟩
   | .arr _ _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩
   | .str _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩
+  | .prod _ _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩
 
 /-- **The answer class, decided exactly** (W1): given the complete function list, the Bool
     says "answerable" exactly when the class is not empty (`antwortLeer_iff`). -/

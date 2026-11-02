@@ -120,6 +120,7 @@ def WertOk : (τ : Ty) → Wert D τ → Prop
   -- an aggregate is not one raw word: no answer has such a value
   | .arr _ _, _ => False
   | .str _, _ => False
+  | .prod _ _, _ => False
   | _, _ => True
 
 /-- **Every value is an answer** (G1 repair): for every type and every value of it
@@ -159,6 +160,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
       rfl⟩
   | .arr _ _, _, h => h.elim
   | .str _, _, h => h.elim
+  | .prod _ _, _, h => h.elim
 
 /-- Every decoded value is a value an answer can have. -/
 
