@@ -185,7 +185,7 @@ theorem assignSlot_andere_fest (O : Orakel D) (passes : Nat)
 /-- `assignDurch t₂` with `t₂ ≠ t` keeps every slot of `t`. -/
 theorem assignDurch_andere_fest (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {n : Nat}
+    {n : Nat} {read : Bool}
     {p : Expr D Γ Λ (.ptr (.table n (read, true) space))} {t₂ : D.Tab} {ht₂ : D.capTab space n = some t₂}
     {f₂ : D.Feld t₂}
     {i : Expr D Γ Λ (.index (D.count t₂))} {e : Expr D Γ Λ (D.typ t₂ f₂)}
