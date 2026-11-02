@@ -66,9 +66,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
             show certRange D Γ Λ (.add a b) = some (l1 + l2, h1 + h2)
             simp only [certRange, ra, rb]
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | sub a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -90,9 +90,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
             have rb : certRange D Γ Λ b = some (l2, h2) := ihb hb1
             show certRange D Γ Λ (.sub a b) = some (l1 - h2, h1 - l2)
             simp only [certRange, ra, rb]
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | neg a iha =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -106,7 +106,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         have ra : certRange D Γ Λ a = some (l, hh) := iha ha1
         show certRange D Γ Λ (.neg a) = some (-hh, -l)
         simp only [certRange, ra]
-      | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+      | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
         simp only [elabInt, ha1, reduceCtorEq] at h
   | mul a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -130,9 +130,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               some (imin (imin (l1 * l2) (l1 * h2)) (imin (h1 * l2) (h1 * h2)),
                 imax (imax (l1 * l2) (l1 * h2)) (imax (h1 * l2) (h1 * h2)))
             simp only [certRange, ra, rb]
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | div a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -158,9 +158,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | rem a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -186,9 +186,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | sdiv a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -215,9 +215,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, Int.reduceNeg, hc, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | srem a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -244,9 +244,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, Int.reduceNeg, hc, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | band a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -272,9 +272,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | bor w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -300,9 +300,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | bxor w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -328,9 +328,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | shl w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -356,9 +356,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | shr w a b iha ihb =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -384,9 +384,9 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
               simp only [certRange, ra, rb, hc, and_self, ↓reduceIte]
             · simp only [dif_neg hc] at h
               simp only [reduceCtorEq] at h
-          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+          | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
             simp only [elabInt, ha1, hb1, reduceCtorEq] at h
-        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+        | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
           simp only [elabInt, ha1, hb1, reduceCtorEq] at h
   | wide lo' hi' a iha =>
     cases ha1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) a with
@@ -405,7 +405,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp only [certRange, ra, hc, and_self, ↓reduceIte]
         · simp only [dif_neg hc] at h
           simp only [reduceCtorEq] at h
-      | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+      | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
         simp only [elabInt, ha1, reduceCtorEq] at h
   | slot t f i ihi =>
     cases hi1 : elabInt (D := D) (Γ := Γ) (Λ := Λ) i with
@@ -424,7 +424,7 @@ theorem elab_valid {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp only [certRange, ri, intVonTyp, hg, hL, and_self, ↓reduceIte]
         · simp only [dif_neg hc] at h
           simp only [reduceCtorEq] at h
-      | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str =>
+      | bool | opt | sum | why | never | fl | fnptr | ptr | ref | arr | str | prod =>
         simp only [elabInt, hi1, reduceCtorEq] at h
 
 

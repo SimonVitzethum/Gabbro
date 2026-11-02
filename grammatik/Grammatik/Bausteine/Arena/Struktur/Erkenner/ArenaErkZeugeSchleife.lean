@@ -135,7 +135,7 @@ theorem drainForever_zeuge : ∃ σ' : World FD, execBlock (V := FV) oF 10 rF dr
 
 /-- The payload of slot `k`, as a number. -/
 def nutz (σ : World FD) (k : Int) : Int :=
-  (Wert.umTyp (show FD.typ FA.tab FA.feld = Ty.int 0 255 from by decide) (σ.slots FA.tab k FA.feld)).n
+  (Wert.umTyp (show FD.typ FA.tab FA.feld = Ty.int 0 255 from by decide +kernel) (σ.slots FA.tab k FA.feld)).n
 
 /-- Store `7` into the payload of every slot. -/
 def fuellKoerper : Block FD FV true G1 [] [] :=
