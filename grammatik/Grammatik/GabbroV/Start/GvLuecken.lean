@@ -125,22 +125,18 @@ theorem gvLuecke_fragment_ohne_atomar (u : UProg) (h : ∀ g ∈ u.globs, g.atom
     ∀ g : (declOf u).Glob, (declOf u).atomar g = false :=
   fun g => h _ (List.get_mem u.globs g)
 
-/-- **L_f: a static with no `Glob` form is refused loudly.** A placement (`aligned`, `section`) is a
-    property of the storage, which a `Glob` does not carry: the static reader stops with an error, it never
-    drops the word. (The `shared` word has a form since the front end reads it: `UGlob.shared`, `D.ggeteilt`.) Parser territory; proved from the accepted definition. -/
+/-- **L_f: invalid global alignment is refused with the global's name.** -/
 theorem gvLuecke_statik_ohne_form
     (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr) (s : Option String)
-    (sh : Bool) (rest : List SItemTief) (h : al.isSome = true ∨ s.isSome = true) :
+    (sh : Bool) (rest : List SItemTief)
+    (h : (match al with
+      | none => some 1
+      | some e => ProfilBindung.ausrichtungWert
+          (consts.map (fun (n, z) => (n, z.toNat))) e).any ausrichtungB = false) :
     ∃ e, uGlobs consts alias (.globT m a t v al s sh :: rest) = .error e := by
-  refine ⟨"static placement without G form", ?_⟩
-  simp only [uGlobs]
-  have h' : (al.isSome || s.isSome) = true := by
-    cases h with
-    | inl h1 => simp only [h1, Bool.true_or]
-    | inr h2 => simp only [h2, Bool.or_true]
-  simp only [h', ↓reduceIte]
-
+  refine ⟨"global " ++ a ++ ": invalid alignment", ?_⟩
+  simp only [uGlobs, h, Bool.not_false, ↓reduceIte]
 /-
   CUTS (review gaps, agent 01 follow-up -- ALL CLOSED as theorems):
   L_a (`gvLuecke_sp4_ist_sp0`: computed memory is 104's declared memory, by
