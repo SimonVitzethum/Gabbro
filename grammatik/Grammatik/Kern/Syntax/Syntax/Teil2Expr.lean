@@ -142,7 +142,7 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   | count (n : Nat) (body : Expr (.index (n : Int) :: Γ) Λ .bool) : Expr Γ Λ (.int 0 (n : Int))
   /-- The product `r` from its complete field arguments in declaration order, every field exactly
       once (C01): the constructor `P(a: .., b: ..)`; no field is missing, defaulted or repeated. -/
-  | prod (r : Nat) (args : Args D Γ Λ fs) : Expr Γ Λ (.prod r fs)
+  | prod (r : Nat) (args : Args Γ Λ fs) : Expr Γ Λ (.prod r fs)
   /-- `p.f`: the field at a position of a BY-VALUE product. A projection reads the places its base reads. -/
   | prodGet (v : Expr Γ Λ (.prod r fs)) (i : FieldAt fs σ) : Expr Γ Λ σ
   /-- The product with the field at a position replaced (a value; `p.f = e` on a local binds it). -/
@@ -152,11 +152,13 @@ inductive NutzlastExpr : Ctx → List (Res D) → Option Ty → Type where
   | empty : NutzlastExpr Γ Λ none
   | val (e : Expr Γ Λ τ) : NutzlastExpr Γ Λ (some τ)
 
-end
-
+/-- The evaluated arguments of a call, in order (C01: moved into the mutual family with `Expr`,
+    since the product constructor takes them). -/
 inductive Args : Ctx → List (Res D) → List Ty → Type where
   | nil : Args Γ Λ []
-  | cons (e : Expr D Γ Λ τ) (rest : Args Γ Λ τs) : Args Γ Λ (τ :: τs)
+  | cons (e : Expr Γ Λ τ) (rest : Args Γ Λ τs) : Args Γ Λ (τ :: τs)
+
+end
 
 /-! ## 4. Anweisungen -- `stmt`, `block`, und der Block, der nicht abfaellt -/
 

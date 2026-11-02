@@ -249,10 +249,10 @@ theorem visitT_mem_iff (T : WalkTree α N) :
           simp only [visitT, List.mem_flatMap]
           refine ⟨k, List.mem_finRange k, ?_⟩
           unfold entryVisits
-          have hl'' : ¬ T.leaf (tbl' k) = true := by simp [hl]
+          have hl'' : ¬ T.leaf (tbl k) = true := by simp [hl]
           rw [if_neg hl'', if_pos hd]
           simp only [hdn, List.mem_map]
-          exact ⟨(q, m'), (visitT_mem_iff T l' t' q m').mpr hq, rfl⟩
+          exact ⟨(q, m), (visitT_mem_iff T l t' q m).mpr hq, rfl⟩
 
 /-- **No duplicate paths**: two different mappings have different paths (shared child tables reached through
     different paths stay different mappings). -/
@@ -377,10 +377,10 @@ theorem walkWork_le (T : WalkTree α N) :
           · by_cases hd : T.dwhen (tbl k) = true
             · rw [if_neg hl, if_pos hd]
               cases hdn : T.down (tbl k) with
-              | none => omega
+              | none => dsimp only; omega
               | some t' =>
                 have := walkWork_le T l t'
-                omega
+                dsimp only; omega
             · rw [if_neg hl, if_neg hd]; omega)
       simpa only [List.length_finRange] using h
 
