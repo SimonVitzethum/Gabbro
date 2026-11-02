@@ -36,6 +36,7 @@ import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Logik.Terminierung.Rekursion.Teil1
+public import Grammatik.Logik.Terminierung.Rekursion.Teil1a
 
 @[expose] public section
 
