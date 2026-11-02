@@ -156,11 +156,12 @@ theorem stmt_treu :
       exact treu_lese σ Λ _
   | .retWhy .., σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
-  | .retScoped e _, σ, ρ, σ', h => by
+  | .retScoped e R, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact treu_lese σ Λ _
-  | .retWhyScoped .., σ, ρ, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
+      exact treuRet_retScoped R.scopes (treu_lese σ Λ _)
+  | .retWhyScoped _ R, σ, ρ, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact treuRet_retWhyScoped σ R.scopes
   | .leave _, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .next _, σ, ρ, σ', h => by
@@ -376,11 +377,12 @@ theorem end_treu :
       exact treu_lese σ Λ _
   | .retWhy .., σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
-  | .retScoped e _, σ, ρ, σ', h => by
+  | .retScoped e R, σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
-      exact treu_lese σ Λ _
-  | .retWhyScoped .., σ, ρ, σ', h => by
-      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
+      exact treuRet_retScoped R.scopes (treu_lese σ Λ _)
+  | .retWhyScoped _ R, σ, ρ, σ', h => by
+      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
+      exact treuRet_retWhyScoped σ R.scopes
   | .leave _, σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .next _, σ, ρ, σ', h => by

@@ -393,11 +393,12 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
       exact gut_lese σ Λ _ e.orte_darf hh
   | .retWhy .., _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .retScoped e _, _, σ, ρ, hh, σ', h => by
+  | .retScoped e R, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact gut_lese σ Λ _ e.orte_darf hh
-  | .retWhyScoped .., _, σ, ρ, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+      exact gutRet_retScoped R.scopes (gut_lese σ Λ _ e.orte_darf hh)
+  | .retWhyScoped _ R, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gutRet_retWhyScoped σ R.scopes
   | .leave _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .next _, _, σ, ρ, hh, σ', h => by

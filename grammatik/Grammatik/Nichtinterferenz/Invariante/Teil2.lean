@@ -83,7 +83,9 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       · exact KErgOk.lokal hst _ _ _ (by first | exact he.1.2 | (simp only [GRest.nR]; exact he.1.2)) _ _
       · exact KErgOk.none
   | ret e _ => exact kPop_ok hst f _ _
+  | retScoped e R => exact kPop_ok hst f _ _
   | retWhy r _ => exact kPopGrund_ok hst f _ _ r
+  | retWhyScoped r R => exact kPopGround_ok hst f _ _ r
   | leave _ => exact KErgOk.none
   | next _ => exact KErgOk.none
 

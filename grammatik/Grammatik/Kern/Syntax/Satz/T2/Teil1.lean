@@ -336,12 +336,159 @@ def RufAusgang.welt {f : D.Fn} : RufAusgang f → Option (World D)
   | .logik _ => none
   | .hardware _ => none
 
-/-- Rahmen und Spur eines Ausgangs gegen die Eingangswelt. -/
+/-- Release-aware trace quality for scoped returns: the held locks change
+    exactly by erasing some list (the crossed scopes at use sites), while every
+    new event stays good and consistency is preserved. -/
+def BravRet (σ σ' : World D) : Prop :=
+  (∃ Ls : List D.Lock, σ'.haelt = Ls.foldl (fun h L => h.erase L) σ.haelt) ∧
+  (∀ e ∈ σ'.spur, e ∈ σ.spur ∨ e.gut) ∧ (Konsistent σ.spur → Konsistent σ'.spur)
+
+/-- Release-aware frame+trace for scoped returns. -/
+def GutRet (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop :=
+  Rahmen W G σ σ' ∧ BravRet σ σ'
+
+theorem offen_gibt_foldl (Ls : List D.Lock) (s : List (Ereignis D)) :
+    offen (Ls.map (fun L => Ereignis.gibt (D := D) L) ++ s) =
+      Ls.foldl (fun h L => h.erase L) (offen s) := by
+  induction Ls generalizing s with
+  | nil => rfl
+  | cons L Ls ih => simp only [List.map_cons, List.cons_append, offen, ih]
+
+theorem haelt_gibt_foldl (σ : World D) (Ls : List D.Lock) :
+    (Ls.foldl World.gibt σ).haelt = Ls.foldl (fun h L => h.erase L) σ.haelt := by
+  rw [World.haelt, World.gibt_foldl_spur, offen_gibt_foldl, World.haelt]
+
+theorem BravRet.refl (σ : World D) : BravRet σ σ :=
+  ⟨⟨[], rfl⟩, fun e he => .inl he, id⟩
+
+theorem Brav.transRet {a b c : World D} (h1 : Brav a b) (h2 : BravRet b c) : BravRet a c := by
+  obtain ⟨Ls, hLs⟩ := h2.1
+  refine ⟨⟨Ls, by rw [hLs, h1.1]⟩, fun e he => match h2.2.1 e he with
+    | .inl hb => h1.2.1 e hb
+    | .inr g => .inr g, fun k => h2.2.2 (h1.2.2 k)⟩
+
+theorem Gut.transRet {W G} {a b c : World D} (h1 : Gut W G a b) (h2 : GutRet W G b c) :
+    GutRet W G a c :=
+  ⟨h1.1.trans h2.1, h1.2.transRet h2.2⟩
+
+/-- Consistency survives scope releases (`gibt` records no constraint). -/
+theorem konsistent_gibt_foldl (Ls : List D.Lock) (σ : World D) :
+    (Konsistent σ.spur → Konsistent (Ls.foldl World.gibt σ).spur) := by
+  induction Ls generalizing σ with
+  | nil => exact id
+  | cons L Ls ih =>
+      intro k
+      simp only [List.foldl_cons]
+      exact konsistent_cons trivial (ih _ (konsistent_cons trivial k))
+
+/-- Frame survives scope releases (memory kept). -/
+theorem rahmen_gibt_foldl {W G} (σ : World D) (Ls : List D.Lock) :
+    Rahmen W G σ (Ls.foldl World.gibt σ) := by
+  obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher σ Ls
+  exact rahmen_gleich (fun _ _ _ _ => by rw [hs]) (fun _ _ => by rw [hg])
+
+/-- A read followed by scope releases is a releasing step with exactly those scopes. -/
+theorem gutRet_retScoped {W G} {σ σ1 : World D} (Ls : List D.Lock)
+    (hl : Gut W G σ σ1) : GutRet W G σ (Ls.foldl World.gibt σ1) := by
+  refine ⟨hl.1.trans (rahmen_gibt_foldl σ1 Ls), ⟨Ls, ?_⟩, ?_, ?_⟩
+  · rw [haelt_gibt_foldl, hl.2.1]
+  · intro e he
+    rw [World.gibt_foldl_spur] at he
+    simp only [List.mem_append] at he
+    rcases he with he | he
+    · simp only [List.mem_map] at he
+      obtain ⟨_, _, rfl⟩ := he
+      exact .inr trivial
+    · rcases hl.2.2.1 e he with h1 | h1
+      · exact .inl h1
+      · exact .inr h1
+  · intro k
+    exact konsistent_gibt_foldl Ls σ1 (hl.2.2.2 k)
+
+/-- A scope release alone is a releasing step with exactly those scopes. -/
+theorem gutRet_retWhyScoped {W G} (σ : World D) (Ls : List D.Lock) :
+    GutRet W G σ (Ls.foldl World.gibt σ) := by
+  refine ⟨rahmen_gibt_foldl σ Ls, ⟨Ls, ?_⟩, ?_, ?_⟩
+  · rw [haelt_gibt_foldl]
+  · intro e he
+    rw [World.gibt_foldl_spur] at he
+    simp only [List.mem_append] at he
+    rcases he with he | he
+    · simp only [List.mem_map] at he
+      obtain ⟨_, _, rfl⟩ := he
+      exact .inr trivial
+    · exact .inl he
+  · intro k
+    exact konsistent_gibt_foldl Ls σ k
+
+/-- Erasing through a taken lock then releasing it is erasing without it,
+    when the lock was free before (`locks` premise). -/
+theorem erase_nimmt_gibt (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) (hn : L ∉ h) :
+    (Ls.foldl (fun h M => h.erase M) (L :: h)).erase L =
+      Ls.foldl (fun h M => h.erase M) h := by
+  induction Ls generalizing h with
+  | nil => exact List.erase_cons_head L h
+  | cons M Ms ih =>
+      simp only [List.foldl_cons]
+      by_cases heq : M = L
+      · subst heq
+        simp only [List.erase_cons_head]
+        have h_erase : h.erase L = h := List.erase_of_not_mem hn
+        rw [h_erase]
+        have h_mem : ∀ (h : List D.Lock), L ∉ h →
+            L ∉ Ms.foldl (fun h M => h.erase M) h := by
+          intro h hn
+          induction Ms generalizing h with
+          | nil => exact hn
+          | cons N Ns ih2 =>
+              simp only [List.foldl_cons]
+              exact ih2 _ (fun hm => hn (List.mem_of_mem_erase hm))
+        exact List.erase_of_not_mem (h_mem h hn)
+      · simp only [List.erase_cons_tail _ (Ne.symm heq)]
+        exact ih _ (fun hm => hn (List.mem_of_mem_erase hm))
+
+/-- `locks L { … }` with a releasing body keeps the release list. -/
+theorem gut_nimmt_gibtRet {W G} (σ σ1 : World D) (L : D.Lock)
+    (hn : (∀ M ∈ σ.haelt, D.rang M < D.rang L) ∧ L ∉ σ.haelt)
+    (h : GutRet W G (σ.nimmt L) σ1) : GutRet W G σ (σ1.gibt L) := by
+  obtain ⟨Ls, hLs⟩ := h.2.1
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact (rahmen_gleich (W := W) (G := G) (σ := σ) (σ' := σ.nimmt L) rfl rfl).trans
+      (h.1.trans (rahmen_gleich rfl rfl))
+  · refine ⟨Ls, ?_⟩
+    show (offen σ1.spur).erase L = Ls.foldl (fun h M => h.erase M) (offen σ.spur)
+    have e1 : σ1.haelt = Ls.foldl (fun h M => h.erase M) (L :: σ.haelt) := by
+      have := hLs
+      simp only [World.haelt, World.nimmt, offen] at this ⊢
+      exact this
+    rw [e1]
+    exact erase_nimmt_gibt L Ls _ hn.2
+  · intro e he
+    simp only [World.gibt, List.mem_cons] at he
+    rcases he with rfl | he
+    · exact .inr trivial
+    · rcases h.2.2.1 e he with h1 | h1
+      · simp only [World.nimmt, List.mem_cons] at h1
+        rcases h1 with rfl | h1
+        · exact .inr ⟨hn.1, hn.2⟩
+        · exact .inl h1
+      · exact .inr h1
+  · intro k
+    exact konsistent_cons trivial (h.2.2.2 (konsistent_cons rfl k))
+
+/-- Rahmen und Spur eines Ausgangs gegen die Eingangswelt: `ok`/`leave`/`next`
+    halten die Sperren, `zurueck`/`why` geben genau die gekreuzten Scopes frei. -/
 def GutAusgang (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : Ausgang V l Γ) : Prop :=
-  ∀ σ', o.welt = some σ' → Gut W G σ σ'
+  ∀ σ', o.welt = some σ' →
+    match o with
+    | .zurueck _ _ | .why _ _ => GutRet W G σ σ'
+    | _ => Gut W G σ σ'
 
 def GutEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAusgang V l Γ) : Prop :=
-  ∀ σ', o.welt = some σ' → Gut W G σ σ'
+  ∀ σ', o.welt = some σ' →
+    match o with
+    | .zurueck _ _ | .why _ _ => GutRet W G σ σ'
+    | _ => Gut W G σ σ'
 
 theorem GutAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
     (h : GutAusgang W G σ o) : GutAusgang W G σ o.schrumpf := by
@@ -367,20 +514,51 @@ theorem GutEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : GutEn
 
 /-- Ein Schritt, der schon gut ist, zieht durch einen Unterblock hindurch. -/
 theorem GutAusgang.vor {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
-    (h1 : Gut W G σ σ1) (h : GutAusgang W G σ1 o) : GutAusgang W G σ o :=
-  fun σ' hs => h1.trans (h σ' hs)
+    (h1 : Gut W G σ σ1) (h : GutAusgang W G σ1 o) : GutAusgang W G σ o := by
+  intro σ' hs
+  cases o with
+  | ok _ _ => exact h1.trans (h _ hs)
+  | zurueck _ _ => exact h1.transRet (h _ hs)
+  | why _ _ => exact h1.transRet (h _ hs)
+  | leave _ _ _ => exact h1.trans (h _ hs)
+  | next _ _ _ => exact h1.trans (h _ hs)
+  | logik _ => cases hs
+  | hardware _ => cases hs
 
 theorem GutEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (h1 : Gut W G σ σ1) (h : GutEnd W G σ1 o) : GutEnd W G σ o :=
-  fun σ' hs => h1.trans (h σ' hs)
+    (h1 : Gut W G σ σ1) (h : GutEnd W G σ1 o) : GutEnd W G σ o := by
+  intro σ' hs
+  cases o with
+  | zurueck _ _ => exact h1.transRet (h _ hs)
+  | why _ _ => exact h1.transRet (h _ hs)
+  | leave _ _ _ => exact h1.trans (h _ hs)
+  | next _ _ _ => exact h1.trans (h _ hs)
+  | logik _ => cases hs
+  | hardware _ => cases hs
 
 /-- `locks L { … }`: nehmen, Rumpf, geben. -/
 theorem GutAusgang.gibt {W G} {σ : World D} (L : D.Lock)
     (hn : (∀ M ∈ σ.haelt, D.rang M < D.rang L) ∧ L ∉ σ.haelt) {o : Ausgang V l Γ}
     (h : GutAusgang W G (σ.nimmt L) o) : GutAusgang W G σ (o.mapWelt (·.gibt L)) := by
   intro σ' hs
-  cases o <;> simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
-    (subst hs; exact gut_nimmt_gibt _ _ L hn (h _ rfl))
+  cases o with
+  | ok _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact gut_nimmt_gibt _ _ L hn (h _ rfl)
+  | zurueck _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact gut_nimmt_gibtRet _ _ L hn (h _ rfl)
+  | why _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact gut_nimmt_gibtRet _ _ L hn (h _ rfl)
+  | leave _ _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact gut_nimmt_gibt _ _ L hn (h _ rfl)
+  | next _ _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact gut_nimmt_gibt _ _ L hn (h _ rfl)
+  | logik _ => simp only [Ausgang.welt, Ausgang.mapWelt, reduceCtorEq] at hs
+  | hardware _ => simp only [Ausgang.welt, Ausgang.mapWelt, reduceCtorEq] at hs
 
 /-- Von einem `Λ` zu einem, das hoechstens weniger Zeugnisse nennt, ueber einen guten Schritt. -/
 theorem heldGenau_weiter {W G} {σ σ1 : World D} {Λ Λ' : List (Res D)}

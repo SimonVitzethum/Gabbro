@@ -342,7 +342,15 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [kEnde]
       rw [(hW.lese Λ e.orte).evalErg e (alle_von hST he) ρ]
       exact kPop_rel st f (hW.lese Λ e.orte) _
+  | retScoped e R =>
+      simp only [nE] at he
+      simp only [kEnde]
+      rw [(hW.lese Λ e.orte).evalErg e (alle_von hST he) ρ]
+      exact kPop_rel st f ((hW.lese Λ e.orte).gibt_foldl R.scopes) _
   | retWhy r _ => exact kPopGrund_rel st f spur hsp r
+  | retWhyScoped r R =>
+      simp only [kEnde, World.gibt_foldl_spur, World.gibt_foldl_speicher]
+      exact kPopGrund_rel st f _ hsp r
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 

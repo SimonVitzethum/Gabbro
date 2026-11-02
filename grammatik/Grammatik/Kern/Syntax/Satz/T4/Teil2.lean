@@ -159,11 +159,12 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ret e _, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .retScoped e _, σ, ρ, hbo, hh, σ', h => by
+  | .retScoped e R, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .retWhyScoped .., σ, ρ, hbo, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+      exact gutRet_retScoped R.scopes (gut_lese σ Λ _ e.orte_darf hh.heldIn)
+  | .retWhyScoped _ R, σ, ρ, hbo, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gutRet_retWhyScoped σ R.scopes
   | .retWhy .., σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, σ, ρ, hbo, hh, σ', h => by
@@ -387,11 +388,12 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ret e _, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .retScoped e _, σ, ρ, hbo, hh, σ', h => by
+  | .retScoped e R, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
-      exact gut_lese σ Λ _ e.orte_darf hh.heldIn
-  | .retWhyScoped .., σ, ρ, hbo, hh, σ', h => by
-      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
+      exact gutRet_retScoped R.scopes (gut_lese σ Λ _ e.orte_darf hh.heldIn)
+  | .retWhyScoped _ R, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
+      exact gutRet_retWhyScoped σ R.scopes
   | .retWhy .., σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, σ, ρ, hbo, hh, σ', h => by

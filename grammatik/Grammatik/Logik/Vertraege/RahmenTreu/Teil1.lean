@@ -18,6 +18,49 @@ variable {D : Deklaration} {V : Vertrag D}
 def Treu (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop :=
   Rahmen W G σ σ' ∧ σ'.haelt = σ.haelt
 
+/-- Release-aware frame for scoped returns: the frame plus a lock release. -/
+def TreuRet (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop :=
+  Rahmen W G σ σ' ∧ ∃ Ls : List D.Lock, σ'.haelt = Ls.foldl (fun h L => h.erase L) σ.haelt
+
+theorem TreuRet.refl (W G) (σ : World D) : TreuRet W G σ σ :=
+  ⟨Rahmen.refl _ _ _, ⟨[], rfl⟩⟩
+
+theorem Treu.transRet {W G} {a b c : World D} (h1 : Treu W G a b) (h2 : TreuRet W G b c) :
+    TreuRet W G a c := by
+  obtain ⟨Ls, hLs⟩ := h2.2
+  exact ⟨h1.1.trans h2.1, ⟨Ls, by rw [hLs, h1.2]⟩⟩
+
+/-- Single-erase commutes: erasing `M` then `L` is erasing `L` then `M`. -/
+theorem erase_comm_single (L M : D.Lock) (h : List D.Lock) :
+    (h.erase M).erase L = (h.erase L).erase M := by
+  rw [List.erase_comm]
+
+/-- Fold-erase commutes with one more erase. -/
+theorem erase_fold_comm (L : D.Lock) (Ms : List D.Lock) (h : List D.Lock) :
+    (Ms.foldl (fun h M => h.erase M) h).erase L =
+      Ms.foldl (fun h M => h.erase M) (h.erase L) := by
+  induction Ms generalizing h with
+  | nil => rfl
+  | cons M Ms ih =>
+      simp only [List.foldl_cons]
+      rw [ih]
+      rw [List.erase_comm]
+
+/-- Taking `L` then releasing `Ls` and `L` is releasing `Ls`. -/
+theorem erase_nimmt_gibt' (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) :
+    (Ls.foldl (fun h M => h.erase M) (L :: h)).erase L =
+      Ls.foldl (fun h M => h.erase M) h := by
+  induction Ls generalizing h with
+  | nil => exact List.erase_cons_head L h
+  | cons M Ms ih =>
+      simp only [List.foldl_cons]
+      by_cases heq : M = L
+      · subst heq
+        simp only [List.erase_cons_head]
+        rw [erase_fold_comm]
+      · simp only [List.erase_cons_tail _ (Ne.symm heq)]
+        exact ih _
+
 theorem Treu.refl (W G) (σ : World D) : Treu W G σ σ := ⟨Rahmen.refl _ _ _, rfl⟩
 
 theorem Treu.trans {W G} {a b c : World D} (h1 : Treu W G a b) (h2 : Treu W G b c) :
@@ -93,13 +136,55 @@ theorem treu_nimmt_gibt {W G} (σ σ1 : World D) (L : D.Lock)
     simp only [World.haelt, World.nimmt, offen] at this
     rw [this]; exact List.erase_cons_head _ _
 
+/-- `locks L { … }` with a releasing body (no rank premise, like `treu_nimmt_gibt`). -/
+theorem treu_nimmt_gibtRet {W G} (σ σ1 : World D) (L : D.Lock)
+    (h : TreuRet W G (σ.nimmt L) σ1) : TreuRet W G σ (σ1.gibt L) := by
+  obtain ⟨Ls, hLs⟩ := h.2
+  refine ⟨?_, ?_⟩
+  · exact (rahmen_gleich (W := W) (G := G) (σ := σ) (σ' := σ.nimmt L) rfl rfl).trans
+      (h.1.trans (rahmen_gleich rfl rfl))
+  · refine ⟨Ls, ?_⟩
+    show (offen σ1.spur).erase L = Ls.foldl (fun h M => h.erase M) (offen σ.spur)
+    have e1 : σ1.haelt = Ls.foldl (fun h M => h.erase M) (L :: σ.haelt) := hLs
+    have e2 : σ1.haelt = Ls.foldl (fun h M => h.erase M) (offen (σ.nimmt L).spur) := by
+      simp only [World.haelt, World.nimmt, offen] at e1 ⊢
+      exact e1
+    have e3 : (offen σ1.spur).erase L = Ls.foldl (fun h M => h.erase M) (offen σ.spur) := by
+      have := e2
+      simp only [World.haelt] at e1
+      rw [e1]
+      exact erase_nimmt_gibt' L Ls (offen σ.spur)
+    exact e3
+
+/-- Guard for `TreuRet`: `GutRet` is at least `TreuRet`. -/
+theorem GutRet.treu {W G} {a b : World D} (h : GutRet W G a b) : TreuRet W G a b :=
+  ⟨h.1, h.2.1⟩
+
+/-- A read followed by releases is releasing with exactly those scopes (frame-only). -/
+theorem treuRet_retScoped {W G} {σ σ1 : World D} (Ls : List D.Lock)
+    (hl : Treu W G σ σ1) : TreuRet W G σ (Ls.foldl World.gibt σ1) := by
+  refine ⟨hl.1.trans (rahmen_gibt_foldl σ1 Ls), ⟨Ls, ?_⟩⟩
+  rw [haelt_gibt_foldl, hl.2]
+
+/-- A release alone is releasing with exactly those scopes (frame-only). -/
+theorem treuRet_retWhyScoped {W G} (σ : World D) (Ls : List D.Lock) :
+    TreuRet W G σ (Ls.foldl World.gibt σ) := by
+  refine ⟨rahmen_gibt_foldl σ Ls, ⟨Ls, ?_⟩⟩
+  rw [haelt_gibt_foldl]
+
 /-! ## 3. Outcomes -/
 
 def TreuAusgang (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : Ausgang V l Γ) : Prop :=
-  ∀ σ', o.welt = some σ' → Treu W G σ σ'
+  ∀ σ', o.welt = some σ' →
+    match o with
+    | .zurueck _ _ | .why _ _ => TreuRet W G σ σ'
+    | _ => Treu W G σ σ'
 
 def TreuEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAusgang V l Γ) : Prop :=
-  ∀ σ', o.welt = some σ' → Treu W G σ σ'
+  ∀ σ', o.welt = some σ' →
+    match o with
+    | .zurueck _ _ | .why _ _ => TreuRet W G σ σ'
+    | _ => Treu W G σ σ'
 
 theorem TreuAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
     (h : TreuAusgang W G σ o) : TreuAusgang W G σ o.schrumpf := by
@@ -124,18 +209,49 @@ theorem TreuEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : Treu
     (subst hs; exact h _ rfl)
 
 theorem TreuAusgang.vor {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
-    (h1 : Treu W G σ σ1) (h : TreuAusgang W G σ1 o) : TreuAusgang W G σ o :=
-  fun σ' hs => h1.trans (h σ' hs)
+    (h1 : Treu W G σ σ1) (h : TreuAusgang W G σ1 o) : TreuAusgang W G σ o := by
+  intro σ' hs
+  cases o with
+  | ok _ _ => exact h1.trans (h _ hs)
+  | zurueck _ _ => exact h1.transRet (h _ hs)
+  | why _ _ => exact h1.transRet (h _ hs)
+  | leave _ _ _ => exact h1.trans (h _ hs)
+  | next _ _ _ => exact h1.trans (h _ hs)
+  | logik _ => cases hs
+  | hardware _ => cases hs
 
 theorem TreuEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (h1 : Treu W G σ σ1) (h : TreuEnd W G σ1 o) : TreuEnd W G σ o :=
-  fun σ' hs => h1.trans (h σ' hs)
+    (h1 : Treu W G σ σ1) (h : TreuEnd W G σ1 o) : TreuEnd W G σ o := by
+  intro σ' hs
+  cases o with
+  | zurueck _ _ => exact h1.transRet (h _ hs)
+  | why _ _ => exact h1.transRet (h _ hs)
+  | leave _ _ _ => exact h1.trans (h _ hs)
+  | next _ _ _ => exact h1.trans (h _ hs)
+  | logik _ => cases hs
+  | hardware _ => cases hs
 
 theorem TreuAusgang.gibt {W G} {σ : World D} (L : D.Lock) {o : Ausgang V l Γ}
     (h : TreuAusgang W G (σ.nimmt L) o) : TreuAusgang W G σ (o.mapWelt (·.gibt L)) := by
   intro σ' hs
-  cases o <;> simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
-    (subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl))
+  cases o with
+  | ok _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl)
+  | zurueck _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact treu_nimmt_gibtRet _ _ L (h _ rfl)
+  | why _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact treu_nimmt_gibtRet _ _ L (h _ rfl)
+  | leave _ _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl)
+  | next _ _ _ =>
+      simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq] at hs ⊢
+      subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl)
+  | logik _ => simp only [Ausgang.welt, Ausgang.mapWelt, reduceCtorEq] at hs
+  | hardware _ => simp only [Ausgang.welt, Ausgang.mapWelt, reduceCtorEq] at hs
 
 /-! ## 4. The three loop combinators -/
 
