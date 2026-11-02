@@ -56,6 +56,18 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.BindingProbes.unselected_metal_preserved_zeuge
 #print axioms Gabbro.Stage0.Senke.bild_ok_u
 #print axioms Gabbro.Stage0.Senke.bild_ok
+-- C05 shared normal-return epilogue and concrete global/mixed carrier witnesses.
+#print axioms Gabbro.Stage0.Compiled.invariants
+#print axioms Gabbro.Stage0.Senke.lowInvs_scratch
+#print axioms Gabbro.Stage0.Senke.owedWorld_at
+#print axioms Gabbro.Stage0.Senke.lowInvs_ok
+#print axioms Gabbro.Stage0.Senke.lowPost_ok
+#print axioms Gabbro.Stage0.Senke.InvariantProbe.lowPost_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.InvariantProbe.ensures_first_zeuge
+#print axioms Gabbro.Stage0.Senke.InvariantProbe.first_failure_zeuge
+#print axioms Gabbro.Stage0.Senke.InvariantProbe.lowFun_zeuge
+#print axioms Gabbro.Stage0.Senke.InvariantProbe.reason_bypasses_epilogue_zeuge
+#print axioms Gabbro.Stage0.Senke.InvariantProbe.unsupported_predicate_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.lowFun_spec
 #print axioms Gabbro.Stage0.Senke.lowS_ok
 #print axioms Gabbro.Stage0.Senke.lowB_ok

@@ -120,8 +120,8 @@ def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String)
         " has an unsupported postcondition; old table indices must be closed arithmetic expressions"
       else if (EntrySnapshots.capture Y (oldCells (P.ensures g)) FB).isNone then
         " has an entry snapshot outside the checked storage layout"
-      else if !(D.invs.filter (schuldet g)).isEmpty then
-        " owes invariants whose return checks are outside the IR fragment"
+      else if (lowInvs Y P g (functionFrame P g).internalStatus D.invs).isNone then
+        " owes an invariant whose predicate is outside the IR expression fragment"
       else " uses a form outside the IR fragment")
 
 /-- Every function of `fs`, lowered with the addresses `A`. -/

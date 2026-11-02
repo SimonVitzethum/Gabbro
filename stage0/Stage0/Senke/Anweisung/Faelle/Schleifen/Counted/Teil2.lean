@@ -92,12 +92,13 @@ theorem CountedStops.forget {n t m c} (h : CountedStops n t m c) : Stops t m c :
 /-- Return costs use the caller endpoint and the canonical return ABI. -/
 def CountedRetZ (n : Nat) (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
     (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
-  if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
-  then CountedStops n t m 102
+  if returnFault P f σ0 σ' ρ0 v ≠ 0
+  then CountedStops n t m (returnFault P f σ0 σ' ρ0 v)
   else ∃ m', Counted n t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
     (ResultAt L m' fp (FB + contextWords (D.params f)) (D.erg f) v ∧
       ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
-      ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧ WeltAt m' L σ'
+      ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧
+      WeltAt m' L (owedWorld P f (σ'.lese (vertragVon D f).ende (P.ensures f).orte))
 
 def CountedRetWhy (n : Nat) (L : Lay D) (f : D.Fn) (fp : Runner.W) (K : Nat) (rp cfp : Runner.W)
     (t : T) (m : Runner.Mem) (σ : World D) (r : Fin (D.gruende f)) : Prop :=

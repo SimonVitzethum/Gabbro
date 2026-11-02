@@ -1,6 +1,7 @@
 /- Evaluate the complete result, check ensures, then publish through the shared ABI. -/
 module
 public import Stage0.Senke.Rueckkehr.Publish
+public import Stage0.Senke.Rueckkehr.Epilogue
 @[expose] public section
 
 
@@ -14,7 +15,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo reserved : Nat
     {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)}
     {cens : List II} {tens : Nat}
     (hlo0 : lo = (functionFrame P f).internalResult)
-    (hens : lowEns L (functionFrame P f) (P.ensures f)
+    (hens : lowPost L (functionFrame P f) P f
       (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg)
     {ce : List II} {te : Nat}
@@ -56,7 +57,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo reserved : Nat
   change PreS L m1 _ fp K (frei Γ reserved) (retC layout (frei Γ reserved) cens) ρ reserved at hp1
   have hq : PreS L m1 (pc + BitVec.ofNat 64 (16 * ce.length)) fp K (frei Γ reserved)
       (copyWords (resultWords (D.erg f)) lo (frei Γ reserved) ++
-        (cens ++ (guardC flag 102 flag ++ publishC layout))) ρ reserved := by
+        (cens ++ publishC layout)) ρ reserved := by
     simpa only [retC, result, internal, status, List.append_assoc] using hp1
   obtain ⟨m2, s2, a2exact, value2⟩ := copyResult_run (L := L) hq.frame hp.small
     (by omega) (by simpa only [resultWords_vertragVon] using (show frei Γ reserved + resultWords (vertragVon D f).erg ≤ K by omega))
@@ -77,38 +78,26 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo reserved : Nat
       layout.ensReserved :=
     ⟨by omega, hp.small, frame2, codeAt_left code2,
       codeFar_left (by rw [← List.length_append]; exact far2), ensEnv, trivial, wstab_true _ _⟩
-  obtain ⟨m3, s3, a3, b, read, encoded⟩ := lowEns_ok layout σ0
-    ((σ.lese Λ e.orte).lese (vertragVon D f).ende (P.ensures f).orte)
-    (fun _ h => h) hl (P.ensures f) flag cens tens hens (by omega) m2 _ _
-    (PreS.welt ensPre (Nat.le_refl K) world2 hl hwl) kept2.entry rfl |>.word trivial
-  have frame3 := frame2.agree a3
-  have far3 := codeFar_tail (a := cens) far2
-  have code3 := (codeAt_right code2).agree a3 far3
-  have guardFar := codeFar_left (by rw [← List.length_append]; exact far3)
-  simp only [Enc] at encoded
+  have postRun := lowPost_ok P f σ0 (σ.lese Λ e.orte) ρ0
+    (evalErg (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ)
+    hens (by omega) (by omega) hl hwl m2 _ ensPre world2 kept2.entry
   simp only [RetZ0]
   split
-  · next falseEns =>
-    have zero : b = 0 := by
-      split at encoded
-      · next h => exact (Bool.false_ne_true (falseEns.symm.trans h)).elim
-      · exact encoded
-    have stopped := guard_stop (codeAt_left code3) guardFar frame3
-      (by omega) (by omega) hp.small (by decide) (by simpa only [zero] using read)
-    exact Stops.prefix (s1.trans (s2.trans s3)) stopped
-  · next trueEns =>
-    have one : b = 1 := by
-      split at encoded
-      · exact encoded
-      · next h => simp only [Bool.not_eq_true] at h; exact absurd h trueEns
-    have guardRun := guard_pass (codeAt_left code3) (by omega) read (by rw [one]; decide)
+  · next failed =>
+    rw [if_pos failed] at postRun
+    exact Stops.prefix (s1.trans s2) postRun
+  · next restored =>
+    rw [if_neg restored] at postRun
+    obtain ⟨m3, s3, a3⟩ := postRun
+    have frame3 := frame2.agree a3
+    have far3 := codeFar_tail (a := cens) far2
+    have code3 := (codeAt_right code2).agree a3 far3
     have value3 := value2.agree a3 frame2 (by omega) (by omega)
     have kept3 := kept2.agree a3 frame2 (by omega)
     obtain ⟨m4, published, changed, returned, mirror, normal⟩ :=
-      publishResult_run layout frame3 hp.small topPublish
-        (codeAt_right code3) (codeFar_tail far3)
+      publishResult_run layout frame3 hp.small topPublish code3 far3
         (by rw [internal]; exact value3) kept3.r0 kept3.r1
-    refine ⟨m4, s1.trans (s2.trans (s3.trans (guardRun.trans published))),
+    refine ⟨m4, s1.trans (s2.trans (s3.trans published)),
       (a1.mono (by omega)).trans ((a2.mono (by omega)).trans ((a3.mono (by omega)).trans changed)),
       returned, mirror, normal⟩
 
@@ -116,7 +105,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo reserved : Nat
 theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo reserved : Nat}
     {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = (functionFrame P f).internalResult)
-    (hens : lowEns L (functionFrame P f) (P.ensures f)
+    (hens : lowPost L (functionFrame P f) P f
       (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {Γ : Ctx} {Λ : List (Res D)} (e : ErgExpr D Γ Λ (vertragVon D f).erg)
     {ce : List II} {te : Nat}
@@ -148,6 +137,7 @@ theorem ret_ok {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo reserved : N
     rw [if_neg h] at run
     obtain ⟨m', steps, changed, result⟩ := run
     exact ⟨m', steps, agreeW_of (Agree.widen changed hks), result,
-      weltAt_stab hW.lay hW.lo m m' hWa (changed.mono (Nat.zero_le _))⟩
+      owedWorld_at P f _ m'
+        (weltAt_stab hW.lay hW.lo m m' hWa (changed.mono (Nat.zero_le _)))⟩
 
 end Gabbro.Stage0.Senke

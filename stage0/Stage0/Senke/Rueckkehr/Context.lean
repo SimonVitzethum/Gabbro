@@ -17,26 +17,27 @@ variable [Kern]
 variable {D : Deklaration} {L : Lay D}
 
 /-- What the code from `t` does when G returns `v` in the world `σ'` from the body of `f`, without the world:
-    failed ensures stops with 102; success publishes the complete canonical result,
+    failed ensures stops with 102, the first failed owed invariant with 103; success publishes the complete canonical result,
     its first-word mirror and normal status while preserving the two return addresses. -/
 def RetZ0 (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
     (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
-  if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
-  then Stops t m 102
+  if returnFault P f σ0 σ' ρ0 v ≠ 0
+  then Stops t m (returnFault P f σ0 σ' ρ0 v)
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ Agree fp 2 K m m' ∧
     ResultAt L m' fp (FB + contextWords (D.params f)) (D.erg f) v ∧
       ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
       ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))
 
-/-- `RetZ0` and the world `σ'` in memory after the return (`WeltAt`). -/
+/-- `RetZ0` and the exact world after the ensures and owed-invariant read phases. -/
 def RetZ (L : Lay D) (P : Programm D) (f : D.Fn) (σ0 : World D) (ρ0 : Env D (D.params f)) (fp : Runner.W) (K : Nat)
     (rp cfp : Runner.W) (t : T) (m : Runner.Mem) (σ' : World D) (v : ErgVal D (D.erg f)) : Prop :=
-  if wahr? (eval σ0 (P.ensures f) (σ'.lese (vertragVon D f).ende (P.ensures f).orte) (ergEnv (D.erg f) v ρ0)) = false
-  then Stops t m 102
+  if returnFault P f σ0 σ' ρ0 v ≠ 0
+  then Stops t m (returnFault P f σ0 σ' ρ0 v)
   else ∃ m', Star t m ⟨rp, cfp⟩ m' ∧ AgreeW L fp 2 K m m' ∧
     (ResultAt L m' fp (FB + contextWords (D.params f)) (D.erg f) v ∧
       ReturnMirror m' fp (FB + contextWords (D.params f)) ∧
-      ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧ WeltAt m' L σ'
+      ReturnFlag m' fp (contextWords (D.params f)) true (returnWords (D.erg f) (D.gruende f))) ∧
+      WeltAt m' L (owedWorld P f (σ'.lese (vertragVon D f).ende (P.ensures f).orte))
 
 theorem RetZ.prefix {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D} {ρ0 : Env D (D.params f)} {fp : Runner.W}
     {K : Nat} {rp cfp : Runner.W} {t0 t : T} {m0 m : Runner.Mem} {σ' : World D} {v : ErgVal D (D.erg f)}

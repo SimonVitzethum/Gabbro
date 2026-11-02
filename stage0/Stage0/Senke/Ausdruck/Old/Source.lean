@@ -127,6 +127,18 @@ def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
   let es ← collect u.fns.length (EnsTy u) (atFunction items u P)
   pure {P with ensures := es}
 
+/-- Entry-postcondition restoration preserves the exact invariant family. -/
+theorem restore_invariante (items : List SItemTief) (u : UProg)
+    (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
+    Q.invariante = P.invariante := by
+  unfold restore at h
+  cases hs : collect u.fns.length (EnsTy u) (atFunction items u P) with
+  | error e => simp [hs] at h
+  | ok es =>
+    simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
+    subst Q
+    rfl
+
 /-- The full goal-theorem checker, on the final restored program and all original enumerations. -/
 def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool := do
   if !sperrInvsOk u then throw "lock invariant without G form"

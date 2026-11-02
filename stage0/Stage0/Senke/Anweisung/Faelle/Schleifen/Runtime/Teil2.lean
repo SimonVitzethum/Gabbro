@@ -25,7 +25,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
     {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = (functionFrame P f).internalResult)
-    (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)
     {cc cb : List II} {tc tb : Nat}
@@ -81,7 +81,7 @@ theorem forever_counter_loop {D : Deklaration} {L : Lay D}
     {P : Programm D} {f : D.Fn} {fp rp cfp : W} {K Ks lo : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = (functionFrame P f).internalResult)
-    (hens : lowEns L (functionFrame P f) (P.ensures f) (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
+    (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {counter one : Nat}
     {reserved : Nat} {pr : List Nat} {ex : Int × Int} {Γ : Ctx} {Λ : List (Res D)}
     (inv : Expr D Γ Λ .bool) (body : Block D (vertragVon D f) true Γ Λ Λ)

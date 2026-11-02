@@ -92,7 +92,7 @@ def Emitted.Simulates [Runner.IR.Kern] {src : String} {K : Nat} {options : Profi
         (Senke.hwCode h)
     | _ => False
 
-/-- Original-source canonical elaboration and execution of that identical program by this image,
+/-- Original-source canonical elaboration, exact invariant carriers/read bounds, and execution\n    of that identical program (including ordered normal-return restoration) by this image,
     under the existing image theorem's gate/view and initial-memory contracts. -/
 def Emitted.Correct [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.Options} (output : Emitted src K options) : Prop :=
   CanonicalSourceProgram output.compiled ∧
@@ -119,7 +119,7 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
   cases outcome <;> exact hr
 
 /-- The actual successful CLI byte result realizes its original source's canonical program.
-    This is conditional on successful compilation and inherited runner contracts, not total coverage. -/
+    This includes C05 through `compile_source_program` and the generic return epilogue theorem.\n    Reason exits keep the original program and its separate `InvGutGrundA` user duty.\n    This is conditional on successful compilation and inherited runner contracts, not total coverage. -/
 theorem irBild_correct [Runner.IR.Kern] [Senke.CloneOK] (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
     ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.image.bytes = bytes ∧ output.Correct := by
