@@ -11,6 +11,8 @@ public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Welt.Spans.CellCode
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 
@@ -67,8 +69,8 @@ theorem resizeIntegerL_top {lo hi lo' hi' : Int} {d top : Nat}
 
 /-- The code of a binary operation stops above `d` once its first operand does. -/
 theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {a : Expr D Γ Λ τa} {b : Expr D Γ Λ τb} {o d : Nat}
-    {c : List II} {top : Nat} (ht : ∀ c t, lowE L (reserved := reserved) a d = some (c, t) → d < t)
-    (h : (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) : d < top := by
+    {c : List II} {top : Nat} (ht : ∀ c t, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (c, t) → d < t)
+    (h : (do let ca ← lowE (currentOld := currentOld) L (reserved := reserved) a d; let cb ← lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1); pure (bin2 o d ca cb)) = some (c, top)) : d < top := by
   simp only [bind, Option.bind_eq_some_iff] at h
   obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, _, he⟩ := h
   simp only [bin2, pure, Option.some.injEq, Prod.mk.injEq] at he
@@ -77,7 +79,7 @@ theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {
 
 theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
     {a : Option Ty} → (e : NutzlastExpr D Γ Λ a) → (d : Nat) → (c : List II) →
-    (top : Nat) → lowN L (reserved := reserved) tag e d = some (c, top) → d < top
+    (top : Nat) → lowN (currentOld := currentOld) L (reserved := reserved) tag e d = some (c, top) → d < top
   | _, .empty, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | some τ, .val e, d, c, top, h => by
@@ -88,7 +90,7 @@ theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
       simp only [packSum, bin2, Prod.mk.injEq] at he
       omega
     | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ => by
-      have hnone : lowN L (reserved := reserved) tag e d = none := rfl
+      have hnone : lowN (currentOld := currentOld) L (reserved := reserved) tag e d = none := rfl
       rw [hnone] at h
       cases h
 

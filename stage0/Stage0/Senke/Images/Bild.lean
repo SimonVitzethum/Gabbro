@@ -117,7 +117,7 @@ def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String)
   | some ct => .ok ct
   | none => .error ("ir: the function " ++ name g ++
       if (lowEns Y (functionFrame P g) (P.ensures g) (functionFrame P g).internalStatus).isNone then
-        " has an unsupported postcondition; old table indices must be closed arithmetic expressions"
+        " has an unsupported postcondition; oldS requires a checked index and an entry column within the frame limit"
       else if (EntrySnapshots.capture Y (oldCells (P.ensures g)) FB).isNone then
         " has an entry snapshot outside the checked storage layout"
       else if (lowInvs Y P g (functionFrame P g).internalStatus D.invs).isNone then

@@ -6,6 +6,8 @@ public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Aggregat.Wort
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -65,11 +67,11 @@ theorem slotRefC_ok {Γ : Ctx} {t : D.Tab} {f : D.Feld t} {n k : Nat}
 theorem refEq_ok {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {σ₀ σ : World D}
     {fp pc : Runner.W} {K d top : Nat} {c : List II} {m : Runner.Mem} {ρ : Env D Γ}
     {W : Runner.Mem → Prop} (a b : Expr D Γ Λ (.ref n))
-    (iha : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.ref n) (eval σ₀ a σ ρ)))
-    (ihb : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
+    (ihb : ∀ cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb (Enc L (.ref n) (eval σ₀ b σ ρ)))
-    (h : lowE L (reserved := reserved) (.refEq a b) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.refEq a b) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (Enc L .bool (eval σ₀ (.refEq a b) σ ρ)) := by
   refine wordL_ok h hK iha ihb (g := fun x y => some (Runner.IR.bool (x == y))) ?_ rfl (by decide) hp

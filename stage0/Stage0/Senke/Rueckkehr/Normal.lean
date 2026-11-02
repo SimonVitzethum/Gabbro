@@ -50,7 +50,7 @@ theorem ret_ok0 {P : Programm D} {f : D.Fn} {fp : Runner.W} {K lo reserved : Nat
     simpa only [retTop, status] using topPublish
   have hspan := lowErg_span (reserved := reserved) e _ _ _ he
   have hpw := PreS.welt hp.left (Nat.le_refl K) hWa hl hwl
-  obtain ⟨m1, s1, a1, value1⟩ := lowErg_ok (reserved := reserved)
+  obtain ⟨m1, s1, a1, value1⟩ := lowErg_ok (same := rfl) (reserved := reserved)
     (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hl e _ ce te he (by omega) m pc ρ hpw
   have world1 := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
   have hp1 := hp.next a1 (Nat.le_refl _) (by omega)

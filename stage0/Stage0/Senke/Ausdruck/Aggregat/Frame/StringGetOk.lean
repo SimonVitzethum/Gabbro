@@ -5,6 +5,8 @@ public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
 public import Stage0.Senke.Ausdruck.Tops.Eng
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -219,14 +221,14 @@ theorem strGetWide_ok {n : Nat} {lo hi : Int} (vs : Wert D (.str n)) (vi : Zahl 
 
 
 theorem strGet_ok {n : Nat} {lo hi : Int} (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi))
-    (ihs : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihs : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
-    (ihi : ∀ ca ta, lowE L (reserved := reserved) i d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihi : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) i d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.int lo hi) (eval σ₀ i σ ρ))
-    (ihl : ∀ ca ta, lowE L (reserved := reserved) i (d + n + 2) = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihl : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) i (d + n + 2) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + n + 2) ca ρ W reserved →
         ValueOk L m pc fp K (d + n + 2) ca (.int lo hi) (eval σ₀ i σ ρ))
-    (h : lowE L (reserved := reserved) (.strGet s i) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.strGet s i) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.int 0 255) (eval σ₀ (.strGet s i) σ ρ) := by
   simp only [lowE_eqs] at h

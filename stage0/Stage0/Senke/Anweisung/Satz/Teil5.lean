@@ -92,8 +92,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       rw [← BitVec.ofInt_natCast, Int.toNat_of_nonneg hn0]
     obtain ⟨m', s', a', hw'⟩ := slotStoreC_ok (σ := σE) (kn := (eval σE i σE ρ).n.toNat) hc (by omega)
       (L.bounded hkc) hW.lay hW.dis hW.lo (PreS.welt hp hks hWaE hW.lay hW.lo)
-      (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
-      (fun m pc hp => ((lowE_ok σE σE (fun _ h => h) hW.lay i _ ci1 ti hi (by omega) m pc ρ hp).word trivial).mono
+      (fun m pc hp => lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
+      (fun m pc hp => ((lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay i _ ci1 ti hi (by omega) m pc ρ hp).word trivial).mono
         fun w hw => by simp only [Enc] at hw; rw [hw, toWord])
     rw [Int.toNat_of_nonneg hn0] at hw'
     exact ⟨m', s', (a'.widen hks).mono hlo2,

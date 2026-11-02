@@ -255,7 +255,7 @@ theorem wortTy_spec {τ : Ty} (h : wortTy τ = true) :
   exact of_decide_eq_true h
 
 /-- The arguments of a gate into the slots from `d`, in order; nothing below `d` changed. -/
-theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) {same : σ₀ = σ}
     (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (d : Nat) → (c : List II) → (top : Nat) →
     lowR L args d reserved = some (c, top) → top ≤ K → d + τs.length ≤ K →
@@ -271,7 +271,7 @@ theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W}
     split at h
     · next hτ =>
       simp only [List.length_cons] at hL
-      obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL hLay rest (d + 1) c top h hK (by omega) m pc ρ (hp.up (by omega))
+      obtain ⟨m2, s2, a2, hA⟩ := lowR_ok (same := same) σ₀ σ hWL hLay rest (d + 1) c top h hK (by omega) m pc ρ (hp.up (by omega))
       refine ⟨m2, s2, a2.mono (by omega), ?_⟩
       simp only [evalArgs, ArgsW]
       refine ⟨?_, argsW_congr _ (fun j _ => by simp only [show d + 1 + j = d + (j + 1) by omega]) hA⟩
@@ -285,9 +285,9 @@ theorem lowR_ok {reserved : Nat} {Λ : List (Res D)} {L : Lay D} {fp : Runner.W}
         obtain ⟨rfl, rfl⟩ := hc
         simp only [List.length_cons] at hL
         have hroom := hp.frame.room
-        obtain ⟨m1, s1, a1, w, hw, hen⟩ := (lowE_ok (fp := fp) (K := K) σ₀ σ hWL hLay e d ce te he (by omega) m pc ρ hp.left).word (wortTy_spec hwort).2
+        obtain ⟨m1, s1, a1, w, hw, hen⟩ := (lowE_ok (same := by intro _; exact same) (fp := fp) (K := K) σ₀ σ hWL hLay e d ce te he (by omega) m pc ρ hp.left).word (wortTy_spec hwort).2
         have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := d + 1) (by omega)
-        obtain ⟨m2, s2, a2, hA⟩ := lowR_ok σ₀ σ hWL hLay rest (d + 1) cr tr hr (by omega) (by omega) m1 _ ρ hp1
+        obtain ⟨m2, s2, a2, hA⟩ := lowR_ok (same := same) σ₀ σ hWL hLay rest (d + 1) cr tr hr (by omega) (by omega) m1 _ ρ hp1
         refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans (a2.mono (by omega)), ?_⟩
         simp only [evalArgs, ArgsW]
         refine ⟨?_, ?_⟩

@@ -132,7 +132,7 @@ theorem callElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       (receiveC (D.signatur g) (frei Γ reserved) ++ [ci 19 (frei Γ reserved + FB + (contextWords (D.params g)) + returnWords (D.erg g) (D.gruende g)) (16 * (cr.length + 2)) 0] ++
        cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [Deklaration.params, Deklaration.erg, Deklaration.gruende, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
-  have hc := callC_ok hS hA args σ σ hca (by omega) hpc.left hu hW hWa
+  have hc := callC_ok (same := rfl) hS hA args σ σ hca (by omega) hpc.left hu hW hWa
   cases hr : R g σ (evalArgs σ args σ ρ) with
   | ok σ' v =>
     rw [hr] at hc

@@ -65,7 +65,7 @@ theorem scalarCompareL_ok_zeuge [Kern] :
       unfold CodeFar
       decide +kernel
     · intro _ x; nomatch x
-  exact lowE_ok FnptrProben.world FnptrProben.world (fun _ h => h) FnptrProben.call_win.lay
+  exact lowE_ok (same := by intro _; rfl) FnptrProben.world FnptrProben.world (fun _ h => h) FnptrProben.call_win.lay
     expression 4 compiled.1 compiled.2 lowered (by rw [code_top]; decide) memory 2048 Env.nil pre
 
 end Gabbro.Stage0.Senke

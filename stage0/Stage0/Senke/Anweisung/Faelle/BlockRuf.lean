@@ -35,7 +35,7 @@ theorem blockCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
   have hFramePrefix := functionFrame_prefix P f
   have hks := hW.ks
   have hct : frei Γ reserved + FB + (contextWords (D.params callee)) + 1 ≤ callTop callee (frei Γ reserved) ta := by simp only [callTop]; omega
-  have hc := callC_ok hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
+  have hc := callC_ok (same := rfl) hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
   simp only [execBlock]
   generalize R callee (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
   cases o with
