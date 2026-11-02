@@ -3,6 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil3
+public import Grammatik.Parser.Elab.UebersetzeAllg.Eingebaut
 
 @[expose] public section
 
@@ -174,6 +175,12 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       else .error "narrowing to an empty range"
     | .ok _ => .error "narrowing of a non-number"
     | .error e => .error e
+  | .ib1 bi w a =>
+    match zahlVon (lowWertE u Γ Λ fn er a) with
+    | .error e => .error e
+    | .ok x => (lowIb1 bi w x).map LowSide.wert
+  | .ib2 bi w a b =>
+    (lowZwei (lowIb2 bi w) (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
     slot reads, `old` and `result` travel (the integer values of `lowWertE`). -/

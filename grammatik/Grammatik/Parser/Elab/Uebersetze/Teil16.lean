@@ -35,6 +35,8 @@ def beqUEns : UEns → UEns → Bool
   | .filtered a t x f r s b, .filtered c u y g v z d =>
       a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
   | .istSome o m, .istSome p n => o == p && m == n
+  | .zaehle o l t x b s, .zaehle o' l' t' x' b' s' =>
+      strEq o o' && l == l' && strEq t t' && strEq x x' && beqUEns b b' && beqUSide s s'
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool

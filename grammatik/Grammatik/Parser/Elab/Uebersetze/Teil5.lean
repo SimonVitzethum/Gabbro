@@ -64,6 +64,41 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     else .error ("lock unknown: " ++ name)
   | .bin op l r =>
     if uIstVgl op then
+      match l, r with
+      -- C13: `count x in slots of T : p` against a number side, in either order (`Expr.count`)
+      | .ext .count [x, dk] [subject, body], o =>
+        if !strEq dk "slots" then .error "source export: count domain lacks a canonical G expansion"
+        else
+          match subject with
+          | .variable tn =>
+            match uTabNr ctx.tabs tn with
+            | .error e => .error e
+            | .ok (num, c) =>
+              match uSichert { ctx with names := x :: ctx.names, kinds := .index num :: ctx.kinds,
+                                        types := Ty.index c :: ctx.types, bits := 0 :: ctx.bits } body with
+              | .error e => .error e
+              | .ok p =>
+                match uSeite ctx o with
+                | .error e => .error e
+                | .ok s => .ok (.zaehle op true tn x p s)
+          | _ => .error "source export: slots domain requires an explicit table"
+      | o, .ext .count [x, dk] [subject, body] =>
+        if !strEq dk "slots" then .error "source export: count domain lacks a canonical G expansion"
+        else
+          match subject with
+          | .variable tn =>
+            match uTabNr ctx.tabs tn with
+            | .error e => .error e
+            | .ok (num, c) =>
+              match uSichert { ctx with names := x :: ctx.names, kinds := .index num :: ctx.kinds,
+                                        types := Ty.index c :: ctx.types, bits := 0 :: ctx.bits } body with
+              | .error e => .error e
+              | .ok p =>
+                match uSeite ctx o with
+                | .error e => .error e
+                | .ok s => .ok (.zaehle op false tn x p s)
+          | _ => .error "source export: slots domain requires an explicit table"
+      | _, _ =>
       match uSeite ctx l with
       | .error e => .error e
       | .ok a =>
@@ -130,6 +165,8 @@ def seiteAltErg : USide → Bool
   | .add a b | .sub a b | .mul a b | .band a b | .bor a b | .bxor a b | .div a b | .rem a b | .shl a b | .shr a b =>
     seiteAltErg a || seiteAltErg b
   | .conv _ _ a | .neg a => seiteAltErg a
+  | .ib1 _ _ a => seiteAltErg a
+  | .ib2 _ _ a b => seiteAltErg a || seiteAltErg b
   | _ => false
 
 /-- `old(..)` or `result` inside a predicate. -/
@@ -138,6 +175,7 @@ def ensAltErg : UEns → Bool
   | .and a b | .or a b | .imp a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
   | .alle _ _ b | .einige _ _ b | .filtered _ _ _ _ _ _ b | .arrayElements _ _ _ b => ensAltErg b
+  | .zaehle _ _ _ _ b o => ensAltErg b || seiteAltErg o
   | .ergB => true
   | _ => false
 

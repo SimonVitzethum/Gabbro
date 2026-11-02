@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Eingebaut
 
 @[expose] public section
 
@@ -104,7 +105,8 @@ def uTraegerIndex (ctx : UCtx) : SExpr → Bool
   | _ => false
 
 /-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
-    integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. -/
+    integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. C13 adds the closed integer builtins
+    (`+% -% *% <<% +|`, `clz ctz log2_floor popcount bswap rotl rotr`) at the declared storage width. -/
 def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Except String USide
   | .bin op a b =>
     if strEq op "+" || strEq op "-" || strEq op "*" || strEq op "&" || strEq op "|" || strEq op "^"
@@ -125,7 +127,21 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
           else if strEq op "%" then .ok (.rem x y)
           else if strEq op "<<" then .ok (.shl x y)
           else .ok (.shr x y)
-    else blatt (.bin op a b)
+    else
+      match uBinEin op with
+      | some bi =>
+        match uRechne ctx blatt a with
+        | .error e => .error e
+        | .ok x =>
+          match uRechne ctx blatt b with
+          | .error e => .error e
+          | .ok y =>
+            if bi == .addS then .ok (.ib2 bi 0 x y)
+            else
+              match uBreite ctx (.bin op a b) with
+              | some w => .ok (.ib2 bi w x y)
+              | none => .error "builtin of unknown width"
+      | none => blatt (.bin op a b)
   | .un "-" (.lit v) => .ok (.lit (-(Int.ofNat v)))
   | .un "-" a =>
     match uRechne ctx blatt a with
@@ -152,7 +168,29 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       match uRechne ctx blatt a with
       | .error e => .error e
       | .ok x => .ok (.conv lo hi x)
-    | .error _ => blatt (.call f [a])
+    | .error _ =>
+      match uBitEin f with
+      | some bi =>
+        match uRechne ctx blatt a with
+        | .error e => .error e
+        | .ok x =>
+          match uBreite ctx a with
+          | some w => .ok (.ib1 bi w x)
+          | none => .error "builtin of unknown width"
+      | none => blatt (.call f [a])
+  | .call f [a, b] =>
+    match uRotEin f with
+    | some bi =>
+      match uRechne ctx blatt a with
+      | .error e => .error e
+      | .ok x =>
+        match uRechne ctx blatt b with
+        | .error e => .error e
+        | .ok y =>
+          match uBreite ctx a with
+          | some w => .ok (.ib2 bi w x y)
+          | none => .error "builtin of unknown width"
+    | none => blatt (.call f [a, b])
   | .built "lenof" [a] =>
     match uRechne ctx blatt a with
     | .error e => .error e

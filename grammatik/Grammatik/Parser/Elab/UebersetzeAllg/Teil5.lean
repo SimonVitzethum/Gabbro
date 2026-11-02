@@ -115,6 +115,24 @@ def lowEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
         | .error e => .error e
         | .ok b => .ok (Expr.existsSlots (D := declOf u) t b hL)
       else .error "access without held guard"
+  | .zaehle op links tn x body other =>
+    match tabIdx u.tabs tn, ergAlsParam u fn er with
+    | .error e, _ => .error e
+    | _, .error e => .error e
+    | .ok t, .ok fnR =>
+      -- the count reads the cells its body reads, under the guards its body's own reads carry; the enumeration of the
+      -- indices reads none (`Expr.orte` of `count` is the body's)
+      if hc : 0 ≤ (declOf u).count t then
+        match lowEns u (.index ((declOf u).count t) :: Γ) Λ (fnR.mitIndex x t.val ((declOf u).count t)) none body,
+            lowSideEns u Γ Λ fn er other with
+        | .ok b, .ok o =>
+          let cnt : LowSide u Γ Λ :=
+            { range := (0, (((declOf u).count t).toNat : Int)),
+              term := Expr.count (D := declOf u) ((declOf u).count t).toNat
+                (umIdx (Int.toNat_of_nonneg hc).symm b) }
+          if links then lowVglSeiten op cnt o else lowVglSeiten op o cnt
+        | .error e, _ | _, .error e => .error e
+      else .error "table count is negative"
 
 /-- The `ensures` conjunction (empty is `.tru`). -/
 def lowEnsList (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))

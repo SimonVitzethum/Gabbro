@@ -21,6 +21,13 @@ inductive UIdx
   | param : String → UIdx
   deriving DecidableEq, Repr
 
+/-- C13: the closed integer builtins of the source (`+%`, `-%`, `*%`, `<<%`, `+|`, `clz`, `ctz`, `log2_floor`,
+    `popcount`, `rotl`, `rotr`, `bswap`). The storage width `W` rides with the use (`USide.ib1/ib2`), read from the
+    declaration, never from an interval. -/
+inductive UBi
+  | addW | subW | mulW | shlW | addS | clz | ctz | log2Floor | popcount | rotl | rotr | bswap
+  deriving DecidableEq, Repr
+
 /-- One side of an `ensures` comparison: a literal, a numeric
     parameter, a slot read through a pointer parameter (`slot`)
     or at a table (`tab`), the entry value (`alt`), or the
@@ -69,6 +76,11 @@ inductive USide
   /-- A number narrowed to `lo .. hi` where the guard of the branch it stands in says so (`Expr.eng`; the
       fallback is unreachable there): the binder of an `update` body. -/
   | eng : USide → Int → Int → USide
+  /-- C13: a closed integer builtin with one operand / two operands, at the declared storage width `W` in bits
+      (`0` where the operation carries none, `+|`). The lowering checks the operand ranges, the zero-excluding
+      scans, the shift amount and the full-word rotates before it builds a G term. -/
+  | ib1 : UBi → Nat → USide → USide
+  | ib2 : UBi → Nat → USide → USide → USide
   deriving DecidableEq, Repr
 
 /-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
@@ -119,6 +131,9 @@ inductive UEns
   | filtered : Bool → String → String → String → Bool → UIdx → UEns → UEns
   /-- Universal/existential iteration over the exact index domain of a fixed array. -/
   | arrayElements : Bool → USide → String → UEns → UEns
+  /-- C13: `count x in slots of T : p` compared with a number side (`Expr.count`): the operator, whether the count
+      stands on the left, the table, the binder, the body and the other side. -/
+  | zaehle : String → Bool → String → String → UEns → USide → UEns
   deriving DecidableEq, Repr
 
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/

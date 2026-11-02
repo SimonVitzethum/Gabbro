@@ -321,6 +321,8 @@ def uSideEng (v : String) (lo hi : Int) : USide → USide
   | .shl a b => .shl (uSideEng v lo hi a) (uSideEng v lo hi b)
   | .shr a b => .shr (uSideEng v lo hi a) (uSideEng v lo hi b)
   | .neg a => .neg (uSideEng v lo hi a)
+  | .ib1 o w a => .ib1 o w (uSideEng v lo hi a)
+  | .ib2 o w a b => .ib2 o w (uSideEng v lo hi a) (uSideEng v lo hi b)
   | s => s
 
 /-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the

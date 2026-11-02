@@ -37,6 +37,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
 public import Grammatik.Parser.Elab.Uebersetze.Teil2
 public import Grammatik.Parser.Elab.Uebersetze.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Eingebaut
 public import Grammatik.Parser.Elab.Uebersetze.Teil4
 public import Grammatik.Parser.Elab.Uebersetze.Teil5
 public import Grammatik.Parser.Elab.Uebersetze.Teil6
