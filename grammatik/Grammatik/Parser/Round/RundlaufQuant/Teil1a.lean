@@ -19,7 +19,7 @@
 -/
 module
 
-public import Grammatik.Parser.Round.RundlaufPred
+public import Grammatik.Parser.Round.Statements.RundlaufPred
 
 @[expose] public section
 

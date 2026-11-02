@@ -266,7 +266,7 @@ public import Grammatik.Parser.Round.RundlaufVoll
 public import Grammatik.Parser.Round.RundlaufTok.Teil4
 public import Grammatik.Parser.Round.RundlaufTyp.Teil2
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil5
-public import Grammatik.Parser.Round.RundlaufPred
+public import Grammatik.Parser.Round.Statements.RundlaufPred
 public import Grammatik.Parser.Round.RundlaufQuant.Teil2
 public import Grammatik.Parser.Round.RundlaufItem.Teil6
 public import Grammatik.Parser.Round.RundlaufGeraet.Teil2
