@@ -30,6 +30,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
@@ -372,9 +373,12 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
 
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
-    error (the refused rows of `collect`). -/
+    error (the refused rows of `collect`). Translators (`transT`) are consumed by the certified
+    expansion (`exportLibraryUnit` runs before this check): they are certificate input, never
+    runtime items, so they step past here. -/
 def uRestFehler : List SItemTief → Except String Unit
   | [] => .ok ()
+  | .transT .. :: rest => uRestFehler rest
   | .constT _ _ _ :: rest => uRestFehler rest
   | .typeT _ _ _ _ _ :: rest => uRestFehler rest
   | .tableT _ _ _ _ _ _ _ :: rest => uRestFehler rest

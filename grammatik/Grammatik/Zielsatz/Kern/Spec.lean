@@ -58,7 +58,8 @@
   roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
   (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
-      lock-free starts, pool safety, write separation, answer sites, masking discipline, and since 2026-10-24 the
+      lock-free starts, pool safety, write separation, answer sites, masking discipline, the C02 library binding
+      (generated programs are ordinary; source certificates in `Uebersetzung.lean`), and since 2026-10-24 the
       ownership judgment of every arena in `E.arenen` with plain allocator words; beside it `BesitzStart E`: every
       arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
       `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
@@ -165,6 +166,13 @@
   the second case of `GabbroZielLeben`.
 
   THE READING -- not premises, assumptions of reading the statements as statements about the BINARY:
+  * C02 translators use exact source-bound map correspondence, in addition to output typing
+    (`Logik/Vertraege/Uebersetzung.lean`). Compile-time row collections are immutable by-value
+    arrays, not runtime table capabilities. The goal applies to the generated accepted ordinary
+    program; a translation certificate alone does not establish payload initialization, library
+    call expansion or image correspondence. Those source cases remain refused until their generic
+    bridges are connected. This strengthens the former output-only translation promise and adds
+    no hardware assumption or change to the existing G/GX safety, contract, call-log or time legs.
   * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is the LLVM path
     (`gabbro build`: checker, LLVM IR from `llvm.rs`, `opt`, `llc`, `ld.lld`); the bridge is translation validation
     (source -> model -> final machine bytes, checked in Lean; dokumente/PLAN-TRANSLATION-VALIDATION.md), which is
@@ -283,6 +291,37 @@
   every definition this file reads out of its proof file.
 -/
 module
+
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 public import Grammatik.Zielsatz.Kern.Spec.Teil2

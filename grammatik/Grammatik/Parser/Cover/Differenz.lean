@@ -116,9 +116,9 @@ def akzeptiertU (u : UProg) : Except String Bool :=
       (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
     .ok (AkzeptiertX P (sperrFamilie u) fs ls cs ws)
 
-/-- The ten components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false), in
-    the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln, einzelnPool,
-    renn, antworten, masken. For finding which component refuses a program. -/
+/-- The components of `AkzeptiertX` on an elaborated unit, one digit each (`1` true, `0` false),
+    in the order of the definition: fragment, abgeschlossen, fuss, stufen, sperrOrte, wurzeln,
+    einzelnPool, renn, antworten, masken, bibliothek. For finding which component refuses a program. -/
 def komponenten (u : UProg) : Except String String :=
   match lowerAllg u with
   | .error e => .error e
@@ -132,7 +132,7 @@ def komponenten (u : UProg) : Except String String :=
     let z (b : Bool) : String := if b then "1" else "0"
     .ok (String.join [z (programmImFragmentG P fs), z (abgAlleB P fs), z (fussWXB P S fs ws),
       z (stufenB P fs), z (sperrOrteB S ls), z (wurzelnB ws), z (einzelnPoolB P fs cs ws),
-      z (rennB P fs cs ws), z (antwortenB P fs), z (maskenB P fs)])
+      z (rennB P fs cs ws), z (antwortenB P fs), z (maskenB P fs), z (libraryB P fs)])
 
 /-- The verdict on a source text (see the header). -/
 def verdict (src : String) : String :=

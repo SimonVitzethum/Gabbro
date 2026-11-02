@@ -21,6 +21,10 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
+  | _ + 1, _, .lcall .. :: _ | _ + 1, _, .bindLib .. :: _ =>
+      -- Unexpanded library calls never arrive here through `elabU`: `exportLibraryUnit` expands
+      -- them into ordinary calls before the lowering runs. This guard stays for direct callers.
+      .error "C02: library call needs certified immutable payload initialization and ordinary call expansion"
   | f + 1, ctx, .bind mu x t e :: rest =>
     match uBindWert ctx tabs koepfe mu x t e with
     | .error err => .error err

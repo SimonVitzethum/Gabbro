@@ -18,21 +18,21 @@ def parseWeiter (f : Nat) (toks : List Token) :
       | .ok rest' => .ok (.next l, rest')
       | .error e => .error e
 
-/-- `@lib#fn(args) { region }` in statement position (`parse.rs`
-    `library_call`): names, argument count, region skipped balanced. -/
+/-- `@lib#fn(args) { region }`: retain ordered expressions and the balanced input tokens.
+    Both names are `::` paths (`nimmPfad`); the reader never produces an empty path. -/
 def parseLibRuf (f : Nat) (toks : List Token) :
-    Except String ((String × String × Nat) × List Token) :=
+    Except String (SLibraryCall × List Token) :=
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
-    | .zeichen "@" :: rest => match nimmName rest with
+    | .zeichen "@" :: rest => match nimmPfad rest with
       | .ok (l, rest') => match fordereZeichen "#" rest' with
-        | .ok rest'' => match nimmName rest'' with
+        | .ok rest'' => match nimmPfad rest'' with
           | .ok (g, rest3) => match fordereZeichen "(" rest3 with
             | .ok rest4 => match parseArgs f rest4 with
               | .ok (args, rest5) => match fordereZeichen "{" rest5 with
-                | .ok rest6 => match nimmBereich rest6 1 with
-                  | .ok rest7 => .ok ((l, g, args.length), rest7)
+                | .ok rest6 => match libraryRegion rest6 1 with
+                  | .ok (region, rest7) => .ok (⟨l, g, args, region⟩, rest7)
                   | .error e => .error e
                 | .error e => .error e
               | .error e => .error e
@@ -47,8 +47,8 @@ def parseLibStmt (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match parseLibRuf f toks with
-    | .ok ((l, g, n), rest) => match fordereZeichen ";" rest with
-      | .ok rest' => .ok (.lcall l g n, rest')
+    | .ok (call, rest) => match fordereZeichen ";" rest with
+      | .ok rest' => .ok (.lcall call, rest')
       | .error e => .error e
     | .error e => .error e
 
@@ -108,9 +108,9 @@ def parseLetLib (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => do
-    let ((l, g, _), rest) ← parseLibRuf f toks
+    let (call, rest) ← parseLibRuf f toks
     let rest' ← fordereZeichen ";" rest
-    pure (.bindLib m name ty l g, rest')
+    pure (.bindLib m name ty call, rest')
 
 def parseSchreitet (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=

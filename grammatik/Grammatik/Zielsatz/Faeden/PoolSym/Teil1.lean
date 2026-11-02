@@ -1,5 +1,36 @@
 module
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Korpus.Referenz.ReferenzB
 
@@ -272,7 +303,7 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
     reset component `resetB`; it is `true` on every program with no zero-less array static. -/
 theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
-    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs) := by
+    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs) := by
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
     (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
@@ -288,12 +319,14 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
 /-- **Every old acceptance stays an acceptance** -- of a program that meets the handler
     discipline, in particular of every program with no handler (`maskenB_ohne`), and whose
     static arrays admit zero (`resetB`). -/
+    discipline, in particular of every program with no handler (`maskenB_ohne`). The library
+    component holds on every program (`libraryB_immer`). -/
 theorem akzeptiert_vor_neu {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true)
     (hR : resetB cs = true) :
     Akzeptiert P S fs ls cs ws = true := by
-  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, hR]
+  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, hR, libraryB_immer _ _]
   rfl
 
 /-- Spec's `Getrennt` BEFORE fix lane F10: different routines only. -/

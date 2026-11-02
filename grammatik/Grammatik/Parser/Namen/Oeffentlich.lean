@@ -1,4 +1,35 @@
 module
+
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Namen.Aufloesung
 @[expose] public section
 
@@ -124,6 +155,7 @@ def namenTeil : STabTeil → List String
 /-- **The names an item's head writes** -- what an importer reads of it. -/
 def kopfNamen : SItemTief → List String
   | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => namenSig s
+  | .transT target s _ => target :: namenSig s
   | .globT _ _ t _ _ _ _ | .constT _ t _ | .atomT _ t _ _ _ | .arenaT _ _ _ _ t _ => namenT t
   | .typeT _ _ args _ t => args.flatMap namenT ++ namenTO t
   | .tableT _ v _ _ _ _ ps => v.toList ++ ps.flatMap namenTeil

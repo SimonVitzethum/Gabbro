@@ -122,7 +122,8 @@ def parseGlobTief (f : Nat) (toks : List Token) :
         | .error e => .error e
         | .ok (it, r) => .ok (it, r)
 
-/-- `translator n for g(params) [-> T] clauses block`. -/
+/-- `translator n for g(params) [-> T] clauses block`: the target `g` is a `::` path, kept as
+    joined text like every other resolved call name; resolution turns it into its item key. -/
 def parseTranslatorTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
@@ -133,7 +134,7 @@ def parseTranslatorTief (f : Nat) (toks : List Token) :
       | .error e => .error e
       | .ok (n, r2) => match nimmWort "for" r2 with
         | .error e => .error e
-        | .ok r3 => match nimmName r3 with
+        | .ok r3 => match nimmPfad r3 with
           | .error e => .error e
           | .ok (g, r4) => match parseParams f r4 with
             | .error e => .error e
@@ -143,7 +144,7 @@ def parseTranslatorTief (f : Nat) (toks : List Token) :
                 | .error e => .error e
                 | .ok (ks, r7) => match parseBlock f r7 with
                   | .error e => .error e
-                  | .ok (b, r) => .ok (.transT g
+                  | .ok (b, r) => .ok (.transT ("::".intercalate g)
                     ({ art := "", name := n, params := ps,
                        res := erg, fehler, klauseln := ks } : FnSig) b, r)
 
