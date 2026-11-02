@@ -51,8 +51,8 @@ def prog (body : List UStmt) : UProg :=
   { tabs := [{ name := "T", count := 2, cols := [("v", 0, 4294967295)] }],
     locks := [{ name := "L", rank := 0, guard := ["T"] }],
     fns := [{ name := "w",
-              params := [("k", .ptr 0 true), ("i", .index 2), ("n", .int 0 255)],
-              kinds := [.ptr 0 true, .index 0, .int], res := none, held := [],
+              params := [("k", .ptr (.table 0 (true, true))), ("i", .index 2), ("n", .int 0 255)],
+              kinds := [.ptr (.table 0 (true, true)), .index 0, .int], res := none, held := [],
               puts := ["T"], gives := [], body := body, ret := .empty }],
     roots := [] }
 

@@ -157,7 +157,7 @@ theorem assignSlot_andere_fest (O : Orakel D) (passes : Nat)
 theorem assignDurch_andere_fest (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {n : Nat}
-    {p : Expr D Γ Λ (.ptr n true)} {t₂ : D.Tab} {ht₂ : D.tabNr n = some t₂}
+    {p : Expr D Γ Λ (.ptr (.table n (read, true) space))} {t₂ : D.Tab} {ht₂ : D.capTab space n = some t₂}
     {f₂ : D.Feld t₂}
     {i : Expr D Γ Λ (.index (D.count t₂))} {e : Expr D Γ Λ (D.typ t₂ f₂)}
     {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}

@@ -32,7 +32,7 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .never => false
   | .fl lo hi => gleitBarB lo hi
   | .fnptr m => fs.any fun f => D.passt f m
-  | .ptr _ _ => true
+  | .ptr _ => true
   | .ref _ => true
   | .arr _ _ => false
   | .str _ => false
@@ -78,7 +78,7 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
       simp only [antwortTyB, List.any_eq_true, decide_eq_true_eq]
       exact ⟨fun ⟨f, _, hf⟩ => ⟨(⟨f, hf⟩ : {f : D.Fn // D.passt f m = true}), trivial⟩,
         fun ⟨v, _⟩ => ⟨(v : {f : D.Fn // D.passt f m = true}).1, hvoll _, v.2⟩⟩
-  | .ptr _ _ => ⟨fun _ => ⟨(() : Unit), trivial⟩, fun _ => rfl⟩
+  | .ptr _ => ⟨fun _ => ⟨(() : Unit), trivial⟩, fun _ => rfl⟩
   | .ref _ => ⟨fun _ => ⟨(Val.vonZelle 0 : Wert D (.ref _)), trivial⟩, fun _ => rfl⟩
   | .arr _ _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩
   | .str _ => ⟨fun h => absurd h (by simp only [antwortTyB, Bool.false_eq_true, not_false_eq_true]), fun ⟨_, h⟩ => h.elim⟩

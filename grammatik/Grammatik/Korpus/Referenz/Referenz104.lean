@@ -16,7 +16,7 @@
   |                                               | `typ := .int 0 100`, `tabNr 0 = some ()`        |
   | `lock M protects { stand } rank 0`            | `Lock := Unit`, `rang 0`, `braucht := [.inl M]` |
   | `held <= 50 ops` (lock hold budget)           | NO FORM (no hold budget in `Deklaration`)       |
-  | `impl fn einzahlen(k : ptr<normal, rw> Konto, | params `[.ptr 0 true, .index 2, .int 0 10]`;    |
+  | `impl fn einzahlen(k : ptr<normal, rw> Konto, | params `[.ptr (.table 0 (true, true)), .index 2, .int 0 10]`;    |
   |   i : index into Konto, b : Betrag)`          | the address space `normal`: NO FORM             |
   | `requires Held(M)`                            | `haelt := [M]`, `requires := .tru`             |
   | `ensures old(k.slots[i].stand) <=             | `.le (.oldS Konto stand i) (.thru k … i)`;  |
@@ -32,7 +32,7 @@
   |                                               | form; `ptrOf` of the same table (a pointer's    |
   |                                               | value is `()`, the denotation is identical)     |
   | end of `einzahlen` (falls off)                | `.ret .empty perm` (an `Endblock` must end)     |
-  | `impl fn lies(k : ptr<normal, r> Konto,       | params `[.ptr 0 false, .index 2]`,              |
+  | `impl fn lies(k : ptr<normal, r> Konto,       | params `[.ptr (.table 0 (true, false)), .index 2]`,              |
   |   i : index into Konto) -> Stand`             | `erg := some (.int 0 100)`                      |
   | `ensures result == k.slots[i].stand`          | `.eq (.var .here) (.thru k … i)`               |
   | `effects { reads k.slots, locks M }`          | `schreibt := false`, `haelt := [M]`             |

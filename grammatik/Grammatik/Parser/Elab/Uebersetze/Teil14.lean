@@ -138,7 +138,7 @@ def lowerAssignEin (tabs : List UTab) (names : List String)
 def lowerArgsLies (tabs : List UTab) (names : List String)
     (types : List Ty) : List UArg →
     Except String (Args G104_referenz.gD UCtxEin ULEin (G104_referenz.gD.params G104_referenz.g_lies))
-  | [.freshPtr "Konto" false, .val (.param "i")] =>
+  | [.freshPtr "Konto" (.table 0 (true, false)), .val (.param "i")] =>
     match names[1]?, types[1]? with
     | .some q, .some (Ty.int 0 1) =>
       if !strEq q "i" then .error "argument swapped"
@@ -148,7 +148,7 @@ def lowerArgsLies (tabs : List UTab) (names : List String)
         | .some tb =>
           if tb.count != 2 then .error "count foreign"
           else
-            .ok (Args.cons (Expr.ptrOf G104_referenz.GTab.Konto 0 rfl false)
+            .ok (Args.cons (Expr.ptrOf G104_referenz.GTab.Konto 0 rfl (true, false))
               (Args.cons (Expr.var (Var.there Var.here)) Args.nil))
     | _, _ => .error "argument without G form"
   | _ => .error "argument without G form"
@@ -259,7 +259,7 @@ abbrev UKoerpLies :=
 
 /-- A parameter variable of `lies` by position and type. -/
 def varNumLies : (j : Nat) → (τ : Ty) → Except String (Var UCtxLies τ)
-  | 0, .ptr 0 false => .ok Var.here
+  | 0, .ptr (.table 0 (true, false)) => .ok Var.here
   | 1, .int 0 1 => .ok (Var.there Var.here)
   | _, _ => .error "parameter without G form"
 
@@ -268,7 +268,7 @@ def varNumLies : (j : Nat) → (τ : Ty) → Except String (Var UCtxLies τ)
 def varEnsLies : (j : Nat) → (τ : Ty) →
     Except String (Var UCtxEnsLies τ)
   | 0, .int 0 100 => .ok Var.here
-  | 1, .ptr 0 false => .ok (Var.there Var.here)
+  | 1, .ptr (.table 0 (true, false)) => .ok (Var.there Var.here)
   | 2, .int 0 1 => .ok (Var.there (Var.there Var.here))
   | _, _ => .error "parameter without G form"
 

@@ -97,7 +97,7 @@ theorem execStmtHA_ru_assignThru {V : Vertrag D}
     (hL)
     (σ : World D)
     (ρ : Env D Γ)
-    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruS, execStmtHA]

@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
-public import Grammatik.Kern.Syntax.Typen.DataRights
+public import Grammatik.Kern.Syntax.Typen.DataCap
 
 @[expose] public section
 
@@ -58,11 +58,10 @@ inductive Ty where
       own signature CONFORMS to signature number `sig` (`Deklaration.passt`, `SigPasst`; structural
       since 2026-10-21). -/
   | fnptr (sig : Nat)
-  /-- `ptr<space, rights> T` -- ein Zeiger auf den Traeger Nummer `t` (M3). Der Wert ist die
-      FAEHIGKEIT, `t` anzusprechen; jeder Zugriff hindurch braucht die Waechter von `t`
-      wie ein direkter. Zwei Zeiger auf `t` sind damit zwei Namen fuer EINE Welt unter EINEM
-      Waechter -- der Alias kostet keine Sicherheit, nur Logik (§15.8). -/
-  | ptr (t : Nat) (rw : Bool)
+  /-- A data capability names its nominal space, independent read/write permissions,
+      optional owner identity and logical target. Table values remain `Unit`: the target
+      identity is in the descriptor. Access still requires the target's ordinary guards. -/
+  | ptr (cap : DataCapTy)
   /-- `index into T` at an open table `T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
       `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
       memory provider: the answer of a provider item (`syscall`/`extern`), whose contract (user logic) says the cell
@@ -144,7 +143,7 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .never => Empty
   | .fl lo hi => Gleit lo hi
   | .fnptr n => { f : F // passt f n = true }
-  | .ptr _ _ => Unit
+  | .ptr _ => Unit
   | .ref _ => Nat
   | .arr τ n => Fin n → Val F passt τ
   | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }

@@ -127,7 +127,7 @@ theorem hp4 : RufPasst D4 (vertragVon D4 ein4) (D4.signatur lies4) L4 where
 def bodyEin4 : Endblock D4 (vertragVon D4 ein4) false (D4.params ein4) L4 :=
   .cons (Stmt.assignThru (.var .here) t4 ht4 f4 (.var (.there .here))
       (.widen (by decide) (by decide) (.lit 100)) rfl darf4)
-    (.cons (Stmt.call lies4 (.cons (.ptrOf t4 0 ht4 false) (.cons (.var (.there .here)) .nil))
+    (.cons (Stmt.call lies4 (.cons (.ptrOf t4 0 ht4 (true, false)) (.cons (.var (.there .here)) .nil))
       hp4 rfl) (.ret .empty (List.Perm.refl _)))
 
 /-- `lies`' body: the return of the slot read through `k`. -/

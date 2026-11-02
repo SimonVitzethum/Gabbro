@@ -347,20 +347,20 @@ inductive CertCut4 (D : Deklaration) where
     generated index shape, and the guard. The field type is NOT constrained --
     `durch` reads `D.typ t f` whatever it is, exactly as `Expr.durch` does. -/
 def certCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) : CertCut4 D → Prop
-  | .ptrOf t n _ => D.tabNr n = some t
+  | .ptrOf t n _ => D.capTab (D.tableSpace t) n = some t
   | .fnref f n => D.passt f n = true
   | .thru t _f n i =>
-    D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧ darf D t Λ
+    D.capTab (D.tableSpace t) n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧ darf D t Λ
 
 /-- CUT-4 remainder validity as `Decidable` (mirror of `decGueltigBlock`). -/
 instance decCut4Ok (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) (c : CertCut4 D) :
     Decidable (certCut4Ok D Γ Λ c) :=
   match c with
-  | .ptrOf t n _ => inferInstanceAs (Decidable (D.tabNr n = some t))
+  | .ptrOf t n _ => inferInstanceAs (Decidable (D.capTab (D.tableSpace t) n = some t))
   | .fnref f n => inferInstanceAs (Decidable (D.passt f n = true))
   | .thru t _f n i =>
     inferInstanceAs
-      (Decidable (D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧
+      (Decidable (D.capTab (D.tableSpace t) n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧
         darf D t Λ))
 
 /-! ## CUT-5 remainder design rows: calls WITH arguments, carrying `RufPasst`

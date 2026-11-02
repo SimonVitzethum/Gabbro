@@ -55,7 +55,7 @@ def startWert : Ty → Except String SExpr
   | .int lo _ => .ok (zahlE lo)
   | .bool => .ok .fls
   | .opt _ => .ok (.call "None" [])
-  | .ptr t _ => .ok (.fnref (nTab t))
+  | .ptr ⟨_, _, .table t⟩ => .ok (.fnref (nTab t))
   | .fnptr _ => .error "start argument of a function-pointer type"
   | _ => .error "start argument of a type without a value form"
 

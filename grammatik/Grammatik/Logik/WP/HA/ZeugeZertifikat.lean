@@ -91,7 +91,7 @@ inductive GFn where
   deriving DecidableEq
 
 def gSig_auffuellen : Signatur GTab Empty GLock Empty where
-  params := [.ptr 0 true]
+  params := [.ptr (.table 0 (true, true))]
   erg := none
   gruende := 0
   haelt := []
@@ -150,7 +150,7 @@ abbrev gD : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-abbrev gCtx_auffuellen : Ctx := [.ptr 0 true]
+abbrev gCtx_auffuellen : Ctx := [.ptr (.table 0 (true, true))]
 def g_auffuellen : gD.Fn := GFn.auffuellen
 
 abbrev gL_auffuellen : List (Res gD) := []

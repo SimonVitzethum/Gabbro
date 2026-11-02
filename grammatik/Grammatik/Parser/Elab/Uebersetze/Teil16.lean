@@ -44,7 +44,7 @@ def beqUEnsList : List UEns → List UEns → Bool
 
 def beqUArg : UArg → UArg → Bool
   | .var a, .var b => strEq a b
-  | .freshPtr a w, .freshPtr b v => strEq a b && w == v
+  | .freshPtr a w, .freshPtr b v => strEq a b && decide (w = v)
   | .val a, .val b => beqUSide a b
   | .fnref a, .fnref b => strEq a b
   | _, _ => false
@@ -100,7 +100,7 @@ def beqUStmtList : List UStmt → List UStmt → Bool
   | _, _ => false
 
 def beqUParamArt : UParamArt → UParamArt → Bool
-  | .ptr a w, .ptr b v => a == b && w == v
+  | .ptr a, .ptr b => decide (a = b)
   | .index a, .index b => a == b
   | .int, .int => true
   | _, _ => false
@@ -247,10 +247,10 @@ theorem u104data :
     r4D.typ () () = .int 0 100 ∧
     uRang104 uExp104 = 0 ∧
     r4D.rang () = 0 ∧
-    uParams104 uExp104 "einzahlen" = [.ptr 0 true, .index 2, .int 0 10] ∧
-    r4D.params r4Ein = [.ptr 0 true, .index 2, .int 0 10] ∧
-    uParams104 uExp104 "lies" = [.ptr 0 false, .index 2] ∧
-    r4D.params r4Lies = [.ptr 0 false, .index 2] ∧
+    uParams104 uExp104 "einzahlen" = [.ptr (.table 0 (true, true)), .index 2, .int 0 10] ∧
+    r4D.params r4Ein = [.ptr (.table 0 (true, true)), .index 2, .int 0 10] ∧
+    uParams104 uExp104 "lies" = [.ptr (.table 0 (true, false)), .index 2] ∧
+    r4D.params r4Lies = [.ptr (.table 0 (true, false)), .index 2] ∧
     uHeld104 uExp104 "einzahlen" = ["M"] ∧
     r4D.haelt r4Ein = [()] ∧
     uSchreibt104 uExp104 "einzahlen" = ["Konto"] ∧

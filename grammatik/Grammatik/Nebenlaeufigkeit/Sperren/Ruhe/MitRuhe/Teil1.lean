@@ -20,7 +20,7 @@ namespace Gabbro.Grammatik
   | .never => .never
   | .fl lo hi => .fl lo hi
   | .fnptr n => .fnptr (n + 1)
-  | .ptr t rw => .ptr t rw
+  | .ptr cap => .ptr cap
   | .ref t => .ref t
   | .arr τ n => .arr (tyR τ) n
   | .str n => .str n
@@ -85,7 +85,7 @@ theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr _, v => ⟨some v.1, v.2⟩
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun j => valR τ (v j)
   | .str _, v => v
@@ -104,7 +104,7 @@ def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.pa
     | ⟨some f, h⟩ => ⟨f, h⟩
     | ⟨none, h⟩ => absurd h (by simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
   not_false_eq_true])
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun j => valZ τ (v j)
   | .str _, v => v
@@ -118,7 +118,7 @@ theorem valZ_valR : ∀ (τ : Ty) (v : Val D.Fn D.passt τ), valZ τ (valR τ v)
   | .never, _ => rfl
   | .fl _ _, _ => rfl
   | .fnptr _, ⟨_, _⟩ => rfl
-  | .ptr _ _, _ => rfl
+  | .ptr _, _ => rfl
   | .ref _, _ => rfl
   | .arr τ _, v => funext fun j => valZ_valR τ (v j)
   | .str _, _ => rfl
@@ -134,7 +134,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   | .fnptr n, ⟨some f, h⟩ => rfl
   | .fnptr n, ⟨none, h⟩ => absurd h (by simp only [passtM, Nat.add_eq_zero_iff, Nat.succ_ne_self, and_false, decide_false, Bool.false_eq_true,
   not_false_eq_true])
-  | .ptr _ _, _ => rfl
+  | .ptr _, _ => rfl
   | .ref _, _ => rfl
   | .arr τ _, v => funext fun j => valR_valZ τ (v j)
   | .str _, _ => rfl
@@ -206,6 +206,10 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   ggeteilt_bewacht := D.ggeteilt_bewacht
   geist := D.geist
   ggeist := D.ggeist
+  dataSpaces := D.dataSpaces
+  tableSpace := D.tableSpace
+  globalSpace := D.globalSpace
+  ownerNr := D.ownerNr
 
 instance instDecEqFnMitRuhe [DecidableEq D.Fn] : DecidableEq D.mitRuhe.Fn :=
   inferInstanceAs (DecidableEq (Option D.Fn))

@@ -122,12 +122,15 @@ structure ObjPar (D : Deklaration) where
   cap : Nat
   tab : D.Tab
   rw : Bool
+  read : Bool := true
+  space : Nat := 0
+  owner : Option Nat := none
 
 /-- The pair is faithful to the context: the index has the generated index type of its
     table, and the capability is a pointer to that table with the pair's right. -/
 def ObjParTreu (D : Deklaration) (Γ : Ctx) (op : ObjPar D) : Prop :=
   Γ.reverse[op.idx]? = some (.index (D.count op.tab)) ∧
-    ∃ n, Γ.reverse[op.cap]? = some (.ptr n op.rw) ∧ D.tabNr n = some op.tab
+    ∃ n, Γ.reverse[op.cap]? = some (.ptr ⟨op.space, ⟨op.read, op.rw, op.owner⟩, .table n⟩) ∧ D.tabNr n = some op.tab
 
 /-- The object the pair names in an environment: its table, at the value of its index. -/
 def ObjPar.obj {Γ : Ctx} (op : ObjPar D) (ρ : Env D Γ) : Option (Obj D) :=

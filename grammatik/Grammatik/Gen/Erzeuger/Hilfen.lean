@@ -78,15 +78,17 @@ theorem mem_mitSome {R : Type} {o : Option Ty} {f : ∀ {τ : Ty}, o = some τ �
 
 /-! ## The pointer-with-write-right view -/
 
-/-- The expressions of type `ptr n true`. -/
-def ptrTS {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) : Sz (Σ n : Nat, Expr D Γ Λ (.ptr n true)) := fun i =>
+/-- Writable capabilities include write-only table views. -/
+def ptrTS {Γ : Ctx} {Λ : List (Res D)} (E : Sz (SE D Γ Λ)) :
+    Sz (Σ (space n : Nat) (read : Bool), Expr D Γ Λ (.ptr (.table n (read, true) space))) := fun i =>
   (E i).filterMap fun p => match p with
-    | ⟨.ptr n true, a⟩ => some ⟨n, a⟩
+    | ⟨.ptr ⟨space, ⟨read, true, none⟩, .table n⟩, a⟩ => some ⟨space, n, read, a⟩
     | _ => none
 
-theorem mem_ptrTS {Γ : Ctx} {Λ : List (Res D)} {E : Sz (SE D Γ Λ)} {i : Nat} {n : Nat}
-    {a : Expr D Γ Λ (.ptr n true)} (h : (⟨.ptr n true, a⟩ : SE D Γ Λ) ∈ E i) :
-    (⟨n, a⟩ : Σ n : Nat, Expr D Γ Λ (.ptr n true)) ∈ ptrTS E i :=
+theorem mem_ptrTS {Γ : Ctx} {Λ : List (Res D)} {E : Sz (SE D Γ Λ)} {i space n : Nat} {read : Bool}
+    {a : Expr D Γ Λ (.ptr (.table n (read, true) space))}
+    (h : (⟨.ptr (.table n (read, true) space), a⟩ : SE D Γ Λ) ∈ E i) :
+    (⟨space, n, read, a⟩ : Σ (space n : Nat) (read : Bool), Expr D Γ Λ (.ptr (.table n (read, true) space))) ∈ ptrTS E i :=
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
 /-! ## Arguments and results -/

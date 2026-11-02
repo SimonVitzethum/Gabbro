@@ -102,7 +102,7 @@ def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr n, v => K.zeiger n v.1 v.2
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun j => valZ τ (v j)
   | .str _, v => v
@@ -123,7 +123,7 @@ theorem vrel_valE : ∀ (τ : Ty) (v : Wert D τ), E.VRel K τ v (E.valE τ v)
   | .never, _ => rfl
   | .fl _ _, _ => rfl
   | .fnptr _, _ => Or.inl rfl
-  | .ptr _ _, _ => rfl
+  | .ptr _, _ => rfl
   | .ref _, _ => rfl
   | .arr τ _, v => fun j => vrel_valE τ (v j)
   | .str _, _ => rfl
@@ -145,7 +145,7 @@ theorem vrel_valZ : ∀ (τ : Ty) (v' : Wert D' (E.tyE τ)), E.VRel K τ (E.valZ
         split
         · rename_i g hr; exact Or.inr ⟨hz, hr⟩
         · rename_i hr; exact absurd (K.voll n f' h' hz) (by rw [hr]; simp only [Option.isSome_none, Bool.false_eq_true, not_false_eq_true])
-  | .ptr _ _, _ => rfl
+  | .ptr _, _ => rfl
   | .ref _, _ => rfl
   | .arr τ _, v' => fun j => vrel_valZ τ (v' j)
   | .str _, _ => rfl
@@ -175,7 +175,7 @@ theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.V
         · split
           · rename_i g0 hr'; simp only at hr; rw [hr] at hr'; cases hr'; rfl
           · rename_i hr'; simp only at hr; rw [hr] at hr'; cases hr'
-  | .ptr _ _, _, _, h => by subst h; rfl
+  | .ptr _, _, _, h => by subst h; rfl
   | .ref _, _, _, h => by subst h; rfl
   | .arr τ _, _, _, h => funext fun j => valZ_vrel τ (h j)
   | .str _, _, _, h => by subst h; rfl
@@ -191,7 +191,7 @@ theorem vrel_frei : ∀ (τ : Ty), τ.zeigerfrei = true → ∀ (v : Wert D τ) 
   | .never, _, _, _ => Iff.rfl
   | .fl _ _, _, _, _ => Iff.rfl
   | .fnptr _, h, _, _ => absurd h (by simp only [Ty.zeigerfrei, Bool.false_eq_true, not_false_eq_true])
-  | .ptr _ _, _, _, _ => Iff.rfl
+  | .ptr _, _, _, _ => Iff.rfl
   | .ref _, _, _, _ => Iff.rfl
   | .arr τ _, h, v, v' => by
       have hz : τ.zeigerfrei = true := h

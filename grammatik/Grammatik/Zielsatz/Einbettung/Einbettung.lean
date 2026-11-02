@@ -36,14 +36,15 @@ open Gabbro.Grammatik
   | .never => .never
   | .fl lo hi => .fl lo hi
   | .fnptr n => .fnptr (sn n)
-  | .ptr t rw => .ptr (tn t) rw
+  | .ptr ⟨space, rights, .table t⟩ => .ptr ⟨space, rights, .table (tn t)⟩
   | .ref t => .ref (tn t)
   | .arr τ n => .arr (tyN sn tn τ) n
   | .str n => .str n
 
 /-- Under the identity maps a type is itself. -/
 theorem tyN_id : ∀ τ : Ty, tyN (fun n => n) (fun n => n) τ = τ
-  | .int _ _ | .bool | .opt _ | .sum _ | .why _ | .never | .fl _ _ | .fnptr _ | .ptr _ _ | .ref _ | .str _ => rfl
+  | .int _ _ | .bool | .opt _ | .sum _ | .why _ | .never | .fl _ _ | .fnptr _ | .ref _ | .str _ => rfl
+  | .ptr ⟨space, rights, .table n⟩ => rfl
   | .arr τ n => by simp only [tyN, tyN_id τ]
 
 /-- **`D` inside `D'`.** -/
@@ -130,7 +131,8 @@ structure Einbettung (D D' : Deklaration) where
   annahme : D.Annahme → D'.Annahme
   a10 : annahme D.a10 = D'.a10
   -- a table number names the image of its table
-  tabNr : ∀ n, D'.tabNr (tnum n) = (D.tabNr n).map tab
+  tabNr : (∀ n, D'.tabNr (tnum n) = (D.tabNr n).map tab) ∧
+    (∀ t, D'.tableSpace (tab t) = D.tableSpace t) ∧ D'.dataSpaces = D.dataSpaces
   -- conformance (the signatures themselves need `sigE`, below: `SigTreu`)
   sig : ∀ f, D'.sig (fn f) = num (D.sig f)
   passt : ∀ f n, D'.passt (fn f) (num n) = D.passt f n
@@ -156,7 +158,7 @@ def valE : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ)
   | .never, v => v
   | .fl _ _, v => v
   | .fnptr _, v => ⟨E.fn v.1, (E.passt v.1 _).trans v.2⟩
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun j => valE τ (v j)
   | .str _, v => v
@@ -325,7 +327,7 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
     rcases c with t | g <;> rfl
   annahme := fun a => a
   a10 := rfl
-  tabNr := fun n => by simp only [Option.map_id_fun', id_eq]
+  tabNr := ⟨fun n => by simp only [Option.map_id_fun', id_eq], fun _ => rfl, rfl⟩
   sig := fun _ => rfl
   passt := fun _ _ => rfl
 

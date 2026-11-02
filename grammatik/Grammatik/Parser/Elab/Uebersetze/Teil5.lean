@@ -119,7 +119,8 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
   | e =>
     match uZugriff ctx e with
     | .error x => .error (if uPraemisse x then x else "ensures clause without G form")
-    | .ok (.thru b, tb, f, ix) =>
+    | .ok (.thru b, tb, f, ix) => do
+      uReadThrough ctx b
       if uBoolFeld ctx tb f then .ok (.slotB b f ix) else .error "ensures clause without G form"
     | .ok (.tabelle b, tb, f, ix) =>
       if uBoolFeld ctx tb f then .ok (.tabB b f ix) else .error "ensures clause without G form"
@@ -163,7 +164,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
         | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr _ _) => .error "pointer as value without G form"
+      | .ok (.ptr _) => .error "pointer as value without G form"
       | .ok .bool => .error "truth value as a number"
       | .ok (.ref _) => .error "reference as a number"
       | .ok _ => .ok (.param p)
@@ -178,7 +179,8 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .none =>
       match uZugriff ctx e with
       | .error x => .error (if uPraemisse x then x else "value without G form")
-      | .ok (.thru b, tb, f, ix) =>
+      | .ok (.thru b, tb, f, ix) => do
+        uReadThrough ctx b
         if uBoolFeld ctx tb f then .error "bool field as a number"
         else if (uOptFeld ctx tb f).isSome then .error "option field as a number" else .ok (.slot b f ix)
       | .ok (.tabelle b, tb, f, ix) =>
@@ -272,10 +274,11 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
       | .ok ty => .ok (n, ty, .int)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
+    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
-      let write ← uTableRight rechte
+      let access ← uTableRight rechte
       let (num, _) ← uTabNr tabs t
-      pure (n, .ptr num write, .ptr num write)
+      pure (n, .ptr (.table num access), .ptr (.table num access))
   | (n, .index false t) =>
     match uTabNr tabs t with
     | .error e => .error e
@@ -366,7 +369,7 @@ def uSchreibtOrt (kopf : UFnKopf) (tabs : List UTab) : SExpr →
       match uStelle kopf.names b with
       | .ok j =>
         match uArtBei kopf.kinds j with
-        | .ok (.ptr num _) =>
+        | .ok (.ptr ⟨_, _, .table num⟩) =>
           match tabs[num]? with
           | .some tb => .ok tb.name
           | .none => .error "pointer table unknown"

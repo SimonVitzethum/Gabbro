@@ -95,7 +95,7 @@ inductive OS (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (hn : NotLink A t f) (hi : checkExpression A c i = true) (he : checkExpression A c e = true)
       (hs : storeCheck A c t i = true) :
       OS A I out (l := l) k c (.assignSlot t f i e hw hL) c
-  | assignThru {l Γ Λ k c n} (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
+  | assignThru {l Γ Λ k c n read space} (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab) (ht : D.capTab space n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) (hn : NotLink A t f)
       (hp : checkExpression A c p = true) (hi : checkExpression A c i = true)

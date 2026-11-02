@@ -79,7 +79,7 @@ def uOfS (art : Nat → UParamArt) (kopf : Option Nat) {Γ : Ctx} {Λ : List (Re
   | .var (τ := τ) x =>
     if kopf = some (Γ.length - 1 - tiefe x) then (if tyInt τ then some .erg else none) else
     match art (tiefe x) with
-    | .ptr _ _ => none
+    | .ptr _ => none
     | .bool => none
     | .ref _ => none
     | _ => some (.param (nVar (Γ.length - 1 - tiefe x)))
@@ -283,7 +283,7 @@ theorem EInvK.optFeld {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {a
 structure Blatt (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Nat → UParamArt) (kopf : Option Nat)
     (bl : SExpr → Except String USide) : Prop where
   lit : ∀ v : Nat, bl (.lit v) = .ok (.lit (Int.ofNat v))
-  var : ∀ d, d < Γ.length → kopf ≠ some (Γ.length - 1 - d) → (∀ n w, art d ≠ .ptr n w) → art d ≠ .bool →
+  var : ∀ d, d < Γ.length → kopf ≠ some (Γ.length - 1 - d) → (∀ cap, art d ≠ .ptr cap) → art d ≠ .bool →
     (∀ n, art d ≠ .ref n) →
     bl (.variable (nVar (Γ.length - 1 - d))) = .ok (.param (nVar (Γ.length - 1 - d)))
   res : ∀ {τ : Ty} (x : Var Γ τ), tyInt τ = true → kopf = some (Γ.length - 1 - tiefe x) → bl .res = .ok .erg

@@ -66,7 +66,7 @@ def tyInts : Ty → List Int
 def tyNats : Ty → List Nat
   | .why n => [n]
   | .fnptr n => [n]
-  | .ptr n _ => [n]
+  | .ptr ⟨_, _, .table n⟩ => [n]
   | _ => []
 
 /-- The float bounds a type names. -/
@@ -223,7 +223,7 @@ def z9 : Spez where
 /-- 10 -- two tables (pointers name them by number), a function that takes a pointer. -/
 def z10 : Spez where
   tabs := [{ count := 2, felder := [{ typ := i3 }] }, { count := 2, felder := [{ typ := b1 }] }]
-  sigs := [{ params := [.ptr 0 true], schreibt := [0, 1] }, { params := [.ptr 1 false] }]
+  sigs := [{ params := [.ptr (.table 0 (true, true))], schreibt := [0, 1] }, { params := [.ptr (.table 1 (true, false))] }]
   fns := [0, 1]
 
 /-- 11 -- floats: a static and a parameter of float type. -/

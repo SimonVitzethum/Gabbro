@@ -65,6 +65,11 @@
     extents inhabit one nominal space. Names imply neither physical separation nor a check/copy snapshot.
     Separation remains a separate `LayoutOk` obligation. This generalizes the former fixed space-0/nonzero
     interpretation without removing `ImBereichO` or the outside-write/extent guarantees. (c).
+    Table capabilities now retain these nominal spaces and independent read/write flags. Every admitted
+    dereference resolves the exact table in a registered space; stores still require the signature's write
+    frame and the table's guards. Write-only access does not grant reads. Owner identities are retained in
+    types but are not usable without the separately checked ownership flow. Live byte grants and restricted
+    entry handles remain outside this table-only stage; no lifetime or code/data provenance claim is added.
   * `rennfrei` (`RennfreiBisGA`) -- two accesses of different threads to a non-atomic carrier, one a write, are
     lock-ordered, on every run with racing atomics. (a), (c).
   * `schwach` (`SchwachX`) -- every step of the weak machine W is a GX step, its presented memory G's outside the

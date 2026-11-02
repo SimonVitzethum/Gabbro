@@ -147,11 +147,13 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
         (Sz.mem_wenn ht (Sz.mem_bind (Sz.mem_wahl (Aufz.feld_mem t f))
           (Sz.mem_bind (mem_tyS hi) (Sz.mem_wenn hL (Sz.mem_pure _)))))))) (by omega)
   | ptrOf t n ht rw =>
+    have hs := (Deklaration.capTab_sound ht).2.1
+    subst hs
     simp only [groesseExpr] at hu ⊢
     ausd (gPtrOf (D := D) (Γ := Γ) (Λ := Λ)),
       Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_nS (n := n) rfl (by omega))
         (Sz.mem_bind (Sz.mem_wahl (Aufz.tab_mem t)) (Sz.mem_wenn ht (Sz.mem_bind
-          (Sz.mem_wahl (by cases rw <;> simp only [List.mem_cons, Bool.false_eq_true, List.not_mem_nil, or_false, or_true, Bool.true_eq_false, or_self])) (Sz.mem_pure _)))))) (by omega)
+          (Sz.mem_wahl (by rcases rw with ⟨read, write⟩; cases read <;> cases write <;> decide)) (Sz.mem_pure _)))))) (by omega)
   | fnref f n hn =>
     simp only [groesseExpr]
     ausd (gFnref (D := D) (Γ := Γ) (Λ := Λ)),

@@ -140,7 +140,7 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .never, _ => Iff.rfl
   | .fl _ _, _ => Iff.rfl
   | .fnptr _, _ => Iff.rfl
-  | .ptr _ _, _ => Iff.rfl
+  | .ptr _, _ => Iff.rfl
   | .ref _, _ => Iff.rfl
   | .arr _ _, _ => Iff.rfl
   | .str _, _ => Iff.rfl
@@ -171,7 +171,7 @@ theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .never => by simp only
   | .fl _ _ => by simp only [reduceCtorEq]
   | .fnptr _ => by simp only [reduceCtorEq]
-  | .ptr _ _ => by simp only [reduceCtorEq]
+  | .ptr _ => by simp only [reduceCtorEq]
   | .ref _ => by simp only [reduceCtorEq]
   | .arr _ _ => by simp only [reduceCtorEq]
   | .str _ => by simp only [reduceCtorEq]

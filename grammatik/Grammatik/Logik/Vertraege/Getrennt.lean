@@ -4,7 +4,7 @@
              `dokumente/A1-OWN-PAPER.md`; slice 1 is the checker rule `R014`,
              `m3.rs::getrennte_wurzeln`).
 
-  WHAT THE MODEL SAYS ABOUT A POINTER PARAMETER. `Ty.ptr n rw` (`Typen.lean` §1) names
+  WHAT THE MODEL SAYS ABOUT A POINTER PARAMETER. `Ty.ptr (.table n (true, rw))` (`Typen.lean` §1) names
   its carrier STATICALLY: the table `D.tabNr n`. A pointer value is `Unit` -- the
   capability to address that whole table. So in machine G the "argument-to-carrier
   substitution" of a call is not chosen by the caller: it is the map
@@ -69,17 +69,18 @@ namespace Gabbro.Grammatik
     This is the model's ROOT of a pointer: a pointer value is `Unit`, so the only thing
     that tells two pointers apart is the table their type names. -/
 def traegerVon (D : Deklaration) : Ty → Option D.Tab
-  | .ptr n _ => D.tabNr n
+  | .ptr ⟨_, _, .table n⟩ => D.tabNr n
   | _ => none
 
-/-- Separation matters for a parameter: a writable pointer in the current readable-table cut. -/
+/-- Separation matters for a parameter: any writable capability, including write-only and owned views. -/
 def zaehltFuerTrennung : Ty → Bool
-  | .ptr _ rw => rw
+  | .ptr ⟨_, ⟨_, rw, _⟩, _⟩ => rw
   | _ => false
 
-theorem zaehlt_ptr {τ : Ty} (h : zaehltFuerTrennung τ = true) : ∃ n, τ = .ptr n true := by
+theorem zaehlt_ptr {τ : Ty} (h : zaehltFuerTrennung τ = true) :
+    ∃ cap : DataCapTy, τ = .ptr cap ∧ cap.rights.write = true := by
   cases τ <;> simp only [zaehltFuerTrennung, Bool.false_eq_true] at h
-  next n rw => subst h; exact ⟨n, rfl⟩
+  next cap => exact ⟨cap, rfl, h⟩
 
 /-! ## 2. `ParamGetrennt` -- the predicate on a call frame -/
 
@@ -217,16 +218,16 @@ theorem getrennt_ruf_rahmen (P : Programm D) (O : Orakel D) (passes fuel : Nat) 
     the table the type names, so this holds for every such signature, whatever the body.
     (A re-view across two pointer types does not reach the model; header, obstruction 2.) -/
 theorem leihe_wurzel (S : Signatur D.Tab D.Glob D.Lock D.Marke) (i : Fin S.params.length)
-    {n : Nat} {rw rw' : Bool} (hi : S.params.get i = .ptr n rw) (he : S.erg = some (.ptr n rw')) :
+    {n : Nat} {space space' : Nat} {rights rights' : DataRights} (hi : S.params.get i = .ptr ⟨space, rights, .table n⟩) (he : S.erg = some (.ptr ⟨space', rights', .table n⟩)) :
     ∃ τ, S.erg = some τ ∧ traegerVon D τ = traegerVon D (S.params.get i) := by
-  exact ⟨.ptr n rw', he, by rw [hi]; rfl⟩
+  exact ⟨.ptr ⟨space', rights', .table n⟩, he, by rw [hi]; rfl⟩
 
 /-- **Two names of one root are not separated**: a callee with two different parameters of
     one pointer type index (a re-view passed with its source, or two plain parameters of one
     table), one of them writable, whose table exists, is NOT `ParamGetrennt`. -/
 theorem leihe_nicht_getrennt {ps : List Ty} (i j : Fin ps.length) (hij : i ≠ j)
-    {n : Nat} {rw rw' : Bool} (hi : ps.get i = .ptr n rw) (hj : ps.get j = .ptr n rw')
-    (hz : (rw || rw') = true) {t : D.Tab} (ht : D.tabNr n = some t) : ¬ ParamGetrenntL D ps := by
+    {n : Nat} {space space' : Nat} {rights rights' : DataRights} (hi : ps.get i = .ptr ⟨space, rights, .table n⟩) (hj : ps.get j = .ptr ⟨space', rights', .table n⟩)
+    (hz : (rights.write || rights'.write) = true) {t : D.Tab} (ht : D.tabNr n = some t) : ¬ ParamGetrenntL D ps := by
   intro hG
   have hz' : (zaehltFuerTrennung (ps.get i) || zaehltFuerTrennung (ps.get j)) = true := by
     rw [hi, hj]; exact hz

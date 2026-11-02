@@ -184,6 +184,7 @@ set_option linter.unusedSectionVars false in
 theorem lowerE_ok_ptrOf (lay : Layout D) (hL : LayoutOk lay)
     {Γ : Ctx}
     {Λ : List (Res D)}
+    {space : Nat}
     (t)
     (n)
     (ht)
@@ -191,7 +192,7 @@ theorem lowerE_ok_ptrOf (lay : Layout D) (hL : LayoutOk lay)
     (cenv : List Reg)
     (r : Nat)
     (c : LR)
-    (h : lowerE lay cenv (.ptrOf t n ht rw : Expr D Γ Λ (Gabbro.Grammatik.Ty.ptr n rw)) r = some c)
+    (h : lowerE lay cenv (.ptrOf t n ht rw : Expr D Γ Λ (Gabbro.Grammatik.Ty.ptr (.table n rw space))) r = some c)
     (σ₀ : World D)
     (σ : World D)
     (ρ : Env D Γ)
@@ -200,11 +201,12 @@ theorem lowerE_ok_ptrOf (lay : Layout D) (hL : LayoutOk lay)
     (hR : Rep lay σ m)
     (hE : EnvRep lay rs m cenv ρ)
     (hc : (∀ x ∈ cenv, x < r))
-    : Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.ptr n rw) (eval σ₀ (.ptrOf t n ht rw : Expr D Γ Λ (Gabbro.Grammatik.Ty.ptr n rw)) σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.ptr n rw) :=
+    : Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.ptr (.table n rw space)) (eval σ₀ (.ptrOf t n ht rw : Expr D Γ Λ (Gabbro.Grammatik.Ty.ptr (.table n rw space))) σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.ptr (.table n rw space)) :=
   by
+  have htab := (Deklaration.capTab_sound ht).1
   simp only [lowerE] at h
   obtain rfl := Option.some.inj h
-  exact ⟨frag_const m rs r _ _ (by simp only [Opd.ev, encR, ht]) (fun x hx => nomatch hx),
+  exact ⟨frag_const m rs r _ _ (by simp only [Opd.ev, encR, htab]) (fun x hx => nomatch hx),
     fitsT_nonint (fun lo hi e => nomatch e)⟩
 
 set_option linter.unusedSectionVars false in
@@ -268,6 +270,7 @@ theorem lowerE_ok_thru (lay : Layout D) (hL : LayoutOk lay)
     {Λ : List (Res D)}
     {zi_n}
     {zi_rw}
+    {zi_space : Nat}
     (p)
     (t)
     (ht)
@@ -277,7 +280,7 @@ theorem lowerE_ok_thru (lay : Layout D) (hL : LayoutOk lay)
     (cenv : List Reg)
     (r : Nat)
     (c : LR)
-    (h : lowerE lay cenv (.thru (n := zi_n) (rw := zi_rw) p t ht f i hL' : Expr D Γ Λ (D.typ t f)) r = some c)
+    (h : lowerE lay cenv (.thru (n := zi_n) (rw := zi_rw) (space := zi_space) p t ht f i hL' : Expr D Γ Λ (D.typ t f)) r = some c)
     (σ₀ : World D)
     (σ : World D)
     (ρ : Env D Γ)
@@ -286,10 +289,11 @@ theorem lowerE_ok_thru (lay : Layout D) (hL : LayoutOk lay)
     (hR : Rep lay σ m)
     (hE : EnvRep lay rs m cenv ρ)
     (hc : (∀ x ∈ cenv, x < r))
-    (ih_lowerE_ok_p : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv p r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.ptr zi_n zi_rw) (eval σ₀ p σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.ptr zi_n zi_rw))
+    (ih_lowerE_ok_p : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv p r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.ptr (.table zi_n (true, zi_rw) zi_space)) (eval σ₀ p σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.ptr (.table zi_n (true, zi_rw) zi_space)))
     (ih_lowerE_ok_i : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv i r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.index (D.count t)) (eval σ₀ i σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.index (D.count t)))
-    : Frag m rs r c (encR lay (D.typ t f) (eval σ₀ (.thru (n := zi_n) (rw := zi_rw) p t ht f i hL' : Expr D Γ Λ (D.typ t f)) σ ρ)) ∧ FitsT (D.typ t f) :=
+    : Frag m rs r c (encR lay (D.typ t f) (eval σ₀ (.thru (n := zi_n) (rw := zi_rw) (space := zi_space) p t ht f i hL' : Expr D Γ Λ (D.typ t f)) σ ρ)) ∧ FitsT (D.typ t f) :=
   by
+  have htab := (Deklaration.capTab_sound ht).1
   simp only [lowerE] at h
   rcases hp : lowerE lay cenv p r with _ | ⟨cp, op, r1⟩
   · simp only [hp, reduceCtorEq] at h
@@ -318,7 +322,7 @@ theorem lowerE_ok_thru (lay : Layout D) (hL : LayoutOk lay)
           (fun x hx => Nat.lt_of_lt_of_le (hc x hx) hrp)).1)
       (fun rsB hagB hoa hob hla hlb => frag_two (ct := (cl, ol, r4))
         (slotAddr_frag lay hL t f hs z.n hk0 hk1 op oi r2 m rsB
-          (by rw [hoa]; simp only [encR, ht]) hla hob hlb ⟨_, hR.1 t z.n f hs hk0 hk1⟩ (ca, oa, r3) hsa)
+          (by rw [hoa]; simp only [encR, htab]) hla hob hlb ⟨_, hR.1 t z.n f hs hk0 hk1⟩ (ca, oa, r3) hsa)
         (fun rsC hagC hoa' hlta => by
           obtain ⟨c', hc', F⟩ := loadG_frag lay (D.typ t f) (σ.slots t z.n f) hs oa (lay.gblk t)
             (lay.off t z.n f) m rsC r3 hoa' (hR.1 t z.n f hs hk0 hk1)

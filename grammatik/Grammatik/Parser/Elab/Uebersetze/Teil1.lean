@@ -143,7 +143,7 @@ inductive UGrund
     numeric parameter or a slot read). -/
 inductive UArg
   | var : String → UArg
-  | freshPtr : String → Bool → UArg
+  | freshPtr : String → DataCapTy → UArg
   | val : USide → UArg
   /-- A truth value for a `bool` parameter. -/
   | bval : UEns → UArg

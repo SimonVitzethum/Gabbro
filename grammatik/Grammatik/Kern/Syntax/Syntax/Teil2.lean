@@ -22,11 +22,11 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       Expr Γ Λ (D.typ t f)
   /-- `p->f`, `p[i].f` -- ein Zugriff DURCH einen Zeiger auf Traeger `n`: derselbe Zugriff wie
       `slot`, mit denselben Waechtern; der Zeiger ist die Faehigkeit, `t` zu nennen (M3). -/
-  | thru (p : Expr Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t) (f : D.Feld t)
+  | thru (p : Expr Γ Λ (.ptr (.table n (true, rw) space))) (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
       (i : Expr Γ Λ (.index (D.count t))) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
   /-- Der Zeiger auf einen Traeger -- die einzige Adresse, die es gibt: die eines DEKLARIERTEN
       Dings. Es gibt keine Adresse eines Ausdrucks (`SYNTAX.md` §4, `fnvalue`). -/
-  | ptrOf (t : D.Tab) (n : Nat) (ht : D.tabNr n = some t) (rw : Bool) : Expr Γ Λ (.ptr n rw)
+  | ptrOf (t : D.Tab) (n : Nat) (ht : D.capTab space n = some t) (rw : Bool × Bool) : Expr Γ Λ (.ptr (.table n rw space))
   /-- `&f` -- the function pointer: a function that CONFORMS to the pointer type («B8»; structural
       since 2026-10-21, `Deklaration.passt`). -/
   | fnref (f : D.Fn) (n : Nat) (h : D.passt f n = true) : Expr Γ Λ (.fnptr n)
@@ -160,8 +160,8 @@ mutual
 inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
-  /-- `p->f = e;` -- Schreiben DURCH einen `rw`-Zeiger (`R002`/`R003`: kein `w` ohne Recht). -/
-  | assignThru (p : Expr D Γ Λ (.ptr n true)) (t : D.Tab) (ht : D.tabNr n = some t)
+  /-- A store requires write permission independently of read permission, plus the contract frame and guards. -/
+  | assignThru (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab) (ht : D.capTab space n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)

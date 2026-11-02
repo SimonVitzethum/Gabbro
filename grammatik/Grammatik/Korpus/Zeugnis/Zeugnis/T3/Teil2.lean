@@ -24,7 +24,7 @@ theorem flVonTyp_eq {τ : Ty} {lo hi : Int × Int}
     obtain ⟨rfl, rfl⟩ := h
     rfl
   | fnptr _ => simp only [flVonTyp, reduceCtorEq] at h
-  | ptr _ _ => simp only [flVonTyp, reduceCtorEq] at h
+  | ptr _ => simp only [flVonTyp, reduceCtorEq] at h
   | ref _ => simp only [flVonTyp, reduceCtorEq] at h
   | arr _ _ => simp only [flVonTyp, reduceCtorEq] at h
   | str _ => simp only [flVonTyp, reduceCtorEq] at h
@@ -52,7 +52,7 @@ theorem ctxFlTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int × Int)
         obtain ⟨rfl, rfl⟩ := h
         exact ⟨.here, trivial⟩
       | fnptr _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
-      | ptr _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | ptr _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
       | ref _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
       | arr _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
       | str _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h

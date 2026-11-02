@@ -61,10 +61,16 @@ theorem own1_refused : stufe own1 = "elab: pointer rights without checked data/o
 /-- Both explicit read and write rights reach the existing checked table operations. -/
 theorem rights_union_ok : stufe (tableRights "w+r") = "OK" := by decide +kernel
 
-/-- The old readable-pointer representation cannot silently grant reads to `w`. -/
+/-- A write-only pointer can store, but its subsequent read is refused. -/
 theorem write_only_refused :
-    stufe (tableRights "w") = "elab: write-only pointer requires a data capability: w" := by
+    stufe (tableRights "w") = "elab: read through pointer without read right" := by
   decide +kernel
+
+/-- Write-only source reaches the ordinary checked table-store lowering. -/
+def storeOnly : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, w> T, i : index into T) effects { writes r.slots } { r.slots[i].b = true; } }"
+
+theorem write_only_store_ok : stufe storeOnly = "OK" := by decide +kernel
 
 /-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
 def bnot1 : String :=

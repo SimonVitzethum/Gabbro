@@ -30,8 +30,8 @@ def sAssignSlot : Sz (SS D V l Γ Λ) :=
         Sz.pure ⟨Λ, .assignSlot t f i e hw hL⟩)
 
 def sAssignThru : Sz (SS D V l Γ Λ) :=
-  Sz.knoten (Sz.bind (ptrTS E) fun ⟨n, q⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
-    Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
+  Sz.knoten (Sz.bind (ptrTS E) fun ⟨space, n, _, q⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
+    Sz.wenn (D.capTab space n = some t) fun ht => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
       Sz.bind (tyS E (.index (D.count t))) fun i => Sz.bind (tyS E (D.typ t f)) fun e =>
         Sz.wenn (V.schreibt t = true) fun hw => Sz.wenn (darf D t Λ) fun hL =>
           Sz.pure ⟨Λ, .assignThru q t ht f i e hw hL⟩)

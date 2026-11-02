@@ -5,7 +5,7 @@
              `dokumente/A1-OWN-PAPER.md` section 6, slice 2b).
 
   WHY. Slice 2 (`Getrennt.lean`) separates CARRIERS: in machine G a pointer type
-  `Ty.ptr n rw` names its table in the TYPE and a pointer value is `Unit`, so two
+  `Ty.ptr (.table n (true, rw))` names its table in the TYPE and a pointer value is `Unit`, so two
   parameters of one table type are one carrier whatever their roots, and the checker's
   rule `R014` (distinct ROOTS, `m3.rs::getrennte_wurzeln`) had no model statement.
 

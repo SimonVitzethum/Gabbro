@@ -220,24 +220,27 @@ def uSVal (ctx : UCtx) (sidx : Nat) (e : SExpr) : Except String USVal :=
     parameter, a value otherwise. -/
 def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
     Except String UArg
-  | .ptr num w, .variable p =>
+  | .ptr cap, .variable p =>
     match uParamNr ctx p with
     | .error e => .error e
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr num2 w2) =>
-        if num == num2 then
-          if w == w2 then .ok (.var p)
-          else
+      | .ok (.ptr source) =>
+        if source = cap then .ok (.var p)
+        else if source.attenuates cap then
+          match cap.target with
+          | .table num =>
             match tabs[num]? with
-            | .some tb => .ok (.freshPtr tb.name w)
-            | .none => .error "pointer table unknown"
-        else .error "argument of foreign table"
+            | some tb => .ok (.freshPtr tb.name cap)
+            | none => .error "pointer table unknown"
+        else .error "pointer argument would widen rights, owner, space or target"
       | _ => .error "pointer argument without G form"
-  | .ptr num w, .fnref t =>
-    match tabs[num]? with
-    | .some tb => if strEq tb.name t then .ok (.freshPtr tb.name w) else .error "argument of foreign table"
-    | .none => .error "pointer table unknown"
+  | .ptr cap, .fnref t =>
+    match cap.target with
+    | .table num =>
+      match tabs[num]? with
+      | some tb => if strEq tb.name t then .ok (.freshPtr tb.name cap) else .error "argument of foreign table"
+      | none => .error "pointer table unknown"
   | .index num, a =>
     match tabs[num]? with
     | .none => .error "index table unknown"

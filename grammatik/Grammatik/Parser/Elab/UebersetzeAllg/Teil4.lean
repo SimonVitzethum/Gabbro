@@ -29,13 +29,13 @@ def lowDurchWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
   | .error _ => none
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num w) =>
+    | some (.ptr (.table num (true, w))) =>
       if h : num < u.tabs.length then
         (fieldHitW u ⟨num, h⟩ fname).map fun fi =>
-          match lowVar Γ (sh + j) (.ptr num w), lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
+          match lowVar Γ (sh + j) (.ptr (.table num (true, w))), lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
           | .ok v, .ok i =>
             if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) then
-              .ok ⟨_, Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (tabNr_some u num h) fi i hL⟩
+              .ok ⟨_, Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (capTab_some u num h) fi i hL⟩
             else .error "access without held guard"
           | .error e, _ | _, .error e => .error e
       else none
@@ -249,12 +249,12 @@ variable (a parameter or a `let`) or the read of an option field through a point
 
 /-- An option field read through a pointer parameter, at its type `opt n`. -/
 def durchTermO (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (num : Nat) (h : num < u.tabs.length)
-    (oh : OptHit u ⟨num, h⟩) {w : Bool} (v : Var Γ (.ptr num w))
+    (oh : OptHit u ⟨num, h⟩) {w : Bool} (v : Var Γ (.ptr (.table num (true, w))))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
     Expr (declOf u) Γ Λ (.opt oh.n) := by
   rw [← oh.hopt]
-  exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (tabNr_some u num h) oh.idx i hL
+  exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (capTab_some u num h) oh.idx i hL
 
 /-- An option field read at a table, at its type `opt n`. -/
 def slotTermO (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (t : Fin u.tabs.length) (oh : OptHit u t)
@@ -290,13 +290,13 @@ def lowOpt (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (sh : 
     | .error e => .error e
     | .ok j =>
       match fn.kinds[j]? with
-      | some (.ptr pnum w) =>
+      | some (.ptr (.table pnum (true, w))) =>
         if h : pnum < u.tabs.length then
           match fieldHitO u ⟨pnum, h⟩ f with
           | .error e => .error e
           | .ok oh =>
             if hn : oh.n = (declOf u).count ⟨num, hnum⟩ then
-              match lowVar Γ (sh + j) (.ptr pnum w) with
+              match lowVar Γ (sh + j) (.ptr (.table pnum (true, w))) with
               | .error e => .error e
               | .ok pv =>
                 match lowIdx u Γ Λ fn sh ⟨pnum, h⟩ ix with

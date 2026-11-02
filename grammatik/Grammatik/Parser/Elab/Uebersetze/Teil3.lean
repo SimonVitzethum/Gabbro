@@ -107,35 +107,32 @@ def sTypText : STyp → String
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
 
-/-- Normalize all rights before the conservative readable-table encoding.
-    Ownership waits for checked C09 flow; it must never silently become `rw`. -/
-def uTableRight (text : String) : Except String Bool :=
+/-- Normalize the complete table access rights. Owner flow is still refused by name. -/
+def uTableRight (text : String) : Except String (Bool × Bool) :=
   match DataRights.decode (fun _ => none) text with
   | some rights =>
-    match rights.readableTable with
-    | some write => .ok write
-    | none => .error ("write-only pointer requires a data capability: " ++ text)
+    if rights.owner.isNone then .ok (rights.read, rights.write)
+    else .error ("pointer rights require checked owner flow: " ++ text)
   | none => .error ("pointer rights without checked data/owner form: " ++ text)
 
-/-- Every exported table right retains its complete decoded permissions. -/
-theorem uTableRight_sound (text : String) (write : Bool) (h : uTableRight text = .ok write) :
+/-- Export retains both flags and cannot erase an owner identity. -/
+theorem uTableRight_sound (text : String) (access : Bool × Bool) (h : uTableRight text = .ok access) :
     ∃ rights : DataRights, DataRights.decode (fun _ => none) text = some rights ∧
-      rights.read = true ∧ rights.write = write ∧ rights.owner = none := by
+      (rights.read, rights.write) = access ∧ rights.owner = none := by
   cases hd : DataRights.decode (fun _ => none) text with
-  | none => simp only [uTableRight, hd] at h; cases h
+  | none => simp [uTableRight, hd] at h
   | some rights =>
-    cases hr : rights.readableTable with
-    | none => simp only [uTableRight, hd, hr] at h; cases h
-    | some rw =>
-      have he : (Except.ok rw : Except String Bool) = .ok write := by
-        simpa only [uTableRight, hd, hr] using h
-      cases he
-      exact ⟨rights, hd, DataRights.readableTable_sound rights rw hr⟩
+    cases ho : rights.owner with
+    | none =>
+      have he : (rights.read, rights.write) = access := by
+        simpa [uTableRight, hd, ho] using h
+      exact ⟨rights, hd, he, ho⟩
+    | some owner => simp [uTableRight, hd, ho] at h
 
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). Named address spaces other than `normal`,
-    rights outside the owner-free readable `r`/`rw` unions, the optional index and every
+    rights outside owner-free data access unions, the optional index and every
     other shape are explicit errors. -/
 def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty
   | .atom a =>
@@ -152,10 +149,13 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
     if !strEq raum "normal" then .error "space without G form"
+    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
-      let write ← uTableRight rechte
+      let access ← uTableRight rechte
       let (num, _) ← uTabNr tabs t
-      pure (.ptr num write)
+      pure (.ptr (.table num access))
+  | .ptr _ _ _ => .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+  | .entry _ _ => .error "entry handle requires C08/C14 binding and C09 forwarding flow"
   | .array t n =>
     match uTyp alias tabs t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"

@@ -39,7 +39,7 @@ def zurueck : (τ : Ty) → Val (D.Fn ⊕ Unit) (passtE D g₀) τ → Wert D τ
   | .fl _ _, v => v
   | .fnptr _, ⟨.inl f, h⟩ => ⟨f, h⟩
   | .fnptr _, ⟨.inr _, h⟩ => ⟨g₀, h⟩
-  | .ptr _ _, v => v
+  | .ptr _, v => v
   | .ref _, v => v
   | .arr τ _, v => fun j => zurueck τ (v j)
   | .str _, v => v
@@ -105,6 +105,10 @@ def erweitert : Deklaration where
   ggeteilt_bewacht := D.ggeteilt_bewacht
   geist := D.geist
   ggeist := D.ggeist
+  dataSpaces := D.dataSpaces
+  tableSpace := D.tableSpace
+  globalSpace := D.globalSpace
+  ownerNr := D.ownerNr
 
 /-- **`D` inside its extension.** -/
 def einE : Einbettung D (erweitert D g₀) where
@@ -206,7 +210,7 @@ def einE : Einbettung D (erweitert D g₀) where
     rcases c with t | g <;> rfl
   annahme := fun a => a
   a10 := rfl
-  tabNr := fun n => by simp only [erweitert, Option.map_id_fun', id_eq]
+  tabNr := ⟨fun n => by simp only [erweitert, Option.map_id_fun', id_eq], fun _ => rfl, rfl⟩
   sig := fun _ => rfl
   passt := fun _ _ => rfl
 
@@ -244,7 +248,7 @@ theorem zurueck_cast : ∀ (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D
       (a := (einE D g₀).tyE τ) (b := τ) h (fun j => (einE D g₀).valE τ (v j)) j)).trans
       (zurueck_cast τ _ (v j))
   | .int _ _, _, _ | .bool, _, _ | .opt _, _, _ | .sum _, _, _ | .why _, _, _ | .never, _, _
-  | .fl _ _, _, _ | .fnptr _, _, _ | .ptr _ _, _, _ | .ref _, _, _ | .str _, _, _ => rfl
+  | .fl _ _, _, _ | .fnptr _, _, _ | .ptr _, _, _ | .ref _, _, _ | .str _, _, _ => rfl
 
 theorem sigTreu_einE : (einE D g₀).SigTreu where
   sigNr := fun n => (sigE_einE D g₀ (D.sigNr n)).symm

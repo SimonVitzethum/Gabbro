@@ -191,7 +191,7 @@ theorem lowerS_lbl_assignThru (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lb
     (st' : St)
     (blks : List Block)
     (hlt : (lb : Nat) < st.l)
-    (h : lowerS lay cenv lv (.assignThru (n := zi_n) p t zz1 f i e zz2 zz3 : Gabbro.Grammatik.Stmt D V l Γ Λ _) lb k st = some (blks, st'))
+    (h : lowerS lay cenv lv (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t zz1 f i e zz2 zz3 : Gabbro.Grammatik.Stmt D V l Γ Λ _) lb k st = some (blks, st'))
     : LblWf lb st st' blks :=
   by
   simp only [lowerS] at h

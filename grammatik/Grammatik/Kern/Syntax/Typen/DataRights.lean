@@ -51,23 +51,6 @@ private def parts (resolveOwner : String → Option Nat) : List (List Char) → 
 def decode (resolveOwner : String → Option Nat) (text : String) : Option DataRights :=
   parts resolveOwner (splitParts text.toList [])
 
-/-- The currently represented table-pointer cut: readable, owner-free rights only.
-    A write-only capability cannot be encoded by the old readable-pointer flag. -/
-def readableTable (r : DataRights) : Option Bool :=
-  if r.read && r.owner.isNone then some r.write else none
-
-/-- Encoding this cut never invents read permission or forgets an owner identity. -/
-theorem readableTable_sound (r : DataRights) (w : Bool) (h : r.readableTable = some w) :
-    r.read = true ∧ r.write = w ∧ r.owner = none := by
-  cases r with
-  | mk read write owner =>
-    cases read <;> cases owner <;> simp_all [readableTable]
-
-theorem readableTable_sound_zeuge :
-    decode (fun _ => none) "w+r+r" = some ⟨true, true, none⟩ ∧
-    (⟨true, true, none⟩ : DataRights).readableTable = some true := by
-  exact ⟨rfl, rfl⟩
-
 /-- A repeated matching owner survives the entire rights union. -/
 theorem owner_union_zeuge :
     decode (fun n => if n = "lease" then some 7 else none) "r+own@lease+w+own@lease" =
@@ -79,9 +62,9 @@ theorem conflicting_owners_refused :
 
 theorem unresolved_owner_refused : decode (fun _ => none) "rw+own@lease" = none := by rfl
 
-theorem write_only_not_readable : (⟨false, true, none⟩ : DataRights).readableTable = none := by rfl
+theorem write_only_not_readable : (⟨false, true, none⟩ : DataRights).read = false := by rfl
 
-theorem owned_not_plain : (⟨true, true, some 7⟩ : DataRights).readableTable = none := by rfl
+theorem owned_not_plain : (⟨true, true, some 7⟩ : DataRights).owner ≠ none := by decide
 
 theorem data_execute_refused : decode (fun _ => none) "rw+x" = none := by rfl
 

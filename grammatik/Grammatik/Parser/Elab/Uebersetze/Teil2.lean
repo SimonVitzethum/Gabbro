@@ -42,7 +42,7 @@ def UReg.ty (g : UReg) : Ty := bif g.bool then .bool else .int g.lo g.hi
     parameter stays recognizable after `Ty.index` unfolds it to
     `.int 0 (n - 1)`). -/
 inductive UParamArt
-  | ptr : Nat → Bool → UParamArt
+  | ptr : DataCapTy → UParamArt
   | index : Nat → UParamArt
   | int : UParamArt
   /-- A truth value: a `bool` parameter or a `let` of a truth value (`Ty.bool` in the context). -/
