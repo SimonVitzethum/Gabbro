@@ -20,7 +20,7 @@
   Every refusal is a named `Except` error at desugar time; elaboration never sees a new
   constructor. The identity of the desugaring with the explicit form is definitional
   (`entfalteFrage_beispiel`, `frageZuElse_ist_else`); end-to-end witnesses elaborate
-  the desugared programs (`Parser/Elab/Proben/Formen/UebersetzeProben33`).
+  the     desugared programs (`Parser/Elab/Proben/Formen/UebersetzeProben42`).
 -/
 module
 
@@ -320,7 +320,7 @@ end
 /-- Expand one adapter to the ordinary function and body (§4.1). -/
 def entfalteAdapt (sigs : List FnSig) (sig : FnSig) (ps : List SAdaptParam) (a : SAdapt)
     (body : Option SAnw) : Except String (FnSig × SAnw) :=
-  if !(strEq sig.art "") then .error "adapter modifier without G form"
+  if !(strEq sig.art "" || strEq sig.art "impl") then .error "adapter modifier without G form"
   else match sigs.find? (fun q => strEq q.name a.quelle) with
   | none => .error ("adapter source unknown: " ++ a.quelle)
   | some q =>

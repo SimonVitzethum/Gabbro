@@ -193,6 +193,7 @@ public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben30
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben31
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben32
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben33
+public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben42
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben34
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben35
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben36
