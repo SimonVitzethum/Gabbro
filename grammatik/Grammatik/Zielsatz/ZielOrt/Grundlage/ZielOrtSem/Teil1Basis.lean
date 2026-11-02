@@ -47,6 +47,13 @@ theorem lese_links (h : GleichAuf S σ σ') (Λ : List (Res D)) (os : List (D.Ta
     GleichAuf S (σ.lese Λ os) σ' := h
 
 theorem gibt (h : GleichAuf S σ σ') (L : D.Lock) : GleichAuf S (σ.gibt L) σ' := h
+/-- Releasing a list of scopes preserves agreement on the footprint. -/
+theorem gibt_foldl (h : GleichAuf S σ σ') (Ls : List D.Lock) :
+    GleichAuf S (Ls.foldl World.gibt σ) σ' := by
+  induction Ls generalizing σ with
+  | nil => exact h
+  | cons L Ls ih => exact ih (h.gibt L)
+
 
 theorem nimmt (h : GleichAuf S σ σ') (L : D.Lock) : GleichAuf S (σ.nimmt L) σ' := h
 
