@@ -20,7 +20,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   main : (declOf unit).Fn
   program : Programm (declOf unit)
   elaborated : (Frontend.elabWithScopes
-    ((uMembers (pre108 source.prepared.selected)).map OldSource.normalizeItem)
+    (uMembers (pre108 source.prepared.selected))
     source.scopes.values source.scopes.types source.scopes.functions
     (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
       (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.selected))}) = .ok unit
@@ -50,13 +50,13 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
   match hc : ExportMetadata.checkConstants members with
   | .error error => throw error
   | .ok () => do
-    match he : Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+    match he : Frontend.elabWithScopes members
         source.scopes.values source.scopes.types source.scopes.functions
         (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
     | .error e => throw e
     | .ok candidate => do
       let unit := {candidate with exportGate := ExportMetadata.check members}
-      have elaborated : (Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+      have elaborated : (Frontend.elabWithScopes members
           source.scopes.values source.scopes.types source.scopes.functions
           (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
             (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
@@ -126,7 +126,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.checkInitializers original result.unit = .ok () ∧
     ExportMetadata.checkConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
-    (Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types scope.functions
+    (Frontend.elabWithScopes original scope.values scope.types scope.functions
       (Frontend.tableWithEmpty scope.values scope.types)).map
         (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧

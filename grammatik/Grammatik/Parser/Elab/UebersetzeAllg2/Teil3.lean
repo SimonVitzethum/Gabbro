@@ -288,7 +288,7 @@ def lowAssignGlobOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
           else .error "option of a foreign table"
       else .error "option table unknown"
 
-/-- `x = v;` at a `let mut` number: `Stmt.assignVar`, the value fitted into the variable's range. -/
+/-- `x = v;` at a mutable local: fit numbers into their range, aggregates into their exact type. -/
 def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (x : String) (v : USide) :
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
@@ -303,7 +303,11 @@ def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn
         match lowWertAt u Γ Λ fn lo hi v with
         | .error e => .error e
         | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
-    | _ => .error "assignment to a non-number variable"
+    | some (_, ty@(.prod ..)) | some (_, ty@(.arr ..)) | some (_, ty@(.str ..)) => do
+      let var ← lowVar Γ j ty
+      let value ← lowWertAtE u Γ Λ fn none ty v
+      pure (Stmt.assignVar (D := declOf u) var value)
+    | _ => .error "assignment to a non-number, non-aggregate variable"
 
 /-- The same for a truth value. -/
 def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)

@@ -72,6 +72,15 @@ def itemMetadata : SItemTief → Bool
     else (sig.art != "" && sig.art != "impl") ||
       clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
       sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  /- Tagged groups expand to ordinary functions before elaboration. Inspect every original
+      header and implementation body, so expansion cannot erase cost/proof/type duties. -/
+  | .specGroupT _ _ functions => functions.any fun sig =>
+      sig.art != "spec" || clausesMetadata sig.klauseln ||
+        sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  | .implGroupT _ receiver functions => typeMetadata receiver || functions.any fun (sig, body) =>
+      sig.art != "impl" || clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
+        sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  | .taggedByT declaration _ => itemMetadata declaration
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
@@ -92,8 +101,9 @@ def itemMetadata : SItemTief → Bool
   | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
   | .groupT .. => true
   | .globT _ _ ty _ bound proof _ => typeMetadata ty || bound.isSome || proof.isSome
-  | .adaptT s ps _ b => (s.art != "" && s.art != "impl") ||
+  | .adaptT s ps adapter b => (s.art != "" && s.art != "impl") ||
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
+    adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
     ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.

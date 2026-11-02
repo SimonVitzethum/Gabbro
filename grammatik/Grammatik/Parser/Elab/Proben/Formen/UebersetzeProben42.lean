@@ -86,7 +86,7 @@ def frageExplizit : List SItemTief :=
       (.block [.bindElse "y" none (.call "g" []) "#frage"
         (.block [.cases (.variable "#frage")
           [.arm "A" none (.block [] (some (.ret (some (.why "R" "A")))))]]
-          none)]
+          (some (.ret (some (.why "R" "A")))))]
         (some (.ret (some (.variable "y")))))]
 
 /-- The desugarer maps `?` to exactly the explicit `else` form (definitional). -/

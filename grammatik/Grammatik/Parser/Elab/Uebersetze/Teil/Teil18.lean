@@ -35,10 +35,13 @@ set_option maxRecDepth 100000
 
 /-! ### Reason propagation `?`: the explicit `else` form -/
 
-/-- The re-raise of a reason `r` over its grounds `cs`: `match e { c => { return r::c; } … }`. -/
+/-- Re-raise each ground through an exhaustive match. Every arm returns its own reason.
+    The unreachable trailing return gives the existing Endblock lowerer a closed continuation;
+    its reason is declared, and an empty channel remains refused by ordinary elaboration. -/
 def frageSonst (r : String) (e : String) (cs : List String) : SAnw :=
   .block [.cases (.variable e)
-    (cs.map fun c => .arm c none (.block [] (some (.ret (some (.why r c))))))] none
+    (cs.map fun c => .arm c none (.block [] (some (.ret (some (.why r c))))))]
+    (cs.head?.map (fun c => .ret (some (.why r c))))
 
 /-- `let x = f(args) ?;` as the explicit `else` form (§4.3). -/
 def frageZuElse (x : String) (ty : Option STyp) (f : String) (args : List SExpr)
@@ -169,7 +172,7 @@ theorem entfalteFrage_beispiel :
       (.block [.cases (.variable "#frage")
         [.arm "A" none (.block [] (some (.ret (some (.why "R" "A"))))),
          .arm "B" none (.block [] (some (.ret (some (.why "R" "B")))))]]
-        none)) := rfl
+        (some (.ret (some (.why "R" "A")))))) := rfl
 
 /-! ### Adapters: the ordinary function -/
 
@@ -368,27 +371,28 @@ def gruendeVon : List SItemTief → List (String × List String)
   | .whyT n cs _ :: rest => (n, cs.map (·.1)) :: gruendeVon rest
   | _ :: rest => gruendeVon rest
 
-/-- Expand one item: adapters become ordinary functions, `?` becomes the explicit `else` form. -/
-def entfalteItem (sigs : List FnSig) (ks : FrageKontext) : SItemTief → Except String SItemTief
-  | .fnT s b => match entfalteFrage { ks with eigen := s.fehler } b with
-    | .error e => .error e
-    | .ok b' => .ok (.fnT s b')
-  | .adaptT s ps a body => match entfalteAdapt sigs s ps a body with
-    | .error e => .error e
-    | .ok (s', b') => match entfalteFrage { ks with eigen := s'.fehler } b' with
-      | .error e => .error e
-      | .ok b'' => .ok (.fnT s' b'')
-  | .gateT it => match entfalteItem sigs ks it with
-    | .error e => .error e
-    | .ok it' => .ok (.gateT it')
-  | it => .ok it
+/-- Resolve adapter signatures before collecting the reason-call environment. Otherwise a
+    later `adapted(args) ?;` sees only the original functions and reports an unknown call. -/
+def entfalteAdapterItem (sigs : List FnSig) : SItemTief → Except String SItemTief
+  | .adaptT s ps a body => do
+    let (signature, expanded) ← entfalteAdapt sigs s ps a body
+    pure (.fnT signature expanded)
+  | .gateT item => (entfalteAdapterItem sigs item).map SItemTief.gateT
+  | item => pure item
 
-/-- **The Phase-1 desugaring**: every adapter and every `?` of the unit to existing forms,
-    before elaboration. -/
-def entzuckere (items : List SItemTief) : Except String (List SItemTief) :=
-  let sigs := sigsVon items
+/-- Expand reason propagation in ordinary and newly generated adapter functions. -/
+def entfalteItem (ks : FrageKontext) : SItemTief → Except String SItemTief
+  | .fnT s b => (entfalteFrage { ks with eigen := s.fehler } b).map (.fnT s)
+  | .gateT item => (entfalteItem ks item).map SItemTief.gateT
+  | item => pure item
+
+/-- The single Phase-1 expansion: adapters first, then `?` with their complete signatures.
+    Adapter targets keep the existing ordinary-function admission rule. -/
+def entzuckere (items : List SItemTief) : Except String (List SItemTief) := do
+  let expanded ← items.mapM (entfalteAdapterItem (sigsVon items))
+  let sigs := sigsVon expanded
   let ks : FrageKontext :=
-    { eigen := none, ruf := sigs.map (fun s => (s.name, s.fehler)), gruende := gruendeVon items }
-  items.mapM (entfalteItem sigs ks)
+    { eigen := none, ruf := sigs.map (fun s => (s.name, s.fehler)), gruende := gruendeVon expanded }
+  expanded.mapM (entfalteItem ks)
 
 end Gabbro.Grammatik.Parser.Uebersetze

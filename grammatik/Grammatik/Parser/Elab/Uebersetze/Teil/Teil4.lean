@@ -248,8 +248,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       match uRechne ctx blatt base with
       | .error e => .error e
       | .ok value => uOldRecord value
-  /- A record constructor would need the labelled-call surface form, which the parser does not
-      provide on this branch: refuse by name instead of misreading positional arguments. -/
+  /- Labelled record constructors share the canonical component elaborator and schema order. -/
   | .call name args =>
     match ctx.records.find? (fun schema => strEq schema.name name) with
     | some schema => do

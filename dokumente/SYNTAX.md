@@ -1059,7 +1059,17 @@ stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-1
    is the shape. The second version wrote `state` transitions through `assign` and left the
    pre-state to a pass. `shiftplace` has no `->` suffix, and the two stage names are
    identifiers, not expressions -- so the arrow is never a pointer suffix. No new word. *)
-exprstmt   = call ";" | call "?" ";" ;   (* reason propagation, below *)
+exprstmt   = call ";" | call "?" ";" ;   (* reason propagation, above *)
+(* There is no `call else (reason) endblock` production without a `let` binding,
+   for either foreign or indirect calls. The parser requires `;` (or `?;`) here.
+   Use `let ignored = foreign(args) else (e) endblock` or the corresponding
+   `let ignored = pointer(args) else (e) endblock` when the call returns a value:
+   these export to Block/Endblock.bindAxiomElse and bindCallIndElse. Discarding
+   an ordinary direct call's result with `call ?;` creates an internal binding
+   through the reason desugaring; it does not emit a G statement-else node.
+   Stmt.axiomCallElse and Stmt.callIndElse currently have no source exporter
+   producer. They remain model forms accepted by the Stage-0 G-to-IR lowerer,
+   rather than additional source spellings. *)
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
 matchstmt  = "match" expr "{" { matcharm } "}" ;
 matcharm   = ident [ "(" ident ")" ] "=>" block ;                 (* CHANGED «SG-5a» *)

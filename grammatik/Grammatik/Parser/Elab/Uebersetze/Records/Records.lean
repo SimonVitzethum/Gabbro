@@ -29,12 +29,7 @@ def uRecordFieldMetadata (field : SFeld) : Bool :=
 /-- One field type: a nominal record reference resolves through the collected schemas, every other
     shape through the canonical type reader (records never weaken a range reading). -/
 def uRecordFeldTyp (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab) :
-    STyp → Except String Ty
-  | .atom name =>
-    match scope.types.find? (fun entry => strEq entry.1 name) with
-    | some (_, ty) => .ok ty
-    | none => uTyp alias tabs (.atom name)
-  | other => uTyp alias tabs other
+    STyp → Except String Ty := uTypIn alias tabs scope.types []
 
 /-- One schema field: no metadata duties, then the resolved type. -/
 def uRecordField (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
@@ -69,7 +64,7 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
           let schema : URecord := { name, identity, fields := resolved, modifiers := flags }
           pure ({ types := scope.types ++ [(name, schema.ty)], records := scope.records ++ [schema] }, deferred)
       | _ =>
-        match uTyp alias tabs body with
+        match uTypIn alias tabs scope.types [] body with
         | .error _ => pure (scope, deferred ++ [(identity, item)])
         | .ok ty => pure ({ scope with types := scope.types ++ [(name, ty)] }, deferred)
     | _ => throw "source export: type declaration has no value schema") (scope, [])
@@ -174,23 +169,26 @@ def uConstantValue : USide → Except String UKonst
     | _ => throw "source export: record initializer conversion requires a number"
   | _ => .error "source export: record initializer requires explicit constant fields"
 
-/-- Elaborate labelled record constructor arguments with the given value elaborator: `P(a: v, …)`
-    arrives as `.ext .label` applications, one per field, in source order. -/
+/-- One record component, shared by construction and replacement. The dependent lowerer
+    checks the component at the field's declared type. -/
+def uRecordSide (ctx : UCtx) (rechne : SExpr → Except String USide) : SExpr → Except String USide
+  | .tru => pure (.truth true)
+  | .fls => pure (.truth false)
+  | .variable name =>
+    match uParamNr ctx name with
+    | .ok position =>
+      match ctx.kinds[position]? with
+      | some .bool => pure (.param name)
+      | _ => rechne (.variable name)
+    | .error _ => rechne (.variable name)
+  | value => rechne value
+
+/-- Labelled constructors arrive as `.ext .label` applications in source order. -/
 def uRecordSides (ctx : UCtx) (rechne : SExpr → Except String USide) :
     List SExpr → Except String (List (String × USide))
   | [] => .ok []
   | .ext .label [label] [value] :: rest => do
-    let side ← match value with
-      | .tru => pure (.truth true)
-      | .fls => pure (.truth false)
-      | .variable name =>
-        match uParamNr ctx name with
-        | .ok position =>
-          match ctx.kinds[position]? with
-          | some .bool => pure (.param name)
-          | _ => rechne value
-        | .error _ => rechne value
-      | _ => rechne value
+    let side ← uRecordSide ctx rechne value
     let tail ← uRecordSides ctx rechne rest
     pure ((label, side) :: tail)
   | _ => .error "source export: record construction requires labelled fields"
