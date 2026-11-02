@@ -185,6 +185,7 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.stmtAxiomElse_case
 #print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_case_zeuge
 #print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_paths_zeuge
+#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.quant_restore
 #print axioms Gabbro.Stage0.Senke.quantBind_ok
 #print axioms Gabbro.Stage0.Senke.quantC_ok

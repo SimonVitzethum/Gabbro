@@ -138,4 +138,22 @@ theorem stmtAxiomElse_paths_zeuge :
     observed none true false = 23 ∧ observed none true true = 9 := by
   decide +kernel
 
+/-- Refusals describe unsupported profiles, rather than refusing the entire
+    statement constructor now that integer and VOID profiles are connected. -/
+def lowered (result : Option Ty) (selected : Option TorB) : Option (List II × Nat) :=
+  lowS 1 (fun _ => 0) (layU (u result) (fun _ => selected) 0)
+    (functionFrame (program result false) (entry result)) ([], 0) [] (0, 0)
+    (statement result (Γ := []))
+
+/-- In particular, a reason outside the declared channel remains an error even
+    though the same statement lowers with its valid one-reason binding. -/
+theorem stmtAxiomElse_refused_zeuge :
+    (lowered (some (.int 0 10)) (some binding)).isSome = true ∧
+    (lowered none (some binding)).isSome = true ∧
+    lowered (some (.int 0 10)) none = none ∧
+    lowered none (some { binding with fehler := [(-9, 1)] }) = none ∧
+    lowered (some (.int (-10) 10)) (some binding) = none ∧
+    lowered (some .bool) (some binding) = none := by
+  decide +kernel
+
 end Gabbro.Stage0.Senke.AxiomElseProbe
