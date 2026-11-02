@@ -19,10 +19,10 @@ variable [DecidableEq D.Fn] (P : Programm D) {S : SperrInv D} {fs ws : List D.Fn
 theorem akzeptiert_mitRuhe {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
-    (h : Akzeptiert P S fs ls cs ws [] checks = true) :
+    (h : Akzeptiert P S fs ls cs ws [] checks = true) (hS : ScopesOkProg P.mitRuhe) :
     Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) [] (checks.map CheckDecl.mitRuhe) = true :=
   spec_akzeptiert (fsRuhe_voll hvoll) hls hcs
-    (h := akzeptiertSpec_mitRuhe P hvoll (akzeptiertSpec_of hvoll hls hcs [] h))
+    (h := akzeptiertSpec_mitRuhe P hvoll (akzeptiertSpec_of hvoll hls hcs [] h)) (hS := hS)
 
 /-- **The root is an idle start of `P.mitRuhe`.** -/
 theorem ruhig_mitRuhe : Ruhig P.mitRuhe (fsRuhe fs) none :=

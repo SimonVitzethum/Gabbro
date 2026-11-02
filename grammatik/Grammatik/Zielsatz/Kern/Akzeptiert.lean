@@ -29,6 +29,16 @@
   | `bibliothek`   | `libraryB`             | `LibraryAdmission P`: generated programs are ordinary (C02 source certificates in `Uebersetzung.lean` carry the content) | by construction (`libraryB_immer`) |
   | `akku`           | `accumulatorB`                  | `AccumulatorAdmission P fs aks`: every per-core accumulator is admitted (descriptor, private cells with one exclusive lock each, exact core-query shape, confined and floored update/reduction graphs) | the staged accumulator leg (C15, 2026-11-02; no goal leg yet) |
   | `pruef`        | `checkB`               | `CheckAdmission P fs checks`: every declared check expands exactly (`CheckExpansion`: `Bool` probe on a reason-free channel threading one Duty), its call-graph closure keeps the read-only frame (`CheckRahmen`), and every gate consumes that Duty once | the check-evidence leg (C16, 2026-11-02; `checkSitePflicht_aus`) |
+| `scopes`       | `scopesOkProgB`        | `ScopesOkProg P` (C11, no `Spec` field: the Satz premise `rufAt_gut`/`exec_gut` read off the program; kept out of `Spec.lean` by design) | the scope legs (`rufAt_gut`, `exec_gut` via `scopesOkProg_of_akzeptiert`) |
+
+  **Changes of 2026-11-02 (C11):**
+  * `scopes` is NEW (`scopesOkProgB`, decided exactly by `scopesOkProgB_iff`):
+    every scoped return releases only locks outside the residual and at or
+    above the floor. This is a strengthening of the CHECKER, not of `Spec`:
+    `AkzeptiertSpec` has no scope field, so the forward proof
+    (`akzeptiertSpec_of`) drops the component while `scopesOkProg_of_akzeptiert`
+    reads it off the Bool; the reverse (`spec_akzeptiert`) takes the program
+    fact as a premise.
 
   **Changes of 2026-11-02 (C16):**
   * `pruef` is NEW (`checkB`, decided exactly by `checkB_iff`): the unit's
