@@ -40,6 +40,27 @@ theorem attenuates_sound (source target : DataCapTy) (h : source.attenuates targ
     cases hsW : source.rights.write <;> cases htW : target.rights.write <;>
     simp_all [attenuates]
 
+/-- Repeated permission restriction preserves the same target, space and owner. -/
+theorem attenuates_trans (source middle target : DataCapTy)
+    (first : source.attenuates middle = true)
+    (second : middle.attenuates target = true) : source.attenuates target = true := by
+  obtain ⟨hs, ht, ho, hr, hw⟩ := attenuates_sound source middle first
+  obtain ⟨hs₂, ht₂, ho₂, hr₂, hw₂⟩ := attenuates_sound middle target second
+  have spaceEq := hs.trans hs₂
+  have targetEq := ht.trans ht₂
+  have ownerEq := ho.trans ho₂
+  cases sr : source.rights.read <;> cases tr : target.rights.read <;>
+    cases sw : source.rights.write <;> cases tw : target.rights.write <;>
+    simp_all [attenuates]
+
+/-- Owner identity survives a sequence that discards write and then read access. -/
+theorem attenuates_trans_zeuge :
+    let source : DataCapTy := ⟨2, ⟨true, true, some 3⟩, .table 7⟩
+    let middle : DataCapTy := ⟨2, ⟨true, false, some 3⟩, .table 7⟩
+    let target : DataCapTy := ⟨2, ⟨false, false, some 3⟩, .table 7⟩
+    source.attenuates target = true :=
+  attenuates_trans _ _ _ rfl rfl
+
 theorem write_only_zeuge :
     (table 0 (false, true)).rights.read = false ∧
     (table 0 (false, true)).rights.write = true ∧
