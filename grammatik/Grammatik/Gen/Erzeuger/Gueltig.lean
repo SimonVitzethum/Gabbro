@@ -32,6 +32,7 @@
 module
 public import Grammatik.Gen.Erzeuger.Programm
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -90,14 +91,15 @@ def komp (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (
   | 8 => antwortenB P fs
   | 9 => maskenB P fs
 
-/-- The Bool of the checker is the conjunction of the ten components. -/
+/-- The Bool of the checker is the conjunction of the ten components, with the C02 library
+    conjunct riding along by construction (`libraryB_immer`): the cells still number 0-9. -/
 theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) :
     AkzeptiertX P S fs ls cs ws = true ↔ ∀ c, komp P S fs ls cs ws c = true := by
   unfold AkzeptiertX
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩ c
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, -⟩ c
     rcases c with ⟨n, hn⟩
     match n, hn with
     | 0, _ => exact h0
@@ -112,7 +114,7 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     | 9, _ => exact h9
     | n + 10, hn => exact absurd hn (by omega)
   · intro h
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩, libraryB_immer _ _⟩
 
 /-- **Refused only by component `c`**: `c` is false, the other nine components are true. -/
 def NurAn (c : Fin 10) (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)

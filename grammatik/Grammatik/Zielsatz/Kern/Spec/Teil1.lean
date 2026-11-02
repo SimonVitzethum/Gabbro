@@ -16,6 +16,7 @@ public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 
 @[expose] public section
 
@@ -163,6 +164,8 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
   -- the handler discipline `H102` (Opus agent H, 2026-09-26, OFFEN O19)
   masken : MaskenDisziplin P fs
+  -- the C02 library binding (generated programs are ordinary; the content is source-level)
+  bibliothek : LibraryAdmission P := trivial
 
 end Pruefer
 

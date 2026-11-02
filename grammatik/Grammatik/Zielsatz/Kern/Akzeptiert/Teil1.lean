@@ -3,6 +3,7 @@ module
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Logik.Vertraege.EinpassenVoll
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 
 @[expose] public section
 
@@ -329,12 +330,14 @@ def maskenDisziplinB (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Bool :=
 def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
   fs.all fun w => !(P.unterbricht w) || maskenDisziplinB P fs w
 
-/-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** -/
+/-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** The last conjunct is the C02
+    library binding: generated programs are ordinary, so it holds by construction
+    (`libraryB_immer`); the content is source-level (`Uebersetzung.lean`). -/
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs
+    antwortenB P fs && maskenB P fs && libraryB P fs
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 

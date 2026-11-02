@@ -17,6 +17,7 @@ public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 
 @[expose] public section
 
@@ -250,6 +251,8 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   -- the ownership judgment (2026-10-24): every body, against every arena's interfaces
   besitz : ∀ a ∈ B, ArenaOwnership.Body.Checked P a.A a.I
   worte : ∀ a ∈ B, ArenaOwnership.Machine.ArenaPlain a.A
+  -- the C02 library binding (generated programs are ordinary; the content is source-level)
+  bibliothek : LibraryAdmission P := trivial
 
 /-- **The ownership start of a unit** (2026-10-24): every arena is empty in the declared start
     memory (nothing used, the free list full), and no declared start or run-time root is handed an

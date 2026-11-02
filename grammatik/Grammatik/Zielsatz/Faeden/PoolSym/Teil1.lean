@@ -266,10 +266,12 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
     Bool accepts only distinct starts. So every unit accepted before is accepted now, and
     every unit refused before with distinct starts is refused now. Since Opus agent H
     (2026-09-26) the Bool has the handler component `maskenB` beside the old conjunction; it
-    is `true` on every program with no handler (`maskenB_ohne`). -/
+    is `true` on every program with no handler (`maskenB_ohne`). Since the C02 binding the
+    Bool has the library component `libraryB` beside that conjunction; it is `true` on every
+    program (`libraryB_immer`). -/
 theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
-    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs) := by
+    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && libraryB P fs) := by
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
     (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
@@ -283,12 +285,13 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   exact of_decide_eq_true h.1.1.2
 
 /-- **Every old acceptance stays an acceptance** -- of a program that meets the handler
-    discipline, in particular of every program with no handler (`maskenB_ohne`). -/
+    discipline, in particular of every program with no handler (`maskenB_ohne`). The library
+    component holds on every program (`libraryB_immer`). -/
 theorem akzeptiert_vor_neu {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true) :
     Akzeptiert P S fs ls cs ws = true := by
-  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM]
+  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, libraryB_immer _ _]
   rfl
 
 /-- Spec's `Getrennt` BEFORE fix lane F10: different routines only. -/

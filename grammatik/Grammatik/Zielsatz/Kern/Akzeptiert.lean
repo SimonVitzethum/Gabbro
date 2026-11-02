@@ -24,6 +24,7 @@
   | `renn`         | `rennB`                | every unguarded, non-atomic carrier (payloads included) is `SchreibGetrennt` | `rennfrei_ungeschuetzt` (the checker's `H013`) |
   | `antworten`    | `antwortenB`           | every answer site of every body is an axiom `-> never` or has a non-empty type (`StelleOk`) | `fortschrittG_aus` (the stop `nieZurueck` is an axiom `-> never` only) |
   | `masken`       | `maskenB`              | `MaskenDisziplin P fs`: every function a handler's (`P.unterbricht`) call graph reaches takes only `masks irqs` locks | `kernHaltE_aus` (the leg `keinKernHalt`; Opus agent H, 2026-09-26, the Rust `H102`) |
+  | `bibliothek`   | `libraryB`             | `LibraryAdmission P`: generated programs are ordinary (C02 source certificates in `Uebersetzung.lean` carry the content) | by construction (`libraryB_immer`) |
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no

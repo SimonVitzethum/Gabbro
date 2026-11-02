@@ -34,7 +34,8 @@
   roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
   (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
-      lock-free starts, pool safety, write separation, answer sites, masking discipline, and since 2026-10-24 the
+      lock-free starts, pool safety, write separation, answer sites, masking discipline, the C02 library binding
+      (generated programs are ordinary; source certificates in `Uebersetzung.lean`), and since 2026-10-24 the
       ownership judgment of every arena in `E.arenen` with plain allocator words; beside it `BesitzStart E`: every
       arena empty in `E.sp0`, no start handed an allocation). The concrete checker is
       `akzeptiertX_pruefer` (Zielsatz/Atomar/AtomarZiel.lean), deciding `AkzeptiertX`. `fs`/`ls`/`cs` are complete
