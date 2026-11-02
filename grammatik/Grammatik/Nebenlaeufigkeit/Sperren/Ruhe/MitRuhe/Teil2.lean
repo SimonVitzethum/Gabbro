@@ -148,6 +148,11 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, Λ, _, .callInd (n := n) p args hp hr =>
       Stmt.nachΛ (nachSig_map (D.sigNr n) Λ).symm
         (.callInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args) (rufPasstR hp) hr)
+  | _, _, Λ, _, .callIndElse (n := n) p args he hp hr err =>
+      Stmt.nachΛ (nachSig_map (D.sigNr n) Λ).symm
+        (.callIndElse (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
+          (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+          (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd err)))
   | _, _, _, _, .locks L hr body =>
       .locks L (fun M hM => hr M (held_mem_map.mp hM)) (ruB body)
   | _, _, _, _, .breaking i body => .breaking i (ruB body)
@@ -195,6 +200,11 @@ def ruB {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, Λ, _, .bindCallInd (n := n) p args he hp hr rest =>
       .bindCallInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
         (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Block.vorΛ (nachSig_map (D.sigNr n) Λ) (ruB rest))
+  | _, _, Λ, _, .bindCallIndElse (n := n) p args he hp hr err rest =>
+      .bindCallIndElse (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
+        (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd err))
         (Block.vorΛ (nachSig_map (D.sigNr n) Λ) (ruB rest))
   | _, _, Λ, _, .bindCallElse f args he hp hr err rest =>
       .bindCallElse (V := vertragR V) (some f) (ruA args)
@@ -310,6 +320,11 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
   | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest =>
       .bindCallInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
         (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd rest))
+  | _, _, Λ, .bindCallIndElse (n := n) p args he hp hr err rest =>
+      .bindCallIndElse (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
+        (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd err))
         (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd rest))
   | _, _, _, .narrow e lo' hi' sonst rest => .narrow (ruE e) lo' hi' (ruEnd sonst) (ruEnd rest)
   | _, _, _, .narrowRequired e lo' hi' rest => .narrowRequired (ruE e) lo' hi' (ruEnd rest)

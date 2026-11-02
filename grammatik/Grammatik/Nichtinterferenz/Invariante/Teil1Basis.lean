@@ -44,6 +44,8 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .narrow e lo' hi' sonst rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .narrowRequired e lo' hi' rest => by

@@ -20,15 +20,18 @@ variable {D : Deklaration}
     caller (in practice the threads of `M.lauf`), read off `RufMaschineG`
     (`(M.faeden t).log`) and `RufEreignisF`.
 
-    While `RufPasst.ownerReady` refuses every nonempty owner flow, every
-    canonical edge carries no owner payload, so the fold step is the
-    identity: the ghost ledger is stable along every `RufSchrittG` step.
-    The per-edge authorization (transfer, borrow, restore) lives in the
-    existing `OwnerState`/`OwnerInvocation` lemmas cited below; connecting a
-    nonempty flow needs the C08 software-call transition first. -/
+    `RufPasst.ownerReady` is the checked call-boundary escrow
+    (`OwnerFlow.EscrowReady`): nonempty flows are admitted with their
+    inputs in hand. Recorded events still carry no owner payload, so the
+    fold step stays the identity and the ghost ledger is stable along every
+    `RufSchrittG` step; the per-call dynamic replay — borrow/transfer at the
+    push, restore/transfer-back at the return on either channel — is
+    `Owner/Escrow.lean`, proved from the `OwnerState`/`OwnerInvocation`
+    lemmas below. The mint itself still needs the C08 software-call
+    transition. -/
 
-/-- One recorded call-log event contributes no owner payload while every
-    canonical call has an empty owner flow (`RufPasst.ownerReady`). -/
+/-- One recorded call-log event contributes no owner payload to the ghost
+    fold; the per-call escrow replay reads the callee flow, not the event. -/
 def ownerFoldStep (s : OwnerState D) : RufEreignisF D → OwnerState D
   | .eintritt _ _ _ => s
   | .rueck _ _ _ _ _ => s

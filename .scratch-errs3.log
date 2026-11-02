@@ -1,0 +1,88 @@
+== Grammatik.Kern.Syntax.Extensions.Extraktion.T2
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T2.lean:269:45: Invalid field notation: Field projection operates on types of the form `C ...` where C is a constant. The expression
+  args
+has type `D.36` which does not have the necessary form.
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T2.lean:296:43: Invalid field notation: Field projection operates on types of the form `C ...` where C is a constant. The expression
+  args
+has type `D.36` which does not have the necessary form.
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T2.lean:297:53: Invalid field notation: Field projection operates on types of the form `C ...` where C is a constant. The expression
+  args
+has type `D.36` which does not have the necessary form.
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T2.lean:330:43: Invalid field notation: Field projection operates on types of the form `C ...` where C is a constant. The expression
+  args
+has type `D.36` which does not have the necessary form.
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T2.lean:331:53: Invalid field notation: Field projection operates on types of the form `C ...` where C is a constant. The expression
+  args
+has type `D.36` which does not have the necessary form.
+warning: Grammatik/Kern/Syntax/Extensions/Extraktion/T2.lean:461:19: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+Some required targets logged failures:
+- Grammatik.Kern.Syntax.Extensions.Extraktion.T2
+error: build failed
+== Grammatik.Logik.Vertraege.ObjektRahmen.T1a
+error: Grammatik/Logik/Vertraege/ObjektRahmen/T1a.lean:68:52: Application type mismatch: The argument
+  a
+has type
+  Option Ty
+but is expected to have type
+  Deklaration.Ax (?m.356 a a✝ args✝ he✝ hp✝ hd✝ hgd✝ hr✝ err)
+in the application
+  KeinTabAx a
+error: Grammatik/Logik/Vertraege/ObjektRahmen/T1a.lean:144:10: Application type mismatch: The argument
+  objs
+has type
+  D.Fn → List (ObjPar D)
+but is expected to have type
+  Endblock ?m.2 ?m.3 ?m.4 ?m.5 ?m.6
+in the application
+  oE objs
+warning: Grammatik/Logik/Vertraege/ObjektRahmen/T1a.lean:172:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Logik/Vertraege/ObjektRahmen/T1a.lean:172:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+--
+error: build failed
+== Grammatik.Parser.Elab.Konst.Dispatch
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:20:28: Application type mismatch: The argument
+  p
+has type
+  Block c.D ?m.41 ?m.42 (Ty.index n :: ?m.77) [] []
+but is expected to have type
+  Block c.D ?m.80 ?m.81 (Ty.index ?m.78 :: ?m.77) [] []
+in the application
+  Stmt.onOption e p
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:56:36: Function expected at
+  ConstSourceBlock
+but this term has type
+  ?m.1
+
+Note: Expected a function because this term is being applied to the argument
+  c
+
+Hint: The identifier `ConstSourceBlock` is unknown, and Lean's `autoImplicit` option causes an unknown identifier to be treated as an implicitly bound variable with an unknown type. However, the unknown type cannot be a function, and a function is what Lean expects here. This is often the result of a typo or a missing `import` or `open` statement.
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:64:38: Function expected at
+  ConstSourceTagArms
+but this term has type
+  ?m.12
+
+Note: Expected a function because this term is being applied to the argument
+  c
+
+Hint: The identifier `ConstSourceTagArms` is unknown, and Lean's `autoImplicit` option causes an unknown identifier to be treated as an implicitly bound variable with an unknown type. However, the unknown type cannot be a function, and a function is what Lean expects here. This is often the result of a typo or a missing `import` or `open` statement.
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:71:41: Function expected at
+  ConstSourceReasonArms
+but this term has type
+  ?m.25
+
+Note: Expected a function because this term is being applied to the argument
+  c
+
+Hint: The identifier `ConstSourceReasonArms` is unknown, and Lean's `autoImplicit` option causes an unknown identifier to be treated as an implicitly bound variable with an unknown type. However, the unknown type cannot be a function, and a function is what Lean expects here. This is often the result of a typo or a missing `import` or `open` statement.
+Some required targets logged failures:
+- Grammatik.Parser.Elab.Konst.Dispatch
+error: build failed

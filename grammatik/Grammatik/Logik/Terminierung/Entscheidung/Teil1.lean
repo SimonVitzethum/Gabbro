@@ -60,6 +60,7 @@ theorem rufeS_mS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .onWhy _ arms => by simp only [rufeS, mS, rufeGArms_mGArms arms]
   | _, _, _, _, .call .. => rfl
   | _, _, _, _, .callInd .. => rfl
+  | _, _, _, _, .callIndElse (n := n) _ _ _ _ _ err => by simp only [rufeS, mS, rufeE_mE err]
   | _, _, _, _, .locks _ _ body => by simp only [rufeS, mS, rufeB_mB body, Bool.true_and]
   | _, _, _, _, .breaking _ body => by simp only [rufeS, mS, rufeB_mB body]
   | _, _, _, _, .traverse _ _ body => by simp only [rufeS, mS, rufeB_mB body]
@@ -93,6 +94,7 @@ theorem rufeB_mB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
   | _, _, _, _, .bind _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .bindCall _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ err rest => by simp only [rufeB, mB, rufeE_mE err, rufeB_mB rest]
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest => by simp only [rufeB, mB, rufeE_mE err, rufeB_mB rest]
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [rufeB, mB, rufeE_mE err, rufeB_mB rest]
@@ -140,6 +142,7 @@ theorem rufeE_mE : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
   | _, _, _, .regReadElse _ _ _ sonst rest => by simp only [rufeE, mE, rufeE_mE sonst, rufeE_mE rest]
   | _, _, _, .awaits _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .bindCallInd _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
+  | _, _, _, .bindCallIndElse _ _ _ _ _ err rest => by simp only [rufeE, mE, rufeE_mE err, rufeE_mE rest]
   | _, _, _, .narrow _ _ _ sonst rest => by simp only [rufeE, mE, rufeE_mE sonst, rufeE_mE rest]
   | _, _, _, .narrowRequired _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .exchange _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
@@ -222,6 +225,9 @@ theorem rufeB_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : 
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie, h => by
       simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeB, rufeB_ohneEwig rest eb ie h.2]
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ err rest, eb, ie, h => by
+      simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
+      simp only [rufeB, rufeE_ohneEwig err eb ie h.1.2, rufeB_ohneEwig rest eb ie h.2]
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest, eb, ie, h => by
       simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeB, rufeE_ohneEwig err eb ie h.1.2, rufeB_ohneEwig rest eb ie h.2]

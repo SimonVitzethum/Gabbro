@@ -34,6 +34,7 @@
 -/
 module
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Semantik.Semantik
 @[expose] public section
 

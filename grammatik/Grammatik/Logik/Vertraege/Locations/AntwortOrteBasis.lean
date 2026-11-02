@@ -53,7 +53,8 @@ def Stmt.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ _ body ueber => body.ants ++ ueber.ants
   | .forever _ _ body => body.ants
   | .axiomCall a .. => [.inl a]
-  | .axiomCallElse a _ _ _ _ _ _ _ err => .inl a :: err.ants
+  | .axiomCallElse _ a _ _ _ _ _ _ err => .inl a :: err.ants
+  | .callIndElse _ _ _ _ _ err => err.ants
   | _ => []
 
 /-- The answer sites of a block: `let x = a(…)` (`inl a`), `let x = R` and
@@ -65,11 +66,12 @@ def Block.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind _ rest => rest.ants
   | .bindCall _ _ _ _ _ rest => rest.ants
   | .bindCallInd _ _ _ _ _ rest => rest.ants
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindCallElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
-  | .bindAxiomOpt a _ _ _ _ _ _ rest => .inl a :: rest.ants
-  | .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
+  | .bindAxiomOpt _ a _ _ _ _ _ rest => .inl a :: rest.ants
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
   | .regRead r _ rest => .inr r :: rest.ants
   | .regReadElse r _ _ sonst rest => .inr r :: (sonst.ants ++ rest.ants)
   | .awaits _ _ _ _ _ rest => rest.ants
@@ -96,12 +98,13 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
-  | .bindAxiomOpt a _ _ _ _ _ _ rest => .inl a :: rest.ants
-  | .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
+  | .bindAxiomOpt _ a _ _ _ _ _ rest => .inl a :: rest.ants
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
   | .regRead r _ rest => .inr r :: rest.ants
   | .regReadElse r _ _ sonst rest => .inr r :: (sonst.ants ++ rest.ants)
   | .awaits g _ _ _ _ rest => rest.ants
   | .bindCallInd _ _ _ _ _ rest => rest.ants
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
   | .narrowRequired _ _ _ rest => rest.ants
   | .exchange _ _ _ _ rest => rest.ants
@@ -157,9 +160,9 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
-  | _, _, .bindAxiomOpt a _ _ _ _ _ _ rest => by
+  | _, _, .bindAxiomOpt _ a _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
-  | _, _, .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => by
+  | _, _, .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .regRead r hk rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]

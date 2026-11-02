@@ -14,6 +14,7 @@
 module
 public import Lean
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 meta import Lean
 meta import Grammatik.Kern.Syntax.Syntax.Teil2
 @[expose] public section
@@ -166,6 +167,7 @@ def tabelle : List Konstr := [
   ⟨"Stmt", "retScoped", ["ErgExpr"], 0, 1⟩,
   ⟨"Stmt", "retWhyScoped", [], 0, 2⟩,
   ⟨"Stmt", "axiomCallElse", ["Args", "Endblock"], 5, 2⟩,
+  ⟨"Stmt", "callIndElse", ["Expr", "Args", "Endblock"], 3, 0⟩,
   ⟨"Block", "nil", [], 0, 0⟩,
   ⟨"Block", "cons", ["Stmt", "Block"], 0, 0⟩,
   ⟨"Block", "bind", ["Expr", "Block"], 0, 0⟩,
@@ -187,6 +189,7 @@ def tabelle : List Konstr := [
   ⟨"Block", "narrowRequired", ["Expr", "Block"], 0, 2⟩,
   ⟨"Block", "bindAxiomOpt", ["Args", "Block"], 4, 2⟩,
   ⟨"Block", "bindAxiomOptElse", ["Args", "Endblock", "Block"], 5, 2⟩,
+  ⟨"Block", "bindCallIndElse", ["Expr", "Args", "Endblock", "Block"], 3, 0⟩,
   ⟨"Endblock", "ret", ["ErgExpr"], 1, 0⟩,
   ⟨"Endblock", "retWhy", [], 1, 1⟩,
   ⟨"Endblock", "leave", [], 1, 0⟩,
@@ -209,6 +212,7 @@ def tabelle : List Konstr := [
   ⟨"Endblock", "retWhyScoped", [], 0, 2⟩,
   ⟨"Endblock", "bindAxiomOpt", ["Args", "Endblock"], 4, 2⟩,
   ⟨"Endblock", "bindAxiomOptElse", ["Args", "Endblock", "Endblock"], 5, 2⟩,
+  ⟨"Endblock", "bindCallIndElse", ["Expr", "Args", "Endblock", "Endblock"], 3, 0⟩,
   ⟨"Arms", "nil", [], 0, 0⟩,
   ⟨"Arms", "cons", ["Block", "Arms"], 0, 0⟩,
   ⟨"GrundArms", "nil", [], 0, 0⟩,
@@ -228,19 +232,19 @@ set_option maxRecDepth 8000
 /-- The rows of a family. -/
 def zeilen (f : String) : List Konstr := tabelle.filter (·.familie == f)
 
-/-- 145 constructors: `Expr` 60, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 32, `Block` 21, `Endblock` 22,
+/-- 148 constructors: `Expr` 60, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 33, `Block` 22, `Endblock` 23,
     `Arms` 2, `GrundArms` 2. -/
-theorem anzahl_konstruktoren : tabelle.length = 145 ∧
+theorem anzahl_konstruktoren : tabelle.length = 148 ∧
     ["Expr", "NutzlastExpr", "Args", "ErgExpr", "Stmt", "Block", "Endblock", "Arms", "GrundArms"].map
-      (fun f => (zeilen f).length) = [60, 2, 2, 2, 32, 21, 22, 2, 2] := by decide
+      (fun f => (zeilen f).length) = [60, 2, 2, 2, 33, 22, 23, 2, 2] := by decide
 
 /-- The arity histogram: how many constructors have 0, 1, 2, 3 children. -/
-theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [29, 36, 57, 22] := by
+theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [29, 36, 57, 23] := by
   decide
 
 /-- The premises (each one local refusal cell of Theorem 4) and the child positions (each one "child of the wrong
     sort or index" refusal cell). -/
-theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 172 ∧
-    (tabelle.map (·.kinder.length)).sum = 221 := by decide
+theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 181 ∧
+    (tabelle.map (·.kinder.length)).sum = 232 := by decide
 
 end Gabbro.Grammatik.Adaequanz.GabbroSig

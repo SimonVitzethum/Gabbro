@@ -77,6 +77,25 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
           h | ⟨m, h1, hE⟩
         · rw [h]; exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+  | .callIndElse p args he hp hr err, σ, ρ => by
+      simp only [execStmt, indSonst]
+      generalize (eval (σ.lese Λ (p.orte ++ args.orte)) p
+          (σ.lese Λ (p.orte ++ args.orte)) ρ) = w
+      obtain ⟨g, hg⟩ := w
+      · dsimp only
+        rcases hR g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases R₂ g (σ.lese Λ (p.orte ++ args.orte))
+              (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+                (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          | ok σ' v => exact Or.inl rfl
+          | why σ' r => exact ((Endblock.kongruent hR err σ' _).schrumpf).zuAusgang
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .assignSlot .., _, _ => Or.inl rfl
   | .assignThru .., _, _ | .assignSlotRef .., _, _ => Or.inl rfl
   | .assignGlob .., _, _ => Or.inl rfl
@@ -159,6 +178,26 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+  | .bindCallIndElse p args he hp hr err rest, σ, ρ => by
+      simp only [execBlock, indSonst]
+      generalize (eval (σ.lese Λ (p.orte ++ args.orte)) p
+          (σ.lese Λ (p.orte ++ args.orte)) ρ) = w
+      obtain ⟨g, hg⟩ := w
+      · dsimp only
+        rcases hR g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases hx : R₂ g (σ.lese Λ (p.orte ++ args.orte))
+              (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+                (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          | ok σ' v => exact (Block.kongruent hR rest σ' _).schrumpf
+          | why σ' r =>
+              exact ((Endblock.kongruent hR err σ' _).schrumpf).zuAusgang
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
   | .bindCallElse g args he hp hr err rest, σ, ρ => by
       simp only [execBlock]
       rcases hR g (σ.lese Λ args.orte)
@@ -209,7 +248,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
             cases ov with
             | none => exact Or.inl rfl
             | some v => exact (ihr _ _).schrumpf
-  | .bindAxiomOptElse e a args he hr' hp hd hgd err rest, σ, ρ => by
+  | .bindAxiomOptElse e a args he hp hd hgd hr' err rest, σ, ρ => by
       have ihr := fun σ ρ => Block.kongruent hR rest σ ρ
       have ihe := fun σ ρ => Endblock.kongruent hR err σ ρ
       cases e with
@@ -382,7 +421,7 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
             cases ov with
             | none => exact Or.inl rfl
             | some v => exact (ihr _ _).schrumpf
-  | .bindAxiomOptElse e a args he hr' hp hd hgd err rest, σ, ρ => by
+  | .bindAxiomOptElse e a args he hp hd hgd hr' err rest, σ, ρ => by
       have ihr := fun σ ρ => Endblock.kongruent hR rest σ ρ
       have ihe := fun σ ρ => Endblock.kongruent hR err σ ρ
       cases e with
@@ -441,6 +480,26 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
                 (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
           | ok σ' v => exact (Endblock.kongruent hR rest σ' _).schrumpf
           | why σ' r => exact Or.inl rfl
+          | logik e => exact Or.inl rfl
+          | hardware e => exact Or.inl rfl
+        · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
+  | .bindCallIndElse p args he hp hr err rest, σ, ρ => by
+      simp only [execEnd, indSonstE]
+      generalize (eval (σ.lese Λ (p.orte ++ args.orte)) p
+          (σ.lese Λ (p.orte ++ args.orte)) ρ) = w
+      obtain ⟨g, hg⟩ := w
+      · dsimp only
+        rcases hR g (σ.lese Λ (p.orte ++ args.orte))
+            (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+              (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          h | ⟨m, h1, hE⟩
+        · rw [h]
+          cases hx : R₂ g (σ.lese Λ (p.orte ++ args.orte))
+              (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
+                (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+          | ok σ' v => exact (Endblock.kongruent hR rest σ' _).schrumpf
+          | why σ' r =>
+              exact ((Endblock.kongruent hR err σ' _).schrumpf)
           | logik e => exact Or.inl rfl
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩

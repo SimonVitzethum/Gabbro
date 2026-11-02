@@ -236,6 +236,18 @@ theorem rahmenStapelS_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       simp only [rufUpdateG_self]
       exact rahmenStapelS_push h hmem _ (traegerSchreibt_passt (g := g) hp)
         (fun c => by cases c <;> rfl) _
+    | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+        hrho neu hneu =>
+      subst hs0; replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
+      simp only [rufUpdateG_self]
+      exact rahmenStapelS_push h hmem _ (traegerSchreibt_passt (g := g) hp)
+        (fun c => by cases c <;> rfl) _
+    | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+        hrho neu hneu =>
+      subst hs0; replace hp := RufPasst.vonPasst (D.passt_sig hg) hp
+      simp only [rufUpdateG_self]
+      exact rahmenStapelS_push h hmem _ (traegerSchreibt_passt (g := g) hp)
+        (fun c => by cases c <;> rfl) _
     -- pops
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hhead g hfg rho hrho
         s0 hs0 hΛ s1 hs1 v hv he neu hneu =>

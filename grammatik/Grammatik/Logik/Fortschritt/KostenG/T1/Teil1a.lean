@@ -148,6 +148,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       no cost field). Counted without a callee here and EXCLUDED from the
       bound: the cost engine runs the gates with `ZS = fun _ => false` (see CUTS). -/
   | .callInd p args _ _ => 1 + kostenExpr p + kostenArgs args
+  | .callIndElse p args _ _ _ err => 1 + kostenExpr p + kostenArgs args + (kostenSonst c pa err + 2)
   | .locks _ _ body => 2 + kostenBlock c pa body
   | .breaking _ body => 1 + kostenBlock c pa body
   | .traverse t inv body =>
@@ -159,7 +160,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
   | .forever _ inv body => 2 + pa * (kostenBlock c pa body + kostenExpr inv + 2)
   | .axiomCall _ args _ _ _ _ _ => 1 + kostenArgs args
-  | .axiomCallElse _ args _ _ _ _ _ _ err => 1 + kostenArgs args + (kostenSonst c pa err + 2)
+  | .axiomCallElse _ _ args _ _ _ _ _ err => 1 + kostenArgs args + (kostenSonst c pa err + 2)
   | .regWrite _ _ e => 1 + kostenExpr e
   | .transition _ _ _ _ _ _ _ => 1
   | .publish _ e _ _ _ _ => 1 + kostenExpr e
@@ -180,13 +181,15 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindCall g args _ _ _ rest => 2 + kostenArgs args + c g + kostenBlock c pa rest
   | .bindCallInd p args _ _ _ rest =>
       2 + kostenExpr p + kostenArgs args + kostenBlock c pa rest
+  | .bindCallIndElse p args _ _ _ err rest =>
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
   | .bindCallElse g args _ _ _ err rest =>
       2 + kostenArgs args + c g + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
   | .regRead _ _ rest => 2 + kostenBlock c pa rest
   | .regReadElse _ _ zusage sonst rest =>
@@ -230,14 +233,16 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
   | .regRead _ _ rest => 5 + kostenSonst c pa rest
   | .regReadElse _ _ zusage sonst rest =>
       5 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .awaits _ _ _ _ _ rest => 5 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 5 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
+  | .bindCallIndElse p args _ _ _ err rest =>
+      5 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
   -- unfolded into block position like the other compound end forms: the unfold step and the block's price
   | .narrow e _ _ sonst rest => 5 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .narrowRequired e _ _ rest => 5 + kostenExpr e + (kostenSonst c pa rest + 1)
@@ -265,14 +270,16 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
   | .regRead _ _ rest => 2 + kostenSonst c pa rest
   | .regReadElse _ _ zusage sonst rest =>
       2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
+  | .bindCallIndElse p args _ _ _ err rest =>
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 1) (kostenSonst c pa rest + 1)
   | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenSonst c pa rest + 1)
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest

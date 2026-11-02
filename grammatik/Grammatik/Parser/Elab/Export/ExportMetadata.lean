@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
 @[expose] public section
@@ -8,7 +9,11 @@ namespace Gabbro.Grammatik.Parser.ExportMetadata
 
 def typeMetadata : STyp → Bool
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
-  | .ptr space _ ty => space != "normal" || typeMetadata ty
+  | .ptr _ rights (.atom target) =>
+      (match Gabbro.Grammatik.DataRights.decode (fun _ => none) rights with
+        | some r => r.owner.isSome
+        | none => true) || target == "u8"
+  | .ptr .. => true
   | .range ty _ _ _ | .array ty _ => typeMetadata ty
   | _ => false
 
@@ -243,7 +248,7 @@ theorem groupT_zeuge :
     handles require C08/C14 binding plus C09 forwarding. Do not erase these
     duties merely because table capability descriptors exist in the model. -/
 theorem capability_unbound_zeuge :
-    typeMetadata (.ptr "guest" "r" (.atom "T")) = true ∧
+    typeMetadata (.ptr "guest" "own@holder" (.atom "T")) = true ∧
     typeMetadata (.entry "main" none) = true := by
   exact ⟨rfl, rfl⟩
 /-- Required allocation remains refused: arenaAllocRequired has no connected
@@ -251,8 +256,10 @@ theorem capability_unbound_zeuge :
 theorem required_allocation_refused_zeuge :
     bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = true := by rfl
 
-/-- Owner production cannot be admitted while nonempty OwnerFlow is refused
-    by the canonical RufPasst.ownerReady escrow boundary. -/
+/-- Owner production stays refused: the model admits escrow-ready flows
+    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), but the elaborator
+    still exports `Marke := Empty` with no owner bindings, so no source form
+    can supply them. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 
@@ -299,5 +306,26 @@ theorem tableSpace_zeuge :
     itemMetadata (.tableT "T" (some "provider") (some (.lit 2)) none (some "Data") false []) = true ∧
     itemMetadata (.tableT "T" none (some (.lit 2)) (some "place") (some "Data") false []) = true := by
   exact ⟨rfl, rfl, rfl⟩
+
+theorem namedPointer_bound (space target : String) :
+    typeMetadata (.ptr space "r" (.atom target)) = (target == "u8") := by
+  have hd : (match Gabbro.Grammatik.DataRights.decode (fun _ => none) "r" with
+      | some r => r.owner.isSome
+      | none => true) = false := rfl
+  show ((match Gabbro.Grammatik.DataRights.decode (fun _ => none) "r" with
+      | some r => r.owner.isSome
+      | none => true) || target == "u8") = (target == "u8")
+  rw [hd, Bool.false_or]
+
+theorem namedPointer_zeuge :
+    typeMetadata (.ptr "sharedData" "r" (.atom "T")) = false ∧
+    typeMetadata (.ptr "sharedData" "x" (.atom "T")) = true ∧
+    typeMetadata (.ptr "sharedData" "rw" (.atom "u8")) = true ∧
+    typeMetadata (.ptr "sharedData" "r" (.raw "T")) = true := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
+/-- A nonempty reset range carries no unbound metadata. -/
+theorem reset_bound_zeuge :
+    bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
+  reset_bound 2 "A" (some (.lit 1, .lit 2))
 
 end Gabbro.Grammatik.Parser.ExportMetadata

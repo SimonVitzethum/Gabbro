@@ -168,15 +168,18 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
       | some _ =>
         simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
     | some q =>
-      obtain ⟨lo, hi2⟩ := q
-      cases p with
-      | none =>
-        simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
-      | some e =>
-        simp only [certCut3PayloadOk] at hp
-        have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
-        obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
-        exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.val ee),
-          trivial⟩
+      cases q with
+      | int lo hi2 =>
+        cases p with
+        | none =>
+          simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
+        | some e =>
+          simp only [certCut3PayloadOk] at hp
+          have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
+          obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
+          exact ⟨Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.val ee),
+            trivial⟩
+      | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ =>
+        cases p <;> simp only [certCut3PayloadOk, Bool.false_eq_true] at hp
 
 end Gabbro.Grammatik

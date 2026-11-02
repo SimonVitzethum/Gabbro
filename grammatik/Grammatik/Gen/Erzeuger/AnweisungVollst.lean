@@ -142,6 +142,13 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
     stm (sCallInd E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
       Sz.mem_wenn hp <| Sz.mem_wenn hr <| Sz.mem_bind (mem_argsS hE _ args (by omega)) <| Sz.mem_pure _)
       (by omega)
+  | callIndElse p args he hp hr err =>
+    simp only [groesseStmt] at hu hE hB hO ⊢
+    have hpp := hE _ p (by omega)
+    have herr := hO.en (groesseEnd err + 0) _ _ _ err (by omega) (by omega)
+    stm (sCallIndElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <| Sz.mem_pure _) (by omega)
   | locks L hr body =>
     simp only [groesseStmt] at hu hE hB hO ⊢
     have hb := hO.bl (groesseBlock body + 0) _ _ _ _ body (by omega) (by omega)

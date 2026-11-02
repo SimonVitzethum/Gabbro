@@ -1,0 +1,1061 @@
+⚠ [2/25] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:44: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:318:6: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:17: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:328:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:330:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [3/25] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil2
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:49:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:50:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:51:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:55:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:56:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:57:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:72:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:73:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:74:18: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:78:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:79:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:80:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:86:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:87:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:88:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:99:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:100:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:101:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:105:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:106:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:107:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:114:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:115:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:116:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:124:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:125:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:126:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:130:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:131:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:132:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:159:21: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+⚠ [5/25] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1Basis
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:23:22: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:53:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:76:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:77:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:69: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:69: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:9: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:47: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:127:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:129:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:131:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:144:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:146:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:148:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:150:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:153:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:159:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:161:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:169:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:171:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:177:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:192:22: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [6/25] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:23:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:27:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:117:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:118:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:125:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:126:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:151:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:152:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:159:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:160:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:193:26: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:203:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:204:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:206:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+ℹ [9/25] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:162:0: 'Gabbro.Grammatik.Gleitkomma.rundeBruch_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:163:0: 'Gabbro.Grammatik.Gleitkomma.add_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:164:0: 'Gabbro.Grammatik.Gleitkomma.sub_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:165:0: 'Gabbro.Grammatik.Gleitkomma.mul_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:166:0: 'Gabbro.Grammatik.Gleitkomma.div_finite' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:167:0: 'Gabbro.Grammatik.Gleitkomma.ofInt_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:168:0: 'Gabbro.Grammatik.Gleitkomma.ofRat_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:169:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:170:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_tie' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:171:0: 'Gabbro.Grammatik.Gleitkomma.wertExakt_neg_some' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:172:0: 'Gabbro.Grammatik.Gleitkomma.findeExp_unten' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:173:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_add01' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:174:0: 'Gabbro.Grammatik.Gleitkomma.sub_selbst' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:175:0: 'Gabbro.Grammatik.Gleitkomma.add_null_null' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:176:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_nullNplusNullN64' depends on axioms: [propext]
+⚠ [11/25] Replayed Grammatik.Kern.Syntax.Typen.Reason
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:59:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:61:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [13/25] Replayed Grammatik.Kern.Syntax.Typen.DataCap
+warning: Grammatik/Kern/Syntax/Typen/DataCap.lean:59:8: Variable name `middle` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _middle
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [16/25] Replayed Grammatik.Kern.Syntax.Typen.Teil2
+warning: Grammatik/Kern/Syntax/Typen/Teil2.lean:30:63: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [zahlZuBytes, List.length_cons, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:118:0: 'Gabbro.Grammatik.eigner_nachRuf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:119:0: 'Gabbro.Grammatik.eigner_lauf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:120:0: 'Gabbro.Grammatik.eigner_aus_leer_nie' depends on axioms: [propext]
+⚠ [18/25] Replayed Grammatik.Kern.Syntax.Syntax.Teil1
+warning: Grammatik/Kern/Syntax/Syntax/Teil1.lean:537:51: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+⚠ [23/25] Replayed Grammatik.Kern.Syntax.Konst.ReinB
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:17:11: Variable name `h1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:17:14: Variable name `h2` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h2
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:22:9: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:22:12: Variable name `h1p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h1p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:23:9: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:23:12: Variable name `h1p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h1p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:24:10: Variable name `hb` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hb
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:25:10: Variable name `hb` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hb
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:26:10: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:26:13: Variable name `h0p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:27:11: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:27:14: Variable name `h0p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:27:18: Variable name `hw1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:27:22: Variable name `hw2` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw2
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:28:12: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:28:15: Variable name `h0p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:28:19: Variable name `hw1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:28:23: Variable name `hw2` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw2
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:29:9: Variable name `w` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _w
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:29:11: Variable name `hw1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:29:15: Variable name `hw2` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw2
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:29:19: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:29:22: Variable name `h0p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:30:9: Variable name `w` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _w
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:30:11: Variable name `hw1` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw1
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:30:15: Variable name `hw2` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hw2
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:30:19: Variable name `h0` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:30:22: Variable name `h0p` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h0p
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:40:13: Variable name `i` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _i
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:42:17: Variable name `t` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _t
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:43:17: Variable name `t` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _t
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:48:12: Variable name `bs` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _bs
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:57:17: Variable name `op` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _op
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:58:17: Variable name `op` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _op
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:83:15: Variable name `x` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _x
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:89:17: Variable name `hp` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hp
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:119:14: Variable name `f` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _f
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:119:21: Variable name `he` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _he
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:119:24: Variable name `hp` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hp
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:119:27: Variable name `hr` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hr
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:138:15: Variable name `h` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _h
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:142:14: Variable name `f` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _f
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:142:21: Variable name `he` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _he
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:142:24: Variable name `hp` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hp
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Konst/ReinB.lean:142:27: Variable name `hr` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hr
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [24/25] Replayed Grammatik.Kern.Syntax.Konst.ReinBKlangAusdruck
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:10:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:13:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:16:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:19:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:22:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:33:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:96:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:99:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:102:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:105:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:108:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:111:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:114:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:117:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:120:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:135:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:138:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:157:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:168:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:175:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constExprB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:220:48: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constPayloadB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:223:48: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constPayloadB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:229:45: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constArgsB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:239:47: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constResultB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Konst/ReinBKlangAusdruck.lean:242:47: This simp argument is unused:
+  Bool.and_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [constResultB] at accepted
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+✖ [25/25] Building Grammatik.Kern.Syntax.Konst.ReinBKlangAnweisung (23s)
+trace: .> LEAN_PATH=/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Cli/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/batteries/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Qq/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/aesop/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/importGraph/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/plausible/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/mathlib/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean /home/simon/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean -j2 -M16384 -DElab.async=true -DmaxHeartbeats=400000 /home/simon/Dokumente/gabbro-c1/grammatik/Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean -o /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.olean -i /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.ilean -c /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.c --setup /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.setup.json --json
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:228:47: Application type mismatch: The argument
+  mid
+has type
+  List (Option Ty)
+but is expected to have type
+  List (Res c.D)
+in the application
+  emptyResources c mid
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:243:24: Type mismatch
+  []
+has type
+  List ?m.10774
+but is expected to have type
+  Nat
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:243:47: Application type mismatch: The argument
+  mid
+has type
+  Nat
+but is expected to have type
+  List (Res c.D)
+in the application
+  emptyResources c mid
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:13:8: fail to show termination for
+  Gabbro.Grammatik.constStmtB_soundGen
+  Gabbro.Grammatik.constArmsB_soundGen
+  Gabbro.Grammatik.constBlockB_soundGen
+with errors
+failed to infer structural recursion:
+Not considering parameter c of Gabbro.Grammatik.constStmtB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.constStmtB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter l of Gabbro.Grammatik.constStmtB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter hΛ of Gabbro.Grammatik.constStmtB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λ = []
+Not considering parameter hΛout of Gabbro.Grammatik.constStmtB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λout = []
+Not considering parameter hacc of Gabbro.Grammatik.constStmtB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    constStmtB c e = true
+Not considering parameter c of Gabbro.Grammatik.constArmsB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.constArmsB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter l of Gabbro.Grammatik.constArmsB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter hΛ of Gabbro.Grammatik.constArmsB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λ = []
+Not considering parameter hΛout of Gabbro.Grammatik.constArmsB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λout = []
+Not considering parameter hacc of Gabbro.Grammatik.constArmsB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    constArmsB c e = true
+Not considering parameter c of Gabbro.Grammatik.constBlockB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.constBlockB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter l of Gabbro.Grammatik.constBlockB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter hΛ of Gabbro.Grammatik.constBlockB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λ = []
+Not considering parameter hΛout of Gabbro.Grammatik.constBlockB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λout = []
+Not considering parameter hacc of Gabbro.Grammatik.constBlockB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    constBlockB c e = true
+Skipping arguments of type List (Option Ty), as Gabbro.Grammatik.constStmtB_soundGen has no compatible argument.
+Cannot use parameters e of Gabbro.Grammatik.constStmtB_soundGen, e of Gabbro.Grammatik.constArmsB_soundGen, and e of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Γ of Gabbro.Grammatik.constStmtB_soundGen, Γ of Gabbro.Grammatik.constArmsB_soundGen, and Γ of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λ of Gabbro.Grammatik.constStmtB_soundGen, Λ of Gabbro.Grammatik.constArmsB_soundGen, and Λ of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λ of Gabbro.Grammatik.constStmtB_soundGen, Λ of Gabbro.Grammatik.constArmsB_soundGen, and Λout of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λ of Gabbro.Grammatik.constStmtB_soundGen, Λout of Gabbro.Grammatik.constArmsB_soundGen, and Λ of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λ of Gabbro.Grammatik.constStmtB_soundGen, Λout of Gabbro.Grammatik.constArmsB_soundGen, and Λout of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λout of Gabbro.Grammatik.constStmtB_soundGen, Λ of Gabbro.Grammatik.constArmsB_soundGen, and Λ of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λout of Gabbro.Grammatik.constStmtB_soundGen, Λ of Gabbro.Grammatik.constArmsB_soundGen, and Λout of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λout of Gabbro.Grammatik.constStmtB_soundGen, Λout of Gabbro.Grammatik.constArmsB_soundGen, and Λ of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+Cannot use parameters Λout of Gabbro.Grammatik.constStmtB_soundGen, Λout of Gabbro.Grammatik.constArmsB_soundGen, and Λout of Gabbro.Grammatik.constBlockB_soundGen:
+  failed to eliminate recursive application
+    constBlockB_soundGen c yes rfl rfl h1
+
+
+Could not find a decreasing measure.
+The basic measures relate at each recursive call as follows:
+(<, ≤, =: relation proved, ? all proofs failed, _: no proof attempted)
+Call from Gabbro.Grammatik.constStmtB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 26:9-46:
+    #1 #2 #3 #4
+#10  =  ?  _  _
+#11  ?  ≤  _  _
+#12  ?  ≤  ≤  _
+#13  ?  ?  _  ?
+Call from Gabbro.Grammatik.constStmtB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 26:49-85:
+    #1 #2 #3 #4
+#10  =  _  _  _
+#11  _  ≤  _  _
+#12  _  ≤  ≤  _
+#13  _  _  _  _
+Call from Gabbro.Grammatik.constStmtB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 32:9-50:
+    #1 #2 #3 #4
+#10  ?  _  _  _
+#11  _  ≤  _  _
+#12  _  ≤  ≤  _
+#13  _  _  _  _
+Call from Gabbro.Grammatik.constStmtB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 32:53-93:
+    #1 #2 #3 #4
+#10  _  _  _  _
+#11  _  ≤  _  _
+#12  _  ≤  ≤  _
+#13  _  _  _  _
+Call from Gabbro.Grammatik.constStmtB_soundGen to Gabbro.Grammatik.constArmsB_soundGen at 37:50-87:
+   #1 #2 #3 #4
+#5  _  ?  _  _
+#6  _  ≤  _  _
+#7  _  ≤  ≤  _
+#8  _  _  _  _
+#9  _  _  _  _
+Call from Gabbro.Grammatik.constArmsB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 232:19-57:
+    #5 #6 #7 #8 #9
+#10  _  _  _  _  _
+#11  _  ≤  ≤  _  _
+#12  _  ≤  ≤  _  _
+#13  _  _  _  _  _
+Call from Gabbro.Grammatik.constArmsB_soundGen to Gabbro.Grammatik.constArmsB_soundGen at 232:60-97:
+ #5 #6 #7 #8 #9
+  _  ≤  ≤  _  _
+Call from Gabbro.Grammatik.constBlockB_soundGen to Gabbro.Grammatik.constStmtB_soundGen at 112:19-56:
+   #10 #11 #12 #13
+#1   _   _   _   _
+#2   _   ≤   ≤   _
+#3   _   _   ≤   _
+#4   _   _   _   _
+Call from Gabbro.Grammatik.constBlockB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 112:59-97:
+ #10 #11 #12 #13
+   _   ≤   ≤   _
+Call from Gabbro.Grammatik.constBlockB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 117:49-87:
+ #10 #11 #12 #13
+   _   ≤   ≤   _
+Call from Gabbro.Grammatik.constBlockB_soundGen to Gabbro.Grammatik.constBlockB_soundGen at 124:38-78:
+ #10 #11 #12 #13
+   _   ?   ≤   _
+
+
+#1: sizeOf Γ
+#2: sizeOf Λ
+#3: sizeOf Λout
+#4: sizeOf e
+#5: sizeOf Γ
+#6: sizeOf Λ
+#7: sizeOf Λout
+#8: sizeOf cs
+#9: sizeOf e
+#10: sizeOf Γ
+#11: sizeOf Λ
+#12: sizeOf Λout
+#13: sizeOf e
+
+Please use `termination_by` to specify a decreasing measure.
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:155:8: fail to show termination for
+  Gabbro.Grammatik.constEndB_soundGen
+with errors
+failed to infer structural recursion:
+Not considering parameter c of Gabbro.Grammatik.constEndB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.constEndB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter l of Gabbro.Grammatik.constEndB_soundGen:
+  it is unchanged in the recursive calls
+Not considering parameter hΛ of Gabbro.Grammatik.constEndB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    Λ = []
+Not considering parameter hacc of Gabbro.Grammatik.constEndB_soundGen:
+  its type Eq is an inductive family and indices are not variables
+    constEndB c e = true
+Cannot use parameter e:
+  failed to eliminate recursive application
+    constEndB_soundGen c rest rfl h1
+Cannot use parameter Γ:
+  failed to eliminate recursive application
+    constEndB_soundGen c rest rfl h1
+Cannot use parameter Λ:
+  failed to eliminate recursive application
+    constEndB_soundGen c rest rfl h1
+
+
+Could not find a decreasing measure.
+The basic measures relate at each recursive call as follows:
+(<, ≤, =: relation proved, ? all proofs failed, _: no proof attempted)
+             Γ Λ #1
+1) 169:59-91 = ≤  ?
+2) 174:49-81 ? ≤  _
+3) 180:9-40  _ ≤  _
+4) 180:43-73 _ ≤  _
+5) 187:38-72 _ ?  _
+
+#1: sizeOf e
+
+Please use `termination_by` to specify a decreasing measure.
+Some required targets logged failures:
+- Grammatik.Kern.Syntax.Konst.ReinBKlangAnweisung
+error: build failed

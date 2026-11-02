@@ -234,6 +234,10 @@ theorem ewig_ruS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .onWhy _ arms, eb, ie, _, _ => ewig_ruGArms arms eb ie
   | _, _, _, _, .call .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
   | _, _, _, _, .callInd .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
+  | _, _, _, _, .callIndElse _ _ _ _ _ err, eb, ie, dl, _ => by
+      refine (ewig_nachΛ _ _ eb ie dl).trans ?_
+      simp only [befS, befund_und_ewig]
+      exact kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie))
   | _, _, _, _, .locks _ _ body, eb, ie, _, _ => ewig_ruB body eb ie
   | _, _, _, _, .breaking _ body, eb, ie, _, _ => ewig_ruB body eb ie
   | _, _, _, _, .traverse _ _ body, _, ie, _, _ => ewig_ruB body false ie
@@ -264,6 +268,10 @@ theorem ewig_ruB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie => by
       simp only [ruB, befB, befund_und_ewig]
       exact kongr₂ (· || ·) rfl ((ewig_vorΛ _ _ eb ie).trans (ewig_ruB rest eb ie))
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ err rest, eb, ie => by
+      simp only [ruB, befB, befund_und_ewig]
+      exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
+        ((ewig_vorΛ _ _ eb ie).trans (ewig_ruB rest eb ie))
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest, eb, ie => by
       simp only [ruB, befB, befund_und_ewig]
       exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
@@ -307,6 +315,10 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
   | _, _, _, .bindCallInd _ _ _ _ _ rest, eb, ie => by
       simp only [ruEnd, befE, befund_und_ewig]
       exact kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
+  | _, _, _, .bindCallIndElse _ _ _ _ _ err rest, eb, ie => by
+      simp only [ruEnd, befE, befund_und_ewig]
+      exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
+        ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
   | _, _, _, .narrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruEnd rest eb ie)
   | _, _, _, .narrowRequired _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
   | _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie

@@ -113,6 +113,35 @@ theorem callInd_slots_fest (O : Orakel D) (passes : Nat)
       simp only [Ausgang.welt] at hstep
       exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
+/-- `callIndElse` through `keinRuf` yields no world: the slot goal is vacuous. -/
+theorem callIndElse_slots_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
+    {p : Expr D Γ Λ (.fnptr n)} {args : Args D Γ Λ (D.sigNr n).params}
+    {he : (D.sigNr n).erg = some τ} {hp : RufPasst D V (D.sigNr n) Λ} {hr : 0 < (D.sigNr n).gruende}
+    {err : Endblock D V l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ)}
+    (s : Stmt D V l Γ Λ (nachSig D (D.sigNr n) Λ))
+    (hs : s = Stmt.callIndElse (V := V) p args he hp hr err)
+    (sg : World D) (rho : Env D Γ) (sg' : World D)
+    (hstep : (execStmt O passes keinRuf s sg rho).welt = some sg')
+    (t : D.Tab) (k : Int) (f : D.Feld t) :
+    sg'.slots t k f = sg.slots t k f := by
+  subst hs
+  simp only [execStmt, indSonst] at hstep
+  revert hstep
+  generalize hP : eval (sg.lese Λ (p.orte ++ args.orte)) p
+      (sg.lese Λ (p.orte ++ args.orte)) rho = pv
+  intro hstep
+  cases pv with
+  | mk fn hf =>
+      simp only at hstep
+      have hR : keinRuf (D := D) fn (sg.lese Λ (p.orte ++ args.orte))
+          (umsig hf (evalArgs (sg.lese Λ (p.orte ++ args.orte)) args
+            (sg.lese Λ (p.orte ++ args.orte)) rho)) =
+          RufAusgang.logik (.abstieg fn) := rfl
+      rw [hR] at hstep
+      simp only [Ausgang.welt] at hstep
+      exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
+
 /-! ## 7. Other-table and degenerate arms: slots of `t` survive writes to `t₂ ≠ t`.
 
   Each lemma takes the firing equation for ONE constructor form with an

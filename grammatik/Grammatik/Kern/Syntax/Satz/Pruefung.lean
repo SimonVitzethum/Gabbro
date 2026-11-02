@@ -20,6 +20,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 
 @[expose] public section
 

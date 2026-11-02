@@ -322,7 +322,7 @@ theorem keinRuf_gut : GutR (D := D) keinRuf := by
 /-- Leaf or compound. A thread step executes one leaf; compound statements
     (`ite`, calls, `locks`, loops, ...) open into further steps instead. -/
 def Stmt.istBlatt : Stmt D V l Γ Λ Λ' → Bool
-  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd ..
+  | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd .. | .callIndElse ..
   | .locks .. | .breaking .. | .traverse .. | .consumeTraverse .. | .retry .. | .forever .. | .axiomCallElse .. => false
   | _ => true
 
@@ -410,6 +410,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
   | .call .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .callInd .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .axiomCallElse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .callIndElse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .locks .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .breaking .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .traverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf

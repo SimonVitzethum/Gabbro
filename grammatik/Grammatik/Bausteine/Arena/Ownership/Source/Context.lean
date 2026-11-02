@@ -76,7 +76,7 @@ theorem origin_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     obtain ⟨h, hg, hv⟩ := ih ρ hr hi
     exact ⟨h, hg, hv⟩
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
   | _ => simp only [origin, expressionOrigin, reduceCtorEq] at hi
 
 @[simp] theorem Context.kill_reference (c : Context) (i : Nat) {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :

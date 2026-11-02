@@ -38,7 +38,8 @@
       `geteilt_treu` unterscheidet erst dort wieder Tabelle/Global.
   S2. W-EXT (die Traversierung, §2): `ruftDirekt` traversiert `Stmt`/`Block`/
       `Endblock`/`Arms`/`GrundArms` und sammelt `Stmt.call`, `Block.bindCall`,
-      `Block.bindCallElse` als Kanten; `callInd` (Zeigerruf), `bindCallInd` und
+      `Block.bindCallElse` als Kanten; `callInd`/`callIndElse` (Zeiger­rufe),
+      `bindCallInd`/`bindCallIndElse` (ihre `else`-Zweige ausgenommen) und
       `axiomCall`/`bindAxiom` (fremder Rumpf) liefern KEINE Kante -- ein
       Zeigerruf faellt damit aus der Huelle, und der Pruefer muss ihn
       verweigern (fail-closed, wie `W003`), nicht raten. `kantenVoll` nennt

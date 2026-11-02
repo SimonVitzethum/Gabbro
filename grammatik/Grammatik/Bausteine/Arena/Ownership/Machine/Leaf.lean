@@ -128,6 +128,7 @@ theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | _, _, _, _, _, _, _, _, .onWhy .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .call .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .callInd .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .callIndElse .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .locks .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .breaking .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .traverse .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl

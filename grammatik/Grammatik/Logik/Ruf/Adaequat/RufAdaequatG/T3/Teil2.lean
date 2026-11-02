@@ -126,6 +126,7 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact ⟨M2, RufLaufG.schritt hs1 hr2, hZ2, by rw [ho2, (Erw.lese _ _ _).offen]⟩
   | _, _, _, _, _, .call .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callIndElse .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs => by
       intro σ σ' ρ ρ' hex M _ rest k hZ hΛ hA
       obtain ⟨hAL, hb⟩ := hs.locks_inv
@@ -205,6 +206,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         by rw [ho2, (Erw.lese _ _ _).offen]⟩
   | _, _, _, _, _, .bindCall .., hb => by cases hb
   | _, _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, _, .bindCallIndElse .., hb => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb

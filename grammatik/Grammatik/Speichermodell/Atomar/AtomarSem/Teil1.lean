@@ -76,6 +76,10 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .callIndElse p args he _ hr err, σ, ρ =>
+      indSonst R p args he hr (leseA A σ Λ (p.orte ++ args.orte)) ρ
+        (fun σ' _ => .ok σ' ρ)
+        (fun σ' r => (execEndHA err σ' (.cons r ρ)).schrumpf.zuAusgang)
   | .locks L _ body, σ, ρ => freiH S L (execBlockHA body ((U L σ).nimmt L) ρ)
   | .breaking _ body, σ, ρ => execBlockHA body σ ρ
   | .traverse t inv body, σ, ρ =>
@@ -152,6 +156,10 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .bindCallIndElse p args he _ hr err rest, σ, ρ =>
+      indSonst R p args he hr (leseA A σ Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execBlockHA rest σ' (.cons v ρ)).schrumpf)
+        (fun σ' r => (execEndHA err σ' (.cons r ρ)).schrumpf.zuAusgang)
   | .bindCallElse f args he _ _ err rest, σ, ρ =>
       let σ := leseA A σ Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
@@ -328,6 +336,10 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .bindCallIndElse p args he _ hr err rest, σ, ρ =>
+      indSonstE R p args he hr (leseA A σ Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execEndHA rest σ' (.cons v ρ)).schrumpf)
+        (fun σ' r => (execEndHA err σ' (.cons r ρ)).schrumpf)
   | .narrow e lo' hi' sonst rest, σ, ρ =>
       let σ := leseA A σ Λ e.orte
       let v := eval σ e σ ρ

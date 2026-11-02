@@ -83,6 +83,21 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
+  | _, _, _, _, _, _, _, _, .callIndElse p args he hp hr err J owner hJ _ _ hplan herr, σ, ρ, hk, h => by
+    simp only [execStmt, indSonst]
+    generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
+    obtain ⟨f, hf⟩ := pv
+    simp only
+    split
+    · rename_i σ' v heq
+      rw [← (hJ f hf).2, ← dropContext_isOwner]
+      exact ValueBound.discard _ _ (callInd_value I R hR J owner hJ args (h.reads _ _) hplan f hf heq)
+    · rename_i σ' r heq
+      exact EPost.toB _ (EPost.schrumpf hk _ (oe_sound hR hO herr _ _ (by simp only [List.length_cons]; omega)
+        ((callInd_reason I R hR J owner hJ args (h.reads _ _) hplan f hf heq).bindNone (τ := .why _)
+          (grundSig hf r))))
+    · trivial
+    · trivial
   | _, _, _, _, _, _, _, _, .locks L hr body hb, σ, ρ, hk, h => by
     simp only [execStmt]
     exact BPost.mapMeta _ _ (fun σ => MetaSame.gives A σ L)
@@ -196,9 +211,24 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, _, _, .bindCallElse f args he hp hr err rest _ hplan herr hrest, σ, ρ, hk, h => by
-    simp only [execBlock]
+  | _, _, _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest,
+      σ, ρ, hk, h => by
+    simp only [execBlock, indSonst]
+    generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
+    obtain ⟨f, hf⟩ := pv
+    simp only
     split
+    · rename_i σ' v heq
+      have hb := ValueBound.bind _ (ergSig hf he) v
+        (callInd_value I R hR J owner hJ args (h.reads _ _) hplan f hf heq)
+      rw [resultContext_isOwner, (hJ f hf).2] at hb
+      exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) hb)
+    · rename_i σ' r heq
+      exact EPost.toB _ (EPost.schrumpf hk _ (oe_sound hR hO herr _ _ (by simp only [List.length_cons]; omega)
+        ((callInd_reason I R hR J owner hJ args (h.reads _ _) hplan f hf heq).bindNone (τ := .why _)
+          (grundSig hf r))))
+    · trivial
+    · trivial
     · rename_i σ' v heq
       exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega)
         (ValueBound.bind _ he v (call_value I R hR f args (h.reads _ _) hplan heq)))
@@ -427,6 +457,24 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) hb)
     · rename_i r _
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
+    · trivial
+    · trivial
+  | _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest, σ, ρ,
+      hk, h => by
+    simp only [execEnd, indSonstE]
+    generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
+    obtain ⟨f, hf⟩ := pv
+    simp only
+    split
+    · rename_i σ' v heq
+      have hb := ValueBound.bind _ (ergSig hf he) v
+        (callInd_value I R hR J owner hJ args (h.reads _ _) hplan f hf heq)
+      rw [resultContext_isOwner, (hJ f hf).2] at hb
+      exact EPost.schrumpf hk _ (oe_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega) hb)
+    · rename_i σ' r heq
+      exact EPost.schrumpf hk _ (oe_sound hR hO herr _ _ (by simp only [List.length_cons]; omega)
+        ((callInd_reason I R hR J owner hJ args (h.reads _ _) hplan f hf heq).bindNone (τ := .why _)
+          (grundSig hf r)))
     · trivial
     · trivial
 

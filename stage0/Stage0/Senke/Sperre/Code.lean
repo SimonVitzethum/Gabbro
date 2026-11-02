@@ -94,6 +94,8 @@ def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D 
   | _, _, _, _, .traverse _ _ b => retFreiB b
   | _, _, _, _, .breaking _ b => retFreiB b
   | _, _, _, _, .locks _ _ b => retFreiB b
+  | _, _, _, _, .axiomCallElse .. => false
+  | _, _, _, _, .callIndElse .. => false
   | _, _, _, _, _ => false
 
 def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → Bool
@@ -103,8 +105,11 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .floatLit _ _ _ r | _, _, _, _, .floatOf _ _ _ r => retFreiB r
   | _, _, _, _, .bindCall _ _ _ _ _ r | _, _, _, _, .bindCallInd _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ r => retFreiB r
+  | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .awaits _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .exchange _ _ _ _ r => retFreiB r
+  | _, _, _, _, .bindAxiomOpt (e := none) .. | _, _, _, _, .bindAxiomOptElse .. => false
+  | _, _, _, _, .bindCallIndElse .. => false
   | _, _, _, _, _ => false
 def retFreiArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
     Arms D V l Γ Λ Λ' cs → Bool

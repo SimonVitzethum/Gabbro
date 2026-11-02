@@ -160,6 +160,7 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .axiomCall .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .axiomCallElse .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .callInd .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .callIndElse .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .assignSlot .., _, _, _ => rfl
   | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
   | .assignGlob .., _, _, _ => rfl
@@ -193,6 +194,7 @@ theorem Block.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Block.kOk] at h
       simp only [execBlock, Block.orakel_kOk rest h]
   | .bindCallInd .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindCallIndElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindCallElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindAxiom .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindAxiomElse .., h, _, _ | .bindAxiomOpt .., h, _, _ | .bindAxiomOptElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
@@ -242,6 +244,12 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCall _ _ _ _ _ rest, h, σ, ρ => by
       simp only [Endblock.kOk] at h
       simp only [execEnd, Endblock.orakel_kOk rest h]
+  | .bindCallElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindCallInd .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindCallIndElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .regRead .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .regReadElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .awaits .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiom .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiomElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiomOpt .., h, _, _ | .bindAxiomOptElse .., h, _, _ | .bindCallElse .., h, _, _ | .bindCallInd .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h

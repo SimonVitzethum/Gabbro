@@ -9,7 +9,7 @@
   AND environment, never quantified over environments.
 
   `BlockOhneRuf` says a block performs no call: no `call`/`callInd` in any
-  statement, no `bindCall`/`bindCallInd`/`bindCallElse` in any block spine,
+  statement, no `bindCall`/`bindCallInd`/`bindCallElse`/`bindCallIndElse` in any block spine,
   and nested blocks preserve the property. Lemma `ohneRuf_Runabhaengig`
   proves the meaning: on such blocks `execBlock` is independent of the
   call-meaning parameter `R`.

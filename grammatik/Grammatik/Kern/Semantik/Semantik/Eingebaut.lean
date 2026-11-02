@@ -8,6 +8,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Semantik.Evaluation.Ueberlauf
 public import Grammatik.Kern.Syntax.Extensions.Bits.T2.Teil1
 

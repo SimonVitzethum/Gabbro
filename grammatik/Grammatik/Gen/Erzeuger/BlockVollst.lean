@@ -65,6 +65,15 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     blk (bBindCallInd O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
       mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
       Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
+  | bindCallIndElse p args he hp hr err rest =>
+    simp only [groesseBlock] at hu hE hS hB hN hO ⊢
+    have hpp := hE _ p (by omega)
+    have herr := hO.en (groesseEnd err + (0 + (groesseBlock rest + 0))) _ _ _ err (by omega) (by omega)
+    have hr' := hO.bl (groesseBlock rest + 0) _ _ _ _ rest (by omega) (by omega)
+    blk (bBindCallIndElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
   | bindCallElse f args he hp hr err rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO ⊢
     have herr := hO.en (groesseEnd err + (0 + (groesseBlock rest + 0))) _ _ _ err (by omega) (by omega)
@@ -282,5 +291,14 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
     blk (eBindCallInd O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
       mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
       Sz.mem_bindR (mem_argsS hE _ args (by omega)) hr' <| Sz.mem_pure _) (by omega)
+  | bindCallIndElse p args he hp hr err rest =>
+    simp only [groesseEnd] at hu hE hS hO ⊢
+    have hpp := hE _ p (by omega)
+    have herr := hO.en (groesseEnd err + (0 + (groesseEnd rest + 0))) _ _ _ err (by omega) (by omega)
+    have hr' := hO.en (groesseEnd rest + 0) _ _ _ rest (by omega) (by omega)
+    blk (eBindCallIndElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+      mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+      Sz.mem_bindR (mem_argsS hE _ args (by omega)) herr <|
+      Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
 
 end Gabbro.Grammatik.Gen

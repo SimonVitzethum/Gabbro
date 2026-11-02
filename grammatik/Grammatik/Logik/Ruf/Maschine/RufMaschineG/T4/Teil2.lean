@@ -36,6 +36,7 @@ def GRest.sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .wartetSonst _ _ _ _ => false
   | .abbruch k => k.sauber
   | .leer => true
+  | .rueckBereit _ k => k.sauber
 
 /-- A stacked residue: clean, or waiting over a clean continuation. -/
 def GRest.stapelSauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -62,5 +63,58 @@ theorem RufFadenSauberG.kopf_wartend {z : RufFadenG D} (h : RufFadenSauberG z) :
     z.kopf.wartend = false :=
   GRest.sauber_wartend h.1
 
+/-- One step preserves the invariant at an UNTOUCHED thread: the
+    result machine's thread state equals the old one. `hne` selects the
+    untouched side and is consumed by the simp set. -/
+theorem rufSchrittG_passt_anders (P : Programm D) (O : Orakel D) (passes : Nat)
+    (M M' : RufMaschineG D) (f f' : Faden) (hne : f' ≠ f)
+    (hs : RufSchrittG P O passes M f M') :
+    M'.faeden f' = M.faeden f' := by
+  (rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs) <;> (simp_all [rufUpdateG_noteq])
+
+/-- One step preserves the invariant for EVERY thread. Both `hact`
+    (acting side) and the untouched side feed the conclusion; `hne`
+    selects the side. -/
+theorem rufSchrittG_passt (P : Programm D) (O : Orakel D) (passes : Nat)
+    (M M' : RufMaschineG D) (f : Faden)
+    (h : RufMaschinePasstG M)
+    (hs : RufSchrittG P O passes M f M') :
+    RufMaschinePasstG M' := by
+  intro f'
+  by_cases hne : f' = f
+  · subst hne
+    exact rufSchrittG_passt_acting P O passes M M' f' (h f') hs
+  · rw [rufSchrittG_passt_anders P O passes M M' f f' hne hs]
+    exact h f'
+
+/-- The invariant holds at every reachable machine. Both `hbase` (start
+    evidence) and the step evidence feed the conclusion. -/
+theorem rufErreichbarG_passt (P : Programm D) (O : Orakel D) (passes : Nat)
+    (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (M : RufMaschineG D)
+    (h : RufErreichbarG P O passes (RufStartG P sp init) M) :
+    RufMaschinePasstG M := by
+  induction h with
+  | start => exact rufStartG_passt P sp init
+  | schritt M M' f hbase hs ih =>
+      exact rufSchrittG_passt P O passes M M' f ih hs
+
+/-- **Return fidelity.** Every `rueck` event in a reachable thread log has
+    its matching `eintritt` event in the same log. Every premise is used:
+    `h` selects the reachable machine, `hmem` the log event. -/
+theorem rufG_treu (P : Programm D) (O : Orakel D) (passes : Nat) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (M : RufMaschineG D)
+    (h : RufErreichbarG P O passes (RufStartG P sp init) M) (f : Faden) :
+    ∀ (g : D.Fn) (rho : Env D (D.params g)) (v : ErgVal D (D.erg g)) (s0 s1 : World D),
+      RufEreignisF.rueck g rho v s0 s1 ∈ (M.faeden f).log →
+      RufEreignisF.eintritt g rho s0 ∈ (M.faeden f).log := by
+  have hmach := rufErreichbarG_passt P O passes sp init M h
+  have hthread := hmach f
+  unfold RufFadenPasstG at hthread
+  have hged := rufLogPasstG_gedeckt (RufFadenSchluesselG (M.faeden f))
+    (M.faeden f).log hthread
+  unfold rufRueckGedecktG at hged
+  intro g rho v s0 s1 hmem
+  exact hged g rho v s0 s1 hmem
 
 end Gabbro.Grammatik

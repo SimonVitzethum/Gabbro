@@ -3,6 +3,7 @@ module
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt.Teil2
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz

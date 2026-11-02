@@ -221,8 +221,11 @@ theorem blatt_erhaelt_slots
   | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | call fn args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callIndElse p args he hp hr err => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | locks Lk hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | traverse u inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | retry n bis body ueber => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
@@ -284,6 +287,16 @@ theorem blatt_erhaelt_slots
       intro k fld'
       rfl
   | retires m st hh a =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      intro k fld'
+      rfl
+  | retScoped =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      intro k fld'
+      exact lese_slots_gleich _ _ _ _ _ _
+  | retWhyScoped =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'

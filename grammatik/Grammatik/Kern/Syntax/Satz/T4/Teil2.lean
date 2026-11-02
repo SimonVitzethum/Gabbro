@@ -99,6 +99,13 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
+  | .callIndElse p args he hp hr err, σ, ρ, hbo, hh, σ', h => by
+      simp only [execStmt] at h
+      exact indSonst_gutB R hR bo hbV p args he hp hr σ _ ρ hh
+        (gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append p.orte_darf args.orte_darf) hh.heldIn)
+        (fun s1 _ => .ok s1 ρ) (fun s1 r => (execEnd err s1 (.cons r ρ)).schrumpf.zuAusgang)
+        (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Gut.refl _ _ _)
+        (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) hh1).schrumpf.zuAusgang) σ' h
   | .locks L hr body, σ, ρ, hbo, hh, σ', h =>
       (GutAusgang.gibt L (nicht_gehaltenB L hr hh (fun c hc => by
           have hsc := hbo c hc; simp only [Stmt.ueberBoden, Bool.and_eq_true, decide_eq_true_eq] at hsc; exact hsc.1))
@@ -217,6 +224,14 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
+  | .bindCallIndElse p args he hp hr err rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execBlock] at h
+      exact indSonst_gutB R hR bo hbV p args he hp hr σ _ ρ hh
+        (gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append p.orte_darf args.orte_darf) hh.heldIn)
+        (fun s1 v => (execBlock rest s1 (.cons v ρ)).schrumpf)
+        (fun s1 r => (execEnd err s1 (.cons r ρ)).schrumpf.zuAusgang)
+        (fun s1 v hh1 => (block_gutB bo hbV rest s1 _ (by boden_tac) hh1).schrumpf)
+        (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) hh1).schrumpf.zuAusgang) σ' h
   | .bindCallElse f args he hp _ err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
@@ -557,6 +572,14 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [EndAusgang.welt, reduceCtorEq] at h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
+  | .bindCallIndElse p args he hp hr err rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      exact indSonstE_gutB R hR bo hbV p args he hp hr σ _ ρ hh
+        (gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append p.orte_darf args.orte_darf) hh.heldIn)
+        (fun s1 v => (execEnd rest s1 (.cons v ρ)).schrumpf)
+        (fun s1 r => (execEnd err s1 (.cons r ρ)).schrumpf)
+        (fun s1 v hh1 => (end_gutB bo hbV rest s1 _ (by boden_tac) hh1).schrumpf)
+        (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) hh1).schrumpf) σ' h
   | .narrow e lo' hi' sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn

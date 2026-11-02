@@ -7,7 +7,9 @@
              passed for such a parameter -- where `f` CONFORMS (`Deklaration.passt`, decided by `passtAt`).
              `p(..);` is `Stmt.callInd`, `let y = p(..);` is `Block.bindCallInd`/`Endblock.bindCallInd`, with
              `RufPasst` against the pointer type decided (`rufPasstB`). A contract on a pointer type (a `requires`,
-             `Held(..)` included, or an `ensures`) is refused (the model has none, TODO O43). An indirect call is an edge of the floor relation.
+             `             Held(..)` included, or an `ensures`) is refused (the model has none, TODO O43). An indirect call is an edge of the floor relation.
+             A pointer type may carry a reason channel (`-> T or R`, «C07»): the name resolves against the unit
+             reasons, and `let y = p(..) else (e) { .. };` is `Block.bindCallIndElse`/`Endblock.bindCallIndElse`.
 -/
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
@@ -138,5 +140,17 @@ theorem rechte_ok_stufe : stufe rechte_ok = "OK" := by decide +kernel
 def typ_ohne_refused : String :=
   "module m { impl fn f(p : fn(), q : u8) { } }"
 theorem typ_ohne_refused_stufe : stufe typ_ohne_refused = "parse: fn type without costs" := by decide +kernel
+
+/-- A fallible call through a declared pointer type with a reason channel («C07», admitted): the error
+    continuation runs, over the type's channel. -/
+def ind_else_ok : String :=
+  "module m { reason G { Weg = 1 \"weg\" exhaustive } impl fn hr(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } { if x == 0 { return G::Weg; } return x; } impl fn f(p : fn(x : u32 in 0 .. 9) -> u32 in 0 .. 9 or G effects { pure } costs <= 2 ops) -> u32 in 0 .. 9 { let y = p(4) else (e) { match e { Weg => { return 0; } } return 0; } return y; } impl fn h() -> u32 in 0 .. 9 { let q = f(&hr); return q; } }"
+theorem ind_else_ok_stufe : stufe ind_else_ok = "OK" := by decide +kernel
+
+/-- Planted defect: a `let .. else` through a pointer whose target has no reason channel. -/
+def ind_else_refused : String :=
+  "module m { impl fn h(a : u32 in 0 .. 9) -> u32 in 0 .. 9 { return a; } impl fn f() -> u32 in 0 .. 9 { let p = &h; let y = p(4) else (e) { return 0; } return y; } }"
+theorem ind_else_refused_stufe :
+    stufe ind_else_refused = "elab: let else of a call without a reason channel" := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben33

@@ -128,6 +128,7 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse _ _ body => spiegelB body
   | .consumeTraverse .. => false
   | .callInd .. => false
+  | .callIndElse .. => false
   | .retry .. => false
   | .forever .. => false
   | .axiomCall .. => false
@@ -158,6 +159,7 @@ def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind _ rest => spiegelB rest
   | .bindCall _ _ _ _ _ rest => spiegelB rest
   | .bindCallInd .. => false
+  | .bindCallIndElse .. => false
   | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelB rest
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
@@ -203,6 +205,7 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelE rest
   | .awaits _ _ _ _ _ rest => spiegelE rest
   | .bindCallInd .. => false
+  | .bindCallIndElse .. => false
   -- the end-block forms of stage 0 are outside the checker's mirror until `kosten.rs` prices them (TODO.md)
   | .narrow .. => false
   | .narrowRequired .. => false

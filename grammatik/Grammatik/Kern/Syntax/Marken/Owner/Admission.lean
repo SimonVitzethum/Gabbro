@@ -25,9 +25,9 @@ variable {D : Deklaration}
     restart the mint (`owner_step_mint_refused_*`: a spawn leaves the G state
     alone, spent authority stays spent).
 
-    NOT wired into `Akzeptiert`/`AkzeptiertSpec(X)` yet: admission defaults
-    to refusing every nonempty owner flow (`RufPasst.ownerReady`) until the
-    C08 software-call transition connects the canonical mint rule. -/
+    NOT wired into `Akzeptiert`/`AkzeptiertSpec(X)` yet: mint admission stays
+    closed until the C08 software-call transition connects the canonical mint
+    rule. (Call-boundary escrow for owner flows is `RufPasst.ownerReady`.) -/
 
 /-- **Owner admission**: the root carrying the distinguished mint is
     declared once, has no caller in the checked graph, starts clean, and is

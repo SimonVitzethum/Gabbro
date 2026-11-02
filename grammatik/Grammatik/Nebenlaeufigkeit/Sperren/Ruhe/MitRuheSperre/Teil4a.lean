@@ -255,6 +255,57 @@ theorem execEndH_ru_bindCallInd {V : Vertrag D}
         exact Or.inr ⟨e', e, rfl, rfl, ht⟩
 
 set_option linter.unusedSectionVars false in
+theorem execEndH_ru_bindCallIndElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_τ}
+    (n)
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    (ih_execEndH_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndH S O U passes R err σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.bindCallIndElse (τ := zi_τ) (n := n) p args he hp hr err rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.bindCallIndElse (τ := zi_τ) (n := n) p args he hp hr err rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEndH, indSonstE]
+  erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+    kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+  erw [lese_worldR, eval_ru, evalArgs_ru]
+  cases h : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ with
+  | mk g hg =>
+      rw [valR_fnptr]
+      dsimp only
+      erw [umsig_ru hg]
+      rcases hR g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
+          (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ))
+        with hx' | ⟨e', e, h1, h2, ht⟩
+      · erw [hx']
+        cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
+            (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+        | ok σ' v =>
+            try erw [hx]
+            simp only [rufR]
+            erw [execEndH_umΛ, ergWert_ru (ergSig hg he)]
+            exact EndRel.schrumpf
+              (ih_execEndH_ru_rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))
+        | why σ' r =>
+            try erw [hx]
+            simp only [rufR]
+            erw [execEndH_umΛ]
+            exact EndRel.schrumpf (ih_execEndH_ru_err σ' (Env.cons (grundSig hg r) ρ))
+        | logik e => (try erw [hx]); exact Or.inl rfl
+        | hardware e => (try erw [hx]); exact Or.inl rfl
+      · erw [h1, h2]
+        exact Or.inr ⟨e', e, rfl, rfl, ht⟩
+
+set_option linter.unusedSectionVars false in
 theorem execEndH_ru_narrow {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

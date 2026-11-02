@@ -1,0 +1,1225 @@
+⚠ [2/42] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:44: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:318:6: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:17: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:328:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:330:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [3/42] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil2
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:49:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:50:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:51:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:55:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:56:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:57:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:72:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:73:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:74:18: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:78:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:79:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:80:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:86:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:87:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:88:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:99:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:100:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:101:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:105:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:106:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:107:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:114:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:115:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:116:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:124:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:125:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:126:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:130:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:131:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:132:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:159:21: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+⚠ [5/42] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1Basis
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:23:22: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:53:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:76:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:77:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:69: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:69: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:9: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:47: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:127:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:129:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:131:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:144:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:146:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:148:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:150:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:153:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:159:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:161:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:169:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:171:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:177:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:192:22: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [6/42] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:23:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:27:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:117:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:118:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:125:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:126:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:151:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:152:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:159:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:160:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:193:26: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:203:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:204:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:206:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+ℹ [9/42] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:162:0: 'Gabbro.Grammatik.Gleitkomma.rundeBruch_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:163:0: 'Gabbro.Grammatik.Gleitkomma.add_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:164:0: 'Gabbro.Grammatik.Gleitkomma.sub_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:165:0: 'Gabbro.Grammatik.Gleitkomma.mul_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:166:0: 'Gabbro.Grammatik.Gleitkomma.div_finite' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:167:0: 'Gabbro.Grammatik.Gleitkomma.ofInt_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:168:0: 'Gabbro.Grammatik.Gleitkomma.ofRat_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:169:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:170:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_tie' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:171:0: 'Gabbro.Grammatik.Gleitkomma.wertExakt_neg_some' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:172:0: 'Gabbro.Grammatik.Gleitkomma.findeExp_unten' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:173:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_add01' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:174:0: 'Gabbro.Grammatik.Gleitkomma.sub_selbst' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:175:0: 'Gabbro.Grammatik.Gleitkomma.add_null_null' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:176:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_nullNplusNullN64' depends on axioms: [propext]
+⚠ [11/42] Replayed Grammatik.Kern.Syntax.Typen.Reason
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:59:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:61:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [13/42] Replayed Grammatik.Kern.Syntax.Typen.DataCap
+warning: Grammatik/Kern/Syntax/Typen/DataCap.lean:59:8: Variable name `middle` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _middle
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [16/42] Replayed Grammatik.Kern.Syntax.Typen.Teil2
+warning: Grammatik/Kern/Syntax/Typen/Teil2.lean:30:63: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [zahlZuBytes, List.length_cons, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:118:0: 'Gabbro.Grammatik.eigner_nachRuf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:119:0: 'Gabbro.Grammatik.eigner_lauf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:120:0: 'Gabbro.Grammatik.eigner_aus_leer_nie' depends on axioms: [propext]
+⚠ [18/42] Replayed Grammatik.Kern.Syntax.Syntax.Teil1
+warning: Grammatik/Kern/Syntax/Syntax/Teil1.lean:537:51: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+⚠ [22/42] Replayed Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:59:105: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add, Nat.zero_mul, Nat.one_mul]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:115:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:116:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:118:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:119:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:121:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:123:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:129:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:131:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:135:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:136:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:138:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:140:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:146:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:147:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:149:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:150:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:222:0: 'Gabbro.Grammatik.Gleitkomma.ausBits_zuBits' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:223:0: 'Gabbro.Grammatik.Gleitkomma.zuBits_lt' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:224:0: 'Gabbro.Grammatik.Gleitkomma.add_wf' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:225:0: 'Gabbro.Grammatik.Gleitkomma.mul_wf' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:226:0: 'Gabbro.Grammatik.Gleitkomma.div_wf' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:227:0: 'Gabbro.Grammatik.Gleitkomma.rundeBruch_wf' depends on axioms: [propext, Quot.sound]
+⚠ [23/42] Replayed Grammatik.Kern.Semantik.Evaluation.Ueberlauf
+warning: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:74:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:393:0: 'Gabbro.Grammatik.zweiPow_pos' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:394:0: 'Gabbro.Grammatik.clamp_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:395:0: 'Gabbro.Grammatik.Zahl.addS_n' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:396:0: 'Gabbro.Grammatik.addS_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:397:0: 'Gabbro.Grammatik.addS_exakt_wenn_passt' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:398:0: 'Gabbro.Grammatik.addS_exakt_wenn_passt_zeuge' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:399:0: 'Gabbro.Grammatik.addW_c_gleich' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:400:0: 'Gabbro.Grammatik.subW_c_gleich' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:401:0: 'Gabbro.Grammatik.mulW_c_gleich' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:402:0: 'Gabbro.Grammatik.wrapping_nur_exakt' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:403:0: 'Gabbro.Grammatik.wrapping_nur_exakt_kein_mod8' depends on axioms: [propext, Quot.sound]
+⚠ [24/42] Replayed Grammatik.Kern.Syntax.Extensions.Bits.T1.Teil1
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:73:62: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [ctzAux, hne, ↓reduceIte, heven, Nat.zero_ne_one]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:108:74: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [ctzAux, hne, ↓reduceIte, heven, Nat.zero_ne_one, hgen]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:291:46: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [rotln, hlo, hhi, Nat.add_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:299:64: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [rotrn, hmod, hmodhi, hdiv, hdivhi, Nat.zero_add]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:319:50: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [rotln, ht, hlo, hhi, Nat.add_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:331:56: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [popcountn, hrot, hLHS, hRHS, Nat.add_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [36/42] Replayed Grammatik.Kern.Syntax.Satz.T1
+warning: Grammatik/Kern/Syntax/Satz/T1.lean:304:56: Variable name `e` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _e
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [37/42] Replayed Grammatik.Kern.Syntax.Satz.T2.Teil1
+warning: Grammatik/Kern/Syntax/Satz/T2/Teil1.lean:242:10: Variable name `L` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _L
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Satz/T2/Teil1.lean:249:14: Variable name `f` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _f
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Satz/T2/Teil1.lean:251:18: Variable name `f` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _f
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Satz/T2/Teil1.lean:300:14: Variable name `f` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _f
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Kern/Syntax/Satz/T2/Teil1.lean:302:18: Variable name `f` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _f
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✖ [42/42] Building Grammatik.Kern.Syntax.Satz.T4.Teil2 (50s)
+trace: .> LEAN_PATH=/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Cli/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/batteries/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Qq/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/aesop/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/importGraph/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/plausible/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/mathlib/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean /home/simon/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean -j2 -M16384 -DElab.async=true -DmaxHeartbeats=400000 /home/simon/Dokumente/gabbro-c1/grammatik/Grammatik/Kern/Syntax/Satz/T4/Teil2.lean -o /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Kern/Syntax/Satz/T4/Teil2.olean -i /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Kern/Syntax/Satz/T4/Teil2.ilean -c /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Kern/Syntax/Satz/T4/Teil2.c --setup /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Kern/Syntax/Satz/T4/Teil2.setup.json --json
+error: Grammatik/Kern/Syntax/Satz/T4/Teil2.lean:23:8: fail to show termination for
+  Gabbro.Grammatik.stmt_gutB
+  Gabbro.Grammatik.end_gutB
+  Gabbro.Grammatik.grund_gutB
+  Gabbro.Grammatik.block_gutB
+  Gabbro.Grammatik.arms_gutB
+with errors
+failed to infer structural recursion:
+Not considering parameter D of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter O of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter passes of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter R of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hR of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hO of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter bo of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hbV of Gabbro.Grammatik.stmt_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter #17 of Gabbro.Grammatik.stmt_gutB:
+  its type is not an inductive
+Not considering parameter #18 of Gabbro.Grammatik.stmt_gutB:
+  its type is an inductive datatype
+    HeldIn Λ x✝⁵.haelt ∧ ∀ (L : D.Lock), L ∈ x✝⁵.haelt → ¬Res.held L ∈ Λ → ∃ c, bo = some c ∧ D.rang L < c
+  and the datatype parameter
+    HeldIn Λ x✝⁵.haelt
+  depends on the function parameter
+    Λ
+  which is not fixed.
+Not considering parameter #20 of Gabbro.Grammatik.stmt_gutB:
+  its type Eq is an inductive family and indices are not variables
+    (execStmt O passes R x✝⁶ x✝⁵ x✝⁴).welt = some x✝¹
+Not considering parameter D of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter O of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter passes of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter R of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hR of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hO of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter bo of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hbV of Gabbro.Grammatik.end_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter #16 of Gabbro.Grammatik.end_gutB:
+  its type is not an inductive
+Not considering parameter #17 of Gabbro.Grammatik.end_gutB:
+  its type is an inductive datatype
+    HeldIn Λ x✝⁵.haelt ∧ ∀ (L : D.Lock), L ∈ x✝⁵.haelt → ¬Res.held L ∈ Λ → ∃ c, bo = some c ∧ D.rang L < c
+  and the datatype parameter
+    HeldIn Λ x✝⁵.haelt
+  depends on the function parameter
+    Λ
+  which is not fixed.
+Not considering parameter #19 of Gabbro.Grammatik.end_gutB:
+  its type Eq is an inductive family and indices are not variables
+    (execEnd O passes R x✝⁶ x✝⁵ x✝⁴).welt = some x✝¹
+Not considering parameter D of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter O of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter passes of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter R of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hR of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hO of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter bo of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hbV of Gabbro.Grammatik.grund_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter #16 of Gabbro.Grammatik.grund_gutB:
+  its type is an inductive datatype
+    Fin n
+  and the datatype parameter
+    n
+  depends on the function parameter
+    n
+  which is not fixed.
+Not considering parameter #19 of Gabbro.Grammatik.grund_gutB:
+  its type is not an inductive
+Not considering parameter #20 of Gabbro.Grammatik.grund_gutB:
+  its type is an inductive datatype
+    HeldIn Λ x✝⁵.haelt ∧ ∀ (L : D.Lock), L ∈ x✝⁵.haelt → ¬Res.held L ∈ Λ → ∃ c, bo = some c ∧ D.rang L < c
+  and the datatype parameter
+    HeldIn Λ x✝⁵.haelt
+  depends on the function parameter
+    Λ
+  which is not fixed.
+Not considering parameter #22 of Gabbro.Grammatik.grund_gutB:
+  its type Eq is an inductive family and indices are not variables
+    (execGrund O passes R x✝⁷ x✝⁶ x✝⁵ x✝⁴).welt = some x✝¹
+Not considering parameter D of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter O of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter passes of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter R of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hR of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hO of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter bo of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hbV of Gabbro.Grammatik.block_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter #17 of Gabbro.Grammatik.block_gutB:
+  its type is not an inductive
+Not considering parameter #18 of Gabbro.Grammatik.block_gutB:
+  its type is an inductive datatype
+    HeldIn Λ x✝⁵.haelt ∧ ∀ (L : D.Lock), L ∈ x✝⁵.haelt → ¬Res.held L ∈ Λ → ∃ c, bo = some c ∧ D.rang L < c
+  and the datatype parameter
+    HeldIn Λ x✝⁵.haelt
+  depends on the function parameter
+    Λ
+  which is not fixed.
+Not considering parameter #20 of Gabbro.Grammatik.block_gutB:
+  its type Eq is an inductive family and indices are not variables
+    (execBlock O passes R x✝⁶ x✝⁵ x✝⁴).welt = some x✝¹
+Not considering parameter D of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter O of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter passes of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter R of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hR of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hO of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter bo of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter hbV of Gabbro.Grammatik.arms_gutB:
+  it is unchanged in the recursive calls
+Not considering parameter #16 of Gabbro.Grammatik.arms_gutB:
+  its type is an inductive datatype
+    (i : Fin cs.length) × Fall D.Fn D.passt cs i
+  and the datatype parameter
+    Fin cs.length
+  depends on the function parameter
+    cs
+  which is not fixed.
+Not considering parameter #19 of Gabbro.Grammatik.arms_gutB:
+  its type is not an inductive
+Not considering parameter #20 of Gabbro.Grammatik.arms_gutB:
+  its type is an inductive datatype
+    HeldIn Λ x✝⁵.haelt ∧ ∀ (L : D.Lock), L ∈ x✝⁵.haelt → ¬Res.held L ∈ Λ → ∃ c, bo = some c ∧ D.rang L < c
+  and the datatype parameter
+    HeldIn Λ x✝⁵.haelt
+  depends on the function parameter
+    Λ
+  which is not fixed.
+Not considering parameter #22 of Gabbro.Grammatik.arms_gutB:
+  its type Eq is an inductive family and indices are not variables
+    (execArms O passes R x✝⁷ x✝⁶ x✝⁵ x✝⁴).welt = some x✝¹
+Too many possible combinations of parameters of type World
+  D (or please indicate the recursive argument explicitly using `termination_by structural`).
+Too many possible combinations of parameters of type List
+  (Res D) (or please indicate the recursive argument explicitly using `termination_by structural`).
+Skipping arguments of type Nat, as Gabbro.Grammatik.stmt_gutB has no compatible argument.
+Skipping arguments of type List (Option Ty), as Gabbro.Grammatik.stmt_gutB has no compatible argument.
+Cannot use parameters #14 of Gabbro.Grammatik.stmt_gutB, #13 of Gabbro.Grammatik.end_gutB, #15 of Gabbro.Grammatik.grund_gutB, #14 of Gabbro.Grammatik.block_gutB, and #15 of Gabbro.Grammatik.arms_gutB:
+  failed to eliminate recursive application
+    end_gutB O passes R hR hO bo hbV rest σ'✝ (ergEnv none (he ▸ val✝) ρ)
+      (fun c hc =>
+        have hsc := hbo c hc;
+        hsc)
+      (heldB_weiter (fun L => held_nachSig_iff (D.asignatur a) Λ L) g1 hh) σ' h
+Cannot use parameters #16 of Gabbro.Grammatik.stmt_gutB, #15 of Gabbro.Grammatik.end_gutB, #18 of Gabbro.Grammatik.grund_gutB, #16 of Gabbro.Grammatik.block_gutB, and #18 of Gabbro.Grammatik.arms_gutB:
+  failed to eliminate recursive application
+    block_gutB O passes R hR hO bo hbV t (σ.lese Λ c.orte) ρ
+      (fun c_1 hc =>
+        have hsc := hbo c_1 hc;
+        (Eq.mp (Bool.and_eq_true (Block.ueberBoden c_1 t) (Block.ueberBoden c_1 e)) hsc).left)
+      (Gut.heldB hl hh)
+Cannot use parameters l of Gabbro.Grammatik.stmt_gutB, l of Gabbro.Grammatik.end_gutB, l of Gabbro.Grammatik.grund_gutB, l of Gabbro.Grammatik.block_gutB, and l of Gabbro.Grammatik.arms_gutB:
+  the type Bool does not have a `.brecOn` recursor
+Cannot use parameters Γ of Gabbro.Grammatik.stmt_gutB, Γ of Gabbro.Grammatik.end_gutB, Γ of Gabbro.Grammatik.grund_gutB, Γ of Gabbro.Grammatik.block_gutB, and Γ of Gabbro.Grammatik.arms_gutB:
+  failed to eliminate recursive application
+    block_gutB O passes R hR hO bo hbV t (σ.lese Λ c.orte) ρ
+      (fun c_1 hc =>
+        have hsc := hbo c_1 hc;
+        (Eq.mp (Bool.and_eq_true (Block.ueberBoden c_1 t) (Block.ueberBoden c_1 e)) hsc).left)
+      (Gut.heldB hl hh)
+
+
+Could not find a decreasing measure.
+The basic measures relate at each recursive call as follows:
+(<, ≤, =: relation proved, ? all proofs failed, _: no proof attempted)
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 61:34-86:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  ?  =  _  _  _  _  _  _
+#27  ?  _  =  _  _  _  _  _
+#28  _  _  _  =  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  ?  _  _
+#31  _  _  _  _  _  _  =  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 62:34-86:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  _  =  _  _  _  _  _  _
+#27  _  _  =  _  _  _  _  _
+#28  _  _  _  =  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  =  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 67:34-86:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  _  ?  _  _  _  _  _  _
+#27  _  _  =  _  _  _  _  _
+#28  _  _  _  =  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  ?  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 68:34-86:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  =  _  _  _  _  _
+#28  _  _  _  =  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.arms_gutB at 71:32-88:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#33  =  _  _  _  _  _  _  _
+#34  ?  _  _  _  _  _  _  _
+#35  ?  _  =  _  _  _  _  _
+#36  ?  _  _  =  _  _  _  _
+#37  ?  _  _  _  <  _  _  _
+#38  ?  _  _  _  _  _  _  _
+#39  ?  _  _  _  _  _  _  _
+#40  ?  _  _  _  _  _  _  _
+#41  ?  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.grund_gutB at 74:32-89:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#16  =  _  _  _  _  _  _  _
+#17  _  _  _  _  _  _  _  _
+#18  _  _  =  _  _  _  _  _
+#19  _  _  _  =  _  _  _  _
+n    _  _  _  _  <  _  _  _
+#20  _  _  _  _  _  _  _  _
+#21  _  _  _  _  _  _  _  _
+#22  _  _  _  _  _  _  _  _
+#23  _  _  _  _  _  _  _  _
+#24  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 105:9-79:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  ?  _  _  _  _  _
+#28  _  _  _  ?  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 106:46-95:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  _  _  _  _  _  _
+#28  _  _  _  _  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 108:51-95:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  ≤  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  _  _  _  _  _  _
+#28  _  _  _  _  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 111:51-95:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  ≤  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  _  _  _  _  _  _
+#28  _  _  _  _  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 114:50-94:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  ≤  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  _  _  _  _  _  _
+#28  _  _  _  _  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 116:23-72:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  =  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  _  _  _  _  _  _
+#28  _  _  _  _  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.block_gutB at 118:52-96:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#25  ≤  _  _  _  _  _  _  _
+#26  _  _  _  _  _  _  _  _
+#27  _  _  _  _  _  _  _  _
+#28  _  _  _  _  _  _  _  _
+#29  _  _  _  _  <  _  _  _
+#30  _  _  _  _  _  _  _  _
+#31  _  _  _  _  _  _  _  _
+#32  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.stmt_gutB to Gabbro.Grammatik.end_gutB at 143:25-144:64:
+    #1 #2 #3 #4 #5 #6 #7 #8
+#9   =  _  _  _  _  _  _  _
+#10  _  _  _  _  _  _  _  _
+#11  _  _  _  _  _  _  _  _
+#12  _  _  _  _  _  _  _  _
+#13  _  _  _  _  ?  _  _  _
+#14  _  _  _  _  _  _  _  _
+#15  _  _  _  _  _  _  _  _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.stmt_gutB at 403:17-57:
+   #9 #10 #11 #12 #13 #14 #15
+#1  =   _   _   _   _   _   _
+#2  _   _   _   _   _   _   _
+#3  _   _   _   _   _   _   _
+#4  _   _   _   _   _   _   _
+#5  _   _   _   _   _   _   _
+#6  _   _   _   _   _   _   _
+#7  _   _   _   _   _   _   _
+#8  _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 407:24-102:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 414:28-81:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 422:25-423:64:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 434:25-435:64:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 439:25-440:64:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 451:25-79:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 462:25-79:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 466:25-78:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 479:29-480:68:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 483:29-484:68:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 498:29-499:68:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 502:29-503:68:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 507:25-508:64:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 517:17-59:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 528:32-85:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 529:32-86:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 539:30-83:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 550:19-94:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 562:30-83:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 563:30-84:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 568:30-83:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 577:28-81:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 582:30-80:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.end_gutB to Gabbro.Grammatik.end_gutB at 583:30-80:
+ #9 #10 #11 #12 #13 #14 #15
+  =   _   _   _   _   _   _
+Call from Gabbro.Grammatik.grund_gutB to Gabbro.Grammatik.block_gutB at 594:47-93:
+    #16 #17 #18 #19 n #20 #21 #22 #23 #24
+#25   =   _   _   _ _   _   _   _   _   _
+#26   _   _   _   _ _   _   _   _   _   _
+#27   _   _   _   _ _   _   _   _   _   _
+#28   _   _   _   _ _   _   _   _   _   _
+#29   _   _   _   _ _   _   _   _   _   _
+#30   _   _   _   _ _   _   _   _   _   _
+#31   _   _   _   _ _   _   _   _   _   _
+#32   _   _   _   _ _   _   _   _   _   _
+Call from Gabbro.Grammatik.grund_gutB to Gabbro.Grammatik.grund_gutB at 595:54-105:
+ #16 #17 #18 #19 n #20 #21 #22 #23 #24
+   =   _   _   _ _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.stmt_gutB at 183:19-80:
+   #25 #26 #27 #28 #29 #30 #31 #32
+#1   =   _   _   _   _   _   _   _
+#2   _   _   _   _   _   _   _   _
+#3   _   _   _   _   _   _   _   _
+#4   _   _   _   _   _   _   _   _
+#5   _   _   _   _   _   _   _   _
+#6   _   _   _   _   _   _   _   _
+#7   _   _   _   _   _   _   _   _
+#8   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 184:24-104:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.stmt_gutB at 186:14-59:
+   #25 #26 #27 #28 #29 #30 #31 #32
+#1   =   _   _   _   _   _   _   _
+#2   _   _   _   _   _   _   _   _
+#3   _   _   _   _   _   _   _   _
+#4   _   _   _   _   _   _   _   _
+#5   _   _   _   _   _   _   _   _
+#6   _   _   _   _   _   _   _   _
+#7   _   _   _   _   _   _   _   _
+#8   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 189:32-87:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 197:25-198:64:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 211:19-96:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 226:25-227:64:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 231:25-232:64:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 243:25-81:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 254:25-81:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 258:25-78:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 271:29-272:68:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 275:29-276:68:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 290:29-291:68:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 294:29-295:68:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 299:25-300:64:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 309:17-61:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 320:36-91:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 321:32-86:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 331:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 340:32-87:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 345:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 346:30-84:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 351:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 357:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 358:30-84:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 364:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 369:15-59:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 375:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.block_gutB at 381:34-89:
+ #25 #26 #27 #28 #29 #30 #31 #32
+   =   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.block_gutB to Gabbro.Grammatik.end_gutB at 382:30-84:
+    #25 #26 #27 #28 #29 #30 #31 #32
+#9    =   _   _   _   _   _   _   _
+#10   _   _   _   _   _   _   _   _
+#11   _   _   _   _   _   _   _   _
+#12   _   _   _   _   _   _   _   _
+#13   _   _   _   _   _   _   _   _
+#14   _   _   _   _   _   _   _   _
+#15   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.arms_gutB to Gabbro.Grammatik.block_gutB at 588:53-94:
+    #33 #34 #35 #36 #37 #38 #39 #40 #41
+#25   =   _   _   _   _   _   _   _   _
+#26   _   _   _   _   _   _   _   _   _
+#27   _   _   _   _   _   _   _   _   _
+#28   _   _   _   _   _   _   _   _   _
+#29   _   _   _   _   _   _   _   _   _
+#30   _   _   _   _   _   _   _   _   _
+#31   _   _   _   _   _   _   _   _   _
+#32   _   _   _   _   _   _   _   _   _
+Call from Gabbro.Grammatik.arms_gutB to Gabbro.Grammatik.arms_gutB at 589:59-109:
+ #33 #34 #35 #36 #37 #38 #39 #40 #41
+   =   _   _   _   _   _   _   _   _
+
+
+#1: sizeOf l
+#2: sizeOf Γ
+#3: sizeOf Λ
+#4: sizeOf Λ'
+#5: sizeOf s
+#6: sizeOf σ
+#7: sizeOf ρ
+#8: sizeOf σ'
+#9: sizeOf l
+#10: sizeOf Γ
+#11: sizeOf Λ
+#12: sizeOf b
+#13: sizeOf σ
+#14: sizeOf ρ
+#15: sizeOf σ'
+#16: sizeOf l
+#17: sizeOf Γ
+#18: sizeOf Λ
+#19: sizeOf Λ'
+#20: sizeOf arms
+#21: sizeOf r
+#22: sizeOf σ
+#23: sizeOf ρ
+#24: sizeOf σ'
+#25: sizeOf l
+#26: sizeOf Γ
+#27: sizeOf Λ
+#28: sizeOf Λ'
+#29: sizeOf b
+#30: sizeOf σ
+#31: sizeOf ρ
+#32: sizeOf σ'
+#33: sizeOf l
+#34: sizeOf Γ
+#35: sizeOf Λ
+#36: sizeOf Λ'
+#37: sizeOf cs
+#38: sizeOf arms
+#39: sizeOf σ
+#40: sizeOf ρ
+#41: sizeOf σ'
+
+Please use `termination_by` to specify a decreasing measure.
+Some required targets logged failures:
+- Grammatik.Kern.Syntax.Satz.T4.Teil2
+error: build failed

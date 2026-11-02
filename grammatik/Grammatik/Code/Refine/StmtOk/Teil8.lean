@@ -36,7 +36,6 @@ theorem lowerEnd_ok_retScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : List 
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
-    (Λ)
     (e)
     (Rr)
     (lb : Lbl)
@@ -114,7 +113,6 @@ theorem lowerEnd_ok_narrowRequired (lay : Layout D) (hL : LayoutOk lay) (cenv : 
     {Λ : List (Res D)}
     (lo)
     (hi)
-    (Λ)
     (e)
     (lo')
     (hi')
@@ -166,7 +164,7 @@ theorem lowerEnd_ok_narrowRequired (lay : Layout D) (hL : LayoutOk lay) (cenv : 
   simp only [Prod.mk.injEq] at h'
   obtain ⟨rfl, rfl⟩ := h'
   have S2 := lowerEnd_shape lay (a :: cenv) lv rest (st.l + 2) ⟨r4, st.l + 3⟩ s2 br hb2
-  have hb0 := hM _ (List.mem_singleton_self ..)
+  have hb0 := hM _ (List.mem_cons_self ..)
   have hbb := hM _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
   have hMr : InM M fn br := fun b hb' =>
     hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ hb')))

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Syntax.Typen.Fall
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut

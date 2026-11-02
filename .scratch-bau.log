@@ -1,0 +1,78 @@
+== Grammatik.Kern.Syntax.Typen.ReasonProben
+== Grammatik.Parser.Cover.Proben
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben15
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben16
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben17
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben18
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben19
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben20
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben21
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben22
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben23
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben24
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben25
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben26
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben27
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben28
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben29
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben30
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben31
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben32
+== Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben33
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben10
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben11
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben2
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben4
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben5
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben6
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben7
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben8
+== Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben9
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben34
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben35
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben36
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben37
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben38
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben39
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben40
+== Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben41
+== Grammatik.Parser.Elab.Uebersetze.ReasonProben
+== Grammatik.Parser.Expr.AusdruckProben
+== Grammatik.Parser.Item.ElementTiefProben1
+== Grammatik.Parser.Item.ElementTiefProben2
+== Grammatik.Parser.Item.ElementTiefProben3
+== Grammatik.Parser.Item.ElementTiefProben4
+== Grammatik.Parser.Item.ElementTiefProben5
+== Grammatik.Parser.Item.ElementTiefProben6
+== Grammatik.Parser.Item.ElementTiefProben7
+== Grammatik.Parser.Namen.AufloesungProben
+== Grammatik.Parser.Namen.OeffentlichProben
+== Grammatik.Parser.Print.Proben
+== Grammatik.Parser.Stmt.AnweisungProben
+== Grammatik.Proben.BitVecProben
+== Grammatik.Zielsatz.Kern.Proben
+== Grammatik.Zielsatz.Kern.ProbenG1
+== Grammatik.Zielsatz.Kern.ProbenW1
+== Grammatik.Zielsatz.Kern.SpecProben
+== all
+rc=1
+error: build failed
+error: Grammatik/Gen/Abdeckung/ZellenPruefung.lean:95:0: the model moved under the cells of `Zellen.lean`:
+error: Grammatik/Gen/Text/Invers/Ruf.lean:241:87: unsolved goals
+error: Grammatik/Gen/Text/Invers/Ruf.lean:274:54: unsolved goals
+error: Grammatik/Korpus/Programme/Einheit104.lean:74:60: Tactic `rfl` failed: The left-hand side
+error: Grammatik/Korpus/Programme/Einheit108.lean:72:60: Tactic `rfl` failed: The left-hand side
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:17:97: unexpected identifier; expected '}'
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:53:79: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:56:80: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:60:74: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:64:2: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:67:2: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:72:51: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:82:58: Tactic `decide` failed to reduce
+error: Grammatik/Parser/Elab/Uebersetze/Transition/Proben/Export.lean:89:2: Tactic `decide` failed to reduce

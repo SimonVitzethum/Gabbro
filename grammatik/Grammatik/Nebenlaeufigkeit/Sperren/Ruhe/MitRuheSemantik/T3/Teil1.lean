@@ -314,6 +314,46 @@ theorem execStmt_ru_callInd {V : Vertrag D}
       | hardware e => (try erw [hx]); rfl
 
 set_option linter.unusedSectionVars false in
+theorem execStmt_ru_callIndElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (n)
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEnd_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd err) (worldR σ) (envR ρ) = endR (execEnd O passes R err σ ρ))
+    : execStmt O.mitRuhe passes R' (ruS (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS]
+  erw [execStmt_nachΛ]
+  simp only [execStmt, indSonst]
+  erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+    kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+  erw [lese_worldR, eval_ru, evalArgs_ru]
+  cases h : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ with
+  | mk g hg =>
+      rw [valR_fnptr]
+      dsimp only
+      erw [umsig_ru hg, hR]
+      cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+      | ok σ' v => (try erw [hx]); rfl
+      | why σ' r =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execEnd_umΛ]
+          exact (congrArg (fun a => EndAusgang.zuAusgang (EndAusgang.schrumpf a))
+            (ih_execEnd_ru_err σ' (Env.cons (grundSig hg r) ρ))).trans
+            ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
+      | logik e => (try erw [hx]); rfl
+      | hardware e => (try erw [hx]); rfl
+
+set_option linter.unusedSectionVars false in
 theorem execStmt_ru_locks {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

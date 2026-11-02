@@ -110,6 +110,54 @@ theorem empty_valid (isOwner : Marke → Bool) (stages : Marke → Nat) :
     Valid isOwner stages ({} : OwnerFlow Marke) := by
   simp [Valid, inputs]
 
+/-- **Checked call-boundary escrow, static half (C09).** The callee's owner flow is
+    valid over the mentioned identities (one input per nominal identity, bounded
+    stages, monotone moves, loans exact), disjoint from ordinary consumption (one
+    identity is never spent twice at a call), and every input is a declared
+    eigner. At a call the caller's bindings named in these inputs move into a
+    frame escrow; the return gives back exactly the outputs (`Owner/Escrow.lean`). -/
+def EscrowReady {Marke : Type} (isOwner : Marke → Bool) (stages : Marke → Nat)
+    (isEigner : Marke → Prop) (konsumiert : List (Marke × Nat)) (F : OwnerFlow Marke) : Prop :=
+  F.Valid isOwner stages ∧
+    (∀ p ∈ konsumiert, p.1 ∉ F.inputs.map Prod.fst) ∧
+    (∀ m ∈ F.inputs.map Prod.fst, isEigner m)
+
+/-- The empty flow is escrow-ready for every declaration. -/
+theorem escrowReady_of_empty {Marke : Type} (isOwner : Marke → Bool) (stages : Marke → Nat)
+    (isEigner : Marke → Prop) (konsumiert : List (Marke × Nat)) {F : OwnerFlow Marke}
+    (h : F = {}) : F.EscrowReady isOwner stages isEigner konsumiert := by
+  subst h
+  refine ⟨OwnerFlow.empty_valid _ _, ?_, ?_⟩
+  · intro p _
+    simp [OwnerFlow.inputs]
+  · intro m hm
+    simp [OwnerFlow.inputs] at hm
+
+/-- Escrow readiness follows equal flows. -/
+theorem escrowReady_congr {Marke : Type} {isOwner : Marke → Bool} {stages : Marke → Nat}
+    {isEigner : Marke → Prop} {konsumiert : List (Marke × Nat)} {F G : OwnerFlow Marke}
+    (h : F = G) (hr : F.EscrowReady isOwner stages isEigner konsumiert) :
+    G.EscrowReady isOwner stages isEigner konsumiert :=
+  h ▸ hr
+
+/-- Projections of the escrow condition. -/
+theorem escrowReady_valid {Marke : Type} {isOwner : Marke → Bool} {stages : Marke → Nat}
+    {isEigner : Marke → Prop} {konsumiert : List (Marke × Nat)} {F : OwnerFlow Marke}
+    (h : F.EscrowReady isOwner stages isEigner konsumiert) : F.Valid isOwner stages :=
+  h.1
+
+theorem escrowReady_disjoint {Marke : Type} {isOwner : Marke → Bool} {stages : Marke → Nat}
+    {isEigner : Marke → Prop} {konsumiert : List (Marke × Nat)} {F : OwnerFlow Marke}
+    (h : F.EscrowReady isOwner stages isEigner konsumiert) :
+    ∀ p ∈ konsumiert, p.1 ∉ F.inputs.map Prod.fst :=
+  h.2.1
+
+theorem escrowReady_resolved {Marke : Type} {isOwner : Marke → Bool} {stages : Marke → Nat}
+    {isEigner : Marke → Prop} {konsumiert : List (Marke × Nat)} {F : OwnerFlow Marke}
+    (h : F.EscrowReady isOwner stages isEigner konsumiert) :
+    ∀ m ∈ F.inputs.map Prod.fst, isEigner m :=
+  h.2.2
+
 end OwnerFlow
 
 namespace OwnerFlow

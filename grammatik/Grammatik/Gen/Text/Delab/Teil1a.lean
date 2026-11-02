@@ -52,6 +52,7 @@ def sperrenS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .ite _ t e => sperrenB t ++ sperrenB e
   | .traverse _ _ body => sperrenB body
   | .consumeTraverse _ _ _ _ _ _ body => sperrenB body
+  | .callIndElse _ _ _ _ _ err => sperrenE err
   | _ => []
 
 def sperrenB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
@@ -60,6 +61,7 @@ def sperrenB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .bind _ rest => sperrenB rest
   | .bindCall _ _ _ _ _ rest => sperrenB rest
   | .bindCallElse _ _ _ _ _ err rest => sperrenE err ++ sperrenB rest
+  | .bindCallIndElse _ _ _ _ _ err rest => sperrenE err ++ sperrenB rest
   | .bindCallInd _ _ _ _ _ rest => sperrenB rest
   | .regRead _ _ rest => sperrenB rest
   | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenB rest
@@ -76,6 +78,7 @@ def sperrenE {l : Bool} {Γ : Ctx} {Λ : List (Res z.deklaration)} :
   | .regReadElse _ _ _ sonst rest => sperrenE sonst ++ sperrenE rest
   | .awaits _ _ _ _ _ rest => sperrenE rest
   | .bindCallInd _ _ _ _ _ rest => sperrenE rest
+  | .bindCallIndElse _ _ _ _ _ err rest => sperrenE err ++ sperrenE rest
   | _ => []
 
 end

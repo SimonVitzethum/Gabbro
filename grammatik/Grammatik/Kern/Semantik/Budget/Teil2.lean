@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Syntax.Ziel
 public import Grammatik.Korpus.Zeugnis.Zeugnis
 public import Grammatik.Kern.Semantik.Budget.Teil1

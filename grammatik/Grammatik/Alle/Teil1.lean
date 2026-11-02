@@ -3,7 +3,9 @@ module
 public import Grammatik.Kern.Syntax.Typen.Teil2
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Kern.Syntax.Syntax.Teil3
+public import Grammatik.Kern.Syntax.Syntax.TraversalZeugen
 public import Grammatik.Kern.Syntax.Syntax.Teil4
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut

@@ -83,7 +83,7 @@ theorem zeuge_c11_consume_ok (M : Modl) (S : Sees) (fn : Nat) (blks : List Block
     OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst
       (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11consume σ ρ) :=
   lowerS_ok_consumeTraverse Wit.wLay Wit.wLayOk [] (0, 0) Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1)
-    [] () .tru .tru .tru 4
+    () .tru .tru .tru 4
     ((.widen (lo := 0) (hi := 0) (by decide) (by decide) (.lit 0)) : Expr Wit.wD [] [] (.int 0 4))
     c11consumeBody 7 8 ⟨10, 30⟩ st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc ih
 
@@ -104,7 +104,7 @@ theorem zeuge_c11_narrow_ok (M : Modl) (S : Sees) (fn : Nat) (blks : List Block)
     OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst
       (execBlock Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11narrow σ ρ) :=
   lowerB_ok_narrowRequired Wit.wLay Wit.wLayOk [] (0, 0) Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1)
-    1 1 [] ((.widen (lo := 1) (hi := 1) (by decide) (by decide) (.lit 1)) : Expr Wit.wD [] [] (.int 1 1))
+    1 1 ((.widen (lo := 1) (hi := 1) (by decide) (by decide) (.lit 1)) : Expr Wit.wD [] [] (.int 1 1))
     0 3 c11narrowRest 7 8 ⟨10, 30⟩ st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc ih
 
 /-- The scoped return lowers (closed evaluation). -/
@@ -123,7 +123,7 @@ theorem zeuge_c11_ret_ok (M : Modl) (S : Sees) (fn : Nat) (blks : List Block) (s
     OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst
       (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11ret σ ρ) :=
   lowerS_ok_retScoped Wit.wLay Wit.wLayOk [] (0, 0) Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1)
-    [] .empty c11retR 7 8 ⟨10, 30⟩ st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
+    .empty c11retR 7 8 ⟨10, 30⟩ st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
 
 /-- The scoped reason return lowers (closed evaluation). -/
 theorem zeuge_c11_retWhy_lower :
@@ -141,6 +141,6 @@ theorem zeuge_c11_retWhy_ok (M : Modl) (S : Sees) (fn : Nat) (blks : List Block)
     EndOk Wit.wLay [] (0, 0) M S fn 7 10 st'.r m rs ks dst
       (execEnd Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11retWhy σ ρ) :=
   lowerEnd_ok_retWhyScoped Wit.wLay Wit.wLayOk [] (0, 0) Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1)
-    ⟨1, by decide⟩ c11retWhyR 7 ⟨10, 30⟩ st' blks h M S fn hM hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
+    ⟨1, by decide⟩ { scopes := [], genau := List.Perm.refl [] } 7 ⟨10, 30⟩ st' blks h M S fn hM hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
 
 end Gabbro.Code.Lower.WitC11

@@ -88,6 +88,23 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
                 exact b
               .ok (Endblock.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b', r')
             else .error "call of a function with a reason channel needs `let .. else`"
+  | Γ, fn, Λ, pe, .bindCallIndElse y p _ args e :: rest => do
+    u.exportGate
+    match lowZeigerN u Γ fn p with
+    | .error err => .error err
+    | .ok ⟨m, v⟩ =>
+      match lowRufKopfN u caller Γ fn Λ m args with
+      | .error err => .error err
+      | .ok k =>
+        if hr : 0 < ((declOf u).sigNr m).gruende then
+          withErgN u m fun τ hE =>
+            match R.ende (l := l) (Ty.why (((declOf u).sigNr m).gruende) :: Γ) (fn.mitWhy e 0 (((declOf u).sigNr m).gruende)) Λ pe rest with
+            | .error err => .error err
+            | .ok (errb, .blkEnd :: tail) => match R.ende (l := l) (τ :: Γ) (fn.mitTy y τ) Λ pe tail with
+              | .error err => .error err
+              | .ok (body, remaining) => .ok (nestedElseN u caller Γ Λ m v k τ hE hr errb body, remaining)
+            | .ok (_, _) => .error "lower: a let else is not closed"
+        else .error "lower: let else of a call without a reason channel"
   | Γ, fn, Λ, pe, .tausch x a v zweige neu :: rest =>
     (globIdx u.globs a).bind fun g => if hw : (verOf u caller).gschreibt g = true then
       if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then

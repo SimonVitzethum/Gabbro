@@ -104,6 +104,8 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerS_shape_call (lay := lay) (cenv := cenv) (lv := lv) (f := f) (args := args) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, .callInd .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .callIndElse .., lb, k, st, st', blks, h => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, h => by
@@ -238,6 +240,8 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         omega
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindCallIndElse .., lb, k, st, st', blks, h => by
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h =>
       bindCallElse_shape lay cenv lv f args he hp hr err rest lb k st st' blks
         (fun a st1 s1 bo hk => lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k st1 s1 bo hk)
@@ -255,7 +259,7 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .exchange .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, k, st, st', blks, h =>
-      lowerB_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
+      lowerB_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
         (ih_lowerB_shape_rest := fun a st1 st1' br hk => lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k st1 st1' br hk)
   | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, st, st', blks,
       h => by
@@ -377,7 +381,7 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .bindCallInd .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, st, st', blks, h =>
-      lowerEnd_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h)
+      lowerEnd_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h)
         (ih_lowerEnd_shape_rest := fun a st1 st1' br hk => lowerEnd_shape lay (a :: cenv) lv rest (st.l + 2) st1 st1' br hk)
 /-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
 theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)

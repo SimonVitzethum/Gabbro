@@ -34,6 +34,7 @@ def Stmt.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .retry _ _ body ueber => body.vOk K && ueber.vOk K
   | .forever _ _ body => body.vOk K
   | .callInd (n := n) .. => K n
+  | .callIndElse (n := n) _ _ _ _ _ err => K n && err.vOk K
   | _ => true
 
 /-- The block is in the covered fragment: no register read, no `awaits`. -/
@@ -44,6 +45,7 @@ def Block.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bind _ rest => rest.vOk K
   | .bindCall _ _ _ _ _ rest => rest.vOk K
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.vOk K
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => K n && err.vOk K && rest.vOk K
   | .bindCallElse _ _ _ _ _ err rest => err.vOk K && rest.vOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk K
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.vOk K && rest.vOk K
@@ -75,6 +77,7 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .regReadElse .. => false
   | .awaits .. => false
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.vOk K
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => K n && err.vOk K && rest.vOk K
   | .narrow _ _ _ sonst rest => sonst.vOk K && rest.vOk K
   | .narrowRequired _ _ _ rest => rest.vOk K
   | .exchange _ _ _ _ rest => rest.vOk K
@@ -116,6 +119,8 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
   | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bindCallInd p args he hp hr rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
@@ -242,6 +247,9 @@ theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .callInd .., h => by
       simp only [Stmt.vOk] at h ⊢
       exact hKK _ h
+  | .callIndElse _ _ _ _ _ err, h => by
+      simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨hKK _ h.1, Endblock.vOk_mono err h.2⟩
   | .assignSlot .., _ => rfl
   | .assignThru .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
@@ -277,6 +285,9 @@ theorem Block.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | .bindCallInd _ _ _ _ _ rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨hKK _ h.1, Block.vOk_mono rest h.2⟩
+  | .bindCallIndElse _ _ _ _ _ err rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨hKK _ h.1.1, Endblock.vOk_mono err h.1.2, Block.vOk_mono rest h.2⟩
   | .bindCallElse _ _ _ _ _ err rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono err h.1, Block.vOk_mono rest h.2⟩
@@ -346,6 +357,9 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bindCallInd _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨hKK _ h.1, Endblock.vOk_mono rest h.2⟩
+  | .bindCallIndElse _ _ _ _ _ err rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨hKK _ h.1.1, Endblock.vOk_mono err h.1.2, Endblock.vOk_mono rest h.2⟩
   | .narrow _ _ _ sonst rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono sonst h.1, Endblock.vOk_mono rest h.2⟩

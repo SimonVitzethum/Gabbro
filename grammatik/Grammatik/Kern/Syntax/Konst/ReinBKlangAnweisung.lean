@@ -9,239 +9,236 @@ private theorem emptyResources (c : ConstProgram) (rs : List (Res c.D)) : rs = [
     cases r with
     | held lock => exact (c.noLocks lock).elim
     | marke mark stage => exact (c.noMarks mark).elim
+set_option maxHeartbeats 4000000 in
 mutual
 theorem constStmtB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (e : Stmt c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
-    (hacc : constStmtB c e = true) : ConstStmt c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .assignVar x e => by
-      cases hΛ; cases hΛout
+    (hacc : constStmtB c e = true) : ConstStmt c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, e, hΛ, hΛout, hacc with
+  | _, _, .assignVar x e, rfl, rfl, hacc => by
       simp only [constStmtB] at hacc
       exact .assignVar (constExprB_sound c e hacc)
-  | .ite condition yes no => by
-      cases hΛ; cases hΛout
+  | _, _, .ite condition yes no, rfl, rfl, hacc => by
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
       exact .ite (constExprB_sound c condition h0)
         (constBlockB_soundGen c yes rfl rfl h1) (constBlockB_soundGen c no rfl rfl h2)
-  | .onOption value present absent => by
-      cases hΛ; cases hΛout
+  | _, _, .onOption value present absent, rfl, rfl, hacc => by
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
       exact .onOption (constExprB_sound c value h0)
         (constBlockB_soundGen c present rfl rfl h1) (constBlockB_soundGen c absent rfl rfl h2)
-  | .onTag value arms => by
-      cases hΛ; cases hΛout
+  | _, _, .onTag value arms, rfl, rfl, hacc => by
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .onTag (constExprB_sound c value h0) (constArmsB_soundGen c arms rfl rfl h1)
-  | .onWhy reason arms => by
-      cases hΛ; cases hΛout
+  | _, _, .onWhy reason arms, rfl, rfl, hacc => by
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .onWhy (constExprB_sound c reason h0) (constReasonArmsB_soundGen c arms rfl rfl h1)
-  | .ret value hperm => by
-      cases hΛ; cases hΛout
+  | _, _, .ret value hperm, rfl, rfl, hacc => by
       simp only [constStmtB] at hacc
       exact .ret (constResultB_sound c value hacc)
-  | .call f args hp hr => by
-      cases hΛ
+  | _, _, .call f args hp hr, rfl, heq, hacc => by
       simp only [constStmtB] at hacc
-      exact ConstStmt.call f args hp hr hΛout (constArgsB_sound c args hacc)
-  | .assignSlot .. => by
-      simp [constStmtB] at hacc
-  | .assignThru .. => by
-      simp [constStmtB] at hacc
-  | .assignGlob .. => by
-      simp [constStmtB] at hacc
-  | .putBytes .. => by
-      simp [constStmtB] at hacc
-  | .shift .. => by
-      simp [constStmtB] at hacc
-  | .callInd .. => by
-      simp [constStmtB] at hacc
-  | .locks .. => by
-      simp [constStmtB] at hacc
-  | .breaking .. => by
-      simp [constStmtB] at hacc
-  | .traverse .. => by
-      simp [constStmtB] at hacc
-  | .retry .. => by
-      simp [constStmtB] at hacc
-  | .forever .. => by
-      simp [constStmtB] at hacc
-  | .axiomCall .. => by
-      simp [constStmtB] at hacc
-  | .regWrite .. => by
-      simp [constStmtB] at hacc
-  | .transition .. => by
-      simp [constStmtB] at hacc
-  | .publish .. => by
-      simp [constStmtB] at hacc
-  | .advances .. => by
-      simp [constStmtB] at hacc
-  | .retires .. => by
-      simp [constStmtB] at hacc
-  | .retWhy .. => by
-      simp [constStmtB] at hacc
-  | .leave .. => by
-      simp [constStmtB] at hacc
-  | .next .. => by
-      simp [constStmtB] at hacc
-  | .assignSlotRef .. => by
-      simp [constStmtB] at hacc
-  | .consumeTraverse .. => by
-      simp [constStmtB] at hacc
-  | .retScoped .. => by
-      simp [constStmtB] at hacc
-  | .retWhyScoped .. => by
-      simp [constStmtB] at hacc
+      exact ConstStmt.call f args hp hr heq (constArgsB_sound c args hacc)
+  | _, _, .assignSlot .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .assignThru .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .assignGlob .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .putBytes .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .shift .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .callInd .., rfl, _, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .callIndElse .., rfl, _, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .locks .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .breaking .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .traverse .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .retry .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .forever .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .axiomCall .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .axiomCallElse .., rfl, _, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .regWrite .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .transition .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .publish .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .advances .., rfl, _, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .retires .., rfl, _, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .retWhy .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .leave .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .next .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .assignSlotRef .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .consumeTraverse .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .retScoped .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .retWhyScoped .., rfl, rfl, hacc => by
+      simp only [constStmtB] at hacc; exact absurd hacc Bool.false_ne_true
 theorem constBlockB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (e : Block c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
-    (hacc : constBlockB c e = true) : ConstBlock c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .nil => by
-      cases hΛ; cases hΛout
+    (hacc : constBlockB c e = true) : ConstBlock c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, e, hΛ, hΛout, hacc with
+  | _, _, .nil, rfl, rfl, hacc => by
       exact .nil
-  | .cons stmt rest => by
-      rename_i mid
-      have hmid : mid = [] := emptyResources c mid
-      cases hΛ; cases hmid; cases hΛout
+  | _, _, .cons stmt rest, rfl, rfl, hacc => by
+      have hmid : _ = (_ : List (Res c.D)) := emptyResources c _
       simp only [constBlockB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
-      exact .cons (constStmtB_soundGen c stmt rfl rfl h0) (constBlockB_soundGen c rest rfl rfl h1)
-  | .bind value rest => by
-      cases hΛ; cases hΛout
+      have hs := constStmtB_soundGen c stmt rfl hmid h0
+      have hr := constBlockB_soundGen c rest hmid rfl h1
+      cases hmid
+      exact .cons hs hr
+  | _, _, .bind value rest, rfl, rfl, hacc => by
       simp only [constBlockB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .bind (constExprB_sound c value h0) (constBlockB_soundGen c rest rfl rfl h1)
-  | .bindCall f args he hp hr rest => by
-      cases hΛ; cases hΛout
+  | _, _, .bindCall f args he hp hr rest, rfl, rfl, hacc => by
       have hcall : nach c.D f [] = [] := emptyResources c _
       simp only [constBlockB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact ConstBlock.bindCall f args he hp hr hcall rest
         (constArgsB_sound c args h0) (constBlockB_soundGen c rest hcall rfl h1)
-  | .bindCallInd .. => by
-      simp [constBlockB] at hacc
-  | .bindCallElse .. => by
-      simp [constBlockB] at hacc
-  | .bindAxiom .. => by
-      simp [constBlockB] at hacc
-  | .bindAxiomElse .. => by
-      simp [constBlockB] at hacc
-  | .regRead .. => by
-      simp [constBlockB] at hacc
-  | .regReadElse .. => by
-      simp [constBlockB] at hacc
-  | .awaits .. => by
-      simp [constBlockB] at hacc
-  | .exchange .. => by
-      simp [constBlockB] at hacc
-  | .narrow .. => by
-      simp [constBlockB] at hacc
-  | .narrowRequired .. => by
-      simp [constBlockB] at hacc
-  | .check .. => by
-      simp [constBlockB] at hacc
-  | .float .. => by
-      simp [constBlockB] at hacc
-  | .floatLit .. => by
-      simp [constBlockB] at hacc
-  | .floatOf .. => by
-      simp [constBlockB] at hacc
-  | .floatNarrow .. => by
-      simp [constBlockB] at hacc
+  | _, _, .bindCallInd .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .bindCallIndElse .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .bindCallElse .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .bindAxiom .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .bindAxiomElse .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .bindAxiomOpt .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .bindAxiomOptElse .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .regRead .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .regReadElse .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .awaits .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .exchange .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .narrow .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .narrowRequired .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .check .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .float .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .floatLit .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .floatOf .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .floatNarrow .., rfl, rfl, hacc => by
+      simp only [constBlockB] at hacc; exact absurd hacc Bool.false_ne_true
 theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (e : Endblock c.D V l Γ Λ) (hΛ : Λ = [])
-    (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) := by
-  match e with
-  | .ret value hperm => by
-      cases hΛ
+    (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) :=
+  match Λ, e, hΛ, hacc with
+  | _, .ret value hperm, rfl, hacc => by
       simp only [constEndB] at hacc
       exact .ret (constResultB_sound c value hacc)
-  | .cons stmt rest => by
-      rename_i mid
-      have hmid : mid = [] := emptyResources c mid
-      cases hΛ; cases hmid
+  | _, .cons stmt rest, rfl, hacc => by
+      have hmid : _ = (_ : List (Res c.D)) := emptyResources c _
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
-      exact .cons (constStmtB_soundGen c stmt rfl rfl h0) (constEndB_soundGen c rest rfl h1)
-  | .bind value rest => by
-      cases hΛ
+      have hs := constStmtB_soundGen c stmt rfl hmid h0
+      have hr := constEndB_soundGen c rest hmid h1
+      cases hmid
+      exact .cons hs hr
+  | _, .bind value rest, rfl, hacc => by
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .bind (constExprB_sound c value h0) (constEndB_soundGen c rest rfl h1)
-  | .ite condition yes no => by
-      cases hΛ
+  | _, .ite condition yes no, rfl, hacc => by
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
       exact .ite (constExprB_sound c condition h0)
         (constEndB_soundGen c yes rfl h1) (constEndB_soundGen c no rfl h2)
-  | .bindCall f args he hp hr rest => by
-      cases hΛ
+  | _, .bindCall f args he hp hr rest, rfl, hacc => by
       have hcall : nach c.D f [] = [] := emptyResources c _
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact ConstEnd.bindCall f args he hp hr hcall rest
         (constArgsB_sound c args h0) (constEndB_soundGen c rest hcall h1)
-  | .retWhy .. => by
-      simp [constEndB] at hacc
-  | .leave .. => by
-      simp [constEndB] at hacc
-  | .next .. => by
-      simp [constEndB] at hacc
-  | .narrowRequired .. => by
-      simp [constEndB] at hacc
-  | .retScoped .. => by
-      simp [constEndB] at hacc
-  | .retWhyScoped .. => by
-      simp [constEndB] at hacc
-  | .bindCallElse .. => by
-      simp [constEndB] at hacc
-  | .bindAxiom .. => by
-      simp [constEndB] at hacc
-  | .bindAxiomElse .. => by
-      simp [constEndB] at hacc
-  | .regRead .. => by
-      simp [constEndB] at hacc
-  | .regReadElse .. => by
-      simp [constEndB] at hacc
-  | .awaits .. => by
-      simp [constEndB] at hacc
-  | .bindCallInd .. => by
-      simp [constEndB] at hacc
-  | .narrow .. => by
-      simp [constEndB] at hacc
-  | .exchange .. => by
-      simp [constEndB] at hacc
+  | _, .retWhy .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .leave .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .next .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .narrowRequired .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .retScoped .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .retWhyScoped .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindCallElse .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindAxiom .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindAxiomElse .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindAxiomOpt .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindAxiomOptElse .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .regRead .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .regReadElse .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .awaits .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindCallInd .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .bindCallIndElse .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .narrow .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, .exchange .., rfl, hacc => by
+      simp only [constEndB] at hacc; exact absurd hacc Bool.false_ne_true
 theorem constArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} (e : Arms c.D V l Γ Λ Λout cs)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constArmsB c e = true) :
-    ConstArms c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .nil => by
-      cases hΛ; cases hΛout
+    ConstArms c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, cs, e, hΛ, hΛout, hacc with
+  | _, _, _, .nil, rfl, rfl, hacc => by
       exact .nil
-  | .cons body rest => by
-      rename_i mid
-      have hmid : mid = [] := emptyResources c mid
-      cases hΛ; cases hmid; cases hΛout
+  | _, _, _, .cons body rest, rfl, rfl, hacc => by
       simp only [constArmsB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .cons (constBlockB_soundGen c body rfl rfl h0) (constArmsB_soundGen c rest rfl rfl h1)
 theorem constReasonArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {n : Nat} (e : GrundArms c.D V l Γ Λ Λout n)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constReasonArmsB c e = true) :
-    ConstReasonArms c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .nil => by
-      cases hΛ; cases hΛout
+    ConstReasonArms c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, n, e, hΛ, hΛout, hacc with
+  | _, _, _, .nil, rfl, rfl, hacc => by
       exact .nil
-  | .cons body rest => by
-      rename_i mid
-      have hmid : mid = [] := emptyResources c mid
-      cases hΛ; cases hmid; cases hΛout
+  | _, _, _, .cons body rest, rfl, rfl, hacc => by
       simp only [constReasonArmsB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .cons (constBlockB_soundGen c body rfl rfl h0) (constReasonArmsB_soundGen c rest rfl rfl h1)

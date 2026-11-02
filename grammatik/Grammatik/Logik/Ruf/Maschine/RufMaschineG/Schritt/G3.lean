@@ -441,8 +441,94 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, reasonTy (D.agruende a) :: Γ, nachSig D (D.asignatur a) Λ,
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ),
-              .dann err.alsBlock.2 (.abbruch k)⟩⟩,
+              .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- A fallible indirect call in `Block` position («C07»): the shape of
+      `dannBindCallElse` over the pointer type. The pointer is evaluated once,
+      the actual conforming function is called with transported arguments, and
+      the caller waits in `wartetSonst` with the pointer type's channel: a
+      normal return exposes the transported value to `rest`, a reason runs
+      `err`. Existing pop rules (`rueckBind`, `rueckGrund`, …) resume it. -/
+  | dannBindCallIndElse (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty)
+      (n : Nat) (p : Expr D Γ Λ (.fnptr n))
+      (args : Args D Γ Λ (D.sigNr n).params) (he : (D.sigNr n).erg = some τ)
+      (hp : RufPasst D (vertragVon D (M.faeden f).kopf.f) (D.sigNr n) Λ)
+      (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock D (vertragVon D (M.faeden f).kopf.f) l
+        (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ)
+        (nachSig D (D.sigNr n) Λ) Λ')
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ')
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .dann (.bindCallIndElse p args he hp hr err rest) k⟩)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur))
+      (s0 : World D)
+      (hs0 : s0 = (M.weltVon f).lese Λ (p.orte ++ args.orte))
+      (g : D.Fn) (hg : D.passt g n = true)
+      (hv : eval s0 p s0 ρ = ⟨g, hg⟩)
+      (rho : Env D (D.params g))
+      (hrho : rho = umsig hg (evalArgs s0 args s0 ρ))
+      (neu : List (Ereignis D))
+      (hneu : s0.spur = neu ++ (M.faeden f).spur) :
+      RufSchrittG3 P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+              ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ,
+               .wartetSonst (D.sigNr n).gruende err rest k⟩⟩ ::
+              (M.faeden f).stapel,
+            ⟨g, rho, s0,
+             ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+              rho, .ende (P.rumpf g)⟩⟩,
+            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu,
+         M.start⟩
+  /-- A fallible indirect call as a statement («C07»): checked sugar over
+      `bindCallIndElse` with an empty success tail, fused into one push. The pointer is
+      evaluated once, the actual conforming function is called with transported arguments,
+      and the caller waits in `wartetSonst` with the pointer type's channel: a normal return
+      runs the empty tail (the value is discarded, `rest` continues in `Γ`), a reason runs
+      `err`. Existing pop rules (`rueckBind`, `rueckGrund`, …) resume it unchanged. The
+      fusion keeps one dispatch and one wait: a two-step desugar would thread the block
+      form's bound value through a statement that binds nothing. -/
+  | dannCallIndElse (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty)
+      (n : Nat) (p : Expr D Γ Λ (.fnptr n))
+      (args : Args D Γ Λ (D.sigNr n).params) (he : (D.sigNr n).erg = some τ)
+      (hp : RufPasst D (vertragVon D (M.faeden f).kopf.f) (D.sigNr n) Λ)
+      (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock D (vertragVon D (M.faeden f).kopf.f) l
+        (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) l Γ
+        (nachSig D (D.sigNr n) Λ) Λ'')
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ'')
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .dann (.cons (.callIndElse p args he hp hr err) rest) k⟩)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur))
+      (s0 : World D)
+      (hs0 : s0 = (M.weltVon f).lese Λ (p.orte ++ args.orte))
+      (g : D.Fn) (hg : D.passt g n = true)
+      (hv : eval s0 p s0 ρ = ⟨g, hg⟩)
+      (rho : Env D (D.params g))
+      (hrho : rho = umsig hg (evalArgs s0 args s0 ρ))
+      (neu : List (Ereignis D))
+      (hneu : s0.spur = neu ++ (M.faeden f).spur) :
+      RufSchrittG3 P O passes M f
+        ⟨M.speicher,
+         rufUpdateG M.faeden f
+           ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+              ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ,
+               .wartetSonst (D.sigNr n).gruende err .nil (.dann rest k)⟩⟩ ::
+              (M.faeden f).stapel,
+            ⟨g, rho, s0,
+             ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+              rho, .ende (P.rumpf g)⟩⟩,
+            s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu,
+         M.start⟩
 
 end Gabbro.Grammatik

@@ -34,6 +34,11 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
       exact fort_schritt' ⟨_, RufSchrittG.dannBindCallInd M t l Γ Λ _ Λ _ _ p args he hp hr rest k
         ρ hx hΛ _ rfl _ (eval ((M.weltVon t).lese Λ (p.orte ++ args.orte)) p
           ((M.weltVon t).lese Λ (p.orte ++ args.orte)) ρ).2 rfl _ rfl neu hneu⟩
+  | bindCallIndElse p args he hp hr err rest =>
+      obtain ⟨neu, hneu, -⟩ := Erw.lese (M.weltVon t) Λ (p.orte ++ args.orte)
+      exact fort_schritt' ⟨_, RufSchrittG.dannBindCallIndElse M t l Γ Λ _ Λ _ _ p args he hp hr err rest k
+        ρ hx hΛ _ rfl _ (eval ((M.weltVon t).lese Λ (p.orte ++ args.orte)) p
+          ((M.weltVon t).lese Λ (p.orte ++ args.orte)) ρ).2 rfl _ rfl neu hneu⟩
   | bindCallElse g args he hp hr err rest =>
       exact fort_schritt (w_bindCallElse rfl g args he hp hr err rest k ρ hx hΛ)
   | bindAxiom a args he hw hg hd hgd rest =>
@@ -241,6 +246,11 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             obtain ⟨neu, hneu, -⟩ := Erw.lese (M.weltVon t) Λ (p.orte ++ args.orte)
             exact fort_schritt' ⟨_, RufSchrittG.dannCallInd M t l Γ Λ Λ _ _ p args hp hr rest k ρ hx
               hΛ _ rfl _ (eval ((M.weltVon t).lese Λ (p.orte ++ args.orte)) p
+                ((M.weltVon t).lese Λ (p.orte ++ args.orte)) ρ).2 rfl _ rfl neu hneu⟩
+        | callIndElse p args he hp hr err =>
+            obtain ⟨neu, hneu, -⟩ := Erw.lese (M.weltVon t) Λ (p.orte ++ args.orte)
+            exact fort_schritt' ⟨_, RufSchrittG.dannCallIndElse M t l Γ Λ Λ _ _ _ p args he hp hr err
+              rest k ρ hx hΛ _ rfl _ (eval ((M.weltVon t).lese Λ (p.orte ++ args.orte)) p
                 ((M.weltVon t).lese Λ (p.orte ++ args.orte)) ρ).2 rfl _ rfl neu hneu⟩
         | locks L hr body =>
             have hA : AnSperre M t L := ⟨l, Γ, Λ, _, ρ, hr, body, rest, k, hx⟩

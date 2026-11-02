@@ -258,6 +258,7 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onWhy r arms => r.orte ++ grundArmsOrte arms
   | .call _ args _ _ => args.orte
   | .callInd p args _ _ => p.orte ++ args.orte
+  | .callIndElse p args _ _ _ err => p.orte ++ args.orte ++ endblockOrte err
   | .locks _ _ body => blockOrte body
   | .breaking _ body => blockOrte body
   | .traverse _ inv body => inv.orte ++ blockOrte body
@@ -266,7 +267,7 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ bis body ueber => bis.orte ++ blockOrte body ++ blockOrte ueber
   | .forever _ inv body => inv.orte ++ blockOrte body
   | .axiomCall _ args _ _ _ _ _ => args.orte
-  | .axiomCallElse _ args _ _ _ _ _ _ err => args.orte ++ endblockOrte err
+  | .axiomCallElse _ _ args _ _ _ _ _ err => args.orte ++ endblockOrte err
   | .regWrite _ _ e => e.orte
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ e _ _ _ _ => e.orte
@@ -289,12 +290,13 @@ def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind e rest => e.orte ++ blockOrte rest
   | .bindCall _ args _ _ _ rest => args.orte ++ blockOrte rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ blockOrte rest
+  | .bindCallIndElse p args _ _ _ err rest => p.orte ++ args.orte ++ endblockOrte err ++ blockOrte rest
   | .bindCallElse _ args _ _ _ err rest =>
       args.orte ++ endblockOrte err ++ blockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => args.orte ++ blockOrte rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
   | .regRead _ _ rest => blockOrte rest
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrte sonst ++ blockOrte rest
@@ -327,13 +329,14 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       args.orte ++ endblockOrte err ++ endblockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => args.orte ++ endblockOrte rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
   | .regRead _ _ rest => endblockOrte rest
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrte sonst ++ endblockOrte rest
   | .awaits g _ _ _ _ rest => .inr g :: endblockOrte rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrte rest
+  | .bindCallIndElse p args _ _ _ err rest => p.orte ++ args.orte ++ endblockOrte err ++ endblockOrte rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrte sonst ++ endblockOrte rest
   | .narrowRequired e _ _ rest => e.orte ++ endblockOrte rest

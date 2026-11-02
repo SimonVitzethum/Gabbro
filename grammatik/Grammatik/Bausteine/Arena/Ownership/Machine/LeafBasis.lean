@@ -114,6 +114,7 @@ theorem ob_cons_inv : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c1 
   | _, _, _, _, _, _, _, _, .bind .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .bindCall .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .bindCallInd .. => by intro he; cases he
+  | _, _, _, _, _, _, _, _, .bindCallIndElse .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .bindCallElse .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .bindAxiom .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .bindAxiomElse .. => by intro he; cases he

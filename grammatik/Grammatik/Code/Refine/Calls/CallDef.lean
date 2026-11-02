@@ -98,8 +98,8 @@ theorem argImgs_ty (lay : Layout D) :
       refine ⟨?_, argImgs_ty lay ρ (fun σ hσ => h σ (List.mem_cons_of_mem _ hσ))⟩
       have hs := h τ (List.mem_cons_self ..)
       cases τ <;> simp_all [supp, encR, regTy, Val.ty, Val.ofInt, Val.bool]
-      rename_i n rw
-      cases D.tabNr n <;> simp only
+      rename_i cap
+      cases D.tabNr cap.3.1 <;> rfl
 
 theorem foldl_set_ne (ps : List (Param × Val)) (rs : Regs) (x : Reg) (h : ∀ p ∈ ps, p.1.r ≠ x) :
     ps.foldl (fun rs pv => rs.set pv.1.r pv.2) rs x = rs x := by

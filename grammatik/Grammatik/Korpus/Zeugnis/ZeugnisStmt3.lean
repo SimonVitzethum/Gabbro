@@ -139,7 +139,7 @@ theorem bindAxiom_sound_zeuge :
         RufErreichbarF arP arO 0 (RufStartF arP arSp0 arInit) M ∧
         M.speicher.slots () 0 () ≠ arSp0.slots () 0 () :=
   ⟨.bindAxiom .ruf1 0 10 arL arHw1 arHg1 arHd1 arHgd1 (.lift .nil),
-    by decide, arMB, arB_erreicht, arB_schreibt⟩
+    by decide +kernel, arMB, arB_erreicht, arB_schreibt⟩
 
 /-- Inhabitation witness for `transition_sound`: the `w`-from-`r`
     mirror step. -/

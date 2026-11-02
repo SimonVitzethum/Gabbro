@@ -23,9 +23,10 @@
      `let … else` with the callee's reason count (`rueckGrund`).
      `FormKette`: every suspended frame has the shape of the call that
      suspended it (`FormG`): not waiting and the callee has no reasons
-     (`call`, `callInd`), waiting for `τ` with `erg callee = some τ` and no
-     reasons (`bindCall`, `bindCallInd`), or waiting in `wartetSonst n`
-     with `erg callee = some τ` and `gruende callee = n` (`bindCallElse`).
+     (`call`, `callInd`, `callIndElse`), waiting for `τ` with
+     `erg callee = some τ` and no reasons (`bindCall`, `bindCallInd`),
+     waiting in `wartetSonst n` with `erg callee = some τ` and
+     `gruende callee = n` (`bindCallElse`, `bindCallIndElse`).
   2. **An abrupt exit without a loop.** `leave`/`next` fire only when the
      continuation reaches a loop shim through `dann`/`schrumpf`/`frei`/
      `abbruch` layers (`GRest.absorb`); an `ende` node never stands inside

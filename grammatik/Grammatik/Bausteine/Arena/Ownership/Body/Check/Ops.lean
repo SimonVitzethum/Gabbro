@@ -29,6 +29,7 @@ def assignsS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stm
   | .traverse _ _ body => assignsB body
   | .consumeTraverse _ _ _ _ _ _ body => assignsB body
   | .retry _ _ body u => assignsB body ++ assignsB u
+  | .callIndElse _ _ _ _ _ err => assignsE err
   | .forever _ _ body => assignsB body
   | _ => []
 
@@ -39,6 +40,7 @@ def assignsB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Blo
   | .bindCall _ _ _ _ _ rest => assignsB rest
   | .bindCallInd _ _ _ _ _ rest => assignsB rest
   | .bindCallElse _ _ _ _ _ err rest => assignsE err ++ assignsB rest
+  | .bindCallIndElse _ _ _ _ _ err rest => assignsE err ++ assignsB rest
   | .bindAxiom _ _ _ _ _ _ _ rest => assignsB rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => assignsE err ++ assignsB rest
   | .regRead _ _ rest => assignsB rest
@@ -65,6 +67,7 @@ def assignsE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endbloc
   | .awaits _ _ _ _ _ rest => assignsE rest
   | .bindCallInd _ _ _ _ _ rest => assignsE rest
   | .narrowRequired _ _ _ rest => assignsE rest
+  | .bindCallIndElse _ _ _ _ _ err rest => assignsE err ++ assignsE rest
   | _ => []
 
 def assignsArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :

@@ -1,0 +1,561 @@
+⚠ [2/15] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil1
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [3/15] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil2
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+⚠ [5/15] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1
+
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+ℹ [8/15] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+⚠ [10/15] Replayed Grammatik.Kern.Syntax.Typen.Reason
+
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [12/15] Replayed Grammatik.Kern.Syntax.Typen.DataCap
+
+  [apply] _middle
+
+✖ [15/15] Building Grammatik.Kern.Syntax.Typen.Transport (1.3s)
+trace: .> LEAN_PATH=/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Cli/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/batteries/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Qq/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/aesop/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/importGraph/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/plausible/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/mathlib/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean /home/simon/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean -j2 -M16384 -DElab.async=true -DmaxHeartbeats=400000 /home/simon/Dokumente/gabbro-c1/grammatik/Grammatik/Kern/Syntax/Typen/Transport.lean -o /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Kern/Syntax/Typen/Transport.olean -i /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Kern/Syntax/Typen/Transport.ilean -c /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Kern/Syntax/Typen/Transport.c --setup /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Kern/Syntax/Typen/Transport.setup.json --json
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:37:11: Tactic `rfl` failed: The left-hand side
+  (mapCases sn tn []).length
+is not definitionally equal to the right-hand side
+  [].length
+
+case nil
+sn tn : Nat → Nat
+⊢ (mapCases sn tn []).length = [].length
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:44:2: Type mismatch
+  congrArg sum (mapCases_id cs)
+has type
+  sum (mapCases id id cs) = sum cs
+but is expected to have type
+  mapNumbers id id (sum cs) = sum cs
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:45:2: Type mismatch
+  congrArg (fun t => t.arr n) (mapNumbers_id τ)
+has type
+  (mapNumbers id id τ).arr n = τ.arr n
+but is expected to have type
+  mapNumbers id id (τ.arr n) = τ.arr n
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:43:2: Type mismatch
+  rfl
+has type
+  ?m.55 = ?m.55
+but is expected to have type
+  mapNumbers id id (ptr { space := space, rights := rights, target := DataTarget.table n }) =
+    ptr { space := space, rights := rights, target := DataTarget.table n }
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:65:26: Tactic `rfl` failed: The left-hand side
+  (mapCases sn tn (none :: cs)).get ⟨↑⟨0, hi⟩, ⋯⟩
+is not definitionally equal to the right-hand side
+  Option.map (mapNumbers sn tn) ((none :: cs).get ⟨0, hi⟩)
+
+case cons.zero.none
+sn tn : Nat → Nat
+cs : List (Option Ty)
+ih : ∀ (i : Fin cs.length), (mapCases sn tn cs).get ⟨↑i, ⋯⟩ = Option.map (mapNumbers sn tn) (cs.get i)
+hi : 0 < (none :: cs).length
+⊢ (mapCases sn tn (none :: cs)).get ⟨↑⟨0, hi⟩, ⋯⟩ = Option.map (mapNumbers sn tn) ((none :: cs).get ⟨0, hi⟩)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:65:26: Tactic `rfl` failed: The left-hand side
+  (mapCases sn tn (some val✝ :: cs)).get ⟨↑⟨0, hi⟩, ⋯⟩
+is not definitionally equal to the right-hand side
+  Option.map (mapNumbers sn tn) ((some val✝ :: cs).get ⟨0, hi⟩)
+
+case cons.zero.some
+sn tn : Nat → Nat
+cs : List (Option Ty)
+ih : ∀ (i : Fin cs.length), (mapCases sn tn cs).get ⟨↑i, ⋯⟩ = Option.map (mapNumbers sn tn) (cs.get i)
+val✝ : Ty
+hi : 0 < (some val✝ :: cs).length
+⊢ (mapCases sn tn (some val✝ :: cs)).get ⟨↑⟨0, hi⟩, ⋯⟩ = Option.map (mapNumbers sn tn) ((some val✝ :: cs).get ⟨0, hi⟩)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:66:28: Type mismatch
+  ih ⟨i, Nat.lt_of_succ_lt_succ hi⟩
+has type
+  (mapCases sn tn cs).get ⟨↑⟨i, ⋯⟩, ⋯⟩ = Option.map (mapNumbers sn tn) (cs.get ⟨i, ⋯⟩)
+but is expected to have type
+  (mapCases sn tn (none :: cs)).get ⟨↑⟨i + 1, hi⟩, ⋯⟩ = Option.map (mapNumbers sn tn) ((none :: cs).get ⟨i + 1, hi⟩)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:66:28: Type mismatch
+  ih ⟨i, Nat.lt_of_succ_lt_succ hi⟩
+has type
+  (mapCases sn tn cs).get ⟨↑⟨i, ⋯⟩, ⋯⟩ = Option.map (mapNumbers sn tn) (cs.get ⟨i, ⋯⟩)
+but is expected to have type
+  (mapCases sn tn (some val✝ :: cs)).get ⟨↑⟨i + 1, hi⟩, ⋯⟩ =
+    Option.map (mapNumbers sn tn) ((some val✝ :: cs).get ⟨i + 1, hi⟩)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:75:2: Type mismatch
+  v
+has type
+  Val F p (Ty.int lo✝ hi✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.int lo✝ hi✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:76:2: Type mismatch
+  v
+has type
+  Val F p Ty.bool
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn Ty.bool)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:77:2: Type mismatch
+  v
+has type
+  Val F p (Ty.opt n✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.opt n✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:78:2: Type mismatch
+  relocateSum sn tn pointer cs v
+has type
+  Val F' p' (Ty.sum (Ty.mapCases sn tn cs))
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.sum cs))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:79:2: Type mismatch
+  v
+has type
+  Val F p (Ty.why n✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.why n✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:80:2: Type mismatch
+  v
+has type
+  Val F p Ty.never
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn Ty.never)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:81:2: Type mismatch
+  v
+has type
+  Val F p (Ty.fl lo✝ hi✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.fl lo✝ hi✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:82:2: Type mismatch
+  pointer n v
+has type
+  { f // p' f (sn n) = true }
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.fnptr n))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:83:2: Type mismatch
+  v
+has type
+  Val F p (Ty.ptr cap✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.ptr cap✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:84:2: Type mismatch
+  v
+has type
+  Val F p (Ty.ref t✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.ref t✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:85:2: Type mismatch
+  fun i => relocate sn tn pointer τ (v i)
+has type
+  Fin n✝ → Val F' p' (Ty.mapNumbers sn tn τ)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (τ.arr n✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:86:2: Type mismatch
+  v
+has type
+  Val F p (Ty.str n✝)
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.str n✝))
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:96:89: Application type mismatch: The argument
+  v
+has type
+  Fall F p (none :: tail✝) ⟨0, isLt✝⟩
+but is expected to have type
+  Fall F' p' (Ty.mapCases sn tn (none :: tail✝)) ⟨0, ?m.155⟩
+in the application
+  ⟨⟨0, ?m.155⟩, v⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:98:63: Application type mismatch: The argument
+  relocate sn tn pointer τ v
+has type
+  Val F' p' (Ty.mapNumbers sn tn τ)
+but is expected to have type
+  Fall F' p' (Ty.mapCases sn tn (some τ :: tail✝)) ⟨0, ?m.175⟩
+in the application
+  ⟨⟨0, ?m.175⟩, relocate sn tn pointer τ v⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:101:5: Application type mismatch: The argument
+  tail.fst.succ
+has type
+  Fin ((Ty.mapCases sn tn cs).length + 1)
+but is expected to have type
+  Fin (Ty.mapCases sn tn (none :: cs)).length
+in the application
+  Sigma.mk tail.fst.succ
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:104:5: Application type mismatch: The argument
+  tail.fst.succ
+has type
+  Fin ((Ty.mapCases sn tn cs).length + 1)
+but is expected to have type
+  Fin (Ty.mapCases sn tn (some val✝ :: cs)).length
+in the application
+  Sigma.mk tail.fst.succ
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:115:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.int lo✝ hi✝))
+but is expected to have type
+  Val F p (Ty.int lo✝ hi✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:116:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn Ty.bool)
+but is expected to have type
+  Val F p Ty.bool
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:117:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.opt n✝))
+but is expected to have type
+  Val F p (Ty.opt n✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:118:51: Application type mismatch: The argument
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.sum cs))
+but is expected to have type
+  Val F' p' (Ty.sum (Ty.mapCases sn tn cs))
+in the application
+  restrictSum sn tn pointer cs v
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:119:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.why n✝))
+but is expected to have type
+  Val F p (Ty.why n✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:120:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn Ty.never)
+but is expected to have type
+  Val F p Ty.never
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:121:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.fl lo✝ hi✝))
+but is expected to have type
+  Val F p (Ty.fl lo✝ hi✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:122:29: Application type mismatch: The argument
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.fnptr n))
+but is expected to have type
+  { f // p' f (sn n) = true }
+in the application
+  pointer n v
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:123:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.ptr cap✝))
+but is expected to have type
+  Val F p (Ty.ptr cap✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:124:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.ref t✝))
+but is expected to have type
+  Val F p (Ty.ref t✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:125:58: Function expected at
+  v
+but this term has type
+  Val F' p' (Ty.mapNumbers sn tn (τ.arr n✝))
+
+  i
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:126:2: Type mismatch
+  v
+has type
+  Val F' p' (Ty.mapNumbers sn tn (Ty.str n✝))
+but is expected to have type
+  Val F p (Ty.str n✝)
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:134:18: Application type mismatch: The argument
+  i
+has type
+  Fin (Ty.mapCases sn tn []).length
+but is expected to have type
+  Fin 0
+in the application
+  i.elim0
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:135:76: Application type mismatch: The argument
+  v
+has type
+  Fall F' p' (Ty.mapCases sn tn (none :: tail✝)) ⟨0, isLt✝⟩
+but is expected to have type
+  Fall F p (none :: tail✝) ⟨0, ?m.156⟩
+in the application
+  ⟨⟨0, ?m.156⟩, v⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:137:79: Application type mismatch: The argument
+  v
+has type
+  Fall F' p' (Ty.mapCases sn tn (some τ :: tail✝)) ⟨0, isLt✝⟩
+but is expected to have type
+  Val F' p' (Ty.mapNumbers sn tn τ)
+in the application
+  restrict sn tn pointer τ v
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:139:77: Application type mismatch: The argument
+  hi
+has type
+  i + 1 < (Ty.mapCases sn tn (none :: cs)).length
+but is expected to have type
+  i.succ < (Ty.mapCases sn tn cs).length.succ
+in the application
+  Nat.lt_of_succ_lt_succ hi
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:142:77: Application type mismatch: The argument
+  hi
+has type
+  i + 1 < (Ty.mapCases sn tn (some val✝ :: cs)).length
+but is expected to have type
+  i.succ < (Ty.mapCases sn tn cs).length.succ
+in the application
+  Nat.lt_of_succ_lt_succ hi
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:160:43: Application type mismatch: The argument
+  v
+has type
+  Nutzlast F p (cs.get i)
+but is expected to have type
+  Fall F p cs i
+in the application
+  ⟨i, v⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:162:10: Type mismatch
+  ⋯ ▸ Nutzlast.relocate sn tn pointer (cs.get i) v
+has type
+  Nutzlast F' p' ((Ty.mapCases sn tn cs).get ⟨↑i, ⋯⟩)
+but is expected to have type
+  Fall F' p' (Ty.mapCases sn tn cs) ⟨↑i, ?m.21⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:192:12: Application type mismatch: The argument
+  Nutzlast.restrict sn tn pointer (cs.get i) v
+has type
+  Nutzlast F p (cs.get i)
+but is expected to have type
+  Fall F p cs i
+in the application
+  ⟨i, Nutzlast.restrict sn tn pointer (cs.get i) v⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:191:10: Type mismatch
+  ⋯ ▸ v
+has type
+  Nutzlast F' p' ((Ty.mapCases sn tn cs).get ⟨↑i, ⋯⟩)
+but is expected to have type
+  Fall F' p' (Ty.mapCases sn tn cs) ⟨↑i, ?m.18⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:197:78: Application type mismatch: The argument
+  z.snd
+has type
+  Fall F p cs z.fst
+but is expected to have type
+  Fall F p (c :: cs) z.fst.succ
+in the application
+  ⟨z.fst.succ, z.snd⟩
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:214:19: Unknown identifier `hleft`
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:215:57: Application type mismatch: The argument
+  sn
+has type
+  Nat → Nat
+but is expected to have type
+  Ty
+in the application
+  restrict_relocate sn
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:216:43: Application type mismatch: The argument
+  sn
+has type
+  Nat → Nat
+but is expected to have type
+  List (Option Ty)
+in the application
+  restrict_relocateSum sn
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:212:2: Type mismatch
+  rfl
+has type
+  ?m.83 = ?m.83
+but is expected to have type
+  restrict sn tn backward (Ty.str n✝) (relocate sn tn forward (Ty.str n✝) x✝) = x✝
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:250:19: Unknown identifier `hright`
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:251:57: Application type mismatch: The argument
+  sn
+has type
+  Nat → Nat
+but is expected to have type
+  Ty
+in the application
+  relocate_restrict sn
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:252:43: Application type mismatch: The argument
+  sn
+has type
+  Nat → Nat
+but is expected to have type
+  List (Option Ty)
+in the application
+  relocate_restrictSum sn
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:291:40: Application type mismatch: The argument
+  forward
+has type
+  (n : Nat) → { f // (fun x x_1 => true) f n = true } → { f // (fun x x_1 => true) f (n + 1) = true }
+but is expected to have type
+  (n : Nat) → { f // true = true } → { f // ?m.19 f (n + 1) = true }
+in the application
+  Val.relocate (fun n => n + 1) id forward
+error: Grammatik/Kern/Syntax/Typen/Transport.lean:298:39: Application type mismatch: The argument
+  forward
+has type
+  (n : Nat) → { f // (fun x x_1 => true) f n = true } → { f // (fun x x_1 => true) f (n + 1) = true }
+but is expected to have type
+  (n : Nat) → { f // true = true } → { f // ?m.4 f (n + 1) = true }
+in the application
+  Val.relocate (fun n => n + 1) id forward
+Some required targets logged failures:
+- Grammatik.Kern.Syntax.Typen.Transport
+error: build failed

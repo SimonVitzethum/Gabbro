@@ -61,6 +61,7 @@ theorem sGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .onWhy _ arms => by simp only [Stmt.gOk, mS, gaGOk K arms]
   | .call .. => rfl
   | .callInd .. => rfl
+  | .callIndElse _ _ _ _ _ err => by simp only [Stmt.gOk, mS, eGOk K err]; rfl
   | .locks _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]; rfl
   | .breaking _ body => by simp only [Stmt.gOk, mS, bGOk K body]
   | .traverse _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]
@@ -93,6 +94,7 @@ theorem bGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bind _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .bindCall _ _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]; rfl
   | .bindCallInd _ _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]; rfl
+  | .bindCallIndElse _ _ _ _ _ err rest => by simp only [Block.gOk, mB, eGOk K err, bGOk K rest]; rfl
   | .bindCallElse _ _ _ _ _ err rest => by simp only [Block.gOk, mB, eGOk K err, bGOk K rest]; rfl
   | .bindAxiom _ _ _ _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [Block.gOk, mB, eGOk K err, bGOk K rest]
@@ -136,6 +138,7 @@ theorem eGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
   | .regReadElse _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest, Bool.true_and]
   | .awaits _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .bindCallInd _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]; rfl
+  | .bindCallIndElse _ _ _ _ _ err rest => by simp only [Endblock.gOk, mE, eGOk K err, eGOk K rest]; rfl
   | .narrow _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest]
   | .narrowRequired _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .exchange _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]

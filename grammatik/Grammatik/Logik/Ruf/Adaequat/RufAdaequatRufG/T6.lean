@@ -88,6 +88,7 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · rfl
       · rfl
   | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .callIndElse .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs => by
       intro σ ρ
       obtain ⟨_, hb, _⟩ := hs.locks_inv
@@ -151,6 +152,7 @@ theorem blockKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · rfl
       · rfl
   | _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, .bindCallIndElse .., hb => by cases hb
   | _, _, _, _, .bindCallElse .., hb => absurd hb.bindCallElse_inv.2.2.2.1 (by decide)
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb

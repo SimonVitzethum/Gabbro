@@ -90,6 +90,33 @@ theorem callInd_value (hR : Respects A I.contracts R) {Λ : List (Res D)} {n : N
   obtain ⟨s2, ha2, hf2, hloc, hprog, hres⟩ := hpost
   exact bound_of_result (I f).output v hRz hc hl hpr hp hloc hprog ha2 hf2 hres
 
+/-- **An indirect call that returns a declared reason** («C07»), whichever fitting function
+the pointer names: the same handoff as `callInd_value`, then the reason exit of `call_reason`. -/
+theorem callInd_reason (hR : Respects A I.contracts R) {Λ : List (Res D)} {n : Nat}
+    (J : Modes (D.sigNr n).params) (owner : Bool) (hJ : SigCompatible I n J owner)
+    (args : Args D Γ Λ (D.sigNr n).params) (h : Holds A fr s0 c σ ρ)
+    (hp : planFits c (modeList J) (originList c args) = true)
+    (f : D.Fn) (hf : D.passt f n = true)
+    {σ' : World D} {r : Fin (D.gruende f)}
+    (hrun : R f σ (umsig hf (evalArgs σ args σ ρ)) = .why σ' r) :
+    Holds A fr s0 (c.afterCall (modeList J) (originList c args)) σ' ρ := by
+  obtain ⟨g, s, hRz, hc, hl, hpr⟩ := h
+  have hok := handoff_ok (ms := modeList J) (os := originList c args) hRz hp
+  obtain ⟨href, hr, hcomp⟩ := handoff_requires J args rfl rfl hRz hp σ σ
+  have hpc := parameterContext_eq (I f).parameters J (hJ f hf).1
+  have hpre : (I.contracts f).requires (calleeFrame A s fr)
+      (s.handoff (calleeFrame A s fr) (movedHandles g (modeList J) (originList c args))
+        (lentHandles g (modeList J) (originList c args)))
+      (umsig hf (evalArgs σ args σ ρ)) := by
+    refine ⟨calleeGhost g (modeList J) (originList c args) s.next, ?_, ?_, ?_⟩
+    · rw [hpc]
+      exact References.transport (D.passt_sig hf).params.symm (umsig_heq hf _).symm href
+    · rw [hpc]; exact hr
+    · rw [hpc]; exact hcomp
+  have hpost := (hR f _ _ σ _ (handoff_agrees hok hRz.1) hRz.2.1 hpre).2 σ' r hrun
+  obtain ⟨s2, ha2, hf2, hloc, hprog, hclosed⟩ := hpost
+  exact return_plain hRz hc hl hpr hp (returnOk_closed ha2.1 hloc hprog hclosed) ha2 hf2
+
 end Step
 
 #print axioms callInd_value

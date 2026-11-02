@@ -79,6 +79,8 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       lowerS_ok_call (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (f := f) (args := args) (zz1 := zz1) (hr := hr) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
   | _, _, _, _, .callInd .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .callIndElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -129,6 +131,8 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
   | _, _, _, _, Gabbro.Grammatik.Block.bindCall (τ := τ) (Λ := Λ) f args he zz1 hr rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerB_ok_GabbroGrammatikBlockbindCall (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (τ := τ) (Λ := Λ) (f := f) (args := args) (he := he) (zz1 := zz1) (hr := hr) (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_rest := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R rest)
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindCallIndElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerB_ok_GabbroGrammatikBlockbindCallElse (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_rest := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R rest) (ih_lowerEnd_ok_err := fun lay hL cenv lv O passes R => lowerEnd_ok lay hL cenv lv O passes R err)
@@ -208,6 +212,10 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindCallIndElse .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindCallIndElse .., lb, st, st', blks, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regRead .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
@@ -219,6 +227,8 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .bindCallInd .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindCallIndElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
 
 /-- Every arm body of a `match` on a tagged value refines (the structural companion of `lowerB_ok`). -/

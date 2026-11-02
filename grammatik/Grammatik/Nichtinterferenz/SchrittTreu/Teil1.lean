@@ -52,6 +52,22 @@ theorem schrittK_von_g3 (P : Programm D) (O : Orakel D) (passes : Nat)
       kstart
       subst hs0 hrho
       rfl
+  | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+      hrho neu hneu =>
+      kstart
+      subst hs0 hrho
+      simp only [kr, kDann]
+      simp only [RufMaschineG.weltVon] at hv
+      rw [hv]
+      rfl
+  | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+      hrho neu hneu =>
+      kstart
+      subst hs0 hrho
+      simp only [kr, kDann]
+      simp only [RufMaschineG.weltVon] at hv
+      rw [hv]
+      rfl
   | rueckBind caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hh g hfg rho hrho s0
       hs0 hΛ s1 hs1 v hv he neu hneu =>
       subst hfg hrho hv hs1

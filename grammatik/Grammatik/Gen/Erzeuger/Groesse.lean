@@ -119,6 +119,7 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
   | _, _, _, _, .onWhy r arms => 1 + groesseExpr r + groesseGrundArms arms
   | _, _, _, _, .call _ args _ _ => 1 + groesseArgs args
   | _, _, _, _, .callInd p args _ _ => 1 + groesseExpr p + groesseArgs args
+  | _, _, _, _, .callIndElse p args _ _ _ err => 1 + groesseExpr p + groesseArgs args + groesseEnd err
   | _, _, _, _, .locks _ _ body => 1 + groesseBlock body
   | _, _, _, _, .breaking _ body => 1 + groesseBlock body
   | _, _, _, _, .traverse _ inv body => 1 + groesseExpr inv + groesseBlock body
@@ -148,6 +149,8 @@ def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V 
   | _, _, _, _, .bind (τ := τ) e rest => 1 + Zahlen.kostT τ + groesseExpr e + groesseBlock rest
   | _, _, _, _, .bindCall _ args _ _ _ rest => 1 + groesseArgs args + groesseBlock rest
   | _, _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseBlock rest
+  | _, _, _, _, .bindCallIndElse p args _ _ _ err rest =>
+    1 + groesseExpr p + groesseArgs args + groesseEnd err + groesseBlock rest
   | _, _, _, _, .bindCallElse _ args _ _ _ err rest => 1 + groesseArgs args + groesseEnd err + groesseBlock rest
   | _, _, _, _, .bindAxiom _ args _ _ _ _ _ rest => 1 + groesseArgs args + groesseBlock rest
   | _, _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
@@ -192,6 +195,8 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .regReadElse _ _ z sonst rest => 1 + groesseExpr z + groesseEnd sonst + groesseEnd rest
   | _, _, _, .awaits _ _ _ _ _ rest => 1 + groesseEnd rest
   | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
+  | _, _, _, .bindCallIndElse p args _ _ _ err rest =>
+    1 + groesseExpr p + groesseArgs args + groesseEnd err + groesseEnd rest
   -- the end-block forms of stage 0 are not drawn yet (TODO.md): their size lies beyond every bound
   | _, _, _, .narrow e _ _ sonst rest => unendlich + 1 + groesseExpr e + groesseEnd sonst + groesseEnd rest
   | _, _, _, .bindAxiomOpt .. => unendlich + 1

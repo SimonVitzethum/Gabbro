@@ -447,8 +447,16 @@ structure RufPasst (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke) (�
       | cases hc
       | (simp at hc)
       | exact ⟨c, hc, Int.le_refl c⟩
-  /-- Nonempty owner flows require canonical escrow replay before admission. -/
-  ownerReady : S.owner = {} := by first | rfl | exact OwnerFlow.empty_of_empty S.owner
+  /-- Checked call-boundary escrow (C09): the callee's owner flow is valid over
+      the mentioned identities, disjoint from ordinary consumption, and every
+      input is a declared eigner. At a call the caller's bindings move into a
+      frame escrow (`Marken.Owner.Escrow`); the return gives back exactly the
+      owner outputs, on either channel. -/
+  ownerReady : S.owner.EscrowReady (fun m => decide (m ∈ S.owner.inputs.map Prod.fst))
+    D.stufen (fun m => ∃ t, m ∈ D.eigner t) S.konsumiert := by
+    first
+      | exact OwnerFlow.escrowReady_of_empty _ _ _ _ rfl
+      | exact OwnerFlow.escrowReady_of_empty _ _ _ _ (OwnerFlow.empty_of_empty S.owner)
 
 /-- The exact held set (the form before 2026-09-13) gives the relaxed `hh`. -/
 theorem RufPasst.hh_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ : List (Res D)}
@@ -479,7 +487,7 @@ theorem RufPasst.vonPasst {D : Deklaration} {V : Vertrag D} {S T : Signatur D.Ta
     obtain ⟨c', hc', hle⟩ := hp.hb c hc
     obtain ⟨c'', hc'', hle'⟩ := hs.boden c' hc'
     exact ⟨c'', hc'', Int.le_trans hle hle'⟩
-  ownerReady := hs.owner.trans hp.ownerReady
+  ownerReady := by rw [hs.owner, hs.konsumiert]; exact hp.ownerReady
 
 /-! ## 2. Sichtbereich und Variablen -/
 
