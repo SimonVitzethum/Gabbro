@@ -141,7 +141,7 @@ end
     exact clauses/body derivation is carried by the caller (`ConstElaborates`),
     while this records the value, the bounds, the canonical equation and the
     successful predicate checks behind that equation. -/
-@[expose] structure ConstCallCertificate (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (c.D.params f)) where
+structure ConstCallCertificate (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (c.D.params f)) where
   value : ErgVal c.D (c.D.erg f)
   bound : Nat
   world : World c.D
@@ -151,7 +151,7 @@ end
 /-- The five outcomes of a checked const call: a certified value, a contract
     violation naming the guilty function, an arithmetic/range failure, an
     unresolved dependency, or resource exhaustion with used and allowed work. -/
-@[expose] inductive ConstCallResult (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (c.D.params f)) where
+inductive ConstCallResult (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (c.D.params f)) where
   | value (cert : ConstCallCertificate c f args) : ConstCallResult c f args
   | contract (guilty : c.D.Fn) : ConstCallResult c f args
   | range (guilty : c.D.Fn) : ConstCallResult c f args
