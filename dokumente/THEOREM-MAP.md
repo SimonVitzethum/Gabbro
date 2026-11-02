@@ -5062,3 +5062,28 @@ parsing, elaboration and generic G lowering in the kernel. Stage0 imports those 
 all inherited memory/view, call-depth and budget premises. The `_zeuge` instantiates
 that generic certificate on the accepted nested-array source/image. No source interpreter or
 additional backend is introduced.
+
+## C05 (2026-11-02): invariant carriers over tables AND globals
+
+`Deklaration.traeger : Inv → List (Tab ⊕ Glob)` (like `rtraeger`); `invarianten_gehalten` (U003) eliminates the
+sum (`schreibt`/`gschreibt`, `braucht`/`gbraucht`), and `invSicht`, `schuldet` fold both kinds (no new `Expr`,
+`Stmt`, event or return phase). Spec meaning (authorized): group restoration, `InvZu`, `InvRuheG`, `InvSichtG` and
+the derived thread/spawn/link claims quantify over declared global carriers as well as tables; `InvTraeger` is
+membership in the carrier list. Old table-only cases are the `.inl` lifts of the former statements.
+
+* Kernel/semantics: `held_invSicht(_aux)`, `heldIn_invarianten` (`Satz/T4/Teil3`), `inv_schreiber_sperren`,
+  `schuldet_hat_schreibtraeger` (`Interferenz`), `schuldet_eq_any`, `schreibt_false_of_schuldet_false`,
+  `SchuldnerHaelt`, `schuldnerHaelt_gilt`, `wache_aus_schuld` (`InterferenzAllgemein`).
+* Goal proof: `invRuhe_erreichbar` (the global branch closes through `schritt_traeger (.inr g)`), `invSicht_aus`,
+  `invRuheG_aus`, `invSichtG_aus`; over GX `invHaelt_aussen`, `invRuhe_erreichbarX`, `invSicht_ausX`,
+  `invarianten_atomar`. `VertragsFrei` additionally excludes the predicate carriers of EVERY declared invariant (an
+  invariant over a shared atomic is refused, `N484`; `vertragsFreiB`, `vertragsFreiB_ok`).
+* Idle root and linking: `Deklaration.mitRuhe` (`invarianten_gehalten`, `invSicht_map`, `invOrteP_mitRuhe_ruhe`,
+  `schuldet_ruhe`), `Einbettung.traeger` (`Sum.map tab glob`), `invSichtE`, `invAmRueck_E`.
+* Exporter: `uInv` (unique table-or-static carrier), `uU003` (`puts` and `gputs`), `invTraeger`, `invOkB`,
+  `traegerD`, `invGehalten`; `lowerInvAt` refuses a failing U003 and an undeclared read (`invReadsOk`);
+  `lowerAllg_traeger`: a lowered unit keeps its whole carrier list and `InvTraeger` holds.
+* Witnesses: `Proben/InvGlobalZeuge` (`cg_*`), `Parser/Elab/Proben/Spaet/UebersetzeProben41`.
+* Not done here: the Stage-0 return epilogue for owed invariants (`Senke/Funktion.lowFun`), Programm-level
+  witnesses (restoration on reason returns, a two-thread guarded observation) and a generator family over global
+  carriers.
