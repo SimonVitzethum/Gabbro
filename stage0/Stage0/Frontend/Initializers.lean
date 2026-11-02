@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.ExportMetadata
+public import Grammatik.Parser.Elab.Export.ExportMetadata
 public import Grammatik.Parser.Elab.Uebersetze
 @[expose] public section
 

@@ -1,0 +1,215 @@
+module
+public import Grammatik.Parser.Elab.Export.ExportRelations
+@[expose] public section
+
+namespace Gabbro.Grammatik.Parser.ExportPreservation
+open Uebersetze UebersetzeAllg UebersetzeAllg2
+
+private theorem lowIdx_syntax (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (shift : Nat) (table : Fin u.tabs.length) (source : UIdx)
+    (value : Expr (declOf u) Γ Λ (.index ((declOf u).count table)))
+    (lowered : lowIdx u Γ Λ fn shift table source = .ok value) : IndexSyntax value := by
+  cases source with
+  | lit number =>
+    simp only [lowIdx] at lowered
+    split at lowered
+    · split at lowered
+      · cases lowered
+        exact .widen _ _ _ (.literal _)
+      · contradiction
+    · contradiction
+  | param name =>
+    simp only [lowIdx] at lowered
+    split at lowered
+    · contradiction
+    · split at lowered
+      · split at lowered
+        · contradiction
+        · cases lowered
+          exact .var _
+      · split at lowered
+        · split at lowered
+          · split at lowered
+            · split at lowered
+              · contradiction
+              · cases lowered
+                exact .widen _ _ _ (.var _)
+            · contradiction
+          · contradiction
+        · contradiction
+      · contradiction
+
+/-- Every successfully exported index has the same value after insertion of the quantifier
+    binder. This is the small expression fragment the actual index exporter can produce. -/
+theorem index_scope (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (shift : Nat)
+    (table : Fin u.tabs.length) (source : UIdx)
+    (value : Expr (declOf u) Γ Λ (.index ((declOf u).count table)))
+    (lowered : lowIdx u Γ Λ fn shift table source = .ok value)
+    {binderTy : Ty} (binder : Wert (declOf u) binderTy)
+    (entry state : World (declOf u)) (env : Env (declOf u) Γ) :
+    eval entry value.weaken state (.cons binder env) = eval entry value state env :=
+  indexSyntax_scope (lowIdx_syntax u Γ Λ fn shift table source value lowered) binder entry state env
+
+/-- The original seed is resolved before entering the binder, even when both names coincide. -/
+theorem tree_quantifier_export (ctx : UCtx) (universal reverse : Bool) (binder : String)
+    (source body : SExpr) (table edge : String) (number : Nat) (seed : UIdx) (predicate : UEns)
+    (found : uTreeDomain ctx source = .ok (table, number, seed, edge))
+    (lowered : uSichert {ctx with names := binder :: ctx.names, kinds := .index number :: ctx.kinds, types := Ty.index ((ctx.tabs[number]?).map (·.count) |>.getD 0) :: ctx.types, bits := 0 :: ctx.bits} body = .ok predicate) :
+    uSichert ctx (.ext (if universal then .all else .any)
+      [binder, if reverse then "ancestors" else "descendants"] [source, body]) =
+      .ok (.filtered universal table binder edge reverse seed predicate) := by
+  cases universal <;> cases reverse
+  all_goals simp only [Bool.false_eq_true, ↓reduceIte]
+  all_goals unfold uSichert
+  all_goals simp [found, lowered, bind, Except.bind, pure, Except.pure]
+
+/-- Both result scope and the outer seed retain their original positions. Only the predicate
+    is lowered under the freshly inserted index; the filter uses a genuine weakening. -/
+theorem tree_quantifier_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn fnR : UFn) (er : Option Ty) (universal reverse : Bool) (name binder field : String)
+    (source : UIdx) (body : UEns) (table : Fin u.tabs.length) (edge : SelfEdge u table field)
+    (seed : Expr (declOf u) Γ Λ (.index ((declOf u).count table)))
+    (predicate : Expr (declOf u) (.index ((declOf u).count table) :: Γ) Λ .bool)
+    (gate : u.exportGate = .ok ()) (found : tabIdx u.tabs name = .ok table)
+    (typed : selfEdge u table field = .ok edge)
+    (outer : lowIdx u Γ Λ fn (if er.isSome then 1 else 0) table source = .ok seed)
+    (result : ergAlsParam u fn er = .ok fnR)
+    (guard : ∀ resource ∈ (declOf u).braucht table, Res.von (declOf u) resource ∈ Λ)
+    (inner : lowEns u (.index ((declOf u).count table) :: Γ) Λ
+      (fnR.mitIndex binder table.val ((declOf u).count table)) none body = .ok predicate) :
+    lowEns u Γ Λ fn er (.filtered universal name binder field reverse source body) =
+      (let filter : Expr (declOf u) (.index ((declOf u).count table) :: Γ) Λ .bool := if reverse then Expr.reaches table edge.field edge.self (.var .here) seed.weaken guard
+        else Expr.reaches table edge.field edge.self seed.weaken (.var .here) guard
+       .ok (if universal then Expr.forallSlots table (Expr.impl filter predicate) guard
+         else Expr.existsSlots table (Expr.and filter predicate) guard)) := by
+  simp only [lowEns, gate, bind, Except.bind, found, typed, outer, result, guard,
+    ↓reduceDIte, inner, pure, Except.pure]
+  split
+  · rfl
+  · contradiction
+
+theorem tree_quantifier_gate (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (er : Option Ty) (universal reverse : Bool) (name binder field : String)
+    (source : UIdx) (body : UEns) (value : Expr (declOf u) Γ Λ .bool)
+    (h : lowEns u Γ Λ fn er (.filtered universal name binder field reverse source body) = .ok value) :
+    u.exportGate = .ok () := by
+  cases gate : u.exportGate with
+  | error error => simp only [lowEns, gate, bind, Except.bind] at h; contradiction
+  | ok unit => cases unit; rfl
+
+/-- The finite filter uses the original seed under every binder, including a source binder
+    that shadows its spelling. The bounded path relation is exactly the model's kette. -/
+theorem tree_quantifier_meaning (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (fn : UFn) (shift : Nat) (table : Fin u.tabs.length) (edge : SelfEdge u table field)
+    (source : UIdx) (seed : Expr (declOf u) Γ Λ (.index ((declOf u).count table)))
+    (lowered : lowIdx u Γ Λ fn shift table source = .ok seed)
+    (predicate : Expr (declOf u) (.index ((declOf u).count table) :: Γ) Λ .bool)
+    (guard : darf (declOf u) table Λ) (universal reverse : Bool)
+    (entry state : World (declOf u)) (env : Env (declOf u) Γ) :
+    (let filter : Expr (declOf u) (.index ((declOf u).count table) :: Γ) Λ .bool := if reverse then Expr.reaches table edge.field edge.self (.var .here) seed.weaken guard
+      else Expr.reaches table edge.field edge.self seed.weaken (.var .here) guard
+     eval entry (if universal then Expr.forallSlots table (Expr.impl filter predicate) guard
+       else Expr.existsSlots table (Expr.and filter predicate) guard) state env) =
+    (let accepts := fun index : Zahl 0 ((declOf u).count table - 1) =>
+       kette (fun number => edge.self ▸ state.slots table number edge.field) ((declOf u).count table).toNat
+         (if reverse then index.n else (eval entry seed state env).n)
+         (if reverse then (eval entry seed state env).n else index.n)
+     if universal then (alleIndizes ((declOf u).count table)).all
+       (fun index => !accepts index || wahr? (eval entry predicate state (.cons index env)))
+     else (alleIndizes ((declOf u).count table)).any
+       (fun index => accepts index && wahr? (eval entry predicate state (.cons index env)))) := by
+  have shifted (index : Zahl 0 ((declOf u).count table - 1)) :=
+    index_scope u Γ Λ fn shift table source seed lowered (binderTy := .index ((declOf u).count table)) index entry state env
+  cases universal <;> cases reverse <;>
+    simp only [Bool.false_eq_true, ↓reduceIte, Expr.impl, eval, shifted, wahr?] <;> rfl <;> try rfl
+
+/-- Expanding a filtered body preserves its statements in order and every explicit exit. -/
+theorem traversal_filter_export (predicate : UEns) (body : List UStmt) :
+    uFilteredBody (some predicate) body = [.ifBeg predicate] ++ body ++ [.ifElse, .blkEnd] := by rfl
+
+/-- The production statement exporter keeps the invariant in the outer scope and keeps
+    leave/next/return inside the filtered body, under the same loop resource discipline. -/
+theorem traversal_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat) (ctx : UCtx)
+    (binder : String) (origin : Option SExpr) (kind : String) (subject : SExpr) (mode raw : String)
+    (invariant : Option SExpr) (statements : List SAnw) (ending : Option SEnde) (rest : List SAnw)
+    (loopHeader : UStmt) (loopCtx bodyCtx endCtx : UCtx) (filter : Option UEns)
+    (body exits tail : List UStmt)
+    (header : uLoopExport ctx binder origin kind subject mode raw invariant = .ok (loopHeader, loopCtx, filter))
+    (inside : uAnwReihe tabs heads fuel loopCtx statements = .ok (body, bodyCtx))
+    (exit : uEndeStmt bodyCtx ending = .ok exits)
+    (outside : uAnwReihe tabs heads fuel ctx rest = .ok (tail, endCtx)) :
+    uAnwReihe tabs heads (fuel + 1) ctx
+      (.each binder origin kind subject mode raw invariant (.block statements ending) :: rest) =
+      .ok ([loopHeader] ++ uFilteredBody filter (body ++ exits) ++ [.blkEnd] ++ tail, endCtx) := by
+  simp only [uAnwReihe, header, inside, exit, outside] <;> try rfl
+
+/-- A skipped node still records the filter's reads. Every body outcome, including early
+    exits and failures, is returned unchanged when the node is selected. -/
+theorem filtered_step_meaning {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+    (predicate : Expr D Γ Λ .bool) (body : Block D V true Γ Λ Λ)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (state : World D) (env : Env D Γ) :
+    execBlock oracle passes calls (.cons (.ite predicate body .nil) .nil) state env =
+      (let observed := state.lese Λ predicate.orte
+       if wahr? (eval observed predicate observed env) then
+         execBlock oracle passes calls body observed env else .ok observed env) := by
+  by_cases selected : wahr? (eval (state.lese Λ predicate.orte) predicate
+      (state.lese Λ predicate.orte) env) = true
+  · simp only [execBlock, execStmt, selected, ↓reduceIte]
+    cases execBlock oracle passes calls body (state.lese Λ predicate.orte) env <;> rfl
+  · simp only [execBlock, execStmt, selected, ↓reduceIte]
+    rfl
+
+/-- The complete finite traversal is exactly G's existing traversal with a filtered step.
+    Invariant reads/checks, the declared count and all exit handling stay in traverseLauf. -/
+theorem filtered_traversal_meaning {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (table : D.Tab) (invariant : Expr D Γ Λ .bool)
+    (predicate : Expr D (.index (D.count table) :: Γ) Λ .bool)
+    (body : Block D V true (.index (D.count table) :: Γ) Λ Λ)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (state : World D) (env : Env D Γ) :
+    execStmt oracle passes calls (l := l)
+      (.traverse table invariant (.cons (.ite predicate body .nil) .nil)) state env =
+      traverseLauf
+        (fun state env => let observed := state.lese Λ predicate.orte
+          if wahr? (eval observed predicate observed env) then
+            execBlock oracle passes calls body observed env else .ok observed env)
+        (fun state env => let observed := state.lese Λ invariant.orte
+          (observed, wahr? (eval observed invariant observed env)))
+        (alleIndizes (D.count table)) state env := by
+  simp only [execStmt] <;> try rfl
+  congr 1
+  funext state env
+  exact filtered_step_meaning predicate body oracle passes calls state env
+
+/-- The source loop-header duties remain refusals rather than disappearing into a finite loop. -/
+theorem traversal_header_refused_zeuge :
+    let ctx : UCtx := {names := [], kinds := [], types := [], tabs := [], locks := [], held := [], res := none, fname := "sample", alias := [], lits := []}
+    uLoopExport ctx "node" none "descendants" (.variable "root") "unvisited" "decreases node " none =
+      .error "source export: traversal decreases/touches duties lack a checked source binding" ∧
+    uLoopExport ctx "node" none "descendants" (.variable "root") "consuming" "" none =
+      .error "traverse by consuming without G form" := by
+  exact ⟨rfl, rfl⟩
+
+theorem tree_quantifier_export_zeuge :
+    uSichert relationContext (.ext .all ["root", "descendants"]
+      [.variable "root", .bin "<=" (.variable "root") (.lit 1)]) =
+      .ok (.filtered true "T" "root" "next" false (.param "root")
+        (.cmp "<=" (.param "root") (.lit 1))) := by rfl
+
+theorem tree_quantifier_lower_zeuge :
+    (lowEns relationUnit [.index 3, .index 3] [] relationFunction none
+      (.filtered true "T" "root" "next" false (.param "root")
+        (.cmp "<=" (.param "root") (.lit 1)))).toOption.isSome = true := by rfl
+
+theorem index_scope_zeuge (entry state : World (declOf relationUnit))
+    (root other binder : Zahl 0 2) :
+    eval entry (Expr.weaken (Expr.var (D := declOf relationUnit) (Λ := [])
+      (Γ := [.index 3, .index 3]) (τ := .index 3) .here)) state
+        (.cons (τ := .index 3) binder (.cons root (.cons other .nil))) = root := by
+  exact index_scope relationUnit [.index 3, .index 3] [] relationFunction 0
+    ⟨0, by decide⟩ (.param "root") (.var .here) rfl (binderTy := .index 3) binder entry state (.cons root (.cons other .nil))
+
+end Gabbro.Grammatik.Parser.ExportPreservation

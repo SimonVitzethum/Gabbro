@@ -2300,6 +2300,8 @@ differently from the reason case), and the named assumption with its falsifier. 
 gate keeps** — its parameters, answer, `or R` channel, `requires`/`ensures`, `effects`,
 `costs`: the contract the program relies on, the same for every kernel.
 
+Stage0 accepts `--testbuild` alongside `--arch` and `--target`; it selects `when TESTBUILD` items before name resolution (shipping selection is the default).
+
 **The active target** is `--target T` (or `GABBRO_TARGET=T`) when given, else the one
 `target T;` selection, else the one block name. The parser fills every `via` gate from
 the active binding (`crates/gabbro-syntax/src/ziel.rs`) before any pass runs, so every

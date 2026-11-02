@@ -42,6 +42,10 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .leave _ => 0
   | .next _ => 0
 
+  | .consumeTraverse _ _ _ _ _ _ body => counterDepthB body
+  | .retScoped .. => 0
+  | .retWhyScoped .. => 0
+
 def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
   | .nil => 0
@@ -63,6 +67,8 @@ def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .floatOf _ _ _ rest => counterDepthB rest
   | .floatNarrow _ _ _ sonst rest => max (counterDepthE sonst) (counterDepthB rest)
 
+  | .narrowRequired _ _ _ rest => counterDepthB rest
+
 def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret _ _ => 0
@@ -82,6 +88,10 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .narrow _ _ _ sonst rest => max (counterDepthE sonst) (counterDepthE rest)
   | .exchange _ _ _ _ rest => counterDepthE rest
   | .ite _ t e => max (counterDepthE e) (counterDepthE t)
+
+  | .narrowRequired _ _ _ rest => counterDepthE rest
+  | .retScoped .. => 0
+  | .retWhyScoped .. => 0
 
 def counterDepthA {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat

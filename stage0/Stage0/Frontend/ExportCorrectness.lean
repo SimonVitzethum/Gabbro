@@ -1,8 +1,8 @@
 module
 public import Stage0.IRBild
 public import Stage0.ArrayWitness
-public import Grammatik.Parser.Elab.ExportWitnesses
-public import Grammatik.Parser.Elab.ExportWitnesses2
+public import Grammatik.Parser.Elab.Export.ExportWitnesses
+public import Grammatik.Parser.Elab.Export.ExportWitnesses2
 @[expose] public section
 
 namespace Gabbro.Stage0
@@ -33,7 +33,7 @@ theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     before old/global normalization or G lowering can discard an annotation. -/
 theorem Compiled.exports_metadata {text : String} {options : Profil.Options} (result : Compiled text options)
     (h : result.unit.exportGate = .ok ()) :
-    (uMembers (pre108 result.source.items)).any ExportMetadata.itemMetadata = false :=
+    (uMembers (pre108 result.source.prepared.selected)).any ExportMetadata.itemMetadata = false :=
   ExportMetadata.check_sound _ (result.metadata.symm.trans h)
 
 /-- The entry-global adapter preserves both original operand snapshots inside implication.
@@ -54,13 +54,13 @@ theorem implication_old_export (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
 /-- New constant headers are checked on the original source, before normalization. -/
 theorem Compiled.constant_exports_metadata {text : String} {options : Profil.Options}
     (result : Compiled text options)
-    (used : (uMembers (pre108 result.source.items)).any ExportMetadata.constantExpansion = true) :
-    (uMembers (pre108 result.source.items)).any ExportMetadata.itemMetadata = false :=
+    (used : (uMembers (pre108 result.source.prepared.selected)).any ExportMetadata.constantExpansion = true) :
+    (uMembers (pre108 result.source.prepared.selected)).any ExportMetadata.itemMetadata = false :=
   ExportMetadata.checkConstants_sound _ used result.constantExports
 
 /-- The actual compiler refuses new nonzero scalar initializers until image memory is initialized. -/
 theorem Compiled.initializer_exports {text : String} {options : Profil.Options} (result : Compiled text options) :
-    Frontend.uninitializedExport (uMembers (pre108 result.source.items)) result.unit = false :=
+    Frontend.uninitializedExport (uMembers (pre108 result.source.prepared.selected)) result.unit = false :=
   Frontend.checkInitializers_sound _ _ result.initializerExports
 
 /-- Every source image from the production compiler has the same canonical source program
@@ -72,25 +72,25 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     ∃ output : Emitted text K options,
       emit text K options = .ok output ∧ output.image.bytes = bytes ∧
       CanonicalSourceProgram output.compiled ∧ output.Correct ∧
-      ExportMetadata.checkConstants (uMembers (pre108 output.compiled.source.items)) = .ok () ∧
+      ExportMetadata.checkConstants (uMembers (pre108 output.compiled.source.prepared.selected)) = .ok () ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (universal : Bool) (source : USide) (binder : String) (body : UEns)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowEns output.compiled.unit Γ Λ fn er (.arrayElements universal source binder body) = .ok value →
-        (uMembers (pre108 output.compiled.source.items)).any ExportMetadata.itemMetadata = false) ∧
+        (uMembers (pre108 output.compiled.source.prepared.selected)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (shift : Nat)
         (table field : String) (a b : UIdx) (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowReach output.compiled.unit Γ Λ fn shift table field a b = .ok value →
-        (uMembers (pre108 output.compiled.source.items)).any ExportMetadata.itemMetadata = false) ∧
+        (uMembers (pre108 output.compiled.source.prepared.selected)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (universal reverse : Bool) (table binder field : String) (source : UIdx) (body : UEns)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowEns output.compiled.unit Γ Λ fn er (.filtered universal table binder field reverse source body) = .ok value →
-        (uMembers (pre108 output.compiled.source.items)).any ExportMetadata.itemMetadata = false) ∧
+        (uMembers (pre108 output.compiled.source.prepared.selected)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (shift : Nat)
         (table : String) (source : UIdx) (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowMember output.compiled.unit Γ Λ fn shift table source = .ok value →
-        (uMembers (pre108 output.compiled.source.items)).any ExportMetadata.itemMetadata = false) ∧
+        (uMembers (pre108 output.compiled.source.prepared.selected)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (op : String) (a b : USide) (n m : Nat)
         (x : Expr (declOf output.compiled.unit) Γ Λ (.str n)) (y : Expr (declOf output.compiled.unit) Γ Λ (.str m))
@@ -98,7 +98,7 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         lowWertE output.compiled.unit Γ Λ fn er a = .ok ⟨.str n, x⟩ →
         lowWertE output.compiled.unit Γ Λ fn er b = .ok ⟨.str m, y⟩ →
         lowCmp output.compiled.unit Γ Λ fn er op a b = .ok value →
-        (uMembers (pre108 output.compiled.source.items)).any ExportMetadata.itemMetadata = false) := by
+        (uMembers (pre108 output.compiled.source.prepared.selected)).any ExportMetadata.itemMetadata = false) := by
   obtain ⟨output, emitted, image, correct⟩ := irBild_correct text K bytes h
   refine ⟨output, emitted, image, compile_source_program text output.compiled, correct,
     output.compiled.constantExports, ?_, ?_, ?_, ?_, ?_⟩
@@ -121,7 +121,7 @@ theorem exported_batch2_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
     ∃ output : Emitted ArrayWitness.text 64,
       emit ArrayWitness.text 64 = .ok output ∧ output.Correct ∧
       CanonicalSourceProgram output.compiled ∧
-      Frontend.uninitializedExport (uMembers (pre108 output.compiled.source.items)) output.compiled.unit = false := by
+      Frontend.uninitializedExport (uMembers (pre108 output.compiled.source.prepared.selected)) output.compiled.unit = false := by
   have image : irBild ArrayWitness.text 64 = .ok ArrayWitness.output.image.bytes := by
     change (emit ArrayWitness.text 64).map (fun output => output.image.bytes) = _
     rw [ArrayWitness.accepted_image]

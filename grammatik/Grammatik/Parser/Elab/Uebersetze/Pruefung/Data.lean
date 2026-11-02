@@ -11,7 +11,7 @@
    checked shipping default, selection under C14 supplies the test mode. -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil1
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil1
 
 @[expose] public section
 
