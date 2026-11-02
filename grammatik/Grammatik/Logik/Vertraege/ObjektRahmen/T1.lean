@@ -8,7 +8,8 @@
   index `index (D.count t)`. `ObjPar` names such a pair: `idx` (the index parameter),
   `cap` (the capability), both counted from the BOTTOM of the context (`Var.unten`), so a
   position stays the same under every `let` a body pushes; `rw` is the right of the
-  capability (`own` travels as read-write, `lean_g.rs::param_ty`). In an environment `ρ`
+  capability's ordinary write flag. Exclusive owner rights are refused by the Lean exporter
+  until checked ownership flow is connected. In an environment `ρ`
   the pair names the object `⟨tab, value of idx⟩` (`ObjPar.obj`). The identity is a VALUE
   the caller chooses -- which the type alone could not say (slice 2's obstruction 1).
 
@@ -115,7 +116,7 @@ theorem Env.unten_set : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ)
 /-! ## 2. Object parameters, the objects of a call frame, the declared frame -/
 
 /-- **An object parameter**: the index parameter at bottom position `idx` together with the
-    capability at bottom position `cap`, on table `tab`, with right `rw` (writable or `own`). -/
+    capability at bottom position `cap`, on table `tab`, with ordinary write flag `rw`. -/
 structure ObjPar (D : Deklaration) where
   idx : Nat
   cap : Nat
@@ -139,7 +140,7 @@ def objVon {Γ : Ctx} (ps : List (ObjPar D)) (ρ : Env D Γ) : Fin ps.length →
 /-- Which object parameters count for separation. -/
 def rwVon (ps : List (ObjPar D)) : Fin ps.length → Bool := fun i => (ps.get i).rw
 
-/-- **`ObjGetrennt` on a call frame**: the objects the writable-or-`own` parameters name differ
+/-- **`ObjGetrennt` on a call frame**: the objects the writable parameters name differ
     from every other parameter's object. -/
 def ObjGetrennt {Γ : Ctx} (ps : List (ObjPar D)) (ρ : Env D Γ) : Prop :=
   ObjGetrenntL (rwVon ps) (objVon ps ρ)

@@ -11,9 +11,9 @@
   `i ↦ traegerVon D (params f)[i]`, fixed by the callee's SIGNATURE, the same at every
   call. A callee's declared frame (`effects { writes p }` over a parameter `p`) reaches
   the model through that map: the exporter writes `writes p` as "writes the table of
-  `p`'s type" (`lean_g.rs`, the writes-clause arm of `param_ty`). `own` travels as
-  read-write (`param_ty`: "ownership carries both rights"), so "writable or `own`" is
-  `rw = true` here.
+  `p`'s type" (`lean_g.rs`, the writes-clause arm of `param_ty`). The Boolean pointer cut
+  represents readable, owner-free table access; `rw = true` adds write permission.
+  The Lean exporter refuses exclusive owner rights until their checked flow is connected.
 
   WHAT IS PROVED (all generic: every declaration, every function, every world):
 
@@ -72,8 +72,7 @@ def traegerVon (D : Deklaration) : Ty → Option D.Tab
   | .ptr n _ => D.tabNr n
   | _ => none
 
-/-- Separation matters for a parameter: a writable pointer (`rw`, `w`, and `own`, which
-    the exporter carries as read-write). -/
+/-- Separation matters for a parameter: a writable pointer in the current readable-table cut. -/
 def zaehltFuerTrennung : Ty → Bool
   | .ptr _ rw => rw
   | _ => false

@@ -272,15 +272,10 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
       | .ok ty => .ok (n, ty, .int)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
-    else if strEq rechte "rw" || strEq rechte "own" then
-      match uTabNr tabs t with
-      | .error e => .error e
-      | .ok (num, _) => .ok (n, .ptr num true, .ptr num true)
-    else if strEq rechte "r" then
-      match uTabNr tabs t with
-      | .error e => .error e
-      | .ok (num, _) => .ok (n, .ptr num false, .ptr num false)
-    else .error "pointer right without G form"
+    else do
+      let write ← uTableRight rechte
+      let (num, _) ← uTabNr tabs t
+      pure (n, .ptr num write, .ptr num write)
   | (n, .index false t) =>
     match uTabNr tabs t with
     | .error e => .error e

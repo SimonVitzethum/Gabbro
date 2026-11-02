@@ -107,10 +107,35 @@ def sTypText : STyp → String
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
 
+/-- Normalize all rights before the conservative readable-table encoding.
+    Ownership waits for checked C09 flow; it must never silently become `rw`. -/
+def uTableRight (text : String) : Except String Bool :=
+  match DataRights.decode (fun _ => none) text with
+  | some rights =>
+    match rights.readableTable with
+    | some write => .ok write
+    | none => .error ("write-only pointer requires a data capability: " ++ text)
+  | none => .error ("pointer rights without checked data/owner form: " ++ text)
+
+/-- Every exported table right retains its complete decoded permissions. -/
+theorem uTableRight_sound (text : String) (write : Bool) (h : uTableRight text = .ok write) :
+    ∃ rights : DataRights, DataRights.decode (fun _ => none) text = some rights ∧
+      rights.read = true ∧ rights.write = write ∧ rights.owner = none := by
+  cases hd : DataRights.decode (fun _ => none) text with
+  | none => simp only [uTableRight, hd] at h; cases h
+  | some rights =>
+    cases hr : rights.readableTable with
+    | none => simp only [uTableRight, hd, hr] at h; cases h
+    | some rw =>
+      have he : (Except.ok rw : Except String Bool) = .ok write := by
+        simpa only [uTableRight, hd, hr] using h
+      cases he
+      exact ⟨rights, hd, DataRights.readableTable_sound rights rw hr⟩
+
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). Named address spaces other than `normal`,
-    rights other than `r`/`rw`, the optional index and every
+    rights outside the owner-free readable `r`/`rw` unions, the optional index and every
     other shape are explicit errors. -/
 def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty
   | .atom a =>
@@ -127,15 +152,10 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → E
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
     if !strEq raum "normal" then .error "space without G form"
-    else if strEq rechte "rw" || strEq rechte "own" then
-      match uTabNr tabs t with
-      | .ok (num, _) => .ok (.ptr num true)
-      | .error e => .error e
-    else if strEq rechte "r" then
-      match uTabNr tabs t with
-      | .ok (num, _) => .ok (.ptr num false)
-      | .error e => .error e
-    else .error "pointer right without G form"
+    else do
+      let write ← uTableRight rechte
+      let (num, _) ← uTabNr tabs t
+      pure (.ptr num write)
   | .array t n =>
     match uTyp alias tabs t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
