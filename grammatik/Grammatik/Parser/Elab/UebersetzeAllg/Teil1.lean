@@ -365,6 +365,8 @@ def anbieterAt (u : UProg) (t : Fin u.tabs.length) : Option (Fin u.axs.length) :
     carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
     (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
 def declOf (u : UProg) : Deklaration where
+  dataSpaces := u.spaces
+  tableSpace := fun t => (tabAt u t).space
   Tab := Fin u.tabs.length
   decTab := inferInstance
   count := fun t => (tabAt u t).count

@@ -174,6 +174,7 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .bindCallElse .., h, _, _
   | _, _, _, _, .bindAxiomElse .., h, _, _ | _, _, _, _, .regRead .., h, _, _
   | _, _, _, _, .regReadElse .., h, _, _
+  | _, _, _, _, .narrowRequired .., h, _, _
   | _, _, _, _, .narrow .., h, _, _ | _, _, _, _, .check .., h, _, _ | _, _, _, _, .float .., h, _, _
   | _, _, _, _, .floatNarrow .., h, _, _ => by simp [retFreiB] at h
 theorem retFreiArms_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →

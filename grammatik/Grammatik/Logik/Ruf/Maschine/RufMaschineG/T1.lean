@@ -110,7 +110,7 @@ def GEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse .. => true
   | .retry .. => true
   | .forever .. => true
-  /-- C11 consuming traversal has no unfold step yet: no `GRest` selection
+  /- C11 consuming traversal has no unfold step yet: no `GRest` selection
       continuation is proved, so the machine refuses it here. The sequential
       `execStmt` placeholder runs it as a fixed sweep; export refuses the
       source form until the current-state selector bridge lands. -/
@@ -144,7 +144,7 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .narrowRequired .. => true
   | .exchange .. => true
   | .ite .. => true
-  /-- C11 scoped returns are terminal in the placeholder: they do not unfold
+  /- C11 scoped returns are terminal in the placeholder: they do not unfold
       into block position beyond `alsBlock`, and no step rule consumes the
       pending scope unwinding yet. -/
   | .retScoped .. => false

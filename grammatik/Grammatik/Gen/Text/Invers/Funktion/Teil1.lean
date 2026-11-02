@@ -53,7 +53,7 @@ theorem schranke_zahlE (als : List (String × (Int × Int))) (n : Int) : uSchran
 theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt} (ht : typS otab t = .ok st) (ha : artErg t = some a)
     (als : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum) (whys : List UWhy)
     (zeiger : List String) (zb : Nat) (n : String) :
-    uParam als tabs sums whys zeiger zb (n, st) = .ok (n, t, a) := by
+    uParam als tabs sums whys zeiger zb [] (n, st) = .ok (n, t, a) := by
   cases t with
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
@@ -82,7 +82,7 @@ theorem parListe_ok (otab : Int → Option Nat) (np : Nat) (als : List (String �
     ∀ (ts : List Ty) (j : Nat) (ps : List (String × STyp)) (ks : List UParamArt),
       parListe otab np j ts = .ok ps → ts.mapM artErg = some ks →
       uOhneGriffe devs ps = ps ∧
-      uSeq (ps.map (uParam als tabs sums whys zeiger zb)) =
+      uSeq (ps.map (uParam als tabs sums whys zeiger zb [])) =
         .ok (((List.range' j ts.length).map fun i => nVar (np - 1 - i)).zip (ts.zip ks) |>.map
           fun (n, t, k) => (n, t, k)) := by
   intro ts

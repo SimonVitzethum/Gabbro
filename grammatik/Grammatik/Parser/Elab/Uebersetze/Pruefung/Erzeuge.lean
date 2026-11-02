@@ -17,7 +17,7 @@
    (`CheckAdmission`), not here. -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil11
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 public section

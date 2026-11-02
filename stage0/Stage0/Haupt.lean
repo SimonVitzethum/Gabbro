@@ -18,7 +18,7 @@ def haupt (args : List String) : IO UInt32 := do
         IO.FS.writeBinFile output ⟨(bytes.map fun b => b.toNat.toUInt8).toArray⟩
         return 0
   | _ =>
-    IO.eprintln "usage: stage0 --ir PROGRAM.gab IMAGE [--arch x86_64] [--target NAME]"
+    IO.eprintln "usage: stage0 --ir PROGRAM.gab IMAGE [--arch x86_64] [--target NAME] [--testbuild]"
     return 2
 
 end Gabbro.Stage0

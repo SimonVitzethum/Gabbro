@@ -20,7 +20,7 @@ public import Grammatik.Speichermodell.Adressen.Platzierung
   * `platzOk_von_platzB` -- the model consequence: with the exporter's correspondence from the model's
     globals to their entries and a layout whose bases lie on the alignments, `PlatzOk` holds.
 
-  The elaborator keeps refusing `static` placement (`uGlobs`: "static placement without G form") until the
+  The elaborator keeps refusing `static` placement (`uGlobs`: "static placement requires Stage-0 global base alignment, section-policy binding and image relocation correspondence") until the
   layout, startup initialisation and image relocation proofs of IR-03/06/12 consume this certificate:
   metadata alone discharges no placement.
 -/
@@ -68,7 +68,9 @@ def platzI (ks : List (String × Nat)) (modul : List String) : SItemTief → Exc
     | none => .ok [⟨modul ++ [n], 1, sec, m⟩]
     | some e =>
       match ausrichtungWert ks e with
-      | some a => .ok [⟨modul ++ [n], a, sec, m⟩]
+      | some a =>
+        if ausrichtungB a then .ok [⟨modul ++ [n], a, sec, m⟩]
+        else .error "static alignment must be a positive power of two"
       | none => .error "static alignment is not a constant"
   | _ => .ok []
 /-- The list form. -/

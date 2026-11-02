@@ -67,9 +67,14 @@ def peE (m : Parser.Auswahl.BauModus) : ProfilEinheit nD := ⟨n1E, m, peItems, 
 theorem pe_zulaessig (m : Parser.Auswahl.BauModus) : (peE m).zulaessig = true := by
   cases m <;> decide
 
+/-- Admission above checks actual library requirements in both modes, rather than an empty list. -/
+theorem pe_bedarfe_nicht_leer (m : Parser.Auswahl.BauModus) :
+    (peE m).zert.bindung.bedarfe ≠ [] := by
+  cases m <;> decide
+
 /-- **`gabbro_ziel_profil` on the flag program**, in either build mode: `ZielFX` on every reachable thread
     machine over GX of the runtime's full start, every budget, every set of initially live threads. -/
-theorem pe_gabbro (m : Parser.Auswahl.BauModus) (passes : Nat) (lebt0 : Faden → Bool)
+theorem gabbro_ziel_profil_zeuge (m : Parser.Auswahl.BauModus) (passes : Nat) (lebt0 : Faden → Bool)
     (K : FadenMaschine nD.mitRuhe)
     (hK : FadenErreichbarX n1E.P.mitRuhe nO.mitRuhe passes (GeteiltV (D := nD) n1E.P n1E.ws)
       (FadenStart n1E.P.mitRuhe (speicherR n1E.sp0) (initRuhe n1E.starts) lebt0) K) :
@@ -104,6 +109,6 @@ theorem pe_profil_modell (m : Parser.Auswahl.BauModus) :
   obtain ⟨mb, hmb⟩ := profil_modell_einheit (peE m) (pe_zulaessig m) hp
   exact ⟨mb, _, by rw [hp]; exact List.mem_singleton_self _, hmb⟩
 
-#print axioms pe_gabbro
+#print axioms gabbro_ziel_profil_zeuge
 
 end Gabbro.Grammatik.AtomarXZeuge

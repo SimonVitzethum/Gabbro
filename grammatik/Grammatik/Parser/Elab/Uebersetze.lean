@@ -34,26 +34,26 @@
 -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil1
-public import Grammatik.Parser.Elab.Uebersetze.Teil2
-public import Grammatik.Parser.Elab.Uebersetze.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil1
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 public import Grammatik.Parser.Elab.Uebersetze.Eingebaut
-public import Grammatik.Parser.Elab.Uebersetze.Teil4
-public import Grammatik.Parser.Elab.Uebersetze.Teil5
-public import Grammatik.Parser.Elab.Uebersetze.Teil5Rest
-public import Grammatik.Parser.Elab.Uebersetze.Teil6
-public import Grammatik.Parser.Elab.Uebersetze.Teil7
-public import Grammatik.Parser.Elab.Uebersetze.Teil8
-public import Grammatik.Parser.Elab.Uebersetze.Teil9
-public import Grammatik.Parser.Elab.Uebersetze.Teil10
-public import Grammatik.Parser.Elab.Uebersetze.Teil11
-public import Grammatik.Parser.Elab.Uebersetze.Teil12
-public import Grammatik.Parser.Elab.Uebersetze.Teil13
-public import Grammatik.Parser.Elab.Uebersetze.Teil14
-public import Grammatik.Parser.Elab.Uebersetze.Teil15
-public import Grammatik.Parser.Elab.Uebersetze.Teil16
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil4
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil7
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil8
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil14
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil15
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil16
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
-public import Grammatik.Parser.Elab.Uebersetze.Teil17
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle

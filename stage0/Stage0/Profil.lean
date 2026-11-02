@@ -1,7 +1,7 @@
 /- Explicit configuration for the existing Stage0 runner image. This is a checked adapter,
    not semantics for boot, entrust or hardware profiles. -/
 module
-public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Profil.Auswahl
 @[expose] public section
 
 
@@ -12,12 +12,14 @@ open Gabbro.Grammatik.Parser
 structure Options where
   arch : String := "x86_64"
   target : Option String := none
+  mode : Auswahl.BauModus := .auslieferung
   deriving Repr
 
 /-- Parse explicit image-binding options after the source and image paths. Repeated flags
     have the usual last-value-wins meaning. Unknown flags fail instead of being ignored. -/
 def parseOptions : List String → Options → Except String Options
   | [], options => .ok options
+  | "--testbuild" :: rest, options => parseOptions rest { options with mode := .pruefbau }
   | "--arch" :: arch :: rest, options => parseOptions rest { options with arch := arch }
   | "--target" :: target :: rest, options => parseOptions rest { options with target := some target }
   | "--arch" :: [], _ => .error "--arch requires an architecture"
@@ -58,23 +60,28 @@ def checkItems : Nat → List SItemTief → Except String Unit
     | _ => pure ()
     checkItems fuel rest
 
-/-- An accepted input carries both exact syntax preservation and the runner ABI check. -/
+/-- An accepted input carries both exact canonical build selection and the runner ABI check. -/
 structure Prepared (options : Options) (items : List SItemTief) where
   selected : List SItemTief
-  unchanged : selected = items
+  selection : selected = Auswahl.waehleL options.mode items
+  admitted : Auswahl.reserviertL items = false
   compatible : runnerCompatible options
 
 def prepareItems (options : Options) (items : List SItemTief) :
     Except String (Prepared options items) := do
   if h : runnerCompatible options then
-    checkItems 100000 items
-    pure ⟨items, rfl, h⟩
+    if reserved : Auswahl.reserviertL items = false then
+      let selected := Auswahl.waehleL options.mode items
+      checkItems 100000 selected
+      pure ⟨selected, rfl, reserved, h⟩
+    else throw "build selection: TESTBUILD is reserved (G003)"
   else throw s!"ir: architecture {options.arch}: no compatible Stage0 runner image ABI"
 
-/-- Any canonical elaborator, root extractor, linker or image compiler sees the original input. -/
+/-- Any canonical elaborator, root extractor, linker or image compiler sees the canonically selected input. -/
 theorem prepareItems_preserves {options : Options} {items : List SItemTief}
     (result : Prepared options items) {α : Sort _} (consumer : List SItemTief → α) :
-    consumer result.selected = consumer items := by rw [result.unchanged]
+    consumer result.selected = consumer (Auswahl.waehleL options.mode items) := by
+  rw [result.selection]
 
 /-- Selecting gate bindings from an accepted configuration cannot silently change the image ISA. -/
 theorem prepareItems_arch {options : Options} {items : List SItemTief}
@@ -86,6 +93,6 @@ theorem prepareItems_preserves_zeuge :
     ∃ result : Prepared {} [.goalT "userspace" none],
       prepareItems {} [.goalT "userspace" none] = .ok result ∧
       result.selected = [.goalT "userspace" none] ∧ runnerCompatible ({} : Options) :=
-  ⟨⟨[.goalT "userspace" none], rfl, rfl⟩, rfl, rfl, rfl⟩
+  ⟨⟨[.goalT "userspace" none], rfl, rfl, rfl⟩, rfl, rfl, rfl⟩
 
 end Gabbro.Stage0.Profil
