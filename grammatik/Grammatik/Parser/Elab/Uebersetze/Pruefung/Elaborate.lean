@@ -10,7 +10,7 @@
    function). -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil5
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 public section

@@ -1,7 +1,7 @@
 module
-public import Grammatik.Parser.Elab.ExportQuantifiers
-public import Grammatik.Parser.Elab.ExportComparisons
-public import Grammatik.Parser.Elab.ExportArrays
+public import Grammatik.Parser.Elab.Export.ExportQuantifiers
+public import Grammatik.Parser.Elab.Export.ExportComparisons
+public import Grammatik.Parser.Elab.Export.ExportArrays
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic

@@ -4,7 +4,7 @@ public import Grammatik.Parser.Elab.Konst.Ableitung
 public import Grammatik.Kern.Syntax.Konst.Zertifikat
 public import Grammatik.Kern.Syntax.Konst.Rang
 public import Grammatik.Parser.Item.ElementTief
-public import Grammatik.Parser.Elab.Uebersetze.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic

@@ -1,8 +1,8 @@
 module
 public import Stage0.IRBild
 public import Stage0.ArrayWitness
-public import Grammatik.Parser.Elab.ExportWitnesses
-public import Grammatik.Parser.Elab.ExportWitnesses2
+public import Grammatik.Parser.Elab.Export.ExportWitnesses
+public import Grammatik.Parser.Elab.Export.ExportWitnesses2
 @[expose] public section
 
 namespace Gabbro.Stage0

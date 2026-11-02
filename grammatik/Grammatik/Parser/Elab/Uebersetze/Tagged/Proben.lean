@@ -30,7 +30,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-public import Grammatik.Parser.Elab.Uebersetze.Teil13
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.GabbroV.Start.GvStartPflicht
 

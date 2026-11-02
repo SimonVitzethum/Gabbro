@@ -31,9 +31,9 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
-public import Grammatik.Parser.Elab.ExportMetadata
+public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
-public import Grammatik.Parser.Elab.Uebersetze.Teil10
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000

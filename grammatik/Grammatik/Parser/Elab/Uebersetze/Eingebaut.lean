@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Profil.Speicher
-public import Grammatik.Parser.Elab.Uebersetze.Teil3
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 
 @[expose] public section
 

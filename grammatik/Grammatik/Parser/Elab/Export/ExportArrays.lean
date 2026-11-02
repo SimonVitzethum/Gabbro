@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.ExportQuantifiers
+public import Grammatik.Parser.Elab.Export.ExportQuantifiers
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportPreservation

@@ -2,16 +2,16 @@ module
 
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
-public import Grammatik.Parser.Elab.ExportMetadata
+public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
-public import Grammatik.Parser.Elab.Uebersetze.Teil17
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 public import Grammatik.Parser.Elab.Konst.Export
 
