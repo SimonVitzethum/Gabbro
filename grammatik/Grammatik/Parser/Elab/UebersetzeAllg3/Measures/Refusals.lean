@@ -253,4 +253,40 @@ theorem xor_negative_zeuge :
       (.lit 1)))).toOption.isSome = false := by
   decide +kernel
 
+/-- Shift left over non-negative ranges lowers with an empty footprint. -/
+def shlU : UProg := withMeasure (.bin "<<" (.variable "n") (.lit 1))
+theorem shlLowered : (lowerAllg shlU).toOption.isSome = true := by decide +kernel
+def shlM := (exported shlU shlLowered).val
+theorem shlSource : SourceTuple shlU 0 (shlM.mass 0) := shlM.source 0
+theorem shlDenotes :
+    ∃ c : Component shlU 0, shlM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf shlU)) (env : Env (declOf shlU) ((declOf shlU).params 0)),
+        SourceValue (fnAt shlU 0) (fnAt shlU 0).measureConstants env
+          (.bin "<<" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes shlU shlM 0 [] [.drops (.bin "<<" (.variable "n") (.lit 1))]
+    (.bin "<<" (.variable "n") (.lit 1)) (.bin "<<" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A shift amount no type holds is refused, never guessed. -/
+theorem shl_range_zeuge :
+    (lowerMeasures (withMeasure (.bin "<<" (.variable "n") (.lit 4097)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Shift right over non-negative ranges lowers with an empty footprint. -/
+def shrU : UProg := withMeasure (.bin ">>" (.variable "n") (.lit 1))
+theorem shrLowered : (lowerAllg shrU).toOption.isSome = true := by decide +kernel
+def shrM := (exported shrU shrLowered).val
+theorem shrSource : SourceTuple shrU 0 (shrM.mass 0) := shrM.source 0
+theorem shrDenotes :
+    ∃ c : Component shrU 0, shrM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf shrU)) (env : Env (declOf shrU) ((declOf shrU).params 0)),
+        SourceValue (fnAt shrU 0) (fnAt shrU 0).measureConstants env
+          (.bin ">>" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes shrU shrM 0 [] [.drops (.bin ">>" (.variable "n") (.lit 1))]
+    (.bin ">>" (.variable "n") (.lit 1)) (.bin ">>" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A shift amount no type holds is refused, never guessed. -/
+theorem shr_range_zeuge :
+    (lowerMeasures (withMeasure (.bin ">>" (.variable "n") (.lit 4097)))).toOption.isSome = false := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Measures.Fixtures

@@ -114,6 +114,24 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
         denotes := fun entry state env => bxor_denotes h a b entry state env
           (x.denotes entry state env) (y.denotes entry state env) }
     | .error e => .error e
+  | .bin "<<" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.links x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := links_orte x.footprint y.footprint h,
+        denotes := fun entry state env => links_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
+  | .bin ">>" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.rechts x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := rechts_orte x.footprint y.footprint h,
+        denotes := fun entry state env => rechts_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
   | .un op a => do
     if hs : op = "-" ∨ op = "-()" then
       let x ← lowerExpression u Γ Λ fn a

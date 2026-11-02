@@ -44,6 +44,12 @@ inductive SourceValue {u : UProg} {Γ : Ctx} (fn : UFn)
   | bxor {a b : SExpr} {x y : Int} : SourceValue fn constants env a x →
       SourceValue fn constants env b y →
       SourceValue fn constants env (.bin "^" a b) ((x.toNat ^^^ y.toNat : Nat) : Int)
+  | shl {a b : SExpr} {x y : Int} : SourceValue fn constants env a x →
+      SourceValue fn constants env b y →
+      SourceValue fn constants env (.bin "<<" a b) (x * 2 ^ y.toNat)
+  | shr {a b : SExpr} {x y : Int} : SourceValue fn constants env a x →
+      SourceValue fn constants env b y →
+      SourceValue fn constants env (.bin ">>" a b) (x / 2 ^ y.toNat)
 
 /-- A division that lowers keeps an empty footprint, whatever its range branch. -/
 theorem durch_orte {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} {x y s : LowSide u Γ Λ}
