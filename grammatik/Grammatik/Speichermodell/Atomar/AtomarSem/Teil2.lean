@@ -91,9 +91,16 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .consumeTraverse t member edge inv bound mass body, hT, σ, ρ => by
       have h1 : ∀ x ∈ inv.orte, ¬ T x := fun x h => hT x (by
         simp only [stmtOrteP, List.mem_append, h, true_or, or_true])
+      have hsel : ∀ x ∈ member.orte ++ edge.orte, ¬ T x := fun x h => by
+        simp only [List.mem_append] at h
+        rcases h with h | h <;> exact hT x (by
+          simp only [stmtOrteP, List.mem_append, h, true_or, or_true])
+      have hmass : ∀ x ∈ mass.orte, ¬ T x := fun x h => hT x (by
+        simp only [stmtOrteP, List.mem_append, h, true_or, or_true])
       have h2 : ∀ x ∈ blockOrteP P body, ¬ T x := fun x h => hT x (by
         simp only [stmtOrteP, List.mem_append, h, or_true])
-      simp only [execStmtHA, execStmtH, leseA_frei hA h1]
+      simp only [execStmtHA, execStmtH, leseA_frei hA h1, leseA_frei hA hsel,
+        leseA_frei hA hmass, verbrauchSelA, verbrauchSel]
       rw [show (fun σ ρ => execBlockHA S O U A passes R body σ ρ) =
         (fun σ ρ => execBlockH S O U passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execHA_frei body h2 σ ρ]

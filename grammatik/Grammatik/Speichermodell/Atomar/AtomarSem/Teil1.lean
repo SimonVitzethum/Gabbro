@@ -86,10 +86,12 @@ def execStmtHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       traverseLauf (fun σ ρ => execBlockHA body σ ρ)
         (fun σ ρ => let σ := leseA A σ Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (alleIndizes (D.count t)) σ ρ
-  | .consumeTraverse t _ _ inv _ _ body, σ, ρ =>
-      traverseLauf (fun σ ρ => execBlockHA body σ ρ)
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ =>
+      verbrauchLauf t (fun σ ρ => execBlockHA body σ ρ)
         (fun σ ρ => let σ := leseA A σ Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
-        (alleIndizes (D.count t)) σ ρ
+        (verbrauchSelA A t member edge)
+        (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+        bound ((D.count t).toNat + bound.toNat + 1) σ ρ
   | .retry n bis body ueberlauf, σ, ρ =>
       retryLauf (fun σ ρ => execBlockHA body σ ρ)
         (fun σ ρ => let σ := leseA A σ Λ bis.orte; (σ, wahr? (eval σ bis σ ρ)))
