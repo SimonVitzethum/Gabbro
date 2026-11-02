@@ -164,6 +164,9 @@ structure UFn where
   decreases : Option UMeasure := none
   /-- Checked scalar constants in the declaration's entry scope. -/
   measureConstants : List (String × Int) := []
+  /-- The unit's type aliases in the declaration's entry scope: what a conversion `T(e)`
+      in `decreases` resolves against (the same table `uRechne` reads as `ctx.alias`). -/
+  measureTypes : List (String × (Int × Int)) := []
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/

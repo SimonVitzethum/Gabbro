@@ -174,7 +174,8 @@ def beqUFn : UFn → UFn → Bool
     beqUEnsList a.gives b.gives &&
     beqUStmtList a.body b.body && beqURet a.ret b.ret && a.boden == b.boden &&
     beqUEnsList a.needs b.needs && decide (a.decreases = b.decreases) &&
-    decide (a.measureConstants = b.measureConstants)
+    decide (a.measureConstants = b.measureConstants) &&
+    decide (a.measureTypes = b.measureTypes)
 
 def beqUFnList : List UFn → List UFn → Bool
   | [], [] => true

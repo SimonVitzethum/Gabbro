@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Pipeline
+public import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Elab.UebersetzePipeline
 import all Init.Data.Repr
@@ -40,8 +41,7 @@ open Uebersetze UebersetzeAllg UebersetzeAllg2 Zielsatz
 
 /-- The smallest nontrivial countdown domain: the recursive branch calls with `0 < n`. -/
 def function (name callee : String) (twice : Bool := false) : UFn :=
-  { name, params := [("n", .int 0 1)], kinds := [.int], res := none, held := [], puts := [], gives := [], ret := .empty, decreases := some (.variable "n"), body := [.ifBeg (.cmp ">" (.param "n") (.lit 0)), .call callee [.val (.lit 0)]] ++
-      (if twice then [.call callee [.val (.lit 0)]] else []) ++ [.ifElse, .blkEnd] }
+  { name, params := [("n", .int 0 1)], kinds := [.int], res := none, held := [], puts := [], gives := [], ret := .empty, decreases := some (.variable "n"), body := [.ifBeg (.cmp ">" (.param "n") (.lit 0)), .call callee [.val (.lit 0)]] ++ (if twice then [.call callee [.val (.lit 0)]] else []) ++ [.ifElse, .blkEnd] }
 
 def countdown : UProg := { tabs := [], locks := [], fns := [function "countdown" "countdown"] }
 def mutualU : UProg := { tabs := [], locks := [], fns := [function "left" "right", function "right" "left"] }
@@ -69,6 +69,11 @@ theorem countdown_origin_zeuge :
     (elabU countdownItems).toOption.map (fun u => u.fns.map (·.decreases)) =
       some [some (.variable "n")] := by decide +kernel
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- The complete elaborated fixture, not only its measure projection, comes from these items. -/
+theorem countdown_elaborated_zeuge : elabU countdownItems = .ok countdown := by decide +kernel
+
 theorem countdown_lowered : (lowerAllg countdown).toOption.isSome = true := by decide +kernel
 theorem mutual_lowered : (lowerAllg mutualU).toOption.isSome = true := by decide +kernel
 theorem nonTail_lowered : (lowerAllg nonTail).toOption.isSome = true := by decide +kernel
@@ -76,6 +81,33 @@ theorem acyclic_lowered : (lowerAllg acyclic).toOption.isSome = true := by decid
 
 def program (u : UProg) (lowered : (lowerAllg u).toOption.isSome = true) : Programm (declOf u) :=
   ((lowerAllg u).toOption.get lowered).1
+
+/-- Recover a concrete body through the generic lowering certificate, without reducing program assembly. -/
+theorem program_rumpf_of_lowerFn {u : UProg} {lowered : (lowerAllg u).toOption.isSome = true}
+    {f : (declOf u).Fn} {ens : EnsTy u f} {body : RumpTy u f} {req : ReqTy u f}
+    (functionLowered : lowerFnAt u f = .ok (ens, body, req)) :
+    (program u lowered).rumpf f = body := by
+  obtain ⟨value, origin, _, bodyEq, _⟩ := lowerAllg_fields u (program u lowered)
+    ((lowerAllg u).toOption.get lowered).2 (except_ok_get lowered) f
+  rw [functionLowered] at origin
+  cases origin
+  exact bodyEq
+
+/-- The requires projection also follows the ordinary assembler, including the empty-clause case. -/
+theorem program_requires_of_lowerFn {u : UProg} {lowered : (lowerAllg u).toOption.isSome = true}
+    {f : (declOf u).Fn} {ens : EnsTy u f} {body : RumpTy u f} {req : ReqTy u f}
+    (functionLowered : lowerFnAt u f = .ok (ens, body, req)) :
+    (program u lowered).requires f = if (fnAt u f).needs = [] then .tru else req := by
+  have success := except_ok_get lowered
+  change lowerAllg u = .ok (program u lowered, ((lowerAllg u).toOption.get lowered).2) at success
+  unfold lowerAllg at success
+  split at success
+  · cases success
+  · split at success
+    · cases success
+    · obtain ⟨same, _⟩ := checkedProgram_eq success
+      rw [same]
+      simp only [progOfFn, reqOf, lowerAtPair_of_ok u f _ functionLowered]
 
 def exported (u : UProg) (lowered : (lowerAllg u).toOption.isSome = true) :
     {measure : Export u // lowerMeasures u = .ok measure} :=
