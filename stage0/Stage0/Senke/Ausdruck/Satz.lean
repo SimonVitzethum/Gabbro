@@ -355,7 +355,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .some e, d, c, top, h, hK, m, pc, ρ, hp =>
     some_ok e (fun d ca ta ha ht m pc hp => lowE_ok σ₀ σ hWL hLay e d ca ta ha ht m pc ρ hp) h hK hp
   | _, _, .istSome e, d, c, top, h, hK, m, pc, ρ, hp =>
-    istSome_ok e (fun ce te he hte m pc hp => lowE_ok σ₀ σ hWL hLay e d ce te he hte m pc ρ hp) h hK hp
+    istSome_ok e (fun ce te he hte m pc hp => ihe ce te he hte m pc ρ hp) h hK hp
   | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     exact globalValueC_ok h hK hWL hp
@@ -470,6 +470,7 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     exact (const_ok hp (lit32_nat (by omega)) (by omega)).mono (fun w hw => by
       simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw))
   | _, some τ, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
+    have ihe := lowE_ok σ₀ σ hWL hLay e d
     cases τ with
     | int lo hi =>
       simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
