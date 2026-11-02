@@ -383,7 +383,7 @@ theorem walkExpand_correct {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (visitT (binding.tree state leaf descend) (shape.levels - 1) tbl).Pairwise
       (fun x y => x.1 ≠ y.1) := by
   obtain ⟨σw, ρw, hw, _⟩ := walkExpand_ok binding guard code tbl oracle passes calls leaf descend
-    state ok (loop := false) (shape.levels - 1) (fun x => .there x) root []
+    state ok (loop := false) (shape.levels - 1) (fun x => .there x) (.var .here) []
     (state.lese resources root.orte)
     (.cons (eval (state.lese resources root.orte) root (state.lese resources root.orte) env) env)
     ok.stable
