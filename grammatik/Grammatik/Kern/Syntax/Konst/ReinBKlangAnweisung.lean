@@ -9,8 +9,9 @@ private theorem emptyResources (c : ConstProgram) (rs : List (Res c.D)) : rs = [
     cases r with
     | held lock => exact (c.noLocks lock).elim
     | marke mark stage => exact (c.noMarks mark).elim
+set_option maxHeartbeats 4000000 in
 mutual
-theorem constStmtB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constStmtB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (e : Stmt c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
     (hacc : constStmtB c e = true) : ConstStmt c (hΛout ▸ hΛ ▸ e) :=
   match Λ, Λout, e, hΛ, hΛout, hacc with
@@ -91,7 +92,7 @@ theorem constStmtB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ 
       simp only [constStmtB] at hacc
   | _, _, .retWhyScoped .., rfl, rfl, hacc => by
       simp only [constStmtB] at hacc
-theorem constBlockB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constBlockB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (e : Block c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
     (hacc : constBlockB c e = true) : ConstBlock c (hΛout ▸ hΛ ▸ e) :=
   match Λ, Λout, e, hΛ, hΛout, hacc with
@@ -149,7 +150,7 @@ theorem constBlockB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ
       simp only [constBlockB] at hacc
   | _, _, .floatNarrow .., rfl, rfl, hacc => by
       simp only [constBlockB] at hacc
-theorem constEndB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (e : Endblock c.D V l Γ Λ) (hΛ : Λ = [])
     (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) :=
   match Λ, e, hΛ, hacc with
@@ -213,7 +214,7 @@ theorem constEndB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ :
       simp only [constEndB] at hacc
   | _, .exchange .., rfl, hacc => by
       simp only [constEndB] at hacc
-theorem constArmsB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} (e : Arms c.D V l Γ Λ Λout cs)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constArmsB c e = true) :
     ConstArms c (hΛout ▸ hΛ ▸ e) :=
@@ -224,7 +225,7 @@ theorem constArmsB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ 
       simp only [constArmsB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .cons (constBlockB_soundGen c body rfl rfl h0) (constArmsB_soundGen c rest rfl rfl h1)
-theorem constReasonArmsB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constReasonArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {n : Nat} (e : GrundArms c.D V l Γ Λ Λout n)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constReasonArmsB c e = true) :
     ConstReasonArms c (hΛout ▸ hΛ ▸ e) :=
@@ -237,27 +238,27 @@ theorem constReasonArmsB_soundGen (c : ConstProgram) {V : vertrag c.D} {l : Bool
       exact .cons (constBlockB_soundGen c body rfl rfl h0) (constReasonArmsB_soundGen c rest rfl rfl h1)
 end
 
-theorem constStmtB_sound (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constStmtB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     (e : Stmt c.D V l Γ [] []) :
     constStmtB c e = true → ConstStmt c e :=
   fun h => constStmtB_soundGen c e rfl rfl h
 
-theorem constBlockB_sound (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constBlockB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     (e : Block c.D V l Γ [] []) :
     constBlockB c e = true → ConstBlock c e :=
   fun h => constBlockB_soundGen c e rfl rfl h
 
-theorem constEndB_sound (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constEndB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     (e : Endblock c.D V l Γ []) :
     constEndB c e = true → ConstEnd c e :=
   fun h => constEndB_soundGen c e rfl h
 
-theorem constArmsB_sound (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constArmsB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {cs : List (Option Ty)} (e : Arms c.D V l Γ [] [] cs) :
     constArmsB c e = true → ConstArms c e :=
   fun h => constArmsB_soundGen c e rfl rfl h
 
-theorem constReasonArmsB_sound (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constReasonArmsB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {n : Nat} (e : GrundArms c.D V l Γ [] [] n) :
     constReasonArmsB c e = true → ConstReasonArms c e :=
   fun h => constReasonArmsB_soundGen c e rfl rfl h
