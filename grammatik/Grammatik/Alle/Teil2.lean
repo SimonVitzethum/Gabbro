@@ -79,7 +79,7 @@ public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 public import Grammatik.Zielsatz.Eigenschaften.RwZeuge
 public import Grammatik.Zielsatz.Eigenschaften.RwZeugeLeser
 public import Grammatik.Zielsatz.Faeden.PoolZeuge
-public import Grammatik.Kern.Semantik.GanzzahlMatch
+public import Grammatik.Kern.Semantik.Evaluation.GanzzahlMatch
 public import Grammatik.Zielsatz.Eigenschaften.Divergenz
 public import Grammatik.Bausteine.Zeichenfolge.ZeichenfolgeGebunden
 public import Grammatik.Speichermodell.Adressen.Bereich
@@ -151,9 +151,9 @@ public import Grammatik.GabbroV.GvZensus
 public import Grammatik.Parser.Print.Stmt
 public import Grammatik.Parser.Print.Item
 public import Grammatik.Parser.Print.Proben
-public import Grammatik.Parser.Round.RundlaufAnw
-public import Grammatik.Parser.Round.RundlaufAnw2
-public import Grammatik.Parser.Round.RundlaufAnw3
+public import Grammatik.Parser.Round.Statements.RundlaufAnw
+public import Grammatik.Parser.Round.Statements.RundlaufAnw2
+public import Grammatik.Parser.Round.Statements.RundlaufAnw3
 public import Grammatik.Parser.Cover.Census
 public import Grammatik.Parser.Cover.Differenz
 public import Grammatik.Parser.Cover.Mitglieder
@@ -177,10 +177,10 @@ public import Grammatik.Code.Conc.GXStep
 public import Grammatik.Code.Conc.Lock
 public import Grammatik.Code.Conc.LockRel
 public import Grammatik.Code.Conc.LockWitness
-public import Grammatik.Code.Conc.Mask
-public import Grammatik.Code.Conc.MaskNeed
-public import Grammatik.Code.Conc.MaskRel
-public import Grammatik.Code.Conc.MaskWitness
+public import Grammatik.Code.Conc.Masks.Mask
+public import Grammatik.Code.Conc.Masks.MaskNeed
+public import Grammatik.Code.Conc.Masks.MaskRel
+public import Grammatik.Code.Conc.Masks.MaskWitness
 public import Grammatik.Code.Conc.RwLock
 public import Grammatik.Code.Conc.RwLockRel.Teil2
 public import Grammatik.Code.Conc.RwLockWitness

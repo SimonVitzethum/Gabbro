@@ -1,5 +1,5 @@
 module
-public import Grammatik.Logik.Vertraege.AntwortOrteBasis
+public import Grammatik.Logik.Vertraege.Locations.AntwortOrteBasis
 @[expose] public section
 
 

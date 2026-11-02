@@ -1,7 +1,7 @@
 /- Source image correctness composed with the canonical full-span world layout. -/
 module
 public import Stage0.Senke.Welt.AnordnungLayout
-public import Stage0.Senke.BildSatz
+public import Stage0.Senke.Images.BildSatz
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

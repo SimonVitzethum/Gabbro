@@ -5,7 +5,7 @@
              facts).
 -/
 module
-public import Grammatik.Parser.Round.RundlaufAnw
+public import Grammatik.Parser.Round.Statements.RundlaufAnw
 @[expose] public section
 
 

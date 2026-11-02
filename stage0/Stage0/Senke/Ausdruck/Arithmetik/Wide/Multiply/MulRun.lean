@@ -8,7 +8,7 @@
   declared product range fits `k` limbs. Only frame slots from `a` on change; `a + 3k + 17 <= K`.
 -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRows
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulRows
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 @[expose] public section
 

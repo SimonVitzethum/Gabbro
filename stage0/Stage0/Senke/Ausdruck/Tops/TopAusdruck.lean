@@ -1,5 +1,5 @@
 module
-public import Stage0.Senke.Ausdruck.TopBasis
+public import Stage0.Senke.Ausdruck.Tops.TopBasis
 @[expose] public section
 
 

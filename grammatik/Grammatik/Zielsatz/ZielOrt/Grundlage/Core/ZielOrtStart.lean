@@ -45,7 +45,7 @@
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
-public import Grammatik.Kern.Semantik.Durchgaenge
+public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
 @[expose] public section
 

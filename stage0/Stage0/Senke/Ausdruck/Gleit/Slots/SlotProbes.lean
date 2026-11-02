@@ -1,8 +1,8 @@
 /- Concrete slot-bound conversion fixtures and child composition. -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Ausdruck.Gleit.Emission
-public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 @[expose] public section
 
 

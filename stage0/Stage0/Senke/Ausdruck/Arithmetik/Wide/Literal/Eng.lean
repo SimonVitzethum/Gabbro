@@ -12,7 +12,7 @@
 module
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.Wide
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulRun
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Code
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.Cond

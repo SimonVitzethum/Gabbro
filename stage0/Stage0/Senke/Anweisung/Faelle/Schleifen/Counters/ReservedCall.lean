@@ -1,6 +1,6 @@
 /- A real world store and call preserve a live sentinel in a nonzero reserved frame. -/
 module
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCalla
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.ReservedCalla
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime.Teil2
 @[expose] public section

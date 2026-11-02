@@ -10,7 +10,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulRun
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Neg
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Bits
 @[expose] public section

@@ -7,7 +7,7 @@
   `2^(64k)`; the result type of `neg` always fits the limbs of its range.
 -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun
+public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulRun
 @[expose] public section
 
 

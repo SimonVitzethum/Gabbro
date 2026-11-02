@@ -22,10 +22,10 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
 public import Stage0.Senke.Anweisung.Faelle.Bloecke
 public import Stage0.Senke.Anweisung.Faelle.BlockRuf
 public import Stage0.Senke.Anweisung.Faelle.Ende
-public import Stage0.Senke.Anweisung.Faelle.EndRuf
-public import Stage0.Senke.Anweisung.Faelle.EndWahl
-public import Stage0.Senke.Anweisung.Faelle.EndFehler
-public import Stage0.Senke.Anweisung.Faelle.EndAtomar
+public import Stage0.Senke.Anweisung.Faelle.Ends.EndRuf
+public import Stage0.Senke.Anweisung.Faelle.Ends.EndWahl
+public import Stage0.Senke.Anweisung.Faelle.Ends.EndFehler
+public import Stage0.Senke.Anweisung.Faelle.Ends.EndAtomar
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.NarrowCases
 public import Stage0.Senke.Anweisung.Faelle.BlockFehler

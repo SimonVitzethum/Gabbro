@@ -39,7 +39,7 @@
 -/
 module
 public import Grammatik.Korpus.Programme.GenOblig104
-public import Grammatik.Kern.Semantik.Durchgaenge
+public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem

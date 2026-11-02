@@ -2,7 +2,7 @@ module
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil13Basis
 import all Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil13Basis
 
-public import Grammatik.Bausteine.Arena.Ownership.Machine.Return
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil12
 
 @[expose] public section

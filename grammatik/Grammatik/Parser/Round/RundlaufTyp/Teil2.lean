@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Round.RundlaufTok.Teil4
-public import Grammatik.Parser.Round.RundlaufAnw3
+public import Grammatik.Parser.Round.Statements.RundlaufAnw3
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic

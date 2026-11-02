@@ -1,7 +1,7 @@
 /- Runtime loop edges consume the actual block simulation and its world-aware frame. -/
 module
 
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted.Teil3
 public import Stage0.Senke.Anweisung.Simulation
 public import Stage0.Senke.Anweisung.Verzweigung

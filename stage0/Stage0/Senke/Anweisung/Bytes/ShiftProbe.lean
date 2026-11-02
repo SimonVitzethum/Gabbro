@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Bytes.Shift
 public import Grammatik.Parser.Elab.UebersetzeAllg
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

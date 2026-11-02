@@ -1,7 +1,7 @@
 module
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil2
 

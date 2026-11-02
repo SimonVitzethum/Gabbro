@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Round.RundlaufQuant.Teil2a
-public import Grammatik.Parser.Round.RundlaufPred
+public import Grammatik.Parser.Round.Statements.RundlaufPred
 public import Grammatik.Parser.Round.RundlaufQuant.Teil1
 
 @[expose] public section

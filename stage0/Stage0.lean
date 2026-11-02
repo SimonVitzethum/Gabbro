@@ -6,10 +6,10 @@ public import Stage0.ArrayWitness
 public import Stage0.ResetWitness
 public import Stage0.Zeugen.BuiltinWitness
 public import Stage0.Senke.Ausdruck
-public import Stage0.Senke.Hilfe
+public import Stage0.Senke.Images.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
 public import Stage0.Senke.Ausdruck.Wort.Wort
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Satz
 public import Stage0.Senke.Umgebung
@@ -23,9 +23,9 @@ public import Stage0.Senke.Spez
 public import Stage0.Senke.Rueckkehr.Call
 public import Stage0.Senke.Rueckkehr
 public import Stage0.Senke.Rekursion
-public import Stage0.Senke.Bild
-public import Stage0.Senke.BildLese
-public import Stage0.Senke.BildSatz
+public import Stage0.Senke.Images.Bild
+public import Stage0.Senke.Images.BildLese
+public import Stage0.Senke.Images.BildSatz
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
@@ -49,17 +49,17 @@ public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 public import Stage0.Senke.Ausdruck.Old.Proben
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 
-public import Stage0.Senke.Ausdruck.Gleit.SlotComposition
-public import Stage0.Senke.Ausdruck.Gleit.SlotProbes
+public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotComposition
+public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotProbes
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil3
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.ReservedCall
 
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterCall
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterRun
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe

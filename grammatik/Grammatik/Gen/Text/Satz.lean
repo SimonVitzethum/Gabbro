@@ -19,10 +19,10 @@ public import Grammatik.Gen.Text.Zeugen.M99_824
 public import Grammatik.Gen.Text.Zeugen.N16_5
 public import Grammatik.Gen.Text.Zeugen.N18_0
 public import Grammatik.Gen.Text.Zeugen.N18_4
-public import Grammatik.Gen.Text.Zeugen.N19_0
-public import Grammatik.Gen.Text.Zeugen.N19_2
-public import Grammatik.Gen.Text.Zeugen.N19_5
-public import Grammatik.Gen.Text.Zeugen.N19_7
+public import Grammatik.Gen.Text.Zeugen.N19.N19_0
+public import Grammatik.Gen.Text.Zeugen.N19.N19_2
+public import Grammatik.Gen.Text.Zeugen.N19.N19_5
+public import Grammatik.Gen.Text.Zeugen.N19.N19_7
 public import Grammatik.Gen.Text.Zeugen.N20_1
 public import Grammatik.Gen.Text.Zeugen.N23_4
 public import Grammatik.Gen.Text.Zeugen.N24_0

@@ -1,6 +1,6 @@
 /- Nonempty witnesses for quantified expressions and bounded optional-index chains. -/
 module
-public import Stage0.Senke.Bild
+public import Stage0.Senke.Images.Bild
 public import Stage0.Senke.Welt.Anordnung
 @[expose] public section
 

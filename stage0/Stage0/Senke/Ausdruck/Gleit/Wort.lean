@@ -1,6 +1,6 @@
 /- Binary64 words and arbitrary-word constants in the integer-only IR. -/
 module
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 @[expose] public section
 
 

@@ -2,7 +2,7 @@
    serializes words; it defines no alternative value encoding or startup execution path. -/
 module
 public import Stage0.Senke.Welt.StartLayout
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 @[expose] public section
 
 

@@ -1,5 +1,5 @@
 module
-public import Stage0.Frontend.ConstantScopes
+public import Stage0.Frontend.Constants.ConstantScopes
 public import Stage0.Frontend.AliasMeaning
 public import Stage0.Frontend.Guard
 public import Stage0.Profil

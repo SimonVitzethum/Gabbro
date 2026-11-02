@@ -3,7 +3,7 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineD.Teil1Basis
 import all Grammatik.Logik.Ruf.Maschine.RufMaschineD.Teil1Basis
 
 public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 
 @[expose] public section
 

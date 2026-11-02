@@ -1,7 +1,7 @@
 module
 public import Stage0.Senke.Anweisung.Satz
 public import Stage0.Senke.Sperre.ContendedProbe
-public import Stage0.Senke.Sperre.WaitProbe
+public import Stage0.Senke.Sperre.Waiting.WaitProbe
 public import Stage0.Senke.Sperre.Interference
 @[expose] public section
 

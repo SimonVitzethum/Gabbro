@@ -4,7 +4,7 @@
              address in the layout (`Lay`), where the world in memory (`WeltAt`) holds their word.
 -/
 module
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 public import Stage0.Senke.Ausdruck.Quant.OkSeq
 public import Stage0.Senke.Welt.WeltAt
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar

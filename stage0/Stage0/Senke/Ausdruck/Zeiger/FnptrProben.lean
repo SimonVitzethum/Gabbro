@@ -2,7 +2,7 @@
   Subject: Non-degenerate function-pointer fixtures, including a global unavailable in the surface front end.
 -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 @[expose] public section
 
 

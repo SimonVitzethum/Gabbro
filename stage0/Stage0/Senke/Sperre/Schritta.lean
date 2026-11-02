@@ -7,7 +7,7 @@
 module
 public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Umgebung
-public import Stage0.Senke.Hilfe
+public import Stage0.Senke.Images.Hilfe
 public import Stage0.Senke.Welt.Schreib
 @[expose] public section
 

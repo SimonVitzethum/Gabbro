@@ -22,7 +22,7 @@
     GX step moves exactly as its inner G step does.
 -/
 module
-public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Threads.FadenMaschine
 public import Grammatik.Logik.Fortschritt.KostenG
 public import Grammatik.Speichermodell.Atomar.AtomarLauf
 @[expose] public section

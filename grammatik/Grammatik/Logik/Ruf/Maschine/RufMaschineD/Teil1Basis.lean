@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 
 @[expose] public section
 

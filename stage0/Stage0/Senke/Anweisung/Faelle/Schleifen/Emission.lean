@@ -1,6 +1,6 @@
 /- Emission proofs recover the actual body and targets used by forever lowering. -/
 module
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 @[expose] public section
 
 

@@ -4,7 +4,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
 public import Stage0.Senke.Ausdruck.Quant.Memory
 public import Stage0.Senke.Welt.Spans.SpanWrite
 public import Stage0.Senke.Welt.Schreib
-public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
 

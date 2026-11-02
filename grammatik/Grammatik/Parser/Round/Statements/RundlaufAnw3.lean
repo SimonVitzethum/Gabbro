@@ -10,7 +10,7 @@
   (`schliesse_ende_noetig` shows the planted defect).
 -/
 module
-public import Grammatik.Parser.Round.RundlaufAnw2
+public import Grammatik.Parser.Round.Statements.RundlaufAnw2
 @[expose] public section
 
 

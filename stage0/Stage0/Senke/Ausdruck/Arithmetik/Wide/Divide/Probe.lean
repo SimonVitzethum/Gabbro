@@ -7,7 +7,7 @@
   `2^65 + 3`; the quotient is one limb, the remainder crosses the limb boundary.
 -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Run
 @[expose] public section
 

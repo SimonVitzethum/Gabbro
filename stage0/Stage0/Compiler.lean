@@ -1,6 +1,6 @@
 module
 public import Stage0.Frontend.Elaboration
-public import Stage0.Frontend.ArrayConstants
+public import Stage0.Frontend.Constants.ArrayConstants
 public import Stage0.Frontend.Initializers
 public import Stage0.Frontend.Measures
 public import Stage0.Senke.Ausdruck.Old.Source

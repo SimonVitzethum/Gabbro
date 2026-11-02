@@ -5,7 +5,7 @@
              `d` (`wenn_ok`).
 -/
 module
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 @[expose] public section
 
 

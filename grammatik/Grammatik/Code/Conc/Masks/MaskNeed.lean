@@ -1,5 +1,5 @@
 module
-public import Grammatik.Code.Conc.Mask
+public import Grammatik.Code.Conc.Masks.Mask
 @[expose] public section
 
 
