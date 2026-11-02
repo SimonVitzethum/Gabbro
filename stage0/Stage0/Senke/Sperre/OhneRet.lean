@@ -162,6 +162,12 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     split
     · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
     · rfl
+  | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ r, h, σ, ρ => by
+    simp only [retFreiB] at h
+    simp only [execBlock]
+    split
+    · rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
+    · rfl
   | _, _, _, _, .awaits _ _ _ _ _ r, h, σ, ρ => by
     simp only [retFreiB] at h
     simp only [execBlock]
@@ -173,7 +179,7 @@ theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
     simp only [execBlock]
     rw [istZ_schrumpf]; exact retFreiB_istZ r h _ _
   | _, _, _, _, .bindCallElse .., h, _, _
-  | _, _, _, _, .bindAxiomOpt .., h, _, _ | _, _, _, _, .bindAxiomOptElse .., h, _, _ => by simp [retFreiB] at h
+  | _, _, _, _, .bindAxiomOpt (e := none) .., h, _, _ | _, _, _, _, .bindAxiomOptElse .., h, _, _ => by simp [retFreiB] at h
   | _, _, _, _, .bindAxiomElse .., h, _, _ | _, _, _, _, .regRead .., h, _, _
   | _, _, _, _, .regReadElse .., h, _, _
   | _, _, _, _, .narrowRequired .., h, _, _
