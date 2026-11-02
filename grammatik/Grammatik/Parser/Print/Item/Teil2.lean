@@ -85,6 +85,28 @@ def druckItem : SItemTief → List Token
   | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckStarts ps ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
   | .pubT it => .wort "pub" :: druckItem it
+  | .adaptT sig ps a b =>
+    ((if strEq sig.art "" then [] else [.wort sig.art]) ++ [.wort "fn", nameTok sig.name, .zeichen "("] ++
+      druckAdaptParams ps ++ [.zeichen ")"] ++
+      (match sig.res with
+        | some t => [.zeichen "->"] ++ druckTyp t
+        | none => []) ++
+      (match sig.fehler with
+        | some n => [.wort "or", nameTok n]
+        | none => []) ++
+      [.wort "from"] ++ rohToks a.quelle ++
+      (match a.gebunden with
+        | some g => [.wort "=>", nameTok g] ++ (match a.sonst with
+          | some (e, blk) => [.wort "else", .zeichen "(", nameTok e, .zeichen ")"] ++ druckAnw blk
+          | none => [])
+        | none => []) ++
+      druckKlauseln sig.klauseln ++
+      (match a.vorspiel with
+        | [] => []
+        | ss => [.zeichen "["] ++ druckAnwListe ss ++ [.zeichen "]"]) ++
+      (match b with
+        | some blk => druckAnw blk
+        | none => [.zeichen ";"])
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++
       (match a with

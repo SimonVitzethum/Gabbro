@@ -144,4 +144,40 @@ theorem rt_item_data :
                  reserviert := false, byOps := true }]]) = true := by
   decide +kernel
 
+/-! ## Reason propagation `?` and adapters `from` (§4.1, §4.3) -/
+
+theorem rt_letquery :
+    rbs [.bindQ false "x" (some (.atom "u32")) (.call "g" [.lit 1]),
+         .bindQ true "y" none (.call "h" [.variable "x"])] = true := by
+  decide +kernel
+
+theorem rt_callquery :
+    rbs [.callQ "f" [.variable "x", .lit 2]] = true := by
+  decide +kernel
+
+/-- NEGATIVE: `?` behind a non-call is refused. -/
+theorem rt_query_twin :
+    (match parseTopBlock (druckAnw (.block [.bindQ false "x" none (.lit 1)] none) ++ [.ende]) with
+      | .ok _ => true
+      | .error _ => false) = false := by
+  decide +kernel
+
+theorem rt_item_adapt :
+    rundlaufItem (.adaptT { art := "", name := "g", params := [], res := some (.atom "u32"),
+                            fehler := none, klauseln := [.cost (.lit 4)] }
+      [.alle, .ohne "s", .neu "k" (.atom "u32")]
+      { quelle := "f", gebunden := some "a", sonst := none,
+        vorspiel := [.bind false "s" none (.lit 2)] }
+      (some (.block [] (some (.ret (some (.variable "a"))))))) = true := by
+  decide +kernel
+
+theorem rt_item_adaptkurz :
+    rundlaufItem (.adaptT { art := "", name := "g", params := [], res := none,
+                            fehler := none, klauseln := [] }
+      [.alle, .ohne "s"]
+      { quelle := "f", gebunden := none, sonst := none,
+        vorspiel := [.bind false "s" none (.lit 2)] }
+      none) = true := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser
