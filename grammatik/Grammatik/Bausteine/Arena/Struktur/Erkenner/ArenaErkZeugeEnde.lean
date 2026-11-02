@@ -7,6 +7,7 @@
 -/
 module
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombi
+public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkZeugeKombia
 public import Grammatik.Bausteine.Arena.Struktur.Erkenner.ArenaErkEnde
 @[expose] public section
 

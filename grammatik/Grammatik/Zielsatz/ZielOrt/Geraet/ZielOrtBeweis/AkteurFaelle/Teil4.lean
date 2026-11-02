@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1a
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.Teil3
 
 @[expose] public section
