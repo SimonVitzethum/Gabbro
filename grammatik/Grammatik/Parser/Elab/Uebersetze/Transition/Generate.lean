@@ -104,9 +104,12 @@ structure UTransitionFragment where
 
 /-- Every nonprimitive declaration gets its own function, including an
     unused declaration. No reachable support function is omitted by demand. -/
-@[expose] def uGenerateTransitions (ctx : UCtx) (states : List UZustand) : Except String (List UFn) :=
-  uSeq (states.flatMap fun state => state.transitions.filterMap fun tr =>
+@[expose] def uGenerateTransitions (ctx : UCtx) (states : List UZustand) : Except String (List UFn) := do
+  let functions ← uSeq (states.flatMap fun state => state.transitions.filterMap fun tr =>
     if tr.primitive then none else some (uGenerateTransition ctx state.name tr))
+  if (uEindeutig (functions.map (·.name))).length != functions.length then
+    throw "duplicate generated transition function identity"
+  pure functions
 
 /-- Candidate generation alone cannot discharge the generic source-to-G
     expansion theorem. Keep this named refusal until that certificate is
