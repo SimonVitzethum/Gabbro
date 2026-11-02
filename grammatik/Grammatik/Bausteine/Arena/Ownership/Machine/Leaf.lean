@@ -122,6 +122,7 @@ theorem ob_cons_inv : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c1 
   | _, _, _, _, _, _, _, _, .awaits .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .exchange .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .narrow .. => by intro he; cases he
+  | _, _, _, _, _, _, _, _, .narrowRequired .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .check .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .float .. => by intro he; cases he
   | _, _, _, _, _, _, _, _, .floatLit .. => by intro he; cases he
@@ -267,6 +268,8 @@ theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     exact MetaSame.refl A σ
   | _, _, _, _, _, _, _, _, .ret .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
   | _, _, _, _, _, _, _, _, .retWhy .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
+  | _, _, _, _, _, _, _, _, .retScoped .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
+  | _, _, _, _, _, _, _, _, .retWhyScoped .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
   | _, _, _, _, _, _, _, _, .leave .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
   | _, _, _, _, _, _, _, _, .next .. => by intro _ σ ρ σ' ρ' h; simp only [execStmt, reduceCtorEq] at h
   | _, _, _, _, _, _, _, _, .ite .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
@@ -278,6 +281,7 @@ theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | _, _, _, _, _, _, _, _, .locks .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .breaking .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .traverse .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
+  | _, _, _, _, _, _, _, _, .consumeTraverse .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .retry .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
   | _, _, _, _, _, _, _, _, .forever .. => by intro hl; simp only [Stmt.istBlatt, Bool.false_eq_true] at hl
 

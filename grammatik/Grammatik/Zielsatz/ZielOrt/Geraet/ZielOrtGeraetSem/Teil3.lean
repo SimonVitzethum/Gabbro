@@ -42,6 +42,9 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .traverse _ _ body, h => by
       simp only [Stmt.vOk] at h
       exact Block.gOk_of_vOk body h
+  | .consumeTraverse _ _ _ _ _ _ body, h => by
+      simp only [Stmt.vOk] at h
+      exact Block.gOk_of_vOk body h
   | .retry _ _ body ueber, h => by
       simp only [Stmt.vOk, Bool.and_eq_true] at h
       have hb : body.gOk K Rg = true ∧ body.regs = [] := Block.gOk_of_vOk body h.1
@@ -69,6 +72,8 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .retires .., _ => ⟨rfl, rfl⟩
   | .ret .., _ => ⟨rfl, rfl⟩
   | .retWhy .., _ => ⟨rfl, rfl⟩
+  | .retScoped .., _ => ⟨rfl, rfl⟩
+  | .retWhyScoped .., _ => ⟨rfl, rfl⟩
   | .leave .., _ => ⟨rfl, rfl⟩
   | .next .., _ => ⟨rfl, rfl⟩
 
@@ -118,6 +123,10 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
       simp only [Block.gOk, Block.regs, hs.1, hr.1, hs.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [Block.vOk] at h
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h
+      simp only [Block.gOk, Block.regs, hr.1, hr.2, Bool.and_self, List.append_nil, and_self]
   | .check _ sonst rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h
       have hs : sonst.gOk K Rg = true ∧ sonst.regs = [] := Endblock.gOk_of_vOk sonst h.1
@@ -144,6 +153,8 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     (e : Endblock D V l Γ Λ) → e.vOk K = true → e.gOk K Rg = true ∧ e.regs = []
   | .ret .., _ => ⟨rfl, rfl⟩
   | .retWhy .., _ => ⟨rfl, rfl⟩
+  | .retScoped .., _ => ⟨rfl, rfl⟩
+  | .retWhyScoped .., _ => ⟨rfl, rfl⟩
   | .leave .., _ => ⟨rfl, rfl⟩
   | .next .., _ => ⟨rfl, rfl⟩
   | .cons s rest, h => by
@@ -186,6 +197,10 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
       simp only [Endblock.gOk, Endblock.regs, hs.1, hr.1, hs.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
+  | .narrowRequired _ _ _ rest, h => by
+      simp only [Endblock.vOk] at h
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h
+      simp only [Endblock.gOk, Endblock.regs, hr.1, hr.2, Bool.and_self, List.append_nil, and_self]
   | .exchange _ _ _ _ rest, h => by
       simp only [Endblock.vOk] at h
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h

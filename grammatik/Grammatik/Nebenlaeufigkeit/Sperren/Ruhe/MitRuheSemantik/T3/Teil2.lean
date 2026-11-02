@@ -470,7 +470,7 @@ theorem execBlock_ru_narrowRequired {V : Vertrag D}
       (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))).trans
       (ausR_schrumpf _)
   · erw [dif_neg hc, dif_neg hc]
-    rfl
+    exact Or.inl rfl
 
 end Haupt
 end Gabbro.Grammatik

@@ -272,6 +272,7 @@ def Stmt.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     Stmt D V l Γ Λ Λ' → Bool
   | .shift .. => false
   | .traverse .. => false
+  | .consumeTraverse .. => false
   | .forever .. => false
   | .onTag .. => false
   | .onWhy .. => false
@@ -297,6 +298,8 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .awaits _ _ _ _ _ rest => rest.logikFrei
   | .exchange _ _ _ _ rest => rest.logikFrei
   | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
+  | .narrowRequired .. => false
+  | .narrowRequired _ _ _ rest => rest.logikFrei
   | .check _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .float .. => false
   | .floatLit q lo hi rest => (gleitPasst lo hi (bruch q)).isSome && rest.logikFrei
@@ -320,6 +323,8 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .awaits _ _ _ _ _ rest => rest.logikFrei
   | .bindCallInd _ _ _ _ _ rest => rest.logikFrei
   | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
+  | .narrowRequired .. => false
+  | .narrowRequired _ _ _ rest => rest.logikFrei
   | .exchange _ _ _ _ rest => rest.logikFrei
   | .ite _ t e => t.logikFrei && e.logikFrei
 

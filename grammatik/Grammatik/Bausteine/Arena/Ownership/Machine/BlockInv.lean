@@ -74,6 +74,7 @@ def BTop (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output 
       ∃ c1, OB A I out k (c.bind none) rest c1 ∧ DropW cout c1
   | _, _, _, _, .cons _ _ => True
   | _, _, _, _, .narrow .. => True
+  | _, _, _, _, .narrowRequired .. => True
 
 theorem BTop.weaken {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c cout c2 : Context}
     {b : Block D V l Γ Λ Λ'} (h : BTop A I out k c cout b) (hw : Weaker c2 cout) : BTop A I out k c c2 b := by
@@ -81,6 +82,7 @@ theorem BTop.weaken {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c cout c2 :
   | nil => exact EqW.weaken h hw
   | cons => trivial
   | narrow => trivial
+  | narrowRequired => trivial
   | bind => exact ⟨h.1, h.2.elim fun c1 h => ⟨c1, h.1, h.2.weaken hw⟩⟩
   | bindCall => exact ⟨h.1, h.2.1, h.2.2.elim fun c1 h => ⟨c1, h.1, h.2.weaken hw⟩⟩
   | bindCallInd =>

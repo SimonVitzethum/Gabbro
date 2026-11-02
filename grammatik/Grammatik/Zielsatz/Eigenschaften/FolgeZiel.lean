@@ -64,6 +64,7 @@ theorem ruS_fNach (Φ : Folge D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .locks .. => rfl
   | .breaking .. => rfl
   | .traverse .. => rfl
+  | .consumeTraverse .. => rfl
   | .retry .. => rfl
   | .forever .. => rfl
   | .axiomCall .. => rfl
@@ -72,6 +73,8 @@ theorem ruS_fNach (Φ : Folge D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .publish .. => rfl
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
 
@@ -96,6 +99,7 @@ theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
   | _, _, _, _, e, _, .locks _ _ body => ruB_fB Φ e false body
   | _, _, _, _, e, _, .breaking _ body => ruB_fB Φ e false body
   | _, _, _, _, e, _, .traverse _ _ body => ruB_fB Φ e false body
+  | _, _, _, _, e, _, .consumeTraverse _ _ _ _ _ _ body => ruB_fB Φ e false body
   | _, _, _, _, e, _, .retry _ _ body ueber =>
       kongr₂ (· && ·) (ruB_fB Φ e false body) (ruB_fB Φ e false ueber)
   | _, _, _, _, e, _, .forever _ _ body => ruB_fB Φ e false body
@@ -107,6 +111,8 @@ theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
   | _, _, _, _, _, _, .retires .. => fS_nachΛ _ _ _ _ _
   | _, _, _, _, _, _, .ret .. => rfl
   | _, _, _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, _, _, .leave _ => rfl
   | _, _, _, _, _, _, .next _ => rfl
 
@@ -139,6 +145,7 @@ theorem ruB_fB (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
   | _, _, _, _, e, w, .exchange _ _ _ _ rest => ruB_fB Φ e w rest
   | _, _, _, _, e, w, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
+  | _, _, _, _, e, w, .narrowRequired _ _ _ rest => ruB_fB Φ e w rest
   | _, _, _, _, e, w, .check _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
   | _, _, _, _, e, w, .float _ _ _ _ _ rest => ruB_fB Φ e w rest
@@ -151,6 +158,8 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
     (e w : Bool) (b : Endblock D V l Γ Λ), fE Φ.mitRuhe e w (ruEnd b) = fE Φ e w b
   | _, _, _, _, _, .ret .. => rfl
   | _, _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, _, .leave _ => rfl
   | _, _, _, _, _, .next _ => rfl
   | _, _, _, e, w, .cons s rest => by
@@ -178,6 +187,7 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
         ((fE_umΛ Φ.mitRuhe _ e false (ruEnd rest)).trans (ruEnd_fE Φ e false rest))
   | _, _, _, e, w, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruEnd_fE Φ e w rest)
+  | _, _, _, e, w, .narrowRequired _ _ _ rest => ruEnd_fE Φ e w rest
   | _, _, _, e, w, .exchange _ _ _ _ rest => ruEnd_fE Φ e w rest
   | _, _, _, e, w, .ite _ t f =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false f) (ruEnd_fE Φ e w t)

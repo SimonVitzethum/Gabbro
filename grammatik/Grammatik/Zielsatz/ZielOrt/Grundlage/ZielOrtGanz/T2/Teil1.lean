@@ -126,6 +126,7 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       split at he <;> cases he
   | .shift .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
   | .traverse .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
+  | .consumeTraverse .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
   | .forever .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
   | .onTag .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
   | .onWhy .., h, _, _, _, _ => by simp only [Stmt.logikFrei, Bool.false_eq_true] at h
@@ -141,6 +142,8 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
   | .retires .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .ret .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .retWhy .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retScoped .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .retWhyScoped .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .leave .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .next .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
 
@@ -240,6 +243,7 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       split at he
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ (EndAusgang.zuAusgang_logik he)
+  | .narrowRequired .., h, _, _, _, _ => by simp only [Block.logikFrei, Bool.false_eq_true] at h
   | .check c sonst rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock] at he
@@ -269,6 +273,8 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
       ∀ (σ : World D) (ρ : Env D Γ) (e : Logik D), execEnd O passes R b σ ρ = .logik e → Ok e
   | .ret .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .retWhy .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .retScoped .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
+  | .retWhyScoped .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .leave .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .next .., _, _, _, _, he => by simp only [execEnd, reduceCtorEq] at he
   | .cons s rest, h, σ, ρ, e, he => by
@@ -364,6 +370,7 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
       split at he
       · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
       · exact Endblock.logikFrei_ok hR sonst h.1 _ _ _ he
+  | .narrowRequired .., h, _, _, _, _ => by simp only [Endblock.logikFrei, Bool.false_eq_true] at h
   | .exchange g neu hw hL rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei] at h
       simp only [execEnd] at he
