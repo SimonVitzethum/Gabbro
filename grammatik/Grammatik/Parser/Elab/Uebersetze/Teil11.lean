@@ -244,12 +244,15 @@ def uInitialNumber (consts : List (String × Int)) (lo hi : Int) : SKonstWert �
       | none => .error "source export: scalar initializer is outside its canonical constant domain"
   | .rows _ => .error "static initialiser without G form"
 /-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
-    as the initial value; a placement, an alignment or a `shared` word has no `Glob` form. -/
+    as the initial value; explicit placement is retained for the image-layout gate. -/
 def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
     List SItemTief → Except String (List UGlob)
   | [] => .ok []
   | .globT m n t v al sec sh :: rest =>
-    if al.isSome || sec.isSome then .error "static placement requires Stage-0 global base alignment, section-policy binding and image relocation correspondence"
+    let alignment := match al with
+      | none => some 1
+      | some e => ProfilBindung.ausrichtungWert (consts.map (fun (n, z) => (n, z.toNat))) e
+    if !alignment.any ausrichtungB then .error ("global " ++ n ++ ": invalid alignment")
     else
       match (match t with
           | .atom "bool" =>
@@ -292,7 +295,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         | .ok k =>
         match uGlobs consts alias rest with
         | .error e => .error e
-        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh, optName := match t with | .index true tn => some tn | _ => none, sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
+        | .ok gs => .ok ({ name := n, ty, init := z, initK := k, placement := if al.isSome || sec.isSome then some ⟨[n], alignment.getD 1, sec, m⟩ else none, var := m, shared := sh, optName := match t with | .index true tn => some tn | _ => none, sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
