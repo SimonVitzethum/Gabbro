@@ -36,7 +36,6 @@ theorem lowerS_ok_consumeTraverse (lay : Layout D) (hL : LayoutOk lay) (cenv : L
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
-    (Λ)
     (t)
     (member)
     (edge)
@@ -134,7 +133,6 @@ theorem lowerS_ok_retScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : List Re
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
-    (Λ)
     (e)
     (Rr)
     (lb : Lbl)
@@ -216,7 +214,6 @@ theorem lowerB_ok_narrowRequired (lay : Layout D) (hL : LayoutOk lay) (cenv : Li
     {Λ' : List (Res D)}
     (lo)
     (hi)
-    (Λ)
     (e)
     (lo')
     (hi')
@@ -274,7 +271,7 @@ theorem lowerB_ok_narrowRequired (lay : Layout D) (hL : LayoutOk lay) (cenv : Li
   have m3 := cvtG_mono hv
   have m4 := bindCode_mono hb
   have S2 := lowerB_shape lay (a :: cenv) lv rest (st.l + 2) k ⟨r4, st.l + 3⟩ s2 br hb2
-  have hb0 := hM _ (List.mem_singleton_self ..)
+  have hb0 := hM _ (List.mem_cons_self ..)
   have hbb := hM _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
   have hMr : InM M fn br := fun b hb' =>
     hM b (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ hb')))
