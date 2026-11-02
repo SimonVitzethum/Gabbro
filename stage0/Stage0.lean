@@ -49,17 +49,17 @@ public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 public import Stage0.Senke.Ausdruck.Old.Proben
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 
 public import Stage0.Senke.Ausdruck.Gleit.SlotComposition
 public import Stage0.Senke.Ausdruck.Gleit.SlotProbes
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil3
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ReservedCall
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.ReservedCall
 
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterCall
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterRun
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Relocate
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.RelocateProbe

@@ -1,5 +1,5 @@
 module
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterCall
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterCall
 @[expose] public section
 
 

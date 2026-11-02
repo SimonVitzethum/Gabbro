@@ -1,7 +1,7 @@
 /- Runtime images for overflow blocks the source reader cannot construct, and forever fuel witnesses. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counter
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
 @[expose] public section
 

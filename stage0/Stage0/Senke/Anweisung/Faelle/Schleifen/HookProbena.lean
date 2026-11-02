@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counted.Teil3
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.CounterRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.CounterRun
 @[expose] public section
 
 
