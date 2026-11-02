@@ -7,28 +7,31 @@ were organised) is in `git log`, not here.
 
 ---
 
-## Current work: Stage 0 and the Lean migration (state of 2026-11-01)
+## Current work: Stage 0 and the C packages (state of 2026-11-02)
 
 This section is the ONE valid staffing and build order; it replaces every earlier one (earlier orders are in
 `git log`). Lane checkpoints, the fourteen work packages and the C-package designs are in
 [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); staffing statements there are history, not orders.
+The Lean module-system migration and the split of every Lean file below 500 lines are merged (2026-11-02).
 
 ### Team
 
-- **Two Claude Sonnet 5.5 leads**, both T3 Code agents.
-  - **Lead B does the Lean module-system migration and the splitting of every Lean file below 500 lines**,
-    repository-wide. It may use up to one GPT Sol 6.1 and four Muse for exactly that, never for new `grammatik/`
-    or Stage-0 work; its slots need not all be busy.
-  - **Lead A works on Stage 0 with permanently five sub-agents**: one GPT Sol 6.1 and four OpenCode Muse Spark 1.3
-    Contributor, only through the Go access (model `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`),
-    started through T3 `delegate_task`. Every slot is occupied at all times: when an agent finishes, its branch
-    goes into the integration branch and it gets its next task at once.
-- **Stage-0 work** means the Stage-0 side only (`stage0/`, the runner, probes): the paused IR lanes (IR-04 floats,
-  IR-02 `narrow`, IR-06 memory, the StatementCost/EarlyExit migration, orphans, `ir_parallel`, IR-01 rest) and the
-  Stage-0 lowering prepared for the C packages. **No `grammatik/` change until the migration is merged.**
-- **Only the leads build.** Sub-agents and their sub-agents never build or check Lean, and their worktrees carry no
+- **One lead** (the root session) runs the C packages and Stage 0 with **four GPT Sol 6.1** (codex `gpt-6.1-sol`),
+  **four Muse** (OpenCode Muse Spark 1.3 Contributor, only through the Go access: model
+  `opencode-go/muse-spark-1.3-contributor`; never `opencode/…`) and **any number of Mercury 3** (opencode
+  `inception/mercury-3`, limited only by API rate limits), all started through T3 `delegate_task`. Sol and Muse
+  slots are occupied at all times: when an agent finishes, its branch goes into the integration branch and it gets
+  its next task at once.
+  - **Muse** takes proof and design work, also hard tasks.
+  - **Sol** takes mechanical migrations with exact grep targets, one coherent migration per task ("do not stop
+    after preparation"); it tends to give up on open-ended proofs.
+  - **Mercury** takes only very light tasks: lint and layout passes, splitting a file that nears the size limit,
+    small mechanical edits.
+- **Work** is the C packages in their three rounds (Scope below) and the Stage-0 side (`stage0/`, the runner,
+  probes): the IR lanes and the Stage-0 lowering of every form the C packages add.
+- **Only the lead builds.** Sub-agents and their sub-agents never build or check Lean, and their worktrees carry no
   `.lake` (no Mathlib, no build cache). A lead checks its sub-agents' work in its own tree.
-- **One integration branch, one build per lead.** A lead merges the branches of all its agents and its own work
+- **One integration branch.** The lead merges the branches of all its agents and its own work
   into ONE integration branch and builds/checks that branch only; never one build per agent.
 - **No `.py` helper scripts for agents**: none are written, kept or used. Agents work with git, `lake`, `lean` and
   the shell. The four guardians stay root's tools.
@@ -62,9 +65,8 @@ lines. Cover the whole language rather than repeatedly expanding infrastructure 
   preserving existing guarantees. Do not weaken checks or semantics to enable a case.
 - Test emitted IR with the assembly runner when needed. Never add another Gabbro interpreter or restore the
   retired Lean execution path.
-- **`grammatik/`** is not changed until the migration is merged (above). Afterwards these owner rules of
-  2026-11-01 apply; outside them `grammatik/` is never rebuilt for this task (reuse its compiled artifacts, run
-  affected Stage-0 checks directly, invoke no build or guardian that would rebuild the grammar):
+- **`grammatik/`** is changed only under these owner rules of 2026-11-01; outside them it is not touched for this
+  task (reuse its compiled artifacts, run affected Stage-0 checks directly):
   - **Exports:** pure source-to-G exports in `grammatik/Grammatik/Parser/Elab/*` for forms whose canonical model
     rule already exists may be added, batched into ONE change by ONE agent with one grammar rebuild,
     `gabbro_ziel` still on the standard axioms and the Lean guardian afterwards.
@@ -100,6 +102,11 @@ The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/
   | Stage-0/runner `lake build` | both | `LEAN_NUM_THREADS=2`, `-p MemoryMax=<min(MemAvailable-4G, 16G)> -p MemoryHigh=<1G below> -p MemorySwapMax=0` |
   | single-module check | one | `-p AllowedCPUs=0-11 -p CPUQuota=400% -p MemoryMax=5G -p MemoryHigh=4G -p MemorySwapMax=0` |
 
+- **Rebuild single modules only (owner, 2026-11-02).** Check the changed modules and the modules that import
+  them, one module at a time in dependency order (`lake build <Module>` or `lean` on the file inside a
+  single-module scope); the module system keeps dependents unbuilt when no interface moved. A full package build
+  (`grammatik/`, `stage0/`) runs only when single-module checks cannot settle a question, at most once per C round,
+  and the lead says why in its report.
 - **Inside a single-module slot exactly ONE `lean` process runs**, with `-j4 -DElab.async=true -M4608`
   (asynchronous elaboration is the standard; the threads of one process share its imports), module by module in
   dependency order. Never run a `lake build` of `stage0/` inside such a slot: it spawns one `lean -M16384` per
@@ -122,7 +129,13 @@ The machine has 20 threads and 31 GB and no swap; the caps below follow the OOM/
 - **Nothing in `/tmp`:** it is RAM. Scratch goes to `.scratch-*` inside the own worktree (`TMPDIR` points there);
   everything in `/tmp` together stays under 100 MB, and root removes leftovers no process holds open.
 
-### Lean module system (fixed rule)
+### Small files and the Lean module system (fixed rules)
+
+**Keep every file small (owner, 2026-11-02).** Below 500 lines is the hard limit for every Lean file; aim for
+200–300 lines, split a file into cohesive modules as soon as it nears the limit (pure moves, no change of a
+statement or a name), and keep functions and proofs short. Small files are what makes single-module rebuilds
+cheap and keep build memory low.
+
 
 All Lean in the repository (`grammatik/`, `stage0/`, `runner/`, `programmlogik/`, `passlogik/`, `bruecke/` and
 every other Lean package) is migrated completely to the Lean module system (`module`, `public import`/`import`,
