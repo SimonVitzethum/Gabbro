@@ -25,7 +25,7 @@
     has no term for the violation, which is why the defect is the premise itself.
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeZeuge
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwRang
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 @[expose] public section

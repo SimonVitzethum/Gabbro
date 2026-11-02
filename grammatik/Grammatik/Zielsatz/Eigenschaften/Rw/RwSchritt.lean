@@ -42,7 +42,7 @@
   Rust, no `SYNTAX.md`; `Spec.lean`/`gabbro_ziel` are untouched.
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.KernMaske
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T2
 public import Grammatik.Logik.Fortschritt.Lebendigkeit.T1

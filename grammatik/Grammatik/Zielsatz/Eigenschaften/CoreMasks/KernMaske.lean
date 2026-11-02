@@ -42,7 +42,7 @@
   once, and no other thread of its core steps meanwhile, exactly as in `KernPlan`).
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.KernMaskea
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskea
 @[expose] public section
 
 

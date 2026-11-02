@@ -69,9 +69,9 @@ public import Grammatik.Logik.Ruf.FremdRuf
 public import Grammatik.Zielsatz.Faeden.PoolSym
 public import Grammatik.Zielsatz.Eigenschaften.Masken
 public import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
-public import Grammatik.Zielsatz.Eigenschaften.KernMaske
-public import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
-public import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeGleich
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeZeuge
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwSchritt
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwRang
 public import Grammatik.Zielsatz.Eigenschaften.Rw.RwOrdnung

@@ -12,7 +12,7 @@
   (`kernHaltE_iff_M`). The proposal for `Spec.lean` is dokumente/PLAN-DYNAMIC.md section 8a.4.
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.KernMaske
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
 @[expose] public section
 
 

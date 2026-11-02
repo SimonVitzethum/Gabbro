@@ -24,8 +24,8 @@
     from the guards, not assumed.
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.KernMaske
-public import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeGleich
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
 @[expose] public section
