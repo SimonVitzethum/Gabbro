@@ -386,7 +386,8 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
         exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
   | g5 hs =>
     cases hs with
-    | rueckConsGrund lk Γk Λk r hperm restk ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+    | rueckConsGrund =>
+        rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk hh hpop hΛ hfg hrho hs0 hrg
         have hheadkey : RufSchluesselG (M.faeden f).kopf =
             (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D) := by
           cases hfg
@@ -397,7 +398,8 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           (by simp only [RufSchluesselG]) g rho rg s0 (M.weltVon f) hheadkey (M.faeden f).spur h
         simp only [rufUpdateG_self]
         exact hkeys
-    | dannRetGrund lk Γk Λk Λk2 r hperm restk kk ρ hh caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+    | dannRetGrund =>
+        rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hh hpop hΛ hfg hrho hs0 hrg
         have hheadkey : RufSchluesselG (M.faeden f).kopf =
             (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D) := by
           cases hfg
