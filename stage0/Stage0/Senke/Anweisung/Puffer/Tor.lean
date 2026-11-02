@@ -156,7 +156,7 @@ theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : 
   have hArgs : ArgsW L (reqArg q) (evalArgs σ args σ ρ) := by
     refine argsW_ptr _ (fun i hi => ?_) hA1
     by_cases hij : i = j
-    · subst hij; exact .inr ⟨nt, rw, hjt⟩
+    · subst hij; exact .inr ⟨.table nt (true, rw), hjt⟩
     · refine .inl ?_
       rw [reqArg_mk _ fq i (by omega)]
       show rdW m1 fp (s + 1 + i) = rdW m5 fp (s + 1 + i)
