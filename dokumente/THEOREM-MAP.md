@@ -5785,3 +5785,63 @@ Stage-0 boundary: the elaborator still exports `Marke := Empty`, so these
 model-level escrow proofs do not open the source owner-flow gate or establish
 connected owner lowering. The ghost ledger remains an identity fold while
 recorded events carry no owner payload.
+
+## 124. C01: products and nominal records (2026-11-02)
+
+`grammatik/Grammatik/Kern/Syntax/Typen/Transport.lean`:
+
+* **`ProdVal.relocate_get`**: Reading a mapped field after product transport equals transporting the original field value.
+* **`ProdVal.relocate_set`**: Product transport commutes with replacing a field under the corresponding field and value maps.
+* **`ProdVal.restrict_relocate`**: Restricting a transported product recovers the original product under the left-inverse transport premises.
+* **`ProdVal.relocate_restrict`**: Transporting a restricted product recovers the target product under the right-inverse transport premises.
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Rahmen.lean`:
+
+* **`constEvalGleichProd`**: Constant product arguments evaluate equally in worlds and environments related by the constant frame and environment relations.
+
+`grammatik/Grammatik/Bausteine/Walk/Abbildung.lean`:
+
+* **`visitT_mem_iff`**: A path/value pair belongs to the mapping walk enumeration exactly when it satisfies `WalkHit`.
+* **`visitT_pfade`**: Distinct entries of the mapping walk enumeration have distinct paths.
+* **`visitT_length_le`**: The enumeration at depth `l` has at most `N ^ (l + 1)` entries.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Records/Records.lean`:
+
+* **`uRecordOf_mem`**: Every successfully resolved record schema belongs to the declared schema list.
+
+`grammatik/Grammatik/Parser/Elab/UebersetzeAllg/RecordLaws.lean`:
+
+* **`record_lower`**: Given an open export gate, matching nominal schema and successful field-argument lowering, the expression lowerer emits the typed nominal product constructor.
+* **`record_replace_meaning`**: Record field replacement evaluates by canonical product replacement and carries the combined footprint of the base and replacement expressions.
+
+These model, export and expression-lowering laws do not alone establish connected Stage-0 record-to-IR correctness.
+
+## 125. C18: required allocation and export gates (2026-11-02)
+
+`grammatik/Grammatik/Bausteine/Arena/ArenaZucker/Teil3.lean`:
+
+* **`arenaAllocRequired_unter_schranke`**: Below the arena bound, required allocation executes the shared allocation body with the fresh index and then shrinks its environment.
+* **`arenaAllocRequired_an_schranke`**: At the arena bound, required allocation returns the logical capacity failure `.logik .kapazitaet`.
+* **`zeuge_allocRequired_leer`**: The empty-arena fixture executes the required allocation body with fresh index zero.
+* **`zeuge_allocRequired_voll_kapazitaet`**: The full-arena fixture returns the logical capacity failure.
+
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`:
+
+* **`allocRequired_bound`**: An immutable, unannotated required allocation has a false refusal-metadata flag at every positive traversal depth.
+* **`allocRequired_zeuge`**: The concrete required allocation passes the metadata gate, while allocation with `else` and mutable required allocation are flagged.
+* **`arenaT_bound`**: A literal-bound static arena without placement or provider metadata has exactly its element type's refusal-metadata flag.
+* **`arenaT_zeuge`**: The concrete ordinary static arena passes the metadata gate, while placed and provider-bound variants are flagged.
+
+## 126. Stage 0 C08: optional-axiom value bindings (2026-11-02)
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2Opt.lean`:
+
+* **`lowB_ok_bindAxiomOpt_some`**: Successful lowering of a value-bearing optional-axiom block binding satisfies `Sim` under the oracle, layout, memory, capacity and continuation-correctness premises.
+* **`lowEnd_ok_bindAxiomOpt_some`**: Successful lowering of a value-bearing optional-axiom end-block binding satisfies `Ret` under the corresponding correctness premises.
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2OptElse.lean`:
+
+* **`lowB_ok_bindAxiomOptElse_some`**: Successful lowering of a value-bearing optional-axiom block binding with a reason handler satisfies `Sim` given correctness of both continuations and the remaining simulation premises.
+* **`lowEnd_ok_bindAxiomOptElse_some`**: Successful lowering of the corresponding end-block binding satisfies `Ret` given correctness of both end continuations and the remaining simulation premises.
+
+All four statements require payload `some`; they do not cover void payload `none`.

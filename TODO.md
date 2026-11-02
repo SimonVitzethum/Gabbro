@@ -20,13 +20,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value.
   - **Stage-0 refusals with their missing step:**
-    - C08 void `bindAxiomOpt` and `bindAxiomOptElse`: Stage-0 lowering missing.
+    - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
-    - C11 `retScoped`/`retWhyScoped`: unwinding semantics in progress on branch `c11-unwind`.
+    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: escrow simulation in progress.
-    - C18 allocation without `else`: provider/memory-availability duty OPEN in the model.
+    - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
     - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
     - C14 `profile`/`requires profile`: certificate transport to Stage-0 image correctness missing.
     - C14 `aligned`/`section`: Stage-0 image placement (global base alignment, section policy, relocation) missing.
