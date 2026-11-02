@@ -15,22 +15,23 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 - **Stage 0: every userspace Gabbro form to IR, formally verified (2026-11-01).** The lanes IR-01..IR-14, their checkpoints
   and the C-package designs are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); team, scope and build caps are
   in [AGENTS.md](AGENTS.md) ("Current work"). No legacy Lean source runtime and no unrelated side project.
-- **C-package integration (2026-11-02).** Integrated into the integration branch: C02, C03, C04, C05, C06, C09, C11,
-  C12, C13, C14, C15, C16, C17, C18. In progress: C01, C07, C08, C10. Refused at the Stage-0 export gate by design:
-  C05 group invariants (cost/runs/by duties unbound), C11 `by consuming` traversal (current-state reselection open). Still
-  refused at the gate, being opened: C14 profile/requires profile/when TESTBUILD/aligned/section/entrust; C12 named spaces,
-  ownership rights, live-byte capabilities, entry handles; C09 owner flows; C18 allocation without else.
+- **C-package status (2026-11-02).** Integrated into `c-runde1`: all C packages except C01 and C10, including C07
+  and C08. Stage 0 admits C12 tables in named spaces and pointers into them (rights decoded by `DataRights.decode`),
+  C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
+  code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value.
   - **Stage-0 refusals with their missing step:**
-    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
-    - C11 `retScoped`/`retWhyScoped`: model semantics does not unwind crossed scopes yet (`R.scopes` ignored).
-    - C18 `narrowRequired`: lowering needs a runner stop for the `.logik .kapazitaet` case.
-    - C18 allocation without `else`: provider/memory-availability duties are OPEN in the model.
-    - C09 owner mint/handoff: `RufPasst.ownerReady` refuses non-empty owner flows; escrow simulation missing.
-    - C12 live byte capabilities and entry handles: need C01 value flow, C08 grant history, C09 loans, C08/C14 entry binding.
-    - C14 `profile`/`requires profile`: certificate transport to Stage-0 image correctness missing.
-    - C14 `aligned`/`section`: elaborated for globals; Stage-0 image placement (global base alignment, section policy, relocation) missing.
-    - C14 `entrust`: refused by the model (no isolation/call service).
+    - C08 void `bindAxiomOpt` and `bindAxiomOptElse`: Stage-0 lowering missing.
+    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
+    - C11 `retScoped`/`retWhyScoped`: unwinding semantics in progress on branch `c11-unwind`.
     - C11 `by consuming`: refused by design.
+    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C09 owner flows: escrow simulation in progress.
+    - C18 allocation without `else`: provider/memory-availability duty OPEN in the model.
+    - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
+    - C14 `profile`/`requires profile`: certificate transport to Stage-0 image correctness missing.
+    - C14 `aligned`/`section`: Stage-0 image placement (global base alignment, section policy, relocation) missing.
+    - C14 `entrust`: refused by the model (no isolation/call service).
+    - C07 fallible indirect calls: Stage-0 arms being added.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
