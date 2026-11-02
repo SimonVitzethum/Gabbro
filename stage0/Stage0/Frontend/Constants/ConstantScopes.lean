@@ -1,7 +1,7 @@
 module
 public import Stage0.Frontend.DependentScopes
-public import Stage0.Frontend.ConstantOrder
-public import Stage0.Frontend.ConstantMeaning
+public import Stage0.Frontend.Constants.ConstantOrder
+public import Stage0.Frontend.Constants.ConstantMeaning
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
