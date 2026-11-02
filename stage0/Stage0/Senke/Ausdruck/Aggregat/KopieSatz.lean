@@ -3,6 +3,8 @@ module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -13,7 +15,7 @@ variable [Kern] {D : Deklaration} {L : Lay D}
 theorem var_value_ok {reserved : Nat} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (x : Var Γ τ) {m : Runner.Mem} {pc fp : Runner.W} {K d top : Nat}
     {code : List II} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    (lower : lowE L (reserved := reserved) (Λ := Λ) (.var x) d = some (code, top))
+    (lower : lowE (currentOld := currentOld) L (reserved := reserved) (Λ := Λ) (.var x) d = some (code, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d code ρ W reserved) :
     ValueOk L m pc fp K d code τ (ρ.get x) := by
   simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at lower

@@ -85,17 +85,21 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .intBuiltin1 op a => op.arbeit + kostenExpr a
   | .intBuiltin2 op a b => op.arbeit + kostenExpr a + kostenExpr b
   | .count n body => 1 + n * (kostenExpr body + 1)
+  | .prod _ args => kostenArgs args
+  | .prodGet v _ => 1 + kostenExpr v
+  | .prodSet v _ e => 1 + kostenExpr v + kostenExpr e
 
 def kostenNutz {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} :
     NutzlastExpr D Γ Λ c → Nat
   | .empty => 0
   | .val e => kostenExpr e
-end
-/-- Cost of call arguments: the sum, as `kosten.rs::ruf` adds each one. -/
+
+/-- Cost of product field arguments and call arguments: the sum, as `kosten.rs::ruf` adds each one. -/
 def kostenArgs {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} :
     Args D Γ Λ τs → Nat
   | .nil => 0
   | .cons e rest => kostenExpr e + kostenArgs rest
+end
 
 /-- Cost of a return payload: nothing for `none`, the expression otherwise. -/
 def kostenErg {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} :
@@ -279,7 +283,7 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
   | .bindCallIndElse p args _ _ _ err rest =>
-      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 1) (kostenSonst c pa rest + 1)
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
   | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenSonst c pa rest + 1)
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest

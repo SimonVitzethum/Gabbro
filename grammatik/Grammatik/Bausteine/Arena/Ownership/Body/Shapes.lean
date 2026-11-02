@@ -53,7 +53,8 @@ theorem exprGlob_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {g : D.Glob}, exprGl
 theorem exprVarPos_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {p : Nat}, exprVarPos e = some p →
     ∀ (σa σb : World D) (ρ : Env D Γ), intVon τ (eval σa e σb ρ) = ρ.unten p := by
   intro τ e
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | var x =>
     intro p h σa σb ρ
     simp only [exprVarPos, Option.some.injEq] at h
@@ -64,7 +65,9 @@ theorem exprVarPos_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {p : Nat}, exprVar
     rw [← ih h σa σb ρ]
     rfl
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => intro p h; simp only [exprVarPos, reduceCtorEq] at h
 
 theorem exprLit_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {n : Int}, exprLit e = some n →
@@ -78,7 +81,8 @@ theorem exprSucc_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {p : Nat}, exprSucc 
     ∀ (σa σb : World D) (ρ : Env D Γ) (n : Int), ρ.unten p = some n →
       intVon τ (eval σa e σb ρ) = some (n + 1) := by
   intro τ e
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | add a b iha ihb =>
     intro p h σa σb ρ n hn
     simp only [exprSucc] at h
@@ -96,7 +100,9 @@ theorem exprSucc_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {p : Nat}, exprSucc 
     rw [← ih h σa σb ρ n hn]
     rfl
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => intro p h; simp only [exprSucc, reduceCtorEq] at h
 
 theorem exprSlotRead_eval : ∀ {τ : Ty} (e : Expr D Γ Λ τ) {t : D.Tab} {f : D.Feld t} {p : Nat},

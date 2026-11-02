@@ -1,0 +1,15 @@
+// A negated slot predicate over mixed truth values: three of five slots fail the flag.
+module c13b_count_mixed_neg {
+table Cells count 5 { slot { ok : bool, } }
+impl fn main() -> u32 in 0 .. 5
+    effects { reads Cells.slots, writes Cells.slots }
+{
+    Cells.slots[0].ok = true;
+    Cells.slots[1].ok = false;
+    Cells.slots[2].ok = true;
+    Cells.slots[3].ok = false;
+    Cells.slots[4].ok = false;
+    let n = count k in slots of Cells : !Cells.slots[k].ok;
+    return n;
+}
+}

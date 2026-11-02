@@ -20,7 +20,7 @@
     followed by digits (`GleitKanon`). Excluded: `_` separators, leading zeros, uppercase `E`,
     and any text that is not a float literal at all (`"1.0 rounded"`, see the CUTS).
   - `text s`: no `"` and no newline in `s` (the lexer has no escapes).
-  - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 47 spellings of
+  - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 48 spellings of
     `nimmZeichen`).
   - `doku`, `ende`: excluded (`lex` drops doc comments and emits `ende` itself).
 
@@ -43,14 +43,14 @@ namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000
 
-/-- The marks the lexer cuts (`nimmZeichen`): the 22 multi-character marks and the 25 single
-    characters of `istEinfach`. -/
+/-- The marks the lexer cuts (`nimmZeichen`): the 22 multi-character marks and the 26 single
+    characters of `istEinfach` (`?` is the reason-propagation mark, `ABSTRACTION-SYNTAX-PLAN.md` §4.3). -/
 def markTafel : List (List Char) :=
   [['<','<','%'], ['.','.','<'], [':',':'], ['.','.'], ['-','>'], ['=','>'], ['=','='],
    ['!','='], ['<','='], ['>','='], ['<','<'], ['>','>'], ['+','='], ['+','%'], ['+','|'],
    ['-','='], ['-','%'], ['*','%'], ['&','&'], ['&','='], ['|','|'], ['|','='],
    [':'], [';'], [','], ['.'], ['='], ['<'], ['>'], ['+'], ['-'], ['*'], ['/'], ['%'], ['&'],
-   ['|'], ['^'], ['!'], ['~'], ['@'], ['#'], ['('], [')'], ['['], [']'], ['{'], ['}']]
+   ['|'], ['^'], ['!'], ['~'], ['@'], ['#'], ['('], [')'], ['['], [']'], ['{'], ['}'], ['?']]
 
 /-- A name-shaped spelling: a name start, then name continuations. -/
 def nameForm (s : String) : Bool :=

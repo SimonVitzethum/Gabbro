@@ -2,6 +2,8 @@ module
 public import Stage0.Senke.Ausdruck.Tops.TopBasis
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 
@@ -12,8 +14,33 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+
+theorem lowE_top_prodSet {name : Nat} {fs : List Ty} {σ : Ty}
+    (i : FieldAt fs σ) (d : Nat) (v e : Option (List II × Nat))
+    (c : List II) (top : Nat)
+    (h : prodSetL (name := name) i d v e = some (c, top)) : d < top := by
+  simp only [prodSetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, ⟨ce, te⟩, he, _, rfl⟩ := h
+  have positive := valueWords_pos σ
+  have bound := Nat.le_max_right (max tv te)
+    (d + valueWords (.prod name fs) + valueWords σ)
+  omega
+
+theorem lowE_top_prodGet {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
+    {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ)
+    (v : Expr D Γ Λ (.prod name fs)) (d : Nat) (c : List II) (top : Nat)
+    (h : prodGetL (name := name) i d (lowE (currentOld := currentOld) L (reserved := reserved) v d) = some (c, top)) :
+    d < top := by
+  simp only [prodGetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, _, rfl⟩ := h
+  have positive := valueWords_pos σ
+  have bound := Nat.le_max_right (max tv (d + valueWords (.prod name fs))) (d + valueWords σ)
+  omega
+
 theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
-    (top : Nat) → lowE L (reserved := reserved) e d = some (c, top) → d < top
+    (top : Nat) → lowE (currentOld := currentOld) L (reserved := reserved) e d = some (c, top) → d < top
   | _, _, .arrNil, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
   | _, _, .arrCons a rest, d, c, top, h => by
@@ -262,7 +289,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
   | _, _, .getBytes t f _ n i _ _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
-    · exact readBytesL_top L t f (lowE L (reserved := reserved) i) n 0 d c top h
+    · exact readBytesL_top L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) n 0 d c top h
     · cases h
   | _, _, .forallSlots .., d, c, top, h | _, _, .existsSlots .., d, c, top, h => by
     simp only [lowE_eqs, quantL] at h
@@ -280,11 +307,30 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · exact reachL_top _ _ _ h
     · cases h
   | _, _, .count .., d, c, top, h => (countL_bounds h).1
+  | _, _, .prod _ args, d, c, top, h => lowE_top_prod d _ c top h
+  | _, _, .prodGet v i, d, c, top, h => lowE_top_prodGet i v d c top h
+  | _, _, .prodSet v i e, d, c, top, h => lowE_top_prodSet i d _ _ c top h
   | _, _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h
   | _, _, .intBuiltin1 op a, d, c, top, h => BitBuiltin.unary_top op h
-  | _, _, .oldG .., _, _, _, h
-  | _, _, .oldS .., _, _, _, h
-    => by simp [lowE_eqs] at h
+  | _, _, .oldG g _, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [globalValueC] at h
+      split at h
+      · have positive := valueWords_pos (D.gtyp g)
+        simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
+      · cases h
+    · cases h
+  | _, _, .oldS t f i _, d, c, top, h => by
+    simp only [lowE_eqs] at h
+    split at h
+    · simp only [bind, Option.bind_eq_some_iff] at h
+      obtain ⟨index, _, made⟩ := h
+      simp only [slotValueC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at made
+      obtain ⟨_, _, rfl, rfl⟩ := made
+      omega
+    · cases h
+
 
 
 end Gabbro.Stage0.Senke

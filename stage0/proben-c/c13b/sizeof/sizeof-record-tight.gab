@@ -1,0 +1,7 @@
+// Sizeof of a tight record: two adjacent bytes need no padding, so the record measures two bytes.
+module c13b_sizeof_record_tight {
+type Two = { lo : u8, hi : u8, };
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    return sizeof(Two);
+}
+}

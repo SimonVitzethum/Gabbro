@@ -1,0 +1,7 @@
+// Lenof of a string literal: two bytes of text answer two.
+module c13b_lenof_literal {
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let s: string max 8 = "hi";
+    return lenof(s);
+}
+}

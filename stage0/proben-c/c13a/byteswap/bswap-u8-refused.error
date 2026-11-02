@@ -1,0 +1,1 @@
+refused: `bswap` needs u16, u32 or u64, and u8 is none of them

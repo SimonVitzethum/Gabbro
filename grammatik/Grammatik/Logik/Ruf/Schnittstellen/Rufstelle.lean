@@ -41,7 +41,7 @@ theorem PtrRufPflicht.torRuf {P : Programm D} (hR : PtrVerfeinert P)
     torRuf P R target.val s0 (umsig target.property (evalArgs s0 args s0 ρ)) =
       R target.val s0 (umsig target.property (evalArgs s0 args s0 ρ)) := by
   dsimp only
-  unfold torRuf
+  unfold _root_.Gabbro.Grammatik.torRuf
   exact if_pos (PtrRufPflicht.req hR h)
 
 /-- At a normal return, expose the interface post while retaining the concrete

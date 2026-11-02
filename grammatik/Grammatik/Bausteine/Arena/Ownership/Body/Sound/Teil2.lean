@@ -1,11 +1,8 @@
 module
-
 public import Grammatik.Bausteine.Arena.Ownership.Body.Forms
 public import Grammatik.Bausteine.Arena.Ownership.Body.Sound.Teil1
 public import Grammatik.Kern.Syntax.Typen.Fall
-
 @[expose] public section
-
 namespace Gabbro.Grammatik.ArenaOwnership.Body
 open Source
 variable {D : Deklaration}
@@ -13,32 +10,25 @@ section Sound
 variable {A : FreiForm D} {I : Interfaces A} {V : Vertrag D} {out : Flow.Output A V.erg}
   {O : Orakel D} {passes : Nat} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
   {fr : Frame} {s0 : State}
-
+set_option maxHeartbeats 1600000 in
 mutual
-
 theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Context} {st : Stmt D V l Γ Λ Λ'},
       OS A I out k c st c' → ∀ (σ : World D) (ρ : Env D Γ), k.references.length ≤ Γ.length →
         Holds A fr s0 c σ ρ → BPost A fr s0 out k c' (execStmt O passes R st σ ρ)
   | _, _, _, _, _, _, _, _, .assignSlot t f i e hw hL hn _ _ _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
+    simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
   | _, _, _, _, _, _, _, _, .assignThru p t ht f i e hw hL hn _ _ _ _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
+    simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
   | _, _, _, _, _, _, _, _, .assignGlob g e hw hL hg _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).meta (MetaSame.writeGlob A _ g _ _ hg)
+    simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeGlob A _ g _ _ hg)
   | _, _, _, _, _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL ht _ _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).meta
+    simp only [execStmt]; exact (h.reads _ _).meta
       (MetaSame.writeBytes A t f hf _ (fun he => absurd he.symm ht) _ _ _)
   | _, _, _, _, _, _, _, _, .assignSlotRef r t _ _ f e _ _ htA _ _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ (fun he => absurd he.symm htA))
+    simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ (fun he => absurd he.symm htA))
   | _, _, _, _, _, _, _, _, .assignVar x e _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).assign x e _ _
+    simp only [execStmt]; exact (h.reads _ _).assign x e _ _
   | _, _, _, _, _, _, _, _, .shift t f hτ i von nach hn he hw hL hl _ _, σ, ρ, _, h => by
     simp only [execStmt]
     split
@@ -57,11 +47,9 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
         (ob_sound hR hO hp _ _ (by simp only [List.length_cons]; omega) ((h.reads _ _).bindNone (τ := .index _) v)))
     · exact ob_sound hR hO ha _ ρ hk (h.reads _ _)
   | _, _, _, _, _, _, _, _, .onTag v arms _ ha, σ, ρ, hk, h => by
-    simp only [execStmt]
-    exact oarms_sound hR hO ha _ _ ρ hk (h.reads _ _)
+    simp only [execStmt]; exact oarms_sound hR hO ha _ _ ρ hk (h.reads _ _)
   | _, _, _, _, _, _, _, _, .onWhy r arms _ ha, σ, ρ, hk, h => by
-    simp only [execStmt]
-    exact ogrund_sound hR hO ha _ _ ρ hk (h.reads _ _)
+    simp only [execStmt]; exact ogrund_sound hR hO ha _ _ ρ hk (h.reads _ _)
   | _, _, _, _, _, _, _, _, .call f args hp hr _ hplan, σ, ρ, _, h => by
     simp only [execStmt]
     split
@@ -83,7 +71,7 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, _, _, .callIndElse p args he hp hr err J owner hJ _ _ hplan herr, σ, ρ, hk, h => by
+  | _, _, Λ, _, _, _, _, _, .callIndElse p args he hp hr err J owner hJ _ _ hplan herr, σ, ρ, hk, h => by
     simp only [execStmt, indSonst]
     generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
     obtain ⟨f, hf⟩ := pv
@@ -99,12 +87,10 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     · trivial
     · trivial
   | _, _, _, _, _, _, _, _, .locks L hr body hb, σ, ρ, hk, h => by
-    simp only [execStmt]
-    exact BPost.mapMeta _ _ (fun σ => MetaSame.gives A σ L)
+    simp only [execStmt]; exact BPost.mapMeta _ _ (fun σ => MetaSame.gives A σ L)
       (ob_sound hR hO hb _ ρ hk (h.meta (MetaSame.takes A σ L)))
   | _, _, _, _, _, _, _, _, .breaking i body hb, σ, ρ, hk, h => by
-    simp only [execStmt]
-    exact ob_sound hR hO hb σ ρ hk h
+    simp only [execStmt]; exact ob_sound hR hO hb σ ρ hk h
   | _, _, _, _, _, _, _, _, .traverse t inv body hentry _ hb hback, σ, ρ, _, h => by
     simp only [execStmt]
     have hlen : _ = _ := (h.weaken hentry).length
@@ -132,33 +118,23 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact ((h.reads _ _).fragt _).meta (MetaSame.axiom hO hfree _ _)
     · trivial
   | _, _, _, _, _, _, _, _, .regWrite r hk' e _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact h.reads _ _
+    simp only [execStmt]; exact h.reads _ _
   | _, _, _, _, _, _, _, _, .transition r hk' m hm hl maske bits, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact h.fragt _
+    simp only [execStmt]; exact h.fragt _
   | _, _, _, _, _, _, _, _, .publish g e payload hp hw hL hg _, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).meta (MetaSame.writeGlob A _ g _ _ hg)
+    simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeGlob A _ g _ _ hg)
   | _, _, _, _, _, _, _, _, .advances m a hm hs, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact h
+    simp only [execStmt]; exact h
   | _, _, _, _, _, _, _, _, .retires m st hm a, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact h
+    simp only [execStmt]; exact h
   | _, _, _, _, _, _, _, _, .ret e hΛ he, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact (h.reads _ _).doneValue e he _ _
+    simp only [execStmt]; exact (h.reads _ _).doneValue e he _ _
   | _, _, _, _, _, _, _, _, .retWhy r hΛ hf, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact h.doneReason hf
+    simp only [execStmt]; exact h.doneReason hf
   | _, _, _, _, _, _, _, _, .leave hl hx, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact ⟨_, hx, h⟩
+    simp only [execStmt]; exact ⟨_, hx, h⟩
   | _, _, _, _, _, _, _, _, .next hl hx, σ, ρ, _, h => by
-    simp only [execStmt]
-    exact ⟨_, hx, h⟩
-
+    simp only [execStmt]; exact ⟨_, hx, h⟩
 theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Context} {b : Block D V l Γ Λ Λ'},
       OB A I out k c b c' → ∀ (σ : World D) (ρ : Env D Γ), k.references.length ≤ Γ.length →
@@ -211,7 +187,7 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest,
+  | _, _, Λ, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest,
       σ, ρ, hk, h => by
     simp only [execBlock, indSonst]
     generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
@@ -229,6 +205,9 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
           (grundSig hf r))))
     · trivial
     · trivial
+  | _, _, _, _, _, _, _, _, .bindCallElse f args he hp hr err rest _ hplan herr hrest, σ, ρ, hk, h => by
+    simp only [execBlock]
+    split
     · rename_i σ' v heq
       exact BPost.schrumpf hk _ (ob_sound hR hO hrest _ _ (by simp only [List.length_cons]; omega)
         (ValueBound.bind _ he v (call_value I R hR f args (h.reads _ _) hplan heq)))
@@ -341,7 +320,6 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
   | _, _, _, _, _, _, _, _, .release t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc hrest, σ, ρ, hk, h =>
     release_post O passes R t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc h
       (fun σ' ρ' h' => ob_sound hR hO hrest σ' ρ' hk h')
-
 theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} {eb : Endblock D V l Γ Λ},
       OE A I out k c eb → ∀ (σ : World D) (ρ : Env D Γ), k.references.length ≤ Γ.length →
@@ -459,7 +437,7 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest, σ, ρ,
+  | _, _, Λ, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest, σ, ρ,
       hk, h => by
     simp only [execEnd, indSonstE]
     generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
@@ -477,7 +455,6 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
           (grundSig hf r)))
     · trivial
     · trivial
-
 theorem oarms_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
       {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' →
@@ -491,7 +468,6 @@ theorem oarms_sound (hR : Respects A I.contracts R) (hO : GutO O) :
   | _, _, _, _, _, _, _, _, _, .cons b rest hb hw hr, ⟨⟨i + 1, hi⟩, nutz⟩, σ, ρ, hk, h => by
     simp only [execArms]
     exact oarms_sound hR hO hr _ σ ρ hk h
-
 theorem ogrund_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} {k c c' : Context}
       {arms : GrundArms D V l Γ Λ Λ' n}, OGrund A I out k c arms c' →
@@ -504,8 +480,6 @@ theorem ogrund_sound (hR : Respects A I.contracts R) (hO : GutO O) :
   | _, _, _, _, _, _, _, _, _, .cons b rest hb hw hr, ⟨i + 1, hi⟩, σ, ρ, hk, h => by
     simp only [execGrund]
     exact ogrund_sound hR hO hr _ σ ρ hk h
-
 end
-
 end Sound
 end Gabbro.Grammatik.ArenaOwnership.Body

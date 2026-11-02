@@ -2,6 +2,22 @@ module
 public import Grammatik.Kern.Syntax.Konst.ReinBKlangAnweisung
 public section
 namespace Gabbro.Grammatik
+/-- The checkers ignore a cast of a holdings index. -/
+private theorem constStmtB_cast (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {Λ X Y : List (Res c.D)} (h : X = Y) (s : Stmt c.D V l Γ Λ X) :
+    constStmtB c (h ▸ s) = constStmtB c s := by
+  subst h; rfl
+
+private theorem constBlockB_cast (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {X Y Z : List (Res c.D)} (h : X = Y) (b : Block c.D V l Γ X Z) :
+    constBlockB c (h ▸ b) = constBlockB c b := by
+  subst h; rfl
+
+private theorem constEndB_cast (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {X Y : List (Res c.D)} (h : X = Y) (b : Endblock c.D V l Γ X) :
+    constEndB c (h ▸ b) = constEndB c b := by
+  subst h; rfl
+
 mutual
 theorem constExprB_complete (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.D Γ [] τ} :
     ConstExpr c e → constExprB c e = true
@@ -99,6 +115,9 @@ theorem constExprB_complete (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
       simp only [constExprB, constExprB_complete c h0, constExprB_complete c h1, Bool.and_self]
   | .pureCount h0 => by
       simp only [constExprB, constExprB_complete c h0, Bool.and_self]
+  | .pureProd h0 => by simp only [constExprB, constArgsB_complete c h0, Bool.and_self]
+  | .pureProdGet h0 => by simp only [constExprB, constExprB_complete c h0, Bool.and_self]
+  | .pureProdSet h0 h1 => by simp only [constExprB, constExprB_complete c h0, constExprB_complete c h1, Bool.and_self]
 theorem constPayloadB_complete (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} :
     ConstPayload c e → constPayloadB c e = true
   | .empty => by
@@ -132,11 +151,7 @@ theorem constStmtB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ 
   | .ret h0 => by
       simp only [constStmtB, constResultB_complete c h0, Bool.and_self]
   | .call f args hp hr resourceEq h0 => by
-      revert resourceEq
-      generalize hn : nach c.D f [] = out
-      intro resourceEq
-      cases resourceEq
-      dsimp only
+      rw [constStmtB_cast]
       simp only [constStmtB, constArgsB_complete c h0, Bool.and_self]
 theorem constBlockB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {e : Block c.D V l Γ [] []} :
     ConstBlock c e → constBlockB c e = true
@@ -147,12 +162,9 @@ theorem constBlockB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ
   | .bind h0 h1 => by
       simp only [constBlockB, constExprB_complete c h0, constBlockB_complete c h1, Bool.and_self]
   | .bindCall f args he hp hr resourceEq rest h0 h1 => by
-      revert resourceEq rest h1
-      generalize hn : nach c.D f [] = out
-      intro resourceEq rest h1
-      cases resourceEq
-      dsimp only at h1
-      simp only [constBlockB, constArgsB_complete c h0, constBlockB_complete c h1, Bool.and_self]
+      have h1' := constBlockB_complete c h1
+      rw [constBlockB_cast] at h1'
+      simp only [constBlockB, constArgsB_complete c h0, h1', Bool.and_self]
 theorem constEndB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {e : Endblock c.D V l Γ []} :
     ConstEnd c e → constEndB c e = true
   | .ret h0 => by
@@ -164,12 +176,9 @@ theorem constEndB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ :
   | .ite h0 h1 h2 => by
       simp only [constEndB, constExprB_complete c h0, constEndB_complete c h1, constEndB_complete c h2, Bool.and_self]
   | .bindCall f args he hp hr resourceEq rest h0 h1 => by
-      revert resourceEq rest h1
-      generalize hn : nach c.D f [] = out
-      intro resourceEq rest h1
-      cases resourceEq
-      dsimp only at h1
-      simp only [constEndB, constArgsB_complete c h0, constEndB_complete c h1, Bool.and_self]
+      have h1' := constEndB_complete c h1
+      rw [constEndB_cast] at h1'
+      simp only [constEndB, constArgsB_complete c h0, h1', Bool.and_self]
 theorem constArmsB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {cs : List (Option Ty)} {e : Arms c.D V l Γ [] [] cs} :
     ConstArms c e → constArmsB c e = true
   | .nil => by

@@ -2,6 +2,7 @@ module
 
 
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
+public import Grammatik.Parser.Namen.Gebunden
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -154,17 +155,6 @@ def klausel (k : Kontext) : SKlausel → SKlausel
   | .effs es => .effs (es.map (effekt k))
   | c => c
 
-/-- The names a statement binds for the statements after it. -/
-def gebunden : SAnw → List String
-  | .bind _ x _ _ => [x]
-  | .bindElse x _ _ _ _ => [x]
-  | .bindLib _ x _ _ => [x]
-  | .alloc _ x _ _ _ _ => [x]
-  | .allocVon _ x _ _ => [x]
-  | .await x _ _ _ => [x]
-  | .swap x _ _ _ => [x]
-  | _ => []
-
 /-- An ender, resolved. -/
 def ende (k : Kontext) : Option SEnde → Option SEnde
   | some (.ret e) => some (.ret (ausO k e))
@@ -183,11 +173,15 @@ mutual
 def anw (k : Kontext) : SAnw → SAnw
   | .bind m x t e => .bind m x (typO k t) (aus k e)
   | .bindElse x t e g s => .bindElse x (typO k t) (aus k e) g (anw k s)
+  | .bindQ m x t e => .bindQ m x (typO k t) (aus k e)
+  | .bindAxiomOpt x t e => .bindAxiomOpt x (typO k t) (aus k e)
+  | .bindAxiomOptElse x t e g s => .bindAxiomOptElse x (typO k t) (aus k e) g (anw k s)
   | .bindLib m x t c => .bindLib m x (typO k t) (libraryCall k c)
   | .lcall c => .lcall (libraryCall k c)
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
   | .call f xs => .call (k.ref f) (xs.map (aus k))
+  | .callQ f xs => .callQ (k.ref f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))
   | .elsif c s => .elsif (aus k c) (anw k s)

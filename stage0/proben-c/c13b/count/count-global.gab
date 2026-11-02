@@ -1,0 +1,16 @@
+// A global read inside the predicate: the threshold is a static the predicate compares against.
+module c13b_count_global {
+static LIMIT : u32 in 0 .. 100 = 6;
+table Scores count 5 { slot { score : u32 in 0 .. 10, } }
+impl fn main() -> u32 in 0 .. 5
+    effects { reads Scores.slots, writes Scores.slots, reads LIMIT }
+{
+    Scores.slots[0].score = 2;
+    Scores.slots[1].score = 7;
+    Scores.slots[2].score = 4;
+    Scores.slots[3].score = 9;
+    Scores.slots[4].score = 5;
+    let n = count k in slots of Scores : Scores.slots[k].score >= LIMIT;
+    return n;
+}
+}

@@ -92,13 +92,13 @@ theorem parseLet_kopf (f : Nat) (m : Bool) (x : String) (hx : x ≠ "mut") (ty :
     intro R; simp only [Bool.false_eq_true, ite_false, List.nil_append]; exact parseLet_nameTok x hx R f
   cases ty with
   | none =>
-    cases m <;> (try rw [hm]) <;> simp only [parseLet, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, List.cons_append, nameText_nameTok] <;> rfl
+    cases m <;> (try rw [hm]) <;> simp only [parseLet, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.nil_append, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Bool.false_eq_true, List.cons_append, nameText_nameTok] <;> rfl
   | some t =>
     have hT : parseTyp f (druckTyp t ++ .zeichen "=" :: nach) = .ok (t, .zeichen "=" :: nach) :=
       parse_druckTyp t hty _ f
         ⟨(by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e), (by intro r e; simp only [List.cons.injEq, reduceCtorEq, false_and] at e),
           (by intro r e; simp only [List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and] at e), rfl, rfl, rfl⟩ (hf t rfl)
-    cases m <;> (try rw [hm]) <;> simp only [parseLet, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.cons_append, List.nil_append, hT, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, nameText_nameTok] <;> rfl
+    cases m <;> (try rw [hm]) <;> simp only [parseLet, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, druckTypOpt, List.cons_append, List.nil_append, hT, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte, parseLetNach, Token.zeichen.injEq, String.reduceEq, Bool.false_eq_true, nameText_nameTok] <;> rfl
 
 /-- An expression right side: neither `@` nor `alloc t (` nor `alloc t ;`. -/
 theorem parseLetNach_expr (f : Nat) (m : Bool) (x : String) (ty : Option STyp) (e : SExpr)
@@ -148,7 +148,7 @@ theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega),
     parseLetNach_expr _ _ _ _ e hg]
   have hO := ausdruck e hg (.zeichen ";" :: rest) F' rfl rfl rfl (by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)
-  simp only [parseLetExpr, bind, Except.bind, hO, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
+  simp only [parseLetExpr, strEq_semi_frage, Bool.false_eq_true, bind, Except.bind, hO, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
 
 
 /-! ### Statements headed by a place or a call -/

@@ -1,16 +1,15 @@
 /-
-  File:      stage0/Stage0/Senke/Anweisung.lean
-  Subject:   The lowering of stage 0, part 2: statements and blocks of machine G into `S0IR`.
+  Anweisung.lean -- the lowering of stage 0, part 2: statements and blocks of machine G into `S0IR`.
 
   The first free slot of a context `Γ` is `frei Γ`: an expression of a statement is computed there; a `bind`
   computes its value there, which is then the new variable's slot. `assignVar x e` moves the value into `x`'s slot;
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `layout.internalResult` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the shared ensures/invariant epilogue, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
-  number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`,
-  `leave` and `next`; the latter two retain the enclosing loop targets.
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`, `bindCallIndElse`, `leave`
+  and `next` (keeping the loop targets); statements also lower `callIndElse` (value discarded, reason to its end block).
 -/
 module
 public import Stage0.Senke.Ausdruck
@@ -23,7 +22,6 @@ public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
 @[expose] public section
-
 
 namespace Gabbro.Stage0.Senke
 
@@ -114,7 +112,8 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         ((wordConstant (frei Γ reserved) nach).1 ++ ca.1 ++ [stC ((frei Γ reserved))])),
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
-  | _, Γ, _, _, .traverse t inv body, reserved =>
+  | _, Γ, _, _, .traverse t inv body, reserved
+  | _, Γ, _, _, .consumeTraverse t _ _ inv _ _ body, reserved => /- C11: lowers today's canonical fixed sweep; selection and measure are unused by execStmt. -/
     if inW (D.count t) (D.count t) then do
       let ci' ← lowE (reserved := reserved) L inv ((frei Γ reserved) + 1)
       let cb ← lowB (reserved := reserved) passes A L layout ens ((frei Γ reserved) :: pr) (48, 0) body
@@ -138,14 +137,42 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, Γ, _, _, .leave _, reserved => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], (frei Γ reserved)) else none
   | _, Γ, _, _, .next _, reserved => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], (frei Γ reserved)) else none
   | _, Γ, _, _, .axiomCall a args _ _ _ _ _, reserved => torC0 (reserved := reserved) L a args ((frei Γ reserved))
-  | _, Γ, _, _, .axiomCallElse _ _ _ _ _ _ _ _ _, reserved => none
-  | _, _, _, _, .callIndElse .., _ => none
+  | _, Γ, _, _, .axiomCallElse _ a args _ _ _ _ _ err, reserved =>
+    match L.tor a, D.aerg a with
+    | some b, some (.int lo' hi') =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+          valueWords (.why (D.agruende a)) = 1 then do
+        let ct ← torC (reserved := reserved) L a args (frei Γ reserved)
+        let ck ← chkC (some (.int lo' hi')) (frei Γ reserved)
+        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + 1) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + 1) : Nat) : Int) ++
+            ck ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
+            max ct.2 (max (frei Γ reserved + 10) ce.2))
+        else none
+      else none
+    | some b, none =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 < D.agruende a ∧
+          valueWords (.why (D.agruende a)) = 1 then do
+        let ct ← torC (reserved := reserved) L a args (frei Γ reserved)
+        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+        if 16 + 16 * (6 * b.fehler.length) + 16 < 2 ^ 31 then
+          pure (ct.1 ++ fehlC (frei Γ reserved) b.fehler 16 ++
+            [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
+            max ct.2 (max (frei Γ reserved + 10) ce.2))
+        else none
+      else none
+    | _, _ => none
+  | _, Γ, _, _, .callIndElse (n := n) p args _ _ _ err, reserved => do
+    let cc ← lowIndElse (reserved := reserved) L p args
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 [] ce.1,
+      max cc.2 (max ((frei Γ reserved) + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n)) + 1) ce.2))
   | _, Γ, _, _, .locks Lk _ body, reserved =>
     if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
       pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
-  | _, _, _, _, .consumeTraverse .., reserved => none
   -- C11 execStmt still ignores R.scopes: scope unwinding and invariant
   -- restoration are OPEN in Kern/Semantik/Semantik/T2/Teil2.lean.
   -- Keep both scoped returns refused until the canonical semantics is complete.
@@ -224,9 +251,45 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
-  | _, Γ, _, _, .bindAxiomOpt (e := none) _ _ _ _ _ _ _ _, reserved => none
-  | _, _, _, _, .bindCallIndElse .., _ => none
-  | _, Γ, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ _, reserved => none
+  | _, Γ, _, _, .bindAxiomOpt (e := none) a args _ _ _ _ rest, reserved => do
+    let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
+    pure (ct.1 ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
+  | _, Γ, _, _, .bindCallIndElse (n := n) p args _ _ _ err rest, reserved => do
+    let cc ← lowIndElse (reserved := reserved) L p args
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 cr.1 ce.1,
+      elseTopInd (D := D) n (frei Γ reserved) cc.2 cr.2 ce.2)
+  | _, Γ, _, _, .bindAxiomOptElse (e := none) a args _ _ _ _ _ err rest, reserved =>
+    match L.tor a, D.aerg a with
+    | some b, none =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 < D.agruende a ∧
+          valueWords (.why (D.agruende a)) = 1 then do
+        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
+        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+        let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * ((cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * ((cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
+            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
+  | _, Γ, _, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
+    match L.tor a, D.aerg a with
+    | some b, some (.int lo' hi') =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+          valueWords (.why (D.agruende a)) = 1 then do
+        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
+        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+        let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
+            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
   | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>
@@ -262,8 +325,11 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       else none
     else none
   -- IEEE arithmetic needs its software algorithms and proofs.
+  -- All four IEEE binary64 operations remain refused: Runner.IR.op has no float
+  -- arithmetic instruction; integer opcodes 3–6 do not implement gleitRechne.
+  -- floatLit materialises rounded bits, while floatOf uses software conversion;
+  -- neither supplies a verified binary-operation lowering for this arm.
   | _, _, _, _, .float .., reserved => none
-  | _, _, _, _, .narrowRequired .., reserved => none
   | _, _, _, _, _, reserved => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
@@ -355,9 +421,45 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
-  | _, Γ, _, .bindAxiomOpt (e := none) _ _ _ _ _ _ _ _, reserved => none
-  | _, _, _, .bindCallIndElse .., _ => none
-  | _, Γ, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ _, reserved => none
+  | _, Γ, _, .bindAxiomOpt (e := none) a args _ _ _ _ rest, reserved => do
+    let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+    pure (ct.1 ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
+  | _, Γ, _, .bindCallIndElse (n := n) p args _ _ _ err rest, reserved => do
+    let cc ← lowIndElse (reserved := reserved) L p args
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 cr.1 ce.1,
+      elseTopInd (D := D) n (frei Γ reserved) cc.2 cr.2 ce.2)
+  | _, Γ, _, .bindAxiomOptElse (e := none) a args _ _ _ _ _ err rest, reserved =>
+    match L.tor a, D.aerg a with
+    | some b, none =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 < D.agruende a ∧
+          valueWords (.why (D.agruende a)) = 1 then do
+        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
+        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+        let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (cr.1.length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (cr.1.length) : Nat) : Int) ++ cr.1 ++ ce.1,
+            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
+  | _, Γ, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
+    match L.tor a, D.aerg a with
+    | some b, some (.int lo' hi') =>
+      if fehlGut (D.agruende a) b.fehler = true ∧ 0 ≤ lo' ∧ 0 < D.agruende a ∧
+          valueWords (.why (D.agruende a)) = 1 then do
+        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
+        let ck ← chkC (some (.int lo' hi')) ((frei Γ reserved))
+        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+        let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
+        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
+          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + cr.1.length) : Nat) : Int) ++ ck ++ cr.1 ++ ce.1,
+            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
+        else none
+      else none
+    | _, _ => none
   | _, Γ, _, .awaits g _ _ _ _ rest, reserved =>
     if lit32 (L.ga g) && aggregateFits (D.gtyp g) then do
       let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
@@ -386,7 +488,6 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
         else none
       else none
     | _, _ => none
-  | _, _, _, .narrowRequired .., reserved => none
   -- C11 execEnd has the same placeholder as execStmt; it ignores R.scopes.
   -- Keep both scoped returns refused until scope unwinding is modelled.
   | _, _, _, .retScoped .., reserved => none

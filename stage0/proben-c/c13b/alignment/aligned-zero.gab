@@ -1,0 +1,7 @@
+// Aligned on zero: zero is a multiple of every positive alignment.
+module c13b_aligned_zero {
+impl fn main() -> u32 in 0 .. 1 effects { pure } {
+    if aligned(0, 8) { return 1; }
+    return 0;
+}
+}

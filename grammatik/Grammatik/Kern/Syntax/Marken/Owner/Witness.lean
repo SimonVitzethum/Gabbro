@@ -30,7 +30,7 @@ theorem output_bounded_zeuge : id true = true ∧ 1 < D.stufen true :=
 theorem outputs_nodup_zeuge : (handoff.outputs.map Prod.fst).Nodup :=
   OwnerFlow.outputs_nodup validB_iff_zeuge.2
 
-theorem loan_exact_stage : scoped.inputs = [(true, 0)] ∧ scoped.outputs = [(true, 0)] :=
+theorem loan_exact_stage : scopedLoan.inputs = [(true, 0)] ∧ scopedLoan.outputs = [(true, 0)] :=
   ⟨rfl, rfl⟩
 
 theorem duplicate_stages_refused :
@@ -276,5 +276,15 @@ theorem retire_cannot_remint_zeuge : OwnerState.recordMint names mint retired ro
 #print axioms transfer_grant_zeuge
 #print axioms nested_borrow_return
 #print axioms retire_cannot_remint_zeuge
+
+/-- The admitted handoff supplies its concrete owner input. -/
+theorem escrow_call_ready_zeuge :
+    Res.vonMarke D (true, 0) ∈ ([Res.marke true 0] : List (Res D)) :=
+  escrow_call_ready escrow_call_admitted_zeuge (by decide)
+
+/-- The returned stage is present after the same admitted handoff. -/
+theorem escrow_call_outputs_present_zeuge :
+    Res.marke true 1 ∈ nachSig D handoffSignature [Res.marke true 0] :=
+  escrow_call_outputs_present handoffSignature [Res.marke true 0] (by decide)
 
 end Gabbro.Grammatik.OwnerWitness

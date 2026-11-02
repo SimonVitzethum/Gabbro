@@ -39,7 +39,7 @@ theorem assignSlotRef_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   have refWord : ∀ m pc, Pre L m pc fp Ks (frei Γ reserved + valueWords (D.typ t field)) cr ρ
       (fun m => WeltAt m L σE) reserved →
       Ok m pc fp Ks (frei Γ reserved + valueWords (D.typ t field)) cr (Enc L _ (eval σE r σE ρ)) :=
-    fun m pc hp => (lowE_ok σE σE (fun _ h => h) hW.lay r _ cr tr hr (by simp only at tops; omega) m pc ρ hp).word trivial
+    fun m pc hp => (lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay r _ cr tr hr (by simp only at tops; omega) m pc ρ hp).word trivial
   -- the reference's cell is known only after its code ran; it lies in the declared table's represented cells
   have indexPre : Pre L m (pc + BitVec.ofNat 64 (16 * ce.length)) fp Ks
       (frei Γ reserved + valueWords (D.typ t field)) cr ρ (fun m => WeltAt m L σE) reserved := by
@@ -58,7 +58,7 @@ theorem assignSlotRef_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   subst same
   obtain ⟨m', s', a', hw'⟩ := slotStoreC_ok (σ := σE) (kn := (eval σE r σE ρ).zelle) hc (by omega) hk
     hW.lay hW.dis hW.lo pre
-    (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
+    (fun m pc hp => lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
     (fun m pc hp => (refWord m pc hp).mono fun w hw => hw.1)
   exact ⟨m', s', (a'.widen hks).mono hlo2,
     envAt_agreeW hp.env a' hW.lo (by have := hp.frame.room; omega) (Nat.le_refl _) (by omega), hw',

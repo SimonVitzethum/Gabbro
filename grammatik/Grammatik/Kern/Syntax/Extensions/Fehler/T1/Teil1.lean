@@ -178,12 +178,12 @@ theorem evalArgsMit_ok {τs : List Ty}
     (aus : ∀ {t}, Expr D Γ Λ t → ErgebnisF D t)
     (as : Args D Γ Λ τs)
     (h : ∀ {t} (e : Expr D Γ Λ t), ∃ v, aus e = .val v) :
-    ∃ ρ', evalArgsMit aus as = .inl ρ' := by
-  induction as with
-  | nil => exact ⟨.nil, rfl⟩
-  | cons e rest ih =>
+    ∃ ρ', evalArgsMit aus as = .inl ρ' :=
+  match as with
+  | .nil => ⟨.nil, rfl⟩
+  | .cons e rest => by
       obtain ⟨v, hv⟩ := h e
-      obtain ⟨vs, hs⟩ := ih
+      obtain ⟨vs, hs⟩ := evalArgsMit_ok aus rest h
       exact ⟨.cons v vs, by simp only [evalArgsMit, hv, hs]⟩
 
 /-- Die `evalAll`-Gestalt ueber dem heutigen Auswerter: `evalArgs` mit Fehlerkanal. -/

@@ -68,6 +68,8 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           | exact Or.inl trivial
           | exact Or.inl rfl
           | exact Or.inl (lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiom_offen' hO _ _ _ _ _ ‹axiomAntwort _ _ _ _ = _›]; exact lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]; exact lese_offen _ _ _)
   | g2 hs =>
     cases hs with
     | dannLocks l Γ Λ Λ'' L _ _ _ _ _ _ _ _ hfrei =>
@@ -85,6 +87,8 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           | exact Or.inl trivial
           | exact Or.inl rfl
           | exact Or.inl (lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiom_offen' hO _ _ _ _ _ ‹axiomAntwort _ _ _ _ = _›]; exact lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]; exact lese_offen _ _ _)
   | g3 hs =>
     cases hs with
     | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hl _ σ' ρ' _ hstep _ _ σ₁ hs₁ =>
@@ -119,6 +123,8 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           | exact Or.inl trivial
           | exact Or.inl rfl
           | exact Or.inl (lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiom_offen' hO _ _ _ _ _ ‹axiomAntwort _ _ _ _ = _›]; exact lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]; exact lese_offen _ _ _)
   | g4 hs =>
     cases hs with
     | peelFreiLeave l Γ Λ L rest k ρ hl hhead =>
@@ -143,24 +149,26 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           | exact Or.inl trivial
           | exact Or.inl rfl
           | exact Or.inl (lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiom_offen' hO _ _ _ _ _ ‹axiomAntwort _ _ _ _ = _›]; exact lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]; exact lese_offen _ _ _)
   | g5 hs =>
     cases hs with
-    | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ _ σ₁ hs₁ σ₂ hs₂ =>
+    | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ _ σ₁ hs₁ σ₂ hs₂ =>
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         rw [hs₂, hs₁]
         exact lese_offen _ _ _
-    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ _ σ₁ hs₁ σ₂ v hax =>
+    | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ _ σ₁ hs₁ σ₂ v hax =>
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
-    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ _ σ₁ hs₁ σ₂ v hax =>
+    | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ _ σ₁ hs₁ σ₂ v hax =>
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ _ σ₁ hs₁ σ₂ r hax =>
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ _ σ₁ hs₁ σ₂ r hax =>
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
@@ -172,6 +180,8 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           | exact Or.inl trivial
           | exact Or.inl rfl
           | exact Or.inl (lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiom_offen' hO _ _ _ _ _ ‹axiomAntwort _ _ _ _ = _›]; exact lese_offen _ _ _)
+          | (refine Or.inl ?_; rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]; exact lese_offen _ _ _)
   | g6 hs =>
     cases hs with
     | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ _ σ₁ hs₁ σ₂ v hax =>
@@ -183,6 +193,12 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+        exact lese_offen _ _ _
+    | _ =>
+        subst_vars
+        simp only [rufUpdateG_self]
+        refine Or.inl ?_
+        rw [axiomSonst_offen' hO _ _ _ _ _ ‹axiomAntwortSonst _ _ _ _ = _›]
         exact lese_offen _ _ _
 
 /-- The start trace of a thread holds exactly its start function's

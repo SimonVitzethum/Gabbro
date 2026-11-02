@@ -11,6 +11,7 @@ appendix, one line each. History is in git.*
 reasoning live in the linked plans, never here. Keep an entry to one short paragraph; if it needs more, write it in a plan and link it.
 
 ## Right now
+- **C14 base-placement duty:** Prove that loader/runner image placement supplies `Nat.lcm 8 N ∣ b` for every positive declared global alignment; the relative layout and `aligned_abs` premise do not yet discharge this duty (THEOREM-MAP §127).
 
 - **Stage 0: every userspace Gabbro form to IR, formally verified (2026-11-01).** The lanes IR-01..IR-14, their checkpoints
   and the C-package designs are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); team, scope and build caps are
@@ -20,13 +21,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value.
   - **Stage-0 refusals with their missing step:**
-    - C08 void `bindAxiomOpt` and `bindAxiomOptElse`: Stage-0 lowering missing.
+    - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
-    - C11 `retScoped`/`retWhyScoped`: unwinding semantics in progress on branch `c11-unwind`.
+    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: escrow simulation in progress.
-    - C18 allocation without `else`: provider/memory-availability duty OPEN in the model.
+    - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
     - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
     - C14 `profile`/`requires profile`: certificate transport to Stage-0 image correctness missing.
     - C14 `aligned`/`section`: Stage-0 image placement (global base alignment, section policy, relocation) missing.
@@ -94,28 +96,31 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 3. **Remaining O-items:** interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate
    preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37). See §2.
 4. **Termination, waiting bounds, fairness, stack depth,** floats beyond the IEEE kernel.
-5. **Benchmark against GCC `-O3`:** only after the compiler lowers much more and strong optimisation is in (Simon).
-6. **Housekeeping:** see §3 (legacy cleanup); file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`); the frozen
+5. **Zero-cost abstractions without objects** (owner, 2026-11-02; after the C packages): adapters, embedding, specs,
+   generics, parametric modules, `tagged … by`, `dyn`, O43, then the slow-code diagnostics. Plan:
+   [ABSTRACTION-SYNTAX-PLAN.md](dokumente/ABSTRACTION-SYNTAX-PLAN.md).
+6. **Benchmark against GCC `-O3`:** only after the compiler lowers much more and strong optimisation is in (Simon).
+7. **Housekeeping:** see §3 (legacy cleanup); file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`); the frozen
    Isabelle `.thy` set.
-7. *Done 2026-10-18 (Simon's decision):* comments as in most languages: `//`, nesting `/* */`, `///` doc comment as trivia
+8. *Done 2026-10-18 (Simon's decision):* comments as in most languages: `//`, nesting `/* */`, `///` doc comment as trivia
    (`Token.doku`); the `--` comment is removed everywhere. Lean first, then `lex.rs`, then ~1270 files (THEOREM-MAP 83).
    Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
-8. **Adequacy of the generated test set** (Simon, 2026-10-18). Goal: if a program-neutral checker/compiler handles every generated test
+9. **Adequacy of the generated test set** (Simon, 2026-10-18). Goal: if a program-neutral checker/compiler handles every generated test
    program, it handles all valid programs correctly. Result in Lean (`grammatik/Grammatik/Adaequanz/`, `CHECKER.md`† §16, THEOREM-MAP 85):
    program-neutral alone admits NO finite test set (`kein_endlicher_test`). With a state bound the W-method set is sufficient and
    astronomically large for Gabbro. For the class "verdict = conjunction of local premises and whole-program patterns" the answer is exact
    and small: one single-fault program per isolable refusal cell plus valid programs covering the accepted cells (124 premise cells, 146
    child-position cells, at most 4 540 pattern cells, independent of program size). EXACT CELLS (2026-10-20, `CHECKER.md`† §16.6a): the global patterns are 124 cells with 20 bad, not 4 540; `gen-zellen` witnesses 75 of 104 good and 9 of 20 bad cells strictly (valid program / single-fault program), from a generator that emits each program with its proof (`Gutes`, `Schlechtes`), against the Lean model only (the Rust checker is never an oracle). Open: the local refusal cells need source mutants,
    so the G-to-source printer of Track P; the coarse accepted cells (4 of 459 covered); the metamorphic tests for hypotheses H1-H8.
-9. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
+10. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
    producer; Lean checks the binary against the certificate through a small UB-free core K, bridge steps justified by Gabbro facts, and a
    backend validator over chip-learned instruction semantics. Nothing built; the first steps start with extending `Code`. Full design,
    hardware contract and research risks: `PLAN-TRANSLATION-VALIDATION.md`† §9c.
-10. **One-off corpus of ALL generated programs** in a git submodule (at most 30 GiB, counting-and-unranking generation). Not started.
+11. **One-off corpus of ALL generated programs** in a git submodule (at most 30 GiB, counting-and-unranking generation). Not started.
     `dokumente/PLAN-LONG-RANGE.md` §1.
-11. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
+12. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
     `dokumente/PLAN-LONG-RANGE.md` §2.
-12. **Self-hosted checker and compiler in Gabbro** (Simon, 2026-10-25): Lean specifies and proves, Gabbro computes (checking,
+13. **Self-hosted checker and compiler in Gabbro** (Simon, 2026-10-25): Lean specifies and proves, Gabbro computes (checking,
     compiling, generating and running M, N, R, coverage, IR validation); `gpruef` and `gkomp` proved terminating, deterministic
     and neutral, correct on every program through M and N, the adequacy theorem and GabbroV logic proofs; LLVM stays the back
     end. Not started; first the language needs (region release, strings in G, file-gate contracts, measure-based loops).
@@ -311,3 +316,27 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - **Not a topic of this list:** O10 (measurement layer); O12 (single program, no model case); O32 (hardware/runtime); O33 (process
   bookkeeping); O39 (kernel-module world; count: `N574`-`N577` built, unload window is hardware).
 - **Out of scope:** O29 (Simon).
+
+## Round 2 / round 3 compilation follow-up (2026-11-02)
+
+- Stage 0 still refuses C01 `prod` and `prodSet`; `prodGet` lowering is in progress.
+- Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
+- C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
+- C15: accumulator uses remain refused until the C08 core query is wired.
+- C16/C02 round-3 work remains open. Compact implementation inventory (16 items, grouped from the designs in `IR-COMPILATION-LANES.md`):
+  1. C02 lossless library-call arguments and region tokens.
+  2. C02 resolved translator/library identity and export metadata.
+  3. C02 typed input schemas and sound decoders.
+  4. C02 canonical translator map and payload typing.
+  5. C02 source-bound translation certificates.
+  6. C02 pure execution, termination and effect/cost obligations.
+  7. C02 immutable payload initialization and ordinary call expansion.
+  8. C02 connected source/image correctness and refusal witnesses.
+  9. C16 declared-check identity and checked expansion.
+  10. C16 generated producer/probe/gate functions.
+  11. C16 actual measurement samples and floor results.
+  12. C16 completed reports for both verdicts and linear Duty discharge.
+  13. C16 report/token provenance through call push and normal return.
+  14. C16 G/GX replay and ownership conservation.
+  15. C16 counterprobe binding, artifact identity and measured status.
+  16. C16 connected export/Stage-0 correctness with emitted sample work.

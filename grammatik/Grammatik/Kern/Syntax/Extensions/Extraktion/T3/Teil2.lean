@@ -447,6 +447,26 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
           σ₀ σ₀' σ σ' (.cons k ρ) hS hSG h0T h0G)
       simp only [eval]
       exact zaehleWahr_congr n _ _ hbody
+  | .prod _ args =>
+      have ha := evalProd_liest_nur_orte args os (fun o ho => hsub o ho)
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      exact ha
+  | .prodGet a _ =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (ho))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha]
+  | .prodSet a _ b =>
+      have ha := eval_liest_nur_orte a os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hb := eval_liest_nur_orte b os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval]
+      rw [ha, hb]
 
 /-- Die Nutzlast D.Fn D.passt liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
 theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
@@ -465,6 +485,28 @@ theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
         (fun o ho => hsub o ho) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [evalNutz]
       rw [h]
+
+/-- The field arguments read only their places: the product half of the stone. -/
+theorem evalProd_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
+    (args : Args D Γ Λ fs) (os : List (D.Tab ⊕ D.Glob))
+    (hsub : ∀ o ∈ args.orte, o ∈ os)
+    (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hSG : ∀ g : D.Glob, .inr g ∈ os → σ.globs g = σ'.globs g)
+    (h0T : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
+    (h0G : ∀ g : D.Glob, .inr g ∈ os → σ₀.globs g = σ₀'.globs g) :
+    evalProd σ₀ args σ ρ = evalProd σ₀' args σ' ρ := by
+  match args with
+  | .nil => rfl
+  | .cons e rest =>
+      have he := eval_liest_nur_orte e os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      have hr := evalProd_liest_nur_orte rest os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [evalProd]
+      rw [he, hr]
 
 end
 end Gabbro.Grammatik.Extraktion

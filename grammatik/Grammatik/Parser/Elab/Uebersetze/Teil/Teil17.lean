@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+public import Grammatik.Bausteine.Kernzelle.Belegung
 
 @[expose] public section
 
@@ -34,17 +35,25 @@ def uAkkuBereich (alias : List (String × (Int × Int))) (t : STyp) :
   | .ok r => .ok r
   | .error _ => .error "accumulator over a non-integer type without G form (F004)"
 
-/-- The neutral element of the operator over the range: `max` starts at the
-    floor, `min` at the ceiling, `add`/`or` at zero. `and` needs the stored
-    width for its all-ones pattern -- still refused, by name. -/
+/-- Storage width and signedness derived from the declared mathematical range. -/
+def uAkkuFormat (lo hi : Int) : Nat × Bool :=
+  if lo < 0 then
+    (Nat.log2 (max ((-lo - 1).toNat) hi.toNat) + 2, true)
+  else (Nat.log2 hi.toNat + 1, false)
+
+/-- Neutral initialization at the derived storage width. Signed bitwise
+    ranges remain refused because the model uses nonnegative encodings. -/
 def uAkkuNeutral (m : String) (lo hi : Int) : Except String Int :=
   if strEq m "max" then .ok lo
   else if strEq m "min" then .ok hi
   else if strEq m "add" then .ok 0
   else if strEq m "or" then .ok 0
   else if strEq m "and" then
-    .error "accumulator and without G form: the width-indexed neutral needs the stored width (staged)"
+    if lo < 0 then .error "signed accumulator and without G form: nonnegative encoding required"
+    else .ok ((2 ^ (uAkkuFormat lo hi).1 - 1 : Nat) : Int)
   else .error "accumulator operator without G form"
+
+theorem uAkkuNeutralAndByte_zeuge : uAkkuNeutral "and" 0 255 = .ok 255 := by decide
 
 /-- The generated cell names (`n#zelle<i>`). -/
 def uAkkuZellen (n : String) (k : Nat) : List String :=
@@ -68,8 +77,36 @@ def uAkkuItem (consts : List (String × Int)) (alias : List (String × (Int × I
           if !(lo ≤ z && z ≤ hi) then
             .error "accumulator neutral outside its range without G form"
           else if !(akkuOperatorOk m) then .error "accumulator operator without G form"
-          else .ok ((uAkkuZellen n k).map fun c => { name := c, ty := .int lo hi, init := z, var := true }, (List.range k).map fun i => { name := n ++ "#sperre" ++ toString i, rank := boden + Int.ofNat i, guard := [n ++ "#zelle" ++ toString i] })
+          else .ok ((uAkkuZellen n k).map fun c => { name := c, ty := .int lo hi, init := z, var := true, breite := (uAkkuFormat lo hi).1 }, (List.range k).map fun i => { name := n ++ "#sperre" ++ toString i, rank := boden + Int.ofNat i, guard := [n ++ "#zelle" ++ toString i] })
   | _ => .ok ([], [])
+
+/-- Export a source descriptor once its generated carriers and function bindings
+    have been resolved. Bindings are explicit: no placeholder core query or
+    update/reduction function is invented by the storage expansion. -/
+def uAkkuDecl {D : Deklaration}
+    (consts : List (String × Int)) (alias : List (String × (Int × Int)))
+    (item : SItemTief)
+    (cells : (k : Nat) → Fin k → D.Glob)
+    (locks : (k : Nat) → Fin k → D.Lock)
+    (query update fold : D.Fn) : Except String (Kernzelle.AccumulatorDecl D) := do
+  let .accT name ty merge count := item
+    | .error "expected accumulator declaration"
+  let k ← uAkkuAnzahl consts count
+  let (lo, hi) ← uAkkuBereich alias ty
+  let neutral ← uAkkuNeutral merge lo hi
+  if !(lo ≤ neutral && neutral ≤ hi) then
+    throw "accumulator neutral outside its range without G form"
+  let op ←
+    if strEq merge "max" then pure Kernzelle.AccOperator.max
+    else if strEq merge "min" then pure Kernzelle.AccOperator.min
+    else if strEq merge "add" then pure Kernzelle.AccOperator.add
+    else if strEq merge "or" then pure Kernzelle.AccOperator.or
+    else if strEq merge "and" then pure Kernzelle.AccOperator.and
+    else throw "accumulator operator without G form"
+  return { name := name, kernZahl := k, breite := (uAkkuFormat lo hi).1,
+    vorzeichen := (uAkkuFormat lo hi).2, lo := lo, hi := hi, op := op,
+    zellen := cells k, sperren := locks k, kernAbfrage := query,
+    aktualisiere := update, falte := fold }
 
 /-- The storage of every admitted `accumulates` item of the unit. -/
 def uAkkuErweiterung (consts : List (String × Int)) (alias : List (String × (Int × Int)))

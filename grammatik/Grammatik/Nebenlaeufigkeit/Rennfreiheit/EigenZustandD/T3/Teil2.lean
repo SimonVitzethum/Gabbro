@@ -92,6 +92,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | traverse tt inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | retry n bis body ueb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd =>
       by_cases ht : D.aschreibt a t = true
       · exact Or.inr (Or.inr ⟨a, args, h, hw, hg, hd, hgd, hstep, ht⟩)
@@ -128,6 +129,16 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | next h =>
       exact Or.inr (Or.inl fun k f =>
         next_slots_fest O passes (Stmt.next h) rfl σ ρ σ' hstep t k f)
+  | retScoped e R =>
+      refine Or.inr (Or.inl fun k f => ?_)
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retWhyScoped r R =>
+      refine Or.inr (Or.inl fun k f => ?_)
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
 
 /-! ## 10. The step theorem: a foreign step keeps the slots of `t`.
 

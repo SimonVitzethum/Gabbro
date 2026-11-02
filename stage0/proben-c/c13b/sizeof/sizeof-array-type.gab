@@ -1,0 +1,6 @@
+// Sizeof of an array type: four words measure sixteen bytes.
+module c13b_sizeof_array_type {
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    return sizeof([u32; 4]);
+}
+}

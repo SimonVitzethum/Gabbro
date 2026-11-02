@@ -242,7 +242,7 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       · rfl
       · rfl
   | _, _, .bindCallIndElse p args he hp hr err rest, σ, ρ => by
-      simp only [Endblock.alsBlock, execBlock, execEnd]
+      simp only [Endblock.alsBlock, execBlock, execEnd, indSonst, indSonstE]
       split
       rename_i f hf _
       split

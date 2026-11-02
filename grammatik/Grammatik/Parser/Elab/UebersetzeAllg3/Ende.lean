@@ -137,6 +137,38 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
       else .error "lower: register read against its class"
   | _, _, _, _, .allocBeg .. :: _ =>
     .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, Λ, pe, .bindOptBeg x c args :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      if hp : rufPasstB u (verOf u caller) ((declOf u).asignatur k.ax) Λ = true then
+        let fn' := match (declOf u).aerg k.ax with
+          | none => fn
+          | some τ => fn.mitTy x τ
+        (R.ende (l := l) (ErgCtx Γ ((declOf u).aerg k.ax)) fn' Λ pe rest).bind fun (b, r) =>
+          .ok (Endblock.bindAxiomOpt (e := (declOf u).aerg k.ax) k.ax k.args rfl
+            (rufPasstB_ok hp) k.hd k.hgd
+            (by simpa [nachSig, Deklaration.asignatur] using b), r)
+      else .error "foreign call does not conform to caller contract"
+  | Γ, fn, Λ, pe, .bindOptElseBeg x c args e :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      if hp : rufPasstB u (verOf u caller) ((declOf u).asignatur k.ax) Λ = true then
+        let fn' := match (declOf u).aerg k.ax with
+          | none => fn
+          | some τ => fn.mitTy x τ
+        if hr : 0 < (declOf u).agruende k.ax then
+          match R.ende (l := l) (reasonTy ((declOf u).agruende k.ax) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).agruende k.ax)) Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: tail) =>
+            (R.ende (l := l) (ErgCtx Γ ((declOf u).aerg k.ax)) fn' Λ pe tail).bind fun (b, r) =>
+              .ok (Endblock.bindAxiomOptElse (e := (declOf u).aerg k.ax) k.ax k.args rfl
+                (rufPasstB_ok hp) k.hd k.hgd hr
+                (by simpa [nachSig, Deklaration.asignatur] using errb)
+                (by simpa [nachSig, Deklaration.asignatur] using b), r)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+        else .error "lower: let else of a foreign call without a reason channel"
+      else .error "foreign call does not conform to caller contract"
+  | _, _, _, _, .allocReqBeg .. :: _ =>
+    .error "lower: an alloc without else in an else branch has no G form (Endblock lacks arenaAllocRequired)"
   | Γ, fn, Λ, pe, .bindAxElse y c args e :: rest => match lowAxKopf u caller Γ fn Λ c args with
     | .error err => .error err
     | .ok k =>

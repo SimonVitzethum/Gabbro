@@ -35,7 +35,7 @@ theorem push_zeuge : invocation.Push gP rufOF 0 M0G M1G where
   key := rfl
   stack := rfl
 
-theorem return_zeuge : invocation.Return gP rufOF 0 M6G M7G where
+def return_zeuge : invocation.Return gP rufOF 0 M6G M7G where
   step := schritt7G
   nested := []
   event := .rueck rufIncF rufRhoF vF (M0G.weltVon 0) s1G

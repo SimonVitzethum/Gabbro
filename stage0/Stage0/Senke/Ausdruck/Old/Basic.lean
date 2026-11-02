@@ -99,6 +99,9 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, e@(.intBuiltin1 ..), _, h
   | _, e@(.intBuiltin2 ..), _, h
   | _, e@(.count ..), _, h
+  | _, e@(.prod ..), _, h
+  | _, e@(.prodGet ..), _, h
+  | _, e@(.prodSet ..), _, h
   | _, e@(.eng ..), _, h => by subst e; simp only [entryIndex] at h; cases h
 
 theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List (Res D)} :
@@ -109,10 +112,16 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
     simp only [lowEnsAt, Option.some.injEq, Prod.mk.injEq] at h
     omega
   | _, .oldS t f i _, d, c, top, h => by
-    have := valueWords_pos (D.typ t f)
-    simp only [lowEnsAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨_, _, _, _⟩ := h
-    omega
+    cases index : entryIndex i with
+    | some k =>
+      have := valueWords_pos (D.typ t f)
+      simp only [lowEnsAt, index, Option.some.injEq, Prod.mk.injEq] at h
+      omega
+    | none =>
+      simp only [lowEnsAt, index] at h
+      split at h
+      · exact entryColumnL_top h
+      · cases h
   | _, .widen _ _ e, d, c, top, h =>
     resizeIntegerL_top h (fun cc tt hc => lowEnsAt_top layout start e d cc tt hc)
   | _, .not a, d, c, top, h => by
@@ -194,7 +203,10 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
   | _, e@(.strWeit ..), d, c, top, h
   | _, e@(.wenn ..), d, c, top, h
   | _, e@(.count ..), d, c, top, h
-  | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (reserved := layout.ensReserved) _ d c top h
+  | _, e@(.prod ..), d, c, top, h
+  | _, e@(.prodGet ..), d, c, top, h
+  | _, e@(.prodSet ..), d, c, top, h
+  | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (currentOld := false) (reserved := layout.ensReserved) _ d c top h
 
 
 theorem lowEns_top (layout : FrameLayout) {Γ : Ctx} {Λ : List (Res D)}

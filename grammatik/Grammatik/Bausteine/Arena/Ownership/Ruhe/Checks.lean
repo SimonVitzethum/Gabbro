@@ -47,33 +47,42 @@ section Expr
 variable {Γ : Ctx} {Λ : List (Res D)}
 
 theorem origin_ruE (c : Context) {τ : Ty} (e : Expr D Γ Λ τ) : origin c (ruE e) = origin c e := by
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | var x => simp only [origin, expressionOrigin, ruE, varR_unten]
   | widen h0 h1 e ih => simpa only [origin, expressionOrigin, ruE] using ih
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => rfl
 
 theorem exprGlob_ruE {τ : Ty} (e : Expr D Γ Λ τ) : exprGlob (ruE e) = exprGlob e := by
   cases e <;> rfl
 
 theorem exprVarPos_ruE {τ : Ty} (e : Expr D Γ Λ τ) : exprVarPos (ruE e) = exprVarPos e := by
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | var x => simp only [exprVarPos, ruE, varR_unten]
   | widen h0 h1 e ih => simpa only [exprVarPos, ruE] using ih
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => rfl
 
 theorem exprLit_ruE {τ : Ty} (e : Expr D Γ Λ τ) : exprLit (ruE e) = exprLit e := by
   cases e <;> rfl
 
 theorem exprSucc_ruE {τ : Ty} (e : Expr D Γ Λ τ) : exprSucc (ruE e) = exprSucc e := by
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | add a b iha ihb => simp only [exprSucc, ruE, exprLit_ruE, exprVarPos_ruE]
   | widen h0 h1 e ih => simpa only [exprSucc, ruE] using ih
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => rfl
 
 theorem exprSlotRead_ruE {τ : Ty} (e : Expr D Γ Λ τ) : exprSlotRead (ruE e) = exprSlotRead e := by

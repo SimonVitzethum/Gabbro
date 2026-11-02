@@ -1,0 +1,1 @@
+refused: `clz` needs an operand whose range excludes zero, and u8 in 0 .. 255 does not

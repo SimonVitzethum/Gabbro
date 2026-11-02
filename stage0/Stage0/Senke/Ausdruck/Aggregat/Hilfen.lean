@@ -7,6 +7,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfena
 public import Lean.Meta.Tactic.Simp.RegisterCommand
+public import Grammatik.Kern.Syntax.Typen.Produkt
 public import Grammatik.Kern.Semantik.Semantik
 public import Runner.IR.Rahmen
 public import Stage0.Senke.Welt.Lay
@@ -206,6 +207,29 @@ def reachesL (L : Lay D) (t : D.Tab) (f : D.Feld t) (d : Nat)
   if n < 2 ^ 31 ∧ 16 * (n + 1) * (ca.1.length + cb.1.length + 20 + 6 * (n + 1)) < 2 ^ 31 then
     reachL L t f d n (some ca) (some cb)
   else none
+
+/-- Static word offset of a typed field. -/
+def productOffset : {fs : List Ty} → {σ : Ty} → FieldAt fs σ → Nat
+  | _, _, .head => 0
+  | _, _, .tail (τ := τ) i => valueWords τ + productOffset i
+
+/-- Static projection uses the shared forward copy, which permits overlapping
+    spans when the destination precedes the source. -/
+def prodGetL {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ) (d : Nat)
+    (a : Option (List Runner.IR.II × Nat)) : Option (List Runner.IR.II × Nat) := do
+  let ca ← a
+  pure (ca.1 ++ copyWords (valueWords τ) d (d + productOffset i),
+    max (max ca.2 (d + valueWords (.prod name fs))) (d + valueWords τ))
+
+/-- Replacement evaluates its operands in disjoint spans, then copies the new
+    field into its static slot within the product. -/
+def prodSetL {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ) (d : Nat)
+    (v e : Option (List II × Nat)) : Option (List II × Nat) := do
+  let cv ← v
+  let ce ← e
+  let src := d + valueWords (.prod name fs)
+  pure (cv.1 ++ ce.1 ++ copyWords (valueWords σ) (d + productOffset i) src,
+    max (max cv.2 ce.2) (src + valueWords σ))
 
 /-- General array selection reserves the entire array before evaluating the
     index and uses the shared physical span transport for the selected value. -/

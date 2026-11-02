@@ -1,6 +1,7 @@
 module
 public import Stage0.Frontend.Source
 public import Stage0.Frontend.Tables
+public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -80,7 +81,12 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   if !globs.all (fun g => !g.shared || g.atomic || bewacht g.name) then .error "shared static without a guard" else
   if !globs.all (fun g => g.nutzlast.all (fun n => globs.any (fun h => strEq h.name n))) then
     .error "payload names no static" else
-  let fnItems := ms.filterMap (fun
+  -- C17: Stage 0 consumes the same certified call-site substitution,
+  -- after the checked scopes and BEFORE `fnItems`/runtime elaboration.
+  match Gabbro.Grammatik.Parser.Konst.konstErsetzePipeline ms with
+  | .error e => .error e
+  | .ok msSub =>
+  let fnItems := msSub.filterMap (fun
     | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
     | _ => none)
   match uWhys ms with
@@ -158,7 +164,7 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
                                         gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
         annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
         zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
-        exportGate := ExportMetadata.check ms0 }
+        exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt ms0 msSub }
     .ok (uMitBoden u)
 
 /-- Conservative equality for every original input, including all error branches. No visibility,

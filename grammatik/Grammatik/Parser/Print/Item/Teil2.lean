@@ -23,6 +23,15 @@ def druckStarts : List (List String × List SExpr) → List Token
 
 /-- An item as tokens (the inverse of `parseItemTief`; total on every kind). -/
 def druckItem : SItemTief → List Token
+  | .taggedByT decl spec =>
+    (druckItem decl).dropLast ++ [.wort "by", nameTok spec, .zeichen ";"]
+  | .specGroupT name parameter fs =>
+    [.wort "spec", nameTok name, .zeichen "[", nameTok parameter, .zeichen "]", .zeichen "{"] ++
+      fs.flatMap (fun sig => druckFnSig { sig with art := "" } ++ [.zeichen ";"]) ++ [.zeichen "}"]
+  | .implGroupT name ty fs =>
+    [.wort "impl", nameTok name, .zeichen "["] ++ druckTyp ty ++ [.zeichen "]", .zeichen "{"] ++
+      fs.flatMap (fun (sig, body) => druckFnSig { sig with art := "" } ++ druckAnw body) ++
+      [.zeichen "}"]
   | .modT p its => [.wort "module"] ++ rohToks p ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
   | .useT p => ([.wort "use"] ++ pfadToks p ++ [.zeichen ";"])
   | .typeT fl n args ord t =>
@@ -85,6 +94,28 @@ def druckItem : SItemTief → List Token
   | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckStarts ps ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
   | .pubT it => .wort "pub" :: druckItem it
+  | .adaptT sig ps a b =>
+    ((if strEq sig.art "" then [] else [.wort sig.art]) ++ [.wort "fn", nameTok sig.name, .zeichen "("] ++
+      druckAdaptParams ps ++ [.zeichen ")"] ++
+      (match sig.res with
+        | some t => [.zeichen "->"] ++ druckTyp t
+        | none => []) ++
+      (match sig.fehler with
+        | some n => [.wort "or", nameTok n]
+        | none => []) ++
+      [.wort "from"] ++ rohToks a.quelle ++
+      (match a.gebunden with
+        | some g => [.wort "=>", nameTok g] ++ (match a.sonst with
+          | some (e, blk) => [.wort "else", .zeichen "(", nameTok e, .zeichen ")"] ++ druckAnw blk
+          | none => [])
+        | none => []) ++
+      druckKlauseln sig.klauseln ++
+      (match a.vorspiel with
+        | [] => []
+        | ss => [.zeichen "["] ++ druckAnwListe ss ++ [.zeichen "]"]) ++
+      (match b with
+        | some blk => druckAnw blk
+        | none => [.zeichen ";"]))
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++
       (match a with

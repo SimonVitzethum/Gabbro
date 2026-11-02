@@ -124,6 +124,7 @@ theorem intVonTyp_eq {τ : Ty} {lo hi : Int}
   | ref _ => simp only [intVonTyp, reduceCtorEq] at h
   | arr _ _ => simp only [intVonTyp, reduceCtorEq] at h
   | str _ => simp only [intVonTyp, reduceCtorEq] at h
+  | prod _ _ => simp only [intVonTyp, reduceCtorEq] at h
 
 /-- The range of the `k`-th variable of `Γ`, if it is int-typed: a de Bruijn
     lookup that says `none` for out-of-range indices and non-int types. -/
@@ -162,6 +163,7 @@ theorem ctxTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int)
       | ref _ => simp only [ctxTyp, reduceCtorEq] at h
       | arr _ _ => simp only [ctxTyp, reduceCtorEq] at h
       | str _ => simp only [ctxTyp, reduceCtorEq] at h
+      | prod _ _ => simp only [ctxTyp, reduceCtorEq] at h
     | succ k =>
       simp only [ctxTyp] at h
       obtain ⟨x, _⟩ := ih k h

@@ -19,6 +19,7 @@ def druckPred (e : SExpr) : List Token :=
     match k with
     | .text => druckToks e
     | .call => druckToks e
+    | .label => druckToks e
     | _ => (druckToks e).drop 1 |>.dropLast
   | _ => druckToks e
 
@@ -154,6 +155,18 @@ def druckRegBinds : List SRegBind → List Token
   | [] => []
   | [b] => druckRegBind b
   | b :: bs => druckRegBind b ++ [.zeichen ","] ++ druckRegBinds bs
+
+/-- One adapter parameter (the inverse of `parseAdaptParamEinzel`). -/
+def druckAdaptParam : SAdaptParam → List Token
+  | .alle => [.zeichen ".."]
+  | .ohne n => [.zeichen "-", nameTok n]
+  | .neu n t => [nameTok n, .zeichen ":"] ++ druckTyp t
+
+/-- Adapter parameters, comma separated (the inverse of `parseAdaptParams`). -/
+def druckAdaptParams : List SAdaptParam → List Token
+  | [] => []
+  | [p] => druckAdaptParam p
+  | p :: ps => druckAdaptParam p ++ [.zeichen ","] ++ druckAdaptParams ps
 
 
 end Gabbro.Grammatik.Parser

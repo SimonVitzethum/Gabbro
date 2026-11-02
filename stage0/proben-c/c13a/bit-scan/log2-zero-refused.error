@@ -1,0 +1,1 @@
+refused: `log2_floor` needs an operand whose range excludes zero, and u8 in 0 .. 255 does not

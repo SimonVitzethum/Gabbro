@@ -522,7 +522,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
               ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ,
-               .wartetSonst (D.sigNr n).gruende err .nil (.dann rest k)⟩⟩ ::
+               .wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k)⟩⟩ ::
               (M.faeden f).stapel,
             ⟨g, rho, s0,
              ⟨false, D.params g, Signatur.anfang D (D.signatur g),

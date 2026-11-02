@@ -119,14 +119,16 @@ def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except
 
 /-- The kind word of a statement, named in a refusal. -/
 def anwArt : SAnw → String
-  | .bind .. => "let" | .bindElse .. => "let else" | .bindLib .. => "library let" | .set .. => "assignment"
+  | .bind .. => "let" | .bindElse .. => "let else"
+  | .bindAxiomOpt .. => "let?" | .bindAxiomOptElse .. => "let? else" | .bindLib .. => "library let" | .set .. => "assignment"
   | .shift .. => "shift" | .call .. => "call" | .lcall .. => "library call" | .cond .. => "if"
   | .elsif .. => "else if" | .cases .. => "match" | .arm .. => "match arm" | .each .. => "traverse"
   | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .locks .. => "locks"
   | .watch .. => "watch" | .leave .. => "leave" | .next .. => "next" | .emit .. => "emit" | .await .. => "await"
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w
-  | .block .. => "block" | .allocVon .. => "alloc from a provider"
+  | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
+  | .callQ .. => "call query"
 
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/
@@ -339,6 +341,10 @@ def uSideEng (v : String) (lo hi : Int) : USide → USide
   | .neg a => .neg (uSideEng v lo hi a)
   | .ib1 o w a => .ib1 o w (uSideEng v lo hi a)
   | .ib2 o w a b => .ib2 o w (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .product identity reordered fields =>
+    .product identity reordered (fields.map (fun (ty, side) => (ty, uSideEng v lo hi side)))
+  | .field base name => .field (uSideEng v lo hi base) name
+  | .replace base name value => .replace (uSideEng v lo hi base) name (uSideEng v lo hi value)
   | s => s
 
 /-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the

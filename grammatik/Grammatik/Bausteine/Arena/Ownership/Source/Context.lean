@@ -70,13 +70,16 @@ theorem origin_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (c : Context) (g : Ghost) (ρ : Env D Γ) (hr : References c g ρ)
     (e : Expr D Γ Λ τ) (i : Nat) (hi : origin c e = some i) (σ0 σ : World D) :
     ∃ h, g i = some h ∧ intVon τ (eval σ0 e σ ρ) = some h.slot := by
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | var x => exact hr.2 x i hi
   | widen h0 h1 e ih =>
     obtain ⟨h, hg, hv⟩ := ih ρ hr hi
     exact ⟨h, hg, hv⟩
   | empty => trivial
   | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => simp only [origin, expressionOrigin, reduceCtorEq] at hi
 
 @[simp] theorem Context.kill_reference (c : Context) (i : Nat) {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :

@@ -72,7 +72,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
       intro m pc hp
       rw [← heq]
       exact slotC_ok hr (by omega)
-        (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay i _ ci' ti hi
+        (fun m pc hp => lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay i _ ci' ti hi
           (by have := slotC_top hr; simp only at this; omega) m pc ρ hp |>.word trivial) (fun _ h => h) hp
     have htest : Ok m pc fp Ks (frei Γ reserved) test (fun w => w = Runner.IR.bool (decide (old.n = von))) := by
       refine bin_ok hread (fun m pc hp => wordConstant_ok (by omega) hp)
@@ -100,7 +100,7 @@ theorem shift_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
           (by have := (wordConstant_top (frei Γ reserved) nach).2; omega) hp).mono
           (fun w hw => (enc_int_back ht ⟨nach, hn.1, hn.2⟩ w).mpr hw))
         (fun m pc hp => slotA_ok cellWidth ha (by omega)
-          (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp |>.word trivial) hp)
+          (fun m pc hp => lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay i _ cj tj hj (by have := slotA_top ha; omega) m pc ρ hp |>.word trivial) hp)
         (by have h := hW.lay.1 t field _ (L.bounded hkc); rw [cellWidth] at h; omega) (fun m w hm hw => by
           have hnw : Enc L (D.typ t field) ((ht ▸ (⟨nach, hn.1, hn.2⟩ : Zahl a b) : Wert D (D.typ t field))) w := hw
           have hh := weltAt_slotWord cellWidth hm hW.lay hW.dis (L.bounded hkc) hnw

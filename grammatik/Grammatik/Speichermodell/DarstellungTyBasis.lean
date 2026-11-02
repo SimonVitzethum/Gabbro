@@ -131,6 +131,7 @@ theorem encN_lt {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty)
   | ref _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | arr _ _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
   | str _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
+  | prod _ _ => simp only [tyBits] at hb; simp only [reduceCtorEq] at hb
 
 /-! ## 3. The round trip (with the `option` side condition).
 
@@ -196,6 +197,9 @@ theorem decN_encN {F : Type} {sig : F → Nat → Bool} (t : Gabbro.Grammatik.Ty
       simp only [tyLo, encN, Gabbro.Grammatik.encW]
       rfl
   | str _ =>
+      simp only [tyLo, encN, Gabbro.Grammatik.encW]
+      rfl
+  | prod _ _ =>
       simp only [tyLo, encN, Gabbro.Grammatik.encW]
       rfl
 

@@ -179,7 +179,7 @@ theorem zeuge_prog : ProgObjOk objs oP := by
   cases f with
   | aendern =>
       refine ⟨⟨⟨.there .here, rfl, ⟨2, 3, OTab.T, true, true, 0, none⟩, by simp only [objs, List.mem_cons, ObjPar.mk.injEq, reduceCtorEq, Nat.reduceEqDiff, Bool.true_eq_false,
-  and_false, and_self, List.not_mem_nil, or_self, or_false], rfl, rfl, rfl⟩, trivial⟩,
+  and_false, and_self, List.not_mem_nil, or_self, or_false, true_or], rfl, rfl, rfl⟩, trivial⟩,
         ?_, ?_⟩
       · intro op hop hrw
         simp only [objs, List.mem_cons, List.not_mem_nil, or_false] at hop

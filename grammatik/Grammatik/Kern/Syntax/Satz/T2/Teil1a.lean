@@ -152,18 +152,26 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact a.orte_darf o h
       · exact b.orte_darf o h
   | .count _ body, o, h => body.orte_darf o h
+  | .prod _ args, o, h => args.orte_darf o h
+  | .prodGet v _, o, h => v.orte_darf o h
+  | .prodSet v _ e, o, h => by
+      simp only [Expr.orte, List.mem_append] at h
+      rcases h with h | h
+      · exact v.orte_darf o h
+      · exact e.orte_darf o h
 
 theorem NutzlastExpr.orte_darf : (e : NutzlastExpr D Γ Λ c) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .empty, _, h => by simp only [NutzlastExpr.orte, List.not_mem_nil] at h
   | .val e, o, h => e.orte_darf o h
-end
+
 theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ o
-  | .nil, _, h => by simp only [orte, List.not_mem_nil] at h
+  | .nil, _, h => by simp only [Args.orte, List.not_mem_nil] at h
   | .cons e rest, o, h => by
       simp only [Args.orte, List.mem_append] at h
       rcases h with h | h
       · exact e.orte_darf o h
       · exact rest.orte_darf o h
+end
 
 theorem ErgExpr.orte_darf : (e : ErgExpr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .empty, _, h => by simp only [orte, List.not_mem_nil] at h

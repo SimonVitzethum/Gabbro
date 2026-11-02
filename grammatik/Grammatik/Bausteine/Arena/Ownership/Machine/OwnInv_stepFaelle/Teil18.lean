@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Bausteine.Arena.Ownership.Machine.Return
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil17
 
 @[expose] public section
@@ -69,7 +69,7 @@ theorem ownInv_step_dannCallIndElse {D : Deklaration} {P : Programm D}
                                   rest :=
                                     (⟨l,
                                         (⟨Γ,
-                                            (⟨nachSig D (D.sigNr n) Λ, (ρ, GRest.wartetSonst (D.sigNr n).gruende err
+                                            (⟨nachSig D (D.sigNr n) Λ, (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err
                                               .nil (GRest.dann rest k))⟩ :
                                               (Λ : List (Res D)) ×
                                                 Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
@@ -109,7 +109,7 @@ theorem ownInv_step_dannCallIndElse {D : Deklaration} {P : Programm D}
                   rest :=
                     (⟨l,
                         (⟨Γ,
-                            (⟨nachSig D (D.sigNr n) Λ, (ρ, GRest.wartetSonst (D.sigNr n).gruende err
+                            (⟨nachSig D (D.sigNr n) Λ, (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err
                               .nil (GRest.dann rest k))⟩ :
                               (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                           (Γ : Ctx) ×
@@ -142,7 +142,7 @@ theorem ownInv_step_dannCallIndElse {D : Deklaration} {P : Programm D}
   have hdrop : (resultContextB (c.afterCall (modeList J) (originList c args)) owner).drop =
       dropContextB (c.afterCall (modeList J) (originList c args)) owner := by
     cases owner <;> simp [resultContextB, dropContextB, Context.drop, Context.bind, Context.bindFresh]
-  have hrwait : OR A I (I (M.faeden u).kopf.f).output k
+  have hrwait : OR A I (I (M.faeden u).kopf.f).output k0
       (resultContextB (c.afterCall (modeList J) (originList c args)) owner)
       (.dann (.nil : Block D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) (nachSig D (D.sigNr n) Λ)
         (nachSig D (D.sigNr n) Λ)) (.schrumpf (.dann rest k))) := by

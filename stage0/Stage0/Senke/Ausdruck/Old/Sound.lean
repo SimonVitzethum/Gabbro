@@ -43,21 +43,51 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
     exact snapshot_copy pre value
       (by simp only [oldCells, EntrySnapshots.words, Nat.add_zero, Zelle.ty] at before; omega) fits
   | _, .oldS t f i _, d, code, top, lower, fits, saved, before, m, pc, pre => by
-    simp only [lowEnsAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at lower
-    obtain ⟨k, index, rfl, rfl⟩ := lower
-    have value : ValueAt L m fp start (D.typ t f) (σ0.slots t k.toNat f) := by
-      have stored := saved pre.env
-      simpa only [oldCells, index, EntrySnapshots.At, Zelle.ty, Zelle.val, and_true] using stored
-    have equal := entryIndex_ok σ0 σ ρ i index
-    simp only [intValue, Option.some.injEq] at equal
-    have nonnegative : 0 ≤ k := by
-      have bound := (eval σ0 i σ ρ).lo_le
-      change 0 ≤ _ at bound
-      omega
-    have ctx := pre.ctx
-    have run := snapshot_copy pre value
-      (by simp only [oldCells, index, EntrySnapshots.words, Nat.add_zero, Zelle.ty] at before; omega) fits
-    simpa only [eval, equal, Int.toNat_of_nonneg nonnegative] using run
+    cases index : entryIndex i with
+    | some k =>
+      simp only [lowEnsAt, index, Option.some.injEq, Prod.mk.injEq] at lower
+      obtain ⟨rfl, rfl⟩ := lower
+      have value : ValueAt L m fp start (D.typ t f) (σ0.slots t k.toNat f) := by
+        have stored := saved pre.env
+        simpa only [oldCells, index, EntrySnapshots.At, Zelle.ty, Zelle.val, and_true] using stored
+      have equal := entryIndex_ok σ0 σ ρ i index
+      simp only [intValue, Option.some.injEq] at equal
+      have nonnegative : 0 ≤ k := by
+        have bound := (eval σ0 i σ ρ).lo_le
+        change 0 ≤ _ at bound
+        omega
+      have ctx := pre.ctx
+      have run := snapshot_copy pre value
+        (by simp only [oldCells, index, EntrySnapshots.words, Nat.add_zero, Zelle.ty] at before; omega) fits
+      simpa only [eval, equal, Int.toNat_of_nonneg nonnegative] using run
+    | none =>
+      simp only [lowEnsAt, index] at lower
+      split at lower
+      · next available =>
+        have captures {m} (env : EnvAt L m fp full) :
+            EntrySnapshots.At L σ0 m fp
+              (oldCells i ++ EntrySnapshots.column t f 0 (D.count t).toNat) start := by
+          simpa only [oldCells, index, available, ite_true] using saved env
+        have bound : start + EntrySnapshots.words (oldCells i) +
+            (D.count t).toNat * valueWords (D.typ t f) ≤ frei Φ := by
+          simpa only [oldCells, index, available, ite_true, EntrySnapshots.words_append,
+            EntrySnapshots.column_words, Nat.add_assoc] using before
+        have literal := (of_decide_eq_true available).2.1
+        apply entryColumnL_ok (eval σ0 i σ ρ) (σ0.slots t (eval σ0 i σ ρ).n f)
+          bound literal ?_ ?_ lower fits m pc pre
+        · intro m env
+          let valid := eval σ0 i σ ρ
+          have range : valid.n.toNat < (D.count t).toNat := by
+            have := valid.lo_le
+            have := valid.le_hi
+            omega
+          have value := EntrySnapshots.column_at t f (D.count t).toNat 0
+            (start + EntrySnapshots.words (oldCells i)) valid.n.toNat range (captures env).right
+          simpa only [Nat.zero_add, Int.toNat_of_nonneg valid.lo_le] using value
+        · intro ci ti emitted childFits m pc childPre
+          exact lowEnsAt_ok layout start σ0 σ hWL hLay full ρ paramsOfFull context
+            i _ ci ti emitted childFits (fun env => (captures env).left) (by omega) m pc childPre
+      · cases lower
   | _, .widen lower upper e, d, code, top, emitted, fits, saved, before, m, pc, pre =>
     resizeIntegerL_ok (eval σ0 e σ ρ) (Zahl.weiter lower upper (eval σ0 e σ ρ)) rfl
       (fun cc tt hc ht hp => lowEnsAt_ok layout start σ0 σ hWL hLay full ρ paramsOfFull context
@@ -253,9 +283,12 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
   | _, e@(.strWeit ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.wenn ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.count ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.prod ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.prodGet ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.prodSet ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.eng ..), d, code, top, lower, fits, saved, before, m, pc, pre => by
     subst e
-    exact lowE_ok (reserved := layout.ensReserved) σ0 σ hWL hLay _ d code top lower fits m pc ρ
+    exact lowE_ok (same := by intro h; cases h) (currentOld := false) (reserved := layout.ensReserved) σ0 σ hWL hLay _ d code top lower fits m pc ρ
       ⟨context.trans pre.ctx, pre.small, pre.frame, pre.code, pre.far,
         paramsOfFull pre.env, pre.welt, pre.wstab⟩
 

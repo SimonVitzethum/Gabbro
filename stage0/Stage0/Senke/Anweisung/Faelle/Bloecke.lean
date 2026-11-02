@@ -73,7 +73,7 @@ theorem blockBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
   have ht := lowE_top e _ _ _ he
   simp only [execBlock]
   refine bindValue_ok hW hlo hlo0 hlo2 hpr (by omega)
-    (fun m pc hp => lowE_ok (reserved := reserved) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
+    (fun m pc hp => lowE_ok (same := by intro _; rfl) (reserved := reserved) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp)
     ?_ hp hu hk hWa
   intro m pc hp hu hk hw
   exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc _ _ hp hlo

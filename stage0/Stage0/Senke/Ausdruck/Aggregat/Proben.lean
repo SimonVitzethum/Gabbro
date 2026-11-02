@@ -99,7 +99,7 @@ theorem simulation_zeuge [Kern] :
       change 65536 ≤ x at hl
       change x < 65536 at hh
       omega
-  have h := (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+  have h := (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
     checks 4 code top lowering_zeuge (by decide +kernel) memory 0 .nil pre).word trivial
   simpa only [show eval world checks world .nil = true from semantics_zeuge] using h
 
@@ -188,7 +188,7 @@ theorem simulation_zeuge [Kern] :
     change 65536 ≤ x at hl
     change x < 65536 at hh
     omega
-  exact (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+  exact (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
     expr 10 code 12 hl (by decide) memory 0 env hp).word trivial
 end Gabbro.Stage0.Senke.AggregateProbe.Reserved
 
@@ -236,7 +236,7 @@ theorem simulation_zeuge [Kern] :
   have he : Enc layout (.sum [none, some (2 ^ 32, 2 ^ 32 + 100)])
       (eval world expr world .nil) 10753 := by constructor <;> decide +kernel
   refine ⟨hl, by decide +kernel, by decide +kernel, hp, he, ?_⟩
-  exact (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+  exact (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
     expr 4 code top hl (by decide +kernel) memory 0 .nil hp).word (wordCompatB_sound _ (by decide +kernel)) |>.mono (fun _ hn => hn.2.trans he.2.symm)
 
 end Gabbro.Stage0.Senke.AggregateProbe.Case
@@ -271,3 +271,33 @@ theorem narrow_lowered_zeuge :
     (lowE layout (.strEq empty wide) 4).isSome = true := by decide +kernel
 
 end Gabbro.Stage0.Senke.AggregateProbe.Narrow
+
+namespace Gabbro.Stage0.Senke.AggregateProbe.Product
+open Gabbro.Grammatik Runner.IR
+
+/-- Distinct heterogeneous fields exercise both the word order and the typed offset. -/
+def pair : Expr D [] [] (.prod 7 [.int 17 17, .bool]) :=
+  .prod 7 (.cons (.lit 17) (.cons .tru .nil))
+
+theorem prod_ok_zeuge :
+    lowE layout pair 4 = some ([ci 1 4 17 0, ci 1 5 1 0], 6) ∧
+    encodeWords layout (.prod 7 [.int 17 17, .bool])
+      (eval world pair world .nil) = [17, 1] := ⟨rfl, rfl⟩
+
+theorem prodGet_ok_zeuge :
+    lowE layout (.prodGet pair (.tail .head)) 4 =
+      some ([ci 1 4 17 0, ci 1 5 1 0, ci 2 4 5 0], 6) ∧
+    eval world (.prodGet pair (.tail .head)) world .nil = true := ⟨rfl, rfl⟩
+
+theorem prodSet_ok_zeuge :
+    lowE layout (.prodSet pair (.tail .head) .fls) 4 =
+      some ([ci 1 4 17 0, ci 1 5 1 0, ci 1 6 0 0, ci 2 5 6 0], 7) ∧
+    encodeWords layout (.prod 7 [.int 17 17, .bool])
+      (eval world (.prodSet pair (.tail .head) .fls) world .nil) = [17, 0] := ⟨rfl, rfl⟩
+
+/-- The constructor owns the empty marker even though its argument list emits no code. -/
+theorem prod_empty_zeuge :
+    lowE layout (Γ := []) (Λ := []) (.prod 7 .nil) 4 = some ([ci 1 4 0 0], 5) ∧
+    encodeWords layout (.prod 7 []) () = [0] := ⟨rfl, rfl⟩
+
+end Gabbro.Stage0.Senke.AggregateProbe.Product

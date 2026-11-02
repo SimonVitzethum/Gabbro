@@ -43,6 +43,8 @@ def assignsB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Blo
   | .bindCallIndElse _ _ _ _ _ err rest => assignsE err ++ assignsB rest
   | .bindAxiom _ _ _ _ _ _ _ rest => assignsB rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => assignsE err ++ assignsB rest
+  | .bindAxiomOpt (rest := rest) .. => assignsB rest
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => assignsE err ++ assignsB rest
   | .regRead _ _ rest => assignsB rest
   | .regReadElse _ _ _ sonst rest => assignsE sonst ++ assignsB rest
   | .awaits _ _ _ _ _ rest => assignsB rest
@@ -62,6 +64,8 @@ def assignsE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endbloc
   | .bindCallElse _ _ _ _ _ err rest => assignsE err ++ assignsE rest
   | .bindAxiom _ _ _ _ _ _ _ rest => assignsE rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => assignsE err ++ assignsE rest
+  | .bindAxiomOpt (rest := rest) .. => assignsE rest
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => assignsE err ++ assignsE rest
   | .regRead _ _ rest => assignsE rest
   | .regReadElse _ _ _ sonst rest => assignsE sonst ++ assignsE rest
   | .awaits _ _ _ _ _ rest => assignsE rest

@@ -5712,3 +5712,276 @@ remain additional obligations. The same file's `itemMetadata` still refuses func
 kinds other than ordinary, impl and the specially handled library form, so these
 Konst theorems alone do not admit const function declarations through Stage 0;
 declared costs and the other unbound clauses listed in section 120 remain refused.
+
+## 122. C07: fallible indirect calls (2026-11-02)
+
+`Stmt.callIndElse` and `Block.bindCallIndElse` (also the end-block binding)
+carry a function pointer, arguments, result-type equality, `RufPasst`, a positive
+reason count and a typed reason handler; the binding additionally carries the
+successful continuation. `indSonst` and `indSonstE` in the canonical semantics
+evaluate the pointer and arguments and dispatch the call's result or reason to
+the corresponding continuation.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/T4/Teil1.lean`:
+
+* **`indSonst_gutB`**: Given `GutR`, call admission, the held-resource and initial `Gut` conditions, and `GutAusgang` for both continuations, every returned world satisfies `Gut` relative to the original world.
+* **`indSonstE_gutB`**: Under the corresponding end-continuation premises, every returned world of `indSonstE` satisfies `Gut` relative to the original world.
+
+`grammatik/Grammatik/Logik/Vertraege/RahmenTreu/Teil1.lean`:
+
+* **`indSonst_treu`**: Given `TreuR`, call admission, an initially faithful world and faithful success and reason continuations, every returned world of `indSonst` is faithful to the original world.
+* **`indSonstE_treu`**: The same frame preservation holds for `indSonstE` with faithful end continuations.
+
+`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/EigenZustandD/T3/Teil1Basis.lean`:
+
+* **`callIndElse_slots_fest`**: A `callIndElse` statement executed with `keinRuf` cannot produce the world required by the slot-preservation premise, so its unchanged-slot conclusion follows vacuously.
+
+Machine integration is in
+`grammatik/Grammatik/Logik/Ruf/Maschine/RufMaschineG/Schritt/G3.lean`:
+`dannBindCallIndElse` and `dannCallIndElse` push the evaluated indirect target
+with the appropriate success/reason continuation. Their arms in
+`RufMaschineG/T4/Teil1.lean` and `BudgetMonoton/Teil1.lean` transport these
+steps through the machine invariant and budget arguments. The cost arms in
+`Logik/Fortschritt/KostenG/` include pointer and argument evaluation, the call
+and reason continuation; these are generic arms, not a source-to-IR theorem.
+
+The existing indirect-call witnesses in
+`grammatik/Grammatik/Logik/Ruf/Schnittstellen/Zeuge.lean`
+(`ptrVerfeinert_zeuge`, `hoare_callInd_zeuge`) concern refinement and ordinary
+indirect calls; they do not witness fallible indirect lowering.
+
+Stage-0 boundary: `bindElse` in
+`grammatik/Grammatik/Parser/Elab/Export/ExportControl.lean` exports
+`bindCallIndElse`, but `lowB` and `lowEnd` in
+`stage0/Stage0/Senke/Anweisung.lean` still return `none` for it.
+`lowInd` in `Stage0/Senke/Anweisung/Faelle/Hilfen.lean` requires
+`(D.sigNr n).gruende = 0`, excluding signatures with reasons.
+
+## 123. C09: checked call-boundary escrow supplement (2026-11-02)
+
+This supplements section 110. `OwnerFlow.EscrowReady` in
+`Kern/Syntax/Marken/Owner/Interface.lean` requires a valid flow, owner inputs
+disjoint from ordinary consumption, and a declared eigner for every input;
+`RufPasst.ownerReady` now requires this escrow condition.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Escrow.lean`:
+
+* **`OwnerFlow.escrow_outputs_conserve`**: Escrow readiness implies distinct output identities, an input for every output, and owner status with an in-range stage for every output.
+* **`escrow_call_outputs_present`**: Every owner output occurs as a mark resource in `nachSig`.
+* **`escrow_call_ready`**: Call admission makes every owner input available in the caller's resource list.
+* **`escrow_push_preserved`**: A canonical invocation push preserves `OwnerInvG`.
+* **`escrow_pop_preserved`**: A canonical invocation return, on either channel, preserves `OwnerInvG`.
+* **`escrow_loan_roundtrip`**: A successful borrow from a valid ledger is restored to the exact original state by the matching return.
+* **`OwnerFlow.escrowReady_map`**: A declaration embedding transports escrow readiness to the embedded signature.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Witness.lean`:
+
+* **`escrow_handoff_ready_zeuge`**: The concrete handoff signature satisfies escrow readiness.
+* **`escrow_call_admitted_zeuge`**: The concrete handoff call satisfies `RufPasst` with its supplied owner resources.
+* **`escrow_outputs_conserve_zeuge`**: The concrete handoff outputs have distinct identities and each comes from an explicit input.
+* **`escrow_move_return_exists_zeuge`**: The moved owner can be transferred from the grandchild back to the child frame with a fresh grant.
+
+Stage-0 boundary: the elaborator still exports `Marke := Empty`, so these
+model-level escrow proofs do not open the source owner-flow gate or establish
+connected owner lowering. The ghost ledger remains an identity fold while
+recorded events carry no owner payload.
+
+## 124. C01: products and nominal records (2026-11-02)
+
+`grammatik/Grammatik/Kern/Syntax/Typen/Transport.lean`:
+
+* **`ProdVal.relocate_get`**: Reading a mapped field after product transport equals transporting the original field value.
+* **`ProdVal.relocate_set`**: Product transport commutes with replacing a field under the corresponding field and value maps.
+* **`ProdVal.restrict_relocate`**: Restricting a transported product recovers the original product under the left-inverse transport premises.
+* **`ProdVal.relocate_restrict`**: Transporting a restricted product recovers the target product under the right-inverse transport premises.
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Rahmen.lean`:
+
+* **`constEvalGleichProd`**: Constant product arguments evaluate equally in worlds and environments related by the constant frame and environment relations.
+
+`grammatik/Grammatik/Bausteine/Walk/Abbildung.lean`:
+
+* **`visitT_mem_iff`**: A path/value pair belongs to the mapping walk enumeration exactly when it satisfies `WalkHit`.
+* **`visitT_pfade`**: Distinct entries of the mapping walk enumeration have distinct paths.
+* **`visitT_length_le`**: The enumeration at depth `l` has at most `N ^ (l + 1)` entries.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Records/Records.lean`:
+
+* **`uRecordOf_mem`**: Every successfully resolved record schema belongs to the declared schema list.
+
+`grammatik/Grammatik/Parser/Elab/UebersetzeAllg/RecordLaws.lean`:
+
+* **`record_lower`**: Given an open export gate, matching nominal schema and successful field-argument lowering, the expression lowerer emits the typed nominal product constructor.
+* **`record_replace_meaning`**: Record field replacement evaluates by canonical product replacement and carries the combined footprint of the base and replacement expressions.
+
+These model, export and expression-lowering laws do not alone establish connected Stage-0 record-to-IR correctness.
+
+## 125. C18: required allocation and export gates (2026-11-02)
+
+`grammatik/Grammatik/Bausteine/Arena/ArenaZucker/Teil3.lean`:
+
+* **`arenaAllocRequired_unter_schranke`**: Below the arena bound, required allocation executes the shared allocation body with the fresh index and then shrinks its environment.
+* **`arenaAllocRequired_an_schranke`**: At the arena bound, required allocation returns the logical capacity failure `.logik .kapazitaet`.
+* **`zeuge_allocRequired_leer`**: The empty-arena fixture executes the required allocation body with fresh index zero.
+* **`zeuge_allocRequired_voll_kapazitaet`**: The full-arena fixture returns the logical capacity failure.
+
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean`:
+
+* **`allocRequired_bound`**: An immutable, unannotated required allocation has a false refusal-metadata flag at every positive traversal depth.
+* **`allocRequired_zeuge`**: The concrete required allocation passes the metadata gate, while allocation with `else` and mutable required allocation are flagged.
+* **`arenaT_bound`**: A literal-bound static arena without placement or provider metadata has exactly its element type's refusal-metadata flag.
+* **`arenaT_zeuge`**: The concrete ordinary static arena passes the metadata gate, while placed and provider-bound variants are flagged.
+
+## 126. Stage 0 C08: optional-axiom value bindings (2026-11-02)
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2Opt.lean`:
+
+* **`lowB_ok_bindAxiomOpt_some`**: Successful lowering of a value-bearing optional-axiom block binding satisfies `Sim` under the oracle, layout, memory, capacity and continuation-correctness premises.
+* **`lowEnd_ok_bindAxiomOpt_some`**: Successful lowering of a value-bearing optional-axiom end-block binding satisfies `Ret` under the corresponding correctness premises.
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2OptElse.lean`:
+
+* **`lowB_ok_bindAxiomOptElse_some`**: Successful lowering of a value-bearing optional-axiom block binding with a reason handler satisfies `Sim` given correctness of both continuations and the remaining simulation premises.
+* **`lowEnd_ok_bindAxiomOptElse_some`**: Successful lowering of the corresponding end-block binding satisfies `Ret` given correctness of both end continuations and the remaining simulation premises.
+
+All four statements require payload `some`; they do not cover void payload `none`.
+
+## 127. Stage 0 C14: aligned globals on a relative common grid (2026-11-02)
+
+The C14 layout threads cumulative padded relative offsets on the `Nat.lcm 8 N`
+grid, then adds the image base; it preserves declared alignment and eight-byte
+storage alignment subject to the base-placement duty below.
+
+`stage0/Stage0/Senke/Welt/AlignUp.lean`:
+
+* **`alignUp`** (definition): Computes the smallest multiple at least the input, with zero imposing no alignment.
+* **`alignUp_zero`**: Zero alignment leaves the input unchanged.
+* **`alignUp_one`**: Unit alignment leaves the input unchanged.
+* **`le_alignUp`**: Padding never decreases the input offset.
+* **`alignUp_le_add`**: The padded offset is at most the input plus the alignment.
+* **`alignUp_dvd`**: A positive alignment divides the padded offset.
+* **`wordAlign`** (definition): Uses `Nat.lcm 8 n` as the common declared and storage alignment grid.
+* **`alignUp_word_grid`**: Padding an eight-byte-aligned relative offset on the common grid preserves divisibility by eight, including zero declared alignment.
+* **`aligned_abs`**: For positive `N` and `Nat.lcm 8 N ∣ b`, the absolute address `b + alignUp off (wordAlign N)` is divisible by both `N` and eight.
+* **`aligned_abs_zeuge`**: Concrete absolute addresses satisfy declared alignments eight, sixteen and twenty-four.
+* **`relative_grid_zeuge`**: Relative offsets for alignments eight, sixteen and twenty-four preserve the base residue modulo eight for bases zero and four.
+
+`stage0/Stage0/Senke/Welt/GlobalOffsets.lean`:
+
+* **`globStartOf_mem`**: Looking up an enumerated global produces a pair belonging to the cumulative padded starts.
+* **`globEnd_ge`**: The final padded end is at least the initial cursor.
+* **`globStarts_bounds`**: Each enumerated global starts at or after the initial cursor and ends no later than the final padded end.
+* **`globStarts_step`**: Every later global starts at or after the preceding global's padded end.
+* **`globStarts_disjoint`**: Distinct globals in the cumulative enumeration occupy disjoint complete spans.
+* **`globEnd_one`**: Unit alignment recovers the initial cursor plus the sum of global sizes.
+* **`globStarts_one`**: Unit alignment recovers the previous prefix-sum offsets at every list index.
+* **`glob_grid`**: With an eight-byte-aligned cursor and sizes, every common-grid start and the final padded end remain eight-byte aligned.
+
+`stage0/Stage0/Senke/Welt/AnordnungLayout.lean`:
+
+* **`layU_spans`**: Distinct present canonical cells occupy disjoint complete byte spans in the padded layout.
+* **`layU_dis`**: The canonical layout satisfies `LayDis`, combining span separation, address uniqueness and the common relative storage grid.
+
+**Named base-placement duty:** Absolute alignment holds under the hypothesis
+`Nat.lcm 8 N ∣ b` on base `b`, for each positive declared alignment `N`;
+the loader/runner must place the image base accordingly. This is a theorem
+premise, not an axiom. Relative grid preservation alone does not discharge it.
+A source search of `runner/` and `stage0/` found `aligned_abs` and its concrete
+witness, plus runner image placement in `Runner/Beweis/Bild.lean` and loader
+entry proofs in `Runner/Beweis/Lader.lean`, but no generic runner proof supplying
+this divisibility premise for the image's declared global alignments.
+This documentation audit ran no Lean checks or builds.
+
+## 128. Stage 0 C07: fallible indirect calls (2026-11-02)
+
+Source audit of `s0-c07-indelse`; no build was run here.
+
+`stage0/Stage0/Senke/Anweisung/Faelle/IndElse.lean`:
+
+* **`lowIndElse_ok`**: Evaluates pointer and arguments once and invokes the callee specification with both value and reason outcomes.
+* **`callIndElse_ok`**: Indirect dispatch followed by the common binder reaches the continuation selected by G.
+
+`stage0/Stage0/Senke/Anweisung/Faelle/IndElseFaelle.lean`:
+
+* **`stmtIndElse_case`**: Supplies the fallible indirect-call statement case under the shared function specification.
+* **`blockIndElse_case`**: Supplies the fallible indirect-call binding block case under the shared function specification.
+* **`endIndElse_case`**: Supplies the fallible indirect-call end-block binding case under the shared function specification.
+
+## 129. Stage 0 C08: void optional axiom bindings (2026-11-02)
+
+Source audit of `s0-c08-none`; these are the no-result counterparts of section 126.
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2OptNone.lean`:
+
+* **`lowB_ok_bindAxiomOpt_none`**: Establishes block lowering correctness for an optional axiom binding with no result value.
+* **`lowEnd_ok_bindAxiomOpt_none`**: Establishes end-block lowering correctness for an optional axiom binding with no result value.
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2OptNoneElse.lean`:
+
+* **`lowB_ok_bindAxiomOptElse_none`**: Establishes block lowering correctness for a no-result optional axiom binding with an else branch.
+* **`lowEnd_ok_bindAxiomOptElse_none`**: Establishes end-block lowering correctness for a no-result optional axiom binding with an else branch.
+
+## 130. C10: reader views and RCU ledger (2026-11-02)
+
+Source audit of `c10-rw-rcu-11`; definitions and conditional theorems below do not claim a completed source-to-IR chain.
+
+* **`SichtInv.leser`**, `grammatik/Grammatik/Speichermodell/Maschine/DRF.lean`: With no writer, the guarded carrier's lock view reaches every message even while readers hold it.
+* **`sperrSicht_aus`**, `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean`: Derives lock observation from reachability, valid lock invariants and exclusive starts, allowing reader holders alongside the actor.
+* **`SperrInvLeserG`**, `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperreMaschine/Teil3.lean`: Requires the lock invariant in memory whenever no writer holds the lock, including reader-only states.
+* **`RcuInvG`**, `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/Rcu/Teil3.lean`: Combines ledger validity with a matching thread observation for every observation resource in a current or suspended frame.
+* **`RcuInvGX`**, the same file: Applies the G ledger invariant to the underlying G component of the weak-memory machine.
+* **`rcuRueckgabe_verbraucht`**, `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/Rcu/Teil2.lean`: Reclaim removes the retired version and every grace authority for that version.
+* **`kein_warteZyklus_mit_gnade`**, `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/Rcu/Teil4.lean`: Excludes cycles in the combined lock/grace wait graph under the existing no-lock-cycle premise and grace exclusions, without a starvation or time bound.
+
+## 131. C08: optional source binding witness (2026-11-02)
+
+On `c08-export-opt`, `stage0/Stage0/Zeugen/Annahme/OptionalAxiomWitness.lean`:
+
+* **`parsed_present`**: The source containing `let r? = ax();` parses successfully.
+* **`unit_present`**: The parsed optional-binding source elaborates to a unit.
+* **`optional_constructor`**: The actual sequence lowerer constructs the canonical optional axiom block from the optional binding.
+
+These are elaboration witnesses, not substitutes for generic lowering correctness; this documentation audit ran no Lean checks.
+
+## 132. C09: escrow call/return witnesses on a shared machine fixture (2026-11-02)
+
+On `c09-witness`: one shared, non-degenerate fixture and `_zeuge` theorems for every C09 escrow call/return
+theorem with a ∀-over-syntax premise. Unbuilt code (no Lean run in this branch); the lead builds and reports back.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowFixture.lean`:
+
+* **`escrowD`**: One owner mark (`true`, three stages), one guarded table, two functions sharing the single loan
+  signature `escrowSig` (`false` calls, `true` is entered). No ordinary signature produces an owner.
+* **`escrowLoan` / `escrowReadyE`**: The nominal loan roundtrip, proved escrow-ready (valid, disjoint from ordinary
+  consumption, declared eigner).
+* **`mintedE` / `loanedE` / `movedE`**: Post-mint, borrowed and transferred owner states with validity and grant
+  lemmas (`mintedValidE`, `mintGrantE`, `loanedGrantE`, `movedGrantE`).
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowRun.lean`:
+
+* **`progE` / `M0E` / `M1E` / `M2E`**: Caller calls, callee returns at once; concrete `RufMaschineG` run with exactly
+  one push (`schrittPushE`, `ruf` rule) and one return (`schrittPopE`, `rueck` rule).
+* **`invocE` / `pushE` / `popE`**: The one canonical invocation with its `Push` and `Return` evidence.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/EscrowRunZeuge.lean`:
+
+* **`escrow_call_borrow_zeuge`**: The push borrows the loan into the callee frame escrow.
+* **`escrow_call_transfer_zeuge`**: The push transfers the loan to a fresh callee grant.
+* **`escrow_push_preserved_zeuge`**: The ghost ledger survives the push.
+* **`escrow_loan_roundtrip_zeuge`**: Borrow at the push inverts exactly at the return.
+* **`escrow_return_restore_zeuge`**: The return restores the saved identity and stage.
+* **`escrow_return_transfer_zeuge`**: The moved owner hands back at the lender.
+* **`escrow_return_advance_zeuge`**: The stage-changing move advances before the handoff back.
+* **`escrow_return_retire_zeuge`**: The terminal move retires without replenishing mint authority.
+* **`escrow_pop_preserved_zeuge`**: The ghost ledger survives the return.
+* **`escrow_outputs_conserve_full_zeuge`**: Full conservation (no duplication, input provenance, stage bounds).
+* **`escrow_call_ready_run_zeuge`**, **`escrow_call_outputs_present_run_zeuge`**: Input availability and return
+  inventory on the admitted call.
+* **`push_borrow_valid_run_zeuge`**, **`push_transfer_valid_run_zeuge`**, **`pop_restore_valid_run_zeuge`**,
+  **`push_borrow_pop_restore_run_zeuge`**: The ledger engines behind the same edges.
+* **`escrowReady_valid/disjoint/resolved/congr_run_zeuge`**: Projections of the checked escrow condition.
+* **`ownerInvG_erreichbar_zeuge`**: Every machine the run reaches keeps the ghost ledger valid.
+
+Finding (not a weakening): `OwnerFlow.escrowReady_map` has no witness here. It quantifies over an
+`Einbettung D D'`; no identity embedding exists in the tree, and building one is a separate fixture. Transport
+across embeddings is not a call/return edge.

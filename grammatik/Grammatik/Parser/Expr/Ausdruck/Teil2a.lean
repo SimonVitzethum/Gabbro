@@ -267,13 +267,12 @@ def parseArg (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 =>
-    let toks' := match toks with
+    match toks with
       | t :: .zeichen ":" :: rest =>
         match nameText t with
-        | some _ => rest
-        | none => toks
-      | _ => toks
-    parseOr f toks'
+        | some label => (parseOr f rest).map (fun (value, remaining) => (.ext .label [label] [value], remaining))
+        | none => parseOr f toks
+      | _ => parseOr f toks
 /-- `q x in D : pred` behind the `in` (for `forall`, `exists` and `count`): the layout of `ext`. -/
 def parseQuant (f : Nat) (k : XKind) (x : String) (toks : List Token) :
     Except String (SExpr × List Token) :=

@@ -105,10 +105,12 @@ def alsFunktion : SItemTief → Option (FnSig × SAnw)
   | .fnT s b => some (s, b)
   | _ => none
 
-/-- Statement tag (all 31 arms of `SAnw`; `Anweisung.lean`). -/
+/-- Statement tag (all 33 arms of `SAnw`; `Anweisung.lean`). -/
 def artAnw : SAnw → String
   | .bind .. => "let"
   | .bindElse .. => "let-else"
+  | .bindAxiomOpt .. => "let?"
+  | .bindAxiomOptElse .. => "let?-else"
   | .bindLib .. => "let-lib"
   | .set .. => "assign"
   | .shift .. => "transition"
@@ -141,6 +143,8 @@ def artAnw : SAnw → String
   | .other .. => "else"
   | .block .. => "block"
   | .allocVon .. => "alloc-from"
+  | .bindQ .. => "let-query"
+  | .callQ .. => "call-query"
 
 /-- Ender tag (all 3 arms of `SEnde`). -/
 def artEnde : SEnde → String
@@ -148,7 +152,7 @@ def artEnde : SEnde → String
   | .leave _ => "leave-end"
   | .next _ => "next-end"
 
-/-- Constructor tag of a surface item (all 32 arms of `SItemTief`). -/
+/-- Constructor tag of a surface item (all 33 arms of `SItemTief`). -/
 def artItem : SItemTief → String
   | .modT .. => "modT"
   | .useT .. => "useT"
@@ -185,6 +189,10 @@ def artItem : SItemTief → String
   | .profT .. => "profT"
   | .gateT .. => "gateT"
   | .pubT .. => "pubT"
+  | .taggedByT .. => "taggedByT"
+  | .specGroupT .. => "specGroupT"
+  | .implGroupT .. => "implGroupT"
+  | .adaptT .. => "adaptT"
 
 /-- Parse each chunk; collect per-chunk outcomes (no short-circuit). -/
 def parseStuecke (toks : List Token) :

@@ -155,7 +155,7 @@ theorem lowInd_ok_zeuge [Kern] :
         (⟨21, by decide, by decide⟩ : Zahl 0 100) ∧
       WeltAt m' callLayout world := by
   refine ⟨call_spec, rfl, call_pre.left, call_umf, call_win, call_world, ?_⟩
-  have h := lowInd_ok (reserved := 0) call_spec (A := addresses)
+  have h := lowInd_ok (same := rfl) (reserved := 0) call_spec (A := addresses)
     addresses_bound
     pointer .nil world world (c := indirect) (top := 9) (by rfl) (by decide)
     call_pre.left call_umf call_win call_world

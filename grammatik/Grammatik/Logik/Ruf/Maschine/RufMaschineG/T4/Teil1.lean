@@ -297,7 +297,8 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
         exact hkeys
     | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
         hs0 g hg hv rho hrho neu hneu =>
-        have hkeys := rufPushG_passt (M.faeden f)
+        simp only [rufUpdateG_self]
+        exact rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
            ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
              (.dann rest k)⟩⟩
@@ -305,30 +306,6 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
            ⟨false, D.params g, Signatur.anfang D (D.signatur g),
             rho, .ende (P.rumpf g)⟩⟩
           rfl g rho s0 rfl s0.spur h
-        have heq : (⟨M.speicher,
-            rufUpdateG M.faeden f
-              ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-                 ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
-                   (.dann rest k)⟩⟩ ::
-                 (M.faeden f).stapel,
-               ⟨g, rho, s0,
-                ⟨false, D.params g, Signatur.anfang D (D.signatur g),
-                 rho, .ende (P.rumpf g)⟩⟩,
-               s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
-            M.lauf ++ rufEigenG f neu,
-            M.start⟩ : RufMaschineG D).faeden f =
-            (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-                ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
-                  (.dann rest k)⟩⟩ ::
-                (M.faeden f).stapel,
-             ⟨g, rho, s0,
-              ⟨false, D.params g, Signatur.anfang D (D.signatur g),
-               rho, .ende (P.rumpf g)⟩⟩,
-             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
-              RufFadenG D) := by
-          simp only [rufUpdateG_self]
-        rw [heq]
-        exact hkeys
     | rueckBind caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ
         hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
         have hhead : RufSchluesselG (M.faeden f).kopf =

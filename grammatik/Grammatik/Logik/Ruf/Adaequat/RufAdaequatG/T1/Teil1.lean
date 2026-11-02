@@ -227,7 +227,7 @@ inductive BlattG {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List 
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       BlattG (l := l) (.assignSlot t f i e hw hL)
-  | assignThru (n : Nat) (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab)
+  | assignThru {read : Bool} (n : Nat) (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab)
       (ht : D.capTab space n = some t) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       BlattG (l := l) (.assignThru p t ht f i e hw hL)

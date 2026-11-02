@@ -7,6 +7,7 @@ public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 public import Stage0.Bindung.Proben
 
 @[expose] public section
@@ -181,6 +182,10 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.ControlProbe.endNarrow_case_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.narrow_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.ControlProbe.blockAxiomElse_case_zeuge
+#print axioms Gabbro.Stage0.Senke.stmtAxiomElse_case
+#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_case_zeuge
+#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_paths_zeuge
+#print axioms Gabbro.Stage0.Senke.AxiomElseProbe.stmtAxiomElse_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.quant_restore
 #print axioms Gabbro.Stage0.Senke.quantBind_ok
 #print axioms Gabbro.Stage0.Senke.quantC_ok

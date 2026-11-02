@@ -30,7 +30,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .ende rest, _, rufUpdateG_self _ _ _, RestG.ende rest hr ho.2, ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_blatt O passes s rest _ _ _ ρ' hstep)
-    | ruf _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | ruf =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | rueck caller rst hpop Γ2 Λ2 e hperm ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu =>
       rw [hR] at hhead
       cases hhead
@@ -177,7 +178,10 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hr ho.2 (RestG.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_narrowOk O passes e lo' hi' sonst rest k _ _ h)
-    | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | endeBindAxiom =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | endeBindAxiomOpt =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
   | g2 hs =>
     cases hs with
     | dannNarrowElse l2 Γ2 Λ2 Λ2' Λ2'' lo hi lo' hi' e sonst rest k ρ2 hhead σ₁ hs₁ h neu hneu =>
@@ -246,28 +250,52 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, k, _, rufUpdateG_self _ _ _, hcov.schrumpf_inv, ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq rfl
-    | dannTrav _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | travNext _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | travFort _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | travDone _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannRetry _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | wiederUeber _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | wiederWeiter _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | wiederSchritt _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | wiederFort _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | ewigWeiter _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | ewigFort _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | dannTrav =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | travNext =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | travFort =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | travDone =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannRetry =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | wiederUeber =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | wiederWeiter =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | wiederSchritt =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | wiederFort =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannForever =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | ewigWeiter =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | ewigFort =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | rufDann =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
   | g3 hs =>
     cases hs with
-    | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannBindCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | dannAxiomCallElseOk =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannAxiomCallElseGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannCallInd =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | rufCallInd =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindCall =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindCallInd =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindCallElse =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindCallIndElse =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannCallIndElse =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | rueckBind caller rst hpop l2 Γ2 Λ2 Λ2' τ restb k ρc hcaller Γc Λc e hperm ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
       rw [hR] at hhead
       cases hhead
@@ -275,22 +303,36 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueck O passes e hperm _ _)⟩
       rw [faeden_upd, hrho]
       rfl
-    | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannLeaveWieder _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannNextWieder _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannLeaveEwig _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | dannLeaveTrav =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannNextTrav =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannLeaveWieder =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannNextWieder =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannLeaveEwig =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
   | g4 hs =>
     cases hs with
-    | dannNextEwig _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelDannLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelDannNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelSchrumpfLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelSchrumpfNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelFreiLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelFreiNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelAbbruchLeave _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | peelAbbruchNext _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | dannNextEwig =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelDannLeave =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelDannNext =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelSchrumpfLeave =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelSchrumpfNext =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelFreiLeave =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelFreiNext =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelAbbruchLeave =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | peelAbbruchNext =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | dannRet l2 Γ2 Λ2 Λ2'' e hperm rest k ρ2 hhead caller rst hpop hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv neu hneu =>
       rw [hR] at hhead
       cases hhead
@@ -321,14 +363,20 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inr ⟨_, _, ?_, REnde.gleich_of_eq (sem_rueckCons O passes e hperm restk _ _)⟩
       rw [faeden_upd, hrho]
       rfl
-    | rueckGrund _ _ _ hhead => widerlege hhead
+    | rueckGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
   | g5 hs =>
     cases hs with
-    | dannRegLies _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannRegLiesElseWahr _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannRegLiesElseFalsch _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannAwaits _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannExchange l2 Γ2 Λ2 Λ2' g neuE hw hL rest k ρ2 hhead σ₁ hs₁ σ₂ hs₂ neu hneu =>
+    | dannRegLies =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannRegLiesElseWahr =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannRegLiesElseFalsch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannAwaits =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannExchange =>
+      rename_i l2 Γ2 Λ2 Λ2' g neuE hL ρ2 σ₁ σ₂ hs₂ neu hw rest k hhead hs₁ hneu hΛ
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -338,7 +386,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.exchange_inv ho (RestG.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_exchange O passes g neuE hw hL rest k (M.weltVon f) ρ)
-    | dannGleit l2 Γ2 Λ2 Λ2' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    | dannGleit =>
+      rename_i l2 Γ2 Λ2 Λ2' l₁ h₁ l₂ h₂ op a b lo hi ρ2 σ₁ v hv neu rest k hhead hs₁ hneu hΛ
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -347,7 +396,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.gleit_inv ho (RestG.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_gleit O passes op a b lo hi rest k _ _ v hv)
-    | dannGleitLit l2 Γ2 Λ2 Λ2' q lo hi rest k ρ2 hhead v hv =>
+    | dannGleitLit =>
+      rename_i l2 Γ2 Λ2 Λ2' q lo hi ρ2 v hv rest k hhead
       rw [hR] at hhead
       cases hhead
       obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
@@ -355,7 +405,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.gleitLit_inv ho (RestG.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_gleitLit O passes q lo hi rest k _ _ v hv)
-    | dannGleitVon l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    | dannGleitVon =>
+      rename_i l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi ρ2 σ₁ v hv neu rest k hhead hs₁ hneu hΛ
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -364,7 +415,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hb.gleitVon_inv ho (RestG.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_gleitVon O passes e lo hi rest k _ _ v hv)
-    | dannGleitNarrowOk l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ v hv neu hneu =>
+    | dannGleitNarrowOk =>
+      rename_i l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi ρ2 σ₁ v hv neu sonst rest k hhead hs₁ hneu hΛ
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -374,7 +426,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestG.dann _ _ hr ho.2 (RestG.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_gleitNarrowOk O passes e lo hi sonst rest k _ _ v hv)
-    | dannGleitNarrowElse l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi sonst rest k ρ2 hhead σ₁ hs₁ hn neu hneu =>
+    | dannGleitNarrowElse =>
+      rename_i l2 Γ2 Λ2 Λ2' l₁ h₁ e lo hi ρ2 σ₁ hn neu sonst rest k hhead hs₁ hneu hΛ
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -386,15 +439,32 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
           (RestG.abbruch _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_gleitNarrowElse O passes e lo hi sonst rest k _ _ hn)
-    | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | rueckConsGrund _ _ _ _ hhead => widerlege hhead
-    | dannRetGrund _ _ _ _ _ hhead => widerlege hhead
+    | dannBindAxiom =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindAxiomElseOk =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindAxiomElseGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindAxiomOpt =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindAxiomOptElseOk =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannBindAxiomOptElseGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | rueckConsGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannRetGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
   | g6 hs =>
     cases hs with
-    | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
-    | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | endeBindAxiomElseOk =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | endeBindAxiomElseGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | endeBindAxiomOptElseOk =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | endeBindAxiomOptElseGrund =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
 
 
 end Gabbro.Grammatik

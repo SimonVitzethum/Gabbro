@@ -169,6 +169,7 @@ def GRest.mR (A : Merkmal D) {V : Vertrag D} :
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.mR A
   | _, _, _, .leer => True
+  | _, _, _, .rueckBereit _ k => k.mR A
 
 /-- The callee `g` is admitted: directly, or through its signature. -/
 def RufZiel (A : Merkmal D) (g : D.Fn) : Prop :=
@@ -186,6 +187,8 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .cons s rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bind e rest => by
@@ -209,6 +212,12 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .narrowRequired _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]

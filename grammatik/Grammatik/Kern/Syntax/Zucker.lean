@@ -120,11 +120,19 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
   | .intBuiltin1 op a => .intBuiltin1 op (a.ren r)
   | .intBuiltin2 op a b => .intBuiltin2 op (a.ren r) (b.ren r)
   | .count n body => .count n (body.ren (Var.hoch r))
+  | .prod n args => .prod n (args.ren r)
+  | .prodGet v i => .prodGet (v.ren r) i
+  | .prodSet v i e => .prodSet (v.ren r) i (e.ren r)
 
 def NutzlastExpr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
     NutzlastExpr D Γ Λ c → NutzlastExpr D Γ' Λ c
   | .empty => .empty
   | .val e => .val (e.ren r)
+
+def Args.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
+    Args D Γ Λ τs → Args D Γ' Λ τs
+  | .nil => .nil
+  | .cons e rest => .cons (e.ren r) (rest.ren r)
 end
 
 /-- Ein Ausdruck unter einem eingeschobenen Binder: dieselben Orte, dasselbe `Λ`. -/
@@ -203,6 +211,11 @@ def undGleich (x : Var Γ (.int 0 hi)) (e : Expr D Γ Λ (.int lo' hi')) (h0' : 
 def oderGleich (w : Nat) (x : Var Γ (.int 0 (2 ^ w - 1))) (e : Expr D Γ Λ (.int lo' hi'))
     (h0' : 0 ≤ lo') (hw : hi' < 2 ^ w) : Stmt D V l Γ Λ Λ :=
   .assignVar x (.bor w (Int.le_refl 0) h0' (by omega) hw (.var x) e)
+/-- `p.f = e` on a by-value product local (C01): `p = prodSet(p, f, e)`. There is no field-store statement:
+    the read-modify-write of the whole local is the existing `assignVar`. -/
+def assignField {r : Nat} {fs : List Ty} {σ : Ty} (x : Var Γ (.prod r fs)) (i : FieldAt fs σ)
+    (e : Expr D Γ Λ σ) : Stmt D V l Γ Λ Λ :=
+  .assignVar x (.prodSet (.var x) i e)
 /-- `observes R { … }` -- eine Sperre ohne Ausschluss ist eine Sperre mit Rang. -/
 def observes (R : D.Lock) (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang R)
     (body : Block D V l Γ (.held R :: Λ) (.held R :: Λ)) : Stmt D V l Γ Λ Λ :=

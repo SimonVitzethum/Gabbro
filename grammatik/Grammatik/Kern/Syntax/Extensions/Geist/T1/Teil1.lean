@@ -447,10 +447,10 @@ theorem g001Stmt_korrekt_callInd {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
 
 set_option linter.unusedSectionVars false in
-theorem g001Stmt_korrekt_callIndElse {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+theorem g001Stmt_korrekt_callIndElse {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
     (p)
     (args)
-    (he)
+    (he : (D.sigNr n).erg = some τ)
     (hp)
     (hr)
     (err)

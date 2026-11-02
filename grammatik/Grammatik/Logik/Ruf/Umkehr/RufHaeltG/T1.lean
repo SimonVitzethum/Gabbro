@@ -58,6 +58,8 @@ def GRest.kette {V : Vertrag D} (A : List D.Lock) :
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L ∈ A, Res.held L ∈ Λ) ∧ (∀ L, Res.held L ∈ Λk → Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .leer => ∀ L ∈ A, Res.held L ∈ Λ
+  | _, _, _, @GRest.rueckBereit _ _ _ _ Λk sc k =>
+      (∀ L ∈ A, Res.held L ∈ sc.map Res.held ++ Λk) ∧ k.kette A
 
 /-- The top node of a chain names `A`. -/
 theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
@@ -77,6 +79,7 @@ theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
   | _, _, _, .wartetSonst _ _ _ _, h => h.1
   | _, _, _, .abbruch _, h => h.1
   | _, _, _, .leer, h => h
+  | _, _, _, .rueckBereit _ _, h => h.1
 
 /-- Naming `A` carries along a block (`Block.held_iff`). -/
 theorem nennt_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -114,8 +117,8 @@ theorem heldIn_nachSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Re
 /-- The chain behind a generalized foreign binder («C08»): void keeps the
     residue's chain, a value pushes a shrink. -/
 theorem GRest.kette_weiterOpt {V : Vertrag D} {A : List D.Lock} {l : Bool} {Γ : Ctx}
-    {Λ' : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ') (hk : k.kette A)
-    (hΛ : ∀ L ∈ A, Res.held L ∈ Λ') : (GRest.weiterOpt e k).kette A := by
+    {Λ Λ' : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ') (hk : k.kette A)
+    (hΛ : ∀ L ∈ A, Res.held L ∈ Λ') : (GRest.weiterOpt (Λ := Λ) e k).kette A := by
   cases e with
   | none => exact hk
   | some _ => exact ⟨hΛ, hk⟩
@@ -148,6 +151,7 @@ def GRest.freis {V : Vertrag D} :
   | _, _, _, .wartetSonst _ _ _ k => k.freis
   | _, _, _, .abbruch k => k.freis
   | _, _, _, .leer => []
+  | _, _, _, .rueckBereit _ k => k.freis
 
 /-- The chain behind an `else` branch run in block position: the branch
     keeps the held locks of its start, and so does the block its
@@ -413,6 +417,11 @@ macro "fr_pop" : tactic => `(tactic|
      | (rcases hcaller with hcaller | ⟨_, _, hcaller⟩ <;>
           (rw [freis_von hcaller]; simp_all [RufRahmenG.freis, GRest.freis]))
      | (rw [freis_von hcaller]; simp_all [RufRahmenG.freis, GRest.freis])))
+
+/-- An optional-result continuation releases what its residue releases («C08»). -/
+@[simp] theorem GRest.freis_weiterOpt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') : (GRest.weiterOpt (Λ := Λ) e k).freis = k.freis := by
+  cases e <;> rfl
 
 set_option hygiene false in
 /-- The release markers of a head-local step: among the old ones. -/

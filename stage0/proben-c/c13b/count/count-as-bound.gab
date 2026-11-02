@@ -1,0 +1,16 @@
+// A count as an index bound: the count is narrowed into range and selects an array element.
+module c13b_count_as_bound {
+const VALS : [u8; 3] = [10, 20, 30];
+table T count 3 { slot { flag : bool, } }
+impl fn main() -> u32 in 0 .. 100
+    effects { reads T.slots, writes T.slots }
+{
+    T.slots[0].flag = true;
+    T.slots[1].flag = true;
+    T.slots[2].flag = false;
+    let n = count k in slots of T : T.slots[k].flag;
+    narrow n to 0 .. 2 else { return 99; }
+    let a : [u8; 3] = VALS;
+    return a[n];
+}
+}

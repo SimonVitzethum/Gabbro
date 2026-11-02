@@ -44,6 +44,9 @@ set_option maxRecDepth 100000
 def beqUEnsList : List UEns → List UEns → Bool
   | [], [] => true
   | x :: xs, y :: ys => beqUEns x y && beqUEnsList xs ys
+  | .bindOptBeg x c a, .bindOptBeg y d b => strEq x y && strEq c d && beqUArgList a b
+  | .bindOptElseBeg x c a e, .bindOptElseBeg y d b f =>
+    strEq x y && strEq c d && beqUArgList a b && strEq e f
   | _, _ => false
 
 def beqUArg : UArg → UArg → Bool
@@ -100,6 +103,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .bindCallInd a p f xs, .bindCallInd b q g ys => strEq a b && strEq p q && strEq f g && beqUArgList xs ys
   | .bindCallIndElse a p f xs e, .bindCallIndElse b q g ys h =>
     strEq a b && strEq p q && strEq f g && beqUArgList xs ys && strEq e h
+  | .allocReqBeg a t s, .allocReqBeg b u v => strEq a b && strEq t u && beqUSide s v
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
@@ -192,7 +196,7 @@ def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabs b.tabs &&
     beqULockList a.locks b.locks && beqUFnList a.fns b.fns &&
     beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs &&
-    decide (a.regs = b.regs)
+    decide (a.regs = b.regs) && decide (a.records = b.records)
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool

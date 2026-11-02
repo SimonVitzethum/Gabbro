@@ -1,7 +1,7 @@
 /- Complete entry snapshots below the immutable postcondition parameter environment. -/
 module
 public import Stage0.Senke.Ausdruck.Satz
-public import Stage0.Senke.Ausdruck.Old.Environment
+public import Stage0.Senke.Ausdruck.Old.ColumnCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
 @[expose] public section
 
@@ -26,7 +26,8 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, .oldG g _ => [.glob g]
   | _, .oldS t f i _ => match entryIndex i with
     | some k => [.elem t f k.toNat]
-    | none => []
+    | none => if EntrySnapshots.columnFits t f then
+        oldCells i ++ EntrySnapshots.column t f 0 (D.count t).toNat else []
   | _, .widen _ _ e | _, .not e | _, .neg e => oldCells e
   | _, .add a b | _, .sub a b | _, .mul a b | _, .eq a b | _, .lt a b | _, .le a b
   | _, .and a b | _, .or a b => oldCells a ++ oldCells b
@@ -35,14 +36,18 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, _ => []
 
 /-- Postcondition lowering uses the same arithmetic instructions as ordinary expressions.
-    Ordinary expression lowering continues to refuse entry reads outside this context. -/
+    Ordinary expressions read old from their current world; the fallback below disables
+    those reads so an unsupported ensures subtree cannot silently read the exit world. -/
 def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List (Res D)} :
     {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
   | _, .oldG g _, d =>
       some (copyWords (valueWords (D.gtyp g)) d start, d + valueWords (D.gtyp g))
-  | _, .oldS t f i _, d => do
-      let _ ← entryIndex i
-      pure (copyWords (valueWords (D.typ t f)) d start, d + valueWords (D.typ t f))
+  | _, .oldS t f i _, d => match entryIndex i with
+      | some _ => some (copyWords (valueWords (D.typ t f)) d start, d + valueWords (D.typ t f))
+      | none => if EntrySnapshots.columnFits t f then
+          entryColumnL (D.typ t f) (start + EntrySnapshots.words (oldCells i)) d
+            (lowEnsAt L layout start i (d + valueWords (D.typ t f)))
+        else none
   | _, .widen (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') _ _ e, d =>
       resizeIntegerL lo hi lo' hi' d (lowEnsAt L layout start e d)
   | _, .not a, d => do
@@ -84,7 +89,7 @@ def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : L
       (lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)
   -- Count uses the ordinary binder path. Entry reads inside a nonempty count
   -- remain refused there until binder-dependent snapshot capture is proved.
-  | _, e, d => lowE (reserved := layout.ensReserved) L e d
+  | _, e, d => lowE (currentOld := false) (reserved := layout.ensReserved) L e d
 
 /-- Function postconditions read the checked snapshot prefix described by this layout. -/
 def lowEns (L : Lay D) (layout : FrameLayout) {Γ : Ctx} {Λ : List (Res D)}

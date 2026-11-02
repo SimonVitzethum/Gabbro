@@ -47,11 +47,14 @@ theorem Context.reference_member {c : Context} {Γ : Ctx} {τ : Ty}
 
 theorem origin_member {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (c : Context)
     (e : Expr D Γ Λ τ) (i : Nat) (hi : origin c e = some i) : some i ∈ c.references := by
-  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True)
+    (motive_3 := fun _ _ _ _ => True) with
   | var x => exact Context.reference_member x i hi
   | widen _ _ _ ih => exact ih hi
   | empty => trivial
   | val => trivial
+  | nil => trivial
+  | cons => trivial
   | _ => simp only [origin, expressionOrigin, reduceCtorEq] at hi
 
 theorem Context.bind_bounded {c : Context} (hc : c.bounded) (ref : Option Nat)

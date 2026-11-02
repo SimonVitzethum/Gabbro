@@ -115,7 +115,7 @@ theorem zeuge_lauf_getrennt :
 /-- Slice 2 cannot express it: `aendern`'s two pointer parameters name ONE carrier. -/
 theorem zeuge_nicht_paramGetrennt : ¬ ParamGetrennt oD fA :=
   leihe_nicht_getrennt (D := oD) (ps := oD.params fA) ⟨0, by decide⟩ ⟨2, by decide⟩
-    (by decide) (n := 0) (rw := true) (rw' := false) rfl rfl rfl (t := OTab.T) rfl
+    (by decide) (n := 0) rfl rfl rfl (t := OTab.T) rfl
 
 /-- **Strictly finer than slice 2**: object separation where carrier separation fails. -/
 theorem zeuge_obj_feiner : ObjGetrennt (objs fA) ρGetrennt ∧ ¬ ParamGetrennt oD fA :=

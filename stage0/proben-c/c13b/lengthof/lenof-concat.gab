@@ -1,0 +1,9 @@
+// Lenof after concatenation: two plus three bytes answer five.
+module c13b_lenof_concat {
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let a: string max 5 = "ab";
+    let b: string max 3 = "cde";
+    let c: string max 8 = a + b;
+    return lenof(c);
+}
+}

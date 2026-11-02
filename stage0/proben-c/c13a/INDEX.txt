@@ -1,0 +1,30 @@
+add-wrap-u8: wrapping add on u8, 250 +% 10, expected 4
+sub-wrap-u8: wrapping subtract on u8, 3 -% 5, expected 254
+mul-wrap-u8: wrapping multiply on u8, 200 *% 2, expected 144
+mul-wrap-u16: wrapping multiply on u16, 60000 *% 3 is 48928, expected 17
+shl-wrap-top-u8: wrapping shift by W-1, 1 <<% 7, expected 128
+shl-wrap-zero-u8: wrapping shift by zero, 5 <<% 0, expected 5
+sat-add-clamp-u8: saturating add on u8, 250 +| 10, expected 255
+sat-add-signed-high: saturating add on i8, 120 +| 10 clamps to 127, expected 41
+sat-add-signed-low: saturating add on i8, -120 +| -10 clamps to -128, expected 42
+clz-one-u8: count leading zeros on u8 at 1, expected 7
+clz-u16-256: count leading zeros on u16 at 256, expected 7
+ctz-top-u8: count trailing zeros on u8 at 128, expected 7
+ctz-u16-12: count trailing zeros on u16 at 12, expected 2
+log2-u8-255: floor binary logarithm on u8 at 255, expected 7
+log2-u16-1000: floor binary logarithm on u16 at 1000, expected 9
+popcount-zero-u8: population count on u8 at 0, expected 0
+popcount-all-u8: population count on u8 at 255, expected 8
+popcount-u16-alt: population count on u16 at 43690 (0xAAAA), expected 8
+rotl-u8: rotate left on u8, rotl(129, 1) is 3, expected 3
+rotl-rotr-roundtrip-u8: rotate round trip on u8, rotr(rotl(57, 3), 3) is 57, expected 77
+rotl-u16: rotate left on u16, rotl(4660, 4) is 9025, expected 78
+bswap16: byte swap on u16, bswap(4660) is 13330, expected 61
+bswap16-involution: byte swap on u16 applied twice restores 43981, expected 62
+wrap-add-u12: wrapping add on the partial limb width u12, 4095 +% 1 is 0, expected 13
+mixed-width-add-refused: wrapping add over u8 and u16, refused for mixed widths
+clz-zero-refused: clz over a range containing zero, refused since zero is excluded
+log2-zero-refused: log2_floor over a range containing zero, refused since zero is excluded
+shift-amount-width-refused: wrapping shift by an amount of full width, refused since the amount must stay below the width
+sat-mixed-range-refused: saturating add over 0 .. 10 and 20 .. 30, refused for mixed ranges
+bswap-u8-refused: byte swap on u8, refused since bswap needs u16, u32 or u64

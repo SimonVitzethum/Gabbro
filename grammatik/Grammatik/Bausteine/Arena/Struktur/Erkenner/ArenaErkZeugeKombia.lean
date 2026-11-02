@@ -68,7 +68,7 @@ theorem fgdarf2 (g : FD2.Glob) : gdarf FD2 g ([] : List (Res FD2)) := by
 
 /-- The payload `7`, at the payload field's declared type. -/
 def sieben2 : Expr FD2 [] [] (FD2.typ FA2.tab FA2.feld) :=
-  Expr.umTyp (show Ty.int 0 255 = FD2.typ FA2.tab FA2.feld from by decide)
+  Expr.umTyp (show Ty.int 0 255 = FD2.typ FA2.tab FA2.feld from by decide +kernel)
     (Expr.widen (by decide) (by decide) (Expr.lit 7))
 
 def oF2 : Orakel FD2 where

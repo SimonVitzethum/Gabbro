@@ -73,7 +73,7 @@ theorem ctxBoolTyp_var (Γ : Ctx) (k : Nat) (h : ctxBoolTyp Γ k = some ()) :
       | fl => simp only [ctxBoolTyp, reduceCtorEq] at h
       | fnptr => simp only [ctxBoolTyp, reduceCtorEq] at h
       | ptr => simp only [ctxBoolTyp, reduceCtorEq] at h
-      | ref | arr | str => simp only [ctxBoolTyp, reduceCtorEq] at h
+      | ref | arr | str | prod => simp only [ctxBoolTyp, reduceCtorEq] at h
     | succ k =>
       simp only [ctxBoolTyp] at h
       obtain ⟨x, _⟩ := ih k h

@@ -101,7 +101,7 @@ theorem stmt_treu :
   | .callIndElse p args he hp hr err, σ, ρ, σ', h => by
       simp only [execStmt] at h
       exact indSonst_treu R hR p args he hp hr σ _ ρ (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte))
-        (fun s1 _ => .ok s1 ρ) (fun s1 r => (execEnd err s1 (.cons r ρ)).schrumpf.zuAusgang)
+        _ _
         (fun s1 _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Treu.refl _ _ _) (fun s1 r => (end_treu err s1 _).schrumpf.zuAusgang) σ' h
   | .locks L hr body, σ, ρ, σ', h =>
       (TreuAusgang.gibt L (block_treu body (σ.nimmt L) ρ)) σ' h
@@ -223,7 +223,7 @@ theorem block_treu :
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       exact indSonst_treu R hR p args he hp hr σ _ ρ (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte))
-        (fun s1 v => (execBlock rest s1 (.cons v ρ)).schrumpf) (fun s1 r => (execEnd err s1 (.cons r ρ)).schrumpf.zuAusgang)
+        _ _
         (fun s1 v => (block_treu rest s1 _).schrumpf) (fun s1 r => (end_treu err s1 _).schrumpf.zuAusgang) σ' h
   | .bindCallElse f args he hp _ err rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
@@ -561,7 +561,7 @@ theorem end_treu :
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       exact indSonstE_treu R hR p args he hp hr σ _ ρ (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte))
-        (fun s1 v => (execEnd rest s1 (.cons v ρ)).schrumpf) (fun s1 r => (execEnd err s1 (.cons r ρ)).schrumpf)
+        _ _
         (fun s1 v => (end_treu rest s1 _).schrumpf) (fun s1 r => (end_treu err s1 _).schrumpf) σ' h
   | .narrow e lo' hi' sonst rest, σ, ρ, σ', h => by
       simp only [execEnd] at h

@@ -1,0 +1,7 @@
+// Count leading zeros on u16: clz(256) is 7.
+module c13a_clz_mid {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 in 1 .. 65535 = 256;
+    return clz(x);
+}
+}

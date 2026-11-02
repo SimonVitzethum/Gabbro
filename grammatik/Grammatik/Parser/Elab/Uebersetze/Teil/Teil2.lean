@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil1
+public import Grammatik.Parser.Elab.Uebersetze.Records.Schema
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Data
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
@@ -129,6 +130,8 @@ structure UCtx where
       of functions); their heads stand in the head list under the names `fn#j` (`elabZeigerTyp`). -/
   zeiger : List String := []
   zeigerBasis : Nat := 0
+  /-- Complete nominal record schemas, shared by construction and named field resolution. -/
+  records : List URecord := []
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -177,7 +180,7 @@ structure UFn where
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
 def uArtVon : Ty → UParamArt
-  | .arr _ _ | .str _ => .wert
+  | .arr _ _ | .str _ | .prod .. => .wert
   | _ => .int
 
 /-- The scope after a `let x` of a number with the computed range `w`: `x` is the first name (it
@@ -285,6 +288,9 @@ structure UProg where
   ptrKeys : List String := []
   /-- Original-source duty check, consumed by the actual new lowering branches. -/
   exportGate : Except String Unit := .ok ()
+  /-- The unit’s nominal record schemas (`uTypes`), shared by construction and named
+      field resolution. Populated by the source export; empty until connected. -/
+  records : List URecord := []
   /-- The unit's declared checks (C16): elaborated records of every `check` item,
       with each `can_fail` body lowered into its generated Boolean producer in
       `fns` (named by the check's `probe` field). -/

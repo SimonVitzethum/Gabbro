@@ -3,6 +3,7 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Welt.GlobalOffsets
 public import Mathlib.Basic.IsEmpty.Defs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -77,23 +78,28 @@ theorem fieldless_table_layout (u : UProg) (t : Fin u.tabs.length)
 /-- The bytes of all tables. -/
 def tabsSz (u : UProg) : Nat := ((List.finRange u.tabs.length).map (tabSz u)).sum
 
-def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : Lay (declOf u) where
-  ga g := b + (((List.finRange u.globs.length).map (globSz u)).take g.val).sum
-  col t f := b + globsSz u + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
+/-- Alignment retained by source elaboration; absent placement imposes no padding. -/
+def globAlign (u : UProg) (g : Fin u.globs.length) : Nat :=
+  ((globAt u g).placement.map (·.ausrichtung)).getD 1
+
+def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
+    (align : Fin u.globs.length → Nat := fun g => wordAlign (globAlign u g)) : Lay (declOf u) where
+  ga g := b + globStartOf (List.finRange u.globs.length) 0 (globSz u) align g
+  col t f := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
     (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum
   lo := b
-  hi := b + globsSz u + tabsSz u
+  hi := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + tabsSz u
   tor := tor
   byte t := (List.finRange (fieldCount u t)).find? (fun f => decide ((declOf u).typ t f = .int 0 255))
-  lk L := b + globsSz u + tabsSz u + 24 * L.val
-  sye := b + globsSz u + tabsSz u + 24 * u.locks.length
+  lk L := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + tabsSz u + 24 * L.val
+  sye := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + tabsSz u + 24 * u.locks.length
 
 /-- The words of the locks after the tables, three each. -/
 theorem layU_sync (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : LaySync (layU u tor b) := by
   refine ⟨fun Lk => ?_, fun Lk Lk' hne => ?_⟩
-  · have := Lk.isLt; simp only [layU]; omega
+  · have := Lk.isLt; simp only [layU, globEnd_one, alignUp_one]; omega
   · have : Lk.val ≠ Lk'.val := fun h => hne (Fin.ext h)
-    simp only [layU]; omega
+    simp only [layU, globEnd_one, alignUp_one]; omega
 
 /-- A part of a sum and the next summand lie inside the sum. -/
 theorem take_sum_add (xs : List Nat) (i : Nat) (hi : i < xs.length) : (xs.take i).sum + xs[i] ≤ xs.sum := by
@@ -115,7 +121,7 @@ theorem colSz_ge (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) 
 
 theorem col_le (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) :
     (layU u tor b).col t f + colSz u t f ≤ (layU u tor b).hi := by
-  simp only [layU, tabsSz]
+  simp only [layU, globEnd_one, alignUp_one, tabsSz]
   have h1 := take_sum_add ((List.finRange (fieldCount u t)).map (colSz u t)) f.val (by simp)
   have h2 := take_sum_add ((List.finRange u.tabs.length).map (tabSz u)) t.val (by simp)
   simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta] at h1 h2
@@ -125,29 +131,16 @@ theorem col_le (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (t : 
 /-- The layout keeps every element and every global inside the world, once the world ends below `2^31`. -/
 theorem layU_in (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (h : (layU u tor b).hi < 2 ^ 31) : LayIn (layU u tor b) := by
   refine ⟨fun t f k hk => ?_, fun g => ?_, h⟩
-  · simp only [Lay.count, layU, Int.natCast_zero, ite_self, Int.add_zero] at hk
+  · simp only [Lay.count, layU, alignUp_one, Int.natCast_zero, ite_self, Int.add_zero] at hk
     have h1 := colSz_ge u t f k hk
     have h2 := col_le u tor b t f
     simp only [Lay.elem]
     constructor
-    · simp only [layU]; omega
+    · have lower := b + globEnd_ge (List.finRange u.globs.length) 0 (globSz u)
+        (fun g => wordAlign (globAlign u g))
+      simp only [layU]; omega
     · omega
-  · have hg := take_sum_add ((List.finRange u.globs.length).map (globSz u)) g.val (by simpa using g.isLt)
-    simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk] at hg
-    change (((List.finRange u.globs.length).map (globSz u)).take g.val).sum + globSz u g ≤ _ at hg
-    simp only [layU, globsSz, globSz] at *
+  · have hg := globStarts_bounds (List.finRange u.globs.length) 0 (globSz u)
+      (fun g => wordAlign (globAlign u g)) g _ (globStartOf_mem _ _ _ _ g (by simp))
+    simp only [layU, globEnd_one, globSz] at *
     omega
-
-/-! ## No two cells share a word -/
-
-theorem take_sum_mono : (xs : List Nat) → (i j : Nat) → i ≤ j → (xs.take i).sum ≤ (xs.take j).sum
-  | [], _, _, _ => by simp
-  | _ :: _, 0, _, _ => by simp
-  | _ :: _, _ + 1, 0, h => by omega
-  | x :: xs, i + 1, j + 1, h => by
-    simp only [List.take_succ_cons, List.sum_cons]
-    have := take_sum_mono xs i j (by omega)
-    omega
-
-
-end Gabbro.Stage0.Senke
