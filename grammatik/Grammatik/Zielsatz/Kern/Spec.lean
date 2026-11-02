@@ -56,7 +56,7 @@
   THE SHAPE. Everything is about ONE value `E : Einheit D`, the program the user wrote: code with contracts `E.P`,
   lock invariants `E.S`, the axioms' declared `ensures` `E.Q`, declared starts with arguments `E.starts`, run-time
   roots `E.gestartet`, the declared initial memory `E.sp0`. Four premise groups:
-  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`
+  (a) `C.akzeptiert E fs ls cs = true` -- ONE Bool of a checker `C : PrueferX`, sound against `AkzeptiertSpecX`; the atomic checker also requires static-array reset admission
       (fragment, closed call graphs, footprints local/guarded/admitted shared atomics, lock floors, lock places,
       lock-free starts, pool safety, write separation, answer sites, masking discipline, the C02 library binding
       (generated programs are ordinary; source certificates in `Uebersetzung.lean`), and since 2026-10-24 the

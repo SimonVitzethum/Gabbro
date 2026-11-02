@@ -158,7 +158,7 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
       (komponiere B ps).arenen (komponiere B ps).akku := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
   refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_,
-    Kernzelle.accumulatorAdmission_leer _ _⟩
+    Kernzelle.accumulatorAdmission_leer _ _, (hA p0 hp0).reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -295,7 +295,7 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
   refine @decide_eq_true _ (Classical.propDecidable _) ⟨⟨hA.frag, hA.abg, (fun f => ?_), hA.stufen,
     hA.sperrOrte, (fun w h => by rw [hws] at h; cases h), (fun _ h => ?_),
     (fun _ _ _ w h => by rw [hws] at h; cases h), hA.antworten,
-    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), hA.akku⟩,
+    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), hA.akku, hA.reset⟩,
     ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩, ?_⟩
   · show FussSX E.P E.S (lokW E.P fs []) _ f
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by
