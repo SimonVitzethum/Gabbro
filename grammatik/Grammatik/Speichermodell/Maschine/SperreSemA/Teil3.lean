@@ -123,6 +123,24 @@ theorem semHA_ewig_falsch {Λ : List (Res D)} (a : D.Annahme) (n : Nat) (inv : E
   simp only [semHA, weiterHA, laufA, foreverLauf, leseBA, hw]
   exact weiterHA_logik S O U A passes R k _
 
+theorem semHA_verbrauch_falsch {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (leseA A σ Λ inv.orte) inv (leseA A σ Λ inv.orte) ρ) = false) :
+    semHA S O U A passes R (.verbrauch t member edge inv bound mass body rest k) σ ρ =
+      .logik .schleife := by
+  cases rest with
+  | zero =>
+      simp only [semHA, weiterHA, laufA, verbrauchLauf]
+      exact weiterHA_logik S O U A passes R k _
+  | succ n =>
+      simp only [semHA, weiterHA, laufA, verbrauchLauf, leseBA, hw]
+      exact weiterHA_logik S O U A passes R k _
+
 theorem semHA_leaveTrav_falsch {Λ Λx : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool)
     (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
     (is : List (Wert D (.index (D.count t)))) (k : GRest D V l Γ Λ)
