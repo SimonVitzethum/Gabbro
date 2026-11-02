@@ -78,6 +78,12 @@ theorem armsOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
+    (fun e a args he hp hd hgd hr err herr iherr σ ρ => by
+        simp only [execStmt]
+        split
+        · rfl
+        · simp only [iherr]
+        · rfl)
     (fun r hk e σ ρ => rfl)
     (fun r hk m hm hl maske bits σ ρ => rfl)
     (fun g e payload hp hw hL σ ρ => rfl)
