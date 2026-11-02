@@ -194,6 +194,7 @@ inductive SItemTief
   /-- `pub item`: the item crosses the boundary of its project (its name is visible to a dependent
       project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
   | pubT : SItemTief → SItemTief
+  | taggedByT : SItemTief → String → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool

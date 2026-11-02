@@ -183,9 +183,16 @@ def parseTypTief (f : Nat) (flags : List String) (toks : List Token) :
           | .ok (ord, r4) => match r4 with
             | .zeichen "=" :: r5 => match parseTyp f r5 with
               | .error e => .error e
-              | .ok (t, r6) => match fordereZeichen ";" r6 with
-                | .error e => .error e
-                | .ok r => .ok (.typeT flags n args ord (some t), r)
+              | .ok (t, r6) => match r6 with
+                | .wort "by" :: tail => do
+                  if !flags.any (strEq · "tagged") then
+                    throw "tagged-dispatch-by-requires-tagged"
+                  let (spec, tail) ← nimmName tail
+                  let rest ← fordereZeichen ";" tail
+                  pure (.taggedByT (.typeT flags n args ord (some t)) spec, rest)
+                | _ => match fordereZeichen ";" r6 with
+                  | .error e => .error e
+                  | .ok r => .ok (.typeT flags n args ord (some t), r)
             | _ => match fordereZeichen ";" r4 with
               | .error e => .error e
               | .ok r => .ok (.typeT flags n args ord none, r)
