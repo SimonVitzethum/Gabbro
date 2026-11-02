@@ -94,7 +94,7 @@ theorem explicit_call_parser_zeuge :
 
 theorem explicit_statement_parser_zeuge :
     beqSAnw ((parseKopfStmt 1000 (explicitCallTokens.dropLast ++ [.zeichen ";"])).toOption.map Prod.fst
-      |>.getD (.other "missing")) (.call "Shape::area::[index into Circles]" [.variable "c"]) = true := by rfl
+      |>.getD (.other "missing")) (.genericCall "Shape::area" ["index into Circles"] [.variable "c"]) = true := by rfl
 
 theorem missing_function_zeuge :
     check [shapeSpec, .implGroupT "Shape" [.index false "Circles"] [[.reads (.variable "Circles")]] []] =
@@ -143,8 +143,9 @@ theorem unknown_instance_zeuge :
       .error "spec.call.implementation.missing" := by rfl
 
 theorem explicit_statement_resolution_zeuge :
-    (Walk.mk shape true).call [] "Shape::area::[index into Circles]" none [.variable "c"] =
-      .ok "$spec$0$area" := by rfl
+    (Walk.mk shape true).statement [] 1000
+      (.genericCall "Shape::area" ["index into Circles"] [.variable "c"]) =
+      .ok (.call "$spec$0$area" [.variable "c"]) := by rfl
 
 theorem normalized_conjunctions_zeuge :
     predicateSubset (conjuncts (.bin "&&" .tru .fls)) (conjuncts (.bin "&&" .fls .tru)) = true := by rfl

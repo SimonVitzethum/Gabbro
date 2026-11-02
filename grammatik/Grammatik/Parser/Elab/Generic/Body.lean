@@ -23,6 +23,7 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
   | .genericCall name words args => do
     match ← rewriteExpression env bindings (.ext .instantiate (name :: words) args) with
     | .call n values => pure (.call n values)
+    | .ext .instantiate (n :: words) args => pure (.genericCall n words args)
     | _ => liftResult (.error "generic statement did not produce a direct call")
   | .call name args => do
     match ← rewriteExpression env bindings (.call name args) with

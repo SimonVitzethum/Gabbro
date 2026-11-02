@@ -17,6 +17,10 @@ def symbolicType (source : List SItemTief) (template : FnSig) (locals : Spec.Loc
   | fuel + 1, expr =>
     match expr with
     | .res => template.res
+    | .variable name =>
+      match locals.find? (fun p => strEq p.1 name) with
+      | some (_, ty) => some ty
+      | none => (Spec.inferType source [] fuel expr).map (Spec.canonicalType source 128)
     | .call name args =>
       ((symbolicCall source template locals fuel name none args).toOption.bind (·.res))
         .orElse (fun _ => Spec.inferType source locals fuel expr)
@@ -32,7 +36,7 @@ def symbolicType (source : List SItemTief) (template : FnSig) (locals : Spec.Loc
         some (.atom "bool")
       else (symbolicType source template locals fuel left).orElse
         (fun _ => symbolicType source template locals fuel right)
-    | _ => Spec.inferType source locals fuel expr
+    | _ => (Spec.inferType source locals fuel expr).map (Spec.canonicalType source 128)
 
 /-- A spec call consumes exactly a written bound. Forwarding to another generic must
     entail that function's bounds before any concrete type substitution can hide the omission. -/
@@ -64,7 +68,14 @@ def symbolicCall (source : List SItemTief) (template : FnSig) (locals : Spec.Loc
       match (Spec.functionHeads source).find? (fun sig => strEq sig.name name) with
       | some sig =>
         match explicit with
-        | none => pure sig
+        | none =>
+          -- These names belong to the callee's scope. A global alias called T is
+          -- not the caller's abstract T, even when their surface spellings coincide.
+          if sig.generics.isEmpty then
+            pure { sig with params := sig.params.map (fun (n, ty) =>
+                (n, Spec.canonicalType source 128 ty)),
+              res := sig.res.map (Spec.canonicalType source 128) }
+          else pure sig
         | some words =>
           if sig.generics.length != words.length then throw "generic argument count does not match declaration"
           let types ← (sig.generics.zip words).foldlM (fun types (param, word) => do
@@ -147,8 +158,11 @@ def checkParametricStatement (source : List SItemTief) (template : FnSig)
     let ty := symbolicType source template locals 128 place
     if ty.any (mentionsParameter (typeParameters template)) then
       if !strEq op "=" then throw ("generic.parametricity.arithmetic: " ++ op)
-      let _ ← checkParametricExpression source template locals ty value
-      pure ()
+    let _ ← checkParametricExpression source template locals ty value
+    if ty.isNone && (symbolicType source template locals 128 value).any
+        (mentionsParameter (typeParameters template)) then
+      throw "generic.parametricity.assignment"
+    pure ()
   | .lcall call | .bindLib _ _ _ call =>
     if call.args.any (fun arg => (symbolicType source template locals 128 arg).any
         (mentionsParameter (typeParameters template))) then
@@ -170,7 +184,10 @@ def checkParametricRaw (source : List SItemTief) (template : FnSig)
 def checkParametricBody (source : List SItemTief) (template : FnSig) (body : SAnw) :
     Except String Unit := do
   if (typeParameters template).isEmpty then return ()
-  let walk : Spec.Walk := { source, instantiate := false, resolveSpecs := false,
+  -- Type inference and call checking use the captured source through the hooks below.
+  -- Keep the visitor's concrete-call expectation lookup empty: callee type names live
+  -- in its own scope and must not be interpreted as this template's binders.
+  let walk : Spec.Walk := { source := [], instantiate := false, resolveSpecs := false,
     infer := fun locals value => symbolicType source template locals 128 value,
     exprRewrite := checkParametricExpression source template,
     statementCheck := checkParametricStatement source template,

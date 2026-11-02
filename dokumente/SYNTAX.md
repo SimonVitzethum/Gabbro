@@ -997,10 +997,43 @@ The actual function's contracts still govern every direct call. Until O43 suppli
 a nontrivial `requires` or `ensures` on the parameter's pointer type retains the existing refusal
 `contract on a function-pointer type without G form`; specialization does not bypass it.
 
-Spec bounds, generic prototypes, generic predicate/assembly bodies and generic translators are still
+Generic prototypes, generic predicate/assembly bodies and generic translators are still
 refused. The Rust frontend has not yet been migrated to these forms. The Lean source/export/lowering
 witnesses are in `Parser/Elab/Generic/PipelineWitness.lean` and `FunctionWitness.lean`. Successful
 expansion still requires the ordinary export and lowering checks; witnesses require Lean checking.
+
+**Spec bounds (Lean frontend, check model A).** `fn use[T: Shape + Other](x: T)` requires
+one implementation of each named unary spec for the concrete type argument. Bounds use the linked
+spec registry and its alias normalization. An unknown group is refused as
+`generic.bound.unknown: <spec>`, a non-unary group as `generic.bound.arity: <spec>`, and an absent
+implementation as `generic.bound.implementation.missing: <spec>`. Unused bounds are checked too;
+conformance remains the unified spec rule in §6.1.
+
+Before instantiation, type-parameter values may be passed, bound, returned and supplied to their
+written bounds' functions. Inferred lets, array elements and spec/generic call results retain their
+abstract type. Arithmetic, comparison, field access, concrete coercion and reflection are refused
+by name (`generic.parametricity.arithmetic`, `.comparison`, `.field`, `.binding`, etc.). A call
+through an unwritten bound, including a bound required by a forwarded generic call, is refused as
+`generic.parametricity.bound: <spec>`. This check also covers unreachable templates; choosing a
+numeric type argument does not enable arithmetic on `T`.
+
+```gabbro
+fn area_of[T: Shape](x: T) -> u64
+    effects { Shape[T] } costs <= 60 ops
+{ let copy = x; return Shape::area(copy); }
+
+let a = area_of::[index into Circles](c);
+```
+
+After substitution, `Shape::area(copy)` resolves to the ordinary direct call of the selected impl;
+`effects { Shape[T] }` resolves through the same instance-effect expansion as other spec uses.
+The concrete implementation's actual signature and contracts still govern ordinary G admission.
+Explicit `Shape::area::[T](copy)` uses the same application representation and resolution path.
+`Parser/Elab/Generic/BoundsWitness.lean` contains source and AST witnesses for the plan's
+`total[T: Shape, N: const u32 in 1 .. 4096]` header instantiated for Circles, direct area calls,
+instance effects, missing implementations and parametricity refusals. Its two-element sum spells
+out the fold body: the surface `add i in 0 ..< N : ...` fold parser is not present in this branch.
+These witnesses have been added for integration checking; no new Lean build result is claimed.
 
 
 **`effects` is NOT fail-open.** A function **without** `effects` over a body

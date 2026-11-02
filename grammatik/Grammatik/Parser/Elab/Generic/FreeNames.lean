@@ -100,10 +100,10 @@ def checkLiteralClause (globals locals : List String) : SKlausel → Except Stri
 
 mutual
 def checkLiteralBody (globals locals : List String) : SAnw → Except String Unit
-  | .bind _ _ ty e | .await _ ty e _ | .swap _ ty e _ => do
+  | .bind _ _ ty e | .bindAxiomOpt _ ty e | .await _ ty e _ | .swap _ ty e _ => do
     ty.toList.forM (checkLiteralType globals locals)
     checkLiteralExpression globals locals e
-  | .bindElse _ ty e _ body => do
+  | .bindElse _ ty e _ body | .bindAxiomOptElse _ ty e _ body => do
     ty.toList.forM (checkLiteralType globals locals)
     checkLiteralExpression globals locals e
     checkLiteralBody globals locals body

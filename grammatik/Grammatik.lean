@@ -55,5 +55,6 @@ public import Grammatik.Parser.TaggedDispatch.SignatureWitnesses
 public import Grammatik.Parser.TaggedDispatch.SourceWitnesses
 public import Grammatik.Parser.Elab.Generic.PipelineWitness
 public import Grammatik.Parser.Elab.Generic.FunctionWitness
+public import Grammatik.Parser.Elab.Generic.BoundsWitness
 
 @[expose] public section

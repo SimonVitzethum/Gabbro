@@ -26,14 +26,6 @@ structure Walk where
 def Walk.call (w : Walk) (locals : Locals) (name : String)
     (types : Option (List STyp)) (args : List SExpr) : Except String String := do
   if !w.resolveSpecs then return name
-  let (name, types) ← match name.splitOn "::[" with
-    | [n, raw] =>
-      if raw.endsWith "]" && types.isNone then do
-        let ts ← explicitTypes (String.ofList raw.toList.dropLast)
-        pure (n, some ts)
-      else throw "spec.call.arguments"
-    | [_] => pure (name, types)
-    | _ => throw "spec.call.arguments"
   if w.instantiate then resolveCall w.source locals name types args
   else if types.isSome || (groups w.source).any (fun g => name.startsWith (g.name ++ "::")) then
     .error "spec.output.call"

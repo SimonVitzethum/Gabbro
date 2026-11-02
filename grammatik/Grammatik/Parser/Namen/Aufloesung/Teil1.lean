@@ -77,15 +77,11 @@ def Kontext.nenntItem (k : Kontext) (p : Pfad) : Bool :=
 
 /-- A spec call resolves its group prefix; ordinary qualified function paths resolve as before. -/
 def Kontext.ruf (k : Kontext) (s : String) : String :=
-  let base := fun n =>
-    let p := segmente n
-    if k.nenntItem p then k.ref n
-    else if p.length > 1 && k.nenntItem p.dropLast then
-      k.ref ("::".intercalate p.dropLast) ++ "::" ++ letzter p
-    else k.ref n
-  match s.splitOn "::[" with
-  | [n, raw] => base n ++ "::[" ++ raw
-  | _ => base s
+  let p := segmente s
+  if k.nenntItem p then k.ref s
+  else if p.length > 1 && k.nenntItem p.dropLast then
+    k.ref ("::".intercalate p.dropLast) ++ "::" ++ letzter p
+  else k.ref s
 
 /-- Explicit argument groups are resolved in the caller's scope before generic expansion. Paths
     are kept whole; field names following `.`/`->` remain members rather than global references. -/
