@@ -16,6 +16,17 @@ def nimmFrage : List Token → Bool × List Token
 theorem strEq_gleich_frage : strEq "=" "?" = false := by decide
 theorem strEq_doppelpunkt_frage : strEq ":" "?" = false := by decide
 
+/-- `?` behind a binding's call: `;` follows, and the bound value must be a call. -/
+def frageEnde (m : Bool) (name : String) (ty : Option STyp) (e : SExpr) :
+    List Token → Except String (SAnw × List Token)
+  | .zeichen t :: rest' =>
+    if strEq t ";" then
+      match e with
+      | .call _ _ => pure (.bindQ m name ty e, rest')
+      | _ => .error "? needs a call"
+    else .error "? without ;"
+  | _ => .error "? without ;"
+
 mutual
 def parseStmt (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -128,11 +139,11 @@ def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
       let (k, rest'') ← nimmBisZeichen ";" rest' 0
       let rest3 ← fordereZeichen ";" rest''
       pure (.swap name ty e k, rest3)
-    | .zeichen "?" :: .zeichen ";" :: rest' =>
-      match e with
-      | .call _ _ => pure (.bindQ m name ty e, rest')
-      | _ => .error "? needs a call"
-    | .zeichen "?" :: _ => .error "? without ;"
+    | .zeichen s :: rest0 =>
+      if strEq s "?" then frageEnde m name ty e rest0
+      else do
+        let rest' ← fordereZeichen ";" rest
+        pure (.bind m name ty e, rest')
     | _ => do
       let rest' ← fordereZeichen ";" rest
       pure (.bind m name ty e, rest')

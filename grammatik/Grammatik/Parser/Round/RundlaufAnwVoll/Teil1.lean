@@ -148,7 +148,7 @@ theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (
       intro t ht; have := fbT_of ty t ht; simp only [fbT]; split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega),
     parseLetNach_expr _ _ _ _ e hg]
   have hO := ausdruck e hg (.zeichen ";" :: rest) F' rfl rfl rfl (by split at hF <;> simp only [Nat.zero_add, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceLeDiff, Nat.add_zero] at hF <;> omega)
-  simp only [parseLetExpr, bind, Except.bind, hO, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
+  simp only [parseLetExpr, strEq_semi_frage, Bool.false_eq_true, bind, Except.bind, hO, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
 
 
 /-! ### Statements headed by a place or a call -/
