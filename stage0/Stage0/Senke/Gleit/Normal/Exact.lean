@@ -115,21 +115,12 @@ theorem routineLeftCountL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   exact routineChooseL_ok (routineLessL_ok count budget) (fun _ => count) (fun _ => budget)
 
-theorem routineLeftCountL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {a index : Nat → Option (List II × Nat)} {n e : Nat}
-    (ha : WordCode (L := L) ρ W a (BitVec.ofNat 64 n))
-    (he : WordCode (L := L) ρ W index (BitVec.ofNat 64 e))
+theorem routineLeftCountWord_model (n e : Nat)
     (low : 4 ≤ n) (high : n < 2 ^ 56) (ep : 1 ≤ e) (eb : e < 2 ^ 64) :
-    WordCode (L := L) ρ W (fun d => routineLeftCountL d a index)
-      (BitVec.ofNat 64 (routineLeftCount n e)) := by
+    routineLeftCountWord (BitVec.ofNat 64 n) (BitVec.ofNat 64 e) =
+      BitVec.ofNat 64 (routineLeftCount n e) := by
   obtain ⟨bl, bh, _, _, _⟩ := routineLeftCount_bounds n e low high ep
   have nb : n < 2 ^ 64 := by omega
-  have leading := routineLeadingZerosL_ok ha
-  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt nb] at leading
-  have count := WordCode.bin leading (WordCode.const 8 (by decide))
-    (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have budget := WordCode.bin he (WordCode.const 1 (by decide))
-    (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have countEq : BitVec.ofNat 64 (64 - bitlen n) - 8 = BitVec.ofNat 64 (56 - bitlen n) := by
     rw [show (8 : Runner.W) = BitVec.ofNat 64 8 from rfl,
       BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) (by omega)]
@@ -137,19 +128,28 @@ theorem routineLeftCountL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     omega
   have budgetEq : BitVec.ofNat 64 e - 1 = BitVec.ofNat 64 (e - 1) :=
     BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) ep
-  rw [countEq] at count
-  rw [budgetEq] at budget
-  have choose := routineChooseL_ok (routineLessL_ok count budget) (fun _ => count) (fun _ => budget)
+  simp only [routineLeftCountWord, routineLeadingZerosWord_model,
+    BitVec.toNat_ofNat, Nat.mod_eq_of_lt nb, countEq, budgetEq]
   have compare : (BitVec.ofNat 64 (56 - bitlen n)).ult (BitVec.ofNat 64 (e - 1)) =
       decide (56 - bitlen n < e - 1) := by
     simp only [BitVec.ult, BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (by omega : 56 - bitlen n < 2 ^ 64),
       Nat.mod_eq_of_lt (by omega : e - 1 < 2 ^ 64)]
-  rw [compare] at choose
+  rw [compare]
   by_cases small : 56 - bitlen n < e - 1
-  · simpa only [small, decide_true, ite_true, routineLeftCount, Nat.min_eq_left (by omega)] using choose
-  · simpa only [small, decide_false, Bool.false_eq_true, ite_false,
-      routineLeftCount, Nat.min_eq_right (by omega)] using choose
+  · simp only [small, decide_true, ite_true, routineLeftCount, Nat.min_eq_left (by omega)]
+  · simp only [small, decide_false, Bool.false_eq_true, ite_false,
+      routineLeftCount, Nat.min_eq_right (by omega)]
+
+theorem routineLeftCountL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {a index : Nat → Option (List II × Nat)} {n e : Nat}
+    (ha : WordCode (L := L) ρ W a (BitVec.ofNat 64 n))
+    (he : WordCode (L := L) ρ W index (BitVec.ofNat 64 e))
+    (low : 4 ≤ n) (high : n < 2 ^ 56) (ep : 1 ≤ e) (eb : e < 2 ^ 64) :
+    WordCode (L := L) ρ W (fun d => routineLeftCountL d a index)
+      (BitVec.ofNat 64 (routineLeftCount n e)) := by
+  rw [← routineLeftCountWord_model n e low high ep eb]
+  exact routineLeftCountL_word ha he
 
 /-- The actual IR left shift agrees with unbounded multiplication before
     rounding. Its denominator is never used to justify a modular wrap. -/
@@ -189,6 +189,7 @@ theorem routineLeftCount_zeuge :
 #print axioms routineLeftCount_round_exact
 #print axioms routineLeftCountL_ok
 #print axioms routineLeftCountL_word
+#print axioms routineLeftCountWord_model
 #print axioms routineLeftShiftL_exact
 #print axioms routineLeftCount_zeuge
 end Gabbro.Stage0.Senke
