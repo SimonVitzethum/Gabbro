@@ -81,7 +81,7 @@ def prog : Programm decl where
     else .le (.var (.there .here)) (.var .here)
   rumpf := fun _ => .ret (.val (.var .here)) (List.Perm.refl [])
   ptrVertrag := fun _ =>
-    ⟨.le (.lit 3) (.var .here), .le (.var (.there .here)) (.var .here)⟩
+    { pre := .le (.lit 3) (.var .here), post := .le (.var (.there .here)) (.var .here) }
 
 /-- O43 holds for every admitted pair and arbitrary worlds, arguments/results,
     rather than just the particular returning bodies of this fixture. -/
@@ -196,7 +196,7 @@ theorem weaker_second_target_post_refused : ¬ PtrVerfeinert badSecondTarget := 
     lower-bound target: a permitted concrete result of 4 is a counterexample. -/
 def strongerInterfacePost : Programm decl :=
   { prog with ptrVertrag := fun _ =>
-    ⟨.le (.lit 3) (.var .here), .eq (.var .here) (.var (.there .here))⟩ }
+    { pre := .le (.lit 3) (.var .here), post := .eq (.var .here) (.var (.there .here)) } }
 
 theorem stronger_interface_post_refused : ¬ PtrVerfeinert strongerInterfacePost := by
   intro h

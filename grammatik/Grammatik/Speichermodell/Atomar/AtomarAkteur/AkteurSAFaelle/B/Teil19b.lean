@@ -81,6 +81,5 @@ theorem akteurSA_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O
   show weiterHA S O' U A passes R k (execBlockHA S O' U A passes R (.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ0 ρ) = _
   simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hr2]
   rw [semHA_alsBlock_schrumpf]
-  rfl
 
 end Gabbro.Grammatik

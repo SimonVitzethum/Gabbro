@@ -96,7 +96,7 @@ theorem execStmtHA_ru_axiomCall {V : Vertrag D}
       | some _ => rfl
 
 set_option linter.unusedSectionVars false in
-theorem execStmtHA_ru_axiomCallElse {V : vertrag D}
+theorem execStmtHA_ru_axiomCallElse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -279,7 +279,7 @@ theorem execBlockHA_ru_bindCall {V : Vertrag D}
 end HauptA
 
 set_option linter.unusedSectionVars false in
-theorem execBlockHA_ru_bindAxiomOpt {V : vertrag D}
+theorem execBlockHA_ru_bindAxiomOpt {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
@@ -323,7 +323,7 @@ theorem execBlockHA_ru_bindAxiomOpt {V : vertrag D}
               exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ' (Env.cons _ ρ))
 
 set_option linter.unusedSectionVars false in
-theorem execBlockHA_ru_bindAxiomOptElse {V : vertrag D}
+theorem execBlockHA_ru_bindAxiomOptElse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
