@@ -351,6 +351,75 @@ theorem ptrVertragsFreiB_zeuge :
   exact ⟨rfl,
     Gabbro.Grammatik.ptrVertragsFreiB_ok progFin_trivial_ausserhalb rfl⟩
 
+/-- A full callback cycle through a parameter: the interface pre at the
+    actual arguments, the selected target's concrete requires and ensures,
+    and the interface post on the transported result. Table reads flow
+    through `oldContract`-style orte (below) and rights through `SigPasst`
+    (source probes `param_ok`/`rechte_ok`). -/
+theorem callback_param_table_result_zeuge :
+    (prog.ptrVertrag 0).preHolds entry arguments ∧
+    ReqAmEintritt prog true entry (umsig pointer.property arguments) ∧
+    EnsAmRueck prog true entry later (umsig pointer.property arguments)
+      ⟨3, by decide, by decide⟩ ∧
+    (prog.ptrVertrag 0).postHolds entry later arguments
+      (ptrResult pointer.property ⟨3, by decide, by decide⟩) :=
+  ⟨rfl, rfl, rfl, rfl⟩
+
+/-- A proved implementation behind the interface (the thunk stand-in for a
+    foreign body): it respects every contract, refines the interface, and
+    the interface pre holds at the call arguments. -/
+theorem proved_foreign_thunk_zeuge :
+    RespektiertVertraege prog handler ∧ PtrVerfeinert prog ∧
+      (prog.ptrVertrag 0).preHolds entry arguments :=
+  ⟨handler_contracts, refinement, rfl⟩
+
+/-- A contract with a nonempty footprint (table reads in both halves):
+    each half flows into the whole, and emptiness of a shared carrier splits
+    per half, so no shared atomic hides in either. -/
+theorem nonempty_effects_flow_zeuge :
+    oldContract.pre.orte = [Sum.inl ()] ∧
+    oldContract.post.orte = [Sum.inl ()] ∧
+    oldContract.pre.orte ⊆ oldContract.orte ∧
+    oldContract.post.orte ⊆ oldContract.orte ∧
+    (∀ c ∈ oldContract.pre.orte, (fun _ : decl.Tab ⊕ decl.Glob => false) c = false) ∧
+    (∀ c ∈ oldContract.post.orte, (fun _ : decl.Tab ⊕ decl.Glob => false) c = false) := by
+  refine ⟨rfl, rfl, fun _ h => List.mem_append_left _ h,
+    fun _ h => List.mem_append_right _ h, fun _ _ => rfl, fun _ _ => rfl⟩
+
+/-- A forged image pointer is refused: no function conforms to signature
+    number `1`, so no `fnptr 1` value selects `true`. -/
+theorem forged_image_pointer_refused :
+    decl.passt true 1 = false ∧ ¬ ∃ v : Wert decl (.fnptr 1), v.val = true := by
+  refine ⟨rfl, fun h => ?_⟩
+  obtain ⟨⟨f, hf⟩, hv⟩ := h
+  subst hv
+  exact absurd hf (by decide)
+
+/-- Evaluating the interface post at the wrong entry world is refused: the
+    `old`-reading post holds from `entry` but not from `later` for the same
+    result, so the current world cannot stand in for the entry world. -/
+theorem old_current_mixup_refused :
+    oldContract.postHolds entry later arguments ⟨0, by decide, by decide⟩ ∧
+      ¬ oldContract.postHolds later later arguments ⟨0, by decide, by decide⟩ :=
+  ⟨rfl, by intro h; cases h⟩
+
+/-- A contract reading a shared-atomic carrier is detected: with the carrier
+    shared, `atomicFreeB` is `false`, so the interface is not admittable as
+    atomically free. -/
+theorem hidden_shared_atomic_refused :
+    oldContract.atomicFreeB (fun _ => true) = false :=
+  rfl
+
+/-- At program level: a unit whose interface reads a shared atomic is not
+    `PtrVertragsFrei` there. -/
+def badAtomProg : Programm decl :=
+  { prog with ptrVertrag := fun _ => oldContract }
+
+theorem hidden_shared_atomic_prog_refused :
+    ¬ PtrVertragsFrei badAtomProg (.inl ()) := by
+  intro h
+  exact (h 0).1 (by decide)
+
 end Gabbro.Grammatik.C06
 
 #print axioms Gabbro.Grammatik.PtrVerfeinert
@@ -368,3 +437,10 @@ end Gabbro.Grammatik.C06
 #print axioms Gabbro.Grammatik.C06.reversed_pre_refused
 #print axioms Gabbro.Grammatik.C06.reversed_post_refused
 #print axioms Gabbro.Grammatik.C06.refinement_konjunkt_zeuge
+#print axioms Gabbro.Grammatik.C06.callback_param_table_result_zeuge
+#print axioms Gabbro.Grammatik.C06.proved_foreign_thunk_zeuge
+#print axioms Gabbro.Grammatik.C06.nonempty_effects_flow_zeuge
+#print axioms Gabbro.Grammatik.C06.forged_image_pointer_refused
+#print axioms Gabbro.Grammatik.C06.old_current_mixup_refused
+#print axioms Gabbro.Grammatik.C06.hidden_shared_atomic_refused
+#print axioms Gabbro.Grammatik.C06.hidden_shared_atomic_prog_refused
