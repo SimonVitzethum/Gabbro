@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.Einbettung.Simulation
 public import Grammatik.Zielsatz.Einbettung.Koerper.Teil2
+public import Grammatik.Zielsatz.Einbettung.Koerper.Teil2a
 
 @[expose] public section
 
