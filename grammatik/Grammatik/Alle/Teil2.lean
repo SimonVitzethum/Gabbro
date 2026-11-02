@@ -107,6 +107,7 @@ public import Grammatik.Speichermodell.Atomar.AtomarAkteur
 public import Grammatik.Speichermodell.Atomar.AtomarLauf
 public import Grammatik.Speichermodell.Atomar.AtomarW
 public import Grammatik.Speichermodell.Atomar.AtomarInv
+public import Grammatik.Speichermodell.Atomar.AtomarInva
 public import Grammatik.Speichermodell.Atomar.AtomarRuhe
 public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
 public import Grammatik.Speichermodell.Atomar.AtomarZiel
