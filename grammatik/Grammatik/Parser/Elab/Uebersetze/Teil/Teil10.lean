@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
@@ -7,12 +6,9 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
-
 @[expose] public section
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
@@ -22,8 +18,6 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
   | _ + 1, _, .lcall .. :: _ | _ + 1, _, .bindLib .. :: _ =>
-      -- Unexpanded library calls never arrive here through `elabU`: `exportLibraryUnit` expands
-      -- them into ordinary calls before the lowering runs. This guard stays for direct callers.
       .error "C02: library call needs certified immutable payload initialization and ordinary call expansion"
   | f + 1, ctx, .bind mu x t e :: rest =>
     match uBindWert ctx tabs koepfe mu x t e with
@@ -44,12 +38,10 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           | .error _ =>
             (ctx.globs.find? (fun g => strEq g.name e)).bind fun g => g.sumNum.map fun num => (e, 1, num)
         | _ =>
-          -- a field of a tagged type: bound to the hidden local `#m` first (`uSumPlatz`)
           match uSumPlatz ctx scrut with
           | .ok (_, num) => some ("#m", 1, num)
           | .error _ => none : Option (String × Nat × Nat)) with
     | .some (e, 1, num) =>
-      -- a field of a tagged type is bound to `#m` first; the arms and the rest see it
       let (ctxM, vor) : UCtx × List UStmt :=
         match (if strEq e "#m" then (uSumPlatz ctx scrut).toOption else none), ctx.sums[num]? with
         | some (sv, _), some sm =>
@@ -178,11 +170,9 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 | .error err, _ | _, .error err => .error err)), uWertBody ctxV sonst with
             | .error err, _ | _, .error err => .error err
             | .ok zs0, .ok neu0 =>
-              -- each arm reads `v` narrowed by its guard and the negated guards before it
               let zs := (List.range zs0.length).zip zs0 |>.map (fun (i, (c, e)) =>
                 (c, uArmEng ctxV v lo hi (some c) ((zs0.take i).map (·.1)) e))
               let neu := uArmEng ctxV v lo hi none (zs0.map (·.1)) neu0
-              -- `awaits` at an exchange: the acquiring read of `Block.awaits` (its value unused) in front
               let vor := if aw.isSome then [UStmt.awaitBind "#awaits" a] else []
               match vergleich with
               | none =>
@@ -191,7 +181,6 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 | .error err => .error err
                 | .ok (xs, cE) => .ok (vor ++ UStmt.tausch x a v zs neu :: xs, cE)
               | some p =>
-                -- compare-exchange: the old value is `#alt`, the binder `x` is the success `p`
                 match uBool ctxV p with
                 | .error err => .error err
                 | .ok pv =>
@@ -231,8 +220,6 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uFnZeiger ctx koepfe c with
       | some (.error err) => .error err
       | some (.ok ziel) =>
-        -- a `let .. else` through a function-pointer local («C07»): the reason channel is the
-        -- pointer type's (`ziel`), never a direct target's; a foreign head has no indirect form.
         match uRuf ctx tabs koepfe ziel.name args with
         | .error err => .error err
         | .ok (callee, xs) =>
@@ -291,6 +278,37 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                   | .error err => .error err
                   | .ok (ys, cE) => .ok ([UStmt.bindElse y c xs e] ++ ebody ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
   | f + 1, ctx, .bindElse .. :: _ => .error "let else without G form"
+  | f + 1, ctx, .bindAxiomOpt x t (.call c args) :: rest =>
+    if t.isSome then .error "optional bind with a type without G form"
+    else
+      (uRuf ctx tabs koepfe c args).bind fun (callee, xs) =>
+        if !callee.ext then .error "optional bind needs an axiom callee"
+        else
+          let next := match callee.res with
+            | none => ctx
+            | some r => uMitLokal ctx x UParamArt.int (Ty.int r.1 r.2)
+                (ctx.muts.filter (fun m => !strEq m x))
+          (uAnwReihe tabs koepfe f next rest).bind fun (ys, cE) =>
+            .ok (UStmt.bindOptBeg x c xs :: ys, cE)
+  | f + 1, ctx, .bindAxiomOptElse x t (.call c args) e (.block ss en) :: rest =>
+    if t.isSome then .error "optional bind with a type without G form"
+    else
+      (uRuf ctx tabs koepfe c args).bind fun (callee, xs) =>
+        if !callee.ext then .error "optional bind needs an axiom callee"
+        else match callee.kanal with
+        | none => .error "let else of a call without a reason channel"
+        | some (num, cnt) =>
+          (uAnwReihe tabs koepfe f (uMitLokal ctx e (UParamArt.why num) (Ty.why cnt)
+              (ctx.muts.filter (fun m => !strEq m e))) ss).bind fun (body, ctxEB) =>
+            (uEndeStmt ctxEB en).bind fun endS =>
+              let next := match callee.res with
+                | none => ctx
+                | some r => uMitLokal ctx x UParamArt.int (Ty.int r.1 r.2)
+                    (ctx.muts.filter (fun m => !strEq m x))
+              (uAnwReihe tabs koepfe f next rest).bind fun (ys, cE) =>
+                .ok ([UStmt.bindOptElseBeg x c xs e] ++ body ++ endS ++ [UStmt.blkEnd] ++ ys, cE)
+  | _ + 1, _, .bindAxiomOpt .. :: _ | _ + 1, _, .bindAxiomOptElse .. :: _ =>
+    .error "optional bind needs an axiom callee"
   | f + 1, ctx, .alloc mu x t an v (.some (.block ss e)) :: rest =>
     if mu || t.isSome then .error "alloc binding without G form"
     else
@@ -333,7 +351,6 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | .ok (xs, cE) => .ok ([UStmt.allocReqBeg x an sv] ++ xs, cE)
   | f + 1, ctx, .alloc .. :: _ => .error "alloc without else without G form"
   | f + 1, ctx, .allocVon mu x t tn :: rest =>
-    -- `let r = alloc T;` is the call of `T`'s provider (`Block.alloc`, Zucker.lean): `let r = p();`
     match ctx.tabs.find? (fun y => strEq y.name tn) with
     | .some { von := .some p, .. } => uAnwReihe tabs koepfe f ctx (.bind mu x t (.call p []) :: rest)
     | _ => .error ("alloc of a table without provider: " ++ tn)
@@ -454,51 +471,4 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
-
-/-- The substitution of the parameters of a `spec fn` by the arguments of a use. A quantifier binder hides the
-    parameter of its name in its body (the last operand). Structural in a fuel (an expression is far shallower). -/
-def sErsetze (σ : List (String × SExpr)) : Nat → SExpr → SExpr
-  | 0, e => e
-  | n + 1, e =>
-    match e with
-    | .variable x => match σ.find? (fun p => strEq p.1 x) with
-      | some p => p.2
-      | none => e
-    | .field a f => .field (sErsetze σ n a) f
-    | .index a i => .index (sErsetze σ n a) (sErsetze σ n i)
-    | .arrow a f => .arrow (sErsetze σ n a) f
-    | .un o a => .un o (sErsetze σ n a)
-    | .bin o a b => .bin o (sErsetze σ n a) (sErsetze σ n b)
-    | .call f as => .call f (as.map (sErsetze σ n))
-    | .built f as => .built f (as.map (sErsetze σ n))
-    | .old a => .old (sErsetze σ n a)
-    | .ext k ns xs =>
-      if k == XKind.all || k == XKind.any || k == XKind.count then
-        let σ' := σ.filter (fun p => !(ns.head?.any (strEq p.1 ·)))
-        .ext k ns ((xs.dropLast.map (sErsetze σ n)) ++ (xs.getLast?.map (sErsetze σ' n)).toList)
-      else .ext k ns (xs.map (sErsetze σ n))
-    | e => e
-
-/-- Every use `g(a…)` of a `spec fn` `g` replaced by its predicate over the arguments (SUGAR, `M130`), also inside
-    the predicates it brings. Structural in a fuel. -/
-def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr → SExpr
-  | 0, e => e
-  | n + 1, e =>
-    match e with
-    | .call f as =>
-      let as' := as.map (uSpecEin specs n)
-      match specs.find? (fun p => strEq p.1 f) with
-      | some (_, ps, body) =>
-        if ps.length == as'.length then uSpecEin specs n (sErsetze (ps.zip as') 1000 body) else .call f as'
-      | none => .call f as'
-    | .field a f => .field (uSpecEin specs n a) f
-    | .index a i => .index (uSpecEin specs n a) (uSpecEin specs n i)
-    | .arrow a f => .arrow (uSpecEin specs n a) f
-    | .un o a => .un o (uSpecEin specs n a)
-    | .bin o a b => .bin o (uSpecEin specs n a) (uSpecEin specs n b)
-    | .built f as => .built f (as.map (uSpecEin specs n))
-    | .old a => .old (uSpecEin specs n a)
-    | .ext k ns xs => .ext k ns (xs.map (uSpecEin specs n))
-    | e => e
-
 end Gabbro.Grammatik.Parser.Uebersetze

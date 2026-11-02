@@ -343,6 +343,10 @@ inductive UStmt
       `reset A;` keeps its counter store below. Appended at the end, so earlier
       constructor positions keep their names. -/
   | resetRange : String → USide → USide → UStmt
+  /-- Optional-result axiom binding; the continuation retains its scope for a void answer. -/
+  | bindOptBeg : String → String → List UArg → UStmt
+  /-- Optional-result axiom binding with an end-block reason continuation. -/
+  | bindOptElseBeg : String → String → List UArg → String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
