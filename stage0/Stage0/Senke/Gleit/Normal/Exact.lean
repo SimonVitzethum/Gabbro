@@ -94,11 +94,26 @@ variable [Kern] {D : Deklaration} {L : Lay D}
 
 /-- The binary search supplies the exact shift count; one comparison caps
     it at the remaining exponent budget. -/
+def routineLeftCountWord (a index : Runner.W) : Runner.W :=
+  let count := routineLeadingZerosWord a - 8
+  let budget := index - 1
+  if count.ult budget then count else budget
+
 def routineLeftCountL (d : Nat) (a index : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   let count := fun j => wordK 4 j (routineLeadingZerosL j a) 8
   let budget := fun j => wordK 4 j (index j) 1
   routineChooseL d (fun j => routineLessL j count budget) count budget
+
+theorem routineLeftCountL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {a index : Nat → Option (List II × Nat)} {av ev : Runner.W}
+    (ha : WordCode (L := L) ρ W a av) (he : WordCode (L := L) ρ W index ev) :
+    WordCode (L := L) ρ W (fun d => routineLeftCountL d a index) (routineLeftCountWord av ev) := by
+  have count := WordCode.bin (routineLeadingZerosL_word ha) (WordCode.const 8 (by decide))
+    (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
+  have budget := WordCode.bin he (WordCode.const 1 (by decide))
+    (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
+  exact routineChooseL_ok (routineLessL_ok count budget) (fun _ => count) (fun _ => budget)
 
 theorem routineLeftCountL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a index : Nat → Option (List II × Nat)} {n e : Nat}
@@ -173,6 +188,7 @@ theorem routineLeftCount_zeuge :
 #print axioms routineLeftCount_exact
 #print axioms routineLeftCount_round_exact
 #print axioms routineLeftCountL_ok
+#print axioms routineLeftCountL_word
 #print axioms routineLeftShiftL_exact
 #print axioms routineLeftCount_zeuge
 end Gabbro.Stage0.Senke
