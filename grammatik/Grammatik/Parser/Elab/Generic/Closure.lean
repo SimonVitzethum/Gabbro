@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Generic.Substitution
+public import Grammatik.Parser.Elab.Instantiation.Names
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -48,12 +49,14 @@ def boundedInstanceClosure (genericDeclarations : Nat)
 
 /-- Reject collisions before adding any generated declarations. -/
 def checkInstanceNames (sourceNames : List String) (instances : List Instance) :
-    Except String Unit := do
-  let mut names := sourceNames
-  for instance in instances do
-    let name := instanceName instance
-    if names.contains name then
-      throw "generic-instance-name-collision: generated instance name is already declared"
-    names := name :: names
+    Except String Unit :=
+  Instantiation.checkFreshNames sourceNames (instances.map instanceName)
+    "generic-instance-name-collision: generated instance name is already declared"
+
+theorem checkInstanceNames_hygiene (sourceNames : List String) (instances : List Instance)
+    (h : checkInstanceNames sourceNames instances = .ok ()) :
+    (instances.map instanceName).Nodup ∧
+      ∀ name ∈ instances.map instanceName, name ∉ sourceNames :=
+  Instantiation.checkFreshNames_sound _ _ _ h
 
 end Gabbro.Grammatik.Parser.Generic

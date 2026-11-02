@@ -9,6 +9,8 @@ structure Expansion where
   items : List SItemTief
   literals : List (FnSig × SAnw) := []
   requirements : List (STyp × String) := []
+  /-- Names allocated by module copies, including templates consumed in the next phase. -/
+  generatedNames : List String := []
 
 structure Work where
   locations : List Located := []
@@ -141,7 +143,8 @@ def expandRaw (items : List SItemTief) : Except String Expansion := do
       if names.contains name then throw "parametric-module-name-collision: generated name is already declared"
       names := name :: names
     if !Oeffentlich.huelleZu target then throw "parametric-module-export: public signature names a private item"
-    pure { items := target, literals := work.literals, requirements := work.requirements }
+    pure { items := target, literals := work.literals, requirements := work.requirements,
+      generatedNames := (instanceKeys work.locations).map Prod.snd }
 
 /-- Refuse any residual surface form at the actual frontend boundary. -/
 def expandWithRequirements (items : List SItemTief) : Except String Expansion := do
