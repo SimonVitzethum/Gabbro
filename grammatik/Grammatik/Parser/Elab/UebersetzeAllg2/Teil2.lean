@@ -135,7 +135,9 @@ def lowGrund (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (n :
       | .ok v => .ok (Expr.var v)
 
 /-- One call argument against the callee parameter kind and the
-    recorded parameter type (the `tr_arg` of `lean_g.rs`). -/
+    recorded parameter type (the `tr_arg` of `lean_g.rs`). An owned callee
+    capability is refused by name: the owner mark travels only through the
+    checked C09 owner flow, never through a re-view. -/
 def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (k : UParamArt) (t : Ty) : UArg →
@@ -174,6 +176,8 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
           else .error "argument capability without G form"
         | _ => .error "value for pointer without G form"
       else .error "argument capability without G form"
+    | .ptr _, .ptr ⟨_, ⟨_, _, some _⟩, .table _⟩ =>
+      .error "owned pointer argument needs the checked C09 owner flow"
     | .index num, t =>
       match t with
       | .int lo hi =>

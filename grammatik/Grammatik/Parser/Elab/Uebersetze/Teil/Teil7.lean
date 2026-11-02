@@ -13,7 +13,9 @@ public import Grammatik.Parser.Elab.Uebersetze.Transition.Resolve
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
-/-- `place = v;` at a slot or a static (the place reader decides which). -/
+/-- `place = v;` at a slot or a static (the place reader decides which).
+    An owned capability is refused by name: the owner mark travels only through
+    the checked C09 owner flow, never through the write flag. -/
 def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
   match uZugriff ctx ziel with
   | .error e => uGlobSchreib ctx ziel wert e
@@ -39,6 +41,8 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
           match uWertBody ctx wert with
           | .error e => .error e
           | .ok v => .ok (.assign b f ix (uWrap ctx tb f v))
+      | .ok (.ptr ⟨_, ⟨_, _, some _⟩, _⟩) =>
+        .error "write through an owned pointer needs the checked C09 owner flow"
       | _ => .error "write through a read pointer"
   | .ok (.tabelle b, tb, f, ix) =>
     if (uOptFeld ctx tb f).isSome then
