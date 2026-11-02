@@ -22,7 +22,7 @@
     would hold it back (`RufFreiG` fails when another reader holds `L`); the layer admits it.
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwSchritt
 public import Grammatik.Zielsatz.Kern.Beweis
 @[expose] public section
 

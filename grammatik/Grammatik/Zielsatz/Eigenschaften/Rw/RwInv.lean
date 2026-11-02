@@ -20,7 +20,7 @@
     invariant may be broken only inside a section no other thread is in.
 -/
 module
-public import Grammatik.Zielsatz.Eigenschaften.RwOrdnung
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwOrdnung
 @[expose] public section
 
 

@@ -72,10 +72,10 @@ public import Grammatik.Zielsatz.Eigenschaften.MaskenZeuge
 public import Grammatik.Zielsatz.Eigenschaften.KernMaske
 public import Grammatik.Zielsatz.Eigenschaften.KernMaskeGleich
 public import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
-public import Grammatik.Zielsatz.Eigenschaften.RwSchritt
-public import Grammatik.Zielsatz.Eigenschaften.RwRang
-public import Grammatik.Zielsatz.Eigenschaften.RwOrdnung
-public import Grammatik.Zielsatz.Eigenschaften.RwInv
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwSchritt
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwRang
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwOrdnung
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 public import Grammatik.Zielsatz.Eigenschaften.RwZeuge
 public import Grammatik.Zielsatz.Eigenschaften.RwZeugeLeser
 public import Grammatik.Zielsatz.Faeden.PoolZeuge

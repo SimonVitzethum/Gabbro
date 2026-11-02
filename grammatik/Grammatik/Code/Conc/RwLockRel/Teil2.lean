@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Code.Conc.RwLock
-public import Grammatik.Zielsatz.Eigenschaften.RwSchritt
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwSchritt
 public import Grammatik.Code.Conc.RwLockRel.Teil1
 
 @[expose] public section
