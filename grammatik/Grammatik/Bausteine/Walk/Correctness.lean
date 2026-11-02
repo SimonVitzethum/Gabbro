@@ -35,13 +35,14 @@ namespace Gabbro.Grammatik
 
 /-- One traverse with an always-true invariant and always-`.ok`, always-preserving steps runs every
     index once, completes with `.ok`, and preserves the node cells. Proved by induction over the
-    index list. -/
-theorem traverseLauf_all_okP {D : Deklaration} {V : Vertrag D} {τ : Ty} {Γ : Ctx} {Λ : List (Res D)}
+    index list. `invCells` transports `cells` across the read-only invariant evaluation. -/
+theorem traverseLauf_all_okP {D : Deklaration} {V : vertrag D} {τ : Ty} {Γ : Ctx} {Λ : List (Res D)}
     {l : Bool}
     (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ :: Γ))
     (inv : World D → Env D Γ → World D × Bool)
     (cells : World D → Prop)
     (invOk : ∀ (σ : World D) (ρ : Env D Γ), (inv σ ρ).2 = true)
+    (invCells : ∀ (σ : World D) (ρ : Env D Γ), cells σ → cells (inv σ ρ).1)
     (stepOkP : ∀ (σ : World D) (k : Wert D τ) (ρ : Env D Γ), cells σ →
       ∃ (σ' : World D) (ρ' : Env D (τ :: Γ)),
         schritt (inv σ ρ).1 (.cons k ρ) = .ok σ' ρ' ∧ cells σ')
@@ -50,7 +51,7 @@ theorem traverseLauf_all_okP {D : Deklaration} {V : Vertrag D} {τ : Ty} {Γ : C
       traverseLauf (l := l) schritt inv ks σ ρ = .ok σ' ρ' ∧ cells σ' := by
   induction ks generalizing σ ρ with
   | nil =>
-      exact ⟨(inv σ ρ).1, ρ, by simp only [traverseLauf, invOk], hσ⟩
+      exact ⟨(inv σ ρ).1, ρ, by simp only [traverseLauf, invOk], invCells σ ρ hσ⟩
   | cons k ks ih =>
       obtain ⟨σ', ρ', hstep, hσ'⟩ := stepOkP σ k ρ hσ
       have hinv : (inv σ ρ).2 = true := invOk σ ρ
@@ -105,7 +106,7 @@ theorem walkHit_det {α : Type} {N : Nat} {T : WalkTree α N} {l : Nat} {tbl : F
       intro n hn
       cases hn with
       | leaf hl' => exact absurd hl (by rw [hl']; simp)
-      | down _ _ _ h' => exact ih h'
+      | down hl₂ hd₂ hdn₂ h' => have heq := hdn.symm.trans hdn₂; cases heq; exact ih h'
 
 /-- **The mapping whole-proof**: emitted visits equal all reachable qualifying path/entry pairs --
     sound (`WalkHit` for every emitted pair), complete (every `WalkHit` pair is emitted), no duplicate
@@ -150,7 +151,7 @@ structure WalkRunOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn) : Prop where
   /-- Stable node memory: the initial read agrees with the pure table. -/
   stable : ∀ (node : Wert D (.index (D.count binding.nodes))),
-    binding.entries state node = tbl node
+    binding.entries state node = tbl
   /-- Corresponding predicates: generated `leaf` agrees with the pure leaf predicate on every entry. -/
   leafOk : ∀ {Γ : Ctx} (rename : WalkRen outer Γ) (e : Expr D Γ resources binding.entryTy)
     (σ : World D) (ρ : Env D Γ),
@@ -190,13 +191,14 @@ structure WalkRunOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
 theorem walkBranch_match {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     {outer : Ctx} {resources : List (Res D)} (binding : WalkBinding D shape)
     {Γ : Ctx} (code : WalkCode binding V outer resources)
+    (rename : WalkRen outer Γ)
     (leaf descend : Wert D binding.entryTy → Bool)
     (okLeaf : ∀ (e : Expr D Γ resources binding.entryTy) (σ : World D) (ρ : Env D Γ),
-      wahr? (eval σ (code.leaf (fun x => x) e) σ ρ) = leaf (eval σ e σ ρ))
+      wahr? (eval σ (code.leaf rename e) σ ρ) = leaf (eval σ e σ ρ))
     (entryval : Wert D binding.entryTy) :
     ∀ (e : Expr D Γ resources binding.entryTy) (σ : World D) (ρ : Env D Γ),
       eval σ e σ ρ = entryval →
-      wahr? (eval σ (code.leaf (fun x => x) e) σ ρ) = leaf entryval := by
+      wahr? (eval σ (code.leaf rename e) σ ρ) = leaf entryval := by
   intro e σ ρ he
   rw [okLeaf e σ ρ, he]
 
@@ -217,25 +219,25 @@ theorem walkIte {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       (binding.entryTy :: .index (D.count binding.iterator) :: Γ) resources resources)
     (hotherwise : ∀ (σ : World D)
       (ρ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-      (∀ nodev, binding.entries σ nodev = tbl nodev) →
+      (∀ nodev, binding.entries σ nodev = tbl) →
       ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
         execBlock oracle passes calls otherwise σ ρ = .ok σ' ρ' ∧
-        ∀ nodev, binding.entries σ' nodev = tbl nodev) :
+        ∀ nodev, binding.entries σ' nodev = tbl) :
     ∀ (σ : World D) (ρ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-      (∀ nodev, binding.entries σ nodev = tbl nodev) →
+      (∀ nodev, binding.entries σ nodev = tbl) →
       ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
         execStmt oracle passes calls
           (.ite (code.leaf (binding.renameEntry rename) (.var .here))
             (code.visit (binding.renameEntry rename) level
               (binding.fullPath path) (.var .here))
             otherwise) σ ρ = .ok σ' ρ' ∧
-        ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+        ∀ nodev, binding.entries σ' nodev = tbl := by
   intro σ ρ hstab
   simp only [execStmt]
   split
-  · obtain ⟨σ', ρ', hvisit, hpres⟩ := ok.visitOk _ _ _ _ _ _
+  · obtain ⟨σ', ρ', hvisit⟩ := ok.visitOk (binding.renameEntry rename) level (binding.fullPath path) (.var .here) _ _
     simp only [hvisit]
-    exact ⟨_, _, rfl, fun nodev => (hpres _ _ _ _ _ _ _ _ hvisit nodev).trans (hstab nodev)⟩
+    exact ⟨_, _, rfl, fun nodev => (ok.visitPreserves (binding.renameEntry rename) level (binding.fullPath path) (.var .here) _ _ _ _ hvisit nodev).trans (hstab nodev)⟩
   · refine hotherwise _ _ ?_
     exact fun nodev => hstab nodev
 
@@ -254,14 +256,14 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       (node' : Expr D Γ' resources (.index (D.count binding.nodes)))
       (path' : List (Expr D Γ' resources (.index shape.arity)))
       (σ' : World D) (ρ' : Env D Γ'),
-      (∀ nodev, binding.entries σ' nodev = tbl nodev) →
+      (∀ nodev, binding.entries σ' nodev = tbl) →
       ∃ σ'' ρ'', execStmt oracle passes calls (l := loop')
         (binding.expand guard code level rename' node' path') σ' ρ' = .ok σ'' ρ'' ∧
-        ∀ nodev, binding.entries σ'' nodev = tbl nodev)
+        ∀ nodev, binding.entries σ'' nodev = tbl)
     {Γ : Ctx} (rename : WalkRen outer Γ)
     (path : List (Expr D Γ resources (.index shape.arity))) :
     ∀ (σ : World D) (ρ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-      (∀ nodev, binding.entries σ nodev = tbl nodev) →
+      (∀ nodev, binding.entries σ nodev = tbl) →
       ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
         execBlock oracle passes calls
           (.cons (.ite (code.descend (binding.renameEntry rename) (.var .here))
@@ -270,7 +272,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                 (fun x => .there (binding.renameEntry rename x)) (.var .here)
                 ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil)
           σ ρ = .ok σ' ρ' ∧
-        ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+        ∀ nodev, binding.entries σ' nodev = tbl := by
   intro σ ρ hstab
   simp only [execBlock]
   have hdesc : ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
@@ -280,7 +282,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             (.cons (binding.expand guard code level
               (fun x => .there (binding.renameEntry rename x)) (.var .here)
               ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) σ ρ =
-      .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+      .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
     simp only [execStmt]
     split
     · -- `dwhen` holds: follow the checked optional child.
@@ -289,19 +291,20 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             (.onOption (Expr.prodGet (.var .here) binding.child)
               (.cons (binding.expand guard code level
                 (fun x => .there (binding.renameEntry rename x)) (.var .here)
-                ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) σ ρ =
-          .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+                ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil)
+            (σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte) ρ =
+          .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
         simp only [execStmt]
-        cases hchild : eval ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte)) (Expr.prodGet (.var .here) binding.child) ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte)) ρ with
+        cases hchild : eval ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) (Expr.prodGet (.var .here) binding.child) ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) ρ with
         | none =>
             simp only [hchild]
             exact ⟨_, _, rfl, fun nodev => hstab nodev⟩
         | some c =>
             simp only [hchild]
             have hstabRec : ∀ nodev, binding.entries
-                (((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) nodev = tbl nodev :=
+                ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) nodev = tbl :=
               fun nodev => hstab nodev
-            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih _ _ _ _ _ hstabRec
+            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ hstabRec
             simp only [execBlock, hrec]
             exact ⟨_, _, rfl, hc3⟩
       obtain ⟨σ', ρ', honOpt, hcOpt⟩ := honOpt
@@ -327,11 +330,11 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       (node : Expr D Γ resources (.index (D.count binding.nodes)))
       (path : List (Expr D Γ resources (.index shape.arity)))
       (σ : World D) (ρ : Env D Γ),
-      (∀ (nodev : Wert D (.index (D.count binding.nodes))), binding.entries σ nodev = tbl nodev) →
+      (∀ (nodev : Wert D (.index (D.count binding.nodes))), binding.entries σ nodev = tbl) →
       ∃ (σ' : World D) (ρ' : Env D Γ),
         execStmt oracle passes calls (l := loop)
           (binding.expand guard code level rename node path) σ ρ = .ok σ' ρ' ∧
-        ∀ (nodev : Wert D (.index (D.count binding.nodes))), binding.entries σ' nodev = tbl nodev := by
+        ∀ (nodev : Wert D (.index (D.count binding.nodes))), binding.entries σ' nodev = tbl := by
   intro level
   induction level with
   | zero =>
@@ -339,8 +342,8 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       have hexpand : binding.expand guard code 0 rename node path =
           binding.expandLevel guard code 0 rename node path none := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
-      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl nodev)
-        (fun σ₁ ρ₁ => ok.invOk rename 0 path σ₁ ρ₁) ?_ _ σ ρ hstab
+      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
+        (fun σ₁ ρ₁ => ok.invOk rename 0 path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
       intro σ₁ k ρ₁ hstab₁
       have hstabBind : ∀ nodev,
           binding.entries
@@ -348,17 +351,17 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1.lese resources
               (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ))).orte) nodev =
-            tbl nodev := fun nodev => hstab₁ nodev
+            tbl := fun nodev => hstab₁ nodev
       have hnite : ∀ (σ₂ : World D)
           (ρ₂ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-          (∀ nodev, binding.entries σ₂ nodev = tbl nodev) →
+          (∀ nodev, binding.entries σ₂ nodev = tbl) →
           ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
             execStmt oracle passes calls
               (.ite (code.leaf (binding.renameEntry rename) (.var .here))
                 (code.visit (binding.renameEntry rename) 0
                   (binding.fullPath path) (.var .here))
                 .nil) σ₂ ρ₂ = .ok σ' ρ' ∧
-            ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+            ∀ nodev, binding.entries σ' nodev = tbl := by
         intro σ₂ ρ₂ hstab₂
         refine walkIte binding code tbl oracle passes calls ok rename path 0 .nil ?_ σ₂ ρ₂ hstab₂
         intro σ₃ ρ₃ hstab₃
@@ -369,7 +372,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             (((fun state env => let invariant := code.invariant rename 0 path
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1) (.cons k ρ₁) =
-          .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+          .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
         simp only [WalkBinding.levelBody, execBlock]
         obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite _ _ hstabBind
         simp only [hnite]
@@ -382,8 +385,8 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
           binding.expandLevel guard code (level + 1) rename node path
             (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)) := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
-      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl nodev)
-        (fun σ₁ ρ₁ => ok.invOk rename (level + 1) path σ₁ ρ₁) ?_ _ σ ρ hstab
+      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
+        (fun σ₁ ρ₁ => ok.invOk rename (level + 1) path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
       intro σ₁ k ρ₁ hstab₁
       have hstabBind : ∀ nodev,
           binding.entries
@@ -391,10 +394,10 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1.lese resources
               (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ))).orte) nodev =
-            tbl nodev := fun nodev => hstab₁ nodev
+            tbl := fun nodev => hstab₁ nodev
       have hnite : ∀ (σ₂ : World D)
           (ρ₂ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-          (∀ nodev, binding.entries σ₂ nodev = tbl nodev) →
+          (∀ nodev, binding.entries σ₂ nodev = tbl) →
           ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
             execStmt oracle passes calls
               (.ite (code.leaf (binding.renameEntry rename) (.var .here))
@@ -403,17 +406,17 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                 (binding.otherwise code rename path
                   (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx))))
               σ₂ ρ₂ = .ok σ' ρ' ∧
-            ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+            ∀ nodev, binding.entries σ' nodev = tbl := by
         intro σ₂ ρ₂ hstab₂
         have hotherwise : ∀ (σ₃ : World D)
             (ρ₃ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-            (∀ nodev, binding.entries σ₃ nodev = tbl nodev) →
+            (∀ nodev, binding.entries σ₃ nodev = tbl) →
             ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
               execBlock oracle passes calls
                 (binding.otherwise code rename path
                   (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)))
                 σ₃ ρ₃ = .ok σ' ρ' ∧
-            ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+            ∀ nodev, binding.entries σ' nodev = tbl := by
           intro σ₃ ρ₃ hstab₃
           refine walkDescendOk binding guard code tbl oracle passes calls ok level ih rename path σ₃ ρ₃ hstab₃
         refine walkIte binding code tbl oracle passes calls ok rename path (level + 1) _ hotherwise σ₂ ρ₂ hstab₂
@@ -424,7 +427,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             (((fun state env => let invariant := code.invariant rename (level + 1) path
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1) (.cons k ρ₁) =
-          .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl nodev := by
+          .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
         simp only [WalkBinding.levelBody, execBlock]
         obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite _ _ hstabBind
         simp only [hnite]
@@ -453,7 +456,10 @@ theorem walkExpand_correct {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     (visitT (binding.tree state leaf descend) (shape.levels - 1) tbl).Pairwise
       (fun x y => x.1 ≠ y.1) := by
   obtain ⟨σw, ρw, hw, _⟩ := walkExpand_ok binding guard code tbl oracle passes calls
-    ok (shape.levels - 1) (fun x => .there x) root [] state env ok.stable
+    ok (shape.levels - 1) (fun x => .there x) root []
+    (state.lese resources root.orte)
+    (.cons (eval (state.lese resources root.orte) root (state.lese resources root.orte) env) env)
+    ok.stable
   have hwalk : execBlock oracle passes calls (binding.walk guard code root) state env =
       .ok σw ρw.tail := by
     simp only [WalkBinding.walk, execBlock, hw, Ausgang.schrumpf]
