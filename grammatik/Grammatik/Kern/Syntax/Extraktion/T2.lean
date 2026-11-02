@@ -261,6 +261,8 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => blockOrte body
   | .breaking _ body => blockOrte body
   | .traverse _ inv body => inv.orte ++ blockOrte body
+  | .consumeTraverse _ member edge inv _ mass body =>
+      member.orte ++ edge.orte ++ inv.orte ++ mass.orte ++ blockOrte body
   | .retry _ bis body ueber => bis.orte ++ blockOrte body ++ blockOrte ueber
   | .forever _ inv body => inv.orte ++ blockOrte body
   | .axiomCall _ args _ _ _ _ _ => args.orte
@@ -271,6 +273,8 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires _ _ _ _ => []
   | .ret e _ => e.orte
   | .retWhy _ _ => []
+  | .retScoped e _ => e.orte
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
 
@@ -295,6 +299,7 @@ def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ blockOrte rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrte sonst ++ blockOrte rest
+  | .narrowRequired e _ _ rest => e.orte ++ blockOrte rest
   | .check c sonst rest =>
       c.orte ++ endblockOrte sonst ++ blockOrte rest
   | .float _ a b _ _ rest => a.orte ++ b.orte ++ blockOrte rest
@@ -308,6 +313,8 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List (D.Tab ⊕ D.Glob)
   | .ret e _ => e.orte
   | .retWhy _ _ => []
+  | .retScoped e _ => e.orte
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
   | .cons s rest => stmtOrte s ++ endblockOrte rest
@@ -324,6 +331,7 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrte rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrte sonst ++ endblockOrte rest
+  | .narrowRequired e _ _ rest => e.orte ++ endblockOrte rest
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrte rest
   | .ite c t e => c.orte ++ endblockOrte e ++ endblockOrte t
 

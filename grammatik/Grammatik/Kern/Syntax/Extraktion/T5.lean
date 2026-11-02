@@ -440,6 +440,7 @@ def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
   | .locks _ _ _ => []
   | .breaking _ _ => []
   | .traverse _ _ _ => []
+  | .consumeTraverse _ _ _ _ _ _ _ => []
   | .retry _ _ _ _ => []
   | .forever _ _ _ => []
   | .axiomCall a _ _ _ _ _ _ =>
@@ -452,6 +453,8 @@ def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
   | .retires _ _ _ _ => []
   | .ret _ _ => []
   | .retWhy _ _ => []
+  | .retScoped _ _ => []
+  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
 
