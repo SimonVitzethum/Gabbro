@@ -5626,3 +5626,89 @@ Stage-0 boundary: Unknown arenas, unknown statics and non-array statics remain r
 * **`groupT_zeuge`**, **`invariant_refused_zeuge`**: concrete group and table invariant declarations return the missing cost/runs/by binding error.
 
 Stage 0 still refuses all group and table invariants: mandatory cost/runs/by duties have no checked source binding.
+
+## 120. C08: foreign contracts and the split goal premise (2026-11-02)
+
+`grammatik/Grammatik/Kern/Syntax/Syntax/Teil2.lean` defines `BoundaryClause`
+(`eingabe`, `ausgabe`, `frisch`, `freigabe`), the typed input/output extent,
+fresh-result and release clauses, and `CallContract` with `pre`, `post` and `grenzen`;
+`Programm.axVertrag` assigns such a contract to each foreign signature.
+These definitions alone do not establish a source-to-IR case.
+
+`grammatik/Grammatik/Kern/Semantik/Semantik/T2/Teil1.lean`:
+
+* **`axiomAntwortSonst`**: Calls `O.wirkt` after recording the axiom query and checks its raw answer with `sonstPasst`, retaining the returned world.
+* **`axiomAntwortSonst_fst`**: For any axiom, world and argument environment, the first projection of `axiomAntwortSonst` equals that of `axiomAntwort`.
+
+`grammatik/Grammatik/Logik/Ruf/FremdRuf/T8.lean`:
+
+* **`axVertragO_of_split`**: `AxVertragOHw Q O` and `AxVertragOSw Q O` imply `AxVertragO Q O`.
+* **`hardwareAnnahmen_of_split`**: `HardwareAnnahmenHw O Q` and `AxVertragOSw Q O` imply `HardwareAnnahmen O Q`.
+* **`axVertragOSw_ohne`**: If no axiom has software provenance, `AxVertragOSw Q O` holds.
+
+`grammatik/Grammatik/Zielsatz/Atomar/GabbroZielFremd.lean`:
+
+* **`gabbro_ziel_fremd`**: Proves `GabbroZielFremd`, namely that checker acceptance, `NutzerPflichtA`, software ensures `AxVertragOSw`, named hardware assumptions `HardwareAnnahmenHw`, and `Laufzeit` imply `ZielFX` at every `FadenErreichbarX` machine for every pass count and initial live-thread map.
+* **`gabbro_ziel_fremd_ohne`**: Under the same acceptance, user, hardware, runtime and reachability premises, absence of software-provenance items yields `ZielFX` without an additional software-ensures premise.
+
+The C08 foundation and premise-split notes in `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`
+distinguish the new contract/provider definitions from the proved goal: `GabbroZiel` stays
+unchanged, while `GabbroZielFremd` moves software ensures into user logic; the call-site
+replacement and machine provider history remain subsequent work.
+
+Stage-0 boundary: `itemMetadata` and `clausesMetadata` in
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean` still reject unbound
+cost, limit, induction, load, moves, quits, keeps, part, arch and refs clauses;
+providers, placement, entry handles and required allocation are not admitted merely
+by having C08 contracts. `capability_unbound_zeuge` witnesses refused owner pointers
+and entry handles; `required_allocation_refused_zeuge` witnesses refused allocation;
+`nested_duties_refused_zeuge` and `invariant_refused_zeuge` retain nested and invariant duties.
+
+## 121. C17: measure provenance and const admission supplements (2026-11-02)
+
+This supplements section 117's Konst execution soundness statements.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/MeasureSource.lean`:
+
+* **`uMeasureSource_exact`**: If `uMeasureSource source = .ok measure`, then `measure.source = source`.
+
+`grammatik/Grammatik/Logik/Vertraege/Uebersetzung.lean`:
+
+* **`translation_measure`**: For a `TranslationDecl` and arbitrary passes, axiom ensures, lock invariant and carrier predicate, its translator satisfies `MassPflicht` with `Mass.leer` and the declared program's `zykS` relation.
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Rein.lean` defines **`ConstAdmissible`**
+as `ConstEnd` for every function's body transported along `emptyEntry`.
+
+`grammatik/Grammatik/Kern/Syntax/Konst/ReinBBeweis.lean`:
+
+* **`constAdmissibleB_iff`**: For every `ConstProgram c`, `constAdmissibleB c = true` iff `ConstAdmissible c`.
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Rang.lean`:
+
+* **`constTerminationB_sound`**: A successful `constTerminationB c n rank` check implies `ConstTermination c n`.
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Zeuge.lean`:
+
+* **`constAdmissibleB_zeuge`**: The concrete call-and-arithmetic `fixtureA` passes Boolean admission.
+* **`constAdmissible_zeuge`**: `fixtureA` satisfies `ConstAdmissible`.
+* **`constTerminationB_zeuge`**: `fixtureA` passes termination checking with bound one and `rankA`.
+* **`constTermination_zeuge`**: `fixtureA` satisfies `ConstTermination` with bound one.
+* **`constRecursion_zeuge`**: The self-recursive `fixtureC` fails the displayed rank check.
+* **`constForbiddenTargets_zeuge`**: Every `ConstProgram` has neither global targets nor oracle targets.
+
+`grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Measures/Refusals.lean`:
+
+* **`uMeasureSource_exact_zeuge`**: Encoding the concrete expression `n + 1` succeeds and decoding preserves its exact source tree.
+
+`grammatik/Grammatik/Parser/Stmt/LibraryCertificates.lean`:
+
+* **`translation_measure_zeuge`**: The concrete translation declaration satisfies `MassPflicht` with empty measures for arbitrary passes, ensures, lock invariants and carrier predicates.
+
+Stage-0 boundary: `drops_bound` in
+`grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean` admits a decreases
+clause only when `uMeasureSource` succeeds; `drops_zeuge` admits `n` and refuses
+`old(n)`. Alias resolution, duplicate-clause checks and certified measure lowering
+remain additional obligations. The same file's `itemMetadata` still refuses function
+kinds other than ordinary, impl and the specially handled library form, so these
+Konst theorems alone do not admit const function declarations through Stage 0;
+declared costs and the other unbound clauses listed in section 120 remain refused.
