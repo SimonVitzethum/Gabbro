@@ -189,7 +189,8 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
     (hA₁ : AkzeptiertSpecX E₁.P E₁.S fs E₁.ws B₁ A₁)
     (hA₂ : AkzeptiertSpecX E₂.P E₂.S fs E₂.ws B₂ A₂)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs e E₁ E₂) :
-    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws [] := by
+    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws
+      (verbinde e E₁ E₂).akku := by
   have hH := huelle_of_reach (e := e) (E₁ := E₁) (E₂ := E₂) hvoll hS.keinRueckruf
   have hfrag : ∀ f, ((teilP e E₁ E₂ f).rumpf f).gOk
       (kandB (teilP e E₁ E₂ f) fs (fussOrteG (teilP e E₁ E₂ f) f)) (fun _ => true) = true := by
@@ -205,7 +206,7 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, Kernzelle.accumulatorAdmission_leer _ _, [], CheckAdmission.nil _ _, hA₁.reset⟩
+    ?_, ?_, ?_, ?_, ?_, hS.akku, [], CheckAdmission.nil _ _, hA₁.reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
       (kandB (verbindeP e E₁ E₂) fs (fussOrteG (verbindeP e E₁ E₂) f)) (fun _ => true) = true
@@ -288,11 +289,25 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
     hV hS
   -- the linked unit without its arenas: the linked statement claims no ownership
   let E : Einheit D := { verbinde e E₁ E₂ with arenen := [] }
+  have hAS₁ : Kernzelle.AkkuStart E₁ E₁.akku := (C.korrekt E₁ fs ls cs h₁).2.2
+  have hAS₂ : Kernzelle.AkkuStart E₂ E₂.akku := (C.korrekt E₂ fs ls cs h₂).2.2
+  have hAS : Kernzelle.AkkuStart E E.akku := by
+    intro a ha hok i
+    have hakku : E.akku = E₁.akku ++ E₂.akku := rfl
+    have hsp : E.sp0 = E₁.sp0 := rfl
+    rw [hakku] at ha
+    rcases List.mem_append.mp ha with h1 | h2
+    · rw [hsp]
+      exact hAS₁ a h1 hok i
+    · rw [hsp, hV.speicher]
+      exact hAS₂ a h2 hok i
+  have hBStart : Kernzelle.akkuStartB E E.akku = true :=
+    Kernzelle.akkuStartB_vollst hA.akku hAS
   have hB : akzeptiertX_pruefer.akzeptiert E fs.1 ls.1 cs.1 = true :=
     (Bool.and_eq_true _ _).mpr
       ⟨(Bool.and_eq_true _ _).mpr
         ⟨akzeptiertX_of_akzeptiert (spec_akzeptiert fs.2 ls.2 cs.2 (h := hA)), besitzB_leer rfl⟩,
-      Kernzelle.akkuStartB_leer E⟩
+      hBStart⟩
   have hN : NutzerPflichtA (verbinde e E₁ E₂) := nutzerPflichtA_of_akzeptiert fs.2 hA
     (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂))
   exact gabbro_ziel akzeptiertX_pruefer D E fs ls cs hB ⟨hN.logik, ⟨hN.start.sperren, hN.start.req⟩⟩
