@@ -1,6 +1,7 @@
 module
 public import Grammatik.Code.Refine.Match.Scope
 public import Grammatik.Code.Refine.Struct.Labels
+public import Grammatik.Code.Refine.Struct.Shape
 @[expose] public section
 
 

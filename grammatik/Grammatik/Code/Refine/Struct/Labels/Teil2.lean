@@ -371,6 +371,14 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact lw_single rfl (Nat.le_refl _)
+  | _, _, _, .bindCallElse .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .narrow .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .exchange .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .ite .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindCall .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, hlt, h => by
