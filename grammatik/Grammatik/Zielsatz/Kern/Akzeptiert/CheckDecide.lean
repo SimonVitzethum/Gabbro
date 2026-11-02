@@ -90,7 +90,7 @@ def CheckAdmission (P : Programm D) (fs : List D.Fn) (checks : List (CheckDecl D
 
 /-- No check is vacuously admitted: the admission over the empty list holds. -/
 theorem CheckAdmission.nil (P : Programm D) (fs : List D.Fn) : CheckAdmission P fs [] :=
-  ⟨fun c hc => absurd hc (List.not_mem_nil _), fun c hc => absurd hc (List.not_mem_nil _), fun c hc => absurd hc (List.not_mem_nil _), fun c hc _ _ => absurd hc (List.not_mem_nil _), List.nodup_nil⟩
+  ⟨fun c hc => absurd hc List.not_mem_nil, fun c hc => absurd hc List.not_mem_nil, fun c hc => absurd hc List.not_mem_nil, fun c hc _ _ => absurd hc List.not_mem_nil, List.nodup_nil⟩
 
 end Pruefung
 

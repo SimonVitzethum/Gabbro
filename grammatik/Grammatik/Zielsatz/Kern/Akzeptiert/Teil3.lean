@@ -173,6 +173,21 @@ example : checkB pruefP [] [] [true] [pruefC] = false := by decide
 /-- A duplicated check name is refused. -/
 example : checkB pruefP [] [] [true, false] [pruefC, pruefC] = false := by decide
 
+/-! ## Witnesses: the decider and the Prop agree on the fixture -/
+
+/-- The fixture admits its check: `checkB_iff` on the non-degenerate
+    `pruefP`/`pruefC`, satisfying every premise jointly. -/
+theorem checkAdmission_zeuge : CheckAdmission pruefP [true, false] [pruefC] :=
+  (checkB_iff (fun g => by cases g <;> decide) (fun t => t.elim) (fun g => g.elim)).mp (by decide)
+
+/-- The fixture gate list is distinct. -/
+theorem toreEindeutig_zeuge : [false].Nodup :=
+  toreEindeutig_iff.mp (by decide)
+
+/-- The fixture check name is unique. -/
+theorem eindeutig_zeuge : ([pruefC].map CheckDecl.name).Nodup :=
+  eindeutig_iff.mp (by decide)
+
 end Pruefung
 
 end Gabbro.Grammatik

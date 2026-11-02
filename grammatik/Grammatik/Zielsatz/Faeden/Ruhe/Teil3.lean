@@ -46,6 +46,8 @@ theorem CheckExpansion.mitRuhe {c : CheckDecl D} (h : CheckExpansion P c) :
     obtain ⟨g0, hg0, rfl⟩ := List.mem_map.mp hg
     exact h7 g0 hg0
   · intro hm
+    have hp : (CheckDecl.mitRuhe c).probe = some c.probe := rfl
+    rw [hp] at hm
     obtain ⟨g0, hg0, he⟩ := List.mem_map.mp hm
     exact h8 (Option.some_inj.mp he ▸ hg0)
   · exact nodup_map_some h9
@@ -61,7 +63,8 @@ theorem CheckRahmen.mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs)
     simp only [reachB_mitRuhe_nicht_ruhe P hA] at hf'
     cases hf'
   | some f =>
-    rw [reachB_mitRuhe P hvoll hA] at hf'
+    have hp : (CheckDecl.mitRuhe c).probe = some c.probe := rfl
+    rw [hp, reachB_mitRuhe P hvoll hA] at hf'
     have hne' : f ≠ c.probe := fun he => hne (congrArg some he)
     obtain ⟨hft, hfg, hfd⟩ := h f hf' hne'
     exact ⟨hft, hfg, hfd⟩
@@ -120,6 +123,11 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
         exact hA.masken w hw f hf
   checks := hA.checks.map CheckDecl.mitRuhe
   pruef := CheckAdmission.mitRuhe P hvoll hA.abg hA.pruef
+
+/-- The fixture expansion survives the idle root. -/
+theorem pruef_expansion_mitRuhe_zeuge :
+    CheckExpansion pruefP.mitRuhe (CheckDecl.mitRuhe pruefC) :=
+  CheckExpansion.mitRuhe pruef_expansion
 
 end Transfer
 
