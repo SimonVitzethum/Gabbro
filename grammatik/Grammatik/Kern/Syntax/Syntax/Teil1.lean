@@ -457,7 +457,7 @@ inductive Var : Ctx → Ty → Type where
 
 def ArmCtx (Γ : Ctx) : Option Ty → Ctx
   | none => Γ
-  | some τ => .int lo hi :: Γ
+  | some τ => τ :: Γ
 
 /-! ## 3. Ausdruecke -- `expr`, `pred`
 
@@ -479,12 +479,13 @@ theorem Deklaration.capTab_sound {D : Deklaration} {space number : Nat} {t : D.T
   | some t' =>
     simp only [Deklaration.capTab, hn] at h
     split at h
-    next hs => cases h; exact ⟨hn, hs⟩
+    next hs => cases h; exact ⟨rfl, hs⟩
     next => cases h
 
 theorem Deklaration.capTab_of {D : Deklaration} {space number : Nat} {t : D.Tab}
     (hn : D.tabNr number = some t) (hs : space = D.tableSpace t)
     (hb : space < D.dataSpaces.length) : D.capTab space number = some t := by
-  simp [Deklaration.capTab, hn, hs, hb]
+  subst hs
+  simp only [Deklaration.capTab, hn, hb, and_self, if_true]
 
 end Gabbro.Grammatik

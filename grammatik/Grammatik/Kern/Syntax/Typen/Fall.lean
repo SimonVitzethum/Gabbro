@@ -12,8 +12,7 @@ theorem Fall_eq_Nutzlast (F : Type) (passt : F → Nat → Bool) :
     ∀ (cs : List (Option Ty)) (i : Fin cs.length),
       Fall F passt cs i = Nutzlast F passt (cs.get i)
   | [], i => (Nat.not_lt_zero _ i.isLt).elim
-  | none :: _, ⟨0, _⟩ => rfl
-  | some _ :: _, ⟨0, _⟩ => rfl
+  | _ :: _, ⟨0, _⟩ => rfl
   | _ :: cs, ⟨i + 1, h⟩ => Fall_eq_Nutzlast F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩
 
 /-- A payload value as a case value. -/
@@ -21,8 +20,7 @@ def Fall.ofNutzlast (F : Type) (passt : F → Nat → Bool) :
     (cs : List (Option Ty)) → (i : Fin cs.length) →
     Nutzlast F passt (cs.get i) → Fall F passt cs i
   | [], i, _ => (Nat.not_lt_zero _ i.isLt).elim
-  | none :: _, ⟨0, _⟩, v => v
-  | some _ :: _, ⟨0, _⟩, v => v
+  | _ :: _, ⟨0, _⟩, v => v
   | _ :: cs, ⟨i + 1, h⟩, v => Fall.ofNutzlast F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩ v
 
 /-- A case value as its payload value. -/
@@ -30,8 +28,7 @@ def Fall.toNutzlast (F : Type) (passt : F → Nat → Bool) :
     (cs : List (Option Ty)) → (i : Fin cs.length) →
     Fall F passt cs i → Nutzlast F passt (cs.get i)
   | [], i, _ => (Nat.not_lt_zero _ i.isLt).elim
-  | none :: _, ⟨0, _⟩, v => v
-  | some _ :: _, ⟨0, _⟩, v => v
+  | _ :: _, ⟨0, _⟩, v => v
   | _ :: cs, ⟨i + 1, h⟩, v => Fall.toNutzlast F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩ v
 
 /-- Casting forth and back is the identity. -/
@@ -39,8 +36,7 @@ def Fall.toNutzlast (F : Type) (passt : F → Nat → Bool) :
     ∀ (cs : List (Option Ty)) (i : Fin cs.length) (v : Nutzlast F passt (cs.get i)),
       Fall.toNutzlast F passt cs i (Fall.ofNutzlast F passt cs i v) = v
   | [], i, _ => (Nat.not_lt_zero _ i.isLt).elim
-  | none :: _, ⟨0, _⟩, _ => rfl
-  | some _ :: _, ⟨0, _⟩, _ => rfl
+  | _ :: _, ⟨0, _⟩, _ => rfl
   | _ :: cs, ⟨i + 1, h⟩, v => Fall.to_of F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩ v
 
 /-- Casting back and forth is the identity. -/
@@ -48,8 +44,7 @@ def Fall.toNutzlast (F : Type) (passt : F → Nat → Bool) :
     ∀ (cs : List (Option Ty)) (i : Fin cs.length) (v : Fall F passt cs i),
       Fall.ofNutzlast F passt cs i (Fall.toNutzlast F passt cs i v) = v
   | [], i, _ => (Nat.not_lt_zero _ i.isLt).elim
-  | none :: _, ⟨0, _⟩, _ => rfl
-  | some _ :: _, ⟨0, _⟩, _ => rfl
+  | _ :: _, ⟨0, _⟩, _ => rfl
   | _ :: cs, ⟨i + 1, h⟩, v => Fall.of_to F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩ v
 
 /-- The cast of a bare case is the unit value. -/

@@ -111,15 +111,14 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
 /-- The value type of case `i` of a sum: its payload's value, `Unit` for a bare case.
     Structural over the case list, so `Val` reduces definitionally. -/
 def Fall (F : Type) (passt : F → Nat → Bool) : (cs : List (Option Ty)) → Fin cs.length → Type
-  | none :: _, ⟨0, _⟩ => Unit
-  | some τ :: _, ⟨0, _⟩ => Val F passt τ
+  | c :: _, ⟨0, _⟩ => Nutzlast F passt c
   | _ :: cs, ⟨i + 1, h⟩ => Fall F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩
-end
 
 /-- The selected payload uses the same function image as its enclosing value. -/
 def Nutzlast (F : Type) (passt : F → Nat → Bool) : Option Ty → Type
   | none => Unit
   | some τ => Val F passt τ
+end
 
 /-- The cell number of a reference. -/
 def Val.zelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (v : Val F passt (.ref n)) : Nat := v
