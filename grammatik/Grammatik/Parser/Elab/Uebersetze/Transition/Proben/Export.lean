@@ -42,13 +42,22 @@ set_option maxHeartbeats 0
 
 @[expose] def summary (tr : STrans) : Option (List String × List UEns × List UStmt) := do
   let state ← (uZustand "S" [tr] ctx).toOption
-  let f ← (uGenerateTransitions ctx [state]).toOption
+  let f ← (uGenerateTransitions ctx.tabs ctx.globs [state]).toOption
   let f ← f.head?
   pure (f.params.map (·.1), f.needs, f.body)
 
+/-- A guarded single constant edge generates the primitive shift of its state,
+    capturing only its index; its edge joins the state graph. -/
 theorem guarded_generation_zeuge :
-    (summary guarded).map (fun (_, _, body) => body) =
-      some [.assignTab "T" "s" (.param "#index0") (.param "#target0")] := by decide +kernel
+    (summary guarded).map (fun (params, _, body) => (params, body)) =
+      some (["#index0"], [.shiftTab "T" "s" (.param "#index0") "S" 0 1]) := by decide +kernel
+
+theorem guarded_edge_in_graph_zeuge :
+    ((uZustand "S" [guarded] ctx).toOption.map (·.paare)) = some [(0, 1)] := by decide +kernel
+
+/-- A declaration of several writes keeps the captured stores and adds no graph edge. -/
+theorem ordered_adds_no_graph_edge_zeuge :
+    ((uZustand "S" [ordered] ctx).toOption.map (·.paare)) = some [] := by decide +kernel
 
 theorem false_guard_preserved_zeuge :
     (summary falseGuard).map (fun (_, needs, _) => needs.head?) = some (some (.and .fls .tru)) := by
@@ -65,17 +74,18 @@ theorem ordered_entry_endpoints_zeuge :
 @[expose] def namedCandidates : Option (String × List UArg) := do
   let state ← (uZustand "S" [ordered] ctx).toOption
   let tr ← state.transitions.head?
-  let args ← (uTransitionArguments tr.writes none).toOption
+  let args ← (uTransitionArguments tr none).toOption
   pure (uTransitionFunction state.name tr.name, args)
 
 theorem entry_capture_arguments_zeuge : namedCandidates =
     some ("#transition#S#cycle", [.val (.lit 0), .val (.lit 0), .val (.lit 1),
       .val (.lit 0), .val (.tab "T" "s" (.lit 0))]) := by decide +kernel
 
-/-- Candidate generation does not falsely certify the source expansion. -/
-theorem source_certificate_still_required_zeuge :
-    ((uZustand "S" [guarded] ctx).toOption.map fun state => uTransitionExportGate [state]) =
-      some (.error "source transition expansion lacks a checked source-to-G certificate") := by
+/-- The constant edge supplies only its index at a use site. -/
+theorem shift_capture_arguments_zeuge :
+    (do let state ← (uZustand "S" [guarded] ctx).toOption
+        let tr ← state.transitions.head?
+        (uTransitionArguments tr (some (.lit 1))).toOption) = some [UArg.val (.lit 1)] := by
   decide +kernel
 
 end Gabbro.Grammatik.Parser.TransitionProben

@@ -117,8 +117,10 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
   pure { name := tr.tname, writes, clause := clauses.foldr UEns.and .tru,
     held := ctx.held, puts := uEindeutig effects.puts, gputs := uEindeutig effects.gputs, primitive }
 
-/-- Preserve every named declaration. Only clause-free constant symbolic
-    edges enter the primitive projection; clauses never become raw shifts. -/
+/-- Preserve every named declaration. The edge graph holds the clause-free
+    constant edges (raw shifts) and the single constant edges of clause
+    declarations, whose generated function ends in the shift; a clause never
+    reaches a raw shift because every source use routes through its call. -/
 @[expose] def uZustand (n : String) (ts : List STrans) (ctx : UCtx) : Except String UZustand := do
   if (uEindeutig (ts.map (·.tname))).length != ts.length then
     throw "duplicate transition name in a state"
@@ -126,7 +128,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
     (ctx.globs.map (·.name) ++ ctx.lits.map (·.1))
   let transitions ← uSeq (ts.map (uTransition ctx labels))
   let pairs := transitions.flatMap fun tr =>
-    if tr.primitive then tr.writes.filterMap fun w =>
+    if tr.primitive || uTransitionShift tr then tr.writes.filterMap fun w =>
       match w.source, w.target with
       | .lit a, .lit b => some (a, b)
       | _, _ => none

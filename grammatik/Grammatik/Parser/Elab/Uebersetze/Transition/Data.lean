@@ -33,6 +33,17 @@ structure UTransition where
   primitive : Bool
   deriving DecidableEq, Repr
 
+/-- A clause-bearing declaration that is exactly one finite constant edge of a table
+    field: its generated function ends in the primitive shift, under a requires
+    that makes the entry legal. Every other clause declaration generates stores. -/
+@[expose] def uTransitionShift (tr : UTransition) : Bool :=
+  !tr.primitive && match tr.writes with
+    | [w] =>
+      match w.place, w.source, w.target with
+      | .slot .., .lit _, .lit _ => true
+      | _, _, _ => false
+    | _ => false
+
 /-- State identity, first-occurrence symbolic numbering, the primitive
     constant-edge projection, and the complete named transition declarations. -/
 structure UZustand where

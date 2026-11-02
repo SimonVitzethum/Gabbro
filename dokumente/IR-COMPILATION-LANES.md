@@ -1503,6 +1503,20 @@ with a constant `Stmt.shift`. Negative fixtures: omitted effect/lock, wrong curr
 state, endpoint out of range, two declarations sharing endpoints but differing in
 requires, duplicate aliases, resource imbalance, and shared-atomic precondition.
 
+**C04 checkpoint 2 (2026-11-02; written statically, not built).** `lowerFnAt` lowers a
+function of the generated name range (`#transition#…`) only as the typed expansion of
+its declaration: it must equal `uGenerateTransition`'s value (up to the lock floor) and
+carries a requires; requires, ensures and body are `transitionRequires/Ensures/End` over
+its captured parameters (clause and capture provenance through `lowEnsList`), or, for a
+single constant edge of one table field, `Stmt.shift` under the source-stage requires
+(`ConstEdge`; its edge joins the state graph, raw shifts still never carry a clause).
+`lowerAllg_transition_certified` yields `TransitionExpansion`/`TransitionShiftExpansion`
+for every generated function of a lowered unit, so `call_correct` relates each successful
+call to the declaration's relation and frame; the export gate is gone and `lowerAllg` has
+its former shape. Failure codes: primitive shift 106, generated function 101 (its
+requires). Open: mixed table/global invariant groups (C05), numeric stage endpoints (A11),
+general index expressions (C13), and building all of it.
+
 **Rebuild/acceptance handoff (implementation only; none run here).**
 
 | Package | Modules whose changes force a rebuild, plus transitive imports |

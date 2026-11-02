@@ -129,9 +129,6 @@ def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i =
     elaborated program over the declaration built from it. -/
 def lowerAllg (u : UProg) :
     Except String (Programm (declOf u) × List (declOf u).Fn) :=
-  match uTransitionExportGate u.zustaende with
-  | .error message => .error message
-  | .ok _ =>
   match hI : lowerInvs u (List.finRange u.invs.length) with
   | .error e => .error e
   | .ok _ =>

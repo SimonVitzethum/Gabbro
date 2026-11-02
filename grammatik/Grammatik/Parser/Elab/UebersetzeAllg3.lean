@@ -10,3 +10,4 @@ module
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest3
+public import Grammatik.Parser.Elab.UebersetzeAllg3.TransitionCert

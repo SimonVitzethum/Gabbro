@@ -165,7 +165,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
       else if !args.isEmpty then .error "transition call takes no explicit arguments"
       else if tr.primitive then .error "constant field transition requires an explicit target"
       else
-        match uTransitionArguments tr.writes none with
+        match uTransitionArguments tr none with
         | .error message => .error message
         | .ok snapshots => .ok (.call (uTransitionFunction state tr.name) snapshots)
     | none =>

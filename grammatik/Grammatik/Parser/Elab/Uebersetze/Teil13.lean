@@ -249,7 +249,7 @@ def elabU : List SItemTief → Except String UProg
     | .ok zustaende =>
     if (uEindeutig (zustaende.map (·.name))).length != zustaende.length then
       .error "duplicate state identity" else
-    match uGenerateTransitions transitionCtx zustaende with
+    match uGenerateTransitions tabs globs zustaende with
     | .error e => .error e
     | .ok transitionFns =>
     if transitionFns.any (fun g => fnItems.any (fun (s, _) => strEq s.name g.name)) then

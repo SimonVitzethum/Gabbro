@@ -46,7 +46,7 @@ theorem shared_atomic_precondition_refused_zeuge :
   let state ← (uZustand "S" [{ ordered with schritte := [(slot 0 "s", .lit 0, .lit 1),
       (slot 0 "s", .lit 0, .lit 2)] }] ctx).toOption
   let tr ← state.transitions.head?
-  pure (uGenerateTransition ctx state.name tr)
+  pure (uGenerateTransition ctx.tabs ctx.globs state.name tr)
 
 theorem aliases_refused_zeuge : aliasedDeclaration =
     some (.error "transition targets alias or lack an equal-result agreement proof") := by
@@ -65,26 +65,40 @@ theorem equal_edges_do_not_identify_clauses_zeuge : ambiguous =
 theorem unbound_capture_refused_zeuge :
     refused (uZustand "S" [unboundEndpoint] ctx) = true := by decide +kernel
 
-/-- Only ordinary function lowering is exercised here. This candidate unit
-    is deliberately rejected by the source expansion gate in lowerAllg. -/
-@[expose] def candidate (tr : STrans) (callerHeld : List String := ["L"]) : Option UProg := do
+/-- A caller and the generated function of one declaration, as the exporter assembles them. -/
+@[expose] def candidate (tr : STrans) (callerHeld : List String := ["L"])
+    (relative : Option UIdx := none) : Option UProg := do
   let state ← (uZustand "S" [tr] ctx).toOption
   let tr ← state.transitions.head?
-  let generated ← (uGenerateTransition ctx state.name tr).toOption
-  let args ← (uTransitionArguments tr.writes none).toOption
+  let generated ← (uGenerateTransition ctx.tabs ctx.globs state.name tr).toOption
+  let args ← (uTransitionArguments tr relative).toOption
   let caller : UFn :=
     { name := "caller", params := [], kinds := [], res := none, held := callerHeld,
       puts := generated.puts, gputs := generated.gputs, gives := [],
       body := [.call generated.name args], ret := .empty }
+  let fns := [caller, generated]
+  let regiert ← (uRegiert fns [state]).toOption
   pure (uMitBoden { tabs := ctx.tabs, locks := ctx.locks, globs := ctx.globs,
-    fns := [caller, generated], zustaende := [state] })
+    fns := fns, zustaende := [state], regiert := regiert })
 
-@[expose] def candidateCallLowers (tr : STrans) (callerHeld : List String := ["L"]) : Bool :=
-  match candidate tr callerHeld with
+@[expose] def candidateCallLowers (tr : STrans) (callerHeld : List String := ["L"])
+    (relative : Option UIdx := none) : Bool :=
+  match candidate tr callerHeld relative with
   | none => false
   | some u =>
     if h : 0 < u.fns.length then
       match lowerFnAt u ⟨0, h⟩ with
+      | .ok _ => true
+      | .error _ => false
+    else false
+
+/-- The generated function itself is admitted by the typed expansion lowering. -/
+@[expose] def generatedLowers (tr : STrans) (relative : Option UIdx := none) : Bool :=
+  match candidate tr ["L"] relative with
+  | none => false
+  | some u =>
+    if h : 1 < u.fns.length then
+      match lowerFnAt u ⟨1, h⟩ with
       | .ok _ => true
       | .error _ => false
     else false
@@ -96,6 +110,33 @@ theorem out_of_range_endpoint_refused_zeuge :
   decide +kernel
 
 theorem ordinary_resource_check_retained_zeuge : candidateCallLowers ordered [] = false := by
+  decide +kernel
+
+/-- The generated function of two ordered stores lowers as the typed expansion. -/
+theorem generated_stores_lowering_zeuge : generatedLowers ordered = true := by decide +kernel
+
+/-- The generated function of a guarded constant edge lowers as the shift expansion. -/
+theorem generated_shift_lowering_zeuge :
+    generatedLowers guarded (some (.lit 1)) = true := by decide +kernel
+
+/-- Without the declared write the generated function is refused, not lowered as an ordinary one. -/
+theorem generated_without_effect_refused_zeuge :
+    generatedLowers { ordered with wirkung := [.writes (.field (.variable "T") "slots")] } = false := by
+  decide +kernel
+
+/-- A generated function of the reserved name range with no declaration is refused. -/
+@[expose] def undeclaredLowers : Bool :=
+  match candidate ordered with
+  | none => false
+  | some u =>
+    let stripped : UProg := { u with zustaende := [] }
+    if h : 1 < stripped.fns.length then
+      match lowerFnAt stripped ⟨1, h⟩ with
+      | .ok _ => true
+      | .error _ => false
+    else false
+
+theorem undeclared_generated_name_refused_zeuge : undeclaredLowers = false := by
   decide +kernel
 
 end Gabbro.Grammatik.Parser.TransitionProben

@@ -10,11 +10,12 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 @[expose] def uTransitionFunction (state clause : String) : String :=
   "#transition#" ++ state ++ "#" ++ clause
 
-/-- The exact entry-expression argument list, before any store. -/
-@[expose] def uTransitionArguments (writes : List UTransitionWrite) (relative : Option UIdx) :
+/-- The exact entry-expression argument list, before any store. A constant
+    edge captures only its index: its endpoints are literals of the shift. -/
+@[expose] def uTransitionArguments (tr : UTransition) (relative : Option UIdx) :
     Except String (List UArg) := do
-  let args ← uSeq (writes.map fun w => do
-    let endpoints := [UArg.val w.source, UArg.val w.target]
+  let args ← uSeq (tr.writes.map fun w => do
+    let endpoints := if uTransitionShift tr then [] else [UArg.val w.source, UArg.val w.target]
     match w.place with
     | .glob _ => pure endpoints
     | .relative _ => throw "transition target scope unresolved"
@@ -76,7 +77,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
   | [(state, a, b, tr)] =>
     if tr.primitive then pure (.shiftTab table field index state (Int.ofNat a) (Int.ofNat b))
     else
-      let args ← uTransitionArguments tr.writes (some index)
+      let args ← uTransitionArguments tr (some index)
       pure (.call (uTransitionFunction state tr.name) args)
   | [] => throw "transition not declared by a state"
   | _ => throw "transition declared by two clauses or states"
