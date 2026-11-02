@@ -1,6 +1,7 @@
 /- Static encoding decomposition for typed product projection. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Product
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -35,8 +36,7 @@ theorem encodeProduct_field_split (L : Lay D) {name : Nat} {fs : List Ty} {τ : 
   simpa only [encodeWords, encodeProduct, if_neg nonempty] using
     encodeProductFields_field_split L i v
 
-/-- Project only the physical words; validity is a separate obligation.
-    Product validity currently does not contain the validity of its fields. -/
+/-- Project only the physical words; validity is a separate obligation. -/
 theorem wordsAt_product_field {L : Lay D} {name : Nat} {fs : List Ty} {τ : Ty}
     {m : Runner.Mem} {fp : Runner.W} {d : Nat}
     (i : FieldAt fs τ) (v : ProdVal D.Fn D.passt fs)
@@ -46,5 +46,32 @@ theorem wordsAt_product_field {L : Lay D} {name : Nat} {fs : List Ty} {τ : Ty}
   rw [split, wordsAt_append] at input
   have selected := (wordsAt_append (encodeWords L τ (prodGetW i v)) after).mp input.2
   simpa only [offset] using selected.1
+
+/-- Static projection transport, pending the compiler frame-span bound. -/
+theorem prodGet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
+    {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
+    (v : Expr D Γ Λ (.prod name fs))
+    {σ₀ σ : World D} {fp pc : Runner.W} {K d top reserved : Nat}
+    {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List Runner.IR.II} {m : Runner.Mem}
+    (ih : ∀ ca ta, lowE L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved →
+        ValueOk L m pc fp K d ca (.prod name fs) (eval σ₀ v σ ρ))
+    (h : prodGetL i d (lowE L (reserved := reserved) v d) = some (c, top))
+    (hK : top ≤ K) (span : d + productOffset i + valueWords τ ≤ K)
+    (hp : Pre L m pc fp K d c ρ W reserved) :
+    ValueOk L m pc fp K d c τ (prodGetW i (eval σ₀ v σ ρ)) := by
+  simp only [prodGetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, rfl, rfl⟩ := h
+  obtain ⟨m1, run1, changed1, valid, words⟩ := ih cv tv hv hK m pc hp.left
+  have tail := hp.next changed1 (Nat.le_refl d) (by omega)
+  have selected : ValueAt L m1 fp (d + productOffset i) τ
+      (prodGetW i (eval σ₀ v σ ρ)) :=
+    ⟨ProdValid.field i _ valid, wordsAt_product_field i _ words⟩
+  obtain ⟨m2, run2, changed2, result⟩ := copyValue_run tail.frame tail.small
+    (by omega) span (Or.inl (Nat.le_add_right _ _)) tail.code
+    (by simpa only [copyWords_length] using tail.far) selected
+  refine ⟨m2, ?_, changed1.trans (changed2.mono (by omega)), result⟩
+  simpa only [List.length_append, copyWords_length, pc_add] using run1.trans run2
 
 end Gabbro.Stage0.Senke
