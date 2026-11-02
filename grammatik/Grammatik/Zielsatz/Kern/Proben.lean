@@ -275,7 +275,7 @@ theorem zCs_voll : ∀ c : zD.Tab ⊕ zD.Glob, c ∈ ([.inl ()] : List (zD.Tab �
   intro c
   rcases c with ⟨⟩ | e
   · exact List.mem_singleton_self _
-  · exact nomatch e
+  · exact (nomatch e)
 
 theorem zInvGutS {P : Programm zD} {passes : Nat} {Q : AxEns zD} {S : SperrInv zD} (f : zD.Fn) :
     InvGutS P passes Q S f := by

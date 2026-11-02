@@ -16,11 +16,11 @@ open Gabbro.Grammatik Gabbro.Grammatik.Isabelle.AccumulatesMonoid
 def zD : Deklaration where
   Tab := Empty
   decTab := inferInstance
-  count := fun t => nomatch t
+  count := fun t => (nomatch t)
   Feld := fun _ => Unit
   decFeld := fun _ => inferInstance
-  typ := fun t _ => nomatch t
-  erlaubt := fun t _ _ _ => nomatch t
+  typ := fun t _ => (nomatch t)
+  erlaubt := fun t _ _ _ => (nomatch t)
   tabNr := fun _ => none
   Glob := Fin 10
   decGlob := inferInstance
@@ -28,7 +28,7 @@ def zD : Deklaration where
     else if g.val < 4 then Ty.int 0 255 else Ty.int 0 0
   nutzlast := fun _ => []
   atomar := fun _ => false
-  geteilt := fun t => nomatch t
+  geteilt := fun t => (nomatch t)
   ggeteilt := fun _ => false
   Lock := Fin 4
   decLock := inferInstance
@@ -37,52 +37,38 @@ def zD : Deklaration where
   Marke := Unit
   decMarke := inferInstance
   stufen := fun _ => 0
-  braucht := fun t => nomatch t
+  braucht := fun t => (nomatch t)
   gbraucht := fun g => [Sum.inl ⟨g.val % 4, Nat.mod_lt _ (by omega)⟩]
   eigner := fun _ => []
   Fn := Fin 6
   sig := fun f => f.val
   sigNr
-    | 0 => { params := [], erg := some (Ty.int 0 1), gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => false,
-        konsumiert := [], produziert := [], boden := none }
-    | 1 => { params := [Ty.int (-100) 50], erg := none, gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => true,
-        konsumiert := [], produziert := [], boden := none }
-    | 2 => { params := [], erg := some (Ty.int (-100) 50), gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => false,
-        konsumiert := [], produziert := [], boden := none }
-    | 3 => { params := [], erg := some (Ty.int 0 1), gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => false,
-        konsumiert := [], produziert := [], boden := none }
-    | 4 => { params := [Ty.int 0 255], erg := none, gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => true,
-        konsumiert := [], produziert := [], boden := none }
-    | 5 => { params := [], erg := some (Ty.int 0 255), gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => false,
-        konsumiert := [], produziert := [], boden := none }
-    | _ => { params := [], erg := none, gruende := 0, haelt := [],
-        schreibt := fun t => nomatch t, gschreibt := fun _ => false,
-        konsumiert := [], produziert := [], boden := none }
-  eigner_nie_erzeugt := fun _ _ _ _ h => nomatch h
+    | 0 => { params := [], erg := some (Ty.int 0 1), gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => false, konsumiert := [], produziert := [], boden := none }
+    | 1 => { params := [Ty.int (-100) 50], erg := none, gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => true, konsumiert := [], produziert := [], boden := none }
+    | 2 => { params := [], erg := some (Ty.int (-100) 50), gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => false, konsumiert := [], produziert := [], boden := none }
+    | 3 => { params := [], erg := some (Ty.int 0 1), gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => false, konsumiert := [], produziert := [], boden := none }
+    | 4 => { params := [Ty.int 0 255], erg := none, gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => true, konsumiert := [], produziert := [], boden := none }
+    | 5 => { params := [], erg := some (Ty.int 0 255), gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => false, konsumiert := [], produziert := [], boden := none }
+    | _ => { params := [], erg := none, gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => false, konsumiert := [], produziert := [], boden := none }
+  eigner_nie_erzeugt := fun _ _ _ _ h => (nomatch h)
   Inv := Empty
-  traeger := fun i => nomatch i
+  traeger := fun i => (nomatch i)
   invs := []
   Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  aparams := fun e => (nomatch e)
+  aerg := fun e => (nomatch e)
+  aschreibt := fun e => (nomatch e)
+  agschreibt := fun e => (nomatch e)
   Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  rtyp := fun e => (nomatch e)
+  rklasse := fun e => (nomatch e)
+  spiegel := fun e => (nomatch e)
+  rzusage := fun e => (nomatch e)
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun t => nomatch t
-  invarianten_gehalten := fun _ i _ => nomatch i
-  ggeteilt_bewacht := fun _ h => nomatch h
+  geteilt_bewacht := fun t => (nomatch t)
+  invarianten_gehalten := fun _ i _ => (nomatch i)
+  ggeteilt_bewacht := fun _ h => (nomatch h)
 
 instance : DecidableEq zD.Fn := inferInstanceAs (DecidableEq (Fin 6))
 instance : DecidableEq zD.Glob := inferInstanceAs (DecidableEq (Fin 10))

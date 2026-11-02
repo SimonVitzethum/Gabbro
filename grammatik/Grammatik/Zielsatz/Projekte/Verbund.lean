@@ -282,7 +282,7 @@ theorem nutzerTeilO_wachs {p : Projekt D} {T₁ : D.Tab ⊕ D.Glob → Prop}
 /-! ## The witness, for every accepted unit and every boundary -/
 
 theorem lokW_ohne_wurzeln [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (c : D.Tab ⊕ D.Glob) : lokW P fs [] c = true :=
-  @decide_eq_true _ (Classical.propDecidable _) fun _ h => nomatch h
+  @decide_eq_true _ (Classical.propDecidable _) fun _ h => (nomatch h)
 
 /-- **A unit without roots and arenas is accepted alone** whenever the unit it is cut from is: what
     depends on roots holds vacuously, the rest is per body. -/

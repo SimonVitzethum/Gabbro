@@ -122,7 +122,7 @@ def f1Crash {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false �
     stop no clause of (b) constrained -- so this program met (b), passed the checker with
     `haupt` declared and running, and `gabbro_ziel` certified it. -/
 def f1P : Programm zD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf f := .cons f1Crash (paP.rumpf f)

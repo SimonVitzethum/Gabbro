@@ -96,7 +96,7 @@ theorem n1_logikA (T : nD.Tab ⊕ nD.Glob → Prop) : LogikPflichtA nP SchwachZe
   · intro O' _ _ _ U _ A _ R _ _ σ ρ _ e
     exact nP_zurueck _ O' U A passes R f σ ρ e
   · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ i
-    exact nomatch i
+    exact (nomatch i)
   · intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ r _
     cases f <;> exact r.elim0
 
@@ -162,7 +162,7 @@ def hEns : Expr nD (ErgCtx (nD.params NFn.zaehlB) (nD.erg NFn.zaehlB)) (vertragV
 
 /-- **The program `hP`**: `nP` with `zaehlB := hRumpf` and its contract `tabB[0] == 1`. -/
 def hP : Programm nD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures
     | .hauptA => .tru
@@ -292,7 +292,7 @@ theorem hP_rely_nicht :
     fun _ _ _ => .hardware .ieee
   have hR : RespektiertRahmen hP R := ⟨fun _ _ _ _ _ _ h => (by cases h), fun _ _ _ _ _ h => (by cases h)⟩
   have hOV : OhneVorbedingung R := fun _ _ _ _ h => by cases h
-  have hU : HavocOk SchwachZeuge.nS (fun _ σ => σ) := fun L => nomatch L
+  have hU : HavocOk SchwachZeuge.nS (fun _ σ => σ) := fun L => (nomatch L)
   have hE := (h.1 nO (gutO_rahmenO nO_gut) nO_lokal (axVertragO_wahr nO) (fun _ σ => σ) hU aFuenf
     aFuenf_havoc R hR hOV (sp0.welt []) .nil rfl).1
   obtain ⟨σ', v, hr⟩ := hRumpf_zurueckA SchwachZeuge.nS nO (fun _ σ => σ) aFuenf 0 R (sp0.welt []) .nil
@@ -324,7 +324,7 @@ def vEns : Expr nD (ErgCtx (nD.params NFn.kern) (nD.erg NFn.kern)) (vertragVon n
 
 /-- `nP` with `kern`'s contract `konfig == 3`. -/
 def vP : Programm nD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures
     | .hauptA => .tru

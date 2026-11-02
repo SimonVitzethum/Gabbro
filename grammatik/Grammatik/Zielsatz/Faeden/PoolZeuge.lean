@@ -247,7 +247,7 @@ theorem pool_schreibt_nicht_voll :
     rw [hw] at e
     exact List.not_mem_nil e
   have hAt : ¬ AtomarAusgenommen (.inl MTab.privA : mD.Tab ⊕ mD.Glob) := fun ⟨g, _, _⟩ =>
-    nomatch g
+    (nomatch g)
   refine ⟨hpool, hB, hAt, rfl, fun g hg => ?_⟩
   exact pool_schreibt_nicht (init := fun _ => ⟨mPruefeA, .nil⟩) (t := 0) rfl hpool hB hAt
     (by unfold kVon; exact hg)

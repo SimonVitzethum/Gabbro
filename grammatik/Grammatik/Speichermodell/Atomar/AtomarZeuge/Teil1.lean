@@ -406,7 +406,7 @@ theorem n1_start (sp : Speicher nD) :
       · rw [h, h'] at he; cases he
     · rw [h]; exact ruhe_ruhig
   req _ := by rfl
-  sperren L := nomatch L
+  sperren L := (nomatch L)
 
 /-- **THE FLAG, COVERED: on configuration 1 every W step is a GA step, and plain tables read
     the newest write** -- for every order assignment, every budget, every start memory. -/

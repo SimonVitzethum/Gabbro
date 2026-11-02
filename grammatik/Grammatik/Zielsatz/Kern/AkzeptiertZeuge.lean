@@ -106,7 +106,7 @@ def mCs : List (mD.Tab ⊕ mD.Glob) := [.inl MTab.konto, .inl MTab.privA, .inl M
 theorem mCs_voll : ∀ c : mD.Tab ⊕ mD.Glob, c ∈ mCs := fun c => by
   rcases c with t | g
   · cases t <;> simp only [mCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
-  · exact nomatch g
+  · exact (nomatch g)
 
 /-- **`Akzeptiert` holds on the two-thread fixture**, its declared starts
     being `hauptA` and `hauptB`: each writes its OWN private table
@@ -182,7 +182,7 @@ theorem x104Ls_voll : ∀ L : x104D.Lock, L ∈ x104Ls := fun L => by
 theorem x104Cs_voll : ∀ c : x104D.Tab ⊕ x104D.Glob, c ∈ x104Cs := fun c => by
   rcases c with t | g
   · cases t; exact List.mem_singleton_self _
-  · exact nomatch g
+  · exact (nomatch g)
 
 theorem x104Fs_voll : ∀ g : x104D.Fn, g ∈ x104Fs := fun g => by
   cases g
@@ -236,7 +236,7 @@ def akSig (w : Bool) (bo : Option Int) : Signatur Unit Empty Unit Empty where
   gruende := 0
   haelt := []
   schreibt := fun _ => w
-  gschreibt := fun e => nomatch e
+  gschreibt := fun e => (nomatch e)
   konsumiert := []
   produziert := []
   boden := bo
@@ -266,43 +266,43 @@ def akD : Deklaration where
   tabNr := fun _ => none
   Glob := Empty
   decGlob := inferInstance
-  gtyp := fun e => nomatch e
-  nutzlast := fun e => nomatch e
-  atomar := fun e => nomatch e
+  gtyp := fun e => (nomatch e)
+  nutzlast := fun e => (nomatch e)
+  atomar := fun e => (nomatch e)
   geteilt := fun _ => false
-  ggeteilt := fun e => nomatch e
+  ggeteilt := fun e => (nomatch e)
   Lock := Unit
   decLock := inferInstance
   rang := fun _ => 0
   maskiert := fun _ => false
   Marke := Empty
   decMarke := inferInstance
-  stufen := fun e => nomatch e
+  stufen := fun e => (nomatch e)
   braucht := fun _ => []
-  gbraucht := fun e => nomatch e
+  gbraucht := fun e => (nomatch e)
   eigner := fun _ => []
   Fn := AkFn
   sig := akSigOf
   sigNr := akSigNr
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
-  traeger := fun e => nomatch e
+  traeger := fun e => (nomatch e)
   invs := []
   Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  aparams := fun e => (nomatch e)
+  aerg := fun e => (nomatch e)
+  aschreibt := fun e => (nomatch e)
+  agschreibt := fun e => (nomatch e)
   Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  rtyp := fun e => (nomatch e)
+  rklasse := fun e => (nomatch e)
+  spiegel := fun e => (nomatch e)
+  rzusage := fun e => (nomatch e)
   Annahme := Unit
   a10 := ()
   geteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  invarianten_gehalten := fun _ i => (nomatch i)
+  ggeteilt_bewacht := fun e => (nomatch e)
 
 instance : DecidableEq akD.Fn := inferInstanceAs (DecidableEq AkFn)
 
@@ -311,7 +311,7 @@ def akB : akD.Fn := AkFn.b
 def akC : akD.Fn := AkFn.c
 def akRuhe : akD.Fn := AkFn.ruhe
 
-theorem akDarf (Λ : List (Res akD)) : darf akD () Λ := fun _ h => nomatch h
+theorem akDarf (Λ : List (Res akD)) : darf akD () Λ := fun _ h => (nomatch h)
 
 def akI0 {Γ : Ctx} {Λ : List (Res akD)} : Expr akD Γ Λ (.index 2) :=
   .widen (by decide) (by decide) (.lit 0)
@@ -341,7 +341,7 @@ def akRumpfC : Endblock akD (vertragVon akD akC) false [] [] :=
 
 /-- The program without the floor violation (`c` just returns). -/
 def akP1 : Programm akD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures
     | .a => akT1
@@ -354,7 +354,7 @@ def akP1 : Programm akD where
 
 /-- The same program with `c` taking a lock below its floor. -/
 def akP2 : Programm akD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures
     | .a => akT1
@@ -376,7 +376,7 @@ def akCs : List (akD.Tab ⊕ akD.Glob) := [.inl ()]
 theorem akCs_voll : ∀ c : akD.Tab ⊕ akD.Glob, c ∈ akCs := fun c => by
   rcases c with t | g
   · cases t; exact List.mem_singleton_self _
-  · exact nomatch g
+  · exact (nomatch g)
 
 /-- **An unguarded shared write is refused**: `a` and `b` are both declared
     starts and both write the unguarded table `t`; `t` is in `a`'s footprint
@@ -417,7 +417,7 @@ theorem ak2_boden_falsch :
 /-- The same two writers with NO read anywhere: every `ensures` is `true`,
     and `t[0] = 1` / `t[0] = 2` read nothing. No footprint contains `t`. -/
 def akP3 : Programm akD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .tru
   rumpf

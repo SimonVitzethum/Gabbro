@@ -64,7 +64,7 @@ def kSig (ps : List Ty) (e : Option Ty) (h : List Unit) (ts : List KTab) :
   gruende := 0
   haelt := h
   schreibt := fun t => decide (t ∈ ts)
-  gschreibt := fun e => nomatch e
+  gschreibt := fun e => (nomatch e)
   konsumiert := []
   produziert := []
 
@@ -103,43 +103,43 @@ def kD : Deklaration where
   tabNr := fun _ => none
   Glob := Empty
   decGlob := inferInstance
-  gtyp := fun e => nomatch e
-  nutzlast := fun e => nomatch e
-  atomar := fun e => nomatch e
+  gtyp := fun e => (nomatch e)
+  nutzlast := fun e => (nomatch e)
+  atomar := fun e => (nomatch e)
   geteilt := kGeteilt
-  ggeteilt := fun e => nomatch e
+  ggeteilt := fun e => (nomatch e)
   Lock := Unit
   decLock := inferInstance
   rang := fun _ => 0
   maskiert := fun _ => false
   Marke := Empty
   decMarke := inferInstance
-  stufen := fun e => nomatch e
+  stufen := fun e => (nomatch e)
   braucht := kBraucht
-  gbraucht := fun e => nomatch e
+  gbraucht := fun e => (nomatch e)
   eigner := fun _ => []
   Fn := KFn
   sig := kSigOf
   sigNr := kSigNr
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Empty
-  traeger := fun i => nomatch i
+  traeger := fun i => (nomatch i)
   invs := []
   Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  aparams := fun e => (nomatch e)
+  aerg := fun e => (nomatch e)
+  aschreibt := fun e => (nomatch e)
+  agschreibt := fun e => (nomatch e)
   Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  rtyp := fun e => (nomatch e)
+  rklasse := fun e => (nomatch e)
+  spiegel := fun e => (nomatch e)
+  rzusage := fun e => (nomatch e)
   Annahme := Unit
   a10 := ()
   geteilt_bewacht := fun t h => by cases t <;> simp_all [kGeteilt, kBraucht]
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  invarianten_gehalten := fun _ i => (nomatch i)
+  ggeteilt_bewacht := fun e => (nomatch e)
 
 def kSetze : kD.Fn := KFn.setze
 def kHauptA : kD.Fn := KFn.hauptA
@@ -156,8 +156,8 @@ theorem kDarfK : darf kD KTab.konto kL := by
   subst e
   exact List.mem_singleton.mpr rfl
 
-theorem kDarfA (Λ : List (Res kD)) : darf kD KTab.privA Λ := fun _ h => nomatch h
-theorem kDarfB (Λ : List (Res kD)) : darf kD KTab.privB Λ := fun _ h => nomatch h
+theorem kDarfA (Λ : List (Res kD)) : darf kD KTab.privA Λ := fun _ h => (nomatch h)
+theorem kDarfB (Λ : List (Res kD)) : darf kD KTab.privB Λ := fun _ h => (nomatch h)
 
 def kI0 {Γ : Ctx} {Λ : List (Res kD)} : Expr kD Γ Λ (.index 2) :=
   .widen (by decide) (by decide) (.lit 0)
@@ -188,7 +188,7 @@ theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
     (hk : (kD.signatur callee).konsumiert = []) (hbc : (kD.signatur caller).boden = none) :
     RufPasst kD (vertragVon kD caller) (kD.signatur callee) Λ where
   hw := hw
-  hg := fun g => nomatch g
+  hg := fun g => (nomatch g)
   hb := fun c hc => by
     have : (vertragVon kD caller).boden = (kD.signatur caller).boden := rfl
     rw [this, hbc] at hc; cases hc
@@ -270,7 +270,7 @@ def kRumpfB : Endblock kD (vertragVon kD kHauptB) false [] [] :=
     contracts (`setze`'s `ensures` matches the source since lane 204; see the
     header for the history). -/
 def kP : Programm kD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires
     | .setze => kGleich
     | .pruefeA => kA7
@@ -318,7 +318,7 @@ def kCs : List (kD.Tab ⊕ kD.Glob) := [.inl KTab.konto, .inl KTab.privA, .inl K
 theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
   rcases c with t | g
   · cases t <;> simp only [kCs, List.mem_cons, List.not_mem_nil, or_false, true_or, or_true]
-  · exact nomatch g
+  · exact (nomatch g)
 
 /-- **The checker accepts the program** with its declared starts `hauptA`,
     `hauptB` (`concurrent { hauptA, hauptB }`). -/
