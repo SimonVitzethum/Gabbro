@@ -51,15 +51,17 @@ theorem lowerAllg_fields (u : UProg) (P : Programm (declOf u)) (fs : List (declO
   · cases h
   · split at h
     · cases h
-    · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
-      obtain ⟨v, hv⟩ := lowerEach_all_ok u (List.finRange u.fns.length) c (List.mem_finRange c)
-        ‹lowerEach u (List.finRange u.fns.length) = .ok ()›
-      refine ⟨v, hv, ?_, ?_, ?_⟩
-      · exact congrArg Prod.fst (lowerAtPair_of_ok u c _ hv)
-      · exact congrArg (fun p => p.2.1) (lowerAtPair_of_ok u c _ hv)
-      · intro hne
-        simp only [progOfFn, reqOf, hne, ↓reduceIte]
-        exact congrArg (fun p => p.2.2) (lowerAtPair_of_ok u c _ hv)
+    · split at h
+      · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
+        obtain ⟨v, hv⟩ := lowerEach_all_ok u (List.finRange u.fns.length) c (List.mem_finRange c)
+          ‹lowerEach u (List.finRange u.fns.length) = .ok ()›
+        refine ⟨v, hv, ?_, ?_, ?_⟩
+        · exact congrArg Prod.fst (lowerAtPair_of_ok u c _ hv)
+        · exact congrArg (fun p => p.2.1) (lowerAtPair_of_ok u c _ hv)
+        · intro hne
+          simp only [progOfFn, reqOf, hne, ↓reduceIte]
+          exact congrArg (fun p => p.2.2) (lowerAtPair_of_ok u c _ hv)
+      · cases h
 
 /-- The pieces of a lowered transition of stores. -/
 theorem lowerStoresAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)

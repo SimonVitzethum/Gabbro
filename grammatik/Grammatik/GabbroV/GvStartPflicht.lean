@@ -394,10 +394,12 @@ theorem gv_lowerAllg_requires (u : UProg) (P : Programm (declOf u))
   · cases h
   split at h
   · cases h
-  · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
-    intro f
-    dsimp only [progOfFn]
-    exact reqOf_leer u _ f (hn _ (List.get_mem u.fns f))
+  · split at h
+    · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
+      intro f
+      dsimp only [progOfFn]
+      exact reqOf_leer u _ f (hn _ (List.get_mem u.fns f))
+    · cases h
 
 /-- **The start duty without `Initially`** (`gv_startPflicht`): for every
     declaration of the parser fragment, lowering-ok plus the decided

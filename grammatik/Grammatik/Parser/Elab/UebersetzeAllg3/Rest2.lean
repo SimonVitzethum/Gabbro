@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Parser.Elab.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
@@ -38,14 +37,11 @@ import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
-
 @[expose] public section
-
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
-
 /-- What `lowerEach` checks, per function. -/
 theorem lowerEach_all_ok (u : UProg) (fs : List (Fin u.fns.length))
     (f : Fin u.fns.length) (hm : f ∈ fs)
@@ -72,7 +68,6 @@ theorem lowerEach_all_ok (u : UProg) (fs : List (Fin u.fns.length))
       | inr hm' =>
         rw [hO] at h
         exact ih hm' h
-
 /-- The lowered pair at an index known good. -/
 def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     (h : ∃ v, lowerFnAt u f = .ok v) :
@@ -84,10 +79,8 @@ def lowerAtPair (u : UProg) (f : Fin u.fns.length)
     obtain ⟨v, hv⟩ := h
     rw [hv] at hm
     simp only [reduceCtorEq] at hm
-
 /-- The type of a lowered invariant: a predicate over no parameter, under the guards of its carriers. -/
 abbrev InvTy (u : UProg) (i : Fin u.invs.length) := Expr (declOf u) [] (invSicht (declOf u) i) .bool
-
 /-- The requires of a function: `.tru` without a `requires` predicate (what the conjunction of none is),
     else the lowered conjunction. -/
 def reqOf (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fin u.fns.length) : ReqTy u f :=
@@ -254,12 +247,14 @@ theorem lowerAllg_traeger (u : UProg) (P : Programm (declOf u)) (fs : List (decl
   next x hI =>
     split at h
     · cases h
-    · obtain ⟨rfl, -⟩ := Measures.checkedProgram_eq h
-      have wI : ∀ j : Fin u.invs.length, ∃ v, lowerInvAt u j = .ok v := fun j =>
-        lowerInvs_all_ok u (List.finRange u.invs.length) j (List.mem_finRange j) hI
-      dsimp only [progOfFn]
-      exact ⟨traegerD_of_ok u i (lowerInvGut_facts u i (wI i)).1,
-        fun c hc => lowerInvGut_orte u i (wI i) c hc⟩
+    · split at h
+      · obtain ⟨rfl, -⟩ := Measures.checkedProgram_eq h
+        have wI : ∀ j : Fin u.invs.length, ∃ v, lowerInvAt u j = .ok v := fun j =>
+          lowerInvs_all_ok u (List.finRange u.invs.length) j (List.mem_finRange j) hI
+        dsimp only [progOfFn]
+        exact ⟨traegerD_of_ok u i (lowerInvGut_facts u i (wI i)).1,
+          fun c hc => lowerInvGut_orte u i (wI i) c hc⟩
+      · cases h
 
 /-! ## 104 pins on the generically lowered program -/
 
