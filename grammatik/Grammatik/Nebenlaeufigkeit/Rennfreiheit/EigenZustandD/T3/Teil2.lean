@@ -83,6 +83,9 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
   | callInd p args hp hr =>
       exact Or.inr (Or.inl fun k f =>
         callInd_slots_fest O passes (Stmt.callInd p args hp hr) rfl σ ρ σ' hstep t k f)
+  | callIndElse p args he hp hr err =>
+      exact Or.inr (Or.inl fun k f =>
+        callIndElse_slots_fest O passes (Stmt.callIndElse p args he hp hr err) rfl σ ρ σ' hstep t k f)
   | locks L hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | traverse tt inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
