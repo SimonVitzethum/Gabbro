@@ -7,7 +7,7 @@
   `wideSub_zeuge` borrows across it for `0 - 1`.
 -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.CompareRun
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.MulRun

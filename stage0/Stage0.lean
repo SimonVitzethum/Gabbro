@@ -6,7 +6,7 @@ public import Stage0.ArrayWitness
 public import Stage0.ResetWitness
 public import Stage0.Zeugen.BuiltinWitness
 public import Stage0.Senke.Ausdruck
-public import Stage0.Senke.Hilfe
+public import Stage0.Senke.Images.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
 public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Ausdruck.Top
@@ -23,9 +23,9 @@ public import Stage0.Senke.Spez
 public import Stage0.Senke.Rueckkehr.Call
 public import Stage0.Senke.Rueckkehr
 public import Stage0.Senke.Rekursion
-public import Stage0.Senke.Bild
-public import Stage0.Senke.BildLese
-public import Stage0.Senke.BildSatz
+public import Stage0.Senke.Images.Bild
+public import Stage0.Senke.Images.BildLese
+public import Stage0.Senke.Images.BildSatz
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben

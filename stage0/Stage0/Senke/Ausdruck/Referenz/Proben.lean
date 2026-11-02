@@ -1,6 +1,6 @@
 /- Subject: Joint witnesses on a real two-cell provider region, beyond the source count zero. -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Grammatik.Bausteine.Arena.Unbounded.GRegion
 @[expose] public section
 

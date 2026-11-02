@@ -1,6 +1,6 @@
 /- Non-degenerate global-only and mixed-carrier epilogue fixtures. -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Grammatik.Proben.InvGlobalZeuge
 @[expose] public section
 

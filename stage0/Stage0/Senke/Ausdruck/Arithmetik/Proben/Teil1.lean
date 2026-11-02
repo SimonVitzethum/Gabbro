@@ -3,7 +3,7 @@ module
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil1a
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 
 @[expose] public section

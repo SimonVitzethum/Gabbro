@@ -7,7 +7,7 @@
              reach the call as `EnvAt`.
 -/
 module
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Stage0.Senke.Welt.StartEnv
 @[expose] public section
 

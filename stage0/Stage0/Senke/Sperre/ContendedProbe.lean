@@ -3,7 +3,7 @@
 module
 public import Stage0.Senke.Sperre.Contended
 public import Stage0.Senke.Sperre.Paar
-public import Stage0.Senke.BildLese
+public import Stage0.Senke.Images.BildLese
 public import Grammatik.Parser.Elab.UebersetzeAllg
 import all Init.Data.Repr
 import all Init.Data.String.Basic

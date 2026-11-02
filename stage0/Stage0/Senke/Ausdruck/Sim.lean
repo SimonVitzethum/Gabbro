@@ -8,7 +8,7 @@
   lowering accepts, `Ok` with `P` = the word of `eval σ₀ e σ ρ`.
 -/
 module
-public import Stage0.Senke.Hilfe
+public import Stage0.Senke.Images.Hilfe
 @[expose] public section
 
 
