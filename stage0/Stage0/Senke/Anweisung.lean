@@ -376,7 +376,10 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
-  | _, Γ, _, .bindAxiomOpt (e := none) _ _ _ _ _ _ _ _, reserved => none
+  | _, Γ, _, .bindAxiomOpt (e := none) a args _ _ _ _ rest, reserved => do
+    let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
+    pure (ct.1 ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
   | _, _, _, .bindCallIndElse .., _ => none
   | _, Γ, _, .bindAxiomOptElse (e := none) _ _ _ _ _ _ _ _ _ _, reserved => none
   | _, Γ, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
