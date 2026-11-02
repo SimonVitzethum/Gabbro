@@ -67,7 +67,7 @@ theorem putBytesL_ok {L : Lay D} {Γ : Ctx} {Λ : List (Res D)} {t : D.Tab} {f :
       (fun m pc hp => (bytePartC_ok hz (by omega) (by omega) hp).mono
         (fun w hw => (enc_int_cast_back hf part w).mpr hw))
       (fun m pc hp => slotA_ok (σ₀ := σ) (σ := σ) (i := ix) cw ha (by omega)
-        (fun m pc hp => lowE_ok σ σ (fun _ h => h) hW.lay ix _ ci' ti hi (by omega) m pc _ hp |>.word trivial) hp)
+        (fun m pc hp => lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) hW.lay ix _ ci' ti hi (by omega) m pc _ hp |>.word trivial) hp)
       (by have h := hW.lay.1 t f (k.n + j).toNat (L.bounded hkc); rw [cw] at h; simpa only [hixn] using h)
       (fun m w hm hw => by
         have hnw : Enc L (D.typ t f) (cast (congrArg (Wert D) hf).symm part) w := hw

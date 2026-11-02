@@ -22,7 +22,7 @@ theorem lowE_int_value_ok_zeuge :
       wstab := weltAt_stab FnptrProben.call_win.lay FnptrProben.call_win.top }
   have pre := Pre.left (a := [ci 1 4 8192 0])
     (b := [ci 15 4 4 0] ++ callTailN 0 0 4 true ++ receiveC (FnptrProben.D.sigNr 0) 4) caller
-  exact lowE_int_value_ok (reserved := 0) (top := 5) (Λ := []) FnptrProben.world FnptrProben.world (fun _ h => h) FnptrProben.call_win.lay
+  exact lowE_int_value_ok (same := rfl) (reserved := 0) (top := 5) (Λ := []) FnptrProben.world FnptrProben.world (fun _ h => h) FnptrProben.call_win.lay
     (.lit 8192) (by decide) (by decide +kernel) (by decide) _ Env.nil pre
 
 end Gabbro.Stage0.Senke

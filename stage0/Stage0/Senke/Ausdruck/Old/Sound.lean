@@ -288,7 +288,7 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
   | _, e@(.prodSet ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.eng ..), d, code, top, lower, fits, saved, before, m, pc, pre => by
     subst e
-    exact lowE_ok (reserved := layout.ensReserved) σ0 σ hWL hLay _ d code top lower fits m pc ρ
+    exact lowE_ok (same := by intro h; cases h) (currentOld := false) (reserved := layout.ensReserved) σ0 σ hWL hLay _ d code top lower fits m pc ρ
       ⟨context.trans pre.ctx, pre.small, pre.frame, pre.code, pre.far,
         paramsOfFull pre.env, pre.welt, pre.wstab⟩
 

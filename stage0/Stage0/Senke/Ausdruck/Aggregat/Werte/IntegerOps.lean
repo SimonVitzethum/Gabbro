@@ -13,6 +13,8 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Ring
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -22,17 +24,17 @@ variable {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
 
 theorem band_ok {l1 h1 l2 h2 : Int} (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
-    (iha : ∀ d' ca ta, lowE L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ d' ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d' ca ρ W reserved → ValueOk L m pc fp K d' ca (.int l1 h1) (eval σ₀ a σ ρ))
-    (ihb : ∀ d' cb tb, lowE L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
+    (ihb : ∀ d' cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K d' cb ρ W reserved → ValueOk L m pc fp K d' cb (.int l2 h2) (eval σ₀ b σ ρ))
-    (h : lowE L (reserved := reserved) (Expr.band h0 h0' a b) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (Expr.band h0 h0' a b) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c _ (eval σ₀ (Expr.band h0 h0' a b) σ ρ) := by
-  have iha' : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+  have iha' : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.int l1 h1) (eval σ₀ a σ ρ)) :=
     fun ca ta ha hta m pc hp => (iha d ca ta ha hta m pc hp).word trivial
-  have ihb' : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
+  have ihb' : ∀ cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb (Enc L (.int l2 h2) (eval σ₀ b σ ρ)) :=
     fun cb tb hb htb m pc hp => (ihb (d + 1) cb tb hb htb m pc hp).word trivial
   simp only [lowE_eqs] at h
@@ -49,21 +51,21 @@ theorem band_ok {l1 h1 l2 h2 : Int} (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     simp only [Enc] at pa pb
     subst pa pb
     exact ⟨_, rfl, and_w (by omega) (by omega) (by omega) (by omega)⟩
-  · exact wideBand_ok h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b) (iha d) (ihb _) h hK hp
+  · exact wideBand_ok h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b) (iha d) (ihb _) h hK hp
 
 theorem bor_ok {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
     (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
-    (iha : ∀ d' ca ta, lowE L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ d' ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d' ca ρ W reserved → ValueOk L m pc fp K d' ca (.int l1 h1) (eval σ₀ a σ ρ))
-    (ihb : ∀ d' cb tb, lowE L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
+    (ihb : ∀ d' cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K d' cb ρ W reserved → ValueOk L m pc fp K d' cb (.int l2 h2) (eval σ₀ b σ ρ))
-    (h : lowE L (reserved := reserved) (Expr.bor w h0 h0' hw1 hw2 a b) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (Expr.bor w h0 h0' hw1 hw2 a b) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c _ (eval σ₀ (Expr.bor w h0 h0' hw1 hw2 a b) σ ρ) := by
-  have iha' : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+  have iha' : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.int l1 h1) (eval σ₀ a σ ρ)) :=
     fun ca ta ha hta m pc hp => (iha d ca ta ha hta m pc hp).word trivial
-  have ihb' : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
+  have ihb' : ∀ cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb (Enc L (.int l2 h2) (eval σ₀ b σ ρ)) :=
     fun cb tb hb htb m pc hp => (ihb (d + 1) cb tb hb htb m pc hp).word trivial
   simp only [lowE_eqs] at h
@@ -92,21 +94,21 @@ theorem bor_ok {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (h
     simp only [Enc] at pa pb
     subst pa pb
     exact ⟨_, rfl, or_w (by omega) (by omega) (by omega) (by omega)⟩
-  · exact wideBor_ok w h0 h0' hw1 hw2 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b) (iha d) (ihb _) h hK hp
+  · exact wideBor_ok w h0 h0' hw1 hw2 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b) (iha d) (ihb _) h hK hp
 
 theorem bxor_ok {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (hw1 : h1 < 2 ^ w) (hw2 : h2 < 2 ^ w)
     (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
-    (iha : ∀ d' ca ta, lowE L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ d' ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d' ca ρ W reserved → ValueOk L m pc fp K d' ca (.int l1 h1) (eval σ₀ a σ ρ))
-    (ihb : ∀ d' cb tb, lowE L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
+    (ihb : ∀ d' cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K d' cb ρ W reserved → ValueOk L m pc fp K d' cb (.int l2 h2) (eval σ₀ b σ ρ))
-    (h : lowE L (reserved := reserved) (Expr.bxor w h0 h0' hw1 hw2 a b) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (Expr.bxor w h0 h0' hw1 hw2 a b) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c _ (eval σ₀ (Expr.bxor w h0 h0' hw1 hw2 a b) σ ρ) := by
-  have iha' : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+  have iha' : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.int l1 h1) (eval σ₀ a σ ρ)) :=
     fun ca ta ha hta m pc hp => (iha d ca ta ha hta m pc hp).word trivial
-  have ihb' : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
+  have ihb' : ∀ cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb (Enc L (.int l2 h2) (eval σ₀ b σ ρ)) :=
     fun cb tb hb htb m pc hp => (ihb (d + 1) cb tb hb htb m pc hp).word trivial
   simp only [lowE_eqs] at h
@@ -135,21 +137,21 @@ theorem bxor_ok {l1 h1 l2 h2 : Int} (w : Nat) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (
     simp only [Enc] at pa pb
     subst pa pb
     exact ⟨_, rfl, xor_w (by omega) (by omega) (by omega) (by omega)⟩
-  · exact wideBxor_ok w h0 h0' hw1 hw2 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b) (iha d) (ihb _) h hK hp
+  · exact wideBxor_ok w h0 h0' hw1 hw2 (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b) (iha d) (ihb _) h hK hp
 
 theorem shl_ok {l1 h1 l2 h2 : Int} (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
-    (iha : ∀ d' ca ta, lowE L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ d' ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d' ca ρ W reserved → ValueOk L m pc fp K d' ca (.int l1 h1) (eval σ₀ a σ ρ))
-    (ihb : ∀ d' cb tb, lowE L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
+    (ihb : ∀ d' cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K d' cb ρ W reserved → ValueOk L m pc fp K d' cb (.int l2 h2) (eval σ₀ b σ ρ))
-    (h : lowE L (reserved := reserved) (Expr.shl w hw1 hw2 h0 h0' a b) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (Expr.shl w hw1 hw2 h0 h0' a b) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c _ (eval σ₀ (Expr.shl w hw1 hw2 h0 h0' a b) σ ρ) := by
-  have iha' : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+  have iha' : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.int l1 h1) (eval σ₀ a σ ρ)) :=
     fun ca ta ha hta m pc hp => (iha d ca ta ha hta m pc hp).word trivial
-  have ihb' : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
+  have ihb' : ∀ cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb (Enc L (.int l2 h2) (eval σ₀ b σ ρ)) :=
     fun cb tb hb htb m pc hp => (ihb (d + 1) cb tb hb htb m pc hp).word trivial
   simp only [lowE_eqs] at h
@@ -166,22 +168,22 @@ theorem shl_ok {l1 h1 l2 h2 : Int} (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w :
     simp only [Enc] at pa pb
     subst pa pb
     exact ⟨_, rfl, shl_w _ (by omega) (by omega)⟩
-  · exact wideShl_ok w hw1 hw2 h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a)
-      (fb := lowE L (reserved := reserved) b) (iha d) (ihb _) h hK hp
+  · exact wideShl_ok w hw1 hw2 h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a)
+      (fb := lowE (currentOld := currentOld) L (reserved := reserved) b) (iha d) (ihb _) h hK hp
 
 theorem shr_ok {l1 h1 l2 h2 : Int} (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w : Int)) (h0 : 0 ≤ l1) (h0' : 0 ≤ l2)
     (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
-    (iha : ∀ d' ca ta, lowE L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ d' ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d' = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d' ca ρ W reserved → ValueOk L m pc fp K d' ca (.int l1 h1) (eval σ₀ a σ ρ))
-    (ihb : ∀ d' cb tb, lowE L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
+    (ihb : ∀ d' cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b d' = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K d' cb ρ W reserved → ValueOk L m pc fp K d' cb (.int l2 h2) (eval σ₀ b σ ρ))
-    (h : lowE L (reserved := reserved) (Expr.shr w hw1 hw2 h0 h0' a b) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (Expr.shr w hw1 hw2 h0 h0' a b) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c _ (eval σ₀ (Expr.shr w hw1 hw2 h0 h0' a b) σ ρ) := by
-  have iha' : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+  have iha' : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → Ok m pc fp K d ca (Enc L (.int l1 h1) (eval σ₀ a σ ρ)) :=
     fun ca ta ha hta m pc hp => (iha d ca ta ha hta m pc hp).word trivial
-  have ihb' : ∀ cb tb, lowE L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
+  have ihb' : ∀ cb tb, lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1) = some (cb, tb) → tb ≤ K → ∀ m pc,
       Pre L m pc fp K (d + 1) cb ρ W reserved → Ok m pc fp K (d + 1) cb (Enc L (.int l2 h2) (eval σ₀ b σ ρ)) :=
     fun cb tb hb htb m pc hp => (ihb (d + 1) cb tb hb htb m pc hp).word trivial
   simp only [lowE_eqs] at h
@@ -198,6 +200,6 @@ theorem shr_ok {l1 h1 l2 h2 : Int} (w : Nat) (hw1 : h1 < 2 ^ w) (hw2 : h2 < (w :
     simp only [Enc] at pa pb
     subst pa pb
     exact ⟨_, rfl, shr_w (by omega) (by omega) (by omega) (by omega)⟩
-  · exact wideShr_ok w hw1 hw2 h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE L (reserved := reserved) a) (fb := lowE L (reserved := reserved) b) (iha d) (ihb _) h hK hp
+  · exact wideShr_ok w hw1 hw2 h0 h0' (eval σ₀ a σ ρ) (eval σ₀ b σ ρ) (fa := lowE (currentOld := currentOld) L (reserved := reserved) a) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b) (iha d) (ihb _) h hK hp
 
 end Gabbro.Stage0.Senke

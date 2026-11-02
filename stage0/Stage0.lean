@@ -65,6 +65,7 @@ public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 public import Stage0.Senke.Ausdruck.Old.Proben
 public import Stage0.Senke.Ausdruck.Old.FunctionProbe
 public import Stage0.Senke.Ausdruck.Old.Admission
+public import Stage0.Senke.Ausdruck.Old.CurrentProbe
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotComposition

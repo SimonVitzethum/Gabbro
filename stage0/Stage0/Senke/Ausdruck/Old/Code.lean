@@ -36,7 +36,8 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, _ => []
 
 /-- Postcondition lowering uses the same arithmetic instructions as ordinary expressions.
-    Ordinary expression lowering continues to refuse entry reads outside this context. -/
+    Ordinary expressions read old from their current world; the fallback below disables
+    those reads so an unsupported ensures subtree cannot silently read the exit world. -/
 def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List (Res D)} :
     {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
   | _, .oldG g _, d =>
@@ -88,7 +89,7 @@ def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : L
       (lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)
   -- Count uses the ordinary binder path. Entry reads inside a nonempty count
   -- remain refused there until binder-dependent snapshot capture is proved.
-  | _, e, d => lowE (reserved := layout.ensReserved) L e d
+  | _, e, d => lowE (currentOld := false) (reserved := layout.ensReserved) L e d
 
 /-- Function postconditions read the checked snapshot prefix described by this layout. -/
 def lowEns (L : Lay D) (layout : FrameLayout) {Γ : Ctx} {Λ : List (Res D)}

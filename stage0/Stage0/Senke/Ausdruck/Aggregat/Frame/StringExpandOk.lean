@@ -6,6 +6,8 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 public import Stage0.Senke.Welt.Spans.Cell
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -153,9 +155,9 @@ theorem strExpand_ok {n q : Nat} (hn1 : n ≤ 1) (hq2 : 2 ≤ q)
 variable {Λ : List (Res D)} {σ₀ σ : World D}
 
 theorem strWeit_ok {n : Nat} (q : Nat) (s : Expr D Γ Λ (.str n))
-    (ih : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ih : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
-    (h : lowE L (reserved := reserved) (.strWeit q s) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.strWeit q s) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.str q) (eval σ₀ (.strWeit q s) σ ρ) := by
   simp only [lowE_eqs] at h

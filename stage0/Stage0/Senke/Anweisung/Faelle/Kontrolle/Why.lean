@@ -140,7 +140,7 @@ theorem onWhy_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
   have htop := lowE_top v _ _ _ hcv
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, st, a1s, w, hw, hen⟩ := lowE_ok (σ.lese Λ v.orte) (σ.lese Λ v.orte)
+  obtain ⟨m1, st, a1s, w, hw, hen⟩ := lowE_ok (same := by intro _; rfl) (σ.lese Λ v.orte) (σ.lese Λ v.orte)
     (fun _ h => h) hW.lay v _ cv tv hcv htv m pc ρ hpw |>.word trivial
   have a1 := Agree.widen a1s hks
   have hp1 := hp.next a1 (Nat.le_refl _) (by omega)

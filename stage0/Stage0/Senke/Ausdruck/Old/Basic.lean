@@ -206,7 +206,7 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
   | _, e@(.prod ..), d, c, top, h
   | _, e@(.prodGet ..), d, c, top, h
   | _, e@(.prodSet ..), d, c, top, h
-  | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (reserved := layout.ensReserved) _ d c top h
+  | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (currentOld := false) (reserved := layout.ensReserved) _ d c top h
 
 
 theorem lowEns_top (layout : FrameLayout) {Γ : Ctx} {Λ : List (Res D)}
