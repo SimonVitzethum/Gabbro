@@ -13,11 +13,11 @@ set_option maxRecDepth 100000
 set_option maxHeartbeats 800000
 
 /-- Two distinct payload types, a receiver between ordinary arguments, and an
-    unimplemented static constructor returning Self in the same spec group. -/
+    unimplemented static member taking and returning Self in the same group. -/
 private def taggedSource (rectResult : String) : String :=
   "spec Shape[T] { " ++
   "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {}; " ++
-  "fn make() -> T effects {}; } " ++
+  "fn copy(s: T) -> T effects {}; } " ++
   "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool " ++
   "effects {} { return prefix; } } " ++
   "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> " ++ rectResult ++
@@ -34,8 +34,10 @@ private def taggedSourceExpanded (rectResult : String) : Except String (List SIt
 
 private def taggedSourceBody (name : String) : Except String SAnw := do
   let items ← taggedSourceExpanded "bool"
-  match items.filterMap (fun | .fnT sig body => if strEq sig.name name then some body else none
-                            | _ => none) with
+  let bodies := items.filterMap fun
+    | .fnT sig body => if strEq sig.name name then some body else none
+    | _ => none
+  match bodies with
   | [body] => pure body
   | _ => throw "witness: generated function not unique"
 

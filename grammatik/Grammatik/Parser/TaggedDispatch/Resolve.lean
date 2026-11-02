@@ -49,7 +49,7 @@ def taggedCallBody (items : List SItemTief) (sig : FnSig) (call : SExpr) : SAnw 
 def resolveTaggedDeclaration (items : List SItemTief) (decl : SItemTief) (spec : String) :
     Except String (List SItemTief × List TaggedBinding) := do
   let (sumName, variants) ← match decl with
-    | .typeT ["tagged"] name [] [] (some (.raw _)) =>
+    | .typeT ["tagged"] name [] [] (some (.raw _)) => do
       let schemas ← Uebersetze.uSumSchemas [decl]
       match schemas with
       | [schema] => pure (name, schema.cases)

@@ -199,6 +199,9 @@ def elabU : List SItemTief → Except String UProg
     match Gabbro.Grammatik.Parser.exportDeclarationUnit ms0 with
     | .error e => .error e
     | .ok msE =>
+    match uRestFehler msE with
+    | .error e => .error e
+    | .ok _ =>
     let blockiert := msE.find? (fun item => match item with
       | .fnT sig body => strEq sig.art "const" && (match body with
         | .block [] (some (.ret (some _))) => false
@@ -212,9 +215,6 @@ def elabU : List SItemTief → Except String UProg
       | _ => .error "const function with a block body: certified evaluation unavailable") else
     let consts := uConstsRech (uKonstFns msE) msE []
     let alias := uAliase consts msE ++ uAliasBreiten msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
-    match uRestFehler msE with
-    | .error e => .error e
-    | .ok _ =>
     match ExportMetadata.checkConstants msE with
     | .error error => .error error
     | .ok () =>

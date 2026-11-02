@@ -16,13 +16,23 @@ private def dispatchImplementations : List TaggedImplementation :=
   [⟨.atom "u8", [("area", dispatchActual "circleArea" (.atom "u8"))]⟩,
    ⟨.atom "bool", [("area", dispatchActual "rectArea" (.atom "bool"))]⟩]
 
-/-- An unimplemented static constructor does not block either dispatch case. -/
+/-- An otherwise dispatchable member returning Self does not block either case. -/
 public theorem tagged_group_static_ignored_zeuge :
     (checkTaggedGroup [dispatchSignature,
-      ⟨"spec", "make", [], some (.atom "Self"), none, []⟩]
+      ⟨"spec", "copy", [("self", .atom "Self")], some (.atom "Self"), none, []⟩]
       [("Circle", some (.atom "u8")), ("Rect", some (.atom "bool"))]
       dispatchImplementations).map (fun fs => fs.map (fun f => f.2.map (·.implementation))) =
     .ok [[some "circleArea", some "rectArea"]] := rfl
+
+/-- Lookup covers the second member and second case, rather than stopping after
+    the first complete member or the first variant implementation. -/
+public theorem tagged_group_every_member_zeuge :
+    (checkTaggedGroup [dispatchSignature, { dispatchSignature with name := "perimeter" }]
+      [("Circle", some (.atom "u8")), ("Rect", some (.atom "bool"))]
+      [⟨.atom "u8", [("area", dispatchActual "circleArea" (.atom "u8")),
+        ("perimeter", dispatchActual "circlePerimeter" (.atom "u8"))]⟩,
+       ⟨.atom "bool", [("area", dispatchActual "rectArea" (.atom "bool"))]⟩]).map (fun _ => ()) =
+      .error "tagged-dispatch-missing-implementation: Rect::perimeter" := rfl
 
 public theorem tagged_group_missing_member_zeuge :
     (checkTaggedGroup [dispatchSignature]

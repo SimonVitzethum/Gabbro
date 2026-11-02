@@ -503,7 +503,7 @@ their implementations before declaration expansion:
 ```gabbro
 spec Shape[T] {
     fn area(s: T) -> bool effects {};
-    fn make() -> T effects {};
+    fn copy(s: T) -> T effects {};
 }
 impl Shape[u8] {
     fn area(s: u8) -> bool effects {} { return true; }
@@ -520,7 +520,7 @@ impl fn area_of(s: AnyShape) -> bool effects {} {
 
 The group's type parameter (`T`, internally `Self`) occurs as exactly one whole parameter
 of a dispatchable function, nowhere in its other parameter types or result. A member returning
-`Self`, such as `make`, is static: it generates no dispatcher and its absence from the case
+`Self`, such as `copy`, is static: it generates no dispatcher and its absence from the case
 implementations does not block the tagged declaration. Calls to such members through the tagged
 group are refused as `tagged-dispatch-non-dispatchable-call`. `Held` in a group contract is refused.
 
