@@ -338,6 +338,7 @@ public import Grammatik.Logik.Vertraege.ObjektZeuge
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil2
 public import Grammatik.Logik.Ruf.RufTiefe
 public import Grammatik.Logik.Ruf.RufLogik
+public import Grammatik.Logik.Ruf.RufLogika
 public import Grammatik.Logik.Ruf.RufLogikZeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Zeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
