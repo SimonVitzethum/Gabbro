@@ -133,7 +133,7 @@ theorem gvLuecke_statik_ohne_form
     (m : Bool) (a : String) (t : STyp) (v : SKonstWert) (al : Option SExpr) (s : Option String)
     (sh : Bool) (rest : List SItemTief) (h : al.isSome = true ∨ s.isSome = true) :
     ∃ e, uGlobs consts alias (.globT m a t v al s sh :: rest) = .error e := by
-  refine ⟨"static placement without G form", ?_⟩
+  refine ⟨"static placement requires Stage-0 global base alignment, section-policy binding and image relocation correspondence", ?_⟩
   simp only [uGlobs]
   have h' : (al.isSome || s.isSome) = true := by
     cases h with

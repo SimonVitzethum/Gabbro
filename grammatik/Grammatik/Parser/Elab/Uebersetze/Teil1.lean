@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Profil.Platzierung
 public import Grammatik.Parser.Elab.ExportMetadata
 public import Grammatik.Kern.Syntax.Typen.Reason
 import all Init.Data.Repr
@@ -457,6 +458,8 @@ structure UGlob where
   nutzlast : List String := []
   /-- C13: the declared STORAGE width in bits of a static of a bare unsigned word type (`0`: none). -/
   breite : Nat := 0
+  /-- Source placement; consumed only after image-layout correspondence is available. -/
+  placement : Option ProfilBindung.PlatzEintrag := none
   deriving DecidableEq, Repr
 
 /-- A source reason declaration, retaining its resolved descriptor for the channel migration. -/

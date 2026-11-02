@@ -249,7 +249,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
     List SItemTief → Except String (List UGlob)
   | [] => .ok []
   | .globT m n t v al sec sh :: rest =>
-    if al.isSome || sec.isSome then .error "static placement without G form"
+    if al.isSome || sec.isSome then .error "static placement requires Stage-0 global base alignment, section-policy binding and image relocation correspondence"
     else
       match (match t with
           | .atom "bool" =>
