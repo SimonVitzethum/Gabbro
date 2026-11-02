@@ -229,6 +229,12 @@
   * ownership beyond the arenas the unit declares (`E.arenen`): an arena whose allocator words are atomic, an
     arena not empty in the start memory, a start handed an allocation (each refused by the checker's
     `BesitzStart`/`worte`), and what a foreign body does to an arena beyond `GutO`;
+  * C09 nominal-owner mint provenance and call-scoped owner-mark transfers/loans on canonical G/GX.
+    `Kern/Syntax/Marken/Owner` supplies resource flow, linear ghost bindings and bookkeeping over the existing
+    grant/escrow ledger, with permanent spent authority. These interfaces do not yet extend `Akzeptiert`,
+    G/GX transitions or `Ziel(X/FX)`. Ordinary signatures still cannot produce owners; no software permission
+    is minted by a hardware assumption. The authorized stronger owner goal awaits the C08 software-call rule,
+    complete root/start admission and reachable-step/frame replay. No new source case is admitted by this work;
   * for threads spawned at run time: arguments per spawn, a root `requires` holding only at the spawn world,
     `old`-reads at the spawn world, the end of a join wait, the child's stack, a failing spawn, the lowering of the
     spawn;

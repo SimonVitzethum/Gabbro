@@ -58,6 +58,7 @@ public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschZeuge
 public import Grammatik.Bausteine.Schablonen.SchablonenStapel
 public import Grammatik.Bausteine.Arena.ArenaReset
 public import Grammatik.Bausteine.Arena.Ownership.Audit
+public import Grammatik.Kern.Syntax.Marken.Owner.Witness
 public import Grammatik.Logik.Ruf.FremdRuf
 public import Grammatik.Zielsatz.Faeden.PoolSym
 public import Grammatik.Zielsatz.Eigenschaften.Masken

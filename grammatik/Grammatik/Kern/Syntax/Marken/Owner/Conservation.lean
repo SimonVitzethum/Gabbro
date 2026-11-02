@@ -236,6 +236,8 @@ theorem retire_cannot_remint {N : OwnerNamespace D} {d : OwnerMintDecl D}
     (hr : retire N s f t = some s') (root : ArenaOwnership.Frame) :
     recordMint N d s' root = none := by
   have he := (retire_grant hv hr).2.2
-  exact mint_spent_refused N d s' root (he ▸ hspent)
+  apply mint_spent_refused N d s' root
+  rw [he]
+  exact hspent
 
 end Gabbro.Grammatik.OwnerState

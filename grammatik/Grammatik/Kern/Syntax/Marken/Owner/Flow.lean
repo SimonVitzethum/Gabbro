@@ -57,6 +57,24 @@ theorem validB_iff [DecidableEq Marke] (isOwner : Marke → Bool) (stages : Mark
     (F : OwnerFlow Marke) : validB isOwner stages F = true ↔ Valid isOwner stages F := by
   simp only [validB, decide_eq_true_eq]
 
+private theorem returned_moves_sublist (moves : List (OwnerMove Marke)) :
+    ((moves.filterMap (fun x => x.after.map (fun s => (x.mark, s)))).map Prod.fst).Sublist
+      ((moves.map (fun x => (x.mark, x.before))).map Prod.fst) := by
+  induction moves with
+  | nil => exact List.Sublist.refl []
+  | cons x xs ih =>
+      cases hs : x.after with
+      | none => simpa [hs] using List.Sublist.cons x.mark ih
+      | some s => simpa [hs] using List.Sublist.cons_cons x.mark ih
+
+/-- Returning never duplicates an input identity, including across stages. -/
+theorem outputs_nodup {isOwner : Marke → Bool} {stages : Marke → Nat}
+    {F : OwnerFlow Marke} (hv : Valid isOwner stages F) : (F.outputs.map Prod.fst).Nodup := by
+  have hs := (returned_moves_sublist F.moves).append (List.Sublist.refl (F.loans.map Prod.fst))
+  have hs' : (F.outputs.map Prod.fst).Sublist (F.inputs.map Prod.fst) := by
+    simpa only [outputs, inputs, List.map_append] using hs
+  exact hs'.nodup hv.1
+
 /-- Every returned identity has an explicit input; only its move stage may differ. -/
 theorem output_from_input (F : OwnerFlow Marke) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : ∃ before, (m, before) ∈ F.inputs := by
@@ -118,6 +136,16 @@ structure OwnerCall (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke)
   resolved : ∀ m ∈ owners, ∃ t, m ∈ D.eigner t
   valid : F.Valid (fun m => decide (m ∈ owners)) D.stufen
   ordinaryDisjoint : ∀ p ∈ S.konsumiert, p.1 ∉ F.inputs.map Prod.fst
+
+/-- The combined availability check supplies every exact flow input. -/
+theorem OwnerCall.input_available {V : Vertrag D}
+    {S : Signatur D.Tab D.Glob D.Lock D.Marke} {owners : List D.Marke}
+    {F : OwnerFlow D.Marke} {Λ : List (Res D)} (h : OwnerCall V S owners F Λ)
+    {p : D.Marke × Nat} (hp : p ∈ F.inputs) : Res.vonMarke D p ∈ Λ := by
+  obtain ⟨kept, hperm, hsub⟩ := h.available
+  apply hsub.subset
+  apply hperm.mem_iff.mp
+  exact List.mem_map.mpr ⟨p, List.mem_append_right _ hp, rfl⟩
 
 /-- Erasing resource inputs cannot introduce another resource. -/
 theorem owner_resource_erase_mem {xs : List (D.Marke × Nat)} {Λ : List (Res D)}

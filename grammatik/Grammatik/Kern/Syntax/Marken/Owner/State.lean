@@ -147,6 +147,25 @@ theorem access_unique {N : OwnerNamespace D} {s : OwnerState D}
     (hf : s.access N f t) (hg : s.access N g t) : f = g :=
   ArenaOwnership.State.access_unique hf.2.2 hg.2.2
 
+/-- Uniqueness is nominal, even for independently supplied handle records.
+    A copied or forged handle cannot provide a second accessor at any stage. -/
+theorem access_owner_unique {N : OwnerNamespace D} {s : OwnerState D}
+    {f g : ArenaOwnership.Frame} {t u : OwnerToken D}
+    (ht : s.access N f t) (hu : s.access N g u) (hm : t.mark = u.mark) :
+    f = g ∧ t.stage = u.stage := by
+  have hs : t.handle.slot = u.handle.slot :=
+    ht.1.trans ((congrArg N.key hm).trans hu.1.symm)
+  have hf := ht.2.2
+  have hg := hu.2.2
+  unfold ArenaOwnership.State.access at hf hg
+  rw [hs] at hf
+  refine ⟨?_, ht.2.1.symm.trans ((congrArg s.stage hm).trans hu.2.1)⟩
+  cases hc : s.ledger.cells u.handle.slot with
+  | none => simp only [hc] at hg
+  | some c =>
+      rw [hc] at hf hg
+      exact hf.2.symm.trans hg.2
+
 /-- Namespace injectivity prevents one grant from denoting two nominal owners. -/
 theorem nominal_unique {N : OwnerNamespace D} {s : OwnerState D}
     {f g : ArenaOwnership.Frame} {t u : OwnerToken D}
