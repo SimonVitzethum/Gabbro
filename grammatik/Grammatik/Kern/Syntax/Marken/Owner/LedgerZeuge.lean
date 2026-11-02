@@ -14,9 +14,10 @@ namespace Gabbro.Grammatik.OwnerWitness
     and it holds a live grant for the declared mark and stage
     (`mint_grant_zeuge`). The ghost ledger of EVERY run — including every
     reachable one — is that ledger, since no recorded event carries an owner
-    payload while `RufPasst.ownerReady` refuses nonempty flows. A witness
-    tying the mint to one executed foreign call needs the C08
-    software-call transition, which is still open by design. -/
+    payload. The per-call escrow replay for admitted flows is
+    `Owner/Escrow.lean`. A witness tying the mint to one executed foreign
+    call needs the C08 software-call transition, which is still open by
+    design. -/
 
 /-- The ghost ledger of any machine is the valid base ledger. -/
 theorem ownerLedger_zeuge_valid (M : RufMaschineG D) (threads : List Faden) :

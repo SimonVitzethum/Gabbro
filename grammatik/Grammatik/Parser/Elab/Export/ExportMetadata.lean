@@ -256,8 +256,10 @@ theorem capability_unbound_zeuge :
 theorem required_allocation_refused_zeuge :
     bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = true := by rfl
 
-/-- Owner production cannot be admitted while nonempty OwnerFlow is refused
-    by the canonical RufPasst.ownerReady escrow boundary. -/
+/-- Owner production stays refused: the model admits escrow-ready flows
+    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), but the elaborator
+    still exports `Marke := Empty` with no owner bindings, so no source form
+    can supply them. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 

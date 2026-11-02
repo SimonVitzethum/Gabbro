@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Einbettung
+public import Grammatik.Kern.Syntax.Marken.Owner.Escrow
 @[expose] public section
 
 
@@ -190,10 +191,7 @@ theorem rufPasstE {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ
     obtain ⟨c, hc, hr⟩ := h.hx L hL (fun hm => hn (List.mem_map_of_mem hm))
     exact ⟨c, hc, by rw [E.rang]; exact hr⟩
   hb := h.hb
-  ownerReady := by
-    change S.owner.map E.marke = {}
-    rw [h.ownerReady]
-    rfl
+  ownerReady := OwnerFlow.escrowReady_map E S h.ownerReady
 
 end Einbettung
 

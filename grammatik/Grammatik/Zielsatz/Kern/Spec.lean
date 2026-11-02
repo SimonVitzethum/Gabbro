@@ -327,8 +327,10 @@
     `Signatur.owner` now contributes exact owner inputs to `Signatur.anfang`, owner outputs to
     `Vertrag.ende`, and both inventories to `nachSig`; pointer conformance preserves the same flow.
     This changes the typed entry/exit resource inventory, not the oracle assumptions. Canonical calls
-    still require an empty owner flow (`RufPasst.ownerReady`) until checked dynamic escrow replay is
-    connected. `Kern/Syntax/Marken/Owner` supplies linear ghost bindings and bookkeeping over the existing
+    admit escrow-ready owner flows (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`): the caller's
+    bindings move into a frame escrow at the push and the return gives back exactly the outputs,
+    with conservation proved per edge (`Kern/Syntax/Marken/Owner/Escrow`). `Kern/Syntax/Marken/Owner`
+    supplies linear ghost bindings and bookkeeping over the existing
     grant/escrow ledger, with permanent spent authority. No `OwnerInvG/GX` or owner provenance/lifetime leg
     is yet claimed by `Ziel(X/FX)`. The authorized stronger goal still needs C08 software-call execution,
     root/start admission and reachable-step/frame replay. No new source case is admitted by this work;

@@ -157,7 +157,7 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
-  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+  | .bindCallIndElse p args he₀ hp hr err rest, h, σ, ρ, e, he => by
       simp only [Block.hardwareFrei, Bool.and_eq_true] at h
       simp only [execBlock, indSonst] at he
       generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
@@ -304,7 +304,7 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
-  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+  | .bindCallIndElse p args he₀ hp hr err rest, h, σ, ρ, e, he => by
       simp only [Endblock.hardwareFrei, Bool.and_eq_true] at h
       simp only [execEnd, indSonstE] at he
       generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
