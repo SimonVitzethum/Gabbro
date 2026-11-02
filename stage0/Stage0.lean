@@ -120,5 +120,7 @@ public import Stage0.Senke.Gleit.AddMag
 public import Stage0.Senke.Gleit.Round
 public import Stage0.Senke.Gleit.Pack
 public import Stage0.Senke.Gleit.Compose
+public import Stage0.Senke.Gleit.BitLength
+public import Stage0.Senke.Gleit.Runde
 
 @[expose] public section
