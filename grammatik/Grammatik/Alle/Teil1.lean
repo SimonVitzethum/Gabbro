@@ -35,7 +35,7 @@ public import Grammatik.Logik.Vertraege.QLeer
 public import Grammatik.Proben.BlattGegenbeispiel
 public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 public import Grammatik.Logik.Ruf.RufAtNachB
-public import Grammatik.Kern.Syntax.MarkenInstanzA
+public import Grammatik.Kern.Syntax.Marken.InstanzA
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
 public import Grammatik.Kern.Syntax.Geist
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD
