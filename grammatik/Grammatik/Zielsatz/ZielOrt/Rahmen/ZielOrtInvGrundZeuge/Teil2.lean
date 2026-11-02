@@ -3,6 +3,7 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 public import Grammatik.Proben.InvZeuge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrundZeuge.Teil1
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrundZeuge.Teil1a
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
