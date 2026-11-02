@@ -16,6 +16,7 @@ public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
 
 @[expose] public section
 
@@ -197,11 +198,14 @@ def SperrInvLokal (S : SperrInv D) : Prop :=
 /-- **The logic of the bodies**: per function and at EVERY `forever` budget the body triple
     with caller duty and no `logik` outcome, owed invariants at value AND reason exits; the
     lock invariants and declared axiom ensures the user wrote read only their carriers.
-    (Until 2026-09-14 this was all of `NutzerPflicht`.) -/
+    (Until 2026-09-14 this was all of `NutzerPflicht`.)
+    Since C06 the interface refinement `PtrVerfeinert` is an explicit conjunct:
+    every admitted target refines its pointer interface, contravariant
+    requires and covariant normal ensures over arbitrary entry/current worlds. -/
 def LogikPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
   (∀ (passes : Nat) (f : D.Fn),
     KoerperGutS P passes Q S f ∧ InvGutS P passes Q S f ∧ InvGutGrund P passes Q S f) ∧
-  SperrInvLokal S ∧ AxEnsLokal Q
+  SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert P
 
 /-- **The start obligation** (NEW 2026-09-15, verdict P1): at the program's DECLARED initial
     memory every lock invariant holds, and every declared start's `requires` holds with its
