@@ -197,28 +197,28 @@ theorem sim_arms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := sim_block b M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by
           simp only [execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hΦ Φ hP,
-        by simp only [exArms, valE_sum, execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hR⟩
+        by simp only [exArms, valE_sum, Val.relocateSum, execArmsHA, armEnv, Ausgang.schrumpfArm]; exact hR⟩
   | .cons (c := some τ) b _, ⟨⟨0, _⟩, nutz⟩ => by
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := sim_block b M σ σ' (Env.cons (τ := τ) nutz ρ)
-        (Env.cons (τ := .int lo hi) nutz ρ') hM
-        (E.envR_cons hZ (τ := .int lo hi) (τ' := .int lo hi) hρ nutz nutz rfl rfl)
+        (Env.cons (τ := E.tyE τ) (E.valE τ nutz) ρ') hM
+        (E.envR_cons hZ (τ := τ) (τ' := E.tyE τ) hρ nutz (E.valE τ nutz) rfl (E.vrel_valE hZ τ nutz))
       exact ⟨M₁, o.schrumpf, hs, fun Φ hP => by
           simp only [execArmsHA, armEnv, Ausgang.schrumpfArm]; exact congrArg Ausgang.schrumpf (hΦ Φ hP),
-        by simp only [exArms, valE_sum, execArmsHA, armEnv, Ausgang.schrumpfArm]
+        by simp only [exArms, valE_sum, Val.relocateSum, execArmsHA, armEnv, Ausgang.schrumpfArm]
            exact E.ausRel_schrumpf hR⟩
   | .cons (c := none) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
       have := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := this M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by simp only [execArmsHA]; exact hΦ Φ hP,
-        by simp only [exArms, valE_sum, execArmsHA]; exact hR⟩
+        by simp only [exArms, valE_sum, Val.relocateSum, execArmsHA]; exact hR⟩
   | .cons (c := some τ) _ rest, ⟨⟨i + 1, h⟩, nutz⟩ => by
       have := sim_arms rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       intro M σ σ' ρ ρ' hM hρ
       obtain ⟨M₁, o, hs, hΦ, hR⟩ := this M σ σ' ρ ρ' hM hρ
       exact ⟨M₁, o, hs, fun Φ hP => by simp only [execArmsHA]; exact hΦ Φ hP,
-        by simp only [exArms, valE_sum, execArmsHA]; exact hR⟩
+        by simp only [exArms, valE_sum, Val.relocateSum, execArmsHA]; exact hR⟩
 
 /-- **Reason arms beside their images.** -/
 theorem sim_grund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} :
