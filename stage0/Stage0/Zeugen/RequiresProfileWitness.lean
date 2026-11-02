@@ -45,6 +45,8 @@ def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- Profile binding exists in `Parser.Profil`, but Stage0 has no certificate transport
     from that binding to the selected image and its named hardware assumptions. -/
-theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
+theorem candidate_refused :
+    (match candidate with | .error message => some message | .ok _ => none) =
+      some "ir: profile: canonical source-to-goal profile binding missing" := by decide +kernel
 
 end Gabbro.Stage0.RequiresProfileWitness

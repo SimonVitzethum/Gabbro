@@ -45,6 +45,8 @@ def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- Selection exists in `Parser.Profil.Auswahl`, but Stage0 Prepared.unchanged
     still requires the original tree; selected-source correctness is not connected. -/
-theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
+theorem candidate_refused :
+    (match candidate with | .error message => some message | .ok _ => none) =
+      some "ir: when TESTBUILD: canonical conditional selection proof missing" := by decide +kernel
 
 end Gabbro.Stage0.TestBuildWitness
