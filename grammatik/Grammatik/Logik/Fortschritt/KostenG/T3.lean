@@ -1,7 +1,7 @@
+module
 /- Part 3 of 5 of `KostenG` (split by instrumente/teile/lean-teilen.py; the umbrella `KostenG.lean` imports all parts). -/
 public import Grammatik.Logik.Fortschritt.KostenG.T3Basis
 import all Grammatik.Logik.Fortschritt.KostenG.T3Basis
-module
 public import Grammatik.Logik.Fortschritt.KostenG.T2
 @[expose] public section
 
