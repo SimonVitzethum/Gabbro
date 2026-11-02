@@ -18,6 +18,7 @@ def fremdStmt (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .locks _ _ body => fremdBlock fa pa body
   | .breaking _ body => fremdBlock fa pa body
   | .traverse t _ body => (D.count t).toNat * fremdBlock fa pa body
+  | .consumeTraverse t _ _ _ _ _ body => (D.count t).toNat * fremdBlock fa pa body
   | .retry n _ body ueber => n * fremdBlock fa pa body + fremdBlock fa pa ueber
   | .forever _ _ body => pa * fremdBlock fa pa body
   | .axiomCall a _ _ _ _ _ _ => fa a

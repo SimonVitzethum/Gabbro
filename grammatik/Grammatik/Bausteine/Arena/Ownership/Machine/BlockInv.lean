@@ -156,6 +156,9 @@ def STop (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output 
   | _, _, _, _, .traverse _ inv body =>
       Weaker c2 c ∧ checkExpression A c2 inv = true ∧
         ∃ c1, OB A I out c2 (c2.bind none) body c1 ∧ Weaker c2 c1.drop
+  | _, _, _, _, .consumeTraverse _ _ _ inv _ _ body =>
+      Weaker c2 c ∧ checkExpression A c2 inv = true ∧
+        ∃ c1, OB A I out c2 (c2.bind none) body c1 ∧ Weaker c2 c1.drop
   | _, _, _, _, .retry _ bis body ueber =>
       Weaker c2 c ∧ checkExpression A c2 bis = true ∧ (∃ c1, OB A I out c2 c2 body c1 ∧ Weaker c2 c1) ∧
         OB A I out k c2 ueber c2

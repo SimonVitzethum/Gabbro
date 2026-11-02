@@ -171,6 +171,7 @@ theorem blockS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ
         Sz.mem_bind (mem_zS (n := lo') rfl (by omega)) <| Sz.mem_bind (mem_zS (n := hi') rfl (by omega)) <|
         Sz.mem_wenn hok <| Sz.mem_bind hso <| Sz.mem_bindR (A := Sz.pure ()) (Sz.mem_pure ()) hr' <| Sz.mem_pure _) (by omega)
     · glfertig
+  | narrowRequired _ _ _ _ => simp only [groesseBlock] at hu; omega
   | check c sonst rest =>
     simp only [groesseBlock] at hu hE hS hB hN hO
     obtain ⟨c', hc, ⟨_, _⟩⟩ := hE _ c (by omega)
@@ -256,6 +257,8 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
       blk (eRet E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (herg) <|
         Sz.mem_wenn hΛ <| Sz.mem_pure _) (by omega)
     · glfertig
+  | retScoped _ _ => simp only [groesseEnd] at hu; omega
+  | retWhyScoped _ _ => simp only [groesseEnd] at hu; omega
   | retWhy r hΛ =>
     refine ⟨.retWhy r hΛ, ?_, GlN.refl _⟩
     simp only [groesseEnd]
@@ -388,6 +391,7 @@ theorem endS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ))
         Sz.mem_bindR hargs hr' <| Sz.mem_pure _) (by omega)
     · glfertig
   | narrow _ _ _ _ _ => simp only [groesseEnd] at hu; omega
+  | narrowRequired _ _ _ _ => simp only [groesseEnd] at hu; omega
   | exchange _ _ _ _ _ => simp only [groesseEnd] at hu; omega
   | ite _ _ _ => simp only [groesseEnd] at hu; omega
 

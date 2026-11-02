@@ -186,13 +186,15 @@ def istZustand (m : String) : Bool := m.startsWith "DynArena." || m.startsWith "
 /-- The statement constructors. -/
 def stmtNamen : List String :=
   ["assignSlot", "assignThru", "assignGlob", "putBytes", "assignVar", "shift", "ite", "onOption", "onTag", "onWhy",
-   "call", "callInd", "locks", "breaking", "traverse", "retry", "forever", "axiomCall", "regWrite", "transition",
-   "publish", "advances", "retires", "ret", "retWhy", "leave", "next"].map ("Stmt." ++ ·)
+   "call", "callInd", "locks", "breaking", "traverse", "consumeTraverse", "retry", "forever", "axiomCall", "regWrite", "transition",
+   "publish", "advances", "retires", "ret", "retWhy", "retScoped", "retWhyScoped", "leave", "next"].map ("Stmt." ++ ·)
 
 /-- The containers of statements (a statement with blocks) and the blocks with an `else` end block. -/
 def behaelter : List String :=
   ["Stmt.ite", "Stmt.onOption", "Stmt.onTag", "Stmt.onWhy", "Stmt.locks", "Stmt.breaking", "Stmt.traverse",
+   "Stmt.consumeTraverse",
    "Stmt.retry", "Stmt.forever", "Block.bindCallElse", "Block.bindAxiomElse", "Block.regReadElse", "Block.narrow",
+   "Block.narrowRequired",
    "Block.check", "Block.floatNarrow"]
 
 /-- **The cells**: a statement in a loop body or under a held lock, a statement directly inside a container. -/

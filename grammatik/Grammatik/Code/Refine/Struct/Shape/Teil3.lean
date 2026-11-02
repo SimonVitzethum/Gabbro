@@ -30,6 +30,7 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .ret e _, lb, k, st, st', blks, h => by
       simp only [lowerS] at h
       exact lowerRet_shape lay cenv V.gruende e lb st st' blks h
+  | _, _, _, _, .retScoped .., _, _, _, _, _, _ | _, _, _, _, .retWhyScoped .., _, _, _, _, _, _ | _, _, _, _, .consumeTraverse .., _, _, _, _, _, _ => by simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .putBytes .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .shift .., lb, k, st, st', blks, h => by
@@ -285,6 +286,7 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .exchange .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .narrowRequired .., _, _, _, _, _, _ => by simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) e lo' hi' sonst rest, lb, k, st, st', blks,
       h => by
       simp only [lowerB] at h
@@ -344,6 +346,7 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .ret e _, lb, st, st', blks, h => by
       simp only [lowerEnd] at h
       exact lowerRet_shape lay cenv V.gruende e lb st st' blks h
+  | _, _, _, .retScoped .., _, _, _, _, _, _ | _, _, _, .retWhyScoped .., _, _, _, _, _, _ => by simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .cons s rest, lb, st, st', blks, h =>
       lowerEnd_shape_cons (lay := lay) (cenv := cenv) (lv := lv) (s := s) (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (ih_lowerS_shape_s := lowerS_shape lay cenv lv s) (ih_lowerEnd_shape_rest := lowerEnd_shape lay cenv lv rest)
   | _, _, _, Gabbro.Grammatik.Endblock.bind (τ := τ) e rest, lb, st, st', blks, h => by
@@ -401,6 +404,7 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
 
   | _, _, _, .bindCallInd .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .narrowRequired .., _, _, _, _, _, _ => by simp only [lowerEnd, reduceCtorEq] at h
 
 /-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
 theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)

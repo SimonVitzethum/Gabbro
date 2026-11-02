@@ -305,6 +305,7 @@ def sperrenS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
   | .locks L _ body => L :: sperrenB body
   | .ite _ t e => sperrenB t ++ sperrenB e
   | .traverse _ _ body => sperrenB body
+  | .consumeTraverse _ _ _ _ _ _ body => sperrenB body
   | _ => []
 
 def sperrenB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :

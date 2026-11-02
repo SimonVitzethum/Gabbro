@@ -193,6 +193,7 @@ def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .locks .. => "Stmt.locks"
   | _, _, _, _, .breaking .. => "Stmt.breaking"
   | _, _, _, _, .traverse .. => "Stmt.traverse"
+  | _, _, _, _, .consumeTraverse .. => "Stmt.consumeTraverse"
   | _, _, _, _, .retry .. => "Stmt.retry"
   | _, _, _, _, .forever .. => "Stmt.forever"
   | _, _, _, _, .axiomCall .. => "Stmt.axiomCall"
@@ -203,6 +204,8 @@ def stmtName {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .retires .. => "Stmt.retires"
   | _, _, _, _, .ret .. => "Stmt.ret"
   | _, _, _, _, .retWhy .. => "Stmt.retWhy"
+  | _, _, _, _, .retScoped .. => "Stmt.retScoped"
+  | _, _, _, _, .retWhyScoped .. => "Stmt.retWhyScoped"
   | _, _, _, _, .leave .. => "Stmt.leave"
   | _, _, _, _, .next .. => "Stmt.next"
 
@@ -221,6 +224,7 @@ def blockStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .awaits _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .exchange _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .narrow _ _ _ _ rest => blockStmts rest
+  | _, _, _, _, .narrowRequired _ _ _ rest => blockStmts rest
   | _, _, _, _, .check _ _ rest => blockStmts rest
   | _, _, _, _, .float _ _ _ _ _ rest => blockStmts rest
   | _, _, _, _, .floatLit _ _ _ rest => blockStmts rest
@@ -240,10 +244,13 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .awaits _ _ _ _ _ rest => endStmts rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => endStmts rest
   | _, _, _, .narrow _ _ _ _ rest => endStmts rest
+  | _, _, _, .narrowRequired _ _ _ rest => endStmts rest
   | _, _, _, .exchange _ _ _ _ rest => endStmts rest
   | _, _, _, .ite .. => []
   | _, _, _, .ret .. => []
   | _, _, _, .retWhy .. => []
+  | _, _, _, .retScoped .. => []
+  | _, _, _, .retWhyScoped .. => []
   | _, _, _, .leave .. => []
   | _, _, _, .next .. => []
 
