@@ -61,9 +61,12 @@ def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) 
           match uKonstBinde k.params vals with
           | none => none
           | some binds =>
-            match uKonstWert k.erg.1 k.erg.2 fns binds f k.rumpf with
-            | some v => ok v
-            | none => none
+            match k.erg, k.rumpf with
+            | .int kl kh, .block [] (some (.ret (some expression))) =>
+              match uKonstWert kl kh fns binds f expression with
+              | some v => ok v
+              | none => none
+            | _, _ => none
     | _ => none
 
 /-- The constant scope of a unit: in source order, each constant may use the ones before it. A literal
@@ -176,6 +179,21 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
 /-- The canonical reader in a declaration environment without named value schemas. -/
 def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty :=
   uTypIn alias tabs []
+
+/-- Collect constant functions independently of their statement body shape. -/
+def uKonstFns : List SItemTief → List UKonstFn
+  | [] => []
+  | .fnT sig body :: rest =>
+    if strEq sig.art "const" then
+      match sig.res with
+      | some result =>
+        match uTyp [] [] result, sig.params.mapM (fun (n, ty) => (uTyp [] [] ty).map (fun t => (n, t))) with
+        | .ok resultType, .ok parameters =>
+          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFns rest
+        | _, _ => uKonstFns rest
+      | none => uKonstFns rest
+    else uKonstFns rest
+  | _ :: rest => uKonstFns rest
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit
