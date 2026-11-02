@@ -50,6 +50,9 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
   | _, _, e, .bindCallInd _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
       exact ⟨h.1.imp id hw, h.2⟩
+  | _, _, e, .bindCallIndElse _ _ _ _ _ err rest, w, w', hw, h => by
+      simp only [fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
+      exact ⟨⟨h.1.1.imp id hw, h.1.2⟩, h.2⟩
   | _, _, e, .bindCallElse g _ _ _ _ err rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
       exact ⟨⟨h.1.1.imp id hw, h.1.2⟩, h.2⟩
@@ -128,6 +131,9 @@ theorem fE_mono {l : Bool} :
   | _, _, e, .bindCallInd _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
       exact ⟨h.1.imp id hw, h.2⟩
+  | _, _, e, .bindCallIndElse _ _ _ _ _ err rest, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h ⊢
+      exact ⟨⟨h.1.1.imp id hw, h.1.2⟩, h.2⟩
   | _, _, e, .narrow _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
   | _, _, e, .narrowRequired _ _ _ rest, w, w', hw, h => by
@@ -197,6 +203,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .awaits g pl hp hL hat rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindCallInd p args he hp hr rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .narrow _ _ _ sonst rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]

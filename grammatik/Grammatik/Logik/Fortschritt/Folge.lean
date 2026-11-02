@@ -72,6 +72,7 @@ variable (Φ : Folge D) {V : Vertrag D}
 def fNach {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (w : Bool) : Stmt D V l Γ Λ Λ' → Bool
   | .call g _ _ _ => Φ.vor g
   | .callInd .. => false
+  | .callIndElse .. => false
   | .ite .. => false
   | .onOption .. => false
   | .onTag .. => false
@@ -90,6 +91,7 @@ mutual
 def fS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Stmt D V l Γ Λ Λ' → Bool
   | .call g _ _ _ => !Φ.ruf g || w
   | .callInd (n := n) .. => !Φ.ind n || w
+  | .callIndElse (n := n) _ _ _ _ err => (!Φ.ind n || w) && fE e false err
   | .ret .. => !e || w
   | .retWhy .. => !e || w
   | .retScoped .. => !e || w
@@ -127,6 +129,8 @@ def fB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Block D V l 
   | .bind _ rest => fB e w rest
   | .bindCall g _ _ _ _ rest => (!Φ.ruf g || w) && fB e (Φ.vor g) rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => (!Φ.ind n || w) && fB e false rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      (!Φ.ind n || w) && fE e false err && fB e false rest
   | .bindCallElse g _ _ _ _ err rest =>
       (!Φ.ruf g || w) && fE e false err && fB e (Φ.vor g) rest
   | .bindAxiom _ _ _ _ _ _ _ rest => fB e w rest
@@ -177,6 +181,8 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   | .regReadElse _ _ _ sonst rest => fE e false sonst && fE e w rest
   | .awaits _ _ _ _ _ rest => fE e w rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => (!Φ.ind n || w) && fE e false rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      (!Φ.ind n || w) && fE e false err && fE e false rest
   | .narrow _ _ _ sonst rest => fE e false sonst && fE e w rest
   | .narrowRequired _ _ _ rest => fE e w rest
   | .exchange _ _ _ _ rest => fE e w rest
