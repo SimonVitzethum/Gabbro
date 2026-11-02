@@ -5,7 +5,7 @@ public import Grammatik.Korpus.Programme.Einheit104
 public import Bruecke.Start
 public import Bruecke.Atomar
 public import Bruecke.Quelle
-public import Duty.Duty104Referenz
+public import Duty.Duty0104Referenz
 @[expose] public section
 
 
@@ -14,12 +14,12 @@ public import Duty.Duty104Referenz
     S1+S2 instance: `beispiele/0104-referenz.gab`.
     The parse is anchored at the source text by `Einheit104.uebersetzt4`
     (`uebersetzeAllg src104real = .ok ⟨uExp104, …⟩`); every printed definition of
-    `Duty104Referenz.lean` is checked against the Lean computation from `uExp104`. -/
+    `Duty0104Referenz.lean` is checked against the Lean computation from `uExp104`. -/
 
 namespace Gabbro.Bruecke.I104
 
 open Gabbro.Body Gabbro.Grammatik.Parser.Uebersetze
-open GabbroDuty.Duty104Referenz
+open GabbroDuty.Duty0104Referenz
 open Gabbro.Grammatik.Parser.UebersetzeAllg (fnAt)
 
 def u := uExp104
@@ -68,7 +68,7 @@ theorem start : Gabbro.Grammatik.Zielsatz.StartPflicht Gabbro.Grammatik.Einheit1
     S3 instance: the simulation theorem (`Bruecke/Simulation.lean`, `bruecke_nutzer`) applied to the
     parser's program of 104. Its premises, each checked here: the lowering (`Einheit104.low4`), the
     name conditions and the rank of the call graph (decided), and the DUTIES -- GabbroV's own
-    proofs `einzahlen_meets` and `lies_meets` from `Duty104Referenz.lean`, the statements the
+    proofs `einzahlen_meets` and `lies_meets` from `Duty0104Referenz.lean`, the statements the
     per-unit `rfl` checks above tie to the Lean computation. The conclusion is premise (b) of the
     goal theorem for the chain's unit `E4`. -/
 

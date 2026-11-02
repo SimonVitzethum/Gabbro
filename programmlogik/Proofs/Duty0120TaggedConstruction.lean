@@ -1,9 +1,9 @@
 module
-public import Duty.Duty120TaggedConstruction
+public import Duty.Duty0120TaggedConstruction
 @[expose] public section
 
 set_option autoImplicit false
-open Gabbro.Body GabbroDuty.Duty120TaggedConstruction
+open Gabbro.Body GabbroDuty.Duty0120TaggedConstruction
 
 /-  Written from `gabbro beweise --vorlage`. Every statement below is the unit's own
     logic; the hypotheses a proof needs stand in the statement. `gabbro_auto?` shows

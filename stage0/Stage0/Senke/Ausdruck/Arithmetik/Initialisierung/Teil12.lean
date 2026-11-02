@@ -1,9 +1,7 @@
 module
 
 public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung.Teil11
-
 @[expose] public section
-
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}

@@ -1,10 +1,10 @@
 module
-public import Duty.Duty124TwoThreadsPrivate
+public import Duty.Duty0124TwoThreadsPrivate
 @[expose] public section
 
 set_option autoImplicit false
 set_option maxHeartbeats 11300000
-open Gabbro.Body GabbroDuty.Duty124TwoThreadsPrivate
+open Gabbro.Body GabbroDuty.Duty0124TwoThreadsPrivate
 
 /-  Written from `gabbro beweise --vorlage`. Every statement below is the unit's own
     logic; the hypotheses a proof needs stand in the statement. `gabbro_auto?` shows

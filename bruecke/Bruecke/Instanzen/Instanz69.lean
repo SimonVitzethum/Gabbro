@@ -1,6 +1,6 @@
 module
 public import Bruecke.Quelle
-public import Duty.Duty69IntegerConversion
+public import Duty.Duty0069IntegerConversion
 @[expose] public section
 
 
@@ -103,7 +103,7 @@ theorem null : nullB u = true := by decide
 theorem stimmig : stimmigB u = true := by decide
 theorem rang : rangB u (rangAuto u) = true := by decide
 
-open GabbroDuty.Duty69IntegerConversion
+open GabbroDuty.Duty0069IntegerConversion
 
 theorem shape_eq : shapeOf = shapeOfU u := by
   funext p

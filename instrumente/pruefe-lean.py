@@ -19,7 +19,7 @@ Stages (each prints what it measured; a stage that cannot run is NOT a pass):
      `stage0`); stage 3 covers its Lean files too. Then every probe `stage0/proben/NAME.gab` runs through the
      compiler to IR, then through the assembly runner on `NAME.ein` (written after `NAME.warte` seconds when
      that file exists); the runner must print exactly `NAME.aus` with exit code 0.
-     `stage0/Nachpruefung.lean`: the lowering's theorems (`bild_ok_u`, `lowS_ok`, ...) depend on exactly the three
+     `stage0/Nachpruefung/Teil*.lean`: the lowering's theorems (`bild_ok_u`, `lowS_ok`, ...) depend on exactly the three
      standard axioms. Every probe `stage0/proben-ir/NAME.gab` is lowered by `stage0 --ir` to an `S0IR` image, which
      the runner binary (written by `lake exe runner`) runs; its exit code must be `NAME.code`.
   8. The verified x86-64 runner (`runner/`, PLAN-SELF-HOSTING.md §2.2): `lake build` of the package;
@@ -168,7 +168,17 @@ def stufe_stage0():
     exe = S0 / ".lake/build/bin/stage0"
     proben = sorted((S0 / "proben").glob("*.gab"))
     falsch = []
-    rc, out = lauf(["lake", "env", "lean", "Nachpruefung.lean"], S0, 1800)
+    # the axiom script is split into stand-alone parts (every Lean file below 500 lines)
+    rc, out = 0, ""
+    teile = sorted((S0 / "Nachpruefung").glob("Teil*.lean"), key=lambda f: int(f.stem[4:]))
+    # the witnesses the script imports are not all in the default target: build them first
+    ziele = sorted({m for f in teile for m in re.findall(r"^(?:public )?import (Stage0\S*)", f.read_text(), re.M)})
+    if ziele:
+        r, o = lauf(["lake", "build", *ziele], S0, 3600)
+        rc, out = rc or r, out + o
+    for teil in teile:
+        r, o = lauf(["lake", "env", "lean", str(teil.relative_to(S0))], S0, 1800)
+        rc, out = rc or r, out + o
     zeilen = re.findall(r"'([^']+)' depends on axioms: \[([^\]]*)\]", out)
     schlecht = [n for n, a in zeilen if not {x.strip() for x in a.split(",") if x.strip()} <= STANDARD]
     satz = any(n.endswith(".bild_ok_u") for n, _ in zeilen)

@@ -52,10 +52,12 @@ def members():
     result = {}
     for relative, names in MODELS.items():
         path = ROOT / "grammatik/Grammatik" / relative
-        text = path.read_text()
-        teile = path.with_suffix("")   # a file split by lean-teilen.py: its parts hold the declarations
+        text = path.read_text() if path.is_file() else ""
+        teile = path.with_suffix("")   # a split file: its parts (T1.., Teil1.., nested) hold the declarations
         if teile.is_dir():
-            text += "\n" + "\n".join(f.read_text() for f in sorted(teile.glob("T*.lean"), key=lambda f: int(f.stem[1:])))
+            def order(f):
+                return [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", str(f.relative_to(teile)))]
+            text += "\n" + "\n".join(f.read_text() for f in sorted(teile.rglob("*.lean"), key=order))
         text = uncomment(text)
         if relative == "Kern/Syntax/Syntax.lean":
             declared = set(re.findall(r"^(?:inductive|structure) ([\w']+)", text, re.M))

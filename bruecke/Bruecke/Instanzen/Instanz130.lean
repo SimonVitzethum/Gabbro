@@ -1,6 +1,6 @@
 module
 public import Bruecke.Quelle
-public import Duty.Duty130DerivedContractPure
+public import Duty.Duty0130DerivedContractPure
 @[expose] public section
 
 
@@ -9,7 +9,7 @@ public import Duty.Duty130DerivedContractPure
     P4: the bridge instance of `beispiele/130` THROUGH THE GENERIC THEOREM (`Quelle.lean`). The file
     is the template `gabbro prove --template --source` writes (the source pinned as pieces, the
     stage outputs as hints the kernel checks, the statements COMPUTED by Lean), with the one owed
-    proof filled by GabbroV's own duty proof `add_meets` (`Duty130DerivedContractPure.lean`, closed
+    proof filled by GabbroV's own duty proof `add_meets` (`Duty0130DerivedContractPure.lean`, closed
     by `gabbro_auto2`). The `example`s tie the computed statement to the printed duty by `rfl`. -/
 
 namespace Gabbro.Bruecke.I130
@@ -73,7 +73,7 @@ theorem null : nullB u = true := by decide
 theorem stimmig : stimmigB u = true := by decide
 theorem rang : rangB u (rangAuto u) = true := by decide
 
-open GabbroDuty.Duty130DerivedContractPure
+open GabbroDuty.Duty0130DerivedContractPure
 
 theorem shape_eq : shapeOf = shapeOfU u := by
   funext p

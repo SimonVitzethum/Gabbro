@@ -5,7 +5,7 @@ public import Grammatik.Korpus.Programme.Einheit108
 public import Bruecke.Start
 public import Bruecke.Atomar
 public import Bruecke.Quelle
-public import Duty.Duty108DisjointStartLocks
+public import Duty.Duty0108DisjointStartLocks
 @[expose] public section
 
 
@@ -16,7 +16,7 @@ public import Duty.Duty108DisjointStartLocks
 namespace Gabbro.Bruecke.I108
 
 open Gabbro.Body Gabbro.Grammatik.Parser.Uebersetze
-open GabbroDuty.Duty108DisjointStartLocks
+open GabbroDuty.Duty0108DisjointStartLocks
 open Gabbro.Grammatik.Parser.UebersetzeAllg (fnAt)
 
 def u := Gabbro.Grammatik.Parser.UebersetzeAllg2.uExp108

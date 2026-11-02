@@ -1,9 +1,9 @@
 module
-public import Duty.Duty151WordPoolDiscipline
+public import Duty.Duty0151WordPoolDiscipline
 @[expose] public section
 
 set_option autoImplicit false
-open Gabbro.Body GabbroDuty.Duty151WordPoolDiscipline
+open Gabbro.Body GabbroDuty.Duty0151WordPoolDiscipline
 
 /-  Written from `gabbro beweise --vorlage`. Every statement below is the unit's own
     logic; the hypotheses a proof needs stand in the statement. `gabbro_auto?` shows

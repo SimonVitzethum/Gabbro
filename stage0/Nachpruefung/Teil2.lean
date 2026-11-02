@@ -8,7 +8,6 @@ public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Bindung.Proben
-public import Nachpruefung.Teil1
 
 @[expose] public section
 

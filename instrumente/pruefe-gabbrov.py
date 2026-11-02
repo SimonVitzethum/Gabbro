@@ -23,9 +23,9 @@ ENV = {**os.environ, "LC_ALL": "C"}
 ENV.pop("ELAN_TOOLCHAIN", None)
 # proof file -> the unit it is held against
 EINHEITEN = {
-    "Duty120TaggedConstruction": "beispiele/0120-tagged-construction.gab",
-    "Duty124TwoThreadsPrivate": "beispiele/0124-two-threads-private.gab",
-    "Duty151WordPoolDiscipline": "beispiele/0151-word-pool-discipline.gab",
+    "Duty0120TaggedConstruction": "beispiele/0120-tagged-construction.gab",
+    "Duty0124TwoThreadsPrivate": "beispiele/0124-two-threads-private.gab",
+    "Duty0151WordPoolDiscipline": "beispiele/0151-word-pool-discipline.gab",
 }
 VERBOTEN = re.compile(r"\b(sorry|admit|native_decide|sorryAx|axiom)\b")
 

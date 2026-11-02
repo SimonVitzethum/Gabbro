@@ -4677,7 +4677,7 @@ pub fn module(baum: &Programm, datei: &str) -> String {
     s.push_str("    declared `effects` list is complete (`E008`/`E010`, `Frame` in `Program`);\n");
     s.push_str("    the initial world satisfies every invariant (a statement about `boot`,\n");
     s.push_str("    booked by no register); and everything `Assumed` names.\n-/\n\n");
-    s.push_str("import Gabbro.Body\n\n");
+    s.push_str("module\n\npublic import Gabbro.Body\n\n@[expose] public section\n\n");
     // **The heartbeat budget is raised, and the reason is the automation.** `gabbro_auto`
     // runs a case split per undecided read and a `simp_all` per goal; a routine over a
     // `count 4096` table with three option reads spends the default budget before the
@@ -5789,7 +5789,7 @@ pub fn program(baum: &Programm, quellen: &[String]) -> String {
     s.push_str("\n    ASSUMED, and visible because it is written down: two different carrier\n");
     s.push_str("    names are two different objects. That is the alias statement, and the\n");
     s.push_str("    alias passes carry it -- no line of this file does.\n-/\n\n");
-    s.push_str("import Gabbro.Body\n\n");
+    s.push_str("module\n\npublic import Gabbro.Body\n\n@[expose] public section\n\n");
     s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body\n\n");
     s.push_str("namespace GabbroProgram\n\n");
 
@@ -6594,7 +6594,13 @@ pub use getragen::Carried;
 /// `Coverage.lean`, read at COMPILE time. A file that moves away takes the build down; a
 /// guard that reads it at run time would report a missing file as a green run.
 #[cfg(test)]
-const COVERAGE_LEAN: &str = include_str!("../../../programmlogik/Gabbro/Coverage.lean");
+// `Coverage.lean` is split into module parts; the reader sees them as one text.
+const COVERAGE_LEAN: &str = concat!(
+    include_str!("../../../programmlogik/Gabbro/Coverage/Teil1.lean"),
+    include_str!("../../../programmlogik/Gabbro/Coverage/Teil2.lean"),
+    include_str!("../../../programmlogik/Gabbro/Coverage/Teil3.lean"),
+    include_str!("../../../programmlogik/Gabbro/Coverage/Teil4.lean"),
+);
 
 #[cfg(test)]
 mod deckung_tests {
@@ -7041,7 +7047,7 @@ pub fn witness(baum: &Programm, datei: &str) -> String {
     s.push_str("    The proposition is `.isSome = true`: `= some _` leaves a metavariable that\n");
     s.push_str("    `decide` cannot evaluate. Entry is the parameter scope: `[]` would refuse\n");
     s.push_str("    every routine that reads a parameter.\n-/\n\n");
-    s.push_str("import Gabbro.Sicherheit.Anweisung\n\n");
+    s.push_str("module\n\npublic import Gabbro.Sicherheit.Anweisung\n\n@[expose] public section\n\n");
     s.push_str("set_option autoImplicit false\n\nopen Gabbro.Body Gabbro.Sicherheit\n\n");
     s.push_str(&format!("namespace GabbroSeam.{name}\n\n"));
 

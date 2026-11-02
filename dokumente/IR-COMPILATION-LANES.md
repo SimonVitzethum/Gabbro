@@ -836,7 +836,7 @@ module of the `Stage0` root build, except two (below). Consumer changes made in 
 - `arrGet` of any length selects the complete element through `selectFrameSpan` (`selectFrameSpan_ok`).
 
 Measured: all 227 modules of the `Stage0` closure (root without the two modules below) check;
-`stage0/Nachpruefung.lean` reports 307+ theorems on only `propext`/`Classical.choice`/`Quot.sound`
+`stage0/Nachpruefung/Teil*.lean` reports 307+ theorems on only `propext`/`Classical.choice`/`Quot.sound`
 (including the new span, store, selection and exit theorems); layout check passes; 116 textual
 source -> IR -> assembly programs of `stage0/proben-ir` (compile and execution results or refusal
 text) match, run with a runner regenerated from `runner/` sources (the old root build lacks `udiv`).
@@ -853,7 +853,7 @@ its five `EarlyExitProbe` lines with them.
 ## IR-03 arrays and strings over the full value span (2026-11-01)
 
 Continued from the full ABI integration above. Each step was rebuilt on the whole `Stage0` root, audited
-with `stage0/Nachpruefung.lean` (only `propext`/`Classical.choice`/`Quot.sound`, no `sorry`) and checked
+with `stage0/Nachpruefung/Teil*.lean` (only `propext`/`Classical.choice`/`Quot.sound`, no `sorry`) and checked
 with the layout tool and the textual source -> IR -> assembly programs of `stage0/proben-ir`.
 
 Forms that now compile with a connected generic theorem (`lowE_ok` case, `lowE_top`, equation lemma):

@@ -1,6 +1,6 @@
 module
 public import Bruecke.Quelle
-public import Duty.Duty73SugarWidths
+public import Duty.Duty0073SugarWidths
 @[expose] public section
 
 
@@ -106,7 +106,7 @@ theorem null : nullB u = true := by decide
 theorem stimmig : stimmigB u = true := by decide
 theorem rang : rangB u (rangAuto u) = true := by decide
 
-open GabbroDuty.Duty73SugarWidths
+open GabbroDuty.Duty0073SugarWidths
 
 theorem shape_eq : shapeOf = shapeOfU u := by
   funext p

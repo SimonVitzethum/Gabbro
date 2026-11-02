@@ -65,10 +65,10 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.HookProben
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.CountedLoop
 public import Stage0.Senke.Sperre.Proben
 
-public import Stage0.Senke.Ausdruck.Arithmetik.ScalarProbe
+public import Stage0.Senke.Ausdruck.Arithmetik.Proben.ScalarProbe
 
-public import Stage0.Senke.Ausdruck.Arithmetik.IntervalProbe
-public import Stage0.Senke.Ausdruck.Arithmetik.MixedProbe
+public import Stage0.Senke.Ausdruck.Arithmetik.Proben.IntervalProbe
+public import Stage0.Senke.Ausdruck.Arithmetik.Proben.MixedProbe
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Probe
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Shift.Probe
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Divide.Probe
