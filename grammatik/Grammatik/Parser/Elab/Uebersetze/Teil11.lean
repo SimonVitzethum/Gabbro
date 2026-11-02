@@ -360,6 +360,20 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
             else .error "arena of no slots"
   | _ :: rest => uArenen consts alias rest
 
+/-- The closed merge operators of `accumulates` (SYNTAX.md §11.4, C15):
+    `max`, `min`, `add` and the bitwise `or`/`and`. Any other operator is refused. -/
+def akkuOperatorOk (m : String) : Bool :=
+  strEq m "max" || strEq m "min" || strEq m "add" || strEq m "or" || strEq m "and"
+
+/-- An `accumulates` item in admitted surface form (C15 storage slice): a closed
+    operator and a `per cpu` count. The count's value (positive constant), the
+    value type (integer range) and the operator's neutral (width-indexed for
+    `and`) are checked at expansion (`UebersetzeAkku`); updates, reads and the
+    core query stay refused there (they need C08). -/
+def akkuFormZulaessig : SItemTief → Bool
+  | .accT _ _ m (some _) => akkuOperatorOk m
+  | _ => false
+
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
     error (the refused rows of `collect`). Translators (`transT`) are consumed by the certified
@@ -392,10 +406,13 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
   -- G form yet (the model's foreign bodies carry no caller duty)
   | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
-  -- `accumulates` (C15): the descriptor is `Kernzelle.AccumulatorDecl`, but lowering needs the
-  -- core-query contract (C08) and the per-cell lock protocol -- still refused, by name below in
-  -- `GvParserFragment.istGegenstand` and here
-  | .accT .. :: _ => .error "item without G form"
+  -- `accumulates` (C15 storage slice): admitted surface forms expand to guarded
+  -- cells (`UebersetzeAkku`); anything else is refused by name (the core query
+  -- and updates/reads need C08, task 4; `and` needs the stored width).
+  | ((.accT _ _ m p) as it) :: rest =>
+    if akkuFormZulaessig it then uRestFehler rest
+    else if !akkuOperatorOk m then .error "accumulator operator without G form"
+    else .error "accumulator without per cpu count without G form"
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/

@@ -9,6 +9,7 @@ import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
+public import Grammatik.Parser.Elab.Uebersetze.Teil17
 
 @[expose] public section
 
@@ -226,6 +227,11 @@ def elabU : List SItemTief → Except String UProg
     match uSperrInvs consts alias globs tabs ms locks0 with
     | .error e => .error e
     | .ok locks =>
+    match uAkkuErweiterung consts alias ((locks.map (fun l => l.rank)).foldl max 0 + 1) ms with
+    | .error e => .error e
+    | .ok (akkuGlobs, akkuLocks) =>
+    let globs := globs ++ akkuGlobs
+    let locks := locks ++ akkuLocks
     let bewacht : String → Bool := fun c => locks.any (fun l => l.guard.any (strEq · c))
     if !tabs.all (fun t => !t.shared || bewacht t.name) then .error "shared table without a guard" else
     if !globs.all (fun g => !g.shared || g.atomic || bewacht g.name) then .error "shared static without a guard" else
@@ -282,6 +288,12 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok gateKoepfe =>
     let axKoepfe := axKoepfe0 ++ gateKoepfe
+    match uAkkuVerwendung (uAkkuNamen ms) fnItems with
+    | .error e => .error e
+    | .ok _ =>
+    match uAkkuFremdVerwendung (uAkkuNamen ms) ((ms.filterMap uFremdSig).map (·.1)) with
+    | .error e => .error e
+    | .ok _ =>
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
     match uSeq (fnItems.map (fun (s, b) =>

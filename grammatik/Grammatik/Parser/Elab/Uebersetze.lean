@@ -52,3 +52,4 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil13
 public import Grammatik.Parser.Elab.Uebersetze.Teil14
 public import Grammatik.Parser.Elab.Uebersetze.Teil15
 public import Grammatik.Parser.Elab.Uebersetze.Teil16
+public import Grammatik.Parser.Elab.Uebersetze.Teil17
