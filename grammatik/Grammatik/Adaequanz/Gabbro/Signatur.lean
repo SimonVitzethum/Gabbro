@@ -14,6 +14,7 @@
 module
 public import Lean
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 meta import Lean
 meta import Grammatik.Kern.Syntax.Syntax.Teil2
 @[expose] public section

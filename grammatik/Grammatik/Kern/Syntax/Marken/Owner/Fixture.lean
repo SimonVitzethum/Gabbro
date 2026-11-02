@@ -3,6 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Marken.Owner.Source
 public import Grammatik.Kern.Syntax.Marken.Owner.Conservation
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 
 @[expose] public section
 
