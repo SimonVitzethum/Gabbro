@@ -173,4 +173,12 @@ theorem resetFinW_zeuge : ∀ j : Fin 4,
 #print axioms resetRange_reads_zero
 #print axioms resetRange_outside_same
 
+/-- A populated integer array admits zero through the Boolean checker. -/
+theorem zeroAdmitting_of_B_zeuge : ZeroAdmitting (.arr (.int 0 255) 4) :=
+  zeroAdmitting_of_B _ rfl
+
+/-- The structural evidence also computes an accepting Boolean. -/
+theorem zeroAdmittingB_of_zeuge : zeroAdmittingB (.arr (.int 0 255) 4) = true :=
+  zeroAdmittingB_of (.arrZero (.intZero (by decide) (by decide)))
+
 end Gabbro.Grammatik

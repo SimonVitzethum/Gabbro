@@ -312,5 +312,9 @@ theorem namedPointer_zeuge :
     typeMetadata (.ptr "sharedData" "rw" (.atom "u8")) = true ∧
     typeMetadata (.ptr "sharedData" "r" (.raw "T")) = true := by
   exact ⟨rfl, rfl, rfl, rfl⟩
+/-- A nonempty reset range carries no unbound metadata. -/
+theorem reset_bound_zeuge :
+    bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
+  reset_bound 2 "A" (some (.lit 1, .lit 2))
 
 end Gabbro.Grammatik.Parser.ExportMetadata

@@ -396,4 +396,17 @@ theorem rueckruf_echt (n : Nat) (h : D.passt g₀ n = true) :
 
 #print axioms Gabbro.Grammatik.Einbettung.einbettung_zeuge
 #print axioms Gabbro.Grammatik.Einbettung.rueckruf_echt
+/-- Mapping identities preserves two distinct payload pairs. -/
+theorem map_prod_id_zeuge :
+    ([(1, true), (2, false)] : List (Nat × Bool)).map
+      (Prod.map (fun m => m) id) = [(1, true), (2, false)] :=
+  map_prod_id _
+
+/-- A concrete Boolean array cast preserves its selected true entry. -/
+theorem arr_cast_zeuge :
+    ((rfl : Ty.arr .bool 3 = Ty.arr .bool 3) ▸
+      ((fun _ => true) : Val Nat (fun _ _ => true) (.arr .bool 3)))
+      (⟨1, by decide⟩ : Fin 3) = true :=
+  arr_cast rfl (fun _ => true) ⟨1, by decide⟩
+
 end Gabbro.Grammatik.Einbettung
