@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil7
+public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 
 @[expose] public section
 
@@ -118,11 +119,15 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
   | .none =>
     match uWertBody ctx e with
     | .ok sd =>
-      if mu then .error "let mut without a type"
-      else
-        match uBindKopf ctx x .none with
-        | .error err => .error err
-        | .ok (d, ctx') => .ok (.bind x d sd, { ctx' with muts := muts })
+      match uValueType ctx sd with
+      | some ty@(.prod ..) | some ty@(.arr ..) | some ty@(.str ..) =>
+        .ok (.bindW x (some ty) sd, uMitLokal ctx x .wert ty muts)
+      | _ =>
+        if mu then .error "let mut without a type"
+        else
+          match uBindKopf ctx x .none with
+          | .error err => .error err
+          | .ok (d, ctx') => .ok (.bind x d sd, { ctx' with muts := muts })
     | .error err =>
       match uBool ctx e with
       | .ok b => .ok (.bindB x b, boolCtx)
@@ -139,7 +144,7 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
           match ctx.tabs[num]? with
           | .none => .error err
           | .some tb => .ok (.bindOpt x num o, uMitLokal ctx x (UParamArt.opt num) (Ty.opt tb.count) muts)
-  | .some ty@(.array _ _) | .some ty@(.str _) =>
+  | .some ty@(.prod ..) | .some ty@(.array _ _) | .some ty@(.str _) =>
     if mu then .error "let mut of an aggregate without G form"
     else
       match uTyp ctx.alias ctx.tabs ty with
@@ -149,17 +154,22 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
         | .error err => .error err
         | .ok sd => .ok (.bindW x (some τ) sd, uMitLokal ctx x UParamArt.wert τ muts)
   | .some ty =>
-    match uWertBody ctx e with
-    | .error err => .error err
-    | .ok sd =>
-      match uBindKopf ctx x (.some ty) with
+    match uTyp ctx.alias ctx.tabs ty with
+    | .ok ty@(.prod ..) => do
+      let side ← uWertBody ctx e
+      pure (.bindW x (some ty) side, uMitLokal ctx x .wert ty muts)
+    | _ =>
+      match uWertBody ctx e with
       | .error err => .error err
-      | .ok (d, ctx') =>
-        if mu then
-          match d with
-          | .some (lo, hi) => .ok (.bindMut x lo hi sd, { ctx' with muts := muts })
-          | .none => .error "let mut without a type"
-        else .ok (.bind x d sd, { ctx' with muts := muts })
+      | .ok sd =>
+        match uBindKopf ctx x (.some ty) with
+        | .error err => .error err
+        | .ok (d, ctx') =>
+          if mu then
+            match d with
+            | .some (lo, hi) => .ok (.bindMut x lo hi sd, { ctx' with muts := muts })
+            | .none => .error "let mut without a type"
+          else .ok (.bind x d sd, { ctx' with muts := muts })
 
 /-- `let [mut] x [: T] = v;` where `v` may be a call of a function of the unit: its value is bound at the
     callee's result type (`Block.bindCall`; a range annotation must contain the result range). -/
@@ -255,6 +265,13 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
             | .some (Ty.int lo hi) => .ok (.bindAx x c xs, uMitLokal ctx x UParamArt.int (Ty.int lo hi) muts)
             | .some (Ty.ref n) => .ok (.bindAx x c xs, uMitLokal ctx x (UParamArt.ref n) (Ty.ref n) muts)
             | .some _ => .error "answer of a foreign fn without G form"
+          else if let some ty := callee.resTy then do
+            match t with
+            | some annotation =>
+              let declared ← uTyp ctx.alias ctx.tabs annotation
+              if decide (declared = ty) then pure () else throw "source export: call result disagrees with annotation"
+            | none => pure ()
+            pure (.bindCall x c xs, uMitLokal ctx x (uArtVon ty) ty muts)
           else
           match callee.resBool, callee.res with
           | true, _ =>

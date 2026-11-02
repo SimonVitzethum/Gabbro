@@ -6,7 +6,7 @@ public import Grammatik.Kern.Syntax.Syntax.ProduktZucker
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
-open Uebersetze
+open Gabbro.Grammatik.Parser.Uebersetze
 
 /-- The real expression lowerer emits the nominal constructor over the complete field list. -/
 theorem record_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)

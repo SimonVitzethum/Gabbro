@@ -6,6 +6,7 @@ public import Grammatik.GabbroV.Start.GvStartPflichta
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 /-
   File:       Grammatik/Parser/Elab/Uebersetze/Records/Proben.lean
