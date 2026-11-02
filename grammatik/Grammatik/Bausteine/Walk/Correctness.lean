@@ -471,20 +471,23 @@ theorem walkExpand_correct {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
 
 /-- Witnesses of the mapping whole-proof on a non-degenerate two-level mapping: a root with one
     leaf entry and one descendable entry whose two child entries are leaves. -/
-def zeugeWalkT : WalkTree Nat 2 where
-  leaf := fun e => e == 10 || e == 20 || e == 21
-  dwhen := fun e => e == 11
-  down := fun e => if e == 11 then some (fun _ => 20) else none
+def zeugeWalkKind : Fin 2 → Nat
+  | ⟨0, _⟩ => 20
+  | ⟨1, _⟩ => 21
 
 def zeugeWalkTbl : Fin 2 → Nat
   | ⟨0, _⟩ => 10
   | ⟨1, _⟩ => 11
 
-def zeugeWalkKind : Fin 2 → Nat
-  | ⟨0, _⟩ => 20
-  | ⟨1, _⟩ => 21
+def zeugeWalkT : WalkTree Nat 2 where
+  leaf := fun e => e == 10 || e == 20 || e == 21
+  dwhen := fun e => e == 11
+  down := fun e => if e == 11 then some zeugeWalkKind else none
 
-theorem zeugeWalkT_down : zeugeWalkT.down 11 = some zeugeWalkKind := rfl
+theorem zeugeWalkT_down : zeugeWalkT.down 11 = some zeugeWalkKind := by
+  have h11 : (11 : Nat) == 11 = true := by decide
+  show (if (11 : Nat) == 11 then some zeugeWalkKind else none) = some zeugeWalkKind
+  rw [if_pos h11]
 
 /-- The generic whole-proof on the two-level fixture: soundness, completeness, no duplicate paths,
     and the exact enumeration `[[0], 10), ([1, 0], 20), ([1, 1], 21)]`. -/
