@@ -107,6 +107,14 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .ref _ => Nat
   | .arr τ n => Fin n → Val F passt τ
   | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }
+  | .prod _ fs => ProdVal F passt fs
+
+/-- The value of a product: the heterogeneous tuple of the field values in declaration
+    order, structural over the field list, so `Val` reduces definitionally. The empty
+    product has exactly one value. -/
+def ProdVal (F : Type) (passt : F → Nat → Bool) : List Ty → Type
+  | [] => Unit
+  | τ :: τs => Val F passt τ × ProdVal F passt τs
 
 /-- The value type of case `i` of a sum: its payload's value, `Unit` for a bare case.
     Structural over the case list, so `Val` reduces definitionally. -/
