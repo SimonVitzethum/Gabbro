@@ -89,7 +89,7 @@ theorem TestHp : RufPasst TestD TestV (TestD.signatur false) [] where
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
   hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
-  ownerReady := OwnerFlow.empty_of_empty _
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (OwnerFlow.empty_of_empty _)
 
 /-- Same fit for the unary callee: `RufPasst` never constrained the params,
     so the same vacuous proofs go through -- and the table still rejects the
@@ -100,7 +100,7 @@ theorem TestHp1 : RufPasst TestD TestV (TestD.signatur true) [] where
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
   hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
-  ownerReady := OwnerFlow.empty_of_empty _
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (OwnerFlow.empty_of_empty _)
 
 /-! ## Witness pairs: acceptance and rejection, both by `decide` -/
 
