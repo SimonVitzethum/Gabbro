@@ -11,6 +11,15 @@ namespace Gabbro.Grammatik.OwnerWitness
 theorem validB_iff_zeuge : handoff.validB id D.stufen = true ∧ handoff.Valid id D.stufen :=
   ⟨by decide, (OwnerFlow.validB_iff id D.stufen handoff).mp (by decide)⟩
 
+/-- Namespace transport preserves the exact input and returned stage lists. -/
+theorem inputs_map_zeuge :
+    (handoff.map Bool.not).inputs = handoff.inputs.map (Prod.map Bool.not id) :=
+  OwnerFlow.inputs_map Bool.not handoff
+
+theorem outputs_map_zeuge :
+    (handoff.map Bool.not).outputs = handoff.outputs.map (Prod.map Bool.not id) :=
+  OwnerFlow.outputs_map Bool.not handoff
+
 theorem output_from_input_zeuge : ∃ before, (true, before) ∈ handoff.inputs :=
   OwnerFlow.output_from_input handoff (by decide : (true, 1) ∈ handoff.outputs)
 
@@ -107,6 +116,12 @@ theorem owner_nachSig_from_input_zeuge :
 theorem nonempty_call_refused : ¬ RufPasst D contract handoffSignature [Res.marke true 0] := by
   intro h
   have he := congrArg OwnerFlow.inputs h.ownerReady
+  have impossible : [(true, 0)] = ([] : List (Bool × Nat)) := he
+  cases impossible
+
+theorem pointer_flow_mismatch_refused : ¬ SigPasst D.rang handoffSignature (D.signatur 0) := by
+  intro h
+  have he := congrArg OwnerFlow.inputs h.owner
   have impossible : [(true, 0)] = ([] : List (Bool × Nat)) := he
   cases impossible
 

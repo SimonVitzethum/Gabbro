@@ -160,7 +160,7 @@ theorem borrow_return {N : OwnerNamespace D} {s loaned : OwnerState D}
         (ArenaOwnership.State.lend_valid hv sourceFrame into t.handle hl).2.1⟩
     have hend := ArenaOwnership.State.lend_endLoan sourceFrame into t.handle hl
     unfold returnBorrow
-    rw [if_pos ⟨ha, guard.2⟩]
+    rw [if_pos ⟨ha, Ne.symm guard.2⟩]
     change (match ledger.endLoan into t.handle with
       | none => none
       | some returned => if returned.access sourceFrame t.handle then

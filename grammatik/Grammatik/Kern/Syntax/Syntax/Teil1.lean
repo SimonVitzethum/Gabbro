@@ -389,7 +389,7 @@ structure RufPasst (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke) (�
       | (simp at hc)
       | exact ⟨c, hc, Int.le_refl c⟩
   /-- Nonempty owner flows require canonical escrow replay before admission. -/
-  ownerReady : S.owner = {} := by rfl
+  ownerReady : S.owner = {} := by first | rfl | exact OwnerFlow.empty_of_empty S.owner
 
 /-- The exact held set (the form before 2026-09-13) gives the relaxed `hh`. -/
 theorem RufPasst.hh_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ : List (Res D)}

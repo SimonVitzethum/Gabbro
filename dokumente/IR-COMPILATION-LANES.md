@@ -2108,6 +2108,15 @@ proofs; `crates/gabbro-check/src/kbedingung.rs` and D265–D268 in `saetze.rs` a
 the current structural contract to port. Software minter behavior belongs to
 user logic under C08, despite the historical “named assumption” documentation.
 
+C09 resource-interface integration: `Signatur.owner` is preserved by pointer
+conformance, idle-root lifting and declaration embedding. `Signatur.anfang`,
+`Vertrag.ende`, `RufPasst.hk` and `nachSig` use its exact input/output inventories
+alongside ordinary marks. This changes the typed entry/exit inventory read by
+`Spec.lean`, without adding mint authority to hardware assumptions. Until the
+canonical escrow simulation is proved, `RufPasst.ownerReady` explicitly refuses
+nonempty flows. Call-log entry serials distinguish repeated activations at the
+same depth; binding a push/pop to a serial is not yet `OwnerInvG/GX` preservation.
+
 **C10 — shared reader/writer locks and full RCU.**
 
 Present boundary: `Stmt.locks` and `Res.held` are exclusive; `Stmt.observes` in

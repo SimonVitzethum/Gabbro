@@ -95,23 +95,25 @@ def recordMint (N : OwnerNamespace D) (d : OwnerMintDecl D)
          ⟨d.mark, d.stage, h⟩)
   else none
 
-/-- Move between adjacent activations of the same thread, using the existing
-    fresh-grant operation. The old source grant becomes unusable immediately. -/
+/-- Move between distinct activation identities of the same thread, using the existing
+    fresh-grant operation. The call-log edge supplies the dynamic authorization;
+    this ledger primitive does not infer one from stack depth. -/
 def transfer (N : OwnerNamespace D) (s : OwnerState D)
     (sourceFrame into : ArenaOwnership.Frame) (t : OwnerToken D) :
     Option (OwnerState D × OwnerToken D) :=
   if s.owns N sourceFrame t ∧
-      (sourceFrame.activation + 1 = into.activation ∨ into.activation + 1 = sourceFrame.activation) then
+      sourceFrame ≠ into then
     match s.ledger.move sourceFrame into t.handle with
     | none => none
     | some (ledger, h) => some (s.withLedger ledger, { t with handle := h })
   else none
 
-/-- Exclusive, direct-call scoped borrow, including a nested borrow from the
-    current accessor. The old holder loses access while the loan is active. -/
+/-- Exclusive call-scoped borrow, including a nested borrow from the
+    current accessor. The call-log edge supplies the scope; the old holder
+    loses access while the loan is active. -/
 def borrow (N : OwnerNamespace D) (s : OwnerState D)
     (sourceFrame into : ArenaOwnership.Frame) (t : OwnerToken D) : Option (OwnerState D) :=
-  if s.access N sourceFrame t ∧ into.activation = sourceFrame.activation + 1 then
+  if s.access N sourceFrame t ∧ sourceFrame ≠ into then
     (s.ledger.lend sourceFrame into t.handle).map s.withLedger
   else none
 
@@ -119,7 +121,7 @@ def borrow (N : OwnerNamespace D) (s : OwnerState D)
     The proposed lender must actually be the accessor after this exact pop. -/
 def returnBorrow (N : OwnerNamespace D) (s : OwnerState D)
     (callee lender : ArenaOwnership.Frame) (saved : OwnerToken D) : Option (OwnerState D) :=
-  if s.access N callee saved ∧ callee.activation = lender.activation + 1 then
+  if s.access N callee saved ∧ callee ≠ lender then
     match s.ledger.endLoan callee saved.handle with
     | none => none
     | some ledger =>
