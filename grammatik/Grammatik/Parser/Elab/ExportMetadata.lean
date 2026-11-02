@@ -26,20 +26,32 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. | _ + 1, .reset .. |
-    _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. |
-    _ + 1, .bindLib .. | _ + 1, .lcall .. => true
+    _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
-    _ + 1, .ret .. | _ + 1, .start .. => false
+    _ + 1, .ret .. | _ + 1, .start .. |
+    _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
   | .cost _ | .limit _ | .induc _ | .load _ | .moves .. | .quits _ | .drops _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
 
+/-- Payload clauses are consumed by the certified C02 expansion, so they do not refuse a library head. Every other cost/scheduling/proof clause still refuses. -/
+def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any fun
+  | .load _ => false
+  | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .drops _ | .keeps _ | .part _ | .arch _ | .refs _ => true
+  | _ => false
+
 def itemMetadata : SItemTief → Bool
-  | .fnT sig body => (sig.art != "" && sig.art != "impl") ||
+  | .fnT sig body =>
+    if sig.art == "library" then
+      clausesMetadataWithoutLoad sig.klauseln || bodyMetadata 10000 body ||
+        sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+    else (sig.art != "" && sig.art != "impl") ||
       clausesMetadata sig.klauseln || bodyMetadata 10000 body ||
       sig.params.any (fun p => typeMetadata p.2) || sig.res.any typeMetadata
+  | .transT _ translator _ => clausesMetadata translator.klauseln ||
+      translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
@@ -149,6 +161,22 @@ theorem stateT_zeuge :
     let tr : STrans := ⟨"a", [(.variable "s", .variable "Idle", .variable "Busy")], none, []⟩
     let body := SAnw.block [] (some (.ret (some (.lit 42))))
     check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
+  exact ⟨rfl, rfl⟩
+
+/-- C02 library calls are bound by the certified expansion. The payload clause is consumed (`exportLibraryKopf` strips `.load`), the call resolves to exactly one library function plus exactly one translator with exactly one payload (`libraryDecl`), and the translator body must be call-free (`callFreeStmt`, otherwise C17). Unexpanded calls never reach ordinary lowering (`ohneBibliothekAnw`, `uAnwReihe`). Costs and other clauses still refuse via `clausesMetadataWithoutLoad`. -/
+theorem libraryFn_bound (sig : FnSig) (body : SAnw) (h : sig.art = "library") (c : clausesMetadataWithoutLoad sig.klauseln = false) (b : bodyMetadata 10000 body = false) (p : sig.params.any (fun p => typeMetadata p.2) = false) (r : sig.res.any typeMetadata = false) : itemMetadata (.fnT sig body) = false := by
+  simp only [itemMetadata, h, ↓reduceIte, c, b, p, r]
+
+theorem transT_bound (target : String) (translator : FnSig) (body : SAnw) (c : clausesMetadata translator.klauseln = false) (p : translator.params.any (fun p => typeMetadata p.2) = false) (r : translator.res.any typeMetadata = false) : itemMetadata (.transT target translator body) = false := by
+  simp only [itemMetadata, c, p, r]
+
+set_option maxRecDepth 100000 in
+theorem library_zeuge :
+    let lib : FnSig := ⟨"library", "f", [], none, none, [.load ["P"]]⟩
+    let trans : FnSig := ⟨"impl", "build", [], none, none, []⟩
+    let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, []⟩
+    let cbody := SAnw.block [.lcall ⟨["m"], ["f"], [], []⟩] (some (.ret (some (.lit 1))))
+    check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)]⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
   exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
