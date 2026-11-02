@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
-public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.AkteurRFaelle.Teil15
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.AkteurRFaelle.B.Teil15
 
 @[expose] public section
 
