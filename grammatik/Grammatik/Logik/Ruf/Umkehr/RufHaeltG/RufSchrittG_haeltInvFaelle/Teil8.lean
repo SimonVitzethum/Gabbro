@@ -37,7 +37,7 @@ theorem rufSchrittG_haeltInv_dannBindAxiomOpt {D : Deklaration} {P : Programm D}
                 { f := (M.faeden f).kopf.f, rho := (M.faeden f).kopf.rho, s0 := (M.faeden f).kopf.s0,
                   rest :=
                     ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
-                      .dann rest (GRest.weiterOpt e k)⟩ },
+                      .dann rest (GRest.weiterOpt (Λ := Λ') e k)⟩ },
               spur := σ₂.spur, log := (M.faeden f).log : RufFadenG D },
         lauf := M.lauf ++ rufEigenG f neu, start := M.start : RufMaschineG D }.faeden
     f) := by
@@ -49,7 +49,7 @@ theorem rufSchrittG_haeltInv_dannBindAxiomOpt {D : Deklaration} {P : Programm D}
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
     ⟨hA, GRest.kette_weiterOpt e k hk.2 (GRest.kette_top k hk.2)⟩ ?_
   rw [axiom_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -76,7 +76,7 @@ theorem rufSchrittG_haeltInv_dannBindAxiomOptElseOk {D : Deklaration} {P : Progr
                 { f := (M.faeden f).kopf.f, rho := (M.faeden f).kopf.rho, s0 := (M.faeden f).kopf.s0,
                   rest :=
                     ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
-                      .dann rest (GRest.weiterOpt e k)⟩ },
+                      .dann rest (GRest.weiterOpt (Λ := Λ') e k)⟩ },
               spur := σ₂.spur, log := (M.faeden f).log : RufFadenG D },
         lauf := M.lauf ++ rufEigenG f neu, start := M.start : RufMaschineG D }.faeden
     f) := by
@@ -88,7 +88,7 @@ theorem rufSchrittG_haeltInv_dannBindAxiomOptElseOk {D : Deklaration} {P : Progr
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
     ⟨hA, GRest.kette_weiterOpt e k hk.2 (GRest.kette_top k hk.2)⟩ ?_
   rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -127,9 +127,9 @@ theorem rufSchrittG_haeltInv_dannBindAxiomOptElseGrund {D : Deklaration} {P : Pr
     fun L hL => (held_nachSig_iff (D.asignatur a) Λ L).mpr (hk.1 L hL)
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
     (kette_abbruch err.alsBlock.2 hA (.schrumpf k) ⟨GRest.kette_top k hk.2, hk.2⟩
-      (fun L hL => (Block.held_iff err.alsBlock.2 L).mpr ((Block.held_iff rest L).mp hL))) ?_
+      (fun L hL => (Block.held_iff rest L).mp hL)) ?_
   rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_endeBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -165,7 +165,7 @@ theorem rufSchrittG_haeltInv_endeBindAxiomOpt {D : Deklaration} {P : Programm D}
     fun L hL => (held_nachSig_iff (D.asignatur a) Λ L).mpr (hk L hL)
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hA ?_
   rw [axiom_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 
 
@@ -270,7 +270,7 @@ theorem rufSchrittG_haeltInv_dannCallIndElse {D : Deklaration} {P : Programm D} 
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)⟩ :
                               (Γ : Ctx) ×

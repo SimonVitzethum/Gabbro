@@ -47,7 +47,7 @@ theorem rufSchrittG_haeltInv_endeBindAxiomOptElseOk {D : Deklaration} {P : Progr
     fun L hL => (held_nachSig_iff (D.asignatur a) Λ L).mpr (hk L hL)
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hA ?_
   rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_endeBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -85,7 +85,7 @@ theorem rufSchrittG_haeltInv_endeBindAxiomOptElseGrund {D : Deklaration} {P : Pr
     fun L hL => (held_nachSig_iff (D.asignatur a) Λ L).mpr (hk L hL)
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hA ?_
   rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_dannAxiomCallElseOk {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -124,7 +124,7 @@ theorem rufSchrittG_haeltInv_dannAxiomCallElseOk {D : Deklaration} {P : Programm
     ⟨hA, hk.2⟩
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hkk ?_
   rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_dannAxiomCallElseGrund {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -151,7 +151,7 @@ theorem rufSchrittG_haeltInv_dannAxiomCallElseGrund {D : Deklaration} {P : Progr
               kopf :=
                 { f := (M.faeden f).kopf.f, rho := (M.faeden f).kopf.rho, s0 := (M.faeden f).kopf.s0,
                   rest := ⟨l, reasonTy (D.agruende a) :: Γ, nachSig D (D.asignatur a) Λ,
-                    (Env.cons (τ := reasonTy (D.agruende a)) r ρ), .dann err.alsBlock.2 (.abbruch k)⟩ },
+                    (Env.cons (τ := reasonTy (D.agruende a)) r ρ), .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩ },
               spur := σ₂.spur, log := (M.faeden f).log : RufFadenG D },
         lauf := M.lauf ++ rufEigenG f neu, start := M.start : RufMaschineG D }.faeden
     f) := by
@@ -162,9 +162,9 @@ theorem rufSchrittG_haeltInv_dannAxiomCallElseGrund {D : Deklaration} {P : Progr
     fun L hL => (held_nachSig_iff (D.asignatur a) Λ L).mpr (hk.1 L hL)
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
     (kette_abbruch err.alsBlock.2 hA (.schrumpf k) ⟨GRest.kette_top k hk.2, hk.2⟩
-      (fun L hL => (Block.held_iff err.alsBlock.2 L).mpr ((Block.held_iff rest L).mp hL))) ?_
+      (fun L hL => (Block.held_iff rest L).mp hL)) ?_
   rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]
-  exact heldIn_nachSig _ _ _ hh
+  exact heldIn_nachSig _ _ hh
 
 
 end Gabbro.Grammatik

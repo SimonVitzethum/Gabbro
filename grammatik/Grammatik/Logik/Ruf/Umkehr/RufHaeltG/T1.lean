@@ -418,6 +418,11 @@ macro "fr_pop" : tactic => `(tactic|
           (rw [freis_von hcaller]; simp_all [RufRahmenG.freis, GRest.freis]))
      | (rw [freis_von hcaller]; simp_all [RufRahmenG.freis, GRest.freis])))
 
+/-- An optional-result continuation releases what its residue releases («C08»). -/
+@[simp] theorem GRest.freis_weiterOpt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') : (GRest.weiterOpt (Λ := Λ) e k).freis = k.freis := by
+  cases e <;> rfl
+
 set_option hygiene false in
 /-- The release markers of a head-local step: among the old ones. -/
 macro "fr_tac" : tactic => `(tactic|

@@ -73,7 +73,7 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
            · exact hst r hr)
   | g3 hs =>
     cases hs with
-    | rueckBind _ _ caller rst hpop _ _ _ _ _ restb k _ hcaller =>
+    | rueckBind caller rst hpop _ _ _ _ _ restb k _ hcaller =>
       obtain ⟨hc, hr⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       refine ⟨?_, hr⟩

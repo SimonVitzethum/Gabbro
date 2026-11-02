@@ -129,7 +129,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
         exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
   | g3 hs =>
     cases hs with
-    | dannCallInd _ _ l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv
+    | dannCallInd l Γ Λ Λ' Λ'' n p args hp hr rest k ρ hhead hΛ s0 hs0 g hg hv
         rho hrho neu hneu =>
         have hkeys := rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
@@ -160,7 +160,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           simp only [rufUpdateG_self]
         rw [heq]
         exact hkeys
-    | rufCallInd _ _ l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv
+    | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv
         rho hrho neu hneu =>
         have hkeys := rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
@@ -171,7 +171,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           rfl g rho s0 rfl s0.spur h
         simp only [rufUpdateG_self]
         exact hkeys
-    | dannBindCall _ _ l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0
+    | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0
         rho hrho neu hneu =>
         have hkeys := rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
@@ -202,7 +202,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           simp only [rufUpdateG_self]
         rw [heq]
         exact hkeys
-    | dannBindCallInd _ _ l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0
+    | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0
         hs0 g hg hv rho hrho neu hneu =>
         have hkeys := rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
@@ -233,7 +233,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           simp only [rufUpdateG_self]
         rw [heq]
         exact hkeys
-    | dannBindCallElse _ _ l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0
+    | dannBindCallElse l Γ Λ Λ' Λ'' τ g args he hp hr err rest k ρ hhead hΛ s0
         hs0 rho hrho neu hneu =>
         have hkeys := rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
@@ -264,7 +264,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           simp only [rufUpdateG_self]
         rw [heq]
         exact hkeys
-    | dannBindCallIndElse _ _ l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
+    | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
         hs0 g hg hv rho hrho neu hneu =>
         have hkeys := rufPushG_passt (M.faeden f)
           ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
@@ -295,7 +295,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           simp only [rufUpdateG_self]
         rw [heq]
         exact hkeys
-    | dannCallIndElse _ _ l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
+    | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
         hs0 g hg hv rho hrho neu hneu =>
         simp only [rufUpdateG_self]
         exact rufPushG_passt (M.faeden f)
@@ -306,7 +306,7 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
            ⟨false, D.params g, Signatur.anfang D (D.signatur g),
             rho, .ende (P.rumpf g)⟩⟩
           rfl g rho s0 rfl s0.spur h
-    | rueckBind _ _ caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ
+    | rueckBind caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ
         hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
         have hhead : RufSchluesselG (M.faeden f).kopf =
             (⟨g, rho, s0⟩ : Σ f : D.Fn, Env D (D.params f) × World D) := by
