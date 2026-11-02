@@ -51,6 +51,18 @@ theorem u64ToG_gToU64 (r : GBits f64) (hw : wf f64 r)
   rw [hround]
   exact ausBits_zuBits f64 f64_dicht _ hw
 
+/-- On the finite path the exact sum rounds exactly like the kernel `add`:
+    the dispatcher is silent and both exact values are known. -/
+theorem softFinite_round (a b : UInt64) (u v : Exakt)
+    (h : softSpecial a b = none)
+    (ha : wertExakt f64 (u64ToG a) = some u)
+    (hb : wertExakt f64 (u64ToG b) = some v) :
+    rundeExakt f64 (exaktAdd u v) = add f64 (u64ToG a) (u64ToG b) := by
+  have hmod := floatAddSpecial_model f64 (u64ToG a) (u64ToG b)
+  unfold softSpecial at h
+  rw [h, ha, hb] at hmod
+  exact hmod.symm
+
 /-- The core proof: on every pair of input words, the composed routine
     decodes to exactly the kernel `Gleitkomma.add f64` of the decoded inputs.
     NaN payloads and signs, infinities, signed zeros and subnormals are all
@@ -89,18 +101,6 @@ theorem softAddComposed_model (a b : UInt64) :
               have hd : u64ToG (gToU64 (rundeExakt f64 (exaktAdd u v)))
                   = rundeExakt f64 (exaktAdd u v) := u64ToG_gToU64 _ hwf hlt
               simpa using hd.trans hrw
-
-/-- On the finite path the exact sum rounds exactly like the kernel `add`:
-    the dispatcher is silent and both exact values are known. -/
-theorem softFinite_round (a b : UInt64) (u v : Exakt)
-    (h : softSpecial a b = none)
-    (ha : wertExakt f64 (u64ToG a) = some u)
-    (hb : wertExakt f64 (u64ToG b) = some v) :
-    rundeExakt f64 (exaktAdd u v) = add f64 (u64ToG a) (u64ToG b) := by
-  have hmod := floatAddSpecial_model f64 (u64ToG a) (u64ToG b)
-  unfold softSpecial at h
-  rw [h, ha, hb] at hmod
-  exact hmod.symm
 
 /-- Encoding roundtrip for the finite path: the rounded triple fits back
     into 64 bits. -/
