@@ -62,3 +62,13 @@ theorem mapping_value_zeuge :
       (value.2.2.2.2.2.1 0).n = 0 ∧ (value.2.2.2.2.2.1 1).n = 1 := by decide +kernel
 
 end Gabbro.Grammatik.WalkBindingWitness
+
+namespace Gabbro.Grammatik
+
+/-- A selected child in the existing two-node fixture satisfies both bounds. -/
+theorem WalkBinding.child_bounded_zeuge :
+    0 ≤ (1 : Int) ∧ (1 : Int) < WalkBindingWitness.declaration.count WalkBindingWitness.binding.nodes :=
+  WalkBinding.child_bounded WalkBindingWitness.binding
+    (WalkBindingWitness.rootEntries 0) ⟨1, by decide, by decide⟩ (by rfl)
+
+end Gabbro.Grammatik
