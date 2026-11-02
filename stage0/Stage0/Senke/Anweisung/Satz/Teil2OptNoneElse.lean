@@ -271,4 +271,91 @@ theorem lowB_ok_bindAxiomOptElse_none {O : Orakel D} [TorOK L O] [SichtOK O] {pa
     · cases h
   · cases h
 
+
+/-- `let x? = g(…) else (e) { … };` over a VOID foreign result at the top level of a body
+    («C08»): same handover as `lowB_ok_bindAxiomOptElse_none`, for end blocks. -/
+theorem lowEnd_ok_bindAxiomOptElse_none {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {f : D.Fn} {fp : Runner.W} {K Ks lo : Nat} {rp cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (a)
+    (args)
+    (he)
+    (hr)
+    (err)
+    (rest)
+    (c : List II)
+    (top : Nat)
+    (h : lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex (.bindAxiomOptElse (e := none) a args he _ _ _ hr err rest : Endblock D (vertragVon D f) l Γ Λ) = some (c, top))
+    (hK : top + cap ≤ Ks)
+    (hs : 16 * c.length < 2 ^ 31)
+    (hW : WIn L fp Ks K)
+    (m : Runner.Mem)
+    (pc : Runner.W)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved)
+    (hlo : lo ≤ frei Γ reserved)
+    (hu : Umf L A C dv m fp Ks K)
+    (hk : Kopf L f m fp K rp cfp ρ0 P σ0)
+    (hWa : WeltAt m L σ)
+    (hpr : (∀ j ∈ pr, j < frei Γ reserved))
+    (ih_lowEnd_ok_err : ∀ {O : Orakel D} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {fp : Runner.W} {K : Nat} {Ks : Nat} {lo : Nat} {rp : Runner.W} {cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}, ∀ (c : List II), ∀ (top : Nat), lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex err = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K → ∀ (m : Runner.Mem), ∀ (pc : Runner.W), ∀ (σ : World D), ∀ (ρ : Env D (Gabbro.Grammatik.Ty.why (D.agruende a) :: Γ)), PreS L m pc fp K (frei (Gabbro.Grammatik.Ty.why (D.agruende a) :: Γ) reserved) c ρ reserved → lo ≤ frei (Gabbro.Grammatik.Ty.why (D.agruende a) :: Γ) reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei (Gabbro.Grammatik.Ty.why (D.agruende a) :: Γ) reserved) → Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R err σ ρ) reserved)
+    (ih_lowEnd_ok_rest : ∀ {O : Orakel D} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f} {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) (hA : ∀ g, A g < 2 ^ 31) {P : Programm D} {fp : Runner.W} {K : Nat} {Ks : Nat} {lo : Nat} {rp : Runner.W} {cfp : Runner.W} {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat} (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens)) {reserved : Nat} {pr : List Nat} {ex : Int × Int}, ∀ (c : List II), ∀ (top : Nat), lowEnd (reserved := reserved) passes A L (functionFrame P f) (cens, tens) pr ex rest = some (c, top) → top + cap ≤ Ks → 16 * c.length < 2 ^ 31 → WIn L fp Ks K → ∀ (m : Runner.Mem), ∀ (pc : Runner.W), ∀ (σ : World D), ∀ (ρ : Env D Γ), PreS L m pc fp K (frei Γ reserved) c ρ reserved → lo ≤ frei Γ reserved → Umf L A C dv m fp Ks K → Kopf L f m fp K rp cfp ρ0 P σ0 → WeltAt m L σ → (∀ j ∈ pr, j < frei Γ reserved) → Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R rest σ ρ) reserved)
+    : Ret L P f σ0 ρ0 fp lo K pr rp cfp ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1) (pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2) (execEnd O passes R (.bindAxiomOptElse (e := none) a args he _ _ _ hr err rest : Endblock D (vertragVon D f) l Γ Λ) σ ρ) reserved := by
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
+  split at h
+  · next b hb _ =>
+    split at h
+    · next hc =>
+      obtain ⟨hf, hn, hwhy⟩ := hc
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ct, tt⟩, ht, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h
+      split at hc
+      · next hJ =>
+        simp only [Option.some.injEq, Prod.mk.injEq] at hc
+        obtain ⟨rfl, rfl⟩ := hc
+        simp only [List.length_append, fehlC_len] at hs
+        have hks := hW.ks
+        have hFB3 : FB = 4 := rfl
+        have hFramePrefix := functionFrame_prefix P f
+        simp only [execEnd]
+        rcases torElseNone_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hb hf hn ht hJ (by omega)
+          (by omega) hW hp hWa with ⟨m2, hAA, s12, a12, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩
+        · rw [hAA]
+          simp only [EndAusgang.weiterOpt, ergEnv]
+          have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * cr.length : Nat) : Int)) ++ (cr ++ ce)) ρ reserved := by simpa only [List.append_assoc] using hp
+          have hq := hp2.nextW hW a12 (d' := frei Γ reserved) (by have := hp.ctx; omega) (by omega) (by omega)
+          simp only [List.length_append, fehlC_len] at hq
+          have hp3 : PreS L m2 _ fp K (frei Γ reserved) cr ρ reserved :=
+            ⟨by omega, hq.small, hq.frame, hq.left.code, hq.left.far, hq.env, trivial, wstab_true _ _⟩
+          have ih := ih_lowEnd_ok_rest hS hA hlo0 hens (cap := cap) (pr := pr) (ex := exPlus ex ce.length) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo
+            (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2 hpr
+          refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
+            (Ret.cast ih rfl ?_ ?_)
+          · simp only [List.length_append, fehlC_len, addr_norm]
+            exact tgt_eq0 (by omega)
+          · simp only [List.length_append, fehlC_len, addr_norm]
+            exact tgt_eq0 (by omega)
+        · rw [hAA]
+          have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * cr.length : Nat) : Int) ++ cr) ++ ce) ρ reserved := by simpa only [List.append_assoc] using hp
+          have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+          simp only [List.length_append, fehlC_len] at hq
+          have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
+            ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
+             envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
+          have ih := ih_lowEnd_ok_err hS hA hlo0 hens (cap := cap) (pr := pr) (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
+            (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
+            (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
+            (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
+          refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
+            (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+          · simp only [List.length_append, fehlC_len, addr_norm]
+            exact tgt_eq0 (by omega)
+          · simp only [List.length_append, fehlC_len, addr_norm]
+            exact tgt_eq0 (by omega)
+      · cases hc
+    · cases h
+  · cases h
+
 end Gabbro.Stage0.Senke
