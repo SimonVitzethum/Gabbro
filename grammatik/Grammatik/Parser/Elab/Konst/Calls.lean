@@ -17,7 +17,11 @@ structure ConstSourceCallee (items : List SItemTief) (c : ConstProgram)
 inductive ConstSourceCallEnd (items : List SItemTief) (c : ConstProgram)
     (scope : ConstScope c.D) : {V : Vertrag c.D} → {l : Bool} → {Γ : Ctx} →
     ConstLocals Γ → SAnw → Endblock c.D V l Γ [] → Prop where
-  | statement (callee : ConstSourceCallee items c scope name f)
+  | statement {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ}
+      {name : String} {f : c.D.Fn} {sources : List SExpr}
+      {args : Args c.D Γ [] (c.D.params f)} {rest : List SAnw} {ending : Option SEnde}
+      {body : Endblock c.D V l Γ []}
+      (callee : ConstSourceCallee items c scope name f)
       (arguments : ConstSourceArgs c locals sources args)
       (hp : RufPasst c.D V (c.D.signatur f) []) (hr : c.D.gruende f = 0)
       (resourceEq : nach c.D f [] = [])
@@ -25,7 +29,11 @@ inductive ConstSourceCallEnd (items : List SItemTief) (c : ConstProgram)
       ConstSourceCallEnd items c scope locals
         (.block (.call name sources :: rest) ending)
         (.cons (resourceEq ▸ Stmt.call c.D V f args hp hr) body)
-  | binding (callee : ConstSourceCallee items c scope name f)
+  | binding {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ}
+      {name binder : String} {mutable : Bool} {τ : Ty} {f : c.D.Fn}
+      {sources : List SExpr} {args : Args c.D Γ [] (c.D.params f)}
+      {rest : List SAnw} {ending : Option SEnde}
+      (callee : ConstSourceCallee items c scope name f)
       (arguments : ConstSourceArgs c locals sources args)
       (he : c.D.erg f = some τ)
       (hp : RufPasst c.D V (c.D.signatur f) []) (hr : c.D.gruende f = 0)
