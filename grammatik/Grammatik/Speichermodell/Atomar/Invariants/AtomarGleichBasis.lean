@@ -81,6 +81,12 @@ theorem Stmt.execHA_gleich {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .callInd p args _ hr, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, hG _ hT] <;> (try rfl)
+  | .callIndElse p args he _ hr err, hT, σ, ρ => by
+      have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_append] at h; rcases h with h | h <;> simp only [stmtOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by
+        simp only [stmtOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      simp only [execStmtHA, hG _ h1, Endblock.execHA_gleich err h3] <;> (try rfl)
   | .locks L _ body, hT, σ, ρ => by
       simp only [execStmtHA, Block.execHA_gleich body hT] <;> (try rfl)
   | .breaking _ body, hT, σ, ρ => by
@@ -163,6 +169,12 @@ theorem Block.execHA_gleich {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         simp only [List.mem_append] at h; rcases h with h | h <;> simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, or_true])
       simp only [execBlockHA, hG _ h1, Block.execHA_gleich rest h2] <;> (try rfl)
+  | .bindCallIndElse p args he _ hr err rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_append] at h; rcases h with h | h <;> simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, or_true])
+      have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      simp only [execBlockHA, hG _ h1, Block.execHA_gleich rest h2, Endblock.execHA_gleich err h3] <;> (try rfl)
   | .bindCallElse f args he _ _ err rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, true_or])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [blockOrteP, List.append_assoc, List.mem_append, h, or_true])
@@ -286,6 +298,12 @@ theorem Endblock.execHA_gleich {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         simp only [List.mem_append] at h; rcases h with h | h <;> simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, or_true])
       simp only [execEndHA, hG _ h1, Endblock.execHA_gleich rest h2] <;> (try rfl)
+  | .bindCallIndElse p args he _ hr err rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_append] at h; rcases h with h | h <;> simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, or_true])
+      have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
+      simp only [execEndHA, hG _ h1, Endblock.execHA_gleich rest h2, Endblock.execHA_gleich err h3] <;> (try rfl)
   | .narrow e lo' hi' sonst rest, hT, σ, ρ => by
       have h1 : ∀ x ∈ e.orte, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, true_or])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp only [endblockOrteP, List.append_assoc, List.mem_append, h, or_true])
