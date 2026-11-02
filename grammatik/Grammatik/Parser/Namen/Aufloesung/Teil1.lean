@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
 public import Grammatik.Parser.Item.ElementTief.FunctionArguments
 public import Grammatik.Parser.Namen.References
+public import Grammatik.Parser.Namen.Gebunden
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -210,6 +211,7 @@ mutual
 def anw (k : Kontext) : SAnw → SAnw
   | .bind m x t e => .bind m x (typO k t) (aus k e)
   | .bindElse x t e g s => .bindElse x (typO k t) (aus k e) g (anw k s)
+  | .bindQ m x t e => .bindQ m x (typO k t) (aus k e)
   | .bindAxiomOpt x t e => .bindAxiomOpt x (typO k t) (aus k e)
   | .bindAxiomOptElse x t e g s => .bindAxiomOptElse x (typO k t) (aus k e) g (anw k s)
   | .bindLib m x t c => .bindLib m x (typO k t) (libraryCall k c)
@@ -217,6 +219,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
   | .call f xs => .call (k.ruf f) (xs.map (aus k))
+  | .callQ f xs => .callQ (k.ruf f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))
   | .elsif c s => .elsif (aus k c) (anw k s)

@@ -127,7 +127,8 @@ def anwArt : SAnw → String
   | .watch .. => "watch" | .leave .. => "leave" | .next .. => "next" | .emit .. => "emit" | .await .. => "await"
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w
-  | .block .. => "block" | .allocVon .. => "alloc from a provider"
+  | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
+  | .callQ .. => "call query"
   | .genericCall .. => "unexpanded generic call"
 
 /-- One body statement: an assignment or a direct call (the

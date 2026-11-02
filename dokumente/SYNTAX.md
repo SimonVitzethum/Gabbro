@@ -41,7 +41,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **190** (the 189 measured by the retired `pruefe-syntax` EBNF branch, 2026-10-17, plus `startstmt`, which `parse.rs` read since lane 253 and this file never wrote down; 189 defined, 0 open, 0 unreachable from `program` before it; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **193** (the 190 above plus `adaptfn`, `adaptparams`, `adaptparam` (§6, phase 1); the `?` alternatives reuse `letstmt`/`exprstmt` (§7) — 192 defined, 0 open, 0 unreachable from `program`; 190 before the phase-1 desugaring, 189 before `startstmt`, 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); `adaptfn`, `adaptparams`, `adaptparam` (phase 1, §6); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
 | vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (by the retired `pruefe-wortschatz`, historical: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
@@ -1100,6 +1100,49 @@ impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
 { … }
 ```
 
+**Adapters `fn … from f` — static reuse without objects** («phase 1», `ABSTRACTION-SYNTAX-PLAN.md` §4.1).
+No new word (`from` is contextual), no new model form: an adapter desugars to an ordinary
+function whose body calls `f` with the mapped arguments, before elaboration.
+
+```ebnf
+adaptfn    = [ "pub" ] "fn" ident "(" [ adaptparams ] ")" [ "->" typeexpr ] [ "or" ident ]
+             "from" path
+             [ "=>" ident [ "else" "(" ident ")" endblock ] ]
+             [ "requires" predlist ] [ "ensures" predlist ]
+             [ "effects" "{" efflist "}" ] [ "costs" "<=" expr "ops" ]
+             [ "[" { stmt } "]" ]                                    (* prelude, runs before the call *)
+             ( endblock | ";" ) ;
+adaptparams = adaptparam { "," adaptparam } ;
+adaptparam  = ".." | "-" ident | ident ":" typeexpr ;
+```
+
+```gabbro
+fn scaled_area(.., -scale, factor: u8 in 1 .. 16) -> u64
+    from area => a
+    ensures result >= 1 effects { reads Circles } costs <= 60 ops
+    [ let scale = factor * 2; ]
+{ return a + 1; }
+
+fn area_x4(.., -scale) -> u64 from area [ let scale = 4; ];      (* `;`: returns `f`'s result as it is *)
+```
+
+- `..` (at most once) splices every parameter of `f` in `f`'s order; `-x` drops the
+  parameter `f` has; `x: T` adds a new one. No name stands twice after expansion.
+- The prelude binds every dropped parameter with `let`, exactly once on every path; it may
+  `return` early (the return type and channel are `g`'s).
+- `f` is a black box: `g` sees `f`'s signature and contract, never its body.
+- Same `or R` on both sides: the error propagates (`?` shape); otherwise `else (e) endblock`
+  is required, and different reasons keep the written `else` (no implicit mapping).
+- The short body `;` only when `g`'s result type equals `f`'s.
+- `requires`/`ensures` are written, never derived. `effects`/`costs` may be omitted: they are
+  the computed sum of prelude, `f` and body.
+- Refused: `f` is `divergent`, a `spec`, the adapter itself, or called in its own prelude;
+  `-x` for a parameter `f` has not; `..` twice; a doubled name; a prelude that leaves a
+  dropped parameter unbound; a short body over a different result type; a changed channel
+  without `else`.
+- *Lean:* `SItemTief.adaptT`, expanded by `Uebersetze.entfalteAdapt` to `fnT` in `elabU`
+  (`Uebersetze/Teil18`); machine G never sees the form.
+
 **`breaking`** names the region in which an invariant rests:
 
 ```ebnf
@@ -1219,7 +1262,17 @@ xform      = "update" "(" ident ")"
    bound and the exit. *)
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident [ ":" typeexpr ] "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
+           | "let" ident [ ":" typeexpr ] "=" call "?" ";" ;   (* reason propagation, below *)
            | "let" [ "mut" ] ident [ ":" typeexpr ] "=" libcall ";" ;   (* lane E1: binding position *)
+(* Reason propagation `?` («phase 1», `ABSTRACTION-SYNTAX-PLAN.md` §4.3): `let x = f(args) ?;`
+   (resp. `f(args) ?;`, value discarded) is the explicit `else` form with the re-raise
+   spelled out — `let x = f(…) else (e) { match e { F1 => { return R::F1; } … } };` with one
+   arm per ground of `R`. Allowed only when the enclosing function carries the SAME `or R`
+   as the callee (a type ascription is refused, like at the explicit form); a different
+   channel, a missing channel, or a non-call under `?` is refused — the writer then keeps
+   the written `else`. No new word, no new model form.
+   *Lean:* `SAnw.bindQ`/`callQ`, expanded by `Uebersetze.entfalteFrage` in `elabU`
+   (`Uebersetze/Teil18`); machine G never sees the form. *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
 stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-19» *)
 (* The transition of a `state` field: `transition T.slots[i].s : Idle -> Busy;` names the
@@ -1229,7 +1282,7 @@ stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-1
    is the shape. The second version wrote `state` transitions through `assign` and left the
    pre-state to a pass. `shiftplace` has no `->` suffix, and the two stage names are
    identifiers, not expressions -- so the arrow is never a pointer suffix. No new word. *)
-exprstmt   = call ";" ;
+exprstmt   = call ";" | call "?" ";" ;   (* reason propagation, below *)
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
 matchstmt  = "match" expr "{" { matcharm } "}" ;
 matcharm   = ident [ "(" ident ")" ] "=>" block ;                 (* CHANGED «SG-5a» *)

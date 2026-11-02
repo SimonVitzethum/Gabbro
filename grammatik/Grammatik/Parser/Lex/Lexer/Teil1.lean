@@ -190,6 +190,7 @@ def istEinfach : Char → Bool
   | ']' => true
   | '{' => true
   | '}' => true
+  | '?' => true
   | _ => false
 
 /-- Take a name tail (the head is already consumed). -/

@@ -170,6 +170,8 @@ def callFreeStmt : SAnw → Bool
   | .child _ | .start _ | .step _ _ | .shift _ _ _ | .locks _ _ _ | .watch _ _ => false
   | .bind _ _ _ e => callFreeExpr e
   | .bindElse _ _ e _ body => callFreeExpr e && callFreeStmt body
+  | .bindQ _ _ _ e => callFreeExpr e
+  | .callQ _ _ => false
   | .set l _ r => callFreeExpr l && callFreeExpr r
   | .cond c yes branches no =>
     callFreeExpr c && callFreeStmt yes && callFreeStmts branches && callFreeOpt no
