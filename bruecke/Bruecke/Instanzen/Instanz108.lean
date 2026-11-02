@@ -9,7 +9,7 @@ public import Duty.Duty108DisjointStartLocks
 @[expose] public section
 
 
-/-! BRIDGE-INSTANCE beispiele/0108-disjoint-start-locks.gab Bruecke.Instanz108
+/-! BRIDGE-INSTANCE beispiele/0108-disjoint-start-locks.gab Bruecke.Instanzen.Instanz108
 
     S1+S2 instance: `beispiele/0108-disjoint-start-locks.gab` (see `Instanz104.lean`). -/
 

@@ -1,5 +1,36 @@
 module
 public import Stage0.IRBild
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 @[expose] public section
 
 
@@ -51,7 +82,7 @@ theorem result_type : (declOf output.compiled.unit).erg output.compiled.main = s
 
 abbrev D := declOf output.compiled.unit
 
-private theorem noIndex {n : Nat} (h : n = 0) (i : Fin n) : False := by
+theorem noIndex {n : Nat} (h : n = 0) (i : Fin n) : False := by
   have := i.isLt
   omega
 
@@ -81,13 +112,13 @@ local instance kernel : Runner.IR.Kern := ⟨fun _ _ _ _ => True⟩
 local instance clone : Senke.CloneOK where
   ans _ := ⟨1, 0, by decide, trivial⟩
 
-private theorem emptyGates [Runner.IR.Kern] (u : UProg) (ha : u.axs.length = 0)
+theorem emptyGates [Runner.IR.Kern] (u : UProg) (ha : u.axs.length = 0)
     (hr : u.regs.length = 0) (L : Senke.Lay (declOf u)) : Senke.TorOK L (emptyOracle u ha hr) :=
   ⟨(fun a => (noIndex ha a).elim), (fun a => (noIndex ha a).elim)⟩
 
 local instance gates : Senke.TorOK output.image.Y oracle :=
   emptyGates output.compiled.unit carrier_shape.2.2.1 carrier_shape.2.2.2 output.image.Y
-private theorem emptyView (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
+theorem emptyView (u : UProg) (ha : u.axs.length = 0) (hr : u.regs.length = 0) :
     Senke.SichtOK (emptyOracle u ha hr) := ⟨fun _ _ => rfl⟩
 
 local instance view : Senke.SichtOK oracle := emptyView _ carrier_shape.2.2.1 carrier_shape.2.2.2
@@ -116,7 +147,7 @@ theorem aliases_final :
 
 theorem image_bound : Runner.Prog.IMG + output.image.bytes.length < 2 ^ 64 := by decide +kernel
 
-private theorem loadedBytes (bytes : List Runner.B) (bound : Runner.Prog.IMG + bytes.length < 2 ^ 64) :
+theorem loadedBytes (bytes : List Runner.B) (bound : Runner.Prog.IMG + bytes.length < 2 ^ 64) :
     Senke.BytesAt (loadedMemory bytes) Runner.Prog.IMG bytes := by
   intro i hi
   refine ⟨rfl, rfl, ?_⟩
@@ -127,7 +158,7 @@ private theorem loadedBytes (bytes : List Runner.B) (bound : Runner.Prog.IMG + b
 theorem bytes_loaded : Senke.BytesAt memory Runner.Prog.IMG output.image.bytes :=
   loadedBytes _ image_bound
 
-private theorem fieldlessWorldLoaded (u : UProg)
+theorem fieldlessWorldLoaded (u : UProg)
     (ht : ∀ t : Fin u.tabs.length, fieldCount u t = 0) (hg : u.globs.length = 0)
     (L : Senke.Lay (declOf u)) (bytes : List Runner.B) :
     Senke.WeltAt (loadedMemory bytes) L (fieldlessWorld u ht hg) :=

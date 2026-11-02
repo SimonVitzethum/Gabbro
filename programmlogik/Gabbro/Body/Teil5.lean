@@ -1,6 +1,7 @@
 module
 
 public import Lean
+public meta import Lean
 public import Gabbro.Body.Teil4
 
 @[expose] public section
@@ -25,7 +26,7 @@ open Lean Elab Tactic Meta in
     nested `by`: that one is elaborated later, and where it does not close, its failure is
     LOGGED as an error of the theorem while the tactic that wrote it goes on believing it
     succeeded (measured 2026-09-07, `kapraum`). -/
-def GabbroMeta.haveClosed (stx : TSyntax `tactic) (tac : TSyntax `tactic) : TacticM Unit := do
+meta def GabbroMeta.haveClosed (stx : TSyntax `tactic) (tac : TSyntax `tactic) : TacticM Unit := do
   let g ← getMainGoal
   let gty ← g.withContext (instantiateMVars (← g.getType))
   let before ← getGoals
@@ -80,7 +81,7 @@ open Lean Elab Tactic Meta in
     fact, a disjunction into two goals -- as far down as it goes. What a contract instance
     says about a call's answer (`∃ x, (ρ f t).2 = some (.int x)`) becomes the rewrite
     `simp` can use. -/
-partial def GabbroMeta.openHyp (n : Name) (fuel : Nat) : TacticM Unit := do
+meta partial def GabbroMeta.openHyp (n : Name) (fuel : Nat) : TacticM Unit := do
   if fuel == 0 then return
   let g ← getMainGoal
   let some d ← g.withContext (return (← getLCtx).findFromUserName? n) | return
@@ -225,7 +226,7 @@ elab "gabbro_instantiate" : tactic => do
 
 open Lean Elab Tactic Meta in
 /-- Every closed `allBelow f n` in `e`. -/
-partial def GabbroMeta.collectAllBelow (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr)) := do
+meta partial def GabbroMeta.collectAllBelow (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr)) := do
   let acc ← IO.mkRef (#[] : Array (Lean.Expr × Lean.Expr))
   let rec go (e : Lean.Expr) : MetaM Unit := do
     match e with
@@ -273,7 +274,7 @@ elab_rules : tactic
 
 /-- Every closed `a &&& b`, `a ^^^ b`, `a ||| b` over `Nat` in `e` -- `0`, `1`, `2` for the
     operator. -/
-partial def GabbroMeta.collectAnd (e : Lean.Expr) (acc : Array (Nat × Lean.Expr × Lean.Expr)) :
+meta partial def GabbroMeta.collectAnd (e : Lean.Expr) (acc : Array (Nat × Lean.Expr × Lean.Expr)) :
     Array (Nat × Lean.Expr × Lean.Expr) :=
   match e with
   | .app .. =>
@@ -361,7 +362,7 @@ macro_rules
 syntax "gabbro_shape" ident : tactic
 open Lean Elab Tactic Meta in
 /-- Every read `σ p` of a world in `e` -- `State.world s` applied to a closed place. -/
-partial def GabbroMeta.collectReads (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr)) := do
+meta partial def GabbroMeta.collectReads (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr)) := do
   let acc ← IO.mkRef (#[] : Array (Lean.Expr × Lean.Expr))
   let rec go (e : Lean.Expr) : MetaM Unit := do
     match e with

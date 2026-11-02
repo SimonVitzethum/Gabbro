@@ -96,7 +96,7 @@ theorem korpus109_nutzer_zeuge
 
 /-
   CUTS: nothing is cut inside this file. The model covers the whole source
-  file `beispiele/109-lockfree-entry-roots.gab` except its `costs` effects
+  file `beispiele/0109-lockfree-entry-roots.gab` except its `costs` effects
   (ignored form, like `reads`) and the `entry` register/stack hardware around
   the two dispatch roots (the roots themselves are the declared starts).
   What is NOT claimed: anything about the `.gab` source text (no exporter

@@ -2,7 +2,7 @@
   File:      Grammatik/ZielOrtGanzZeuge.lean
   Subject:   WITNESSES AND THE PROBE for the goal theorem `ziel_ort_ganz`.
 
-  * `ziel_ort_ganz_ref104`: the corpus program `beispiele/104-referenz.gab`
+  * `ziel_ort_ganz_ref104`: the corpus program `beispiele/0104-referenz.gab`
     (hand translation `r4P`) meets EVERY premise of `ziel_ort_ganz` jointly
     -- the new clause `KeineLogik` by the syntactic check -- and on its
     reached run (memory `0 -> 100`, the return of `einzahlen` logged) the

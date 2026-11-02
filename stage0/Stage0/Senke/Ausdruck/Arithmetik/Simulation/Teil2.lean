@@ -17,8 +17,8 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
-/-- Dispatch from the actual distance-test result to the emitted transfer paths. -/
 set_option maxHeartbeats 800000 in
+/-- Dispatch from the actual distance-test result to the emitted transfer paths. -/
 theorem floatNormalizeLoopL_distance_branch
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} {fuel count distance : Nat} {q r : Int}

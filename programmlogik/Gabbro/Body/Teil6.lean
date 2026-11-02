@@ -1,15 +1,16 @@
 module
 
 public import Lean
+public meta import Lean
 public import Gabbro.Body.Teil5
 
 @[expose] public section
 
 
+open Lean Elab Tactic Meta in
 /-- Every `ρ f t` in `e` where `ρ` is a local of type `Env` -- with `t` closed (no loose
     bound variables), because only a closed state can be handed to a contract. -/
-open Lean Elab Tactic Meta in
-partial def GabbroMeta.collectCalls (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr × Lean.Expr)) := do
+meta partial def GabbroMeta.collectCalls (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr × Lean.Expr)) := do
   let acc ← IO.mkRef (#[] : Array (Lean.Expr × Lean.Expr × Lean.Expr))
   let rec go (e : Lean.Expr) : MetaM Unit := do
     match e with
@@ -35,7 +36,7 @@ open Lean Elab Tactic Meta in
 /-- **Has an earlier pass already instantiated `key = ρ f t` on THIS goal?** The mark
     `gabbro_seen : key = key` says so -- per goal, and not per invocation: a sibling goal an
     opening left has no instance yet and gets its own. -/
-def GabbroMeta.seenKey (key : Lean.Expr) : TacticM Bool := do
+meta def GabbroMeta.seenKey (key : Lean.Expr) : TacticM Bool := do
   (← getMainGoal).withContext do
     let lctx ← getLCtx
     lctx.anyM fun d => do
@@ -51,7 +52,7 @@ open Lean Elab Tactic Meta in
     holes its instantiation at a state opens: a plain `Contract` one (the precondition), a
     `LoopRule`, `ContractBelow` or `ContractBelowM` two, a `LoopRuleP` three (the counter at
     zero). -/
-def GabbroMeta.contractDecls (ρ f : Lean.Expr) : TacticM (Array (Lean.LocalDecl × Nat)) := do
+meta def GabbroMeta.contractDecls (ρ f : Lean.Expr) : TacticM (Array (Lean.LocalDecl × Nat)) := do
   (← getMainGoal).withContext do
     let lctx ← getLCtx
     let mut out : Array (Lean.LocalDecl × Nat) := #[]
@@ -299,7 +300,7 @@ open Lean Elab Tactic Meta in
 /-- Every `store σ p v q` in `e` with `p` and `q` closed and not syntactically equal --
     the reads the model could not decide, because whether two indices coincide is a
     fact about the program and not about the form. -/
-partial def GabbroMeta.collectStores (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr)) := do
+meta partial def GabbroMeta.collectStores (e : Lean.Expr) : MetaM (Array (Lean.Expr × Lean.Expr)) := do
   let acc ← IO.mkRef (#[] : Array (Lean.Expr × Lean.Expr))
   let rec go (e : Lean.Expr) : MetaM Unit := do
     match e with
@@ -377,7 +378,7 @@ open Lean Elab Tactic Meta in
 /-- Every `decide p` in `e` with `p` closed -- the conditions of the program's `if`s and
     comparisons, which `simp` cannot decide because they are about the values and not
     about the form. -/
-partial def GabbroMeta.collectDecides (e : Lean.Expr) : MetaM (Array Lean.Expr) := do
+meta partial def GabbroMeta.collectDecides (e : Lean.Expr) : MetaM (Array Lean.Expr) := do
   let acc ← IO.mkRef (#[] : Array Lean.Expr)
   let rec go (e : Lean.Expr) : MetaM Unit := do
     match e with

@@ -58,7 +58,7 @@ def r4SigRuhe : Signatur Unit Empty Unit Empty where
   konsumiert := []
   produziert := []
 
-/-- `104-referenz.gab`'s declarations: table `Konto` (2 slots, field
+/-- `0104-referenz.gab`'s declarations: table `Konto` (2 slots, field
     `stand : 0 .. 100`), lock `M` (rank 0) protecting it; functions
     `einzahlen`, `lies`, and the flagged additions `treiber`, `ruhe`. -/
 def r4D : Deklaration where
@@ -378,7 +378,7 @@ theorem r4Boese_ohne : OhneVorbedingung r4Boese := by
   | ruhe => cases h; cases he
 
 /-- **The finding (`r4_einzahlen_nicht_V`).** `einzahlen` of
-    `104-referenz.gab` does NOT meet the user obligation of the goal
+    `0104-referenz.gab` does NOT meet the user obligation of the goal
     theorems: from an entry world with the slot at `50`, the body writes
     `100` and calls `lies`; the contract-respecting handler `r4Boese`
     answers `lies` with the slot at `0` (and result `0`, so `lies`'s

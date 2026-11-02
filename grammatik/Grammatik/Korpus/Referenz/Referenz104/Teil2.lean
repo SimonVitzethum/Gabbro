@@ -8,7 +8,7 @@ public import Grammatik.Korpus.Referenz.Referenz104.Teil1
 
 namespace Gabbro.Grammatik
 
-/-- **The run of `104-referenz.gab` on G** (7 steps of thread 0): the driver
+/-- **The run of `0104-referenz.gab` on G** (7 steps of thread 0): the driver
     calls `einzahlen(&Konto, 0, 7)` (1), which writes `Konto[0].stand = 100`
     through its pointer (2: memory `0 -> 100`), calls `lies(k, 0)` (3), which
     returns the slot (4, logged); `einzahlen` returns (5, logged); the
@@ -130,7 +130,7 @@ theorem r4Lauf : ∃ M : RufMaschineG r4D,
 /-! ## 7. The premises, jointly -/
 
 /-- **`referenz104_zeuge`.** On the hand translation of
-    `104-referenz.gab` (plus the flagged driver and idle function), every
+    `0104-referenz.gab` (plus the flagged driver and idle function), every
     premise of `ziel_ort_voll` holds EXCEPT the user obligation of
     `einzahlen`, which is refuted; the declared costs pass `kostenPasst`;
     on the reached run (memory `0 -> 100`, the return of `einzahlen`
@@ -152,7 +152,7 @@ theorem referenz104_zeuge :
 
 /-! ## CUTS:
 
-  What is proved: the hand translation `r4D`/`r4P` of `104-referenz.gab`
+  What is proved: the hand translation `r4D`/`r4P` of `0104-referenz.gab`
   (the construct table in the header); the decidable premises
   (`r4P_fragment`, `r4P_fuss`), the declared costs (`r4P_kostenPasst`),
   `GutO`, the start facts, the user obligations of `lies`, the driver and

@@ -17,9 +17,9 @@ variable [Kern] {D : Deklaration} {L : Lay D} {Γ : Ctx}
     {K base top reserved : Nat} {code : List II} {origin target : Int}
     {originDistance budget : Nat}
 
+set_option maxHeartbeats 800000 in
 /-- Commit the two SMALL results from their actual temporary slots. The
     distance, target and budget slots survive the emitted copies. -/
-set_option maxHeartbeats 800000 in
 theorem floatNormalizeLoopL_small_copies
     (hc : floatNormalizeLoopL base = some (code, top))
     {m : Runner.Mem} (h : Pre L m pc fp K base code ρ W reserved)

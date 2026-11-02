@@ -39,7 +39,7 @@ import all Init.Data.String.ToSlice
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
--- beispiele/02-geraet.gab:129. The phase step as a statement --
+-- beispiele/0002-geraet.gab:129. The phase step as a statement --
 -- `parse.rs` has no statement-level counterpart either (it rides
 -- in the checker); the shape is the SYNTAX.md `advstmt`
 -- production.
@@ -53,7 +53,7 @@ theorem s32_lex :
 theorem s32 : beqTopStmt (parseTopStmt st32)
     (.ok (.alloc false "a" .none "Log" (.lit 10) .none)) = true := by
   decide
--- beispiele/98-arena-erklaert.gab:11. Rust: `Alloc` with no
+-- beispiele/0098-arena-erklaert.gab:11. Rust: `Alloc` with no
 -- `else` -- same shape.
 def st33 : List Token :=
   [.wort "let", .ident "c", .zeichen "=", .wort "alloc",
@@ -70,7 +70,7 @@ theorem s33 : beqTopStmt (parseTopStmt st33)
       (.bin "+" (.variable "a") (.variable "b"))
       (.some (.block [] (.some (.ret (.some (.lit 0)))))))) = true := by
   decide
--- beispiele/98-arena-erklaert.gab:13 (shortened). Rust: `Alloc`
+-- beispiele/0098-arena-erklaert.gab:13 (shortened). Rust: `Alloc`
 -- with the full-arena continuation -- same shape (the `else`
 -- takes a plain block here, unlike `let … else`).
 def st34 : List Token :=
@@ -81,7 +81,7 @@ theorem s34_lex :
 theorem s34 : beqTopStmt (parseTopStmt st34)
     (.ok (.reset "Log" .none)) = true := by
   decide
--- beispiele/98-arena-erklaert.gab:16. Rust: `ResetArena` --
+-- beispiele/0098-arena-erklaert.gab:16. Rust: `ResetArena` --
 -- same shape.
 def st35 : List Token :=
   [.zeichen "@", .ident "spirv", .zeichen "#", .wort "kernel",

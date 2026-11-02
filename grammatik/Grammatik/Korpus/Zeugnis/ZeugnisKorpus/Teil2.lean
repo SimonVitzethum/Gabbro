@@ -9,12 +9,12 @@ public import Grammatik.Korpus.Zeugnis.ZeugnisKorpus.Teil1
 
 namespace Gabbro.Grammatik
 
-/-- Contract for `zaehle` (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`): writes Takte. -/
+/-- Contract for `zaehle` (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`): writes Takte. -/
 def D59V_zaehle : Vertrag D59D :=
   { schreibt := fun | .Takte => true | _ => false, gschreibt := fun _ => false,
     erg := none, gruende := 0, haelt := [], produziert := [] }
 
-/-- Verbatim printer output for `zaehle` (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`). -/
+/-- Verbatim printer output for `zaehle` (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`). -/
 def cd59_zaehle : CertEnd2 D59D D59V_zaehle := (.liftE (.cons (.assignSlot D59Tab.Takte D59FeldTakte.stand (.var 0) (.wide 0 18446744073709551615 (.lit 1))) [] .ret))
 
 example : certEnd2Ok D59D D59V_zaehle false [(.int 0 63)] [] cd59_zaehle = true := by
@@ -24,12 +24,12 @@ example : certEnd2Ok D59D D59V_zaehle false [(.int 0 63)] [] cd59_zaehle = true 
 example : ∃ _ : Endblock D59D D59V_zaehle false [(.int 0 63)] [], True :=
   zeugnisStmt2_sound D59D D59V_zaehle false [(.int 0 63)] [] cd59_zaehle (by decide)
 
-/-- Contract for `bearbeite` (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`): writes Auftraege. -/
+/-- Contract for `bearbeite` (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`): writes Auftraege. -/
 def D59V_bearbeite : Vertrag D59D :=
   { schreibt := fun | .Auftraege => true | _ => false, gschreibt := fun _ => false,
     erg := none, gruende := 0, haelt := [], produziert := [] }
 
-/-- Verbatim printer output for `bearbeite` (`beispiele/59-eintritt-nimmt-maskierte-sperre.gab`). -/
+/-- Verbatim printer output for `bearbeite` (`beispiele/0059-eintritt-nimmt-maskierte-sperre.gab`). -/
 def cd59_bearbeite : CertEnd2 D59D D59V_bearbeite := (.liftE (.cons (.assignSlot D59Tab.Auftraege D59FeldAuftraege.stand (.var 0) (.wide 0 18446744073709551615 (.lit 1))) [] .ret))
 
 example : certEnd2Ok D59D D59V_bearbeite false [(.int 0 15)] [] cd59_bearbeite = true := by
@@ -39,7 +39,7 @@ example : certEnd2Ok D59D D59V_bearbeite false [(.int 0 15)] [] cd59_bearbeite =
 example : ∃ _ : Endblock D59D D59V_bearbeite false [(.int 0 15)] [], True :=
   zeugnisStmt2_sound D59D D59V_bearbeite false [(.int 0 15)] [] cd59_bearbeite (by decide)
 
-/-! ## Hand declaration for `109-lockfree-entry-roots.gab` (no `lean-g` export) -/
+/-! ## Hand declaration for `0109-lockfree-entry-roots.gab` (no `lean-g` export) -/
 
 inductive D109Tab where
 | T
@@ -122,12 +122,12 @@ abbrev D109D : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-/-- Contract for `write_a` (`beispiele/109-lockfree-entry-roots.gab`): writes T. -/
+/-- Contract for `write_a` (`beispiele/0109-lockfree-entry-roots.gab`): writes T. -/
 def D109V_write_a : Vertrag D109D :=
   { schreibt := fun | .T => true | _ => false, gschreibt := fun _ => false,
     erg := none, gruende := 0, haelt := [], produziert := [] }
 
-/-- Verbatim printer output for `write_a` (`beispiele/109-lockfree-entry-roots.gab`). -/
+/-- Verbatim printer output for `write_a` (`beispiele/0109-lockfree-entry-roots.gab`). -/
 def cd109_write_a : CertEnd2 D109D D109V_write_a := (.liftE (.cons (.assignSlot D109Tab.T D109FeldT.v (.var 0) (.wide 0 4294967295 (.lit 1))) [] .ret))
 
 example : certEnd2Ok D109D D109V_write_a false [(.int 0 3)] [] cd109_write_a = true := by
@@ -137,12 +137,12 @@ example : certEnd2Ok D109D D109V_write_a false [(.int 0 3)] [] cd109_write_a = t
 example : ∃ _ : Endblock D109D D109V_write_a false [(.int 0 3)] [], True :=
   zeugnisStmt2_sound D109D D109V_write_a false [(.int 0 3)] [] cd109_write_a (by decide)
 
-/-- Contract for `write_b` (`beispiele/109-lockfree-entry-roots.gab`): writes U. -/
+/-- Contract for `write_b` (`beispiele/0109-lockfree-entry-roots.gab`): writes U. -/
 def D109V_write_b : Vertrag D109D :=
   { schreibt := fun | .U => true | _ => false, gschreibt := fun _ => false,
     erg := none, gruende := 0, haelt := [], produziert := [] }
 
-/-- Verbatim printer output for `write_b` (`beispiele/109-lockfree-entry-roots.gab`). -/
+/-- Verbatim printer output for `write_b` (`beispiele/0109-lockfree-entry-roots.gab`). -/
 def cd109_write_b : CertEnd2 D109D D109V_write_b := (.liftE (.cons (.assignSlot D109Tab.U D109FeldU.v (.var 0) (.wide 0 4294967295 (.lit 2))) [] .ret))
 
 example : certEnd2Ok D109D D109V_write_b false [(.int 0 3)] [] cd109_write_b = true := by
@@ -152,7 +152,7 @@ example : certEnd2Ok D109D D109V_write_b false [(.int 0 3)] [] cd109_write_b = t
 example : ∃ _ : Endblock D109D D109V_write_b false [(.int 0 3)] [], True :=
   zeugnisStmt2_sound D109D D109V_write_b false [(.int 0 3)] [] cd109_write_b (by decide)
 
-/-! ## Hand declaration for `112-register-traeger-bewacht.gab` (no `lean-g` export) -/
+/-! ## Hand declaration for `0112-register-traeger-bewacht.gab` (no `lean-g` export) -/
 
 inductive D112Tab where
 | Zustand
@@ -227,12 +227,12 @@ abbrev D112D : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-/-- Contract for `schreiben` (`beispiele/112-register-traeger-bewacht.gab`): writes Zustand. -/
+/-- Contract for `schreiben` (`beispiele/0112-register-traeger-bewacht.gab`): writes Zustand. -/
 def D112V_schreiben : Vertrag D112D :=
   { schreibt := fun | .Zustand => true, gschreibt := fun _ => false,
     erg := some (.int 0 4294967295), gruende := 0, haelt := [], produziert := [] }
 
-/-- Verbatim printer output for `schreiben` (`beispiele/112-register-traeger-bewacht.gab`). -/
+/-- Verbatim printer output for `schreiben` (`beispiele/0112-register-traeger-bewacht.gab`). -/
 def cd112_schreiben : CertEnd2 D112D D112V_schreiben := (.liftE (.cons (.assignSlot D112Tab.Zustand D112FeldZustand.bereit (.var 0) (.var 1)) [] (.retWert (.wide 0 4294967295 (.lit 0)) 0 4294967295)))
 
 example : certEnd2Ok D112D D112V_schreiben false [(.int 0 3), (.int 0 4294967295)] [] cd112_schreiben = true := by
@@ -242,7 +242,7 @@ example : certEnd2Ok D112D D112V_schreiben false [(.int 0 3), (.int 0 4294967295
 example : ∃ _ : Endblock D112D D112V_schreiben false [(.int 0 3), (.int 0 4294967295)] [], True :=
   zeugnisStmt2_sound D112D D112V_schreiben false [(.int 0 3), (.int 0 4294967295)] [] cd112_schreiben (by decide)
 
-/-! ## Hand declaration for `44-register-einmal-lesen.gab` (no `lean-g` export) -/
+/-! ## Hand declaration for `0044-register-einmal-lesen.gab` (no `lean-g` export) -/
 
 inductive D44Tab where
 | Auftrag
@@ -317,12 +317,12 @@ abbrev D44D : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-/-- Contract for `gewicht_bei` (`beispiele/44-register-einmal-lesen.gab`): writes nothing. -/
+/-- Contract for `gewicht_bei` (`beispiele/0044-register-einmal-lesen.gab`): writes nothing. -/
 def D44V_gewicht_bei : Vertrag D44D :=
   { schreibt := fun _ => false, gschreibt := fun _ => false,
     erg := some (.int 0 4294967295), gruende := 0, haelt := [], produziert := [] }
 
-/-- Verbatim printer output for `gewicht_bei` (`beispiele/44-register-einmal-lesen.gab`). -/
+/-- Verbatim printer output for `gewicht_bei` (`beispiele/0044-register-einmal-lesen.gab`). -/
 def cd44_gewicht_bei : CertEnd2 D44D D44V_gewicht_bei := (.liftE (.retWert (.slot D44Tab.Auftrag D44FeldAuftrag.gewicht (.var 0)) 0 4294967295))
 
 example : certEnd2Ok D44D D44V_gewicht_bei false [(.int 0 7)] [] cd44_gewicht_bei = true := by

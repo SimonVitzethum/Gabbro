@@ -9,7 +9,7 @@ public import Duty.Duty104Referenz
 @[expose] public section
 
 
-/-! BRIDGE-INSTANCE beispiele/0104-referenz.gab Bruecke.Instanz104
+/-! BRIDGE-INSTANCE beispiele/0104-referenz.gab Bruecke.Instanzen.Instanz104
 
     S1+S2 instance: `beispiele/0104-referenz.gab`.
     The parse is anchored at the source text by `Einheit104.uebersetzt4`

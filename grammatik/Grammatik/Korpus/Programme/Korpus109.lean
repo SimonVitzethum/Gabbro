@@ -1,6 +1,6 @@
 /-
   File:      Grammatik/Korpus109.lean
-  Subject:   THE G PROGRAM OF `beispiele/109-lockfree-entry-roots.gab`, with the
+  Subject:   THE G PROGRAM OF `beispiele/0109-lockfree-entry-roots.gab`, with the
              bodies of the source, and every premise group of the goal theorem on it.
 
   The source: tables `T`, `U` (count 4, `u32` field `v`), locks `L`, `M`

@@ -18,7 +18,7 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
 -- SRC-BEGIN src108
-/-- The real `beispiele/108-disjoint-start-locks.gab` text, one entry per source line (a long
+/-- The real `beispiele/0108-disjoint-start-locks.gab` text, one entry per source line (a long
     line cut again after a space). `zaehle-kette.py` compares the
     pieces against the file, byte for byte. WHY PIECES and not one
     literal: `Parser/Lexer.lean`'s `lex_ofList` -- one 2082-byte

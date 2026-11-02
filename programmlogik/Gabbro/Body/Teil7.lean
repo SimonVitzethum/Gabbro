@@ -1,6 +1,7 @@
 module
 
 public import Lean
+public meta import Lean
 public import Gabbro.Body.Teil6
 
 @[expose] public section
@@ -115,7 +116,7 @@ elab "gabbro_try " n:num tac:tactic : tactic => do
     that closes nothing over 192 units and 500-odd theorems is not thereby a step that closes
     nothing. Putting it back is one line, and a unit that needs it will say so with a `sorry`,
     not silently. -/
-initialize gabbroSimpAllFixed : IO.Ref (Array Lean.MVarId) ← IO.mkRef #[]
+meta initialize gabbroSimpAllFixed : IO.Ref (Array Lean.MVarId) ← IO.mkRef #[]
 
 open Lean Elab Tactic in
 /-- Forget every goal the memo holds -- at the head of the pipeline, so that one theorem's
@@ -144,7 +145,7 @@ elab "gabbro_simp_all_once" : tactic => do
     gabbroSimpAllFixed.modify fun a => gs.foldl (fun a m => if a.contains m then a else a.push m) a
 
 /-- Every `a.tdiv b` / `a.tmod b` (closed) in `e` -- `true` for a division. -/
-partial def GabbroMeta.collectDivMod (e : Lean.Expr) (acc : Array (Bool × Lean.Expr × Lean.Expr)) :
+meta partial def GabbroMeta.collectDivMod (e : Lean.Expr) (acc : Array (Bool × Lean.Expr × Lean.Expr)) :
     Array (Bool × Lean.Expr × Lean.Expr) :=
   match e with
   | .app .. =>
@@ -200,7 +201,7 @@ elab "gabbro_divmod" : tactic => do
         saved.restore
 
 /-- Every closed `a * b` over `Int` in `e`. -/
-partial def GabbroMeta.collectMul (e : Lean.Expr) (acc : Array (Lean.Expr × Lean.Expr)) :
+meta partial def GabbroMeta.collectMul (e : Lean.Expr) (acc : Array (Lean.Expr × Lean.Expr)) :
     Array (Lean.Expr × Lean.Expr) :=
   match e with
   | .app .. =>

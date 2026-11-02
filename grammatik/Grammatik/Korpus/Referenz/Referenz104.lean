@@ -1,12 +1,12 @@
 /-
   File:      Grammatik/Referenz104.lean
-  Subject:   `beispiele/104-referenz.gab`, TRANSLATED BY HAND into the Lean
+  Subject:   `beispiele/0104-referenz.gab`, TRANSLATED BY HAND into the Lean
              syntax, run on machine G, and checked against the premises of
              `ziel_ort_voll`.
 
   ## The translation, construct by construct
 
-  | surface (104-referenz.gab)                    | Lean form here                                  |
+  | surface (0104-referenz.gab)                    | Lean form here                                  |
   |-----------------------------------------------|-------------------------------------------------|
   | `module beispiel::referenz { … }`             | NO FORM (a namespace; this file)                |
   | `const NKONTO : u32 = 2;`                     | inlined: `count := fun _ => 2`                  |
