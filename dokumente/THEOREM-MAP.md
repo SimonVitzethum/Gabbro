@@ -5104,3 +5104,525 @@ until the IR layout proofs consume it. `Zielsatz/Projekte/Profil.lean` states `G
 proved isolation service has a form. Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
 Open: the entry/service correspondence and the guest service (C08/C12), function-tail gates, the `Verbund` profile
 transport, and the layout/startup/relocation proofs of placement.
+
+
+## 106. C02: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `733f1b65b` (`feat(grammar): bind C02 library admission into the checker`).
+
+`grammatik/Grammatik/Gen/Erzeuger/Gueltig.lean`:
+
+* **`akzeptiertX_iff`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs : List D.Fn`, `ls : List D.Lock`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, `aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D)`, the conclusion is `AkzeptiertX P S fs ls cs ws aks = true ↔ (∀ c, komp P S fs ls cs ws c = true) ∧ Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true ∧ resetB cs = true`.
+* **`stufenOk_of`**: For arbitrary `P : Programm D`, `f : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : komp P S fs ls cs ws 3 = true`, the conclusion is `stufenOk f (P.rumpf f) = true`.
+* **`antwortOk_of`**: For arbitrary `P : Programm D`, `f : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : komp P S fs ls cs ws 8 = true`, the conclusion is `antwortOk fs f (P.rumpf f) = true`.
+* **`okFuer_of`**: For arbitrary `P : Programm D`, `p3 p8 : Bool`, `f : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h3 : p3 = true → komp P S fs ls cs ws 3 = true` and `h8 : p8 = true → komp P S fs ls cs ws 8 = true`, the conclusion is `okFuer p3 p8 fs f (P.rumpf f) = true`.
+* **`gueltig_korrekt`**: For arbitrary `n k : Nat`, `P : Programm D`, assuming `h : P ∈ genGueltig S fs ls cs ws n k`, the conclusion is `AkzeptiertX P S fs ls cs ws = true`.
+* **`gueltig_vollst`**: For arbitrary `n : Nat`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : Haut D` and `hv : AkzeptiertX h.programm S fs ls cs ws = true` and `hn : ∀ f, groesseEnd (h.rumpf f) ≤ n` and `hu : ∀ f, groesseEnd (h.rumpf f) < unendlich`, the conclusion is `h.programm ∈ genGueltig S fs ls cs ws n (groesseHaut h)`.
+* **`gueltig_alle`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : Haut D` and `hv : AkzeptiertX h.programm S fs ls cs ws = true` and `hu : ∀ f, groesseEnd (h.rumpf f) < unendlich`, the conclusion is `∃ n, h.programm ∈ genGueltig S fs ls cs ws n (groesseHaut h)`.
+* **`bad_korrekt`**: For arbitrary `c : Fin 10`, `n k : Nat`, `P : Programm D`, assuming `h : P ∈ genBad c S fs ls cs ws n k`, the conclusion is `NurAn c P S fs ls cs ws`.
+* **`bad_vollst`**: For arbitrary `c : Fin 10`, `n : Nat`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : Haut D` and `hv : NurAn c h.programm S fs ls cs ws` and `hn : ∀ f, groesseEnd (h.rumpf f) ≤ n` and `hu : ∀ f, groesseEnd (h.rumpf f) < unendlich`, the conclusion is `h.programm ∈ genBad c S fs ls cs ws n (groesseHaut h)`.
+* **`bad_alle`**: For arbitrary `c : Fin 10`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : Haut D` and `hv : NurAn c h.programm S fs ls cs ws` and `hu : ∀ f, groesseEnd (h.rumpf f) < unendlich`, the conclusion is `∃ n, h.programm ∈ genBad c S fs ls cs ws n (groesseHaut h)`.
+* **`gueltig_oder_nicht`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs : List D.Fn`, `ls : List D.Lock`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, assuming `hr : resetB cs = true`, the conclusion is `AkzeptiertX P S fs ls cs ws = true ∨ ∃ c, komp P S fs ls cs ws c = false`.
+* **`gueltigAlle_vollst`**: For arbitrary `nb nc : Nat`, `P : Programm D`, assuming `hv : AkzeptiertX P S fs ls cs ws = true` and `hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb` and `hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc` and `hi : ∀ i, groesseExpr (P.invariante i) ≤ nc` and `hu : groesseProg P < unendlich`, the conclusion is `P ∈ genGueltigAlle S fs ls cs ws nb nc (groesseProg P) P.ptrVertrag`.
+`grammatik/Grammatik/Speichermodell/Atomar/AtomarZeuge/Teil1.lean`:
+
+* **`atomarB_iff`**: For arbitrary `c : D.Tab ⊕ D.Glob`, the conclusion is `atomarB c = true ↔ AtomarAusgenommen c`.
+* **`fussWAB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `fussWAB P S fs ws = true ↔ ∀ f, FussSA P S (lokW P fs ws) f`.
+* **`fussWAB_of_fussWB`**: Assuming `h : fussWB P S fs ws = true`, the conclusion is `fussWAB P S fs ws = true`.
+* **`akzeptiertA_of_akzeptiert`**: For arbitrary `aks : List (Kernzelle.AccumulatorDecl D)`, assuming `h : Akzeptiert P S fs ls cs ws aks = true`, the conclusion is `AkzeptiertA P S fs ls cs ws = true`.
+* **`fussSA_mono`**: For arbitrary `lok lok' : D.Tab ⊕ D.Glob → Bool`, `f : D.Fn`, assuming `hl : ∀ c, c ∈ fussOrteG P f → lok c = true → lok' c = true` and `h : FussSA P S lok f`, the conclusion is `FussSA P S lok' f`.
+* **`akzeptiertA_ok`**: For arbitrary `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hAk : AkzeptiertA P S fs ls cs ws = true` and `hZ : StartZulaessig P S fs ws sp init`, the conclusion is `(∀ t, AbgK P fs (kVon P fs init t)) ∧ (∀ t, kVon P fs init t (init t).1 = true) ∧ (∀ f, FussSA P S (lokK P (kVon P fs init)) f) ∧ StartExklusiv init`.
+* **`schwach_ist_gA_akzeptiert`**: For arbitrary `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `O : Orakel D`, `passes : Nat`, `ord : D.Glob → Ordnung`, `W W' : RufMaschineW D`, `u : Faden`, `σ : Speicher D`, `M'' : RufMaschineG D`, `wahl : D.Tab ⊕ D.Glob → NachrichtW D`, `neu : D.Tab ⊕ D.Glob → Nat`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hAk : AkzeptiertA P S fs ls cs ws = true` and `hZ : StartZulaessig P S fs ws sp init` and `hO : GutO O` and `hr : RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W` and `h : SchrittW P O passes ord W u W' σ M'' wahl neu`, the conclusion is `RufSchrittGA P O passes W.g u W'.g ∧ ∀ c, ¬ AtomarAusgenommen c → TraegerGleich σ W.g.speicher c`.
+* **`gaInv_rang`**: For arbitrary `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, assuming `hO : GutO O` and `hSt : StufenM P` and `hND : ∀ t, (offen (startSpur (D`, the conclusion is ``.
+* **`kein_warteZyklusGA`**: For arbitrary `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `M : RufMaschineG D`, assuming `hO : GutO O` and `hSt : StufenM P` and `hLeer : ∀ t, D.haelt (init t).1 = []` and `hr : RufErreichbarGA P O passes (RufStartG P sp init) M`, the conclusion is `KeinWarteZyklus M`.
+* **`keine_verklemmungGA`**: For arbitrary `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `ls : List D.Lock`, `M : RufMaschineG D`, assuming `hO : GutO O` and `hSt : StufenM P` and `hLeer : ∀ t, D.haelt (init t).1 = []` and `hls : ∀ L : D.Lock, L ∈ ls` and `hr : RufErreichbarGA P O passes (RufStartG P sp init) M` and `hW : ∀ t, ¬ FertigG M t → WartetG M t`, the conclusion is `∀ t, FertigG M t`.
+* **`laufW_erreichbar`**: For the parameters and hypotheses `{ord : D.Glob → Ordnung} {W0 : RufMaschineW D} {Ws : Nat → RufMaschineW D} {ts : Nat → Faden} {n : Nat} (hl : LaufW P O passes ord W0 Ws ts n) : ∀ k, k ≤ n → RufErreichbarW P O passes ord W0 (Ws k) | 0, _ => by rw [hl.1]; exact .start | k + 1, hk => .schritt _ _ _ (laufW_erreichbar hl k (by omega)) (hl.2 k (by omega)) /-- **THE LANGUAGE-CARRIED LEGS OVER W, RACING ATOMICS INCLUDED.** On a program `AkzeptiertA` accepts, from an admissible start, for every order assignment, at every machine W reaches: * the trace invariant (`SpurInv`, the leg `speicherSicher` of `Ziel`) and lock exclusivity; * no global deadlock and no wait cycle (the legs `keineVerklemmung`, `keinZyklus`); * the time bound (`ZeitAb`, the leg `zeit`; it holds at every machine); * every step W takes from there is a step of GA whose presented memory is G's at every non-atomic carrier; and on every run of W (by index) RACE FREEDOM for every non-atomic carrier (the leg `rennfrei`, over W's runs): two accesses by different threads, one a write, are ordered through a guard lock. What is NOT here: the contract legs (`vertrag`, `sperrInv`, `invRueck`, `invGrund`, `startEnde`, `keinStartGrund`, `keinLogikHalt`, `fortschritt`), which come from the replay of the user's sequential proof -- OFFEN O25. -/ theorem w_sprache_akzeptiertA {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)} {ord : D.Glob → Ordnung} (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (hAk : AkzeptiertA P S fs ls cs ws = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O) : (∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W → SpurInv W.g ∧ Exklusiv W.g ∧ ((∀ t, ¬ FertigG W.g t → WartetG W.g t) → ∀ t, FertigG W.g t) ∧ KeinWarteZyklus W.g ∧ ZeitAb P O passes W.g ∧ ∀ (W' : RufMaschineW D) (u : Faden), RufSchrittW P O passes ord W u W' → RufSchrittGA P O passes W.g u W'.g) ∧ (∀ (Ws : Nat → RufMaschineW D) (ts : Nat → Faden) (n : Nat), LaufW P O passes ord (RufStartW (RufStartG P sp init)) Ws ts n → ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → ts i ≠ ts j → ZugriffG (Ws i).g (Ws (i + 1)).g (ts i) c → ZugriffG (Ws j).g (Ws (j + 1)).g (ts j) c → (SchreibG (Ws i).g (Ws (i + 1)).g (ts i) c ∨ SchreibG (Ws j).g (Ws (j + 1)).g (ts j) c) → ¬ AtomarAusgenommen c → ∃ L, Bewacht c L ∧ GeordnetG (fun k => (Ws k).g) ts L i j)`, the concluding judgment after the final binder holds.
+* **`w_sprache_akzeptiertA`**: For arbitrary `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `ord : D.Glob → Ordnung`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `hAk : AkzeptiertA P S fs ls cs ws = true` and `hZ : StartZulaessig P S fs ws sp init` and `hO : GutO O`, the conclusion is `(∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W → SpurInv W.g ∧ Exklusiv W.g ∧ ((∀ t, ¬ FertigG W.g t → WartetG W.g t) → ∀ t, FertigG W.g t) ∧ KeinWarteZyklus W.g ∧ ZeitAb P O passes W.g ∧ ∀ (W' : RufMaschineW D) (u : Faden), RufSchrittW P O passes ord W u W' → RufSchrittGA P O passes W.g u W'.g) ∧ (∀ (Ws : Nat → RufMaschineW D) (ts : Nat → Faden) (n : Nat), LaufW P O passes ord (RufStartW (RufStartG P sp init)) Ws ts n → ∀ (i j : Nat) (c : D.Tab ⊕ D.Glob), i < j → j < n → ts i ≠ ts j → ZugriffG (Ws i).g (Ws (i + 1)).g (ts i) c → ZugriffG (Ws j).g (Ws (j + 1)).g (ts j) c → (SchreibG (Ws i).g (Ws (i + 1)).g (ts i) c ∨ SchreibG (Ws j).g (Ws (j + 1)).g (ts j) c) → ¬ AtomarAusgenommen c → ∃ L, Bewacht c L ∧ GeordnetG (fun k => (Ws k).g) ts L i j)`.
+`grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean`:
+
+* **`akzeptiertSpecX_of_spec`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, `A : List (Kernzelle.AccumulatorDecl D)`, assuming `h : AkzeptiertSpec P S fs ws A`, the conclusion is `AkzeptiertSpecX P S fs ws [] A`.
+* **`AkzeptiertSpecX.mitBesitz`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, `B : List (ArenaOwnership.Body.ArenaIface D)`, `A : List (Kernzelle.AccumulatorDecl D)`, assuming `h : AkzeptiertSpecX P S fs ws B A` and `hb : ∀ a ∈ B', ArenaOwnership.Body.Checked P a.A a.I` and `hw : ∀ a ∈ B', ArenaOwnership.Machine.ArenaPlain a.A`, the conclusion is `AkzeptiertSpecX P S fs ws B' A`.
+* **`AkzeptiertSpecX.mitAkku`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, `B : List (ArenaOwnership.Body.ArenaIface D)`, `A A' : List (Kernzelle.AccumulatorDecl D)`, assuming `h : AkzeptiertSpecX P S fs ws B A` and `ha : Kernzelle.AccumulatorAdmission P fs A'`, the conclusion is `AkzeptiertSpecX P S fs ws B A'`.
+* **`fragX_ok`**: For arbitrary `lok : D.Tab ⊕ D.Glob → Bool`, `Tg : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : programmImFragmentG P fs = true` and `hF : ∀ f, FussSX P S lok Tg f`, the conclusion is `(P.rumpf f).gOk (kandP P (fussOrteG P f)) (regP (sicher P lok f)) = true`.
+* **`geteiltV_nicht_stabil`**: For arbitrary `B : List (ArenaOwnership.Body.ArenaIface D)`, `A : List (Kernzelle.AccumulatorDecl D)`, `c : D.Tab ⊕ D.Glob`, `f : D.Fn`, `Λ : List (Res D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : AkzeptiertSpecX P S fs ws B A` and `hc : GeteiltV P ws c`, the conclusion is `c ∉ stabilS P S (lokW P fs ws) f Λ`.
+* **`rennfreiBis_of_GA`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `M0 M : RufMaschineG D`, assuming `h : RennfreiBisGA P O passes M0 M`, the conclusion is `RennfreiBis P O passes M0 M`.
+* **`ziel_atomar_spec`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `Q : AxEns D`, `fs : List D.Fn`, `ls : List D.Lock`, `ws : List D.Fn`, `B : List (ArenaOwnership.Body.ArenaIface D)`, `A : List (Kernzelle.AccumulatorDecl D)`, `O : Orakel D`, `passes : Nat`, `ord : D.Glob → Ordnung`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hA : AkzeptiertSpecX P S fs ws B A` and `hN : LogikPflichtA P S Q (GeteiltA P ws)` and `hH : HardwareAnnahmen O Q` and `hZ : StartZulaessig P S fs ws sp init`, the conclusion is `∀ W : RufMaschineW D, RufErreichbarW P O passes ord (RufStartW (RufStartG P sp init)) W → ZielAtomar P S O passes ord (GeteiltV P ws) (RufStartG P sp init) W`.
+* **`rennfrei_atomar_spec`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs : List D.Fn`, `ws : List D.Fn`, `B : List (ArenaOwnership.Body.ArenaIface D)`, `A : List (Kernzelle.AccumulatorDecl D)`, `O : Orakel D`, `passes : Nat`, `ord : D.Glob → Ordnung`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `Ws : Nat → RufMaschineW D`, `ts : Nat → Faden`, `n : Nat`, `i j : Nat`, `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : AkzeptiertSpecX P S fs ws B A` and `hO : GutO O` and `hZ : StartZulaessig P S fs ws sp init` and `hl : LaufW P O passes ord (RufStartW (RufStartG P sp init)) Ws ts n` and `hij : i < j` and `hjn : j < n` and `hfg : ts i ≠ ts j` and `hzi : ZugriffG (Ws i).g (Ws (i + 1)).g (ts i) c` and `hzj : ZugriffG (Ws j).g (Ws (j + 1)).g (ts j) c` and `hw : SchreibG (Ws i).g (Ws (i + 1)).g (ts i) c ∨ SchreibG (Ws j).g (Ws (j + 1)).g (ts j) c` and `hAt : ¬ AtomarAusgenommen c`, the conclusion is `∃ L, Bewacht c L ∧ GeordnetG (fun k => (Ws k).g) ts L i j`.
+* **`vertragsFreiB_ok`**: For arbitrary `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `h : vertragsFreiB P fs c = true`, the conclusion is `VertragsFrei P c`.
+* **`fussWXB_ok`**: For arbitrary `f : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hAbg : ∀ w, AbgK P fs (reachB P fs w)` and `h : fussWXB P S fs ws = true`, the conclusion is `FussSX P S (lokW P fs ws) (GeteiltV P ws) f`.
+* **`akzeptiertSpecX_of`**: For arbitrary `aks : List (Kernzelle.AccumulatorDecl D)`, `checks : List (CheckDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `h : AkzeptiertX P S fs ls cs ws aks checks = true`, the conclusion is `AkzeptiertSpecX P S fs ws [] aks`.
+* **`fussWXB_of_fussWB`**: Assuming `h : fussWB P S fs ws = true`, the conclusion is `fussWXB P S fs ws = true`.
+`grammatik/Grammatik/Zielsatz/Faeden/PoolSym/Teil1.lean`:
+
+* **`pool_filter_nil`**: For arbitrary `l : List D.Fn`, `w : D.Fn`, assuming `h : w ∉ l`, the conclusion is `l.filter (fun v => decide (v = w)) = []`.
+* **`nodup_filter_length_le_one`**: For arbitrary `ws : List D.Fn`, `w : D.Fn`, assuming `hnd : ws.Nodup`, the conclusion is `(ws.filter (fun v => decide (v = w))).length ≤ 1`.
+* **`einzelnPool_of_nodup`**: For arbitrary `P : Programm D`, `fs ws : List D.Fn`, assuming `hnd : ws.Nodup`, the conclusion is `EinzelnPool P fs ws`.
+* **`einzelnPoolB_of_einzelnB`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, assuming `h : einzelnB ws = true`, the conclusion is `einzelnPoolB P fs cs ws = true`.
+* **`einzelnPool_paar`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `w : D.Fn`, the conclusion is `EinzelnPool P fs [w, w] ↔ PoolSicherW P fs w`.
+* **`getrenntW_nodup`**: For arbitrary `P : Programm D`, `fs ws : List D.Fn`, assuming `hnd : ws.Nodup`, the conclusion is `getrenntW P fs ws = getrenntWVor P fs ws`.
+* **`akzeptiert_nodup_gleich`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs : List D.Fn`, `ls : List D.Lock`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, assuming `hnd : ws.Nodup`, the conclusion is `Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs)`.
+* **`akzeptiertVor_nodup`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs : List D.Fn`, `ls : List D.Lock`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, assuming `h : AkzeptiertVor P S fs ls cs ws = true`, the conclusion is `ws.Nodup`.
+* **`akzeptiert_vor_neu`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs : List D.Fn`, `ls : List D.Lock`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, assuming `h : AkzeptiertVor P S fs ls cs ws = true` and `hM : maskenB P fs = true` and `hR : resetB cs = true`, the conclusion is `Akzeptiert P S fs ls cs ws = true`.
+* **`akzeptiertSpecVor_neu`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, assuming `h : AkzeptiertSpecVor P S fs ws` and `hM : MaskenDisziplin P fs` and `hR : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem`, the conclusion is `AkzeptiertSpec P S fs ws []`.
+* **`laufzeit_vor_neu`**: For arbitrary `E : Einheit D`, `sp : Speicher D.mitRuhe`, `init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)`, assuming `hl : sp = speicherR E.sp0` and `hs : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts, init t = ⟨some a.1, envR a.2⟩` and `he : ∀ t u, t ≠ u → (init t).1 = (init u).1 → (init t).1 = none`, the conclusion is `Laufzeit E sp init`.
+* **`pool_schreibt_nicht_lauf`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `fs : List D.Fn`, `w : D.Fn`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `ms : Nat → RufMaschineG D`, `ts : Nat → Faden`, `n : Nat`, `k : Nat`, `c : D.Tab ⊕ D.Glob`, assuming `hO : GutO O` and `hvoll : ∀ g : D.Fn, g ∈ fs` and `hAbg : ∀ t, AbgK P fs (kVon P fs init t)` and `hWurzel : ∀ t, kVon P fs init t (init t).1 = true` and `hl : LaufG P O passes (RufStartG P sp init) ms ts n` and `hk : k < n` and `ht : (init (ts k)).1 = w` and `hpoolW : PoolSicher D (reachB P fs w) w` and `hB : ∀ L, ¬ Bewacht c L` and `hAt : ¬ AtomarAusgenommen c` and `hw : SchreibG (ms k) (ms (k + 1)) (ts k) c`, the conclusion is `False`.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Bibliothek.lean`:
+
+* **`libraryB_immer`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, the conclusion is `libraryB P fs = true`.
+* **`libraryB_iff`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, the conclusion is `libraryB P fs = true ↔ LibraryAdmission P`.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Teil1.lean`:
+
+* **`mehrfach_filter`**: For arbitrary `α : Type`, the conclusion is `[DecidableEq α] {ws : List α} {w : α} : Mehrfach ws w ↔ 1 < (ws.filter (fun v => decide (v = w))).length`.
+* **`mehrfachB_iff`**: For arbitrary `ws : List D.Fn`, `w : D.Fn`, the conclusion is `mehrfachB ws w = true ↔ Mehrfach ws w`.
+* **`nicht_mehrfach_of_nodup`**: For arbitrary `α : Type`, `ws : List α`, `w : α`, assuming `hnd : ws.Nodup`, the conclusion is `¬ Mehrfach ws w`.
+* **`getrenntW_iff`**: For arbitrary `P : Programm D`, `fs ws : List D.Fn`, `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `getrenntW P fs ws c = true ↔ Getrennt P fs ws c`.
+* **`getrenntW_eq_lokW`**: For arbitrary `P : Programm D`, `fs ws : List D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `getrenntW P fs ws = lokW P fs ws`.
+* **`schreibGetrenntW_iff`**: For arbitrary `P : Programm D`, `fs ws : List D.Fn`, `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `schreibGetrenntW P fs ws c = true ↔ SchreibGetrennt P fs ws c`.
+* **`ausgenommenB_false`**: For arbitrary `c : D.Tab ⊕ D.Glob`, the conclusion is `ausgenommenB c = false ↔ (∀ L, ¬ Bewacht c L) ∧ ¬ AtomarAusgenommen c`.
+* **`rennB_iff`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `cs : List (D.Tab ⊕ D.Glob)`, `ws : List D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `rennB P fs cs ws = true ↔ ∀ c, (∀ L, ¬ Bewacht c L) → ¬ AtomarAusgenommen c → SchreibGetrennt P fs ws c`.
+* **`abgAlleB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `abgAlleB P fs = true ↔ ∀ w, AbgK P fs (reachB P fs w)`.
+* **`fussWB_iff'`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `fussWB P S fs ws = true ↔ ∀ f, FussS P S (getrenntW P fs ws) f`.
+* **`fussWB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `fussWB P S fs ws = true ↔ ∀ f, FussS P S (lokW P fs ws) f`.
+* **`stufenB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `stufenB P fs = true ↔ StufenM P`.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Teil2.lean`:
+
+* **`poolSicherWB_iff`**: For arbitrary `w : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `poolSicherWB P fs cs w = true ↔ PoolSicherW P fs w`.
+* **`einzelnPoolB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `einzelnPoolB P fs cs ws = true ↔ EinzelnPool P fs ws`.
+* **`maskenB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `maskenB P fs = true ↔ MaskenDisziplin P fs`.
+* **`maskenB_ohne`**: Assuming `h : ∀ f, P.unterbricht f = false`, the conclusion is `maskenB P fs = true`.
+* **`tabsOf_voll`**: For arbitrary `cs : List (D.Tab ⊕ D.Glob)`, `t : D.Tab`, assuming `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `t ∈ tabsOf cs`.
+* **`globsOf_voll`**: For arbitrary `cs : List (D.Tab ⊕ D.Glob)`, `g : D.Glob`, assuming `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `g ∈ globsOf cs`.
+* **`akzeptiertSpec_of`**: For arbitrary `aks : List (Kernzelle.AccumulatorDecl D)`, `checks : List (CheckDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `h : Akzeptiert P S fs ls cs ws aks checks = true`, the conclusion is `AkzeptiertSpec P S fs ws aks`.
+* **`spec_akzeptiert`**: For arbitrary `aks : List (Kernzelle.AccumulatorDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `h : AkzeptiertSpec P S fs ws aks`, the conclusion is `Akzeptiert P S fs ls cs ws aks h.checks = true`.
+* **`ruheB_iff`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `cs : List (D.Tab ⊕ D.Glob)`, `w : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `ruheB P fs cs w = true ↔ Ruhig P fs w`.
+* **`getrenntK_of`**: For arbitrary `c : D.Tab ⊕ D.Glob`, assuming `hZ : StartZulaessig P S fs ws sp init` and `hc : Getrennt P fs ws c`, the conclusion is `GetrenntK P (kVon P fs init) c`.
+* **`schreibGetrenntK_of`**: For arbitrary `c : D.Tab ⊕ D.Glob`, assuming `hZ : StartZulaessig P S fs ws sp init` and `hP : EinzelnPool P fs ws` and `hB : ∀ L, ¬ Bewacht c L` and `hAt : ¬ AtomarAusgenommen c` and `hc : SchreibGetrennt P fs ws c`, the conclusion is `SchreibGetrenntK P (kVon P fs init) c`.
+* **`wurzel_of`**: For arbitrary `A : List (Kernzelle.AccumulatorDecl D)`, `t : Faden`, assuming `hA : AkzeptiertSpec P S fs ws A` and `hZ : StartZulaessig P S fs ws sp init`, the conclusion is `D.haelt (init t).1 = [] ∧ D.gruende (init t).1 = 0`.
+`grammatik/Grammatik/Zielsatz/Kern/Spec/Teil1.lean`:
+
+* **`AkzeptiertSpec.mitAkku`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, `A A' : List (Kernzelle.AccumulatorDecl D)`, assuming `h : AkzeptiertSpec P S fs ws A` and `ha : Kernzelle.AccumulatorAdmission P fs A'`, the conclusion is `AkzeptiertSpec P S fs ws A'`.
+
+Stage-0 boundary: Unexpanded library calls and translators with calls are refused; declared costs and other unbound clauses remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `libraryFn_bound`, `transT_bound`, `library_zeuge`.
+
+
+## 107. C03: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `33d5d68bd` (`test(grammatik): cover typed payload lowering and refusal boundaries`).
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Tagged/Proben.lean`:
+
+* **`uSumFaelle_nested_zeuge`**: the conclusion is `uSumFaelle 100 nestedPayload = .ok [("Data", some (.range (.atom "u32") (.bin "+" (.lit 1) (.lit 2)) (.lit 10) false)), ("Empty", none)]`.
+* **`uSumFaelle_nested_resolved_zeuge`**: the conclusion is `(uSumFaelle 100 nestedPayload).bind (USum.resolveCases (uSumPayload [])) = .ok [("Data", some (.int 3 10)), ("Empty", none)]`.
+* **`uSumFaelle_bool_zeuge`**: the conclusion is `uSumFaelle 100 [.ident "Flag", .zeichen "(", .wort "bool", .zeichen ")"] = .ok [("Flag", some (.atom "bool"))]`.
+* **`uSumFaelle_array_zeuge`**: the conclusion is `uSumFaelle 100 [.ident "Bytes", .zeichen "(", .zeichen "[", .wort "u8", .zeichen ";", .num 3, .zeichen "]", .zeichen ")", .zeichen ",", .ident "Empty"] = .ok [("Bytes", some (.array (.atom "u8") (.lit 3))), ("Empty", none)]`.
+* **`uSumFaelle_string_zeuge`**: the conclusion is `uSumFaelle 100 [.ident "Text", .zeichen "(", .ident "string", .wort "max", .num 8, .zeichen ")"] = .ok [("Text", some (.str (.lit 8)))]`.
+* **`uSumFaelle_reference_zeuge`**: the conclusion is `uSumFaelle 100 [.ident "Cell", .zeichen "(", .wort "index", .wort "into", .ident "Region", .zeichen ")"] = .ok [("Cell", some (.index false "Region"))]`.
+* **`uSumFaelle_record_zeuge`**: the conclusion is `uSumFaelle 100 [.ident "Record", .zeichen "(", .zeichen "{", .ident "flag", .zeichen ":", .wort "bool", .zeichen "}", .zeichen ")", .zeichen ",", .ident "Empty"] = .ok [("Record", some (.raw "{ flag : bool } ")), ("Empty", none)]`.
+* **`tagged_resolve_zeuge`**: the conclusion is `taggedSourceSchema.resolve (uTyp [] []) = .ok taggedValueSchema`.
+* **`USum.resolveCases_shape_zeuge`**: the conclusion is `taggedValueSchema.cases.map (fun c => (c.1, c.2.isSome)) = taggedSourceSchema.cases.map (fun c => (c.1, c.2.isSome))`.
+* **`USum.resolve_shape_zeuge`**: the conclusion is `taggedValueSchema.name = taggedSourceSchema.name ∧ taggedValueSchema.cases.map (fun c => (c.1, c.2.isSome)) = taggedSourceSchema.cases.map (fun c => (c.1, c.2.isSome))`.
+* **`uSumFaelle_missing_close_refused`**: the conclusion is `(match uSumFaelle 100 nestedPayload.dropLast.dropLast.dropLast with | .error _ => true | .ok _ => false) = true`.
+* **`uSumFaelle_extra_payload_refused`**: the conclusion is `(match uSumFaelle 100 [.ident "Data", .zeichen "(", .wort "u8", .zeichen ",", .wort "bool", .zeichen ")"] with | .error _ => true | .ok _ => false) = true`.
+
+Stage-0 boundary: Typed payload support does not bypass metadata checks; nested duties and unsupported local type metadata remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 108. C04: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Stage 0`).
+
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`:
+
+* **`check_sound`**: For arbitrary `items : List SItemTief`, assuming `h : check items = .ok ()`, the conclusion is `items.any itemMetadata = false`.
+* **`check_clear`**: For arbitrary `items : List SItemTief`, assuming `h : items.any itemMetadata = false`, the conclusion is `check items = .ok ()`.
+* **`check_sound_zeuge`**: the conclusion is `let body`.
+* **`checkConstants_sound`**: For arbitrary `items : List SItemTief`, `used : items.any constantExpansion = true`, `accepted : checkConstants items = .ok ()`, the conclusion is `items.any itemMetadata = false`.
+* **`invariant_refused_zeuge`**: the conclusion is `check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding"`.
+* **`nested_duties_refused_zeuge`**: the conclusion is `let held`.
+* **`stateT_bound`**: For arbitrary `n : String`, `ts : List STrans`, the conclusion is `itemMetadata (.stateT n ts) = false`.
+* **`stateT_zeuge`**: the conclusion is `let tr : STrans`.
+* **`libraryFn_bound`**: For arbitrary `sig : FnSig`, `body : SAnw`, `c : clausesMetadataWithoutLoad sig.klauseln = false`, `b : bodyMetadata 10000 body = false`, `p : sig.params.any (fun p => typeMetadata p.2) = false`, `r : sig.res.any typeMetadata = false`, assuming `h : sig.art = "library"`, the conclusion is `itemMetadata (.fnT sig body) = false`.
+* **`transT_bound`**: For arbitrary `target : String`, `translator : FnSig`, `body : SAnw`, `c : clausesMetadata translator.klauseln = false`, `p : translator.params.any (fun p => typeMetadata p.2) = false`, `r : translator.res.any typeMetadata = false`, the conclusion is `itemMetadata (.transT target translator body) = false`.
+* **`library_zeuge`**: the conclusion is `let lib : FnSig`.
+`stage0/Stage0/Zeugen/StateWitness.lean`:
+
+* **`candidate_present`**: the conclusion is `candidate.toOption.isSome = true`.
+* **`accepted_image`**: the conclusion is `emit text 64 = .ok output`.
+
+Stage-0 boundary: Atomic transition contracts, conflicting effects and incompatible aliases remain refused by transition elaboration. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
+
+
+## 109. C06: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `d060d11a4` (`feat(c06): add witnesses for prefix replay and checker binding`).
+
+`grammatik/Grammatik/Logik/Ruf/Schnittstellen/Zeuge.lean`:
+
+* **`refinement`**: the conclusion is `PtrVerfeinert prog`.
+* **`ptrVerfeinert_zeuge`**: the conclusion is `PtrVerfeinert prog ∧ decl.passt true 0 = true ∧ decl.passt false 0 = true ∧ (prog.ptrVertrag 0).preHolds entry arguments ∧ (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩`.
+* **`ptrRufPflicht_req_zeuge`**: the conclusion is `PtrVerfeinert prog ∧ PtrRufPflicht prog operand operands entry arguments ∧ ReqAmEintritt prog true entry (umsig pointer.property arguments)`.
+* **`concrete_contracts_differ`**: the conclusion is `ReqAmEintritt prog true entry (.cons ⟨1, by decide, by decide⟩ .nil) ∧ ¬ ReqAmEintritt prog false entry (.cons ⟨1, by decide, by decide⟩ .nil) ∧ EnsAmRueck prog false entry later arguments ⟨4, by decide, by decide⟩ ∧ ¬ EnsAmRueck prog true entry later arguments ⟨4, by decide, by decide⟩`.
+* **`default_does_not_discharge_O43`**: the conclusion is `¬ PtrVerfeinert unguarded`.
+* **`inventory_functions`**: For arbitrary `f : decl.Fn`, the conclusion is `f ∈ [false, true]`.
+* **`inventory_signatures`**: For arbitrary `f : decl.Fn`, `n : Nat`, assuming `hf : decl.passt f n = true`, the conclusion is `n ∈ [0]`.
+* **`ptrVerfeinert_iff_kandidaten_zeuge`**: the conclusion is `ptrKandidaten decl [false, true] [0] = [(false, 0), (true, 0)] ∧ (∀ (f : decl.Fn) (n : Nat), (f, n) ∈ ptrKandidaten decl [false, true] [0] → ∀ hf : decl.passt f n = true, PtrZielVerfeinert prog f n hf)`.
+* **`old_world_and_read_only_zeuge`**: the conclusion is `oldContract.preHolds entry arguments ∧ ¬ oldContract.preHolds later arguments ∧ oldContract.postHolds entry later arguments ⟨0, by decide, by decide⟩ ∧ ¬ oldContract.postHolds later later arguments ⟨0, by decide, by decide⟩ ∧ oldContract.orte = [.inl (), .inl ()] ∧ sig.schreibt () = false ∧ oldContract.atomicFreeB (fun _ => true) = false`.
+* **`weaker_second_target_post_refused`**: the conclusion is `¬ PtrVerfeinert badSecondTarget`.
+* **`stronger_interface_post_refused`**: the conclusion is `¬ PtrVerfeinert strongerInterfacePost`.
+* **`handler_contracts`**: the conclusion is `RespektiertVertraege prog handler`.
+
+Stage-0 boundary: Indirect calls require interface refinement and caller duties; a pointer contract alone does not establish an executable source binding. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 110. C09: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `36662142d` (`feat(owner): ghost run ledger with G/GX conservation and root admission`).
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Admission.lean`:
+
+* **`ownerB_iff`**: the conclusion is `[DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (d : OwnerMintDecl D) (ws : List D.Fn) : ownerB P fs d ws = true ↔ d.root ∈ ws ∧ ((ws.filter (fun v => decide (v = d.root)))).length = 1 ∧ (∀ f ∈ fs, ruftB P f d.root = false) ∧ D.haelt d.root = [] ∧ D.gruende d.root = 0`.
+* **`ownerAdmission_of_ownerB`**: the conclusion is `[DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (d : OwnerMintDecl D) (ws : List D.Fn) (h : ownerB P fs d ws = true) : OwnerAdmission P fs d ws`.
+* **`owner_single_not_twice`**: the conclusion is `[DecidableEq D.Fn] (d : OwnerMintDecl D) (ws : List D.Fn) (hsingle : ((ws.filter (fun v => decide (v = d.root)))).length = 1) : ¬ Zielsatz.Mehrfach ws d.root`.
+* **`owner_root_once`**: the conclusion is `[DecidableEq D.Fn] (E : Zielsatz.Einheit D) (d : OwnerMintDecl D) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hL : Zielsatz.Laufzeit E sp init) (hsingle : (((Zielsatz.Einheit.ws E).filter (fun v => decide (v = d.root)))).length = 1) {t u : Faden} (hne : t ≠ u) (ht : (init t).1 = some d.root) (hu : (init u).1 = some d.root) : False`.
+* **`fadenSpawn_m_G`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `K K' : FadenMaschine D`, assuming `hs : FadenSchritt P O passes K K'`, the conclusion is `K'.m = K.m ∨ ∃ (f : Faden) (M' : RufMaschineG D), RufSchrittG P O passes K.m f M'`.
+* **`owner_step_mint_refused_G`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `N : OwnerNamespace D`, `base : OwnerState D`, `d : OwnerMintDecl D`, `K K' : FadenMaschine D`, `threads : List Faden`, `f : ArenaOwnership.Frame`, assuming `hs : FadenSchritt P O passes K K'` and `hspent : (ownerLedgerOf N base K.m threads).spent d.mark = true`, the conclusion is `OwnerState.recordMint N d (ownerLedgerOf N base K'.m threads) f = none`.
+* **`owner_step_mint_refused_X`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `Tg : D.Tab ⊕ D.Glob → Prop`, `N : OwnerNamespace D`, `base : OwnerState D`, `d : OwnerMintDecl D`, `K K' : FadenMaschine D`, `threads : List Faden`, `f : ArenaOwnership.Frame`, assuming `hs : FadenSchrittX P O passes Tg K K'` and `hspent : (ownerLedgerOf N base K.m threads).spent d.mark = true`, the conclusion is `OwnerState.recordMint N d (ownerLedgerOf N base K'.m threads) f = none`.
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Ledger.lean`:
+
+* **`foldStep_id`**: For arbitrary `s : OwnerState D`, `ev : RufEreignisF D`, the conclusion is `ownerFoldStep s ev = s`.
+* **`foldl_ledger_id`**: For arbitrary `s : OwnerState D`, the conclusion is `∀ log : List (RufEreignisF D), log.foldl ownerFoldStep s = s | [] => rfl | ev :: rest => by have h : ownerFoldStep s ev = s`.
+* **`ownerThreadStep_id`**: For arbitrary `M : RufMaschineG D`, `s : OwnerState D`, `t : Faden`, the conclusion is `ownerThreadStep M s t = s`.
+* **`ownerLedger_fold_eq`**: For arbitrary `M : RufMaschineG D`, `s : OwnerState D`, the conclusion is `∀ ts : List Faden, ts.foldl (ownerThreadStep M) s = s | [] => rfl | t :: rest => by have h : ownerThreadStep M s t = s`.
+* **`ownerLedger_eq_base`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `M : RufMaschineG D`, `threads : List Faden`, the conclusion is `ownerLedgerOf N base M threads = base`.
+* **`ownerLedger_of_ledger_eq`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `M M' : RufMaschineG D`, `threads : List Faden`, assuming `h : ownerLedgerOf N base M' threads = ownerLedgerOf N base M threads` and `hI : OwnerInvG N base M threads`, the conclusion is `OwnerInvG N base M' threads`.
+* **`ownerInvG_start`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `P : Programm D`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `threads : List Faden`, assuming `hv : base.Valid N`, the conclusion is `OwnerInvG N base (RufStartG P sp init) threads`.
+* **`ownerInvG_schritt`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `M : RufMaschineG D`, `f : Faden`, `M' : RufMaschineG D`, `threads : List Faden`, assuming `hI : OwnerInvG N base M threads` and `hs : RufSchrittG P O passes M f M'`, the conclusion is `OwnerInvG N base M' threads`.
+* **`ownerInvG_erreichbar`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `M0 : RufMaschineG D`, `threads : List Faden`, `M : RufMaschineG D`, assuming `hv : base.Valid N` and `hr : RufErreichbarG P O passes M0 M`, the conclusion is `OwnerInvG N base M threads`.
+* **`push_transfer_valid`**: For arbitrary `c : OwnerInvocation D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `M M' : RufMaschineG D`, `N : OwnerNamespace D`, `s s' : OwnerState D`, `t t' : OwnerToken D`, `push : c.Push P O passes M M'`, assuming `hv : s.ledger.valid` and `h : push.transfer N s t = some (s', t')`, the conclusion is `s'.ledger.valid ∧ s'.owns N c.frame t' ∧ t'.mark = t.mark ∧ t'.stage = t.stage ∧ (∀ frame, ¬ s'.access N frame t) ∧ s'.spent = s.spent`.
+* **`push_borrow_valid`**: For arbitrary `c : OwnerInvocation D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `M M' : RufMaschineG D`, `N : OwnerNamespace D`, `s s' : OwnerState D`, `t : OwnerToken D`, `push : c.Push P O passes M M'`, assuming `hv : s.ledger.valid` and `h : push.borrow N s t = some s'`, the conclusion is `s'.ledger.valid ∧ s'.access N c.frame t ∧ ¬ s'.access N c.caller t ∧ ¬ s'.owns N c.frame t ∧ s'.spent = s.spent ∧ s'.stage = s.stage`.
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/LedgerGX.lean`:
+
+* **`ownerInvGX_of_G`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `Tg : D.Tab ⊕ D.Glob → Prop`, `M : RufMaschineG D`, `threads : List Faden`, assuming `hI : OwnerInvG N base M threads`, the conclusion is `OwnerInvGX N base Tg M threads`.
+* **`ownerInvGX_schritt`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `Tg : D.Tab ⊕ D.Glob → Prop`, `M : RufMaschineG D`, `u : Faden`, `M' : RufMaschineG D`, `threads : List Faden`, assuming `hI : OwnerInvGX N base Tg M threads` and `hs : RufSchrittGX P O passes Tg M u M'`, the conclusion is `OwnerInvGX N base Tg M' threads`.
+* **`ownerInvGX_erreichbar`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `Tg : D.Tab ⊕ D.Glob → Prop`, `M0 : RufMaschineG D`, `threads : List Faden`, `M : RufMaschineG D`, assuming `hv : base.Valid N` and `hr : RufErreichbarGX P O passes Tg M0 M`, the conclusion is `OwnerInvGX N base Tg M threads`.
+* **`ownerInvF_schritt_X`**: For arbitrary `N : OwnerNamespace D`, `base : OwnerState D`, `P : Programm D`, `O : Orakel D`, `passes : Nat`, `Tg : D.Tab ⊕ D.Glob → Prop`, `K K' : FadenMaschine D`, `threads : List Faden`, assuming `hI : OwnerInvGX N base Tg K.m threads` and `hs : FadenSchrittX P O passes Tg K K'`, the conclusion is `OwnerInvGX N base Tg K'.m threads`.
+* **`fadenSpawn_m_X`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `Tg : D.Tab ⊕ D.Glob → Prop`, `K K' : FadenMaschine D`, assuming `hs : FadenSchrittX P O passes Tg K K'`, the conclusion is `K'.m = K.m ∨ ∃ (f : Faden) (M' : RufMaschineG D), RufSchrittGX P O passes Tg K.m f M'`.
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/LedgerZeuge.lean`:
+
+* **`ownerLedger_zeuge_valid`**: For arbitrary `M : RufMaschineG D`, `threads : List Faden`, the conclusion is `OwnerInvG names minted M threads`.
+* **`ownerLedger_zeuge_spent`**: For arbitrary `M : RufMaschineG D`, `threads : List Faden`, the conclusion is `(ownerLedgerOf names minted M threads).spent mint.mark = true`.
+* **`ownerLedger_zeuge_grant`**: For arbitrary `M : RufMaschineG D`, `threads : List Faden`, the conclusion is `(ownerLedgerOf names minted M threads).owns names root token`.
+* **`ownerLedger_zeuge_run`**: For arbitrary `P : Programm D`, `O : Orakel D`, `passes : Nat`, `sp : Speicher D`, `init : Faden → Σ f : D.Fn, Env D (D.params f)`, `M : RufMaschineG D`, `threads : List Faden`, assuming `hr : RufErreichbarG P O passes (RufStartG P sp init) M`, the conclusion is `OwnerInvG names minted M threads`.
+
+Stage-0 boundary: Nominal owner flow and escrow admission do not bypass the source metadata gate or establish a provider binding. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 111. C11: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `8abb7bd47` (`feat(grammatik): lower C11 traversal forms with verified refinement`).
+
+`grammatik/Grammatik/Code/Refine/StmtOk/Teil6.lean`:
+
+* **`lowerS_ok`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, assuming `hL : LayoutOk lay`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ') (lb k : Lbl) (st st' : St) (blks : List Block), lowerS lay cenv lv s lb k st = some (blks, st') → ∀ (M : Modl) (S : Sees) (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R s σ ρ) | _, _, _, _, .assignSlotRef .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by simp only [lowerS, reduceCtorEq] at h | _, _, _, _, .assignGlob (Λ`.
+* **`lowerB_ok`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, assuming `hL : LayoutOk lay`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Gabbro.Grammatik.Block D V l Γ Λ Λ') (lb k : Lbl) (st st' : St) (blks : List Block), lowerB lay cenv lv b lb k st = some (blks, st') → ∀ (M : Modl) (S : Sees) (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execBlock O passes R b σ ρ) | _, _, _, _, .nil, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => lowerB_ok_nil (lay`.
+* **`lowerEnd_ok`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, assuming `hL : LayoutOk lay`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Gabbro.Grammatik.Endblock D V l Γ Λ) (lb : Lbl) (st st' : St) (blks : List Block), lowerEnd lay cenv lv e lb st = some (blks, st') → ∀ (M : Modl) (S : Sees) (fn : Nat), InM M fn blks → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → EndOk lay cenv lv M S fn lb st.r st'.r m rs ks dst (execEnd O passes R e σ ρ) | _, _, _, .ret (Λ`.
+* **`lowerAr_ok`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, assuming `hL : LayoutOk lay`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)} (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (i : Fin cs.length), ArmBOk lay cenv lv O passes R (cs.get i) (garmT arms i) | _, _, _, _, _, .cons (c`.
+
+`grammatik/Grammatik/Code/Refine/StmtOk/Teil7.lean`:
+
+* **`lowerS_ok_consumeTraverse`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ`, `t`, `member`, `edge`, `inv`, `bound`, `mass`, `body`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerS lay cenv lv (.consumeTraverse (Λ`, the conclusion is ``.
+* **`lowerS_ok_retScoped`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ`, `e`, `Rr`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerS lay cenv lv (.retScoped (Λ`, the conclusion is ``.
+* **`lowerS_ok_retWhyScoped`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `r`, `Rr`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerS lay cenv lv (.retWhyScoped (Λ`, the conclusion is ``.
+* **`lowerB_ok_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ' : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerB lay cenv lv (Gabbro.Grammatik.Block.narrowRequired (lo`, the conclusion is ``.
+`grammatik/Grammatik/Code/Refine/StmtOk/Teil8.lean`:
+
+* **`lowerEnd_ok_retScoped`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ`, `e`, `Rr`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerEnd lay cenv lv (.retScoped (Λ`, the conclusion is ``.
+* **`lowerEnd_ok_retWhyScoped`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `r`, `Rr`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerEnd lay cenv lv (.retWhyScoped (Λ`, the conclusion is ``.
+* **`lowerEnd_ok_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `O : Orakel D`, `passes : Nat`, `R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hL : LayoutOk lay` and `h : lowerEnd lay cenv lv (Gabbro.Grammatik.Endblock.narrowRequired (lo`, the conclusion is ``.
+`grammatik/Grammatik/Code/Refine/Struct/Labels/Teil3.lean`:
+
+* **`lowerB_lbl_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ' : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hlt : (lb : Nat) < st.l` and `h : lowerB lay cenv lv (Gabbro.Grammatik.Block.narrowRequired (lo`, the conclusion is ``.
+* **`lowerEnd_lbl_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `hlt : (lb : Nat) < st.l` and `h : lowerEnd lay cenv lv (Gabbro.Grammatik.Endblock.narrowRequired (lo`, the conclusion is ``.
+`grammatik/Grammatik/Code/Refine/Struct/Shape/Teil3.lean`:
+
+* **`lowerS_shape`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ') (lb k : Lbl) (st st' : St) (blks : List Block), lowerS lay cenv lv s lb k st = some (blks, st') → Shape lb st st' blks | _, _, _, _, .assignSlot t f i e zz1 zz2, lb, k, st, st', blks, h => lowerS_shape_assignSlot (lay`.
+* **`lowerB_shape`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Gabbro.Grammatik.Block D V l Γ Λ Λ') (lb k : Lbl) (st st' : St) (blks : List Block), lowerB lay cenv lv b lb k st = some (blks, st') → Shape lb st st' blks | _, _, _, _, .nil, lb, k, st, st', blks, h => lowerB_shape_nil (lay`.
+* **`lowerEnd_shape`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ) (lb : Lbl) (st st' : St) (blks : List Block), lowerEnd lay cenv lv b lb st = some (blks, st') → Shape lb st st' blks | _, _, _, .ret e _, lb, st, st', blks, h | _, _, _, .retScoped e _, lb, st, st', blks, h => by simp only [lowerEnd] at h exact lowerRet_shape lay cenv V.gruende e lb st st' blks h | _, _, _, .cons s rest, lb, st, st', blks, h => lowerEnd_shape_cons (lay`.
+* **`lowerAr_shape`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `top : Int`, `W L : Nat`, `ov : Opd`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)} (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Lbl) (st st' : St) (blks : List Block), lowerAr lay cenv lv top W L ov arms lb k st = some (blks, st') → (∀ b ∈ blks, b.phis = []) ∧ st.r ≤ st'.r | _, _, _, _, _, .nil, lb, k, st, st', blks, h => lowerAr_shape_nil (lay`.
+* **`lowerGA_shape`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, the conclusion is `∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} (arms : Gabbro.Grammatik.GrundArms D V l Γ Λ Λ' n) (lb k : Lbl) (st st' : St) (blks : List Block), lowerGA lay cenv lv arms lb k st = some (blks, st') → (∀ b ∈ blks, b.phis = []) ∧ st.r ≤ st'.r | _, _, _, _, _, .nil, lb, k, st, st', blks, h => lowerGA_shape_nil (lay`.
+`grammatik/Grammatik/Code/Refine/Struct/Shape/Teil4.lean`:
+
+* **`lowerS_shape_traverse`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `t`, `inv`, `body`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerS lay cenv lv (.traverse (Λ`, the conclusion is ``.
+* **`lowerS_shape_consumeTraverse`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `t`, `member`, `edge`, `inv`, `bound`, `mass`, `body`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerS lay cenv lv (.consumeTraverse (Λ`, the conclusion is ``.
+* **`lowerB_shape_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ' : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerB lay cenv lv (Gabbro.Grammatik.Block.narrowRequired (lo`, the conclusion is ``.
+* **`lowerEnd_shape_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerEnd lay cenv lv (Gabbro.Grammatik.Endblock.narrowRequired (lo`, the conclusion is ``.
+`grammatik/Grammatik/Code/Refine/WitnessC11.lean`:
+
+* **`zeuge_c11_consume_lower`**: the conclusion is `∃ blks st', lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st')`.
+* **`zeuge_c11_consume_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD []`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, `ih : ∀ (lay : Layout Wit.wD) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel Wit.wD) (passes : Nat) (R : (f : Wit.wD.Fn) → World Wit.wD → Env Wit.wD (Wit.wD.params f) → RufAusgang f), ∀ (lb : Lbl), ∀ (k : Lbl), ∀ (st : St), ∀ (st' : St), ∀ (blks : List Block), lowerB lay cenv lv c11consumeBody lb k st = some (blks, st') → ∀ (M : Modl), ∀ (S : Sees), ∀ (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World Wit.wD), ∀ (ρ : Env Wit.wD _), ∀ (m : Mem), ∀ (rs : Regs), ∀ (ks : List Frame), ∀ (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execBlock O passes R c11consumeBody σ ρ)`, assuming `h : lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hk : KOk M fn 8` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11consume σ ρ)`.
+* **`zeuge_c11_narrow_lower`**: the conclusion is `∃ blks st', lowerB Wit.wLay [] (0, 0) c11narrow 7 8 ⟨10, 30⟩ = some (blks, st')`.
+* **`zeuge_c11_narrow_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD []`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, `ih : ∀ (lay : Layout Wit.wD) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel Wit.wD) (passes : Nat) (R : (f : Wit.wD.Fn) → World Wit.wD → Env Wit.wD (Wit.wD.params f) → RufAusgang f), ∀ (lb : Lbl), ∀ (k : Lbl), ∀ (st : St), ∀ (st' : St), ∀ (blks : List Block), lowerB lay cenv lv c11narrowRest lb k st = some (blks, st') → ∀ (M : Modl), ∀ (S : Sees), ∀ (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World Wit.wD), ∀ (ρ : Env Wit.wD _), ∀ (m : Mem), ∀ (rs : Regs), ∀ (ks : List Frame), ∀ (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execBlock O passes R c11narrowRest σ ρ)`, assuming `h : lowerB Wit.wLay [] (0, 0) c11narrow 7 8 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hk : KOk M fn 8` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst (execBlock Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11narrow σ ρ)`.
+* **`zeuge_c11_ret_lower`**: the conclusion is `∃ blks st', lowerS Wit.wLay [] (0, 0) c11ret 7 8 ⟨10, 30⟩ = some (blks, st')`.
+* **`zeuge_c11_ret_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD []`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, assuming `h : lowerS Wit.wLay [] (0, 0) c11ret 7 8 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hk : KOk M fn 8` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11ret σ ρ)`.
+* **`zeuge_c11_retWhy_lower`**: the conclusion is `∃ blks st', lowerEnd Wit.wLay [] (0, 0) c11retWhy 7 ⟨10, 30⟩ = some (blks, st')`.
+* **`zeuge_c11_retWhy_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD [.int 0 3]`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, assuming `h : lowerEnd Wit.wLay [] (0, 0) c11retWhy 7 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `EndOk Wit.wLay [] (0, 0) M S fn 7 10 st'.r m rs ks dst (execEnd Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11retWhy σ ρ)`.
+
+Stage-0 boundary: Traversal lowering retains narrowing, capacity and cleanup duties; metadata-bearing unsupported nested forms remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 112. C12: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `4f246049c` (`feat(c12): compose owner-preserving capability attenuation`).
+
+`grammatik/Grammatik/Kern/Syntax/Typen/DataCap.lean`:
+
+* **`attenuates_sound`**: For arbitrary `source target : DataCapTy`, assuming `h : source.attenuates target = true`, the conclusion is `source.space = target.space ∧ source.target = target.target ∧ source.rights.owner = target.rights.owner ∧ (target.rights.read = true → source.rights.read = true) ∧ (target.rights.write = true → source.rights.write = true)`.
+* **`attenuates_trans`**: For arbitrary `source middle target : DataCapTy`, `first : source.attenuates middle = true`, `second : middle.attenuates target = true`, the conclusion is `source.attenuates target = true`.
+* **`attenuates_trans_zeuge`**: the conclusion is `let source : DataCapTy`.
+* **`write_only_zeuge`**: the conclusion is `(table 0 (false, true)).rights.read = false ∧ (table 0 (false, true)).rights.write = true ∧ attenuates (table 0 (true, true)) (table 0 (false, true)) = true ∧ attenuates (table 0 (false, true)) (table 0 (true, true)) = false`.
+* **`attenuates_sound_zeuge`**: the conclusion is `let source`.
+
+Stage-0 boundary: Capability attenuation preserves ownership; descriptors alone do not establish a source memory provider binding. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 113. C13: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `0891322a6` (`merge: Stage-0 witness for a C13 builtin`).
+
+`stage0/Stage0/Zeugen/BuiltinWitness.lean`: **`candidate_present`** proves that compilation produces a candidate; **`accepted_image`** proves `emit text 64 = .ok output` for the builtin fixture.
+
+
+Stage-0 boundary: The builtin witness establishes its concrete emitted image; unsupported source metadata remains refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 114. C14: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entry admission and guest boundary`).
+
+`grammatik/Grammatik/Parser/Profil/Eintritt.lean`:
+
+* **`isNone_eq`**: For arbitrary `α : Type`, `o : Option α`, assuming `h : o.isNone = true`, the conclusion is `o = none`.
+* **`isEmpty_eq`**: For arbitrary `α : Type`, `l : List α`, assuming `h : l.isEmpty = true`, the conclusion is `l = []`.
+* **`eintrittB_sound`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `(∃ a, wertVon .arch e.arch = some a) ∧ e.vektor = none ∧ e.via = none ∧ e.regIn = [] ∧ e.regOut = [] ∧ e.erhaelt = [] ∧ e.kills = [] ∧ e.stapel = "" ∧ e.perCpu = false ∧ e.ist = none ∧ e.nest = none ∧ ∀ w ∈ e.dispatch, ∃ f ∈ fns, strEq f w = true`.
+* **`eintritt_ohne_registerzustand`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `e.regIn = [] ∧ e.regOut = [] ∧ e.stapel = ""`.
+* **`gast_ohne_dienst_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `g : GuestBoundary`, assuming `h : g.dienst = none`, the conclusion is `gastB regionen fns reg g = false`.
+* **`gastVon_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `name region arch annahme : String`, the conclusion is `gastB regionen fns reg (gastVon name region arch annahme) = false`.
+`grammatik/Grammatik/Parser/Profil/EintrittZeuge.lean`:
+
+* **`ez_zulaessig`**: the conclusion is `eintrittB ["worker"] ezE = true`.
+* **`ez_bindung`**: the conclusion is `(eintrittVon ["worker"] ezE).map (fun b => (b.name, b.arch, b.abi, b.wurzeln)) = some ("main_entry", 1, UserAbi.verteilung, ["worker"])`.
+* **`ez_ohne_register`**: the conclusion is `ezE.regIn = [] ∧ ezE.regOut = [] ∧ ezE.stapel = ""`.
+* **`ez_vektor`**: the conclusion is `eintrittB ["worker"] { ezE with vektor`.
+* **`ez_via`**: the conclusion is `eintrittB ["worker"] { ezE with via`.
+* **`ez_register`**: the conclusion is `eintrittB ["worker"] { ezE with regIn`.
+* **`ez_stapel`**: the conclusion is `eintrittB ["worker"] { ezE with stapel`.
+* **`ez_percpu`**: the conclusion is `eintrittB ["worker"] { ezE with perCpu`.
+* **`ez_arch`**: the conclusion is `eintrittB ["worker"] { ezE with arch`.
+* **`ez_wurzel`**: the conclusion is `eintrittB ["worker"] { ezE with dispatch`.
+* **`ez_kills`**: the conclusion is `eintrittB ["worker"] { ezE with kills`.
+* **`ez_gast_mit_dienst`**: the conclusion is `gastB ["guest_image"] ["isolate_svc"] ezReg ⟨"jit", "guest_image", "x86_64", some "isolate_svc", "guest_stays_in_room"⟩ = true`.
+`grammatik/Grammatik/Zielsatz/Projekte/Profil.lean`:
+
+* **`hardware_iff_komponenten`**: For arbitrary `O : Orakel D`, `Q : AxEns D`, the conclusion is `HardwareAnnahmen O Q ↔ ∀ k ∈ hwAlle, k.gilt O Q`.
+* **`profilKomponenten_eq`**: For arbitrary `PE : ProfilEinheit D`, the conclusion is `profilKomponenten PE = hwAlle`.
+* **`profilAnnahmen_iff`**: For arbitrary `PE : ProfilEinheit D`, `O : Orakel D`, the conclusion is `ProfilAnnahmen PE O ↔ HardwareAnnahmen O PE.E.Q`.
+* **`ProfilEinheit.bindung_zulaessig`**: For arbitrary `PE : ProfilEinheit D`, assuming `hz : PE.zulaessig = true`, the conclusion is `bindungB PE.zert.bindung = true`.
+* **`profil_modell_einheit`**: For arbitrary `PE : ProfilEinheit D`, `p : ProfilBlock`, assuming `hz : PE.zulaessig = true` and `hp : PE.zert.bindung.profile = [p]`, the conclusion is `∃ m : ModusBelegung, Profil.gilt (modusProfil D (modi p.eintraege)) m`.
+* **`profil_bindung_einheit`**: For arbitrary `PE : ProfilEinheit D`, `p : ProfilBlock`, `lib : ProfilBlock`, `name : String`, `m : ModusBelegung`, assuming `hz : PE.zulaessig = true` and `hp : PE.zert.bindung.profile = [p]` and `hl : lib ∈ PE.zert.bindung.bedarfe` and `hgilt : Profil.gilt (modusProfil D (modi p.eintraege)) m`, the conclusion is `Bibliothek.gilt (modusBibliothek D name (modi lib.eintraege)) m`.
+* **`gabbro_ziel_profil`**: the conclusion is `GabbroZielProfil`.
+* **`eintritt_wurzel_in_ws`**: For arbitrary `E : Einheit D`, `w : D.Fn`, `a : Env D (D.params w)`, assuming `h : EintrittTreu E w a`, the conclusion is `w ∈ E.ws`.
+* **`eintritt_laufzeit`**: For arbitrary `E : Einheit D`, `sp : Speicher D.mitRuhe`, `init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)`, `t : Faden`, `w : D.Fn`, assuming `hL : Laufzeit E sp init` and `hne : (init t).1 = some w`, the conclusion is `∃ a ∈ E.starts ++ E.gestartet, a.1 = w`.
+
+Stage-0 boundary: Profile-bound admission does not discharge unsupported source metadata or supply guest environment contracts. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 115. C15: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `24ba84fa8` (`feat(grammatik): C15 per-cell protocol, link transport and program witness`).
+
+`grammatik/Grammatik/Bausteine/Kernzelle/SperrProtokoll.lean`:
+
+* **`akkuZelleBewacht`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `a : AccumulatorDecl D`, `i : Fin a.kernZahl`, assuming `h : akkuZulaessig P fs a`, the conclusion is `Bewacht (.inr (a.zellen i)) (a.sperren i)`.
+* **`akkuZellenBewacht`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `a : AccumulatorDecl D`, `i : Fin a.kernZahl`, assuming `h : akkuZulaessig P fs a`, the conclusion is `∃ L, Bewacht (.inr (a.zellen i)) L`.
+* **`akkuRennfreiAbgedeckt`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `a : AccumulatorDecl D`, `i : Fin a.kernZahl`, assuming `h : akkuZulaessig P fs a`, the conclusion is `∃ L, Bewacht (.inr (a.zellen i)) L`.
+* **`zellFalteRuhig`**: For arbitrary `op : AccOperator`, `neutral : Int`, `i : Nat`, assuming `h : AccVerlauf` and `hr : akkuRuhig h`, the conclusion is `zellFalte op neutral (h.fertig ++ h.flug) i = zellFalte op neutral h.fertig i`.
+* **`verlaufGleichRuhig`**: For arbitrary `op : AccOperator`, `neutral : Int`, `zellen : Nat → Int`, `i : Nat`, assuming `h : AccVerlauf` and `hT : verlaufGleichFalte op neutral h zellen` and `hr : akkuRuhig h`, the conclusion is `zellen i = zellFalte op neutral h.fertig i`.
+* **`akkuRuhigReduktion`**: For arbitrary `M : MergeMonoid α`, `bei : List (List α)`, the conclusion is `faltet M (akkuProben M bei) = faltet M bei.flatten ∧ faltet M (akkuProben M bei) = rmwKette M M.neutral bei.flatten`.
+* **`akkuRuhigTreue`**: For arbitrary `A : List (AccumulatorDecl D)`, `sp : Speicher D`, `a : AccumulatorDecl D`, `i : Nat`, assuming `H : AccumulatorDecl D → AccVerlauf` and `hT : AccumulatorTreueG D sp A H` and `ha : a ∈ A` and `hok : akkuOk D a` and `hr : akkuRuhig (H a)`, the conclusion is `zellWert D sp a (akkuZellTyp hok) i = zellFalte a.op (neutralInt a.op a.lo a.hi a.breite) (H a).fertig i`.
+* **`akkuZielErweitert_aus`**: For arbitrary `A : List (AccumulatorDecl D)`, `sp : Speicher D`, assuming `H : AccumulatorDecl D → AccVerlauf` and `hT : AccumulatorTreueG D sp A H` and `hr : ∀ a ∈ A, akkuRuhig (H a)`, the conclusion is `AkkuZielErweitert sp A H`.
+* **`akkuStartB_vollst`**: For arbitrary `E : Einheit D`, `fs : List D.Fn`, `A : List (AccumulatorDecl D)`, assuming `hAdm : AccumulatorAdmission E.P fs A` and `hStart : AkkuStart E A`, the conclusion is `akkuStartB E A = true`.
+`grammatik/Grammatik/Bausteine/Kernzelle/Zeuge.lean`:
+
+* **`zMax_okB`**: the conclusion is `akkuOkB zMax = true`.
+* **`zOr_okB`**: the conclusion is `akkuOkB zOr = true`.
+* **`zMax_ok`**: the conclusion is `akkuOk zD zMax`.
+* **`zOr_ok`**: the conclusion is `akkuOk zD zOr`.
+* **`zMax_neutral`**: the conclusion is `neutralInt zMax.op zMax.lo zMax.hi zMax.breite = -100`.
+* **`zOr_neutral`**: the conclusion is `neutralInt zOr.op zOr.lo zOr.hi zOr.breite = 0`.
+* **`maxFalte_zeuge`**: the conclusion is `(faltet (maxZahlMonoid (-100) 50 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩]).n = 70`.
+* **`minFalte_zeuge`**: the conclusion is `(faltet (minZahlMonoid (-100) 100 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩]).n = 30`.
+* **`addKette_zeuge`**: the conclusion is `rmwKette addIntMonoid 0 [3, -1, 5] = 7`.
+* **`orFalte_zeuge`**: the conclusion is `faltet orNatMonoid [5, 3] = 7`.
+* **`andFalte_zeuge`**: the conclusion is `(faltet (andMaskMonoid 8 (by omega)) [⟨12, by omega⟩, ⟨10, by omega⟩]).val = 8`.
+* **`ruhigMax_zeuge`**: the conclusion is `faltet (maxZahlMonoid (-100) 100 (by omega)) [faltet (maxZahlMonoid (-100) 100 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩], faltet (maxZahlMonoid (-100) 100 (by omega)) [⟨-10, by omega, by omega⟩]] = faltet (maxZahlMonoid (-100) 100 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩, ⟨-10, by omega, by omega⟩] ∧ faltet (maxZahlMonoid (-100) 100 (by omega)) [faltet (maxZahlMonoid (-100) 100 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩], faltet (maxZahlMonoid (-100) 100 (by omega)) [⟨-10, by omega, by omega⟩]] = rmwKette (maxZahlMonoid (-100) 100 (by omega)) (maxZahlMonoid (-100) 100 (by omega)).neutral [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩, ⟨-10, by omega, by omega⟩]`.
+`grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Teil2.lean`:
+
+* **`gabbro_ziel_gx`**: For arbitrary `C : PrueferX`, `D : Deklaration`, the conclusion is `[DecidableEq D.Fn] (E : Einheit D) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflichtA E) (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe) (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init) (M : RufMaschineG D.mitRuhe) (hr : RufErreichbarGX E.P.mitRuhe O.mitRuhe passes (GeteiltV (D`.
+* **`nutzerPflichtA_ohne_atomar`**: For arbitrary `D : Deklaration`, the conclusion is `[DecidableEq D.Fn] {E : Einheit D} (hat : ∀ g : D.Glob, D.atomar g = false) (h : NutzerPflicht E) : NutzerPflichtA E`.
+* **`ziel_of_X`**: For arbitrary `M0 M : RufMaschineG D`, assuming `hT : ∀ c, ¬ Tg c` and `h : ZielX P S O passes Tg M0 M`, the conclusion is `Ziel P S O passes M0 M`.
+* **`zielF_of_X`**: For arbitrary `M0 : RufMaschineG D`, `K : FadenMaschine D`, `B : List (ArenaOwnership.Body.ArenaIface D)`, assuming `hT : ∀ c, ¬ Tg c` and `h : ZielFX P S O passes Tg M0 B K`, the conclusion is `ZielF P S O passes M0 K`.
+* **`geteiltA_leer`**: For arbitrary `fs ws : List D.Fn`, `A : List (Kernzelle.AccumulatorDecl D)`, `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : AkzeptiertSpec P S fs ws A`, the conclusion is `¬ GeteiltA P ws c`.
+* **`geteiltV_leer`**: For arbitrary `fs ws : List D.Fn`, `A : List (Kernzelle.AccumulatorDecl D)`, `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : AkzeptiertSpec P S fs ws A`, the conclusion is `¬ GeteiltV P ws c`.
+* **`gabbro_ziel_sc_aus`**: For arbitrary `C : Pruefer`, `D : Deklaration`, assuming `h : GabbroZiel`, the conclusion is `[DecidableEq D.Fn] (E : Einheit D) (hB : E.arenen = []) (hA : E.akku = []) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (hC : C.akzeptiert E fs.1 ls.1 cs.1 = true) (hN : NutzerPflicht E) (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe) (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init) (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe) (hK : FadenErreichbar E.P.mitRuhe O.mitRuhe passes (FadenStart E.P.mitRuhe sp init lebt0) K) : ZielF E.P.mitRuhe E.S.mitRuhe O.mitRuhe passes (RufStartG E.P.mitRuhe sp init) K`.
+* **`akzeptiertSpec_verbindeX`**: For arbitrary `fs : List D.Fn`, `B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)`, `A₁ A₂ : List (Kernzelle.AccumulatorDecl D)`, `hA₁ : AkzeptiertSpecX E₁.P E₁.S fs E₁.ws B₁ A₁`, `hA₂ : AkzeptiertSpecX E₂.P E₂.S fs E₂.ws B₂ A₂`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hV : Verbindbar E₁ E₂` and `hS : SchnittstelleSpec fs e E₁ E₂`, the conclusion is `AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku`.
+* **`nutzerTeil_of_A`**: For arbitrary `eigen : D.Fn → Bool`, `E : Einheit D`, assuming `h : NutzerTeilA eigen E`, the conclusion is `NutzerTeil eigen E`.
+* **`nutzerTeilA_of`**: For arbitrary `eigen : D.Fn → Bool`, `E : Einheit D`, `fs : List D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : AkzeptiertSpec E.P E.S fs E.ws E.akku` and `h : NutzerTeil eigen E`, the conclusion is `NutzerTeilA eigen E`.
+* **`gabbro_ziel_verbund`**: the conclusion is `GabbroZielVerbund`.
+* **`gabbro_ziel_verbund_sc_aus`**: For arbitrary `C : Pruefer`, `D : Deklaration`, assuming `h : GabbroZielVerbund`, the conclusion is `[DecidableEq D.Fn] (E₁ E₂ : Einheit D) (hB₁ : E₁.arenen = []) (hB₂ : E₂.arenen = []) (hA₁ : E₁.akku = []) (hA₂ : E₂.akku = []) (e : D.Fn → Bool) (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)) (h₁ : C.akzeptiert E₁ fs.1 ls.1 cs.1 = true) (h₂ : C.akzeptiert E₂ fs.1 ls.1 cs.1 = true) (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs.1 e E₁ E₂) (hN₁ : NutzerTeil e E₁) (hN₂ : NutzerTeil (fun f => !e f) E₂) (hQ : E₂.Q = E₁.Q) (O : Orakel D) (hH : HardwareAnnahmen O E₁.Q) (passes : Nat) (sp : Speicher D.mitRuhe) (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit (verbinde e E₁ E₂) sp init) (lebt0 : Faden → Bool) (K : FadenMaschine D.mitRuhe) (hK : FadenErreichbar (verbinde e E₁ E₂).P.mitRuhe O.mitRuhe passes (FadenStart (verbinde e E₁ E₂).P.mitRuhe sp init lebt0) K) : ZielF (verbinde e E₁ E₂).P.mitRuhe (verbinde e E₁ E₂).S.mitRuhe O.mitRuhe passes (RufStartG (verbinde e E₁ E₂).P.mitRuhe sp init) K`.
+`grammatik/Grammatik/Zielsatz/Faeden/Verbund/T2.lean`:
+
+* **`p2_eq`**: Assuming `hV : Verbindbar E₁ E₂`, the conclusion is `E₂.P = mitRumpf E₁.P E₂.P.rumpf`.
+* **`verbindeP_rumpf`**: For arbitrary `f : D.Fn`, the conclusion is `(verbindeP e E₁ E₂).rumpf f = (teilP e E₁ E₂ f).rumpf f`.
+* **`teilP_gleich`**: For arbitrary `f g : D.Fn`, assuming `h : e f = e g`, the conclusion is `teilP e E₁ E₂ f = teilP e E₁ E₂ g`.
+* **`teilP_teil`**: For arbitrary `f : D.Fn`, assuming `hV : Verbindbar E₁ E₂`, the conclusion is `teilP e E₁ E₂ f = mitRumpf E₁.P (teilP e E₁ E₂ f).rumpf`.
+* **`fussOrteG_teil`**: For arbitrary `f : D.Fn`, assuming `hV : Verbindbar E₁ E₂`, the conclusion is `fussOrteG (verbindeP e E₁ E₂) f = fussOrteG (teilP e E₁ E₂ f) f`.
+* **`fussOrte_teil`**: For arbitrary `f : D.Fn`, assuming `hV : Verbindbar E₁ E₂`, the conclusion is `fussOrte (verbindeP e E₁ E₂) f = fussOrte (teilP e E₁ E₂ f) f`.
+* **`kandB_teil`**: For arbitrary `fs : List D.Fn`, `f : D.Fn`, assuming `hV : Verbindbar E₁ E₂`, the conclusion is `kandB (verbindeP e E₁ E₂) fs = kandB (teilP e E₁ E₂ f) fs`.
+* **`ruftB_teil`**: For arbitrary `h g : D.Fn`, the conclusion is `ruftB (verbindeP e E₁ E₂) h g = ruftB (teilP e E₁ E₂ h) h g`.
+* **`huelle_of_reach`**: For arbitrary `fs : List D.Fn`, `w : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hNC : KeinRueckruf fs e E₁ E₂`, the conclusion is `∀ h, reachB (verbindeP e E₁ E₂) fs w h = true → HuelleV fs e E₁ E₂ w h`.
+* **`teil_abg`**: For arbitrary `fs : List D.Fn`, `hA₁ : ∀ w, AbgK E₁.P fs (reachB E₁.P fs w)`, `hA₂ : ∀ w, AbgK E₂.P fs (reachB E₂.P fs w)`, `f : D.Fn`, the conclusion is `∀ w, AbgK (teilP e E₁ E₂ f) fs (reachB (teilP e E₁ E₂ f) fs w)`.
+* **`kante_teil`**: For arbitrary `hB₁ : Platzhalter e E₁.P`, `hB₂ : Platzhalter (fun f => !e f) E₂.P`, `f h g : D.Fn`, assuming `hr : ruftB (teilP e E₁ E₂ f) h g = true`, the conclusion is `ruftB (verbindeP e E₁ E₂) h g = true`.
+* **`mle_rufM`**: For arbitrary `fs : List D.Fn`, `Z Z' : D.Fn → Bool`, assuming `h : ∀ g, Z g = true → Z' g = true`, the conclusion is `MLe (rufM fs Z) (rufM fs Z')`.
+`grammatik/Grammatik/Zielsatz/Faeden/Verbund/T3.lean`:
+
+* **`schreibGetrenntVB_iff`**: For arbitrary `ws : List D.Fn`, `c : D.Tab ⊕ D.Glob`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs`, the conclusion is `schreibGetrenntVB fs e E₁ E₂ ws c = true ↔ SchreibGetrenntV fs e E₁ E₂ ws c`.
+* **`poolSicherVB_iff`**: For arbitrary `w : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `poolSicherVB fs cs e E₁ E₂ w = true ↔ PoolSicherV fs e E₁ E₂ w`.
+* **`schnittstelleB_iff`**: Assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `schnittstelleB fs cs e E₁ E₂ = true ↔ SchnittstelleSpec fs e E₁ E₂`.
+* **`verbinde_leer`**: For arbitrary `E E' : Einheit D`, assuming `h1 : E'.starts = []` and `h2 : E'.gestartet = []` and `h3 : E'.arenen = []` and `h4 : E'.akku = []` and `h5 : E'.pruefungen = []`, the conclusion is `verbinde (fun _ => true) E E' = E`.
+* **`verbinde_akzeptiert`**: For arbitrary `E₁ E₂ : Einheit D`, `e : D.Fn → Bool`, `fs : List D.Fn`, `ls : List D.Lock`, `cs : List (D.Tab ⊕ D.Glob)`, `h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true`, `h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku = true`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `hV : Verbindbar E₁ E₂` and `hS : schnittstelleB fs cs e E₁ E₂ = true`, the conclusion is `Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) = true`.
+* **`nutzerTeil_verbinde`**: For arbitrary `E₁ E₂ : Einheit D`, `e a₁ a₂ : D.Fn → Bool`, `h₁ : ∀ f, a₁ f = true → e f = true`, `h₂ : ∀ f, a₂ f = true → e f = false`, `hN₁ : NutzerTeil a₁ E₁`, `hN₂ : NutzerTeil a₂ E₂`, assuming `hV : Verbindbar E₁ E₂` and `hQ : E₂.Q = E₁.Q`, the conclusion is `NutzerTeil (fun f => a₁ f || a₂ f) (verbinde e E₁ E₂)`.
+`grammatik/Grammatik/Zielsatz/Kern/Spec/Teil1.lean`:
+
+* **`AkzeptiertSpec.mitAkku`**: For arbitrary `P : Programm D`, `S : SperrInv D`, `fs ws : List D.Fn`, `A A' : List (Kernzelle.AccumulatorDecl D)`, assuming `h : AkzeptiertSpec P S fs ws A` and `ha : Kernzelle.AccumulatorAdmission P fs A'`, the conclusion is `AkzeptiertSpec P S fs ws A'`.
+`grammatik/Grammatik/Zielsatz/Projekte/Komposition.lean`:
+
+* **`passend_P`**: For arbitrary `B : Einheit D`, `p : Projekt D`, assuming `h : Passend B p`, the conclusion is `p.E.P = mitRumpf B.P p.E.P.rumpf`.
+* **`koerperVon_besitzer`**: For arbitrary `B : Programm D`, `ps : List (Projekt D)`, `f : D.Fn`, assuming `h : Deckend ps`, the conclusion is `∃ p ∈ ps, p.eigen f = true ∧ koerperVon B ps f = p.E.P.rumpf f`.
+* **`geteiltA_offen`**: the conclusion is `[DecidableEq D.Fn] {P : Programm D} {ws : List D.Fn} {c : D.Tab ⊕ D.Glob} (h : GeteiltA P ws c) : OffenA c`.
+* **`koerperGutSA_Q`**: For arbitrary `P : Programm D`, `passes : Nat`, `Q Q' : AxEns D`, `S : SperrInv D`, `T : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `hQ : ∀ O, AxVertragO Q' O → AxVertragO Q O` and `h : KoerperGutSA P passes Q S T f`, the conclusion is `KoerperGutSA P passes Q' S T f`.
+* **`invGutSA_Q`**: For arbitrary `P : Programm D`, `passes : Nat`, `Q Q' : AxEns D`, `S : SperrInv D`, `T : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `hQ : ∀ O, AxVertragO Q' O → AxVertragO Q O` and `h : InvGutSA P passes Q S T f`, the conclusion is `InvGutSA P passes Q' S T f`.
+* **`invGutGrundA_Q`**: For arbitrary `P : Programm D`, `passes : Nat`, `Q Q' : AxEns D`, `S : SperrInv D`, `T : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `hQ : ∀ O, AxVertragO Q' O → AxVertragO Q O` and `h : InvGutGrundA P passes Q S T f`, the conclusion is `InvGutGrundA P passes Q' S T f`.
+* **`axVertragO_qAlle`**: For arbitrary `ps : List (Projekt D)`, `p : Projekt D`, `O : Orakel D`, assuming `hp : p ∈ ps` and `h : AxVertragO (qAlle ps) O`, the conclusion is `AxVertragO p.E.Q O`.
+* **`axEnsLokal_qAlle`**: For arbitrary `ps : List (Projekt D)`, assuming `h : ∀ p ∈ ps, AxEnsLokal p.E.Q`, the conclusion is `AxEnsLokal (qAlle ps)`.
+* **`koerperGutSA_mitRumpf2`**: For arbitrary `r r' : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))`, `passes : Nat`, `Q : AxEns D`, `S : SperrInv D`, `T : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `h : r f = r' f`, the conclusion is `KoerperGutSA (mitRumpf P r) passes Q S T f ↔ KoerperGutSA (mitRumpf P r') passes Q S T f`.
+* **`invGutSA_mitRumpf2`**: For arbitrary `r r' : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))`, `passes : Nat`, `Q : AxEns D`, `S : SperrInv D`, `T : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `h : r f = r' f`, the conclusion is `InvGutSA (mitRumpf P r) passes Q S T f ↔ InvGutSA (mitRumpf P r') passes Q S T f`.
+* **`invGutGrundA_mitRumpf2`**: For arbitrary `r r' : ∀ f : D.Fn, Endblock D (vertragVon D f) false (D.params f) (Signatur.anfang D (D.signatur f))`, `passes : Nat`, `Q : AxEns D`, `S : SperrInv D`, `T : D.Tab ⊕ D.Glob → Prop`, `f : D.Fn`, assuming `h : r f = r' f`, the conclusion is `InvGutGrundA (mitRumpf P r) passes Q S T f ↔ InvGutGrundA (mitRumpf P r') passes Q S T f`.
+* **`nutzerPflichtA_komponiere`**: Assuming `hV : ∀ p ∈ ps, Passend B p` and `hne : ps ≠ []` and `hD : Deckend ps` and `hDS : DeckendS ps` and `hN : ∀ p ∈ ps, NutzerTeilO p`, the conclusion is `NutzerPflichtA (komponiere B ps)`.
+`grammatik/Grammatik/Zielsatz/Projekte/Verbund.lean`:
+
+* **`checked_iff`**: For arbitrary `P : Programm D`, `A : FreiForm D`, `I : ArenaOwnership.Body.Interfaces A`, the conclusion is `ArenaOwnership.Body.Checked P A I ↔ ∀ f, CheckedAt P A I f`.
+* **`besitzer_mem`**: For arbitrary `f : D.Fn`, `p : Projekt D`, assuming `h : besitzerVon ps f = some p`, the conclusion is `p ∈ ps ∧ p.eigen f = true ∧ koerperVon B.P ps f = p.E.P.rumpf f`.
+* **`besitzer_da`**: For arbitrary `f : D.Fn`, assuming `hD : Deckend ps`, the conclusion is `∃ p, besitzerVon ps f = some p`.
+* **`komponiere_rumpf`**: For arbitrary `f : D.Fn`, `p : Projekt D`, assuming `h : besitzerVon ps f = some p`, the conclusion is `(komponiere B ps).P.rumpf f = p.E.P.rumpf f`.
+* **`fussOrteG_besitzer`**: For arbitrary `f : D.Fn`, `p : Projekt D`, assuming `hV : ∀ p ∈ ps, Passend B p` and `h : besitzerVon ps f = some p`, the conclusion is `fussOrteG (komponiere B ps).P f = fussOrteG p.E.P f`.
+* **`kandB_besitzer`**: For arbitrary `p : Projekt D`, `fs : List D.Fn`, assuming `hV : ∀ p ∈ ps, Passend B p` and `hp : p ∈ ps`, the conclusion is `kandB (komponiere B ps).P fs = kandB p.E.P fs`.
+* **`mem_ws_komponiere`**: For arbitrary `w : D.Fn`, assuming `h : w ∈ (komponiere B ps).ws`, the conclusion is `∃ p ∈ ps, w ∈ p.E.ws`.
+* **`mem_arenen_komponiere`**: For arbitrary `a : ArenaOwnership.Body.ArenaIface D`, assuming `h : a ∈ (komponiere B ps).arenen`, the conclusion is `∃ p ∈ ps, a ∈ p.E.arenen`.
+* **`akzeptiertSpecX_komponiere`**: the conclusion is `[DecidableEq D.Fn] {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) {B : Einheit D} {ps : List (Projekt D)} (hne : ps ≠ []) (hD : Deckend ps) (hV : ∀ p ∈ ps, Passend B p) (hA : ∀ p ∈ ps, AkzeptiertSpecX p.E.P p.E.S fs p.E.ws p.E.arenen p.E.akku) (hL : BindeSpec fs B ps) : AkzeptiertSpecX (komponiere B ps).P (komponiere B ps).S fs (komponiere B ps).ws (komponiere B ps).arenen (komponiere B ps).akku`.
+* **`bindeB_sound`**: the conclusion is `[DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : Einheit D} {ps : List (Projekt D)} (h : bindeB fs cs B ps = true) : BindeSpec fs B ps`.
+* **`gabbro_ziel_verbund_n`**: the conclusion is `GabbroZielVerbundN`.
+* **`nutzerTeilO_wachs`**: For arbitrary `p : Projekt D`, `T₁ : D.Tab ⊕ D.Glob → Prop`, assuming `hL : ∀ (passes : Nat) (f : D.Fn), p.eigen f = true → KoerperGutSA p.E.P passes p.E.Q p.E.S T₁ f ∧ InvGutSA p.E.P passes p.E.Q p.E.S T₁ f ∧ InvGutGrundA p.E.P passes p.E.Q p.E.S T₁ f` and `hNeu : ∀ (passes : Nat) (f : D.Fn), p.eigen f = true → (∀ c ∈ endblockOrteP p.E.P (p.E.P.rumpf f), ¬ (OffenA c ∧ ¬ T₁ c)) ∨ (KoerperGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧ InvGutSA p.E.P passes p.E.Q p.E.S OffenA f ∧ InvGutGrundA p.E.P passes p.E.Q p.E.S OffenA f)` and `hSL : SperrInvLokal p.E.S` and `hQL : AxEnsLokal p.E.Q` and `hstart : StartTeil p`, the conclusion is `NutzerTeilO p`.
+
+Stage-0 boundary: Only the five bound operators with an explicit per-cpu count pass the metadata gate; accumulator uses in bodies and contracts remain refused pending C08. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `accT_bound`, `accT_zeuge`.
+
+
+## 116. C16: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `161338497` (`feat(grammatik): C16 witnesses for admission, fidelity and transport`).
+
+`grammatik/Grammatik/Zielsatz/Faeden/Ruhe/Teil3.lean`:
+
+* **`nodup_map_some`**: For arbitrary `gs : List D.Fn`, assuming `h : gs.Nodup`, the conclusion is `(gs.map some).Nodup`.
+* **`CheckExpansion.mitRuhe`**: For arbitrary `c : CheckDecl D`, assuming `h : CheckExpansion P c`, the conclusion is `CheckExpansion P.mitRuhe (CheckDecl.mitRuhe c)`.
+* **`CheckRahmen.mitRuhe`**: For arbitrary `c : CheckDecl D`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : ∀ w, AbgK P fs (reachB P fs w)` and `h : CheckRahmen P fs c`, the conclusion is `CheckRahmen P.mitRuhe (fsRuhe fs) (CheckDecl.mitRuhe c)`.
+* **`CheckAdmission.mitRuhe`**: For arbitrary `checks : List (CheckDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : ∀ w, AbgK P fs (reachB P fs w)` and `h : CheckAdmission P fs checks`, the conclusion is `CheckAdmission P.mitRuhe (fsRuhe fs) (checks.map CheckDecl.mitRuhe)`.
+* **`akzeptiertSpec_mitRuhe`**: For arbitrary `A : List (Kernzelle.AccumulatorDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hA : AkzeptiertSpec P S fs ws A`, the conclusion is `AkzeptiertSpec P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (A.map Kernzelle.AccumulatorDecl.mitRuhe)`.
+* **`pruef_expansion_mitRuhe_zeuge`**: the conclusion is `CheckExpansion pruefP.mitRuhe (CheckDecl.mitRuhe pruefC)`.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/CheckDecide.lean`:
+
+* **`CheckAdmission.nil`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, the conclusion is `CheckAdmission P fs []`.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Teil3.lean`:
+
+
+* **`resetAdmissionB_iff`**: For arbitrary `g : D.Glob`, the conclusion is `resetAdmissionB g = true ↔ ResetAdmission g`.
+
+* **`resetAdmission_zeuge`**: For arbitrary `g : D.Glob`, assuming `harr : D.gtyp g = .arr (.int 0 255) 4`, the conclusion is `ResetAdmission g`.
+* **`resetCarrierB_iff`**: For arbitrary `g : D.Glob`, the conclusion is `resetCarrierB (.inr g) = true ↔ ∀ (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem`.
+* **`resetB_iff`**: For arbitrary `cs : List (D.Tab ⊕ D.Glob)`, assuming `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `resetB cs = true ↔ ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem`.
+`grammatik/Grammatik/Zielsatz/Kern/Spec/Teil4.lean`:
+
+* **`checkTreue_zeuge`**: the conclusion is `CheckTreueG (D`.
+
+Stage-0 boundary: Counterprobes remain refused; parameterised and reason-carrying gates and unbound sibling-check gates remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `checkT_bound`, `checkT_zeuge`.
+
+
+## 117. C17: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `aeea4a7bc` (`feat(const): prove soundness of checked const calls`).
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Zertifikat.lean`:
+
+* **`constStmtErhaelt`**: For arbitrary `c : ConstProgram`, `V : vertrag c.D`, `l : Bool`, `Γ : Ctx`, `body : Stmt c.D V l Γ [] []`, `O : Orakel c.D`, `p : Nat`, `R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g`, `σ : World c.D`, `ρ : Env c.D Γ`, assuming `h : ConstStmt c body` and `hR : ∀ (g : c.D.Fn) (σ : World c.D) (ρ : Env c.D (c.D.params g)), RufErhaelt c σ (R g σ ρ)`, the conclusion is `AusgangErhaelt c σ (execStmt O p R body σ ρ)`.
+* **`constBlockErhaelt`**: For arbitrary `c : ConstProgram`, `V : vertrag c.D`, `l : Bool`, `Γ : Ctx`, `body : Block c.D V l Γ [] []`, `O : Orakel c.D`, `p : Nat`, `R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g`, `σ : World c.D`, `ρ : Env c.D Γ`, assuming `h : ConstBlock c body` and `hR : ∀ (g : c.D.Fn) (σ : World c.D) (ρ : Env c.D (c.D.params g)), RufErhaelt c σ (R g σ ρ)`, the conclusion is `AusgangErhaelt c σ (execBlock O p R body σ ρ)`.
+* **`constEndErhaelt`**: For arbitrary `c : ConstProgram`, `V : vertrag c.D`, `l : Bool`, `Γ : Ctx`, `body : Endblock c.D V l Γ []`, `O : Orakel c.D`, `p : Nat`, `R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g`, `σ : World c.D`, `ρ : Env c.D Γ`, assuming `h : ConstEnd c body` and `hR : ∀ (g : c.D.Fn) (σ : World c.D) (ρ : Env c.D (c.D.params g)), RufErhaelt c σ (R g σ ρ)`, the conclusion is `EndErhaelt c σ (execEnd O p R body σ ρ)`.
+* **`constArmsErhaelt`**: For arbitrary `c : ConstProgram`, `V : vertrag c.D`, `l : Bool`, `Γ : Ctx`, `arms : Arms c.D V l Γ [] [] cs`, `O : Orakel c.D`, `p : Nat`, `R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g`, `v : Wert c.D (.sum cs)`, `σ : World c.D`, `ρ : Env c.D Γ`, assuming `h : ConstArms c arms` and `hR : ∀ (g : c.D.Fn) (σ : World c.D) (ρ : Env c.D (c.D.params g)), RufErhaelt c σ (R g σ ρ)`, the conclusion is `AusgangErhaelt c σ (execArms O p R arms v σ ρ)`.
+* **`constReasonErhaelt`**: For arbitrary `c : ConstProgram`, `V : vertrag c.D`, `l : Bool`, `Γ : Ctx`, `arms : GrundArms c.D V l Γ [] [] n`, `O : Orakel c.D`, `p : Nat`, `R : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g`, `v : Fin n`, `σ : World c.D`, `ρ : Env c.D Γ`, assuming `h : ConstReasonArms c arms` and `hR : ∀ (g : c.D.Fn) (σ : World c.D) (ρ : Env c.D (c.D.params g)), RufErhaelt c σ (R g σ ρ)`, the conclusion is `AusgangErhaelt c σ (execGrund O p R arms v σ ρ)`.
+* **`schrumpfArmErhaelt`**: For arbitrary `c : ConstProgram`, `V : vertrag c.D`, `l : Bool`, `Γ : Ctx`, `k : Option (Int × Int)`, `o : Ausgang V l (ArmCtx Γ k)`, `σ : World c.D`, assuming `h : AusgangErhaelt c σ o`, the conclusion is `AusgangErhaelt c σ (o.schrumpfArm k)`.
+* **`constRufErhaelt`**: For arbitrary `c : ConstProgram`, assuming `hadm : ConstAdmissible c`, the conclusion is `∀ (d : Nat) (g : c.D.Fn) (σ : World c.D) (ρ : Env c.D (c.D.params g)) (O : Orakel c.D) (p : Nat), RufErhaelt c σ (rufAt c.P O p d g σ ρ)`.
+* **`const_call_sound`**: For arbitrary `c : ConstProgram`, `f : c.D.Fn`, `args : Env c.D (c.D.params f)`, `n : Nat`, assuming `cert : ConstCallCertificate c f args` and `hadm : ConstAdmissible c` and `hterm : ConstTermination c n`, the conclusion is `∀ (σ : World c.D) (O : Orakel c.D) (passes depth : Nat), max cert.bound (n + 1) ≤ depth → ∃ σ', rufAt c.P O passes depth f σ args = RufAusgang.ok σ' cert.value ∧ σ'.slots = σ.slots ∧ σ'.globs = σ.globs`.
+* **`const_call_eindeutig`**: For arbitrary `c : ConstProgram`, `f : c.D.Fn`, `args : Env c.D (c.D.params f)`, `cert₁ cert₂ : ConstCallCertificate c f args`, `n : Nat`, assuming `hadm : ConstAdmissible c` and `hterm : ConstTermination c n`, the conclusion is `cert₁.value = cert₂.value`.
+* **`const_call_stabil`**: For arbitrary `c : ConstProgram`, `f : c.D.Fn`, `args : Env c.D (c.D.params f)`, assuming `cert : ConstCallCertificate c f args`, the conclusion is `∀ k : Nat, rufAt c.P (constOrakel c) 0 (cert.bound + k) f (constWelt c) args = rufAt c.P (constOrakel c) 0 cert.bound f (constWelt c) args`.
+* **`const_call_fehlerVertrag`**: For arbitrary `c : ConstProgram`, `f : c.D.Fn`, `args : Env c.D (c.D.params f)`, `limit : Nat`, `g : c.D.Fn`, assuming `haufwand : constArbeitsSchranke c f ≤ limit` and `h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.vorbedingung g) ∨ rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.nachbedingung g)`, the conclusion is `evalConstCall c f args limit = ConstCallResult.contract g`.
+* **`const_call_fehlerErschoepft`**: For arbitrary `c : ConstProgram`, `f : c.D.Fn`, `args : Env c.D (c.D.params f)`, `limit : Nat`, `g : c.D.Fn`, assuming `haufwand : constArbeitsSchranke c f ≤ limit` and `h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.abstieg g)`, the conclusion is `evalConstCall c f args limit = ConstCallResult.exhausted (constArbeitsSchranke c f) limit`.
+
+Stage-0 boundary: Checked constant evaluation retains the original metadata obligations; declared costs without a checked binding remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 118. C18: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `1e93b2e57` (`feat(grammatik): witness a closed static-array reset through lowering`).
+
+`grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Rest2.lean`:
+
+* **`lowerAllg104fragment`**: the conclusion is `(match lowerAllg uExp104 with | .ok (P, fs) => programmImFragmentG P fs | .error _ => false) = true`.
+* **`lowerAllg104fuss`**: the conclusion is `(match lowerAllg uExp104 with | .ok (P, fs) => fussOrtGB P fs | .error _ => false) = true`.
+* **`lowerAllg104data`**: the conclusion is `(declOf uExp104).count ⟨0, by decide⟩ = 2 ∧ G104_referenz.gD.count G104_referenz.GTab.Konto = 2 ∧ (declOf uExp104).typ ⟨0, by decide⟩ ⟨0, by decide⟩ = .int 0 100 ∧ G104_referenz.gD.typ G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand = .int 0 100 ∧ (declOf uExp104).rang ⟨0, by decide⟩ = 0 ∧ G104_referenz.gD.rang G104_referenz.GLock.M = 0 ∧ (declOf uExp104).braucht ⟨0, by decide⟩ = ([.inl (⟨0, by decide⟩ : Fin uExp104.locks.length)] : List ((declOf uExp104).Lock ⊕ ((declOf uExp104).Marke × Nat))) ∧ G104_referenz.gD.braucht G104_referenz.GTab.Konto = [.inl G104_referenz.GLock.M] ∧ ((declOf uExp104).signatur ⟨0, by decide⟩).haelt = ([(⟨0, by decide⟩ : Fin uExp104.locks.length)] : List (declOf uExp104).Lock) ∧ G104_referenz.gD.haelt G104_referenz.g_einzahlen = [G104_referenz.GLock.M] ∧ ((declOf uExp104).signatur ⟨1, by decide⟩).haelt = ([(⟨0, by decide⟩ : Fin uExp104.locks.length)] : List (declOf uExp104).Lock) ∧ G104_referenz.gD.haelt G104_referenz.g_lies = [G104_referenz.GLock.M] ∧ ((declOf uExp104).signatur ⟨0, by decide⟩).schreibt ⟨0, by decide⟩ = true ∧ (G104_referenz.gD.signatur G104_referenz.g_einzahlen).schreibt G104_referenz.GTab.Konto = true ∧ ((declOf uExp104).signatur ⟨1, by decide⟩).schreibt ⟨0, by decide⟩ = false ∧ (G104_referenz.gD.signatur G104_referenz.g_lies).schreibt G104_referenz.GTab.Konto = false`.
+* **`lexL104real`**: the conclusion is `lexL srcQuelle104 = .ok tt104`.
+* **`lex104real`**: the conclusion is `lex src104real = .ok tt104`.
+* **`kette104`**: the conclusion is `lex src104real = .ok tt104 ∧ beqTopTief (parseTopTief tt104) (.ok items104) = true ∧ beqElabU (elabU items104) (.ok uExp104) = true ∧ (match lowerAllg uExp104 with | .ok (P, fs) => programmImFragmentG P fs && fussOrtGB P fs | .error _ => false) = true`.
+* **`uReset_lower`**: the conclusion is `(lowerAllg uReset).toOption.isSome = true`.
+
+Stage-0 boundary: Unknown arenas, unknown statics and non-array statics remain refused; range validity and zero observation remain lowering obligations. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `reset_bound`, `reset_zeuge`.
+
+
+## 119. C05: refused invariant gate (2026-11-02)
+
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`:
+
+* **`groupT_still_refused`**: For arbitrary `g : String`, `ts : List String`, `vs : List SGruppenInv`, the conclusion is `itemMetadata (.groupT g ts vs) = true`.
+* **`groupT_zeuge`**, **`invariant_refused_zeuge`**: concrete group and table invariant declarations return the missing cost/runs/by binding error.
+
+Stage 0 still refuses all group and table invariants: mandatory cost/runs/by duties have no checked source binding.
