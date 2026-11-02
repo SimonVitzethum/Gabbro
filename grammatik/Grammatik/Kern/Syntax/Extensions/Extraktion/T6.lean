@@ -23,6 +23,7 @@ def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .onWhy _ arms => grundArmsAtome tabs globs arms
   | .call _ _ _ _ => []
   | .callInd _ _ _ _ => []
+  | .callIndElse _ _ _ _ _ err => endblockAtome tabs globs err
   | .locks L _ body =>
       [PCAtom.take L] ++ blockAtome tabs globs body ++ [PCAtom.rel L]
   | .breaking _ body => blockAtome tabs globs body
@@ -81,6 +82,8 @@ def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .bind _ rest => blockAtome tabs globs rest
   | .bindCall _ _ _ _ _ rest => blockAtome tabs globs rest
   | .bindCallInd _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .bindCallIndElse _ _ _ _ _ _ err rest =>
+      endblockAtome tabs globs err ++ blockAtome tabs globs rest
   | .bindCallElse _ _ _ _ _ err rest =>
       endblockAtome tabs globs err ++ blockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => blockAtome tabs globs rest
@@ -124,6 +127,8 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
       endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
   | .awaits _ _ _ _ _ rest => endblockAtome tabs globs rest
   | .bindCallInd _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .bindCallIndElse _ _ _ _ _ _ err rest =>
+      endblockAtome tabs globs err ++ endblockAtome tabs globs rest
   | .narrow _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest
   | .narrowRequired _ _ _ rest => endblockAtome tabs globs rest

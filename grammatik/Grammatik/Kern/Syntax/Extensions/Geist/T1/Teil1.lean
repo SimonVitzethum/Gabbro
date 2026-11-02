@@ -102,6 +102,7 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onWhy r arms => orteOk (D := D) r.orte && g001Grund arms
   | .call _ args _ _ => orteOk (D := D) args.orte
   | .callInd p args _ _ => orteOk (D := D) (p.orte ++ args.orte)
+  | .callIndElse p args _ _ _ err => orteOk (D := D) (p.orte ++ args.orte) && g001End err
   | .locks _ _ body => g001 body
   | .breaking _ body => g001 body
   | .traverse _ inv body => orteOk (D := D) inv.orte && g001 body
@@ -131,6 +132,8 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCall _ args _ _ _ rest => orteOk (D := D) args.orte && g001 rest
   | .bindCallInd p args _ _ _ rest =>
       orteOk (D := D) (p.orte ++ args.orte) && g001 rest
+  | .bindCallIndElse p args _ _ _ err rest =>
+      orteOk (D := D) (p.orte ++ args.orte) && g001End err && g001 rest
   | .bindCallElse _ args _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001 rest
   | .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
@@ -178,6 +181,8 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .awaits g _ _ _ _ rest => orteOk (D := D) [.inr g] && g001End rest
   | _, _, _, .bindCallInd p args _ _ _ rest =>
       orteOk (D := D) (p.orte ++ args.orte) && g001End rest
+  | _, _, _, .bindCallIndElse p args _ _ _ err rest =>
+      orteOk (D := D) (p.orte ++ args.orte) && g001End err && g001End rest
   | _, _, _, .narrow e _ _ sonst rest => orteOk (D := D) e.orte && g001End sonst && g001End rest
   | _, _, _, .narrowRequired e _ _ rest => orteOk (D := D) e.orte && g001End rest
   | _, _, _, .exchange g neu _ _ rest => orteOk (D := D) ([.inr g] ++ neu.orte) && g001End rest
@@ -431,6 +436,38 @@ theorem g001Stmt_korrekt_callInd {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   have ho' : o ∈ p.orte ++ args.orte := by
     simpa [Extraktion.stmtOrte] using ho
   exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
+
+set_option linter.unusedSectionVars false in
+theorem g001Stmt_korrekt_callIndElse {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (zr_h : g001Stmt (.callIndElse p args he hp hr err : Stmt D V l Γ Λ (Gabbro.Grammatik.nachSig D (D.sigNr n) Λ)) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.stmtOrte (.callIndElse p args he hp hr err : Stmt D V l Γ Λ (Gabbro.Grammatik.nachSig D (D.sigNr n) Λ)))
+    (ih_g001End_korrekt_err : ∀ (h : g001End err = true), ∀ (o : D.Tab ⊕ D.Glob), ∀ (ho : o ∈ Extraktion.endblockOrte err), ¬ istGeist (D := D) o)
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) (p.orte ++ args.orte) && g001End err) = true := h
+  have ho' : o ∈ p.orte ∨ o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte err := by
+    simpa [Extraktion.stmtOrte] using ho
+  have h1 : ((orteOk (D := D) (p.orte ++ args.orte)) = true) ∧ ((g001End err) = true) :=
+    Bool.and_eq_true_iff.mp h0
+  have ho2 : (o ∈ p.orte ∨ o ∈ args.orte) ∨ o ∈ Extraktion.endblockOrte err := by
+    rcases ho' with ho' | ho' | ho'
+    · exact Or.inl (Or.inl ho')
+    · exact Or.inl (Or.inr ho')
+    · exact Or.inr ho'
+  rcases ho2 with ho2 | ho2
+  · have ho3 : o ∈ p.orte ++ args.orte := by
+      simpa [List.mem_append] using ho2
+    exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho3)
+  · exact ih_g001End_korrekt_err h1.2 o ho2
 
 set_option linter.unusedSectionVars false in
 theorem g001Stmt_korrekt_regWrite {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
