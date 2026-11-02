@@ -49,6 +49,7 @@ def Stmt.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => body.ants
   | .breaking _ body => body.ants
   | .traverse _ _ body => body.ants
+  | .consumeTraverse _ _ _ _ _ _ body => body.ants
   | .retry _ _ body ueber => body.ants ++ ueber.ants
   | .forever _ _ body => body.ants
   | .axiomCall a .. => [.inl a]
@@ -71,6 +72,7 @@ def Block.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits _ _ _ _ _ rest => rest.ants
   | .exchange _ _ _ _ rest => rest.ants
   | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
+  | .narrowRequired _ _ _ rest => rest.ants
   | .check _ sonst rest => sonst.ants ++ rest.ants
   | .float _ _ _ _ _ rest => rest.ants
   | .floatLit _ _ _ rest => rest.ants
@@ -81,6 +83,8 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List (D.Ax ⊕ D.Reg)
   | .ret .. => []
   | .retWhy .. => []
+  | .retScoped .. => []
+  | .retWhyScoped .. => []
   | .leave .. => []
   | .next .. => []
   | .cons s rest => s.ants ++ rest.ants
@@ -94,6 +98,7 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => rest.ants
   | .bindCallInd _ _ _ _ _ rest => rest.ants
   | .narrow _ _ _ sonst rest => sonst.ants ++ rest.ants
+  | .narrowRequired _ _ _ rest => rest.ants
   | .exchange _ _ _ _ rest => rest.ants
   | .ite _ t e => e.ants ++ t.ants
 
@@ -131,6 +136,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.ants = e.ants
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -154,6 +161,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]

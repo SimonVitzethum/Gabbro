@@ -251,6 +251,8 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
       blockOrteP P e.alsBlock.2 = endblockOrteP P e
   | _, _, .ret _ _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
   | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
+  | _, _, .retScoped _ _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
+  | _, _, .retWhyScoped _ _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
   | _, _, .leave _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
   | _, _, .next _ => by simp only [Endblock.alsBlock, blockOrteP, stmtOrteP, List.append_nil, endblockOrteP]
   | _, _, .cons s rest => by
@@ -274,6 +276,8 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]

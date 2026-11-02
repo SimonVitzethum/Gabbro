@@ -101,6 +101,7 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ ρ
       simp only [execStmt]
       exact traverseLauf_ende_none _ _ (fun σ ρ => blockKeinR body hs.traverse_inv σ ρ) _ _ _
+  | _, _, _, _, .consumeTraverse .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .retry n bis body ueber, hs => by
       intro σ ρ
       simp only [execStmt]
@@ -113,6 +114,8 @@ theorem stmtKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret .., hs => absurd hs.ret_inv (by decide)
   | _, _, _, _, .retWhy .., hs => absurd hs.retGrund_inv (by decide)
+  | _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .retWhyScoped .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .leave .., _ => by intro σ ρ; rfl
   | _, _, _, _, .next .., _ => by intro σ ρ; rfl
 
@@ -173,6 +176,7 @@ theorem blockKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rw [ende_schrumpf]
       exact blockKeinR rest hr _ _
   | _, _, _, _, .narrow .., hb => absurd hb.narrow_inv.1 (by decide)
+  | _, _, _, _, .narrowRequired .., hb => by cases hb
   | _, _, _, _, .check .., hb => absurd hb.pruefung_inv.1 (by decide)
   | _, _, _, _, .float op a b lo hi rest, hb => by
       intro σ ρ

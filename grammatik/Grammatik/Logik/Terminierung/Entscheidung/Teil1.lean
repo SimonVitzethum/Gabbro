@@ -63,6 +63,7 @@ theorem rufeS_mS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .locks _ _ body => by simp only [rufeS, mS, rufeB_mB body, Bool.true_and]
   | _, _, _, _, .breaking _ body => by simp only [rufeS, mS, rufeB_mB body]
   | _, _, _, _, .traverse _ _ body => by simp only [rufeS, mS, rufeB_mB body]
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => by simp only [rufeS, mS, rufeB_mB body]
   | _, _, _, _, .retry _ _ body ueber => by simp only [rufeS, mS, rufeB_mB body, rufeB_mB ueber]
   | _, _, _, _, .forever _ _ body => by simp only [rufeS, mS, rufeB_mB body, Bool.true_and]
   | _, _, _, _, .assignSlot .. => rfl
@@ -79,6 +80,8 @@ theorem rufeS_mS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .retires .. => rfl
   | _, _, _, _, .ret .. => rfl
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -97,6 +100,7 @@ theorem rufeB_mB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
   | _, _, _, _, .awaits _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .exchange _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .narrow _ _ _ sonst rest => by simp only [rufeB, mB, rufeE_mE sonst, rufeB_mB rest]
+  | _, _, _, _, .narrowRequired _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .check _ sonst rest => by simp only [rufeB, mB, rufeE_mE sonst, rufeB_mB rest]
   | _, _, _, _, .float _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .floatLit _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
@@ -117,6 +121,8 @@ theorem rufeE_mE : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
     rufeE Z ZS true e = mE ⟨Z, ZS, fun _ => true⟩ e
   | _, _, _, .ret .. => rfl
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped .. => rfl
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => by simp only [rufeE, mE, rufeS_mS s, rufeE_mE rest]
@@ -130,6 +136,7 @@ theorem rufeE_mE : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
   | _, _, _, .awaits _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .bindCallInd _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .narrow _ _ _ sonst rest => by simp only [rufeE, mE, rufeE_mE sonst, rufeE_mE rest]
+  | _, _, _, .narrowRequired _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .exchange _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .ite _ t e => by simp only [rufeE, mE, rufeE_mE t, rufeE_mE e, Bool.and_comm]
 
@@ -165,6 +172,9 @@ theorem rufeS_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : 
   | _, _, _, _, .traverse _ _ body, _, ie, _, h => by
       simp only [befS] at h
       simp only [rufeS, rufeB_ohneEwig body false ie h]
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body, _, ie, _, h => by
+      simp only [befS] at h
+      simp only [rufeS, rufeB_ohneEwig body false ie h]
   | _, _, _, _, .retry _ _ body ueber, eb, ie, _, h => by
       simp only [befS, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeS, rufeB_ohneEwig body false ie h.1, rufeB_ohneEwig ueber eb ie h.2]
@@ -184,6 +194,8 @@ theorem rufeS_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : 
   | _, _, _, _, .retires .., _, _, _, _ => rfl
   | _, _, _, _, .ret .., _, _, _, _ => rfl
   | _, _, _, _, .retWhy .., _, _, _, _ => rfl
+  | _, _, _, _, .retScoped .., _, _, _, _ => rfl
+  | _, _, _, _, .retWhyScoped .., _, _, _, _ => rfl
   | _, _, _, _, .leave _, _, _, _, _ => rfl
   | _, _, _, _, .next _, _, _, _, _ => rfl
 
@@ -226,6 +238,9 @@ theorem rufeB_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : 
   | _, _, _, _, .narrow _ _ _ sonst rest, eb, ie, h => by
       simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeB, rufeE_ohneEwig sonst eb ie h.1, rufeB_ohneEwig rest eb ie h.2]
+  | _, _, _, _, .narrowRequired _ _ _ rest, eb, ie, h => by
+      simp only [befB] at h
+      simp only [rufeB, rufeB_ohneEwig rest eb ie h]
   | _, _, _, _, .check _ sonst rest, eb, ie, h => by
       simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeB, rufeE_ohneEwig sonst eb ie h.1, rufeB_ohneEwig rest eb ie h.2]
@@ -262,6 +277,8 @@ theorem rufeE_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endb
     (eb ie : Bool), (befE eb ie e).ewig = false → rufeE Z ZS false e = rufeE Z ZS true e
   | _, _, _, .ret .., _, _, _ => rfl
   | _, _, _, .retWhy .., _, _, _ => rfl
+  | _, _, _, .retScoped .., _, _, _ => rfl
+  | _, _, _, .retWhyScoped .., _, _, _ => rfl
   | _, _, _, .leave _, _, _, _ => rfl
   | _, _, _, .next _, _, _, _ => rfl
   | _, _, _, .cons s rest, eb, ie, h => by
@@ -297,6 +314,9 @@ theorem rufeE_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endb
   | _, _, _, .narrow _ _ _ sonst rest, eb, ie, h => by
       simp only [befE, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeE, rufeE_ohneEwig sonst eb ie h.1, rufeE_ohneEwig rest eb ie h.2]
+  | _, _, _, .narrowRequired _ _ _ rest, eb, ie, h => by
+      simp only [befE] at h
+      simp only [rufeE, rufeE_ohneEwig rest eb ie h]
   | _, _, _, .exchange _ _ _ _ rest, eb, ie, h => by
       simp only [befE] at h
       simp only [rufeE, rufeE_ohneEwig rest eb ie h]

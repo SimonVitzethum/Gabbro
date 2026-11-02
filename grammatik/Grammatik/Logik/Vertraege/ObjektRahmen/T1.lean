@@ -275,6 +275,7 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .locks _ _ body => oB body
   | .breaking _ body => oB body
   | .traverse _ _ body => oB body
+  | .consumeTraverse _ _ _ _ _ _ body => oB body
   | .retry _ _ body ueber => oB body ∧ oB ueber
   | .forever _ _ body => oB body
   | .axiomCall a .. => KeinTabAx a
@@ -285,6 +286,8 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .retires .. => True
   | .ret .. => True
   | .retWhy .. => True
+  | .retScoped .. => True
+  | .retWhyScoped .. => True
   | .leave _ => True
   | .next _ => True
 
@@ -302,6 +305,7 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .awaits _ _ _ _ _ rest => oB rest
   | .exchange _ _ _ _ rest => oB rest
   | .narrow _ _ _ sonst rest => oE sonst ∧ oB rest
+  | .narrowRequired _ _ _ rest => oB rest
   | .check _ sonst rest => oE sonst ∧ oB rest
   | .float _ _ _ _ _ rest => oB rest
   | .floatLit _ _ _ rest => oB rest
@@ -311,6 +315,8 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
 def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Prop
   | .ret .. => True
   | .retWhy .. => True
+  | .retScoped .. => True
+  | .retWhyScoped .. => True
   | .leave _ => True
   | .next _ => True
   | .cons s rest => oS s ∧ oE rest
@@ -324,6 +330,7 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .awaits _ _ _ _ _ rest => oE rest
   | .bindCallInd .. => False
   | .narrow _ _ _ sonst rest => oE sonst ∧ oE rest
+  | .narrowRequired _ _ _ rest => oE rest
   | .exchange _ _ _ _ rest => oE rest
   | .ite _ t e => oE t ∧ oE e
 
