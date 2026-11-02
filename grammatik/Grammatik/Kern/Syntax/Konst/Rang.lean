@@ -22,6 +22,7 @@ def constStmtCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {�
   | .putBytes .. => []
   | .shift .. => []
   | .callInd .. => []
+  | .callIndElse .. => []
   | .locks .. => []
   | .breaking .. => []
   | .traverse .. => []
@@ -47,6 +48,7 @@ def constBlockCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {
   | .bind value rest => constBlockCalls c rest
   | .bindCall f args he hp hr rest => [f] ++ constBlockCalls c rest
   | .bindCallInd .. => []
+  | .bindCallIndElse .. => []
   | .bindCallElse .. => []
   | .bindAxiom .. => []
   | .bindAxiomElse .. => []
@@ -81,6 +83,7 @@ def constEndCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ
   | .regReadElse .. => []
   | .awaits .. => []
   | .bindCallInd .. => []
+  | .bindCallIndElse .. => []
   | .narrow .. => []
   | .exchange .. => []
   | .narrowRequired .. => []
