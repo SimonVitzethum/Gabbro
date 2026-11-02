@@ -170,4 +170,31 @@ theorem gabbro_ziel_profil : GabbroZielProfil := by
 
 #print axioms gabbro_ziel_profil
 
+/-! ## Entry roots -/
+
+/-- A root the unit declares to start (an entry's dispatch root as a declared start), with its declared
+    arguments. -/
+def EintrittTreu (E : Einheit D) (w : D.Fn) (a : Env D (D.params w)) : Prop :=
+  (⟨w, a⟩ : Σ w : D.Fn, Env D (D.params w)) ∈ E.starts ++ E.gestartet
+
+/-- **The entry binding adds no thread the checker did not see**: a declared start is among the roots
+    `Einheit.ws` that thread-locality, pool safety and write separation range over. -/
+theorem eintritt_wurzel_in_ws {E : Einheit D} {w : D.Fn} {a : Env D (D.params w)}
+    (h : EintrittTreu E w a) : w ∈ E.ws := by
+  unfold Einheit.ws
+  exact List.mem_map.mpr ⟨⟨w, a⟩, List.mem_append_left _ h, rfl⟩
+
+/-- Under the runtime assumption (d) a thread that runs a root runs a DECLARED one: its start is a declared
+    start of the unit. -/
+theorem eintritt_laufzeit {E : Einheit D} {sp : Speicher D.mitRuhe}
+    {init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)}
+    (hL : Laufzeit E sp init) (t : Faden) (w : D.Fn) (hne : (init t).1 = some w) :
+    ∃ a ∈ E.starts ++ E.gestartet, a.1 = w := by
+  rcases hL.start t with h | ⟨a, ha, h⟩
+  · rw [h] at hne
+    exact absurd hne (by simp)
+  · rw [h] at hne
+    have h2 : some a.1 = some w := hne
+    exact ⟨a, ha, Option.some.inj h2⟩
+
 end Gabbro.Grammatik.Zielsatz
