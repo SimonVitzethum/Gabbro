@@ -105,7 +105,8 @@ def elabUFunktion (consts : List (String × Int))
               resWhy := kopf.resWhy, resTy := kopf.resTy,
               gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
               puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r,
-              decreases, measureConstants := if decreases.isSome then consts else [] }
+               decreases, measureConstants := if decreases.isSome then consts else [],
+               measureTypes := if decreases.isSome then alias else [] }
 
 /-- The payload of an `atomic` item: statics named bare (a table payload, `T.slots`, has no form: `D.nutzlast`
     lists statics). -/
