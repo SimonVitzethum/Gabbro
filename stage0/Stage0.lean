@@ -101,7 +101,6 @@ public import Stage0.Zeugen.PointerContractWitness
 public import Stage0.Zeugen.MeasureWitness
 public import Stage0.Zeugen.ConstControlWitness
 public import Stage0.Zeugen.TransitionContractWitness
-@[expose] public section
 public import Stage0.Zeugen.WriteOnlyCapabilityWitness
 public import Stage0.Zeugen.RightsUnionWitness
 public import Stage0.Zeugen.LibraryBindWitness
@@ -111,3 +110,5 @@ public import Stage0.Zeugen.TestBuildWitness
 public import Stage0.Zeugen.AlignmentWitness
 public import Stage0.Zeugen.SectionWitness
 public import Stage0.Zeugen.EntrustWitness
+
+@[expose] public section
