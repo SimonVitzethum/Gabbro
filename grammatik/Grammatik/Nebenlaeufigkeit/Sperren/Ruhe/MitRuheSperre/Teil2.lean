@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil1
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil1a
 
 @[expose] public section
 
