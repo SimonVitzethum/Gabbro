@@ -116,5 +116,6 @@ public import Stage0.Senke.Gleit.Add
 public import Stage0.Senke.Gleit.Unpack
 public import Stage0.Senke.Gleit.Special
 public import Stage0.Senke.Gleit.Align
+public import Stage0.Senke.Gleit.AddMag
 
 @[expose] public section
