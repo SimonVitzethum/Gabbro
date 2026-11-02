@@ -3,7 +3,7 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Stage0.Senke.Welt.WeltAt
-public import Stage0.Senke.Welt.AlignUp
+public import Stage0.Senke.Welt.GlobalOffsets
 public import Mathlib.Basic.IsEmpty.Defs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -84,15 +84,15 @@ def globAlign (u : UProg) (g : Fin u.globs.length) : Nat :=
 
 def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     (align : Fin u.globs.length → Nat := fun _ => 1) : Lay (declOf u) where
-  ga g := alignUp (b + (((List.finRange u.globs.length).map (globSz u)).take g.val).sum) (align g)
-  col t f := b + globsSz u + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
+  ga g := globStartOf (List.finRange u.globs.length) b (globSz u) align g
+  col t f := globEnd (List.finRange u.globs.length) b (globSz u) align + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
     (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum
   lo := b
-  hi := b + globsSz u + tabsSz u
+  hi := globEnd (List.finRange u.globs.length) b (globSz u) align + tabsSz u
   tor := tor
   byte t := (List.finRange (fieldCount u t)).find? (fun f => decide ((declOf u).typ t f = .int 0 255))
-  lk L := b + globsSz u + tabsSz u + 24 * L.val
-  sye := b + globsSz u + tabsSz u + 24 * u.locks.length
+  lk L := globEnd (List.finRange u.globs.length) b (globSz u) align + tabsSz u + 24 * L.val
+  sye := globEnd (List.finRange u.globs.length) b (globSz u) align + tabsSz u + 24 * u.locks.length
 
 /-- The words of the locks after the tables, three each. -/
 theorem layU_sync (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : LaySync (layU u tor b) := by

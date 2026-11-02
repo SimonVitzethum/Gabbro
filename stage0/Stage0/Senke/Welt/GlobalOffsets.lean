@@ -18,6 +18,25 @@ def globEnd {G : Type} : List G → Nat → (G → Nat) → (G → Nat) → Nat
   | g :: gs, o, sz, alignment =>
       globEnd gs (alignUp o (alignment g) + sz g) sz alignment
 
+/-- Look up the first occurrence, threading the same padded cursor as the layout. -/
+def globStartOf {G : Type} [DecidableEq G] : List G → Nat → (G → Nat) → (G → Nat) → G → Nat
+  | [], o, _, _, _ => o
+  | a :: gs, o, sz, alignment, g =>
+      if g = a then alignUp o (alignment a)
+      else globStartOf gs (alignUp o (alignment a) + sz a) sz alignment g
+
+theorem globStartOf_mem {G : Type} [DecidableEq G] (gs : List G) (o : Nat)
+    (sz alignment : G → Nat) (g : G) (hg : g ∈ gs) :
+    (g, globStartOf gs o sz alignment g) ∈ globStarts gs o sz alignment := by
+  induction gs generalizing o with
+  | nil => simp at hg
+  | cons a gs ih =>
+      by_cases eq : g = a
+      · subst g; simp [globStartOf, globStarts]
+      · have tail : g ∈ gs := by simpa [eq] using hg
+        simpa [globStartOf, globStarts, eq] using
+          (List.mem_cons_of_mem (a, alignUp o (alignment a)) (ih _ tail))
+
 theorem globEnd_ge {G : Type} (gs : List G) (o : Nat) (sz alignment : G → Nat) :
     o ≤ globEnd gs o sz alignment := by
   induction gs generalizing o with
