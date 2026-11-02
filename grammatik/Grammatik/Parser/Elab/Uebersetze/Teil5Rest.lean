@@ -35,7 +35,7 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
         | .none => uGlobLies ctx p
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr _ _) => .error "pointer as value without G form"
+      | .ok (.ptr _) => .error "pointer as value without G form"
       | .ok .bool => .error "truth value as a number"
       | .ok (.ref _) => .error "reference as a number"
       | .ok _ => .ok (.param p)
@@ -144,15 +144,11 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
       | .ok ty => .ok (n, ty, .int)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
-    else if strEq rechte "rw" || strEq rechte "own" then
-      match uTabNr tabs t with
-      | .error e => .error e
-      | .ok (num, _) => .ok (n, .ptr num true, .ptr num true)
-    else if strEq rechte "r" then
-      match uTabNr tabs t with
-      | .error e => .error e
-      | .ok (num, _) => .ok (n, .ptr num false, .ptr num false)
-    else .error "pointer right without G form"
+    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+    else do
+      let access ← uTableRight rechte
+      let (num, _) ← uTabNr tabs t
+      pure (n, .ptr (.table num access), .ptr (.table num access))
   | (n, .index false t) =>
     match uTabNr tabs t with
     | .error e => .error e
@@ -243,7 +239,7 @@ def uSchreibtOrt (kopf : UFnKopf) (tabs : List UTab) : SExpr →
       match uStelle kopf.names b with
       | .ok j =>
         match uArtBei kopf.kinds j with
-        | .ok (.ptr num _) =>
+        | .ok (.ptr ⟨_, _, .table num⟩) =>
           match tabs[num]? with
           | .some tb => .ok tb.name
           | .none => .error "pointer table unknown"
