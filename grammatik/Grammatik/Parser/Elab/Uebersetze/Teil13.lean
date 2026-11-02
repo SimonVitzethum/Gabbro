@@ -293,12 +293,12 @@ def elabU : List SItemTief → Except String UProg
           (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e
     | .ok fns =>
-    let fns := fns ++ transitionFns
+    let fns := fns ++ transitionFns ++ probeFns
     match uWurzeln tabs fns ms with
     | .error e => .error e
     | .ok roots =>
     match uSeq ((uOhneDoppelte (fnItems.flatMap (fun (_, b) => uStartNamen 100000 b))).map
-        (fun d => uStart (fns ++ probeFns) "start" d)) with
+        (fun d => uStart fns "start" d)) with
     | .error e => .error e
     | .ok gestartet =>
       if !uU003 locks (fns ++ zeigerPaare.map (·.2)) invs then .error "a writer of an invariant's carrier does not hold all its locks" else
@@ -306,7 +306,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns ++ probeFns, roots := roots, hands := uHandler ms, globs := globs,
+        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
           gestartet := gestartet,
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
