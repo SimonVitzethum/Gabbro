@@ -68,4 +68,16 @@ theorem globStarts_disjoint {G : Type} (gs : List G) (o : Nat)
   | nil => simp [globEnd]
   | cons g gs ih => simp [globEnd, ih, Nat.add_assoc]
 
+/-- Unit alignment recovers every previous prefix offset. -/
+theorem globStarts_one {G : Type} (gs : List G) (o : Nat) (sz : G → Nat) :
+    ∀ k : Nat, (globStarts gs o sz (fun _ => 1))[k]? =
+      gs[k]?.map (fun g => (g, o + ((gs.map sz).take k).sum)) := by
+  induction gs generalizing o with
+  | nil => intro k; simp [globStarts]
+  | cons g gs ih =>
+      intro k
+      cases k with
+      | zero => simp [globStarts]
+      | succ k => simpa [globStarts, Nat.add_assoc] using ih (o + sz g) k
+
 end Gabbro.Stage0.Senke
