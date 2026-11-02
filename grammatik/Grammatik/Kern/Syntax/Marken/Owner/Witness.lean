@@ -30,7 +30,7 @@ theorem output_bounded_zeuge : id true = true ∧ 1 < D.stufen true :=
 theorem outputs_nodup_zeuge : (handoff.outputs.map Prod.fst).Nodup :=
   OwnerFlow.outputs_nodup validB_iff_zeuge.2
 
-theorem loan_exact_stage : scoped.inputs = [(true, 0)] ∧ scoped.outputs = [(true, 0)] :=
+theorem loan_exact_stage : scopedLoan.inputs = [(true, 0)] ∧ scopedLoan.outputs = [(true, 0)] :=
   ⟨rfl, rfl⟩
 
 theorem duplicate_stages_refused :

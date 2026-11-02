@@ -19,7 +19,7 @@ structure WalkBinding (D : Deklaration) (shape : WalkShape) where
   count : D.count iterator = (shape.arity : Int)
   scale : WalkScale
 
-def WalkBinding.entryTy {D : Deklaration} {shape : WalkShape} (binding : WalkBinding D shape) : Ty :=
+abbrev WalkBinding.entryTy {D : Deklaration} {shape : WalkShape} (binding : WalkBinding D shape) : Ty :=
   .prod binding.entryName shape.entry
 
 /-- This view uses the actual declared memory, not an unrelated flattened table. -/
@@ -72,9 +72,17 @@ theorem WalkBinding.readEntry_eval {D : Deklaration} {shape : WalkShape} (bindin
     (entry state : World D) (env : Env D Γ) :
     eval entry (binding.readEntry guard node index) state env =
       binding.entries state (eval entry node state env) (eval entry index state env).fin := by
-  change (eval entry (binding.schema ▸ Expr.slot binding.nodes binding.field node guard) state env) _ = _
-  rw [eval_typeCast]
-  rfl
+  have hc := eval_typeCast binding.schema (Expr.slot binding.nodes binding.field node guard) entry state env
+  unfold WalkBinding.readEntry
+  simp only [eval]
+  simp only [hc]
+  unfold WalkBinding.entries
+  generalize eval entry index state env = i
+  apply congrFun
+  apply eq_of_heq
+  refine (eqRec_heq _ _).trans ?_
+  refine HEq.trans ?_ (cast_heq _ _).symm
+  exact HEq.rfl
 
 /-- Subfields do not split a node carrier into independent locks or race locations. -/
 theorem WalkBinding.readEntry_orte {D : Deklaration} {shape : WalkShape} (binding : WalkBinding D shape)

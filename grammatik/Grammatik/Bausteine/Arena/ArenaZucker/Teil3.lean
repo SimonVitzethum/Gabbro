@@ -100,7 +100,7 @@ theorem arenaAllocRequired_an_schranke (A : ArenaForm D)
     body runs with the fresh index. -/
 theorem zeuge_allocRequired_leer (O : Orakel ArenaZeuge.ZD) (passes : Nat)
     (R : ∀ f : ArenaZeuge.ZD.Fn, World ArenaZeuge.ZD → Env ArenaZeuge.ZD (ArenaZeuge.ZD.params f) → RufAusgang f)
-    (rest : Block ArenaZeuge.ZV false [Ty.index (ArenaZeuge.ZD.count ArenaZeuge.Log.tab)] [] []) :
+    (rest : Block ArenaZeuge.ZD ArenaZeuge.ZV false [Ty.index (ArenaZeuge.ZD.count ArenaZeuge.Log.tab)] [] []) :
     execBlock (V := ArenaZeuge.ZV) O passes R
         (Block.arenaAllocRequired ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest)
         (ArenaZeuge.welt 0 (by decide) (by decide)) .nil
@@ -115,7 +115,7 @@ theorem zeuge_allocRequired_leer (O : Orakel ArenaZeuge.ZD) (passes : Nat)
     has no success continuation to confuse with its failure. -/
 theorem zeuge_allocRequired_voll_kapazitaet (O : Orakel ArenaZeuge.ZD) (passes : Nat)
     (R : ∀ f : ArenaZeuge.ZD.Fn, World ArenaZeuge.ZD → Env ArenaZeuge.ZD (ArenaZeuge.ZD.params f) → RufAusgang f)
-    (rest : Block ArenaZeuge.ZV false [Ty.index (ArenaZeuge.ZD.count ArenaZeuge.Log.tab)] [] []) :
+    (rest : Block ArenaZeuge.ZD ArenaZeuge.ZV false [Ty.index (ArenaZeuge.ZD.count ArenaZeuge.Log.tab)] [] []) :
     execBlock (V := ArenaZeuge.ZV) O passes R
         (Block.arenaAllocRequired ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest)
         (ArenaZeuge.welt 4 (by decide) (by decide)) .nil

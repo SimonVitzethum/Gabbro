@@ -37,7 +37,7 @@ theorem execStmt_assignField {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (R
 theorem assignField_lies {Γ : Ctx} {r : Nat} {fs : List Ty} {σ : Ty} (x : Var Γ (.prod r fs))
     (i : FieldAt fs σ) (ρ : Env D Γ) (v : Wert D σ) :
     prodGetW i ((ρ.set x (prodSetW i (ρ.get x) v)).get x) = v := by
-  rw [Env.get_set_same]
+  erw [Env.get_set_same]
   exact prodGetW_prodSetW i (ρ.get x) v
 
 /-- **Frame**: every other field of the local keeps its value. -/
@@ -45,29 +45,30 @@ theorem assignField_geschwister {Γ : Ctx} {r : Nat} {fs : List Ty} {σ τ : Ty}
     (x : Var Γ (.prod r fs)) {i : FieldAt fs σ} {j : FieldAt fs τ} (hd : FieldAt.Disj i j)
     (ρ : Env D Γ) (v : Wert D σ) :
     prodGetW j ((ρ.set x (prodSetW i (ρ.get x) v)).get x) = prodGetW j (ρ.get x) := by
-  rw [Env.get_set_same]
+  erw [Env.get_set_same]
   exact prodGetW_prodSetW_of_disj hd (ρ.get x) v
 
 /-- Get after set on the product EXPRESSIONS: a replaced field reads back its replacement. -/
-theorem eval_prodGet_prodSet {Γ : Ctx} {Λ : List (Res D)} {r : Nat} {fs : List Ty} {σ : Ty}
-    (σ₀ σ : World D) (ρ : Env D Γ) (v : Expr D Γ Λ (.prod r fs)) (i : FieldAt fs σ)
-    (e : Expr D Γ Λ σ) :
+theorem eval_prodGet_prodSet {Γ : Ctx} {Λ : List (Res D)} {r : Nat} {fs : List Ty} {ν : Ty}
+    (σ₀ σ : World D) (ρ : Env D Γ) (v : Expr D Γ Λ (.prod r fs)) (i : FieldAt fs ν)
+    (e : Expr D Γ Λ ν) :
     eval σ₀ (Expr.prodGet (Expr.prodSet v i e) i) σ ρ = eval σ₀ e σ ρ := by
   simp only [eval]
   exact prodGetW_prodSetW i _ _
 
 /-- Frame on the product EXPRESSIONS: reading another field of an updated product reads the original. -/
 theorem eval_prodGet_prodSet_geschwister {Γ : Ctx} {Λ : List (Res D)} {r : Nat} {fs : List Ty}
-    {σ τ : Ty} (σ₀ σ : World D) (ρ : Env D Γ) (v : Expr D Γ Λ (.prod r fs)) {i : FieldAt fs σ}
-    {j : FieldAt fs τ} (hd : FieldAt.Disj i j) (e : Expr D Γ Λ σ) :
+    {ν τ : Ty} (σ₀ σ : World D) (ρ : Env D Γ) (v : Expr D Γ Λ (.prod r fs)) {i : FieldAt fs ν}
+    {j : FieldAt fs τ} (hd : FieldAt.Disj i j) (e : Expr D Γ Λ ν) :
     eval σ₀ (Expr.prodGet (Expr.prodSet v i e) j) σ ρ = eval σ₀ (Expr.prodGet v j) σ ρ := by
   simp only [eval]
   exact prodGetW_prodSetW_of_disj hd _ _
 
 /-- A product literal reads back its first field. -/
-theorem eval_prodGet_prod_head {Γ : Ctx} {Λ : List (Res D)} {r : Nat} {σ : Ty} {fs : List Ty}
-    (σ₀ σ : World D) (ρ : Env D Γ) (a : Expr D Γ Λ σ) (rest : Args D Γ Λ fs) :
+theorem eval_prodGet_prod_head {Γ : Ctx} {Λ : List (Res D)} {r : Nat} {ν : Ty} {fs : List Ty}
+    (σ₀ σ : World D) (ρ : Env D Γ) (a : Expr D Γ Λ ν) (rest : Args D Γ Λ fs) :
     eval σ₀ (Expr.prodGet (Expr.prod r (.cons a rest)) FieldAt.head) σ ρ = eval σ₀ a σ ρ := by
   simp only [eval, evalProd]
+  rfl
 
 end Gabbro.Grammatik

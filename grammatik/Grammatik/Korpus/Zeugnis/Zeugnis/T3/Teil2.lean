@@ -28,6 +28,7 @@ theorem flVonTyp_eq {τ : Ty} {lo hi : Int × Int}
   | ref _ => simp only [flVonTyp, reduceCtorEq] at h
   | arr _ _ => simp only [flVonTyp, reduceCtorEq] at h
   | str _ => simp only [flVonTyp, reduceCtorEq] at h
+  | prod _ _ => simp only [flVonTyp, reduceCtorEq] at h
 
 /-- What `ctxFlTyp` promises: a `some` names a variable that EXISTS (mirror
     of `ctxTyp_var`). The `Var` witness is rebuilt here, never trusted from
@@ -56,6 +57,7 @@ theorem ctxFlTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int × Int)
       | ref _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
       | arr _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
       | str _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
+      | prod _ _ => simp only [ctxFlTyp, flVonTyp, reduceCtorEq] at h
     | succ k =>
       simp only [ctxFlTyp] at h
       obtain ⟨x, _⟩ := ih k h

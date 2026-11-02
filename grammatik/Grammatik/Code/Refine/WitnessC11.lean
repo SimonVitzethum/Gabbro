@@ -34,7 +34,7 @@ open Gabbro.Grammatik
 instance c11conf : Conf := ⟨64, false, Or.inr rfl⟩
 
 /-- Consuming traversal over `konto`: live tests, bound `4`, zero measure, storing body. -/
-def c11consumeBody : Block Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) true [.index (Wit.wD.count ())] [] [] :=
+def c11consumeBody : Gabbro.Grammatik.Block Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) true [.index (Wit.wD.count ())] [] [] :=
   .cons (.assignSlot () () (.var .here)
     (.widen (lo := 0) (hi := 0) (by decide) (by decide) (.lit 0)) rfl (Wit.wDarf _)) .nil
 
@@ -44,10 +44,10 @@ def c11consume : Stmt Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) true [] [] [] :=
     c11consumeBody
 
 /-- Required narrowing of `1` to `0 .. 3` with a fall-through rest. -/
-def c11narrowRest : Block Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) false [.int 0 3] [] [] :=
+def c11narrowRest : Gabbro.Grammatik.Block Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) false [.int 0 3] [] [] :=
   .nil
 
-def c11narrow : Block Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) false [] [] [] :=
+def c11narrow : Gabbro.Grammatik.Block Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) false [] [] [] :=
   .narrowRequired
     ((.widen (lo := 1) (hi := 1) (by decide) (by decide) (.lit 1)) : Expr Wit.wD [] [] (.int 1 1))
     0 3 c11narrowRest
@@ -119,8 +119,10 @@ theorem zeuge_c11_ret_ok (M : Modl) (S : Sees) (fn : Nat) (blks : List Block) (s
     (hc : ∀ x ∈ ([] : List Reg), x < 10) :
     OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst
       (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11ret σ ρ) :=
-  lowerS_ok_retScoped Wit.wLay Wit.wLayOk [] (0, 0) Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1)
-    .empty c11retR 7 8 ⟨10, 30⟩ st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
+  by
+    unfold c11ret at h ⊢
+    exact lowerS_ok_retScoped Wit.wLay Wit.wLayOk [] (0, 0) Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1)
+      _ c11retR 7 8 ⟨10, 30⟩ st' blks h M S fn hM hk hlv hFn hCall σ ρ m rs ks dst hR hE hW hc
 
 /-- The scoped reason return lowers (closed evaluation). -/
 theorem zeuge_c11_retWhy_lower :
