@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Walk.Abbildung
+public import Grammatik.Bausteine.Walk.Position
 
 @[expose] public section
 
@@ -107,10 +108,7 @@ def zeugeWalkT : WalkTree Nat 2 where
   dwhen := fun e => e == 11
   down := fun e => if e == 11 then some zeugeWalkKind else none
 
-theorem zeugeWalkT_down : zeugeWalkT.down 11 = some zeugeWalkKind := by
-  have h11 : (11 : Nat) == 11 = true := by decide
-  show (if (11 : Nat) == 11 then some zeugeWalkKind else none) = some zeugeWalkKind
-  rw [if_pos h11]
+theorem zeugeWalkT_down : zeugeWalkT.down 11 = some zeugeWalkKind := rfl
 
 /-- The generic whole-proof on the two-level fixture: soundness, completeness, no duplicate paths,
     and the exact enumeration `[[0], 10), ([1, 0], 20), ([1, 1], 21)]`. -/
