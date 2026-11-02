@@ -61,6 +61,7 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .awaits g pl hp hL hat rest => ⟨rest.alsBlock.1, .awaits g pl hp hL hat rest.alsBlock.2⟩
   | _, _, .bindCallInd p args he hp hr rest => ⟨rest.alsBlock.1, .bindCallInd p args he hp hr rest.alsBlock.2⟩
   | _, _, .narrow e lo' hi' sonst rest => ⟨rest.alsBlock.1, .narrow e lo' hi' sonst rest.alsBlock.2⟩
+  | _, _, .narrowRequired e lo' hi' rest => ⟨rest.alsBlock.1, .narrowRequired e lo' hi' rest.alsBlock.2⟩
   | _, _, .exchange g neu hw hL rest => ⟨rest.alsBlock.1, .exchange g neu hw hL rest.alsBlock.2⟩
   -- an `if` of two end blocks is a check: true runs `t`, false the end block `e` (`Block.check`)
   | _, _, .ite c t e => ⟨t.alsBlock.1, .check c e t.alsBlock.2⟩
@@ -328,6 +329,7 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits .. => true
   | .bindCallInd .. => true
   | .narrow .. => true
+  | .narrowRequired .. => true
   | .exchange .. => true
   | .ite .. => true
 

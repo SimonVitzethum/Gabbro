@@ -322,6 +322,12 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       `else`-Zweig. -/
   | floatNarrow (e : Expr D Γ Λ (.fl l1 h1)) (lo hi : Int × Int) (sonst : Endblock l Γ Λ)
       (rest : Block l (.fl lo hi :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  /-- `narrowRequired x to lo .. hi` (C11): the same typed narrowing as
+      `narrow`, with a logical failure instead of a source `else`. Out of
+      range is `Logik.kapazitaet`, excluded by the caller's capacity duty;
+      the supplied `else` semantics of `narrow` is unchanged. -/
+  | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+      (rest : Block l (.int lo' hi' :: Γ) Λ Λ') : Block l Γ Λ Λ'
 
 inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
@@ -389,6 +395,11 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hL : gdarf D g Λ) (rest : Endblock l (D.gtyp g :: Γ) Λ) : Endblock l Γ Λ
   /-- `if c { … } else { … }` as the last statement of a body, both branches ending (stage 0, 2026-10-26). -/
   | ite (c : Expr D Γ Λ .bool) (t e : Endblock l Γ Λ) : Endblock l Γ Λ
+  /-- `narrowRequired x to lo .. hi` at the top level of a body (C11):
+      `Block.narrowRequired` with an end-block rest; out of range is
+      `Logik.kapazitaet`, never a clipped value. -/
+  | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
+      (rest : Endblock l (.int lo' hi' :: Γ) Λ) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []

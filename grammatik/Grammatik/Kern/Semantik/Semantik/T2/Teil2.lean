@@ -210,6 +210,13 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       match gleitPasst lo hi (eval σ e σ ρ).x with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
       | Option.none => (execEnd sonst σ ρ).zuAusgang
+  /-- C11 required narrowing: in range runs the rest; out of range is the
+      appended capacity case of `Logik`, excluded by the caller's duty. -/
+  | .narrowRequired e lo' hi' rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execBlock rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else .logik .kapazitaet
 
 def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → World D → Env D Γ → EndAusgang V l Γ
   | .ret e _, σ, ρ =>
@@ -296,6 +303,13 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
   | .ite c t e, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execEnd t σ ρ else execEnd e σ ρ
+  /-- C11 required narrowing at the top level of a body: in range runs the
+      rest; out of range is `Logik.kapazitaet`. -/
+  | .narrowRequired e lo' hi' rest, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      let v := eval σ e σ ρ
+      if h : lo' ≤ v.n ∧ v.n ≤ hi' then (execEnd rest σ (.cons ⟨v.n, h.1, h.2⟩ ρ)).schrumpf
+      else .logik .kapazitaet
 
 def execArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
