@@ -6,6 +6,7 @@ public import Stage0.ArrayWitness
 public import Stage0.ResetWitness
 public import Stage0.Zeugen.BuiltinWitness
 public import Stage0.Zeugen.StateWitness
+public import Stage0.Zeugen.NamedSpaceWitness
 public import Stage0.Zeugen.LibraryWitness
 public import Stage0.Zeugen.CheckWitness
 public import Stage0.Zeugen.AccWitness
