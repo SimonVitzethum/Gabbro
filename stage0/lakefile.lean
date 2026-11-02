@@ -5,7 +5,7 @@ open Lake DSL System
     The compiler reuses the grammar package and its Mathlib checkout. -/
 package stage0 where
   packagesDir := "../grammatik/.lake/packages"
-  weakLeanArgs := #["-j2", "-M16384", "-DElab.async=true"]
+  weakLeanArgs := #["-j2", "-M16384", "-DElab.async=true", "-DmaxHeartbeats=400000"]
 
 require grammatik from "../grammatik"
 require runner from "../runner"

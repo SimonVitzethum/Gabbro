@@ -4,7 +4,10 @@ defaultTargets = ["Grammatik"]
 # Bound native compiler workers/heap. Raised 2026-10-17 (Simon: Lean may run with up to 16 GiB; the kernel
 # check of `Parser/ElementTiefProben.lean` hit "excessive memory consumption" at 4 GiB).
 # Weak arguments preserve build traces; they change resource use, not proofs.
-weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true"]
+# maxHeartbeats 400000 (2026-11-02): the equation lemmas of `eval` are realized under the DEFAULT budget wherever a
+# proof first unfolds `eval`, and a local `set_option` does not reach them; with the C13 builtins they need just over
+# the default 200000 (measured: master 100000-200000). A resource bound, not a proof change.
+weakLeanArgs = ["-j2", "-M16384", "-DElab.async=true", "-DmaxHeartbeats=400000"]
 
 # Mathlib ALLOWED EVERYWHERE since 2026-10-08 (Simon: "mathlib darf ueberall genutzt werden").
 # Pinned to the tag whose toolchain equals this project's (v4.35.0); precompiled oleans via

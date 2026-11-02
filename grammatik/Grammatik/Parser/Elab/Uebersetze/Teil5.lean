@@ -148,14 +148,14 @@ def uZSeite (ctx : UCtx) : SExpr → Except String USide
   | .ext .count [x, dk] [subject, body] =>
     if dk == "elems" then do
       let (array, _, count) ← uArrayDomain ctx subject
-      let predicate ← uSichert {ctx with names := x :: ctx.names, kinds := .int :: ctx.kinds,
-        types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits} body
+      let inner : UCtx := { ctx with names := x :: ctx.names, kinds := .int :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits }
+      let predicate ← uSichert inner body
       pure (.zaehleFeld array x predicate)
     else if dk == "descendants" || dk == "ancestors" then do
       let (table, number, seed, field) ← uTreeDomain ctx subject
       let count := (ctx.tabs[number]?).map (·.count) |>.getD 0
-      let predicate ← uSichert {ctx with names := x :: ctx.names, kinds := .index number :: ctx.kinds,
-        types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits} body
+      let inner : UCtx := { ctx with names := x :: ctx.names, kinds := .index number :: ctx.kinds, types := Ty.index count :: ctx.types, bits := 0 :: ctx.bits }
+      let predicate ← uSichert inner body
       pure (.zaehleBaum table x field (dk == "ancestors") seed predicate)
     else if !strEq dk "slots" then .error "source export: count domain lacks a canonical G expansion"
     else

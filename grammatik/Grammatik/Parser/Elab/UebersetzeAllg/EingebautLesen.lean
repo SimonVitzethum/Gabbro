@@ -57,13 +57,11 @@ namespace EingebautLesen
 
 /-- The empty context the fixtures extend. -/
 def lb : UCtx :=
-  { names := [], kinds := [], types := [], tabs := [], locks := [], held := [], res := none, fname := "f",
-    alias := [], lits := [] }
+  { names := [], kinds := [], types := [], tabs := [], locks := [], held := [], res := none, fname := "f", alias := [], lits := [] }
 
 /-- Four numeric parameters `a b n z`: `a`, `b` and `n` are bare bytes, `z` has no declared storage width. -/
 def cw : UCtx :=
-  { lb with names := ["a", "b", "n", "z"], kinds := [.int, .int, .int, .int],
-            types := [.int 0 255, .int 0 255, .int 0 7, .int 0 255], bits := [8, 8, 8, 0] }
+  { lb with names := ["a", "b", "n", "z"], kinds := [.int, .int, .int, .int], types := [.int 0 255, .int 0 255, .int 0 7, .int 0 255], bits := [8, 8, 8, 0] }
 
 /-- A table `T` of four slots with a byte field `v` of declared storage width `8` and a field `w` without one. -/
 def tt : UTab :=
@@ -193,8 +191,7 @@ theorem zaehle_global_lesen_zeuge :
 
 /-- The tree domains: the table of the edge, the binder, the declared edge field, whether the walk is reversed, the
     outer seed (an index parameter) and the body. -/
-def baumU : UTab := { name := "T", count := 3, cols := [("next", (0, 0))], opts := [("next", 0)],
-  kanten := [("child", "next")] }
+def baumU : UTab := { name := "T", count := 3, cols := [("next", (0, 0))], opts := [("next", 0)], kanten := [("child", "next")] }
 
 def baumCtx : UCtx :=
   { lb with names := ["root"], kinds := [.index 0], types := [.index 3], tabs := [baumU] }

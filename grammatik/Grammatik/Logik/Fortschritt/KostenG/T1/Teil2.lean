@@ -132,7 +132,7 @@ theorem rufeB_grundWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V 
       exact rufeB_grundWahlG Z ZS EW rest _ h.2
 
 /-- The index list of a `traverse` has at most `count` entries. -/
-theorem alleIndizes_length (n : Int) : (alleIndizes n).length ≤ n.toNat := by
+theorem alleIndizes_length_toNat (n : Int) : (alleIndizes n).length ≤ n.toNat := by
   unfold alleIndizes
   have h := List.length_filterMap_le
     (fun (k : Nat) => if h : ((k : Nat) : Int) ≤ n - 1 then

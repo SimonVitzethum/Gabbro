@@ -110,7 +110,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · have h : @List.length (Wert D (.index (D.count t))) (alleIndizes (D.count t)) *
             (kostenBlock c pa body + kostenExpr inv + 2) ≤
             (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2) :=
-          Nat.mul_le_mul_right _ (alleIndizes_length (D.count t))
+          Nat.mul_le_mul_right _ (alleIndizes_length_toNat (D.count t))
         omega
     | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
       refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,

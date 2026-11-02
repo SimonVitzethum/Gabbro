@@ -114,14 +114,16 @@ theorem popcount8_zeuge :
     (evalIntBuiltin1 (D := D) (IntBuiltin.popcount 7) (zw 7 0)).n = 0 ∧
     (evalIntBuiltin1 (D := D) (IntBuiltin.popcount 7) (zw 7 255)).n = 8 := ⟨rfl, rfl⟩
 
+set_option maxRecDepth 100000 in
 /-- `popcount` at all bits across a partial limb, `W = 70`. -/
 theorem popcount70_zeuge :
-    (evalIntBuiltin1 (D := D) (IntBuiltin.popcount 69) (zw 69 (2 ^ 70 - 1))).n = 70 := by rfl
+    (Zahl.popcount 69 (zw 69 (2 ^ 70 - 1))).n = 70 := by decide +kernel
 
+set_option maxRecDepth 100000 in
 /-- `clz` and `ctz` at `W = 70`. -/
 theorem clzctz70_zeuge :
-    (evalIntBuiltin1 (D := D) (IntBuiltin.clz 69) (zr 1 (2 ^ 70 - 1) 1)).n = 69 ∧
-    (evalIntBuiltin1 (D := D) (IntBuiltin.ctz 69) (zr 1 (2 ^ 70 - 1) (2 ^ 69))).n = 69 := ⟨rfl, rfl⟩
+    (Zahl.clz 69 (zr 1 (2 ^ 70 - 1) 1)).n = 69 ∧
+    (Zahl.ctz 69 (zr 1 (2 ^ 70 - 1) (2 ^ 69))).n = 69 := by decide +kernel
 
 /-! ## Rotates and byte swaps -/
 
@@ -135,20 +137,17 @@ theorem rotr8_zeuge :
 
 /-- The rotates are inverse on a sample, `W = 8`. -/
 theorem rot8_invers_zeuge :
-    (evalIntBuiltin2 (D := D) (IntBuiltin.rotr 7)
-      (evalIntBuiltin2 (D := D) (IntBuiltin.rotl 7) (zw 7 173) (za 7 3)) (za 7 3)).n = 173 := by rfl
+    (Zahl.rotr 7 (Zahl.rotl 7 (zw 7 173) (za 7 3)) (za 7 3)).n = 173 := by decide
 
 /-- The rotates are inverse on a sample across a partial limb, `W = 70`. -/
 theorem rot70_invers_zeuge :
-    (evalIntBuiltin2 (D := D) (IntBuiltin.rotr 69)
-      (evalIntBuiltin2 (D := D) (IntBuiltin.rotl 69) (zw 69 (2 ^ 69 + 12345)) (za 69 66)) (za 69 66)).n =
-      2 ^ 69 + 12345 := by rfl
+    (Zahl.rotr 69 (Zahl.rotl 69 (zw 69 (2 ^ 69 + 12345)) (za 69 66)) (za 69 66)).n =
+      2 ^ 69 + 12345 := by decide
 
 /-- `bswap32` reverses the bytes and is an involution on a sample. -/
 theorem bswap32_zeuge :
     (evalIntBuiltin1 (D := D) IntBuiltin.bswap32 (zr 0 (2 ^ 32 - 1) 0x11223344)).n = 0x44332211 ∧
-    (evalIntBuiltin1 (D := D) IntBuiltin.bswap32
-      (evalIntBuiltin1 (D := D) IntBuiltin.bswap32 (zr 0 (2 ^ 32 - 1) 0x11223344))).n = 0x11223344 := ⟨rfl, rfl⟩
+    (Zahl.bswap32 (Zahl.bswap32 (zr 0 (2 ^ 32 - 1) 0x11223344))).n = 0x11223344 := ⟨rfl, by decide⟩
 
 /-- `bswap16` and `bswap64` on samples. -/
 theorem bswap16_64_zeuge :

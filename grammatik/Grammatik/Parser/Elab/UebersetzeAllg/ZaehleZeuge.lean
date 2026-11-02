@@ -75,8 +75,7 @@ theorem domain_exakt (n : Nat) : (alleIndizes (n : Int)).length = n := alleIndiz
 /-- A table of four slots with a byte field. -/
 def zU : UProg := {tabs := [{name := "T", count := 4, cols := [("v", (0, 255))]}], locks := [], fns := []}
 
-def zF : UFn := {name := "sample", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [],
-  ret := .empty}
+def zF : UFn := {name := "sample", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [], ret := .empty}
 
 /-- The predicate `T.slots[x].v > 10` over the binder `x`. -/
 def zBody : UEns := .cmp ">" (.tab "T" "v" (.param "x")) (.lit 10)
@@ -103,11 +102,9 @@ theorem zaehle_offen_abgelehnt_zeuge :
         .error "count over an open table has no static cardinality" := by rfl
 
 /-- The tree domains: a tree of three slots, the seed an index parameter. -/
-def bU : UProg := {tabs := [{name := "T", count := 3, cols := [("next", (0, 0))], opts := [("next", 0)],
-  kanten := [("child", "next")]}], locks := [], fns := []}
+def bU : UProg := {tabs := [{name := "T", count := 3, cols := [("next", (0, 0))], opts := [("next", 0)], kanten := [("child", "next")]}], locks := [], fns := []}
 
-def bF : UFn := {name := "sample", params := [("root", .index 3)], kinds := [.index 0], res := none, held := [],
-  puts := [], gives := [], body := [], ret := .empty}
+def bF : UFn := {name := "sample", params := [("root", .index 3)], kinds := [.index 0], res := none, held := [], puts := [], gives := [], body := [], ret := .empty}
 
 theorem zaehle_baum_lower_zeuge :
     (lowSeiteZ bU [.index 3] [] bF none (.zaehleBaum "T" "x" "next" false (.param "root") .tru)).toOption.map
@@ -118,8 +115,7 @@ theorem zaehle_baum_lower_zeuge :
 /-- The array domain: an array of two elements, the carrier of length two. -/
 def aU : UProg := {tabs := [{name := "#array-elements:2", count := 2, cols := []}], locks := [], fns := []}
 
-def aF : UFn := {name := "sample", params := [("data", .arr (.int 0 255) 2)], kinds := [.wert], res := none,
-  held := [], puts := [], gives := [], body := [], ret := .empty}
+def aF : UFn := {name := "sample", params := [("data", .arr (.int 0 255) 2)], kinds := [.wert], res := none, held := [], puts := [], gives := [], body := [], ret := .empty}
 
 theorem zaehle_feld_lower_zeuge :
     (lowSeiteZ aU [.arr (.int 0 255) 2] [] aF none

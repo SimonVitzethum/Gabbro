@@ -258,13 +258,13 @@ def uRegKlasse (k : String) : Except String Regklasse :=
   else .error ("register class without G form: " ++ k)
 
 /-- A side of a register predicate at the value `v` (the register's own name reads `v`). -/
-def uZSeite (v : Int) : USide → Option Int
+def uRegSeite (v : Int) : USide → Option Int
   | .lit k => some k
   | .param _ => some v
-  | .add a b => (uZSeite v a).bind fun x => (uZSeite v b).map (x + ·)
-  | .sub a b => (uZSeite v a).bind fun x => (uZSeite v b).map (x - ·)
-  | .mul a b => (uZSeite v a).bind fun x => (uZSeite v b).map (x * ·)
-  | .neg a => (uZSeite v a).map (- ·)
+  | .add a b => (uRegSeite v a).bind fun x => (uRegSeite v b).map (x + ·)
+  | .sub a b => (uRegSeite v a).bind fun x => (uRegSeite v b).map (x - ·)
+  | .mul a b => (uRegSeite v a).bind fun x => (uRegSeite v b).map (x * ·)
+  | .neg a => (uRegSeite v a).map (- ·)
   | _ => none
 
 /-- A comparison of two numbers by its operator word. -/
@@ -276,7 +276,7 @@ def uVergleich (op : String) (x y : Int) : Option Bool :=
 
 /-- A register predicate at the value `v` (`none`: a form the promise does not evaluate). -/
 def uZEns (v : Int) : UEns → Option Bool
-  | .cmp op a b => (uZSeite v a).bind fun x => (uZSeite v b).bind fun y => uVergleich op x y
+  | .cmp op a b => (uRegSeite v a).bind fun x => (uRegSeite v b).bind fun y => uVergleich op x y
   | .tru => some true
   | .fls => some false
   | .and a b => (uZEns v a).bind fun x => (uZEns v b).map (x && ·)

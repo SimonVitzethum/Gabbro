@@ -110,11 +110,11 @@ theorem slot_cast_worldR (σ : World D) (t : D.Tab) (f : D.Feld t)
 
 /-- The translated builtin on a translated operand is the translated result. -/
 theorem eval_ib1_ru {τ1 τ : Ty} (op : IntBuiltin [τ1] τ) (x : Wert D τ1) :
-    evalIntBuiltin1 (ibR op) (valR τ1 x) = valR τ (evalIntBuiltin1 op x) := by
+    evalIntBuiltin1 (D := D.mitRuhe) (ibR op) (valR τ1 x) = valR τ (evalIntBuiltin1 op x) := by
   cases op <;> rfl
 
 theorem eval_ib2_ru {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (x : Wert D τ1) (y : Wert D τ2) :
-    evalIntBuiltin2 (ibR op) (valR τ1 x) (valR τ2 y) = valR τ (evalIntBuiltin2 op x y) := by
+    evalIntBuiltin2 (D := D.mitRuhe) (ibR op) (valR τ1 x) (valR τ2 y) = valR τ (evalIntBuiltin2 op x y) := by
   cases op <;> rfl
 
 /-! ## 2. Expressions -/
