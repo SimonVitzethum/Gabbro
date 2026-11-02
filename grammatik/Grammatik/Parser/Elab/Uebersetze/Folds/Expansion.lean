@@ -18,9 +18,10 @@ def isFold : XKind → Bool
 def foldRange (ctx : UCtx) : USide → Option (Int × Int)
   | .lit n => some (n, n)
   | .param name => do
-    let position ← ctx.names.findIdx? (strEq · name)
-    let .int lo hi ← ctx.types[position]? | none
-    some (lo, hi)
+    if ctx.unknownRanges.contains name then none else do
+      let position ← ctx.names.findIdx? (strEq · name)
+      let .int lo hi ← ctx.types[position]? | none
+      some (lo, hi)
   | .tab table field _ => do
     let table ← ctx.tabs.find? (fun tab => strEq tab.name table)
     let field ← table.cols.find? (fun column => strEq column.1 field)
@@ -51,6 +52,18 @@ def foldRange (ctx : UCtx) : USide → Option (Int × Int)
     some (min (min (x.1*y.1) (x.1*y.2)) (min (x.2*y.1) (x.2*y.2)),
           max (max (x.1*y.1) (x.1*y.2)) (max (x.2*y.1) (x.2*y.2)))
   | _ => none
+
+/-- The ordinary exporter defers untyped number intervals until G lowering. Carry a
+    computed interval when available, and mark the others explicitly as unknown. -/
+def foldBindingContext (before after : UCtx) (statement : UStmt) : UCtx :=
+  let name := after.names.headD ""
+  let unknown := before.unknownRanges.filter (fun previous => previous != name)
+  match statement with
+  | .bind _ none value =>
+    match foldRange before value with
+    | some (lo, hi) => {after with types := .int lo hi :: after.types.drop 1, unknownRanges := unknown}
+    | none => {after with unknownRanges := name :: unknown}
+  | _ => {after with unknownRanges := unknown}
 
 /-- A filtered sum may select zero through capacity elements, including when all
     element bounds have the same sign. -/

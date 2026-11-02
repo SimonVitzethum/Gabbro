@@ -41,6 +41,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
     match uBindWert ctx tabs koepfe mu x t e with
     | .error err => .error err
     | .ok (st, ctx') =>
+      let ctx' := foldBindingContext ctx ctx' st
       match uAnwReihe tabs koepfe f ctx' rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok (st :: xs, cE)

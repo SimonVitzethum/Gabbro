@@ -134,4 +134,19 @@ public theorem float_syntax_zeuge :
 public theorem float_export_refused_zeuge :
     (expandFold context 0 .foldAdd ["k", "slots"] [.variable "T", .tru, .float "1.0"]).toOption.isNone = true := rfl
 
+/-- Deferred source typing must not turn a placeholder into a proved zero range. -/
+public theorem unknown_local_range_zeuge :
+    foldRange {context with names := ["x"], kinds := [.int], types := [.int 0 0],
+      unknownRanges := ["x"]} (.param "x") = none := rfl
+
+public theorem inferred_local_range_zeuge :
+    foldRange (foldBindingContext context
+      {context with names := ["x"], kinds := [.int], types := [.int 0 0]}
+      (.bind "x" none (.lit 7))) (.param "x") = some (7, 7) := rfl
+
+public theorem deferred_local_range_zeuge :
+    foldRange (foldBindingContext context
+      {context with names := ["x"], kinds := [.int], types := [.int 0 0]}
+      (.bind "x" none (.div (.lit 9) (.lit 3)))) (.param "x") = none := rfl
+
 end Gabbro.Grammatik.Parser.Uebersetze.FoldWitnesses
