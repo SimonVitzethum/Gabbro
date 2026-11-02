@@ -194,6 +194,10 @@ inductive SItemTief
   /-- `pub item`: the item crosses the boundary of its project (its name is visible to a dependent
       project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
   | pubT : SItemTief → SItemTief
+  | taggedByT : SItemTief → String → SItemTief
+  /-- Closed-dispatch declarations retain signatures and bodies until expansion. -/
+  | specGroupT : String → String → List FnSig → SItemTief
+  | implGroupT : String → STyp → List (FnSig × SAnw) → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
@@ -265,6 +269,13 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     (a == b) && beqSProfEintragList e f
   | .gateT a, .gateT b => beqSItemTief a b
   | .pubT a, .pubT b => beqSItemTief a b
+  | .taggedByT a s, .taggedByT b t => beqSItemTief a b && strEq s t
+  | .specGroupT n p fs, .specGroupT m q gs =>
+    strEq n m && strEq p q && fs.length == gs.length &&
+      (fs.zip gs).all (fun (f, g) => beqFnSig f g)
+  | .implGroupT n t fs, .implGroupT m u gs =>
+    strEq n m && beqSTyp t u && fs.length == gs.length &&
+      (fs.zip gs).all (fun (f, g) => beqFnSig f.1 g.1 && beqSAnw f.2 g.2)
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true

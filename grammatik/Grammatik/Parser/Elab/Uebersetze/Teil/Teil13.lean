@@ -9,6 +9,7 @@ import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
+public import Grammatik.Parser.TaggedDispatch.Frontend
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
@@ -189,16 +190,19 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
   | _ => none
 
 /-- The elaborator: a parsed surface tree to the exported
-    fragment (tables, locks, `impl` functions). The certified C02 expansion (`exportLibraryUnit`)
+    fragment (tables, locks, `impl` functions). Declaration expansion (`exportDeclarationUnit`)
     runs first, so a source program with a library call exports to an ordinary unit: `library`
     bodies elaborate as ordinary functions, translators are consumed, and calls expand into
     ordinary calls carrying the declared payload. -/
 def elabU : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
-    match Gabbro.Grammatik.Parser.exportLibraryUnit ms0 with
+    match Gabbro.Grammatik.Parser.exportDeclarationUnit ms0 with
     | .error e => .error e
     | .ok msE =>
+    match uRestFehler msE with
+    | .error e => .error e
+    | .ok _ =>
     let blockiert := msE.find? (fun item => match item with
       | .fnT sig body => strEq sig.art "const" && (match body with
         | .block [] (some (.ret (some _))) => false
@@ -212,9 +216,6 @@ def elabU : List SItemTief → Except String UProg
       | _ => .error "const function with a block body: certified evaluation unavailable") else
     let consts := uConstsRech (uKonstFns msE) msE []
     let alias := uAliase consts msE ++ uAliasBreiten msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
-    match uRestFehler msE with
-    | .error e => .error e
-    | .ok _ =>
     match ExportMetadata.checkConstants msE with
     | .error error => .error error
     | .ok () =>
