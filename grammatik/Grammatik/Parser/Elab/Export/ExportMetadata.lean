@@ -23,13 +23,13 @@ def typeMetadata : STyp → Bool
 def bodyMetadata : Nat → SAnw → Bool
   | 0, _ => true
   | n + 1, .block ss _ => ss.any (bodyMetadata n)
-  | n + 1, .bindElse _ ty _ _ b => ty.any typeMetadata || bodyMetadata n b
+  | n + 1, .bindElse _ ty _ _ b | n + 1, .bindAxiomOptElse _ ty _ _ b => ty.any typeMetadata || bodyMetadata n b
   | n + 1, .waive _ b | n + 1, .locks _ _ b | n + 1, .watch _ b |
     n + 1, .trim _ _ b => bodyMetadata n b
   | n + 1, .cond _ a bs b => bodyMetadata n a || bs.any (bodyMetadata n) || b.any (bodyMetadata n)
   | n + 1, .elsif _ b | n + 1, .arm _ _ b => bodyMetadata n b
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
-  | _ + 1, .bind _ _ ty _ => ty.any typeMetadata
+  | _ + 1, .bind _ _ ty _ | _ + 1, .bindAxiomOpt _ ty _ => ty.any typeMetadata
   | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
   /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
