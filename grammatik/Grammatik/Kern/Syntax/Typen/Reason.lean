@@ -1,7 +1,5 @@
 module
 
-public import Mathlib.Data.List.Nodup
-import Lean.Elab.Tactic.Omega
 
 @[expose] public section
 
@@ -25,7 +23,7 @@ namespace ReasonVal
 
 /-- Source construction uses a declared case, including for an open declaration. -/
 def known (r : ReasonSpec) (i : Fin r.codes.length) : ReasonVal r :=
-  ⟨r.codes.get i, fun _ => List.get_mem r.codes i⟩
+  ⟨r.codes[i.val], fun _ => List.getElem_mem i.isLt⟩
 
 /-- Recover the case index only when the declaration is closed. -/
 def index {r : ReasonSpec} (h : r.closed = true) (v : ReasonVal r) : Fin r.codes.length :=
@@ -34,19 +32,18 @@ def index {r : ReasonSpec} (h : r.closed = true) (v : ReasonVal r) : Fin r.codes
 @[simp] theorem known_index {r : ReasonSpec} (h : r.closed = true) (v : ReasonVal r) :
     known r (index h v) = v := by
   apply Subtype.ext
-  exact List.idxOf_get _
+  exact List.getElem_idxOf _
 
 @[simp] theorem index_known {r : ReasonSpec} (h : r.closed = true) (i : Fin r.codes.length) :
     index h (known r i) = i := by
-  apply r.distinct.injective_get
-  exact congrArg Subtype.val (known_index h (known r i))
+  apply Fin.ext
+  have h1 := congrArg Subtype.val (known_index h (known r i))
+  exact r.distinct.eq_of_getElem_eq _ _ h1
 
 /-- The compact closed representation is a bijection with declared case indices. -/
-def closedEquiv (r : ReasonSpec) (h : r.closed = true) : Fin r.codes.length ≃ ReasonVal r where
-  toFun := known r
-  invFun := index h
-  left_inv := index_known h
-  right_inv := known_index h
+theorem closed_bijektiv (r : ReasonSpec) (h : r.closed = true) :
+    Function.LeftInverse (index h) (known r) ∧ Function.RightInverse (index h) (known r) :=
+  ⟨index_known h, known_index h⟩
 
 /-- The foreign boundary checks bounds before checking closed membership. -/
 def decode (r : ReasonSpec) (n : Int) : Option (ReasonVal r) :=
@@ -62,6 +59,7 @@ theorem decode_complete {r : ReasonSpec} (v : ReasonVal r) :
   rw [dif_pos ⟨Int.natCast_nonneg _, by have := v.1.isLt; omega⟩]
   simp only [Int.toNat_natCast]
   rw [dif_pos v.2]
+  exact congrArg some (Subtype.ext (Fin.ext rfl))
 
 theorem decode_bounded {r : ReasonSpec} {n : Int} {v : ReasonVal r}
     (h : decode r n = some v) : 0 ≤ n ∧ n < (2 ^ 128 : Nat) := by
@@ -96,7 +94,8 @@ theorem inhabitedB_iff (r : ReasonSpec) : inhabitedB r = true ↔ Nonempty (Reas
         simp only [inhabitedB, hc, hs, List.isEmpty_nil, Bool.not_true,
           Bool.false_or, Bool.false_eq_true] at h
       · rintro ⟨v⟩
-        have hv := v.2 hc
+        have hv : v.1 ∈ r.codes := v.2 hc
+        generalize v.1 = x at hv
         rw [hs] at hv
         cases hv
     | cons c cs =>

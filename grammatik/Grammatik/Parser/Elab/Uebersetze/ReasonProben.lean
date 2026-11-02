@@ -13,13 +13,14 @@ import all Init.Data.String.Hashable
 import all Init.Data.String.Iter
 import all Init.Data.String.Iter.Basic
 import all Init.Data.String.Iter.Intercalate
-import all Init.Data.String.Iter.Iterate
+import all Init.Data.String.Iterate
 import all Init.Data.String.Iterator
 import all Init.Data.String.Legacy
 import all Init.Data.String.Length
 import all Init.Data.String.Modify
 import all Init.Data.String.OrderInstances
 import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
 import all Init.Data.String.Pattern.Char
 import all Init.Data.String.Pattern.Pred
 import all Init.Data.String.Pattern.String
@@ -37,10 +38,10 @@ import all Init.Data.String.ToSlice
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
-private def reasonCases : List (String × SExpr × String) :=
+def reasonCases : List (String × SExpr × String) :=
   [("Ready", .lit 3, "ready"), ("Wide", .lit (2 ^ 100), "wide")]
 
-private def descriptorShape (r : Except String ReasonSpec) : Option (Nat × List Nat × Bool) :=
+def descriptorShape (r : Except String ReasonSpec) : Option (Nat × List Nat × Bool) :=
   match r with
   | .error _ => none
   | .ok r => some (r.name, r.codes.map (·.val), r.closed)
@@ -98,7 +99,7 @@ theorem uReasonSpec_nonconstant_refused :
     uReasonSpec [("Code", (3, 4))] 41 [("A", .variable "Code", "a")] true =
       .error "reason code without a constant G form" := by decide
 
-private def collectedShape (items : List SItemTief) : Option (List (Nat × List Nat × Bool)) :=
+def collectedShape (items : List SItemTief) : Option (List (Nat × List Nat × Bool)) :=
   match uWhys items with
   | .error _ => none
   | .ok ws => ws.mapM fun w => w.descriptor.map fun r => (r.name, r.codes.map (·.val), r.closed)
@@ -117,7 +118,7 @@ theorem uWhys_open_still_refused :
     uWhys [.whyT "R" reasonCases false] =
       .error "reason that is not exhaustive without G form" := by decide
 
-private def nestedPayload : List Token :=
+def nestedPayload : List Token :=
   [.ident "Data", .zeichen "(", .wort "u32", .wort "in", .zeichen "(",
     .num 1, .zeichen "+", .num 2, .zeichen ")", .zeichen "..", .num 10,
     .zeichen ")", .zeichen ",", .ident "Empty"]

@@ -6,17 +6,18 @@ public import Grammatik.Kern.Syntax.Typen.Reason
 
 namespace Gabbro.Grammatik
 
-private def closedReason : ReasonSpec :=
+def closedReason : ReasonSpec :=
   ⟨7, [⟨3, by decide⟩, ⟨2 ^ 100, by decide⟩], true, by decide⟩
 
-private def openReason : ReasonSpec := { closedReason with name := 8, closed := false }
+def openReason : ReasonSpec := { closedReason with name := 8, closed := false }
 
-private def emptyOpenReason : ReasonSpec := ⟨9, [], false, by decide⟩
+def emptyOpenReason : ReasonSpec := ⟨9, [], false, by decide⟩
 
 /-- Known cases retain their declared order, including a code larger than a runner word. -/
-theorem reason_closedEquiv_zeuge :
-    (ReasonVal.closedEquiv closedReason rfl) ⟨1, by decide⟩ =
-      ReasonVal.known closedReason ⟨1, by decide⟩ := rfl
+theorem reason_closed_bijektiv_zeuge :
+    (ReasonVal.known closedReason ⟨1, by decide⟩).1 = ⟨2 ^ 100, by decide⟩ ∧
+      ReasonVal.index rfl (ReasonVal.known closedReason ⟨1, by decide⟩) = ⟨1, by decide⟩ :=
+  ⟨rfl, (ReasonVal.closed_bijektiv closedReason rfl).1 _⟩
 
 theorem reason_known_index_zeuge :
     ReasonVal.known closedReason
@@ -29,9 +30,10 @@ theorem reason_index_known_zeuge :
   ReasonVal.index_known rfl _
 
 theorem reason_decode_complete_zeuge :
-    ReasonVal.decode openReason (2 ^ 100) =
-      some (ReasonVal.known openReason ⟨1, by decide⟩) :=
-  ReasonVal.decode_complete _
+    ReasonVal.decode openReason ((ReasonVal.known openReason ⟨1, by decide⟩).1.val : Int) =
+        some (ReasonVal.known openReason ⟨1, by decide⟩) ∧
+      (ReasonVal.known openReason ⟨1, by decide⟩).1.val = 2 ^ 100 :=
+  ⟨ReasonVal.decode_complete _, rfl⟩
 
 /-- Unknown codes survive an open boundary even when the declaration has no known cases. -/
 theorem reason_empty_open_zeuge :
