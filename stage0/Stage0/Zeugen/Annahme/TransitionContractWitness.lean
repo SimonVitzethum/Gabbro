@@ -50,4 +50,20 @@ def output : Emitted text 64 := candidate.toOption.get candidate_present
 theorem accepted_image : emit text 64 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
 
+namespace Ordered
+
+def text : String :=
+  "module ordered_transition_probe { table T count 2 { slot { s : u32 in 0 .. 2, } } state S { transition cycle { T.slots[0].s : 0 -> 1, T.slots[1].s : 0 -> T.slots[0].s } requires true effects { writes T.slots } } impl fn main() -> u64 in 0 .. 100 effects { writes T.slots } { cycle(); return 23; } }"
+
+def candidate : Except String (Emitted text 64) := emit text 64
+
+theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+
+def output : Emitted text 64 := candidate.toOption.get candidate_present
+
+theorem accepted_image : emit text 64 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
+
+end Ordered
+
 end Gabbro.Stage0.TransitionContractWitness

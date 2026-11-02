@@ -168,4 +168,8 @@ theorem generated_without_effect_refused_zeuge :
 theorem undeclared_generated_name_refused_zeuge : undeclaredLowers = false := by
   decide +kernel
 
+theorem outside_declared_effect_refused_reason_zeuge :
+    uZustand "S" [{ ordered with wirkung := [.writes (.field (.variable "T") "slots")] }] ctx =
+      .error "transition store omitted from declared effects" := by decide +kernel
+
 end Gabbro.Grammatik.Parser.TransitionProben
