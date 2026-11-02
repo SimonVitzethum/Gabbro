@@ -140,8 +140,36 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
               | .error e => .error e
               | .ok (b, r) => (mkAllocBlock u caller Γ Λ t g fh ev0 voll b).bind fun blk => .ok (blk, r)
             | .ok (_, _) => .error "lower: an alloc is not closed"
-  | _, _, _, _, .bindOptBeg .. :: _ | _, _, _, _, .bindOptElseBeg .. :: _ =>
-    .error "optional bind: model lowering pending"
+  | Γ, fn, Λ, pe, .bindOptBeg x c args :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      if hp : rufPasstB u (verOf u caller) ((declOf u).asignatur k.ax) Λ = true then
+        let fn' := match (declOf u).aerg k.ax with
+          | none => fn
+          | some τ => fn.mitTy x τ
+        (R.seq (l := l) (ErgCtx Γ ((declOf u).aerg k.ax)) fn' Λ pe rest).bind fun (b, r) =>
+          .ok (Block.bindAxiomOpt (e := (declOf u).aerg k.ax) k.ax k.args rfl
+            (rufPasstB_ok hp) k.hd k.hgd
+            (by simpa [nachSig, Deklaration.asignatur] using b), r)
+      else .error "foreign call does not conform to caller contract"
+  | Γ, fn, Λ, pe, .bindOptElseBeg x c args e :: rest =>
+    (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
+      if hp : rufPasstB u (verOf u caller) ((declOf u).asignatur k.ax) Λ = true then
+        let fn' := match (declOf u).aerg k.ax with
+          | none => fn
+          | some τ => fn.mitTy x τ
+        if hr : 0 < (declOf u).agruende k.ax then
+          match R.ende (l := l) (reasonTy ((declOf u).agruende k.ax) :: Γ)
+              (fn.mitWhy e 0 ((declOf u).agruende k.ax)) Λ pe rest with
+          | .error err => .error err
+          | .ok (errb, .blkEnd :: tail) =>
+            (R.seq (l := l) (ErgCtx Γ ((declOf u).aerg k.ax)) fn' Λ pe tail).bind fun (b, r) =>
+              .ok (Block.bindAxiomOptElse (e := (declOf u).aerg k.ax) k.ax k.args rfl
+                (rufPasstB_ok hp) k.hd k.hgd hr
+                (by simpa [nachSig, Deklaration.asignatur] using errb)
+                (by simpa [nachSig, Deklaration.asignatur] using b), r)
+          | .ok (_, _) => .error "lower: a let else is not closed"
+        else .error "lower: let else of a foreign call without a reason channel"
+      else .error "foreign call does not conform to caller contract"
   | Γ, fn, Λ, pe, .allocReqBeg x an v :: rest =>
     (tabIdx u.tabs an).bind fun t =>
       (globIdx u.globs (an ++ "#used")).bind fun g =>
