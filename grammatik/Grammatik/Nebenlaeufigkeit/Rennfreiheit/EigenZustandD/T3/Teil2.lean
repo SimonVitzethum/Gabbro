@@ -88,6 +88,7 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
         callIndElse_slots_fest O passes (Stmt.callIndElse p args he hp hr err) rfl σ ρ σ' hstep t k f)
   | locks L hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | traverse tt inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | retry n bis body ueb => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf

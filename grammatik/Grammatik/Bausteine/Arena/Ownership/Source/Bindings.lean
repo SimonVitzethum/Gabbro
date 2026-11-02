@@ -51,7 +51,7 @@ theorem origin_member {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (c : Context)
   | var x => exact Context.reference_member x i hi
   | widen _ _ _ ih => exact ih hi
   | empty => trivial
-  | num _ _ => trivial
+  | val => trivial
   | _ => simp only [origin, expressionOrigin, reduceCtorEq] at hi
 
 theorem Context.bind_bounded {c : Context} (hc : c.bounded) (ref : Option Nat)

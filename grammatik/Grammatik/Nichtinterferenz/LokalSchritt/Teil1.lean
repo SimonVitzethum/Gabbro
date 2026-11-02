@@ -198,6 +198,7 @@ theorem kEntf_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
       exact KRel.lokal _ _ _ _ _ rfl hsp
   | locks L hr body => exact KRel.lokal _ _ _ _ _ rfl hsp
   | breaking i body => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | consumeTraverse => exact KRel.lokal _ _ _ _ _ rfl hsp
   | traverse t inv body => exact KRel.lokal _ _ _ _ _ rfl hsp
   | retry n bis body ueber => exact KRel.lokal _ _ _ _ _ rfl hsp
   | forever a inv body => exact KRel.lokal _ _ _ _ _ rfl hsp
