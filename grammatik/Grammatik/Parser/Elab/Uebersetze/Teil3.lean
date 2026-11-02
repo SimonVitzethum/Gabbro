@@ -165,8 +165,7 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
       if ((tabs[num]?).bind (·.von)).isSome then .ok (.ref num) else .ok (.index c)
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
-    if !strEq raum "normal" then .error "space without G form"
-    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+    if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
       let space ← uDataSpace spaces raum
       let access ← uTableRight rechte
