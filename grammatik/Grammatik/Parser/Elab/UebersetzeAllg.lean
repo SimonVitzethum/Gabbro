@@ -18,6 +18,7 @@
 -/
 module
 
+public import Grammatik.Parser.Elab.UebersetzeAllg.Konform
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil1
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 public import Grammatik.Parser.Elab.UebersetzeAllg.Eingebaut
