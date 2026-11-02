@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Speichermodell.Atomar.AtomarInv
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInv
 
 @[expose] public section
 

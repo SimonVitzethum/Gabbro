@@ -27,8 +27,8 @@
   machine `ZielF` are not re-proved over GX.
 -/
 module
-public import Grammatik.Speichermodell.Atomar.AtomarInv
-public import Grammatik.Speichermodell.Atomar.AtomarInva
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInv
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInva
 public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
 @[expose] public section

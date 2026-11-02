@@ -106,13 +106,13 @@ public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Speichermodell.Maschine.RMW
 public import Grammatik.Speichermodell.Atomar.AtomarSem
 public import Grammatik.Speichermodell.Maschine.SperreSemA
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 public import Grammatik.Speichermodell.Atomar.AtomarReplay
 public import Grammatik.Speichermodell.Atomar.AtomarAkteur
 public import Grammatik.Speichermodell.Atomar.AtomarLauf
 public import Grammatik.Speichermodell.Atomar.AtomarW
-public import Grammatik.Speichermodell.Atomar.AtomarInv
-public import Grammatik.Speichermodell.Atomar.AtomarInva
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInv
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInva
 public import Grammatik.Speichermodell.Atomar.AtomarRuhe
 public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
 public import Grammatik.Speichermodell.Atomar.AtomarZiel

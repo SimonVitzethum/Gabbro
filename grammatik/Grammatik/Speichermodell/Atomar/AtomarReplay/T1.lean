@@ -13,7 +13,7 @@
   in `ziel_ort_sperre`, and only body reads may see the rely.
 -/
 module
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 public import Grammatik.Logik.Terminierung.Mass
 @[expose] public section
 
