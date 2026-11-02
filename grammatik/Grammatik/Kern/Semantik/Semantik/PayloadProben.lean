@@ -23,7 +23,8 @@ def D : Deklaration :=
         konsumiert := [], produziert := [] }
     passt := fun _ _ => false
     passt_ok := fun _ _ h => by cases h
-    rzusage := fun r => nomatch r }
+    rzusage := fun r => nomatch r
+    invarianten_gehalten := fun _ i => nomatch i }
 
 def V : Vertrag D := vertragVon D ()
 
@@ -96,6 +97,6 @@ theorem foreign_typed_payload_refused_zeuge :
 
 theorem nested_schema_equality_zeuge :
     decide (Ty.sum [some (.arr (.sum [some .bool]) 2)] =
-      Ty.sum [some (.arr (.sum [some .bool]) 2)]) = true := by decide
+      Ty.sum [some (.arr (.sum [some .bool]) 2)]) = true := by decide +kernel
 
 end Gabbro.Grammatik.TypedPayload
