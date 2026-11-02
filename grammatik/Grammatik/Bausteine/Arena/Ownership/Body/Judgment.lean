@@ -137,6 +137,18 @@ inductive OS (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (hL : darf D t Λ) (htA : t ≠ A.tab) (hr : checkExpression A c r = true)
       (he : checkExpression A c e = true) :
       OS A I out (l := l) k c (.assignSlotRef r t ht ho f e hw hL) c
+  /-- A fallible call through a function pointer as a statement («C07»): the shape of `callInd`
+      with the reason branch of `bindCallElse` over the pointer type; success discards the value,
+      so the post-context is the dropped call context. -/
+  | callIndElse {l Γ Λ k c n τ} (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock D V l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (J : Modes (D.sigNr n).params) (owner : Bool) (hJ : SigCompatible I n J owner)
+      (hpc : checkExpression A c p = true) (ha : checkArguments A c args = true)
+      (hplan : planFits c (modeList J) (originList c args) = true)
+      (herr : OE A I out k ((c.afterCall (modeList J) (originList c args)).bind none) err) :
+      OS A I out (l := l) k c (.callIndElse p args he hp hr err)
+        (dropContextB (c.afterCall (modeList J) (originList c args)) owner)
 
 /-- **A block.** -/
 inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
@@ -272,9 +284,21 @@ inductive OB (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (g : D.Glob) (e2 : Expr D Γ Λ (D.gtyp g)) (hwK : V.gschreibt g = true) (hLK : gdarf D g Λ)
       (rest : Block D V l Γ Λ Λ')
       (ht : t = A.tab) (hf : ht ▸ f = A.nxt) (hip : exprVarPos i = some p) (he : exprGlob e = some A.kopf)
-      (hg : g = A.kopf) (he2 : exprVarPos e2 = some p) (hc : consume c i = some (c2, o))
+      (hg : g = A.kopf) (he2 : exprVarPos e2 = some p)       (hc : consume c i = some (c2, o))
       (hrest : OB A I out k c2 rest c1) :
       OB A I out k c (.cons (.assignSlot t f i e hw hL) (.cons (.assignGlob g e2 hwK hLK) rest)) c1
+  /-- `let x = p(..) else (e) { .. };` through a function pointer («C07»): the shape of
+      `bindCallElse` over the pointer type with the interface split of `bindCallInd`. -/
+  | bindCallIndElse {l Γ Λ Λ' k c c1 τ n} (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock D V l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (rest : Block D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ')
+      (J : Modes (D.sigNr n).params) (owner : Bool) (hJ : SigCompatible I n J owner)
+      (hpc : checkExpression A c p = true) (ha : checkArguments A c args = true)
+      (hplan : planFits c (modeList J) (originList c args) = true)
+      (herr : OE A I out k ((c.afterCall (modeList J) (originList c args)).bind none) err)
+      (hrest : OB A I out k (resultContextB (c.afterCall (modeList J) (originList c args)) owner) rest c1) :
+      OB A I out k c (.bindCallIndElse p args he hp hr err rest) c1.drop
 
 /-- **An end block** (a body, or an `else` that does not fall off). -/
 inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
@@ -349,6 +373,18 @@ inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (hplan : planFits c (modeList J) (originList c args) = true)
       (hrest : OE A I out k (resultContextB (c.afterCall (modeList J) (originList c args)) owner) rest) :
       OE A I out k c (.bindCallInd p args he hp hr rest)
+  /-- `Block.bindCallIndElse` with an end-block rest («C07»): the shape of `bindCallElse` over the
+      pointer type with the interface split of `bindCallInd`. -/
+  | bindCallIndElse {l Γ Λ k c τ n} (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+      (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
+      (err : Endblock D V l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ))
+      (rest : Endblock D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ))
+      (J : Modes (D.sigNr n).params) (owner : Bool) (hJ : SigCompatible I n J owner)
+      (hpc : checkExpression A c p = true) (ha : checkArguments A c args = true)
+      (hplan : planFits c (modeList J) (originList c args) = true)
+      (herr : OE A I out k ((c.afterCall (modeList J) (originList c args)).bind none) err)
+      (hrest : OE A I out k (resultContextB (c.afterCall (modeList J) (originList c args)) owner) rest) :
+      OE A I out k c (.bindCallIndElse p args he hp hr err rest)
 
 /-- **The arms of a `match` over a tagged value.** All arms end in one context. -/
 inductive OArms (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :

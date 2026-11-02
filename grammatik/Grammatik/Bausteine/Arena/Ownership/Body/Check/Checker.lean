@@ -113,6 +113,14 @@ def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
       some (some (dropContextB (c.afterCall (modeList (sigIface A I fs n).1) (originList c args))
         (sigIface A I fs n).2))
     else none
+  | _, _, _, _, .callIndElse (n := n) p args _ _ _ err, k, c =>
+    if checkExpression A c p && checkArguments A c args &&
+      sigCompatB A I fs n (sigIface A I fs n).1 (sigIface A I fs n).2 &&
+      planFits c (modeList (sigIface A I fs n).1) (originList c args) &&
+      chkE err k ((c.afterCall (modeList (sigIface A I fs n).1) (originList c args)).bind none) then
+      some (some (dropContextB (c.afterCall (modeList (sigIface A I fs n).1) (originList c args))
+        (sigIface A I fs n).2))
+    else none
   | _, _, _, _, .locks _ _ body, k, c => chkB body k c
   | _, _, _, _, .breaking _ body, k, c => chkB body k c
   | _, _, _, _, .traverse _ inv body, _, c =>
@@ -178,6 +186,14 @@ def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
       chkE err k ((c.afterCall (modeList (I f).parameters) (originList c args)).bind none) then
       mapR Context.drop (chkB rest k (resultContext (c.afterCall (modeList (I f).parameters) (originList c args))
         (I f).output))
+    else none
+  | _, _, _, _, .bindCallIndElse (n := n) p args _ _ _ err rest, k, c =>
+    if checkExpression A c p && checkArguments A c args &&
+      sigCompatB A I fs n (sigIface A I fs n).1 (sigIface A I fs n).2 &&
+      planFits c (modeList (sigIface A I fs n).1) (originList c args) &&
+      chkE err k ((c.afterCall (modeList (sigIface A I fs n).1) (originList c args)).bind none) then
+      mapR Context.drop (chkB rest k (resultContextB (c.afterCall (modeList (sigIface A I fs n).1)
+        (originList c args)) (sigIface A I fs n).2))
     else none
   | _, _, _, _, .bindAxiom a args _ _ _ _ _ rest, k, c =>
     if decide (AxiomFree A a) && checkArguments A c args then mapR Context.drop (chkB rest k (c.bind none))
@@ -246,6 +262,13 @@ def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l 
     checkExpression A c p && checkArguments A c args &&
       sigCompatB A I fs n (sigIface A I fs n).1 (sigIface A I fs n).2 &&
       planFits c (modeList (sigIface A I fs n).1) (originList c args) &&
+      chkE rest k (resultContextB (c.afterCall (modeList (sigIface A I fs n).1) (originList c args))
+        (sigIface A I fs n).2)
+  | _, _, _, .bindCallIndElse (n := n) p args _ _ _ err rest, k, c =>
+    checkExpression A c p && checkArguments A c args &&
+      sigCompatB A I fs n (sigIface A I fs n).1 (sigIface A I fs n).2 &&
+      planFits c (modeList (sigIface A I fs n).1) (originList c args) &&
+      chkE err k ((c.afterCall (modeList (sigIface A I fs n).1) (originList c args)).bind none) &&
       chkE rest k (resultContextB (c.afterCall (modeList (sigIface A I fs n).1) (originList c args))
         (sigIface A I fs n).2)
   -- the end-block forms of stage 0 have no ownership judgment yet (`OE`, TODO.md): refused, never passed

@@ -451,7 +451,6 @@ theorem sim_end_ite {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact hΦ2 Φ hP
     · simp only [exEnd, execEndHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, ↓reduceIte]
       exact hR
-
 end Sim
 end Einbettung
 end Gabbro.Grammatik.Einbettung

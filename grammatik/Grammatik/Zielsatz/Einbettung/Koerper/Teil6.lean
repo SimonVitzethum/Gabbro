@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.Einbettung.Simulation
-public import Grammatik.Zielsatz.Einbettung.Koerper.Teil5
+public import Grammatik.Zielsatz.Einbettung.Koerper.Teil7
 
 @[expose] public section
 
@@ -71,6 +71,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_call (f := f) (args := args) (hp := hp) (hr := hr) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .callInd (n := n) p args hp hr =>
       sim_stmt_callInd (n := n) (p := p) (args := args) (hp := hp) (hr := hr) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .callIndElse (n := n) p args he hp hr err =>
+      sim_stmt_callIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .locks L hr body =>
       sim_stmt_locks (hr := hr) (body := body) (ih_sim_block_body := sim_block body) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .breaking i body =>
@@ -124,6 +126,8 @@ theorem sim_block {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       sim_block_bindCall (τ := τ) (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindCallInd (n := n) (τ := τ) p args he hp hr rest =>
       sim_block_bindCallInd (n := n) (τ := τ) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (ih_sim_block_rest := sim_block rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .bindCallIndElse (n := n) (τ := τ) p args he hp hr err rest =>
+      sim_block_bindCallIndElse (n := n) (τ := τ) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (ih_sim_block_rest := sim_block rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindCallElse (τ := τ) f args he hp hr err rest =>
       sim_block_bindCallElse (τ := τ) (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (ih_sim_block_rest := sim_block rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindAxiom (τ := τ) a args he hw hg hd hgd rest =>
@@ -178,6 +182,8 @@ theorem sim_end {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       sim_end_bindCall (τ := τ) (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindCallInd (n := n) (τ := τ) p args he hp hr rest =>
       sim_end_bindCallInd (n := n) (τ := τ) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (ih_sim_end_rest := sim_end rest) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .bindCallIndElse (n := n) (τ := τ) p args he hp hr err rest =>
+      sim_end_bindCallIndElse (n := n) (τ := τ) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (ih_sim_end_rest := sim_end rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindCallElse (τ := τ) f args he hp hr err rest =>
       sim_end_bindCallElse (τ := τ) (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (ih_sim_end_rest := sim_end rest) (ih_sim_end_err := sim_end err) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .bindAxiom (τ := τ) a args he hw hg hd hgd rest =>

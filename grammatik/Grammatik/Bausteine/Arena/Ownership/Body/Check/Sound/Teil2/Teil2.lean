@@ -15,7 +15,38 @@ section Sound
 variable {A : FreiForm D} {I : Interfaces A} {fs : List D.Fn} {V : Vertrag D} {out : Flow.Output A V.erg}
 variable (hvoll : ∀ f, f ∈ fs)
 include hvoll
-include hvoll
+set_option linter.unusedSectionVars false in
+theorem chkB_sound_bindCallIndElse
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_n}
+    {zi_τ}
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (rest)
+    (k : Context)
+    (c : Context)
+    (hk : k.bounded)
+    (hc : c.bounded)
+    (ih_chkB_sound_rest : ∀ (k : Context), ∀ (c : Context), k.bounded → c.bounded → Supports (OB A I out k c rest) (chkB A I fs out rest k c))
+    (ih_chkE_sound_err : ∀ (k : Context), ∀ (c : Context), k.bounded → c.bounded → chkE A I fs out err k c = true → OE A I out k c err)
+    : Supports (OB A I out k c (.bindCallIndElse (n := zi_n) (τ := zi_τ) p args he hp hr err rest : Block D V l Γ Λ Λ')) (chkB A I fs out (.bindCallIndElse (n := zi_n) (τ := zi_τ) p args he hp hr err rest : Block D V l Γ Λ Λ') k c) :=
+  by
+  simp only [chkB]
+  exact supports_condDrop
+    (fun _ => ih_chkB_sound_rest k _ hk (resultContextB_bounded (afterCall_bounded hc) _))
+    (fun h c1 h1 => by
+      simp only [Bool.and_eq_true] at h
+      exact OB.bindCallIndElse p args he hp hr err rest _ _ (sigCompatB_sound hvoll h.1.1.2) h.1.1.1.1
+        h.1.1.1.2 h.1.2
+        (ih_chkE_sound_err k _ hk (Context.bindNone_bounded (afterCall_bounded hc)) h.2) h1)
+
 
 set_option linter.unusedSectionVars false in
 theorem chkB_sound_regRead 

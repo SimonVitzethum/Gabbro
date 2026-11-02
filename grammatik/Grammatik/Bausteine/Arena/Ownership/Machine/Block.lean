@@ -139,6 +139,10 @@ theorem oe_alsBlock : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Conte
     have := OB.bindCallInd (out := out) p args he hp hr rest.alsBlock.2 J owner hJ hpc ha hplan
       (oe_alsBlock hrest c'.pad)
     rwa [Context.pad_drop] at this
+  | _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ hpc ha hplan herr hrest, c' => by
+    have := OB.bindCallIndElse (out := out) p args he hp hr err rest.alsBlock.2 J owner hJ hpc ha hplan
+      herr (oe_alsBlock hrest c'.pad)
+    rwa [Context.pad_drop] at this
 
 /-- **An `else` branch in front of its continuation.** -/
 theorem OR.sonst {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} {k c : Context} {e : Endblock D V l Γ Λ}
