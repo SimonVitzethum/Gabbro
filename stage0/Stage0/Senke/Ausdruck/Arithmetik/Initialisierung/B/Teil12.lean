@@ -1,6 +1,6 @@
 module
 
-public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung.Teil11
+public import Stage0.Senke.Ausdruck.Arithmetik.Initialisierung.B.Teil11
 @[expose] public section
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
