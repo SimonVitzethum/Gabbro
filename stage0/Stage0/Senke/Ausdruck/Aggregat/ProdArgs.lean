@@ -45,3 +45,22 @@ theorem prodArgsL_top {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
     omega
 
 end Gabbro.Stage0.Senke
+
+namespace Gabbro.Stage0.Senke
+open Gabbro.Grammatik Runner.IR
+
+/-- Reserve the product marker as well as all fields, including the empty case. -/
+def prodL (d : Nat) (args : Option (List II × Nat)) : Option (List II × Nat) := do
+  let result ← args
+  pure (result.1, max result.2 (d + 1))
+
+/-- Product packing always reserves a positive result span. -/
+theorem lowE_top_prod (d : Nat) (args : Option (List II × Nat))
+    (c : List II) (top : Nat) (h : prodL d args = some (c, top)) : d < top := by
+  simp only [prodL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨code, bound⟩, _, _, rfl⟩ := h
+  have upper := Nat.le_max_right bound (d + 1)
+  omega
+
+end Gabbro.Stage0.Senke
