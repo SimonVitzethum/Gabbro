@@ -14,14 +14,20 @@ section Sperren
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
-/-- A leaf keeps the held locks (`stmt_gut`, `Brav` leg). -/
-theorem blatt_offen (hO : GutO O) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+/-- A leaf keeps the held locks (`gut_blatt`, `Brav` leg). The firing equation
+    is `.ok`, so scoped returns are impossible and the static scope check
+    comes from the leaf itself (`scopesOk_of_ok`). -/
+theorem blatt_offen (hO : GutO O) {V : vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true) (σ : World D)
     (ρ : Env D Γ) (hΛ : HeldIn Λ (offen σ.spur)) (σ' : World D) (ρ' : Env D Γ)
     (hst : execStmt O passes keinRuf s σ ρ = Ausgang.ok σ' ρ') :
     offen σ'.spur = offen σ.spur := by
   have hw : (execStmt O passes keinRuf s σ ρ).welt = some σ' := by rw [hst]; rfl
-  exact ((Stmt.gut_blatt O passes keinRuf hO s hleaf σ ρ hΛ) σ' hw).2.1
+  have hscope : s.ScopesOk :=
+    Stmt.scopesOk_of_ok O passes keinRuf s hleaf σ ρ σ' ρ' hst
+  have hG := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope σ ρ hΛ) σ' hw
+  rw [hst] at hG
+  exact hG.2.1
 
 /-- Reads keep the held locks. -/
 theorem lese_offen (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Glob)) :

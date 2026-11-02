@@ -239,23 +239,22 @@ inductive GenErreichbar (P : Programm D) (O : Orakel D) (passes : Nat)
       (h : GenErreichbar P O passes M0 M) (hs : GenSchritt P O passes M f M') :
       GenErreichbar P O passes M0 M'
 
-/-- One leaf through `execStmt` keeps frame and trace (`stmt_gut`, release-aware). -/
+/-- One leaf through `execStmt` keeps frame and trace (release-aware `BravRet`).
+
+    The leaf-local plain form (`gutRet_blatt`), not `stmt_gut`: memory facts
+    never needed the caller residual (`ResidHeld`) or the static scope
+    check, which no machine step could discharge. Only `hleaf` travels,
+    which every `blatt` rule carries. -/
 theorem blatt_brav (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
-    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (V : vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
-    (hΛ : HeldGenau Λ (offen (M.spuren f))) (σ' : World D)
+    (hleaf : s.istBlatt = true)
+    (hΛ : HeldGenau Λ (offen (M.spuren f)))
+    (σ' : World D)
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ') :
     BravRet (M.weltVon f) σ' := by
-  have hG := (stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon f) ρ hΛ) σ' hstep
-  cases he : execStmt O passes keinRuf s (M.weltVon f) ρ with
-  | ok _ _ => exact (hG).2.toRet
-  | zurueck _ _ => exact (hG).2
-  | why _ _ => exact (hG).2
-  | leave _ _ _ => exact (hG).2.toRet
-  | next _ _ _ => exact (hG).2.toRet
-  | logik _ => exact (hG).2.toRet
-  | hardware _ => exact (hG).2.toRet
+  exact (Stmt.gutRet_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ.heldIn σ' hstep).2
 
 /-- Old positions of an extended run keep the scheduler rule. -/
 theorem genAuss_append_old (l xs : Lauf D) (hA : ForeignExclusion l)
@@ -364,9 +363,9 @@ theorem genStart_inv (sp : Speicher D) : GenInv (GenStart sp) := by
 /-- A leaf step preserves the invariant. -/
 theorem genInv_blatt (_P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
-    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (V : vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
-    (_hleaf : s.istBlatt = true)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -375,7 +374,7 @@ theorem genInv_blatt (_P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO 
     (hM : GenInv M) :
     GenInv ⟨σ'.speicher, genUpdate M.spuren f σ'.spur,
       M.lauf ++ genEigen f neu, M.start, M.welten ++ [σ'], M.tiefe + 1⟩ := by
-  have hb : Brav (M.weltVon f) σ' := blatt_brav O passes hO M f V l Γ Λ Λ' s ρ hΛ σ' hstep
+  have hb : BravRet (M.weltVon f) σ' := blatt_brav O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro f'
     by_cases hf : f' = f

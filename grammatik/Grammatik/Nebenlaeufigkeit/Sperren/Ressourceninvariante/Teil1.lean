@@ -76,7 +76,12 @@ theorem csl_ressourceninvariante
       cases hs with
       | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' _ hstep _ _ _ _ _ _ _ _ =>
           show inv σ'.speicher
-          have hbrav := blatt_brav O passes hO M f V l Γ Λ Λ' s ρ hΛ σ' hstep
+          have hbrav := blatt_brav O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
+          -- OPEN (C11): `hopenf` below is the pre-C11 lock equality, false
+          -- for a scoped return (it unwinds scopes). The `hLf` case needs
+          -- the release-aware argument (a scope release of `L` must meet
+          -- `hRelease` like an explicit `rel`); `hbrav` is kept for the
+          -- push-back direction (`BravRet.mem`). Lead decision pending.
           have hopenf : offen σ'.spur = offen (M.spuren f) := by
             have e1 : σ'.haelt = offen σ'.spur := rfl
             have e2 : (M.weltVon f).haelt = offen (M.spuren f) := rfl

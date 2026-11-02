@@ -27,15 +27,23 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         left
         have hw : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ' := by
           rw [hstep]; rfl
-        exact zugriffsDelta_brav ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ)
-          σ' hw).2 neu hneu hkein
+        have hscope : s.ScopesOk :=
+          Stmt.scopesOk_of_ok O passes keinRuf s hleaf (M.weltVon f) ρ σ' ρ' hstep
+        have hG := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope (M.weltVon f) ρ hΛ)
+          σ' hw
+        rw [hstep] at hG
+        exact zugriffsDelta_brav hG.2 neu hneu hkein
     | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
         simp only [rufUpdateG_self]
         left
         have hw : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ' := by
           rw [hstep]; rfl
-        exact zugriffsDelta_brav ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ)
-          σ' hw).2 neu hneu hkein
+        have hscope : s.ScopesOk :=
+          Stmt.scopesOk_of_ok O passes keinRuf s hleaf (M.weltVon f) ρ σ' ρ' hstep
+        have hG := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope (M.weltVon f) ρ hΛ)
+          σ' hw
+        rw [hstep] at hG
+        exact zugriffsDelta_brav hG.2 neu hneu hkein
     | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         simp only [rufUpdateG_self]
         left

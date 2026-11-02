@@ -42,7 +42,10 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
     refInv81 M'.speicher := by
   cases hs with
   | leaf V l Γ Λ Λ' s ρ hleaf hΛ σ' _ hstep _ _ _ _ _ _ _ _ =>
-      have hbrav := blatt_brav refO 0 refO_gut M f V l Γ Λ Λ' s ρ hΛ σ' hstep
+      have hbrav := blatt_brav refO 0 refO_gut M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
+      -- OPEN (C11): as in `csl_ressourceninvariante`, the lock equality
+      -- below is false for a scoped return; a held-to-free move by release
+      -- is real. Lead decision pending.
       have hopenf : offen σ'.spur = offen (M.spuren f) := by
         have e1 : σ'.haelt = offen σ'.spur := rfl
         have e2 : (M.weltVon f).haelt = offen (M.spuren f) := rfl
