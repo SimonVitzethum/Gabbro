@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Generic.Closure
 public import Grammatik.Parser.Elab.Generic.Literals
+public import Grammatik.Parser.Elab.Generic.PointerTypes
 public import Grammatik.Parser.Print.Item.Teil1a
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
@@ -9,10 +10,17 @@ namespace Gabbro.Grammatik.Parser.Generic
 structure Bindings where
   types : List (String × STyp) := []
   values : List (String × SExpr) := []
+  functions : List (String × String) := []
+  functionArguments : List (String × String) := []
+  literals : List (FnSig × SAnw) := []
+  requirements : List (STyp × String) := []
 
 /-- Hide constant parameters under value binders; type parameters occupy their own namespace. -/
 def Bindings.without (bindings : Bindings) (names : List String) : Bindings :=
-  { bindings with values := bindings.values.filter (fun p => !names.contains p.1) }
+  { bindings with
+    values := bindings.values.filter (fun p => !names.contains p.1)
+    functions := bindings.functions.filter (fun p => !names.contains p.1)
+    functionArguments := bindings.functionArguments.filter (fun p => !names.contains p.1) }
 
 /-- Compilation context, shared by argument normalization and body rewriting. -/
 structure Environment where
@@ -20,6 +28,7 @@ structure Environment where
   constants : List (String × Int)
   constantFunctions : List Uebersetze.UKonstFn
   aliases : List (String × (Int × Int))
+  globals : List String := []
 
 def tokens (text : String) : Except String (List Token) :=
   match lex text with
@@ -54,7 +63,9 @@ def substituteRaw (bindings : Bindings) (text : String) : Except String String :
       | some (_, ty) => druckTyp ty
       | none => match bindings.values.find? (fun p => strEq p.1 name) with
         | some (_, value) => druckToks value
-        | none => [token]
+        | none => match bindings.functions.find? (fun p => strEq p.1 name) with
+          | some (_, target) => [.ident target]
+          | none => [token]
     | none => match token with
       | .ende => []
       | _ => [token]
@@ -67,8 +78,18 @@ def declaration (env : Environment) (name : String) : Except String (FnSig × SA
   | [] => .error ("unknown generic function: " ++ name)
   | _ => .error ("duplicate generic function: " ++ name)
 
-/-- Normalize by the declared kind. This does not infer type parameters from value arguments.
-    Spec bounds and static functions require their own conformance rule and are refused here. -/
+/-- A static parameter type must keep the existing named contract gate until O43 lands. -/
+def staticParameterType (bindings : Bindings) (ty : STyp) : Except String STyp := do
+  match ty with
+  | .raw text =>
+    let raw ← substituteRaw bindings text
+    let sig ← Uebersetze.uZeigerSig raw
+    Uebersetze.uZeigerVertrag sig.klauseln
+    pure (.raw raw)
+  | _ => throw "static function parameter requires a function-pointer type"
+
+/-- Normalize by the declared kind. Every static function requirement is retained for the
+    canonical SigPasst check over the complete elaborated unit, before export succeeds. -/
 def normalizeArguments (env : Environment) (outer : Bindings) :
     List SGenericParam → List String → Bindings → Except String (List String × Bindings)
   | [], [], bindings => .ok ([], bindings)
@@ -89,7 +110,30 @@ def normalizeArguments (env : Environment) (outer : Bindings) :
       { bindings with values := bindings.values ++ [(name, integerExpression value)] }
     pure (toString value :: tail, result)
   | .type _ (_ :: _) :: _, _, _ => .error "generic spec bounds: conformance rule unavailable"
-  | .function _ _ :: _, _, _ => .error "generic static function argument: conformance rule unavailable"
+  | .function name ty :: ps, word :: ws, bindings => do
+    let expected ← staticParameterType bindings ty
+    let word := match outer.functionArguments.find? (fun p => strEq p.1 word) with
+      | some (_, argument) => argument
+      | none => word
+    let (canonical, argument) ← functionArgument word
+    let (target, literals, canonical) ← match argument with
+      | .path path => do
+        let target := String.intercalate "::" path
+        let (sig, _) ← declaration env target
+        if !sig.generics.isEmpty then
+          throw ("static function argument requires an ordinary function: " ++ target)
+        pure (target, [], target)
+      | .literal sig body => do
+        checkLiteral env.globals sig body
+        let target := literalName canonical
+        pure (target, [({ sig with name := target }, body)], canonical)
+    let (tail, result) ← normalizeArguments env outer ps ws
+      { bindings with
+        functions := bindings.functions ++ [(name, target)]
+        functionArguments := bindings.functionArguments ++ [(name, canonical)]
+        literals := bindings.literals ++ literals
+        requirements := bindings.requirements ++ [(expected, target)] }
+    pure (canonical :: tail, result)
   | _, _, _ => .error "generic argument count does not match declaration"
 
 def normalize (env : Environment) (outer : Bindings) (name : String) (words : List String) :

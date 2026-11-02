@@ -266,6 +266,7 @@ def sig (k : Kontext) (s : FnSig) : FnSig :=
     generics := s.generics.map fun
       | .type n bounds => .type n (bounds.map k.ref)
       | .constant n ty => .constant n (typ k' ty)
+      | .function n (.raw raw) => .function n (.raw (genericArgument k' raw))
       | .function n ty => .function n (typ k' ty) }
 
 mutual

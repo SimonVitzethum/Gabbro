@@ -3,19 +3,6 @@ public import Grammatik.Parser.Elab.Generic.Body
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
-/-- All ordinary declarations participate in explicit-call lookup and duplicate checking. -/
-def environment (source : List SItemTief) : Environment :=
-  let declarations := source.filterMap fun
-    | .fnT sig body => some (sig, body)
-    | _ => none
-  let ordinary := source.filter fun
-    | .fnT sig _ => sig.generics.isEmpty
-    | _ => true
-  let fns := Uebersetze.uKonstFns ordinary
-  let constants := Uebersetze.uConstsRech fns ordinary []
-  { declarations, constants, constantFunctions := fns,
-    aliases := Uebersetze.uAliase constants ordinary ++ Uebersetze.uAliasBreiten ordinary }
-
 /-- Every declaration namespace is checked before generated names are inserted. -/
 def sourceName : SItemTief → Option String
   | .fnT sig _ | .protoT sig | .specT sig _ | .asmT sig _ | .transT _ sig _ => some sig.name
@@ -29,6 +16,20 @@ def sourceName : SItemTief → Option String
   | .entryT entry => some entry.name
   | .callT call => some call.name
   | _ => none
+
+/-- All ordinary declarations participate in explicit-call lookup and duplicate checking. -/
+def environment (source : List SItemTief) : Environment :=
+  let declarations := source.filterMap fun
+    | .fnT sig body => some (sig, body)
+    | _ => none
+  let ordinary := source.filter fun
+    | .fnT sig _ => sig.generics.isEmpty
+    | _ => true
+  let fns := Uebersetze.uKonstFns ordinary
+  let constants := Uebersetze.uConstsRech fns ordinary []
+  { declarations, constants, constantFunctions := fns,
+    aliases := Uebersetze.uAliase constants ordinary ++ Uebersetze.uAliasBreiten ordinary,
+    globals := source.filterMap sourceName }
 
 mutual
 def rewriteConstant (env : Environment) : SKonstWert → RewriteM SKonstWert
@@ -86,7 +87,8 @@ def checkRecursion (env : Environment) : Nat → List Instance → Instance → 
 
 /-- The output retains every ordinary item and appends exactly the closed, deterministically named
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
-def expandTemplates (source : List SItemTief) : Except String (List SItemTief) := do
+def expandTemplatesWithRequirements (source : List SItemTief) :
+    Except String (List SItemTief × List (STyp × String)) := do
   let env := environment source
   let names := source.filterMap sourceName
   for (sig, _) in env.declarations do
@@ -96,7 +98,9 @@ def expandTemplates (source : List SItemTief) : Except String (List SItemTief) :
       match param with
       | .type _ [] | .constant _ _ => pure ()
       | .type _ (_ :: _) => throw "generic spec bounds: conformance rule unavailable"
-      | .function _ _ => throw "generic static function argument: conformance rule unavailable"
+      | .function _ ty => do
+        let _ ← staticParameterType {} ty
+        pure ()
   let (ordinary, roots) ← (do
     let groups ← source.mapM (rewriteItem env)
     pure groups.flatten).run []
@@ -105,10 +109,14 @@ def expandTemplates (source : List SItemTief) : Except String (List SItemTief) :
   let instances ← boundedInstanceClosure (sizeOf source)
     (fun key => do pure (← instantiate env key).2) roots
   checkInstanceNames names instances
-  let generated ← instances.mapM fun key => do
-    let ((sig, body), _) ← instantiate env key
-    pure (.fnT sig body)
-  pure (ordinary ++ generated)
+  let results ← instances.mapM (instantiate env)
+  let generated := results.map (fun result =>
+    let ((sig, body), _, _) := result.1
+    SItemTief.fnT sig body)
+  let literals := results.flatMap (fun result => result.1.2.1)
+  let requirements := results.flatMap (fun result => result.1.2.2)
+  let target ← appendLiterals (names ++ instances.map instanceName) (ordinary ++ generated) literals
+  pure (target, requirements)
 
 /-- Generic syntax belongs to ordinary function bodies in this implementation. -/
 def genericHeader : SItemTief → Bool
@@ -117,12 +125,16 @@ def genericHeader : SItemTief → Bool
 
 /-- Successful expansion removes all generic declarations. The check is a refusal gate, never
     an unchecked fallback; ordinary units retain their exact original frontend path. -/
-def expand (source : List SItemTief) : Except String (List SItemTief) := do
+def expandWithRequirements (source : List SItemTief) :
+    Except String (List SItemTief × List (STyp × String)) := do
   if source.any genericHeader then
-    let target ← expandTemplates source
+    let (target, requirements) ← expandTemplatesWithRequirements source
     if target.any genericHeader then throw "generic expansion left a template declaration"
-    pure target
-  else pure source
+    pure (target, requirements)
+  else pure (source, [])
+
+def expand (source : List SItemTief) : Except String (List SItemTief) :=
+  (expandWithRequirements source).map Prod.fst
 
 /-- Model A's generic syntactic guarantee: the actual exporter receives ordinary declarations.
     Their safety and contracts are checked by the unchanged G elaboration and checker. -/
@@ -130,18 +142,19 @@ theorem expand_ordinary (source target : List SItemTief) (h : expand source = .o
     target.any genericHeader = false := by
   cases hs : source.any genericHeader with
   | false =>
-    simp [expand, hs] at h
+    simp [expand, expandWithRequirements, hs] at h
     cases h
     exact hs
   | true =>
-    cases he : expandTemplates source with
-    | error error => simp [expand, hs, he] at h
+    cases he : expandTemplatesWithRequirements source with
+    | error error => simp [expand, expandWithRequirements, hs, he] at h
     | ok result =>
+      rcases result with ⟨result, requirements⟩
       cases hg : result.any genericHeader with
       | false =>
-        simp [expand, hs, he, hg] at h
+        simp [expand, expandWithRequirements, hs, he, hg] at h
         cases h
         exact hg
-      | true => simp [expand, hs, he, hg] at h
+      | true => simp [expand, expandWithRequirements, hs, he, hg] at h
 
 end Gabbro.Grammatik.Parser.Generic

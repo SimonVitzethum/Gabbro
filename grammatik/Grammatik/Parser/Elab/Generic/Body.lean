@@ -89,12 +89,17 @@ end
 
 /-- Instantiate the complete declaration and collect its rewritten dependencies in the same pass. -/
 def instantiate (env : Environment) (key : Instance) :
-    Except String ((FnSig × SAnw) × List Instance) := do
+    Except String (((FnSig × SAnw) × List (FnSig × SAnw) × List (STyp × String)) ×
+      List Instance) := do
   let (sig, body) ← declaration env key.function
   let (_, bindings) ← normalizeArguments env {} sig.generics key.arguments {}
   (do
     let sig' ← rewriteSignature env bindings sig
     let body' ← rewriteBody env (bindings.without (sig.params.map Prod.fst)) body
-    pure ({ sig' with name := instanceName key }, body')).run []
+    -- Literal bodies have no access to the instance's runtime or translation-time binders.
+    -- Their own generic calls still contribute to the same closed instance dependency graph.
+    let literals ← bindings.literals.mapM fun (literalSig, literalBody) => do
+      pure (← rewriteSignature env {} literalSig, ← rewriteBody env {} literalBody)
+    pure (({ sig' with name := instanceName key }, body'), literals, bindings.requirements)).run []
 
 end Gabbro.Grammatik.Parser.Generic

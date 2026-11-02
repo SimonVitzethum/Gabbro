@@ -17,11 +17,14 @@ def genericArguments : List Token → List String → List Token → List String
       (done ++ [String.intercalate " " (current.reverse.map zeigeTok)])
   | .zeichen s :: rest, stack, current, done =>
     let closer := if s == "[" then some "]" else if s == "(" then some ")"
-      else if s == "{" then some "}" else if s == "<" then some ">" else none
+      else if s == "{" then some "}"
+      else if s == "<" && (match current with
+        | .wort "ptr" :: _ => true
+        | _ => false) then some ">" else none
     match closer with
     | some close => genericArguments rest (close :: stack) (.zeichen s :: current) done
     | none =>
-      if s == "]" || s == ")" || s == "}" || s == ">" then
+      if s == "]" || s == ")" || s == "}" || (s == ">" && stack.head? == some ">") then
         match stack with
         | close :: tail =>
           if s == close then genericArguments rest tail (.zeichen s :: current) done

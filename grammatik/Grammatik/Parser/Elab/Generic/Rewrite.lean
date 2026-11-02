@@ -12,17 +12,21 @@ def liftResult {α : Type} (result : Except String α) : RewriteM α :=
 /-- The shared expression traversal substitutes constants and eliminates explicit applications. -/
 mutual
 def rewriteExpression (env : Environment) (bindings : Bindings) : SExpr → RewriteM SExpr
-  | .variable n => pure (expression bindings.values (.variable n))
+  | .variable n => match bindings.functions.find? (fun p => strEq p.1 n) with
+    | some (_, target) => pure (.fnref target)
+    | none => pure (expression bindings.values (.variable n))
   | .field e n => return .field (← rewriteExpression env bindings e) n
   | .index e i => return .index (← rewriteExpression env bindings e) (← rewriteExpression env bindings i)
   | .arrow e n => return .arrow (← rewriteExpression env bindings e) n
   | .un op e => return .un op (← rewriteExpression env bindings e)
   | .bin op a b => return .bin op (← rewriteExpression env bindings a) (← rewriteExpression env bindings b)
   | .call n args => do
+    let n := ((bindings.functions.find? (fun p => strEq p.1 n)).map Prod.snd).getD n
     if env.declarations.any (fun p => strEq p.1.name n && !p.1.generics.isEmpty) then
       liftResult (.error ("generic call requires explicit ::[arguments]: " ++ n))
     else return .call n (← args.mapM (rewriteExpression env bindings))
-  | .fnref n =>
+  | .fnref n => do
+    let n := ((bindings.functions.find? (fun p => strEq p.1 n)).map Prod.snd).getD n
     if env.declarations.any (fun p => strEq p.1.name n && !p.1.generics.isEmpty) then
       liftResult (.error "generic function reference requires an ordinary named instance")
     else pure (.fnref n)
