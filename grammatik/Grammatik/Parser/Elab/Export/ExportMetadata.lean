@@ -101,7 +101,9 @@ def metadataReason : SItemTief → String
     if !accOperatorBound m then "accumulator operator without G form"
     else "accumulator without per cpu count without G form"
   | .fnT sig _ =>
-    if sig.klauseln.any (fun | .cost _ => true | _ => false) then
+    if sig.art == "const" then
+      "const function requires certified call-site substitution before runtime export: " ++ sig.name
+    else if sig.klauseln.any (fun | .cost _ => true | _ => false) then
       "declared costs lack a checked source-to-kostenPasst binding: " ++ sig.name
     else "function type/proof/header duties lack a checked source binding: " ++ sig.name
   | _ => "type/provider/proof duties lack a checked source binding"

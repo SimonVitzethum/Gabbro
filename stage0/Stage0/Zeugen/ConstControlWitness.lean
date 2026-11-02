@@ -43,8 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- Const functions are evaluated by the front end but their source header is outside the export gate. -/
+/-- The runtime exporter omits const bodies; certified substitution of all call sites is still missing. -/
 theorem candidate_refused :
-    emit text 64 = .error "source export: function type/proof/header duties lack a checked source binding: choose" := by decide +kernel
+    emit text 64 = .error "source export: const function requires certified call-site substitution before runtime export: choose" := by decide +kernel
 
 end Gabbro.Stage0.ConstControlWitness
