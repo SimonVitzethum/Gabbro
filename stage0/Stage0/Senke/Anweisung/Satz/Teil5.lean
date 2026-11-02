@@ -20,6 +20,7 @@ public import Stage0.Senke.Anweisung.Bytes.Put
 public import Stage0.Senke.Anweisung.Faelle.Schreiben
 public import Stage0.Senke.Anweisung.Faelle.Speicher
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Traversal
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consume
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Retry
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Runtime.Teil2
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Emission
@@ -149,7 +150,11 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     assignSlotRef_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens r t ht ho field e
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
-  | _, _, _, _, .consumeTraverse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
+  | _, Γ, Λ, _, .consumeTraverse t member edge inv bound mass body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact consumeTraverse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
+      (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass)
+      (fun {pr ex} => lowB_ok hS hA hlo0 hens body)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .retScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, _, _, _, .retWhyScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
 
