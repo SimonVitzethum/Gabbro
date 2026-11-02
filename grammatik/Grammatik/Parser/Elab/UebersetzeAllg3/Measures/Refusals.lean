@@ -41,13 +41,13 @@ def withMeasure (measure : UMeasure) : UProg :=
   { countdown with fns := [{function "countdown" "countdown" with decreases := some measure}] }
 
 theorem duplicate_clause_zeuge :
-    uMeasureClause [.drops (.variable "n"), .drops (.lit 0)] =
+    uMeasureClause [] [.drops (.variable "n"), .drops (.lit 0)] =
       .error "duplicate or ambiguous decreases clause" := by decide +kernel
 
-theorem hidden_old_zeuge : uMeasureClause [.drops (.bin "+" (.lit 1) (.old (.variable "GLOBAL")))] =
+theorem hidden_old_zeuge : uMeasureClause [] [.drops (.bin "+" (.lit 1) (.old (.variable "GLOBAL")))] =
     .error "old-state read in decreases" := by decide +kernel
 
-theorem unsupported_call_zeuge : uMeasureClause [.drops (.bin "+" (.lit 1) (.call "helper" [.variable "n"]))] =
+theorem unsupported_call_zeuge : uMeasureClause [] [.drops (.bin "+" (.lit 1) (.call "helper" [.variable "n"]))] =
     .error "unsupported call in decreases" := by decide +kernel
 
 theorem hidden_global_zeuge :
@@ -236,8 +236,194 @@ theorem lowerMeasures_denotes_zeuge :
           (eval initial c.2.1 state env).n) ∧
     AkzeptiertX countP (Cover.Differenz.sperrFamilie countdown) [0] [] [] [] = true ∧
     ∀ passes Q S T, MassPflicht countP passes Q S T countM.mass (zykS countP [0]) 0 :=
-  ⟨lowerMeasures_denotes countdown countM 0 [.drops (.variable "n")] (.variable "n")
+  ⟨lowerMeasures_denotes countdown countM 0 [] [.drops (.variable "n")] (.variable "n")
       (.variable "n") rfl rfl rfl,
     countdown_accepted_zeuge, countdown_duty_zeuge⟩
+
+/-- Division over a positive denominator lowers with an empty footprint. -/
+def divU : UProg := withMeasure (.bin "/" (.variable "n") (.lit 1))
+theorem divLowered : (lowerAllg divU).toOption.isSome = true := by decide +kernel
+def divM := (exported divU divLowered).val
+theorem divSource : SourceTuple divU 0 (divM.mass 0) := divM.source 0
+theorem divDenotes :
+    ∃ c : Component divU 0, divM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf divU)) (env : Env (declOf divU) ((declOf divU).params 0)),
+        SourceValue (fnAt divU 0) (fnAt divU 0).measureConstants env
+          (.bin "/" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes divU divM 0 [] [.drops (.bin "/" (.variable "n") (.lit 1))]
+    (.bin "/" (.variable "n") (.lit 1)) (.bin "/" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A denominator that may be zero is refused, never guessed. -/
+theorem div_zero_zeuge :
+    (lowerMeasures (withMeasure (.bin "/" (.variable "n") (.lit 0)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- A nonzero signed denominator still fails the entry nonnegativity gate when its
+    quotient may go negative: the gate is not weakened for the signed branch. -/
+theorem div_negative_gate_zeuge :
+    (lowerMeasures (withMeasure (.bin "/" (.variable "n")
+      (.bin "-" (.variable "n") (.lit 2))))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Remainder over a positive denominator lowers with an empty footprint. -/
+def remU : UProg := withMeasure (.bin "%" (.variable "n") (.lit 2))
+theorem remLowered : (lowerAllg remU).toOption.isSome = true := by decide +kernel
+def remM := (exported remU remLowered).val
+theorem remSource : SourceTuple remU 0 (remM.mass 0) := remM.source 0
+theorem remDenotes :
+    ∃ c : Component remU 0, remM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf remU)) (env : Env (declOf remU) ((declOf remU).params 0)),
+        SourceValue (fnAt remU 0) (fnAt remU 0).measureConstants env
+          (.bin "%" (.variable "n") (.lit 2)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes remU remM 0 [] [.drops (.bin "%" (.variable "n") (.lit 2))]
+    (.bin "%" (.variable "n") (.lit 2)) (.bin "%" (.variable "n") (.lit 2)) rfl rfl rfl
+
+/-- A remainder over a denominator that may be zero is refused, never guessed. -/
+theorem rem_zero_zeuge :
+    (lowerMeasures (withMeasure (.bin "%" (.variable "n") (.lit 0)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Bitwise and over non-negative ranges lowers with an empty footprint. -/
+def andU : UProg := withMeasure (.bin "&" (.variable "n") (.lit 1))
+theorem andLowered : (lowerAllg andU).toOption.isSome = true := by decide +kernel
+def andM := (exported andU andLowered).val
+theorem andSource : SourceTuple andU 0 (andM.mass 0) := andM.source 0
+theorem andDenotes :
+    ∃ c : Component andU 0, andM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf andU)) (env : Env (declOf andU) ((declOf andU).params 0)),
+        SourceValue (fnAt andU 0) (fnAt andU 0).measureConstants env
+          (.bin "&" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes andU andM 0 [] [.drops (.bin "&" (.variable "n") (.lit 1))]
+    (.bin "&" (.variable "n") (.lit 1)) (.bin "&" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A bit operation over a negative range is refused, never guessed. -/
+theorem and_negative_zeuge :
+    (lowerMeasures (withMeasure (.bin "&" (.bin "-" (.lit 0) (.variable "n"))
+      (.variable "n")))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Bitwise or over non-negative ranges lowers with an empty footprint. -/
+def orU : UProg := withMeasure (.bin "|" (.variable "n") (.lit 1))
+theorem orLowered : (lowerAllg orU).toOption.isSome = true := by decide +kernel
+def orM := (exported orU orLowered).val
+theorem orSource : SourceTuple orU 0 (orM.mass 0) := orM.source 0
+theorem orDenotes :
+    ∃ c : Component orU 0, orM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf orU)) (env : Env (declOf orU) ((declOf orU).params 0)),
+        SourceValue (fnAt orU 0) (fnAt orU 0).measureConstants env
+          (.bin "|" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes orU orM 0 [] [.drops (.bin "|" (.variable "n") (.lit 1))]
+    (.bin "|" (.variable "n") (.lit 1)) (.bin "|" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A bitwise or over a negative range is refused, never guessed. -/
+theorem or_negative_zeuge :
+    (lowerMeasures (withMeasure (.bin "|" (.bin "-" (.lit 0) (.variable "n"))
+      (.lit 1)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Bitwise xor over non-negative ranges lowers with an empty footprint. -/
+def xorU : UProg := withMeasure (.bin "^" (.variable "n") (.lit 1))
+theorem xorLowered : (lowerAllg xorU).toOption.isSome = true := by decide +kernel
+def xorM := (exported xorU xorLowered).val
+theorem xorSource : SourceTuple xorU 0 (xorM.mass 0) := xorM.source 0
+theorem xorDenotes :
+    ∃ c : Component xorU 0, xorM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf xorU)) (env : Env (declOf xorU) ((declOf xorU).params 0)),
+        SourceValue (fnAt xorU 0) (fnAt xorU 0).measureConstants env
+          (.bin "^" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes xorU xorM 0 [] [.drops (.bin "^" (.variable "n") (.lit 1))]
+    (.bin "^" (.variable "n") (.lit 1)) (.bin "^" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A bitwise xor over a negative range is refused, never guessed. -/
+theorem xor_negative_zeuge :
+    (lowerMeasures (withMeasure (.bin "^" (.bin "-" (.lit 0) (.variable "n"))
+      (.lit 1)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Shift left over non-negative ranges lowers with an empty footprint. -/
+def shlU : UProg := withMeasure (.bin "<<" (.variable "n") (.lit 1))
+theorem shlLowered : (lowerAllg shlU).toOption.isSome = true := by decide +kernel
+def shlM := (exported shlU shlLowered).val
+theorem shlSource : SourceTuple shlU 0 (shlM.mass 0) := shlM.source 0
+theorem shlDenotes :
+    ∃ c : Component shlU 0, shlM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf shlU)) (env : Env (declOf shlU) ((declOf shlU).params 0)),
+        SourceValue (fnAt shlU 0) (fnAt shlU 0).measureConstants env
+          (.bin "<<" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes shlU shlM 0 [] [.drops (.bin "<<" (.variable "n") (.lit 1))]
+    (.bin "<<" (.variable "n") (.lit 1)) (.bin "<<" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A shift amount no type holds is refused, never guessed. -/
+theorem shl_range_zeuge :
+    (lowerMeasures (withMeasure (.bin "<<" (.variable "n") (.lit 4097)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Shift right over non-negative ranges lowers with an empty footprint. -/
+def shrU : UProg := withMeasure (.bin ">>" (.variable "n") (.lit 1))
+theorem shrLowered : (lowerAllg shrU).toOption.isSome = true := by decide +kernel
+def shrM := (exported shrU shrLowered).val
+theorem shrSource : SourceTuple shrU 0 (shrM.mass 0) := shrM.source 0
+theorem shrDenotes :
+    ∃ c : Component shrU 0, shrM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf shrU)) (env : Env (declOf shrU) ((declOf shrU).params 0)),
+        SourceValue (fnAt shrU 0) (fnAt shrU 0).measureConstants env
+          (.bin ">>" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes shrU shrM 0 [] [.drops (.bin ">>" (.variable "n") (.lit 1))]
+    (.bin ">>" (.variable "n") (.lit 1)) (.bin ">>" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A shift amount no type holds is refused, never guessed. -/
+theorem shr_range_zeuge :
+    (lowerMeasures (withMeasure (.bin ">>" (.variable "n") (.lit 4097)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- A conversion through a built-in width lowers with an empty footprint. -/
+def convU : UProg := withMeasure (.conv "u8" (.variable "n"))
+theorem convLowered : (lowerAllg convU).toOption.isSome = true := by decide +kernel
+def convM := (exported convU convLowered).val
+theorem convSource : SourceTuple convU 0 (convM.mass 0) := convM.source 0
+theorem convDenotes :
+    ∃ c : Component convU 0, convM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf convU)) (env : Env (declOf convU) ((declOf convU).params 0)),
+        SourceValue (fnAt convU 0) (fnAt convU 0).measureConstants env
+          (.call "u8" [.variable "n"]) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes convU convM 0 [] [.drops (.call "u8" [.variable "n"])]
+    (.call "u8" [.variable "n"]) (.conv "u8" (.variable "n")) rfl rfl rfl
+
+/-- A conversion through a unit alias lowers once the alias scope travels with the function. -/
+def convAliasU : UProg := { countdown with fns :=
+  [{function "countdown" "countdown" with decreases := some (.conv "A" (.variable "n")),
+      measureTypes := [("A", (0, 7))]}] }
+theorem convAliasLowered : (lowerAllg convAliasU).toOption.isSome = true := by decide +kernel
+def convAliasM := (exported convAliasU convAliasLowered).val
+theorem convAliasSource : SourceTuple convAliasU 0 (convAliasM.mass 0) := convAliasM.source 0
+theorem convAliasDenotes :
+    ∃ c : Component convAliasU 0, convAliasM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf convAliasU))
+        (env : Env (declOf convAliasU) ((declOf convAliasU).params 0)),
+        SourceValue (fnAt convAliasU 0) (fnAt convAliasU 0).measureConstants env
+          (.call "A" [.variable "n"]) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes convAliasU convAliasM 0 [("A", (0, 7))]
+    [.drops (.call "A" [.variable "n"])]
+    (.call "A" [.variable "n"]) (.conv "A" (.variable "n")) rfl rfl rfl
+
+/-- Collection admits a conversion only when its head names a type of the alias scope. -/
+theorem conv_collect_zeuge :
+    uMeasureClause [("A", (0, 7))] [.drops (.call "A" [.variable "n"])] =
+      .ok (some (.conv "A" (.variable "n"))) := by decide +kernel
+
+/-- Collection refuses a conversion whose head names no type, like any other call. -/
+theorem conv_unknown_zeuge :
+    uMeasureClause [] [.drops (.call "A" [.variable "n"])] =
+      .error "unsupported call in decreases" := by decide +kernel
+
+/-- A conversion whose operand lies outside the target range is refused, never guessed. -/
+theorem conv_range_zeuge :
+    (lowerMeasures (withMeasure (.conv "i1" (.variable "n")))).toOption.isSome = false := by
+  decide +kernel
+
+/-- A call that names no type is refused at lowering too, never read as a conversion. -/
+theorem conv_call_zeuge :
+    (lowerMeasures (withMeasure (.conv "helper" (.variable "n")))).toOption.isSome = false := by
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.Measures.Fixtures

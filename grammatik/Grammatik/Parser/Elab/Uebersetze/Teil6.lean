@@ -31,16 +31,37 @@ where
     | .effs _ :: _ => true
     | _ :: rest => uHatWirkung rest
 
-/-- The expression of a `decreases` clause, `none` for every other clause. -/
+/-- Select the original decreases expression. -/
 def dropsOf : SKlausel → Option SExpr
   | .drops e => some e
   | _ => none
 
+/-- Every conversion in a collected measure names a type of the unit's alias scope;
+    a call to anything else is a call and stays refused, including below arithmetic. -/
+def uMeasureCheck (alias : List (String × (Int × Int))) : UMeasure → Except String Unit
+  | .conv f a =>
+    match uTypName alias f with
+    | .ok _ => uMeasureCheck alias a
+    | .error _ => .error "unsupported call in decreases"
+  | .bin _ a b =>
+    match uMeasureCheck alias a with
+    | .ok _ => uMeasureCheck alias b
+    | .error e => .error e
+  | .un _ a => uMeasureCheck alias a
+  | _ => .ok ()
+
 /-- Collect exactly one written measure. The surface grammar has one expression, not a tuple. -/
-def uMeasureClause (ks : List SKlausel) : Except String (Option UMeasure) :=
+def uMeasureClause (alias : List (String × (Int × Int))) (ks : List SKlausel) :
+    Except String (Option UMeasure) :=
   match ks.filterMap dropsOf with
   | [] => .ok none
-  | [e] => (uMeasureSource e).map some
+  | [e] =>
+    match uMeasureSource e with
+    | .ok m =>
+      match uMeasureCheck alias m with
+      | .ok _ => .ok (some m)
+      | .error err => .error err
+    | .error err => .error err
   | _ => .error "duplicate or ambiguous decreases clause"
 
 /-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`,
@@ -97,7 +118,7 @@ def elabKopf (_consts : List (String × Int))
     -- `None | Some(Impl)`)
     if !(strEq art "impl" || strEq art "") then .error "fn is not impl"
     else
-      match uMeasureClause klauseln, uOhneKlauselForm klauseln with
+      match uMeasureClause alias klauseln, uOhneKlauselForm klauseln with
       | .error e, _ => .error e
       | _, .error e => .error e
       | .ok _, .ok _ =>
