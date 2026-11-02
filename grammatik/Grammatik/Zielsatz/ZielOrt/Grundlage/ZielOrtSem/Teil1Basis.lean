@@ -243,6 +243,7 @@ theorem blatt_lokal (P : Programm D) (O : Orakel D) (passes : Nat) {V : Vertrag 
   | next h' => simp only [execStmt] at h; cases h
   | axiomCall => simp only [Stmt.kOk, Bool.false_eq_true] at hk
   | callInd => simp only [Stmt.kOk, Bool.false_eq_true] at hk
+  | callIndElse => simp only [Stmt.kOk, Bool.false_eq_true] at hk
   | traverse => simp only [Stmt.kOk, Bool.false_eq_true] at hk
   | retry => simp only [Stmt.kOk, Bool.false_eq_true] at hk
   | forever => simp only [Stmt.kOk, Bool.false_eq_true] at hk

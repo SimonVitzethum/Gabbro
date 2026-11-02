@@ -205,6 +205,14 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+        hrho neu hneu =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho
+        hrho neu hneu =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
       rw [hpop] at hStk
       cases hStk

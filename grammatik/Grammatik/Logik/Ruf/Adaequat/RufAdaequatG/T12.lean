@@ -69,6 +69,8 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | dannBindCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | dannCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
     | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg
@@ -140,11 +142,13 @@ theorem ruf_fortsetzung :
   frame the machine did not push with a bind-call; the witness's caller
   satisfies it by `rfl`. What is NOT proved here:
 
-  - Calls of every form (`call`, `callInd`, `bindCall`, `bindCallInd`,
-    `bindCallElse`): direct calls and bind-calls are covered in
+  - Calls of every form (`call`, `callInd`, `callIndElse`, `bindCall`,
+    `bindCallInd`, `bindCallElse`, `bindCallIndElse`): direct calls and
+    bind-calls are covered in
     `RufAdaequatRufG.lean` (TARGET 4, any nesting depth), after the repair
     of `ruf`/`rufCallInd` (they pushed the caller frame with its unchanged
-    residue, so after `rueck` the caller repeated the call).
+    residue, so after `rueck` the caller repeated the call). The indirect
+    else forms are not simulated yet.
   - `traverse`: after the repair (`dannTrav` reads nothing, `travNext`/
     `travDone`/`dannLeaveTrav` read exactly where `traverseLauf` does, a
     false read fires no rule) the rules agree with `traverseLauf`

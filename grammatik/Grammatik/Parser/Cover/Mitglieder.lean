@@ -118,6 +118,7 @@ def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .onWhy r arms => "Stmt.onWhy" :: (eE r ++ cGArms arms)
   | .call (args := args) .. => "Stmt.call" :: eA args
   | .callInd (p := p) (args := args) .. => "Stmt.callInd" :: (eE p ++ eA args)
+  | .callIndElse (p := p) (args := args) (err := err) .. => "Stmt.callIndElse" :: (eE p ++ eA args ++ cE err)
   | .locks _ _ body => "Stmt.locks" :: cB body
   | .breaking _ body => "Stmt.breaking" :: cB body
   | .traverse _ inv body => "Stmt.traverse" :: (eE inv ++ cB body)
@@ -145,6 +146,7 @@ def cB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .bind e rest => "Block.bind" :: (eE e ++ cB rest)
   | .bindCall (args := args) (rest := rest) .. => "Block.bindCall" :: (eA args ++ cB rest)
   | .bindCallInd (p := p) (args := args) (rest := rest) .. => "Block.bindCallInd" :: (eE p ++ eA args ++ cB rest)
+  | .bindCallIndElse (p := p) (args := args) (err := err) (rest := rest) .. => "Block.bindCallIndElse" :: (eE p ++ eA args ++ cE err ++ cB rest)
   | .bindCallElse (args := args) (err := err) (rest := rest) .. => "Block.bindCallElse" :: (eA args ++ cE err ++ cB rest)
   | .bindAxiom (args := args) (rest := rest) .. => "Block.bindAxiom" :: (eA args ++ cB rest)
   | .bindAxiomElse (args := args) (err := err) (rest := rest) .. => "Block.bindAxiomElse" :: (eA args ++ cE err ++ cB rest)
@@ -190,6 +192,7 @@ def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .regReadElse (zusage := z) (sonst := sonst) (rest := rest) .. => "Endblock.regReadElse" :: (eE z ++ cE sonst ++ cE rest)
   | .awaits (rest := rest) .. => "Endblock.awaits" :: cE rest
   | .bindCallInd (p := p) (args := args) (rest := rest) .. => "Endblock.bindCallInd" :: (eE p ++ eA args ++ cE rest)
+  | .bindCallIndElse (p := p) (args := args) (err := err) (rest := rest) .. => "Endblock.bindCallIndElse" :: (eE p ++ eA args ++ cE err ++ cE rest)
   | .narrow e _ _ sonst rest => "Endblock.narrow" :: (eE e ++ cE sonst ++ cE rest)
   | .narrowRequired e _ _ rest => "Endblock.narrowRequired" :: (eE e ++ cE rest)
   | .exchange (neu := neu) (rest := rest) .. => "Endblock.exchange" :: (eE neu ++ cE rest)

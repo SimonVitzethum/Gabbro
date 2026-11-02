@@ -56,6 +56,7 @@ def Stmt.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .leave .. => false
   | .next .. => false
   | .callInd .. => false
+  | .callIndElse .. => false
   | _ => true
 
 def Block.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -65,6 +66,7 @@ def Block.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind _ rest => rest.kOk
   | .bindCall _ _ _ _ _ rest => rest.kOk
   | .bindCallInd .. => false
+  | .bindCallIndElse .. => false
   | .bindCallElse .. => false
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
@@ -110,6 +112,8 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits .. => false
 
   | .bindCallInd .. => false
+
+  | .bindCallIndElse .. => false
 
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool

@@ -93,6 +93,8 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .bindCallInd p args he hp hr rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
+  | .bindCallIndElse p args he hp hr err rest, σ, ρ => by
+      simp only [execBlockH, execBlock, indSonst, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .bindCallElse f args he hp hr err rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
@@ -159,6 +161,8 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindCallInd p args he hp hr rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .bindCallIndElse p args he hp hr err rest, σ, ρ => by
+      simp only [execEndH, execEnd, indSonstE, Endblock.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .narrow e lo' hi' sonst rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer sonst] <;> rfl
   | .narrowRequired e lo' hi' rest, σ, ρ => by
@@ -213,6 +217,7 @@ def Stmt.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ
   | .retry _ _ body ueber => body.ohneLocks && ueber.ohneLocks
   | .forever _ _ body => body.ohneLocks
   | .axiomCallElse _ _ _ _ _ _ _ _ err => err.ohneLocks
+  | .callIndElse _ _ _ _ _ err => err.ohneLocks
   | _ => true
 
 def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Bool
@@ -221,6 +226,7 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
   | .bind _ rest => rest.ohneLocks
   | .bindCall _ _ _ _ _ rest => rest.ohneLocks
   | .bindCallInd _ _ _ _ _ rest => rest.ohneLocks
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
@@ -257,6 +263,7 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .regReadElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .awaits _ _ _ _ _ rest => rest.ohneLocks
   | .bindCallInd _ _ _ _ _ rest => rest.ohneLocks
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .narrow _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .narrowRequired _ _ _ rest => rest.ohneLocks
   | .exchange _ _ _ _ rest => rest.ohneLocks

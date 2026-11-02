@@ -122,6 +122,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact grundSG arms ha ho _ _ _ _ h1
   | _, _, _, _, _, .call .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .callInd .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callIndElse .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hb⟩ := hs.locks_inv
@@ -179,6 +180,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact AusSG.schrumpf (blockSG rest hr ho _ _ _ h1)
   | _, _, _, _, _, .bindCall .., hb, _ => by cases hb
   | _, _, _, _, _, .bindCallInd .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindCallIndElse .., hb, _ => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb, _ => by cases hb

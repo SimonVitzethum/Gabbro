@@ -82,6 +82,20 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
+  | .callIndElse p args he hp hr err, h, σ, ρ, e', he' => by
+      simp only [Stmt.hardwareFrei] at h
+      simp only [execStmt, indSonst] at he'
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he'
+      obtain ⟨f, hf⟩ := pv
+      simp only at he'
+      split at he'
+      · cases he'
+      · exact Endblock.hardwareFrei_ok hR err h _ _ _
+          (EndAusgang.schrumpf_hardware (EndAusgang.zuAusgang_hardware he'))
+      · cases he'
+      · rename_i heq
+        cases he'
+        exact hR _ _ _ _ heq
   | .forever .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
   | .axiomCall .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
   | .axiomCallElse .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
@@ -139,6 +153,20 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
       · exact Block.hardwareFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_hardware he)
       · rename_i r _
         exact keinGrundSig hf hr r
+      · cases he
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+      simp only [Block.hardwareFrei, Bool.and_eq_true] at h
+      simp only [execBlock, indSonst] at he
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
+      obtain ⟨f, hf⟩ := pv
+      simp only at he
+      split at he
+      · exact Block.hardwareFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_hardware he)
+      · exact Endblock.hardwareFrei_ok hR err h.1 _ _ _
+          (EndAusgang.schrumpf_hardware (EndAusgang.zuAusgang_hardware he))
       · cases he
       · rename_i heq
         cases he
@@ -272,6 +300,19 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       · exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
       · rename_i r _
         exact keinGrundSig hf hr r
+      · cases he
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+      simp only [Endblock.hardwareFrei, Bool.and_eq_true] at h
+      simp only [execEnd, indSonstE] at he
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
+      obtain ⟨f, hf⟩ := pv
+      simp only at he
+      split at he
+      · exact Endblock.hardwareFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_hardware he)
+      · exact Endblock.hardwareFrei_ok hR err h.1 _ _ _ (EndAusgang.schrumpf_hardware he)
       · cases he
       · rename_i heq
         cases he

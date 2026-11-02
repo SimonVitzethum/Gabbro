@@ -224,10 +224,10 @@ where
 
 /-! ## CUTS: what is not proved.
 
-  - `hoare_call` covers the `Stmt.call` statement only; the `callInd`
-    (indirect call), `Block.bindCall`, `bindCallInd` and `bindCallElse`
-    constructors take the same `RespektiertVertraege` premise but are
-    not stated here.
+  - `hoare_call` covers the `Stmt.call` statement only; the `callInd`,
+    `callIndElse` (indirect calls), `Block.bindCall`, `bindCallInd`,
+    `bindCallIndElse` and `bindCallElse` constructors take the same
+    `RespektiertVertraege` premise but are not stated here.
   - The witness handler answers with the entry world unchanged (the
     `rufD` signature writes nothing), so the postcondition holds with
     `s0 = σ'`; a handler whose return world differs from the entry

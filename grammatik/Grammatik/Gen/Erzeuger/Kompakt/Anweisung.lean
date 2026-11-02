@@ -159,6 +159,18 @@ theorem stmtS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ Λ)
         Sz.mem_wenn hp <| Sz.mem_wenn hr <| Sz.mem_bind hargs <| Sz.mem_pure _)
         (by omega)
     · glfertig
+  | callIndElse p args he hp hr err =>
+    simp only [groesseStmt] at hu hE hB hO
+    obtain ⟨p', hpp, ⟨_, _⟩⟩ := hE _ p (by omega)
+    obtain ⟨args', hargs, ⟨_, _⟩⟩ := argsS_rep hE _ args (by omega)
+    obtain ⟨err', herrm, ⟨_, _, _, _, _, _⟩⟩ := hO.en _ _ _ err (by omega)
+    refine ⟨.callIndElse p' args' he hp hr err', ?_, ?_⟩
+    · simp only [groesseStmt]
+      have herr' := herrm (groesseEnd err' + 0) (by omega)
+      stm (sCallIndElse O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_fnptrS hpp) <|
+        mem_mitSome he <| Sz.mem_wenn hp <| Sz.mem_wenn hr <|
+        Sz.mem_bindR hargs herr' <| Sz.mem_pure _) (by omega)
+    · glfertig
   | locks L hr body =>
     simp only [groesseStmt] at hu hE hB hO
     obtain ⟨body', hbm, ⟨_, _, _, _, _, _⟩⟩ := hO.bl _ _ _ _ body (by omega)

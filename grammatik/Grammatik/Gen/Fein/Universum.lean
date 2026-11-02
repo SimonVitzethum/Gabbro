@@ -158,7 +158,8 @@ def kTab : List (List Zeile) := [
     ⟨none, false, false, []⟩ /- retWhy -/,
     ⟨none, true, false, []⟩ /- leave -/,
     ⟨none, true, false, []⟩ /- next -/,
-    ⟨none, false, false, [(0, some 9, none), (0, none, none)]⟩ /- assignSlotRef -/],
+    ⟨none, false, false, [(0, some 9, none), (0, none, none)]⟩ /- assignSlotRef -/,
+    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none)]⟩ /- callIndElse -/],
   -- Block
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(4, none, none), (5, none, none)]⟩ /- cons -/,
@@ -177,7 +178,8 @@ def kTab : List (List Zeile) := [
     ⟨none, false, false, [(0, some 6, none), (0, some 6, none), (5, none, none)]⟩ /- float -/,
     ⟨none, false, false, [(5, none, none)]⟩ /- floatLit -/,
     ⟨none, false, false, [(0, some 0, none), (5, none, none)]⟩ /- floatOf -/,
-    ⟨none, false, false, [(0, some 6, none), (6, none, none), (5, none, none)]⟩ /- floatNarrow -/],
+    ⟨none, false, false, [(0, some 6, none), (6, none, none), (5, none, none)]⟩ /- floatNarrow -/,
+    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none), (5, none, none)]⟩ /- bindCallIndElse -/],
   -- Endblock
   [⟨none, false, false, [(3, none, none)]⟩ /- ret -/,
     ⟨none, false, false, []⟩ /- retWhy -/,
@@ -195,7 +197,8 @@ def kTab : List (List Zeile) := [
     ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none)]⟩ /- bindCallInd -/,
     ⟨none, false, false, [(0, some 0, none), (6, none, none), (6, none, none)]⟩ /- narrow -/,
     ⟨none, false, false, [(0, none, none), (6, none, none)]⟩ /- exchange -/,
-    ⟨none, false, false, [(0, some 1, none), (6, none, none), (6, none, none)]⟩ /- ite -/],
+    ⟨none, false, false, [(0, some 1, none), (6, none, none), (6, none, none)]⟩ /- ite -/,
+    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none), (6, none, none)]⟩ /- bindCallIndElse -/],
   -- Arms
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(5, none, none), (7, none, none)]⟩ /- cons -/],

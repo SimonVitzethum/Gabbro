@@ -70,6 +70,10 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .callIndElse p args he _ hr err, σ, ρ =>
+      indSonst R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' _ => .ok σ' ρ)
+        (fun σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang)
   | .locks L _ body, σ, ρ => (execBlock body (σ.nimmt L) ρ).mapWelt (·.gibt L)
   | .breaking _ body, σ, ρ => execBlock body σ ρ
   | .traverse t inv body, σ, ρ =>
@@ -160,6 +164,10 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       | .why σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .bindCallIndElse p args he _ hr err rest, σ, ρ =>
+      indSonst R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execBlock rest σ' (.cons v ρ)).schrumpf)
+        (fun σ' r => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang)
   | .bindAxiom a args he _ _ _ _ rest, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
@@ -328,6 +336,10 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .bindCallIndElse p args he _ hr err rest, σ, ρ =>
+      indSonstE R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execEnd rest σ' (.cons v ρ)).schrumpf)
+        (fun σ' r => (execEnd err σ' (.cons r ρ)).schrumpf)
   | .narrow e lo' hi' sonst rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       let v := eval σ e σ ρ

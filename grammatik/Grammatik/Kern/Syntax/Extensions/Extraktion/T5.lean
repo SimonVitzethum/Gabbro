@@ -437,6 +437,7 @@ def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
   | .onWhy _ _ => []
   | .call _ _ _ _ => []
   | .callInd _ _ _ _ => []
+  | .callIndElse _ _ _ _ _ _ => []
   | .locks _ _ _ => []
   | .breaking _ _ => []
   | .traverse _ _ _ => []

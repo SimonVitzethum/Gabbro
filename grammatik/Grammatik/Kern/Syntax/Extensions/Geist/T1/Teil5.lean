@@ -4,6 +4,7 @@ public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil4
+public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil6
 
 @[expose] public section
 
@@ -39,6 +40,8 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001Stmt_korrekt_call (f := f) (args := args) (hp := hp) (hr := hr) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .callInd p args hp hr, zr_h, o, zr_ho =>
       g001Stmt_korrekt_callInd (p := p) (args := args) (hp := hp) (hr := hr) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
+  | .callIndElse p args he hp hr err, zr_h, o, zr_ho =>
+      g001Stmt_korrekt_callIndElse (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_err := g001End_korrekt err)
   | .axiomCall a args h hw hg hd hgd, zr_h, o, zr_ho => by
       revert zr_h zr_ho
       intro h ho
@@ -125,6 +128,8 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001_korrekt_bindCall (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
   | .bindCallInd p args he hp hr rest, zr_h, o, zr_ho =>
       g001_korrekt_bindCallInd (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
+  | .bindCallIndElse p args he hp hr err rest, zr_h, o, zr_ho =>
+      g001_korrekt_bindCallIndElse (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_err := g001End_korrekt err)
   | .bindCallElse f args he hp hr err rest, zr_h, o, zr_ho =>
       g001_korrekt_bindCallElse (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_err := g001End_korrekt err)
   | .bindAxiom a args he hw hg hd hgd rest, zr_h, o, zr_ho =>
@@ -217,6 +222,8 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       g001End_korrekt_awaits (g := g) (payload := payload) (hp := hp) (hL := hL) (hat := hat) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .bindCallInd p args he hp hr rest, zr_h, o, zr_ho =>
       g001End_korrekt_bindCallInd (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .bindCallIndElse p args he hp hr err rest, zr_h, o, zr_ho =>
+      g001End_korrekt_bindCallIndElse (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_err := g001End_korrekt err) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .narrow e lo' hi' sonst rest, zr_h, o, zr_ho =>
       g001End_korrekt_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_sonst := g001End_korrekt sonst) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .narrowRequired e lo' hi' rest, zr_h, o, zr_ho =>

@@ -60,6 +60,7 @@ def Stmt.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ 
   | .onOption _ p a => p.ohneEwig && a.ohneEwig
   | .onTag _ arms => arms.ohneEwig
   | .onWhy _ arms => arms.ohneEwig
+  | .callIndElse _ _ _ _ _ err => err.ohneEwig
   | .locks _ _ body => body.ohneEwig
   | .breaking _ body => body.ohneEwig
   | .traverse _ _ body => body.ohneEwig
@@ -77,6 +78,7 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bind _ rest => rest.ohneEwig
   | .bindCall _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindCallElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
@@ -113,6 +115,7 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .awaits _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .narrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .narrowRequired _ _ _ rest => rest.ohneEwig
   | .exchange _ _ _ _ rest => rest.ohneEwig
@@ -190,6 +193,7 @@ theorem Stmt.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .shift .., _, _, _ => rfl
   | .call .., _, _, _ => rfl
   | .callInd .., _, _, _ => rfl
+  | .callIndElse .., _, _, _ => rfl
   | .axiomCall .., _, _, _ => rfl
   | .axiomCallElse .., _, _, _ => rfl
   | .regWrite .., _, _, _ => rfl
@@ -220,6 +224,9 @@ theorem Block.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ => by
+      simp only [Block.ohneEwig, Bool.and_eq_true] at h
+      simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes err h.1]
   | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
       simp only [Block.ohneEwig, Bool.and_eq_true] at h
       simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes err h.1]
@@ -314,6 +321,9 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes err h.1]
   | .narrow e lo' hi' sonst rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
       simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes sonst h.1]

@@ -131,6 +131,11 @@ def druckS (nm : Namen D) (ein : String) {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       .ok s!"{ein}if {c'} \{\n{t'}{ein}} else \{\n{e'}{ein}}\n"
   | .call f args _ _ => do .ok s!"{ein}{nm.fn f}({liste (← druckA nm args)});\n"
   | .callInd p args _ _ => do .ok s!"{ein}{← druckE nm none p}({liste (← druckA nm args)});\n"
+  | .callIndElse p args _ _ _ err => do
+      -- No statement-level `else` surface reads this back yet (like the direct `Stmt.call`, which has no
+      -- `else` form either); the text parser accepts the `let .. else` shape for the block forms only.
+      let fehler ← druckEnd nm (ein ++ "    ") err
+      .ok s!"{ein}{← druckE nm none p}({liste (← druckA nm args)}) else (v{Γ.length}) \{\n{fehler}{ein}}\n"
   | .traverse t inv body => do
       let invS := match inv with | .tru => .ok "" | i => do .ok s!" invariant {← druckE nm none i}"
       .ok s!"{ein}traverse v{Γ.length} over slots of {nm.tab t} by unvisited{← invS} \{\n{← druckB nm (ein ++ "    ") body}{ein}}\n"

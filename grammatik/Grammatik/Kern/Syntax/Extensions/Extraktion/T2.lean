@@ -258,6 +258,7 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onWhy r arms => r.orte ++ grundArmsOrte arms
   | .call _ args _ _ => args.orte
   | .callInd p args _ _ => p.orte ++ args.orte
+  | .callIndElse p args _ _ _ err => p.orte ++ args.orte ++ endblockOrte err
   | .locks _ _ body => blockOrte body
   | .breaking _ body => blockOrte body
   | .traverse _ inv body => inv.orte ++ blockOrte body
@@ -289,6 +290,7 @@ def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind e rest => e.orte ++ blockOrte rest
   | .bindCall _ args _ _ _ rest => args.orte ++ blockOrte rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ blockOrte rest
+  | .bindCallIndElse p args _ _ _ err rest => p.orte ++ args.orte ++ endblockOrte err ++ blockOrte rest
   | .bindCallElse _ args _ _ _ err rest =>
       args.orte ++ endblockOrte err ++ blockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
@@ -334,6 +336,7 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       zusage.orte ++ endblockOrte sonst ++ endblockOrte rest
   | .awaits g _ _ _ _ rest => .inr g :: endblockOrte rest
   | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrte rest
+  | .bindCallIndElse p args _ _ _ err rest => p.orte ++ args.orte ++ endblockOrte err ++ endblockOrte rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrte sonst ++ endblockOrte rest
   | .narrowRequired e _ _ rest => e.orte ++ endblockOrte rest

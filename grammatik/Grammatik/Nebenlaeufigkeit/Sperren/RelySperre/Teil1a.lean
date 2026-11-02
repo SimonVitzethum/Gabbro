@@ -146,6 +146,7 @@ theorem blatt_erhaelt_globs
   | onWhy r arms => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | call fn args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | callIndElse p args he hp hr err => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | locks Lk hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | traverse u inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf

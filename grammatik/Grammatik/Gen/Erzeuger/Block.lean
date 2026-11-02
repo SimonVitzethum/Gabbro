@@ -49,6 +49,14 @@ def bBindCallInd : Sz (SB D V l Γ Λ) :=
       Sz.bindR (argsS E (D.sigNr n).params) (fun m => O.bl l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args r =>
         Sz.pure ⟨r.1, .bindCallInd p args he hp hr r.2⟩)
 
+def bBindCallIndElse : Sz (SB D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ => mitSome (D.sigNr n).erg fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn (0 < (D.sigNr n).gruende) fun hr =>
+      Sz.bindR (argsS E (D.sigNr n).params)
+        (fun m => O.en l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args err =>
+        Sz.bindR (Sz.pure ()) (fun m => O.bl l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun _ r =>
+          Sz.pure ⟨r.1, .bindCallIndElse p args he hp hr err r.2⟩)
+
 def bBindCallElse : Sz (SB D V l Γ Λ) :=
   Sz.knoten (Sz.bind (Sz.wahl Aufz.fn) fun f => mitSome (D.erg f) fun {τ} he =>
     Sz.wenn (RufPasst D V (D.signatur f) Λ) fun hp => Sz.wenn (0 < D.gruende f) fun hr =>
@@ -208,6 +216,14 @@ def eBindCallInd : Sz (Endblock D V l Γ Λ) :=
       Sz.bindR (argsS E (D.sigNr n).params) (fun m => O.en l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args r =>
         Sz.pure (.bindCallInd p args he hp hr r))
 
+def eBindCallIndElse : Sz (Endblock D V l Γ Λ) :=
+  Sz.knoten (Sz.bind (fnptrS E) fun ⟨n, p⟩ => mitSome (D.sigNr n).erg fun {τ} he =>
+    Sz.wenn (RufPasst D V (D.sigNr n) Λ) fun hp => Sz.wenn (0 < (D.sigNr n).gruende) fun hr =>
+      Sz.bindR (argsS E (D.sigNr n).params)
+        (fun m => O.en l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ) m) fun args err =>
+        Sz.bindR (Sz.pure ()) (fun m => O.en l (τ :: Γ) (nachSig D (D.sigNr n) Λ) m) fun _ r =>
+          Sz.pure (.bindCallIndElse p args he hp hr err r))
+
 end Klauseln
 
 /-- **The blocks of exact size `k`**. -/
@@ -215,12 +231,12 @@ def blockS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE 
     (Bs : Sz (SB D V l Γ Λ)) (Ns : Sz (Endblock D V l Γ Λ)) : Sz (SB D V l Γ Λ) :=
   Sz.alle [bNil, bCons O Ss, bBind O E, bBindCall O E, bBindCallInd O E, bBindCallElse O E, bBindAxiom O E,
     bBindAxiomElse O E, bRegRead O, bRegReadElse O Ns, bAwaits O, bExchange O, bNarrow O E Ns, bCheck E Bs Ns,
-    bFloat O E, bFloatLit O, bFloatOf O E, bFloatNarrow O E Ns]
+    bFloat O E, bFloatLit O, bFloatOf O E, bFloatNarrow O E Ns, bBindCallIndElse O E]
 
 /-- **The end blocks of exact size `k`**. -/
 def endS {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ Λ)) :
     Sz (Endblock D V l Γ Λ) :=
   Sz.alle [eRet E, eRetWhy, eLeave, eNext, eCons O Ss, eBind O E, eBindCall O E, eBindCallElse O E, eBindAxiom O E,
-    eBindAxiomElse O E, eRegRead O, eRegReadElse O, eAwaits O, eBindCallInd O E]
+    eBindAxiomElse O E, eRegRead O, eRegReadElse O, eAwaits O, eBindCallInd O E, eBindCallIndElse O E]
 
 end Gabbro.Grammatik.Gen

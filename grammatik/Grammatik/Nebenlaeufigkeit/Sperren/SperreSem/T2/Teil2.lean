@@ -70,6 +70,9 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .shift .., _, _, _ => rfl
   | .call .., _, _, _ => rfl
   | .callInd .., _, _, _ => rfl
+  | .callIndElse p args he hp hr err, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt, indSonst, Endblock.execH_ohne err h] <;> rfl
   | .axiomCall .., _, _, _ => rfl
   | .regWrite .., _, _, _ => rfl
   | .transition .., _, _, _ => rfl
@@ -99,6 +102,9 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, indSonst, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
   | .bindCallElse f args he hp hr err rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
@@ -198,6 +204,9 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd p args he hp hr rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, indSonstE, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
   | .narrow e lo' hi' sonst rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne sonst h.1] <;>

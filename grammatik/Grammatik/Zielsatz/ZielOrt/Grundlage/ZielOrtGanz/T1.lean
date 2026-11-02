@@ -281,6 +281,7 @@ def Stmt.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | .locks _ _ body => body.logikFrei
   | .breaking _ body => body.logikFrei
   | .retry _ _ body ueber => body.logikFrei && ueber.logikFrei
+  | .callIndElse _ _ _ _ _ err => err.logikFrei
   | _ => true
 
 def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -290,6 +291,7 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .bind _ rest => rest.logikFrei
   | .bindCall _ _ _ _ _ rest => rest.logikFrei
   | .bindCallInd _ _ _ _ _ rest => rest.logikFrei
+  | .bindCallIndElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .bindCallElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
@@ -321,6 +323,7 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .awaits _ _ _ _ _ rest => rest.logikFrei
   | .bindCallInd _ _ _ _ _ rest => rest.logikFrei
+  | .bindCallIndElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .narrow _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .narrowRequired .. => false
   | .exchange _ _ _ _ rest => rest.logikFrei

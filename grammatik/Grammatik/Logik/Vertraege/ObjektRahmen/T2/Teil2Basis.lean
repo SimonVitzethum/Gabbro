@@ -74,6 +74,7 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       · trivial
       · trivial
   | .callInd .., hok, _, _, _, _ => hok.elim
+  | .callIndElse .., hok, _, _, _, _ => hok.elim
   | .locks L hr body, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
       exact ObjA.gibt L (block_obj body hok (σ.nimmt L) ρ hlen hinv)
@@ -177,6 +178,7 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
       · trivial
       · trivial
   | .bindCallInd .., hok, _, _, _, _ => hok.elim
+  | .bindCallIndElse .., hok, _, _, _, _ => hok.elim
   | .bindCallElse f args he hp _ err rest, hok, σ, ρ, hlen, hinv => by
       simp only [execBlock]
       split
@@ -438,6 +440,7 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
           (end_obj rest hok _ _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · trivial
   | .bindCallInd .., hok, _, _, _, _ => hok.elim
+  | .bindCallIndElse .., hok, _, _, _, _ => hok.elim
   | .narrow e lo' hi' sonst rest, hok, σ, ρ, hlen, hinv => by
       simp only [execEnd]
       split

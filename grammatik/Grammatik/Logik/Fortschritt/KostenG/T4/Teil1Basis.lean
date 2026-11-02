@@ -48,6 +48,7 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
         exact Nat.mul_le_mul_left _ (by omega)
       simp only [kostenStmt, kostenKS, zusatzS]; omega
   | .callInd .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .callIndElse .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .consumeTraverse .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .retry .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .forever .., h => by simp only [spiegelS, Bool.false_eq_true] at h
@@ -89,6 +90,7 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
   | .bindCallInd .., h => by simp only [spiegelB, Bool.false_eq_true] at h
+  | .bindCallIndElse .., h => by simp only [spiegelB, Bool.false_eq_true] at h
   | .bindCallElse _ _ _ _ _ err rest, h => by
       simp only [spiegelB, Bool.and_eq_true] at h
       have h1 := spiegel_sonst c pa err h.1
@@ -202,6 +204,7 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .bindCallInd .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindCallIndElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .narrow .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .narrowRequired .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .retScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h
@@ -249,6 +252,7 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bindCallInd .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindCallIndElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .narrow .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .narrowRequired .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .retScoped .., h => by simp only [spiegelE, Bool.false_eq_true] at h

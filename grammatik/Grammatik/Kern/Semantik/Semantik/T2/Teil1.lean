@@ -81,6 +81,47 @@ theorem ergSig {f : D.Fn} {n : Nat} {τ : Ty} (hf : D.passt f n = true) (he : (D
     D.erg f = some τ := by
   unfold Deklaration.erg; rw [(D.passt_sig hf).erg]; exact he
 
+/-- **The reason of an indirect call, in the pointer type's channel** («C07»): a conforming
+    function has the pointer type's reasons (`SigPasst.gruende`), so a reason of the actual
+    callee `f` is a reason of the channel the `else` branch is typed over. -/
+def grundSig {f : D.Fn} {n : Nat} (hf : D.passt f n = true) (r : Fin (D.gruende f)) :
+    Fin (D.sigNr n).gruende := by
+  unfold Deklaration.gruende at r; rw [(D.passt_sig hf).gruende] at r; exact r
+
+/-- **One indirect call through a pointer, both outcomes** («C07»): evaluate the pointer once,
+    call the actual conforming function with transported arguments, and continue with the
+    transported value (`ok`) or the channel reason (`why`). The sequential, lock-havoc and
+    atomic semantics share this dispatch; only their recorders and continuations differ. -/
+def indSonst {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+    (he : (D.sigNr n).erg = some τ) (hr : 0 < (D.sigNr n).gruende)
+    (s0 : World D) (ρ : Env D Γ)
+    (ok : World D → Wert D τ → Ausgang V l Γ)
+    (why : World D → Fin (D.sigNr n).gruende → Ausgang V l Γ) : Ausgang V l Γ :=
+  let ⟨f, hf⟩ := eval s0 p s0 ρ
+  match R f s0 (umsig hf (evalArgs s0 args s0 ρ)) with
+  | .ok σ' v => ok σ' (ergWert (ergSig hf he) v)
+  | .why σ' r => why σ' (grundSig hf r)
+  | .logik e => .logik e
+  | .hardware e => .hardware e
+
+/-- **One indirect call through a pointer, both outcomes, at the end of a body** («C07»):
+    the `EndAusgang` variant of `indSonst`, for `execEnd` and its havoc/atomic variants. -/
+def indSonstE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
+    (he : (D.sigNr n).erg = some τ) (hr : 0 < (D.sigNr n).gruende)
+    (s0 : World D) (ρ : Env D Γ)
+    (ok : World D → Wert D τ → EndAusgang V l Γ)
+    (why : World D → Fin (D.sigNr n).gruende → EndAusgang V l Γ) : EndAusgang V l Γ :=
+  let ⟨f, hf⟩ := eval s0 p s0 ρ
+  match R f s0 (umsig hf (evalArgs s0 args s0 ρ)) with
+  | .ok σ' v => ok σ' (ergWert (ergSig hf he) v)
+  | .why σ' r => why σ' (grundSig hf r)
+  | .logik e => .logik e
+  | .hardware e => .hardware e
+
 /-- A float as a raw integer for the machine (a register write): truncation toward zero,
     saturated to the `Int64` range -- the meaning of the `Float` model's
     `x.toInt64.toInt`, now computed on the exact value (NaN/infinity give `0`; they do not

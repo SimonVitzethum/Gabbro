@@ -156,6 +156,7 @@ def befS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig danachLeer 
   | .onWhy _ arms => befGArms ebene imEwig arms
   | .call g _ _ _ => Befund.ruf g imEwig danachLeer
   | .callInd (n := n) _ _ _ _ => Befund.rufInd n imEwig
+  | .callIndElse (n := n) _ _ _ _ err => Befund.rufInd n imEwig ++ befE ebene imEwig err
   | .locks _ _ body => befB ebene imEwig body
   | .breaking _ body => befB ebene imEwig body
   | .traverse _ _ body => befB false imEwig body
@@ -177,6 +178,8 @@ def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
   | .bind _ rest => befB ebene imEwig rest
   | .bindCall g _ _ _ _ rest => Befund.ruf g imEwig rest.retHier ++ befB ebene imEwig rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => Befund.rufInd n imEwig ++ befB ebene imEwig rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      Befund.rufInd n imEwig ++ befE ebene imEwig err ++ befB ebene imEwig rest
   | .bindCallElse g _ _ _ _ err rest =>
       Befund.ruf g imEwig false ++ befE ebene imEwig err ++ befB ebene imEwig rest
   | .bindAxiom _ _ _ _ _ _ _ rest => befB ebene imEwig rest
@@ -225,6 +228,8 @@ def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endbl
   | .regReadElse _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
   | .awaits _ _ _ _ _ rest => befE ebene imEwig rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => Befund.rufInd n imEwig ++ befE ebene imEwig rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      Befund.rufInd n imEwig ++ befE ebene imEwig err ++ befE ebene imEwig rest
   | .narrow _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
   | .narrowRequired _ _ _ rest => befE ebene imEwig rest
   | .exchange _ _ _ _ rest => befE ebene imEwig rest

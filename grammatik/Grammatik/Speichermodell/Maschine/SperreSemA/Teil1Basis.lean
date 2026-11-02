@@ -281,7 +281,7 @@ theorem Endblock.execBlockHA_alsBlock :
         cases execEndHA S O U A passes R rest _ _ <;> rfl
       · rfl
   | _, _, .bindCallInd p args he hp hr rest, σ, ρ => by
-      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA, indSonstE]
       split
       rename_i f hf _
       split
@@ -289,6 +289,16 @@ theorem Endblock.execBlockHA_alsBlock :
         cases execEndHA S O U A passes R rest _ _ <;> rfl
       · rename_i r _
         exact keinGrundSig hf hr r
+      · rfl
+      · rfl
+  | _, _, .bindCallIndElse p args he hp hr err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA, indSonst, indSonstE]
+      split
+      rename_i f hf _
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · cases execEndHA S O U A passes R err _ _ <;> rfl
       · rfl
       · rfl
   | _, _, .narrow e lo' hi' sonst rest, σ, ρ => by

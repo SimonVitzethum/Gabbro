@@ -60,6 +60,7 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .onWhy _ arms => mGArms A arms
   | .call g _ _ _ => A.ruf g
   | .callInd (n := n) _ _ _ _ => A.ind n
+  | .callIndElse (n := n) _ _ _ _ _ err => A.ind n && mE A err
   | .locks L _ body => A.sperre L && mB A body
   | .breaking _ body => mB A body
   | .traverse _ _ body => mB A body
@@ -93,6 +94,7 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bind _ rest => mB A rest
   | .bindCall g _ _ _ _ rest => A.ruf g && mB A rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mB A rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => A.ind n && mE A err && mB A rest
   | .bindCallElse g _ _ _ _ err rest => A.ruf g && mE A err && mB A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mB A rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mB A rest
@@ -140,6 +142,7 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .regReadElse _ _ _ sonst rest => mE A sonst && mE A rest
   | .awaits _ _ _ _ _ rest => mE A rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mE A rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => A.ind n && mE A err && mE A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mE A rest
   | .narrowRequired _ _ _ rest => mE A rest
   | .exchange _ _ _ _ rest => mE A rest
@@ -202,6 +205,8 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindCallInd p args he hp hr rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]

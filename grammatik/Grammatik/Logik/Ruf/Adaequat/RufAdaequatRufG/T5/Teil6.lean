@@ -56,6 +56,7 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .call g args hp hr, hs =>
       stmtOkR_call (g := g) (args := args) (hp := hp) (hr := hr) (hs := hs) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callIndElse .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs =>
       stmtOkR_locks (hr := hr) (body := body) (hs := hs) (ih_blockOkR_body := blockOkR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .breaking i body, hs =>
@@ -96,6 +97,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCall g args he hp hr rest, hb =>
       blockOkR_bindCall (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, _, .bindCallIndElse .., hb => by cases hb
   | _, _, _, _, _, .bindCallElse g args he hp hr err rest, hb =>
       blockOkR_bindCallElse (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
@@ -181,6 +183,7 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .call g args hp hr, zzh1 =>
       stmtAbbR_call (g := g) (args := args) (hp := hp) (hr := hr) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .callInd .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .callIndElse .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .locks L hr body, hs =>
       stmtAbbR_locks (hr := hr) (body := body) (hs := hs) (ih_blockAbbR_body := blockAbbR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .breaking i body, hs =>
@@ -219,6 +222,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCall g args he hp hr rest, hb =>
       blockAbbR_bindCall (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (hb := hb) (ih_blockAbbR_rest := blockAbbR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, _, .bindCallIndElse .., hb => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb => by
       intro hl
       have h0 := hb.bindCallElse_inv.2.2.2.2

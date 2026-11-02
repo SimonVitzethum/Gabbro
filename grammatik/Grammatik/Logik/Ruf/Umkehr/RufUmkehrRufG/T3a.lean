@@ -180,6 +180,7 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .awaits .. => rfl
 
   | _, _, .bindCallInd .. => rfl
+  | _, _, .bindCallIndElse .. => rfl
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .narrowRequired _ _ _ rest => by
