@@ -43,6 +43,7 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 public import Grammatik.Kern.Semantik.Syscall.Syscall
 public import Grammatik.Kern.Semantik.Ueberlauf
 public import Grammatik.Kern.Syntax.Profil.Teil2
+public import Grammatik.Kern.Syntax.Profil.Speicher
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Schiebung
 public import Grammatik.Nebenlaeufigkeit.Sperren.FremdSperre
 public import Grammatik.Kern.Syntax.Bits
@@ -255,6 +256,8 @@ public import Grammatik.Parser.Round.RundlaufGeraet.Teil2
 public import Grammatik.Parser.Round.RundlaufProgramm
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Parser.Elab.UebersetzeAllg.EingebautZeuge
+public import Grammatik.Parser.Elab.UebersetzeAllg.EingebautLesen
+public import Grammatik.Parser.Elab.UebersetzeAllg.ZaehleZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil2
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 public import Grammatik.Kern.Semantik.Durchgaenge
