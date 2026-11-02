@@ -182,6 +182,14 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     cases hs with
     | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch => kopfweg
+    | verbrauchWeiter => kopfweg
+    | verbrauchLeer => kopfweg
+    | verbrauchFort => kopfweg
+    | dannLeaveVerbrauch => kopfweg
+    | dannNextVerbrauch => kopfweg
 
 /-- A thread whose head waits stays so, and logs nothing, along any run. -/
 theorem wartet_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}

@@ -315,6 +315,26 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
 
 end Stumm
 end Gabbro.Grammatik
