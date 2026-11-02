@@ -14,12 +14,16 @@ theorem restore_measure_lengths (items : List SItemTief) (u : UProg)
     (lengths : Measures.cycleLengths u raw exported.mass = true) :
     Measures.cycleLengths u final exported.mass = true := by
   unfold OldSource.restore at restored
-  cases hc : OldSource.collect u.fns.length (EnsTy u) (OldSource.atFunction items u raw) with
-  | error error => simp only [hc, bind, Except.bind, reduceCtorEq] at restored
-  | ok predicates =>
-    simp only [hc, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at restored
-    subst final
-    exact lengths
+  cases hx : expandU items with
+  | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at restored
+  | ok expanded =>
+    simp only [hx, bind, Except.bind] at restored
+    cases hc : OldSource.collect u.fns.length (EnsTy u) (OldSource.atFunction expanded u raw) with
+    | error error => simp only [hc, bind, Except.bind, reduceCtorEq] at restored
+    | ok predicates =>
+      simp only [hc, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at restored
+      subst final
+      exact lengths
 
 /-- The same source measure remains valid after the existing old-state restoration step. -/
 theorem compiled_measure_lengths (items : List SItemTief) (u : UProg)
