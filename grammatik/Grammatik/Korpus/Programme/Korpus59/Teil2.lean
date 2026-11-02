@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.Kern.Proben
 public import Grammatik.Korpus.Programme.Korpus59.Teil1
+public import Grammatik.Korpus.Programme.Korpus59.Teil1a
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

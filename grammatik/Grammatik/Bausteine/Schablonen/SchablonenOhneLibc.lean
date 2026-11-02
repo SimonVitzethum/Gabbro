@@ -36,6 +36,7 @@
 module
 
 public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil1
+public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil1a
 public import Grammatik.Bausteine.Schablonen.SchablonenOhneLibc.Teil2
 import all Init.Data.Repr
 import all Init.Data.String.Basic
