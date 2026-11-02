@@ -18,13 +18,20 @@ def parseModulTief (f : Nat) (toks : List Token) :
     | .error e => .error e
     | .ok r1 => match nimmPfad r1 with
       | .error e => .error e
-      | .ok (p, r2) => match fordereZeichen "{" r2 with
-        | .error e => .error e
-        | .ok r3 => match parseItemsTief f r3 with
+      | .ok (p, r2) => match r2 with
+        | .zeichen "[" :: _ => do
+          let (params, r2) ← parseGenericParams f r2
+          let r3 ← fordereZeichen "{" r2
+          let (its, r4) ← parseItemsTief f r3
+          let r ← fordereZeichen "}" r4
+          pure (.moduleTemplateT ("::".intercalate p) params its, r)
+        | _ => match fordereZeichen "{" r2 with
           | .error e => .error e
-          | .ok (its, r4) => match fordereZeichen "}" r4 with
+          | .ok r3 => match parseItemsTief f r3 with
             | .error e => .error e
-            | .ok r => .ok (.modT ("::".intercalate p) its, r)
+            | .ok (its, r4) => match fordereZeichen "}" r4 with
+              | .error e => .error e
+              | .ok r => .ok (.modT ("::".intercalate p) its, r)
 
 /-- The item levels of SYNTAX.md section 1 (`item`) in depth:
     every body rides structured. Against `parse.rs` `item`: the

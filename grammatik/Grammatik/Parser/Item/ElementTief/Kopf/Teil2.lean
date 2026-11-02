@@ -194,6 +194,10 @@ inductive SItemTief
   /-- `pub item`: the item crosses the boundary of its project (its name is visible to a dependent
       project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
   | pubT : SItemTief → SItemTief
+  /-- A parametric module template; instantiated before ordinary name resolution. -/
+  | moduleTemplateT : String → List SGenericParam → List SItemTief → SItemTief
+  /-- A generative module application: each written alias owns fresh declarations. -/
+  | moduleUseT : String → List String → List String → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
@@ -265,6 +269,10 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     (a == b) && beqSProfEintragList e f
   | .gateT a, .gateT b => beqSItemTief a b
   | .pubT a, .pubT b => beqSItemTief a b
+  | .moduleTemplateT n ps xs, .moduleTemplateT m qs ys =>
+    strEq n m && beqSGenericParams ps qs && beqSItemTiefList xs ys
+  | .moduleUseT n p args, .moduleUseT m q other =>
+    strEq n m && beqWorte p q && beqWorte args other
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true

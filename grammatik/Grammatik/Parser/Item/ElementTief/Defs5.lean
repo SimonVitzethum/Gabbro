@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Item.ElementTief.Defs5a
 public import Grammatik.Parser.Stmt.Anweisung
 public import Grammatik.Parser.Item.ElementTief.Defs4
+public import Grammatik.Parser.Expr.GenericArguments
 
 @[expose] public section
 
@@ -31,9 +32,17 @@ def parseUseTief : List Token → Except String (SItemTief × List Token)
     | .error e => .error e
     | .ok r1 => match nimmPfad r1 with
       | .error e => .error e
-      | .ok (p, r2) => match fordereZeichen ";" r2 with
-        | .error e => .error e
-        | .ok r => .ok (.useT p, r)
+      | .ok (p, r2) => match p, r2 with
+        | [alias], .zeichen "=" :: rest => do
+          let (target, rest) ← nimmPfad rest
+          let rest ← fordereZeichen "::" rest
+          let rest ← fordereZeichen "[" rest
+          let (args, rest) ← genericArguments rest [] [] []
+          let rest ← fordereZeichen ";" rest
+          pure (.moduleUseT alias target args, rest)
+        | _, _ => match fordereZeichen ";" r2 with
+          | .error e => .error e
+          | .ok r => .ok (.useT p, r)
 
 /-- `concurrent { paths } ;`. -/
 def parseNebenTief (f : Nat) (toks : List Token) :
