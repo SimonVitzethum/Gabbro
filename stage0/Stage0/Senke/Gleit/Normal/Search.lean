@@ -110,7 +110,7 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show fuel ≤ 5 by omega)
       exact this
     have literal : lit32 (Int.ofNat (2 ^ fuel)) = true := by
-      simp only [lit32]
+      simp [lit32]
       omega
     have count : (BitVec.ofInt 64 (Int.ofNat (2 ^ fuel))).toNat % 64 = 2 ^ fuel := by
       change ((2 ^ fuel) % 2 ^ 64) % 64 = 2 ^ fuel
@@ -127,6 +127,25 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
 /-- Count the zeros before the leading bit. Zero's result is 64. -/
 def routineLeadingZerosWord (a : Runner.W) : Runner.W :=
   if a == 0 then 64 else 63 - routineTopWordAux 6 a
+
+theorem routineLeadingZerosWord_model (av : Runner.W) :
+    routineLeadingZerosWord av = BitVec.ofNat 64 (64 - bitlen av.toNat) := by
+  by_cases hz : av = 0
+  · subst av
+    rfl
+  · have nonzero : av.toNat ≠ 0 := by
+      intro h
+      exact hz (BitVec.eq_of_toNat_eq h)
+    have bounds := routineTopNat_bounds 6 av.toNat (by omega) av.isLt
+    have bits := bitlen_unique av.toNat (routineTopNat 6 av.toNat + 1)
+      (by simpa using bounds.2.1) bounds.2.2 (by omega)
+    have positive : 0 < bitlen av.toNat := by omega
+    have topBound : bitlen av.toNat - 1 ≤ 63 := by omega
+    simp only [routineLeadingZerosWord, beq_eq_false_iff_ne.mpr hz, Bool.false_eq_true,
+      ite_false, routineTopWordAux_canonical av nonzero,
+      show (63 : Runner.W) = BitVec.ofNat 64 63 from rfl,
+      BitVec.ofNat_sub_ofNat_of_le 63 (bitlen av.toNat - 1) (by omega) topBound,
+      show 63 - (bitlen av.toNat - 1) = 64 - bitlen av.toNat by omega]
 
 def routineLeadingZerosL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
@@ -149,32 +168,8 @@ theorem routineLeadingZerosL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     (ha : WordCode (L := L) ρ W a av) :
     WordCode (L := L) ρ W (fun d => routineLeadingZerosL d a)
       (BitVec.ofNat 64 (64 - bitlen av.toNat)) := by
-  have result := routineLeadingZerosL_word ha
-  dsimp only [routineLeadingZerosWord] at result
-  by_cases hz : av = 0
-  · subst av
-    simpa only [beq_self_eq_true, ite_true, BitVec.toNat_zero,
-      show bitlen 0 = 0 from rfl] using result
-  · have nonzero : av.toNat ≠ 0 := by
-      intro h
-      exact hz (BitVec.eq_of_toNat_eq h)
-    have bits := routineTopNat_bounds 6 av.toNat (by omega) av.isLt
-    have top := routineTopWordAux_canonical av nonzero
-    have bp : 0 < bitlen av.toNat := by
-      have upper := bitlen_obere av.toNat
-      by_contra h
-      have bz : bitlen av.toNat = 0 := by omega
-      rw [bz] at upper
-      omega
-    have tb : bitlen av.toNat - 1 ≤ 63 := by
-      have he := routineTopWordAux_model 6 av
-      have b := bitlen_unique av.toNat (routineTopNat 6 av.toNat + 1)
-        (by simpa using bits.2.1) bits.2.2 (by omega)
-      omega
-    simpa only [beq_eq_false_iff_ne.mpr hz, Bool.false_eq_true, ite_false, top,
-      show (BitVec.ofInt 64 63 : Runner.W) = BitVec.ofNat 64 63 from rfl,
-      BitVec.ofNat_sub_ofNat_of_le 63 (bitlen av.toNat - 1) (by omega) tb,
-      show 63 - (bitlen av.toNat - 1) = 64 - bitlen av.toNat by omega] using result
+  rw [← routineLeadingZerosWord_model av]
+  exact routineLeadingZerosL_word ha
 
 theorem routineLeadingZeros_zeuge :
     routineTopWordAux 6 8 = 3 ∧
@@ -193,6 +188,7 @@ theorem routineTopAuxL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → P
 #print axioms routineTopWordAux_canonical
 #print axioms routineTopAuxL_ok
 #print axioms routineLeadingZerosL_word
+#print axioms routineLeadingZerosWord_model
 #print axioms routineLeadingZerosL_ok
 #print axioms routineLeadingZeros_zeuge
 #print axioms routineTopAuxL_ok_zeuge
