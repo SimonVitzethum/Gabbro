@@ -47,7 +47,7 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     | dannOnOptionNone l Γ Λ Λ' Λ'' n o p a rest k ρ hhead σ₁ hs₁ hv neu hneu hΛ =>
       exact rufSchrittG_haeltInv_dannOnOptionNone (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (n := n) (o := o) (p := p) (a := a) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw neu hneu hΛ =>
-      exact rufSchrittG_haeltInv_dannOnTagSome (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cs := cs) (v := v) (arms := arms) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (lo := lo) (hi := hi) (b := b) (nutz := nutz) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+      exact rufSchrittG_haeltInv_dannOnTagSome (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cs := cs) (v := v) (arms := arms) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (τ := τ) (b := b) (nutz := nutz) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     | dannOnTagNone l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ b nutz hw neu hneu hΛ =>
       exact rufSchrittG_haeltInv_dannOnTagNone (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (Λ'' := Λ'') (cs := cs) (v := v) (arms := arms) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (b := b) (nutz := nutz) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     | dannOnGrund l Γ Λ Λ' Λ'' n r arms rest k ρ hhead σ₁ hs₁ b hw neu hneu hΛ =>
@@ -258,8 +258,8 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       rw [hcaller]; exact hL
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
-        hfg rho hrho s0 hs0 rg hrg hn =>
+    | rueckConsGrund =>
+      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk hhead hpop hΛ hfg hrho hs0 hrg
       simp only [rufUpdateG_self]
       have hc : caller.rest.2.2.2.2.kette (D.haelt caller.f) :=
         h.2.1 caller (by rw [hpop]; exact List.mem_cons_of_mem _ List.mem_cons_self)
@@ -269,8 +269,8 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       refine haeltInvG_pop h hpop _ _ _ rfl ?_ (by fr_pop) hck rfl
       intro L hL
       rw [hcaller]; exact hL
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
-        hfg rho hrho s0 hs0 rg hrg hn =>
+    | dannRetGrund =>
+      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hhead hpop hΛ hfg hrho hs0 hrg
       simp only [rufUpdateG_self]
       have hc : caller.rest.2.2.2.2.kette (D.haelt caller.f) :=
         h.2.1 caller (by rw [hpop]; exact List.mem_cons_of_mem _ List.mem_cons_self)
@@ -280,58 +280,70 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       refine haeltInvG_pop h hpop _ _ _ rfl ?_ (by fr_pop) hck rfl
       intro L hL
       rw [hcaller]; exact hL
-    | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+    | dannRegLies =>
+      rename_i l Γ Λ Λ' r hk ρ v hz rest k hhead hv hΛ
       exact rufSchrittG_haeltInv_dannRegLies (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk := hk) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (hz := hz) (hΛ := hΛ)
-    | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseWahr =>
+      rename_i l Γ Λ Λ' r hk zusage ρ v σ₁ hw neu sonst rest k hhead hv hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannRegLiesElseWahr (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk := hk) (zusage := zusage) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseFalsch =>
+      rename_i l Γ Λ Λ' r hk zusage ρ v σ₁ hw neu sonst rest k hhead hv hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannRegLiesElseFalsch (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk := hk) (zusage := zusage) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannAwaits l Γ Λ Λ' g payload hp hL _ rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+    | dannAwaits =>
+      rename_i l Γ Λ Λ' g payload hp hL hat ρ σ₁ neu rest k hhead hvis hs₁ hneu hΛ
       simp only [rufUpdateG_self]
       have hk := kette_von hhead hk0
       have hh := heldIn_von hhead hh0
       refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨hk.1, GRest.kette_top k hk.2, hk.2⟩ ?_
       rw [hs₁, offen_lese]; exact hh
-    | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+    | dannExchange =>
+      rename_i l Γ Λ Λ' g neuE hL ρ σ₁ σ₂ hs₂ neu hw rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannExchange (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (g := g) (neuE := neuE) (hw := hw) (hL := hL) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (hs₂ := hs₂) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannGleit l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleit =>
+      rename_i l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi ρ σ₁ v hv neu rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannGleit (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannGleitLit l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
+    | dannGleitLit =>
+      rename_i l Γ Λ Λ' q lo hi ρ v hv rest k hhead
       exact rufSchrittG_haeltInv_dannGleitLit (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (q := q) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv)
-    | dannGleitVon l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleitVon =>
+      rename_i l Γ Λ Λ' l₁ h₁ e lo hi ρ σ₁ v hv neu rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannGleitVon (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannGleitNarrowOk l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleitNarrowOk =>
+      rename_i l Γ Λ Λ' l₁ h₁ e lo hi ρ σ₁ v hv neu sonst rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannGleitNarrowOk (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+    | dannGleitNarrowElse =>
+      rename_i l Γ Λ Λ' l₁ h₁ e lo hi ρ σ₁ hn neu sonst rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannGleitNarrowElse (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiom =>
+      rename_i l Γ Λ Λ' τ a args he hd hgd ρ σ₁ σ₂ v hax neu hw hg rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannBindAxiom (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu
-        hneu hΛ =>
+    | dannBindAxiomElseOk =>
+      rename_i l Γ Λ Λ' τ a args he hr hd hgd ρ σ₁ σ₂ v hax neu hw hg err rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannBindAxiomElseOk (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax
-        neu hneu hΛ =>
+    | dannBindAxiomElseGrund =>
+      rename_i l Γ Λ Λ' τ a args he hr hd hgd ρ σ₁ σ₂ r hax neu hw hg err rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannBindAxiomElseGrund (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannBindAxiomOpt l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomOpt =>
+      rename_i x l Γ Λ Λ' e a args he hd hgd ρ σ₁ σ₂ v hax neu hp rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannBindAxiomOpt (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannBindAxiomOptElseOk l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu
-        hneu hΛ =>
+    | dannBindAxiomOptElseOk =>
+      rename_i x l Γ Λ Λ' e a args he hr hd hgd ρ σ₁ σ₂ v hax neu hp err rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannBindAxiomOptElseOk (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (e := e) (a := a) (args := args) (he := he) (hr := hr) (hp := hp) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | dannBindAxiomOptElseGrund l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax
-        neu hneu hΛ =>
+    | dannBindAxiomOptElseGrund =>
+      rename_i l Γ Λ Λ' e a args he hr hd hgd ρ σ₁ σ₂ r hax neu hp err rest k hhead hs₁ hneu hΛ
       exact rufSchrittG_haeltInv_dannBindAxiomOptElseGrund (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (e := e) (a := a) (args := args) (he := he) (hr := hr) (hp := hp) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
   | g6 hs =>
     cases hs with
-    | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu
-        hΛ =>
+    | endeBindAxiomElseOk =>
+      rename_i l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ
       exact rufSchrittG_haeltInv_endeBindAxiomElseOk (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu
-        hneu hΛ =>
+    | endeBindAxiomElseGrund =>
+      rename_i l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ
       exact rufSchrittG_haeltInv_endeBindAxiomElseGrund (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu
-        hΛ =>
+    | endeBindAxiomOptElseOk =>
+      rename_i l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ
       exact rufSchrittG_haeltInv_endeBindAxiomOptElseOk (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (e := e) (a := a) (args := args) (he := he) (hr := hr) (hp := hp) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu
-        hneu hΛ =>
+    | endeBindAxiomOptElseGrund =>
+      rename_i l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ
       exact rufSchrittG_haeltInv_endeBindAxiomOptElseGrund (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (e := e) (a := a) (args := args) (he := he) (hr := hr) (hp := hp) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
 end Gabbro.Grammatik
