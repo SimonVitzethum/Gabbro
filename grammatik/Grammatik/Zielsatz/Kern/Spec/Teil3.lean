@@ -155,10 +155,10 @@ def verbindeP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Programm D :=
   mitRumpf E₁.P (fun f => if e f then E₁.P.rumpf f else E₂.P.rumpf f)
 
 /-- **The linked unit** `verbinde e E₁ E₂`: the linked program, the (shared) lock invariants,
-    initial memory and axiom ensures, and BOTH units' declared starts, run-time roots
-    and arenas. Declared checks are NOT linked: the linked unit carries none
-    (`pruefungen` defaults to `[]`); linked check admission is the open remainder
-    (C16: cross-unit gate consumption and name separation). -/
+    initial memory and axiom ensures, and BOTH units' declared starts, run-time roots,
+    arenas and declared checks. A link whose checks do not compose -- a gate outside the
+    linked functions, or a check name claimed by both units -- admits no
+    `SchnittstelleSpec` proof: the link is refused, never silently check-free. -/
 def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   P := verbindeP e E₁ E₂
   S := E₁.S
@@ -168,6 +168,8 @@ def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   gestartet := E₁.gestartet ++ E₂.gestartet
   -- both units' arenas; ownership across a link is not claimed (NOT CLAIMED)
   arenen := E₁.arenen ++ E₂.arenen
+  -- both units' declared checks; their joint admission is the link check's `pruef` field
+  pruefungen := E₁.pruefungen ++ E₂.pruefungen
 
 /-- The OWNER's program of `f` (unit 1 iff `e f`). -/
 def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=
@@ -248,8 +250,10 @@ def PoolSicherV (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (w 
       hull (a routine both units start counts twice);
     * `masken` (Opus agent H, 2026-09-26) -- every function the composed hull of an interrupt
       handler reaches takes only locks declared `masks irqs` (`H102` across the link).
+    * `pruef` (C16, 2026-11-02) -- the declared checks of BOTH units, admitted over the
+      linked program: cross-unit gates consume across the boundary, names are disjoint.
     Every per-body component of `AkzeptiertSpec` (fragment, closed graphs, lock floors, lock
-    invariant places, roots, answer sites) is each unit's own verdict; these four are the
+    invariant places, roots, answer sites) is each unit's own verdict; these five are the
     whole-program components, and they are the ones the link re-decides. -/
 structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Prop where
   blatt₁ : Platzhalter e E₁.P
@@ -262,6 +266,11 @@ structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Ei
   -- an interrupt handler's COMPOSED hull takes only masked locks (Opus agent H, 2026-09-26)
   masken : ∀ w, E₁.P.unterbricht w = true → ∀ h, HuelleV fs e E₁ E₂ w h →
     mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h) = true
+  -- the declared checks of BOTH units, admitted over the linked program (C16, 2026-11-02):
+  -- every gate of every carried check is a linked function (cross-unit gates consume
+  -- across the boundary) and no check name is claimed twice. Without this proof the
+  -- link is refused: `verbinde` carries the checks, never drops them.
+  pruef : CheckAdmission (verbindeP e E₁ E₂) fs (E₁.pruefungen ++ E₂.pruefungen)
 
 /-- **The user's logic of ONE unit** (the part of (b) a separately compiled unit owes): the
     bodies it OWNS at every budget, its lock and axiom families read only their carriers, and

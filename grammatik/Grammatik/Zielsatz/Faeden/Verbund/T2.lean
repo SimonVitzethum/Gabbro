@@ -146,7 +146,8 @@ theorem mem_ws_verbinde {w : D.Fn} (h : w ∈ (verbinde e E₁ E₂).ws) : w ∈
   · exact Or.inr (Or.inl (Or.inr h))
 
 /-- **The linked unit is accepted**: the per-unit verdicts carry every per-body component,
-    the link check carries the three whole-program components over the composed hulls. -/
+    the link check carries the whole-program components over the composed hulls -- and the
+    composed check admission, so the linked unit keeps both units' declared checks. -/
 theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hA₁ : AkzeptiertSpec E₁.P E₁.S fs E₁.ws) (hA₂ : AkzeptiertSpec E₂.P E₂.S fs E₂.ws)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs e E₁ E₂) :
@@ -166,7 +167,7 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, [], CheckAdmission.nil _ _⟩
+    ?_, ?_, ?_, ?_, ?_, E₁.pruefungen ++ E₂.pruefungen, hS.pruef⟩
   · -- frag
     refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
