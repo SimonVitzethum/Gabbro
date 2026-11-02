@@ -60,7 +60,7 @@ def itemMetadata : SItemTief → Bool
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
-  | .tableT _ provider _ place space _ parts => provider.isSome || place.isSome || space.isSome ||
+  | .tableT _ provider _ place _ _ parts => provider.isSome || place.isSome ||
       parts.any fun
         | .tSlot fields => fields.any (fun field => typeMetadata field.ftyp || field.pos.isSome ||
             field.bezug.isSome || field.wo.isSome || field.reserviert || field.byOps)
@@ -231,5 +231,15 @@ set_option maxRecDepth 100000 in
 theorem groupT_zeuge :
     check [.groupT "G" ["T"] [⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" ∧ check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
+
+/-- Named table spaces are registered by the unit elaborator; providers and placement remain gated. -/
+theorem tableSpace_bound (name space : String) (count : Option SExpr) (shared : Bool) :
+    itemMetadata (.tableT name none count none (some space) shared []) = false := by rfl
+
+theorem tableSpace_zeuge :
+    check [.tableT "T" none (some (.lit 2)) none (some "Data") false []] = .ok () ∧
+    itemMetadata (.tableT "T" (some "provider") (some (.lit 2)) none (some "Data") false []) = true ∧
+    itemMetadata (.tableT "T" none (some (.lit 2)) (some "place") (some "Data") false []) = true := by
+  exact ⟨rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
