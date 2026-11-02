@@ -193,12 +193,12 @@ theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : Li
     (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true)
     (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku = true) (hV : Verbindbar E₁ E₂)
-    (hS : schnittstelleB fs cs e E₁ E₂ = true) (hSc : ScopesOkProg (verbinde e E₁ E₂).P) :
+    (hS : schnittstelleB fs cs e E₁ E₂ = true) :
     Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) = true :=
   spec_akzeptiert hvoll hls hcs
     (h := akzeptiertSpec_verbinde hvoll
       (akzeptiertSpec_of hvoll hls hcs [] h₁) (akzeptiertSpec_of hvoll hls hcs [] h₂) hV
-      ((schnittstelleB_iff hvoll hcs).mp hS)) (hS := hSc)
+      ((schnittstelleB_iff hvoll hcs).mp hS))
 
 /-- **The user duty of the linked unit, restricted to what the two users own** (`a₁` inside
     unit 1's share, `a₂` inside unit 2's): the premise (b) of a further link. -/

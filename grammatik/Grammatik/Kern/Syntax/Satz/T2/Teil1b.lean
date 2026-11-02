@@ -229,8 +229,185 @@ theorem BravRet.transRet {a b c : World D} (h1 : BravRet a b) (h2 : BravRet b c)
     exact h2.2.2 (h1.2.2 k)
 
 /-- A releasing step followed by another is releasing with the concatenated scopes. -/
-theorem GutRet.transRet {W G} {a b c : World D} (h1 : GutRet W G a b) (h2 : GutRet W G b c) :
+theorem GutRet.transRet {W G} {a b c : World D} (h1 : GutRet W G b c) (h2 : GutRet W G b c) :
     GutRet W G a c :=
   ⟨h1.1.trans h2.1, h1.2.transRet h2.2⟩
+
+/-- A permutation keeps every held count. -/
+theorem count_of_perm {a : Res D} {l₁ l₂ : List (Res D)} (h : l₁.Perm l₂) :
+    l₁.count a = l₂.count a := by
+  have hP := h.countP_eq (· == a)
+  rwa [← List.count_eq_countP, ← List.count_eq_countP] at hP
+
+/-- Counting held locks commutes with the scope list. -/
+theorem count_held_map (L : D.Lock) (Ks : List D.Lock) :
+    (Ks.map Res.held).count (Res.held L) = Ks.count L := by
+  induction Ks with
+  | nil => rfl
+  | cons K Ks ih =>
+      simp only [List.map_cons]
+      by_cases h : K = L
+      · subst h
+        rw [List.count_cons_self, List.count_cons_self, ih]
+      · have hne : Res.held K ≠ Res.held L := by
+          intro hKK
+          cases hKK
+          exact h rfl
+        rw [List.count_cons_of_ne hne, List.count_cons_of_ne h, ih]
+
+/-! ### Held-count preservation (C11 scope discipline)
+
+    No step changes how often a lock is held: `locks` keeps the frame, calls
+    only erase and append marks, everything else keeps `Λ`. A scoped return
+    reads this off `RueckRessourcen.genau`; the scope check then compares
+    against the residual. -/
+
+/-- Marks never count as held locks. -/
+theorem count_held_marke_map (L : D.Lock) (ms : List (D.Marke × Nat)) :
+    (ms.map (Res.vonMarke D)).count (Res.held L) = 0 := by
+  rw [List.count_eq_zero]
+  intro r hr
+  simp only [List.mem_map] at hr
+  obtain ⟨m, _, heq⟩ := hr
+  obtain ⟨m1, m2⟩ := m
+  simp only [Res.vonMarke, reduceCtorEq] at heq
+
+/-- Erasing a mark and appending marks keep every held count. -/
+theorem count_held_nachSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D))
+    (L : D.Lock) : (nachSig D S Λ).count (Res.held L) = Λ.count (Res.held L) := by
+  unfold nachSig
+  rw [List.count_append]
+  have hfold : ((S.inputMarks.foldl (fun acc m => acc.erase (Res.vonMarke D m)) Λ)).count
+      (Res.held L) = Λ.count (Res.held L) := by
+    induction S.inputMarks generalizing Λ with
+    | nil => rfl
+    | cons m ms ih =>
+        simp only [List.foldl_cons]
+        have hne : Res.held L ≠ Res.vonMarke D m := by
+          obtain ⟨m1, m2⟩ := m
+          simp only [Res.vonMarke, ne_eq, reduceCtorEq, not_false_eq_true]
+        rw [ih, List.count_erase_of_ne hne]
+  rw [hfold, count_held_marke_map, Nat.add_zero]
+
+mutual
+
+/-- No statement changes how often a lock is held. -/
+theorem stmt_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (L : D.Lock) :
+    ∀ (s : Stmt D V l Γ Λ Λ'), (Λ'.count (Res.held L)) = (Λ.count (Res.held L))
+  | .ite _ t e => block_heldCount L t
+  | .onOption _ p a => block_heldCount L p
+  | .onTag _ arms => arms_heldCount L arms
+  | .onWhy _ arms => grundArms_heldCount L arms
+  | .call f _ _ _ => count_held_nachSig (D.signatur f) Λ L
+  | .callInd (n := n) _ _ _ _ => count_held_nachSig (D.sigNr n) Λ L
+  | .locks _ _ _ => rfl
+  | .breaking _ body => block_heldCount L body
+  | .traverse _ _ body => block_heldCount L body
+  | .consumeTraverse _ _ _ _ _ _ body => block_heldCount L body
+  | .retry _ _ body _ => block_heldCount L body
+  | .forever _ _ body => block_heldCount L body
+  | .axiomCall .. => rfl
+  | .axiomCallElse _ a _ _ _ _ _ _ _ => count_held_nachSig (D.asignatur a) Λ L
+  | .callIndElse (n := n) _ _ _ _ _ _ => count_held_nachSig (D.sigNr n) Λ L
+  | .assignSlot .. => rfl
+  | .assignThru .. => rfl
+  | .assignSlotRef .. => rfl
+  | .assignGlob .. => rfl
+  | .putBytes .. => rfl
+  | .assignVar .. => rfl
+  | .shift .. => rfl
+  | .regWrite .. => rfl
+  | .transition .. => rfl
+  | .publish .. => rfl
+  | .advances .. => rfl
+  | .retires .. => rfl
+  | .ret .. => rfl
+  | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
+  | .leave _ => rfl
+  | .next _ => rfl
+
+/-- No block changes how often a lock is held. -/
+theorem block_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (L : D.Lock) :
+    ∀ (b : Block D V l Γ Λ Λ'), (Λ'.count (Res.held L)) = (Λ.count (Res.held L))
+  | .nil => rfl
+  | .cons s rest => (block_heldCount L rest).trans (stmt_heldCount L s)
+  | .bind _ rest => block_heldCount L rest
+  | .bindCall f _ _ _ _ rest =>
+      (block_heldCount L rest).trans (count_held_nachSig (D.signatur f) Λ L)
+  | .bindCallInd (n := n) _ _ _ _ _ rest =>
+      (block_heldCount L rest).trans (count_held_nachSig (D.sigNr n) Λ L)
+  | .bindCallElse f _ _ _ _ _ rest =>
+      (block_heldCount L rest).trans (count_held_nachSig (D.signatur f) Λ L)
+  | .bindCallIndElse (n := n) _ _ _ _ _ _ rest =>
+      (block_heldCount L rest).trans (count_held_nachSig (D.sigNr n) Λ L)
+  | .bindAxiom _ _ _ _ _ _ _ rest => block_heldCount L rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest => block_heldCount L rest
+  | .bindAxiomOpt _ a _ _ _ _ _ rest =>
+      (block_heldCount L rest).trans (count_held_nachSig (D.asignatur a) Λ L)
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ _ rest =>
+      (block_heldCount L rest).trans (count_held_nachSig (D.asignatur a) Λ L)
+  | .regRead _ _ rest => block_heldCount L rest
+  | .regReadElse _ _ _ _ rest => block_heldCount L rest
+  | .awaits _ _ _ _ _ rest => block_heldCount L rest
+  | .exchange _ _ _ _ rest => block_heldCount L rest
+  | .narrow _ _ _ _ rest => block_heldCount L rest
+  | .narrowRequired _ _ _ rest => block_heldCount L rest
+  | .check _ _ rest => block_heldCount L rest
+  | .float _ _ _ _ _ rest => block_heldCount L rest
+  | .floatLit _ _ _ rest => block_heldCount L rest
+  | .floatOf _ _ _ rest => block_heldCount L rest
+  | .floatNarrow _ _ _ _ rest => block_heldCount L rest
+
+/-- No option arm changes how often a lock is held. -/
+theorem arms_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (L : D.Lock) : ∀ (a : Arms D V l Γ Λ Λ' cs),
+      (Λ'.count (Res.held L)) = (Λ.count (Res.held L))
+  | .nil => rfl
+  | .cons b _ => block_heldCount L b
+
+/-- No reason arm changes how often a lock is held. -/
+theorem grundArms_heldCount {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (L : D.Lock) : ∀ (a : GrundArms D V l Γ Λ Λ' n),
+      (Λ'.count (Res.held L)) = (Λ.count (Res.held L))
+  | .nil => rfl
+  | .cons b _ => block_heldCount L b
+
+/-- No end block changes how often a lock is held (an end block keeps its
+    frame: there is no post-frame). -/
+theorem end_heldCount {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (L : D.Lock) :
+    ∀ (_b : Endblock D V l Γ Λ), (Λ.count (Res.held L)) = (Λ.count (Res.held L))
+  | _ => rfl
+
+end
+
+/-! ### The counted frame (C11 scope discipline)
+
+    Extra held locks beyond the residual are fresh and above the floor:
+    `locks` strictness keeps them outside the residual, the floor check
+    keeps them above it. A scoped return releases exactly those extras
+    (`RueckRessourcen.genau` plus held-count preservation), so it meets
+    the scope check. -/
+
+/-- Extra held locks beyond the residual are fresh and above the floor. -/
+def HCountScope (V : vertrag D) (Λ : List (Res D)) : Prop :=
+  ∀ L : D.Lock, Λ.count (Res.held L) = (V.haelt.map Res.held).count (Res.held L) ∨
+    (L ∉ V.haelt ∧ ∀ c, V.boden = some c → c ≤ D.rang L)
+
+/-- HCount survives a frame whose held counts agree. -/
+theorem HCountScope.of_countEq {V : vertrag D} {Λ Λ' : List (Res D)} (h : HCountScope V Λ)
+    (heq : ∀ L, (Λ'.count (Res.held L)) = (Λ.count (Res.held L))) :
+    HCountScope V Λ' := fun L => by
+  rw [heq L]
+  exact h L
+
+/-- The entry frame is exactly the residual: no extra held locks. -/
+theorem hcount_anfang (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
+    HCountScope (Vertrag.vonSig D S) (Signatur.anfang D S) := by
+  intro L
+  left
+  unfold Signatur.anfang
+  rw [List.count_append, count_held_marke_map, Nat.add_zero]
 
 end Gabbro.Grammatik

@@ -38,6 +38,8 @@ public import Grammatik.Logik.Vertraege.EinpassenVoll
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil1
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
+public import Grammatik.Kern.Syntax.Satz.T4.Teil3
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T4
 
 @[expose] public section
 
@@ -170,11 +172,24 @@ theorem scopesOkProg_of_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs)
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
 
+/-- **The scope discipline follows from the floor field** (C11, owner
+    2026-11-02): no new `Spec` field, no change to the meaning of `Spec.lean`. -/
+theorem scopesOkProg_of_stufenM {P : Programm D} (h : StufenM P) : ScopesOkProg P :=
+  scopesOkProg_of_stufen P (stufenOk_of_stufenM h)
+
+/-- **The scope discipline follows from the checker's facts** (C11, owner
+    2026-11-02): the reverse lemmas read it off `AkzeptiertSpec` instead of
+    taking it as a premise. -/
+theorem scopesOkProg_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
+    {A : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A) :
+    ScopesOkProg P :=
+  scopesOkProg_of_stufenM h.stufen
+
 /-- **An `AkzeptiertSpec` value is accepted by `Akzeptiert` at its own checks**:
-    the reverse direction. -/
+    the reverse direction. The scope conjunct is derived from the floor field
+    (`scopesOkProg_of_spec`), not taken as a premise. -/
 theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
-    (hS : ScopesOkProg P) :
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks} :
     Akzeptiert P S fs ls cs ws aks h.checks = true := by
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
@@ -184,7 +199,8 @@ theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, 
     (rennB_iff hvoll hcs).mpr h.renn⟩,
     (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
     (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku⟩,
-    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩, (scopesOkProgB_iff hvoll).mpr hS⟩
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩,
+    (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_spec h)⟩
 
 end Komponenten
 

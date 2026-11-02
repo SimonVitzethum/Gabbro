@@ -423,11 +423,12 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
 
 /-- **The reverse direction**: `AkzeptiertSpecX` gives `AkzeptiertX`, at the value's own
     checks. The footprint needs exactly the completeness above; every other component
-    already decides both ways. The arena fields are dropped: the Bool has none. -/
+    already decides both ways. The arena fields are dropped: the Bool has none. The
+    scope conjunct is derived from the floor field (`scopesOkProg_of_stufenM`),
+    not taken as a premise. -/
 theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : List (ArenaOwnership.Body.ArenaIface D)}
-    {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks)
-    (hS : ScopesOkProg P) :
+    {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks) :
     AkzeptiertX P S fs ls cs ws aks h.checks = true := by
   unfold AkzeptiertX
   simp only [Bool.and_eq_true]
@@ -437,7 +438,7 @@ theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lo
     (rennB_iff hvoll hcs).mpr h.renn⟩, (antwortenB_iff hvoll).mpr h.antworten⟩,
     (maskenB_iff hvoll).mpr h.masken⟩, (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku⟩,
     (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩, (resetB_iff hcs).mpr h.reset⟩,
-    (scopesOkProgB_iff hvoll).mpr hS⟩
+    (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_stufenM h.stufen)⟩
 
 end Bool
 

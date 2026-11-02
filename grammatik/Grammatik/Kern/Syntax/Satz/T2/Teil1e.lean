@@ -4,6 +4,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T2.Teil1b
 public import Grammatik.Kern.Syntax.Satz.T2.Teil1d
 
 @[expose] public section
@@ -156,5 +157,29 @@ theorem GutRetV.toGut_entry {S : Signatur D.Tab D.Glob D.Lock D.Marke}
       omega
   have heq2 : σ'.haelt = σ.haelt := heq.trans (foldl_erase_of_not_mem Ls _ hnot)
   exact ⟨hr, heq2, hgood, hkons⟩
+
+/-- A taken lock is fresh and above the floor (C11 scope discipline): it is
+    outside the residual (strictness against `ResidHeld`) and respects the
+    floor (the rank premise). -/
+theorem HCountScope.of_locks {V : vertrag D} {Λ : List (Res D)} {K : D.Lock}
+    (hresid : ResidHeld V Λ) (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang K)
+    (hrk : ∀ c, V.boden = some c → c ≤ D.rang K)
+    (hcount : HCountScope V Λ) : HCountScope V (Res.held K :: Λ) := by
+  intro L
+  by_cases hLK : L = K
+  · rw [hLK, List.count_cons_self]
+    right
+    refine ⟨?_, ?_⟩
+    · intro hKh
+      have hmem : Res.held K ∈ Λ := hresid K hKh
+      have hlt := hr K hmem
+      exact absurd hlt (lt_irrefl _)
+    · exact hrk
+  · have hne : Res.held L ≠ Res.held K := by
+      intro hKK
+      cases hKK
+      exact hLK rfl
+    rw [List.count_cons_of_ne hne]
+    exact hcount L
 
 end Gabbro.Grammatik

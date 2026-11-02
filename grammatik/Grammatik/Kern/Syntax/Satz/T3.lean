@@ -390,6 +390,51 @@ end Scopes
 def ScopesOkProg (P : Programm D) : Prop :=
   ∀ f, (P.rumpf f).scopesOk (D.signatur f).haelt (D.signatur f).boden = true
 
+/-! ### The counted scope check (C11, owner 2026-11-02)
+
+    A predicate on a scope list decides the check; a scoped return at a
+    counted frame meets it. Used by the derivation of `ScopesOkProg` from
+    the floor (`Satz/T4/Teil3`). -/
+
+/-- A predicate on a scope list decides the scope check. -/
+theorem scopesOkScopes_of_forall {haelt : List D.Lock} {boden : Option Int} {Ls : List D.Lock}
+    (h : ∀ L ∈ Ls, L ∉ haelt ∧ ∀ c, boden = some c → c ≤ D.rang L) :
+    scopesOkScopes haelt boden Ls = true := by
+  induction Ls with
+  | nil => rfl
+  | cons K Ks ih =>
+      have ⟨hnK, hrK⟩ := h K List.mem_cons_self
+      have hrest := ih (fun L hL => h L (List.mem_cons_of_mem _ hL))
+      simp only [scopesOkScopes, Bool.and_eq_true]
+      refine ⟨⟨decide_eq_true hnK, ?_⟩, hrest⟩
+      cases hb : boden with
+      | none => rfl
+      | some c =>
+          simp only [hb]
+          exact decide_eq_true (hrK c hb)
+
+/-- A scoped return at a counted frame meets the scope check. -/
+theorem scopesOk_retScopedAux {V : vertrag D} {Λ : List (Res D)}
+    (R : RueckRessourcen D V Λ) (hcount : HCountScope V Λ) :
+    scopesOkScopes V.haelt V.boden R.scopes = true := by
+  apply scopesOkScopes_of_forall
+  intro L hL
+  have hmem : 0 < R.scopes.count L := List.count_pos_iff.mpr hL
+  have hmap : (R.scopes.map Res.held).count (Res.held L) = R.scopes.count L :=
+    count_held_map L R.scopes
+  have hperm : Λ.count (Res.held L) = (V.ende ++ R.scopes.map Res.held).count (Res.held L) :=
+    count_of_perm R.genau
+  have hende : V.ende.count (Res.held L) = (V.haelt.map Res.held).count (Res.held L) := by
+    unfold Vertrag.ende
+    rw [List.count_append, count_held_marke_map, Nat.add_zero]
+  have hgt : (V.haelt.map Res.held).count (Res.held L) < Λ.count (Res.held L) := by
+    rw [hperm, List.count_append, hende, hmap]
+    omega
+  rcases hcount L with heq | hR
+  · have hF : False := by omega
+    exact hF.elim
+  · exact hR
+
 set_option hygiene false in
 /-- Scope bookkeeping: the scope premise of a sub-block from the enclosing one (`hscope`). -/
 macro "scopes_tac" : tactic => `(tactic|
