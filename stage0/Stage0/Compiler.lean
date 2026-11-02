@@ -20,18 +20,18 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   main : (declOf unit).Fn
   program : Programm (declOf unit)
   elaborated : (Frontend.elabWithScopes
-    ((uMembers (pre108 source.items)).map OldSource.normalizeItem)
+    ((uMembers (pre108 source.prepared.selected)).map OldSource.normalizeItem)
     source.scopes.values source.scopes.types source.scopes.functions
     (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.items))}) = .ok unit
+      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.selected))}) = .ok unit
   entry : fnIdx unit.fns "main" = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
-    OldSource.restore (uMembers (pre108 source.items)) unit raw = .ok program
+    OldSource.restore (uMembers (pre108 source.prepared.selected)) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
-  arrayConstants : ∀ item ∈ uMembers (pre108 source.items), Frontend.ArrayMeaning unit source.scopes item
-  initializerExports : Frontend.checkInitializers (uMembers (pre108 source.items)) unit = .ok ()
-  constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.items)) = .ok ()
-  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.items))
+  arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.selected), Frontend.ArrayMeaning unit source.scopes item
+  initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.selected)) unit = .ok ()
+  constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.selected)) = .ok ()
+  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.prepared.selected))
   /-- The exact source-derived measure, checked by generic lowering at entry parameters/resources. -/
   measures : {exported : Measures.Export unit // Measures.lowerMeasures unit = .ok exported} :=
     Measures.checkedExport unit (by
@@ -40,13 +40,13 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
       exact ⟨exported, origin⟩)
   /-- Cycle lengths are checked on the final program, after old-state restoration. -/
   measureLengths : Measures.cycleLengths unit program measures.val.mass = true :=
-    Frontend.compiled_measure_lengths (uMembers (pre108 source.items)) unit program
+    Frontend.compiled_measure_lengths (uMembers (pre108 source.prepared.selected)) unit program
       measures.val measures.property lowered
 
 /-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
 def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
   let source ← Frontend.source text options
-  let members := uMembers (pre108 source.items)
+  let members := uMembers (pre108 source.prepared.selected)
   match hc : ExportMetadata.checkConstants members with
   | .error error => throw error
   | .ok () => do

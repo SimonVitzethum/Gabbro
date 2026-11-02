@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Profil.Auswahl
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportMetadata
@@ -231,5 +232,25 @@ set_option maxRecDepth 100000 in
 theorem groupT_zeuge :
     check [.groupT "G" ["T"] [⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" ∧ check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
+
+/-- C14 gates are consumed only by canonical build selection, before metadata checking.
+    Raw wrappers remain refused; selection never suppresses the retained item's duties. -/
+theorem gateT_bound (m : Auswahl.BauModus) (items selected : List SItemTief)
+    (selection : selected = Auswahl.waehleL m items)
+    (clear : selected.any itemMetadata = false) :
+    check (Auswahl.waehleL m items) = .ok () := by
+  rw [← selection]
+  exact check_clear selected clear
+
+theorem gateT_zeuge :
+    check [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))] =
+      .error "source export: type/provider/proof duties lack a checked source binding" ∧
+    check (Auswahl.waehleL .auslieferung
+      [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
+    check (Auswahl.waehleL .pruefbau
+      [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
+    check (Auswahl.waehleL .pruefbau [.gateT (.groupT "G" [] [])]) =
+      .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
