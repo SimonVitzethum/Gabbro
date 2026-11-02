@@ -1,5 +1,5 @@
 module
-public import Grammatik.Bausteine.Arena.Ownership.Machine.Return
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil16
 @[expose] public section
 

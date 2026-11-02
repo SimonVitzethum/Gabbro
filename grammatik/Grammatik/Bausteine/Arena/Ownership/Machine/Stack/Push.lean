@@ -1,5 +1,5 @@
 module
-public import Grammatik.Bausteine.Arena.Ownership.Machine.Pop
+public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Pop
 public import Grammatik.Bausteine.Arena.Ownership.Body.Call
 @[expose] public section
 
