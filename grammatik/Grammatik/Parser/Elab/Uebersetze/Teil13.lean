@@ -12,6 +12,7 @@ public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Teil17
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 
 @[expose] public section
 
@@ -309,6 +310,13 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok fns =>
     let fns := fns ++ transitionFns ++ probeFns
+    match uTorHuellen fns checks with
+    | .error e => .error e
+    | .ok torFns =>
+    let marken := uMarken ms checks
+    match uMarkenPruef marken (fns ++ torFns) with
+    | .error e => .error e
+    | .ok _ =>
     match uWurzeln tabs fns ms with
     | .error e => .error e
     | .ok roots =>
@@ -321,7 +329,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check msE, checks := checks }
+        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check msE, checks := checks, marken := marken }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/

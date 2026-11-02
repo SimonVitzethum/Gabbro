@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Projekte.Zeuge
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 public import Grammatik.Speichermodell.Atomar.AtomarGleich
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -81,7 +82,8 @@ theorem checked_iff (P : Programm D) (A : FreiForm D) (I : ArenaOwnership.Body.I
 def besitzerVon (ps : List (Projekt D)) (f : D.Fn) : Option (Projekt D) := ps.find? fun p => p.eigen f
 
 /-- **THE LINK CHECK** over the linked unit `K = komponiere B ps`: what depends on more than one
-    body or on the composed roots. -/
+    body or on the composed roots -- closed graphs, footprints, pool safety, write separation,
+    masks, foreign arenas, the ownership start, and the composed check admission. -/
 structure BindeSpec [DecidableEq D.Fn] (fs : List D.Fn) (B : Einheit D) (ps : List (Projekt D)) : Prop where
   abg : ∀ w, AbgK (komponiere B ps).P fs (reachB (komponiere B ps).P fs w)
   fuss : ∀ f, FussSX (komponiere B ps).P (komponiere B ps).S
@@ -99,6 +101,10 @@ structure BindeSpec [DecidableEq D.Fn] (fs : List D.Fn) (B : Einheit D) (ps : Li
   akku : Kernzelle.AccumulatorAdmission (komponiere B ps).P fs (komponiere B ps).akku
   -- their neutral initialization at the composed start memory
   akkuStart : Kernzelle.AkkuStart (komponiere B ps) (komponiere B ps).akku
+  -- the declared checks of all projects, admitted over the composed program (C16,
+  -- 2026-11-02): cross-unit gates consume across the boundary, names are disjoint.
+  -- Without this proof the link is refused: `komponiere` carries the checks, never drops them.
+  pruef : CheckAdmission (komponiere B ps).P fs (komponiere B ps).pruefungen
 
 /-! ## Each unit's own verdict -/
 
@@ -162,7 +168,7 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
       (komponiere B ps).arenen (komponiere B ps).akku := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
   refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_,
-    hL.akku, [], CheckAdmission.nil _ _, (hA p0 hp0).reset⟩
+    hL.akku, (komponiere B ps).pruefungen, hL.pruef, (hA p0 hp0).reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -209,7 +215,7 @@ noncomputable def bindeB [DecidableEq D.Fn] (fs : List D.Fn) (cs : List (D.Tab �
     rennB (komponiere B ps).P fs cs (komponiere B ps).ws && maskenB (komponiere B ps).P fs &&
     besitzB (komponiere B ps) fs &&
     Kernzelle.accumulatorB (komponiere B ps).P fs cs (komponiere B ps).akku &&
-    Kernzelle.akkuStartB (komponiere B ps) (komponiere B ps).akku
+    Kernzelle.akkuStartB (komponiere B ps) (komponiere B ps).akku && checkB (komponiere B ps).P (tabsOf cs) (globsOf cs) fs (komponiere B ps).pruefungen
 
 /-- **The decided link check is sound.** -/
 theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -217,12 +223,12 @@ theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D
     (h : bindeB fs cs B ps = true) : BindeSpec fs B ps := by
   unfold bindeB at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h1
   obtain ⟨hb, -, hs⟩ := besitzB_sound hvoll h6
   exact ⟨hAbg, fussWXB_ok hvoll hAbg h2, (einzelnPoolB_iff hvoll hcs).mp h3, (rennB_iff hvoll hcs).mp h4,
     (maskenB_iff hvoll).mp h5, fun a ha f _ => (checked_iff _ _ _).mp (hb a ha) f, hs,
-    (Kernzelle.accumulatorB_iff hvoll hcs).mp h7, Kernzelle.akkuStartB_sound h8⟩
+    (Kernzelle.accumulatorB_iff hvoll hcs).mp h7, Kernzelle.akkuStartB_sound h8, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h9⟩
 
 /-- **The checker that decides the specification**: accepts exactly what `AkzeptiertSpecX`, the
     ownership start and neutral initialization establish (the strongest checker the statement admits). -/
@@ -291,7 +297,9 @@ theorem lokW_ohne_wurzeln [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (
 
 /-- **A unit without roots, arenas and checks is accepted alone** whenever the unit it
     is cut from is: what depends on roots holds vacuously, the rest is per body.
-    The cut drops the checks (linked check admission is open, as for `verbinde`). -/
+    The cut keeps the first half's checks and drops the second half's (the second
+    project is check-free); the composed admission is the unit's own at its declared
+    checks (`hC`). -/
 theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.Fn}
     (hA : AkzeptiertSpecX E.P E.S fs E.ws E.arenen E.akku)
     (hAS : Kernzelle.AkkuStart E E.akku) :
@@ -319,6 +327,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (hA : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku) (hBS : BesitzStart E)
     (hAS : Kernzelle.AkkuStart E E.akku)
+    (hChecks : hA.checks = E.pruefungen)
     (hN : NutzerTeilO ⟨fun _ => true, fun _ => true, E⟩)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
@@ -339,7 +348,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     · exact @decide_eq_true _ (Classical.propDecidable _) ⟨hA, hBS, hAS⟩
     · exact ohne_wurzeln_akzeptiert hA hAS
   have hL' : BindeSpec fs.1 E (schnitt E eigen) := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [hkomp]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [hkomp]
     · exact hA.abg
     · exact hA.fuss
     · exact hA.einzeln
@@ -349,6 +358,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     · exact hBS
     · exact hA.akku
     · exact hAS
+    · rw [← hChecks]; exact hA.pruef
   exact gabbro_ziel_verbund_n specPruefer D E (schnitt E eigen) fs ls cs hC (schnitt_passend E eigen)
     (by simp only [schnitt, ne_eq, reduceCtorEq, not_false_eq_true]) (schnitt_deckend E eigen) (schnitt_deckendS E eigen) hL' (schnitt_nutzer hN) O
     (by rw [hkomp]; exact hH) passes sp init (by rw [hkomp]; exact hL) lebt0 K hK

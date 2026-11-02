@@ -1,6 +1,7 @@
 /- Part 3 of 3 of `Verbund` (split by instrumente/teile/lean-teilen.py; the umbrella `Verbund.lean` imports all parts). -/
 module
 public import Grammatik.Zielsatz.Faeden.Verbund.T2
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 @[expose] public section
 
 
@@ -64,8 +65,8 @@ def poolSicherVB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn → B
       (cs.all fun c => !(TraegerSchreibt f c) || (!(waechterVon c).isEmpty || atomarB c))
 
 /-- **THE LINK CHECK** (`SchnittstelleSpec`, decided): placeholders are leaves, no callback
-    through an imported function, and thread-locality, write separation and pool safety over
-    the COMPOSED hulls. -/
+    through an imported function, thread-locality, write separation and pool safety over
+    the COMPOSED hulls, and both units' declared checks admitted over the linked program. -/
 def schnittstelleB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn → Bool)
     (E₁ E₂ : Einheit D) : Bool :=
   platzhalterB fs e E₁.P && platzhalterB fs (fun f => !e f) E₂.P && keinRueckrufB fs e E₁ E₂ &&
@@ -75,7 +76,7 @@ def schnittstelleB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn →
       !(mehrfachB (verbinde e E₁ E₂).ws w) || poolSicherVB fs cs e E₁ E₂ w) &&
     (fs.all fun w => !(E₁.P.unterbricht w) || fs.all fun h =>
       !(huelleB fs e E₁ E₂ w h) || mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h)) &&
-    Kernzelle.accumulatorB (verbinde e E₁ E₂).P fs cs (verbinde e E₁ E₂).akku
+    Kernzelle.accumulatorB (verbinde e E₁ E₂).P fs cs (verbinde e E₁ E₂).akku && checkB (verbindeP e E₁ E₂) (tabsOf cs) (globsOf cs) fs (E₁.pruefungen ++ E₂.pruefungen)
 
 variable {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} {e : D.Fn → Bool} {E₁ E₂ : Einheit D}
 
@@ -304,10 +305,10 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
   unfold schnittstelleB
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
     refine ⟨(platzhalterB_iff hvoll).mp h1, (platzhalterB_iff hvoll).mp h2,
       (keinRueckrufB_iff hvoll).mp h3, fun c hc => ?_, fun c hB hA => ?_, fun w hw => ?_,
-      fun w hw h hh => ?_, (Kernzelle.accumulatorB_iff hvoll hcs).mp h8⟩
+      fun w hw h hh => ?_, (Kernzelle.accumulatorB_iff hvoll hcs).mp h8, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h9⟩
     · have h := List.all_eq_true.mp h4 c (hcs c)
       rw [(lokBedarfB_iff hvoll).mpr hc, Bool.not_true, Bool.false_or] at h
       exact (getrenntVB_iff hvoll).mp h
@@ -324,8 +325,8 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
       rw [(huelleB_iff hvoll).mpr hh, Bool.not_true, Bool.false_or] at h2
       exact h2
   · intro h
-    refine ⟨⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
-      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
+    refine ⟨⟨⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
+      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩
     · refine List.all_eq_true.mpr fun c _ => ?_
       cases hc : lokBedarfB fs e E₁ E₂ c
       · rfl
@@ -370,22 +371,22 @@ variable [DecidableEq D.Fn]
     nothing IS the unit. The statement `GabbroZiel` is unchanged by this diff; this lemma says
     the new operation does not move a single unit either. -/
 theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestartet = [])
-    (h3 : E'.arenen = []) (h4 : E'.akku = []) :
+    (h3 : E'.arenen = []) (h4 : E'.akku = []) (h5 : E'.pruefungen = []) :
     verbinde (fun _ => true) E E' = E := by
   cases E
   unfold verbinde verbindeP mitRumpf
-  rw [h1, h2, h3, h4, List.append_nil, List.append_nil, List.append_nil, List.append_nil]
+  rw [h1, h2, h3, h4, h5, List.append_nil, List.append_nil, List.append_nil, List.append_nil, List.append_nil]
   rfl
 
-/-- **The linked unit is accepted by the concrete checker** -- so it can be linked again: a
-    chain of units, by iteration. -/
+/-- **The linked unit is accepted by the concrete checker** -- at both units' declared
+    checks, so it can be linked again: a chain of units, by iteration. -/
 theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true)
     (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku = true) (hV : Verbindbar E₁ E₂)
     (hS : schnittstelleB fs cs e E₁ E₂ = true) :
-    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku = true :=
+    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) = true :=
   spec_akzeptiert hvoll hls hcs
     (h := akzeptiertSpec_verbinde hvoll
       (akzeptiertSpec_of hvoll hls hcs [] h₁) (akzeptiertSpec_of hvoll hls hcs [] h₂) hV

@@ -124,4 +124,5 @@ module
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil1
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil2
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil4
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide

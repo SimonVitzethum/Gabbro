@@ -169,7 +169,7 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, hS.akku, [], CheckAdmission.nil _ _⟩
+    ?_, ?_, ?_, ?_, ?_, hS.akku, E₁.pruefungen ++ E₂.pruefungen, hS.pruef⟩
   · -- frag
     refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk

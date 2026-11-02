@@ -6,8 +6,9 @@
    no guessed table for a dynamically returned region), the resolved gate names,
    the floors as `UEns` predicates, the unique optional external counterprobe and
    the build mode. `probe` names the generated Boolean producer elaborated from
-   the `can_fail` body (`Erzeuge.uProbeFns`); the mode is the checked shipping
-   default, selection under C14 supplies the test mode. -/
+   the `can_fail` body (`Erzeuge.uProbeFns`); `duty` names the Duty mark the probe
+   threads and the gate wrappers consume (`Torhuelle.uTorHuellen`); the mode is the
+   checked shipping default, selection under C14 supplies the test mode. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
@@ -37,7 +38,14 @@ structure UCheck where
   testbau : Bool := false
   /-- The generated Boolean producer elaborated from the `can_fail` body. -/
   probe : String := ""
+  /-- The Duty mark this check threads (C16): consumed by its gate wrappers, produced by its
+      probe on every normal return. Named after the check, like the probe. -/
+  duty : String := ""
   deriving DecidableEq, Repr
+
+/-- The Duty mark of a check: it cannot collide with a written
+    function, since `#` never stands in a source identifier. -/
+def dutyName (cname : String) : String := cname ++ "#duty"
 
 /-- The generated producer of a check: its name cannot collide with a written
     function, since `#` never stands in a source identifier. -/

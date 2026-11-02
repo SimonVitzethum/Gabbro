@@ -182,7 +182,8 @@ variable [DecidableEq D.Fn] {E₁ E₂ : Einheit D} {e : D.Fn → Bool}
 /-- **The linked unit is accepted by the checker of before**, from two units each accepted WITH
     the rely: the link check's `lok` makes every carrier a function relies on without a lock
     thread-local over the composed hulls -- shared atomics included -- so the linked footprints
-    need no rely. The per-body components are each unit's own. -/
+    need no rely. The per-body components are each unit's own; the link check's `pruef`
+    carries both units' declared checks. -/
 theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     {B₁ B₂ : List (ArenaOwnership.Body.ArenaIface D)}
     {A₁ A₂ : List (Kernzelle.AccumulatorDecl D)}
@@ -206,7 +207,7 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, hS.akku, [], CheckAdmission.nil _ _, hA₁.reset⟩
+    ?_, ?_, ?_, ?_, ?_, hS.akku, E₁.pruefungen ++ E₂.pruefungen, hS.pruef, hA₁.reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
       (kandB (verbindeP e E₁ E₂) fs (fussOrteG (verbindeP e E₁ E₂) f)) (fun _ => true) = true
