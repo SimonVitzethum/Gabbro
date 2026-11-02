@@ -68,6 +68,11 @@ theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
 @[reducible] def valR : (τ : Ty) → Val D.Fn D.passt τ → Val (Option D.Fn) (passtM D) (tyR τ) :=
   Val.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩)
 
+/-- A payload uses the same function-image transport as its enclosing sum. -/
+def nutzR : (c : Option Ty) → Nutzlast D.Fn D.passt c →
+    Nutzlast (Option D.Fn) (passtM D) (c.map tyR) :=
+  Nutzlast.relocate (fun n => n + 1) id (fun _ v => ⟨some v.1, v.2⟩)
+
 /-- A value of the shifted `τ` as a value of `τ` (the root has number `0`,
     which no shifted pointer type names). -/
 def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.passt τ :=

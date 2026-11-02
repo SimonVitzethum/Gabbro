@@ -95,7 +95,7 @@ theorem ergWert_ru {τ : Ty} : ∀ {e : Option Ty} (he : e = some τ)
   | _, rfl, _, _ => rfl
 
 theorem armEnv_ru {Γ : Ctx} : ∀ {c : Option Ty} (nutz : Nutzlast D.Fn D.passt c) (ρ : Env D Γ),
-    HEq (envR (armEnv nutz ρ)) (armEnv (D := D.mitRuhe) nutz (envR ρ))
+    HEq (envR (armEnv nutz ρ)) (armEnv (D := D.mitRuhe) (nutzR c nutz) (envR ρ))
   | none, _, _ => HEq.rfl
   | some _, _, _ => HEq.rfl
 

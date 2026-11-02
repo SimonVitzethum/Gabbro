@@ -143,6 +143,34 @@ def Val.restrictSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → 
 termination_by cs _ => sizeOf cs
 end
 
+/-- Transport a complete optional payload under the same pointer map as its sum. -/
+def Nutzlast.relocate {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true}) :
+    (c : Option Ty) → Nutzlast F p c → Nutzlast F' p' (c.map (Ty.mapNumbers sn tn))
+  | none, v => v
+  | some τ, v => Val.relocate sn tn pointer τ v
+
+/-- Relocation selects the same tag and transports precisely its active payload. -/
+theorem Val.relocateSum_mk {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true}) :
+    ∀ (cs : List (Option Ty)) (i : Fin cs.length) (v : Nutzlast F p (cs.get i)),
+      Val.relocateSum sn tn pointer cs ⟨i, v⟩ =
+        ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
+          (Ty.mapCases_get sn tn cs i).symm ▸ Nutzlast.relocate sn tn pointer (cs.get i) v⟩
+  | [], i, _ => i.elim0
+  | none :: _, ⟨0, _⟩, _ => rfl
+  | some _ :: _, ⟨0, _⟩, _ => rfl
+  | none :: cs, ⟨i + 1, hi⟩, v =>
+    congrArg (fun z : Val F' p' (.sum (Ty.mapCases sn tn cs)) =>
+      (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (none :: Ty.mapCases sn tn cs))))
+      (Val.relocateSum_mk sn tn pointer cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v)
+  | some τ :: cs, ⟨i + 1, hi⟩, v =>
+    congrArg (fun z : Val F' p' (.sum (Ty.mapCases sn tn cs)) =>
+      (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (some (Ty.mapNumbers sn tn τ) :: Ty.mapCases sn tn cs))))
+      (Val.relocateSum_mk sn tn pointer cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v)
+
 section Inverse
 variable {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
   (sn tn : Nat → Nat)

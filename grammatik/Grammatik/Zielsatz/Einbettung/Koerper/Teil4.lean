@@ -43,7 +43,7 @@ theorem sim_block_narrow {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
     · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2)]
       rw [dif_pos hc]
       exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
-    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
+    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
       rw [dif_pos hc]
       exact E.ausRel_schrumpf hR
   · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_end_sonst M₁ σ₁ _ ρ ρ' hI hρ
@@ -51,7 +51,7 @@ theorem sim_block_narrow {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
     · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2)]
       rw [dif_neg hc]
       exact congrArg EndAusgang.zuAusgang (hΦ2 Φ hP)
-    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
+    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int]
       rw [dif_neg hc]
       exact E.endRel_zuAusgang hR
 
@@ -73,13 +73,13 @@ theorem sim_block_check {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
     refine ⟨M₂, o.zuAusgang, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hb, Bool.false_eq_true, ↓reduceIte]
       exact congrArg EndAusgang.zuAusgang (hΦ2 Φ hP)
-    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, Bool.false_eq_true, ↓reduceIte]
+    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, Bool.false_eq_true, ↓reduceIte]
       exact E.endRel_zuAusgang hR
   · obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_rest M₁ σ₁ _ ρ ρ' hI hρ
     refine ⟨M₂, o, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
     · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hb, ↓reduceIte]
       exact hΦ2 Φ hP
-    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, ↓reduceIte]
+    · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, wahr_valE, hb, ↓reduceIte]
       exact hR
 
 set_option linter.unusedSectionVars false in
@@ -105,7 +105,7 @@ theorem sim_block_float {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | none =>
       refine ⟨M₁, .logik .bereich, hs, fun Φ hP => ?_, ?_⟩
       · simp only [execBlockHA, hΦ Φ hP, hg]
-      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
+      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
         exact ⟨logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
   | some w =>
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_rest M₁ σ₁ _ (Env.cons (τ := .fl lo hi) w ρ) (Env.cons (τ := .fl lo hi) w ρ') hI
@@ -113,7 +113,7 @@ theorem sim_block_float {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
       refine ⟨M₂, o.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hg]
         exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
-      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
+      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
         exact E.ausRel_schrumpf hR
 
 set_option linter.unusedSectionVars false in
@@ -160,7 +160,7 @@ theorem sim_block_floatOf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
   | none =>
       refine ⟨M₁, .logik .bereich, hs, fun Φ hP => ?_, ?_⟩
       · simp only [execBlockHA, hΦ Φ hP, hg]
-      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int, hg]
+      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int, hg]
         exact ⟨logikRel_kein (fun _ h' => by cases h'), hI.keyOk E⟩
   | some w =>
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_rest M₁ σ₁ _ (Env.cons (τ := .fl lo hi) w ρ) (Env.cons (τ := .fl lo hi) w ρ') hI
@@ -168,7 +168,7 @@ theorem sim_block_floatOf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       refine ⟨M₂, o.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hg]
         exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
-      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int, hg]
+      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_int, hg]
         exact E.ausRel_schrumpf hR
 
 set_option linter.unusedSectionVars false in
@@ -194,7 +194,7 @@ theorem sim_block_floatNarrow {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       refine ⟨M₂, o.zuAusgang, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hg]
         exact congrArg EndAusgang.zuAusgang (hΦ2 Φ hP)
-      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
+      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
         exact E.endRel_zuAusgang hR
   | some w =>
       obtain ⟨M₂, o, hs2, hΦ2, hR⟩ := ih_sim_block_rest M₁ σ₁ _ (Env.cons (τ := .fl lo hi) w ρ) (Env.cons (τ := .fl lo hi) w ρ') hI
@@ -202,7 +202,7 @@ theorem sim_block_floatNarrow {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Li
       refine ⟨M₂, o.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
       · simp only [execBlockHA, hΦ Φ (passt_teil hP hs2), hg]
         exact congrArg Ausgang.schrumpf (hΦ2 Φ hP)
-      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
+      · simp only [exB, execBlockHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref, valE_fl, hg]
         exact E.ausRel_schrumpf hR
 
 set_option linter.unusedSectionVars false in
@@ -299,7 +299,7 @@ theorem sim_end_bind {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   refine ⟨M₂, o.schrumpf, teil_trans hs hs2, fun Φ hP => ?_, ?_⟩
   · simp only [execEndHA, hΦ Φ (passt_teil hP hs2)]
     exact congrArg EndAusgang.schrumpf (hΦ2 Φ hP)
-  · simp only [exEnd, execEndHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_sum, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+  · simp only [exEnd, execEndHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
     exact E.endRel_schrumpf hR
 
 set_option linter.unusedSectionVars false in

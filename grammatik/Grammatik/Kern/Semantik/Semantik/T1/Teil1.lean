@@ -264,6 +264,14 @@ def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ
   | .val e, σ, ρ => eval σ₀ e σ ρ
 
 end
+
+/-- Evaluation commutes with transport of the selected payload type. -/
+theorem evalNutz_cast {c c' : Option Ty} (h : c = c') (σ₀ σ : World D)
+    (e : NutzlastExpr D Γ Λ c) (ρ : Env D Γ) :
+    evalNutz σ₀ (h ▸ e) σ ρ = (h ▸ evalNutz σ₀ e σ ρ) := by
+  cases h
+  rfl
+
 def evalArgs (σ₀ : World D) : Args D Γ Λ τs → World D → Env D Γ → Env D τs
   | .nil, _, _ => .nil
   | .cons e rest, σ, ρ => .cons (eval σ₀ e σ ρ) (evalArgs σ₀ rest σ ρ)

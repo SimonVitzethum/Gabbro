@@ -104,6 +104,12 @@ def VRel : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ) → Prop
   | .arr τ _, v, v' => ∀ j, VRel τ (v j) (v' j)
   | τ, v, v' => v' = E.valE τ v
 
+/-- Payload relations use the same function representatives as all other values. -/
+def NRel : (c : Option Ty) → Nutzlast D.Fn D.passt c →
+    Nutzlast D'.Fn D'.passt (c.map E.tyE) → Prop
+  | none, _, _ => True
+  | some τ, v, v' => E.VRel K τ v v'
+
 theorem vrel_valE : ∀ (τ : Ty) (v : Wert D τ), E.VRel K τ v (E.valE τ v)
   | .int _ _, _ => rfl
   | .bool, _ => rfl

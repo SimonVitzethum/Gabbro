@@ -382,11 +382,10 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :
     ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ)
       (ρ' : Env D' (Γ.map E.tyE)), E.EnvR K ρ ρ' →
-      evalNutz σ₀' (exN E n) σ' ρ' = evalNutz σ₀ n σ ρ
-  | _, _, _, .empty, _, _, _ => rfl
+      E.NRel K c (evalNutz σ₀ n σ ρ) (evalNutz σ₀' (exN E n) σ' ρ')
+  | _, _, _, .empty, _, _, _ => trivial
   | _, _, _, .val e, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ
-      simp only [VRel] at he
       exact he
 
 end
