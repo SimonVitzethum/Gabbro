@@ -34,15 +34,16 @@ theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .forever _ _ body => ruB_gOk K Rg body
   | _, _, _, _, .axiomCall .. => rfl
   | _, _, _, _, .axiomCallElse e _ _ _ _ _ _ _ err => by
+      have ih0 := ruEnd_gOk K Rg err
       cases e with
       | none =>
           simp only [ruS, Stmt.gOk]
           exact (gOk_nachΛ _ _ _ _).trans
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+            ((gOk_umΛ _ _ _ _).trans (ih0))
       | some _ =>
           simp only [ruS, Stmt.gOk]
           exact (gOk_nachΛ _ _ _ _).trans
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+            ((gOk_umΛ _ _ _ _).trans (ih0))
   | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
@@ -70,25 +71,28 @@ theorem ruB_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruB_gOk K Rg rest)
   | _, _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      have ih0 := ruB_gOk K Rg rest
       cases e with
       | none =>
           simp only [ruB, Block.gOk]
-          exact (gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest)
+          exact (gOk_vorΛ _ _ _ _).trans (ih0)
       | some _ =>
           simp only [ruB, Block.gOk]
-          exact (gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest)
+          exact (gOk_vorΛ _ _ _ _).trans (ih0)
   | _, _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_gOk K Rg err
+      have ih1 := ruB_gOk K Rg rest
       cases e with
       | none =>
           simp only [ruB, Block.gOk]
           exact kongr₂ (· && ·)
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
-            ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
+            ((gOk_umΛ _ _ _ _).trans (ih0))
+            ((gOk_vorΛ _ _ _ _).trans (ih1))
       | some _ =>
           simp only [ruB, Block.gOk]
           exact kongr₂ (· && ·)
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
-            ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
+            ((gOk_umΛ _ _ _ _).trans (ih0))
+            ((gOk_vorΛ _ _ _ _).trans (ih1))
   | _, _, _, _, .regRead r _ rest => congrArg (Rg r && ·) (ruB_gOk K Rg rest)
   | _, _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Rg r && ·) (kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest))
@@ -123,25 +127,28 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruEnd_gOk K Rg rest)
   | _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      have ih0 := ruEnd_gOk K Rg rest
       cases e with
       | none =>
           simp only [ruEnd, Endblock.gOk]
-          exact (gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest)
+          exact (gOk_umΛ _ _ _ _).trans (ih0)
       | some _ =>
           simp only [ruEnd, Endblock.gOk]
-          exact (gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest)
+          exact (gOk_umΛ _ _ _ _).trans (ih0)
   | _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_gOk K Rg err
+      have ih1 := ruEnd_gOk K Rg rest
       cases e with
       | none =>
           simp only [ruEnd, Endblock.gOk]
           exact kongr₂ (· && ·)
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
+            ((gOk_umΛ _ _ _ _).trans (ih0))
+            ((gOk_umΛ _ _ _ _).trans (ih1))
       | some _ =>
           simp only [ruEnd, Endblock.gOk]
           exact kongr₂ (· && ·)
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
-            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
+            ((gOk_umΛ _ _ _ _).trans (ih0))
+            ((gOk_umΛ _ _ _ _).trans (ih1))
   | _, _, _, .regRead r _ rest => congrArg (Rg r && ·) (ruEnd_gOk K Rg rest)
   | _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Rg r && ·) (kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruEnd_gOk K Rg rest))
