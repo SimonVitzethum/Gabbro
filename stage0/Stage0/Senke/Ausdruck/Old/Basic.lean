@@ -112,10 +112,16 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
     simp only [lowEnsAt, Option.some.injEq, Prod.mk.injEq] at h
     omega
   | _, .oldS t f i _, d, c, top, h => by
-    have := valueWords_pos (D.typ t f)
-    simp only [lowEnsAt, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨_, _, _, _⟩ := h
-    omega
+    cases index : entryIndex i with
+    | some k =>
+      have := valueWords_pos (D.typ t f)
+      simp only [lowEnsAt, index, Option.some.injEq, Prod.mk.injEq] at h
+      omega
+    | none =>
+      simp only [lowEnsAt, index] at h
+      split at h
+      · exact entryColumnL_top h
+      · cases h
   | _, .widen _ _ e, d, c, top, h =>
     resizeIntegerL_top h (fun cc tt hc => lowEnsAt_top layout start e d cc tt hc)
   | _, .not a, d, c, top, h => by

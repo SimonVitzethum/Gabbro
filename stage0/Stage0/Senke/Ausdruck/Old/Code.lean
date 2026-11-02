@@ -1,7 +1,7 @@
 /- Complete entry snapshots below the immutable postcondition parameter environment. -/
 module
 public import Stage0.Senke.Ausdruck.Satz
-public import Stage0.Senke.Ausdruck.Old.Column
+public import Stage0.Senke.Ausdruck.Old.ColumnCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
 @[expose] public section
 
@@ -41,9 +41,12 @@ def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : L
     {τ : Ty} → Expr D Γ Λ τ → Nat → Option (List II × Nat)
   | _, .oldG g _, d =>
       some (copyWords (valueWords (D.gtyp g)) d start, d + valueWords (D.gtyp g))
-  | _, .oldS t f i _, d => do
-      let _ ← entryIndex i
-      pure (copyWords (valueWords (D.typ t f)) d start, d + valueWords (D.typ t f))
+  | _, .oldS t f i _, d => match entryIndex i with
+      | some _ => some (copyWords (valueWords (D.typ t f)) d start, d + valueWords (D.typ t f))
+      | none => if EntrySnapshots.columnFits t f then
+          entryColumnL (D.typ t f) (start + EntrySnapshots.words (oldCells i)) d
+            (lowEnsAt L layout start i (d + valueWords (D.typ t f)))
+        else none
   | _, .widen (lo := lo) (hi := hi) (lo' := lo') (hi' := hi') _ _ e, d =>
       resizeIntegerL lo hi lo' hi' d (lowEnsAt L layout start e d)
   | _, .not a, d => do
