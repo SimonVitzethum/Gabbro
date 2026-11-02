@@ -73,7 +73,7 @@ def blockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind _ rest => blockKanten rest
   | .bindCall f _ _ _ _ rest => f :: blockKanten rest
   | .bindCallInd _ _ _ _ _ rest => blockKanten rest
-  | .bindCallIndElse _ _ _ _ _ _ err rest => endblockKanten err ++ blockKanten rest
+  | .bindCallIndElse _ _ _ _ _ err rest => endblockKanten err ++ blockKanten rest
   | .bindCallElse f _ _ _ _ err rest =>
       f :: endblockKanten err ++ blockKanten rest
   | .bindAxiom _ _ _ _ _ _ _ rest => blockKanten rest
@@ -119,7 +119,7 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       endblockKanten sonst ++ endblockKanten rest
   | .awaits _ _ _ _ _ rest => endblockKanten rest
   | .bindCallInd _ _ _ _ _ rest => endblockKanten rest
-  | .bindCallIndElse _ _ _ _ _ _ err rest => endblockKanten err ++ endblockKanten rest
+  | .bindCallIndElse _ _ _ _ _ err rest => endblockKanten err ++ endblockKanten rest
   | .narrow _ _ _ sonst rest => endblockKanten sonst ++ endblockKanten rest
   | .narrowRequired _ _ _ rest => endblockKanten rest
   | .exchange _ _ _ _ rest => endblockKanten rest
