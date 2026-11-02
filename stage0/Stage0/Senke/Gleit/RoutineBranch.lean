@@ -34,7 +34,7 @@ theorem routineChooseL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   dsimp only at he ht
   subst body
   subst top
-  apply wennL_ok hb (by omega) (by omega)
+  apply wennL_ok hb (by omega) (by omega) (bc := flag)
     (P := fun m' => ∃ w, m'.rd64 (slot fp (BitVec.ofNat 64 d)) = some w ∧
       w = if flag then yv else nv)
   · intro c t he ht m pc pre
