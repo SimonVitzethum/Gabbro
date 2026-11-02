@@ -86,9 +86,41 @@ def leerFn : UFn :=
   { name := "", params := [], kinds := [], res := none, held := [], puts := [], gives := [], body := [],
     ret := .empty }
 
-/-- One invariant, lowered. -/
+/-- A lowered invariant reads only its declared carriers: every carrier its predicate reads is one of the
+    invariant's carriers (tables and statics, C05) -- `InvTraeger` of the exported unit, decided. -/
+def invReadsOk (u : UProg) (i : Fin u.invs.length) (e : InvTy u i) : Bool :=
+  e.orte.all fun (c : Fin u.tabs.length ⊕ Fin u.globs.length) => decide (c ∈ invTraeger u i)
+
+/-- One invariant, lowered. It is REFUSED -- never lowered over a shortened carrier list -- where a writer of a
+    carrier does not hold every guard lock of the carriers (`U003`, `invOkB`; `traegerD` would fall back to
+    no carriers there), and where the predicate reads a carrier the invariant does not declare. -/
 def lowerInvAt (u : UProg) (i : Fin u.invs.length) : Except String (InvTy u i) :=
-  lowEns u [] (invSicht (declOf u) i) leerFn none (u.invs.get i).pred
+  if invOkB u i then
+    match lowEns u [] (invSicht (declOf u) i) leerFn none (u.invs.get i).pred with
+    | .error e => .error e
+    | .ok e =>
+      if invReadsOk u i e then .ok e else .error "an invariant reads a carrier it does not declare"
+  else .error "a writer of an invariant's carrier does not hold all its locks"
+
+/-- What a lowered invariant guarantees: `U003` holds and the predicate reads only declared carriers. -/
+theorem lowerInvAt_facts (u : UProg) (i : Fin u.invs.length) (v : InvTy u i)
+    (h : lowerInvAt u i = .ok v) : invOkB u i = true ∧ invReadsOk u i v = true := by
+  unfold lowerInvAt at h
+  by_cases hok : invOkB u i = true
+  · rw [if_pos hok] at h
+    refine ⟨hok, ?_⟩
+    cases hl : lowEns u [] (invSicht (declOf u) i) leerFn none (u.invs.get i).pred with
+    | error e => simp only [hl, reduceCtorEq] at h
+    | ok e =>
+      simp only [hl] at h
+      by_cases hr : invReadsOk u i e = true
+      · rw [if_pos hr] at h
+        cases h
+        exact hr
+      · rw [if_neg hr] at h
+        cases h
+  · rw [if_neg hok] at h
+    cases h
 
 /-- Every invariant lowers. -/
 def lowerInvs (u : UProg) : List (Fin u.invs.length) → Except String Unit
@@ -145,6 +177,51 @@ def lowerAllg (u : UProg) :
       (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
       (fun i => lowerInvGut u i (wI i)),
       List.finRange u.fns.length)
+
+/-- The lowered invariant at an index known good: `U003` holds and it reads only declared carriers. -/
+theorem lowerInvGut_facts (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i = .ok v) :
+    invOkB u i = true ∧ invReadsOk u i (lowerInvGut u i h) = true := by
+  unfold lowerInvGut
+  split
+  next v hm => exact lowerInvAt_facts u i v hm
+  next e hm =>
+    exfalso
+    obtain ⟨v, hv⟩ := h
+    rw [hv] at hm
+    cases hm
+
+/-- A lowered invariant reads only carriers in the declaration's carrier list (`InvTraeger`). -/
+theorem lowerInvGut_orte (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i = .ok v) :
+    ∀ c ∈ (lowerInvGut u i h).orte, c ∈ (declOf u).traeger i := by
+  intro c hc
+  obtain ⟨hok, hr⟩ := lowerInvGut_facts u i h
+  unfold invReadsOk at hr
+  have hc' : c ∈ invTraeger u i := of_decide_eq_true (List.all_eq_true.mp hr c hc)
+  show c ∈ traegerD u i
+  rw [traegerD_of_ok u i hok]
+  exact hc'
+
+/-- **The exported unit keeps its whole declared carrier list and reads only it.** A unit that lowers has `U003`
+    at every invariant, so the declaration's carriers of each invariant are ALL its carriers, tables and statics
+    (never the empty fallback of `traegerD`), and the lowered predicate reads no other carrier. -/
+theorem lowerAllg_traeger (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
+    (h : lowerAllg u = .ok (P, fs)) (i : Fin u.invs.length) :
+    (declOf u).traeger i = invTraeger u i ∧
+      ∀ c ∈ (P.invariante i).orte, c ∈ (declOf u).traeger i := by
+  unfold lowerAllg at h
+  split at h
+  next e hI => cases h
+  next x hI =>
+    split at h
+    · cases h
+    · injection h with h1
+      injection h1 with h2 h3
+      subst h2
+      have wI : ∀ j : Fin u.invs.length, ∃ v, lowerInvAt u j = .ok v := fun j =>
+        lowerInvs_all_ok u (List.finRange u.invs.length) j (List.mem_finRange j) hI
+      dsimp only [progOfFn]
+      exact ⟨traegerD_of_ok u i (lowerInvGut_facts u i (wI i)).1,
+        fun c hc => lowerInvGut_orte u i (wI i) c hc⟩
 
 /-! ## 104 pins on the generically lowered program -/
 

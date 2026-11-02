@@ -437,7 +437,7 @@ structure UZustand where
   deriving DecidableEq, Repr
 
 /-- One invariant (`table T { .. invariant I cost .. runs .. : p; }` or `group G over { T, U } { invariant I .. }`,
-    `D.Inv`): its name, its carrier tables (`D.traeger`) and its predicate over no parameter (`Programm.invariante`,
+    `D.Inv`): its name, its carriers -- tables and statics, by name (`D.traeger`) -- and its predicate over no parameter (`Programm.invariante`,
     read under the guards of its carriers, `invSicht`). -/
 structure UInv where
   name : String

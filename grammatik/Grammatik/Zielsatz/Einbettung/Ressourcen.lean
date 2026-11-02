@@ -147,11 +147,18 @@ theorem invSichtE (i : D.Inv) : (invSicht D i).map E.resE = invSicht D' (E.inv i
   rw [E.traeger]
   induction D.traeger i with
   | nil => rfl
-  | cons t ts ih =>
+  | cons c cs ih =>
       simp only [List.foldr_cons, List.map_append, List.map_cons, ih]
       congr 1
-      rw [E.braucht, List.map_map, List.map_map]
-      exact List.map_congr_left fun w _ => (E.von_e w).symm
+      cases c with
+      | inl t =>
+          simp only [Sum.map_inl, Sum.elim_inl]
+          rw [E.braucht, List.map_map, List.map_map]
+          exact List.map_congr_left fun w _ => (E.von_e w).symm
+      | inr g =>
+          simp only [Sum.map_inr, Sum.elim_inr]
+          rw [E.gbraucht, List.map_map, List.map_map]
+          exact List.map_congr_left fun w _ => (E.von_e w).symm
 
 theorem rufPasstE {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ : List (Res D)}
     (h : RufPasst D V S Λ) : RufPasst D' (E.vertragE V) (E.sigE S) (Λ.map E.resE) where

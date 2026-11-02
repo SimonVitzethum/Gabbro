@@ -373,8 +373,12 @@ variable (P : Programm D) (passes : Nat) (Q : AxEns D.mitRuhe) (S : SperrInv D.m
 theorem schuldet_ruhe (i : D.Inv) : schuldet (D := D.mitRuhe) none i = false := by
   unfold schuldet
   rw [List.any_eq_false]
-  intro t _ ht
-  exact Bool.noConfusion ((show (D.mitRuhe).schreibt none t = false from rfl).symm.trans ht)
+  intro c _ hc
+  cases c with
+  | inl t =>
+      exact Bool.noConfusion ((show (D.mitRuhe).schreibt none t = false from rfl).symm.trans hc)
+  | inr g =>
+      exact Bool.noConfusion ((show (D.mitRuhe).gschreibt none g = false from rfl).symm.trans hc)
 
 theorem koerperGutS_ruhe : KoerperGutS P.mitRuhe passes Q S none := by
   unfold KoerperGutS

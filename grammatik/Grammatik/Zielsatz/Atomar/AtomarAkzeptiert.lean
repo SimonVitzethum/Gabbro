@@ -240,22 +240,28 @@ variable [DecidableEq D.Fn] {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
 
 /-- **No contract mentions `c`**: no `requires`, no `ensures`, no owed invariant of a function
-    of the member list. -/
+    of the member list, and `c` is read by the predicate of no declared invariant (C05). -/
 def vertragsFreiB (P : Programm D) (fs : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
-  fs.all fun g => !(istIn (P.requires g).orte c) && !(istIn (P.ensures g).orte c) &&
-    !(istIn (invOrteP P g) c)
+  (fs.all fun g => !(istIn (P.requires g).orte c) && !(istIn (P.ensures g).orte c) &&
+    !(istIn (invOrteP P g) c)) &&
+  D.invs.all fun i => !(istIn (P.invariante i).orte c)
 
 omit [DecidableEq D.Fn] in
 theorem vertragsFreiB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) {c : D.Tab ⊕ D.Glob}
     (h : vertragsFreiB P fs c = true) : VertragsFrei P c := by
-  intro g
-  have h1 := (List.all_eq_true.mp h) g (hvoll g)
-  simp only [Bool.and_eq_true, Bool.not_eq_true'] at h1
-  obtain ⟨⟨h1, h2⟩, h3⟩ := h1
-  refine ⟨fun hc => ?_, fun hc => ?_, fun hc => ?_⟩
-  · rw [istIn_iff.mpr hc] at h1; cases h1
-  · rw [istIn_iff.mpr hc] at h2; cases h2
-  · rw [istIn_iff.mpr hc] at h3; cases h3
+  simp only [vertragsFreiB, Bool.and_eq_true] at h
+  obtain ⟨hg, hiv⟩ := h
+  refine ⟨fun g => ?_, fun i hi hc => ?_⟩
+  · have h1 := (List.all_eq_true.mp hg) g (hvoll g)
+    simp only [Bool.and_eq_true, Bool.not_eq_true'] at h1
+    obtain ⟨⟨h1, h2⟩, h3⟩ := h1
+    refine ⟨fun hc => ?_, fun hc => ?_, fun hc => ?_⟩
+    · rw [istIn_iff.mpr hc] at h1; cases h1
+    · rw [istIn_iff.mpr hc] at h2; cases h2
+    · rw [istIn_iff.mpr hc] at h3; cases h3
+  · have h5 := (List.all_eq_true.mp hiv) i hi
+    simp only [Bool.not_eq_true'] at h5
+    rw [istIn_iff.mpr hc] at h5; cases h5
 
 /-- **An admitted shared atomic, decided at a footprint carrier**: `atomic`, no guard lock, in
     no contract (thread-locality is the first disjunct of the footprint component). -/

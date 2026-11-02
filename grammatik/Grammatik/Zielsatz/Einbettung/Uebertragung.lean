@@ -95,7 +95,8 @@ structure Uebernahme (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab 
   atom : ∀ c, T' (E.ortE c) → T c
   ax : ∀ a (W' : World D') (v : ErgVal D (D.aerg a)),
     Q' (E.ax a) W' (castV (E.aerg a).symm (E.ergE _ v)) = Q a ((E.speicherZ hZ W'.speicher).welt []) v
-  invBild : ∀ i' t', t' ∈ D'.traeger i' → (E.tabZ t').isSome = true → ∃ i, E.inv i = i'
+  invBild : ∀ i' (c' : D'.Tab ⊕ D'.Glob), c' ∈ D'.traeger i' →
+    Sum.elim (fun t' => (E.tabZ t').isSome) (fun g' => (E.globZ g').isSome) c' = true → ∃ i, E.inv i = i'
   rueck : ∀ pad, E.RueckVertrag hZ hS pad P P'
 
 theorem inv_anfang (σ' : World D') :
@@ -162,26 +163,44 @@ theorem invAmRueck_E {σ : World D} {σ' : World D'} (h : E.Treu hZ σ.speicher 
   intro i' hi' hs
   have hs' := hs
   unfold schuldet at hs'
-  obtain ⟨t', ht', hw⟩ := List.any_eq_true.mp hs'
-  have hz : (E.tabZ t').isSome = true := by
-    unfold Deklaration.schreibt at hw
-    rw [hS.signatur] at hw
-    simp only [sigE] at hw
-    revert hw
-    cases E.tabZ t' with
-    | none => intro hw; cases hw
-    | some _ => intro _; rfl
-  obtain ⟨i, rfl⟩ := hU.invBild i' t' ht' hz
+  obtain ⟨c', hc', hw⟩ := List.any_eq_true.mp hs'
+  have hz : Sum.elim (fun t' => (E.tabZ t').isSome) (fun g' => (E.globZ g').isSome) c' = true := by
+    cases c' with
+    | inl t' =>
+        simp only [Sum.elim_inl] at hw ⊢
+        unfold Deklaration.schreibt at hw
+        rw [hS.signatur] at hw
+        simp only [sigE] at hw
+        revert hw
+        cases E.tabZ t' with
+        | none => intro hw; cases hw
+        | some _ => intro _; rfl
+    | inr g' =>
+        simp only [Sum.elim_inr] at hw ⊢
+        unfold Deklaration.gschreibt at hw
+        rw [hS.signatur] at hw
+        simp only [sigE] at hw
+        revert hw
+        cases E.globZ g' with
+        | none => intro hw; cases hw
+        | some _ => intro _; rfl
+  obtain ⟨i, rfl⟩ := hU.invBild i' c' hc' hz
   have hi : i ∈ D.invs := (E.invs i).mp hi'
   have hsch : schuldet f i = true := by
     unfold schuldet at hs ⊢
     rw [E.traeger, List.any_map] at hs
     rw [← hs]
     congr 1
-    funext t
-    show (D.signatur f).schreibt t = (D'.signatur (E.fn f)).schreibt (E.tab t)
-    rw [hS.signatur]
-    simp only [sigE, E.tabZ_tab]
+    funext c
+    cases c with
+    | inl t =>
+        show (D.signatur f).schreibt t = (D'.signatur (E.fn f)).schreibt (E.tab t)
+        rw [hS.signatur]
+        simp only [sigE, E.tabZ_tab]
+    | inr g =>
+        show (D.signatur f).gschreibt g = (D'.signatur (E.fn f)).gschreibt (E.glob g)
+        rw [hS.signatur]
+        simp only [sigE, E.globZ_glob]
   have hh := hI i hi hsch
   unfold InvHaelt at hh ⊢
   rw [hU.fort.invariante i]

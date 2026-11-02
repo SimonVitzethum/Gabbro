@@ -231,7 +231,7 @@ theorem kette_bezeugt_start (Nb : Nebeneinander) (sp : Speicher D)
     (f : Faden) (code : Faden → D.Fn)
     (t₀ : D.Tab) (L : D.Lock)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
-    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hEintritt : EintrittPasst (code f) (GenStart sp).start)
     (hSchuld : SchuldnerHaelt (code f))
     (hInvSicht : InvSichtHaelt (code f) (GenStart sp).start) :

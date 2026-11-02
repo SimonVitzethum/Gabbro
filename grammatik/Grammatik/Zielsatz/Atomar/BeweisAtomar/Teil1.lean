@@ -399,12 +399,17 @@ variable [DecidableEq D.Fn] (P : Programm D) {fs ws : List D.Fn}
 
 omit [DecidableEq D.Fn] in
 theorem vertragsFrei_mitRuhe_rueck {c : D.Tab ⊕ D.Glob} (h : VertragsFrei P.mitRuhe c) :
-    VertragsFrei P c := fun f => by
-  obtain ⟨h1, h2, h3⟩ := h (some f)
-  rw [requires_mitRuhe_orte] at h1
-  rw [ensures_mitRuhe_orte] at h2
-  rw [invOrteP_mitRuhe] at h3
-  exact ⟨h1, h2, h3⟩
+    VertragsFrei P c :=
+  ⟨fun f => by
+    obtain ⟨h1, h2, h3⟩ := h.1 (some f)
+    rw [requires_mitRuhe_orte] at h1
+    rw [ensures_mitRuhe_orte] at h2
+    rw [invOrteP_mitRuhe] at h3
+    exact ⟨h1, h2, h3⟩,
+   fun i hi => by
+    have h4 := h.2 i hi
+    rw [invariante_mitRuhe_orte] at h4
+    exact h4⟩
 
 theorem geteiltV_mitRuhe_eq (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w)) :
     GeteiltV P.mitRuhe (wsRuhe ws) = GeteiltV P ws := by

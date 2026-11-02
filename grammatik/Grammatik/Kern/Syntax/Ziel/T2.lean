@@ -111,7 +111,7 @@ theorem ziel_nutzer_last_aus_disziplin (o : Ausgang V l Γ)
         J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
           L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hFormU : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ : World D),
       SpecQ Pre Post Nb J f σ ↔ I.inv (.inl t₀) σ)
     (S : Nat) (c : TickClock S) (hstart : c.tick 0 ≤ S)

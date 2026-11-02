@@ -24,9 +24,13 @@ variable {D : Deklaration}
 
 /-! ## 1. The footprint property with shared atomics -/
 
-/-- `c` occurs in no contract of the program: no `requires`, no `ensures`, no owed invariant. -/
+/-- `c` occurs in no contract of the program: no `requires`, no `ensures`, no owed invariant of a
+    function -- and, since C05, in the predicate of no declared invariant at all (an invariant over a
+    shared atomic is refused, `N484`; the shared memory at an atomic is answered by the weak memory,
+    so no invariant reading it is stable, owed by a writer or not). -/
 def VertragsFrei (P : Programm D) (c : D.Tab ⊕ D.Glob) : Prop :=
-  ∀ g, c ∉ (P.requires g).orte ∧ c ∉ (P.ensures g).orte ∧ c ∉ invOrteP P g
+  (∀ g, c ∉ (P.requires g).orte ∧ c ∉ (P.ensures g).orte ∧ c ∉ invOrteP P g) ∧
+  ∀ i ∈ D.invs, c ∉ (P.invariante i).orte
 
 /-- **The footprint property with shared atomics**: `FussS` with one more disjunct at a
     footprint carrier, "the carrier is a shared atomic" (`Tg c`). Device carriers unchanged. -/
@@ -87,8 +91,8 @@ theorem vertrag_stabilX (hF : FussSX P S lok Tg f) (hTV : ∀ c, Tg c → Vertra
   · exact h'
   · exfalso
     rcases List.mem_append.mp ho with ho | ho
-    · exact (hTV o h' g).1 ho
-    · exact (hTV o h' g).2.1 ho
+    · exact ((hTV o h').1 g).1 ho
+    · exact ((hTV o h').1 g).2.1 ho
 
 theorem vertrag_stabilX_ind (hF : FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFrei P c)
     {V : Vertrag D} {Λ : List (Res D)} {n : Nat} (g : D.Fn) (hg : D.passt g n = true)
@@ -106,7 +110,7 @@ theorem ens_stabilX (hF : FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFr
   rcases stabil_of_fussX hF (fuss_ensG P f ho) (fun _ hB =>
     hperm.symm.mem_iff.mp (bewacht_held ((P.ensures f).orte_darf _ ho) hB)) with h | h
   · exact h
-  · exact absurd ho (hTV o h f).2.1
+  · exact absurd ho ((hTV o h).1 f).2.1
 
 end Stabil
 /-! ## 2. Justified answers over `execStmtHA` (declarations without an event) -/

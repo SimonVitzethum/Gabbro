@@ -236,7 +236,7 @@ theorem kette_aus_lauf_bezeugt
     (f : Faden) (code : Faden → D.Fn)
     (t₀ : D.Tab) (L : D.Lock)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
-    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hsingle_prog : ∀ g, g ≠ f → prog g = [])
     (hsingle_run : ∀ s ∈ M.lauf, s.faden = f)
     (hRahmen : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
@@ -282,7 +282,7 @@ theorem kette_aus_lauf_bezeugt
       (_hsingle : ∀ st ∈ M.lauf, st.faden = f)
       (_hGuardT : Sum.inl L ∈ D.braucht t₀)
       (_hCov : ∀ (g : Faden), g ∈ J.faeden →
-        TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+        TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
       (_hwit_old : ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
         TraegerSchreibt (J.code g) (.inl t₀) = true →
         ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
@@ -355,7 +355,7 @@ theorem kette_aus_lauf_bezeugt
           rw [hJcodeJ]
           exact hGt g0 hg0
         have hCovJ : ∀ (g : Faden), g ∈ J.faeden →
-            TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i := by
+            TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i := by
           intro g hg hw
           have hmem' : g ∈ ([f] : List Faden) := by
             rw [← hJfJ]

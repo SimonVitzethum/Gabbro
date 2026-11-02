@@ -220,8 +220,8 @@ end Gabbro.Grammatik
     invariant's carrier list -- the CSL coverage side condition, per thread, no run
     reasoning); the guard fact `Sum.inl L ∈ D.braucht t` is consumed there.
 
-    Scope, honestly narrowed: U003 (`Syntax.lean`:181-182) quantifies over TABLE carriers
-    (`D.traeger : Inv → List Tab`) only -- globals have no `schuldet` coverage, so the
+    Scope, honestly narrowed: `wache_aus_schuld` discharges the watch of TABLE carriers (U003 now also covers
+    the global carriers of an invariant, `D.traeger : Inv → List (Tab ⊕ Glob)`; the global discharge is not done here), so the
     derived watch (`wache_aus_schuld`) and the named `hinv_aus_disziplin` are TABLE-scoped.
     Shared globals stay on the §13-§15 exception track (`AtomarAusgenommen` via A10
     machine ordering, `PaarungAusgenommen` via publishes/awaits); the general per-carrier
@@ -362,7 +362,7 @@ theorem kette_belegt_of_mem {α : Type} (w : List α) (σ : α) (h : σ ∈ w) :
 
 /-- A `schreibt`-hit inside a carrier list fires the `any`: the `schuldet` unfolding
     step for `wache_aus_schuld`. -/
-theorem any_of_mem_true (ts : List D.Tab) (P : D.Tab → Bool) (t₀ : D.Tab)
+theorem any_of_mem_true {α : Type} (ts : List α) (P : α → Bool) (t₀ : α)
     (hm : t₀ ∈ ts) (hP : P t₀ = true) : ts.any P = true := by
   induction ts with
   | nil => simp only [List.not_mem_nil] at hm
@@ -385,7 +385,7 @@ theorem wache_aus_schuld (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
     (g : Faden) (hg : g ∈ J.faeden)
     (hW : TraegerSchreibt (J.code g) (.inl t₀) = true)
-    (hCov : ∃ i : D.Inv, t₀ ∈ D.traeger i) :
+    (hCov : ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i) :
     L ∈ D.haelt (J.code g) := by
   obtain ⟨i, hi⟩ := hCov
   have hP : D.schreibt (J.code g) t₀ = true := by
@@ -393,8 +393,9 @@ theorem wache_aus_schuld (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb)
     exact hW
   have hs : schuldet (J.code g) i = true := by
     unfold schuldet
-    exact any_of_mem_true (D.traeger i) _ t₀ hi hP
-  exact J.hSchuld g hg i hs t₀ hi L hGuardT
+    exact any_of_mem_true (D.traeger i) (Sum.elim (D.schreibt (J.code g)) (D.gschreibt (J.code g)))
+      (Sum.inl t₀) hi hP
+  exact J.hSchuld g hg i hs (Sum.inl t₀) hi L hGuardT
 
 /-- **The invariant from discipline, CSL-exact (`lockFree → inv`).** For a table carrier
     with guard `L`: entry plus return-under-guard plus frame-locality, where the watch
@@ -414,7 +415,7 @@ theorem hinv_aus_disziplin (Nb : Nebeneinander) (J : GemeinsamerLauf (D := D) Nb
         J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
           L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i) :
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i) :
     ∀ (k : Nat) (σ : World D), J.welten[k]? = some σ → LockFrei (D := D) L σ →
       I.inv (.inl t₀) σ := by
   intro k σ h _

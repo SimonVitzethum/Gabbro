@@ -103,7 +103,7 @@ structure Einbettung (D D' : Deklaration) where
   invZ : D'.Inv → Option D.Inv
   invZ_inv : ∀ i, invZ (inv i) = some i
   inv_invZ : ∀ i' i, invZ i' = some i → inv i = i'
-  traeger : ∀ i, D'.traeger (inv i) = (D.traeger i).map tab
+  traeger : ∀ i, D'.traeger (inv i) = (D.traeger i).map (Sum.map tab glob)
   invs : ∀ i, inv i ∈ D'.invs ↔ i ∈ D.invs
   -- axioms (foreign bodies): their frames stay inside the image
   ax : D.Ax → D'.Ax
@@ -293,7 +293,11 @@ def Einbettung.id (D : Deklaration) : Einbettung D D where
   invZ := some
   invZ_inv := fun _ => rfl
   inv_invZ := fun _ _ h => (Option.some.inj h).symm
-  traeger := fun _ => by simp only [List.map_id_fun', id_eq]
+  traeger := fun i => by
+    conv => lhs; rw [← List.map_id (D.traeger i)]
+    congr 1
+    funext c
+    rcases c with t | g <;> rfl
   invs := fun _ => Iff.rfl
   ax := fun a => a
   axZ := some

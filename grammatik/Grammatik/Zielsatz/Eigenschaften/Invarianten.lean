@@ -236,16 +236,10 @@ theorem invRuhe_erreichbar (hO : GutO O) (sp : Speicher D)
         have hkopf : schuldet (M.faeden u).kopf.f i = false := hU _ List.mem_cons_self
         have hgl : GleichAuf (P.invariante i).orte (M'.speicher.welt []) (M.speicher.welt []) := by
           refine ⟨fun tb htb => ?_, fun g hg => ?_⟩
-          · obtain ⟨t', ht', he⟩ := hT _ htb
-            cases he
-            have hw : TraegerSchreibt (M.faeden u).kopf.f (Sum.inl tb) = false := by
-              show D.schreibt (M.faeden u).kopf.f tb = false
-              unfold schuldet at hkopf
-              exact Bool.eq_false_iff.mpr fun hw =>
-                Bool.false_ne_true (hkopf ▸ List.any_eq_true.mpr ⟨tb, ht', hw⟩)
-            exact schritt_traeger hO hs (.inl tb) (Or.inr hw)
-          · obtain ⟨_, _, he⟩ := hT _ hg
-            cases he
+          · exact schritt_traeger hO hs (.inl tb)
+              (Or.inr (schreibt_false_of_schuldet_false hkopf (hT _ htb)))
+          · exact schritt_traeger hO hs (.inr g)
+              (Or.inr (schreibt_false_of_schuldet_false hkopf (hT _ hg)))
         unfold InvHaelt at hIH ⊢
         rw [eval_gleichAuf (P.invariante i) (fun _ h => h) hgl .nil]
         exact hIH
@@ -298,14 +292,14 @@ theorem invSicht_aus (hO : GutO O) (sp : Speicher D)
     {M : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     {i : D.Inv} (hJ : InvZu M i → InvHaelt P i (M.speicher.welt [])) (t : Faden)
     (ht : ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, schuldet F.f i = false)
-    (hL : ∃ tb ∈ D.traeger i, ∃ L, Sum.inl L ∈ D.braucht tb ∧ L ∈ offen (M.faeden t).spur) :
+    (hL : ∃ cb ∈ D.traeger i, ∃ L, Sum.inl L ∈ Sum.elim D.braucht D.gbraucht cb ∧ L ∈ offen (M.faeden t).spur) :
     InvHaelt P i (M.speicher.welt []) := by
-  obtain ⟨tb, htb, L, hLb, hLt⟩ := hL
+  obtain ⟨cb, hcb, L, hLb, hLt⟩ := hL
   refine hJ fun u _ F hF => ?_
   by_cases hut : u = t
   · subst hut; exact ht F hF
   · refine Bool.eq_false_iff.mpr fun hs => ?_
-    have hLF : L ∈ D.haelt F.f := D.invarianten_gehalten (D.sig F.f) i hs tb htb L hLb
+    have hLF : L ∈ D.haelt F.f := D.invarianten_gehalten (D.sig F.f) i hs cb hcb L hLb
     have hLu := rufG_haelt_signatur hO sp init hr u F hF L hLF
     exact exklusivG hO sp init hex hr t u (fun e => hut e.symm) L hLt hLu
 

@@ -6,7 +6,8 @@
   Opus agent D proved four legs over G (Zielsatz/Invarianten.lean). Over GX -- G with the shared
   atomics `Tg` answered by the weak memory -- the same arguments go through, because a GX step
   differs from a G step only at carriers of `Tg`, and none of them is in an invariant:
-  * a table/group invariant reads tables only (`InvTraeger`), and `Tg` holds atomics, which are
+  * an invariant reads no shared atomic (C05: `VertragsFrei` covers every declared invariant, tables and
+    globals), and `Tg` holds atomics, which are
     globals (`hTA`);
   * a lock invariant reads its lock's carriers, which are guarded (`sperrOrte`), and `Tg` holds
     unguarded carriers only (`hTO`).
@@ -143,21 +144,22 @@ theorem schritt_schluesselX {M M' : RufMaschineG D} {u : Faden}
     cases h1 with
     | why _ _ _ _ _ _ _ h2 => exact (rufLogPasstG_eind h2 h0).symm
 
-/-- An invariant reading tables only is read equally at two memories agreeing outside `Tg`. -/
-theorem invHaelt_aussen (hTA : ∀ c, Tg c → AtomarAusgenommen c) {i : D.Inv}
-    (hT : InvTraeger P i) {σ σ' : World D}
+/-- An invariant none of whose carriers is a shared atomic (`hTI`) is read equally at two memories
+    agreeing outside `Tg` (tables and globals alike, C05). -/
+theorem invHaelt_aussen {i : D.Inv} (hTI : ∀ c, Tg c → c ∉ (P.invariante i).orte)
+    {σ σ' : World D}
     (h : ∀ c, ¬ Tg c → TraegerGleich σ.speicher σ'.speicher c) :
     InvHaelt P i σ ↔ InvHaelt P i σ' := by
   have hgl : GleichAuf (P.invariante i).orte σ σ' := by
     refine ⟨fun tb htb => ?_, fun g hg => ?_⟩
-    · exact h (.inl tb) fun ht => by obtain ⟨_, e, _⟩ := hTA _ ht; cases e
-    · obtain ⟨_, _, he⟩ := hT _ hg
-      cases he
+    · exact h (.inl tb) fun ht => hTI _ ht htb
+    · exact h (.inr g) fun ht => hTI _ ht hg
   unfold InvHaelt
   rw [eval_gleichAuf (P.invariante i) (fun _ h => h) hgl .nil]
 
 /-- **`InvRuheG` over GX.** -/
 theorem invRuhe_erreichbarX (hO : GutO O) (hTA : ∀ c, Tg c → AtomarAusgenommen c)
+    (hTI : ∀ c, Tg c → ∀ i ∈ D.invs, c ∉ (P.invariante i).orte)
     (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hIR : ∀ M, RufErreichbarGX P O passes Tg (RufStartG P sp init) M →
       InvAmOrtG P M ∧ InvAmGrundG P M ∧ StartEndeG P M ∧ KeinStartGrundG M)
@@ -172,7 +174,7 @@ theorem invRuhe_erreichbarX (hO : GutO O) (hTA : ∀ c, Tg c → AtomarAusgenomm
       have hr' : RufErreichbarGX P O passes Tg (RufStartG P sp init) M' := .schritt _ _ _ hr hs
       have hwelt : ∀ s1 : World D, (∀ c, ¬ Tg c → TraegerGleich s1.speicher M'.speicher c) →
           InvHaelt P i s1 → InvHaelt P i (M'.speicher.welt []) := fun s1 hs1 h =>
-        (invHaelt_aussen hTA hT fun c hc => by
+        (invHaelt_aussen (fun c hc => hTI c hc i hi) fun c hc => by
           rw [speicher_welt_speicher]; exact hs1 c hc).mp h
       by_cases hU : ∀ F ∈ (M.faeden u).kopf :: (M.faeden u).stapel, schuldet F.f i = false
       · have hZ : InvZu M i := by
@@ -188,17 +190,10 @@ theorem invRuhe_erreichbarX (hO : GutO O) (hTA : ∀ c, Tg c → AtomarAusgenomm
         have hkopf : schuldet (M.faeden u).kopf.f i = false := hU _ List.mem_cons_self
         have hgl : GleichAuf (P.invariante i).orte (M'.speicher.welt []) (M.speicher.welt []) := by
           refine ⟨fun tb htb => ?_, fun g hg => ?_⟩
-          · obtain ⟨t', ht', he⟩ := hT _ htb
-            cases he
-            have hw : TraegerSchreibt (M.faeden u).kopf.f (Sum.inl tb) = false := by
-              show D.schreibt (M.faeden u).kopf.f tb = false
-              unfold schuldet at hkopf
-              exact Bool.eq_false_iff.mpr fun hw =>
-                Bool.false_ne_true (hkopf ▸ List.any_eq_true.mpr ⟨tb, ht', hw⟩)
-            exact gx_traeger hO hs (.inl tb) (fun ht => by obtain ⟨_, e, _⟩ := hTA _ ht; cases e)
-              (Or.inr hw)
-          · obtain ⟨_, _, he⟩ := hT _ hg
-            cases he
+          · exact gx_traeger hO hs (.inl tb) (fun ht => hTI _ ht i hi htb)
+              (Or.inr (schreibt_false_of_schuldet_false hkopf (hT _ htb)))
+          · exact gx_traeger hO hs (.inr g) (fun ht => hTI _ ht i hi hg)
+              (Or.inr (schreibt_false_of_schuldet_false hkopf (hT _ hg)))
         unfold InvHaelt at hIH ⊢
         rw [eval_gleichAuf (P.invariante i) (fun _ h => h) hgl .nil]
         exact hIH
@@ -244,15 +239,15 @@ theorem invSicht_ausX (hO : GutO O) (hTA : ∀ c, Tg c → AtomarAusgenommen c) 
     {M : RufMaschineG D} (hr : RufErreichbarGX P O passes Tg (RufStartG P sp init) M)
     {i : D.Inv} (hJ : InvZu M i → InvHaelt P i (M.speicher.welt [])) (t : Faden)
     (ht : ∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, schuldet F.f i = false)
-    (hL : ∃ tb ∈ D.traeger i, ∃ L, Sum.inl L ∈ D.braucht tb ∧ L ∈ offen (M.faeden t).spur) :
+    (hL : ∃ cb ∈ D.traeger i, ∃ L, Sum.inl L ∈ Sum.elim D.braucht D.gbraucht cb ∧ L ∈ offen (M.faeden t).spur) :
     InvHaelt P i (M.speicher.welt []) := by
   have hA := gx_ga_lauf hTA hr
-  obtain ⟨tb, htb, L, hLb, hLt⟩ := hL
+  obtain ⟨cb, hcb, L, hLb, hLt⟩ := hL
   refine hJ fun u _ F hF => ?_
   by_cases hut : u = t
   · subst hut; exact ht F hF
   · refine Bool.eq_false_iff.mpr fun hs => ?_
-    have hLF : L ∈ D.haelt F.f := D.invarianten_gehalten (D.sig F.f) i hs tb htb L hLb
+    have hLF : L ∈ D.haelt F.f := D.invarianten_gehalten (D.sig F.f) i hs cb hcb L hLb
     have hLu := (ga_haeltInv hO sp init hA u).signatur F hF L hLF
     exact gaInv_exklusiv hO sp init hex hA t u (fun e => hut e.symm) L hLt hLu
 
@@ -332,9 +327,11 @@ theorem invarianten_atomar (P : Programm D) (O : Orakel D) (passes : Nat) (Q : A
       InvAmOrtG P M ∧ InvAmGrundG P M ∧ StartEndeG P M ∧ KeinStartGrundG M := fun M hr =>
     ⟨(hV M hr).2.2.2.1, (hV M hr).2.2.2.2.1, (hV M hr).2.2.2.2.2.1, (hV M hr).2.2.2.2.2.2⟩
   intro M hr
-  exact ⟨fun _ hi hT h0 hZ => invRuhe_erreichbarX hO hTA sp init hIR hi hT h0 hr hZ,
+  have hTI : ∀ c, Tg c → ∀ i ∈ D.invs, c ∉ (P.invariante i).orte :=
+    fun c hc i hi => (hTV c hc).2 i hi
+  exact ⟨fun _ hi hT h0 hZ => invRuhe_erreichbarX hO hTA hTI sp init hIR hi hT h0 hr hZ,
     fun _ hi hT h0 t ht hL => invSicht_ausX hO hTA sp init hex hr
-      (invRuhe_erreichbarX hO hTA sp init hIR hi hT h0 hr) t ht hL,
+      (invRuhe_erreichbarX hO hTA hTI sp init hIR hi hT h0 hr) t ht hL,
     sperrWechsel_ausX hO hTA hTO hS sp init hex (fun M hr => (hV M hr).2.1) hr,
     sperrSicht_ausX hO hTA hTO hS sp init hex hr⟩
 

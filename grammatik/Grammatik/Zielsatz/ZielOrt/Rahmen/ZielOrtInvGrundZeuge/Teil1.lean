@@ -96,7 +96,7 @@ def igD : Deklaration where
   sigNr := igSigNr
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Unit
-  traeger := fun _ => [()]
+  traeger := fun _ => [.inl ()]
   invs := [()]
   Ax := Empty
   aparams := fun e => nomatch e
@@ -116,7 +116,7 @@ def igD : Deklaration where
     match n, h with
     | 0, _ => exact List.mem_singleton.mpr rfl
     | 1, _ => exact List.mem_singleton.mpr rfl
-    | n + 2, h => simp only [igSigNr, igSig, List.any_cons, List.any_nil, Bool.or_self, Bool.false_eq_true] at h
+    | n + 2, h => simp only [igSigNr, igSig, List.any_cons, List.any_nil, Sum.elim_inl, Bool.or_self, Bool.false_eq_true] at h
   ggeteilt_bewacht := fun e => nomatch e
 
 def igHaupt : igD.Fn := IgFn.haupt

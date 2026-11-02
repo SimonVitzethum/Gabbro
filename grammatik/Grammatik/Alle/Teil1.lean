@@ -179,6 +179,7 @@ public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben37
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben38
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben39
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben40
+public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben41
 public import Grammatik.Parser.Expr.AusdruckProben
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
@@ -217,6 +218,7 @@ public import Grammatik.Proben.HelferZeuge
 public import Grammatik.Proben.SonstLeaveZeuge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 public import Grammatik.Proben.InvZeuge
+public import Grammatik.Proben.InvGlobalZeuge
 public import Grammatik.Isabelle.Table_Induktion
 public import Grammatik.Isabelle.Table_Indexschranke
 public import Grammatik.Isabelle.Table_Absenkung

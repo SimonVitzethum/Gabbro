@@ -5,7 +5,7 @@
   Mirror of `wache_aus_schuld` (InterferenzAllgemein.lean) for globals:
   a writer of global `x` holds every guard in its watch list, from the
   checker's per-thread touch discipline plus the guard fact. U003
-  (`D.invarianten_gehalten`) is table-only, so the mirror routes via
+  (`D.invarianten_gehalten`) covers the carriers of invariants only (tables and, since C05, globals), so this mirror routes via
   the touch rule (`WaechterGehalten`) instead of `J.hSchuld`.
 -/
 module
@@ -326,8 +326,8 @@ theorem wache_global_aus_schuld_zeuge :
   - STRUCTURAL DIFFERENCE (measured, not worked around): the exact
     mirror via `J.hSchuld` is impossible for globals. `SchuldnerHaelt`
     (`InterferenzAllgemein.lean`), `schuldet` (`Semantik.lean`), and
-    U003 (`D.invarianten_gehalten`, `Syntax.lean`) quantify over TABLE
-    carriers only (`D.traeger : Inv -> List Tab`); there is no global
+    U003 (`D.invarianten_gehalten`, `Syntax.lean`) quantified over TABLE
+    carriers only (then `D.traeger : Inv -> List Tab`; since C05 `List (Tab ⊕ Glob)`); there was no global
     invariant-carrier list, hence no global coverage premise to mirror
     `hCov`. The mirror routes via the touch rule instead.
   - CONSTRUCTOR SURVEY (no falsifying form): every syntactic global

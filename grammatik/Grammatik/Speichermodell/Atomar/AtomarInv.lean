@@ -35,7 +35,7 @@ theorem inv_stabilX (hF : FussSX P S lok Tg f) (hTV : ∀ c, Tg c → VertragsFr
     have h2 : L ∈ D.haelt f := D.invarianten_gehalten (D.sig f) i hs t ht L hL
     exact hperm.symm.mem_iff.mp (List.mem_append_left _ (List.mem_map.mpr ⟨L, h2, rfl⟩))) with h | h
   · exact h
-  · exact absurd (List.mem_flatMap.mpr ⟨i, List.mem_filter.mpr ⟨hi, hs⟩, hc⟩) (hTV c h f).2.2
+  · exact absurd (List.mem_flatMap.mpr ⟨i, List.mem_filter.mpr ⟨hi, hs⟩, hc⟩) ((hTV c h).1 f).2.2
 
 end Stabil
 

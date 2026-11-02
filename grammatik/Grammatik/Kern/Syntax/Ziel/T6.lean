@@ -27,7 +27,7 @@ theorem kette_aus_lauf_bezeugt_closed
     (f : Faden) (code : Faden → D.Fn)
     (t₀ : D.Tab) (L : D.Lock)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
-    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+    (hCov : TraegerSchreibt (code f) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hsingle_prog : ∀ g, g ≠ f → prog g = [])
     (hsingle_run : ∀ s ∈ M.lauf, s.faden = f)
     (hRahmen : ∀ (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))

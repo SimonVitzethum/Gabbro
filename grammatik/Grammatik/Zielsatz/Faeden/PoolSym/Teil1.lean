@@ -72,9 +72,11 @@ theorem poolEignerNie : ∀ (n : Nat) (_t : Unit) (m : Empty) (s : Nat),
     index eliminates. Stated against the variant's own literals (`Empty.elim`,
     not `nomatch`: the match-compiler term is not defeq to `Empty.elim`). -/
 theorem poolInvGehalten : ∀ (n : Nat) (i : Empty),
-    (Empty.elim i : List Unit).any (poolSigNr n).schreibt = true → ∀ (t : Unit),
-      t ∈ (Empty.elim i : List Unit) → ∀ (L : Unit),
-        Sum.inl L ∈ ([Sum.inl ()] : List (Unit ⊕ (Empty × Nat))) →
+    (Empty.elim i : List (Unit ⊕ Unit)).any
+        (Sum.elim (poolSigNr n).schreibt (poolSigNr n).gschreibt) = true →
+      ∀ (c : Unit ⊕ Unit), c ∈ (Empty.elim i : List (Unit ⊕ Unit)) → ∀ (L : Unit),
+        Sum.inl L ∈ (Sum.elim (fun _ : Unit => ([Sum.inl ()] : List (Unit ⊕ (Empty × Nat))))
+            (fun _ : Unit => ([] : List (Unit ⊕ (Empty × Nat)))) c) →
           L ∈ (poolSigNr n).haelt :=
   fun _ i => Empty.elim i
 
