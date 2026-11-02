@@ -443,6 +443,46 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
         obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
         rw [rumpf_mitRuhe_mE]
         exact hA.masken w hw f hf
+  reset := fun g elem len harr => by
+    have hT : tyR (D.gtyp g) = .arr elem len := harr
+    cases hτ : D.gtyp g with
+    | int lo hi =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | bool =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | opt n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | sum cs =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | why n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | never =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | fl _ =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | fnptr n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | ptr t rw =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | ref t =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
+    | arr elem' len' =>
+      simp only [tyR] at hT
+      cases hT
+      exact zeroAdmitting_tyR (hA.reset g elem' len' hτ)
+    | str n =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
 
 end Transfer
 end Gabbro.Grammatik

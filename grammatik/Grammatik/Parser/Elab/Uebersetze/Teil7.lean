@@ -156,6 +156,23 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
   | .reset a .none =>
     if ctx.tabs.any (fun x => x.arena && strEq x.name a) then .ok (.assignGlob (a ++ "#used") (.lit 0))
     else .error ("arena unknown: " ++ a)
+  /- `reset A at i count n;` over a zero-initialized static array (C18): the static as
+      written must be a declared static array (`GTy.wert (.arr ..)`); the two operands
+      elaborate as body values and travel as `UStmt.resetRange` metadata. Range validity
+      (`0 ≤ i`, `n ≤ len`, `i ≤ len - n`) and the zero observation are user duties
+      discharged at lowering, which refuses the metadata until the C18 range-store proof
+      and the page-return bridge are connected. -/
+  | .reset a (some (i, n)) =>
+    match ctx.globs.find? (fun g => strEq g.name a) with
+    | none => .error ("static unknown: " ++ a)
+    | some g => match g.ty with
+      | .wert (.arr _ _) =>
+        match uWertBody ctx i with
+        | .error e => .error e
+        | .ok iu => match uWertBody ctx n with
+          | .error e => .error e
+          | .ok nu => .ok (.resetRange a iu nu)
+      | _ => .error ("reset range of a static that is not a static array: " ++ a)
   | .call c args =>
     match uNamedTransition ctx.zustaende c with
     | some (.error message) => .error message

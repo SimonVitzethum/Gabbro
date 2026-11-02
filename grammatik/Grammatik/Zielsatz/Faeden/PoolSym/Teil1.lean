@@ -268,10 +268,11 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
     Bool accepts only distinct starts. So every unit accepted before is accepted now, and
     every unit refused before with distinct starts is refused now. Since Opus agent H
     (2026-09-26) the Bool has the handler component `maskenB` beside the old conjunction; it
-    is `true` on every program with no handler (`maskenB_ohne`). -/
+    is `true` on every program with no handler (`maskenB_ohne`). Since C18 it also has the
+    reset component `resetB`; it is `true` on every program with no zero-less array static. -/
 theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
-    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs) := by
+    Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs) := by
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
     (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
@@ -285,12 +286,14 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   exact of_decide_eq_true h.1.1.2
 
 /-- **Every old acceptance stays an acceptance** -- of a program that meets the handler
-    discipline, in particular of every program with no handler (`maskenB_ohne`). -/
+    discipline, in particular of every program with no handler (`maskenB_ohne`), and whose
+    static arrays admit zero (`resetB`). -/
 theorem akzeptiert_vor_neu {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
-    (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true) :
+    (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true)
+    (hR : resetB cs = true) :
     Akzeptiert P S fs ls cs ws = true := by
-  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM]
+  rw [akzeptiert_nodup_gleich (akzeptiertVor_nodup h), h, hM, hR]
   rfl
 
 /-- Spec's `Getrennt` BEFORE fix lane F10: different routines only. -/
@@ -317,9 +320,13 @@ structure AkzeptiertSpecVor (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn
 /-- **The old specification implies the new one** (Prop side of (a)): with distinct
     starts the occurrence form of `Getrennt` is the routine form. Since Opus agent H
     (2026-09-26) the handler discipline is an extra premise (it holds on every program with
-    no handler, `maskenB_ohne`). -/
+    no handler, `maskenB_ohne`). Since C18 the static-array reset admission is an extra
+    premise (it holds on every program with no zero-less array static). -/
 theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    (h : AkzeptiertSpecVor P S fs ws) (hM : MaskenDisziplin P fs) : AkzeptiertSpec P S fs ws := by
+    (h : AkzeptiertSpecVor P S fs ws) (hM : MaskenDisziplin P fs)
+    (hR : ∀ (g : D.Glob) (elem : Ty) (len : Nat),
+      D.gtyp g = .arr elem len → ZeroAdmitting elem) :
+    AkzeptiertSpec P S fs ws := by
   have hlok : lokWVor P fs ws = lokW P fs ws := by
     funext c
     have e : GetrenntVor P fs ws c ↔ Getrennt P fs ws c := by
@@ -331,7 +338,7 @@ theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.
     unfold lokWVor lokW
     exact @decide_eq_decide _ _ (Classical.propDecidable _) (Classical.propDecidable _) |>.mpr e
   exact ⟨h.frag, h.abg, hlok ▸ h.fuss, h.stufen, h.sperrOrte, h.wurzeln,
-    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM⟩
+    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM, hR⟩
 
 end PoolBool
 
@@ -347,10 +354,11 @@ def pruefer_vor_neu
     (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
       (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
       akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
-  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs
+  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs && resetB cs
   korrekt := fun E fs ls cs h => by
-    rw [Bool.and_eq_true] at h
-    exact akzeptiertSpecVor_neu (korr E fs ls cs h.1) ((maskenB_iff fs.2).mp h.2)
+    simp only [Bool.and_eq_true] at h
+    exact akzeptiertSpecVor_neu (korr E fs ls cs h.1.1) ((maskenB_iff fs.2).mp h.1.2)
+      ((resetB_iff cs.2).mp h.2)
 
 /-- **(d) OF THE REVIEWED DIFF: every run admitted before is admitted now.** The old
     `Laufzeit.einmal` (no declared start on two threads) implies the new one. -/

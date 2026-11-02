@@ -245,6 +245,12 @@
     spawn;
   * dynamic data structures without a declared ceiling (OFFEN O29; an arena with ceiling `M` is a table of `M`
     slots, and the exporter refuses `grow`, `LG005`); probabilistic statements (OFFEN O29);
+  * any release of a static's backing pages (C18, open): the pending page-return authority, the
+    exclusive scope, the granule-aligned coverage and the zero-on-next-read contract stay open until
+    the proved page-return binding (C08 grant ledger) is connected, with no OS assumption (page
+    return is user logic). The `reset A at i count n` range itself is connected: it elaborates to
+    `UStmt.resetRange` metadata, lowers via the checked range-store expansion into typed array
+    stores, and is admitted (`AkzeptiertSpec.reset`);
   * every program the certificate register lists as UNCERTIFIED, by name.
 
   KNOWN DEBT. There is no definition-only layer: the goal predicates live in mixed files (ZielOrt, SperreFuss,
