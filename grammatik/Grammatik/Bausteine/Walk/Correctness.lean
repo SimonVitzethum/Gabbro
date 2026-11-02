@@ -53,7 +53,7 @@ theorem traverseLauf_all_okP {D : Deklaration} {V : Vertrag D} {τ : Ty} {Γ : C
       traverseLauf (l := l) schritt inv ks σ ρ = .ok σ' ρ' ∧ cells σ' := by
   induction ks generalizing σ ρ with
   | nil =>
-      exact ⟨(inv σ ρ).1, ρ, by simp only [traverseLauf, invOk], invCells σ ρ hσ⟩
+      exact ⟨(inv σ ρ).1, ρ, by simp only [traverseLauf, invOk, ite_true], invCells σ ρ hσ⟩
   | cons k ks ih =>
       obtain ⟨σ', ρ', hstep, hσ'⟩ := stepOkP σ k ρ hσ
       have hinv : (inv σ ρ).2 = true := invOk σ ρ
@@ -266,8 +266,8 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
   induction level with
   | zero =>
       intro Γ loop rename node path σ ρ hstab
-      have hexpand : binding.expand guard code 0 rename node path =
-          binding.expandLevel guard code 0 rename node path none := rfl
+      have hexpand : binding.expand guard code 0 (loop := loop) rename node path =
+          binding.expandLevel (loop := loop) guard code 0 rename node path none := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
       refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
         (fun σ₁ ρ₁ => ok.invOk rename 0 path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
@@ -308,8 +308,8 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       exact ⟨_, _, hstep, hcstep⟩
   | succ level ih =>
       intro Γ loop rename node path σ ρ hstab
-      have hexpand : binding.expand guard code (level + 1) rename node path =
-          binding.expandLevel guard code (level + 1) rename node path
+      have hexpand : binding.expand guard code (level + 1) (loop := loop) rename node path =
+          binding.expandLevel (loop := loop) guard code (level + 1) rename node path
             (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)) := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
       refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
