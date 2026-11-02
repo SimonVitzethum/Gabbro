@@ -6,6 +6,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Round.RundlaufTyp.Teil1
+public import Grammatik.Parser.Round.RundlaufTyp.Teil1a
 
 @[expose] public section
 

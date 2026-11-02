@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil1
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil1a
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil2
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil2a
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre.Teil3

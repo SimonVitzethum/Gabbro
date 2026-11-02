@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Round.RundlaufItem.Teil6
 public import Grammatik.Parser.Round.RundlaufGeraet.Teil1
+public import Grammatik.Parser.Round.RundlaufGeraet.Teil1a
 
 @[expose] public section
 

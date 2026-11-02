@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Vertraege.Uebersetzung
 public import Grammatik.Parser.Print.Stmt
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil2
+public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil2a
 public import Grammatik.Parser.Stmt.LibraryFixtures
 import all Init.Data.Repr
 import all Init.Data.String.Basic
