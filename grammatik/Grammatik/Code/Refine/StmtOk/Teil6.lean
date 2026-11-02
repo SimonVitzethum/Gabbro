@@ -10,6 +10,8 @@ public import Grammatik.Code.Refine.Match.Why
 public import Grammatik.Code.Refine.Match.Tag
 public import Grammatik.Code.Refine.Match.Else
 public import Grammatik.Code.Refine.StmtOk.Teil5
+public import Grammatik.Code.Refine.StmtOk.Teil7
+public import Grammatik.Code.Refine.StmtOk.Teil8
 
 @[expose] public section
 
@@ -31,6 +33,8 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       ∀ (σ : World D) (ρ : Env D Γ) (m : Mem) (rs : Regs) (ks : List Frame) (dst : Option Reg),
         Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) →
         OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R s σ ρ)
+  | _, _, _, _, .assignSlotRef .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .assignGlob (Λ := Λ) g e zz1 zz2, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerS_ok_assignGlob (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (g := g) (e := e) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
   | _, _, _, _, .ret (Λ := Λ) e zz1, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
@@ -82,7 +86,7 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
   | _, _, _, _, .traverse (Λ := Λ) t inv body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerS_ok_traverse (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (t := t) (inv := inv) (body := body) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_body := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R body)
   | _, _, _, _, .consumeTraverse (Λ := Λ) t member edge inv bound mass body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp only [lowerS, reduceCtorEq] at h
+      exact lowerS_ok_consumeTraverse (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_body := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R body)
   | _, _, _, _, .retry (Λ := Λ) n bis body ueb, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerS_ok_retry (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (n := n) (bis := bis) (body := body) (ueb := ueb) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_body := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R body) (ih_lowerB_ok_ueb := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R ueb)
   | _, _, _, _, .forever (Λ := Λ) a inv body, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
@@ -101,10 +105,10 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .retWhy r zz1, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerS_ok_retWhy (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (r := r) (zz1 := zz1) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
-  | _, _, _, _, .retScoped (Λ := Λ) e R, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp only [lowerS, reduceCtorEq] at h
-  | _, _, _, _, .retWhyScoped (Λ := Λ) r R, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .retScoped (Λ := Λ) e Rr, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      exact lowerS_ok_retScoped (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (e := e) (Rr := Rr) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
+  | _, _, _, _, .retWhyScoped (Λ := Λ) r Rr, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      exact lowerS_ok_retWhyScoped (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (r := r) (Rr := Rr) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
 theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D)
     (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Gabbro.Grammatik.Block D V l Γ Λ Λ')
@@ -143,7 +147,7 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
   | _, _, _, _, Gabbro.Grammatik.Block.narrow (lo := lo) (hi := hi) (Λ := Λ) e lo' hi' sonst rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerB_ok_GabbroGrammatikBlocknarrow (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_rest := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R rest) (ih_lowerEnd_ok_sonst := fun lay hL cenv lv O passes R => lowerEnd_ok lay hL cenv lv O passes R sonst)
   | _, _, _, _, Gabbro.Grammatik.Block.narrowRequired (lo := lo) (hi := hi) (Λ := Λ) e lo' hi' rest, lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp only [lowerB, reduceCtorEq] at h
+      exact lowerB_ok_narrowRequired (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_rest := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R rest)
   | _, _, _, _, .float .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatLit .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -164,8 +168,8 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
         EndOk lay cenv lv M S fn lb st.r st'.r m rs ks dst (execEnd O passes R e σ ρ)
   | _, _, _, .ret (Λ := Λ) e zz1, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerEnd_ok_ret (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (e := e) (zz1 := zz1) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
-  | _, _, _, .retScoped (Λ := Λ) e R, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
-      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .retScoped (Λ := Λ) e Rr, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      exact lowerEnd_ok_retScoped (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (e := e) (Rr := Rr) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
   | _, _, _, .leave .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -186,8 +190,18 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       lowerEnd_ok_GabbroGrammatikEndblockbind (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (τ := τ) (Λ := Λ) (e := e) (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerEnd_ok_rest := fun lay hL cenv lv O passes R => lowerEnd_ok lay hL cenv lv O passes R rest)
   | _, _, _, .retWhy r zz1, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc =>
       lowerEnd_ok_retWhy (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (r := r) (zz1 := zz1) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
-  | _, _, _, .retWhyScoped (Λ := Λ) r R, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+  | _, _, _, .retWhyScoped (Λ := Λ) r Rr, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      exact lowerEnd_ok_retWhyScoped (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (r := r) (Rr := Rr) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc)
+  | _, _, _, .bindCallElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .narrow .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .exchange .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .ite .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, Gabbro.Grammatik.Endblock.narrowRequired (lo := lo) (hi := hi) (Λ := Λ) e lo' hi' rest, lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      exact lowerEnd_ok_narrowRequired (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerEnd_ok_rest := fun lay hL cenv lv O passes R => lowerEnd_ok lay hL cenv lv O passes R rest)
   | _, _, _, .bindCall .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
