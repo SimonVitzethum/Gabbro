@@ -68,7 +68,8 @@ theorem softAdd_model (a b : UInt64) :
   have hround : (UInt64.ofNat (zuBits f64 (add f64 (u64ToG a) (u64ToG b)))).toNat
       = zuBits f64 (add f64 (u64ToG a) (u64ToG b)) :=
     UInt64.toNat_ofNat_of_lt' hsize
-  unfold softAdd gToU64 u64ToG
+  show ausBits f64 (UInt64.ofNat (zuBits f64 (add f64 (u64ToG a) (u64ToG b)))).toNat
+      = add f64 (u64ToG a) (u64ToG b)
   rw [hround]
   exact ausBits_zuBits f64 f64_dicht _ hw
 
