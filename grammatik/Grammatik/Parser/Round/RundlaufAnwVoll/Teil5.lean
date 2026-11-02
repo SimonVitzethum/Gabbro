@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Round.RundlaufQuant.Teil2
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil4
+public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil4a
 
 @[expose] public section
 
