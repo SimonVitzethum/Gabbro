@@ -106,6 +106,7 @@ def GEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onWhy .. => true
   | .locks .. => true
   | .breaking .. => true
+  | .axiomCallElse .. => true
   | .traverse .. => true
   | .retry .. => true
   | .forever .. => true
@@ -133,6 +134,8 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse .. => true
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead .. => true
   | .regReadElse .. => true
   | .awaits .. => true

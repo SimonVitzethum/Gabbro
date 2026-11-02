@@ -254,4 +254,99 @@ theorem execEnd_ru_awaits {V : Vertrag D}
       rfl
 
 end Haupt
+
+set_option linter.unusedSectionVars false in
+theorem execEnd_ru_bindAxiomOpt {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hp)
+    (hd)
+    (hgd)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEnd_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd rest) (worldR σ) (envR ρ) = endR (execEnd O passes R rest σ ρ))
+    : execEnd O.mitRuhe passes R' (ruEnd (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruEnd, execEnd]
+      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => rfl
+          | some v =>
+              simp only [EndAusgang.weiterOpt, ergEnv]
+              exact ih_execEnd_ru_rest σ' _
+  | some τ =>
+      simp only [ruEnd, execEnd]
+      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => rfl
+          | some v =>
+              simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+              rw [ergWert_ru he, ← endR_schrumpf, ← ih_execEnd_ru_rest σ' (Env.cons _ ρ)]
+              rfl
+
+set_option linter.unusedSectionVars false in
+theorem execEnd_ru_bindAxiomOptElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hr)
+    (hp)
+    (hd)
+    (hgd)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEnd_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd rest) (worldR σ) (envR ρ) = endR (execEnd O passes R rest σ ρ))
+    (ih_execEnd_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd err) (worldR σ) (envR ρ) = endR (execEnd O passes R err σ ρ))
+    : execEnd O.mitRuhe passes R' (ruEnd (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruEnd, execEnd]
+      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · rfl
+          · simp only [EndAusgang.weiterOpt, ergEnv]
+            exact ih_execEnd_ru_rest σ' _
+          · simp only [EndAusgang.weiterOpt, ergEnv]
+            exact (congrArg (fun a => (EndAusgang.schrumpf a)) (ih_execEnd_ru_err σ' _)).trans
+              (endR_schrumpf _)
+  | some τ =>
+      simp only [ruEnd, execEnd]
+      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · rfl
+          · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+            rw [ergWert_ru he, ← endR_schrumpf, ← ih_execEnd_ru_rest σ' (Env.cons _ ρ)]
+            rfl
+          · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+            exact (congrArg (fun a => (EndAusgang.schrumpf a)) (ih_execEnd_ru_err σ' _)).trans
+              (endR_schrumpf _)
+
+end Haupt
 end Gabbro.Grammatik

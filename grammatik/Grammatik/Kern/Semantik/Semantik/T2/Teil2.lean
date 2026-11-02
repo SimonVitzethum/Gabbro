@@ -96,6 +96,12 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some _) => .ok σ' ρ
       | (_, Option.none) => .hardware (.annahme a)
+  | .axiomCallElse _ a args _ _ _ _ _ err, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl _)) => .ok σ' ρ
+      | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | (_, Option.none) => .hardware (.annahme a)
   | .regWrite r _ e, σ, ρ =>
       let σ := σ.lese Λ e.orte
       let _ := O.regSchreib r (roh (eval σ e σ ρ))
@@ -163,6 +169,18 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       let σ := σ.lese Λ args.orte
       match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some (Sum.inl v)) => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwort O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some v) => Ausgang.weiterOpt e (execBlock rest σ' (ergEnv e (he ▸ v) ρ))
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) =>
+          Ausgang.weiterOpt e (execBlock rest σ' (ergEnv e (he ▸ v) ρ))
       | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
       | (_, Option.none) => .hardware (.annahme a)
   | .regRead r _ rest, σ, ρ =>
@@ -267,6 +285,18 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       let σ := σ.lese Λ args.orte
       match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some (Sum.inl v)) => (execEnd rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwort O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some v) => EndAusgang.weiterOpt e (execEnd rest σ' (ergEnv e (he ▸ v) ρ))
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) =>
+          EndAusgang.weiterOpt e (execEnd rest σ' (ergEnv e (he ▸ v) ρ))
       | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
   | .regRead r _ rest, σ, ρ =>

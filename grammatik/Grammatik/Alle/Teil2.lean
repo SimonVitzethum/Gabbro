@@ -134,6 +134,7 @@ public import Grammatik.Zielsatz.Eigenschaften.FolgeZiel
 public import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
 public import Grammatik.Speichermodell.Maschine.ZaehlerW
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
+public import Grammatik.Zielsatz.Atomar.GabbroZielFremd
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Grammatik.GabbroV.GvAtomRely
 public import Grammatik.GabbroV.GvTraversal

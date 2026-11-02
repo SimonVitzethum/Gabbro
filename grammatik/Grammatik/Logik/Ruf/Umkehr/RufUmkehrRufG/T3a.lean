@@ -170,6 +170,8 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallElse .. => rfl
   | _, _, .bindAxiom .. => rfl
   | _, _, .bindAxiomElse .. => rfl
+  | _, _, .bindAxiomOpt .. => rfl
+  | _, _, .bindAxiomOptElse .. => rfl
 
   | _, _, .regRead .. => rfl
 

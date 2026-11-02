@@ -248,6 +248,19 @@ theorem Endblock.execBlockH_alsBlock :
         cases execEndH S O U passes R rest _ _ <;> rfl
       · cases execEndH S O U passes R err _ _ <;> rfl
       · rfl
+  | _, _, .bindAxiomOpt e a args he _ _ _ rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockH, execEndH]
+      split
+      · rw [Endblock.execBlockH_alsBlock rest]
+        cases execEndH S O U passes R rest _ _ <;> rfl
+      · cases execEndH S O U passes R err _ _ <;> rfl
+      · rfl
   | _, _, .regRead r hk rest, σ, ρ => by
       simp only [Endblock.alsBlock, execBlockH, execEndH]
       split

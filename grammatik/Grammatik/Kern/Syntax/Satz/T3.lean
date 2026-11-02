@@ -149,6 +149,7 @@ def Stmt.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .consumeTraverse _ _ _ _ _ _ body => body.ueberBoden c
   | .retry _ _ body ueber => body.ueberBoden c && ueber.ueberBoden c
   | .forever _ _ body => body.ueberBoden c
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => err.ueberBoden c
   | _ => true
 
 def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
@@ -161,6 +162,8 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .bindCallElse _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.ueberBoden c
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .regRead _ _ rest => rest.ueberBoden c
   | .regReadElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c
@@ -187,6 +190,8 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .bindCallElse _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.ueberBoden c
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .regRead _ _ rest => rest.ueberBoden c
   | .regReadElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .awaits _ _ _ _ _ rest => rest.ueberBoden c

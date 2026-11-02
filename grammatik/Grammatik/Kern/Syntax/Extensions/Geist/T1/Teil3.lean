@@ -71,6 +71,39 @@ theorem g001_korrekt_narrowRequired {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   · exact ih_g001_korrekt_rest h1.2 o ho'
 
 set_option linter.unusedSectionVars false in
+theorem g001_korrekt_bindAxiomOptElse {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hr)
+    (hp)
+    (hd)
+    (hgd)
+    (err)
+    (rest)
+    (zr_h : g001 (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Block D V l Γ Λ Λ') = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.blockOrte (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Block D V l Γ Λ Λ'))
+    (ih_g001_korrekt_rest : ∀ (h : g001 rest = true), ∀ (o : D.Tab ⊕ D.Glob), ∀ (ho : o ∈ Extraktion.blockOrte rest), ¬ istGeist (D := D) o)
+    (ih_g001End_korrekt_err : ∀ (h : g001End err = true), ∀ (o : D.Tab ⊕ D.Glob), ∀ (ho : o ∈ Extraktion.endblockOrte err), ¬ istGeist (D := D) o)
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) args.orte && g001End err && g001 rest) = true := h
+  have ho' : o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte err ∨ o ∈ Extraktion.blockOrte rest := by
+    simpa [Extraktion.blockOrte] using ho
+  have h1 : ((orteOk (D := D) args.orte && g001End err) = true) ∧ ((g001 rest) = true) :=
+    Bool.and_eq_true_iff.mp h0
+  have h2 : ((orteOk (D := D) args.orte) = true) ∧ ((g001End err) = true) :=
+    Bool.and_eq_true_iff.mp h1.1
+  rcases ho' with ho' | ho' | ho'
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
+  · exact ih_g001End_korrekt_err h2.2 o ho'
+  · exact ih_g001_korrekt_rest h1.2 o ho'
+
+set_option linter.unusedSectionVars false in
 theorem g001_korrekt_regRead {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (r)
     (hk)

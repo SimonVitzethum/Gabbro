@@ -161,6 +161,14 @@ def Regklasse.schreibbar : Regklasse → Bool
   | .w | .rw | .w1c => true
   | .r | .rc => false
 
+/-- **The provenance of a foreign item (C08).** `software` is a service with a proved
+    implementation (user logic); `hardware` is true device behaviour under a named
+    assumption. Never inferred from source keywords; see `Deklaration.axHerkunft`. -/
+inductive AxOrigin where
+  | software
+  | hardware
+  deriving DecidableEq, Repr
+
 /-- Die deklarierte Welt einer Uebersetzungseinheit. -/
 structure Deklaration where
   Tab : Type
@@ -289,6 +297,13 @@ structure Deklaration where
   globalSpace : Glob → Nat := fun _ => 0
   /-- Resolved owner identities; exclusive movement still needs the ownership rules. -/
   ownerNr : Nat → Option Marke := fun _ => none
+  /-- **Provenance of a foreign item (C08):** `software` needs a proved implementation
+      (`ForeignPflicht`), `hardware` stays a named assumption. Unresolved (`none`) until
+      declared; ambiguous origin is refused, never inferred from keywords. -/
+  axHerkunft : Ax → Option AxOrigin := fun _ => none
+  /-- The named assumption witnessing a hardware origin (`none` for software items and
+      while unresolved). -/
+  axBeleg : Ax → Option Annahme := fun _ => none
 
 attribute [instance] Deklaration.decTab Deklaration.decFeld Deklaration.decGlob
   Deklaration.decLock Deklaration.decMarke
@@ -305,6 +320,33 @@ def gschreibt (f : D.Fn) : D.Glob → Bool := (D.signatur f).gschreibt
 def konsumiert (f : D.Fn) : List (D.Marke × Nat) := (D.signatur f).konsumiert
 def produziert (f : D.Fn) : List (D.Marke × Nat) := (D.signatur f).produziert
 end Deklaration
+
+/-- **The canonical signature of a foreign item (C08).** Derived from the declared shape
+    fields, so every declaration written before this definition is the declaration of
+    before: parameters, result and channel from `aparams`/`aerg`/`agruende`, the frame
+    from `aschreibt`/`agschreibt`; no locks, no marks, no floor. -/
+def Deklaration.asignatur (D : Deklaration) (a : D.Ax) : Signatur D.Tab D.Glob D.Lock D.Marke :=
+  { params := D.aparams a
+    erg := D.aerg a
+    gruende := D.agruende a
+    haelt := []
+    schreibt := D.aschreibt a
+    gschreibt := D.agschreibt a
+    konsumiert := []
+    produziert := []
+    boden := none }
+
+theorem Deklaration.asignatur_params (D : Deklaration) (a : D.Ax) :
+    (D.asignatur a).params = D.aparams a := rfl
+
+theorem Deklaration.asignatur_erg (D : Deklaration) (a : D.Ax) :
+    (D.asignatur a).erg = D.aerg a := rfl
+
+theorem Deklaration.asignatur_gruende (D : Deklaration) (a : D.Ax) :
+    (D.asignatur a).gruende = D.agruende a := rfl
+
+theorem Deklaration.asignatur_produziert (D : Deklaration) (a : D.Ax) :
+    (D.asignatur a).produziert = [] := rfl
 
 variable (D : Deklaration)
 
@@ -366,9 +408,15 @@ def Vertrag.vonSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) : Vertrag D :=
 def Vertrag.ende (V : Vertrag D) : List (Res D) :=
   V.haelt.map Res.held ++ (V.produziert ++ V.owner.outputs).map (Res.vonMarke D)
 
+theorem Deklaration.asignatur_ende (D : Deklaration) (a : D.Ax) :
+    (Vertrag.vonSig D (D.asignatur a)).ende = [] := rfl
+
 /-- Womit ein Rumpf anfaengt: die Zeugnisse der Signatur und die verbrauchten Marken. -/
 def Signatur.anfang (S : Signatur D.Tab D.Glob D.Lock D.Marke) : List (Res D) :=
   S.haelt.map Res.held ++ S.inputMarks.map (Res.vonMarke D)
+
+theorem Deklaration.asignatur_anfang (D : Deklaration) (a : D.Ax) :
+    Signatur.anfang D (D.asignatur a) = [] := rfl
 
 /-- Die Signatur eines Rufs passt in den Vertrag des Rufers: Schreibrechte enthalten,
     verbrauchte Marken in der Hand. -/

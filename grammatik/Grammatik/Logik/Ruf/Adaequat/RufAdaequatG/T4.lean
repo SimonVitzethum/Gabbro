@@ -98,6 +98,7 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .axiomCallElse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret .., hs => absurd hs.ret_inv (by decide)
   | _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
@@ -126,6 +127,8 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, .regRead r hk rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.regLies_inv

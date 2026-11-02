@@ -30,5 +30,14 @@ module
 public import Grammatik.Logik.Ruf.FremdRuf.T1
 public import Grammatik.Logik.Ruf.FremdRuf.T2
 public import Grammatik.Logik.Ruf.FremdRuf.T3
+public import Grammatik.Logik.Ruf.FremdRuf.T4
+public import Grammatik.Logik.Ruf.FremdRuf.T5
+public import Grammatik.Logik.Ruf.FremdRuf.T6
+public import Grammatik.Logik.Ruf.FremdRuf.T7
+public import Grammatik.Logik.Ruf.FremdRuf.T8
+public import Grammatik.Logik.Ruf.FremdRuf.T9
+public import Grammatik.Logik.Ruf.FremdRuf.T10
+public import Grammatik.Logik.Ruf.FremdRuf.T11
+public import Grammatik.Logik.Ruf.FremdRuf.T12
 @[expose] public section
 

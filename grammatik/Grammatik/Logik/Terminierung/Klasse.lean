@@ -167,6 +167,7 @@ def befS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig danachLeer 
   | .retWhy .. => { austritt := imEwig }
   | .retScoped .. => { austritt := imEwig }
   | .retWhyScoped .. => { austritt := imEwig }
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => befE ebene imEwig err
   | _ => {}
 
 def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
@@ -180,6 +181,8 @@ def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
       Befund.ruf g imEwig false ++ befE ebene imEwig err ++ befB ebene imEwig rest
   | .bindAxiom _ _ _ _ _ _ _ rest => befB ebene imEwig rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => befE ebene imEwig err ++ befB ebene imEwig rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => befB ebene imEwig rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => befE ebene imEwig err ++ befB ebene imEwig rest
   | .regRead _ _ rest => befB ebene imEwig rest
   | .regReadElse _ _ _ sonst rest => befE ebene imEwig sonst ++ befB ebene imEwig rest
   | .awaits _ _ _ _ _ rest => befB ebene imEwig rest
@@ -216,6 +219,8 @@ def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endbl
       Befund.ruf g imEwig false ++ befE ebene imEwig err ++ befE ebene imEwig rest
   | .bindAxiom _ _ _ _ _ _ _ rest => befE ebene imEwig rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => befE ebene imEwig err ++ befE ebene imEwig rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => befE ebene imEwig rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => befE ebene imEwig err ++ befE ebene imEwig rest
   | .regRead _ _ rest => befE ebene imEwig rest
   | .regReadElse _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
   | .awaits _ _ _ _ _ rest => befE ebene imEwig rest

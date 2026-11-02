@@ -84,6 +84,7 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
         exact hR _ _ _ _ heq
   | .forever .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
   | .axiomCall .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
+  | .axiomCallElse .., h, _, _, _, _ => by simp only [Stmt.hardwareFrei, Bool.false_eq_true] at h
   | .shift .., _, _, _, _, he => by
       simp only [execStmt] at he
       split at he <;> cases he
@@ -155,6 +156,8 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
         exact hR _ _ _ _ heq
   | .bindAxiom .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
   | .bindAxiomElse .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
   | .regRead .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
   | .regReadElse .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
   | .awaits .., h, _, _, _, _ => by simp only [Block.hardwareFrei, Bool.false_eq_true] at h
@@ -255,6 +258,8 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
         exact hR _ _ _ _ heq
   | .bindAxiom .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
   | .bindAxiomElse .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
   | .regRead .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
   | .regReadElse .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h
   | .awaits .., h, _, _, _, _ => by simp only [Endblock.hardwareFrei, Bool.false_eq_true] at h

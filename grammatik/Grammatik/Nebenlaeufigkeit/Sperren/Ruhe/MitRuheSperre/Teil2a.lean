@@ -203,6 +203,38 @@ theorem execStmtH_ru_axiomCall {V : Vertrag D}
       | some _ => rfl
 
 set_option linter.unusedSectionVars false in
+theorem execStmtH_ru_axiomCallElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (a)
+    (args)
+    (he)
+    (hp)
+    (hd)
+    (hgd)
+    (hr)
+    (err)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndH S O U passes R err σ ρ))
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.axiomCallElse e a args he hp hd hgd hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.axiomCallElse e a args he hp hd hgd hr err : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS]
+  erw [execStmtH_nachΛ]
+  simp only [execStmtH]
+  erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ruG hO]
+  cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+    (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+  | mk σ' w =>
+      rcases w with _ | v | r
+      · exact Or.inl rfl
+      · exact Or.inl rfl
+      · exact EndRel.zuAusgang (EndRel.schrumpf
+          (ih_execEndH_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))
+
+set_option linter.unusedSectionVars false in
 theorem execStmtH_ru_regWrite {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

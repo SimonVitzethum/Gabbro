@@ -34,6 +34,8 @@ def Block.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .cons s _ => s.istBlatt
   | .bindAxiom .. => true
   | .bindAxiomElse .. => true
+  | .bindAxiomOpt .. => true
+  | .bindAxiomOptElse .. => true
   | .regRead .. => true
   | .regReadElse .. => true
   | .awaits .. => true
@@ -48,6 +50,8 @@ def GRest.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | .cons s _ => s.istBlatt
       | .bindAxiom .. => true
       | .bindAxiomElse .. => true
+      | .bindAxiomOpt .. => true
+      | .bindAxiomOptElse .. => true
       | _ => false
   | .dann b _ => b.kannHalten
   | _ => false
@@ -69,6 +73,8 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
           all_goals exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
+      | bindAxiomOpt => rfl
+      | bindAxiomOptElse => rfl
       | _ => cases k <;> exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
   | dann b k' =>
       cases b with
@@ -78,6 +84,8 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
           all_goals exact absurd h (by simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt, not_false_eq_true])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
+      | bindAxiomOpt => rfl
+      | bindAxiomOptElse => rfl
       | regRead => rfl
       | regReadElse => rfl
       | awaits => rfl

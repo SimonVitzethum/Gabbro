@@ -159,6 +159,12 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .axiomCall a args h hw hg hd hgd =>
       .axiomCall (V := vertragR V) a (ruA args) (by show Option.map tyR (D.aerg a) = _; rw [h]; rfl)
         hw hg (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg'))
+  | _, _, Λ, _, .axiomCallElse e a args he hp hd hgd hr err =>
+      Stmt.nachΛ (nachSig_map (D.asignatur a) Λ).symm
+        (.axiomCallElse (V := vertragR V) (e.map tyR) a (ruA args)
+          (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+          (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) hr
+          (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd err)))
   | _, _, _, _, .regWrite r hk e => .regWrite r hk (ruE e)
   | _, _, _, _, .transition r hk m hm hl maske bits => .transition r hk m hm hl maske bits
   | _, _, _, _, .publish g e payload hp hw hL => .publish g (ruE e) payload hp hw (gdarfR hL)
@@ -202,6 +208,32 @@ def ruB {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
       .bindAxiomElse (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hr hw hg
         (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd err) (ruB rest)
+  | _, _, Λ, _, .bindAxiomOpt e a args he hp hd hgd rest =>
+      match e with
+      | none =>
+          .bindAxiomOpt (V := vertragR V) none a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg'))
+            (Block.vorΛ (nachSig_map (D.asignatur a) Λ) (ruB rest))
+      | some τ =>
+          .bindAxiomOpt (V := vertragR V) (some (tyR τ)) a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg'))
+            (Block.vorΛ (nachSig_map (D.asignatur a) Λ) (ruB rest))
+  | _, _, Λ, _, .bindAxiomOptElse e a args he hp hd hgd hr err rest =>
+      match e with
+      | none =>
+          .bindAxiomOptElse (V := vertragR V) none a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) hr
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd err))
+            (Block.vorΛ (nachSig_map (D.asignatur a) Λ) (ruB rest))
+      | some τ =>
+          .bindAxiomOptElse (V := vertragR V) (some (tyR τ)) a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) hr
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd err))
+            (Block.vorΛ (nachSig_map (D.asignatur a) Λ) (ruB rest))
   | _, _, _, _, .regRead r hk rest => .regRead r hk (ruB rest)
   | _, _, _, _, .regReadElse r hk zusage sonst rest =>
       .regReadElse r hk (ruE zusage) (ruEnd sonst) (ruB rest)
@@ -245,6 +277,32 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
       .bindAxiomElse (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hr hw hg
         (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd err) (ruEnd rest)
+  | _, _, Λ, .bindAxiomOpt e a args he hp hd hgd rest =>
+      match e with
+      | none =>
+          .bindAxiomOpt (V := vertragR V) none a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg'))
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd rest))
+      | some τ =>
+          .bindAxiomOpt (V := vertragR V) (some (tyR τ)) a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg'))
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd rest))
+  | _, _, Λ, .bindAxiomOptElse e a args he hp hd hgd hr err rest =>
+      match e with
+      | none =>
+          .bindAxiomOptElse (V := vertragR V) none a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) hr
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd err))
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd rest))
+      | some τ =>
+          .bindAxiomOptElse (V := vertragR V) (some (tyR τ)) a (ruA args)
+            (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+            (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) hr
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd err))
+            (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd rest))
   | _, _, _, .regRead r hk rest => .regRead r hk (ruEnd rest)
   | _, _, _, .regReadElse r hk zusage sonst rest =>
       .regReadElse r hk (ruE zusage) (ruEnd sonst) (ruEnd rest)
@@ -274,6 +332,40 @@ def ruGArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res 
   | _, _, _, _, _, .cons b rest => .cons (ruB b) (ruGArms rest)
 
 end
+
+/-! ## 4b. Boundary clauses of the foreign contracts (C08) -/
+
+/-- A capability parameter keeps its type under `List.map tyR` (`tyR` fixes `ref`). -/
+theorem get_map_tyR (l : List Ty) (i : Fin l.length) :
+    (l.map tyR).get (Fin.cast (List.length_map ..).symm i) = tyR (l.get i) := by
+  simp only [List.get_eq_getElem, Fin.coe_cast, List.getElem_map]
+
+/-- The capability parameter of a boundary clause, over `D.mitRuhe`. -/
+theorem ru_cap (a : D.Ax) (idx : Fin (D.asignatur a).params.length) (n : Nat)
+    (hcap : (D.asignatur a).params.get idx = Ty.ref n) :
+    (D.mitRuhe.asignatur a).params.get (Fin.cast (List.length_map ..).symm idx) = Ty.ref n := by
+  have h := get_map_tyR (D.asignatur a).params idx
+  rw [hcap] at h
+  exact h
+
+/-- The reference result of a boundary clause, over `D.mitRuhe`. -/
+theorem ru_erg (a : D.Ax) (n : Nat) (herg : (D.asignatur a).erg = some (Ty.ref n)) :
+    (D.mitRuhe.asignatur a).erg = some (Ty.ref n) := by
+  have h : D.aerg a = some (Ty.ref n) := herg
+  show (D.aerg a).map tyR = some (Ty.ref n)
+  simp only [h, Option.map_some, tyR]
+
+/-- **A boundary clause of the foreign item `a` as a clause over `D.mitRuhe`**: the same clause,
+    its length expressions translated by `ruE`, the capability index moved along the length
+    equation of `List.map tyR`. -/
+def ruKlausel (a : D.Ax) :
+    BoundaryClause D (D.asignatur a) → BoundaryClause D.mitRuhe (D.mitRuhe.asignatur a)
+  | .eingabe idx n t hcap ht m len =>
+      .eingabe (Fin.cast (List.length_map ..).symm idx) n t (ru_cap a idx n hcap) ht m (ruE len)
+  | .ausgabe n t herg ht m len => .ausgabe n t (ru_erg a n herg) ht m (ruE len)
+  | .frisch n t herg ht => .frisch n t (ru_erg a n herg) ht
+  | .freigabe idx n t hcap ht =>
+      .freigabe (Fin.cast (List.length_map ..).symm idx) n t (ru_cap a idx n hcap) ht
 
 /-! ## 5. The program, the oracle, the lock invariants -/
 
@@ -307,6 +399,9 @@ def Programm.mitRuhe (P : Programm D) : Programm D.mitRuhe where
   ptrVertrag
     | 0 => CallContract.trivial D.mitRuhe (sigNrM D 0)
     | n + 1 => ruCallContract (D.sigNr n) (P.ptrVertrag n)
+  -- the foreign contracts keep their pre/post and boundary clauses (C08): the idle root calls
+  -- no foreign item, and the contract of an item is the translated contract of `D`
+  axVertrag a := ⟨ruE (P.axVertrag a).pre, Expr.umΓ (ergCtx_map (D.asignatur a).params (D.asignatur a).erg) (ruE (P.axVertrag a).post), (P.axVertrag a).grenzen.map (ruKlausel a)⟩
 
 /-- The member list of `D.mitRuhe`'s functions: the root, then `fs`. -/
 def fsRuhe (fs : List D.Fn) : List D.mitRuhe.Fn := none :: fs.map some

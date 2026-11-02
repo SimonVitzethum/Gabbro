@@ -232,6 +232,7 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .forever a inv body, hs =>
       stmtRetR_forever (a := a) (inv := inv) (body := body) (hs := hs) (ih_blockRetR_body := blockRetR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .axiomCallElse .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret e hperm, zzh1 =>
       stmtRetR_ret (e := e) (hperm := hperm) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .retWhy r hperm, zzh1 =>
@@ -262,6 +263,8 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blockRetR_bindCallElse (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (ih_alsRetR_err := alsRetR err) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, .regRead r hk rest, hb =>
       blockRetR_regRead (r := r) (hk := hk) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .regReadElse r hk zusage sonst rest, hb =>

@@ -96,6 +96,39 @@ theorem execStmtHA_ru_axiomCall {V : Vertrag D}
       | some _ => rfl
 
 set_option linter.unusedSectionVars false in
+theorem execStmtHA_ru_axiomCallElse {V : vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (e)
+    (a)
+    (args)
+    (he)
+    (hp)
+    (hd)
+    (hgd)
+    (hr)
+    (err)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndHA_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndHA S O U A passes R err σ ρ))
+    : AusRelRu (execStmtHA S.mitRuhe O' U' A' passes R' (ruS (.axiomCallElse e a args he hp hd hgd hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtHA S O U A passes R (.axiomCallElse e a args he hp hd hgd hr err : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS]
+  erw [execStmtHA_nachΛ]
+  simp only [execStmtHA]
+  erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+  cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
+    (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+  | mk σ' w =>
+      rcases w with _ | v | r
+      · exact Or.inl rfl
+      · exact Or.inl rfl
+      · erw [execEndHA_umΛ]
+        exact EndRel.zuAusgang (EndRel.schrumpf
+          (ih_execEndHA_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))
+
+set_option linter.unusedSectionVars false in
 theorem execStmtHA_ru_regWrite {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
@@ -242,6 +275,101 @@ theorem execBlockHA_ru_bindCall {V : Vertrag D}
     | hardware e => (try erw [hx]); exact Or.inl rfl
   · erw [h1, h2]
     exact Or.inr ⟨e', e, rfl, rfl, ht⟩
+
+end HauptA
+
+set_option linter.unusedSectionVars false in
+theorem execBlockHA_ru_bindAxiomOpt {V : vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hp)
+    (hd)
+    (hgd)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlockHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB rest) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R rest σ ρ))
+    : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruB, execBlockHA]
+      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwort_ruG hO]
+      cases axiomAntwort O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => exact Or.inl rfl
+          | some v =>
+              simp only [Ausgang.weiterOpt, ergEnv]
+              exact ih_execBlockHA_ru_rest σ' _
+  | some τ =>
+      simp only [ruB, execBlockHA]
+      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwort_ruG hO]
+      cases axiomAntwort O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => exact Or.inl rfl
+          | some v =>
+              simp only [Option.map, Ausgang.weiterOpt, ergEnv]
+              rw [ergWert_ru he]
+              exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ' (Env.cons _ ρ))
+
+set_option linter.unusedSectionVars false in
+theorem execBlockHA_ru_bindAxiomOptElse {V : vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hr)
+    (hp)
+    (hd)
+    (hgd)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlockHA_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB rest) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R rest σ ρ))
+    (ih_execEndHA_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndHA S.mitRuhe O' U' A' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndHA S O U A passes R err σ ρ))
+    : AusRelRu (execBlockHA S.mitRuhe O' U' A' passes R' (ruB (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execBlockHA S O U A passes R (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruB, execBlockHA]
+      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · exact Or.inl rfl
+          · simp only [Ausgang.weiterOpt, ergEnv]
+            exact ih_execBlockHA_ru_rest σ' _
+          · erw [execEndHA_umΛ]
+            exact EndRel.zuAusgang (EndRel.schrumpf (ih_execEndHA_ru_err σ' _))
+  | some τ =>
+      simp only [ruB, execBlockHA]
+      erw [execBlockHA_vorΛ, ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · exact Or.inl rfl
+          · simp only [Option.map, Ausgang.weiterOpt, ergEnv]
+            rw [ergWert_ru he]
+            exact AusRelRu.schrumpf (ih_execBlockHA_ru_rest σ' (Env.cons _ ρ))
+          · erw [execEndHA_umΛ]
+            exact EndRel.zuAusgang (EndRel.schrumpf (ih_execEndHA_ru_err σ' _))
 
 end HauptA
 end Gabbro.Grammatik

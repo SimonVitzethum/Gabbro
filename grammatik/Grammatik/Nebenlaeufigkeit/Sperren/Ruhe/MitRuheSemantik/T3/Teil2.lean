@@ -257,4 +257,101 @@ theorem execBlock_ru_narrowRequired {V : Vertrag D}
     exact Or.inl rfl
 
 end Haupt
+
+set_option linter.unusedSectionVars false in
+theorem execBlock_ru_bindAxiomOpt {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hp)
+    (hd)
+    (hgd)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlock_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execBlock O.mitRuhe passes R' (ruB rest) (worldR σ) (envR ρ) = ausR (execBlock O passes R rest σ ρ))
+    : execBlock O.mitRuhe passes R' (ruB (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruB, execBlock]
+      erw [execBlock_vorΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => rfl
+          | some v =>
+              simp only [Ausgang.weiterOpt, ergEnv]
+              exact ih_execBlock_ru_rest σ' _
+  | some τ =>
+      simp only [ruB, execBlock]
+      erw [execBlock_vorΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => rfl
+          | some v =>
+              simp only [Option.map, Ausgang.weiterOpt, ergEnv]
+              rw [ergWert_ru he, ← ausR_schrumpf, ← ih_execBlock_ru_rest σ' (Env.cons _ ρ)]
+              rfl
+
+set_option linter.unusedSectionVars false in
+theorem execBlock_ru_bindAxiomOptElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hr)
+    (hp)
+    (hd)
+    (hgd)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlock_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execBlock O.mitRuhe passes R' (ruB rest) (worldR σ) (envR ρ) = ausR (execBlock O passes R rest σ ρ))
+    (ih_execEnd_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd err) (worldR σ) (envR ρ) = endR (execEnd O passes R err σ ρ))
+    : execBlock O.mitRuhe passes R' (ruB (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruB, execBlock]
+      erw [execBlock_vorΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · rfl
+          · simp only [Ausgang.weiterOpt, ergEnv]
+            exact ih_execBlock_ru_rest σ' _
+          · erw [execEnd_umΛ]
+            exact (congrArg (fun a => (EndAusgang.schrumpf a).zuAusgang) (ih_execEnd_ru_err σ' _)).trans
+              ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
+  | some τ =>
+      simp only [ruB, execBlock]
+      erw [execBlock_vorΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · rfl
+          · simp only [Option.map, Ausgang.weiterOpt, ergEnv]
+            rw [ergWert_ru he, ← ausR_schrumpf, ← ih_execBlock_ru_rest σ' (Env.cons _ ρ)]
+            rfl
+          · erw [execEnd_umΛ]
+            exact (congrArg (fun a => (EndAusgang.schrumpf a).zuAusgang) (ih_execEnd_ru_err σ' _)).trans
+              ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
+
+end Haupt
 end Gabbro.Grammatik

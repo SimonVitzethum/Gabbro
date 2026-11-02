@@ -108,6 +108,12 @@ theorem Block.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
       simp only [Block.ohneLocks, Bool.and_eq_true] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .bindAxiomOpt e a args he _ _ _ rest, h, σ, ρ => by
+      simp only [Block.ohneLocks] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
+  | .bindAxiomOptElse e a args he _ _ _ _ err rest, h, σ, ρ => by
+      simp only [Block.ohneLocks, Bool.and_eq_true] at h
+      simp only [execBlockH, execBlock, Block.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
   | .regRead r hk rest, h, σ, ρ => by
       simp only [Block.ohneLocks] at h
       simp only [execBlockH, execBlock, Block.execH_ohne rest h] <;> rfl
@@ -171,6 +177,12 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
+  | .bindAxiomOpt e a args he _ _ _ rest, h, σ, ρ => by
+      simp only [Endblock.ohneLocks] at h
+      simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
+  | .bindAxiomOptElse e a args he _ _ _ _ err rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks, Bool.and_eq_true] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h.2, Endblock.execH_ohne err h.1] <;> rfl
   | .regRead r hk rest, h, σ, ρ => by

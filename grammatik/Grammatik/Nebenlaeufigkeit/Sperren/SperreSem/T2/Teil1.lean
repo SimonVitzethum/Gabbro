@@ -99,6 +99,10 @@ theorem Block.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
+  | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ => by
+      simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
+  | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ => by
+      simp only [execBlockH, execBlock, Block.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .regRead r hk rest, σ, ρ => by
       simp only [execBlockH, execBlock, Block.execH_leer rest] <;> rfl
   | .regReadElse r hk zusage sonst rest, σ, ρ => by
@@ -142,6 +146,10 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer err] <;> rfl
+  | .bindAxiomOpt e a args he _ _ _ rest, σ, ρ => by
+      simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
+  | .bindAxiomOptElse e a args he _ _ _ _ err rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest, Endblock.execH_leer err] <;> rfl
   | .regRead r hk rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
@@ -204,6 +212,7 @@ def Stmt.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ
   | .consumeTraverse _ _ _ _ _ _ body => body.ohneLocks
   | .retry _ _ body ueber => body.ohneLocks && ueber.ohneLocks
   | .forever _ _ body => body.ohneLocks
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => err.ohneLocks
   | _ => true
 
 def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Bool
@@ -215,6 +224,8 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
   | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.ohneLocks
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .regRead _ _ rest => rest.ohneLocks
   | .regReadElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .awaits _ _ _ _ _ rest => rest.ohneLocks
@@ -240,6 +251,8 @@ def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .bindCallElse _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.ohneLocks
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.ohneLocks && rest.ohneLocks
   | .regRead _ _ rest => rest.ohneLocks
   | .regReadElse _ _ _ sonst rest => sonst.ohneLocks && rest.ohneLocks
   | .awaits _ _ _ _ _ rest => rest.ohneLocks

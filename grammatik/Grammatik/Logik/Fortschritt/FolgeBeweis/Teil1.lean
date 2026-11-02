@@ -57,6 +57,10 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
+  | _, _, e, .bindAxiomOpt _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
+  | _, _, e, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
   | _, _, e, .regRead _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .regReadElse _ _ _ sonst rest, w, w', hw, h => by
@@ -110,6 +114,10 @@ theorem fE_mono {l : Bool} :
   | _, _, e, .bindAxiom _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
+  | _, _, e, .bindAxiomOpt _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
+  | _, _, e, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
   | _, _, e, .regRead _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
@@ -177,6 +185,10 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .bindCallElse _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .regRead r hk rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]

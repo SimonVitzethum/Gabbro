@@ -104,6 +104,7 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCallElse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret e hΛ, _ => .ret e hΛ
   | _, _, _, _, _, .retWhy .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .retScoped .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
@@ -123,6 +124,8 @@ theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, _, .regRead _ _ rest, hb => .regRead _ _ _ (blockG_ohneRuf rest hb.regLies_inv)
   | _, _, _, _, _, .regReadElse _ _ _ sonst rest, hb =>
       .regReadElse _ _ _ _ _ (endG_ohneRuf sonst hb.regLiesElse_inv.2.2.1)

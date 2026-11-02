@@ -46,6 +46,17 @@ theorem g001Stmt_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have ho' : o ∈ args.orte := by
         simpa [Extraktion.stmtOrte] using ho
       exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
+  | .axiomCallElse _ a args _ hp hd hgd _ err, zr_h, o, zr_ho => by
+      revert zr_h zr_ho
+      intro h ho
+      have h0 : (orteOk (D := D) args.orte && g001End err) = true := h
+      have ho' : o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte err := by
+        simpa [Extraktion.stmtOrte] using ho
+      have h1 : ((orteOk (D := D) args.orte) = true) ∧ ((g001End err) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      rcases ho' with ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+      · exact g001End_korrekt err h1.2 o ho'
   | .regWrite r hk e, zr_h, o, zr_ho =>
       g001Stmt_korrekt_regWrite (r := r) (hk := hk) (e := e) (zr_h := zr_h) (o := o) (zr_ho := zr_ho)
   | .publish g e payload hp hw hL, zr_h, o, zr_ho =>
@@ -120,6 +131,10 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       g001_korrekt_bindAxiom (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, zr_h, o, zr_ho =>
       g001_korrekt_bindAxiomElse (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_err := g001End_korrekt err)
+  | .bindAxiomOpt e a args he hp hd hgd rest, zr_h, o, zr_ho =>
+      g001_korrekt_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest, zr_h, o, zr_ho =>
+      g001_korrekt_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest) (ih_g001End_korrekt_err := g001End_korrekt err)
   | .regRead r hk rest, zr_h, o, zr_ho =>
       g001_korrekt_regRead (r := r) (hk := hk) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001_korrekt_rest := g001_korrekt rest)
   | .regReadElse r hk zusage sonst rest, zr_h, o, zr_ho =>
@@ -190,6 +205,10 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       g001End_korrekt_bindAxiom (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, zr_h, o, zr_ho =>
       g001End_korrekt_bindAxiomElse (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_err := g001End_korrekt err) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .bindAxiomOpt e a args he hp hd hgd rest, zr_h, o, zr_ho =>
+      g001End_korrekt_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest, zr_h, o, zr_ho =>
+      g001End_korrekt_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_err := g001End_korrekt err) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .regRead r hk rest, zr_h, o, zr_ho =>
       g001End_korrekt_regRead (r := r) (hk := hk) (rest := rest) (zr_h := zr_h) (o := o) (zr_ho := zr_ho) (ih_g001End_korrekt_rest := g001End_korrekt rest)
   | .regReadElse r hk zusage sonst rest, zr_h, o, zr_ho =>

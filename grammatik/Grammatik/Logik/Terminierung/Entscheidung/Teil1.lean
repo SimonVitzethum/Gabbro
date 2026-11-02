@@ -73,6 +73,7 @@ theorem rufeS_mS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .assignVar .. => rfl
   | _, _, _, _, .shift .. => rfl
   | _, _, _, _, .axiomCall .. => rfl
+  | _, _, _, _, .axiomCallElse _ _ _ _ _ _ _ _ err => by simp only [rufeS, mS, rufeE_mE err]
   | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
@@ -95,6 +96,8 @@ theorem rufeB_mB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest => by simp only [rufeB, mB, rufeE_mE err, rufeB_mB rest]
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [rufeB, mB, rufeE_mE err, rufeB_mB rest]
+  | _, _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
+  | _, _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => by simp only [rufeB, mB, rufeE_mE err, rufeB_mB rest]
   | _, _, _, _, .regRead _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .regReadElse _ _ _ sonst rest => by simp only [rufeB, mB, rufeE_mE sonst, rufeB_mB rest]
   | _, _, _, _, .awaits _ _ _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
@@ -131,6 +134,8 @@ theorem rufeE_mE : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D
   | _, _, _, .bindCallElse _ _ _ _ _ err rest => by simp only [rufeE, mE, rufeE_mE err, rufeE_mE rest]
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by simp only [rufeE, mE, rufeE_mE err, rufeE_mE rest]
+  | _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
+  | _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => by simp only [rufeE, mE, rufeE_mE err, rufeE_mE rest]
   | _, _, _, .regRead _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
   | _, _, _, .regReadElse _ _ _ sonst rest => by simp only [rufeE, mE, rufeE_mE sonst, rufeE_mE rest]
   | _, _, _, .awaits _ _ _ _ _ rest => by simp only [rufeE, mE, rufeE_mE rest]
@@ -187,6 +192,9 @@ theorem rufeS_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : 
   | _, _, _, _, .assignVar .., _, _, _, _ => rfl
   | _, _, _, _, .shift .., _, _, _, _ => rfl
   | _, _, _, _, .axiomCall .., _, _, _, _ => rfl
+  | _, _, _, _, .axiomCallElse _ _ _ _ _ _ _ _ err, eb, ie, h => by
+      simp only [befS] at h
+      simp only [rufeS, rufeE_ohneEwig err eb ie h]
   | _, _, _, _, .regWrite .., _, _, _, _ => rfl
   | _, _, _, _, .transition .., _, _, _, _ => rfl
   | _, _, _, _, .publish .., _, _, _, _ => rfl
@@ -221,6 +229,12 @@ theorem rufeB_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : 
       simp only [befB] at h
       simp only [rufeB, rufeB_ohneEwig rest eb ie h]
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, eb, ie, h => by
+      simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
+      simp only [rufeB, rufeE_ohneEwig err eb ie h.1, rufeB_ohneEwig rest eb ie h.2]
+  | _, _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest, eb, ie, h => by
+      simp only [befB] at h
+      simp only [rufeB, rufeB_ohneEwig rest eb ie h]
+  | _, _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest, eb, ie, h => by
       simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeB, rufeE_ohneEwig err eb ie h.1, rufeB_ohneEwig rest eb ie h.2]
   | _, _, _, _, .regRead _ _ rest, eb, ie, h => by
@@ -297,6 +311,12 @@ theorem rufeE_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endb
       simp only [befE] at h
       simp only [rufeE, rufeE_ohneEwig rest eb ie h]
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, eb, ie, h => by
+      simp only [befE, befund_und_ewig, Bool.or_eq_false_iff] at h
+      simp only [rufeE, rufeE_ohneEwig err eb ie h.1, rufeE_ohneEwig rest eb ie h.2]
+  | _, _, _, .bindAxiomOpt _ _ _ _ _ _ _ rest, eb, ie, h => by
+      simp only [befE] at h
+      simp only [rufeE, rufeE_ohneEwig rest eb ie h]
+  | _, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest, eb, ie, h => by
       simp only [befE, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeE, rufeE_ohneEwig err eb ie h.1, rufeE_ohneEwig rest eb ie h.2]
   | _, _, _, .regRead _ _ rest, eb, ie, h => by

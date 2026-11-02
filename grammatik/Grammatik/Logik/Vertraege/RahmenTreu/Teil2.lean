@@ -122,6 +122,22 @@ theorem stmt_treu :
         rw [ha] at this
         exact hl.trans (Treu.weiter hw hg this)
       · simp only [Ausgang.welt, reduceCtorEq] at h
+  | .axiomCallElse _ a args _ hp hd hgd _ err, σ, ρ, σ', h => by
+      simp only [execStmt] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+        rw [ha] at h1
+        exact hl.trans (Treu.weiter hp.hw hp.hg h1)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
+        exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regWrite r _ e, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
@@ -232,6 +248,45 @@ theorem block_treu :
       · rename_i σ1 r ha
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+  | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, σ', h => by
+      simp only [execBlock] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      split at h
+      · rename_i σ1 v ha
+        have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
+        cases e with
+        | none =>
+            simp only [Ausgang.weiterOpt] at h
+            exact g1.trans ((block_treu rest σ1 _) σ' h)
+        | some τ =>
+            simp only [Ausgang.weiterOpt] at h
+            exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, σ', h => by
+      simp only [execBlock] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
+        cases e with
+        | none =>
+            simp only [Ausgang.weiterOpt] at h
+            exact g1.trans ((block_treu rest σ1 _) σ' h)
+        | some τ =>
+            simp only [Ausgang.weiterOpt] at h
+            exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
         exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regRead r _ rest, σ, ρ, σ', h => by
@@ -392,6 +447,45 @@ theorem end_treu :
       · rename_i σ1 r ha
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+  | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      split at h
+      · rename_i σ1 v ha
+        have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
+        cases e with
+        | none =>
+            simp only [EndAusgang.weiterOpt] at h
+            exact g1.trans ((end_treu rest σ1 _) σ' h)
+        | some τ =>
+            simp only [EndAusgang.weiterOpt] at h
+            exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
+        cases e with
+        | none =>
+            simp only [EndAusgang.weiterOpt] at h
+            exact g1.trans ((end_treu rest σ1 _) σ' h)
+        | some τ =>
+            simp only [EndAusgang.weiterOpt] at h
+            exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
         exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
       · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .regRead r _ rest, σ, ρ, σ', h => by

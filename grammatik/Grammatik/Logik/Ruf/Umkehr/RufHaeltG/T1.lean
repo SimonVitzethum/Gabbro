@@ -105,6 +105,21 @@ theorem heldIn_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     (s : Stmt D V l Γ Λ Λ') {o : List D.Lock} (h : HeldIn Λ o) : HeldIn Λ' o :=
   fun L hL => h L ((Stmt.held_iff s L).mp hL)
 
+/-- Holdings held carry through the canonical foreign exit («C08»): `nachSig`
+    only moves marks. -/
+theorem heldIn_nachSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D))
+    {o : List D.Lock} (h : HeldIn Λ o) : HeldIn (nachSig D S Λ) o :=
+  fun L hL => h L (held_nachSig S Λ L hL)
+
+/-- The chain behind a generalized foreign binder («C08»): void keeps the
+    residue's chain, a value pushes a shrink. -/
+theorem GRest.kette_weiterOpt {V : Vertrag D} {A : List D.Lock} {l : Bool} {Γ : Ctx}
+    {Λ' : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ') (hk : k.kette A)
+    (hΛ : ∀ L ∈ A, Res.held L ∈ Λ') : (GRest.weiterOpt e k).kette A := by
+  cases e with
+  | none => exact hk
+  | some _ => exact ⟨hΛ, hk⟩
+
 /-! ## 2. The thread invariant
 
     Since the held-set relaxation (2026-09-13, `RufPasst.hh` is `⊆`), a

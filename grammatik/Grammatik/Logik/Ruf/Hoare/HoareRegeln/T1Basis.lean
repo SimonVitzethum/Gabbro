@@ -108,6 +108,13 @@ inductive StmtOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) :
       StmtOhneRuf (.axiomCall a args h hw hg hd hgd)
+  | axiomCallElse (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = e)
+      (hp : RufPasst D V (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) (hr : 0 < D.agruende a)
+      (err : Endblock D V l (reasonTy (D.agruende a) :: Γ) (nachSig D (D.asignatur a) Λ))
+      (herr : EndOhneRuf err) :
+      StmtOhneRuf (.axiomCallElse e a args he hp hd hgd hr err)
   | regWrite (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (e : Expr D Γ Λ (D.rtyp r)) :
       StmtOhneRuf (.regWrite r hk e)
   | transition (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (m : D.Reg)

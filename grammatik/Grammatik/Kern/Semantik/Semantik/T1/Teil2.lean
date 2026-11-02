@@ -74,6 +74,25 @@ def EndAusgang.schrumpf : EndAusgang V l (τ :: Γ) → EndAusgang V l Γ
   | .logik e => .logik e
   | .hardware e => .hardware e
 
+/-- **The outcome of a generalized foreign binder** («C08»): void adds no local,
+    a value shrinks -- the uniform continuation behind `ErgCtx`. -/
+def Ausgang.weiterOpt : (e : Option Ty) → Ausgang V l (ErgCtx Γ e) → Ausgang V l Γ
+  | none, x => x
+  | some _, x => x.schrumpf
+
+/-- **The outcome of a generalized foreign binder at the top level** («C08»):
+    void adds no local, a value shrinks. -/
+def EndAusgang.weiterOpt : (e : Option Ty) → EndAusgang V l (ErgCtx Γ e) → EndAusgang V l Γ
+  | none, x => x
+  | some _, x => x.schrumpf
+
+/-- Both outcome transformers agree through `zuAusgang`. -/
+theorem weiterOpt_zuAusgang (e : Option Ty) (x : EndAusgang V l (ErgCtx Γ e)) :
+    (EndAusgang.weiterOpt e x).zuAusgang = Ausgang.weiterOpt e x.zuAusgang := by
+  cases e with
+  | none => cases x <;> rfl
+  | some τ => cases x <;> rfl
+
 def EndAusgang.zuAusgang : EndAusgang V l Γ → Ausgang V l Γ
   | .zurueck σ v => .zurueck σ v
   | .why σ r => .why σ r

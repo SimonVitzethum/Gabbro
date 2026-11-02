@@ -73,6 +73,13 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
       teile
       exact ohneAus_forever a _ _ (fun σ ρ => ohneAus_execBlock body true h.2 σ ρ) passes σ ρ
   | _, _, _, _, .axiomCall .., _, _, _, σ, ρ => by simp only [execStmt]; split <;> trivial
+  | _, _, _, _, .axiomCallElse _ a args _ _ _ _ _ err, eb, _, h, σ, ρ => by
+      have h2 : (befE eb true err).austritt = false := by simpa [befS] using h
+      simp only [execStmt]
+      split
+      · trivial
+      · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h2 _ _))
+      · trivial
   | _, _, _, _, .regWrite .., _, _, _, _, _ => trivial
   | _, _, _, _, .transition .., _, _, _, _, _ => trivial
   | _, _, _, _, .publish .., _, _, _, _, _ => trivial
@@ -134,6 +141,31 @@ theorem ohneAus_execBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b
       simp only [execBlock]
       split
       · exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
+      · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.1 _ _))
+      · trivial
+  | _, _, _, _, .bindAxiomOpt e a args he _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execBlock]
+      split
+      · cases e with
+        | none =>
+            simp only [Ausgang.weiterOpt]
+            exact ohneAus_execBlock rest eb h _ _
+        | some τ =>
+            simp only [Ausgang.weiterOpt]
+            exact ohneAus_schrumpf (ohneAus_execBlock rest eb h _ _)
+      · trivial
+  | _, _, _, _, .bindAxiomOptElse e a args he _ _ _ _ err rest, eb, h, σ, ρ => by
+      teile
+      simp only [execBlock]
+      split
+      · cases e with
+        | none =>
+            simp only [Ausgang.weiterOpt]
+            exact ohneAus_execBlock rest eb h.2 _ _
+        | some τ =>
+            simp only [Ausgang.weiterOpt]
+            exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
       · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.1 _ _))
       · trivial
   | _, _, _, _, .regRead _ _ rest, eb, h, σ, ρ => by
@@ -249,6 +281,31 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
       simp only [execEnd]
       split
       · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
+      · exact endOhneAus_schrumpf (ohneAus_execEnd err eb h.1 _ _)
+      · trivial
+  | _, _, _, .bindAxiomOpt e a args he _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · cases e with
+        | none =>
+            simp only [EndAusgang.weiterOpt]
+            exact ohneAus_execEnd rest eb h _ _
+        | some τ =>
+            simp only [EndAusgang.weiterOpt]
+            exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+      · trivial
+  | _, _, _, .bindAxiomOptElse e a args he _ _ _ _ err rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · cases e with
+        | none =>
+            simp only [EndAusgang.weiterOpt]
+            exact ohneAus_execEnd rest eb h.2 _ _
+        | some τ =>
+            simp only [EndAusgang.weiterOpt]
+            exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
       · exact endOhneAus_schrumpf (ohneAus_execEnd err eb h.1 _ _)
       · trivial
   | _, _, _, .regRead _ _ rest, eb, h, σ, ρ => by

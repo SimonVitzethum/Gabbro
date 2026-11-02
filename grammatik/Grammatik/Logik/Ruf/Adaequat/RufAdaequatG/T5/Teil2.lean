@@ -148,6 +148,7 @@ theorem stmtRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .retry .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .forever .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .axiomCall .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .axiomCallElse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .ret e hperm, _ => by
       intro σ σ' ρ v hex M _ rest k hZ hΛ _
       have hW := hZ.welt
@@ -196,6 +197,8 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, .regRead r hk rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.regLies_inv

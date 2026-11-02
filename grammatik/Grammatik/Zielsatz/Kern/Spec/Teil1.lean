@@ -51,6 +51,9 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Kern.Syntax.Satz.Pruefung
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
+public import Grammatik.Logik.Ruf.FremdRuf.T4
+public import Grammatik.Zielsatz.Kern.Schnittstellen
+
 @[expose] public section
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
@@ -98,6 +101,10 @@ structure Einheit (D : Deklaration) where
       elaborated by the exporter (`UCheck.probe` names the generated producer).
       Default `[]`: a unit without a check is the unit of before. -/
   pruefungen : List (CheckDecl D) := []
+  /-- The source-declared initial grant inventory (C08): the external world's live
+      grants at the start, proved by `GrantsStart`, not assumed empty. Default `[]`:
+      a unit with no provider is the unit of before. -/
+  grants0 : List (BoundaryRecord D) := []
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
     demands it pool-safe (the model side of `N462`/`N457`), `Getrennt` pairs it with itself and
@@ -188,6 +195,9 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
   -- the handler discipline `H102` (Opus agent H, 2026-09-26, OFFEN O19)
   masken : MaskenDisziplin P fs
+  -- the interface resolution (C08): every referenced foreign item agrees with its
+  -- canonical signature (decided by `schnittstellenB`, exactly by `schnittstellenB_iff`)
+  schnittstellen : SchnittstellenOk P fs
   -- checked static-array reset admission (C18): every declared static array admits zero
   reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
   -- the C02 library binding (generated programs are ordinary; the content is source-level)

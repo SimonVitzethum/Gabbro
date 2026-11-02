@@ -47,6 +47,7 @@ def logikR : Logik D → Logik D.mitRuhe
   | .vorzustand => .vorzustand
   | .bereich => .bereich
   | .kapazitaet => .kapazitaet
+  | .fremdAntwort a => .fremdAntwort a
 
 /-- A hardware outcome, translated. -/
 def hwR : Hardware D → Hardware D.mitRuhe

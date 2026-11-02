@@ -104,6 +104,16 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         refine ⟨?_, hinv⟩
         exact axiom_rahmen hO hok (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha])
       · trivial
+  | .axiomCallElse _ a args _ hp hd hgd _ err, hok, σ, ρ, hlen, hinv => by
+      simp only [execStmt]
+      split
+      · rename_i σ1 v ha
+        refine ⟨?_, hinv⟩
+        exact axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha])
+      · rename_i σ1 r ha
+        exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
+          (end_obj err hok.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf.zuAusgang
+      · trivial
   | .regWrite r _ e, _, σ, ρ, _, hinv => by
       simp only [execStmt]
       exact ⟨slotRahmen_gleich rfl, hinv⟩
@@ -192,6 +202,38 @@ theorem block_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
         exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
             (by rw [← axiomAntwortSonst_fst, ha]))
           (block_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · rename_i σ1 r ha
+        exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+            (by rw [← axiomAntwortSonst_fst, ha]))
+          (end_obj err hok.2.1 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf.zuAusgang
+      · trivial
+  | .bindAxiomOpt e a args he hp hd hgd rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execBlock]
+      split
+      · rename_i σ1 v ha
+        cases e with
+        | none =>
+            simp only [Ausgang.weiterOpt] at *
+            exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
+              (block_obj rest hok.2 σ1 _ hlen hinv)
+        | some τ =>
+            simp only [Ausgang.weiterOpt] at *
+            exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
+              (block_obj rest hok.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execBlock]
+      split
+      · rename_i σ1 v ha
+        cases e with
+        | none =>
+            simp only [Ausgang.weiterOpt] at *
+            exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
+              (block_obj rest hok.2.2 σ1 _ hlen hinv)
+        | some τ =>
+            simp only [Ausgang.weiterOpt] at *
+            exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
+              (block_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · rename_i σ1 r ha
         exact ObjA.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
             (by rw [← axiomAntwortSonst_fst, ha]))
@@ -333,6 +375,38 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
             (by rw [← axiomAntwortSonst_fst, ha]))
           (end_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · rename_i σ1 r ha
+        exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+            (by rw [← axiomAntwortSonst_fst, ha]))
+          (end_obj err hok.2.1 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .bindAxiomOpt e a args he hp hd hgd rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · rename_i σ1 v ha
+        cases e with
+        | none =>
+            simp only [EndAusgang.weiterOpt] at *
+            exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
+              (end_obj rest hok.2 σ1 _ hlen hinv)
+        | some τ =>
+            simp only [EndAusgang.weiterOpt] at *
+            exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [ha]))
+              (end_obj rest hok.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
+      · trivial
+  | .bindAxiomOptElse e a args he hp hd hgd hr err rest, hok, σ, ρ, hlen, hinv => by
+      simp only [execEnd]
+      split
+      · rename_i σ1 v ha
+        cases e with
+        | none =>
+            simp only [EndAusgang.weiterOpt] at *
+            exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
+              (end_obj rest hok.2.2 σ1 _ hlen hinv)
+        | some τ =>
+            simp only [EndAusgang.weiterOpt] at *
+            exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) (by rw [← axiomAntwortSonst_fst, ha]))
+              (end_obj rest hok.2.2 σ1 _ (hlen.cons _) (hinv.cons hlen _)).schrumpf
       · rename_i σ1 r ha
         exact ObjE.vor (axiom_rahmen hO hok.1 (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
             (by rw [← axiomAntwortSonst_fst, ha]))

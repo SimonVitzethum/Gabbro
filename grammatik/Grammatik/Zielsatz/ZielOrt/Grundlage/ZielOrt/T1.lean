@@ -162,6 +162,7 @@ def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .retry _ bis body ueber => bis.orte ++ blockOrteP P body ++ blockOrteP P ueber
   | .forever _ inv body => inv.orte ++ blockOrteP P body
   | .axiomCall _ args _ _ _ _ _ => args.orte
+  | .axiomCallElse _ args _ _ _ _ _ _ err => args.orte ++ endblockOrteP P err
   | .regWrite _ _ e => e.orte
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ e _ _ _ _ => e.orte
@@ -189,6 +190,9 @@ def blockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
         blockOrteP P rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrteP P rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      args.orte ++ endblockOrteP P err ++ blockOrteP P rest
+  | .bindAxiomOpt _ args _ _ _ _ _ rest => args.orte ++ blockOrteP P rest
+  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
       args.orte ++ endblockOrteP P err ++ blockOrteP P rest
   | .regRead _ _ rest => blockOrteP P rest
   | .regReadElse _ _ zusage sonst rest =>
@@ -223,6 +227,9 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
         endblockOrteP P rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrteP P rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      args.orte ++ endblockOrteP P err ++ endblockOrteP P rest
+  | .bindAxiomOpt _ args _ _ _ _ _ rest => args.orte ++ endblockOrteP P rest
+  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
       args.orte ++ endblockOrteP P err ++ endblockOrteP P rest
   | .regRead _ _ rest => endblockOrteP P rest
   | .regReadElse _ _ zusage sonst rest =>
@@ -271,6 +278,10 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallElse _ args _ _ _ err rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bindAxiomOpt _ args _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bindAxiomOptElse _ args _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .regRead r hk rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]

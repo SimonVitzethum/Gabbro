@@ -52,6 +52,7 @@ theorem spiegel_stmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {�
   | .retry .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .forever .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .axiomCall .., h => by simp only [spiegelS, Bool.false_eq_true] at h
+  | .axiomCallElse .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .transition .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .advances .., h => by simp only [spiegelS, Bool.false_eq_true] at h
   | .retires .., h => by simp only [spiegelS, Bool.false_eq_true] at h
@@ -95,6 +96,8 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       simp only [kostenBlock, kostenKB, zusatzB]; omega
   | .bindAxiom .., h => by simp only [spiegelB, Bool.false_eq_true] at h
   | .bindAxiomElse .., h => by simp only [spiegelB, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h => by simp only [spiegelB, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h => by simp only [spiegelB, Bool.false_eq_true] at h
   | .regRead _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
@@ -185,6 +188,8 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .bindAxiom .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .bindAxiomElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .regRead _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
@@ -230,6 +235,8 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bindAxiom .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .bindAxiomElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h => by simp only [spiegelE, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h => by simp only [spiegelE, Bool.false_eq_true] at h
   | .regRead _ _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega

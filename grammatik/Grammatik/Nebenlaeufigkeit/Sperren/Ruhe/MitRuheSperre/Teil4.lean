@@ -194,5 +194,99 @@ theorem execEndH_ru_bindCall {V : Vertrag D}
   · erw [h1, h2]
     exact Or.inr ⟨e', e, rfl, rfl, ht⟩
 
+set_option linter.unusedSectionVars false in
+theorem execEndH_ru_bindAxiomOpt {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hp)
+    (hd)
+    (hgd)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.bindAxiomOpt (e := zi_e) a args he hp hd hgd rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruEnd, execEndH]
+      erw [execEndH_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ruG hO]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => exact Or.inl rfl
+          | some v =>
+              simp only [EndAusgang.weiterOpt, ergEnv]
+              exact ih_execEndH_ru_rest σ' _
+  | some τ =>
+      simp only [ruEnd, execEndH]
+      erw [execEndH_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ruG hO]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => exact Or.inl rfl
+          | some v =>
+              simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+              rw [ergWert_ru he]
+              exact EndRel.schrumpf (ih_execEndH_ru_rest σ' (Env.cons _ ρ))
+
+set_option linter.unusedSectionVars false in
+theorem execEndH_ru_bindAxiomOptElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_e}
+    (a)
+    (args)
+    (he)
+    (hr)
+    (hp)
+    (hd)
+    (hgd)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd rest) (worldR σ) (envR ρ)) (execEndH S O U passes R rest σ ρ))
+    (ih_execEndH_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndH S O U passes R err σ ρ))
+    : EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ)) (execEndH S O U passes R (.bindAxiomOptElse (e := zi_e) a args he hp hd hgd hr err rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  cases zi_e with
+  | none =>
+      simp only [ruEnd, execEndH]
+      erw [execEndH_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · exact Or.inl rfl
+          · simp only [EndAusgang.weiterOpt, ergEnv]
+            exact ih_execEndH_ru_rest σ' _
+          · simp only [EndAusgang.weiterOpt, ergEnv]
+            erw [execEndH_umΛ]
+            exact EndRel.schrumpf (ih_execEndH_ru_err σ' _)
+  | some τ =>
+      simp only [ruEnd, execEndH]
+      erw [execEndH_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · exact Or.inl rfl
+          · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+            rw [ergWert_ru he]
+            exact EndRel.schrumpf (ih_execEndH_ru_rest σ' (Env.cons _ ρ))
+          · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+            erw [execEndH_umΛ]
+            exact EndRel.schrumpf (ih_execEndH_ru_err σ' _)
+
+
 end Haupt
 end Gabbro.Grammatik

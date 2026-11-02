@@ -56,6 +56,10 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
       ⟨rest.alsBlock.1, .bindAxiom a args he hw hg hd hgd rest.alsBlock.2⟩
   | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest =>
       ⟨rest.alsBlock.1, .bindAxiomElse a args he hr hw hg hd hgd err rest.alsBlock.2⟩
+  | _, _, .bindAxiomOpt e a args he hp hd hgd rest =>
+      ⟨rest.alsBlock.1, .bindAxiomOpt e a args he hp hd hgd rest.alsBlock.2⟩
+  | _, _, .bindAxiomOptElse e a args he hp hd hgd hr err rest =>
+      ⟨rest.alsBlock.1, .bindAxiomOptElse e a args he hp hd hgd hr err rest.alsBlock.2⟩
   | _, _, .regRead r hk rest => ⟨rest.alsBlock.1, .regRead r hk rest.alsBlock.2⟩
   | _, _, .regReadElse r hk z sonst rest => ⟨rest.alsBlock.1, .regReadElse r hk z sonst rest.alsBlock.2⟩
   | _, _, .awaits g pl hp hL hat rest => ⟨rest.alsBlock.1, .awaits g pl hp hL hat rest.alsBlock.2⟩
@@ -128,6 +132,13 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       it at the head and the block in front never falls off, so it is never reached and carries
       no obligation (Track P, 2026-10-18). -/
   | leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ
+
+/-- **The continuation behind a generalized foreign binder** («C08»): void keeps the
+    residue, a value pushes a shrink -- the residue half of `Ausgang.weiterOpt`. -/
+def GRest.weiterOpt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    (e : Option Ty) → GRest D V l Γ Λ' → GRest D V l (ErgCtx Γ e) Λ'
+  | none, k => k
+  | some _, k => .schrumpf k
   /-- C11 pending return: unwind `scopes` innermost first before the outer
       contract/return epilogue. Inert placeholder: no step rule consumes it
       yet; the saved result span, per-scope invariant checks and the
@@ -182,6 +193,17 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       split
       · rw [Endblock.execBlock_alsBlock O passes R rest]
         cases execEnd O passes R rest _ _ <;> rfl
+      · cases execEnd O passes R err _ _ <;> rfl
+      · rfl
+  | _, _, .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest, weiterOpt_zuAusgang]
+      · rfl
+  | _, _, .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest, weiterOpt_zuAusgang]
       · cases execEnd O passes R err _ _ <;> rfl
       · rfl
   | _, _, .regRead r hk rest, σ, ρ => by

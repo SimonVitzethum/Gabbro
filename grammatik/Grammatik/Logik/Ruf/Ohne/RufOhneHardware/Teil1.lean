@@ -49,6 +49,7 @@ def Stmt.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ _ body ueber => body.hardwareFrei && ueber.hardwareFrei
   | .forever .. => false
   | .axiomCall .. => false
+  | .axiomCallElse .. => false
   | _ => true
 
 /-- The block carries no source of a `hardware` outcome: no axiom bind, no
@@ -63,6 +64,8 @@ def Block.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.hardwareFrei && rest.hardwareFrei
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead .. => false
   | .regReadElse .. => false
   | .awaits .. => false
@@ -89,6 +92,8 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => err.hardwareFrei && rest.hardwareFrei
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead .. => false
   | .regReadElse .. => false
   | .awaits .. => false

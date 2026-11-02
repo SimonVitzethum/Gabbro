@@ -139,6 +139,7 @@ theorem stmtSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .retry .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .forever .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .axiomCall .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCallElse .., hs, _ => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, Λ₀, _, .ret e hperm, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
@@ -181,6 +182,8 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallElse .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindAxiomOpt .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindAxiomOptElse .., hb, _ => by cases hb
   | _, _, _, _, _, .regRead .., _, ho => by simp only [Block.ohneOrakel, Bool.false_eq_true] at ho
   | _, _, _, _, _, .regReadElse .., _, ho => by simp only [Block.ohneOrakel, Bool.false_eq_true] at ho
   | _, _, _, _, _, .awaits .., _, ho => by simp only [Block.ohneOrakel, Bool.false_eq_true] at ho

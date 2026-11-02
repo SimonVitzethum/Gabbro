@@ -64,6 +64,9 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignVar .., _ => rfl
   | .shift .., _ => rfl
   | .axiomCall .., _ => rfl
+  | .axiomCallElse _ _ _ _ _ _ _ _ err, h => by
+      simp only [mS]
+      exact mE_boden err fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
   | .regWrite .., _ => rfl
   | .transition .., _ => rfl
   | .publish .., _ => rfl
@@ -100,6 +103,13 @@ theorem mB_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [mB]
       exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [mB, Bool.and_eq_true]
+      exact ⟨mE_boden err fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
+        mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest, h => by
+      simp only [mB]
+      exact mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨mE_boden err fun c hc => by have := h c hc; simp_all [Block.ueberBoden],
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
@@ -184,6 +194,13 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [mE]
       exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨mE_boden err fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
+        mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest, h => by
       simp only [mE, Bool.and_eq_true]
       exact ⟨mE_boden err fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
         mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩

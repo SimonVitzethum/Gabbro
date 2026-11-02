@@ -84,6 +84,15 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
   | .assignVar .., _, _ => Or.inl rfl
   | .shift .., _, _ => Or.inl rfl
   | .axiomCall .., _, _ => Or.inl rfl
+  | .axiomCallElse _ a args _ _ _ _ _ err, σ, ρ => by
+      simp only [execStmt]
+      cases hx : axiomAntwortSonst O a (σ.lese Λ args.orte)
+          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ2 ov =>
+        rcases ov with _ | v | r
+        · exact Or.inl rfl
+        · exact Or.inl rfl
+        · exact ((Endblock.kongruent hR err _ _).schrumpf).zuAusgang
   | .regWrite .., _, _ => Or.inl rfl
   | .transition .., _, _ => Or.inl rfl
   | .publish .., _, _ => Or.inl rfl
@@ -181,6 +190,44 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
         · exact Or.inl rfl
         · exact (Block.kongruent hR rest _ _).schrumpf
         · exact ((Endblock.kongruent hR err _ _).schrumpf).zuAusgang
+  | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ => by
+      cases e with
+      | none =>
+          simp only [execBlock, Ausgang.weiterOpt]
+          cases hx : axiomAntwort O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            cases ov with
+            | none => exact Or.inl rfl
+            | some v => exact Block.kongruent hR rest _ _
+      | some τ =>
+          simp only [execBlock, Ausgang.weiterOpt]
+          cases hx : axiomAntwort O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            cases ov with
+            | none => exact Or.inl rfl
+            | some v => exact (Block.kongruent hR rest _ _).schrumpf
+  | .bindAxiomOptElse e a args he hr' hp hd hgd err rest, σ, ρ => by
+      cases e with
+      | none =>
+          simp only [execBlock, Ausgang.weiterOpt]
+          cases hx : axiomAntwortSonst O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            rcases ov with _ | v | r
+            · exact Or.inl rfl
+            · exact Block.kongruent hR rest _ _
+            · exact ((Endblock.kongruent hR err _ _).schrumpf).zuAusgang
+      | some τ =>
+          simp only [execBlock, Ausgang.weiterOpt]
+          cases hx : axiomAntwortSonst O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            rcases ov with _ | v | r
+            · exact Or.inl rfl
+            · exact (Block.kongruent hR rest _ _).schrumpf
+            · exact ((Endblock.kongruent hR err _ _).schrumpf).zuAusgang
   | .regRead r hr rest, σ, ρ => by
       simp only [execBlock]
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
@@ -313,6 +360,44 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
         · exact Or.inl rfl
         · exact (Endblock.kongruent hR rest _ _).schrumpf
         · exact (Endblock.kongruent hR err _ _).schrumpf
+  | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ => by
+      cases e with
+      | none =>
+          simp only [execEnd, EndAusgang.weiterOpt]
+          cases hx : axiomAntwort O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            cases ov with
+            | none => exact Or.inl rfl
+            | some v => exact Endblock.kongruent hR rest _ _
+      | some τ =>
+          simp only [execEnd, EndAusgang.weiterOpt]
+          cases hx : axiomAntwort O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            cases ov with
+            | none => exact Or.inl rfl
+            | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .bindAxiomOptElse e a args he hr' hp hd hgd err rest, σ, ρ => by
+      cases e with
+      | none =>
+          simp only [execEnd, EndAusgang.weiterOpt]
+          cases hx : axiomAntwortSonst O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            rcases ov with _ | v | r
+            · exact Or.inl rfl
+            · exact Endblock.kongruent hR rest _ _
+            · exact (Endblock.kongruent hR err _ _).schrumpf
+      | some τ =>
+          simp only [execEnd, EndAusgang.weiterOpt]
+          cases hx : axiomAntwortSonst O a (σ.lese Λ args.orte)
+              (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+          | mk σ2 ov =>
+            rcases ov with _ | v | r
+            · exact Or.inl rfl
+            · exact (Endblock.kongruent hR rest _ _).schrumpf
+            · exact (Endblock.kongruent hR err _ _).schrumpf
   | .regRead r hr rest, σ, ρ => by
       simp only [execEnd]
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with

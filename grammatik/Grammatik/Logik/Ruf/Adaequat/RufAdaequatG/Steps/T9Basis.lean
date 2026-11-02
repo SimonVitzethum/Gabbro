@@ -174,6 +174,8 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
         Endblock.ohneOrakel_alsBlock rest]
   | _, _, .bindAxiom .. => rfl
   | _, _, .bindAxiomElse .. => rfl
+  | _, _, .bindAxiomOpt .. => rfl
+  | _, _, .bindAxiomOptElse .. => rfl
   | _, _, .regRead .. => rfl
   | _, _, .regReadElse .. => rfl
   | _, _, .awaits .. => rfl

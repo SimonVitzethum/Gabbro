@@ -323,7 +323,7 @@ theorem keinRuf_gut : GutR (D := D) keinRuf := by
     (`ite`, calls, `locks`, loops, ...) open into further steps instead. -/
 def Stmt.istBlatt : Stmt D V l Γ Λ Λ' → Bool
   | .ite .. | .onOption .. | .onTag .. | .onWhy .. | .call .. | .callInd ..
-  | .locks .. | .breaking .. | .traverse .. | .consumeTraverse .. | .retry .. | .forever .. => false
+  | .locks .. | .breaking .. | .traverse .. | .consumeTraverse .. | .retry .. | .forever .. | .axiomCallElse .. => false
   | _ => true
 
 /-- **Frame and trace of a LEAF, under held static holdings only.** A leaf
@@ -408,6 +408,7 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
   | .onWhy .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .call .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .callInd .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .axiomCallElse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .locks .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .breaking .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
   | .traverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf

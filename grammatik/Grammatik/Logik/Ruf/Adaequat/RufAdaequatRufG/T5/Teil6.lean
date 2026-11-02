@@ -68,6 +68,7 @@ theorem stmtOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .forever a inv body, hs =>
       stmtOkR_forever (a := a) (inv := inv) (body := body) (hs := hs) (ih_blockOkR_body := blockOkR body) (ih_blockAbbR_body := blockAbbR body) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCallElse .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret .., _ => by
       intro log σ σ' ρ ρ' hex
       simp only [execStmt, reduceCtorEq] at hex
@@ -99,6 +100,8 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       blockOkR_bindCallElse (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, _, .regRead r hk rest, hb =>
       blockOkR_regRead (r := r) (hk := hk) (rest := rest) (hb := hb) (ih_blockOkR_rest := blockOkR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .regReadElse r hk zusage sonst rest, hb =>
@@ -190,6 +193,7 @@ theorem stmtAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, l0, _, _, _, .forever a inv body, zzh1 =>
       stmtAbbR_forever (a := a) (inv := inv) (body := body) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCallElse .., hs => by exact absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret .., _ => by
       intro hl log σ σ' ρ ρ' w hex
       simp only [Ausgang.abb?, execStmt, reduceCtorEq] at hex
@@ -222,6 +226,8 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       cases hl
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, _, .regRead r hk rest, hb =>
       blockAbbR_regRead (r := r) (hk := hk) (rest := rest) (hb := hb) (ih_blockAbbR_rest := blockAbbR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (stapel := stapel) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (hRuf := hRuf)
   | _, _, _, _, _, .regReadElse .., hb => by

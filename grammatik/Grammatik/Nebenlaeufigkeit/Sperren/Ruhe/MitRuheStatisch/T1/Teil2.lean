@@ -33,6 +33,16 @@ theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
       kongr₂ (· && ·) (ruB_gOk K Rg body) (ruB_gOk K Rg ueber)
   | _, _, _, _, .forever _ _ body => ruB_gOk K Rg body
   | _, _, _, _, .axiomCall .. => rfl
+  | _, _, _, _, .axiomCallElse e _ _ _ _ _ _ _ err => by
+      cases e with
+      | none =>
+          simp only [ruS, Stmt.gOk]
+          exact (gOk_nachΛ _ _ _ _).trans
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+      | some _ =>
+          simp only [ruS, Stmt.gOk]
+          exact (gOk_nachΛ _ _ _ _).trans
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
   | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
@@ -59,6 +69,26 @@ theorem ruB_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_gOk K Rg rest
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruB_gOk K Rg rest)
+  | _, _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      cases e with
+      | none =>
+          simp only [ruB, Block.gOk]
+          exact (gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest)
+      | some _ =>
+          simp only [ruB, Block.gOk]
+          exact (gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest)
+  | _, _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      cases e with
+      | none =>
+          simp only [ruB, Block.gOk]
+          exact kongr₂ (· && ·)
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+            ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
+      | some _ =>
+          simp only [ruB, Block.gOk]
+          exact kongr₂ (· && ·)
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+            ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
   | _, _, _, _, .regRead r _ rest => congrArg (Rg r && ·) (ruB_gOk K Rg rest)
   | _, _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Rg r && ·) (kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest))
@@ -92,6 +122,26 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruEnd_gOk K Rg rest)
+  | _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      cases e with
+      | none =>
+          simp only [ruEnd, Endblock.gOk]
+          exact (gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest)
+      | some _ =>
+          simp only [ruEnd, Endblock.gOk]
+          exact (gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest)
+  | _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      cases e with
+      | none =>
+          simp only [ruEnd, Endblock.gOk]
+          exact kongr₂ (· && ·)
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
+      | some _ =>
+          simp only [ruEnd, Endblock.gOk]
+          exact kongr₂ (· && ·)
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+            ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
   | _, _, _, .regRead r _ rest => congrArg (Rg r && ·) (ruEnd_gOk K Rg rest)
   | _, _, _, .regReadElse r _ _ sonst rest =>
       congrArg (Rg r && ·) (kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruEnd_gOk K Rg rest))

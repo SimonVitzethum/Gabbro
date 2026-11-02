@@ -173,6 +173,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .retry .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .forever .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .axiomCall .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .axiomCallElse .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, Λ₀, _, .ret e hperm, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
@@ -246,6 +247,8 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .bindAxiom .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .bindAxiomElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .bindAxiomOpt .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .bindAxiomOptElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .regRead .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .regReadElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .awaits .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho

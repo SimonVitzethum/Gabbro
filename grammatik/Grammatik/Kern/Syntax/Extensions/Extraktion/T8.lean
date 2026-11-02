@@ -249,6 +249,7 @@ theorem hwit_aus_feuerung_ohne_axiomCall
   | retry n bis body ueberlauf => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd => exact False.elim hax
+  | axiomCallElse .. => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | regWrite r hk e =>
       simp only [stmtTraeger, List.not_mem_nil] at hmem
   | transition r hk m hm hl maske bits =>

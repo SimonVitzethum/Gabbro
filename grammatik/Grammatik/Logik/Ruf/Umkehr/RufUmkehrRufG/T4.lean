@@ -198,6 +198,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_narrowOk O passes R e lo' hi' sonst rest k _ _ h)
     | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | endeBindAxiomOpt _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | g2 hs =>
     cases hs with
     | dannNarrowElse l2 Γ2 Λ2 Λ2' Λ2'' lo hi lo' hi' e sonst rest k ρ2 hhead σ₁ hs₁ h neu hneu =>
@@ -308,6 +309,8 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       intro σ1 v1 hR1
       exact semK_bindCall O passes R g args he hp hr rest k _ _ σ1 v1 hR1
     | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannAxiomCallElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannAxiomCallElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | rueckBind caller rst hpop l2 Γ2 Λ2 Λ2' τ restb k ρc hcaller Γc Λc e hperm ρ2 hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
       rw [hR] at hhead
@@ -450,14 +453,19 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleitNarrowElse O passes R e lo hi sonst rest k _ _ hn)
     | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomOpt _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomOptElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | dannBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | rueckConsGrund _ _ _ _ hhead => widerlegeK hhead
     | dannRetGrund _ _ _ _ _ hhead => widerlegeK hhead
   | g6 hs =>
     cases hs with
     | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | endeBindAxiomOptElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+    | endeBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
 
 
 /-! ## 5. The pending call chain

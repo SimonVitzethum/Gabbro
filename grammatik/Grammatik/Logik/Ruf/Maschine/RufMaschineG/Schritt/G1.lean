@@ -398,5 +398,31 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
               .dann rest (.schrumpf k)⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- A generalized nonfallible foreign call at the top level of a body («C08»):
+      the optional result continues over `ErgCtx`. -/
+  | endeBindAxiomOpt (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (e : Option Ty)
+      (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = e)
+      (hp : RufPasst D (vertragVon D (M.faeden f).kopf.f) (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (rest : Endblock D (vertragVon D (M.faeden f).kopf.f) l (ErgCtx Γ e)
+        (nachSig D (D.asignatur a) Λ))
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .ende (.bindAxiomOpt e a args he hp hd hgd rest)⟩)
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ args.orte)
+      (σ₂ : World D) (v : ErgVal D (D.aerg a))
+      (hax : axiomAntwort O a σ₁ (evalArgs σ₁ args σ₁ ρ) = (σ₂, some v))
+      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      RufSchrittG1 P O passes M f
+        ⟨σ₂.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ, .ende rest⟩⟩,
+            σ₂.spur, (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu, M.start⟩
 
 end Gabbro.Grammatik

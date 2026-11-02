@@ -446,6 +446,9 @@ def stmtTraeger (tabs : List D.Tab) (globs : List D.Glob)
   | .axiomCall a _ _ _ _ _ _ =>
       (tabs.filter (D.aschreibt a)).map .inl ++
         (globs.filter (D.agschreibt a)).map .inr
+  | .axiomCallElse _ a _ _ _ _ _ _ _ =>
+      (tabs.filter (D.aschreibt a)).map .inl ++
+        (globs.filter (D.agschreibt a)).map .inr
   | .regWrite _ _ _ => []
   | .transition _ _ _ _ _ _ _ => []
   | .publish g _ _ _ _ _ => [.inr g]

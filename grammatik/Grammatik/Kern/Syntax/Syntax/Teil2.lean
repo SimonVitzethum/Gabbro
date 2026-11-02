@@ -268,6 +268,19 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (`GRest.rueckBereit`) is OPEN. -/
   | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
   | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
+  /-- `g(…) else (e) { … };` -- a fallible foreign call as a statement («C08»): the
+      normal answer is discarded and the statement continues in `Γ`, a reason runs
+      `err` with the reason bound. Checked sugar over `Block.bindAxiomOptElse`
+      with an empty success tail and the generalized binder; the option index `e`
+      with `he` lets the machine discard either a void or a value answer. The
+      exit holdings are the canonical signature's (`nachSig`), with the caller's
+      duty as `RufPasst` over `D.asignatur a` and the held guards beside it. -/
+  | axiomCallElse (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+      (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) (hr : 0 < D.agruende a)
+      (err : Endblock l (reasonTy (D.agruende a) :: Γ) (nachSig D (D.asignatur a) Λ)) :
+      Stmt l Γ Λ (nachSig D (D.asignatur a) Λ)
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ
@@ -344,6 +357,28 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       the supplied `else` semantics of `narrow` is unchanged. -/
   | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
       (rest : Block l (.int lo' hi' :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  /-- `let x? = g(…);` over an OPTIONAL foreign result («C08»): the generalized
+      nonfallible binder -- `Block.bindAxiom` with the result option `e` made
+      explicit (`he`), so void (`none`) adds no local and a value binds. The
+      exit holdings are the canonical signature's (`nachSig`), with the caller's
+      duty as `RufPasst` over `D.asignatur a` and the held guards beside it. -/
+  | bindAxiomOpt (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+      (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (rest : Block l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ) Λ') : Block l Γ Λ Λ'
+  /-- `let x? = g(…) else (e) { … };` over an OPTIONAL foreign result («C08»): the
+      generalized fallible binder -- `Block.bindAxiomElse` with the result option
+      `e` made explicit (`he`) and the reason channel as `reasonTy`. Success
+      continues over `ErgCtx`, the reason over the channel, both under the same
+      `nachSig`; the caller's duty is `RufPasst` over `D.asignatur a` with the
+      held guards beside it. -/
+  | bindAxiomOptElse (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+      (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) (hr : 0 < D.agruende a)
+      (err : Endblock l (reasonTy (D.agruende a) :: Γ) (nachSig D (D.asignatur a) Λ))
+      (rest : Block l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ) Λ') : Block l Γ Λ Λ'
 
 inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | ret (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende) : Endblock l Γ Λ
@@ -420,6 +455,24 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       `Stmt.retScoped` in end-block position; same placeholder status. -/
   | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
   | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
+  /-- `let x? = g(…);` at the top level of a body («C08»): `Block.bindAxiomOpt`
+      with an end-block rest. The optional result binds over `ErgCtx`, the exit
+      holdings are the canonical signature's (`nachSig`). -/
+  | bindAxiomOpt (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+      (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (rest : Endblock l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ)) : Endblock l Γ Λ
+  /-- `let x? = g(…) else (e) { … };` at the top level of a body («C08»):
+      `Block.bindAxiomOptElse` with an end-block rest. Success continues over
+      `ErgCtx`, the reason over the `reasonTy` channel, both under the same
+      `nachSig`. -/
+  | bindAxiomOptElse (e : Option Ty) (a : D.Ax) (args : Args D Γ Λ (D.aparams a))
+      (he : D.aerg a = e) (hp : RufPasst D V (D.asignatur a) Λ)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ) (hr : 0 < D.agruende a)
+      (err : Endblock l (reasonTy (D.agruende a) :: Γ) (nachSig D (D.asignatur a) Λ))
+      (rest : Endblock l (ErgCtx Γ e) (nachSig D (D.asignatur a) Λ)) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option Ty) → Type where
   | nil : Arms l Γ Λ Λ []
@@ -439,6 +492,25 @@ def ErgCtx (Γ : Ctx) : Option Ty → Ctx
   | none => Γ
   | some τ => τ :: Γ
 
+/-- **The reason channel as a type** (C08): the error of `n` reasons, as `Block`
+    and `Endblock` bind it behind `else`. -/
+def reasonTy (n : Nat) : Ty := .why n
+
+/-- **A typed boundary clause (C08).** A closed capability annotation attached to a call
+    contract alongside Boolean pre/post: input extents, output extents, fresh output
+    grants and explicit releases. Bounds are nonnegative integer expressions over the
+    original parameter context. Only `.ref` capabilities are representable before C12;
+    any other shape stays refused, never asserted of a unit value. -/
+inductive BoundaryClause (D : Deklaration) (S : Signatur D.Tab D.Glob D.Lock D.Marke) where
+  | eingabe (idx : Fin S.params.length) (n : Nat) (t : D.Tab)
+      (hcap : S.params.get idx = .ref n) (ht : D.tabNr n = some t)
+      (m : Int) (len : Expr D S.params [] (.int 0 m))
+  | ausgabe (n : Nat) (t : D.Tab) (herg : S.erg = some (.ref n)) (ht : D.tabNr n = some t)
+      (m : Int) (len : Expr D S.params [] (.int 0 m))
+  | frisch (n : Nat) (t : D.Tab) (herg : S.erg = some (.ref n)) (ht : D.tabNr n = some t)
+  | freigabe (idx : Fin S.params.length) (n : Nat) (t : D.Tab)
+      (hcap : S.params.get idx = .ref n) (ht : D.tabNr n = some t)
+
 /-- A typed interface contract. Expressions live beside `Programm`, after
     `Expr` exists, so structural signatures remain independent of expressions.
     The postcondition covers normal returns and sees the original arguments
@@ -446,11 +518,18 @@ def ErgCtx (Γ : Ctx) : Option Ty → Ctx
 structure CallContract (S : Signatur D.Tab D.Glob D.Lock D.Marke) where
   pre : Expr D S.params (Signatur.anfang D S) .bool
   post : Expr D (ErgCtx S.params S.erg) (Vertrag.vonSig D S).ende .bool
+  /-- Typed boundary clauses (C08): input/output extents, fresh grants, releases. -/
+  grenzen : List (BoundaryClause D S) := []
 
 /-- Absence of predicate clauses means two true predicates. Target admission
     still owes refinement: this default never discharges a target's requires. -/
 def CallContract.trivial (S : Signatur D.Tab D.Glob D.Lock D.Marke) : CallContract D S :=
   ⟨.tru, .tru⟩
+
+/-- The trivial contract: pre/post `true`, no boundary clauses. -/
+def callVertragWahr (D : Deklaration) (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
+    CallContract D S :=
+  ⟨.tru, .tru, []⟩
 
 def invSicht (i : D.Inv) : List (Res D) :=
   (D.traeger i).foldr (fun c acc => (Sum.elim D.braucht D.gbraucht c).map (Res.von D) ++ acc) []
@@ -473,5 +552,10 @@ structure Programm where
       `PtrVerfeinert`; structural `Deklaration.passt_ok` alone proves no
       implication between these predicates and concrete function contracts. -/
   ptrVertrag : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)
+  /-- The proved contract of every foreign item (C08): pre/post over the canonical
+      signature with original arguments and entry-world `old`, plus typed boundary
+      clauses. Default: the trivial contract, so every program written before this
+      field is the program of before. -/
+  axVertrag : ∀ a : D.Ax, CallContract D (D.asignatur a) := fun _ => callVertragWahr D _
 
 end Gabbro.Grammatik

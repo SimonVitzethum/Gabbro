@@ -212,6 +212,7 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
   | traverse t inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | retry n bis body ueberlauf => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | axiomCallElse .. => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd => exact False.elim hax
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep

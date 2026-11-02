@@ -44,6 +44,7 @@ def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .assignVar .. => true
   | .shift .. => true
   | .axiomCall .. => true
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => rufeE Z ZS EW err
   | .regWrite .. => true
   | .transition .. => true
   | .publish .. => true
@@ -66,6 +67,8 @@ def rufeB (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z ZS EW err && rufeB Z ZS EW rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeB Z ZS EW rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeB Z ZS EW rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rufeB Z ZS EW rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeB Z ZS EW rest
   | .regRead _ _ rest => rufeB Z ZS EW rest
   | .regReadElse _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeB Z ZS EW rest
   | .awaits _ _ _ _ _ rest => rufeB Z ZS EW rest
@@ -102,6 +105,8 @@ def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z ZS EW err && rufeE Z ZS EW rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeE Z ZS EW rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeE Z ZS EW rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rufeE Z ZS EW rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeE Z ZS EW rest
   | .regRead _ _ rest => rufeE Z ZS EW rest
   | .regReadElse _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
   | .awaits _ _ _ _ _ rest => rufeE Z ZS EW rest

@@ -50,6 +50,7 @@ def Stmt.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry .. => false
   | .forever .. => false
   | .axiomCall .. => false
+  | .axiomCallElse .. => false
   | .retWhy .. => false
   | .retWhyScoped .. => false
   | .leave .. => false
@@ -67,6 +68,8 @@ def Block.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse .. => false
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead .. => false
   | .regReadElse .. => false
   | .awaits .. => false
@@ -93,6 +96,8 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse .. => false
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .narrow _ _ _ sonst rest => sonst.kOk && rest.kOk
   | .narrowRequired _ _ _ rest => rest.kOk
   | .exchange _ _ _ _ rest => rest.kOk

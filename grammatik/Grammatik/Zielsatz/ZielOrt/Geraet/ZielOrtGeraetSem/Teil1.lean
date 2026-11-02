@@ -104,6 +104,8 @@ def Block.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bindCallElse _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.gOk K Rg
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .regRead r _ rest => Rg r && rest.gOk K Rg
   | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
   | .awaits _ _ _ _ _ rest => rest.gOk K Rg
@@ -130,6 +132,8 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .bindCallElse _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.gOk K Rg
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .regRead r _ rest => Rg r && rest.gOk K Rg
   | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
   | .awaits _ _ _ _ _ rest => rest.gOk K Rg

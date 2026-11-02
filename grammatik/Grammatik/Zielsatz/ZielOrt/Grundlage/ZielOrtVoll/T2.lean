@@ -158,6 +158,7 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .forever .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .axiomCall .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .axiomCallElse .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .callInd .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .assignSlot .., _, _, _ => rfl
   | .assignThru .., _, _, _ | .assignSlotRef .., _, _, _ => rfl
@@ -194,7 +195,7 @@ theorem Block.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindCallElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindAxiom .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
-  | .bindAxiomElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindAxiomElse .., h, _, _ | .bindAxiomOpt .., h, _, _ | .bindAxiomOptElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .regRead .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .regReadElse .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .awaits .., h, _, _ => by simp only [Block.kOk, Bool.false_eq_true] at h
@@ -243,6 +244,8 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEnd, Endblock.orakel_kOk rest h]
   | .bindAxiom .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiomElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h, _, _ | .bindAxiomOptElse .., h, _, _ | .bindCallElse .., h, _, _ | .bindCallInd .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .regRead .., h, _, _ | .regReadElse .., h, _, _ | .awaits .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .narrow _ _ _ sonst rest, h, σ, ρ => by
       simp only [Endblock.kOk, Bool.and_eq_true] at h
       simp only [execEnd, Endblock.orakel_kOk sonst h.1, Endblock.orakel_kOk rest h.2]

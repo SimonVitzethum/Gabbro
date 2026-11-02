@@ -305,6 +305,11 @@ inductive Logik (D : Deklaration) where
       caller's capacity duty (`KoerperGutS/SA`); a full arena at a required
       allocation is never a hardware failure and never fabricates a value. -/
   | kapazitaet
+  /-- An unexpected answer of a software foreign item (C08): the raw word fits no
+      declared outcome. Excluded by `ForeignPflicht` (decoding) and in runs by the
+      existing no-logic-halt conclusion; only a named hardware-origin decoder
+      violation may retain `Hardware.annahme`. -/
+  | fremdAntwort (a : D.Ax)
 
 /-- Die Hardware: eine Annahme ueber die Maschine gilt nicht. -/
 inductive Hardware (D : Deklaration) where

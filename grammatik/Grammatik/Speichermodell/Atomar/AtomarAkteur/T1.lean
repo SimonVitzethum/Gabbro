@@ -13,6 +13,7 @@
 module
 public import Grammatik.Speichermodell.Atomar.AtomarReplay
 public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.B.Teil19
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.B.Teil19b
 @[expose] public section
 
 namespace Gabbro.Grammatik

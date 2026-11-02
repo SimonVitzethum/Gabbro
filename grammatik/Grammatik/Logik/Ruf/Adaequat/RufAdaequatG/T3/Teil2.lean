@@ -159,6 +159,7 @@ theorem stmtOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .retry .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .forever .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .axiomCall .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, _, .axiomCallElse .., hs => by exact absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, _, .ret .., _ => by
       intro σ σ' ρ ρ' hex
       simp only [execStmt, reduceCtorEq] at hex
@@ -207,6 +208,8 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOpt .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomOptElse .., hb => by cases hb
   | _, _, _, _, _, .regRead r hk rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.regLies_inv

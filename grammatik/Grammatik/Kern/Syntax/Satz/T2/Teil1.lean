@@ -229,6 +229,7 @@ theorem Stmt.held_mono : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ
   | .onWhy _ arms, L, h => arms.held_mono L h
   | .call f _ _ _, L, h => held_nachSig _ _ L h
   | .callInd (n := n) _ _ _ _, L, h => held_nachSig _ _ L h
+  | .axiomCallElse _ _ _ _ _ _ _ _ _, L, h => held_nachSig _ _ L h
   | .breaking _ body, L, h => body.held_mono L h
   | .advances m a _ _, L, h => by
       simp only [List.mem_append, List.mem_singleton] at h
@@ -249,6 +250,8 @@ theorem Block.held_mono : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ 
   | .bindCallInd _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
   | .bindCallElse f _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
   | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, L, h => rest.held_mono L h
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
 
 theorem Arms.held_mono : (a : Arms D V l Γ Λ Λ' cs) → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
   | .nil, L, h => h
@@ -272,6 +275,7 @@ theorem Stmt.held_iff : (s : Stmt D V l Γ Λ Λ') → ∀ L, Res.held L ∈ Λ'
   | .onWhy _ arms, L => arms.held_iff L
   | .call f _ _ _, L => held_nachSig_iff _ _ L
   | .callInd (n := n) _ _ _ _, L => held_nachSig_iff _ _ L
+  | .axiomCallElse _ _ _ _ _ _ _ _ _, L => held_nachSig_iff _ _ L
   | .breaking _ body, L => body.held_iff L
   | .advances m a _ _, L => by
       simp only [List.mem_append, List.mem_singleton]
@@ -297,6 +301,8 @@ theorem Block.held_iff : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ �
   | .bindCallInd _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
   | .bindCallElse f _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
   | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, L => rest.held_iff L
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
 
 theorem Arms.held_iff : (a : Arms D V l Γ Λ Λ' cs) → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
   | .nil, _ => Iff.rfl

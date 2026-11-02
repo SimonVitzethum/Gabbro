@@ -24,6 +24,7 @@ def Stmt.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .retry _ _ body u => body.ohneOrakel && u.ohneOrakel
   | .forever _ _ body => body.ohneOrakel
   | .axiomCall .. => false
+  | .axiomCallElse .. => false
   | _ => true
 
 def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -36,6 +37,8 @@ def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead .. => false
   | .regReadElse .. => false
   | .awaits .. => false
@@ -62,6 +65,8 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead .. => false
   | .regReadElse .. => false
   | .awaits .. => false

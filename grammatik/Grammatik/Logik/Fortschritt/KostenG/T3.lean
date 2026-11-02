@@ -40,6 +40,7 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall _ args _ _ _ _ _ => kostenArgs args
+  | .axiomCallElse _ args _ _ _ _ _ _ err => kostenArgs args + kostenKE c err
   | .regWrite _ _ e => 1 + kostenExpr e
   | .transition .. => 0
   | .publish _ e _ _ _ _ => 1 + kostenExpr e
@@ -66,6 +67,8 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       1 + kostenArgs args + c g + kostenKE c err + kostenKB c rest
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKB c rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => kostenKB c rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
   -- `Let x = R`: `1 +` one load
   | .regRead _ _ rest => 2 + kostenKB c rest
   -- `LetSonst` over a place: `1 + 1 + block(sonst)`; the predicate is not read (F4)
@@ -111,6 +114,8 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       1 + kostenArgs args + c g + kostenKE c err + kostenKE c rest
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKE c rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => kostenKE c rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
   | .regRead _ _ rest => 2 + kostenKE c rest
   | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKE c rest
   | .awaits _ _ _ _ _ rest => 1 + kostenKE c rest
@@ -150,6 +155,7 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall .. => 0
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => zusatzSonst err
   | .regWrite .. => 0
   | .transition .. => 0
   | .publish .. => 0
@@ -172,6 +178,8 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzB rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
+  | .bindAxiomOpt .. => 0
+  | .bindAxiomOptElse .. => 0
   | .regRead _ _ rest => zusatzB rest
   | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzB rest
   | .awaits _ _ _ _ _ rest => 1 + zusatzB rest
@@ -208,6 +216,8 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => 6 + zusatzSonst err + zusatzSonst rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
+  | .bindAxiomOpt .. => 0
+  | .bindAxiomOptElse .. => 0
   | .regRead _ _ rest => 3 + zusatzSonst rest
   | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
@@ -234,6 +244,8 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzSonst rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
+  | .bindAxiomOpt .. => 0
+  | .bindAxiomOptElse .. => 0
   | .regRead _ _ rest => zusatzSonst rest
   | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 1 + zusatzSonst rest

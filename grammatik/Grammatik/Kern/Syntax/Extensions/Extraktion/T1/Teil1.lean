@@ -49,6 +49,7 @@ def stmtKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ _ body ueber => blockKanten body ++ blockKanten ueber
   | .forever _ _ body => blockKanten body
   | .axiomCall _ _ _ _ _ _ _ => []
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => endblockKanten err
   | .regWrite _ _ _ => []
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ _ _ _ _ _ => []
@@ -74,6 +75,8 @@ def blockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       f :: endblockKanten err ++ blockKanten rest
   | .bindAxiom _ _ _ _ _ _ _ rest => blockKanten rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ blockKanten rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => blockKanten rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ blockKanten rest
   | .regRead _ _ rest => blockKanten rest
   | .regReadElse _ _ _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
@@ -106,6 +109,8 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       f :: endblockKanten err ++ endblockKanten rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockKanten rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ endblockKanten rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => endblockKanten rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ endblockKanten rest
   | .regRead _ _ rest => endblockKanten rest
   | .regReadElse _ _ _ sonst rest =>
       endblockKanten sonst ++ endblockKanten rest

@@ -222,6 +222,63 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
       · exact fort_schritt' ⟨_, RufSchrittG.endeBindAxiomElseGrund M t l Γ Λ _ a args he hr hw hg hd hgd err rest
           ρ hx _ rfl σ₂ r hax neu hneu hΛ⟩
+  | bindAxiomOpt e a args he hp hd hgd rest =>
+      rcases hax : axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
+          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
+        ⟨σ₂, _ | v⟩
+      · by_cases hleer : AntwortLeer D (D.aerg a)
+        · simp only [Endblock.ants, List.all_cons, Bool.and_eq_true] at hAnt
+          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx,
+            (stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer⟩
+        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_, hleer⟩
+        show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
+          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
+            = none
+        rw [hax]
+      · have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
+            (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
+              ρ)).1 = σ₂ := by
+          have := congrArg Prod.fst hax
+          simpa [axiomAntwort] using this
+        have hh : HeldIn Λ ((M.weltVon t).lese Λ args.orte).haelt := by
+          show HeldIn Λ (offen _)
+          rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
+          exact hΛ
+        have herw := ((Erw.lese (M.weltVon t) Λ args.orte).trans (Erw.fragt _ (.inl a))).trans
+          (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
+            ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
+        rw [hσ] at herw
+        obtain ⟨neu, hneu, -⟩ := herw
+        exact fort_schritt' ⟨_, RufSchrittG.endeBindAxiomOpt M t l Γ Λ e a args he hp hd hgd rest
+          ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
+  | bindAxiomOptElse e a args he hr hp hd hgd err rest =>
+      rcases hax : axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
+          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
+        ⟨σ₂, _ | v | r⟩
+      · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
+        show (axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
+          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
+            = none
+        rw [hax]
+      all_goals
+        have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
+            (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
+              ρ)).1 = σ₂ := by
+          have := congrArg Prod.fst hax
+          simpa [axiomAntwortSonst] using this
+        have hh : HeldIn Λ ((M.weltVon t).lese Λ args.orte).haelt := by
+          show HeldIn Λ (offen _)
+          rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
+          exact hΛ
+        have herw := ((Erw.lese (M.weltVon t) Λ args.orte).trans (Erw.fragt _ (.inl a))).trans
+          (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
+            ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
+        rw [hσ] at herw
+        obtain ⟨neu, hneu, -⟩ := herw
+      · exact fort_schritt' ⟨_, RufSchrittG.endeBindAxiomOptElseOk M t l Γ Λ e a args he hr hp hd hgd err rest
+          ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
+      · exact fort_schritt' ⟨_, RufSchrittG.endeBindAxiomOptElseGrund M t l Γ Λ e a args he hr hp hd hgd err rest
+          ρ hx _ rfl σ₂ r hax neu hneu hΛ⟩
   | cons s rest =>
       by_cases hbl : s.istBlatt = true ∧ s.istAbschluss = false
       · rcases blatt_fall hO passes s hbl.1 hbl.2 (M.weltVon t) ρ hΛ with

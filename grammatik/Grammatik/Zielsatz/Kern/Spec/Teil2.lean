@@ -251,6 +251,8 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
   -- the handler discipline `H102` (Opus agent H), as in `AkzeptiertSpec`
   masken : MaskenDisziplin P fs
+  -- the interface resolution (C08), as in `AkzeptiertSpec`
+  schnittstellen : SchnittstellenOk P fs
   -- the ownership judgment (2026-10-24): every body, against every arena's interfaces
   besitz : ∀ a ∈ B, ArenaOwnership.Body.Checked P a.A a.I
   worte : ∀ a ∈ B, ArenaOwnership.Machine.ArenaPlain a.A

@@ -47,6 +47,8 @@ def stmtAtome (tabs : List D.Tab) (globs : List D.Glob)
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.axiomCall _ _ _ _ _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
+  | s@(.axiomCallElse _ _ _ _ _ _ _ _ _) =>
+      [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.regWrite _ _ _) =>
       [PCAtom.leaf Λ (stmtTraeger tabs globs s ++ stmtOrte s)]
   | s@(.transition _ _ _ _ _ _ _) =>
@@ -85,6 +87,8 @@ def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
       endblockAtome tabs globs err ++ blockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => blockAtome tabs globs rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ blockAtome tabs globs rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ blockAtome tabs globs rest
   | .regRead _ _ rest => blockAtome tabs globs rest
   | .regReadElse _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
@@ -119,6 +123,8 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
       endblockAtome tabs globs err ++ endblockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockAtome tabs globs rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ endblockAtome tabs globs rest
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ endblockAtome tabs globs rest
   | .regRead _ _ rest => endblockAtome tabs globs rest
   | .regReadElse _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ endblockAtome tabs globs rest

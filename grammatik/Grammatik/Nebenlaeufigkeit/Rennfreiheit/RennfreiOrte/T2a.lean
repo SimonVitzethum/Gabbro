@@ -114,6 +114,7 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .breaking .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .traverse .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .consumeTraverse .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | .axiomCallElse .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .retry .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | .forever .., hleaf, _, _, _, _, _, _ => by simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
 

@@ -131,6 +131,7 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry .. => false
   | .forever .. => false
   | .axiomCall .. => false
+  | .axiomCallElse .. => false
   | .transition .. => false
   | .advances .. => false
   | .retires .. => false
@@ -160,6 +161,8 @@ def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelB rest
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead _ _ rest => spiegelB rest
   | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelB rest
   | .awaits _ _ _ _ _ rest => spiegelB rest
@@ -194,6 +197,8 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelE rest
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
+  | .bindAxiomOpt .. => false
+  | .bindAxiomOptElse .. => false
   | .regRead _ _ rest => spiegelE rest
   | .regReadElse _ _ _ sonst rest => spiegelE sonst && spiegelE rest
   | .awaits _ _ _ _ _ rest => spiegelE rest

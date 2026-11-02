@@ -348,6 +348,33 @@
   KNOWN DEBT. There is no definition-only layer: the goal predicates live in mixed files (ZielOrt, SperreFuss,
   SperreMaschine, Verklemmung, RennfreiVoll, KostenG, …), and the import closure includes witness files. To do:
   every definition this file reads out of its proof file.
+
+  C08 FOUNDATION (2026-11-02, no change of meaning). New definitions only: the canonical
+  foreign signature (`Deklaration.asignatur`), the provenance (`AxOrigin`, `axHerkunft`,
+  `axBeleg`; unresolved by default, never inferred), call contracts with boundary clauses
+  (`CallContract`, `BoundaryClause`, `Programm.axVertrag`), boundary records with the
+  live-grant inventory and provider judgment (`BoundaryRecord`, `GrantInventory`,
+  `ProviderOk`, `ProviderRealisiert`, `klauselGilt`), the generalized contract with replay
+  (`AxVor`, `AxNach`, `AxVertragONeu`, `VertragANeu`), the software obligations
+  (`ForeignPflicht` over the actual binding, `ProviderTreueG`, `GrantsStart` with
+  `Einheit.grants0`), the interface component (`schnittstellenB`, `SchnittstellenOk`,
+  folded into `Akzeptiert`/`AkzeptiertX` and `AkzeptiertSpec`/`AkzeptiertSpecX`), and the
+  `Logik.fremdAntwort` outcome for unexpected software answers. The statements above are
+  unchanged: wiring the software obligations into (b), narrowing the foreign part of (c)
+  to named hardware, and the provider history in G are staged next.
+
+  C08 PREMISE SPLIT (2026-11-02, authorized change of what (c) means; `GabbroZiel` itself is
+  untouched and stays proved). `Zielsatz/Atomar/GabbroZielFremd.lean` states the same goal as
+  `GabbroZielFremd` with the foreign premise split by provenance: (c) of the above reads
+  "the hardware and foreign code", but a foreign item declared SOFTWARE (`axHerkunft`) is user
+  logic -- its implementation proves its declared ensures against the actual binding `O`
+  (`AxVertragOSw`, now part of (b)), and only the named hardware stays in (c')
+  (`HardwareAnnahmenHw`: frame, register locality, the ensures of every item NOT declared
+  software; unresolved provenance reads as hardware, the meaning of every unit before C08).
+  `hardwareAnnahmen_of_split` shows the pair is exactly the old (c) (`gabbro_ziel_fremd` is
+  `gabbro_ziel` recombined): no guarantee is weakened and nothing is newly assumed. The
+  call-site form (the software contract's pre proved at each call, `CallSitePflicht`) and the
+  provider history in the machine replace the unconditional software premise in a later step.
 -/
 module
 

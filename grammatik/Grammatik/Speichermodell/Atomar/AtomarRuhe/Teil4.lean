@@ -69,6 +69,8 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       execStmtHA_ru_forever (a := a) (inv := inv) (body := body) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_body := execBlockHA_ru body) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .axiomCall a args h hw hg hd hgd, σ, ρ =>
       execStmtHA_ru_axiomCall (a := a) (args := args) (h := h) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, _, .axiomCallElse e a args he hp hd hgd hr err, σ, ρ =>
+      execStmtHA_ru_axiomCallElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .regWrite r hk e, σ, ρ =>
       execStmtHA_ru_regWrite (r := r) (hk := hk) (e := e) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .transition .., σ, ρ => Or.inl rfl
@@ -112,6 +114,10 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
       execBlockHA_ru_bindAxiom (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ =>
       execBlockHA_ru_bindAxiomElse (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, _, .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ =>
+      execBlockHA_ru_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, _, .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ =>
+      execBlockHA_ru_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .regRead r hk rest, σ, ρ =>
       execBlockHA_ru_regRead (r := r) (hk := hk) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockHA_ru_rest := execBlockHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, _, .regReadElse r hk zusage sonst rest, σ, ρ =>
@@ -158,6 +164,10 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
       execEndHA_ru_bindAxiom (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ =>
       execEndHA_ru_bindAxiomElse (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ =>
+      execEndHA_ru_bindAxiomOpt (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
+  | _, _, Λ, .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ =>
+      execEndHA_ru_bindAxiomOptElse (e := e) (a := a) (args := args) (he := he) (hp := hp) (hd := hd) (hgd := hgd) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (ih_execEndHA_ru_err := execEndHA_ru err) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, .regRead r hk rest, σ, ρ =>
       execEndHA_ru_regRead (r := r) (hk := hk) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_rest := execEndHA_ru rest) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, Λ, .regReadElse r hk zusage sonst rest, σ, ρ =>
