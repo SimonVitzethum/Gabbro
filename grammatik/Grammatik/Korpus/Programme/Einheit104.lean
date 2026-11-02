@@ -17,6 +17,7 @@ public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.Zielsatz.Kern.Beweis
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Logik.Ruf.RufLogik
+public import Grammatik.Logik.Ruf.RufLogika
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
