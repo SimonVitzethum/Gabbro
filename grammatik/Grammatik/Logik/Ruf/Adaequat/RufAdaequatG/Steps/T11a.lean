@@ -72,6 +72,16 @@ macro "kopfweg" : tactic => `(tactic| (
   | (rw [hR] at hhead; cases hhead; simp [execStmt] at hstep; done)
   | (rw [hS] at hpop; cases hpop; done)))
 
+set_option hygiene false in
+/-- `kopfweg` with the head equation found by its type rather than by position:
+    `cases` orders constructor fields by dependency, so positional names drift. -/
+macro "kopfwegH" : tactic => `(tactic| (
+  have hhead := ‹(M.faeden f).kopf.rest = _›
+  (try have hleaf := ‹Stmt.istBlatt _ = true›)
+  (try have hstep := ‹execStmt _ _ _ _ _ _ = _›)
+  (try have hpop := ‹(M.faeden f).stapel = _›)
+  kopfweg))
+
 /-- At a head `ende (traverse …; rest)` every step of `f` is the unfold
     `endeEntf`. (The first disjunct, frame, stack and log kept, was the bare
     lock steps, removed from G on 2026-09-13; it is kept in the statement
