@@ -127,11 +127,16 @@ theorem kopf_ne {s : String} (h : istKopfWort s = false) :
 /-- A printed name at a primary: read through `parseKopf`. -/
 theorem parsePrimary_nameTok (f : Nat) (s : String) (r : List Token) (h : istKopfWort s = false) :
     parsePrimary (f + 1) (nameTok s :: r) = parseKopf f (nameTok s :: r) := by
+  have hdyn : s ≠ "dyn" := by
+    intro he
+    subst s
+    revert h
+    decide
   have hk := kopf_kp h
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := kopf_ne h
   unfold nameTok
   split
-  · simp [parsePrimary, nameText, hk, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
+  · simp [parsePrimary, nameText, hk, hdyn, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
   · simp only [parsePrimary, nameText, hk, Bool.false_eq_true, ↓reduceIte]
 
 /-- A printed name at a unary: no prefix mark, so the primary reader. -/

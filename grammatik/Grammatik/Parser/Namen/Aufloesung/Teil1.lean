@@ -58,6 +58,7 @@ def Kontext.ruf (k : Kontext) (s : String) : String :=
 def typArgumentTokens (k : Kontext) : Nat → List Token → List Token
   | 0, ts => ts
   | _ + 1, [] => []
+  | f + 1, t@(.wort _) :: ts => t :: typArgumentTokens k f ts
   | f + 1, t :: ts =>
     match nameText t with
     | some n =>
@@ -92,6 +93,7 @@ def aus (k : Kontext) : SExpr → SExpr
   | .ext .all (x :: d :: ns) xs => .ext .all (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .any (x :: d :: ns) xs => .ext .any (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .count (x :: d :: ns) xs => .ext .count (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
+  | .ext .dyn [n] xs => .ext .dyn [k.ref n] (ausL k xs)
   | .ext .inst [n, raw] xs => .ext .inst [k.ruf n, k.typArgument raw] (ausL k xs)
   | .ext .mem (d :: ns) xs => .ext .mem (d :: ns.map k.ref) (ausL k xs)
   | .ext w ns xs => .ext w ns (ausL k xs)
@@ -108,6 +110,7 @@ def ausO (k : Kontext) : Option SExpr → Option SExpr
 
 /-- **A type, resolved.** -/
 def typ (k : Kontext) : STyp → STyp
+  | .dyn n raw => .dyn (k.ref n) (raw.map k.typArgument)
   | .atom s => .atom (k.ref s)
   | .path ps => if k.nenntItem ps then .atom (k.ref ("::".intercalate ps)) else .path ps
   | .ptr r w t => .ptr r w (typ k t)

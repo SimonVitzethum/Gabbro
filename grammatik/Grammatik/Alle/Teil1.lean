@@ -373,3 +373,5 @@ public import Grammatik.Kern.Syntax.Konst.Geschlossen
 public import Grammatik.Kern.Syntax.Konst.Literal
 public import Grammatik.Kern.Syntax.Konst.Ersetzung
 public import Grammatik.Parser.Spec.Zeugen
+public import Grammatik.Parser.Dyn.Witnesses
+public import Grammatik.Parser.Dyn.SourceWitnesses

@@ -109,6 +109,7 @@ def sTypText : STyp → String
   | .raw n => "raw " ++ n
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
+  | .dyn n _ => "dyn " ++ n
 
 /-- Normalize the complete table access rights. Owner flow is still refused by name. -/
 def uTableRight (text : String) : Except String (Bool × Bool) :=

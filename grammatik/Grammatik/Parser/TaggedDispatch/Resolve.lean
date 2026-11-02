@@ -61,15 +61,22 @@ def resolveTaggedDeclaration (items : List SItemTief) (decl : SItemTief) (spec :
     | _ => throw ("tagged-dispatch-duplicate-spec: " ++ spec)
   let [parameter] := group.types | throw "tagged-dispatch-type-arity"
   let functions := group.functions
-  let impls := (Spec.instances items).zipIdx.filterMap fun (instance, index) =>
-    match instance.types with
+  let impls := (Spec.instances items).zipIdx.filterMap fun (i, index) =>
+    match i.types with
     | [ty] =>
-      if strEq instance.group spec then some (TaggedImplementation.mk ty
-        (instance.functions.filterMap fun
-          | .fnT sig _ => some (sig.name, { sig with name := Spec.implementationName index sig.name })
+      if strEq i.group spec then some (TaggedImplementation.mk (Spec.canonicalType items 128 ty)
+        (i.functions.filterMap fun
+          | .fnT sig _ => some (sig.name, { sig with name := Spec.implementationName index sig.name,
+              params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t)),
+              res := sig.res.map (Spec.canonicalType items 128) })
           | _ => none)) else none
     | _ => none
-  let checked ← checkTaggedGroup (functions.map (taggedCanonicalSignature parameter)) variants impls
+  let variants := variants.map fun (n, t) => (n, t.map (Spec.canonicalType items 128))
+  let functions := functions.map fun original =>
+    let sig := taggedCanonicalSignature parameter original
+    { sig with params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t)),
+      res := sig.res.map (Spec.canonicalType items 128) }
+  let checked ← checkTaggedGroup functions variants impls
   let mut output := [decl]
   let mut bindings := []
   for (sig, cases) in checked do

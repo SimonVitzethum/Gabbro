@@ -15,14 +15,14 @@ def Walk.field (w : Walk) (f : SFeld) : Except String SFeld := do
 mutual
 def Walk.constant (w : Walk) : Nat → SKonstWert → Except String SKonstWert
   | 0, _ => .error "spec.expansion.fuel"
-  | f + 1, .one e => return .one (← w.expr [] f e)
-  | f + 1, .rows vs => return .rows (← vs.mapM (w.constant f))
+  | f + 1, .one e => do return .one (← w.expr [] f e)
+  | f + 1, .rows vs => do return .rows (← vs.mapM (w.constant f))
 end
 
 def Walk.tablePart (w : Walk) : STabTeil → Except String STabTeil
-  | .tConst n t v => return .tConst n (← w.type [] 1000 t) (← w.constant 1000 v)
-  | .tSlot fs => return .tSlot (← fs.mapM w.field)
-  | .tInv i => return .tInv (← w.invariant i)
+  | .tConst n t v => do return .tConst n (← w.type [] 1000 t) (← w.constant 1000 v)
+  | .tSlot fs => do return .tSlot (← fs.mapM w.field)
+  | .tInv i => do return .tInv (← w.invariant i)
   | p => pure p
 
 def Walk.transition (w : Walk) (t : STrans) : Except String STrans := do
@@ -32,18 +32,18 @@ def Walk.transition (w : Walk) (t : STrans) : Except String STrans := do
                   wirkung := ← w.effects [] t.wirkung }
 
 def Walk.devicePart (w : Walk) (locals : Locals) : SGerTeil → Except String SGerTeil
-  | .copy a b => return .copy (← w.expr locals 1000 a) (← w.expr locals 1000 b)
-  | .reg r => return .reg { r with rtyp := ← w.type locals 1000 r.rtyp,
+  | .copy a b => do return .copy (← w.expr locals 1000 a) (← w.expr locals 1000 b)
+  | .reg r => do return .reg { r with rtyp := ← w.type locals 1000 r.rtyp,
       addr := ← w.expr locals 1000 r.addr, voraus := ← r.voraus.mapM (w.expr locals 1000) }
-  | .trans t => return .trans (← w.transition t)
-  | .bank raw => return .bank (← w.raw raw)
+  | .trans t => do return .trans (← w.transition t)
+  | .bank raw => do return .bank (← w.raw raw)
 
 def Walk.binding (w : Walk) (b : SBind) : Except String SBind := do
   let codes ← b.codes.mapM fun (a, n, c) => return (a, ← n.mapM (w.expr [] 1000), c)
   return { b with id := ← w.expr [] 1000 b.id, codes }
 
 def Walk.way (w : Walk) : SWay → Except String SWay
-  | .lit a b c h => return .lit a b (← w.binding c) h
+  | .lit a b c h => do return .lit a b (← w.binding c) h
   | way => pure way
 
 /-- Every expression-bearing item is visited; no group declaration survives instantiation. -/
@@ -53,19 +53,27 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
     let ex := w.expr [] f
     let ty := w.type [] f
     match it with
-    | .specGroupT .. | .implGroupT .. => throw "spec.output.group"
+    | .specGroupT n ts es fs =>
+      if w.resolveSpecs then throw "spec.output.group"
+      return .specGroupT n ts es (← fs.mapM w.signature)
+    | .implGroupT n ts es fs =>
+      if w.resolveSpecs then throw "spec.output.group"
+      return .implGroupT n (← ts.mapM ty) es (← fs.mapM (w.item f))
+    | .taggedByT decl spec =>
+      if w.resolveSpecs then throw "tagged-dispatch-unexpanded-declaration"
+      return .taggedByT (← w.item f decl) spec
     | .modT n its => return .modT n (← its.mapM (w.item f))
     | .pubT it => return .pubT (← w.item f it)
     | .gateT it => return .gateT (← w.item f it)
     | .fnT s body =>
       let s ← w.signature s
-      return .fnT s (← w.statement s.params f body)
+      return .fnT s (← { w with result := s.res }.statement s.params f body)
     | .protoT s => return .protoT (← w.signature s)
     | .specT s p => return .specT (← w.signature s) (← w.expr s.params f p)
     | .asmT s raw => return .asmT (← w.signature s) raw
     | .typeT fl n args ord t => return .typeT fl n (← args.mapM ty) ord (← t.mapM ty)
-    | .constT n t v => return .constT n (← ty t) (← w.constant f v)
-    | .globT b n t v a s sh => return .globT b n (← ty t) (← w.constant f v) (← a.mapM ex) s sh
+    | .constT n t v => return .constT n (← ty t) (← { w with expected := some (← ty t) }.constant f v)
+    | .globT b n t v a s sh => return .globT b n (← ty t) (← { w with expected := some (← ty t) }.constant f v) (← a.mapM ex) s sh
     | .formatT n a b fs => return .formatT n (← a.mapM ex) b (← fs.mapM w.field)
     | .tableT n v c b o sh ps => return .tableT n v (← c.mapM ex) b o sh (← ps.mapM w.tablePart)
     | .arenaT n lo hi mx t pb =>
@@ -75,8 +83,11 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
       let cs ← cs.mapM fun (n, e, text) => return (n, ← ex e, text)
       return .whyT n cs b
     | .stateT n ts => return .stateT n (← ts.mapM w.transition)
-    | .devT n ps space parts => return .devT n ps space (← parts.mapM (w.devicePart ps))
+    | .devT n ps space parts =>
+      let ps ← ps.mapM fun (n, t) => return (n, ← ty t)
+      return .devT n ps space (← parts.mapM (w.devicePart ps))
     | .axiomT n ps res pred es h =>
+      let ps ← ps.mapM fun (n, t) => return (n, ← ty t)
       return .axiomT n ps (← res.mapM ty) (← pred.mapM (w.expr ps f)) (← w.effects ps es) h
     | .checkT c => return .checkT { c with misst := ← c.misst.mapM ex, boden := ← c.boden.mapM ex,
         canFail := ← w.statement [] f c.canFail }
@@ -103,7 +114,9 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
           let n ← w.call [] ("::".intercalate p) none args
           return .call [n] args
       return .bootT n arch ss keeps
-    | .callT c => return .callT { c with res := ← c.res.mapM ty, way := ← w.way c.way,
+    | .callT c =>
+      let params ← c.params.mapM fun (n, t) => return (n, ← ty t)
+      return .callT { c with params, res := ← c.res.mapM ty, way := ← w.way c.way,
         gate := { pre := ← c.gate.pre.mapM (w.expr c.params f),
                   post := ← c.gate.post.mapM (w.expr c.params f), uses := ← w.effects c.params c.gate.uses,
                   cost := ← c.gate.cost.mapM ex } }

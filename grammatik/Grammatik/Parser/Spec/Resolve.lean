@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Spec.Check
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 
 @[expose] public section
 
@@ -48,7 +49,12 @@ def inferType (items : List SItemTief) (locals : Locals) : Nat → SExpr → Opt
             if strEq m n then some t else none
           | _ => none
     | .tru | .fls => some (.atom "bool")
-    | .call n _ => ((functionHeads items).find? fun s => strEq s.name n).bind (·.res)
+    | .call n _ =>
+      (((functionHeads items).find? fun s => strEq s.name n).bind (·.res)).orElse fun _ => do
+        let declarations := items.map fun | .taggedByT decl _ => decl | it => it
+        let schemas ← (Uebersetze.uSumSchemas declarations).toOption
+        let [schema] := schemas.filter (fun s => s.cases.any (fun c => strEq c.1 n)) | none
+        return .atom schema.name
     | .field (.index (.variable t) _) fld => tableField items t fld
     | .field (.index (.field (.variable t) "slots") _) fld => tableField items t fld
     | .field x fld => do

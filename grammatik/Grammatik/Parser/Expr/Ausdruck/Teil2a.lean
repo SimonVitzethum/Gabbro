@@ -130,6 +130,12 @@ def parsePrimary (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
+    | .wort "dyn" :: name :: .zeichen "(" :: rest => do
+      let some spec := nameText name | .error "dyn.spec.required"
+      let (payload, tail) ← parseOr f rest
+      match tail with
+      | .zeichen ")" :: tail => return (.ext .dyn [spec] [payload], tail)
+      | _ => .error "dyn.producer.parenthesis"
     | .num v :: rest => .ok (.lit v, rest)
     | .text t :: rest => .ok (.ext .text [t] [], rest)
     | .wort "count" :: t :: .wort "in" :: rest => match nameText t with

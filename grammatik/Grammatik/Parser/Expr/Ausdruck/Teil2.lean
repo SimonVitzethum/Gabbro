@@ -49,6 +49,7 @@ def druck : SExpr → String
   | .old x => "old(" ++ druck x ++ ")"
   | .res => "result"
   | .why g f => g ++ "::" ++ f
+  | .ext .dyn [n] [value] => "dyn " ++ n ++ "(" ++ druck value ++ ")"
   | .ext .inst [n, raw] args => n ++ "::[" ++ raw ++ "](" ++ druckArgs args ++ ")"
   | .ext .text ns _ => "\"" ++ ("".intercalate ns) ++ "\""
   | .ext .label [name] [value] => name ++ ": " ++ druck value

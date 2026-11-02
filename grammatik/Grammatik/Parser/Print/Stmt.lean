@@ -30,6 +30,10 @@ def rohToks (s : String) : List Token :=
 
 /-- A surface type as tokens (the inverse of `parseTyp`). -/
 def druckTyp : STyp → List Token
+  | .dyn n bound => [.wort "dyn"] ++ rohToks n ++
+      (match bound with
+      | none => []
+      | some raw => [.wort "effects", .zeichen "{"] ++ rohToks raw)
   | .atom a => [nameTok a]
   | .path segs => pfadToks segs
   | .ptr r w t =>

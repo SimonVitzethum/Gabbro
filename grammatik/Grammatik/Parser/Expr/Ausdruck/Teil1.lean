@@ -26,6 +26,8 @@ inductive XKind
   /-- One labelled call argument: `names = [label]`, `subs = [value]`. -/
   | label
   | inst
+  /-- Producer: names = [spec], subs = [payload]. -/
+  | dyn
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool

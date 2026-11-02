@@ -11,9 +11,18 @@ namespace Gabbro.Grammatik.Parser.Spec
 structure Walk where
   source : List SItemTief
   instantiate : Bool
+  /-- Earlier front-end passes share the traversal and defer spec-call resolution. -/
+  resolveSpecs : Bool := true
+  typeRewrite : STyp → Except String STyp := Except.ok
+  exprRewrite : Locals → Option STyp → SExpr → Except String SExpr := fun _ _ e => .ok e
+  statementCheck : Locals → SAnw → Except String Unit := fun _ _ => .ok ()
+  rawCheck : Locals → String → Except String Unit := fun _ _ => .ok ()
+  expected : Option STyp := none
+  result : Option STyp := none
 
 def Walk.call (w : Walk) (locals : Locals) (name : String)
     (types : Option (List STyp)) (args : List SExpr) : Except String String := do
+  if !w.resolveSpecs then return name
   let (name, types) ← match name.splitOn "::[" with
     | [n, raw] =>
       if raw.endsWith "]" && types.isNone then do
@@ -31,56 +40,69 @@ mutual
 def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SExpr
   | 0, _ => .error "spec.expansion.fuel"
   | f + 1, e => do
-    let recur := w.expr locals f
-    match e with
-    | .call name args =>
-      let args ← args.mapM recur
-      return .call (← w.call locals name none args) args
-    | .ext .inst [name, raw] args =>
-      let types ← explicitTypes raw
-      let args ← args.mapM recur
-      return .call (← w.call locals name (some types) args) args
-    | .ext .inst _ _ => throw "spec.call.arguments"
-    | .field x n =>
-      let x ← recur x
-      match x with
-      | .index (.variable table) i =>
-        if !(locals.any fun p => strEq p.1 table) && w.source.any (fun
-            | .tableT t _ _ _ _ _ _ => strEq t table
-            | _ => false) then
-          return .field (.index (.field (.variable table) "slots") i) n
-        else return .field x n
-      | _ => return .field x n
-    | .index x i => return .index (← recur x) (← recur i)
-    | .arrow x n => return .arrow (← recur x) n
-    | .un op x => return .un op (← recur x)
-    | .bin op a b => return .bin op (← recur a) (← recur b)
-    | .built n args => return .built n (← args.mapM recur)
-    | .old x => return .old (← recur x)
-    | .ext k (x :: "slots" :: ns) args =>
-      let locals := match args.head? with
-        | some (.variable t) => (x, STyp.index false t) :: locals
-        | _ => locals
-      return .ext k (x :: "slots" :: ns) (← args.mapM (w.expr locals f))
-    | .ext k ns args => return .ext k ns (← args.mapM recur)
-    | e => return e
+    let recur := { w with expected := none }.expr locals f
+    let e ← match e with
+      | .call name args => do
+        let signature := (functionHeads (materialize w.source)).find? (fun s => strEq s.name name)
+        let args ← args.zipIdx.mapM fun (arg, index) => do
+          let expected := signature.bind fun s => (s.params[index]?).map Prod.snd
+          { w with expected }.expr locals f arg
+        return .call (← w.call locals name none args) args
+      | .ext .dyn ns args => do
+        if w.resolveSpecs then throw "dyn.unexpanded-producer"
+        return .ext .dyn ns (← args.mapM recur)
+      | .ext .inst [name, raw] args => do
+        if !w.resolveSpecs then return .ext .inst [name, raw] (← args.mapM recur)
+        let types ← explicitTypes raw
+        let args ← args.mapM recur
+        return .call (← w.call locals name (some types) args) args
+      | .ext .inst _ _ => do throw "spec.call.arguments"
+      | .field x n => do
+        let x ← recur x
+        match x with
+        | .index (.variable table) i =>
+          if w.resolveSpecs && !(locals.any fun p => strEq p.1 table) && w.source.any (fun
+              | .tableT t _ _ _ _ _ _ => strEq t table
+              | _ => false) then
+            return .field (.index (.field (.variable table) "slots") i) n
+          else return .field x n
+        | _ => return .field x n
+      | .index x i => do return .index (← recur x) (← recur i)
+      | .arrow x n => do return .arrow (← recur x) n
+      | .un op x => do return .un op (← recur x)
+      | .bin op a b => do return .bin op (← recur a) (← recur b)
+      | .built n args => do return .built n (← args.mapM recur)
+      | .old x => do return .old (← recur x)
+      | .ext k (x :: "slots" :: ns) args => do
+        let locals := match args.head? with
+          | some (.variable t) => (x, STyp.index false t) :: locals
+          | _ => locals
+        return .ext k (x :: "slots" :: ns) (← args.mapM (w.expr locals f))
+      | .ext k ns args => do return .ext k ns (← args.mapM recur)
+      | e => do return e
+    w.exprRewrite locals w.expected e
 end
 
 def Walk.type (w : Walk) (locals : Locals) : Nat → STyp → Except String STyp
   | 0, _ => .error "spec.expansion.fuel"
   | f + 1, t => do
-    match t with
-    | .ptr s r t => return .ptr s r (← w.type locals f t)
-    | .range t lo hi b => return .range (← w.type locals f t) (← w.expr locals f lo) (← w.expr locals f hi) b
-    | .array t n => return .array (← w.type locals f t) (← w.expr locals f n)
-    | .wrap t => return .wrap (← w.type locals f t)
-    | .embed t p s => return .embed (← w.type locals f t) p (← s.mapM (w.expr locals f))
-    | .str n => return .str (← w.expr locals f n)
-    | .entry ps r => return .entry ps (← r.mapM (w.type locals f))
-    | t => return t
+    let t ← match t with
+      | .dyn n raw => do
+        if w.resolveSpecs then throw "dyn.unexpanded-type"
+        return .dyn n raw
+      | .ptr s r t => do return .ptr s r (← w.type locals f t)
+      | .range t lo hi b => do return .range (← w.type locals f t) (← w.expr locals f lo) (← w.expr locals f hi) b
+      | .array t n => do return .array (← w.type locals f t) (← w.expr locals f n)
+      | .wrap t => do return .wrap (← w.type locals f t)
+      | .embed t p s => do return .embed (← w.type locals f t) p (← s.mapM (w.expr locals f))
+      | .str n => do return .str (← w.expr locals f n)
+      | .entry ps r => do return .entry ps (← r.mapM (w.type locals f))
+      | t => do return t
+    w.typeRewrite t
 
 def Walk.effects (w : Walk) (locals : Locals) (es : List SEffekt) : Except String (List SEffekt) := do
-  let es ← if w.instantiate then expandEffects w.source (groups w.source) (instances w.source) [] [] 1000 es
+  let es ← if !w.resolveSpecs then pure es
+    else if w.instantiate then expandEffects w.source (groups w.source) (instances w.source) [] [] 1000 es
     else if es.any (fun | .param _ | .instanceEffects _ _ => true | _ => false) then throw "spec.output.effects"
     else pure es
   es.mapM fun e => match e with
@@ -106,7 +128,7 @@ def Walk.signature (w : Walk) (s : FnSig) : Except String FnSig := do
 
 /-- New bindings affect the remainder of their block, including inferred let types. -/
 def bindings (items : List SItemTief) (locals : Locals) : SAnw → Locals
-  | .bind _ n t e | .bindElse n t e _ _ =>
+  | .bind _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
     match t.orElse (fun _ => inferType items locals 128 e) with
     | some ty => [(n, ty)]
     | none => []
@@ -115,39 +137,77 @@ def bindings (items : List SItemTief) (locals : Locals) : SAnw → Locals
   | _ => []
 
 /-- Raw headers have their own ordinary elaborators. Refuse an abstract call hidden there. -/
-def Walk.raw (w : Walk) (s : String) : Except String String :=
+def Walk.raw (w : Walk) (s : String) (locals : Locals := []) : Except String String := do
+  w.rawCheck locals s
   let compact := String.ofList (s.toList.filter fun c => c != ' ' && c != '\t' && c != '\n' && c != '\r')
-  if (groups w.source).any (fun g => (compact.splitOn (g.name ++ "::")).length > 1) then
+  if w.resolveSpecs && (groups w.source).any (fun g => (compact.splitOn (g.name ++ "::")).length > 1) then
     .error "spec.call.raw.header"
   else .ok s
+
+/-- A match payload binder receives the existing case's concrete type. This serves static
+    spec inference and tagged dispatch alike, without a separate statement walker. -/
+def matchBindings (items : List SItemTief) (locals : Locals) (value : SExpr) : SAnw → Locals
+  | .arm caseName (some binder) _ =>
+    let payload := do
+      let .atom sumName ← inferType (materialize items) locals 128 value | none
+      let schemas ← (Uebersetze.uSumSchemas (items.map fun
+        | .taggedByT decl _ => decl | it => it)).toOption
+      let schema ← schemas.find? (fun s => strEq s.name sumName)
+      let variant ← schema.cases.find? (fun c => strEq c.1 caseName)
+      variant.2
+    payload.toList.map (fun ty => (binder, ty))
+  | _ => []
 
 mutual
 def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String SAnw
   | 0, _ => .error "spec.expansion.fuel"
   | f + 1, s => do
-    let ex := w.expr locals f
+    w.statementCheck locals s
+    let ex := { w with expected := none }.expr locals f
     let ty := w.type locals f
     let st := w.statement locals f
     match s with
-    | .bind b n t e => return .bind b n (← t.mapM ty) (← ex e)
-    | .bindElse n t e why body => return .bindElse n (← t.mapM ty) (← ex e) why (← st body)
-    | .set a op b => return .set (← ex a) op (← ex b)
+    | .bind b n t e =>
+      let t ← t.mapM ty
+      return .bind b n t (← { w with expected := t }.expr locals f e)
+    | .bindElse n t e why body =>
+      let t ← t.mapM ty
+      return .bindElse n t (← { w with expected := t }.expr locals f e) why (← st body)
+    | .bindLib b n t c =>
+      let t ← t.mapM ty
+      return .bindLib b n t { c with args := ← c.args.mapM ex }
+    | .lcall c => return .lcall { c with args := ← c.args.mapM ex }
+    | .bindAxiomOpt n t e =>
+      let t ← t.mapM ty
+      return .bindAxiomOpt n t (← { w with expected := t }.expr locals f e)
+    | .bindAxiomOptElse n t e why body =>
+      let t ← t.mapM ty
+      return .bindAxiomOptElse n t (← { w with expected := t }.expr locals f e) why (← st body)
+    | .set a op b =>
+      let a ← ex a
+      let expected ← (inferType (materialize w.source) locals 128 a).mapM ty
+      return .set a op (← { w with expected }.expr locals f b)
     | .shift e a b => return .shift (← ex e) a b
     | .call name args =>
-      let args ← args.mapM ex
-      return .call (← w.call locals name none args) args
+      let .call name args ← ex (.call name args) | throw "spec.statement.call"
+      return .call name args
     | .cond e body arms other => return .cond (← ex e) (← st body) (← arms.mapM st) (← other.mapM st)
     | .elsif e body => return .elsif (← ex e) (← st body)
-    | .cases e arms => return .cases (← ex e) (← arms.mapM st)
+    | .cases e arms =>
+      let e ← ex e
+      w.statementCheck locals (.cases e arms)
+      let arms ← arms.mapM fun arm =>
+        w.statement (matchBindings w.source locals e arm ++ locals) f arm
+      return .cases e arms
     | .arm c n body => return .arm c n (← st body)
     | .each n start kind subject mode raw inv body =>
       let inner := match subject with
         | .variable t => (n, STyp.index false t) :: locals
         | _ => locals
-      return .each n (← start.mapM ex) kind (← ex subject) mode (← w.raw raw)
+      return .each n (← start.mapM ex) kind (← ex subject) mode (← w.raw raw locals)
         (← inv.mapM (w.expr inner f)) (← w.statement inner f body)
-    | .retry raw body => return .retry (← w.raw raw) (← st body)
-    | .loop raw body => return .loop (← w.raw raw) (← st body)
+    | .retry raw body => return .retry (← w.raw raw locals) (← st body)
+    | .loop raw body => return .loop (← w.raw raw locals) (← st body)
     | .waive ns body => return .waive ns (← st body)
     | .trim e n body => return .trim (← ex e) n (← st body)
     | .locks b e body => return .locks b (← ex e) (← st body)
@@ -155,7 +215,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .emit a b p => return .emit (← ex a) (← ex b) p
     | .await n t e p => return .await n (← t.mapM ty) (← ex e) p
     | .swap n t e p => return .swap n (← t.mapM ty) (← ex e) p
-    | .ret e => return .ret (← e.mapM ex)
+    | .ret e => return .ret (← e.mapM ({ w with expected := w.result }.expr locals f))
     | .alloc b n t a e body => return .alloc b n (← t.mapM ty) a (← ex e) (← body.mapM st)
     | .allocVon b n t a => return .allocVon b n (← t.mapM ty) a
     | .reset n es => return .reset n (← es.mapM fun (a, b) => return (← ex a, ← ex b))
@@ -165,7 +225,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .block ss ending =>
       let (ss, env) ← w.statements locals f ss
       let ending ← ending.mapM fun
-        | .ret e => return .ret (← e.mapM (w.expr env f))
+        | .ret e => return .ret (← e.mapM ({ w with expected := w.result }.expr env f))
         | e => pure e
       return .block ss ending
     | s => return s

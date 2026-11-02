@@ -497,19 +497,21 @@ linear ghost type MayWrite(ThreadId, Pa);
 linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` declaration
 ```
 
-**Closed dispatch: `tagged … by S`.** The Lean frontend reads single-type spec groups and
-their implementations before declaration expansion:
+**Closed dispatch: `tagged … by S`.** The Lean frontend uses the canonical spec/impl groups
+of §6.1, including their effect arguments and full conformance check:
 
 ```gabbro
 spec Shape[T] {
-    fn area(s: T) -> bool effects {};
-    fn copy(s: T) -> T effects {};
+    fn area(s: T) -> bool effects {} costs <= 50 ops;
+    fn copy(s: T) -> T effects {} costs <= 50 ops;
 }
 impl Shape[u8] {
-    fn area(s: u8) -> bool effects {} { return true; }
+    fn area(s: u8) -> bool effects {} costs <= 20 ops { return true; }
+    fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; }
 }
 impl Shape[bool] {
-    fn area(s: bool) -> bool effects {} { return s; }
+    fn area(s: bool) -> bool effects {} costs <= 20 ops { return s; }
+    fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; }
 }
 tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape;
 impl fn area_of(s: AnyShape) -> bool effects {} {
@@ -520,9 +522,9 @@ impl fn area_of(s: AnyShape) -> bool effects {} {
 
 The group's type parameter (`T`, internally `Self`) occurs as exactly one whole parameter
 of a dispatchable function, nowhere in its other parameter types or result. A member returning
-`Self`, such as `copy`, is static: it generates no dispatcher and its absence from the case
-implementations does not block the tagged declaration. Calls to such members through the tagged
-group are refused as `tagged-dispatch-non-dispatchable-call`. `Held` in a group contract is refused.
+`Self`, such as `copy`, is static: it generates no dispatcher. Every implementation still
+provides it, as required by §6.1. Static calls resolve through the canonical spec resolver;
+there is no implementation for the sum itself unless explicitly declared. `Held` in a group contract is refused.
 
 For every dispatchable member, every variant must have exactly one implementation with the
 Self-substituted parameter types, result type and reason channel. Parameter names may differ.
@@ -536,9 +538,59 @@ table, heap allocation or new machine construct is introduced.
 The actual `elabU` declaration pass runs this check and expansion before library expansion.
 Overload selection uses the receiver type from function parameters, globals, explicit local
 annotations, inferred constructor/call results and match payloads. An unresolved or ambiguous
-receiver is refused. This frontend slice does not accept multi-type or effect-parameter group
-headers; ordinary typing, metadata, contract, cost and lowering refusals continue to apply to
-the expanded functions.
+receiver is refused. A `by` declaration requires a spec with one type parameter; effect
+parameters use the canonical §6.1 representation. Ordinary typing, metadata, contract, cost
+and lowering refusals continue to apply to the expanded functions.
+
+**Link-time dispatch: `dyn S`.** A dynamic value uses the same checked tagged-sum
+expansion after all linked implementations of the canonical spec group are known:
+
+```ebnf
+typeexpr += "dyn" ident [ "effects" "{" efflist "}" ] ;
+primary  += "dyn" ident "(" expr ")" ;
+```
+
+```gabbro
+table Scene count 256 {
+    slot { s: dyn Shape effects { reads Circles, reads Rects }, }
+}
+Scene[i].s = dyn Shape(c);       // c: index into Circles
+let a = Shape::area(Scene[j].s);
+```
+
+`dyn Shape effects B` closes over exactly the linked implementations whose concrete
+effects are a subset of B, with one case carrying that implementation's type. Each
+selected payload must be a scalar value of at most eight bytes: an index, integer,
+opaque scalar, reason, bool, float or option index. Larger payloads are refused as
+`dyn.payload-too-large`; unsupported payload shapes as `dyn.payload-type`. Effect
+filtering precedes the payload check. No implementation, unknown specs and unresolved
+types are named refusals rather than an empty or guessed representation.
+
+An effect bound is mandatory in a written `dyn S` type when S has effect parameters
+(`dyn.effects.required`). Equal effect sets share one generated type regardless of list
+order. A producer uses its assignment, parameter, result or let annotation to select
+the bound; an unannotated producer uses the unique matching bound in the program.
+With no written bound for that spec, its inferred bound is the union of the linked
+implementation effects. Multiple matching bounds need contextual type information
+(`dyn.producer-bound-required`); there is no implicit conversion between distinct bounds.
+
+Calls use the same match expansion as `tagged … by S`, with the bound B as their effects
+and the spec's costs plus one branch. Only dispatchable members can receive a dyn value
+(`dyn.non-dispatchable-call`). Dyn values may be stored in tables and passed or returned
+as ordinary values. A written match on a dyn value is refused as
+`dyn.implementation-test`; narrowing to a concrete type as `dyn.downcast`; equality and
+inequality as `dyn.equality`, including equality through arrays of dyn values.
+There is no downcast or reflection operation. Dyn occurrences in uninterpreted raw type
+or loop headers are refused by name until those headers have structured expansion.
+
+The implementation is `Parser/Dyn/`. The declaration pipeline checks spec conformance and resolves known static calls,
+closes dyn types, expands producers and tagged dispatch, resolves remaining spec calls,
+checks the ordinary output forms, then expands libraries. `Dyn.checkedOutput_ordinary`
+is the generic output-form gate; `Dyn/Witnesses.lean` and `Dyn/SourceWitnesses.lean`
+cover Scene/Shape, the exact two-case dispatch, effect filtering, costs and refusals.
+This is a front-end expansion into existing sums and matches: no `Ty.dyn`, machine G
+change, address table or allocation is introduced. Rust mirroring and executable
+source-to-IR coverage remain separate integration work.
 
 **Attributes and Lean.**
 

@@ -108,6 +108,10 @@ def namenO (lok : List String) : Option SExpr → List String
 /-- **The names a type writes**: named types, paths, the table of an `index into`, and the names in
     range bounds and array lengths. -/
 def namenT : STyp → List String
+  | .dyn n raw => n :: (raw.toList.flatMap fun raw =>
+      match lex raw with
+      | .error _ => []
+      | .ok ts => ts.filterMap fun | .ident name => some name | _ => none)
   | .atom s => [s]
   | .path ps => ["::".intercalate ps]
   | .ptr _ _ t => namenT t

@@ -76,6 +76,11 @@ def domToks (dk : String) (ds : List String) (ops : List (List Token)) : List To
     the witnesses of `Print/ExtProben` decide it per form. -/
 def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List Token :=
   match k with
+  | .dyn => match ns, ts with
+    | [spec], [payload] => [.wort "dyn"] ++
+        (match lex spec with | .ok tokens => tokens.dropLast | .error _ => []) ++
+        [.zeichen "("] ++ payload ++ [.zeichen ")"]
+    | _, _ => [.ende]
   | .inst => match ns with
     | [f, raw] => [.ident f, .zeichen "::", .zeichen "["] ++
         (match lex raw with | .ok tokens => tokens.dropLast | .error _ => []) ++
@@ -129,6 +134,8 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · split <;> simp only [ne_eq, List.cons_ne_self, List.cons_ne_nil, not_false_eq_true]
 
   · split <;> simp only [List.cons_append, List.nil_append, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
+
+  · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
 
 mutual
 def druckToks : SExpr → List Token
@@ -216,7 +223,7 @@ def istTypWortVar : SExpr → Bool
 def primWortTafel : List (List Char) :=
   [['t','r','u','e'], ['f','a','l','s','e'], ['S','o','m','e'], ['N','o','n','e'],
    ['r','e','s','u','l','t'], ['o','l','d'], ['c','o','u','n','t'], ['a','l','l','o','c'],
-   ['t','r','a','n','s','i','t','i','o','n']]
+   ['t','r','a','n','s','i','t','i','o','n'], ['d','y','n']]
 
 /-- A word that cannot head a printed name: refused as a place (`istKeinPlatz`) or taken by a
     primary arm (`primWortTafel`). -/
