@@ -39,14 +39,7 @@ namespace Gabbro.Grammatik.OwnerWitness
   Fn := Fin 3
   sig := fun _ => 0
   sigNr := fun _ =>
-    { params := []
-      erg := none
-      gruende := 0
-      haelt := []
-      schreibt := fun _ => true
-      gschreibt := fun e => nomatch e
-      konsumiert := []
-      produziert := [] }
+    { params := [], erg := none, gruende := 0, haelt := [], schreibt := fun _ => true, gschreibt := (fun e => (nomatch e)), konsumiert := [], produziert := [] }
   eigner_nie_erzeugt := by intros; simp
   Inv := Empty
   traeger := fun e => nomatch e
@@ -91,10 +84,7 @@ def mintedLedger : ArenaOwnership.State :=
   { (ArenaOwnership.State.empty.put 0 (some ⟨0, 0, root, []⟩)) with next := 1 }
 
 def minted : OwnerState D :=
-  { OwnerState.empty with
-    ledger := mintedLedger
-    spent := fun m => if m = true then true else false
-    stage := fun m => if m = true then 0 else 0 }
+  { OwnerState.empty with ledger := mintedLedger, spent := fun m => if m = true then true else false, stage := fun m => if m = true then 0 else 0 }
 
 def loaned : OwnerState D := minted.withLedger
   (mintedLedger.put 0 (some ⟨0, 0, root, [child]⟩))
