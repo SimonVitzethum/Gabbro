@@ -199,7 +199,10 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
     refine ⟨nodup_map_fst hinj hv.1, ?_, ?_⟩
     · intro x hx
       rw [hmoves] at hx
-      obtain ⟨y, hym, rfl⟩ := List.mem_map.mp hx
+      obtain ⟨y, hym, heq⟩ := List.mem_map.mp hx
+      have e_mark : x.mark = E.marke y.mark := congrArg OwnerMove.mark heq
+      have e_bef : x.before = y.before := congrArg OwnerMove.before heq
+      have e_aft : x.after = y.after := congrArg OwnerMove.after heq
       have hyin : (y.mark, y.before) ∈ S.owner.inputs := by
         simp only [OwnerFlow.inputs]
         exact List.mem_append.mpr (Or.inl (List.mem_map.mpr ⟨y, hym, rfl⟩))
@@ -211,10 +214,13 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
         rw [decide_eq_true_eq]
         exact List.mem_map.mpr ⟨(E.marke y.mark, y.before), hmem, rfl⟩
       have hb := (hv.2.1 y hym).2
-      exact ⟨htrue, by rw [E.stufen]; exact hb.1, hb.2⟩
+      rw [e_mark, e_bef, e_aft, E.stufen]
+      exact ⟨htrue, hb.1, hb.2⟩
     · intro p hp
       rw [hloans] at hp
-      obtain ⟨q, hqm, rfl⟩ := List.mem_map.mp hp
+      obtain ⟨q, hqm, heq⟩ := List.mem_map.mp hp
+      have f1 : p.1 = E.marke q.1 := (congrArg Prod.fst heq).symm
+      have f2 : p.2 = q.2 := (congrArg Prod.snd heq).symm
       have hqmem : E.marke q.1 ∈ ((S.owner.map E.marke).inputs.map Prod.fst) := by
         have hqin : q ∈ S.owner.inputs := by
           simp only [OwnerFlow.inputs]
@@ -224,6 +230,7 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
           exact List.mem_map.mpr ⟨q, hqin, rfl⟩
         exact List.mem_map.mpr ⟨(E.marke q.1, q.2), hmem, rfl⟩
       have hb := hv.2.2 q hqm
+      rw [f1, f2]
       refine ⟨?_, ?_⟩
       · rw [decide_eq_true_eq]
         exact hqmem
