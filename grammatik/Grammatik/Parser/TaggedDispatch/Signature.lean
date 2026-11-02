@@ -14,7 +14,7 @@ def taggedSubstituteType (parameter : String) (variant : STyp) : STyp → STyp
   | .array t n => .array (taggedSubstituteType parameter variant t) n
   | .wrap t => .wrap (taggedSubstituteType parameter variant t)
   | .embed t n e => .embed (taggedSubstituteType parameter variant t) n e
-  | .entry args result => .entry args (result.map (taggedSubstituteType parameter variant))
+  | .entry args (some result) => .entry args (some (taggedSubstituteType parameter variant result))
   | t => t
 
 def taggedSubstituteSelf (variant : STyp) : STyp → STyp :=
@@ -25,7 +25,7 @@ def taggedContainsSelf : STyp → Bool
   | .atom "Self" => true
   | .ptr _ _ t | .range t _ _ _ | .array t _ | .wrap t | .embed t _ _ =>
     taggedContainsSelf t
-  | .entry _ result => result.any taggedContainsSelf
+  | .entry _ (some result) => taggedContainsSelf result
   | _ => false
 
 /-- Result-producing static functions do not participate in closed dispatch. -/
