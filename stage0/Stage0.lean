@@ -81,4 +81,5 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareProbe
 public import Stage0.Frontend.ExportCorrectness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 @[expose] public section

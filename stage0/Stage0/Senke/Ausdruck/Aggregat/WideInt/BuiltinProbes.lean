@@ -172,17 +172,17 @@ theorem table_count_zeuge :
     (lowE (layU QuantProbe.u (fun _ => none) 65536) occupied 8).isSome = true := by
   decide +kernel
 
-/-- Named cuts: no CPU scan zero convention, rotate or byte swap is assumed. -/
-theorem builtin_refused_zeuge :
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.clz 7) (.widen (by decide) (by decide) (.lit 1))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.ctz 7) (.widen (by decide) (by decide) (.lit 128))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.log2Floor 7) (.widen (by decide) (by decide) (.lit 3))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.popcount 7) (unsigned 7 255 (by decide) (by decide))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 .bswap16 (unsigned 15 4660 (by decide) (by decide))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 .bswap32 (unsigned 31 305419896 (by decide) (by decide))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin1 .bswap64 (unsigned 63 72623859790382856 (by decide) (by decide))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin2 (.rotl 7) (unsigned 7 129 (by decide) (by decide)) (amount 7 1 (by decide))) 4 = none ∧
-    lowE layout (Γ := []) (Λ := []) (.intBuiltin2 (.rotr 7) (unsigned 7 129 (by decide) (by decide)) (amount 7 1 (by decide))) 4 = none := by
+/-- The bit families share the connected complete-value lowering path. -/
+theorem builtin_lowered_zeuge :
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.clz 7) (.widen (by decide) (by decide) (.lit 1))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.ctz 7) (.widen (by decide) (by decide) (.lit 128))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.log2Floor 7) (.widen (by decide) (by decide) (.lit 3))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 (.popcount 7) (unsigned 7 255 (by decide) (by decide))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 .bswap16 (unsigned 15 4660 (by decide) (by decide))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 .bswap32 (unsigned 31 305419896 (by decide) (by decide))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin1 .bswap64 (unsigned 63 72623859790382856 (by decide) (by decide))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin2 (.rotl 7) (unsigned 7 129 (by decide) (by decide)) (amount 7 1 (by decide))) 4).isSome = true ∧
+    (lowE layout (Γ := []) (Λ := []) (.intBuiltin2 (.rotr 7) (unsigned 7 129 (by decide) (by decide)) (amount 7 1 (by decide))) 4).isSome = true := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.BuiltinProbe
