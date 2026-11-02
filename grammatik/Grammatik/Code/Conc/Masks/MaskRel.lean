@@ -1,5 +1,5 @@
 module
-public import Grammatik.Code.Conc.MaskNeed
+public import Grammatik.Code.Conc.Masks.MaskNeed
 public import Grammatik.Zielsatz.Eigenschaften.KernMaske
 @[expose] public section
 

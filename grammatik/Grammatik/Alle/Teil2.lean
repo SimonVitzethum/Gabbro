@@ -177,10 +177,10 @@ public import Grammatik.Code.Conc.GXStep
 public import Grammatik.Code.Conc.Lock
 public import Grammatik.Code.Conc.LockRel
 public import Grammatik.Code.Conc.LockWitness
-public import Grammatik.Code.Conc.Mask
-public import Grammatik.Code.Conc.MaskNeed
-public import Grammatik.Code.Conc.MaskRel
-public import Grammatik.Code.Conc.MaskWitness
+public import Grammatik.Code.Conc.Masks.Mask
+public import Grammatik.Code.Conc.Masks.MaskNeed
+public import Grammatik.Code.Conc.Masks.MaskRel
+public import Grammatik.Code.Conc.Masks.MaskWitness
 public import Grammatik.Code.Conc.RwLock
 public import Grammatik.Code.Conc.RwLockRel.Teil2
 public import Grammatik.Code.Conc.RwLockWitness
