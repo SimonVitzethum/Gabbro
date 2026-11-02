@@ -5,6 +5,7 @@ public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Semantik.Eingebaut
+public import Grammatik.Kern.Semantik.Semantik.EingebautZeuge
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
 public import Grammatik.Kern.Syntax.Zucker
@@ -253,6 +254,7 @@ public import Grammatik.Parser.Round.RundlaufItem.Teil6
 public import Grammatik.Parser.Round.RundlaufGeraet.Teil2
 public import Grammatik.Parser.Round.RundlaufProgramm
 public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Grammatik.Parser.Elab.UebersetzeAllg.EingebautZeuge
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil2
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 public import Grammatik.Kern.Semantik.Durchgaenge
