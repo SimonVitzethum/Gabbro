@@ -316,3 +316,7 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - **Not a topic of this list:** O10 (measurement layer); O12 (single program, no model case); O32 (hardware/runtime); O33 (process
   bookkeeping); O39 (kernel-module world; count: `N574`-`N577` built, unload window is hardware).
 - **Out of scope:** O29 (Simon).
+
+- Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
+  `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
+  TODO (Muse): prove generic expansion soundness for the connected implementation.
