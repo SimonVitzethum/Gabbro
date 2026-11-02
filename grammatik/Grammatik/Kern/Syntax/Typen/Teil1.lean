@@ -89,6 +89,7 @@ structure Gleit (lo hi : Int × Int) where
   lo_le : gleitLe (bruch lo) x = true
   le_hi : gleitLe x (bruch hi) = true
 
+mutual
 /-- Der Wert eines Typs. **Ein Wert ausserhalb seines Typs existiert nicht.**
     `F` are the functions of the program and `passt f n` says that `f` CONFORMS to the pointer
     type `fnptr n` (`Deklaration.passt`, `SigPasst`, 2026-10-21): a function pointer is a
@@ -97,10 +98,7 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .int lo hi => Zahl lo hi
   | .bool => Bool
   | .opt n => Option (Zahl 0 (n - 1))
-  | .sum cs => Σ i : Fin cs.length,
-      match cs.get i with
-      | none => Unit
-      | some τ => Val F passt τ
+  | .sum cs => Σ i : Fin cs.length, Fall F passt cs i
   | .why n => Fin n
   | .never => Empty
   | .fl lo hi => Gleit lo hi
@@ -109,13 +107,14 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .ref _ => Nat
   | .arr τ n => Fin n → Val F passt τ
   | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }
-termination_by τ => sizeOf τ
-decreasing_by
-  all_goals first
-    | decreasing_trivial
-    | have h := List.sizeOf_get cs i
-      simp_all only [Ty.sum.sizeOf_spec, Option.some.sizeOf_spec]
-      omega
+
+/-- The value type of case `i` of a sum: its payload's value, `Unit` for a bare case.
+    Structural over the case list, so `Val` reduces definitionally. -/
+def Fall (F : Type) (passt : F → Nat → Bool) : (cs : List (Option Ty)) → Fin cs.length → Type
+  | none :: _, ⟨0, _⟩ => Unit
+  | some τ :: _, ⟨0, _⟩ => Val F passt τ
+  | _ :: cs, ⟨i + 1, h⟩ => Fall F passt cs ⟨i, Nat.lt_of_succ_lt_succ h⟩
+end
 
 /-- The selected payload uses the same function image as its enclosing value. -/
 def Nutzlast (F : Type) (passt : F → Nat → Bool) : Option Ty → Type
