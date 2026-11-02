@@ -9,6 +9,7 @@ public import Stage0.Zeugen.Annahme.StateWitness
 public import Stage0.Zeugen.Annahme.ReturnCleanupWitness
 public import Stage0.Zeugen.Annahme.ResetWholeWitness
 public import Stage0.Zeugen.Annahme.CapacityRequiredWitness
+public import Stage0.Zeugen.Annahme.EndAllocWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomValueWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomVoidWitness
 public import Stage0.Zeugen.Ablehnung.ConsumingTraversalWitness
