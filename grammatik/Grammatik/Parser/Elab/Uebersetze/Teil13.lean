@@ -195,7 +195,7 @@ def elabU : List SItemTief → Except String UProg
       (match (uKonstFns ms0).find? (fun k => match k.rumpf with
         | .block [] (some (.ret (some _))) => false
         | _ => true) with
-      | some k => Konst.Export.constBlockVerweigerung k
+      | some k => Gabbro.Grammatik.Parser.Konst.Export.constBlockVerweigerung k
       | _ => .error "const function with a block body: certified evaluation unavailable") else
     let consts := uConstsRech (uKonstFns ms0) ms0 []
     let alias := uAliase consts ms0 ++ uAliasBreiten ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
