@@ -166,6 +166,6 @@ theorem RufMaschineG.plus_update (j : Nat) (sp : Speicher D) (m : Faden → RufF
       ⟨sp, rufUpdateG (fun t => (m t).plus j) f (z.plus j), la, st⟩ := by
   simp only [RufMaschineG.plus, rufUpdateG_plus]
 
-/-- **A step at budget `p` is a step at budget `p + j`** of the shifted machines. -/
+/- **A step at budget `p` is a step at budget `p + j`** of the shifted machines. -/
 
 end Gabbro.Grammatik

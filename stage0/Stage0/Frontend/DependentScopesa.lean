@@ -167,6 +167,6 @@ def elaborateScopes (items : List SItemTief) : Except String (DerivedScopes item
   | none =>
     discoverScopes items (items.length + 1) (prepare items).initial ⟨order.ordered, order.permutation⟩
 
-/-- Successful frontend scope discovery includes a checked strict alias dependency rank. -/
+/- Successful frontend scope discovery includes a checked strict alias dependency rank. -/
 
 end Gabbro.Stage0.Frontend

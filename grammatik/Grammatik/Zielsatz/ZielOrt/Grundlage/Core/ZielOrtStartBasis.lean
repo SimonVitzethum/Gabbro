@@ -216,7 +216,7 @@ theorem keinStartGrundG {P : Programm D} {O : Orakel D} {pa : Nat} {sp : Speiche
 
 /-! ## 3. The theorems at one budget (lemmas) -/
 
-/-- **The flagship with the start functions' completion, generic in the
+/- **The flagship with the start functions' completion, generic in the
     local carriers, AT ONE `forever` BUDGET.** The conclusion of
     `ziel_ort_sperre_invL` AND `StartEndeG`: at every finished thread (empty
     stack, head at a `return`) the start function's `ensures` and owed
