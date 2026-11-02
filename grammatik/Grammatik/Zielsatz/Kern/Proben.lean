@@ -243,7 +243,7 @@ theorem initRuhe_laeuft {D : Deklaration} (E : Einheit D) (h1 : E.gestartet = []
 
 theorem mE_nutzerPflicht : NutzerPflicht mE :=
   ⟨⟨fun passes f => ⟨mP_koerper_alle passes f, mP_inv_alle passes f,
-      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr⟩,
+      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, mSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
     ⟨fun L => by cases L; decide, fun a ha => by
       simp only [mE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩
@@ -305,14 +305,14 @@ theorem zStartPflicht (E : Einheit zD) (hS : E.S = zS) (hst : E.starts = [⟨zHa
 theorem probeB_erfuellbar_haupt : Erfuellbar zEB ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPB_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEB rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEB,
     initRuhe_laeuft zEB rfl⟩
 
 theorem probeC_erfuellbar_haupt : Erfuellbar zEC ⟨zFs, zFs_voll⟩ :=
   ⟨akzeptiertSpec_of zFs_voll zLs_voll zCs_voll zPC_akzeptiert,
     ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPC_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩, zStartPflicht zEC rfl rfl rfl rfl⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, zStartPflicht zEC rfl rfl rfl rfl⟩,
     ⟨zO, zO_gut, zO_lokal, axVertragO_wahr zO⟩, _, _, laufzeit_initRuhe zEC,
     initRuhe_laeuft zEC rfl⟩
 

@@ -182,7 +182,7 @@ theorem nutzer8 : NutzerPflicht E8 where
         have h := r.isLt
         have h0 : D8.gruende f = 0 := sigGruende_null uExp108 (by decide) f
         omega⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
+    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
   start := ⟨fun L => (kein_lock L).elim, fun a _ => by
     show ReqAmEintritt P8 a.1 _ a.2
     unfold ReqAmEintritt

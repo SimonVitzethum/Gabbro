@@ -156,7 +156,7 @@ def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [⟨kHauptA, .nil⟩, ⟨
 
 theorem kE_nutzerPflicht : Zielsatz.NutzerPflicht kE :=
   ⟨⟨fun passes f => ⟨kP_koerper_alle passes f, kP_inv_alle passes f,
-      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, kSI_ok.2, axEnsLokal_wahr⟩,
+      invGutGrund_ohneGrund (by cases f <;> rfl)⟩, kSI_ok.2, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
     ⟨fun L => by cases L; decide, fun a ha => by
       simp only [kE, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩

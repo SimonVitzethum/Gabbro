@@ -90,7 +90,7 @@ theorem nP_zurueck (S : SperrInv nD) (O' : Orakel nD) (U : Umwelt nD) (A : AUmwe
 /-- **(b) with the rely on configuration 1**: no contract, no invariant, no reason, and no
     `logik` outcome whatever a shared atomic read answers. -/
 theorem n1_logikA (T : nD.Tab ⊕ nD.Glob → Prop) : LogikPflichtA nP SchwachZeuge.nS (axWahr nD) T := by
-  refine ⟨fun passes f => ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, ⟨(fun (L : nD.Lock) => nomatch L), axEnsLokal_wahr⟩⟩
+  refine ⟨fun passes f => ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩, ⟨(fun (L : nD.Lock) => nomatch L), axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩⟩
   · intro O' _ _ _ U _ A _ R _ _ σ ρ _
     exact ⟨fun _ _ _ => rfl, fun g => nP_zurueck _ O' U A passes (torRuf nP R) f σ ρ _⟩
   · intro O' _ _ _ U _ A _ R _ _ σ ρ _ e

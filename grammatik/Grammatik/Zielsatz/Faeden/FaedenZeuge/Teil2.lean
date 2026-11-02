@@ -115,7 +115,7 @@ theorem zKind_akzeptiert :
 
 theorem zKind_nutzerPflicht : NutzerPflicht zKind :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
     ⟨fun _ => rfl, fun a ha => by
       simp only [zKind, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil,
         or_false, or_self] at ha

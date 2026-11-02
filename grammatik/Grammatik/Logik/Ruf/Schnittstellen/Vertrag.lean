@@ -71,4 +71,15 @@ theorem PtrVerfeinert.ens {P : Programm D} (h : PtrVerfeinert P) {n : Nat}
     (P.ptrVertrag n).postHolds s0 s1 ρ (ptrResult p.property v) :=
   (h p.val n p.property).2 s0 s1 ρ v hp hv
 
+/-- **O43 holds trivially when every target's requires holds everywhere and the
+    interfaces keep their default trivial contracts**: the interface post is
+    `true`, and the target's requires needs no interface pre. -/
+theorem ptrVerfeinert_trivial {P : Programm D}
+    (hreq : ∀ (f : D.Fn) (s : World D) (ρ : Env D (D.params f)), ReqAmEintritt P f s ρ)
+    (hp : ∀ n, P.ptrVertrag n = CallContract.trivial D (D.sigNr n)) : PtrVerfeinert P := by
+  intro f n hf
+  unfold PtrZielVerfeinert
+  rw [hp n]
+  exact ⟨fun s ρ _ => hreq f s _, fun _ _ _ _ _ _ => rfl⟩
+
 end Gabbro.Grammatik

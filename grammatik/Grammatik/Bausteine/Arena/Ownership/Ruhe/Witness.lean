@@ -137,7 +137,7 @@ theorem body_no_logik (S' : SperrInv FD) (O' : Orakel FD) (U : Umwelt FD) (A' : 
 
 /-- (b) The user's obligation with the atomic rely. -/
 theorem nutzer : NutzerPflichtA E := by
-  refine ⟨⟨fun passes f => ⟨⟨?_, ?_⟩, ?_, ?_⟩, ⟨(fun L => nomatch L), axEnsLokal_wahr⟩⟩,
+  refine ⟨⟨fun passes f => ⟨⟨?_, ?_⟩, ?_, ?_⟩, ⟨(fun L => nomatch L), axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩⟩,
     ⟨(fun L => nomatch L), fun _ _ => rfl⟩⟩
   · intro O' _ _ _ U _ A' _ R _ _ σ ρ _
     exact ⟨fun _ _ _ => rfl, fun g => body_no_logik _ O' U A' passes _ σ ρ _⟩

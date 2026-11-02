@@ -80,7 +80,7 @@ theorem logikPflicht_ohne {P : Programm D} {fs : List D.Fn} (hvoll : ∀ g : D.F
         intro i hi
         rw [hinv] at hi
         cases hi⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
+    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
 
 /-- **Such a project owes nothing a human writes**: without an atomic global the open-world rely
     is empty, and the sequential logic is the logic with the rely. -/
