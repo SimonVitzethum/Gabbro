@@ -368,3 +368,4 @@ public import Grammatik.Kern.Syntax.Konst.Zertifikat
 public import Grammatik.Kern.Syntax.Konst.AuswertungZeuge
 public import Grammatik.Kern.Syntax.Konst.Geschlossen
 public import Grammatik.Kern.Syntax.Konst.Literal
+public import Grammatik.Kern.Syntax.Konst.Ersetzung
