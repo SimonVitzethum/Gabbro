@@ -38,10 +38,10 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T4
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T5
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T6
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T7
-public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T8
-public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T9
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T8
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T9
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10
-public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T11
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T11
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T12
 @[expose] public section
 
