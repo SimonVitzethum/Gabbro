@@ -206,6 +206,13 @@ def lowCmp (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     String → USide → USide → Except String (Expr (declOf u) Γ Λ .bool)
   | op, a, b =>
     match lowWertE u Γ Λ fn er a, lowWertE u Γ Λ fn er b with
+    | .ok ⟨.fl _ _, x⟩, .ok ⟨.fl _ _, y⟩ =>
+      match op with
+      | "<" => .ok (Expr.fllt x y)
+      | "<=" => .ok (Expr.flle x y)
+      | ">" => .ok (Expr.fllt y x)
+      | ">=" => .ok (Expr.flle y x)
+      | _ => .error "float: comparison without canonical G form"
     | .ok ⟨.str _, x⟩, .ok ⟨.str _, y⟩ => do
       u.exportGate
       match op with

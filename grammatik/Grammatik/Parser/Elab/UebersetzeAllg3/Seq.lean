@@ -65,6 +65,14 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .bindW x d v :: rest =>
     (lowBindW u Γ Λ fn d v).bind fun w =>
       (R.seq (w.ty :: Γ) (fn.mitWert x w.ty) Λ pe rest).bind fun (b, r) => .ok (Block.bind w.term b, r)
+  | Γ, fn, Λ, pe, .floatLit x q lo hi :: rest =>
+    (R.seq (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest).bind fun (b, r) =>
+      .ok (Block.floatLit q lo hi b, r)
+  | Γ, fn, Λ, pe, .float x op a b lo hi :: rest => do
+    let ⟨.fl _ _, left⟩ ← lowWertE u Γ Λ fn none a | .error "float: left operand is not a float"
+    let ⟨.fl _ _, right⟩ ← lowWertE u Γ Λ fn none b | .error "float: right operand is not a float"
+    let (body, remaining) ← R.seq (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest
+    pure (Block.float op left right lo hi body, remaining)
   | Γ, fn, Λ, pe, .bindB x v :: rest =>
     (lowEns u Γ Λ fn none v).bind fun ev =>
       (R.seq (.bool :: Γ) (fn.mitBindungB x) Λ pe rest).bind fun (b, r) => .ok (Block.bind ev b, r)

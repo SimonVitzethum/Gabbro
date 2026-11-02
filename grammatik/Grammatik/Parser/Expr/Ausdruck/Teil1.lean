@@ -30,6 +30,8 @@ inductive XKind
   /-- Explicit instantiation: `names = callee :: argument spellings`, `subs = call arguments`.
       Argument spellings are balanced token groups, interpreted by the declared parameter kind. -/
   | instantiate
+  /-- Folds: binder/domain names; domain operands, filter, value, optional empty value. -/
+  | foldAdd | foldMin | foldMax
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool

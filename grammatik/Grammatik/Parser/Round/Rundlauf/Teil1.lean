@@ -107,16 +107,33 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
       raw name ++ [.zeichen "::", .zeichen "["] ++ kommaToks (words.map raw) ++
         [.zeichen "]", .zeichen "("] ++ kommaToks ts ++ [.zeichen ")"]
     | [] => [.ende]
+  | .foldAdd => druckFold "add" ns ts
+  | .foldMin => druckFold "min" ns ts
+  | .foldMax => druckFold "max" ns ts
   | .label => match ns, ts with
     | [name], [value] => nameTok name :: .zeichen ":" :: value
     | _, _ => [.ende]
 where
+  druckFold (word : String) (names : List String) (operands : List (List Token)) : List Token :=
+    match names, operands with
+    | [binder, domain], [subject, filter, value] =>
+      [.zeichen "(", .wort word, nameTok binder, .wort "in"] ++ domToks domain [] [subject] ++
+        [.wort "where"] ++ filter ++ [.zeichen ":"] ++ value ++ [.zeichen ")"]
+    | [binder, domain], [subject, filter, value, empty] =>
+      [.zeichen "(", .wort word, nameTok binder, .wort "in"] ++ domToks domain [] [subject] ++
+        [.wort "where"] ++ filter ++ [.zeichen ":"] ++ value ++ [.wort "else"] ++ empty ++ [.zeichen ")"]
+    | _, _ => [.ende]
   druckQuant (w : String) (ns : List String) (ts : List (List Token)) : List Token :=
     match ns, ts.reverse with
     | x :: dk :: ds, body :: opsRev =>
       [.zeichen "(", .wort w, nameTok x, .wort "in"] ++ domToks dk ds opsRev.reverse ++
         [.zeichen ":"] ++ body ++ [.zeichen ")"]
     | _, _ => [.ende]
+
+theorem druckFold_ne_nil (word : String) (names : List String) (operands : List (List Token)) :
+    druckExtToks.druckFold word names operands ≠ [] := by
+  unfold druckExtToks.druckFold
+  split <;> simp
 
 theorem druckQuant_ne_nil (w : String) (ns : List String) (ts : List (List Token)) :
     druckExtToks.druckQuant w ns ts ≠ [] := by
@@ -135,10 +152,12 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · split <;> simp only [ne_eq, List.cons_ne_self, List.cons_ne_nil, not_false_eq_true]
   · split <;> simp only [List.append_assoc, List.cons_append, List.nil_append, ne_eq, List.append_eq_nil_iff, reduceCtorEq, and_false, not_false_eq_true, List.cons_ne_self]
   · split <;> simp only [ne_eq, List.cons_ne_self, List.cons_ne_nil, not_false_eq_true]
-
   · split <;> simp only [List.cons_append, List.nil_append, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
 
   · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
+  · exact druckFold_ne_nil _ _ _
+  · exact druckFold_ne_nil _ _ _
+  · exact druckFold_ne_nil _ _ _
 
 mutual
 def druckToks : SExpr → List Token

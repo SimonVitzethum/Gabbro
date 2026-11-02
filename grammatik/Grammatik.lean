@@ -57,4 +57,8 @@ public import Grammatik.Parser.Elab.Generic.PipelineWitness
 public import Grammatik.Parser.Elab.Generic.FunctionWitness
 public import Grammatik.Parser.Elab.Generic.BoundsWitness
 
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
+public import Grammatik.Parser.Elab.Uebersetze.Folds.ExistsWitness
+public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatWitnesses
+
 @[expose] public section

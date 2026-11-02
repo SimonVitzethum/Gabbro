@@ -6,6 +6,7 @@ public import Grammatik.Parser.Item.ElementTief.Defs1
 public import Grammatik.Parser.Lex.Lexer
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 public import Grammatik.Parser.Elab.Uebersetze.Records.Schema
+public import Grammatik.Parser.Elab.Uebersetze.Records.Embedding
 
 @[expose] public section
 
@@ -47,7 +48,7 @@ def uRecordField (scope : UTypeScope) (alias : List (String × (Int × Int))) (t
 /-- One dependency pass. Identity is the original declaration position, independent of resolution
     order. A deferred declaration is retried only after another declaration has resolved. -/
 def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (pending : List (Nat × SItemTief)) :
+    (items : List SItemTief) (pending : List (Nat × SItemTief)) :
     Except String (UTypeScope × List (Nat × SItemTief)) :=
   pending.foldlM (fun (scope, deferred) (identity, item) => do
     match item with
@@ -57,8 +58,8 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
       if scope.types.any (fun entry => strEq entry.1 name) then
         throw ("source export: duplicate type declaration: " ++ name)
       match body with
-      | .raw text =>
-        let fields ← uRecordFields text
+      | .raw _ =>
+        let fields ← expandRecord (items.length + 1) items [] name
         if (fields.map (·.fname)).eraseDups.length != fields.length then
           throw ("source export: duplicate record field: " ++ name)
         if fields.any uRecordFieldMetadata then
@@ -75,13 +76,13 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
     | _ => throw "source export: type declaration has no value schema") (scope, [])
 
 /-- There are at most as many productive passes as declarations. Cycles and missing names fail closed. -/
-def uResolveTypes : Nat → UTypeScope → List (String × (Int × Int)) → List UTab →
+def uResolveTypes (items : List SItemTief) : Nat → UTypeScope → List (String × (Int × Int)) → List UTab →
     List (Nat × SItemTief) → Except String UTypeScope
   | _, scope, _, _, [] => .ok scope
   | 0, _, _, _, _ => .error "source export: cyclic or unresolved by-value record schema"
   | fuel + 1, scope, alias, tabs, pending => do
-    let (next, deferred) ← uTypePass scope alias tabs pending
-    if deferred.length < pending.length then uResolveTypes fuel next alias tabs deferred
+    let (next, deferred) ← uTypePass scope alias tabs items pending
+    if deferred.length < pending.length then uResolveTypes items fuel next alias tabs deferred
     else throw "source export: cyclic, unsupported or unresolved by-value record schema"
 
 /-- Tagged declarations retain their separate canonical collector. Every other type resolves here. -/
@@ -91,7 +92,7 @@ def uTypes (constants : List (String × Int)) (alias : List (String × (Int × I
     match item with
     | .typeT flags .. => !flags.any (strEq · "tagged")
     | _ => false
-  uResolveTypes pending.length { types := constants.map (fun (name, value) => (name, .int value value)) } alias tabs pending
+  uResolveTypes items pending.length { types := constants.map (fun (name, value) => (name, .int value value)) } alias tabs pending
 
 /-- The nominal schema of a product value, with the proof that the identity matches. Unknown nominal
     identities stay refused; they never default to a structural guess. -/

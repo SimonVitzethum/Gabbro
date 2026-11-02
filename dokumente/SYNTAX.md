@@ -866,6 +866,13 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 |---|---|---|
 | `forall k in slots of T : p`, `elems of` | the binder has type `index into T`; the body runs over `0 ..< count`; **the guards of `T` are in Λ** — a quantifier reads the table | `Expr.forallSlots t body hL` |
 | `exists k in slots of T : p` | | `Expr.existsSlots t body hL` |
+
+`exists` and `forall` are boolean expressions in bodies as well as predicates in contracts:
+they can initialize an inferred or explicit `bool` binding, be returned, passed to a boolean
+parameter, stored in a boolean destination, or combined with boolean operators and guards.
+For example, `let b = exists k in slots of T : T.slots[k].v > 10;` uses the same
+quantifier elaboration and `Expr.existsSlots` lowering as a contract predicate. Table lookup,
+index binding and held-guard requirements remain identical. Unsupported domains are refused.
 | `a reaches b via f` | `f` is an `option index into Self` field of `T` (`T001`–`T003`); the chain is followed for at most `count` steps — more steps than slots repeat one | `Expr.reaches t f hf a b hL` |
 | `descendants of s`, `ancestors of s`, `chain(a, b) in T` | SUGAR: `forall k in slots of T : (s reaches k via child) => …` and the mirror with `parent`; `chain` names its field at the site | `forallSlots` + `reaches` |
 | `queue T`, `fields of T` | SUGAR over `slots of` and over the record's fields | `forallSlots` |

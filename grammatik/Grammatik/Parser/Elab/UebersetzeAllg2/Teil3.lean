@@ -288,7 +288,8 @@ def lowAssignGlobOL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
           else .error "option of a foreign table"
       else .error "option table unknown"
 
-/-- `x = v;` at a `let mut` number: `Stmt.assignVar`, the value fitted into the variable's range. -/
+/-- Assign a local at its actual declared type, including an IEEE accumulator.
+    The canonical fitter retains integer widening and rejects incompatible types. -/
 def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) (x : String) (v : USide) :
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ) :=
@@ -296,14 +297,14 @@ def lowSetVarL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn
   | .error e => .error e
   | .ok j =>
     match fn.params[j]? with
-    | some (_, .int lo hi) =>
-      match lowVar Γ j (.int lo hi) with
+    | some (_, ty) =>
+      match lowVar Γ j ty with
       | .error e => .error e
       | .ok var =>
-        match lowWertAt u Γ Λ fn lo hi v with
+        match lowWertAtE u Γ Λ fn none ty v with
         | .error e => .error e
         | .ok e => .ok (Stmt.assignVar (D := declOf u) var e)
-    | _ => .error "assignment to a non-number variable"
+    | _ => .error "assignment to an unknown variable"
 
 /-- The same for a truth value. -/
 def lowSetVarBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)

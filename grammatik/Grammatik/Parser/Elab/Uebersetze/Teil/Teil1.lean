@@ -347,6 +347,9 @@ inductive UStmt
   | bindOptBeg : String → String → List UArg → UStmt
   /-- Optional-result axiom binding with an end-block reason continuation. -/
   | bindOptElseBeg : String → String → List UArg → String → UStmt
+  /-- IEEE introductions retain their rational literal or operation and checked result bounds. -/
+  | floatLit : String → (Int × Int) → (Int × Int) → (Int × Int) → UStmt
+  | float : String → GleitOp → USide → USide → (Int × Int) → (Int × Int) → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
