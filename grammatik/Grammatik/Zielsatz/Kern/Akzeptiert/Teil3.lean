@@ -74,7 +74,7 @@ theorem resetAdmissionB_iff {g : D.Glob} :
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
     · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
-  | ptr t rw =>
+  | ptr cap =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
@@ -207,7 +207,7 @@ theorem resetCarrierB_iff {g : D.Glob} :
       exact Ty.noConfusion harr
     · intro _
       trivial
-  | ptr t rw =>
+  | ptr cap =>
     simp only [resetCarrierB, h]
     constructor
     · intro _ elem len harr

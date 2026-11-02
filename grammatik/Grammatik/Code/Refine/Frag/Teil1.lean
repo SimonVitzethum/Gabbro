@@ -220,10 +220,10 @@ theorem loadG_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = t
       · exact opdlt_reg (r + 1) (r + 2) (by omega)
       · simp only [Opd.ev, bool_ofInt, regs_set_same, encR, Option.some.injEq]
         rfl
-  | ptr n rw =>
+  | ptr cap =>
       refine ⟨([.load r .ptr p], .reg r, r + 1), by simp only [loadG], ?_⟩
       apply frag_one
-      have hl' : m.load b o .ptr = some (encR lay (.ptr n rw) v) := by
+      have hl' : m.load b o .ptr = some (encR lay (.ptr cap) v) := by
         simpa [memTy, regTy, encM] using hl
       exact stepI_load hp hl'
   | opt n =>

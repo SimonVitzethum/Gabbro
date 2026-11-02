@@ -76,7 +76,7 @@ def gg : UGlob := { name := "G", ty := .int 0 255, init := 0, breite := 8 }
 
 /-- The context of a function with a pointer parameter `p` to `T` and the unit's table, arena and static. -/
 def ct : UCtx :=
-  { lb with names := ["p"], kinds := [.ptr 0 true], types := [.ptr 0 true], tabs := [tt, aa], globs := [gg] }
+  { lb with names := ["p"], kinds := [.ptr (.table 0 (true, true))], types := [.ptr (.table 0 (true, true))], tabs := [tt, aa], globs := [gg] }
 
 /-! ## The builtins at a declared storage width -/
 

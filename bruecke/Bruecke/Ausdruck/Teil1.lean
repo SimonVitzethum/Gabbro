@@ -33,8 +33,8 @@ def LRel {D : Deklaration} {Γ : Ctx} (fn : UFn) (sh : Nat) (ρ : Env D Γ)
 /-- The consistency of a function's two parameter lists (kinds and types, as the elaborator
     writes both): a pointer kind is a pointer type to the same table. Checked per unit. -/
 def ArtStimmtPtr (fn : UFn) : Prop :=
-  ∀ (j num : Nat) (w : Bool), fn.kinds[j]? = some (UParamArt.ptr num w) →
-    ∃ w', (fn.params[j]?).map (·.2) = some (Ty.ptr num w')
+  ∀ (j num : Nat) (w : Bool), fn.kinds[j]? = some (.ptr (.table num (true, w))) →
+    ∃ w', (fn.params[j]?).map (·.2) = some (.ptr (.table num (true, w')))
 
 /-- The parameter kinds the bridge speaks about: pointers, indices and numbers. -/
 def ArtSchlicht : UParamArt → Bool
@@ -112,7 +112,7 @@ theorem lowIdx_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat}
 
 theorem durchTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (num : Nat) (w : Bool) (h : num < u.tabs.length)
-    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr num w))
+    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr (.table num (true, w))))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
     HEq (durchTerm u Γ Λ num w h fh v i hL)
@@ -143,7 +143,7 @@ theorem wrel_lies {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u �
 
 /-- The pointer parameter the lowering resolves names, in `Pflichten.ptrTab`, its table. -/
 theorem ptrTab_of (fn : UFn) (hA : ArtStimmt fn) (b : String) (j num : Nat) (w : Bool)
-    (hj : paramPos fn.params b = .ok j) (hp : fn.kinds[j]? = some (.ptr num w))
+    (hj : paramPos fn.params b = .ok j) (hp : fn.kinds[j]? = some (.ptr (.table num (true, w))))
     (h : num < u.tabs.length) :
     ptrTab u fn b = some (tabAt u ⟨num, h⟩).name := by
   obtain ⟨w', hw'⟩ := hA.1 j num w hp

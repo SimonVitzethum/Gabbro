@@ -105,7 +105,7 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .never => Empty
   | .fl lo hi => Gleit lo hi
   | .fnptr n => { f : F // passt f n = true }
-  | .ptr _ _ => Unit
+  | .ptr _ => Unit
   | .ref _ => Nat
   | .arr τ n => Fin n → Val F passt τ
   | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }

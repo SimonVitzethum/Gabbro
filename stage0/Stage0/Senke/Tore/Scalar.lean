@@ -69,9 +69,9 @@ def world : World D where
   globs g := nomatch g
   spur := []
 
-def environment : Env D [.ptr 0 false] := .cons () .nil
+def environment : Env D [.ptr (.table 0 (true, false))] := .cons () .nil
 
-def arguments : Args D [.ptr 0 false] [] [.ptr 0 false, .int 42 42, .bool] :=
+def arguments : Args D [.ptr (.table 0 (true, false))] [] [.ptr (.table 0 (true, false)), .int 42 42, .bool] :=
   .cons (.var .here) (.cons (.lit 42) (.cons .tru .nil))
 
 def code : List II := [ci 1 9 42 0, ci 1 10 1 0]
@@ -118,7 +118,7 @@ theorem lowR_ok_zeuge [Kern] :
     lowR layout arguments 8 = some (code, 11) ∧
     EnvAt layout memory 1024 environment ∧
     memory.rd64 (slot 1024 (BitVec.ofNat 64 8)) = some 99 ∧
-    ¬ Enc layout (.ptr 0 false) () 99 ∧
+    ¬ Enc layout (.ptr (.table 0 (true, false))) () 99 ∧
     ∃ m', Star ⟨0, 1024⟩ memory ⟨32, 1024⟩ m' ∧
       Agree 1024 8 32 memory m' ∧
       ArgsW layout (fun j => rdW m' 1024 (8 + j)) (evalArgs world arguments world environment) := by

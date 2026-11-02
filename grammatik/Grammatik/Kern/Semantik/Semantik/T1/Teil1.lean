@@ -470,7 +470,7 @@ def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D �
   | .never, _ => Option.none
   | .fl lo hi, n => gleitWortPasst lo hi n
   | .fnptr m, n => zeigerPasst z m n
-  | .ptr _ _, _ => some ()
+  | .ptr _, _ => some ()
   | .ref _, n => if 0 ≤ n then some (Val.vonZelle n.toNat) else Option.none
   -- An aggregate is not one raw word: the checker admits no foreign or register answer of such a type.
   | .arr _ _, _ => Option.none

@@ -90,7 +90,7 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
               · have h2' : ¬ (D.mitRuhe).passt (some f) (m + 1) = true := h2
                 simp only [zeigerPasst, hz', hzn, dif_neg h2, dif_neg h2']
                 try rfl
-  | .ptr _ _, _ => rfl
+  | .ptr _, _ => rfl
   | .arr _ _, _ => rfl
   | .str _, _ => rfl
 

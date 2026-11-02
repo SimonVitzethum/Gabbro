@@ -19,7 +19,7 @@ inductive R4Fn where
   deriving DecidableEq
 
 def r4SigEin : Signatur Unit Empty Unit Empty where
-  params := [.ptr 0 true, .index 2, .int 0 10]
+  params := [.ptr (.table 0 (true, true)), .index 2, .int 0 10]
   erg := none
   gruende := 0
   haelt := [()]
@@ -29,7 +29,7 @@ def r4SigEin : Signatur Unit Empty Unit Empty where
   produziert := []
 
 def r4SigLies : Signatur Unit Empty Unit Empty where
-  params := [.ptr 0 false, .index 2]
+  params := [.ptr (.table 0 (true, false)), .index 2]
   erg := some (.int 0 100)
   gruende := 0
   haelt := [()]
@@ -127,7 +127,7 @@ theorem r4Darf : darf r4D () r4M := by
 /-! ## 2. The bodies and contracts -/
 
 /-- `einzahlen`'s parameters: `k` (`.here`), `i`, `b`. -/
-abbrev r4GEin : Ctx := [.ptr 0 true, .index 2, .int 0 10]
+abbrev r4GEin : Ctx := [.ptr (.table 0 (true, true)), .index 2, .int 0 10]
 
 /-- `k.slots[i].stand = 100;` -/
 def r4Schreib : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M r4M :=
@@ -148,7 +148,7 @@ theorem r4HpLies : RufPasst r4D (vertragVon r4D r4Ein) (r4D.signatur r4Lies) r4M
 
 /-- `lies(k, i);` -- `k` (rw) passed as `r`: the pointer to the same table. -/
 def r4RufLies : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M (nach r4D r4Lies r4M) :=
-  .call r4Lies (.cons (.ptrOf () 0 rfl false) (.cons (.var (.there .here)) .nil)) r4HpLies rfl
+  .call r4Lies (.cons (.ptrOf () 0 rfl (true, false)) (.cons (.var (.there .here)) .nil)) r4HpLies rfl
 
 def r4RetEin : Endblock r4D (vertragVon r4D r4Ein) false r4GEin r4M :=
   .ret .empty (List.Perm.refl _)
@@ -165,7 +165,7 @@ def r4EnsEin : Expr r4D (ErgCtx (r4D.params r4Ein) (r4D.erg r4Ein)) (vertragVon 
     (.thru (.var .here) () rfl () (.var (.there .here)) r4Darf)
 
 /-- `lies`'s parameters: `k` (`.here`), `i`. -/
-abbrev r4GLies : Ctx := [.ptr 0 false, .index 2]
+abbrev r4GLies : Ctx := [.ptr (.table 0 (true, false)), .index 2]
 
 /-- `return k.slots[i].stand;` -/
 def r4RumpfLies : Endblock r4D (vertragVon r4D r4Lies) false r4GLies r4M :=
@@ -203,10 +203,10 @@ def r4Idx0 {Γ : Ctx} : Expr r4D Γ r4M (.index 2) := .widen (by decide) (by dec
 def r4Sieben {Γ : Ctx} : Expr r4D Γ r4M (.int 0 10) := .widen (by decide) (by decide) (.lit 7)
 
 def r4RufEinT : Stmt r4D (vertragVon r4D r4Treiber) false [] r4M (nach r4D r4Ein r4M) :=
-  .call r4Ein (.cons (.ptrOf () 0 rfl true) (.cons r4Idx0 (.cons r4Sieben .nil))) r4HpEinT rfl
+  .call r4Ein (.cons (.ptrOf () 0 rfl (true, true)) (.cons r4Idx0 (.cons r4Sieben .nil))) r4HpEinT rfl
 
 def r4RufLiesT : Stmt r4D (vertragVon r4D r4Treiber) false [] r4M (nach r4D r4Lies r4M) :=
-  .call r4Lies (.cons (.ptrOf () 0 rfl false) (.cons r4Idx0 .nil)) r4HpLiesT rfl
+  .call r4Lies (.cons (.ptrOf () 0 rfl (true, false)) (.cons r4Idx0 .nil)) r4HpLiesT rfl
 
 def r4RetT : Endblock r4D (vertragVon r4D r4Treiber) false [] r4M := .ret .empty (List.Perm.refl _)
 

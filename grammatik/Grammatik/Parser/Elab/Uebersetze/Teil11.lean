@@ -414,7 +414,7 @@ def uStartArg (tabs : List UTab) : Ty → SExpr → Bool
   | .bool, .fls => true
   | .opt _, .call "None" [] => true
   -- `&T` for a `ptr<…> T` parameter (`Expr.ptrOf`): the one pointer to the carrier the type names
-  | .ptr n _, .fnref t => match tabs[n]? with
+  | .ptr ⟨0, ⟨_, _, none⟩, .table n⟩, .fnref t => match tabs[n]? with
     | .some tb => strEq tb.name t
     | .none => false
   | _, _ => false

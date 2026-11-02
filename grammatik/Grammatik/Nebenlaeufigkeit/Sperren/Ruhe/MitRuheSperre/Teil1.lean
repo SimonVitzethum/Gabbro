@@ -404,7 +404,7 @@ theorem execStmtH_ru_assignThru {V : Vertrag D}
     (hL)
     (σ : World D)
     (ρ : Env D Γ)
-    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]

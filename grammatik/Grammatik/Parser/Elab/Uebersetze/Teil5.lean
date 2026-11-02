@@ -134,7 +134,8 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
   | e =>
     match uZugriff ctx e with
     | .error x => .error (if uPraemisse x then x else "ensures clause without G form")
-    | .ok (.thru b, tb, f, ix) =>
+    | .ok (.thru b, tb, f, ix) => do
+      uReadThrough ctx b
       if uBoolFeld ctx tb f then .ok (.slotB b f ix) else .error "ensures clause without G form"
     | .ok (.tabelle b, tb, f, ix) =>
       if uBoolFeld ctx tb f then .ok (.tabB b f ix) else .error "ensures clause without G form"
@@ -209,5 +210,3 @@ def ensAltErg : UEns → Bool
   | .ergB => true
   | _ => false
 end
-
-end Gabbro.Grammatik.Parser.Uebersetze

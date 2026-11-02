@@ -53,7 +53,7 @@ theorem chkS_sound_assignThru
     (c : Context)
     (zzh1 : k.bounded)
     (hc : c.bounded)
-    : Supports (OS A I out k c (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (chkS A I fs out (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _) k c) :=
+    : Supports (OS A I out k c (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (chkS A I fs out (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _) k c) :=
   by
   simp only [chkS]
   exact supports_if (fun h => by

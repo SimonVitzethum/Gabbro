@@ -16,7 +16,7 @@
     §1  program/module/use/const/static/when  -> `Deklaration` (Namen sind statisch; ein
                                                `const` ist ein Literal, ein `static` ein `Glob`)
     §2  typedecl/intty/floatty/tagged/linear  -> `Ty` (`int`, `fl`, `sum`, `never`, …), `Marke`
-    §3  ptrty/space/rights                    -> `Ty.ptr t rw`; ein Zugriff hindurch ist ein
+    §3  ptrty/space/rights                    -> `Ty.ptr (.table t (true, rw))`; ein Zugriff hindurch ist ein
                                                Zugriff auf `t` mit dessen Waechtern («SG-8»)
     §4  expr/primary/place/call/fnvalue/old   -> `Expr` (alle Operatoren), `Expr.fnref`,
                                                `Expr.altGlob`/`altSlot`, `Expr.ptrOf`
@@ -282,6 +282,13 @@ structure Deklaration where
       ghost -- `Geist.lean` says what that means. Default: none is ghost. -/
   geist : Tab → Bool := fun _ => false
   ggeist : Glob → Bool := fun _ => false
+  /-- Finite nominal data-space registry. A name alone promises no physical isolation. -/
+  dataSpaces : List String := ["normal"]
+  /-- The declared logical space of each table and global. -/
+  tableSpace : Tab → Nat := fun _ => 0
+  globalSpace : Glob → Nat := fun _ => 0
+  /-- Resolved owner identities; exclusive movement still needs the ownership rules. -/
+  ownerNr : Nat → Option Marke := fun _ => none
 
 attribute [instance] Deklaration.decTab Deklaration.decFeld Deklaration.decGlob
   Deklaration.decLock Deklaration.decMarke
@@ -456,5 +463,28 @@ def ArmCtx (Γ : Ctx) : Option Ty → Ctx
 
     Jeder Konstruktor traegt den Bereich seines Ergebnisses im Typ. Was `M104` rechnet,
     steht hier als Index; was `M102`/`M103`/`M137` verlangen, steht als Argument. -/
+
+/-- Resolve a table capability only in its registered nominal space. Equal space names
+    grant no access to a different table and establish no physical separation. -/
+def Deklaration.capTab (D : Deklaration) (space number : Nat) : Option D.Tab :=
+  match D.tabNr number with
+  | none => none
+  | some t => if space = D.tableSpace t ∧ space < D.dataSpaces.length then some t else none
+
+theorem Deklaration.capTab_sound {D : Deklaration} {space number : Nat} {t : D.Tab}
+    (h : D.capTab space number = some t) :
+    D.tabNr number = some t ∧ space = D.tableSpace t ∧ space < D.dataSpaces.length := by
+  cases hn : D.tabNr number with
+  | none => simp [Deklaration.capTab, hn] at h
+  | some t' =>
+    simp only [Deklaration.capTab, hn] at h
+    split at h
+    next hs => cases h; exact ⟨hn, hs⟩
+    next => cases h
+
+theorem Deklaration.capTab_of {D : Deklaration} {space number : Nat} {t : D.Tab}
+    (hn : D.tabNr number = some t) (hs : space = D.tableSpace t)
+    (hb : space < D.dataSpaces.length) : D.capTab space number = some t := by
+  simp [Deklaration.capTab, hn, hs, hb]
 
 end Gabbro.Grammatik

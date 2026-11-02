@@ -46,7 +46,7 @@ inductive GFn where
 
 /-- `fn aendern(k : ptr<normal, rw> T, w : ptr<normal, r> T) effects { writes k, reads w }`. -/
 def sigAendern : Signatur GTab Empty Empty Empty where
-  params := [.ptr 0 true, .ptr 0 false]
+  params := [.ptr (.table 0 (true, true)), .ptr (.table 0 (true, false))]
   erg := none
   gruende := 0
   haelt := []
@@ -57,7 +57,7 @@ def sigAendern : Signatur GTab Empty Empty Empty where
 
 /-- `fn getrennt(k : ptr<normal, rw> T, q : ptr<normal, r> U) effects { writes k, reads q }`. -/
 def sigGetrennt : Signatur GTab Empty Empty Empty where
-  params := [.ptr 0 true, .ptr 1 false]
+  params := [.ptr (.table 0 (true, true)), .ptr (.table 1 (true, false))]
   erg := none
   gruende := 0
   haelt := []
@@ -68,8 +68,8 @@ def sigGetrennt : Signatur GTab Empty Empty Empty where
 
 /-- A re-view at one pointer type: `fn sicht(r : ptr<normal, r> T) -> ptr<normal, r> T`. -/
 def sigSicht : Signatur GTab Empty Empty Empty where
-  params := [.ptr 0 false]
-  erg := some (.ptr 0 false)
+  params := [.ptr (.table 0 (true, false))]
+  erg := some (.ptr (.table 0 (true, false)))
   gruende := 0
   haelt := []
   schreibt := fun _ => false
@@ -173,14 +173,14 @@ def σ0 : World gD where
   globs := fun g => nomatch g
   spur := []
 
-def ρ2 : Env gD [.ptr 0 true, .ptr 0 false] := .cons () (.cons () .nil)
-def ρG : Env gD [.ptr 0 true, .ptr 1 false] := .cons () (.cons () .nil)
+def ρ2 : Env gD [.ptr (.table 0 (true, true)), .ptr (.table 0 (true, false))] := .cons () (.cons () .nil)
+def ρG : Env gD [.ptr (.table 0 (true, true)), .ptr (.table 1 (true, false))] := .cons () (.cons () .nil)
 
 /-! ## The converse: without `ParamGetrennt`, the per-parameter frame is only a promise -/
 
 theorem zeuge_aendern_nicht_getrennt : ¬ ParamGetrennt gD gAendern :=
   leihe_nicht_getrennt (D := gD) (ps := gD.params gAendern) ⟨0, by decide⟩ ⟨1, by decide⟩
-    (by decide) (n := 0) (rw := true) (rw' := false) rfl rfl rfl (t := GTab.T) rfl
+    (by decide) (n := 0) (rights := ⟨true, true, none⟩) (rights' := ⟨true, false, none⟩) rfl rfl rfl (t := GTab.T) rfl
 
 theorem zeuge_aendern_rahmen : RahmenUeberParams gD gAendern := by
   intro t ht
@@ -255,8 +255,8 @@ theorem leihe_wurzel_zeuge :
     ∃ τ, sigSicht.erg = some τ ∧
       traegerVon gD τ = traegerVon gD (sigSicht.params.get ⟨0, by decide⟩) ∧
       traegerVon gD τ = some GTab.T :=
-  let ⟨τ, h1, h2⟩ := leihe_wurzel (D := gD) sigSicht ⟨0, by decide⟩ (n := 0) (rw := false)
-    (rw' := false) rfl rfl
+  let ⟨τ, h1, h2⟩ := leihe_wurzel (D := gD) sigSicht ⟨0, by decide⟩ (n := 0) (rights := ⟨true, false, none⟩)
+    (rights' := ⟨true, false, none⟩) rfl rfl
   ⟨τ, h1, h2, by rw [h2]; rfl⟩
 
 #print axioms Gabbro.Grammatik.GetrenntZeuge.zeuge_aendern_nicht_getrennt

@@ -88,7 +88,9 @@ def typS (otab : Int → Option Nat) : Ty → Except String STyp
   | .int lo hi => .ok (.range (.atom (if 0 ≤ lo then "u64" else "i64")) (zahlE lo) (zahlE hi) false)
   | .bool => .ok (.atom "bool")
   | .why n => .ok (.atom (nGrund n))
-  | .ptr n rw => .ok (.ptr "normal" (if rw then "rw" else "r") (.atom (nTab n)))
+  | .ptr ⟨0, ⟨true, rw, none⟩, .table n⟩ => .ok (.ptr "normal" (if rw then "rw" else "r") (.atom (nTab n)))
+  | .ptr ⟨0, ⟨false, true, none⟩, .table n⟩ => .ok (.ptr "normal" "w" (.atom (nTab n)))
+  | .ptr _ => .error "capability type without checked source binding"
   | .opt n => match otab n with
     | some i => .ok (.index true (nTab i))
     | none => .error "option of a count no table has"

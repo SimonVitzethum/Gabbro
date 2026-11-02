@@ -48,11 +48,29 @@ set_option maxRecDepth 100000
 
 /-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
 
-/-- WITNESS (`beispiele/15`, shortened): an `own` pointer is a read-write pointer in the model (the
-    exporter reads it the same way; ownership is the checker's business). -/
-def own1 : String :=
-  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, own> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
-theorem own1_ok : stufe own1 = "OK" := by decide +kernel
+/-- One table program with the source rights supplied at its capability parameter. -/
+def tableRights (rights : String) : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, " ++ rights ++
+  "> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
+
+/-- Ownership cannot be erased into ordinary read/write permission. This source declares no owner mark. -/
+def own1 : String := tableRights "own"
+theorem own1_refused : stufe own1 = "elab: pointer rights without checked data/owner form: own" := by
+  decide +kernel
+
+/-- Both explicit read and write rights reach the existing checked table operations. -/
+theorem rights_union_ok : stufe (tableRights "w+r") = "OK" := by decide +kernel
+
+/-- A write-only pointer can store, but its subsequent read is refused. -/
+theorem write_only_refused :
+    stufe (tableRights "w") = "elab: read through pointer without read right" := by
+  decide +kernel
+
+/-- Write-only source reaches the ordinary checked table-store lowering. -/
+def storeOnly : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, w> T, i : index into T) effects { writes r.slots } { r.slots[i].b = true; } }"
+
+theorem write_only_store_ok : stufe storeOnly = "OK" := by decide +kernel
 
 /-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
 def bnot1 : String :=

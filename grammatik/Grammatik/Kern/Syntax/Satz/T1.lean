@@ -94,8 +94,8 @@ theorem slot_hat_waechter {t : D.Tab} {f : D.Feld t} {i : Expr D Γ Λ (.index (
     {hL : darf D t Λ} (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .slot t f i hL) : darf D t Λ := hL
 
 /-- Ein Zugriff DURCH einen Zeiger steht unter denselben Waechtern («SG-8»). -/
-theorem zeiger_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr n rw)}
-    {ht : D.tabNr n = some t} {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
+theorem zeiger_hat_waechter {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (true, rw) space))}
+    {ht : D.capTab space n = some t} {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
     (_e : Expr D Γ Λ (D.typ t f)) (_h : _e = .thru p t ht f i hL) : darf D t Λ := hL
 
 /-- Eine Bytelesung liegt in der Tabelle: `hi + n ≤ count` («SG-16»). -/
@@ -109,7 +109,7 @@ theorem zuweisung_hat_recht {t : D.Tab} {f : D.Feld t} {i} {e} {hw : V.schreibt 
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignSlot t f i e hw hL) : V.schreibt t = true := hw
 
 /-- Eine Zuweisung DURCH einen Zeiger verlangt einen `rw`-Zeiger UND das Schreibrecht. -/
-theorem zeiger_schreibt_mit_recht {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr n true)}
+theorem zeiger_schreibt_mit_recht {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (read, true) space))}
     {ht} {i} {e} {hw : V.schreibt t = true} {hL}
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignThru p t ht f i e hw hL) : V.schreibt t = true := hw
 

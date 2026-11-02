@@ -68,7 +68,7 @@ def lowEndF (u : UProg) (c : Fin u.fns.length) (r : URet) :
 
 theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
-    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr t.val true))
+    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (true, true))))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
@@ -255,13 +255,13 @@ theorem envVals_length {D : Deklaration} : ∀ {Γ : Ctx} (ρ : Env D Γ), (envV
   | _ :: _, .cons v ρ => by simp [envVals, envVals_length ρ]
 
 /-- A pointer entry reads as `.absent`. -/
-theorem nthVal_ptr {D : Deklaration} : ∀ {Γ : Ctx} (ρ : Env D Γ) (j n : Nat) (w : Bool),
-    Γ[j]? = some (.ptr n w) → nthVal ρ j = .absent
-  | _, .nil, _, _, _, h => rfl
-  | _ :: _, .cons v ρ, 0, n, w, h => by
+theorem nthVal_ptr {D : Deklaration} : ∀ {Γ : Ctx} (ρ : Env D Γ) (j : Nat) (cap : DataCapTy),
+    Γ[j]? = some (.ptr cap) → nthVal ρ j = .absent
+  | _, .nil, _, _, h => rfl
+  | _ :: _, .cons v ρ, 0, cap, h => by
       simp only [List.getElem?_cons_zero, Option.some.injEq] at h
       subst h; rfl
-  | _ :: _, .cons v ρ, j + 1, n, w, h => nthVal_ptr ρ j n w (by simpa using h)
+  | _ :: _, .cons v ρ, j + 1, cap, h => nthVal_ptr ρ j cap (by simpa using h)
 
 theorem ctxOf_get (c : Fin u.fns.length) (j : Nat) :
     (ctxOf u c)[j]? = ((fnAt u c).params[j]?).map (·.2) := by
@@ -273,10 +273,10 @@ def NamenEindeutig (fn : UFn) : Prop := (fn.params.map (·.1)).Nodup
 /-- A pointer parameter reads as `.absent` in a related binding. -/
 theorem lrel_ptr (c : Fin u.fns.length) {ρ : Env (declOf u) (ctxOf u c)} {β : Gabbro.Body.Binding}
     (hL : LRel (fnAt u c) 0 ρ β) (p : String) (j : Nat) (hj : paramPos (fnAt u c).params p = .ok j)
-    (n : Nat) (w : Bool) (hτ : ((fnAt u c).params[j]?).map (·.2) = some (.ptr n w)) :
+    (cap : DataCapTy) (hτ : ((fnAt u c).params[j]?).map (·.2) = some (.ptr cap)) :
     β p = .absent := by
   rw [hL p j hj, Nat.zero_add]
-  exact nthVal_ptr ρ j n w (by rw [ctxOf_get]; exact hτ)
+  exact nthVal_ptr ρ j cap (by rw [ctxOf_get]; exact hτ)
 
 theorem uIdxOfSide_expr {sd : USide} {ix : UIdx} (h : uIdxOfSide sd = .ok ix) :
     sideExpr u fn sd = some (idxExpr ix) := by
@@ -304,7 +304,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
             split at h
             · rename_i num2 w2 hp
               obtain ⟨w3, hw3⟩ := hA.1 j num2 w2 hp
-              have hab := lrel_ptr c hL p j hj num2 w3 hw3
+              have hab := lrel_ptr c hL p j hj (.table num2 (true, w3)) hw3
               have goal : Gabbro.Body.eval s (.name p) = some .absent := by
                 simp only [Gabbro.Body.eval, hab]
               repeat' split at h
@@ -341,11 +341,11 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
           obtain ⟨hqm, hqp⟩ := hmem
           obtain ⟨jq, hjq⟩ := List.mem_iff_getElem?.mp hqm
           have hpos := paramPos_of_nodup _ jq q.1 q.2 hN (by rw [hjq])
-          have hty : ∃ tn tw, q.2 = .ptr tn tw := by
+          have hty : ∃ cap, q.2 = .ptr cap := by
             revert hqp
             cases q.2 <;> simp
-          obtain ⟨tn, tw, htq⟩ := hty
-          have hab := lrel_ptr c hL q.1 jq hpos tn tw (by rw [hjq]; simp [htq])
+          obtain ⟨cap, htq⟩ := hty
+          have hab := lrel_ptr c hL q.1 jq hpos cap (by rw [hjq]; simp [htq])
           simp only [Gabbro.Body.eval, hab]
         · cases hq
       simp only [lowCallArgOne, lowCallArgOneL] at h

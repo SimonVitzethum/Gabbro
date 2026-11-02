@@ -175,7 +175,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++
         List.replicate (n - v.1.length) 0
   | .fl _ _, v => [BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 v.x)]
-  | .ptr _ _, _ => [0]
+  | .ptr _, _ => [0]
   | .never, v => nomatch v
 
 /-- Width is determined entirely by the declared type, never by runtime contents. -/

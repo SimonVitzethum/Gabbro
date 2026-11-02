@@ -11,7 +11,7 @@ open Gabbro.Grammatik
 /-- The environment `main` starts with, or none when a parameter is not a table pointer. -/
 def mainEnv {D : Deklaration} : (Γ : Ctx) → Option (Env D Γ)
   | [] => some .nil
-  | .ptr t rw :: Γ => (mainEnv Γ).map fun ρ => Env.cons (τ := .ptr t rw) () ρ
+  | .ptr cap :: Γ => (mainEnv Γ).map fun ρ => Env.cons (τ := .ptr cap) () ρ
   | _ :: _ => none
 
 /-- Pointer values are not representation-constrained: the environment is valid under every layout. -/
@@ -22,7 +22,7 @@ theorem mainEnv_valid {D : Deklaration} (L : Lay D) (Γ : Ctx) :
   | cons σ Γ ih =>
     intro ρ h τ x
     cases σ with
-    | ptr t rw =>
+    | ptr cap =>
       simp only [mainEnv, Option.map_eq_some_iff] at h
       obtain ⟨ρ', hρ', rfl⟩ := h
       cases x with

@@ -393,21 +393,21 @@ def uExp104 : UProg :=
     locks := [{ name := "M", rank := 0, guard := ["Konto"] }],
     fns := [
       { name := "einzahlen",
-        params := [("k", .ptr 0 true), ("i", .index 2),
+        params := [("k", .ptr (.table 0 (true, true))), ("i", .index 2),
           ("b", .int 0 10)],
-        kinds := [.ptr 0 true, .index 0, .int],
+        kinds := [.ptr (.table 0 (true, true)), .index 0, .int],
         res := .none,
         held := ["M"], puts := ["Konto"],
         gives := [.cmp "<="
           (.old "k" "stand" (.param "i"))
           (.slot "k" "stand" (.param "i"))],
         body := [.assign "k" "stand" (.param "i") (.lit 100),
-          .call "lies" [.freshPtr "Konto" false,
+          .call "lies" [.freshPtr "Konto" (.table 0 (true, false)),
             .val (.param "i")]],
         ret := .empty, boden := some 1 },
       { name := "lies",
-        params := [("k", .ptr 0 false), ("i", .index 2)],
-        kinds := [.ptr 0 false, .index 0],
+        params := [("k", .ptr (.table 0 (true, false))), ("i", .index 2)],
+        kinds := [.ptr (.table 0 (true, false)), .index 0],
         res := .some (0, 100),
         held := ["M"], puts := [],
         gives := [.cmp "==" .erg
@@ -433,67 +433,3 @@ def beqPayloads : List (Option Ty) →
 
 /-- Complete shape equality, including recursively typed payloads and arrays. -/
 def beqTy (a b : Ty) : Bool := decide (a = b)
-
-def beqUIdx : UIdx → UIdx → Bool
-  | .lit a, .lit b => a == b
-  | .param a, .param b => strEq a b
-  | _, _ => false
-
-mutual
-def beqUSide : USide → USide → Bool
-  | .lit a, .lit b => a == b
-  | .param a, .param b => strEq a b
-  | .slot a f x, .slot b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .tab a f x, .tab b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .old a f x, .old b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .erg, .erg => true
-  | .glob a, .glob b => strEq a b
-  | .add a b, .add c d | .sub a b, .sub c d | .mul a b, .mul c d
-  | .band a b, .band c d | .bor a b, .bor c d | .bxor a b, .bxor c d
-  | .div a b, .div c d | .rem a b, .rem c d | .shl a b, .shl c d | .shr a b, .shr c d =>
-    beqUSide a c && beqUSide b d
-  | .neg a, .neg b => beqUSide a b
-  | .ib1 o w a, .ib1 p v b => o == p && w == v && beqUSide a b
-  | .ib2 o w a b, .ib2 p v c d => o == p && w == v && beqUSide a c && beqUSide b d
-  | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
-  | .truth a, .truth b => a == b
-  | .predicate a, .predicate b => beqUEns a b
-  | .option n a, .option m b => n == m && a == b
-  | .absent n, .absent m => n == m
-  | .present n a, .present m b => n == m && beqUSide a b
-  | .reason n a, .reason m b => n == m && a == b
-  | .function n a, .function m b => n == m && strEq a b
-  | .taggedEmpty cs i, .taggedEmpty ds j => beqPayloads cs ds && i == j
-  | .taggedValue cs i a, .taggedValue ds j b => beqPayloads cs ds && i == j && beqUSide a b
-  | _, _ => false
-
-def beqUEns : UEns → UEns → Bool
-  | .cmp o a b, .cmp p c d =>
-    strEq o p && beqUSide a c && beqUSide b d
-  | .tru, .tru => true
-  | .fls, .fls => true
-  | .and a b, .and c d => beqUEns a c && beqUEns b d
-  | .or a b, .or c d => beqUEns a c && beqUEns b d
-  | .not a, .not b => beqUEns a b
-  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .globB a, .globB b | .var a, .var b => strEq a b
-  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
-  | .ergB, .ergB => true
-  | .held a, .held b => strEq a b
-  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
-  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
-  | .member t a, .member u b => strEq t u && a == b
-  | .arrayElements a source x body, .arrayElements b target y other =>
-      a == b && beqUSide source target && strEq x y && beqUEns body other
-  | .filtered a t x f r s b, .filtered c u y g v z d =>
-      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
-  | .istSome o m, .istSome p n => o == p && m == n
-  | _, _ => false
-
-end
-
-end Gabbro.Grammatik.Parser.Uebersetze

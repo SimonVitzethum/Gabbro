@@ -274,9 +274,9 @@ theorem g001Stmt_korrekt_assignThru {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (e)
     (hw)
     (hL)
-    (zr_h : g001Stmt (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)) = true)
+    (zr_h : g001Stmt (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)) = true)
     (o : D.Tab ⊕ D.Glob)
-    (zr_ho : o ∈ Extraktion.stmtOrte (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)))
+    (zr_ho : o ∈ Extraktion.stmtOrte (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)))
     : ¬ istGeist (D := D) o :=
   by
   revert zr_h zr_ho

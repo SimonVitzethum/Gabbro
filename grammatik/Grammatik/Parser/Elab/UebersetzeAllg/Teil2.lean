@@ -96,6 +96,11 @@ theorem tabNr_some (u : UProg) (num : Nat) (h : num < u.tabs.length) :
     (some ⟨num, h'⟩ : Option (Fin u.tabs.length)) else none) = _
   rw [dif_pos h]
 
+/-- Exported tables use the registered normal space. -/
+theorem capTab_some (u : UProg) (num : Nat) (h : num < u.tabs.length) :
+    (declOf u).capTab 0 num = some (⟨num, h⟩ : Fin u.tabs.length) :=
+  Deklaration.capTab_of (tabNr_some u num h) rfl (by decide)
+
 /-! ## Generic lowering: field search, variables -/
 
 /-- Position of the first field with a name. -/

@@ -3,7 +3,7 @@
   Subject:  **The user/kernel boundary as a shape** -- the design piece that
              `messung/TOCTOU-ADRESSRAUM.md` finds missing (verdict GAP).
 
-             SYNTAX §3 has six spaces and no user one; `Ty.ptr` drops the space;
+             C12 retains registered nominal spaces in `Ty.ptr`; a space name supplies no snapshot or isolation binding;
              `Expr.durch` is one read with one guard set; `World` (both the
              grammar's and `Body.lean`'s) is a single flat mapping; M3 holds
              rights and placement and never check-then-copy. So a `copy_from_user`

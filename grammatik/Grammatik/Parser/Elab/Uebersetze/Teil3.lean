@@ -107,10 +107,32 @@ def sTypText : STyp → String
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
 
+/-- Normalize the complete table access rights. Owner flow is still refused by name. -/
+def uTableRight (text : String) : Except String (Bool × Bool) :=
+  match DataRights.decode (fun _ => none) text with
+  | some rights =>
+    if rights.owner.isNone then .ok (rights.read, rights.write)
+    else .error ("pointer rights require checked owner flow: " ++ text)
+  | none => .error ("pointer rights without checked data/owner form: " ++ text)
+
+/-- Export retains both flags and cannot erase an owner identity. -/
+theorem uTableRight_sound (text : String) (access : Bool × Bool) (h : uTableRight text = .ok access) :
+    ∃ rights : DataRights, DataRights.decode (fun _ => none) text = some rights ∧
+      (rights.read, rights.write) = access ∧ rights.owner = none := by
+  cases hd : DataRights.decode (fun _ => none) text with
+  | none => simp [uTableRight, hd] at h
+  | some rights =>
+    cases ho : rights.owner with
+    | none =>
+      have he : (rights.read, rights.write) = access := by
+        simpa [uTableRight, hd, ho] using h
+      exact ⟨rights, hd, he, ho⟩
+    | some owner => simp [uTableRight, hd, ho] at h
+
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
     `lean_g.rs`). Named address spaces other than `normal`,
-    rights other than `r`/`rw`, the optional index and every
+    rights outside owner-free data access unions, the optional index and every
     other shape are explicit errors. -/
 def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) : STyp → Except String Ty
   | .atom "bool" => .ok .bool
@@ -133,15 +155,13 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
     if !strEq raum "normal" then .error "space without G form"
-    else if strEq rechte "rw" || strEq rechte "own" then
-      match uTabNr tabs t with
-      | .ok (num, _) => .ok (.ptr num true)
-      | .error e => .error e
-    else if strEq rechte "r" then
-      match uTabNr tabs t with
-      | .ok (num, _) => .ok (.ptr num false)
-      | .error e => .error e
-    else .error "pointer right without G form"
+    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+    else do
+      let access ← uTableRight rechte
+      let (num, _) ← uTabNr tabs t
+      pure (.ptr (.table num access))
+  | .ptr _ _ _ => .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+  | .entry _ _ => .error "entry handle requires C08/C14 binding and C09 forwarding flow"
   | .array t n =>
     match uTypIn alias tabs named t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"

@@ -22,7 +22,7 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
     | .error e => .error e
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr _ true) =>
+      | .ok (.ptr ⟨0, ⟨_, true, none⟩, .table _⟩) =>
         if (uOptFeld ctx tb f).isSome then
           match uOptFeld ctx tb f with
           | .none => .error "option field without G form"

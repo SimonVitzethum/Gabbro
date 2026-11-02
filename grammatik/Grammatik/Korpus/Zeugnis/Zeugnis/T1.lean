@@ -119,7 +119,7 @@ theorem intVonTyp_eq {τ : Ty} {lo hi : Int}
   | never => simp only [intVonTyp, reduceCtorEq] at h
   | fl _ => simp only [intVonTyp, reduceCtorEq] at h
   | fnptr _ => simp only [intVonTyp, reduceCtorEq] at h
-  | ptr _ _ => simp only [intVonTyp, reduceCtorEq] at h
+  | ptr _ => simp only [intVonTyp, reduceCtorEq] at h
   | ref _ => simp only [intVonTyp, reduceCtorEq] at h
   | arr _ _ => simp only [intVonTyp, reduceCtorEq] at h
   | str _ => simp only [intVonTyp, reduceCtorEq] at h
@@ -157,7 +157,7 @@ theorem ctxTyp_var (Γ : Ctx) (k : Nat) (lo hi : Int)
       | never => simp only [ctxTyp, reduceCtorEq] at h
       | fl _ => simp only [ctxTyp, reduceCtorEq] at h
       | fnptr _ => simp only [ctxTyp, reduceCtorEq] at h
-      | ptr _ _ => simp only [ctxTyp, reduceCtorEq] at h
+      | ptr _ => simp only [ctxTyp, reduceCtorEq] at h
       | ref _ => simp only [ctxTyp, reduceCtorEq] at h
       | arr _ _ => simp only [ctxTyp, reduceCtorEq] at h
       | str _ => simp only [ctxTyp, reduceCtorEq] at h
