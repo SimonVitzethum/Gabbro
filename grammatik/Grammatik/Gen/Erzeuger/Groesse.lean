@@ -138,6 +138,7 @@ def groesseStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Stmt D V l 
   | _, _, _, _, .retWhy _ _ => 1
   | _, _, _, _, .retScoped e _ => unendlich + 1 + groesseErg e
   | _, _, _, _, .retWhyScoped _ _ => unendlich + 1
+  | _, _, _, _, .axiomCallElse .. => unendlich + 1
   | _, _, _, _, .leave _ => 1
   | _, _, _, _, .next _ => 1
 
@@ -158,6 +159,8 @@ def groesseBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}, Block D V 
   | _, _, _, _, .narrow e lo' hi' sonst rest =>
     1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' + Zahlen.kostT (.int lo' hi') + groesseEnd sonst +
       groesseBlock rest
+  | _, _, _, _, .bindAxiomOpt .. => unendlich + 1
+  | _, _, _, _, .bindAxiomOptElse .. => unendlich + 1
   | _, _, _, _, .narrowRequired e lo' hi' rest =>
     unendlich + 1 + groesseExpr e + Zahlen.kost lo' + Zahlen.kost hi' +
       Zahlen.kostT (.int lo' hi') + groesseBlock rest
@@ -191,6 +194,8 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .bindCallInd p args _ _ _ rest => 1 + groesseExpr p + groesseArgs args + groesseEnd rest
   -- the end-block forms of stage 0 are not drawn yet (TODO.md): their size lies beyond every bound
   | _, _, _, .narrow e _ _ sonst rest => unendlich + 1 + groesseExpr e + groesseEnd sonst + groesseEnd rest
+  | _, _, _, .bindAxiomOpt .. => unendlich + 1
+  | _, _, _, .bindAxiomOptElse .. => unendlich + 1
   | _, _, _, .narrowRequired e _ _ rest => unendlich + 1 + groesseExpr e + groesseEnd rest
   | _, _, _, .exchange _ neu _ _ rest => unendlich + 1 + groesseExpr neu + groesseEnd rest
   | _, _, _, .ite c t e => unendlich + 1 + groesseExpr c + groesseEnd t + groesseEnd e

@@ -86,13 +86,6 @@ def EndAusgang.weiterOpt : (e : Option Ty) → EndAusgang V l (ErgCtx Γ e) → 
   | none, x => x
   | some _, x => x.schrumpf
 
-/-- Both outcome transformers agree through `zuAusgang`. -/
-theorem weiterOpt_zuAusgang (e : Option Ty) (x : EndAusgang V l (ErgCtx Γ e)) :
-    (EndAusgang.weiterOpt e x).zuAusgang = Ausgang.weiterOpt e x.zuAusgang := by
-  cases e with
-  | none => cases x <;> rfl
-  | some τ => cases x <;> rfl
-
 def EndAusgang.zuAusgang : EndAusgang V l Γ → Ausgang V l Γ
   | .zurueck σ v => .zurueck σ v
   | .why σ r => .why σ r
@@ -100,6 +93,13 @@ def EndAusgang.zuAusgang : EndAusgang V l Γ → Ausgang V l Γ
   | .next h σ ρ => .next h σ ρ
   | .logik e => .logik e
   | .hardware e => .hardware e
+
+/-- Both outcome transformers agree through `zuAusgang`. -/
+theorem weiterOpt_zuAusgang (e : Option Ty) (x : EndAusgang V l (ErgCtx Γ e)) :
+    (EndAusgang.weiterOpt e x).zuAusgang = Ausgang.weiterOpt e x.zuAusgang := by
+  cases e with
+  | none => cases x <;> rfl
+  | some τ => cases x <;> rfl
 
 /-- Die Welt eines Ausgangs umbauen (Sperre geben). -/
 def Ausgang.mapWelt (f : World D → World D) : Ausgang V l Γ → Ausgang V l Γ
