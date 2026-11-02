@@ -72,4 +72,48 @@ theorem wordsAt_prodSet {L : Lay D} {name : Nat} {fs : List Ty} {σ : Ty}
     rw [preserved _ (by omega) (Or.inr (by omega))]
     exact read
 
+/-- Product replacement preserves the operand below the replacement scratch span. -/
+theorem prodSet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
+    {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
+    (v : Expr D Γ Λ (.prod name fs)) (e : Expr D Γ Λ τ)
+    {σ₀ σ : World D} {fp pc : Runner.W} {K d top reserved : Nat}
+    {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List Runner.IR.II} {m : Runner.Mem}
+    (ihv : ∀ ca ta, lowE L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K d ca ρ W reserved →
+        ValueOk L m pc fp K d ca (.prod name fs) (eval σ₀ v σ ρ))
+    (ihe : ∀ ca ta, lowE L (reserved := reserved) e (d + valueWords (.prod name fs)) = some (ca, ta) → ta ≤ K → ∀ m pc,
+      Pre L m pc fp K (d + valueWords (.prod name fs)) ca ρ W reserved →
+        ValueOk L m pc fp K (d + valueWords (.prod name fs)) ca τ (eval σ₀ e σ ρ))
+    (h : prodSetL (name := name) i d (lowE L (reserved := reserved) v d)
+      (lowE L (reserved := reserved) e (d + valueWords (.prod name fs))) = some (c, top))
+    (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
+    ValueOk L m pc fp K d c (.prod name fs)
+      (prodSetW i (eval σ₀ v σ ρ) (eval σ₀ e σ ρ)) := by
+  simp only [prodSetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, ⟨ce, te⟩, he, rfl, rfl⟩ := h
+  let src := d + valueWords (.prod name fs)
+  have field := prodGet_fieldBound i (Nat.le_refl (d + valueWords (.prod name fs))) (Nat.le_refl _)
+  have hp' : Pre L m pc fp K d
+      (cv ++ (ce ++ copyWords (valueWords τ) (d + productOffset i) src)) ρ W reserved := by
+    simpa only [src, List.append_assoc] using hp
+  obtain ⟨m1, run1, changed1, product⟩ := ihv cv tv hv (by omega) m pc hp'.left
+  have next1 := hp'.next changed1 (show d ≤ src by dsimp [src]; omega) (show src ≤ K by dsimp [src]; omega)
+  obtain ⟨m2, run2, changed2, value⟩ := ihe ce te he (by omega) m1 _ next1.left
+  have product2 := product.agree changed2 (hp.frame.agree changed1)
+    (show d + valueWords (.prod name fs) ≤ src from Nat.le_refl _) (show src ≤ K by dsimp [src]; omega)
+  have tail := next1.next changed2 (Nat.le_refl src) (show src ≤ K by dsimp [src]; omega)
+  obtain ⟨m3, run3, changed3, written⟩ := copyValue_run tail.frame tail.small
+    (by dsimp [src] at *; omega) (by dsimp [src] at *; omega)
+    (Or.inl (by dsimp [src]; omega)) tail.code
+    (by simpa only [copyWords_length] using tail.far) value
+  refine ⟨m3, ?_, changed1.trans ((changed2.mono (by dsimp [src]; omega)).trans
+    (changed3.mono (by omega))), ProdValid.set i _ _ product.1 value.1, ?_⟩
+  · simpa only [src, List.length_append, copyWords_length, pc_add, List.append_assoc,
+      Nat.add_assoc] using run1.trans (run2.trans run3)
+  · exact wordsAt_prodSet i _ _ product2.2 written.2 (fun s hs outside => by
+      rcases outside with below | above
+      · exact agree_rd_low changed3 (by have := tail.frame.room; dsimp [src] at *; omega) below (by dsimp [src] at *; omega)
+      · exact agree_rd_above changed3 (by have := tail.frame.room; dsimp [src] at *; omega) above (by dsimp [src] at *; omega)) (Nat.le_refl _)
+
 end Gabbro.Stage0.Senke

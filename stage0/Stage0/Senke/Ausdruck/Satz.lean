@@ -3,6 +3,7 @@
   Subject:   `lowE_ok`: every expression the lowering accepts computes, in IR, the word of its value in G.
 -/
 module
+public import Stage0.Senke.Ausdruck.Aggregat.ProdSet
 public import Stage0.Senke.Ausdruck.Referenz.Lesen
 public import Stage0.Senke.Ausdruck.Gleit.Fall
 public import Stage0.Senke.Ausdruck.Lesen
@@ -453,7 +454,11 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     prodGet_ok i v
       (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
       h hK hp
-  | _, _, .prodSet .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
+| _, _, .prodSet v i e, d, c, top, h, hK, m, pc, ρ, hp =>
+  prodSet_ok i v e
+    (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
+    (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay e _ ca ta ha hta m pc ρ hp)
+    h hK hp
   | _, _, .intBuiltin2 op a b, d, c, top, h, hK, m, pc, ρ, hp =>
     intBuiltin2L_ok op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
       (fun q ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
