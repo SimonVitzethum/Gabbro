@@ -255,6 +255,7 @@ public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
 public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.Zeuge
+public import Grammatik.Bausteine.Kernzelle.KernzelleZeugen
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert
@@ -351,6 +352,7 @@ public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
 public import Grammatik.Logik.Ruf.RufLogikZeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Zeuge
+public import Grammatik.Logik.Ruf.Schnittstellen.SchnittstellenZeugen
 public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
 public import Grammatik.Logik.Ruf.Schnittstellen.Pruefung
 public import Grammatik.Nebenlaeufigkeit.Sperren.Sperrstreifen

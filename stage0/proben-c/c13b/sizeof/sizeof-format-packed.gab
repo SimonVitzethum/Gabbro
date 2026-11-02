@@ -1,0 +1,10 @@
+// Sizeof of a packed wire format: two plus four bytes with no padding.
+module c13b_sizeof_format_packed {
+format Head endian little {
+    tag : u16,
+    val : u32,
+}
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    return sizeof(Head);
+}
+}

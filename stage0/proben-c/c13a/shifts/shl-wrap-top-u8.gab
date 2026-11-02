@@ -1,0 +1,8 @@
+// Wrapping shift at the top amount: 1 <<% 7 is 128 on u8.
+module c13a_shl_top {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 1;
+    let b : u8 in 0 .. 7 = 7;
+    return a <<% b;
+}
+}

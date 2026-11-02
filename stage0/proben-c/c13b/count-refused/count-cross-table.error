@@ -1,0 +1,1 @@
+refused: a count ranges over one table only, but the predicate also reads table B

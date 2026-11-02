@@ -1,0 +1,7 @@
+// Population count on u8 at zero: popcount(0) is 0.
+module c13a_pop_zero {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 0;
+    return popcount(x);
+}
+}

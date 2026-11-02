@@ -1,0 +1,7 @@
+// The floor logarithm of a possibly zero value has no defined answer.
+module c13a_log_zero {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 0;
+    return log2_floor(x);
+}
+}

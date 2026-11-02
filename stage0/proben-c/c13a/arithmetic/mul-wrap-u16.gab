@@ -1,0 +1,10 @@
+// Wrapping multiply on u16 wraps modulo 65536: 60000 *% 3 is 48928.
+module c13a_mul_wrap16 {
+impl fn main() -> u8 effects { pure } {
+    let a : u16 = 60000;
+    let b : u16 = 3;
+    let p : u16 = a *% b;
+    if p == 48928 { return 17; }
+    return 0;
+}
+}

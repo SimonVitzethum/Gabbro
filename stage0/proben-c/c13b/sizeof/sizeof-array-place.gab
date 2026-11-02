@@ -1,0 +1,8 @@
+// Sizeof of a place: a three-byte local array measures three bytes.
+module c13b_sizeof_array_place {
+const VALS : [u8; 3] = [10, 20, 30];
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    let a : [u8; 3] = VALS;
+    return sizeof(a);
+}
+}

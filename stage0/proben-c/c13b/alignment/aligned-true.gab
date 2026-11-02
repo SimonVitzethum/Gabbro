@@ -1,0 +1,7 @@
+// Aligned on an aligned number: sixteen is a multiple of eight.
+module c13b_aligned_true {
+impl fn main() -> u32 in 0 .. 1 effects { pure } {
+    if aligned(16, 8) { return 1; }
+    return 0;
+}
+}

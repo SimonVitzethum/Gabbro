@@ -1,0 +1,7 @@
+// Population count on u8 at all bits: popcount(255) is 8.
+module c13a_pop_all {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 255;
+    return popcount(x);
+}
+}

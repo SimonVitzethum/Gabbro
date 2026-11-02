@@ -45,7 +45,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil7
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil8
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+public import Grammatik.Parser.Elab.Uebersetze.Teil.SpecExpansion
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13

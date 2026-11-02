@@ -1,0 +1,8 @@
+// Aligned on a computed value: seven plus nine is sixteen, a multiple of eight.
+module c13b_aligned_var {
+impl fn main() -> u32 in 0 .. 1 effects { pure } {
+    let a : u64 = 7 + 9;
+    if aligned(a, 8) { return 1; }
+    return 0;
+}
+}

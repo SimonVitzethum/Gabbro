@@ -33,7 +33,7 @@ public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+public import Grammatik.Parser.Elab.Uebersetze.Teil.SpecExpansion
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000

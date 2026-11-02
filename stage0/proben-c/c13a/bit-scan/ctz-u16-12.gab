@@ -1,0 +1,7 @@
+// Count trailing zeros on u16: ctz(12) is 2.
+module c13a_ctz_low {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 in 1 .. 65535 = 12;
+    return ctz(x);
+}
+}

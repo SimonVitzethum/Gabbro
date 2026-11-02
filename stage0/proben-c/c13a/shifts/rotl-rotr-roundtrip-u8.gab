@@ -1,0 +1,10 @@
+// Rotate round trip on u8: rotr(rotl(57, 3), 3) is 57 again.
+module c13a_rot_round {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 57;
+    let k : u8 in 0 .. 7 = 3;
+    let y : u8 = rotr(rotl(x, k), k);
+    if y == 57 { return 77; }
+    return 0;
+}
+}

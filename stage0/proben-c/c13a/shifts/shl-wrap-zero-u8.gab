@@ -1,0 +1,8 @@
+// Wrapping shift by zero leaves the value: 5 <<% 0 is 5 on u8.
+module c13a_shl_zero {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 5;
+    let b : u8 in 0 .. 7 = 0;
+    return a <<% b;
+}
+}

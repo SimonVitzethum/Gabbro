@@ -1,0 +1,7 @@
+// Counting leading zeros of a possibly zero value has no defined answer.
+module c13a_clz_zero {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 0;
+    return clz(x);
+}
+}

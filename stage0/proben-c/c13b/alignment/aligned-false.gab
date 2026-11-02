@@ -1,0 +1,7 @@
+// Aligned on a misaligned number: eighteen is no multiple of eight.
+module c13b_aligned_false {
+impl fn main() -> u32 in 0 .. 1 effects { pure } {
+    if aligned(18, 8) { return 1; }
+    return 0;
+}
+}
