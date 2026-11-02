@@ -18,6 +18,10 @@
   Empty arrays use zero; singleton arrays reuse their element word recursively. Strings with maximum zero
   or one use zero for empty and 256 + byte otherwise. Larger aggregates are refused at constructors and reads,
   including variables, globals and table cells. No allocation, layout or call-ABI change is needed.
+
+  C13 arithmetic shares complete-value wide kernels and masks wrapping results to the declared width.
+  Count borrows and restores the ordinary quantifier binder slot. Scans, popcount, rotations and byte swaps
+  remain explicit refusals until their composition with the named Zahl functions is established.
 -/
 module
 public import Lean.Meta.Tactic.Simp.RegisterCommand
@@ -38,7 +42,9 @@ public import Stage0.Senke.Ausdruck.Aggregat.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinCode
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
+public import Stage0.Senke.Ausdruck.Quant.CountCode
 @[expose] public section
 
 
@@ -199,12 +205,19 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     if n ≤ 8 then readBytesL L t f (lowE L (reserved := reserved) i) 0 n d else none
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
+  | Γ, _, .count n body, d => countL (frei Γ reserved) d n (lowE L (reserved := reserved) body (d + 3))
   | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, .refEq a b, d => wordL 14 d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, .slotRef r t _ _ f _, d => do
     let cr ← lowE L (reserved := reserved) r (d + valueWords (D.typ t f)); slotValueC L t f d cr
   | _, _, .wenn c a b, d => wennL d (lowE L (reserved := reserved) c d) (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b d)
-  | _, _, _, _ => none
+  -- Each refused family still needs composition with its named Zahl function.
+  | _, _, .intBuiltin1 op _, _ => match op with
+    | .clz _ | .ctz _ | .log2Floor _ | .popcount _ => none
+    | .bswap16 | .bswap32 | .bswap64 => none
+  | _, _, .intBuiltin2 op a b, d => intBuiltin2L op d
+      (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
+  | _, _, .oldG .., _ | _, _, .oldS .., _ => none
 
 
 /-- Lower a tagged payload through the same expression recursion. -/

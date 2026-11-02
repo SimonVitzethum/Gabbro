@@ -30,6 +30,8 @@ def oldCells {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ Λ τ → 
   | _, .widen _ _ e | _, .not e | _, .neg e => oldCells e
   | _, .add a b | _, .sub a b | _, .mul a b | _, .eq a b | _, .lt a b | _, .le a b
   | _, .and a b | _, .or a b => oldCells a ++ oldCells b
+  | _, .intBuiltin1 _ a => oldCells a
+  | _, .intBuiltin2 _ a b => oldCells a ++ oldCells b
   | _, _ => []
 
 /-- Postcondition lowering uses the same arithmetic instructions as ordinary expressions.
@@ -76,6 +78,11 @@ def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : L
         (lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)
   | _, .and a b, d => do let ca ← lowEnsAt L layout start a d; let cb ← lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b (d+1); pure (bin2 8 d ca cb)
   | _, .or a b, d => do let ca ← lowEnsAt L layout start a d; let cb ← lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b (d+1); pure (bin2 9 d ca cb)
+  | _, .intBuiltin2 op a b, d => intBuiltin2L op d
+      (lowEnsAt L layout start a)
+      (lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)
+  -- Count uses the ordinary binder path. Entry reads inside a nonempty count
+  -- remain refused there until binder-dependent snapshot capture is proved.
   | _, e, d => lowE (reserved := layout.ensReserved) L e d
 
 /-- Function postconditions read the checked snapshot prefix described by this layout. -/

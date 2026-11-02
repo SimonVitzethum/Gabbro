@@ -60,6 +60,9 @@ def side (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Op
         pure (LowSide.minus (← side u Γ Λ fn er a x) (← side u Γ Λ fn er b y))
     | .bin "*" a b, .mul x y => do
         pure (LowSide.times (← side u Γ Λ fn er a x) (← side u Γ Λ fn er b y))
+    | .bin op a b, .ib2 bi width x y => do
+        if uBinEin op != some bi then throw "ir: old(global) integer builtin mismatch"
+        lowIb2 bi width (← side u Γ Λ fn er a x) (← side u Γ Λ fn er b y)
     | _, _ => .error "ir: unsupported source expression containing old(global)"
 termination_by src _ => sizeOf src
 

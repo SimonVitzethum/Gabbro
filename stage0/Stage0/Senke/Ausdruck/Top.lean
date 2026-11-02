@@ -412,6 +412,9 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     split at h
     · exact reachL_top _ _ _ h
     · cases h
+  | _, _, .count .., d, c, top, h => (countL_bounds h).1
+  | _, _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h
+  | _, _, .intBuiltin1 .., _, _, _, h
   | _, _, .oldG .., _, _, _, h
   | _, _, .oldS .., _, _, _, h
     => by simp [lowE_eqs] at h

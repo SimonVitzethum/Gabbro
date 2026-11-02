@@ -361,4 +361,16 @@ theorem lowE_literal_boundaries_zeuge :
       engL d lo hi lo' hi' (lowE L (reserved := reserved) e d) (lowE L (reserved := reserved) sonst d)
     else wideEngL lo hi lo' hi' d (lowE L (reserved := reserved) e) (lowE L (reserved := reserved) sonst)) := by rfl
 
+@[lowE_eqs] theorem lowE_count (n : Nat) (body : Expr D (.index (n : Int) :: Γ) Λ .bool) :
+    lowE L (reserved := reserved) (.count n body) d =
+      countL (frei Γ reserved) d n (lowE L (reserved := reserved) body (d + 3)) := rfl
+
+@[lowE_eqs] theorem lowE_intBuiltin1 (op : IntBuiltin [τ1] τ) (a : Expr D Γ Λ τ1) :
+    lowE L (reserved := reserved) (.intBuiltin1 op a) d = none := by cases op <;> rfl
+
+@[lowE_eqs] theorem lowE_intBuiltin2 (op : IntBuiltin [τ1, τ2] τ)
+    (a : Expr D Γ Λ τ1) (b : Expr D Γ Λ τ2) :
+    lowE L (reserved := reserved) (.intBuiltin2 op a b) d =
+      intBuiltin2L op d (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b) := rfl
+
 end Gabbro.Stage0.Senke
