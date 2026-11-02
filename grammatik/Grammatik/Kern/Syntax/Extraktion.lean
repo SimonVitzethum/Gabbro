@@ -71,14 +71,14 @@
 
 
 module
-public import Grammatik.Kern.Syntax.Extraktion.T1
-public import Grammatik.Kern.Syntax.Extraktion.T2
-public import Grammatik.Kern.Syntax.Extraktion.T3
-public import Grammatik.Kern.Syntax.Extraktion.T4
-public import Grammatik.Kern.Syntax.Extraktion.T5
-public import Grammatik.Kern.Syntax.Extraktion.T6
-public import Grammatik.Kern.Syntax.Extraktion.T7
-public import Grammatik.Kern.Syntax.Extraktion.T8
-public import Grammatik.Kern.Syntax.Extraktion.T9
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T1
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T2
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T3
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T4
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T5
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T6
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T7
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T8
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T9
 @[expose] public section
 

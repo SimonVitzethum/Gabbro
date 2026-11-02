@@ -8,7 +8,7 @@
 -/
 
 module
-public import Grammatik.Kern.Syntax.Geist.T1
-public import Grammatik.Kern.Syntax.Geist.T2
+public import Grammatik.Kern.Syntax.Extensions.Geist.T1
+public import Grammatik.Kern.Syntax.Extensions.Geist.T2
 @[expose] public section
 

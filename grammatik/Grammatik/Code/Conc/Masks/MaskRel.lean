@@ -1,6 +1,6 @@
 module
 public import Grammatik.Code.Conc.Masks.MaskNeed
-public import Grammatik.Zielsatz.Eigenschaften.KernMaske
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
 @[expose] public section
 
 

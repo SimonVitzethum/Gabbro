@@ -11,8 +11,8 @@
 -/
 
 module
-public import Grammatik.Kern.Syntax.Bits.T1
-public import Grammatik.Kern.Syntax.Bits.T2
-public import Grammatik.Kern.Syntax.Bits.T3
+public import Grammatik.Kern.Syntax.Extensions.Bits.T1
+public import Grammatik.Kern.Syntax.Extensions.Bits.T2
+public import Grammatik.Kern.Syntax.Extensions.Bits.T3
 @[expose] public section
 

@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Kern.Syntax.Zucker.Transition
+public import Grammatik.Kern.Syntax.Extensions.Zucker.Transition
 public import Grammatik.Kern.Syntax.Satz.T1
 public import Grammatik.Kern.Syntax.Koernung.Teil1
 

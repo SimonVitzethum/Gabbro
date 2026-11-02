@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Kern.Syntax.Geist.T2
+public import Grammatik.Kern.Syntax.Extensions.Geist.T2
 public import Grammatik.Kern.Syntax.Typen.Transport
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 

@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Kern.Syntax.Zucker.TransitionShift
+public import Grammatik.Kern.Syntax.Extensions.Zucker.TransitionShift
 public import Grammatik.Kern.Semantik.Semantik.TransitionCall
 
 public section

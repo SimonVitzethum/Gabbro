@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreMaschine
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.Teil8
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.A.Teil8
 
 @[expose] public section
 

@@ -154,7 +154,7 @@
 -/
 
 module
-public import Grammatik.Kern.Syntax.Fehler.T1
-public import Grammatik.Kern.Syntax.Fehler.T2
+public import Grammatik.Kern.Syntax.Extensions.Fehler.T1
+public import Grammatik.Kern.Syntax.Extensions.Fehler.T2
 @[expose] public section
 
