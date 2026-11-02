@@ -302,6 +302,7 @@ def logikR : Logik D → Logik D.mitRuhe
   | .abstieg f => .abstieg (some f)
   | .vorzustand => .vorzustand
   | .bereich => .bereich
+  | .kapazitaet => .kapazitaet
 
 /-- A hardware outcome, translated. -/
 def hwR : Hardware D → Hardware D.mitRuhe
