@@ -146,14 +146,14 @@ theorem mem_ws_verbinde {w : D.Fn} (h : w ∈ (verbinde e E₁ E₂).ws) : w ∈
   · exact Or.inr (Or.inl (Or.inr h))
 
 /-- **The linked unit is accepted**: the per-unit verdicts carry every per-body component,
-    the link check carries the three whole-program components over the composed hulls.
-    The accumulator admission does not cross the link yet (C15 staging: link transport
-    needs accumulator clauses in the link check); the conclusion carries it vacuously. -/
+    the link check carries the whole-program components over the composed hulls,
+    including the accumulator admission (C15 link transport). -/
 theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     {A₁ A₂ : List (Kernzelle.AccumulatorDecl D)}
     (hA₁ : AkzeptiertSpec E₁.P E₁.S fs E₁.ws A₁) (hA₂ : AkzeptiertSpec E₂.P E₂.S fs E₂.ws A₂)
     (hV : Verbindbar E₁ E₂) (hS : SchnittstelleSpec fs e E₁ E₂) :
-    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws [] := by
+    AkzeptiertSpec (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs (verbinde e E₁ E₂).ws
+      (verbinde e E₁ E₂).akku := by
   have hH := huelle_of_reach (e := e) (E₁ := E₁) (E₂ := E₂) hvoll hS.keinRueckruf
   have hfrag : ∀ f, ((teilP e E₁ E₂ f).rumpf f).gOk
       (kandB (teilP e E₁ E₂ f) fs (fussOrteG (teilP e E₁ E₂ f) f)) (fun _ => true) = true := by
@@ -169,7 +169,7 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, Kernzelle.accumulatorAdmission_leer _ _, [], CheckAdmission.nil _ _⟩
+    ?_, ?_, ?_, ?_, ?_, hS.akku, [], CheckAdmission.nil _ _⟩
   · -- frag
     refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk

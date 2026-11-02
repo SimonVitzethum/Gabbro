@@ -204,6 +204,182 @@ theorem minFalle_zeuge : min (50 : Int) 0 = 0 := minStartBeiNullFalle 50
 /-- The named trap: `and` started at `0` drags every result to `0`. -/
 theorem andFalle_zeuge : 12 &&& 0 = 0 := andStartBeiNullFalle 12
 
+/-- The named trap: `and` started at `0` drags every result to `0`. -/
+theorem andFalle_zeuge : 12 &&& 0 = 0 := andStartBeiNullFalle 12
+
+/-! ## 4. A full-program fixture: two `or` cells, admitted -/
+
+/-- The three generated functions: query, update, reduction. -/
+inductive ZAFn
+  | q
+  | u
+  | f
+  deriving DecidableEq, Repr
+
+/-- One signature: parameters, result, no reasons, no locks, no writes, no floor. -/
+def zASig (ps : List Ty) (e : Option Ty) : Signatur Empty (Fin 2) (Fin 2) Empty where
+  params := ps
+  erg := e
+  gruende := 0
+  haelt := []
+  schreibt := fun t => nomatch t
+  gschreibt := fun _ => false
+  konsumiert := []
+  produziert := []
+  boden := none
+
+def zASigNr : Nat → Signatur Empty (Fin 2) (Fin 2) Empty
+  | 0 => zASig [] (some (Ty.int 0 1))
+  | 1 => zASig [Ty.int 0 255] none
+  | 2 => zASig [] (some (Ty.int 0 255))
+  | _ => zASig [] none
+
+def zASigOf : ZAFn → Nat
+  | .q => 0
+  | .u => 1
+  | .f => 2
+
+/-- The fixture declaration: two `or` cells over `0 .. 255`, guarded 1:1. -/
+def zAD : Deklaration where
+  Tab := Empty
+  decTab := inferInstance
+  count := fun t => nomatch t
+  Feld := fun t => nomatch t
+  decFeld := fun t => nomatch t
+  typ := fun t => nomatch t
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun _ => none
+  Glob := Fin 2
+  decGlob := inferInstance
+  gtyp := fun _ => Ty.int 0 255
+  nutzlast := fun _ => []
+  atomar := fun _ => false
+  geteilt := fun t => nomatch t
+  ggeteilt := fun _ => false
+  Lock := Fin 2
+  decLock := inferInstance
+  rang := fun l => (l.val : Int)
+  maskiert := fun _ => true
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun _ => 0
+  braucht := fun t => nomatch t
+  gbraucht := fun g => [Sum.inl ⟨g.val, g.isLt⟩]
+  eigner := fun _ => []
+  Fn := ZAFn
+  sig := zASigOf
+  sigNr := zASigNr
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Empty
+  aparams := fun e => nomatch e
+  aerg := fun e => nomatch e
+  aschreibt := fun e => nomatch e
+  agschreibt := fun e => nomatch e
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t => nomatch t
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun e => nomatch e
+
+instance : DecidableEq zAD.Fn := inferInstanceAs (DecidableEq ZAFn)
+
+def zAQ : zAD.Fn := .q
+def zAU : zAD.Fn := .u
+def zAF : zAD.Fn := .f
+
+/-- Literal `0` in `0 .. 1`: the query answer. -/
+def zALitQ {Γ : Ctx} {Λ : List (Res zAD)} : Expr zAD Γ Λ (Ty.int 0 1) :=
+  .widen (by decide) (by decide) (.lit 0)
+
+/-- Literal `0` in `0 .. 255`: the `or` neutral the reduction returns. -/
+def zALitN {Γ : Ctx} {Λ : List (Res zAD)} : Expr zAD Γ Λ (Ty.int 0 255) :=
+  .widen (by decide) (by decide) (.lit 0)
+
+/-- The query body: return `0`. -/
+def zARumpfQ : Endblock zAD (vertragVon zAD zAQ) false [] [] :=
+  .ret (.val zALitQ) (List.Perm.refl _)
+
+/-- The reduction body: return the neutral `0` (read-only, hence admitted;
+    the sampled fold it should return is the quiescent leg, not admission). -/
+def zARumpfF : Endblock zAD (vertragVon zAD zAF) false [] [] :=
+  .ret (.val zALitN) (List.Perm.refl _)
+
+/-- The update body: call the query, then return (no value). The call edge is
+    what `reachB` needs; the callee writes nothing and takes no lock. -/
+def zARumpfU : Endblock zAD (vertragVon zAD zAU) false [Ty.int 0 255] [] :=
+  .bindCall zAQ Args.nil rfl
+    { hw := fun t _ => nomatch t, hg := fun g h => by simp at h, hk := ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩, hh := fun L h => absurd h (List.not_mem_nil _) } rfl
+    (.ret .empty (List.Perm.refl _))
+
+/-- The fixture program: trivial bodies, no contracts. -/
+def zAP : Programm zAD where
+  invariante := fun i => nomatch i
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf
+    | .q => zARumpfQ
+    | .u => zARumpfU
+    | .f => zARumpfF
+
+/-- The fixture accumulator: two unsigned `or` cells. -/
+def zA : AccumulatorDecl zAD where
+  name := "maske"
+  kernZahl := 2
+  breite := 8
+  vorzeichen := false
+  lo := 0
+  hi := 255
+  op := .or
+  zellen := fun i => ⟨i.val, i.isLt⟩
+  sperren := fun i => ⟨i.val, i.isLt⟩
+  kernAbfrage := zAQ
+  aktualisiere := zAU
+  falte := zAF
+
+def zAFs : List zAD.Fn := [zAQ, zAU, zAF]
+
+def zACs : List (zAD.Tab ⊕ zAD.Glob) := [.inr ⟨0, by decide⟩, .inr ⟨1, by decide⟩]
+
+theorem zAFs_voll : ∀ g : zAD.Fn, g ∈ zAFs := fun g => by cases g <;> simp only [zAFs, List.mem_cons,
+  List.not_mem_nil, List.mem_singleton]
+
+theorem zACs_voll : ∀ c : zAD.Tab ⊕ zAD.Glob, c ∈ zACs := fun c => by
+  cases c with
+  | inl t => exact nomatch t
+  | inr g => fin_cases g <;> simp only [zACs, List.mem_cons, List.not_mem_nil, List.mem_singleton]
+
+/-- The fixture descriptor is valid, decided. -/
+theorem zA_okB : akkuOkB zA = true := by decide
+
+/-- The fixture descriptor is valid. -/
+theorem zA_ok : akkuOk zAD zA := (akkuOkB_iff).mpr zA_okB
+
+/-- The two cells are distinct and the neutral is `0`: non-degenerate. -/
+theorem zA_nichtEntartet : zA.zellen ⟨0, by decide⟩ ≠ zA.zellen ⟨1, by decide⟩ ∧
+    neutralInt zA.op zA.lo zA.hi zA.breite = 0 := by
+  refine ⟨by decide, rfl⟩
+
+/-- **The full-program admission, decided**: every clause of `akkuZulaessig`
+    plus global cell/lock distinctness holds on the fixture. -/
+theorem zA_akkuB : accumulatorB zAP zAFs zACs [zA] = true := by decide
+
+/-- **The full-program admission `_zeuge`**: the fixture's accumulator is
+    admitted (non-degenerate: two distinct cells, `or` with neutral `0`). -/
+theorem akkuProgramm_zeuge : AccumulatorAdmission zAP zAFs [zA] :=
+  (accumulatorB_iff zAFs_voll zACs_voll).mp zA_akkuB
+
+#print axioms Gabbro.Grammatik.Kernzelle.zA_ok
+#print axioms Gabbro.Grammatik.Kernzelle.zA_nichtEntartet
+#print axioms Gabbro.Grammatik.Kernzelle.akkuProgramm_zeuge
+
 #print axioms Gabbro.Grammatik.Kernzelle.zMax_ok
 #print axioms Gabbro.Grammatik.Kernzelle.zOr_ok
 #print axioms Gabbro.Grammatik.Kernzelle.maxFalte_zeuge

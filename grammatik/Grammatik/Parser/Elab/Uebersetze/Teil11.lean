@@ -1,5 +1,4 @@
 module
-
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -30,18 +29,14 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Uebersetze.Teil10
-
 @[expose] public section
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
 /-- The contract clauses with every `spec fn` inlined: `refines g` is `ensures g(params)` (`M131`/`M132`),
     `maintains` documents (the owed invariants are derived from `effects`), `by induction over` names a scheme
     and carries no term. Without `spec fn`s the clauses stay as they are. -/
@@ -62,7 +57,6 @@ def uSpecKlauseln (ctx : UCtx) (params : List String) (ks : List SKlausel) : Exc
       | .refs _ => .error "refines without one spec fn"
       | .keeps _ | .induc _ => .ok r
       | k => .ok (k :: r)) (.ok [])
-
 /-- Pass two: contracts and body of one function. -/
 def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
     (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
@@ -92,7 +86,6 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
           else .error e
         | .ok r => .ok (gives, needs, body, r)
     | _ => .error "fn body without G form"
-
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
     (tabs : List UTab) (locks : List ULock) (globs : List UGlob) (kopf : UFnKopf)
@@ -100,7 +93,6 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     (regs : List UReg := []) (zustaende : List UZustand := [])
     (specs : List (String × List String × SExpr) := []) (arrKonst : List (String × USide) := []) : UCtx :=
   { names := kopf.names, kinds := kopf.kinds, types := kopf.types, tabs := tabs, locks := locks, held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2), zustaende, specs, arrKonst }
-
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
 def elabUFunktion (consts : List (String × Int))
@@ -132,7 +124,6 @@ def uNutzItem : List SExpr → Except String (List String)
     | .error e => .error e
     | .ok gs => .ok (g :: gs)
   | _ :: _ => .error "payload of a table without G form"
-
 mutual
 /-- A tagged initializer checks payload presence, then uses the canonical typed
     constant reader for the complete selected value. -/
@@ -150,7 +141,6 @@ def uSumKonst (consts : List (String × Int)) (sums : List USum) (sm : USum) :
   | _ => .error "static initialiser without G form"
 termination_by value => 2 * sizeOf value
 decreasing_by all_goals simp_wf; omega
-
 /-- Constants use their declared type throughout nested tagged and array values.
     The later value decoder still checks exact shape, ranges and string bounds. -/
 def uKonst (consts : List (String × Int)) (sums : List USum) (expected : Option Ty) :
@@ -179,7 +169,6 @@ def uKonst (consts : List (String × Int)) (sums : List USum) (expected : Option
     | _, .one _ => .error "static initialiser without G form"
 termination_by value => 2 * sizeOf value + 1
 decreasing_by all_goals simp_wf; omega
-
 /-- Read all array elements under their declared element type. -/
 def uKonstReihe (consts : List (String × Int)) (sums : List USum) (element : Option Ty) :
     List SKonstWert → Except String UKonst
@@ -190,9 +179,7 @@ def uKonstReihe (consts : List (String × Int)) (sums : List USum) (element : Op
     | .error e, _ | _, .error e => .error e
 termination_by values => 2 * sizeOf values
 decreasing_by all_goals simp_wf; omega
-
 end
-
 /-- The statics of a tagged type with their type, read once the `tagged type`s are known. -/
 def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SItemTief) :
     List UGlob → Except String (List UGlob)
@@ -211,7 +198,6 @@ def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SIte
           | .error e => .error e
         | none => .error ("static unknown: " ++ g.name)
       | _, _ => .error ("type unknown: " ++ a)
-
 /-- The tables with their fields of a tagged type typed (`werte`) and numbered (`sumFelder`). -/
 def uSumTabs (sums : List USum) : List UTab → Except String (List UTab)
   | [] => .ok []
@@ -224,7 +210,6 @@ def uSumTabs (sums : List USum) : List UTab → Except String (List UTab)
     | .ok ts, .ok fs =>
       .ok ({ t with werte := t.werte ++ fs.map (fun (f, _, sp) => (f, Ty.sum sp)), sumFelder := fs.map (fun (f, k, _) => (f, k)) } :: ts)
     | .error e, _ | _, .error e => .error e
-
 /-- The range of a column: an `index into T` field reads `0 .. count T - 1`. -/
 def uIdxSpalte (tabs : List UTab) (t : UTab) (c : String × (Int × Int)) : String × (Int × Int) :=
   match t.idxNamen.find? (fun p => strEq p.1 c.1) with
@@ -233,11 +218,9 @@ def uIdxSpalte (tabs : List UTab) (t : UTab) (c : String × (Int × Int)) : Stri
     | some x => (c.1, (0, x.count - 1))
     | none => c
   | none => c
-
 /-- The `index into T` fields with their range `0 .. count T - 1`. -/
 def uIdxTabs (tabs : List UTab) : List UTab :=
   tabs.map fun t => { t with cols := t.cols.map (uIdxSpalte tabs t) }
-
 /-- The option statics with the number and count of their table. -/
 def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
   | [] => .ok []
@@ -249,8 +232,6 @@ def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
       match uTabNr tabs tn with
       | .ok (num, c) => .ok ({ g with ty := .wert (.opt c), optNum := some num } :: gs)
       | .error e => .error e
-
-
 /-- Scalar initializers keep their declared range at every constant-evaluator intermediate.
     Existing literal/constant encodings retain their canonical admission; new expressions are checked. -/
 def uInitialNumber (consts : List (String × Int)) (lo hi : Int) : SKonstWert → Except String Int
@@ -262,7 +243,6 @@ def uInitialNumber (consts : List (String × Int)) (lo hi : Int) : SKonstWert �
       | some value => .ok value
       | none => .error "source export: scalar initializer is outside its canonical constant domain"
   | .rows _ => .error "static initialiser without G form"
-
 /-- The statics of the unit: ONE value each, an integer range or `bool`, with a numeral (or `true`/`false`)
     as the initial value; a placement, an alignment or a `shared` word has no `Glob` form. -/
 def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int))) :
@@ -333,7 +313,6 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
           | .error e => .error e
           | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true, nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
   | _ :: rest => uGlobs consts alias rest
-
 /-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
     field `wert`, and the counter static `A#used` over `0 .. hi` starting at zero. A dynamic ceiling and a
     placement have no form here. -/
@@ -359,7 +338,18 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
                    { name := n ++ "#used", ty := GTy.int 0 h, init := 0, var := true } :: gs)
             else .error "arena of no slots"
   | _ :: rest => uArenen consts alias rest
-
+/-- The closed merge operators of `accumulates` (SYNTAX.md §11.4, C15):
+    `max`, `min`, `add` and the bitwise `or`/`and`. Any other operator is refused. -/
+def akkuOperatorOk (m : String) : Bool :=
+  strEq m "max" || strEq m "min" || strEq m "add" || strEq m "or" || strEq m "and"
+/-- An `accumulates` item in admitted surface form (C15 storage slice): a closed
+    operator and a `per cpu` count. The count's value (positive constant), the
+    value type (integer range) and the operator's neutral (width-indexed for
+    `and`) are checked at expansion (`UebersetzeAkku`); updates, reads and the
+    core query stay refused there (they need C08). -/
+def akkuFormZulaessig : SItemTief → Bool
+  | .accT _ _ m (some _) => akkuOperatorOk m
+  | _ => false
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
     error (the refused rows of `collect`). Translators (`transT`) are consumed by the certified
@@ -394,12 +384,14 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
   -- G form yet (the model's foreign bodies carry no caller duty)
   | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
-  -- `accumulates` (C15): the descriptor is `Kernzelle.AccumulatorDecl`, but lowering needs the
-  -- core-query contract (C08) and the per-cell lock protocol -- still refused, by name below in
-  -- `GvParserFragment.istGegenstand` and here
-  | .accT .. :: _ => .error "item without G form"
+  -- `accumulates` (C15 storage slice): admitted surface forms expand to guarded
+  -- cells (`UebersetzeAkku`); anything else is refused by name (the core query
+  -- and updates/reads need C08, task 4; `and` needs the stored width).
+  | ((.accT _ _ m p) as it) :: rest =>
+    if akkuFormZulaessig it then uRestFehler rest
+    else if !akkuOperatorOk m then .error "accumulator operator without G form"
+    else .error "accumulator without per cpu count without G form"
   | _ :: _ => .error "item without G form"
-
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
 def uStart (fns : List UFn) (quelle d : String) : Except String String :=
   match fns.find? (fun f => strEq f.name d) with
@@ -407,7 +399,6 @@ def uStart (fns : List UFn) (quelle d : String) : Except String String :=
     if f.params.isEmpty then .ok d
     else .error (quelle ++ " names a function with parameters: no start-argument form: " ++ d)
   | .none => .error (quelle ++ " names an unknown function: " ++ d)
-
 /-- A start argument is a value of its parameter's type: a literal in the range, `true`/`false`, `None`. -/
 def uStartArg (tabs : List UTab) : Ty → SExpr → Bool
   | .int lo hi, .lit n => decide (lo ≤ (n : Int) ∧ (n : Int) ≤ hi)
@@ -420,7 +411,6 @@ def uStartArg (tabs : List UTab) : Ty → SExpr → Bool
     | .some tb => strEq tb.name t
     | .none => false
   | _, _ => false
-
 /-- A `concurrent` member: a function of the unit, started with one value per parameter
     (`concurrent { m::f(a, b) }`, the model's start with its arguments). -/
 def uStartMit (tabs : List UTab) (fns : List UFn) (d : String) (args : List SExpr) : Except String String :=
@@ -432,7 +422,6 @@ def uStartMit (tabs : List UTab) (fns : List UFn) (d : String) (args : List SExp
     else if (f.params.zip args).all (fun (p, a) => uStartArg tabs p.2 a) then .ok d
     else .error ("concurrent member with an argument outside its parameter's type: " ++ d)
   | .none => .error ("concurrent member names an unknown function: " ++ d)
-
 /-- The roots of the `concurrent` items, in order (their members come first, as in `check_starts`). -/
 def uNebenWurzeln (tabs : List UTab) (fns : List UFn) : List SItemTief → Except String (List String)
   | [] => .ok []
@@ -443,7 +432,6 @@ def uNebenWurzeln (tabs : List UTab) (fns : List UFn) : List SItemTief → Excep
     let more ← uNebenWurzeln tabs fns rest
     pure (here ++ more)
   | _ :: rest => uNebenWurzeln tabs fns rest
-
 /-- The dispatch roots of the `entry` items: ONE dispatch target that names a parameterless function of
     the unit. Everything else about the entry (vector, registers, stack) is the
     hardware side and stays with the checker. -/
@@ -457,7 +445,6 @@ def uEingangsWurzeln (fns : List UFn) : List SItemTief → Except String (List S
       pure (w :: ws)
     | .none => .error "entry without a dispatch: no G form"
   | _ :: rest => uEingangsWurzeln fns rest
-
 /-- The handlers: the dispatch targets of the entries that carry a `via` word. -/
 def uHandler : List SItemTief → List String
   | [] => []
@@ -466,13 +453,11 @@ def uHandler : List SItemTief → List String
     | .some _, .some d => d :: uHandler rest
     | _, _ => uHandler rest
   | _ :: rest => uHandler rest
-
 /-- The thread roots: `concurrent` members, then entry dispatch roots. -/
 def uWurzeln (tabs : List UTab) (fns : List UFn) (ms : List SItemTief) : Except String (List String) := do
   let a ← uNebenWurzeln tabs fns ms
   let b ← uEingangsWurzeln fns ms
   pure (a ++ b)
-
 /-- The clauses an `extern fn` may carry: `effects { pure | diverges | reads .. }` and `costs`; a `requires`,
     an `ensures` or a write has no form (`D.Ax` carries no contract here). -/
 def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
@@ -491,5 +476,4 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
   -- time bounds), the same as at an implemented function
   | .limit _ :: rest => uAxKlauseln kopf tabs globs rest
   | _ :: _ => .error "foreign fn clause without G form"
-
 end Gabbro.Grammatik.Parser.Uebersetze

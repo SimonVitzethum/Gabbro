@@ -72,6 +72,7 @@ def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
   gestartet := ps.flatMap (·.E.gestartet)
   arenen := ps.flatMap (·.E.arenen)
   pruefungen := ps.flatMap (·.E.pruefungen)
+  akku := ps.flatMap (·.E.akku)
 
 /-- Every function is owned by some project of the list. -/
 def Deckend (ps : List (Projekt D)) : Prop := ∀ f, ∃ p ∈ ps, p.eigen f = true
