@@ -89,7 +89,7 @@ theorem erstAblehnung_104_zeuge :
 
 /-- **Is this item outside the elaborated fragment?** True for every
     `SItemTief` kind `uRestFehler` refuses (everything but `constT`,
-    `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`) except the
+    `typeT`, `tableT`, `lockT`, `fnT`, `entryT`, `concT`, `checkT`) except the
     kinds the unit may carry (`concurrent`, `static`, `atomic`, `arena`, `extern fn`, `assume`, `reason`, `syscall` gates and their bindings, `device`).
     Translators (`transT`) are consumed by the certified expansion before the item check, so they
     are not off-fragment. -/
@@ -117,6 +117,7 @@ def istGegenstand : SItemTief → Bool
   | .asmT .. => false
   | .axiomT _ _ _ .none _ _ => false
   | .transT _ _ _ => false
+  | .checkT .. => false
   | _ => true
 
 /-- **One off-fragment item fails the item check.** By cases over all
@@ -148,7 +149,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
     cases q with
     | none => simp only [istGegenstand, Bool.false_eq_true] at he
     | some _ => rfl
-  | checkT _ => rfl
+  | checkT _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | atomT _ _ _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | rcuT _ _ _ => rfl
   | groupT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
@@ -191,6 +192,7 @@ def istAngenommen : SItemTief → Bool
   | .asmT .. => true
   | .axiomT _ _ _ .none _ _ => true
   | .transT _ _ _ => true
+  | .checkT .. => true
   | _ => false
 
 /-- **An accepted head steps past the item check.** The mirror of
@@ -222,7 +224,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
     cases q with
     | none => rfl
     | some _ => simp only [istAngenommen, Bool.false_eq_true] at he
-  | checkT _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | checkT _ => rfl
   | atomT _ _ _ _ _ => rfl
   | rcuT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | groupT _ _ _ => rfl
@@ -269,7 +271,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
     cases q with
     | none => simp only [istAngenommen, Bool.true_eq_false] at ha
     | some _ => simp only [istGegenstand, Bool.true_eq_false] at he
-  | checkT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | checkT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
   | atomT _ _ _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
   | rcuT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | groupT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
@@ -353,22 +355,14 @@ theorem elabU_verweigert_noch_zeuge :
 def w108items : List SItemTief :=
   [.modT "beispiel::disjoint_start_locks"
     [.tableT "T" .none (.some (.lit 4)) .none .none false
-      [.tSlot [{ fname := "v", ftyp := .atom "u32",
-                  pos := .none, bezug := .none, wo := .none,
-                  reserviert := false, byOps := false }]],
+      [.tSlot [{ fname := "v", ftyp := .atom "u32", pos := .none, bezug := .none, wo := .none, reserviert := false, byOps := false }]],
     .fnT
-      { art := "impl", name := "read_a", params := [],
-        res := .some (.atom "u32"), fehler := .none,
-        klauseln := [.effs [.reads (.field (.variable "T") "slots")],
-                     .cost (.lit 4)] }
+      { art := "impl", name := "read_a", params := [], res := .some (.atom "u32"), fehler := .none, klauseln := [.effs [.reads (.field (.variable "T") "slots")], .cost (.lit 4)] }
       (.block []
         (.some (.ret (.some (.field
           (.index (.field (.variable "T") "slots") (.lit 0)) "v"))))),
     .fnT
-      { art := "impl", name := "read_c", params := [],
-        res := .some (.atom "u32"), fehler := .none,
-        klauseln := [.effs [.reads (.field (.variable "T") "slots")],
-                     .cost (.lit 4)] }
+      { art := "impl", name := "read_c", params := [], res := .some (.atom "u32"), fehler := .none, klauseln := [.effs [.reads (.field (.variable "T") "slots")], .cost (.lit 4)] }
       (.block []
         (.some (.ret (.some (.field
           (.index (.field (.variable "T") "slots") (.lit 1)) "v"))))),
@@ -377,17 +371,7 @@ def w108items : List SItemTief :=
 /-- **108's elaborated program** (same probe, pasted):
     the table and both readers, the `concurrent` members as thread roots. -/
 def w108prog : UProg :=
-  { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], bools := [] }],
-    locks := [],
-    fns := [{ name := "read_a", params := [], kinds := [],
-              res := .some (0, 4294967295), resBool := false,
-              held := [], puts := [], gives := [], body := [],
-              ret := .val (.tab "T" "v" (.lit 0)) },
-            { name := "read_c", params := [], kinds := [],
-              res := .some (0, 4294967295), resBool := false,
-              held := [], puts := [], gives := [], body := [],
-              ret := .val (.tab "T" "v" (.lit 1)) }],
-    roots := ["read_a", "read_c"] }
+  { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], bools := [] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"] }
 
 /-- **108 elaborates**: `elabU` yields exactly the pasted program, the `concurrent` members as its thread
     roots (and `lowerAllg` succeeds on it). -/

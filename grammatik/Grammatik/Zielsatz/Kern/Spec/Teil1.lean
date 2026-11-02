@@ -49,6 +49,8 @@ public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
 public import Grammatik.Bausteine.Arena.ArenaStaticReset
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 public import Grammatik.Bausteine.Kernzelle.Zulassung
+public import Grammatik.Kern.Syntax.Satz.Pruefung
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 @[expose] public section
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
@@ -91,6 +93,10 @@ structure Einheit (D : Deklaration) where
   gestartet : List (Σ w : D.Fn, Env D (D.params w)) := []
   arenen : List (ArenaOwnership.Body.ArenaIface D) := []
   akku : List (Kernzelle.AccumulatorDecl D) := []
+  /-- The unit's declared checks (C16): kernel descriptors of every `check` item,
+      elaborated by the exporter (`UCheck.probe` names the generated producer).
+      Default `[]`: a unit without a check is the unit of before. -/
+  pruefungen : List (CheckDecl D) := []
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
     demands it pool-safe (the model side of `N462`/`N457`), `Getrennt` pairs it with itself and
@@ -104,9 +110,7 @@ def Einheit.ws (E : Einheit D) : List D.Fn := (E.starts ++ E.gestartet ++ E.gest
 def Mehrfach {α : Type} (ws : List α) (w : α) : Prop := List.Sublist [w, w] ws
 /-! ## (a) What the checker decides -/
 section Pruefer
-
 variable [DecidableEq D.Fn]
-
 /-- Carrier `c` is thread-local among the declared starts `ws`: no start reaches `c` in a
     footprint while a DIFFERENT start OCCURRENCE can write it (`GetrenntK` over the starts).
     Since fix lane F10 (2026-09-22) a routine declared twice (`Mehrfach`) is two threads, so
@@ -116,16 +120,13 @@ variable [DecidableEq D.Fn]
 def Getrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
   ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, (w₁ ≠ w₂ ∨ Mehrfach ws w₁) → ∀ f g, reachB P fs w₁ f = true →
     c ∈ fussOrteG P f → reachB P fs w₂ g = true → TraegerSchreibt g c = false
-
 noncomputable def lokW (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Bool :=
   @decide (Getrennt P fs ws c) (Classical.propDecidable _)
-
 /-- Carrier `c` is WRITE-separated among the declared starts `ws`: if one start's call graph
     may write `c`, no DIFFERENT start's graph may write it or have it in a footprint. -/
 def SchreibGetrennt (P : Programm D) (fs ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
   ∀ w₁ ∈ ws, ∀ w₂ ∈ ws, w₁ ≠ w₂ → ∀ g, reachB P fs w₁ g = true → TraegerSchreibt g c = true →
     ∀ h, reachB P fs w₂ h = true → TraegerSchreibt h c = false ∧ c ∉ fussOrteG P h
-
 /-- **Pool-safe**: routine `w` may run on any number of threads. It starts
     like any admitted start (no signature-held lock, no reasons), and every
     carrier some function of the thread graph `K` may write is guarded by a
@@ -138,12 +139,10 @@ def PoolSicher (D : Deklaration) (K : D.Fn → Bool) (w : D.Fn) : Prop :=
   D.haelt w = [] ∧ D.gruende w = 0 ∧
     ∀ f, K f = true → ∀ c, TraegerSchreibt f c = true →
       (∃ L, Bewacht c L) ∨ AtomarAusgenommen c
-
 /-- **Pool-safe at its computed graph**: `PoolSicher` with the thread
     graph `reachB P fs w`. -/
 def PoolSicherW (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
   PoolSicher D (reachB P fs w) w
-
 /-- **Duplicates allowed iff pool-safe**: every routine declared at least
     twice is pool-safe at its computed graph. `ws.Nodup` implies it
     vacuously (`einzelnPool_of_nodup`, PoolSym.lean); the symmetric pair
@@ -152,20 +151,17 @@ def PoolSicherW (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
     F10 (2026-09-22) this is the field `einzeln` of `AkzeptiertSpec`. -/
 def EinzelnPool (P : Programm D) (fs : List D.Fn) (ws : List D.Fn) : Prop :=
   ∀ w, Mehrfach ws w → PoolSicherW P fs w
-
 -- BEGIN handler discipline (Opus agent H, 2026-09-26, OFFEN O19) --
 /-- The feature set "every call, every signature, and ONLY locks declared `masks irqs`": a body
     admitted by it takes no lock that leaves interrupts on. -/
 def NurMaskiert (D : Deklaration) : Merkmal D :=
   ⟨fun _ => true, fun _ => true, fun L => D.maskiert L⟩
-
 /-- **The masking discipline of an interrupt handler** (the Rust `H102`, `kontexte.rs`): every
     function of the call graph of a root `w` the program declares entered by hardware
     (`P.unterbricht w`, `entry … via idt`) takes only locks declared `masks irqs`. -/
 def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop :=
   ∀ w, P.unterbricht w = true → ∀ f, reachB P fs w f = true → mE (NurMaskiert D) (P.rumpf f) = true
 -- END handler discipline --
-
 /-- **What `Akzeptiert` must establish** (the Props of its components): fragment; closed call
     graphs; every footprint carrier signature-guarded, lock-protected or thread-local; lock
     floors; protected carriers guarded by their lock; declared starts hold no lock by
@@ -178,7 +174,8 @@ def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop 
     interrupt handler's call graph reaches takes only locks declared `masks irqs` (`masken`,
     since 2026-09-26, Opus agent H: the Rust `H102`); every declared static array admits
     zero (`reset`, since C18: no `fnptr`/`ref`/`ptr` zero, no floats); accumulator admission is required (C15). -/
-structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)\n    (A : List (Kernzelle.AccumulatorDecl D)) : Prop where
+structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
+    (A : List (Kernzelle.AccumulatorDecl D)) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
   fuss : ∀ f, FussS P S (lokW P fs ws) f
@@ -196,16 +193,16 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)\n
   bibliothek : LibraryAdmission P := trivial
   -- the accumulator admission (C15, 2026-11-02)
   akku : Kernzelle.AccumulatorAdmission P fs A
-
+  -- the declared checks (C16, 2026-11-02): the admitted checks of this value
+  checks : List (CheckDecl D) := []
+  pruef : CheckAdmission P fs checks
 /-- **The accumulator admission added to the checker's facts**: the facts of `AkzeptiertSpec`
     that do not read the accumulators hold for every accumulator list. -/
 theorem AkzeptiertSpec.mitAkku {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
     {A A' : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A)
     (ha : Kernzelle.AccumulatorAdmission P fs A') : AkzeptiertSpec P S fs ws A' :=
   { h with akku := ha }
-
 end Pruefer
-
 /-- **The checker interface.** `akzeptiert E fs ls cs` is the Bool the Rust checker computes
     on the program `E` (member lists of functions, locks, carriers); `korrekt` is its
     soundness, the one link between the Bool and what the statement uses. -/
@@ -215,9 +212,7 @@ structure Pruefer where
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 E.ws E.akku
-
 /-! ## (b) What the user proves -/
-
 /-- Owed invariants at a REASON exit (the twin of `InvGutS`; SYNTAX.md: "owes `I` at every
     `return`"). -/
 def InvGutGrund (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (f : D.Fn) :
@@ -229,11 +224,9 @@ def InvGutGrund (P : Programm D) (passes : Nat) (Q : AxEns D) (S : SperrInv D) (
         ∀ (σ' : World D) (r : Fin (D.gruende f)),
           execEndH (V := vertragVon D f) S O' U passes R (P.rumpf f) σ ρ = EndAusgang.why σ' r →
             InvAmRueck P f σ'
-
 /-- A lock invariant reads only its protected carriers (second half of `SperrInvOk`). -/
 def SperrInvLokal (S : SperrInv D) : Prop :=
   ∀ L (s s' : Speicher D), (∀ c ∈ S.orte L, TraegerGleich s s' c) → S.inv L s = S.inv L s'
-
 /-- **The logic of the bodies**: per function and at EVERY `forever` budget the body triple
     with caller duty and no `logik` outcome, owed invariants at value AND reason exits; the
     lock invariants and declared axiom ensures the user wrote read only their carriers.
@@ -245,7 +238,6 @@ def LogikPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
   (∀ (passes : Nat) (f : D.Fn),
     KoerperGutS P passes Q S f ∧ InvGutS P passes Q S f ∧ InvGutGrund P passes Q S f) ∧
   SperrInvLokal S ∧ AxEnsLokal Q ∧ PtrVerfeinert P
-
 /-- **The start obligation** (NEW 2026-09-15, verdict P1): at the program's DECLARED initial
     memory every lock invariant holds, and every declared start's `requires` holds with its
     declared arguments. Before, these two were conditions on the quantified start
@@ -256,20 +248,15 @@ def LogikPflicht (P : Programm D) (S : SperrInv D) (Q : AxEns D) : Prop :=
 structure StartPflicht (E : Einheit D) : Prop where
   sperren : ∀ L, E.S.inv L E.sp0 = true
   req : ∀ a ∈ E.starts ++ E.gestartet, ReqAmEintritt E.P a.1 (E.sp0.welt []) a.2
-
 /-- **The user's own logic**: the bodies' logic and the start obligation, both over the
     program `E` -- nothing the prover picks. -/
 structure NutzerPflicht (E : Einheit D) : Prop where
   logik : LogikPflicht E.P E.S E.Q
   start : StartPflicht E
-
 /-! ## (c) What the hardware is assumed to do -/
-
 def HardwareAnnahmen (O : Orakel D) (Q : AxEns D) : Prop :=
   GutO O ∧ RegLokal O ∧ AxVertragO Q O
-
 /-! ## (d) What the runtime is assumed to do (A4) -/
-
 /-- **Assumption A4, the loader and the runtime's thread creation.** The machine runs
     `E.P.mitRuhe` (the program with the runtime's idle root `none`, MitRuhe.lean) from
     * `lader` -- the loader establishes the program's DECLARED initial memory `E.sp0`;
@@ -287,19 +274,14 @@ structure Laufzeit (E : Einheit D) (sp : Speicher D.mitRuhe)
   start : ∀ t, init t = ⟨none, .nil⟩ ∨ ∃ a ∈ E.starts ++ E.gestartet, init t = ⟨some a.1, envR a.2⟩
   einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 →
     (init t).1 = none ∨ ∃ w, (init t).1 = some w ∧ Mehrfach E.ws w
-
 /-! ## The start the proof works with (derived from (b) and (d), not a premise) -/
-
 section Start
-
 variable [DecidableEq D.Fn]
-
 /-- An idle start: no signature lock, no reasons, every function it reaches has an empty
     footprint and writes nothing. Any number of threads may run it. -/
 def Ruhig (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Prop :=
   D.haelt w = [] ∧ D.gruende w = 0 ∧ ∀ f, reachB P fs w f = true →
     fussOrteG P f = [] ∧ ∀ c, TraegerSchreibt f c = false
-
 /-- **Admissible starts** (the proof's notion; NOT a premise of `GabbroZiel` since
     2026-09-15): every thread runs a declared start or an idle one; a start on two threads is
     idle or declared twice (`Mehrfach`, since fix lane F10); the start functions' `requires`
@@ -311,11 +293,8 @@ structure StartZulaessig (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   einmal : ∀ t u, t ≠ u → (init t).1 = (init u).1 → Ruhig P fs (init t).1 ∨ Mehrfach ws (init t).1
   req : StartGut P sp init
   sperren : ∀ L, S.inv L sp = true
-
 end Start
-
 /-! ## The legs of the goal -/
-
 /-- **Data-race freedom on every run from `M0` to `M`**: two accesses by different threads to
     ONE carrier, one a write, the carrier not `atomic`, are ordered through a guard lock
     (release by the first, acquire by the second). Unguarded carriers included: there such a
@@ -328,13 +307,11 @@ def RennfreiBis (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschi
       (SchreibG (ms i) (ms (i + 1)) (fs i) c ∨ SchreibG (ms j) (ms (j + 1)) (fs j) c) →
       ¬ AtomarAusgenommen c →
       ∃ L, Bewacht c L ∧ GeordnetG ms fs L i j
-
 /-- At every logged REASON return, every invariant the function owes holds. -/
 def InvAmGrundG (P : Programm D) (M : RufMaschineG D) : Prop :=
   ∀ (t : Faden) (ev : RufEreignisF D), ev ∈ (M.faeden t).log →
     ∀ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       ev = RufEreignisF.why g rho r s0 s1 → InvAmRueck P g s1
-
 /-- **The kinds of named stop** (2026-09-15, verdicts F1 and F3, finding G1). Each is a place
     where G has no rule for a thread and the statement reports it instead of claiming more:
     * `hardware` -- a hardware assumption of (c) fails at the head: an axiom (foreign code)
@@ -361,7 +338,6 @@ inductive HaltArt where
       type no function has, at an axiom or a register) is refused by the checker
       (`AkzeptiertSpec.antworten`), because there the compiled call returns. -/
   | nieZurueck
-
 /-- The first layer of the head block is a named stop of kind `k` at the world `σ`: the
     failing side conditions of `dannBlatt` (a leaf's hardware outcome), `dannBindAxiom`,
     `dannRegLies*` (`hardware` for an answerable type, since G1), an axiom `-> never`
@@ -386,7 +362,6 @@ def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | .flagge, .awaits g .. => O.sichtbar g (σ.fragt (.inr (.inr g))) = false
   | _, _ => False
-
 /-- A residue at a named stop of kind `k`: a spent `forever` budget (`budget`), a leaf's
     hardware outcome at the end block's head (`hardware`), or its head block's first layer. -/
 def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -404,14 +379,12 @@ def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | k, .dann b _ => KopfHalt O passes σ ρ k b
   | _, _ => False
-
 /-- Thread `t` stands at a named stop of kind `k`. -/
 def HaltBenannt (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (k : HaltArt) (t : Faden) :
     Prop :=
   ∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
     (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
     (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩ ∧ RestHalt O passes (M.weltVon t) ρ k r
-
 /-- **Every stop is named**: each thread is finished, waits for a lock another thread holds,
     waits for a publication, has spent its `forever` budget, stands at a hardware stop, stands
     at a call that does not return (an axiom `-> never`: G1, narrowed by W1), or can step. Nothing else: no thread ever stands at a failing `logik` check (`keinLogikHalt`) or
@@ -420,24 +393,20 @@ def FortschrittG (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschine
   ∀ t, FertigG M t ∨ WartetG M t ∨ HaltBenannt O passes M .flagge t ∨
     HaltBenannt O passes M .budget t ∨ HaltBenannt O passes M .hardware t ∨
     HaltBenannt O passes M .nieZurueck t ∨ ∃ M', RufSchrittG P O passes M t M'
-
 /-- **No named stop inside a critical section**, of any kind (`HaltArt`): devices and axioms answer, `awaits`
     payloads become visible, the `forever` budget is not spent while a lock is held. A named assumption of the
     waiting bound (`GabbroZielWarten`). -/
 def HardwareImAbschnitt {P : Programm D} {O : Orakel D} {passes : Nat} (R : PlanLauf P O passes) : Prop :=
   ∀ n u L, L ∈ offen ((R.M n).faeden u).spur → ∀ k, ¬ HaltBenannt O passes (R.M n) k u
-
 /-- Thread `t` stands at `locks L` while thread `u` holds `L`. -/
 def WartetAuf (M : RufMaschineG D) (t u : Faden) (L : D.Lock) : Prop :=
   AnSperre M t L ∧ L ∈ offen (M.faeden u).spur
-
 /-- **No wait cycle** (verdict F2): there are no threads `t₀, …, tₙ₊₁` with `tₙ₊₁ = t₀` where
     each `tᵢ` stands at a lock that `tᵢ₊₁` holds -- whatever the OTHER threads do. (The global
     `keineVerklemmung` only rules out that EVERY unfinished thread waits.) -/
 def KeinWarteZyklus (M : RufMaschineG D) : Prop :=
   ∀ (n : Nat) (ts : Nat → Faden) (Ls : Nat → D.Lock),
     (∀ i, i ≤ n → WartetAuf M (ts i) (ts (i + 1)) (Ls i)) → ts (n + 1) ≠ ts 0
-
 /-- **The schedule of ONE core with interrupt handlers** (fix lane F11, 2026-09-22, OFFEN
     O19): the two hardware facts about `cli`/`sti` and about preemption, as conditions on a
     G run. `kern t` is the core thread `t` runs on, `H g` says `g` is an interrupt handler (in
@@ -459,7 +428,6 @@ def KernPlan (kern : Faden → Nat) (H : Faden → Prop) (ms : Nat → RufMaschi
         L ∈ offen ((ms i).faeden f).spur → D.maskiert L = false) ∧
   (∀ (g : Faden) (i j k : Nat), H g → fs i = g → (∀ r, r < i → fs r ≠ g) →
       i ≤ k → k < j → j ≤ n → ¬ FertigG (ms j) g → kern (fs k) = kern g → fs k = g)
-
 -- BEGIN handler leg (Opus agent H, 2026-09-26, OFFEN O19) --
 /-- **Thread `t` is an interrupt handler of the program** (Opus agent H, 2026-09-26): its root --
     the function it started with at `M0` -- is one the program declares entered by hardware
@@ -467,13 +435,11 @@ def KernPlan (kern : Faden → Nat) (H : Faden → Prop) (ms : Nat → RufMaschi
     prover; the runtime's idle root is never one (`Programm.mitRuhe`). -/
 def HandlerVon (P : Programm D) (M0 : RufMaschineG D) (t : Faden) : Prop :=
   P.unterbricht (M0.faeden t).kopf.f = true
-
 /-- **No same-core interrupt deadlock** (fix lane F11, 2026-09-22; CONTENTFUL since Opus agent H,
     2026-09-26, OFFEN O19). For EVERY core assignment `kern` and every run from `M0` to `M` that
     the core hardware admits (`KernPlan`: masking and preemption as named hardware facts), a
     thread whose root the program declares an interrupt handler (`HandlerVon`) NEVER stands at a
     lock that another thread of its own core holds -- the deadlock `H102` refuses in Rust.
-
     Unlike the leg of F11 (`KernHaltG`, now in Zielsatz/Masken.lean), nothing of the program side
     is a hypothesis here: WHICH threads are handlers comes from the unit (`P.unterbricht`), and
     the masking discipline from (a) (`AkzeptiertSpec.masken`). The leg is FALSE for programs the
@@ -487,7 +453,6 @@ def KernHaltE (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschine
     ∀ (g f : Faden) (L : D.Lock), HandlerVon P M0 g → f ≠ g → kern f = kern g →
       AnSperre M g L → L ∉ offen ((M.faeden f).spur)
 -- END handler leg --
-
 /-- **Time**: a frame entered at `M`, of a function whose calls nest at most `n` deep, takes
     at most `kostenTief P passes (n + 1) g` own steps on every run while it is active. -/
 def ZeitAb (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
@@ -495,5 +460,4 @@ def ZeitAb (P : Programm D) (O : Orakel D) (passes : Nat) (M : RufMaschineG D) :
     rufTief P (n + 1) g = true → Eintritt P f g rho s0 k M →
     ∀ (M2 : RufMaschineG D) (run : SegLauf P O passes M M2), aktivVor f k run →
       segZaehle run f ≤ kostenTief P passes (n + 1) g
-
 end Gabbro.Grammatik.Zielsatz

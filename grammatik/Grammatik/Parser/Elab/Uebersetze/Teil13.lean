@@ -9,6 +9,8 @@ import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 
 @[expose] public section
 
@@ -125,10 +127,7 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
         -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
         -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
         let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
-        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds,
-                     res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
-                     gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [],
-                     body := [], ret := .empty, boden := boden })
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, gruende := 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
 
 /-- The names a unit declares as memory: tables, arenas, statics, atomics. -/
 def uSpeicherNamen (ms : List SItemTief) : List String :=
@@ -219,6 +218,10 @@ def elabU : List SItemTief → Except String UProg
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
+    -- C16: every `check` item elaborates now, with its generated probe below.
+    match uChecks tabs globs ms with
+    | .error e => .error e
+    | .ok checks =>
     match uSeq ((ms.filter (fun
         | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (fun item => uSperre globs tabs item consts)) with
     | .error e => .error e
@@ -252,8 +255,7 @@ def elabU : List SItemTief → Except String UProg
     match uInvs consts alias tabs locks globs ms with
     | .error e => .error e
     | .ok invs =>
-    let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [],
-                                  res := none, fname := "transition", alias, lits := consts, globs }
+    let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs }
     match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
     | .error e => .error e
     | .ok zustaende =>
@@ -284,13 +286,17 @@ def elabU : List SItemTief → Except String UProg
     let axKoepfe := axKoepfe0 ++ gateKoepfe
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
+    -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
+    match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) (uKonstArrays alias (uKonstFns ms) consts ms) zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) with
+    | .error e => .error e
+    | .ok probeFns =>
     match uSeq (fnItems.map (fun (s, b) =>
         elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
           (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
           (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e
     | .ok fns =>
-    let fns := fns ++ transitionFns
+    let fns := fns ++ transitionFns ++ probeFns
     match uWurzeln tabs fns ms with
     | .error e => .error e
     | .ok roots =>
@@ -303,13 +309,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
-          gestartet := gestartet,
-          axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
-                                          gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
-          annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
-          zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
-          exportGate := ExportMetadata.check msE }
+        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check msE, checks := checks }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
@@ -400,11 +400,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100),
-                term := Expr.thru (Expr.var Var.here)
-                  G104_referenz.GTab.Konto rfl
-                  G104_referenz.GKontoFeld.stand i
-                  G104_referenz.gDarf_einzahlen_Konto }
+          .ok { range := (0, 100), term := Expr.thru (Expr.var Var.here) G104_referenz.GTab.Konto rfl G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .tab b f ix =>
     if !(strEq b "Konto" && strEq f "stand") then .error "place without G form"
     else
@@ -414,10 +410,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100),
-                term := Expr.slot G104_referenz.GTab.Konto
-                  G104_referenz.GKontoFeld.stand i
-                  G104_referenz.gDarf_einzahlen_Konto }
+          .ok { range := (0, 100), term := Expr.slot G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .old b f ix =>
     if !((strEq b "k" || strEq b "Konto") && strEq f "stand") then
       .error "place without G form"
@@ -428,10 +421,7 @@ def lowerSeiteEin (tabs : List UTab) (names : List String)
         match lowerIdxEin ix with
         | .error e => .error e
         | .ok i =>
-          .ok { range := (0, 100),
-                term := Expr.oldS G104_referenz.GTab.Konto
-                  G104_referenz.GKontoFeld.stand i
-                  G104_referenz.gDarf_einzahlen_Konto }
+          .ok { range := (0, 100), term := Expr.oldS G104_referenz.GTab.Konto G104_referenz.GKontoFeld.stand i G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result in a body"
   | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. | .div .. | .rem .. | .shl .. | .shr .. | .neg .. =>
     .error "arithmetic without G form in the 104 lowering"

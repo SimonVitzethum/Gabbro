@@ -158,7 +158,7 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
       (komponiere B ps).arenen (komponiere B ps).akku := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
   refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_,
-    Kernzelle.accumulatorAdmission_leer _ _⟩
+    Kernzelle.accumulatorAdmission_leer _ _, [], CheckAdmission.nil _ _⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -284,8 +284,9 @@ theorem nutzerTeilO_wachs {p : Projekt D} {T₁ : D.Tab ⊕ D.Glob → Prop}
 theorem lokW_ohne_wurzeln [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (c : D.Tab ⊕ D.Glob) : lokW P fs [] c = true :=
   @decide_eq_true _ (Classical.propDecidable _) fun _ h => (nomatch h)
 
-/-- **A unit without roots and arenas is accepted alone** whenever the unit it is cut from is: what
-    depends on roots holds vacuously, the rest is per body. -/
+/-- **A unit without roots, arenas and checks is accepted alone** whenever the unit it
+    is cut from is: what depends on roots holds vacuously, the rest is per body.
+    The cut drops the checks (linked check admission is open, as for `verbinde`). -/
 theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.Fn}
     (hA : AkzeptiertSpecX E.P E.S fs E.ws E.arenen E.akku)
     (hAS : Kernzelle.AkkuStart E E.akku) :
@@ -295,7 +296,7 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
   refine @decide_eq_true _ (Classical.propDecidable _) ⟨⟨hA.frag, hA.abg, (fun f => ?_), hA.stufen,
     hA.sperrOrte, (fun w h => by rw [hws] at h; cases h), (fun _ h => ?_),
     (fun _ _ _ w h => by rw [hws] at h; cases h), hA.antworten,
-    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), hA.akku⟩,
+    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), hA.akku, hA.reset, hA.checks, hA.pruef⟩,
     ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩, ?_⟩
   · show FussSX E.P E.S (lokW E.P fs []) _ f
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by

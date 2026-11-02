@@ -3,7 +3,8 @@
   Subject:   PLAN-ZIELSATZ.md step 3 -- what the CHECKER decides, as ONE Bool
              (`Akzeptiert`), proved to be a `Pruefer` of `Spec.lean`
              (`akzeptiert_pruefer`): the Bool decides EXACTLY
-             `AkzeptiertSpec` (`akzeptiert_iff`), given complete member
+             `AkzeptiertSpec` (`akzeptiertSpec_of` forward, `spec_akzeptiert`
+             reverse), given complete member
              lists. The start the PROOF works with is Spec's
              `StartZulaessig` (derived from the runtime's start `Laufzeit`
              and the user's `StartPflicht`, `startZulaessig_aus`), with a
@@ -27,6 +28,14 @@
   | `reset`        | `resetB`               | every declared static array admits zero (C18)          | the checked range-store expansion (`lowResetRangeL`) |
   | `bibliothek`   | `libraryB`             | `LibraryAdmission P`: generated programs are ordinary (C02 source certificates in `Uebersetzung.lean` carry the content) | by construction (`libraryB_immer`) |
   | `akku`           | `accumulatorB`                  | `AccumulatorAdmission P fs aks`: every per-core accumulator is admitted (descriptor, private cells with one exclusive lock each, exact core-query shape, confined and floored update/reduction graphs) | the staged accumulator leg (C15, 2026-11-02; no goal leg yet) |
+  | `pruef`        | `checkB`               | `CheckAdmission P fs checks`: every declared check expands exactly (`CheckExpansion`: `Bool` probe on a reason-free channel threading one Duty), its call-graph closure keeps the read-only frame (`CheckRahmen`), and every gate consumes that Duty once | the check-evidence leg (C16, 2026-11-02; `checkSitePflicht_aus`) |
+
+  **Changes of 2026-11-02 (C16):**
+  * `pruef` is NEW (`checkB`, decided exactly by `checkB_iff`): the unit's
+    declared checks (`checks`, default `[]`) expand exactly, keep the frame
+    and discharge one Duty per gate. The Bool runs on the unit's declared
+    checks (`E.pruefungen`); the forward proof is `akzeptiertSpec_of`, the
+    reverse `spec_akzeptiert` (at the value's own checks).
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no
@@ -115,3 +124,4 @@ module
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil1
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil2
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide

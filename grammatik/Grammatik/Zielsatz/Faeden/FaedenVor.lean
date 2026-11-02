@@ -98,31 +98,36 @@ structure PrueferVor where
     akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 (E.starts.map (·.1)) E.akku
 
 /-- An old checker as a new one: it refuses what it never judged (a unit with run-time
-    roots) and says what it said on every other unit. -/
+    roots or with declared checks) and says what it said on every other unit. -/
 def pruefer_aus_vor (C : PrueferVor) : Pruefer where
-  akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && E.gestartet.isEmpty
+  akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && E.gestartet.isEmpty && E.pruefungen.isEmpty
   korrekt := fun E fs ls cs h => by
     rw [Bool.and_eq_true] at h
-    have hg : E.gestartet = [] := List.isEmpty_iff.mp h.2
-    rw [ws_ohne_gestartet E hg]
-    exact C.korrekt E fs ls cs h.1
+    obtain ⟨hC, hg, hP⟩ := h
+    have hg' : E.gestartet = [] := List.isEmpty_iff.mp hg
+    -- the old checker never judged checks: the lifted verdict admits none, and
+    -- units that declare any are refused by the Bool above (`hP` is that refusal)
+    have hA := C.korrekt E fs ls cs hC
+    rw [ws_ohne_gestartet E hg'] at hA ⊢
+    exact { hA with checks := [], pruef := CheckAdmission.nil _ _ }
 
-/-- **The same verdict on every unit of before.** -/
+/-- **The same verdict on every unit of before** (no run-time root, no declared check). -/
 theorem pruefer_aus_vor_gleich (C : PrueferVor) {D : Deklaration} [DecidableEq D.Fn]
-    (E : Einheit D) (h : E.gestartet = []) (fs : List D.Fn) (ls : List D.Lock)
+    (E : Einheit D) (h : E.gestartet = []) (hP : E.pruefungen = []) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) :
     (pruefer_aus_vor C).akzeptiert E fs ls cs = C.akzeptiert E fs ls cs := by
-  show (C.akzeptiert E fs ls cs && E.gestartet.isEmpty) = C.akzeptiert E fs ls cs
-  rw [h]
+  show (C.akzeptiert E fs ls cs && E.gestartet.isEmpty && E.pruefungen.isEmpty) = C.akzeptiert E fs ls cs
+  rw [h, hP]
   simp only [List.isEmpty_nil, Bool.and_true]
 
 /-! ## 3. The old statement, verbatim, is a corollary -/
 
-/-- **`GabbroZiel` AS IT READ BEFORE 2026-09-26**, over the units of before (no run-time root):
-    the old checker interface, the old (b) and (d), and `Ziel` on every machine-G run. -/
+/-- **`GabbroZiel` AS IT READ BEFORE 2026-09-26**, over the units of before (no run-time root,
+    no declared check): the old checker interface, the old (b) and (d), and `Ziel` on every
+    machine-G run. -/
 def GabbroZielVor : Prop :=
   ∀ (C : PrueferVor) (D : Deklaration) [DecidableEq D.Fn] (E : Einheit D),
-    E.gestartet = [] →
+    E.gestartet = [] → E.pruefungen = [] →
     ∀ (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
     C.akzeptiert E fs.1 ls.1 cs.1 = true →
     NutzerPflichtVor E →
@@ -136,9 +141,9 @@ def GabbroZielVor : Prop :=
 
 /-- **NOTHING IS WEAKENED: the old statement follows from the new one.** -/
 theorem gabbro_ziel_vor : GabbroZielVor := by
-  intro C D _ E hg fs ls cs hC hN O hH passes sp init hL M hr
+  intro C D _ E hg hP fs ls cs hC hN O hH passes sp init hL M hr
   have hC' : (pruefer_aus_vor C).akzeptiert E fs.1 ls.1 cs.1 = true := by
-    rw [pruefer_aus_vor_gleich C E hg]; exact hC
+    rw [pruefer_aus_vor_gleich C E hg hP]; exact hC
   exact gabbro_ziel_g (pruefer_aus_vor C) D E fs ls cs hC'
     ⟨hN.logik, (startPflicht_vor_iff E hg).mpr hN.start⟩ O hH passes sp init
     ((laufzeit_vor_iff E hg).mpr hL) M hr
