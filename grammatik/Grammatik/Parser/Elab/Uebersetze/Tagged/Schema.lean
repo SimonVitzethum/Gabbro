@@ -141,37 +141,37 @@ def uSumPayload (alias : List (String × (Int × Int))) : STyp → Except String
 /-- One dependency round. Failed resolutions stay pending rather than disappearing.
     All declarations in a round see the same resolved type environment. -/
 def resolveSumRound (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (known : List USum) : List (USum STyp) → List USum × List (USum STyp)
+    (spaces : List String) (known : List USum) : List (USum STyp) → List USum × List (USum STyp)
   | [] => ([], [])
   | schema :: rest =>
-    let (done, pending) := resolveSumRound alias tabs known rest
-    match schema.resolve (uTypIn alias tabs (known.map fun s => (s.name, Ty.sum s.spec))) with
+    let (done, pending) := resolveSumRound alias tabs spaces known rest
+    match schema.resolve (uTypIn alias tabs (known.map fun s => (s.name, Ty.sum s.spec)) spaces) with
     | .ok value => (value :: done, pending)
     | .error _ => (done, schema :: pending)
 
 /-- There are at most as many dependency layers as declarations. This bound comes
     from the finite schema graph; recursive-by-value and unresolved names refuse. -/
-def resolveSums (alias : List (String × (Int × Int))) (tabs : List UTab) :
+def resolveSums (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String) :
     Nat → List (USum STyp) → List USum → Except String (List USum)
   | _, [], known => .ok known
   | 0, _ :: _, _ => .error "recursive or unresolved tagged payload type"
   | n + 1, pending, known =>
-    let (done, next) := resolveSumRound alias tabs known pending
+    let (done, next) := resolveSumRound alias tabs spaces known pending
     if done.isEmpty then
       match pending with
       | [] => .ok known
       | schema :: _ =>
-        match schema.resolve (uTypIn alias tabs (known.map fun s => (s.name, Ty.sum s.spec))) with
+        match schema.resolve (uTypIn alias tabs (known.map fun s => (s.name, Ty.sum s.spec)) spaces) with
         | .error e => .error e
         | .ok _ => .error "recursive or unresolved tagged payload type"
-    else resolveSums alias tabs n next (known ++ done)
+    else resolveSums alias tabs spaces n next (known ++ done)
 
 /-- Admit complete acyclic schemas, restoring declaration order after dependency
     resolution so function/table sum identities keep their source positions. -/
 def uSums (alias : List (String × (Int × Int))) (items : List SItemTief)
-    (tabs : List UTab := []) : Except String (List USum) := do
+    (tabs : List UTab := []) (spaces : List String := []) : Except String (List USum) := do
   let schemas ← uSumSchemas items
-  let resolved ← resolveSums alias tabs schemas.length schemas []
+  let resolved ← resolveSums alias tabs spaces schemas.length schemas []
   schemas.mapM fun schema =>
     match resolved.find? (fun value => strEq value.name schema.name) with
     | some value => .ok value

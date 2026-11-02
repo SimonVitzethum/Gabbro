@@ -132,12 +132,20 @@ theorem uTableRight_sound (text : String) (access : Bool × Bool) (h : uTableRig
       exact ⟨rights, hd, he, ho⟩
     | some owner => simp [uTableRight, hd, ho] at h
 
+/-- Resolve a logical space against the declaration order. Unknown names are refused. -/
+def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
+  if strEq name "normal" then .ok 0
+  else
+    match spaces.zipIdx.find? (fun entry => strEq entry.1 name) with
+    | some (_, index) => .ok (index + 1)
+    | none => .error ("unknown data space: " ++ name)
+
 /-- A surface type as G sees it: a pointer to a table, an index
     into one, or an integer range (the `ParamTy`/`int_range` of
-    `lean_g.rs`). Named address spaces other than `normal`,
+    `lean_g.rs`). Unknown named address spaces,
     rights outside owner-free data access unions, the optional index and every
     other shape are explicit errors. -/
-def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) : STyp → Except String Ty
+def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) (spaces : List String := []) : STyp → Except String Ty
   | .atom "bool" => .ok .bool
   | .atom a =>
     match named.find? (fun entry => strEq entry.1 a) with
@@ -147,7 +155,7 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
       | .ok (lo, hi) => .ok (.int lo hi)
       | .error e => .error e
   | .range base lo hi o =>
-    match uTypIn alias tabs named base, uSchranke alias lo, uSchranke alias hi with
+    match uTypIn alias tabs named spaces base, uSchranke alias lo, uSchranke alias hi with
     | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
     | .error e, _, _ => .error e
     | _, _, _ => .error "range requires an integer type and known bounds"
@@ -157,16 +165,16 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
       if ((tabs[num]?).bind (·.von)).isSome then .ok (.ref num) else .ok (.index c)
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
-    if !strEq raum "normal" then .error "space without G form"
-    else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
+    if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
+      let space ← uDataSpace spaces raum
       let access ← uTableRight rechte
       let (num, _) ← uTabNr tabs t
-      pure (.ptr (.table num access))
+      pure (.ptr (.table num access space))
   | .ptr _ _ _ => .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
   | .entry _ _ => .error "entry handle requires C08/C14 binding and C09 forwarding flow"
   | .array t n =>
-    match uTypIn alias tabs named t, uSchranke alias n with
+    match uTypIn alias tabs named spaces t, uSchranke alias n with
     | .ok τ, some k => if 0 ≤ k then .ok (.arr τ k.toNat) else .error "array of a negative length"
     | .error e, _ => .error e
     | _, none => .error "array length without G form"
@@ -177,8 +185,8 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
   | t => .error ("type without G form: " ++ sTypText t)
 
 /-- The canonical reader in a declaration environment without named value schemas. -/
-def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty :=
-  uTypIn alias tabs []
+def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String := []) : STyp → Except String Ty :=
+  uTypIn alias tabs [] spaces
 
 /-- Collect constant functions independently of their statement body shape. -/
 def uKonstFns : List SItemTief → List UKonstFn
@@ -351,13 +359,13 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
     are explicit errors (the refused arms of `read_table`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n .none (.some cnt) .none .none sh parts =>
+  | .tableT n .none (.some cnt) .none _ sh parts =>
     -- `tree { parent p, child c }` names the fields `reaches … via` and the tree domains read; it adds no carrier
     match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
     | .tSlot fds :: invs => uTabelleSlots consts alias tnames n cnt sh fds invs
         (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => []))
     | _ => .error "table without G form"
-  | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
+  | .tableT n (.some p) .none .none _ sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uFelder alias tnames fds with
     | .error e => .error e

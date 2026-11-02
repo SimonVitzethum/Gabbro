@@ -74,6 +74,7 @@ def UReg.art (g : UReg) : UParamArt := bif g.bool then .bool else .int
     locks, the held lock names, the optional result range and
     the function name (for errors). -/
 structure UCtx where
+  spaces : List String := []
   names : List String
   kinds : List UParamArt
   types : List Ty
@@ -292,6 +293,7 @@ structure UProg where
       declaration order, then every check's Duty (`dutyName`), deduplicated. Every `nimmt`/`gibt`
       of every function must name a member (`uMarkenPruef`). -/
   marken : List String := []
+  spaces : List String := ["normal"]
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare

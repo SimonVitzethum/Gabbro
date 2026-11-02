@@ -15,6 +15,7 @@ public import Stage0.Zeugen.Annahme.LibraryWitness
 public import Stage0.Zeugen.Annahme.CheckWitness
 public import Stage0.Zeugen.Annahme.AccWitness
 public import Stage0.Zeugen.Annahme.ResetRangeWitness
+public import Stage0.Zeugen.Annahme.NamedSpaceWitness
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Images.Hilfe
 public import Stage0.Senke.Ausdruck.Sim

@@ -58,7 +58,7 @@ def aliasBody (env : List (String × (Int × Int))) (name : String) : Except Str
 theorem aliasBody_correct (env : List (String × (Int × Int))) (tabs : List UTab)
     (name : String) (lo hi : Int) (h : uTypName env name = .ok (lo, hi)) :
     aliasBody env name = .ok (.range (.atom name) (bound lo) (bound hi) false) ∧
-    uTyp env tabs (.range (.atom name) (bound lo) (bound hi) false) = .ok (.int lo hi) := by
+    uTyp env tabs [] (.range (.atom name) (bound lo) (bound hi) false) = .ok (.int lo hi) := by
   constructor
   · simp only [aliasBody, h]
     rfl
@@ -204,7 +204,7 @@ def constants (env : List (String × (Int × Int))) (fns : List UKonstFn) :=
 theorem aliasBody_correct_zeuge :
     aliasBody [("Small", (-4, 9))] "Small" =
       .ok (.range (.atom "Small") (bound (-4)) (bound 9) false) ∧
-    uTyp [("Small", (-4, 9))] []
+    uTyp [("Small", (-4, 9))] [] []
       (.range (.atom "Small") (bound (-4)) (bound 9) false) = .ok (.int (-4) 9) :=
   aliasBody_correct _ _ _ _ _ (by rfl)
 
