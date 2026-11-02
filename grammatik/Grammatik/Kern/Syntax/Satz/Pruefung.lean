@@ -187,6 +187,7 @@ def pruefD : Deklaration where
   Tab := Empty
   count := fun t => t.elim
   Feld := fun t => t.elim
+  decFeld := fun t => t.elim
   typ := fun t => t.elim
   erlaubt := fun t => t.elim
   tabNr := fun _ => none
@@ -262,11 +263,13 @@ def pruefP : Programm pruefD where
 theorem pruef_expansion : CheckExpansion pruefP pruefC := by
   refine ⟨rfl, rfl, rfl, rfl, fun t => t.elim, fun g => g.elim, ?_, ?_, ?_⟩
   · intro g hg
-    simp only [pruefC, List.mem_cons, List.not_mem_nil, or_false] at hg
-    subst hg
+    change Bool at g
+    have hf : g = false := List.mem_singleton.mp hg
+    subst hf
     exact by decide
-  · exact by decide
-  · rw [pruefC]
-    exact List.nodup_cons.mpr ⟨by simp, List.nodup_nil⟩
+  · change ¬ (true : Bool) ∈ ([false] : List Bool)
+    decide
+  · change ([false] : List Bool).Nodup
+    decide
 
 end Gabbro.Grammatik

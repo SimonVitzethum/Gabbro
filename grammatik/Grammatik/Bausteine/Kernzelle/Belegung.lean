@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Bausteine.Kernzelle.Operator
 public import Grammatik.Kern.Syntax.Syntax.Teil1
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil1
 
 @[expose] public section
 
@@ -30,7 +31,8 @@ structure AccumulatorDecl (D : Deklaration) where
   kernZahl : Nat
   breite : Nat
   vorzeichen : Bool
-  lo hi : Int
+  lo : _root_.Int
+  hi : _root_.Int
   op : AccOperator
   zellen : Fin kernZahl → D.Glob
   sperren : Fin kernZahl → D.Lock

@@ -76,7 +76,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       traverseLauf (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (alleIndizes (D.count t)) σ ρ
-  /-- C11 consuming traversal, sequential placeholder: runs the body as a
+  /- C11 consuming traversal, sequential placeholder: runs the body as a
       fixed sweep like `traverse` over the initial index list. Current-state
       re-selection, minimal selection, strict measure fall and removal
       (Isabelle/Consuming bridge) are OPEN and stay refused at export. -/
@@ -116,7 +116,7 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
-  /-- C11 scoped return, sequential placeholder: immediate value/reason pop
+  /- C11 scoped return, sequential placeholder: immediate value/reason pop
       like `ret`; scope unwinding with invariant restoration is OPEN. -/
   | .retScoped e _, σ, ρ =>
       let σ := σ.lese Λ e.orte
@@ -217,7 +217,7 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       match gleitPasst lo hi (eval σ e σ ρ).x with
       | Option.some v => (execBlock rest σ (.cons v ρ)).schrumpf
       | Option.none => (execEnd sonst σ ρ).zuAusgang
-  /-- C11 required narrowing: in range runs the rest; out of range is the
+  /- C11 required narrowing: in range runs the rest; out of range is the
       appended capacity case of `Logik`, excluded by the caller's duty. -/
   | .narrowRequired e lo' hi' rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
@@ -310,12 +310,12 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
   | .ite c t e, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execEnd t σ ρ else execEnd e σ ρ
-  /-- C11 scoped return at the top level of a body: same placeholder. -/
+  /- C11 scoped return at the top level of a body: same placeholder. -/
   | .retScoped e _, σ, ρ =>
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhyScoped r _, σ, _ => .why σ r
-  /-- C11 required narrowing at the top level of a body: in range runs the
+  /- C11 required narrowing at the top level of a body: in range runs the
       rest; out of range is `Logik.kapazitaet`. -/
   | .narrowRequired e lo' hi' rest, σ, ρ =>
       let σ := σ.lese Λ e.orte

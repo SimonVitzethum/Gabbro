@@ -21,7 +21,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration} {V : Vertrag D} {Λ : List (Res D)}
 
 /-- Old exact evidence embeds as the empty cleanup. -/
-theorem RueckRessourcen.vonGenau (h : Λ.Perm V.ende) : RueckRessourcen D V Λ :=
+def RueckRessourcen.vonGenau (h : Λ.Perm V.ende) : RueckRessourcen D V Λ :=
   ⟨[], by simpa using h⟩
 
 /-- An empty cleanup is the old exact evidence. -/
