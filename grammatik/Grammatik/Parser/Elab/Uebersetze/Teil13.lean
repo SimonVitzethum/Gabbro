@@ -302,12 +302,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
-          gestartet := gestartet,
-          axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
-          annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
-          zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
-          exportGate := ExportMetadata.check ms0, checks := checks }
+        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check ms0, checks := checks }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/

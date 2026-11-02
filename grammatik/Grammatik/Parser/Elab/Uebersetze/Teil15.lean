@@ -344,11 +344,7 @@ theorem u104parse : beqTopTief (parseTopTief tt104) (.ok items104) = true := by
 /-- The elaborated 104 program (`u104elab` checks it against
     the elaborator). -/
 def uExp104 : UProg :=
-  { tabs := [{ name := "Konto", count := 2, cols := [("stand", (0, 100))], breiten := [("stand", 32)] }],
-    locks := [{ name := "M", rank := 0, guard := ["Konto"] }],
-    fns := [
-      { name := "einzahlen", params := [("k", .ptr 0 true), ("i", .index 2), ("b", .int 0 10)], kinds := [.ptr 0 true, .index 0, .int], res := .none, held := ["M"], puts := ["Konto"], gives := [.cmp "<=" (.old "k" "stand" (.param "i")) (.slot "k" "stand" (.param "i"))], body := [.assign "k" "stand" (.param "i") (.lit 100), .call "lies" [.freshPtr "Konto" false, .val (.param "i")]], ret := .empty, boden := some 1 },
-      { name := "lies", params := [("k", .ptr 0 false), ("i", .index 2)], kinds := [.ptr 0 false, .index 0], res := .some (0, 100), held := ["M"], puts := [], gives := [.cmp "==" .erg (.slot "k" "stand" (.param "i"))], body := [], ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }], exportGate := ExportMetadata.check (uMembers items104) }
+  { tabs := [{ name := "Konto", count := 2, cols := [("stand", (0, 100))], breiten := [("stand", 32)] }], locks := [{ name := "M", rank := 0, guard := ["Konto"] }], fns := [ { name := "einzahlen", params := [("k", .ptr 0 true), ("i", .index 2), ("b", .int 0 10)], kinds := [.ptr 0 true, .index 0, .int], res := .none, held := ["M"], puts := ["Konto"], gives := [.cmp "<=" (.old "k" "stand" (.param "i")) (.slot "k" "stand" (.param "i"))], body := [.assign "k" "stand" (.param "i") (.lit 100), .call "lies" [.freshPtr "Konto" false, .val (.param "i")]], ret := .empty, boden := some 1 }, { name := "lies", params := [("k", .ptr 0 false), ("i", .index 2)], kinds := [.ptr 0 false, .index 0], res := .some (0, 100), held := ["M"], puts := [], gives := [.cmp "==" .erg (.slot "k" "stand" (.param "i"))], body := [], ret := .val (.slot "k" "stand" (.param "i")), boden := some 1 }], exportGate := ExportMetadata.check (uMembers items104) }
 
 /-! ## Shape equality on U (Bool pins, like `beqTopTief`) -/
 

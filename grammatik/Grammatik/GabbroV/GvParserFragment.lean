@@ -333,11 +333,7 @@ def w108items : List SItemTief :=
 /-- **108's elaborated program** (same probe, pasted):
     the table and both readers, the `concurrent` members as thread roots. -/
 def w108prog : UProg :=
-  { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], bools := [] }],
-    locks := [],
-    fns := [{ name := "read_a", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) },
-            { name := "read_c", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }],
-    roots := ["read_a", "read_c"] }
+  { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], bools := [] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := .some (0, 4294967295), resBool := false, held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"] }
 
 /-- **108 elaborates**: `elabU` yields exactly the pasted program, the `concurrent` members as its thread
     roots (and `lowerAllg` succeeds on it). -/
