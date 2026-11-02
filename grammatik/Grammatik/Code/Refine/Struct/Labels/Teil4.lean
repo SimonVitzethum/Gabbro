@@ -152,6 +152,8 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerS_lbl_call (lay := lay) (cenv := cenv) (lv := lv) (f := f) (args := args) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
   | _, _, _, _, .callInd .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .callIndElse .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .locks .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .breaking .., lb, k, st, st', blks, hlt, h => by
@@ -265,6 +267,8 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       exact lw_bind (b := ⟨lb, [], ca ++ [.call (some r1) (lay.fno f) ops] ++ cb, .jmp st.l⟩) rfl hlt (by exact m2)
         ⟨n2, a2⟩
   | _, _, _, _, .bindCallInd .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindCallIndElse .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, Gabbro.Grammatik.Block.bindCallElse f args he hp hr err rest, lb, k, st, st', blks, hlt, h =>
       bindCallElse_lbl lay cenv lv f args he hp hr err rest lb k st st' blks hlt
