@@ -77,6 +77,11 @@ def druckWurzeln : List String → List Token
   | [p] => rohToks p
   | p :: ps => rohToks p ++ [.zeichen ","] ++ druckWurzeln ps
 
+/-- Print the actual arguments and retained input, with no synthesized argument values. -/
+def druckLibraryCall (c : SLibraryCall) : List Token :=
+  [.zeichen "@", nameTok c.library, .zeichen "#", nameTok c.function, .zeichen "("] ++
+    druckToksListe c.args ++ [.zeichen ")", .zeichen "{"] ++ c.region ++ [.zeichen "}"]
+
 mutual
 /-- A statement as tokens (the inverse of `parseStmt`). -/
 def druckAnw : SAnw → List Token
@@ -86,17 +91,14 @@ def druckAnw : SAnw → List Token
   | .bindElse x ty e f b =>
     [.wort "let", nameTok x] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks e ++
       [.wort "else", .zeichen "(", nameTok f, .zeichen ")"] ++ druckAnw b
-  | .bindLib m x ty l f =>
+  | .bindLib m x ty c =>
     [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [nameTok x] ++ druckTypOpt ty ++
-      [.zeichen "=", .zeichen "@", nameTok l, .zeichen "#", nameTok f, .zeichen "(", .zeichen ")",
-       .zeichen "{", .zeichen "}", .zeichen ";"]
+      [.zeichen "="] ++ druckLibraryCall c ++ [.zeichen ";"]
   | .set z o w => druckToks z ++ [.zeichen o] ++ druckToks w ++ [.zeichen ";"]
   | .shift z a b =>
     [.wort "transition"] ++ druckToks z ++ [.zeichen ":", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
   | .call f xs => rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .zeichen ";"]
-  | .lcall l f n =>
-    [.zeichen "@", nameTok l, .zeichen "#", nameTok f, .zeichen "("] ++
-      kommaToks (List.replicate n [.num 0]) ++ [.zeichen ")", .zeichen "{", .zeichen "}", .zeichen ";"]
+  | .lcall c => druckLibraryCall c ++ [.zeichen ";"]
   | .cond c t eis s =>
     [.wort "if"] ++ druckToks c ++ druckAnw t ++ druckAnwListe eis ++
       (match s with

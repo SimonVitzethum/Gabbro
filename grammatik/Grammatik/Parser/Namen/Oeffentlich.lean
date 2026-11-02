@@ -124,6 +124,7 @@ def namenTeil : STabTeil → List String
 /-- **The names an item's head writes** -- what an importer reads of it. -/
 def kopfNamen : SItemTief → List String
   | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => namenSig s
+  | .transT target s _ => target :: namenSig s
   | .globT _ _ t _ _ _ _ | .constT _ t _ | .atomT _ t _ _ _ | .arenaT _ _ _ _ t _ => namenT t
   | .typeT _ _ args _ t => args.flatMap namenT ++ namenTO t
   | .tableT _ v _ _ _ _ ps => v.toList ++ ps.flatMap namenTeil

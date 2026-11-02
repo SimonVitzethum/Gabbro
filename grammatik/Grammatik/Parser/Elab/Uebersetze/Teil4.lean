@@ -360,7 +360,7 @@ def uArrayBodyTypes : Nat → SAnw → List STyp
   | 0, _ => []
   | fuel + 1, statement =>
     match statement with
-    | .bind _ _ annotation _ | .bindLib _ _ annotation _ _ => annotation.toList
+    | .bind _ _ annotation _ | .bindLib _ _ annotation _ => annotation.toList
     | .bindElse _ annotation _ _ body => annotation.toList ++ uArrayBodyTypes fuel body
     | .cond _ yes branches no => uArrayBodyTypes fuel yes ++ branches.flatMap (uArrayBodyTypes fuel) ++
         no.toList.flatMap (uArrayBodyTypes fuel)

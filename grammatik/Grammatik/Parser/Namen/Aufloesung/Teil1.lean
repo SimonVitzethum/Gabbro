@@ -3,6 +3,38 @@ module
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Namen.Namensraum
 
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
 @[expose] public section
 
 
@@ -158,7 +190,7 @@ def itemName : SItemTief → Option String
   | .entryT e => some e.name
   | .callT c => some c.name
   | .varT n => some n
-  | .transT n _ _ => some n
+  | .transT _ s _ => some s.name
   | .gateT it => itemName it
   | .pubT it => itemName it
   | _ => none
@@ -355,7 +387,7 @@ def klausel (k : Kontext) : SKlausel → SKlausel
 def gebunden : SAnw → List String
   | .bind _ x _ _ => [x]
   | .bindElse x _ _ _ _ => [x]
-  | .bindLib _ x _ _ _ => [x]
+  | .bindLib _ x _ _ => [x]
   | .alloc _ x _ _ _ _ => [x]
   | .allocVon _ x _ _ => [x]
   | .await x _ _ _ => [x]
@@ -367,12 +399,19 @@ def ende (k : Kontext) : Option SEnde → Option SEnde
   | some (.ret e) => some (.ret (ausO k e))
   | e => e
 
+/-- Resolve the target and the ordinary arguments; the compile-time input remains byte-for-token exact. -/
+def libraryCall (k : Kontext) (c : SLibraryCall) : SLibraryCall :=
+  { c with library := k.ref c.library
+           function := k.ref (c.library ++ "::" ++ c.function)
+           args := c.args.map (aus k) }
+
 mutual
 /-- **A statement, resolved**; the statements of a block see the names the earlier ones bind. -/
 def anw (k : Kontext) : SAnw → SAnw
   | .bind m x t e => .bind m x (typO k t) (aus k e)
   | .bindElse x t e g s => .bindElse x (typO k t) (aus k e) g (anw k s)
-  | .bindLib m x t a b => .bindLib m x (typO k t) a b
+  | .bindLib m x t c => .bindLib m x (typO k t) (libraryCall k c)
+  | .lcall c => .lcall (libraryCall k c)
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
   | .call f xs => .call (k.ref f) (xs.map (aus k))

@@ -4,6 +4,38 @@ public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Namen.Namensraum
 public import Grammatik.Parser.Namen.Aufloesung.Teil1
 
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Aufloesung
@@ -55,6 +87,8 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .constT n t v => .constT (k.eigen n) (typ k t) (konst k v)
   | .globT m n t v al s sh => .globT m (k.eigen n) (typ k t) (konst k v) (ausO k al) s sh
   | .fnT s b => .fnT (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+  | .transT target s b =>
+    .transT (k.ref target) (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
   | .protoT s => .protoT (sig k s)
   | .specT s p => .specT (sig k s) (aus (k.mit (s.params.map Prod.fst)) p)
   | .asmT s h => .asmT (sig k s) h

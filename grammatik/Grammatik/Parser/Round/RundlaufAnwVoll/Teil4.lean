@@ -3,6 +3,38 @@ module
 public import Grammatik.Parser.Round.RundlaufQuant.Teil2
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil3
 
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser
@@ -156,14 +188,14 @@ inductive AnwGut : Rolle → SAnw → Prop
       TypOptGut ty → gut e = true → AnwGut .anw (.bind m x ty e)
   | bindElse (x : String) (ty : Option STyp) (e : SExpr) (f : String) (b : SAnw) : x ≠ "mut" →
       TypOptGut ty → gut e = true → AnwGut .block b → AnwGut .anw (.bindElse x ty e f b)
-  | bindLib (m : Bool) (x : String) (ty : Option STyp) (l g : String) : x ≠ "mut" →
-      TypOptGut ty → AnwGut .anw (.bindLib m x ty l g)
+  | bindLib (m : Bool) (x : String) (ty : Option STyp) (c : SLibraryCall) : x ≠ "mut" →
+      TypOptGut ty → LibraryCallGut c → AnwGut .anw (.bindLib m x ty c)
   | set (z : SExpr) (o : String) (w : SExpr) :
       gutPlatz z = true → istZuweis o = true → gut w = true → AnwGut .anw (.set z o w)
   | shift (z : SExpr) (a b : String) : gutPlatz z = true → AnwGut .anw (.shift z a b)
   | call (f : String) (xs : List SExpr) : NameGut f → istAnwWort f = false → gutListe xs = true →
       AnwGut .anw (.call f xs)
-  | lcall (l g : String) (n : Nat) : AnwGut .anw (.lcall l g n)
+  | lcall (c : SLibraryCall) : LibraryCallGut c → AnwGut .anw (.lcall c)
   | cond (c : SExpr) (t : SAnw) (eis : List SAnw) (s : Option SAnw) :
       gut c = true → AnwGut .block t → (∀ x ∈ eis, AnwGut .elsif x) →
       (∀ b, s = some b → AnwGut .block b) → AnwGut .anw (.cond c t eis s)
@@ -265,8 +297,8 @@ theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
     exact ⟨anw_bind m x hx ty e hty he, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | bindElse x ty e f b hx hty he _ ihb =>
     exact ⟨anw_bindElse x hx ty e f b hty he ihb.1, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
-  | bindLib m x ty l g hx hty =>
-    exact ⟨anw_bindLib m x hx ty l g hty, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
+  | bindLib m x ty c hx hty hc =>
+    exact ⟨anw_bindLib m x hx ty c hty hc, anwKopf_wort _ "let" (by decide) ⟨_, rfl⟩⟩
   | set z o w hz ho hw =>
     exact ⟨anw_set z o w hz ho hw, anwKopf_platz _ z hz ⟨_, by simp only [druckAnw, List.append_assoc, List.cons_append, List.nil_append, List.append_cancel_left_eq] <;> rfl⟩⟩
   | shift z a b hz =>
@@ -274,8 +306,8 @@ theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
   | call f xs hf hw hxs =>
     exact ⟨anw_call f xs hf hw hxs, anwKopf_ident _ f (by intro e; subst e; revert hw; decide)
       ⟨_, by simp only [druckAnw, rohToks_nameGut f hf, List.cons_append, List.nil_append, List.cons.injEq, true_and] <;> rfl⟩⟩
-  | lcall l g n =>
-    exact ⟨anw_lcall l g n, ⟨.zeichen "@", _, rfl, by simp only [ne_eq, Token.zeichen.injEq, String.reduceEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩⟩
+  | lcall c hc =>
+    exact ⟨anw_lcall c hc, ⟨.zeichen "@", _, rfl, by simp only [ne_eq, Token.zeichen.injEq, String.reduceEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true], by simp only [ne_eq, reduceCtorEq, not_false_eq_true]⟩⟩
   | cond c t eis s hc _ _ _ iht iheis ihs =>
     exact ⟨anw_cond c t eis s hc iht.1 iht.2 iheis ihs, anwKopf_wort _ "if" (by decide)
       (by cases s <;> exact ⟨_, rfl⟩)⟩
