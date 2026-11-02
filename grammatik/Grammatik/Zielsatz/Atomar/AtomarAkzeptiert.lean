@@ -83,7 +83,7 @@ theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List 
     {A : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpec P S fs ws A) :
     AkzeptiertSpecX P S fs ws [] A :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
-    h.einzeln, h.renn, h.antworten, h.masken, (fun _ h => nomatch h), (fun _ h => nomatch h),
+    h.einzeln, h.renn, h.antworten, h.masken, h.bibliothek, (fun _ h => nomatch h), (fun _ h => nomatch h),
     h.akku⟩
 
 /-- **The ownership judgment added to the checker's facts**: the facts of `AkzeptiertSpecX` that
