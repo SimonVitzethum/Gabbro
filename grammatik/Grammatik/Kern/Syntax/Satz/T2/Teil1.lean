@@ -361,6 +361,35 @@ theorem haelt_gibt_foldl (σ : World D) (Ls : List D.Lock) :
 theorem BravRet.refl (σ : World D) : BravRet σ σ :=
   ⟨⟨[], rfl⟩, fun e he => .inl he, id⟩
 
+/-- `Brav` is `BravRet` with no release. -/
+theorem Brav.toRet {a b : World D} (h : Brav a b) : BravRet a b :=
+  ⟨⟨[], by simpa using h.1⟩, h.2.1, h.2.2⟩
+
+/-- `Gut` is `GutRet` with no release. -/
+theorem Gut.toRet {W G} {a b : World D} (h : Gut W G a b) : GutRet W G a b :=
+  ⟨h.1, h.2.toRet⟩
+
+/-- `Brav` is `BravRet` with no release. -/
+theorem Brav.toRet {a b : World D} (h : Brav a b) : BravRet a b := by
+  obtain ⟨heq, hgood, hkons⟩ := h
+  exact ⟨⟨[], by rw [heq]⟩, hgood, hkons⟩
+
+/-- Membership survives releases: a held lock after releasing was held before. -/
+theorem BravRet.mem {a b : World D} (h : BravRet a b) {L : D.Lock} (hm : L ∈ b.haelt) :
+    L ∈ a.haelt := by
+  obtain ⟨Ls, hLs⟩ := h.1
+  have key : ∀ (Ls : List D.Lock) (h : List D.Lock), L ∈ Ls.foldl (fun h M => h.erase M) h →
+      L ∈ h := by
+    intro Ls
+    induction Ls with
+    | nil => intro h hm; simpa using hm
+    | cons M Ms ih =>
+        intro h hm
+        simp only [List.foldl_cons] at hm
+        exact List.mem_of_mem_erase (ih _ hm)
+  rw [hLs] at hm
+  exact key Ls _ hm
+
 theorem Brav.transRet {a b c : World D} (h1 : Brav a b) (h2 : BravRet b c) : BravRet a c := by
   obtain ⟨Ls, hLs⟩ := h2.1
   refine ⟨⟨Ls, by rw [hLs, h1.1]⟩, fun e he => match h2.2.1 e he with
@@ -370,6 +399,17 @@ theorem Brav.transRet {a b c : World D} (h1 : Brav a b) (h2 : BravRet b c) : Bra
 theorem Gut.transRet {W G} {a b c : World D} (h1 : Gut W G a b) (h2 : GutRet W G b c) :
     GutRet W G a c :=
   ⟨h1.1.trans h2.1, h1.2.transRet h2.2⟩
+
+/-- Release then no release is the same release. -/
+theorem BravRet.transGut {a b c : World D} (h1 : BravRet a b) (h2 : Brav b c) : BravRet a c := by
+  obtain ⟨Ls, hLs⟩ := h1.1
+  refine ⟨⟨Ls, by rw [h2.1, hLs]⟩, fun e he => match h1.2.1 e he with
+    | .inl hb => h2.2.1 e hb
+    | .inr g => .inr g, fun k => h1.2.2 (h2.2.2 k)⟩
+
+theorem GutRet.transGut {W G} {a b c : World D} (h1 : GutRet W G a b) (h2 : Gut W G b c) :
+    GutRet W G a c :=
+  ⟨h1.1.trans h2.1, h1.2.transGut h2.2⟩
 
 /-- Consistency survives scope releases (`gibt` records no constraint). -/
 theorem konsistent_gibt_foldl (Ls : List D.Lock) (σ : World D) :

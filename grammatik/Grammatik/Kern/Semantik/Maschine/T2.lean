@@ -239,15 +239,23 @@ inductive GenErreichbar (P : Programm D) (O : Orakel D) (passes : Nat)
       (h : GenErreichbar P O passes M0 M) (hs : GenSchritt P O passes M f M') :
       GenErreichbar P O passes M0 M'
 
-/-- One leaf through `execStmt` keeps frame and trace (`stmt_gut`). -/
+/-- One leaf through `execStmt` keeps frame and trace (`stmt_gut`, release-aware). -/
 theorem blatt_brav (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
     (hΛ : HeldGenau Λ (offen (M.spuren f))) (σ' : World D)
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ') :
-    Brav (M.weltVon f) σ' :=
-  ((stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon f) ρ hΛ) σ' hstep).2
+    BravRet (M.weltVon f) σ' := by
+  have hG := (stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon f) ρ hΛ) σ' hstep
+  cases he : execStmt O passes keinRuf s (M.weltVon f) ρ with
+  | ok _ _ => exact (hG).2.toRet
+  | zurueck _ _ => exact (hG).2
+  | why _ _ => exact (hG).2
+  | leave _ _ _ => exact (hG).2.toRet
+  | next _ _ _ => exact (hG).2.toRet
+  | logik _ => exact (hG).2.toRet
+  | hardware _ => exact (hG).2.toRet
 
 /-- Old positions of an extended run keep the scheduler rule. -/
 theorem genAuss_append_old (l xs : Lauf D) (hA : ForeignExclusion l)

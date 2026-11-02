@@ -25,10 +25,20 @@ def TreuRet (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop
 theorem TreuRet.refl (W G) (σ : World D) : TreuRet W G σ σ :=
   ⟨Rahmen.refl _ _ _, ⟨[], rfl⟩⟩
 
+/-- `Treu` is `TreuRet` with no release. -/
+theorem Treu.toRet {W G} {a b : World D} (h : Treu W G a b) : TreuRet W G a b :=
+  ⟨h.1, ⟨[], by simpa using h.2⟩⟩
+
 theorem Treu.transRet {W G} {a b c : World D} (h1 : Treu W G a b) (h2 : TreuRet W G b c) :
     TreuRet W G a c := by
   obtain ⟨Ls, hLs⟩ := h2.2
   exact ⟨h1.1.trans h2.1, ⟨Ls, by rw [hLs, h1.2]⟩⟩
+
+/-- Release then no release is the same release (frame-only). -/
+theorem TreuRet.transGut {W G} {a b c : World D} (h1 : TreuRet W G a b) (h2 : Treu W G b c) :
+    TreuRet W G a c := by
+  obtain ⟨Ls, hLs⟩ := h1.2
+  exact ⟨h1.1.trans h2.1, ⟨Ls, by rw [h2.2, hLs]⟩⟩
 
 /-- Single-erase commutes: erasing `M` then `L` is erasing `L` then `M`. -/
 theorem erase_comm_single (L M : D.Lock) (h : List D.Lock) :
