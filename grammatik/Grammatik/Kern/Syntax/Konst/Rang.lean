@@ -5,7 +5,7 @@ public import Grammatik.Kern.Syntax.Konst.ReinBBeweis
 @[expose] public section
 namespace Gabbro.Grammatik
 
-/-- Direct callees in the admitted structural fragment; rejected forms contribute no edges.
+/- Direct callees in the admitted structural fragment; rejected forms contribute no edges.
     This scan must be paired with ConstAdmissible. Expressions contain no calls. -/
 mutual
 def constStmtCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Stmt c.D V l Γ Λ Λout → List c.D.Fn

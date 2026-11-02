@@ -41,7 +41,7 @@ inductive Ty where
   | str (n : Nat)
   deriving Repr
 
-/-- Decidable equality for nested payload schemas. Lean's deriving handler does not
+/- Decidable equality for nested payload schemas. Lean's deriving handler does not
     support nested inductives; compare the same finite tree without fuel. -/
 mutual
 
