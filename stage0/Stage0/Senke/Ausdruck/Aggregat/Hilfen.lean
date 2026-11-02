@@ -215,10 +215,11 @@ def productOffset : {fs : List Ty} → {σ : Ty} → FieldAt fs σ → Nat
 
 /-- Static projection uses the shared forward copy, which permits overlapping
     spans when the destination precedes the source. -/
-def prodGetL {fs : List Ty} {τ : Ty} (i : FieldAt fs τ) (d : Nat)
+def prodGetL {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ) (d : Nat)
     (a : Option (List Runner.IR.II × Nat)) : Option (List Runner.IR.II × Nat) := do
   let ca ← a
-  pure (ca.1 ++ copyWords (valueWords τ) d (d + productOffset i), ca.2)
+  pure (ca.1 ++ copyWords (valueWords τ) d (d + productOffset i),
+    max (max ca.2 (d + valueWords (.prod name fs))) (d + valueWords τ))
 
 /-- General array selection reserves the entire array before evaluating the
     index and uses the shared physical span transport for the selected value. -/

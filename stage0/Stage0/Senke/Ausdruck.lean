@@ -207,7 +207,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE L (reserved := reserved) body (d + 3))
   | Γ, _, .count n body, d => countL (frei Γ reserved) d n (lowE L (reserved := reserved) body (d + 3))
   | _, _, .prod .., _ => none
-  | _, _, .prodGet .., _ => none
+  | _, _, .prodGet (r := name) v i, d => prodGetL (name := name) i d (lowE L (reserved := reserved) v d)
   | _, _, .prodSet .., _ => none
   | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))
   | _, _, .refEq a b, d => wordL 14 d (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b (d + 1))

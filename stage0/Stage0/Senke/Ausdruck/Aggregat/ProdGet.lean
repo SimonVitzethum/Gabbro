@@ -59,7 +59,7 @@ theorem prodGet_fieldBound {name : Nat} {fs : List Ty} {τ : Ty}
   have width : productWords fs ≤ max 1 (productWords fs) := Nat.le_max_right _ _
   omega
 
-/-- Static projection transport, pending the compiler frame-span bound. -/
+/-- Static projection transport with a complete product reservation. -/
 theorem prodGet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
     (v : Expr D Γ Λ (.prod name fs))
@@ -68,14 +68,19 @@ theorem prodGet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     (ih : ∀ ca ta, lowE L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved →
         ValueOk L m pc fp K d ca (.prod name fs) (eval σ₀ v σ ρ))
-    (h : prodGetL i d (lowE L (reserved := reserved) v d) = some (c, top))
-    (hK : top ≤ K) (span : d + productOffset i + valueWords τ ≤ K)
+    (h : prodGetL (name := name) i d (lowE L (reserved := reserved) v d) = some (c, top))
+    (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c τ (prodGetW i (eval σ₀ v σ ρ)) := by
   simp only [prodGetL, bind, Option.bind_eq_some_iff, pure,
     Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨⟨cv, tv⟩, hv, rfl, rfl⟩ := h
-  obtain ⟨m1, run1, changed1, valid, words⟩ := ih cv tv hv hK m pc hp.left
+  have operand : d + valueWords (.prod name fs) ≤ K :=
+    Nat.le_trans (Nat.le_trans (Nat.le_max_right _ _) (Nat.le_max_left _ _)) hK
+  have span := prodGet_fieldBound i operand (Nat.le_refl K)
+  have htv : tv ≤ K :=
+    Nat.le_trans (Nat.le_trans (Nat.le_max_left _ _) (Nat.le_max_left _ _)) hK
+  obtain ⟨m1, run1, changed1, valid, words⟩ := ih cv tv hv htv m pc hp.left
   have tail := hp.next changed1 (Nat.le_refl d) (by omega)
   have selected : ValueAt L m1 fp (d + productOffset i) τ
       (prodGetW i (eval σ₀ v σ ρ)) :=

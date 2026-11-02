@@ -12,6 +12,18 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+theorem lowE_top_prodGet {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
+    {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ)
+    (v : Expr D Γ Λ (.prod name fs)) (d : Nat) (c : List II) (top : Nat)
+    (h : prodGetL (name := name) i d (lowE L (reserved := reserved) v d) = some (c, top)) :
+    d < top := by
+  simp only [prodGetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, _, rfl⟩ := h
+  have positive := valueWords_pos σ
+  have bound := Nat.le_max_right (max tv (d + valueWords (.prod name fs))) (d + valueWords σ)
+  omega
+
 theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty} → (e : Expr D Γ Λ τ) → (d : Nat) → (c : List II) →
     (top : Nat) → lowE L (reserved := reserved) e d = some (c, top) → d < top
   | _, _, .arrNil, d, c, top, h => by
@@ -281,7 +293,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · cases h
   | _, _, .count .., d, c, top, h => (countL_bounds h).1
   | _, _, .prod .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
-  | _, _, .prodGet .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prodGet v i, d, c, top, h => lowE_top_prodGet i v d c top h
   | _, _, .prodSet .., _, _, _, h => by simp only [lowE, reduceCtorEq] at h
   | _, _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h
   | _, _, .intBuiltin1 op a, d, c, top, h => BitBuiltin.unary_top op h
@@ -290,17 +302,5 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     => by simp [lowE_eqs] at h
 
 
-/-- Static product projection inherits the operand's depth bound; reserving the
-    selected field's width therefore also stays strictly above the destination. -/
-theorem lowE_top_prodGet {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
-    {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ)
-    (v : Expr D Γ Λ (.prod name fs)) (d : Nat) (c : List II) (top : Nat)
-    (h : prodGetL i d (lowE L (reserved := reserved) v d) = some (c, top)) :
-    d < max top (d + valueWords σ) := by
-  simp only [prodGetL, bind, Option.bind_eq_some_iff, pure,
-    Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨⟨cv, tv⟩, hv, _, rfl⟩ := h
-  have := lowE_top v d cv tv hv
-  omega
 
 end Gabbro.Stage0.Senke

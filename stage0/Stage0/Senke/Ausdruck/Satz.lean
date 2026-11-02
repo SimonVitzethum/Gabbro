@@ -13,6 +13,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.ProdGet
 public import Stage0.Senke.Ausdruck.Aggregat.Array
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Compare
@@ -448,7 +449,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
       (fun cb tb hb htb k m pc hp =>
         (lowE_ok σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp
   | _, _, .prod .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
-  | _, _, .prodGet .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
+  | _, _, .prodGet v i, d, c, top, h, hK, m, pc, ρ, hp =>
+    prodGet_ok i v
+      (fun ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay v d ca ta ha hta m pc ρ hp)
+      h hK hp
   | _, _, .prodSet .., _, _, _, h, _, _, _, _, _ => by simp only [lowE, reduceCtorEq] at h
   | _, _, .intBuiltin2 op a b, d, c, top, h, hK, m, pc, ρ, hp =>
     intBuiltin2L_ok op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
