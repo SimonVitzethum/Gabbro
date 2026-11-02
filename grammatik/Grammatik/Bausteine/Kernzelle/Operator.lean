@@ -247,4 +247,7 @@ theorem andStartBeiNullFalle (x : Nat) : x &&& 0 = 0 :=
 #print axioms Gabbro.Grammatik.Kernzelle.sumNonneg
 #print axioms Gabbro.Grammatik.Kernzelle.addNichtnegGenuegt
 
+/-- The unsigned byte accumulator starts bitwise AND at all eight bits set. -/
+theorem neutralAndByte_zeuge : neutralInt .and 0 255 8 = 255 := by decide
+
 end Gabbro.Grammatik.Kernzelle
