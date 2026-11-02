@@ -10,6 +10,11 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
       (← rewriteExpression env bindings value)
   | .bindElse n ty value reason body => return .bindElse n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value) reason (← rewriteBody env bindings body)
+  | .bindAxiomOpt n ty value => return .bindAxiomOpt n (← ty.mapM (rewriteType env bindings))
+      (← rewriteExpression env bindings value)
+  | .bindAxiomOptElse n ty value reason body => return .bindAxiomOptElse n
+      (← ty.mapM (rewriteType env bindings)) (← rewriteExpression env bindings value) reason
+      (← rewriteBody env bindings body)
   | .bindLib mu n ty call => return .bindLib mu n (← ty.mapM (rewriteType env bindings))
       { call with args := ← call.args.mapM (rewriteExpression env bindings) }
   | .set place op value => return .set (← rewriteExpression env bindings place) op
@@ -80,7 +85,8 @@ def rewriteStatements (env : Environment) (bindings : Bindings) :
   | statement :: rest => do
     let rewritten ← rewriteBody env bindings statement
     let names := match statement with
-      | .bind _ n _ _ | .bindElse n _ _ _ _ | .bindLib _ n _ _ | .alloc _ n _ _ _ _ |
+      | .bind _ n _ _ | .bindElse n _ _ _ _ | .bindAxiomOpt n _ _ | .bindAxiomOptElse n _ _ _ _ |
+        .bindLib _ n _ _ | .alloc _ n _ _ _ _ |
         .allocVon _ n _ _ | .await n _ _ _ | .swap n _ _ _ => [n]
       | _ => []
     let (tail, final) ← rewriteStatements env (bindings.without names) rest

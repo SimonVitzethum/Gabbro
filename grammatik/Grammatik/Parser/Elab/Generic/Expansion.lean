@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Generic.Body
+public import Grammatik.Parser.Elab.Generic.Parametricity
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -29,7 +30,7 @@ def environment (source : List SItemTief) : Environment :=
   let constants := Uebersetze.uConstsRech fns ordinary []
   { declarations, constants, constantFunctions := fns,
     aliases := Uebersetze.uAliase constants ordinary ++ Uebersetze.uAliasBreiten ordinary,
-    globals := source.filterMap sourceName }
+    globals := source.filterMap sourceName, source }
 
 mutual
 def rewriteConstant (env : Environment) : SKonstWert → RewriteM SKonstWert
@@ -100,18 +101,20 @@ def expandSpecificationContracts (specs : List (String × List String × SExpr))
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
 def expandTemplatesWithRequirements (source : List SItemTief) :
     Except String (List SItemTief × List (STyp × String)) := do
+  Spec.check source
   let env := environment source
   let names := source.filterMap sourceName
-  for (sig, _) in env.declarations do
+  for (sig, body) in env.declarations do
     if !sig.generics.isEmpty && (names.filter (strEq sig.name)).length != 1 then
       throw ("duplicate generic function: " ++ sig.name)
     for param in sig.generics do
       match param with
-      | .type _ [] | .constant _ _ => pure ()
-      | .type _ (_ :: _) => throw "generic spec bounds: conformance rule unavailable"
+      | .type _ bounds => checkBounds source bounds
+      | .constant _ _ => pure ()
       | .function _ ty => do
         let _ ← staticParameterType {} ty
         pure ()
+    if !sig.generics.isEmpty then checkParametricBody source sig body
   let (ordinary, roots) ← (do
     let groups ← source.mapM (rewriteItem env)
     pure groups.flatten).run []

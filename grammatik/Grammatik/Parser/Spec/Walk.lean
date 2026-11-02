@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Spec.Resolve
+public import Grammatik.Parser.Namen.References
 
 @[expose] public section
 
@@ -17,6 +18,8 @@ structure Walk where
   exprRewrite : Locals → Option STyp → SExpr → Except String SExpr := fun _ _ e => .ok e
   statementCheck : Locals → SAnw → Except String Unit := fun _ _ => .ok ()
   rawCheck : Locals → String → Except String Unit := fun _ _ => .ok ()
+  /-- Earlier checks may infer symbolic template results before concrete spec resolution. -/
+  infer : Locals → SExpr → Option STyp := fun _ _ => none
   expected : Option STyp := none
   result : Option STyp := none
 
@@ -127,9 +130,10 @@ def Walk.signature (w : Walk) (s : FnSig) : Except String FnSig := do
                   klauseln := ← s.klauseln.mapM (w.clause params) }
 
 /-- New bindings affect the remainder of their block, including inferred let types. -/
-def bindings (items : List SItemTief) (locals : Locals) : SAnw → Locals
+def bindings (items : List SItemTief) (locals : Locals)
+    (infer : Locals → SExpr → Option STyp) : SAnw → Locals
   | .bind _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
-    match t.orElse (fun _ => inferType items locals 128 e) with
+    match t.orElse (fun _ => (infer locals e).orElse (fun _ => inferType items locals 128 e)) with
     | some ty => [(n, ty)]
     | none => []
   | .await n t _ _ | .swap n t _ _ => (t.map fun ty => [(n, ty)]).getD []
@@ -234,6 +238,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
         | .ret e => return .ret (← e.mapM ({ w with expected := w.result }.expr env f))
         | e => pure e
       return .block ss ending
+    | .other raw => return .other (← w.raw raw locals)
     | s => return s
 
 def Walk.statements (w : Walk) (locals : Locals) : Nat → List SAnw → Except String (List SAnw × Locals)
@@ -241,7 +246,9 @@ def Walk.statements (w : Walk) (locals : Locals) : Nat → List SAnw → Except 
   | _ + 1, [] => .ok ([], locals)
   | f + 1, s :: ss => do
     let s ← w.statement locals f s
-    let locals := bindings (materialize w.source) locals s ++ locals
+    let names := Aufloesung.gebunden s
+    let locals := bindings (materialize w.source) locals w.infer s ++
+      locals.filter (fun p => !(names.any (strEq p.1)))
     let (ss, env) ← w.statements locals f ss
     return (s :: ss, env)
 end

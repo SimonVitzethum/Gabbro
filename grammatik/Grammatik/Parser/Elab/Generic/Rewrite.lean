@@ -79,6 +79,7 @@ def rewriteEffect (env : Environment) (bindings : Bindings) : SEffekt → Rewrit
   | .locks sh e => return .locks sh (← rewriteExpression env bindings e)
   | .takes e => return .takes (← rewriteExpression env bindings e)
   | .posts e => return .posts (← rewriteExpression env bindings e)
+  | .instanceEffects name types => return .instanceEffects name (← types.mapM (rewriteType env bindings))
   | effect => pure effect
 
 def rewriteClause (env : Environment) (bindings : Bindings) : SKlausel → RewriteM SKlausel

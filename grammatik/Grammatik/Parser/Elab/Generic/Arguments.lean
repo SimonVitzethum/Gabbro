@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Generic.Closure
+public import Grammatik.Parser.Elab.Generic.Bounds
 public import Grammatik.Parser.Elab.Generic.Literals
 public import Grammatik.Parser.Elab.Generic.PointerTypes
 public import Grammatik.Parser.Print.Item.Teil1a
@@ -29,6 +30,7 @@ structure Environment where
   constantFunctions : List Uebersetze.UKonstFn
   aliases : List (String × (Int × Int))
   globals : List String := []
+  source : List SItemTief := []
 
 def tokens (text : String) : Except String (List Token) :=
   match lex text with
@@ -93,8 +95,9 @@ def staticParameterType (bindings : Bindings) (ty : STyp) : Except String STyp :
 def normalizeArguments (env : Environment) (outer : Bindings) :
     List SGenericParam → List String → Bindings → Except String (List String × Bindings)
   | [], [], bindings => .ok ([], bindings)
-  | .type name [] :: ps, word :: ws, bindings => do
+  | .type name bounds :: ps, word :: ws, bindings => do
     let ty := surfaceType outer.types outer.values (← readType word)
+    checkTypeBounds env.source ty bounds
     let (tail, result) ← normalizeArguments env outer ps ws
       { bindings with types := bindings.types ++ [(name, ty)] }
     pure (typeSpelling ty :: tail, result)
@@ -109,7 +112,6 @@ def normalizeArguments (env : Environment) (outer : Bindings) :
     let (tail, result) ← normalizeArguments env outer ps ws
       { bindings with values := bindings.values ++ [(name, integerExpression value)] }
     pure (toString value :: tail, result)
-  | .type _ (_ :: _) :: _, _, _ => .error "generic spec bounds: conformance rule unavailable"
   | .function name ty :: ps, word :: ws, bindings => do
     let expected ← staticParameterType bindings ty
     let word := match outer.functionArguments.find? (fun p => strEq p.1 word) with
