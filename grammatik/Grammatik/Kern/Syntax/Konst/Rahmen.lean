@@ -157,3 +157,18 @@ theorem constEvalGleichExpr (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
   | .pureProd hargs => by simp only [eval, constEvalGleichProd c hargs σ₁ σ₂ ρ₁ ρ₂ hW hρ]
   | .pureProdGet hv => by simp only [eval, constEvalGleichExpr c hv σ₁ σ₂ ρ₁ ρ₂ hW hρ]
   | .pureProdSet hv he => by simp only [eval, constEvalGleichExpr c hv σ₁ σ₂ ρ₁ ρ₂ hW hρ, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+
+/-- Pure tag payloads agree: the empty payload is unit, a value payload
+    evaluates its expression. -/
+theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ := by
+  cases hp with
+  | empty => simp only [evalNutz]
+  | val he => simp only [evalNutz, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+end
+
+/-- Pure call arguments agree: evaluation is pointwise over the expressions,
+    so environments that agree pointwise evaluate identically. -/
+theorem constEvalGleichArgs (c : ConstProgram) {Γ : Ctx} {τs : List Ty} {e : Args c.D Γ [] τs} (hp : ConstArgs c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalArgs σ₁ e σ₁ ρ₁ = evalArgs σ₂ e σ₂ ρ₂ := by
+  induction hp with
+  | nil => rfl
+  | cons he _ ih => simp only [evalArgs, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ, ih]
