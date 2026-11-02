@@ -123,15 +123,15 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
       change Fin u.globs.length at g'
       have hgg : g.val = g'.val := stretch_eq ((List.finRange u.globs.length).map (globSz u))
         g.val g'.val (x - b) (by simpa using g.isLt) (by simpa using g'.isLt)
-        (by simp only [Zelle.adr, layU] at x1; omega)
-        (by simp only [Zelle.adr, Zelle.bytes, layU] at x1; simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz]; omega)
-        (by simp only [Zelle.adr, layU] at x2; omega)
-        (by simp only [Zelle.adr, Zelle.bytes, layU] at x2; simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz]; omega)
+        (by simp only [Zelle.adr, layU, alignUp_one] at x1; omega)
+        (by simp only [Zelle.adr, Zelle.bytes, layU, alignUp_one] at x1; simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz]; omega)
+        (by simp only [Zelle.adr, layU, alignUp_one] at x2; omega)
+        (by simp only [Zelle.adr, Zelle.bytes, layU, alignUp_one] at x2; simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz]; omega)
       exact congrArg Zelle.glob (Fin.ext hgg)
     | elem t f k =>
       have hg := take_sum_add ((List.finRange u.globs.length).map (globSz u)) g.val (by simpa using g.isLt)
       simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz] at hg
-      simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU] at x1 x2
+      simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU, alignUp_one] at x1 x2
       unfold globsSz at *
       omega
   | elem t f k =>
@@ -142,13 +142,13 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
       change Fin u.globs.length at g
       have hg := take_sum_add ((List.finRange u.globs.length).map (globSz u)) g.val (by simpa using g.isLt)
       simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta, globSz] at hg
-      simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU] at x1 x2
+      simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU, alignUp_one] at x1 x2
       unfold globsSz at *
       omega
     | elem t' f' k' =>
       change Fin u.tabs.length at t'
       change Fin (fieldCount u t') at f'
-      simp only [Zelle.da, Lay.count, layU, Int.natCast_zero, ite_self, Int.add_zero] at hc hc'
+      simp only [Zelle.da, Lay.count, layU, alignUp_one, Int.natCast_zero, ite_self, Int.add_zero] at hc hc'
       have col1 := colSz_ge u t f k hc
       have col2 := colSz_ge u t' f' k' hc'
       have sum1 := take_sum_add ((List.finRange (fieldCount u t)).map (colSz u t)) f.val (by simp)
@@ -156,7 +156,7 @@ theorem layU_spans (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
       simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta] at sum1 sum2
       change (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum + colSz u t f ≤ tabSz u t at sum1
       change (((List.finRange (fieldCount u t')).map (colSz u t')).take f'.val).sum + colSz u t' f' ≤ tabSz u t' at sum2
-      simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU] at x1 x2
+      simp only [Zelle.adr, Zelle.bytes, Lay.elem, layU, alignUp_one] at x1 x2
       have ht : t.val = t'.val := stretch_eq ((List.finRange u.tabs.length).map (tabSz u)) t.val t'.val
         (x - (b + globsSz u)) (by simp) (by simp)
         (by omega) (by simp only [List.getElem_map, List.getElem_finRange, Fin.cast_mk, Fin.eta]; change _ < _ + tabSz u t; omega)
@@ -203,13 +203,13 @@ theorem layU_dis (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) :
     cases c with
     | glob g =>
       have hg := take_mul8 _ globals g.val
-      simp [Zelle.adr, layU, Nat.add_mod, hg]
+      simp [Zelle.adr, layU, alignUp_one, Nat.add_mod, hg]
     | elem t f k =>
       have hg := sum_mul8 _ globals
       have ht := take_mul8 ((List.finRange u.tabs.length).map (tabSz u))
         (by intro x hx; obtain ⟨t, _, rfl⟩ := List.mem_map.mp hx; exact tabSz_mul8 u t) t.val
       have hf := take_mul8 ((List.finRange (fieldCount u t)).map (colSz u t))
         (by intro x hx; obtain ⟨f, _, rfl⟩ := List.mem_map.mp hx; simp [colSz, Nat.mul_assoc]) f.val
-      simp [Zelle.adr, Lay.elem, layU, globsSz, Nat.add_mod, Nat.mul_assoc, hg, ht, hf]
+      simp [Zelle.adr, Lay.elem, layU, alignUp_one, globsSz, Nat.add_mod, Nat.mul_assoc, hg, ht, hf]
 
 end Gabbro.Stage0.Senke
