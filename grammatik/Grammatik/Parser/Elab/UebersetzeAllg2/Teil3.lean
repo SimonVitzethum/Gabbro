@@ -390,15 +390,15 @@ theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.t
   unfold rufPasstB at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
   obtain ⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩ := h
-  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_⟩
+  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, OwnerFlow.empty_of_empty S.owner⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
   · rcases hg g (List.mem_finRange g) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
-  · have : S.konsumiert = [] := by
-      cases hk : S.konsumiert with
+  · have : S.inputMarks = [] := by
+      cases hk : S.inputMarks with
       | nil => rfl
       | cons m _ => exact m.1.elim
     rw [this]; exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩

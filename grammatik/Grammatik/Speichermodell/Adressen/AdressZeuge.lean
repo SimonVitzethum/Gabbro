@@ -48,7 +48,7 @@ open Gabbro.Grammatik
   eigner := fun _ => []
   Fn := Bool
   sig := fun _ => 0
-  sigNr := fun _ => ⟨[], none, 0, [], fun _ => true, fun g => g.elim, [], [], none⟩
+  sigNr := fun _ => ⟨[], none, 0, [], fun _ => true, fun g => g.elim, [], [], none, {}⟩
   eigner_nie_erzeugt := fun _ _ _ _ h => nomatch h
   Inv := Empty
   traeger := fun i => i.elim

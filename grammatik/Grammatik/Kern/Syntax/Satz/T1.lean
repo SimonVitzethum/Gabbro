@@ -150,14 +150,14 @@ theorem rueckgabe_bilanziert {e : ErgExpr D Γ Λ V.erg} {hΛ : Λ.Perm V.ende}
     Schreibrechte des Gerufenen stehen im eigenen Vertrag. -/
 theorem ruf_hat_alles {f : D.Fn} {args} {hp : RufPasst D V (D.signatur f) Λ} {hr}
     (_s : Stmt D V l Γ Λ (nach D f Λ)) (_h : _s = .call f args hp hr) :
-    Untermulti ((D.konsumiert f).map (Res.vonMarke D)) Λ ∧
+    Untermulti ((D.signatur f).inputMarks.map (Res.vonMarke D)) Λ ∧
     (∀ L, L ∈ D.haelt f → Res.held L ∈ Λ) ∧
     (∀ t, D.schreibt f t = true → V.schreibt t = true) := ⟨hp.hk, hp.hh, hp.hw⟩
 
 /-- Ein Ruf DURCH einen Funktionszeiger hat dasselbe in der Hand («B8»). -/
 theorem zeigerruf_hat_alles {p : Expr D Γ Λ (.fnptr n)} {args} {hp : RufPasst D V (D.sigNr n) Λ} {hr}
     (_s : Stmt D V l Γ Λ (nachSig D (D.sigNr n) Λ)) (_h : _s = .callInd p args hp hr) :
-    Untermulti ((D.sigNr n).konsumiert.map (Res.vonMarke D)) Λ ∧
+    Untermulti ((D.sigNr n).inputMarks.map (Res.vonMarke D)) Λ ∧
     (∀ t, (D.sigNr n).schreibt t = true → V.schreibt t = true) := ⟨hp.hk, hp.hw⟩
 
 /-- Ein Registerschreiben steht an einem Register schreibbarer Klasse (`R005`/`R006`). -/

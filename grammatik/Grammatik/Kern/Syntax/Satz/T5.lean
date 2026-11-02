@@ -55,7 +55,7 @@ def leer : Deklaration where
   eigner := fun t => t.elim
   Fn := Empty
   sig := fun f => f.elim
-  sigNr := fun _ => ⟨[], none, 0, [], fun t => t.elim, fun g => g.elim, [], [], none⟩
+  sigNr := fun _ => ⟨[], none, 0, [], fun t => t.elim, fun g => g.elim, [], [], none, {}⟩
   eigner_nie_erzeugt := fun _ t => t.elim
   Inv := Empty
   traeger := fun i => i.elim
@@ -103,7 +103,7 @@ example : ¬ (1 ≤ (0 : Int) ∨ (5 : Int) ≤ -1) := by decide
 example : wahr? (eval (D := leer) (Γ := []) (Λ := []) leereWelt (.and .tru (.not .fls)) leereWelt .nil) = true := by
   rfl
 
-def leerV : Vertrag leer := ⟨fun t => t.elim, fun g => g.elim, none, 0, [], [], none⟩
+def leerV : Vertrag leer := ⟨fun t => t.elim, fun g => g.elim, none, 0, [], [], none, {}⟩
 
 def leerO : Orakel leer :=
   ⟨fun a => a.elim, fun r => r.elim, fun r => r.elim, fun g => g.elim, fun _ => Option.none⟩

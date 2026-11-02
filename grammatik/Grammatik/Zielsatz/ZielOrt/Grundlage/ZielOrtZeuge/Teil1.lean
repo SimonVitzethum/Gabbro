@@ -161,7 +161,10 @@ theorem zHp (caller callee : zD.Fn) (hw : ∀ t, (zD.signatur callee).schreibt t
   hw := hw
   hg := fun g => nomatch g
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
+  hk := by
+    unfold Signatur.inputMarks
+    rw [hk, OwnerFlow.empty_of_empty (zD.signatur callee).owner]
+    exact ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
   hh := RufPasst.hh_von (by
     intro L
     cases L

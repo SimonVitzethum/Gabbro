@@ -290,9 +290,10 @@ def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn
 /-- No consumed marks at a call (`RufPasst.hk`). -/
 theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
     (Λ : List (Res (declOf u))) :
-    Untermulti (((declOf u).signatur callee).konsumiert.map
+    Untermulti (((declOf u).signatur callee).inputMarks.map
       (Res.vonMarke (declOf u))) Λ := by
-  rw [sigKonsumiert_nil u callee]
+  unfold Signatur.inputMarks
+  rw [sigKonsumiert_nil u callee, OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner]
   show Untermulti ([] : List (Res (declOf u))) Λ
   exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
 
@@ -428,9 +429,7 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
               rw [sigGSchreibt_eq u callee g] at hg0
               rw [vGSchreibt_eq u caller g]
               exact hG g hg0
-            .ok { callee := callee, args := a,
-                  hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx,
-                          hb := rufHb_ok u caller callee hB } }
+            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner } }
           else .error "call: a held lock does not rank below the callee's floor"
          else .error "call: the caller's lock floor is above the callee's"
         else .error "call without held guard"

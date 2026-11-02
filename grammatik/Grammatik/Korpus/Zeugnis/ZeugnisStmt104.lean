@@ -126,12 +126,12 @@ def csD : Deklaration where
 
 /-- Contracts at the demo: writes only for the slot body, ends empty. -/
 def csV : CSFn → Vertrag csD
-  | .fRet => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none⟩
-  | .fBind => ⟨fun _ => false, csElimBool, some (.int 3 3), 0, [], [], none⟩
-  | .fVar => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none⟩
-  | .fWenn => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none⟩
-  | .fSlot => ⟨fun _ => true, csElimBool, none, 0, [], [], none⟩
-  | .fDoppelt => ⟨fun _ => false, csElimBool, some (.int 0 2000), 0, [], [], none⟩
+  | .fRet => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none, {}⟩
+  | .fBind => ⟨fun _ => false, csElimBool, some (.int 3 3), 0, [], [], none, {}⟩
+  | .fVar => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none, {}⟩
+  | .fWenn => ⟨fun _ => false, csElimBool, some (.int 0 10), 0, [], [], none, {}⟩
+  | .fSlot => ⟨fun _ => true, csElimBool, none, 0, [], [], none, {}⟩
+  | .fDoppelt => ⟨fun _ => false, csElimBool, some (.int 0 2000), 0, [], [], none, {}⟩
 
 /-! ## 2. Generated certificates: the fitting probe bodies
 
