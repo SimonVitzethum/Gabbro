@@ -178,6 +178,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_narrowOk O passes e lo' hi' sonst rest k _ _ h)
     | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+    | endeBindAxiomOpt l2 Γ2 Λ2 e a args he hp hd hgd rest ρ2 hhead => widerlege hhead
   | g2 hs =>
     cases hs with
     | dannNarrowElse l2 Γ2 Λ2 Λ2' Λ2'' lo hi lo' hi' e sonst rest k ρ2 hhead σ₁ hs₁ h neu hneu =>
@@ -261,6 +262,8 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     | rufDann _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | g3 hs =>
     cases hs with
+    | dannAxiomCallElseOk l2 Γ2 Λ2 Λ2p e a args he hp hd hgd hr err rest k ρ2 hhead => widerlege hhead
+    | dannAxiomCallElseGrund l2 Γ2 Λ2 Λ2p e a args he hp hd hgd hr err rest k ρ2 hhead => widerlege hhead
     | dannCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
     | rufCallInd _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
     | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
