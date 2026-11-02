@@ -163,6 +163,14 @@ inductive GleitOp where
   | add | sub | mul | div
   deriving DecidableEq, Repr
 
+def ErgCtx (Γ : Ctx) : Option Ty → Ctx
+  | none => Γ
+  | some τ => τ :: Γ
+
+/-- **The reason channel as a type** (C08): the error of `n` reasons, as `Block`
+    and `Endblock` bind it behind `else`. -/
+def reasonTy (n : Nat) : Ty := .why n
+
 variable (V : Vertrag D)
 
 mutual
@@ -488,14 +496,6 @@ end
 
 def vertragVon (f : D.Fn) : Vertrag D := Vertrag.vonSig D (D.signatur f)
 
-def ErgCtx (Γ : Ctx) : Option Ty → Ctx
-  | none => Γ
-  | some τ => τ :: Γ
-
-/-- **The reason channel as a type** (C08): the error of `n` reasons, as `Block`
-    and `Endblock` bind it behind `else`. -/
-def reasonTy (n : Nat) : Ty := .why n
-
 /-- **A typed boundary clause (C08).** A closed capability annotation attached to a call
     contract alongside Boolean pre/post: input extents, output extents, fresh output
     grants and explicit releases. Bounds are nonnegative integer expressions over the
@@ -524,7 +524,7 @@ structure CallContract (S : Signatur D.Tab D.Glob D.Lock D.Marke) where
 /-- Absence of predicate clauses means two true predicates. Target admission
     still owes refinement: this default never discharges a target's requires. -/
 def CallContract.trivial (S : Signatur D.Tab D.Glob D.Lock D.Marke) : CallContract D S :=
-  ⟨.tru, .tru⟩
+  { pre := .tru, post := .tru }
 
 /-- The trivial contract: pre/post `true`, no boundary clauses. -/
 def callVertragWahr (D : Deklaration) (S : Signatur D.Tab D.Glob D.Lock D.Marke) :

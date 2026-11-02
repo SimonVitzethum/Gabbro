@@ -40,6 +40,9 @@ theorem stmtS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ 
     (hB : BUnter Bs (groesseStmt s)) (hO : OUnter O (groesseStmt s)) :
     (⟨Λ', s⟩ : SS D V l Γ Λ) ∈ stmtS O E Bs (groesseStmt s) := by
   cases s with
+  | consumeTraverse .. | retScoped .. | retWhyScoped .. =>
+    simp only [groesseStmt] at hu
+    omega
   | assignSlot t f i e hw hL =>
     simp only [groesseStmt] at hu hE hB hO ⊢
     have hi := hE _ i (by omega)
