@@ -100,6 +100,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .bindCallInd a p f xs, .bindCallInd b q g ys => strEq a b && strEq p q && strEq f g && beqUArgList xs ys
   | .bindCallIndElse a p f xs e, .bindCallIndElse b q g ys h =>
     strEq a b && strEq p q && strEq f g && beqUArgList xs ys && strEq e h
+  | .allocReqBeg a t s, .allocReqBeg b u v => strEq a b && strEq t u && beqUSide s v
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool

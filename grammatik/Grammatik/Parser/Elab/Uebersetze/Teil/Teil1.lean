@@ -263,6 +263,11 @@ inductive UStmt
   /-- `let i = alloc A (v) else { .. };` (`Block.arenaAlloc`, sugar over `narrow`): `allocBeg i A v`, the
       statements of the full-arena branch with its ender, `blkEnd`; the rest reads `i` as an index into `A`. -/
   | allocBeg : String → String → USide → UStmt
+  /-- `let i = alloc A (v);` without `else` (`Block.arenaAllocRequired`, sugar over
+      `narrowRequired`): `allocReqBeg i A v`; the rest reads `i` as an index into `A`.
+      A full arena is `Logik.kapazitaet`, excluded by the caller's capacity duty
+      (`KoerperGutS/SA`); there is no failure continuation. -/
+  | allocReqBeg : String → String → USide → UStmt
   /-- `let x = v;` of a tagged value, `T` the position of its declaration. -/
   | bindSum : String → Nat → USVal → UStmt
   /-- `match m { C => { .. } .. }` over a tagged value (`Stmt.onTag`): `matchTagBeg T m binders`, one arm per case in
