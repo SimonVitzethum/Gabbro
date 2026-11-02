@@ -1,7 +1,7 @@
 /- Serialize the canonical declared initial memory with the shared value encoding.
    This is compile-time image data, not a source execution interpreter. -/
 module
-public import Grammatik.GabbroV.GvStartPflicht
+public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Welt.AnordnungLayout
 public import Stage0.Senke.Welt.StartLayout
 public import Stage0.Senke.Welt.InitialBytes

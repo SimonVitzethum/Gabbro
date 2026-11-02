@@ -30,7 +30,7 @@
 module
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Speichermodell.Atomar.AtomarSem
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 public import Grammatik.Zielsatz.Atomar.AtomarPflicht
 public import Grammatik.Zielsatz.Atomar.BeweisAtomar
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge

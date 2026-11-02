@@ -1,7 +1,7 @@
 module
 public import Grammatik.Zielsatz.Projekte.Zeuge
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
-public import Grammatik.Speichermodell.Atomar.AtomarGleich
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarGleich
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

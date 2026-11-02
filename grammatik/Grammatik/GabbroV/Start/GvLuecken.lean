@@ -10,7 +10,7 @@
   by path, so that direction would be a dependency cycle).
 -/
 module
-public import Grammatik.GabbroV.GvStartPflicht
+public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Kern.Semantik.Maschine

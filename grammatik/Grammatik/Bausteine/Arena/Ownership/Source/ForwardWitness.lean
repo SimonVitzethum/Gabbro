@@ -1,7 +1,7 @@
 module
 public import Grammatik.Bausteine.Arena.Ownership.Source.Admission
 public import Grammatik.Bausteine.Arena.Ownership.Source.Results
-public import Grammatik.Bausteine.Arena.Ownership.Witness
+public import Grammatik.Bausteine.Arena.Ownership.Witnesses.Witness
 public import Grammatik.Bausteine.Arena.Ownership.Source.ArgumentFlow
 @[expose] public section
 

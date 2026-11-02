@@ -3,7 +3,7 @@ public import Grammatik.GabbroV.GvAtomKoerper.Teil1a
 
 public import Grammatik.Zielsatz.Atomar.AtomarPflicht
 public import Grammatik.Speichermodell.Atomar.AtomarSem
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
 public import Grammatik.GabbroV.GvAtomRely

@@ -1,5 +1,5 @@
 module
-public import Grammatik.Bausteine.Arena.Ownership.FactoryWitness
+public import Grammatik.Bausteine.Arena.Ownership.Witnesses.FactoryWitness
 public import Grammatik.Bausteine.Arena.Ownership.Source.Witness
 public import Grammatik.Bausteine.Arena.Ownership.Source.ForwardWitness
 public import Grammatik.Bausteine.Arena.Ownership.Body.Goal

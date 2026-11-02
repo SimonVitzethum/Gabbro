@@ -9,7 +9,7 @@
 -/
 module
 public import Grammatik.Speichermodell.Atomar.AtomarW
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Zielsatz.Kern.Spec
 @[expose] public section
 

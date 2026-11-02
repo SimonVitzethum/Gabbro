@@ -26,8 +26,8 @@
 -/
 module
 public import Grammatik.Zielsatz.Eigenschaften.KernMaskeZeuge
-public import Grammatik.Zielsatz.Eigenschaften.RwRang
-public import Grammatik.Zielsatz.Eigenschaften.RwInv
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwRang
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 @[expose] public section
 
 

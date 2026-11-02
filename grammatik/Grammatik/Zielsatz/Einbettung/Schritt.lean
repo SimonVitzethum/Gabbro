@@ -1,6 +1,6 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Auswertung
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 @[expose] public section
 
 

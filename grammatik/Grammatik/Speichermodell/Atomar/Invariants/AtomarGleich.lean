@@ -9,7 +9,7 @@
   outside `T` into a read without havoc, this one rewrites it into the other environment's read.
 -/
 module
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 @[expose] public section
 
 

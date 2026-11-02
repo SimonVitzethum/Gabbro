@@ -1,7 +1,7 @@
 /- Part 11 of 12 of `RufAdaequatG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufAdaequatG.lean` imports all parts). -/
 module
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10
-public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T11a
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T11a
 @[expose] public section
 
 

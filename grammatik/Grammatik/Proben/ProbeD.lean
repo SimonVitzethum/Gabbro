@@ -29,7 +29,7 @@
     (`fwP_ende_verletzt`: `¬ StartEndeG`).
 -/
 module
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 import all Init.Data.Repr
 import all Init.Data.String.Basic

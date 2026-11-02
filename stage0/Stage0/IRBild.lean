@@ -7,7 +7,7 @@ module
 public import Stage0.Bindung
 public import Stage0.Compiler
 public import Grammatik.Parser.Elab.UebersetzePipeline
-public import Grammatik.GabbroV.GvStartPflicht
+public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Bild
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.MainEnv

@@ -17,7 +17,7 @@
 -/
 module
 public import Grammatik.Proben.InvZeuge
-public import Grammatik.Zielsatz.Eigenschaften.RwInv
+public import Grammatik.Zielsatz.Eigenschaften.Rw.RwInv
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap

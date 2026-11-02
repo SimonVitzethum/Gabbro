@@ -19,7 +19,7 @@
 -/
 module
 public import Grammatik.Logik.Terminierung.Klasse
-public import Grammatik.Speichermodell.Atomar.AtomarRec
+public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 @[expose] public section
 
 
