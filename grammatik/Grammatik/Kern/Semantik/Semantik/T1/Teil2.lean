@@ -47,9 +47,10 @@ def ergEnv : (e : Option Ty) → ErgVal D e → Env D Γ → Env D (ErgCtx Γ e)
   | Option.some _, v, ρ => .cons v ρ
 
 /-- Die Invarianten, die ein Rumpf von `f` am Ende schuldet: alle ueber Traegern, die er
-    schreibt (`maintains`, aus `effects` abgeleitet -- «SG-I»). -/
+    schreibt (`maintains`, aus `effects` abgeleitet -- «SG-I»): Tabellen ueber `D.schreibt f`,
+    Globale ueber `D.gschreibt f` (C05). -/
 def schuldet (f : D.Fn) (i : D.Inv) : Bool :=
-  (D.traeger i).any fun t => D.schreibt f t
+  (D.traeger i).any (Sum.elim (D.schreibt f) (D.gschreibt f))
 
 /-- Ein Ausgang aus einem Unterblock mit erweitertem Sichtbereich, zurueck in den aeusseren. -/
 def Ausgang.schrumpf : Ausgang V l (τ :: Γ) → Ausgang V l Γ

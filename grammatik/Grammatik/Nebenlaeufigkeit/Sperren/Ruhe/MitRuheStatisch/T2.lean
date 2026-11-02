@@ -412,9 +412,11 @@ theorem invOrteP_mitRuhe_ruhe : invOrteP P.mitRuhe none = [] := by
   unfold invOrteP
   have : (D.mitRuhe).invs.filter (schuldet (D := D.mitRuhe) none) = [] := by
     apply List.filter_eq_nil_iff.mpr
-    intro i _
-    simp only [schuldet, Deklaration.mitRuhe, Deklaration.schreibt, Deklaration.signatur, sigNrM, sigM, sigRuheM,
-  List.any_eq_true, Bool.false_eq_true, and_false, exists_false, not_false_eq_true]
+    intro i _ h
+    unfold schuldet at h
+    obtain ⟨x, _, hx⟩ := List.any_eq_true.mp h
+    cases x <;> simp only [Deklaration.mitRuhe, Deklaration.schreibt, Deklaration.gschreibt,
+      Deklaration.signatur, sigNrM, sigM, sigRuheM, Sum.elim_inl, Sum.elim_inr, Bool.false_eq_true] at hx
   rw [this]
   rfl
 

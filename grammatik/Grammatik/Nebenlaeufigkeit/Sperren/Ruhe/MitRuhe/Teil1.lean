@@ -200,9 +200,12 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (passtM D) (tyR τ)), v
   Annahme := D.Annahme
   a10 := D.a10
   geteilt_bewacht := D.geteilt_bewacht
-  invarianten_gehalten := fun n i h t ht L hL => match n with
-    | 0 => by simp only [sigNrM, sigRuheM, List.any_eq_true, Bool.false_eq_true, and_false, exists_false] at h
-    | n + 1 => D.invarianten_gehalten n i h t ht L hL
+  invarianten_gehalten := fun n i h c hc L hL => match n with
+    | 0 => by
+        simp only [List.any_eq_true] at h
+        obtain ⟨x, _, hx⟩ := h
+        cases x <;> simp only [sigNrM, sigRuheM, Sum.elim_inl, Sum.elim_inr, Bool.false_eq_true] at hx
+    | n + 1 => D.invarianten_gehalten n i h c hc L hL
   ggeteilt_bewacht := D.ggeteilt_bewacht
   geist := D.geist
   ggeist := D.ggeist
@@ -384,12 +387,12 @@ theorem nach_map (f : D.Fn) (Λ : List (Res D)) :
 
 theorem invSicht_map (i : D.Inv) : (invSicht D i).map resR = invSicht D.mitRuhe i := by
   simp only [invSicht]
-  show ((D.traeger i).foldr (fun t acc => (D.braucht t).map (Res.von D) ++ acc) []).map resR =
-    (D.traeger i).foldr (fun t (acc : List (Res D.mitRuhe)) =>
-      (D.braucht t).map (Res.von D.mitRuhe) ++ acc) []
+  show ((D.traeger i).foldr (fun c acc => (Sum.elim D.braucht D.gbraucht c).map (Res.von D) ++ acc) []).map resR =
+    (D.traeger i).foldr (fun c (acc : List (Res D.mitRuhe)) =>
+      (Sum.elim D.braucht D.gbraucht c).map (Res.von D.mitRuhe) ++ acc) []
   induction D.traeger i with
   | nil => rfl
-  | cons t ts ih =>
+  | cons c cs ih =>
       simp only [List.foldr_cons, List.map_append, ih]
       congr 1
       rw [List.map_map]

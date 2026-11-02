@@ -347,7 +347,7 @@ theorem vertrag_atomar_abgelehnt :
 theorem vertrag_atomar_echt :
     (.inr NGlob.konfig : nD.Tab ⊕ nD.Glob) ∈ (vP.ensures NFn.kern).orte ∧
       ¬ VertragsFrei vP (.inr NGlob.konfig) :=
-  ⟨List.mem_cons_self, fun h => (h NFn.kern).2.1 List.mem_cons_self⟩
+  ⟨List.mem_cons_self, fun h => (h.1 NFn.kern).2.1 List.mem_cons_self⟩
 
 #print axioms n1_ziel_atomar
 #print axioms n1_konfig_geteilt

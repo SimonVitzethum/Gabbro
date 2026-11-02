@@ -395,7 +395,7 @@ def ErgCtx (Γ : Ctx) : Option Ty → Ctx
   | some τ => τ :: Γ
 
 def invSicht (i : D.Inv) : List (Res D) :=
-  (D.traeger i).foldr (fun t acc => (D.braucht t).map (Res.von D) ++ acc) []
+  (D.traeger i).foldr (fun c acc => (Sum.elim D.braucht D.gbraucht c).map (Res.von D) ++ acc) []
 
 /-- Ein Programm: je Funktion `requires`, `ensures` (mit `refines`: die `ensures` der
     Spezifikation sind darin enthalten -- eine Konjunktion, kein zweiter Kanal) und ein

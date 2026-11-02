@@ -18,7 +18,7 @@ theorem serialLink_zeuge_fuer_kette (Nb : Nebeneinander) (J : GemeinsamerLauf (D
     (run : Lauf D) (f : Faden)
     (hGuard : ∀ t₀ : D.Tab, ∃ L : D.Lock, Sum.inl L ∈ D.braucht t₀)
     (hCov : ∀ (t₀ : D.Tab) (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hwit : ∀ (t₀ : D.Tab) (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
       TraegerSchreibt (J.code g) (.inl t₀) = true →
       ∃ (j : Nat) (w : Bool) (Λ : List (Res D)) (h : List D.Lock),

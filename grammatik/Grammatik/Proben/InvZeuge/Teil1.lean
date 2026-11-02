@@ -105,7 +105,7 @@ def ivD : Deklaration where
     | zero => simp only [List.not_mem_nil] at h
     | succ n => simp only [List.not_mem_nil] at h
   Inv := Unit
-  traeger := fun _ => [()]
+  traeger := fun _ => [.inl ()]
   invs := [()]
   Ax := Empty
   aparams := fun e => nomatch e
@@ -123,7 +123,7 @@ def ivD : Deklaration where
   invarianten_gehalten := fun n _ h _ _ L _ => by
     cases n with
     | zero => cases L; exact List.mem_singleton.mpr rfl
-    | succ n => simp only [ivSigFrei, List.any_cons, List.any_nil, Bool.or_self, Bool.false_eq_true] at h
+    | succ n => simp only [ivSigFrei, List.any_cons, List.any_nil, Sum.elim_inl, Bool.or_self, Bool.false_eq_true] at h
   ggeteilt_bewacht := fun e => nomatch e
 
 def ivHaupt : ivD.Fn := IvFn.haupt

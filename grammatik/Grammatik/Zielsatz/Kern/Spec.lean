@@ -70,8 +70,12 @@
     (a), (b), (c).
   * `sperrInv` -- every free lock has its invariant in shared memory. `sperrWechsel`, `sperrSicht` -- every acquire
     starts from it, every release leaves it, and no thread but the holder touches a protected carrier. (a), (b).
-  * `invRuhe`, `invSicht` -- a table invariant holds wherever no unfinished thread is inside one of its writers,
-    and for a thread holding one of its guards outside every writer (hypothesis: it held at the start). (a), (b).
+  * `invRuhe`, `invSicht` -- a table/group/global invariant holds wherever no unfinished thread is inside one of
+    its writers, and for a thread holding one of its guards outside every writer (hypothesis: it held at the
+    start). Since C05 the declared carriers of an invariant are tables AND globals (`D.traeger : Inv → List
+    (Tab ⊕ Glob)`): a writer of a global carrier (`gschreibt`) owes the invariant and the group's locks
+    (`gbraucht` beside `braucht`) exactly like a writer of a table, and an observation under a global carrier's
+    guard counts. No shared atomic is a carrier (refused, `N484`). (a), (b).
   * `keineVerklemmung`, `keinZyklus` -- no global deadlock, no wait cycle (lock ranks). (a).
   * `keinKernHalt` (`KernHaltEA`) -- for every core assignment and every run the core hardware admits (`KernPlan`,
     inside the leg), a thread whose root the program declares an interrupt handler never stands at a lock another
@@ -215,7 +219,7 @@
     `N484`); the merge discipline of per-core cells beyond reading them (OFFEN O17); linked units sharing an atomic
     across the link; the publish/await hand-off of an unguarded PLAIN payload (refused);
   * floats beyond the kernel IEEE model (that the FPU computes it is `gleitkomma_ieee`, a hardware fact);
-  * an invariant inside a running writer or false in the start memory or reading carriers outside its declared
+  * an invariant inside a running writer or false in the start memory or reading carriers (tables or globals) outside its declared
     `traeger`; a lock invariant inside its holder's section (claimed: no other thread observes it there);
   * interrupt handlers beyond `KernPlan`: re-entry, handler-on-handler preemption, a thrown entry without `via idt`,
     a lock the unit does not declare (OFFEN O19);

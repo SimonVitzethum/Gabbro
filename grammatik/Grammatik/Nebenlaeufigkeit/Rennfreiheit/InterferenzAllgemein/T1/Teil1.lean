@@ -18,6 +18,28 @@ def TraegerSchreibt (f : D.Fn) : D.Tab ⊕ D.Glob → Bool
   | .inl t => D.schreibt f t
   | .inr g => D.gschreibt f g
 
+/-- `schuldet` ist die `any`-Bedingung ueber dem Schreibschalter `TraegerSchreibt` (C05): `schuldet` selbst
+    steht vor dieser Definition (`Semantik/Semantik/T1`) und eliminiert die Summe direkt. -/
+theorem schuldet_eq_any (f : D.Fn) (i : D.Inv) :
+    schuldet f i = (D.traeger i).any (TraegerSchreibt f) := by
+  have h : Sum.elim (D.schreibt f) (D.gschreibt f) = TraegerSchreibt f := by
+    funext c
+    cases c <;> rfl
+  unfold schuldet
+  rw [h]
+
+/-- Wer eine Invariante nicht schuldet, schreibt keinen ihrer Traeger (Tabelle oder Global). -/
+theorem schreibt_false_of_schuldet_false {f : D.Fn} {i : D.Inv} (h : schuldet f i = false)
+    {c : D.Tab ⊕ D.Glob} (hc : c ∈ D.traeger i) : TraegerSchreibt f c = false := by
+  cases hc' : TraegerSchreibt f c with
+  | false => rfl
+  | true =>
+      have h1 : schuldet f i = true := by
+        rw [schuldet_eq_any]
+        exact List.any_eq_true.mpr ⟨c, hc, hc'⟩
+      rw [h] at h1
+      exact absurd h1 (by decide)
+
 /-- Die Wache eines Traegers, gehalten im Eintritt von `f`: jeder genannte Waechter steht
     in den Anfangsmitteln der Signatur (`darf`-Gestalt, statisch). -/
 def WaechterGehalten (f : D.Fn) : D.Tab ⊕ D.Glob → Prop
@@ -55,8 +77,8 @@ def EintrittPasst (f : D.Fn) (σ : World D) : Prop :=
     `invarianten_gehalten`, U003, mit `schuldet` als Bedingung). -/
 def SchuldnerHaelt (f : D.Fn) : Prop :=
   ∀ (i : D.Inv), schuldet f i = true →
-    ∀ (t : D.Tab), t ∈ D.traeger i →
-      ∀ (L : D.Lock), Sum.inl L ∈ D.braucht t → L ∈ D.haelt f
+    ∀ (c : D.Tab ⊕ D.Glob), c ∈ D.traeger i →
+      ∀ (L : D.Lock), Sum.inl L ∈ Sum.elim D.braucht D.gbraucht c → L ∈ D.haelt f
 
 /-- Die Invariantensicht liest unter gehaltenen Sperren (die Gestalt von
     `heldIn_invarianten` am Eintritt). -/
@@ -260,8 +282,8 @@ theorem stabilKette_aus_Schritt (Nb : Nebeneinander) (J : GemeinsamerLauf (D := 
     `inv_schreiber_sperren` in `Interferenz.lean`). Darum ist `hSchuld` im Lauf keine
     Annahme, die je Kette faellt: sie gilt je Rumpf von vornherein. -/
 theorem schuldnerHaelt_gilt (f : D.Fn) : SchuldnerHaelt (D := D) f := by
-  intro i hs t ht L hL
-  exact D.invarianten_gehalten (D.sig f) i hs t ht L hL
+  intro i hs c hc L hL
+  exact D.invarianten_gehalten (D.sig f) i hs c hc L hL
 
 /-- **Beidseitige Eintrittsmenge, einseitig verbraucht.** `EintrittPasst` nennt die
     Sperrmenge in BEIDEN Richtungen (die Form von `RufPasst.hh`, SG-20); wo nur das

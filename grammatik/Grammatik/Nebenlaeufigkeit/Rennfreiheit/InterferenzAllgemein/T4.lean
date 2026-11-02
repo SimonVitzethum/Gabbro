@@ -31,7 +31,7 @@ theorem interferenceFree_wo_frei (Nb : Nebeneinander)
         J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
           L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hFormU : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ : World D),
       Q f σ ↔ I.inv (.inl t₀) σ) :
     ∀ (f : Faden), f ∈ J.faeden → ∀ (k : Nat) (g : Faden) (vor nach : World D),
@@ -188,7 +188,7 @@ theorem reduktion_seriell_under_lock (Nb : Nebeneinander)
     (k₁ k₂ : Nat) (g₁ g₂ : Faden)
     (hK : SectionConflict Nb J t₀ k₁ k₂ g₁ g₂)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (run : Lauf D) (hG : Gesittet run)
     (j₁ j₂ : Nat) (w₁ w₂ : Bool) (Λ₁ Λ₂ : List (Res D)) (h₁ h₂ : List D.Lock)
     (hw₁ : run[j₁]? = some (Schritt.mk g₁ (.zugriff t₀ w₁ Λ₁ h₁)))
@@ -250,7 +250,7 @@ theorem serial_chain_from_run (Nb : Nebeneinander)
         J.welten[k + 1]? = some nach → TraegerSchreibt (J.code g) (.inl t₀) = true →
           L ∈ D.haelt (J.code g) → I.inv (.inl t₀) nach)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hForm : ∀ (f : Faden), f ∈ J.faeden → ∀ (σ : World D),
       Q f σ ↔ I.inv (.inl t₀) σ)
     (run : Lauf D) (hG : Gesittet run)

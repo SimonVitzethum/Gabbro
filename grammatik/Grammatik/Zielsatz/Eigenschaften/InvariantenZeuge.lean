@@ -52,7 +52,6 @@ theorem mP_hIR : ∀ M, RufErreichbarG mP mO 0 (RufStartG mP mSp mInit) M →
 
 theorem mP_invTraeger : InvTraeger mP () := by
   intro c hc
-  refine ⟨MTab.privA, List.mem_singleton_self _, ?_⟩
   revert c
   decide
 

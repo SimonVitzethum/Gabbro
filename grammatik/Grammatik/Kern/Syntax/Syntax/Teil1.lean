@@ -207,9 +207,10 @@ structure Deklaration where
   passt_ok : ∀ f n, passt f n = true → SigPasst rang (sigNr (sig f)) (sigNr n) := by
     intro f n h; have e := of_decide_eq_true h; subst e; exact SigPasst.refl _ _
   eigner_nie_erzeugt : ∀ n t m s, m ∈ eigner t → (m, s) ∉ (sigNr n).produziert
-  /-- `table … { invariant I }` / `group … { invariant I }`. -/
+  /-- `table … { invariant I }` / `group … { invariant I }`. The carriers of an invariant are tables AND
+      globals (C05): one list over the sum of both kinds, like `rtraeger`. -/
   Inv : Type
-  traeger : Inv → List Tab
+  traeger : Inv → List (Tab ⊕ Glob)
   invs : List Inv
   /-- `axiom`, und jeder FREMDE Rumpf: `extern fn`, `prim fn`, `asm`, `entry`, `entrust`. -/
   Ax : Type
@@ -256,10 +257,12 @@ structure Deklaration where
       oder nicht geteilt. Das ist die Erklaerung, aus der `kein_wettlauf` (Wettlauf.lean)
       seine Voraussetzung nimmt. -/
   geteilt_bewacht : ∀ t, geteilt t = true → braucht t ≠ []
-  /-- `U003` als Erklaerung: wer einen Traeger einer Invariante schreibt, haelt die Sperren
-      ALLER ihrer Traeger -- denn er schuldet sie am `return`, und sie liest sie alle. -/
-  invarianten_gehalten : ∀ n i, (traeger i).any (sigNr n).schreibt = true →
-      ∀ t ∈ traeger i, ∀ L, Sum.inl L ∈ braucht t → L ∈ (sigNr n).haelt
+  /-- `U003` als Erklaerung: wer einen Traeger einer Invariante schreibt (eine Tabelle ueber `schreibt`,
+      ein Global ueber `gschreibt`), haelt die Sperren ALLER ihrer Traeger (`braucht` bzw. `gbraucht`) --
+      denn er schuldet sie am `return`, und sie liest sie alle. -/
+  invarianten_gehalten : ∀ n i,
+      (traeger i).any (Sum.elim (sigNr n).schreibt (sigNr n).gschreibt) = true →
+      ∀ c ∈ traeger i, ∀ L, Sum.inl L ∈ Sum.elim braucht gbraucht c → L ∈ (sigNr n).haelt
   ggeteilt_bewacht : ∀ g, ggeteilt g = true → gbraucht g ≠ [] ∨ atomar g = true
   /-- `ghost table T` / `ghost static G` -- spec-only carriers: the semantics treats
       them like any carrier (so every theorem stays valid) and the emitter omits

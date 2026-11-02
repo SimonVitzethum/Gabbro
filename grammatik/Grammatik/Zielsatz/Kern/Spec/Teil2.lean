@@ -40,12 +40,12 @@ def SchwachSC (P : Programm D) (O : Orakel D) (passes : Nat) (M0 M : RufMaschine
 -- END weak-memory definition --
 
 -- BEGIN invariant definitions (Opus agent D, 2026-09-26) --
-/-- **The table/group invariant `i` reads only its declared carriers**: every carrier its
+/-- **The table/group/global invariant `i` reads only its declared carriers** (tables AND globals): every carrier its
     predicate reads is one of `D.traeger i`. (`invSicht` only asks that a read carrier's GUARDS
     be among those of the declared carriers; a predicate reading another table under the same
     lock, or an unguarded table, reads carriers that functions NOT owing `i` may write.) -/
 def InvTraeger (P : Programm D) (i : D.Inv) : Prop :=
-  ∀ c ∈ (P.invariante i).orte, ∃ t ∈ D.traeger i, c = Sum.inl t
+  ∀ c ∈ (P.invariante i).orte, c ∈ D.traeger i
 
 /-- **The invariant `i` is CLOSED at `M`**: no unfinished thread has a frame -- the head or a
     suspended caller -- of a function that owes `i` (`schuldet`: its effects write a carrier of
@@ -71,7 +71,7 @@ def InvRuheG (P : Programm D) (M0 M : RufMaschineG D) : Prop :=
 def InvSichtG (P : Programm D) (M0 M : RufMaschineG D) : Prop :=
   ∀ i ∈ D.invs, InvTraeger P i → InvHaelt P i (M0.speicher.welt []) → ∀ t,
     (∀ F ∈ (M.faeden t).kopf :: (M.faeden t).stapel, schuldet F.f i = false) →
-    (∃ tb ∈ D.traeger i, ∃ L, Sum.inl L ∈ D.braucht tb ∧ L ∈ offen (M.faeden t).spur) →
+    (∃ cb ∈ D.traeger i, ∃ L, Sum.inl L ∈ Sum.elim D.braucht D.gbraucht cb ∧ L ∈ offen (M.faeden t).spur) →
     InvHaelt P i (M.speicher.welt [])
 
 /-- **Lock invariants at every lock move** (Opus agent D, 2026-09-26): every step from `M` that

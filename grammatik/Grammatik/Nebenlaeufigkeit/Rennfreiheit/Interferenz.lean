@@ -157,30 +157,32 @@ theorem rahmen_aus_exec (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO 
 
 /-! ## 4. Invarianten am Paar: U003 und `schuldet` -/
 
-/-- **U003 am Rumpf**: wer eine Invariante schuldet, haelt die Sperren ALLER ihrer Traeger --
-    `invarianten_gehalten`, eingeloest an `f`. -/
+/-- **U003 am Rumpf**: wer eine Invariante schuldet, haelt die Sperren ALLER ihrer Traeger (Tabellen und
+    Globale) -- `invarianten_gehalten`, eingeloest an `f`. -/
 theorem inv_schreiber_sperren (f : D.Fn) (i : D.Inv) (hs : schuldet f i = true)
-    (t : D.Tab) (ht : t ∈ D.traeger i) (L : D.Lock) (hL : Sum.inl L ∈ D.braucht t) :
+    (c : D.Tab ⊕ D.Glob) (hc : c ∈ D.traeger i) (L : D.Lock)
+    (hL : Sum.inl L ∈ Sum.elim D.braucht D.gbraucht c) :
     L ∈ D.haelt f :=
-  D.invarianten_gehalten (D.sig f) i hs t ht L hL
+  D.invarianten_gehalten (D.sig f) i hs c hc L hL
 
 /-- Eine geschuldete Invariante hat einen Traeger im Rahmen: `schuldet` am `return` steht
-    sonst ueber nichts. -/
+    sonst ueber nichts. Ein Tabellen- wie ein Globaltraeger zaehlt. -/
 theorem schuldet_hat_schreibtraeger (f : D.Fn) (i : D.Inv) (hs : schuldet f i = true) :
-    ∃ t ∈ D.traeger i, D.schreibt f t = true := by
+    ∃ c ∈ D.traeger i, Sum.elim (D.schreibt f) (D.gschreibt f) c = true := by
   unfold schuldet at hs
-  have key : ∀ (ts : List D.Tab), ts.any (D.schreibt f) = true →
-      ∃ t ∈ ts, D.schreibt f t = true := by
-    intro ts
-    induction ts with
+  have key : ∀ (cs : List (D.Tab ⊕ D.Glob)),
+      cs.any (Sum.elim (D.schreibt f) (D.gschreibt f)) = true →
+      ∃ c ∈ cs, Sum.elim (D.schreibt f) (D.gschreibt f) c = true := by
+    intro cs
+    induction cs with
     | nil => intro h; simp only [List.any_nil, Bool.false_eq_true] at h
     | cons x xs ih =>
         intro h
         simp only [List.any_cons] at h
-        by_cases hx : D.schreibt f x = true
+        by_cases hx : Sum.elim (D.schreibt f) (D.gschreibt f) x = true
         · exact ⟨x, List.mem_cons_self, hx⟩
-        · obtain ⟨t, ht, hwt⟩ := ih (by simpa [hx] using h)
-          exact ⟨t, List.mem_cons_of_mem _ ht, hwt⟩
+        · obtain ⟨c, hc, hwc⟩ := ih (by simpa [hx] using h)
+          exact ⟨c, List.mem_cons_of_mem _ hc, hwc⟩
   exact key _ hs
 
 /-- Die Invariantensicht liest unter gehaltenen Sperren: am Eintritt von `f` haelt `f` die

@@ -170,7 +170,12 @@ def einE : Einbettung D (erweitert D g₀) where
   invZ := some
   invZ_inv := fun _ => rfl
   inv_invZ := fun _ _ h => (Option.some.inj h).symm
-  traeger := fun _ => by simp only [erweitert, List.map_id_fun', id_eq]
+  traeger := fun i => by
+    show D.traeger i = _
+    conv => lhs; rw [← List.map_id (D.traeger i)]
+    congr 1
+    funext c
+    rcases c with t | g <;> rfl
   invs := fun _ => Iff.rfl
   ax := fun a => a
   axZ := some

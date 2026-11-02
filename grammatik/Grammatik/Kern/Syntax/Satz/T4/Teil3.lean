@@ -32,25 +32,25 @@ theorem end_gut (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ) (hh : 
 end Rumpf
 /-! ### Der Ruf, bis hinauf zum Programm -/
 
-theorem held_invSicht_aux (L : D.Lock) : ∀ (ts : List D.Tab),
-    Res.held L ∈ ts.foldr (fun t acc => (D.braucht t).map (Res.von D) ++ acc) [] →
-    ∃ t ∈ ts, Sum.inl L ∈ D.braucht t := by
+theorem held_invSicht_aux (L : D.Lock) : ∀ (ts : List (D.Tab ⊕ D.Glob)),
+    Res.held L ∈ ts.foldr (fun c acc => (Sum.elim D.braucht D.gbraucht c).map (Res.von D) ++ acc) [] →
+    ∃ c ∈ ts, Sum.inl L ∈ Sum.elim D.braucht D.gbraucht c := by
   intro ts
   induction ts with
   | nil => intro h; simp only [List.foldr_nil, List.not_mem_nil] at h
-  | cons t ts ih =>
+  | cons c ts ih =>
       intro h
       simp only [List.foldr_cons, List.mem_append, List.mem_map] at h
       rcases h with ⟨w, hw, hwL⟩ | h
-      · refine ⟨t, List.mem_cons_self, ?_⟩
+      · refine ⟨c, List.mem_cons_self, ?_⟩
         cases w with
         | inl M => simp only [Res.von, Res.held.injEq] at hwL; subst hwL; exact hw
         | inr m => obtain ⟨_, _⟩ := m; simp only [Res.von, reduceCtorEq] at hwL
-      · obtain ⟨t', ht', hL⟩ := ih h
-        exact ⟨t', List.mem_cons_of_mem _ ht', hL⟩
+      · obtain ⟨c', hc', hL⟩ := ih h
+        exact ⟨c', List.mem_cons_of_mem _ hc', hL⟩
 
 theorem held_invSicht (i : D.Inv) (L : D.Lock) (h : Res.held L ∈ invSicht D i) :
-    ∃ t ∈ D.traeger i, Sum.inl L ∈ D.braucht t :=
+    ∃ c ∈ D.traeger i, Sum.inl L ∈ Sum.elim D.braucht D.gbraucht c :=
   held_invSicht_aux L _ h
 
 /-- Die Invarianten, die ein Rumpf schuldet, liest er unter Sperren, die er haelt (`U003`). -/
@@ -58,8 +58,8 @@ theorem heldIn_invarianten (P : Programm D) (f : D.Fn) {h : List D.Lock}
     (hh : HeldIn (Signatur.anfang D (D.signatur f)) h) (i : D.Inv) (hi : schuldet f i = true) :
     HeldIn (invSicht D i) h := by
   intro L hL
-  obtain ⟨t, ht, hLt⟩ := held_invSicht i L hL
-  have := D.invarianten_gehalten (D.sig f) i hi t ht L hLt
+  obtain ⟨c, hc, hLc⟩ := held_invSicht i L hL
+  have := D.invarianten_gehalten (D.sig f) i hi c hc L hLc
   exact hh L ((held_anfang _ L).mpr this)
 
 theorem gut_foldl_lese {W G} (P : Programm D) (f : D.Fn) :

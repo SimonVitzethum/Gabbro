@@ -57,7 +57,7 @@ theorem kette_mit_zeugen_orakel
     (t₀ : D.Tab) (L : D.Lock)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hwit_old : ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
       TraegerSchreibt (J.code g) (.inl t₀) = true →
       ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
@@ -172,7 +172,7 @@ theorem hwitschritt_kleber_reuse
     (t₀ : D.Tab) (L : D.Lock)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hwit_old : ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
       TraegerSchreibt (J.code g) (.inl t₀) = true →
       ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),
@@ -227,7 +227,7 @@ theorem hwitschritt_kleber_voll
     (t₀ : D.Tab) (L : D.Lock)
     (hGuardT : Sum.inl L ∈ D.braucht t₀)
     (hCov : ∀ (g : Faden), g ∈ J.faeden →
-      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, t₀ ∈ D.traeger i)
+      TraegerSchreibt (J.code g) (.inl t₀) = true → ∃ i : D.Inv, Sum.inl t₀ ∈ D.traeger i)
     (hwit_old : ∀ (k : Nat) (g : Faden), J.schrittFaden[k]? = some g →
       TraegerSchreibt (J.code g) (.inl t₀) = true →
       ∃ (j : Nat) (w : Bool) (Λe : List (Res D)) (he : List D.Lock),

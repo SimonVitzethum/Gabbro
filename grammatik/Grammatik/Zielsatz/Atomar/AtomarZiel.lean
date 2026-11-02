@@ -96,11 +96,13 @@ omit [DecidableEq D.Fn] in
 /-- `VertragsFrei` transfers to `P.mitRuhe` (the root has `requires true`, `ensures true` and
     owes nothing). -/
 theorem vertragsFrei_mitRuhe {c : D.Tab ⊕ D.Glob} (h : VertragsFrei P c) :
-    VertragsFrei P.mitRuhe c
-  | none => ⟨List.not_mem_nil, List.not_mem_nil, by rw [invOrteP_mitRuhe_ruhe]; exact List.not_mem_nil⟩
-  | some f => ⟨by rw [requires_mitRuhe_orte]; exact (h f).1,
-      by rw [ensures_mitRuhe_orte]; exact (h f).2.1,
-      by rw [invOrteP_mitRuhe]; exact (h f).2.2⟩
+    VertragsFrei P.mitRuhe c :=
+  ⟨fun g => match g with
+    | none => ⟨List.not_mem_nil, List.not_mem_nil, by rw [invOrteP_mitRuhe_ruhe]; exact List.not_mem_nil⟩
+    | some f => ⟨by rw [requires_mitRuhe_orte]; exact (h.1 f).1,
+        by rw [ensures_mitRuhe_orte]; exact (h.1 f).2.1,
+        by rw [invOrteP_mitRuhe]; exact (h.1 f).2.2⟩,
+   fun i hi => by rw [invariante_mitRuhe_orte]; exact h.2 i hi⟩
 
 /-- **The footprint property with the admitted shared atomics transfers to `P.mitRuhe`.** -/
 theorem fussSX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))

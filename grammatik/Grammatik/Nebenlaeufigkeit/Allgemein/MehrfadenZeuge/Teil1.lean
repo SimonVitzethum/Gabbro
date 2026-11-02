@@ -119,7 +119,7 @@ def mD : Deklaration where
   sigNr := mSigNr
   eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
   Inv := Unit
-  traeger := fun _ => [.privA]
+  traeger := fun _ => [.inl .privA]
   invs := [()]
   Ax := Empty
   aparams := fun e => nomatch e
@@ -134,9 +134,9 @@ def mD : Deklaration where
   Annahme := Unit
   a10 := ()
   geteilt_bewacht := fun t h => by cases t <;> simp_all [mGeteilt, mBraucht]
-  invarianten_gehalten := fun _ _ _ t ht L hL => by
-    simp only [List.mem_singleton] at ht
-    subst ht
+  invarianten_gehalten := fun _ _ _ c hc L hL => by
+    simp only [List.mem_singleton] at hc
+    subst hc
     cases hL
   ggeteilt_bewacht := fun e => nomatch e
 
