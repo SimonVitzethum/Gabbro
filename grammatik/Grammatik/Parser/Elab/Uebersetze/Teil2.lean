@@ -158,6 +158,10 @@ structure UFn where
   ret : URet
   /-- The lock floor (`Signatur.boden`): filled after elaboration by `uMitBoden` with the rule `floorOf`. -/
   boden : Option Int := none
+  /-- The original entry-parameter measure; absence is the empty tuple, never an inferred measure. -/
+  decreases : Option SExpr := none
+  /-- Checked scalar constants in the declaration's entry scope. -/
+  measureConstants : List (String × Int) := []
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
