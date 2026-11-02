@@ -1,5 +1,5 @@
 module
-public import Grammatik.Logik.Vertraege.VertragOrtBBasis
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtBBasis
 @[expose] public section
 
 

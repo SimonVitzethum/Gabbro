@@ -26,7 +26,7 @@
 -/
 module
 public import Grammatik.Logik.Ruf.Hoare.HoareRegeln
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineD
 @[expose] public section
 

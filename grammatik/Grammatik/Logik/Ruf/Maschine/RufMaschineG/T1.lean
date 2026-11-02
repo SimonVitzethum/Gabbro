@@ -22,7 +22,7 @@
 -/
 module
 public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineF
 @[expose] public section
 

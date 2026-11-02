@@ -56,7 +56,7 @@ public import Grammatik.Kern.Syntax.Typen.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis

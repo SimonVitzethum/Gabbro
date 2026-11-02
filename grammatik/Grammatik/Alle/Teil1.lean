@@ -33,7 +33,7 @@ public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Semantik.MaschinenKette
 public import Grammatik.Logik.Vertraege.QLeer
 public import Grammatik.Proben.BlattGegenbeispiel
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 public import Grammatik.Logik.Ruf.RufAtNachB
 public import Grammatik.Kern.Syntax.MarkenInstanzA
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineD

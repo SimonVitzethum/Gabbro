@@ -12,7 +12,7 @@
   `.logik (.nachbedingung f)` iff the ensures check holds.
 -/
 module
-public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Logik.Vertraege.Locations.VertragOrtB
 @[expose] public section
 
 
