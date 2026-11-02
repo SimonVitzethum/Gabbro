@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Saturation
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift
-public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.BitBuiltin

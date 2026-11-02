@@ -21,7 +21,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringEqMixedCode
 public import Stage0.Senke.Ausdruck.Aggregat.Kopie
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
-public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
 public meta import Lean.Meta.Tactic.Simp.Attr
 @[expose] public section

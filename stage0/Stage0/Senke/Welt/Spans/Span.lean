@@ -1,7 +1,7 @@
 /- Complete typed storage spans use the canonical value encoding. Physical addresses
    are supplied by the checked layout, never decoded from logical pointer values. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Spans.SpanCode
 public import Stage0.Senke.Ausdruck.Aggregat.Footprint
 public import Stage0.Senke.Ausdruck.Quant.Memory

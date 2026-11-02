@@ -1,7 +1,7 @@
 /- Subject: Generic correctness of byte access to a string of capacity at least two with any scalar index. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
-public import Stage0.Senke.Ausdruck.Aggregat.StringOps
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
 public import Stage0.Senke.Ausdruck.Tops.Eng
 @[expose] public section
 

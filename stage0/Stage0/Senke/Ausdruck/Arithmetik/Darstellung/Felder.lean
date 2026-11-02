@@ -1,7 +1,7 @@
 /- Shared integer-only extraction of IEEE fields for arithmetic dispatch. -/
 module
-public import Stage0.Senke.Ausdruck.Arithmetik.Feldera
-public import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
+public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Feldera
+public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Vorzeichen
 @[expose] public section
 
 

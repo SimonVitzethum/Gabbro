@@ -59,7 +59,7 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.Counter
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotComposition
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotProbes
 
-public import Stage0.Senke.Ausdruck.Arithmetik.Vorzeichen
+public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Vorzeichen
 public import Stage0.Senke.Ausdruck.Arithmetik.Proben.Teil3
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Counters.ReservedCall
 

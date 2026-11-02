@@ -1,7 +1,7 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontext
-public import Stage0.Senke.Anweisung.TorLauf
+public import Stage0.Senke.Anweisung.Bindung.TorLauf
 @[expose] public section
 
 

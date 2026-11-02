@@ -6,7 +6,7 @@
              else no answer.
 -/
 module
-public import Stage0.Senke.Anweisung.TorLauf
+public import Stage0.Senke.Anweisung.Bindung.TorLauf
 public import Stage0.Senke.Anweisung.SchleifeTeile
 @[expose] public section
 

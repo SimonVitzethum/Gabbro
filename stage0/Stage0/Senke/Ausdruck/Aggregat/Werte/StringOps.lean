@@ -1,6 +1,6 @@
 /- Subject: Runtime length, byte access and comparisons on short string words. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.String
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.String
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 public import Stage0.Senke.Ausdruck.Quant.Selection
 @[expose] public section

@@ -4,7 +4,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontext
 public import Stage0.Senke.Anweisung.SchleifeTeile
-public import Stage0.Senke.Anweisung.Fnptr
+public import Stage0.Senke.Anweisung.Bindung.Fnptr
 @[expose] public section
 
 

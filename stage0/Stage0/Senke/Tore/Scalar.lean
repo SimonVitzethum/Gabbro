@@ -1,6 +1,6 @@
 /- Joint scalar-register and internal-pointer-marker witnesses for foreign argument lowering. -/
 module
-public import Stage0.Senke.Anweisung.TorLauf
+public import Stage0.Senke.Anweisung.Bindung.TorLauf
 public import Runner.Prog.IRAsm
 public import Grammatik.Parser.Elab.UebersetzeAllg
 import all Init.Data.Repr

@@ -4,7 +4,7 @@
              changes no slot below `s + 1`; outside, the stop 110 (G's hardware outcome at the gate).
 -/
 module
-public import Stage0.Senke.Anweisung.Tor
+public import Stage0.Senke.Anweisung.Bindung.Tor
 public import Stage0.Senke.Ausdruck.Arithmetik.Interval
 @[expose] public section
 

@@ -1,7 +1,7 @@
 /- The start environment of `main`: every parameter is the one pointer to the table its type names (G's value `()`,
    encoded as the zero word). A parameter of another type has no start-argument form in the source and is refused. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 @[expose] public section
 
 

@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Welt.MainEnv
 public import Stage0.Senke.Welt.Anordnung
-public import Stage0.Senke.Anweisung.TorLauf
+public import Stage0.Senke.Anweisung.Bindung.TorLauf
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
