@@ -1,5 +1,5 @@
 module
-public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T2a
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T2aUnd
 @[expose] public section
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
