@@ -153,4 +153,47 @@ theorem lowerMeasures_denotes_zeuge :
       (.variable "n") rfl rfl rfl,
     countdown_accepted_zeuge, countdown_duty_zeuge⟩
 
+/-- Division over a positive denominator lowers with an empty footprint. -/
+def divU : UProg := withMeasure (.bin "/" (.variable "n") (.lit 1))
+theorem divLowered : (lowerAllg divU).toOption.isSome = true := by decide +kernel
+def divM := (exported divU divLowered).val
+theorem divSource : SourceTuple divU 0 (divM.mass 0) := divM.source 0
+theorem divDenotes :
+    ∃ c : Component divU 0, divM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf divU)) (env : Env (declOf divU) ((declOf divU).params 0)),
+        SourceValue (fnAt divU 0) (fnAt divU 0).measureConstants env
+          (.bin "/" (.variable "n") (.lit 1)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes divU divM 0 [] [.drops (.bin "/" (.variable "n") (.lit 1))]
+    (.bin "/" (.variable "n") (.lit 1)) (.bin "/" (.variable "n") (.lit 1)) rfl rfl rfl
+
+/-- A denominator that may be zero is refused, never guessed. -/
+theorem div_zero_zeuge :
+    (lowerMeasures (withMeasure (.bin "/" (.variable "n") (.lit 0)))).toOption.isSome = false := by
+  decide +kernel
+
+/-- A nonzero signed denominator still fails the entry nonnegativity gate when its
+    quotient may go negative: the gate is not weakened for the signed branch. -/
+theorem div_negative_gate_zeuge :
+    (lowerMeasures (withMeasure (.bin "/" (.variable "n")
+      (.bin "-" (.variable "n") (.lit 2))))).toOption.isSome = false := by
+  decide +kernel
+
+/-- Remainder over a positive denominator lowers with an empty footprint. -/
+def remU : UProg := withMeasure (.bin "%" (.variable "n") (.lit 2))
+theorem remLowered : (lowerAllg remU).toOption.isSome = true := by decide +kernel
+def remM := (exported remU remLowered).val
+theorem remSource : SourceTuple remU 0 (remM.mass 0) := remM.source 0
+theorem remDenotes :
+    ∃ c : Component remU 0, remM.mass 0 = [c] ∧
+      ∀ (initial state : World (declOf remU)) (env : Env (declOf remU) ((declOf remU).params 0)),
+        SourceValue (fnAt remU 0) (fnAt remU 0).measureConstants env
+          (.bin "%" (.variable "n") (.lit 2)) (eval initial c.2.1 state env).n :=
+  lowerMeasures_denotes remU remM 0 [] [.drops (.bin "%" (.variable "n") (.lit 2))]
+    (.bin "%" (.variable "n") (.lit 2)) (.bin "%" (.variable "n") (.lit 2)) rfl rfl rfl
+
+/-- A remainder over a denominator that may be zero is refused, never guessed. -/
+theorem rem_zero_zeuge :
+    (lowerMeasures (withMeasure (.bin "%" (.variable "n") (.lit 0)))).toOption.isSome = false := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.Measures.Fixtures

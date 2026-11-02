@@ -1,32 +1,11 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil1
 public import Grammatik.Logik.Terminierung.Mass
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Values
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Measures
 open Uebersetze UebersetzeAllg UebersetzeAllg2
-
-/-- Source arithmetic denotation over the entry environment. There is no storage, old-state,
-    result or call rule. Name resolution is witnessed at the original parameter position. -/
-inductive SourceValue {u : UProg} {Γ : Ctx} (fn : UFn)
-    (constants : List (String × Int)) (env : Env (declOf u) Γ) : SExpr → Int → Prop
-  | literal (n : Nat) : SourceValue fn constants env (.lit n) (Int.ofNat n)
-  | parameter (name : String) (j : Nat) (lo hi : Int) (v : Var Γ (.int lo hi))
-      (found : fn.params[j]? = some (name, .int lo hi))
-      (position : lowVar Γ j (.int lo hi) = .ok v) :
-      SourceValue fn constants env (.variable name) (env.get v).n
-  | constant (name : String) (z : Int)
-      (unbound : fn.params.findIdx? (fun p => p.1 == name) = none)
-      (found : constants.filter (fun p => p.1 == name) = [(name, z)]) :
-      SourceValue fn constants env (.variable name) z
-  | add {a b : SExpr} {x y : Int} : SourceValue fn constants env a x →
-      SourceValue fn constants env b y → SourceValue fn constants env (.bin "+" a b) (x + y)
-  | sub {a b : SExpr} {x y : Int} : SourceValue fn constants env a x →
-      SourceValue fn constants env b y → SourceValue fn constants env (.bin "-" a b) (x - y)
-  | mul {a b : SExpr} {x y : Int} : SourceValue fn constants env a x →
-      SourceValue fn constants env b y → SourceValue fn constants env (.bin "*" a b) (x * y)
-  | neg {a : SExpr} {x : Int} (op : String) (spelling : op = "-" ∨ op = "-()") :
-      SourceValue fn constants env a x → SourceValue fn constants env (.un op a) (-x)
 
 /-- A typed term together with its independent source denotation and empty footprint. -/
 structure Expression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -89,6 +68,24 @@ def lowerExpression (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UF
     pure { side := x.side.times y.side,
            footprint := by change x.side.term.orte ++ y.side.term.orte = []; rw [x.footprint, y.footprint]; rfl,
            denotes := fun entry state env => SourceValue.mul (x.denotes entry state env) (y.denotes entry state env) }
+  | .bin "/" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.durch x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := durch_orte x.footprint y.footprint h,
+        denotes := fun entry state env => durch_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
+  | .bin "%" a b => do
+    let x ← lowerExpression u Γ Λ fn a
+    let y ← lowerExpression u Γ Λ fn b
+    match h : LowSide.rest x.side y.side with
+    | .ok s => pure { side := s,
+        footprint := rest_orte x.footprint y.footprint h,
+        denotes := fun entry state env => rest_denotes h a b entry state env
+          (x.denotes entry state env) (y.denotes entry state env) }
+    | .error e => .error e
   | .un op a => do
     if hs : op = "-" ∨ op = "-()" then
       let x ← lowerExpression u Γ Λ fn a
