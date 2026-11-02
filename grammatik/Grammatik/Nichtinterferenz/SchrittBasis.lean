@@ -211,7 +211,8 @@ def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.para
   | _, _, _, _, _, ρ, .traverse t inv body, rest, k =>
       kLokal st f rho ρ (.trav t inv body (alleIndizes (D.count t)) (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .consumeTraverse t member edge inv bound mass body, rest, k =>
-      kLokal st f rho ρ (.trav t inv body (alleIndizes (D.count t)) (.dann rest k)) spur sp
+      kLokal st f rho ρ (.verbrauch t member edge inv bound mass body
+        ((D.count t).toNat + bound.toNat + 1) (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .retry n bis body ueber, rest, k =>
       kLokal st f rho ρ (.wieder n bis body ueber (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .forever a inv body, rest, k =>

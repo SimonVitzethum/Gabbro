@@ -57,6 +57,12 @@ def GRest.oR (P : Programm D) (C : D.Tab ⊕ D.Glob → Bool) {V : Vertrag D} :
       inv.orte.all C = true ∧ (blockOrteP P body).all C = true ∧ k.oR P C
   | _, _, _, .travRest _ inv body _ k =>
       inv.orte.all C = true ∧ (blockOrteP P body).all C = true ∧ k.oR P C
+  | _, _, _, .verbrauch _ member edge inv _ mass body _ k =>
+      member.orte.all C = true ∧ edge.orte.all C = true ∧ inv.orte.all C = true ∧
+        mass.orte.all C = true ∧ (blockOrteP P body).all C = true ∧ k.oR P C
+  | _, _, _, .verbrauchRest _ member edge inv _ mass body _ _ k =>
+      member.orte.all C = true ∧ edge.orte.all C = true ∧ inv.orte.all C = true ∧
+        mass.orte.all C = true ∧ (blockOrteP P body).all C = true ∧ k.oR P C
   | _, _, _, .wieder _ bis body ueber k =>
       bis.orte.all C = true ∧ (blockOrteP P body).all C = true ∧
         (blockOrteP P ueber).all C = true ∧ k.oR P C
