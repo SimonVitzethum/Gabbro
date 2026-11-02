@@ -321,3 +321,4 @@ public import Grammatik.Korpus.Programme.Korpus59
 public import Grammatik.Korpus.Programme.Korpus109
 public import Grammatik.Korpus.Programme.Korpus125
 public import Grammatik.Bausteine.Arena.ArenaDyn
+public import Grammatik.Parser.Spec.Zeugen
