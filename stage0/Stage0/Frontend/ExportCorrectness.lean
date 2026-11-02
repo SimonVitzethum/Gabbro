@@ -33,7 +33,7 @@ theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     before old/global normalization or G lowering can discard an annotation. -/
 theorem Compiled.exports_metadata {text : String} {options : Profil.Options} (result : Compiled text options)
     (h : result.unit.exportGate = .ok ()) :
-    (uMembers (pre108 result.source.items)).any ExportMetadata.itemMetadata = false :=
+    (uMembers (pre108 result.source.prepared.selected)).any ExportMetadata.itemMetadata = false :=
   ExportMetadata.check_sound _ (result.metadata.symm.trans h)
 
 /-- The entry-global adapter preserves both original operand snapshots inside implication.
@@ -54,13 +54,13 @@ theorem implication_old_export (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)
 /-- New constant headers are checked on the original source, before normalization. -/
 theorem Compiled.constant_exports_metadata {text : String} {options : Profil.Options}
     (result : Compiled text options)
-    (used : (uMembers (pre108 result.source.items)).any ExportMetadata.constantExpansion = true) :
-    (uMembers (pre108 result.source.items)).any ExportMetadata.itemMetadata = false :=
+    (used : (uMembers (pre108 result.source.prepared.selected)).any ExportMetadata.constantExpansion = true) :
+    (uMembers (pre108 result.source.prepared.selected)).any ExportMetadata.itemMetadata = false :=
   ExportMetadata.checkConstants_sound _ used result.constantExports
 
 /-- The actual compiler refuses new nonzero scalar initializers until image memory is initialized. -/
 theorem Compiled.initializer_exports {text : String} {options : Profil.Options} (result : Compiled text options) :
-    Frontend.uninitializedExport (uMembers (pre108 result.source.items)) result.unit = false :=
+    Frontend.uninitializedExport (uMembers (pre108 result.source.prepared.selected)) result.unit = false :=
   Frontend.checkInitializers_sound _ _ result.initializerExports
 
 /-- Every source image from the production compiler has the same canonical source program

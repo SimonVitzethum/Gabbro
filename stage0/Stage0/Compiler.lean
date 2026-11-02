@@ -98,13 +98,13 @@ theorem Compiled.invariants {text : String} {options : Profil.Options} (result :
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
 def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : Compiled text options) : Prop :=
-    let original := uMembers (pre108 result.source.items)
+    let original := uMembers (pre108 result.source.prepared.selected)
     let scope := result.source.scopes
     Profil.runnerCompatible options ∧
-    result.source.prepared.selected = result.source.items ∧
+    result.source.prepared.selected = Gabbro.Grammatik.Parser.Auswahl.waehleL options.mode result.source.items ∧
     lex text = .ok result.source.tokens ∧
     parseTopTief result.source.tokens = .ok result.source.items ∧
-    Oeffentlich.huelleZu result.source.items = true ∧
+    Oeffentlich.huelleZu result.source.prepared.selected = true ∧
     (scope.aliasConstants = uConstsRech (uKonstFns original) original [] ∨ scope.aliasConstants = scope.values) ∧
     Frontend.AliasAcyclic original ∧
     (Frontend.aliasNames original).Nodup ∧
@@ -143,7 +143,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
-  exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
+  exact ⟨result.source.prepared.compatible, result.source.prepared.selection, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted, result.arrayConstants, result.metadata, result.measures.property,
     result.measures.val.source, result.measureLengths, result.invariants⟩
@@ -183,7 +183,7 @@ theorem Compiled.termination {text : String} {options : Profil.Options} (result 
 theorem compile_transitions_certified {text : String} {options : Profil.Options}
     (result : Compiled text options) :
     ∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
-      OldSource.restore (uMembers (pre108 result.source.items)) result.unit raw = .ok result.program ∧
+      OldSource.restore (uMembers (pre108 result.source.prepared.selected)) result.unit raw = .ok result.program ∧
       ∀ c : Fin result.unit.fns.length, (fnAt result.unit c).name.startsWith "#transition#" = true →
         ∃ (state : UZustand) (tr : UTransition), transitionOfFn result.unit c = some (state, tr) ∧
           (Nonempty (TransitionExpansion raw c) ∨ Nonempty (TransitionShiftExpansion raw c)) := by

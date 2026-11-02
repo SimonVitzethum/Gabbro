@@ -43,7 +43,7 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The current compiler retains the explicit refusal for this source form. -/
-theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
+/-- Shipping selection removes the test-only function before compilation. -/
+theorem candidate_accepted : candidate.toOption.isSome = true := by decide +kernel
 
 end Gabbro.Stage0.TestBuildWitness
