@@ -383,6 +383,8 @@ theorem blatt_slots_t_gleich
   | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | locks L' hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | traverse u inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | retry n bis body ueber => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
@@ -417,6 +419,16 @@ theorem blatt_slots_t_gleich
       intro k fld'
       rfl
   | retires m st hh a =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      intro k fld'
+      rfl
+  | retScoped =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      intro k fld'
+      exact lese_slots_gleich _ _ _ _ _ _
+  | retWhyScoped =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'

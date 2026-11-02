@@ -165,7 +165,8 @@ theorem borrow_return {N : OwnerNamespace D} {s loaned : OwnerState D}
       | none => none
       | some returned => if returned.access sourceFrame t.handle then
           some ((s.withLedger ledger).withLedger returned) else none) = some s
-    rw [hend, if_pos guard.1.2.2]
+    simp only [hend]
+    rw [if_pos guard.1.2.2]
     cases s
     rfl
   · cases h

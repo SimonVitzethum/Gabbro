@@ -85,22 +85,22 @@ def FA3 : FreiForm FD3 where
   tab := false
   feld := 0
   zaehl := 0
-  hz := by decide
+  hz := by decide +kernel
   hpos := by decide
   komm := 1
-  hk := by decide
+  hk := by decide +kernel
   hzwei := by decide
   kopf := 2
-  hkopf := by decide
+  hkopf := by decide +kernel
   nxt := 1
-  hnxt := by decide
+  hnxt := by decide +kernel
   hk1 := by decide
   hk2 := by decide
   hf := by decide
 
 def LL3 : LinkFeld FA3 where
   f := 2
-  hf := by decide
+  hf := by decide +kernel
   h1 := by decide
   h2 := by decide
 
