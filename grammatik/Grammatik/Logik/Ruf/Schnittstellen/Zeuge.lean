@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Ruf.Schnittstellen.Kandidaten
+public import Grammatik.Logik.Ruf.Schnittstellen.Einschluss
 public import Grammatik.Logik.Ruf.Schnittstellen.Lokal
 public import Grammatik.Logik.Ruf.Schnittstellen.Rufstelle
 public import Grammatik.Logik.Ruf.Schnittstellen.Hoare
@@ -204,6 +205,51 @@ theorem stronger_interface_post_refused : ¬ PtrVerfeinert strongerInterfacePost
   change false = true at hp
   cases hp
 
+/-- A target whose requires is stronger than the interface pre is refused:
+    `true` needs `5 ≤ x` but the interface only promises `3 ≤ x`
+    (counterexample `x = 4`). -/
+def strongerTargetPre : Programm decl :=
+  { prog with requires := fun f => if f then .le (.lit 5) (.var .here) else prog.requires f }
+
+theorem stronger_target_pre_refused : ¬ PtrVerfeinert strongerTargetPre := by
+  intro h
+  have hr := (h true 0 rfl).1 entry (.cons ⟨4, by decide, by decide⟩ .nil) rfl
+  change false = true at hr
+  cases hr
+
+/-- Reversed implication is refused, both ways. The target pre does not imply
+    the interface pre (`x = 1` satisfies `true`'s requires but not the
+    interface `3 ≤ x`) ... -/
+theorem reversed_pre_refused :
+    ¬ (∀ (s0 : World decl) (ρ : Env decl sig.params),
+      ReqAmEintritt prog true s0 (umsig pointer.property ρ) →
+      (prog.ptrVertrag 0).preHolds s0 ρ) := by
+  intro h
+  have hr := h entry (.cons ⟨1, by decide, by decide⟩ .nil) rfl
+  change false = true at hr
+  cases hr
+
+/-- ... and the interface post does not imply the target ensures (`x = 4`
+    satisfies the interface `param ≤ result` but not `true`'s equality). -/
+theorem reversed_post_refused :
+    ¬ (∀ (s0 s1 : World decl) (ρ : Env decl sig.params) (v : ErgVal decl (decl.erg true)),
+      (prog.ptrVertrag 0).postHolds s0 s1 ρ (ptrResult pointer.property v) →
+      EnsAmRueck prog true s0 s1 (umsig pointer.property ρ) v) := by
+  intro h
+  have hp := h entry later arguments ⟨4, by decide, by decide⟩ rfl
+  change false = true at hp
+  cases hp
+
+/-- The conjunct reformulation fires on the jointly inhabited fixture: every
+    interface-pre conjunct (here: the single `3 ≤ x`) implies the selected
+    target's requires. -/
+theorem refinement_konjunkt_zeuge :
+    (∀ (s0 : World decl) (ρ : Env decl sig.params),
+      (∀ c ∈ konjunkte ((prog.ptrVertrag 0).pre), wahr? (eval s0 c s0 ρ) = true) →
+      ReqAmEintritt prog true s0 (umsig pointer.property ρ)) :=
+  ((ptrZielVerfeinert_konjunkt prog true 0 pointer.property).mp
+    (refinement true 0 pointer.property)).1
+
 /-- A contract-respecting abstract handler; it is not a source interpreter. -/
 def handler (f : decl.Fn) (σ : World decl) (ρ : Env decl (decl.params f)) : RufAusgang f :=
   .ok σ (ρ.get .here)
@@ -305,6 +351,75 @@ theorem ptrVertragsFreiB_zeuge :
   exact ⟨rfl,
     Gabbro.Grammatik.ptrVertragsFreiB_ok progFin_trivial_ausserhalb rfl⟩
 
+/-- A full callback cycle through a parameter: the interface pre at the
+    actual arguments, the selected target's concrete requires and ensures,
+    and the interface post on the transported result. Table reads flow
+    through `oldContract`-style orte (below) and rights through `SigPasst`
+    (source probes `param_ok`/`rechte_ok`). -/
+theorem callback_param_table_result_zeuge :
+    (prog.ptrVertrag 0).preHolds entry arguments ∧
+    ReqAmEintritt prog true entry (umsig pointer.property arguments) ∧
+    EnsAmRueck prog true entry later (umsig pointer.property arguments)
+      ⟨3, by decide, by decide⟩ ∧
+    (prog.ptrVertrag 0).postHolds entry later arguments
+      (ptrResult pointer.property ⟨3, by decide, by decide⟩) :=
+  ⟨rfl, rfl, rfl, rfl⟩
+
+/-- A proved implementation behind the interface (the thunk stand-in for a
+    foreign body): it respects every contract, refines the interface, and
+    the interface pre holds at the call arguments. -/
+theorem proved_foreign_thunk_zeuge :
+    RespektiertVertraege prog handler ∧ PtrVerfeinert prog ∧
+      (prog.ptrVertrag 0).preHolds entry arguments :=
+  ⟨handler_contracts, refinement, rfl⟩
+
+/-- A contract with a nonempty footprint (table reads in both halves):
+    each half flows into the whole, and emptiness of a shared carrier splits
+    per half, so no shared atomic hides in either. -/
+theorem nonempty_effects_flow_zeuge :
+    oldContract.pre.orte = [Sum.inl ()] ∧
+    oldContract.post.orte = [Sum.inl ()] ∧
+    oldContract.pre.orte ⊆ oldContract.orte ∧
+    oldContract.post.orte ⊆ oldContract.orte ∧
+    (∀ c ∈ oldContract.pre.orte, (fun _ : decl.Tab ⊕ decl.Glob => false) c = false) ∧
+    (∀ c ∈ oldContract.post.orte, (fun _ : decl.Tab ⊕ decl.Glob => false) c = false) := by
+  refine ⟨rfl, rfl, fun _ h => List.mem_append_left _ h,
+    fun _ h => List.mem_append_right _ h, fun _ _ => rfl, fun _ _ => rfl⟩
+
+/-- A forged image pointer is refused: no function conforms to signature
+    number `1`, so no `fnptr 1` value selects `true`. -/
+theorem forged_image_pointer_refused :
+    decl.passt true 1 = false ∧ ¬ ∃ v : Wert decl (.fnptr 1), v.val = true := by
+  refine ⟨rfl, fun h => ?_⟩
+  obtain ⟨⟨f, hf⟩, hv⟩ := h
+  subst hv
+  exact absurd hf (by decide)
+
+/-- Evaluating the interface post at the wrong entry world is refused: the
+    `old`-reading post holds from `entry` but not from `later` for the same
+    result, so the current world cannot stand in for the entry world. -/
+theorem old_current_mixup_refused :
+    oldContract.postHolds entry later arguments ⟨0, by decide, by decide⟩ ∧
+      ¬ oldContract.postHolds later later arguments ⟨0, by decide, by decide⟩ :=
+  ⟨rfl, by intro h; cases h⟩
+
+/-- A contract reading a shared-atomic carrier is detected: with the carrier
+    shared, `atomicFreeB` is `false`, so the interface is not admittable as
+    atomically free. -/
+theorem hidden_shared_atomic_refused :
+    oldContract.atomicFreeB (fun _ => true) = false :=
+  rfl
+
+/-- At program level: a unit whose interface reads a shared atomic is not
+    `PtrVertragsFrei` there. -/
+def badAtomProg : Programm decl :=
+  { prog with ptrVertrag := fun _ => oldContract }
+
+theorem hidden_shared_atomic_prog_refused :
+    ¬ PtrVertragsFrei badAtomProg (.inl ()) := by
+  intro h
+  exact (h 0).1 (by decide)
+
 end Gabbro.Grammatik.C06
 
 #print axioms Gabbro.Grammatik.PtrVerfeinert
@@ -318,3 +433,14 @@ end Gabbro.Grammatik.C06
 #print axioms Gabbro.Grammatik.abgK_indirekt_schliesst
 #print axioms Gabbro.Grammatik.C06.ptrPre_prefix_zeuge
 #print axioms Gabbro.Grammatik.C06.ptrVertragsFreiB_zeuge
+#print axioms Gabbro.Grammatik.C06.stronger_target_pre_refused
+#print axioms Gabbro.Grammatik.C06.reversed_pre_refused
+#print axioms Gabbro.Grammatik.C06.reversed_post_refused
+#print axioms Gabbro.Grammatik.C06.refinement_konjunkt_zeuge
+#print axioms Gabbro.Grammatik.C06.callback_param_table_result_zeuge
+#print axioms Gabbro.Grammatik.C06.proved_foreign_thunk_zeuge
+#print axioms Gabbro.Grammatik.C06.nonempty_effects_flow_zeuge
+#print axioms Gabbro.Grammatik.C06.forged_image_pointer_refused
+#print axioms Gabbro.Grammatik.C06.old_current_mixup_refused
+#print axioms Gabbro.Grammatik.C06.hidden_shared_atomic_refused
+#print axioms Gabbro.Grammatik.C06.hidden_shared_atomic_prog_refused
