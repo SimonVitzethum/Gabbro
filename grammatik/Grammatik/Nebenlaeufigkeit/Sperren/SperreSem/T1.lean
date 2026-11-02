@@ -68,6 +68,10 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .callIndElse p args he _ hr err, σ, ρ =>
+      indSonst R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' _ => .ok σ' ρ)
+        (fun σ' r => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang)
   | .locks L _ body, σ, ρ => freiH S L (execBlockH body ((U L σ).nimmt L) ρ)
   | .breaking _ body, σ, ρ => execBlockH body σ ρ
   | .traverse t inv body, σ, ρ =>
@@ -138,6 +142,10 @@ def execBlockH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .bindCallIndElse p args he _ hr err rest, σ, ρ =>
+      indSonst R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execBlockH rest σ' (.cons v ρ)).schrumpf)
+        (fun σ' r => (execEndH err σ' (.cons r ρ)).schrumpf.zuAusgang)
   | .bindCallElse f args he _ _ err rest, σ, ρ =>
       let σ := σ.lese Λ args.orte
       match R f σ (evalArgs σ args σ ρ) with
@@ -290,6 +298,10 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       | .why _ r => keinGrundSig hf hr r
       | .logik e => .logik e
       | .hardware e => .hardware e
+  | .bindCallIndElse p args he _ hr err rest, σ, ρ =>
+      indSonstE R p args he hr (σ.lese Λ (p.orte ++ args.orte)) ρ
+        (fun σ' v => (execEndH rest σ' (.cons v ρ)).schrumpf)
+        (fun σ' r => (execEndH err σ' (.cons r ρ)).schrumpf)
   | .narrow e lo' hi' sonst rest, σ, ρ =>
       let σ := σ.lese Λ e.orte
       let v := eval σ e σ ρ

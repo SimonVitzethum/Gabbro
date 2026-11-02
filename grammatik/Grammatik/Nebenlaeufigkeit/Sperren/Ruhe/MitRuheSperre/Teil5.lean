@@ -102,6 +102,8 @@ theorem execStmtH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       execStmtH_ru_call (g := g) (args := args) (hp := hp) (hr := hr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .callInd (n := n) p args hp hr, σ, ρ =>
       execStmtH_ru_callInd (n := n) (p := p) (args := args) (hp := hp) (hr := hr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, _, .callIndElse (n := n) p args he hp hr err, σ, ρ =>
+      execStmtH_ru_callIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (σ := σ) (ρ := ρ) (ih_execEndH_ru_err := execEndH_ru err) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .locks L hr body, σ, ρ =>
       execStmtH_ru_locks (hr := hr) (body := body) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_body := execBlockH_ru body) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, _, _, .breaking _ body, σ, ρ => by
@@ -154,6 +156,8 @@ theorem execBlockH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
       execBlockH_ru_bindCall (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .bindCallInd (n := n) p args he hp hr rest, σ, ρ =>
       execBlockH_ru_bindCallInd (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, _, .bindCallIndElse (n := n) p args he hp hr err rest, σ, ρ =>
+      execBlockH_ru_bindCallIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (ih_execEndH_ru_err := execEndH_ru err) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .bindCallElse g args he hp hr err rest, σ, ρ =>
       execBlockH_ru_bindCallElse (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlockH_ru_rest := execBlockH_ru rest) (ih_execEndH_ru_err := execEndH_ru err) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ =>
@@ -214,6 +218,8 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
       execEndH_ru_awaits (g := g) (payload := payload) (hp := hp) (hL := hL) (hat := hat) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest, σ, ρ =>
       execEndH_ru_bindCallInd (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
+  | _, _, Λ, .bindCallIndElse (n := n) p args he hp hr err rest, σ, ρ =>
+      execEndH_ru_bindCallIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (ih_execEndH_ru_err := execEndH_ru err) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .narrow e lo' hi' sonst rest, σ, ρ =>
       execEndH_ru_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEndH_ru_rest := execEndH_ru rest) (ih_execEndH_ru_sonst := execEndH_ru sonst) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
   | _, _, Λ, .narrowRequired e lo' hi' rest, σ, ρ =>

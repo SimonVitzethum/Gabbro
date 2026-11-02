@@ -154,6 +154,9 @@ def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .call g args _ _ => args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte)
   | .callInd (n := n) p args _ _ =>
       p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte
+  | .callIndElse (n := n) p args _ _ _ err =>
+      p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
+        endblockOrteP P err
   | .locks _ _ body => blockOrteP P body
   | .breaking _ body => blockOrteP P body
   | .traverse _ inv body => inv.orte ++ blockOrteP P body
@@ -184,6 +187,9 @@ def blockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bindCallInd (n := n) p args _ _ _ rest =>
       p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
         blockOrteP P rest
+  | .bindCallIndElse (n := n) p args _ _ _ err rest =>
+      p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
+        endblockOrteP P err ++ blockOrteP P rest
   | .bindCallElse g args _ _ _ err rest =>
       args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte) ++ endblockOrteP P err ++
         blockOrteP P rest
@@ -231,6 +237,9 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bindCallInd (n := n) p args _ _ _ rest =>
       p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
         endblockOrteP P rest
+  | .bindCallIndElse (n := n) p args _ _ _ err rest =>
+      p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
+        endblockOrteP P err ++ endblockOrteP P rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
   | .narrowRequired e _ _ rest => e.orte ++ endblockOrteP P rest
@@ -279,6 +288,8 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
   | _, _, .awaits g pl hp hL hat rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindCallInd p args he hp hr rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]

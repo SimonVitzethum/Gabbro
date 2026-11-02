@@ -90,6 +90,7 @@ def Stmt.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .retry _ _ body ueber => body.gOk K Rg && ueber.gOk K Rg
   | .forever _ _ body => body.gOk K Rg
   | .callInd (n := n) .. => K n
+  | .callIndElse (n := n) _ _ _ _ err => K n && err.gOk K Rg
   | _ => true
 
 /-- The block is in the widened fragment: a register read of `r` where
@@ -101,6 +102,7 @@ def Block.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bind _ rest => rest.gOk K Rg
   | .bindCall _ _ _ _ _ rest => rest.gOk K Rg
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.gOk K Rg
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => K n && err.gOk K Rg && rest.gOk K Rg
   | .bindCallElse _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
@@ -134,6 +136,7 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .regReadElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
   | .awaits _ _ _ _ _ rest => rest.gOk K Rg
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.gOk K Rg
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => K n && err.gOk K Rg && rest.gOk K Rg
   | .narrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
   | .narrowRequired _ _ _ rest => rest.gOk K Rg
   | .exchange _ _ _ _ rest => rest.gOk K Rg
@@ -178,6 +181,8 @@ theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg 
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .bindCallIndElse p args he hp hr err rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .exchange _ _ _ _ rest => by
@@ -201,6 +206,7 @@ def Stmt.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .consumeTraverse _ _ _ _ _ _ body => body.regs
   | .retry _ _ body ueber => body.regs ++ ueber.regs
   | .forever _ _ body => body.regs
+  | .callIndElse _ _ _ _ _ err => err.regs
   | _ => []
 
 /-- The registers a block reads (`let x = R`, `let x = R else …`). -/
@@ -211,6 +217,7 @@ def Block.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind _ rest => rest.regs
   | .bindCall _ _ _ _ _ rest => rest.regs
   | .bindCallInd _ _ _ _ _ rest => rest.regs
+  | .bindCallIndElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindCallElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
@@ -244,6 +251,7 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
   | .awaits _ _ _ _ _ rest => rest.regs
   | .bindCallInd _ _ _ _ _ rest => rest.regs
+  | .bindCallIndElse _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .narrow _ _ _ sonst rest => sonst.regs ++ rest.regs
   | .narrowRequired _ _ _ rest => rest.regs
   | .exchange _ _ _ _ rest => rest.regs

@@ -29,6 +29,9 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢; exact ⟨h, h'⟩
   | _, _, _, _, .callInd (n := n) .., h, h' => by
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢; exact ⟨h, h'⟩
+  | _, _, _, _, .callIndElse (n := n) _ _ _ _ _ err, h, h' => by
+      simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩
   | _, _, _, _, .locks L _ body, h, h' => by
       simp only [mS, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨h.1, h'.1⟩, mB_und body h.2 h'.2⟩
@@ -71,6 +74,9 @@ theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | _, _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest, h, h' => by
       simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨h.1, h'.1⟩, mB_und rest h.2 h'.2⟩
+  | _, _, _, _, .bindCallIndElse (n := n) _ _ _ _ _ err rest, h, h' => by
+      simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mB_und rest h.2 h'.2⟩
   | _, _, _, _, .bindCallElse g _ _ _ _ err rest, h, h' => by
       simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mB_und rest h.2 h'.2⟩
@@ -130,6 +136,9 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest, h, h' => by
       simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨h.1, h'.1⟩, mE_und rest h.2 h'.2⟩
+  | _, _, _, .bindCallIndElse (n := n) _ _ _ _ _ err rest, h, h' => by
+      simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mE_und rest h.2 h'.2⟩
   | _, _, _, .narrow _ _ _ sonst rest, h, h' => by
       simp only [mE, Bool.and_eq_true] at h h' ⊢
       exact ⟨mE_und sonst h.1 h'.1, mE_und rest h.2 h'.2⟩

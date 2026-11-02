@@ -25,6 +25,8 @@ theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .onWhy _ arms => ruGArms_gOk K Rg arms
   | _, _, _, _, .call .. => gOk_nachΛ _ _ _ _
   | _, _, _, _, .callInd .. => gOk_nachΛ _ _ _ _
+  | _, _, _, _, .callIndElse (n := n) _ _ _ _ _ err =>
+      (gOk_nachΛ _ _ _ _).trans (kongr₂ (· && ·) rfl ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err)))
   | _, _, _, _, .locks _ _ body => ruB_gOk K Rg body
   | _, _, _, _, .breaking _ body => ruB_gOk K Rg body
   | _, _, _, _, .traverse _ _ body => ruB_gOk K Rg body
@@ -53,6 +55,9 @@ theorem ruB_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .bindCall _ _ _ _ _ rest => (gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest)
   | _, _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (K (n + 1) && ·) ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
+  | _, _, _, _, .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      kongr₂ (fun x y => K (n + 1) && x && y) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+        ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest =>
       kongr₂ (· && ·) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
         ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
@@ -98,6 +103,9 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .bindCallInd (n := n) _ _ _ _ _ rest =>
       congrArg (K (n + 1) && ·) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
+  | _, _, _, .bindCallIndElse (n := n) _ _ _ _ _ err rest =>
+      kongr₂ (fun x y => K (n + 1) && x && y) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
+        ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
   | _, _, _, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruEnd_gOk K Rg rest)
   | _, _, _, .narrowRequired _ _ _ rest => ruEnd_gOk K Rg rest

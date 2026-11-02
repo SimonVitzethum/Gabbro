@@ -54,6 +54,49 @@ theorem execStmtH_ru_callInd {V : Vertrag D}
         exact Or.inr ⟨e', e, rfl, rfl, ht⟩
 
 set_option linter.unusedSectionVars false in
+theorem execStmtH_ru_callIndElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (n)
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEndH_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), EndRel (execEndH S.mitRuhe O' U' passes R' (ruEnd err) (worldR σ) (envR ρ)) (execEndH S O U passes R err σ ρ))
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.callIndElse (n := n) p args he hp hr err : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS]
+  erw [execStmtH_nachΛ]
+  simp only [execStmtH, indSonst]
+  erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+    kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+  erw [lese_worldR, eval_ru, evalArgs_ru]
+  cases h : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ with
+  | mk g hg =>
+      rw [valR_fnptr]
+      dsimp only
+      erw [umsig_ru hg]
+      rcases hR g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
+          (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ))
+        with hx' | ⟨e', e, h1, h2, ht⟩
+      · erw [hx']
+        cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs
+            (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+        | ok σ' v => (try erw [hx]); exact Or.inl rfl
+        | why σ' r =>
+            try erw [hx]
+            exact EndRel.zuAusgang (EndRel.schrumpf (ih_execEndH_ru_err σ' (Env.cons (grundSig hg r) ρ)))
+        | logik e => (try erw [hx]); exact Or.inl rfl
+        | hardware e => (try erw [hx]); exact Or.inl rfl
+      · erw [h1, h2]
+        exact Or.inr ⟨e', e, rfl, rfl, ht⟩
+
+set_option linter.unusedSectionVars false in
 theorem execStmtH_ru_locks {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

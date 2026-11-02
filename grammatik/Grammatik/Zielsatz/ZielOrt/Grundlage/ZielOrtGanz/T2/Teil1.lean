@@ -121,6 +121,19 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
         cases he
         exact hR _ _ _ _ heq
       · cases he
+  | .callIndElse p args he hp hr err, h, σ, ρ, e', he' => by
+      simp only [Stmt.logikFrei] at h
+      simp only [execStmt, indSonst] at he'
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he'
+      obtain ⟨f, hf⟩ := pv
+      simp only at he'
+      split at he'
+      · cases he'
+      · exact Endblock.logikFrei_ok hR err h _ _ _ (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he'))
+      · rename_i heq
+        cases he'
+        exact hR _ _ _ _ heq
+      · cases he'
   | .axiomCall a args h' hw hg hd hgd, _, σ, ρ, e', he => by
       simp only [execStmt, axiomAntwort] at he
       split at he <;> cases he
@@ -182,6 +195,20 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.schrumpf_logik he)
       · rename_i r _
         exact keinGrundSig hf hr r
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+      · cases he
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+      simp only [Block.logikFrei, Bool.and_eq_true] at h
+      simp only [execBlock, indSonst] at he
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
+      obtain ⟨f, hf⟩ := pv
+      simp only at he
+      split at he
+      · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _
+          (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he))
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
@@ -360,6 +387,20 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
       · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
       · rename_i r _
         exact keinGrundSig hf hr r
+      · rename_i heq
+        cases he
+        exact hR _ _ _ _ heq
+      · cases he
+  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd, indSonstE] at he
+      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
+      obtain ⟨f, hf⟩ := pv
+      simp only at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _
+          (EndAusgang.schrumpf_logik he)
       · rename_i heq
         cases he
         exact hR _ _ _ _ heq
