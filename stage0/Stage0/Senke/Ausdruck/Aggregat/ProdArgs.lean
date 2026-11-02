@@ -52,7 +52,7 @@ open Gabbro.Grammatik Runner.IR
 /-- Reserve the product marker as well as all fields, including the empty case. -/
 def prodL (d : Nat) (args : Option (List II × Nat)) : Option (List II × Nat) := do
   let result ← args
-  pure (result.1, max result.2 (d + 1))
+  pure ((if result.2 = d then [ci 1 d 0 0] else result.1), max result.2 (d + 1))
 
 /-- Product packing always reserves a positive result span. -/
 theorem lowE_top_prod (d : Nat) (args : Option (List II × Nat))
