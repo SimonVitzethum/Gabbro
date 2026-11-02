@@ -91,7 +91,7 @@ def rewriteExpr (items : List SItemTief) (closed : List Closed) (locals : Locals
   | .field value _ | .arrow value _ =>
     if (dynamicType items closed locals value).isSome then throw "dyn.implementation-test"
     return e
-  | .ext .inst [name, _] args =>
+  | .ext .instantiate (name :: _) args =>
     checkCall items closed locals name args
     return e
   | .call name args | .built name args =>

@@ -108,6 +108,8 @@ def druckAnw : SAnw → List Token
   | .set z o w => druckToks z ++ [.zeichen o] ++ druckToks w ++ [.zeichen ";"]
   | .shift z a b =>
     [.wort "transition"] ++ druckToks z ++ [.zeichen ":", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
+  | .genericCall name words args =>
+    druckToks (.ext .instantiate (name :: words) args) ++ [.zeichen ";"]
   | .call f xs => rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .zeichen ";"]
   | .lcall c => druckLibraryCall c ++ [.zeichen ";"]
   | .cond c t eis s =>

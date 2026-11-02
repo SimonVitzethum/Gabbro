@@ -199,6 +199,10 @@ inductive SItemTief
   | specGroupT : String → List String → List String → List FnSig → SItemTief
   /-- A concrete type tuple, effect arguments and ordinary implementation functions. -/
   | implGroupT : String → List STyp → List (List SEffekt) → List SItemTief → SItemTief
+  /-- A parametric module template; instantiated before ordinary name resolution. -/
+  | moduleTemplateT : String → List SGenericParam → List SItemTief → SItemTief
+  /-- A generative module application: each written alias owns fresh declarations. -/
+  | moduleUseT : String → List String → List String → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
@@ -280,6 +284,10 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     strEq n m && beqWorte ts us && beqWorte es ds && beqFnSigs fs gs
   | .implGroupT n ts es fs, .implGroupT m us ds gs =>
     strEq n m && beqSTypList ts us && beqEffectArgs es ds && beqSItemTiefList fs gs
+  | .moduleTemplateT n ps xs, .moduleTemplateT m qs ys =>
+    strEq n m && beqSGenericParams ps qs && beqSItemTiefList xs ys
+  | .moduleUseT n p args, .moduleUseT m q other =>
+    strEq n m && beqWorte p q && beqWorte args other
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true

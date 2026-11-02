@@ -1,6 +1,39 @@
 module
 
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
+public import Grammatik.Parser.Item.ElementTief.FunctionArguments
+public import Grammatik.Parser.Namen.References
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 @[expose] public section
 
@@ -54,22 +87,34 @@ def Kontext.ruf (k : Kontext) (s : String) : String :=
   | [n, raw] => base n ++ "::[" ++ raw
   | _ => base s
 
-/-- Resolve paths in explicit type tuples before instantiation, including table and alias names. -/
-def typArgumentTokens (k : Kontext) : Nat → List Token → List Token
-  | 0, ts => ts
+/-- Explicit argument groups are resolved in the caller's scope before generic expansion. Paths
+    are kept whole; field names following `.`/`->` remain members rather than global references. -/
+def genericArgumentTokens (k : Kontext) : Nat → List Token → List Token
+  | 0, tokens => tokens
   | _ + 1, [] => []
-  | f + 1, t@(.wort _) :: ts => t :: typArgumentTokens k f ts
-  | f + 1, t :: ts =>
-    match nameText t with
-    | some n =>
-      let (ps, rest) := sammleSegmente ts [n]
-      .ident (k.ref ("::".intercalate ps)) :: typArgumentTokens k f rest
-    | none => t :: typArgumentTokens k f ts
+  | fuel + 1, .zeichen dot :: field :: rest =>
+    if dot == "." || dot == "->" then
+      .zeichen dot :: field :: genericArgumentTokens k fuel rest
+    else .zeichen dot :: genericArgumentTokens k fuel (field :: rest)
+  | fuel + 1, token :: rest => match nameText token with
+    | some name =>
+      let (path, tail) := sammleSegmente rest [name]
+      let text := String.intercalate "::" path
+      let resolved := k.ref text
+      let head := if path.length == 1 && strEq resolved text then token else .ident resolved
+      head :: genericArgumentTokens k fuel tail
+    | none => token :: genericArgumentTokens k fuel rest
 
-def Kontext.typArgument (k : Kontext) (s : String) : String :=
-  match lex s with
-  | .error _ => s
-  | .ok ts => " ".intercalate ((typArgumentTokens k (ts.length + 1) ts.dropLast).map instWort)
+def genericArgument (k : Kontext) (word : String) : String :=
+  match lex word with
+  | .error _ => word
+  | .ok tokens =>
+    let k := match parseFunctionArgument (tokens.length * 4 + 32) tokens with
+      | .ok (.literal sig body) =>
+        { k with lok := sig.params.map Prod.fst ++ literalLocals body }
+      | _ => k
+    let tokens := tokens.filter (fun | .ende => false | _ => true)
+    String.intercalate " " ((genericArgumentTokens k (tokens.length + 1) tokens).map zeigeTok)
 
 mutual
 /-- **An expression, resolved.** -/
@@ -90,11 +135,12 @@ def aus (k : Kontext) : SExpr → SExpr
     else match aufloeseK k.q ⟨none, []⟩ k.von [g, f] with
       | some c => .variable (schluessel k.q.namen c)
       | none => .why g f
+  | .ext .instantiate (name :: words) xs =>
+    .ext .instantiate (k.ruf name :: words.map (genericArgument k)) (ausL k xs)
   | .ext .all (x :: d :: ns) xs => .ext .all (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .any (x :: d :: ns) xs => .ext .any (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .count (x :: d :: ns) xs => .ext .count (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .dyn [n] xs => .ext .dyn [k.ref n] (ausL k xs)
-  | .ext .inst [n, raw] xs => .ext .inst [k.ruf n, k.typArgument raw] (ausL k xs)
   | .ext .mem (d :: ns) xs => .ext .mem (d :: ns.map k.ref) (ausL k xs)
   | .ext w ns xs => .ext w ns (ausL k xs)
   | e => e
@@ -110,7 +156,7 @@ def ausO (k : Kontext) : Option SExpr → Option SExpr
 
 /-- **A type, resolved.** -/
 def typ (k : Kontext) : STyp → STyp
-  | .dyn n raw => .dyn (k.ref n) (raw.map k.typArgument)
+  | .dyn n raw => .dyn (k.ref n) (raw.map (genericArgument k))
   | .atom s => .atom (k.ref s)
   | .path ps => if k.nenntItem ps then .atom (k.ref ("::".intercalate ps)) else .path ps
   | .ptr r w t => .ptr r w (typ k t)
@@ -149,17 +195,6 @@ def klausel (k : Kontext) : SKlausel → SKlausel
   | .load p => .load (k.pfad p)
   | .effs es => .effs (es.map (effekt k))
   | c => c
-
-/-- The names a statement binds for the statements after it. -/
-def gebunden : SAnw → List String
-  | .bind _ x _ _ | .bindAxiomOpt x _ _ => [x]
-  | .bindElse x _ _ _ _ | .bindAxiomOptElse x _ _ _ _ => [x]
-  | .bindLib _ x _ _ => [x]
-  | .alloc _ x _ _ _ _ => [x]
-  | .allocVon _ x _ _ => [x]
-  | .await x _ _ _ => [x]
-  | .swap x _ _ _ => [x]
-  | _ => []
 
 /-- An ender, resolved. -/
 def ende (k : Kontext) : Option SEnde → Option SEnde
@@ -212,6 +247,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .child s => .child (anw k s)
   | .start fs => .start (fs.map k.ref)
   | .block ss e => .block (anwL k ss) (ende (k.mit (ss.flatMap gebunden)) e)
+  | .genericCall name words args => .genericCall (k.ruf name) (words.map (genericArgument k)) (args.map (aus k))
   | .allocVon m x t a => .allocVon m x (typO k t) (k.ref a)
   | s => s
 def anwL (k : Kontext) : List SAnw → List SAnw
@@ -221,13 +257,18 @@ end
 
 /-- **A function head, resolved**: its own key; parameters are locals of its clauses. -/
 def sig (k : Kontext) (s : FnSig) : FnSig :=
-  let k' := k.mit (s.params.map Prod.fst)
+  let k' := k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)
   { s with
     name := k.eigen s.name
-    params := s.params.map fun (n, t) => (n, typ k t)
-    res := typO k s.res
+    params := s.params.map fun (n, t) => (n, typ k' t)
+    res := typO k' s.res
     fehler := s.fehler.map k.ref
-    klauseln := s.klauseln.map (klausel k') }
+    klauseln := s.klauseln.map (klausel k')
+    generics := s.generics.map fun
+      | .type n bounds => .type n (bounds.map k.ref)
+      | .constant n ty => .constant n (typ k' ty)
+      | .function n (.raw raw) => .function n (.raw (genericArgument k' raw))
+      | .function n ty => .function n (typ k' ty) }
 
 mutual
 /-- A constant value, resolved. -/

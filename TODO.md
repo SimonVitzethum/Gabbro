@@ -341,3 +341,6 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   14. C16 G/GX replay and ownership conservation.
   15. C16 counterprobe binding, artifact identity and measured status.
   16. C16 connected export/Stage-0 correctness with emitted sample work.
+- Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
+  `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
+  TODO (Muse): prove generic expansion soundness for the connected implementation.

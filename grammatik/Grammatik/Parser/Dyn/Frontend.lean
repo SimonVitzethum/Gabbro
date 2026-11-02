@@ -18,8 +18,8 @@ def resolveKnownBodies (source : List SItemTief) : SItemTief → Except String S
           | .error _ => pure e
         match e with
         | .call name args => resolve name none args
-        | .ext .inst [name, raw] args =>
-          match Spec.explicitTypes raw with
+        | .ext .instantiate (name :: words) args =>
+          match Spec.explicitTypes (String.intercalate ", " words) with
           | .ok types => resolve name (some types) args
           | .error _ => pure e
         | _ => pure e }

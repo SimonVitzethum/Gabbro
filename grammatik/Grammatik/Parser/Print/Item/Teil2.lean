@@ -27,6 +27,11 @@ def druckItem : SItemTief → List Token
     (druckItem decl).dropLast ++ [.wort "by", nameTok spec, .zeichen ";"]
   | .modT p its => [.wort "module"] ++ rohToks p ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
   | .useT p => ([.wort "use"] ++ pfadToks p ++ [.zeichen ";"])
+  | .moduleTemplateT n params its => [.wort "module"] ++ rohToks n ++
+    druckGenericParams params ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
+  | .moduleUseT n path args => [.wort "use", nameTok n, .zeichen "="] ++
+    pfadToks path ++ [.zeichen "::", .zeichen "["] ++
+    rohToks (String.intercalate ", " args) ++ [.zeichen "]", .zeichen ";"]
   | .typeT fl n args ord t =>
     (fl.map (fun w => Token.wort w) ++ [.wort "type", nameTok n] ++
       (match args with

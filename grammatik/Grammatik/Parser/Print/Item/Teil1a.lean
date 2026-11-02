@@ -19,7 +19,7 @@ def druckPred (e : SExpr) : List Token :=
     match k with
     | .text => druckToks e
     | .call => druckToks e
-    | .label | .inst | .dyn => druckToks e
+    | .label | .instantiate | .dyn => druckToks e
     | _ => (druckToks e).drop 1 |>.dropLast
   | _ => druckToks e
 
@@ -71,9 +71,22 @@ def druckParams : List (String × STyp) → List Token
   | [p] => druckParam p
   | p :: ps => druckParam p ++ [.zeichen ","] ++ druckParams ps
 
+/-- Generic parameters print their declared kinds; constants use the explicit `const` spelling. -/
+def druckGenericParam : SGenericParam → List Token
+  | .type n bounds => [nameTok n] ++ (match bounds with
+    | [] => []
+    | b :: bs => [.zeichen ":", nameTok b] ++ bs.flatMap (fun x => [.zeichen "+", nameTok x]))
+  | .constant n ty => [nameTok n, .zeichen ":", .wort "const"] ++ druckTyp ty
+  | .function n ty => [nameTok n, .zeichen ":"] ++ druckTyp ty
+
+def druckGenericParams : List SGenericParam → List Token
+  | [] => []
+  | p :: ps => [.zeichen "["] ++ druckGenericParam p ++
+    ps.flatMap (fun q => .zeichen "," :: druckGenericParam q) ++ [.zeichen "]"]
+
 /-- A function head: `[art] fn name (params) [-> T] [or R] clauses`. -/
 def druckFnSig (s : FnSig) : List Token :=
-  (if strEq s.art "" then [] else [.wort s.art]) ++ [.wort "fn", nameTok s.name, .zeichen "("] ++
+  (if strEq s.art "" then [] else [.wort s.art]) ++ [.wort "fn", nameTok s.name] ++ druckGenericParams s.generics ++ [.zeichen "("] ++
     druckParams s.params ++ [.zeichen ")"] ++
     (match s.res with
       | some t => [.zeichen "->"] ++ druckTyp t

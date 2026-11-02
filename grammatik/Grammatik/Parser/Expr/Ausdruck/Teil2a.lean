@@ -3,7 +3,7 @@ module
 public import Grammatik.Parser.Lex.Lexer
 import all Init.Data.Repr
 import all Init.Data.String.Defs
-public import Grammatik.Parser.Expr.Ausdruck.Teil1
+public import Grammatik.Parser.Expr.GenericArguments
 
 @[expose] public section
 
@@ -218,12 +218,12 @@ def parseKopf (f : Nat) (toks : List Token) :
       | some s =>
         match sammleSegmente rest [s] with
         | (segs, .zeichen "::" :: .zeichen "[" :: rest') => do
-          let (ws, r) ← parseInstWorte f rest' 0
-          match r with
-          | .zeichen "(" :: r' =>
-            let (args, r'') ← parseArgs f r'
-            return (.ext .inst ["::".intercalate segs, " ".intercalate ws] args, r'')
-          | _ => .error "spec.call.arguments: wanted ("
+          let (words, after) ← genericArguments rest' [] [] []
+          match after with
+          | .zeichen "(" :: tail => do
+            let (args, remaining) ← parseArgs f tail
+            pure (.ext .instantiate (("::".intercalate segs) :: words) args, remaining)
+          | _ => .error "generic instantiation without call arguments"
         | (segs, .zeichen "(" :: rest') =>
           match parseArgs f rest' with
           | .ok (args, rest'') =>

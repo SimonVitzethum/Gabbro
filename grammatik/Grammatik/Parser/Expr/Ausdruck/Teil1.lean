@@ -25,9 +25,11 @@ inductive XKind
   | all | any | count | mem | reach | imp | text | call
   /-- One labelled call argument: `names = [label]`, `subs = [value]`. -/
   | label
-  | inst
   /-- Producer: names = [spec], subs = [payload]. -/
   | dyn
+  /-- Explicit instantiation: `names = callee :: argument spellings`, `subs = call arguments`.
+      Argument spellings are balanced token groups, interpreted by the declared parameter kind. -/
+  | instantiate
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool
@@ -97,6 +99,17 @@ def beqSExprList : List SExpr → List SExpr → Bool
   | _, _ => false
 end
 
+/-- One token as raw text (for unsplit headers). -/
+def zeigeTok : Token → String
+  | .ident s => s
+  | .wort s => s
+  | .num n => toString n
+  | .float s => s
+  | .text s => "\"" ++ s ++ "\""
+  | .zeichen s => s
+  | .doku s => "///" ++ s
+  | .ende => "<ende>"
+
 /-- A name token (identifier or contextual keyword) with its text.
     `parse.rs` `erwarte_ident` takes the same two token shapes. -/
 def nameText : Token → Option String
@@ -150,27 +163,6 @@ where
       ds.all istZiffer &&
       (let n := ds.foldl (fun a c => 10 * a + (c.toNat - 48)) 0
        1 ≤ n && n ≤ 64)
-
-/-- Keep explicit call type arguments as source tokens until the type reader is available.
-    `ext inst [callee, arguments] operands` is consumed before export. -/
-def instWort : Token → String
-  | .ident s | .wort s | .zeichen s | .float s => s
-  | .num n => toString n
-  | _ => ""
-
-def parseInstWorte : Nat → List Token → Nat → Except String (List String × List Token)
-  | 0, _, _ => .error "spec.call.arguments: out of fuel"
-  | _ + 1, [], _ => .error "spec.call.arguments: wanted ]"
-  | f + 1, .zeichen "]" :: rest, 0 => .ok ([], rest)
-  | f + 1, .zeichen "]" :: rest, d + 1 => do
-      let (ws, r) ← parseInstWorte f rest d
-      return ("]" :: ws, r)
-  | f + 1, .zeichen "[" :: rest, d => do
-      let (ws, r) ← parseInstWorte f rest (d + 1)
-      return ("[" :: ws, r)
-  | f + 1, t :: rest, d => do
-      let (ws, r) ← parseInstWorte f rest d
-      return (instWort t :: ws, r)
 
 /-- One spelled operator of the `||` level. -/
 def opOder : List Token → Option (List Token)

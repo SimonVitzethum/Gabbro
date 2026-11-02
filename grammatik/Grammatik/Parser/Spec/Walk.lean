@@ -51,12 +51,12 @@ def Walk.expr (w : Walk) (locals : Locals) : Nat → SExpr → Except String SEx
       | .ext .dyn ns args => do
         if w.resolveSpecs then throw "dyn.unexpanded-producer"
         return .ext .dyn ns (← args.mapM recur)
-      | .ext .inst [name, raw] args => do
-        if !w.resolveSpecs then return .ext .inst [name, raw] (← args.mapM recur)
-        let types ← explicitTypes raw
+      | .ext .instantiate (name :: words) args => do
+        if !w.resolveSpecs then return .ext .instantiate (name :: words) (← args.mapM recur)
+        let types ← explicitTypes (String.intercalate ", " words)
         let args ← args.mapM recur
         return .call (← w.call locals name (some types) args) args
-      | .ext .inst _ _ => do throw "spec.call.arguments"
+      | .ext .instantiate [] _ => do throw "spec.call.arguments"
       | .field x n => do
         let x ← recur x
         match x with
@@ -191,6 +191,12 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .call name args =>
       let .call name args ← ex (.call name args) | throw "spec.statement.call"
       return .call name args
+    | .genericCall name words args =>
+      let e ← ex (.ext .instantiate (name :: words) args)
+      match e with
+      | .call target values => return .call target values
+      | .ext .instantiate (target :: arguments) values => return .genericCall target arguments values
+      | _ => throw "spec.statement.call"
     | .cond e body arms other => return .cond (← ex e) (← st body) (← arms.mapM st) (← other.mapM st)
     | .elsif e body => return .elsif (← ex e) (← st body)
     | .cases e arms =>

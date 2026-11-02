@@ -90,7 +90,7 @@ def explicitCallTokens : List Token :=
 
 theorem explicit_call_parser_zeuge :
     beqTop (parseTop explicitCallTokens)
-      (.ok (.ext .inst ["Shape::area", "index into Circles"] [.variable "c"])) = true := by rfl
+      (.ok (.ext .instantiate ["Shape::area", "index into Circles"] [.variable "c"])) = true := by rfl
 
 theorem explicit_statement_parser_zeuge :
     beqSAnw ((parseKopfStmt 1000 (explicitCallTokens.dropLast ++ [.zeichen ";"])).toOption.map Prod.fst

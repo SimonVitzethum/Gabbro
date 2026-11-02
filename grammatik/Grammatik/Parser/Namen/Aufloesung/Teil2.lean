@@ -95,11 +95,11 @@ def item (k : Kontext) : SItemTief → SItemTief
       (fs.map fun
         | .fnT s b => .fnT { sig k s with name := s.name } (anw (k.mit (s.params.map Prod.fst)) b)
         | it => it)
-  | .fnT s b => .fnT (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+  | .fnT s b => .fnT (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .transT target s b =>
-    .transT (k.ref target) (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+    .transT (k.ref target) (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .protoT s => .protoT (sig k s)
-  | .specT s p => .specT (sig k s) (aus (k.mit (s.params.map Prod.fst)) p)
+  | .specT s p => .specT (sig k s) (aus (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) p)
   | .asmT s h => .asmT (sig k s) h
   | .tableT n v c b o sh ps => .tableT (k.eigen n) (v.map k.ref) (ausO k c) b o sh (ps.map (tabTeil k))
   | .lockT n ps rk h sh m i =>
