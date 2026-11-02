@@ -141,7 +141,7 @@ theorem akteurS_dannBindCallInd {D : Deklaration} {P : Programm D} {O : Orakel D
   have hev : ∀ σ : World D, GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hss.1.1 h') h)
+    rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hss.1.1.1.1 h') h)
       (hgσ.lese Λ Λ _ _) ρ]
     exact hv
   obtain ⟨hFad, hReq⟩ := pushS_gen hO hRL hQ hS hsp hK hFragS hF hhead (p.orte ++ args.orte) g
@@ -150,7 +150,7 @@ theorem akteurS_dannBindCallInd {D : Deklaration} {P : Programm D} {O : Orakel D
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
       rw [evalArgs_gleichAuf args
-        (fun _ h => args_stabil (hFS _) args (fun _ h' => hss.1.2 h') h) (hgσ.lese Λ Λ _ _) ρ])
+        (fun _ h => args_stabil (hFS _) args (fun _ h' => hss.1.1.1.2 h') h) (hgσ.lese Λ Λ _ _) ρ])
     ρ (.wartet rest k) (fun L => held_nachSig_iff _ _ L)
     (fun hok => by
       obtain ⟨hks', hss', hk⟩ := hok

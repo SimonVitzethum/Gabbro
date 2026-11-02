@@ -137,13 +137,13 @@ theorem akteurG_dannBindCallInd {D : Deklaration} {P : Programm D} {O : Orakel D
   have hev : ∀ σ : World D, GleichAuf (fussOrteG P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hss.1.1 h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hss.1.1.1.1 h) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
   obtain ⟨hFad, hReq⟩ := pushG_gen hO hRL hK hFrag hF hhead (p.orte ++ args.orte) g
     (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
-      rw [evalArgs_gleichAuf args (fun _ h => hss.1.2 h) (hgσ.lese Λ Λ _ _) ρ])
+      rw [evalArgs_gleichAuf args (fun _ h => hss.1.1.1.2 h) (hgσ.lese Λ Λ _ _) ρ])
     ρ (.wartet rest k)
     (fun hok => by
       obtain ⟨hks', hss', hk⟩ := hok
