@@ -261,7 +261,6 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
       endNarrowRequired_case hS hA hlo0 hens (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, Γ, Λ, .exchange g neu proof0 proof1 rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_exchange (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (g := g) (neu := neu) (proof0 := proof0) (proof1 := proof1) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
-  | _, _, _, .narrowRequired .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
   | _, _, _, .retScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
   | _, _, _, .retWhyScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
 
