@@ -44,4 +44,5 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil1
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Zeugen
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil2
