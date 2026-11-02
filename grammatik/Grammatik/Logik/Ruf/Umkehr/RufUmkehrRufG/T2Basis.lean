@@ -183,7 +183,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
       simp only [execStmt]
-      exact ⟨h1, h1.evalErg e ρ⟩
+      exact ⟨h1.gibt_foldl R.scopes, h1.evalErg e ρ⟩
   | _, _, _, _, _, .retWhy .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .retWhyScoped .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .leave .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
@@ -335,7 +335,7 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ e.orte
       simp only [execEnd]
-      exact ⟨h1, h1.evalErg e ρ⟩
+      exact ⟨h1.gibt_foldl R.scopes, h1.evalErg e ρ⟩
   | _, _, _, .retWhy .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
   | _, _, _, .retWhyScoped .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
   | _, _, _, .leave .., _, ho => by simp only [Endblock.kOk, Bool.false_eq_true] at ho
