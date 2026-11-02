@@ -120,7 +120,7 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
   | .intBuiltin1 op a => .intBuiltin1 op (a.ren r)
   | .intBuiltin2 op a b => .intBuiltin2 op (a.ren r) (b.ren r)
   | .count n body => .count n (body.ren (Var.hoch r))
-  | .prod r args => .prod r (args.ren r)
+  | .prod n args => .prod n (args.ren r)
   | .prodGet v i => .prodGet (v.ren r) i
   | .prodSet v i e => .prodSet (v.ren r) i (e.ren r)
 

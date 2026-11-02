@@ -101,12 +101,10 @@ def argsS (E : Sz (SE D Γ Λ)) : (τs : List Ty) → Sz (Args D Γ Λ τs)
   | τ :: τs => Sz.knoten (Sz.bind (tyS E τ) fun e => Sz.bind (argsS E τs) fun r => Sz.pure (.cons e r))
 
 theorem mem_argsS {E : Sz (SE D Γ Λ)} {K : Nat} (hE : Unter E K) :
-    ∀ (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ K → a ∈ argsS E τs (groesseArgs a) := by
-  intro τs a
-  induction a with
-  | nil => intro _; exact Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
-  | cons e rest ih =>
-    intro h
+    ∀ (τs : List Ty) (a : Args D Γ Λ τs), groesseArgs a ≤ K → a ∈ argsS E τs (groesseArgs a)
+  | _, .nil => fun _ => Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
+  | _, .cons e rest => fun h => by
+    have ih := mem_argsS hE _ rest
     simp only [groesseArgs] at h ⊢
     have he := hE _ e (by omega)
     exact Sz.mem_cast (Sz.mem_knoten (Sz.mem_bind (mem_tyS he) (Sz.mem_bind (ih (by omega)) (Sz.mem_pure _))))

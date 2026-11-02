@@ -31,7 +31,7 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
   | _ + 1, .bind _ _ ty _ => ty.any typeMetadata
   | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
-  /-- A required allocation binds a plain index and runs no continuation: the
+  /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
       the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
       failure-continuation duty can disappear. Mutable and type-annotated binders
@@ -82,7 +82,7 @@ def itemMetadata : SItemTief → Bool
         | .tTree _ => false
         | _ => true
   | .lockT _ _ _ held reserve mask inv => held.isSome || reserve.isSome || mask.isSome || inv.isSome
-  /-- A static arena declaration carries no unbound metadata: literal reservation
+  /- A static arena declaration carries no unbound metadata: literal reservation
       and bound, no dynamic ceiling, a checked element type and no
       provider/proof binding (`uArenen` refuses the dynamic and placed shapes;
       the static arena commits all its slots, so the required allocation's only
@@ -283,7 +283,7 @@ theorem allocRequired_zeuge :
 /-- Static arena declarations are admitted at the gate exactly in their
     elaborated shape: anything dynamic, placed, non-literal or provider-bound
     stays refused. -/
-theorem arenaT_bound (n : String) (lo hi : Int) (ty : STyp) :
+theorem arenaT_bound (n : String) (lo hi : Nat) (ty : STyp) :
     itemMetadata (.arenaT n (.lit lo) (.lit hi) none ty none) = typeMetadata ty := by rfl
 
 theorem arenaT_zeuge :

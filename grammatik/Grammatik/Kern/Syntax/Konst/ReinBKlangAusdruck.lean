@@ -223,7 +223,6 @@ theorem constExprB_sound (c : ConstProgram) {Γ : Ctx} {τ : Ty} (e : Expr c.D �
       intro accepted; simp only [constExprB, Bool.and_eq_true] at accepted
       obtain ⟨h0, h1⟩ := accepted
       exact .pureProdSet (constExprB_sound c v h0) (constExprB_sound c e h1)
-  | _ => by simp [constExprB]
 theorem constPayloadB_sound (c : ConstProgram) {Γ : Ctx} {k : Option Ty} (e : NutzlastExpr c.D Γ [] k) :
     constPayloadB c e = true → ConstPayload c e :=
   match e with
