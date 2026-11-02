@@ -9,6 +9,8 @@ public import Stage0.Zeugen.Annahme.StateWitness
 public import Stage0.Zeugen.Annahme.ReturnCleanupWitness
 public import Stage0.Zeugen.Annahme.ResetWholeWitness
 public import Stage0.Zeugen.Annahme.CapacityRequiredWitness
+public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomValueWitness
+public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomVoidWitness
 public import Stage0.Zeugen.Ablehnung.ConsumingTraversalWitness
 public import Stage0.Zeugen.Ablehnung.OwnerMintWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness
@@ -44,6 +46,7 @@ public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben

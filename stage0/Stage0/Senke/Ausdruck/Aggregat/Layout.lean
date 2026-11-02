@@ -30,15 +30,23 @@ def sumPayloadWords (cs : List (Option Ty)) : Nat :=
 /-- Canonical width in runner words, including the empty value's zero marker.
     Long strings contain length followed by one word per byte, padded with zero.
     Short strings retain their established packed encoding. -/
+mutual
 def valueWords : Ty → Nat
   | .int lo hi => integerWords lo hi
   | .arr τ n => max 1 (n * valueWords τ)
+  | .prod _ fs => max 1 (productWords fs)
   | .str n => if n ≤ 1 then 1 else n + 1
   | .opt n => if n ≤ 2 ^ 63 then 1 else 1 + integerWords 0 (n - 1)
   | .sum cs => if sumFits cs then 1 else
       integerWords 0 (cs.length - 1) + sumPayloadWords cs
   | .why n => integerWords 0 (n - 1)
   | _ => 1
+
+/-- Sum of the complete field spans in declaration order. -/
+def productWords : List Ty → Nat
+  | [] => 0
+  | τ :: rest => valueWords τ + productWords rest
+end
 
 /-- The values whose complete encoding is the single word of the established scalar operations. -/
 def wordCompatB : Ty → Bool
@@ -48,6 +56,7 @@ def wordCompatB : Ty → Bool
     | 0 => true
     | 1 => wordCompatB τ
     | _ => false
+  | .prod .. => false
   | .str n => decide (n ≤ 1)
   | _ => true
 

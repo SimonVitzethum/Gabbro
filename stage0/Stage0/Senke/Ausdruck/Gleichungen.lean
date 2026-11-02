@@ -16,6 +16,11 @@ open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) (d : Nat) {reserved : Nat}
 
+@[lowE_eqs] theorem lowE_prod (name : Nat) {fs : List Ty} (args : Args D Γ Λ fs) :
+    lowE L (reserved := reserved) (.prod name args) d =
+      prodL d (prodArgsL (lowE L (reserved := reserved)) args d) :=
+  congrArg (prodL d) (lowA_eq_prodArgsL args d)
+
 @[lowE_eqs] theorem lowE_or (a b : Expr D Γ Λ .bool) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.or a b) d =
     (do let ca ← lowE L (reserved := reserved) a d; let cb ← lowE L (reserved := reserved) b (d + 1); pure (bin2 9 d ca cb)) := rfl

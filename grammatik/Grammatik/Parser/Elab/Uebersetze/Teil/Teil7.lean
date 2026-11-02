@@ -119,7 +119,8 @@ def uFnZeiger (ctx : UCtx) (koepfe : List UFnKopf) (p : String) : Option (Except
 
 /-- The kind word of a statement, named in a refusal. -/
 def anwArt : SAnw → String
-  | .bind .. => "let" | .bindElse .. => "let else" | .bindLib .. => "library let" | .set .. => "assignment"
+  | .bind .. => "let" | .bindElse .. => "let else"
+  | .bindAxiomOpt .. => "let?" | .bindAxiomOptElse .. => "let? else" | .bindLib .. => "library let" | .set .. => "assignment"
   | .shift .. => "shift" | .call .. => "call" | .lcall .. => "library call" | .cond .. => "if"
   | .elsif .. => "else if" | .cases .. => "match" | .arm .. => "match arm" | .each .. => "traverse"
   | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .locks .. => "locks"

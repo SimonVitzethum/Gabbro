@@ -1,0 +1,7 @@
+// Sizeof of a padded record: three padding bytes bring the word to its alignment, eight bytes total.
+module c13b_sizeof_record_padded {
+type Pad = { tag : u8, val : u32, };
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    return sizeof(Pad);
+}
+}

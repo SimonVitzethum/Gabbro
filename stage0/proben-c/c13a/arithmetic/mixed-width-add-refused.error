@@ -1,0 +1,1 @@
+refused: wrapping `+%` needs both operands on the same exact unsigned width, and u8 with u16 is not one

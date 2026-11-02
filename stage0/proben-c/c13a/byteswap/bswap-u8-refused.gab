@@ -1,0 +1,7 @@
+// A single byte has no byte order to reverse: bswap needs u16, u32 or u64.
+module c13a_swap_one {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 = 18;
+    return bswap(x);
+}
+}

@@ -1,0 +1,8 @@
+// A wrapping shift by the full width is undefined: the amount must stay below it.
+module c13a_shift_wide {
+impl fn main() -> u8 effects { pure } {
+    let a : u8 = 1;
+    let b : u8 = 8;
+    return a <<% b;
+}
+}

@@ -5891,3 +5891,54 @@ witness, plus runner image placement in `Runner/Beweis/Bild.lean` and loader
 entry proofs in `Runner/Beweis/Lader.lean`, but no generic runner proof supplying
 this divisibility premise for the image's declared global alignments.
 This documentation audit ran no Lean checks or builds.
+
+## 128. Stage 0 C07: fallible indirect calls (2026-11-02)
+
+Source audit of `s0-c07-indelse`; no build was run here.
+
+`stage0/Stage0/Senke/Anweisung/Faelle/IndElse.lean`:
+
+* **`lowIndElse_ok`**: Evaluates pointer and arguments once and invokes the callee specification with both value and reason outcomes.
+* **`callIndElse_ok`**: Indirect dispatch followed by the common binder reaches the continuation selected by G.
+
+`stage0/Stage0/Senke/Anweisung/Faelle/IndElseFaelle.lean`:
+
+* **`stmtIndElse_case`**: Supplies the fallible indirect-call statement case under the shared function specification.
+* **`blockIndElse_case`**: Supplies the fallible indirect-call binding block case under the shared function specification.
+* **`endIndElse_case`**: Supplies the fallible indirect-call end-block binding case under the shared function specification.
+
+## 129. Stage 0 C08: void optional axiom bindings (2026-11-02)
+
+Source audit of `s0-c08-none`; these are the no-result counterparts of section 126.
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2OptNone.lean`:
+
+* **`lowB_ok_bindAxiomOpt_none`**: Establishes block lowering correctness for an optional axiom binding with no result value.
+* **`lowEnd_ok_bindAxiomOpt_none`**: Establishes end-block lowering correctness for an optional axiom binding with no result value.
+
+`stage0/Stage0/Senke/Anweisung/Satz/Teil2OptNoneElse.lean`:
+
+* **`lowB_ok_bindAxiomOptElse_none`**: Establishes block lowering correctness for a no-result optional axiom binding with an else branch.
+* **`lowEnd_ok_bindAxiomOptElse_none`**: Establishes end-block lowering correctness for a no-result optional axiom binding with an else branch.
+
+## 130. C10: reader views and RCU ledger (2026-11-02)
+
+Source audit of `c10-rw-rcu-11`; definitions and conditional theorems below do not claim a completed source-to-IR chain.
+
+* **`SichtInv.leser`**, `grammatik/Grammatik/Speichermodell/Maschine/DRF.lean`: With no writer, the guarded carrier's lock view reaches every message even while readers hold it.
+* **`sperrSicht_aus`**, `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean`: Derives lock observation from reachability, valid lock invariants and exclusive starts, allowing reader holders alongside the actor.
+* **`SperrInvLeserG`**, `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperreMaschine/Teil3.lean`: Requires the lock invariant in memory whenever no writer holds the lock, including reader-only states.
+* **`RcuInvG`**, `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/Rcu/Teil3.lean`: Combines ledger validity with a matching thread observation for every observation resource in a current or suspended frame.
+* **`RcuInvGX`**, the same file: Applies the G ledger invariant to the underlying G component of the weak-memory machine.
+* **`rcuRueckgabe_verbraucht`**, `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/Rcu/Teil2.lean`: Reclaim removes the retired version and every grace authority for that version.
+* **`kein_warteZyklus_mit_gnade`**, `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/Rcu/Teil4.lean`: Excludes cycles in the combined lock/grace wait graph under the existing no-lock-cycle premise and grace exclusions, without a starvation or time bound.
+
+## 131. C08: optional source binding witness (2026-11-02)
+
+On `c08-export-opt`, `stage0/Stage0/Zeugen/Annahme/OptionalAxiomWitness.lean`:
+
+* **`parsed_present`**: The source containing `let r? = ax();` parses successfully.
+* **`unit_present`**: The parsed optional-binding source elaborates to a unit.
+* **`optional_constructor`**: The actual sequence lowerer constructs the canonical optional axiom block from the optional binding.
+
+These are elaboration witnesses, not substitutes for generic lowering correctness; this documentation audit ran no Lean checks.

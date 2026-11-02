@@ -137,6 +137,10 @@ inductive SAnw
   | bindQ : Bool → String → Option STyp → SExpr → SAnw
   /-- `f(args) ?;` -- `?` in statement position: the call's value is discarded, its reason re-raised. -/
   | callQ : String → List SExpr → SAnw
+  /-- Optional axiom result binding; `none` introduces no local. -/
+  | bindAxiomOpt : String → Option STyp → SExpr → SAnw
+  /-- Optional axiom result binding with a reason handler. -/
+  | bindAxiomOptElse : String → Option STyp → SExpr → String → SAnw → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -163,6 +167,9 @@ def beqOptEnde : Option SEnde → Option SEnde → Bool
 
 mutual
 def beqSAnw : SAnw → SAnw → Bool
+  | .bindAxiomOpt a t x, .bindAxiomOpt b u y => strEq a b && beqSTypOpt t u && beqSExpr x y
+  | .bindAxiomOptElse a t f e b, .bindAxiomOptElse c u g h d =>
+    strEq a c && beqSTypOpt t u && beqSExpr f g && strEq e h && beqSAnw b d
   | .bind m a t x, .bind n b u y => m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
   | .bindElse a t f e b, .bindElse c u g h d =>
     strEq a c && beqSTypOpt t u && beqSExpr f g && strEq e h && beqSAnw b d

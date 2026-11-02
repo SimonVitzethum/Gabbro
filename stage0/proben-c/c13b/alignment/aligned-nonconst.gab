@@ -1,0 +1,10 @@
+// The alignment is a layout fact, so it must be a compile-time constant, not a parameter.
+module c13b_aligned_nonconst {
+impl fn probe(a : u64, n : u64) -> u32 in 0 .. 1 effects { pure } {
+    if aligned(a, n) { return 1; }
+    return 0;
+}
+impl fn main() -> u32 in 0 .. 1 effects { pure } {
+    return probe(16, 8);
+}
+}

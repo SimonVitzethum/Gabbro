@@ -1,0 +1,7 @@
+// Floor binary logarithm on u8 at all bits: log2_floor(255) is 7.
+module c13a_log_all {
+impl fn main() -> u8 effects { pure } {
+    let x : u8 in 1 .. 255 = 255;
+    return log2_floor(x);
+}
+}

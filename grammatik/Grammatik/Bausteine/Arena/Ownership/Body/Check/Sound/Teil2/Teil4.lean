@@ -18,6 +18,7 @@ mutual
 
 theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stmt D V l Γ Λ Λ') (k c : Context),
     k.bounded → c.bounded → Supports (OS A I out k c st) (chkS A I fs out st k c)
+  | _, _, _, _, .axiomCallElse .., _, _, _, _ => by simp only [chkS, Supports]
   | _, _, _, _, .assignSlot t f i e hw hL, k, c, zzh1, hc =>
       chkS_sound_assignSlot (t := t) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (k := k) (c := c) (zzh1 := zzh1) (hc := hc) (hvoll := hvoll)
   | _, _, _, _, .assignThru p t ht f i e hw hL, k, c, zzh1, hc =>
@@ -101,6 +102,8 @@ theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stm
       chkS_sound_assignSlotRef (r := r) (t := t) (ht := ht) (ho := ho) (f := f) (e := e) (hw := hw) (hL := hL) (k := k) (c := c) (zzh1 := zzh1) (hc := hc) (hvoll := hvoll)
 theorem chkB_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (k c : Context),
     k.bounded → c.bounded → Supports (OB A I out k c b) (chkB A I fs out b k c)
+  | _, _, _, _, .bindAxiomOpt .., _, _, _, _ => by simp only [chkB, Supports]
+  | _, _, _, _, .bindAxiomOptElse .., _, _, _, _ => by simp only [chkB, Supports]
   | _, _, _, _, .nil, k, c, _, hc => by
     simp only [chkB]
     exact ⟨OB.nil, hc⟩
@@ -159,6 +162,7 @@ theorem relB_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : B
       | _ => simp only [relB]; trivial
     | .nil => by simp only [relB]; trivial
     | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bindAxiomOpt .. | .bindAxiomOptElse .. | .narrowRequired ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [relB]; trivial
 
@@ -180,6 +184,7 @@ theorem ctr2B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
       | _ => simp only [ctr2B]; trivial
     | .nil => by simp only [ctr2B]; trivial
     | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bindAxiomOpt .. | .bindAxiomOptElse .. | .narrowRequired ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [ctr2B]; trivial
 
@@ -205,6 +210,7 @@ theorem ctr1B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
       | _ => simp only [ctr1B]; trivial
     | .nil => by simp only [ctr1B]; trivial
     | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bindAxiomOpt .. | .bindAxiomOptElse .. | .narrowRequired ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [ctr1B]; trivial
 
@@ -227,6 +233,7 @@ theorem lst2B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
       | _ => simp only [lst2B]; trivial
     | .nil => by simp only [lst2B]; trivial
     | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bindAxiomOpt .. | .bindAxiomOptElse .. | .narrowRequired ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [lst2B]; trivial
 
@@ -253,11 +260,14 @@ theorem lst1B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
       | _ => simp only [lst1B]; trivial
     | .nil => by simp only [lst1B]; trivial
     | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bindAxiomOpt .. | .bindAxiomOptElse .. | .narrowRequired ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [lst1B]; trivial
 
 theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endblock D V l Γ Λ) (k c : Context),
     k.bounded → c.bounded → chkE A I fs out eb k c = true → OE A I out k c eb
+  | _, _, _, .bindAxiomOpt .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
+  | _, _, _, .bindAxiomOptElse .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
   | _, _, _, .ret e hΛ, k, c, _, _, h => by
     simp only [chkE] at h; exact OE.ret e hΛ h
   | _, _, _, .retWhy r hΛ, k, c, _, _, h => by

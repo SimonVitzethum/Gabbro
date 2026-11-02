@@ -100,6 +100,10 @@ theorem bswap_abgelehnt_zeuge :
 theorem operand_ausserhalb_abgelehnt_zeuge :
     (lowIb2 (u := u) (Γ := Γ) (Λ := Λ) .addW 8 (sr 0 255 5) (sr 0 300 5)).toBool = false := by rfl
 
+ /-- A byte swap at the unsupported byte width is refused by the exporter. -/
+theorem bswap8_source_refused_zeuge :
+    (lowIb1 (u := u) (Γ := Γ) (Λ := Λ) .bswap 8 (sr 0 255 5)).toBool = false := by rfl
+
 end EingebautZeuge
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg

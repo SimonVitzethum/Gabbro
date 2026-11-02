@@ -315,7 +315,9 @@ let a = Shape::area(s);                       // s : AnyShape
 - Generates `impl Shape[AnyShape; effects { … union of the cases … }]`, one `match` per spec function with
   one arm per case calling the case's implementation.
 - **Dispatchable spec function:** exactly one parameter of type `T`, `T` not in the result, no `Held`.
-  A spec with a non-dispatchable function is refused at `by`.
+  Non-dispatchable functions, including constructors returning `T` by value, remain static and
+  do not block `by`; only dispatchable functions require a case implementation for dispatch.
+  A call to a non-dispatchable member through the tagged group is refused by name.
 - Cost: one branch on the case number; no table of addresses, no heap.
 
 ### 6.2 Open: `dyn S` — a sum closed at link time

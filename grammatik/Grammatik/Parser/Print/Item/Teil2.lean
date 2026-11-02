@@ -23,6 +23,15 @@ def druckStarts : List (List String × List SExpr) → List Token
 
 /-- An item as tokens (the inverse of `parseItemTief`; total on every kind). -/
 def druckItem : SItemTief → List Token
+  | .taggedByT decl spec =>
+    (druckItem decl).dropLast ++ [.wort "by", nameTok spec, .zeichen ";"]
+  | .specGroupT name parameter fs =>
+    [.wort "spec", nameTok name, .zeichen "[", nameTok parameter, .zeichen "]", .zeichen "{"] ++
+      fs.flatMap (fun sig => druckFnSig { sig with art := "" } ++ [.zeichen ";"]) ++ [.zeichen "}"]
+  | .implGroupT name ty fs =>
+    [.wort "impl", nameTok name, .zeichen "["] ++ druckTyp ty ++ [.zeichen "]", .zeichen "{"] ++
+      fs.flatMap (fun (sig, body) => druckFnSig { sig with art := "" } ++ druckAnw body) ++
+      [.zeichen "}"]
   | .modT p its => [.wort "module"] ++ rohToks p ++ [.zeichen "{"] ++ druckItems its ++ [.zeichen "}"]
   | .useT p => ([.wort "use"] ++ pfadToks p ++ [.zeichen ";"])
   | .typeT fl n args ord t =>

@@ -1,0 +1,1 @@
+refused: the count predicate reads lock-guarded Vault without holding its lock

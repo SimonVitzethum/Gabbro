@@ -73,6 +73,21 @@ def lowInd (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
     pure (indC (D := D) n ((frei Γ reserved)) cp.1 ca.1, indTop (D := D) n ((frei Γ reserved)) cp.2 ca.2)
   else none
 
+def lowIndElse (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} {n : Nat}
+    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) (reserved : Nat := 0) : Option (List II × Nat) := do
+  if 0 < (D.sigNr n).gruende then do
+    let cp ← lowE (reserved := reserved) L p ((frei Γ reserved))
+    let ca ← lowA (reserved := reserved) L args ((frei Γ reserved) + FB)
+    pure (indC (D := D) n ((frei Γ reserved)) cp.1 ca.1, indTop (D := D) n ((frei Γ reserved)) cp.2 ca.2)
+  else none
+
+/-- The top of a fallible indirect call with its two continuations: the call
+    frame from `lowIndElse`, the shared receive area, and both arms.
+    Written with the explicit receive area (not `receiveTop`) so `omega`
+    sees the same atoms as the `callIndElse_ok` bound. -/
+def elseTopInd (n : Nat) (s tc tr te : Nat) : Nat :=
+  max tc (max (s + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n)) + 1) (max tr te))
+
 def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgExpr D Γ Λ e → Nat → (reserved : Nat := 0) → Option (List II × Nat)
   | _, .empty, d, reserved => some ([ci 1 d 0 0], d + 1)
   | some τ, .val e, d, reserved =>

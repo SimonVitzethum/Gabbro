@@ -348,3 +348,5 @@ public import Grammatik.Zielsatz.Projekte.ProfilZeuge
 public import Grammatik.Parser.Profil.Eintritt
 public import Grammatik.Parser.Profil.EintrittZeuge
 public import Grammatik.Parser.Elab.Konst.Calls
+public import Grammatik.Parser.Elab.Konst.Ersetzung
+public import Grammatik.Parser.Elab.Konst.ErsetzungTor

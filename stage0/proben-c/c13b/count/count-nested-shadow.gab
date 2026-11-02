@@ -1,0 +1,18 @@
+// Nested counts with a shadowing binder: the inner k hides the outer one; the inner count is constant.
+module c13b_count_nested_shadow {
+table A count 3 { slot { flag : bool, } }
+table B count 4 { slot { mark : bool, } }
+impl fn main() -> u32 in 0 .. 10
+    effects { reads A.slots, reads B.slots, writes A.slots, writes B.slots }
+{
+    A.slots[0].flag = true;
+    A.slots[1].flag = true;
+    A.slots[2].flag = false;
+    B.slots[0].mark = false;
+    B.slots[1].mark = true;
+    B.slots[2].mark = false;
+    B.slots[3].mark = false;
+    let n = count k in slots of A : A.slots[k].flag && (count k in slots of B : B.slots[k].mark) == 1;
+    return n;
+}
+}

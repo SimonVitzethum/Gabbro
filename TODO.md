@@ -316,3 +316,28 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - **Not a topic of this list:** O10 (measurement layer); O12 (single program, no model case); O32 (hardware/runtime); O33 (process
   bookkeeping); O39 (kernel-module world; count: `N574`-`N577` built, unload window is hardware).
 - **Out of scope:** O29 (Simon).
+
+## Round 2 / round 3 compilation follow-up (2026-11-02)
+
+- Stage 0 still refuses C01 `prod` and `prodSet`; `prodGet` lowering is in progress.
+- Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
+- C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
+- C15: accumulator uses remain refused until the C08 core query is wired.
+- C09: escrow call/return theorem witnesses still need a concrete machine fixture with a push and a return.
+- C16/C02 round-3 work remains open. Compact implementation inventory (16 items, grouped from the designs in `IR-COMPILATION-LANES.md`):
+  1. C02 lossless library-call arguments and region tokens.
+  2. C02 resolved translator/library identity and export metadata.
+  3. C02 typed input schemas and sound decoders.
+  4. C02 canonical translator map and payload typing.
+  5. C02 source-bound translation certificates.
+  6. C02 pure execution, termination and effect/cost obligations.
+  7. C02 immutable payload initialization and ordinary call expansion.
+  8. C02 connected source/image correctness and refusal witnesses.
+  9. C16 declared-check identity and checked expansion.
+  10. C16 generated producer/probe/gate functions.
+  11. C16 actual measurement samples and floor results.
+  12. C16 completed reports for both verdicts and linear Duty discharge.
+  13. C16 report/token provenance through call push and normal return.
+  14. C16 G/GX replay and ownership conservation.
+  15. C16 counterprobe binding, artifact identity and measured status.
+  16. C16 connected export/Stage-0 correctness with emitted sample work.

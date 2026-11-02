@@ -8,6 +8,14 @@ public import Grammatik.Parser.Stmt.Anweisung.Defs1
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
+/-- The optional-bind marker `?` after a binder name (`let x? = …`). -/
+def nimmFrage : List Token → Bool × List Token
+  | .zeichen s :: rest => if strEq s "?" then (true, rest) else (false, .zeichen s :: rest)
+  | r => (false, r)
+
+theorem strEq_gleich_frage : strEq "=" "?" = false := by decide
+theorem strEq_doppelpunkt_frage : strEq ":" "?" = false := by decide
+
 mutual
 def parseStmt (f : Nat) (toks : List Token) :
     Except String (SAnw × List Token) :=
@@ -51,13 +59,20 @@ def parseLet (f : Nat) (toks : List Token) :
       | .wort "mut" :: rest => (true, rest)
       | _ => (false, toks)
     let (name, r1) ← nimmName t1
+    let (optional, r1) := nimmFrage r1
     let (ty, r2) ← (match r1 with
       | .zeichen ":" :: r => do
         let (t, r') ← parseTyp f r
         pure (some t, r')
       | _ => pure (none, r1))
     let nach ← fordereZeichen "=" r2
-    match nach with
+    if optional then do
+      let (a, rest) ← parseLetExpr f m name ty nach
+      match a with
+      | .bind _ x t e => pure (.bindAxiomOpt x t e, rest)
+      | .bindElse x t e why b => pure (.bindAxiomOptElse x t e why b, rest)
+      | _ => .error "optional bind needs a call"
+    else match nach with
     | .zeichen "@" :: _ => parseLetLib f m name ty nach
     | .wort s :: t :: .zeichen ";" :: rest =>
       if strEq s "alloc" then match nameText t with

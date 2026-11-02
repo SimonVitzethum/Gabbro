@@ -156,8 +156,8 @@ def klausel (k : Kontext) : SKlausel → SKlausel
 
 /-- The names a statement binds for the statements after it. -/
 def gebunden : SAnw → List String
-  | .bind _ x _ _ => [x]
-  | .bindElse x _ _ _ _ => [x]
+  | .bind _ x _ _ | .bindAxiomOpt x _ _ => [x]
+  | .bindElse x _ _ _ _ | .bindAxiomOptElse x _ _ _ _ => [x]
   | .bindQ _ x _ _ => [x]
   | .bindLib _ x _ _ => [x]
   | .alloc _ x _ _ _ _ => [x]
@@ -185,6 +185,8 @@ def anw (k : Kontext) : SAnw → SAnw
   | .bind m x t e => .bind m x (typO k t) (aus k e)
   | .bindElse x t e g s => .bindElse x (typO k t) (aus k e) g (anw k s)
   | .bindQ m x t e => .bindQ m x (typO k t) (aus k e)
+  | .bindAxiomOpt x t e => .bindAxiomOpt x (typO k t) (aus k e)
+  | .bindAxiomOptElse x t e g s => .bindAxiomOptElse x (typO k t) (aus k e) g (anw k s)
   | .bindLib m x t c => .bindLib m x (typO k t) (libraryCall k c)
   | .lcall c => .lcall (libraryCall k c)
   | .set l o r => .set (aus k l) o (aus k r)

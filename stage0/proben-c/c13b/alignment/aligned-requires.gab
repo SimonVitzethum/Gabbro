@@ -1,0 +1,12 @@
+// Aligned in a contract: the helper requires a page-aligned address and answers five.
+module c13b_aligned_requires {
+impl fn probe(x : u64) -> u32 in 0 .. 10
+    requires aligned(x, 4096)
+    effects { pure }
+{
+    return 5;
+}
+impl fn main() -> u32 in 0 .. 10 effects { pure } {
+    return probe(4096);
+}
+}

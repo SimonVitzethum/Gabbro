@@ -81,6 +81,11 @@ def zF : UFn := {name := "sample", params := [], kinds := [], res := none, held 
 def zBody : UEns := .cmp ">" (.tab "T" "v" (.param "x")) (.lit 10)
 
 /-- The count over the slots of a table of four carries the range `0 .. 4`. -/
+ /-- A count predicate cannot read a slot at the exclusive domain bound. -/
+theorem count_domain_bound_refused_zeuge :
+    (lowSeiteZ zU [] [] zF none
+      (.zaehle "T" "x" (.cmp ">" (.tab "T" "v" (.lit 4)) (.lit 10)))).toOption.isSome = false := by rfl
+
 theorem zaehle_slots_lower_zeuge :
     (lowSeiteZ zU [] [] zF none (.zaehle "T" "x" zBody)).toOption.map (·.range) = some (0, 4) := by rfl
 

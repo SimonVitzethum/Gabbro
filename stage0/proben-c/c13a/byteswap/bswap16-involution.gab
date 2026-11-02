@@ -1,0 +1,9 @@
+// Byte swap on u16 is an involution: bswap(bswap(43981)) is 43981 again.
+module c13a_swap_inv {
+impl fn main() -> u8 effects { pure } {
+    let x : u16 = 43981;
+    let y : u16 = bswap(bswap(x));
+    if y == 43981 { return 62; }
+    return 0;
+}
+}

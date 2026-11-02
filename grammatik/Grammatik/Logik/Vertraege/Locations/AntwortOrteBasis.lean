@@ -172,6 +172,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .bindCallIndElse _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .narrowRequired _ _ _ rest => by
@@ -202,6 +204,7 @@ def GRest.aR (C : D.Ax ⊕ D.Reg → Bool) {V : Vertrag D} :
   | _, _, _, .wartetSonst _ err b k => err.ants.all C = true ∧ b.ants.all C = true ∧ k.aR C
   | _, _, _, .abbruch k => k.aR C
   | _, _, _, .leer => True
+  | _, _, _, .rueckBereit _ k => k.aR C
 
 section Wahl
 

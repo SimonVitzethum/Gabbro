@@ -109,6 +109,8 @@ def alsFunktion : SItemTief → Option (FnSig × SAnw)
 def artAnw : SAnw → String
   | .bind .. => "let"
   | .bindElse .. => "let-else"
+  | .bindAxiomOpt .. => "let?"
+  | .bindAxiomOptElse .. => "let?-else"
   | .bindLib .. => "let-lib"
   | .set .. => "assign"
   | .shift .. => "transition"
@@ -187,6 +189,9 @@ def artItem : SItemTief → String
   | .profT .. => "profT"
   | .gateT .. => "gateT"
   | .pubT .. => "pubT"
+  | .taggedByT .. => "taggedByT"
+  | .specGroupT .. => "specGroupT"
+  | .implGroupT .. => "implGroupT"
   | .adaptT .. => "adaptT"
 
 /-- Parse each chunk; collect per-chunk outcomes (no short-circuit). -/

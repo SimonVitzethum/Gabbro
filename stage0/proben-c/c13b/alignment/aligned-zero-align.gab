@@ -1,0 +1,8 @@
+// Alignment zero answers nothing: no number is aligned to it.
+module c13b_aligned_zero_align {
+impl fn main() -> u32 in 0 .. 1 effects { pure } {
+    let a : u64 = 16;
+    if aligned(a, 0) { return 1; }
+    return 0;
+}
+}

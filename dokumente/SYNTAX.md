@@ -375,7 +375,9 @@ world before the first body and has no run-time meaning of its own.
 
 ```ebnf
 typedecl   = [ "pub" ] [ "opaque" ] [ "linear" [ "ghost" ] ] [ "tagged" ]
-             "type" ident [ "(" typelist ")" ] [ markorder ] [ "=" typeexpr ] ";" ;
+             "type" ident [ "(" typelist ")" ] [ markorder ] [ "=" typeexpr ]
+             [ "by" ident ] ";" ;
+(* `by S` requires a tagged variants declaration; it selects closed dispatch. *)
 markorder  = "order" "{" identlist "}" ;
 (* «B37»: the stages of a linear mark, in ONE declaration. `order` stands before the `=`
    because it is not a body: an order says which steps are admissible on the value. *)
@@ -494,6 +496,49 @@ linear ghost type BootPhase order { roh, mmu, geraete };
 linear ghost type MayWrite(ThreadId, Pa);
 linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` declaration
 ```
+
+**Closed dispatch: `tagged … by S`.** The Lean frontend reads single-type spec groups and
+their implementations before declaration expansion:
+
+```gabbro
+spec Shape[T] {
+    fn area(s: T) -> bool effects {};
+    fn copy(s: T) -> T effects {};
+}
+impl Shape[u8] {
+    fn area(s: u8) -> bool effects {} { return true; }
+}
+impl Shape[bool] {
+    fn area(s: bool) -> bool effects {} { return s; }
+}
+tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape;
+impl fn area_of(s: AnyShape) -> bool effects {} {
+    let answer = Shape::area(s);
+    return answer;
+}
+```
+
+The group's type parameter (`T`, internally `Self`) occurs as exactly one whole parameter
+of a dispatchable function, nowhere in its other parameter types or result. A member returning
+`Self`, such as `copy`, is static: it generates no dispatcher and its absence from the case
+implementations does not block the tagged declaration. Calls to such members through the tagged
+group are refused as `tagged-dispatch-non-dispatchable-call`. `Held` in a group contract is refused.
+
+For every dispatchable member, every variant must have exactly one implementation with the
+Self-substituted parameter types, result type and reason channel. Parameter names may differ.
+Missing, ambiguous, duplicate and incompatible implementations are refused by name, including
+`tagged-dispatch-missing-implementation` and `tagged-dispatch-signature-mismatch`.
+The generated ordinary function matches the receiver and directly calls one implementation in
+each arm, preserving argument order. Its effects are the union of the case effects; written
+contracts remain obligations of the ordinary elaboration and proof path. No runtime dispatch
+table, heap allocation or new machine construct is introduced.
+
+The actual `elabU` declaration pass runs this check and expansion before library expansion.
+Overload selection uses the receiver type from function parameters, globals, explicit local
+annotations, inferred constructor/call results and match payloads. An unresolved or ambiguous
+receiver is refused. This frontend slice does not accept multi-type or effect-parameter group
+headers; ordinary typing, metadata, contract, cost and lowering refusals continue to apply to
+the expanded functions.
 
 **Attributes and Lean.**
 
@@ -1127,6 +1172,7 @@ enclosing `locks` blocks and the statements before the position:
 | `let x = f(…);` | as a call; `f` has a return type and no `or` | — | `Block.bindCall` |
 | `let x = p(…);` | indirect, against the type of `p` | — | `Block.bindCallInd` |
 | `let x = f(…) else (e) endblock;` | `f` has `or R`; `e : reason R` in the `else`; the `else` does not fall off | — | `Block.bindCallElse f args he hp hr err rest` |
+| `let x? = ax(…);` / `let x? = ax(…) else (e) endblock;` | foreign call with an optional result; success binds `x` only when the declared result exists; the `else` handles the declared reason channel | — | `Block.bindAxiomOpt` / `Block.bindAxiomOptElse` (connected elaboration) |
 | `let x = axiom(…);` | the axiom's `writes` ⊆ the contract's | **`hardware (annahme a)`** if the answer is outside the declared type (every type has a decoding since 2026-09-15, finding G1: a sum is `marke + cases * last` (`cases` the number of cases), a float its binary64 bits, a pointer an address the loaded image names; `einpassen_voll`); a declared type WITHOUT a value (`-> never`, an empty range) admits no answer: the call does not return, named `HaltArt.nieZurueck` | `Block.bindAxiom` |
 | `let x = R;` (register) | `R` has a readable class (§10); the value is held against the type AND against the register's declared promise (`requires` without `else`) | **`hardware (register r)`** if outside the type; **`hardware (geraet r)`** if the promise fails — the device assumption, named at the register | `Block.regRead r hk rest`, `D.rzusage`; theorem `register_lesbar` |
 | `let x = R else (e) endblock;` | `R` carries `requires … else` (§10): the promise is checked on the binding | — (the `else` runs) | `Block.regReadElse` |

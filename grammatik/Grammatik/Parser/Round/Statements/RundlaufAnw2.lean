@@ -157,8 +157,9 @@ theorem parseLet_nach (x : String) (hx : x ≠ "mut") (nach : List Token) (f : N
     (h3 : ∀ s t ts, nach = .wort s :: t :: .zeichen ";" :: ts → strEq s "alloc" = false) :
     parseLet (f + 1) (nameTok x :: .zeichen "=" :: nach) = parseLetExpr f false x none nach := by
   rw [parseLet_nameTok x hx]
-  simp only [parseLet, bind, Except.bind, nimmName, nameText_ident, List.cons.injEq, Token.zeichen.injEq,
-  String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self, ↓reduceIte]
+  simp only [parseLet, nimmFrage, strEq_gleich_frage, strEq_doppelpunkt_frage, bind, Except.bind, nimmName, nameText_ident, List.cons.injEq, Token.zeichen.injEq,
+  String.reduceEq, false_and, imp_self, implies_true, pure, Except.pure, fordereZeichen, strEq_self,
+  Bool.false_eq_true, ↓reduceIte]
   split
   · rename_i tl
     exact absurd rfl (h1 tl)

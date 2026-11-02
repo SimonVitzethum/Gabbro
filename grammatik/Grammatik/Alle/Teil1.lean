@@ -6,6 +6,7 @@ public import Grammatik.Bausteine.Walk.Abbildung
 public import Grammatik.Bausteine.Walk.AbbildungZeuge
 public import Grammatik.Bausteine.Walk.BindingZeuge
 public import Grammatik.Bausteine.Walk.Correctness
+public import Grammatik.Bausteine.Walk.CorrectnessEnum
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
@@ -256,6 +257,7 @@ public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
 public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.Zeuge
+public import Grammatik.Bausteine.Kernzelle.KernzelleZeugen
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert
@@ -352,6 +354,7 @@ public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
 public import Grammatik.Logik.Ruf.RufLogikZeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Zeuge
+public import Grammatik.Logik.Ruf.Schnittstellen.SchnittstellenZeugen
 public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
 public import Grammatik.Logik.Ruf.Schnittstellen.Pruefung
 public import Grammatik.Nebenlaeufigkeit.Sperren.Sperrstreifen
@@ -367,3 +370,6 @@ public import Grammatik.Kern.Syntax.Konst.Rahmen
 public import Grammatik.Kern.Syntax.Konst.Kongruenz
 public import Grammatik.Kern.Syntax.Konst.Zertifikat
 public import Grammatik.Kern.Syntax.Konst.AuswertungZeuge
+public import Grammatik.Kern.Syntax.Konst.Geschlossen
+public import Grammatik.Kern.Syntax.Konst.Literal
+public import Grammatik.Kern.Syntax.Konst.Ersetzung

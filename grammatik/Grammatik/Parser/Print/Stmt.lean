@@ -86,6 +86,12 @@ def druckLibraryCall (c : SLibraryCall) : List Token :=
 mutual
 /-- A statement as tokens (the inverse of `parseStmt`). -/
 def druckAnw : SAnw → List Token
+  | .bindAxiomOpt x ty e =>
+    [.wort "let", nameTok x, .zeichen "?"] ++ druckTypOpt ty ++
+      [.zeichen "="] ++ druckToks e ++ [.zeichen ";"]
+  | .bindAxiomOptElse x ty e f b =>
+    [.wort "let", nameTok x, .zeichen "?"] ++ druckTypOpt ty ++ [.zeichen "="] ++ druckToks e ++
+      [.wort "else", .zeichen "(", nameTok f, .zeichen ")"] ++ druckAnw b
   | .bind m x ty e =>
     [.wort "let"] ++ (if m then [.wort "mut"] else []) ++ [nameTok x] ++ druckTypOpt ty ++
       [.zeichen "="] ++ druckToks e ++ [.zeichen ";"]

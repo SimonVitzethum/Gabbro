@@ -1,0 +1,6 @@
+// Sizeof of a scalar type: one word measures four bytes.
+module c13b_sizeof_scalar {
+impl fn main() -> u32 in 0 .. 100 effects { pure } {
+    return sizeof(u32);
+}
+}

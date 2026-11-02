@@ -10,11 +10,13 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
+public import Grammatik.Parser.TaggedDispatch.Frontend
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 public import Grammatik.Parser.Elab.Konst.Export
+public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 
 @[expose] public section
 
@@ -189,16 +191,19 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
   | _ => none
 
 /-- The elaborator: a parsed surface tree to the exported
-    fragment (tables, locks, `impl` functions). The certified C02 expansion (`exportLibraryUnit`)
+    fragment (tables, locks, `impl` functions). Declaration expansion (`exportDeclarationUnit`)
     runs first, so a source program with a library call exports to an ordinary unit: `library`
     bodies elaborate as ordinary functions, translators are consumed, and calls expand into
     ordinary calls carrying the declared payload. -/
 def elabUroh : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
-    match Gabbro.Grammatik.Parser.exportLibraryUnit ms0 with
+    match Gabbro.Grammatik.Parser.exportDeclarationUnit ms0 with
     | .error e => .error e
     | .ok msE =>
+    match uRestFehler msE with
+    | .error e => .error e
+    | .ok _ =>
     let blockiert := msE.find? (fun item => match item with
       | .fnT sig body => strEq sig.art "const" && (match body with
         | .block [] (some (.ret (some _))) => false
@@ -212,9 +217,6 @@ def elabUroh : List SItemTief → Except String UProg
       | _ => .error "const function with a block body: certified evaluation unavailable") else
     let consts := uConstsRech (uKonstFns msE) msE []
     let alias := uAliase consts msE ++ uAliasBreiten msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
-    match uRestFehler msE with
-    | .error e => .error e
-    | .ok _ =>
     match ExportMetadata.checkConstants msE with
     | .error error => .error error
     | .ok () =>
@@ -256,7 +258,13 @@ def elabUroh : List SItemTief → Except String UProg
     if !globs.all (fun g => !g.shared || g.atomic || bewacht g.name) then .error "shared static without a guard" else
     if !globs.all (fun g => g.nutzlast.all (fun n => globs.any (fun h => strEq h.name n))) then
       .error "payload names no static" else
-    let fnItems := ms.filterMap (fun
+    -- C17: certified call-site substitution runs here, after the checked
+    -- const/type views and BEFORE `fnItems`/`elabUFunktion` and the export
+    -- metadata gate. Failing substitutions keep their refusal.
+    match Gabbro.Grammatik.Parser.Konst.konstErsetzePipeline ms with
+    | .error e => .error e
+    | .ok msSub =>
+    let fnItems := msSub.filterMap (fun
       | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
       | _ => none)
     match uWhys ms alias with
@@ -344,7 +352,7 @@ def elabUroh : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check msE, checks := checks, marken := marken, spaces := spaces }
+        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces }
       .ok (uMitBoden u)
 
 /-- The elaborator over the Phase-1-sugared unit: `entzuckere` (adapters, `?`) runs first on
