@@ -34,6 +34,9 @@ theorem mS_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       exact mGArms_boden arms fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]
   | .call g _ _ _, _ => by simp only [mS]; exact hr g
   | .callInd (n := n) _ _ _ _, _ => by simp only [mS]; exact hi n
+  | .callIndElse (n := n) _ _ _ _ _ err, h => by
+      simp only [mS, Bool.and_eq_true]
+      exact ⟨hi n, mE_boden err fun c hc => by have := h c hc; simp_all [Stmt.ueberBoden]⟩
   | .locks L _ body, h => by
       simp only [mS, Bool.and_eq_true]
       refine ⟨hs L fun c hc => ?_, mB_boden body fun c hc => ?_⟩
@@ -95,6 +98,10 @@ theorem mB_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd (n := n) _ _ _ _ _ rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨hi n, mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest, h => by
+      simp only [mB, Bool.and_eq_true]
+      exact ⟨⟨hi n, mE_boden err fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩,
+        mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
   | .bindCallElse g _ _ _ _ err rest, h => by
       simp only [mB, Bool.and_eq_true]
       exact ⟨⟨hr g, mE_boden err fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩,
@@ -217,6 +224,10 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd (n := n) _ _ _ _ _ rest, h => by
       simp only [mE, Bool.and_eq_true]
       exact ⟨hi n, mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest, h => by
+      simp only [mE, Bool.and_eq_true]
+      exact ⟨⟨hi n, mE_boden err fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩,
+        mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
   | .narrow _ _ _ sonst rest, h => by
       simp only [mE, Bool.and_eq_true]
       exact ⟨mE_boden sonst fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
