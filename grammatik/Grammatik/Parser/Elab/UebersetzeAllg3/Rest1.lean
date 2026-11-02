@@ -8,6 +8,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
+public import Grammatik.Parser.Elab.UebersetzeAllg3.Transition
 
 @[expose] public section
 
@@ -375,24 +376,10 @@ def lowBody (u : UProg) (caller : Fin u.fns.length)
       (ctxOf u caller) (resOf u caller)) :=
   lowBodyF u caller (ctxOf u caller) (fnAt u caller) (ss.length + 1) ss r
 
-/-- The ensures type of a lowered function. -/
-abbrev EnsTy (u : UProg) (f : Fin u.fns.length) :=
-  Expr (declOf u) (ErgCtx ((declOf u).params f) ((declOf u).erg f))
-    (vertragVon (declOf u) f).ende .bool
-
-/-- The body type of a lowered function. -/
-abbrev RumpTy (u : UProg) (f : Fin u.fns.length) :=
-  Endblock (declOf u) (vertragVon (declOf u) f) false
-    ((declOf u).params f)
-    (Signatur.anfang (declOf u) ((declOf u).signatur f))
-
-/-- The requires type of a lowered function. -/
-abbrev ReqTy (u : UProg) (f : Fin u.fns.length) :=
-  Expr (declOf u) ((declOf u).params f) (Signatur.anfang (declOf u) ((declOf u).signatur f)) .bool
 
 /-- One whole function: contracts and body through the
     declaration. -/
-def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
+def lowerFnPlain (u : UProg) (c : Fin u.fns.length) :
     Except String (EnsTy u c × RumpTy u c × ReqTy u c) :=
   match lowEnsList u (ctxOf u c) (resOf u c) (fnAt u c) none (fnAt u c).needs with
   | .error e => .error e
@@ -422,6 +409,19 @@ def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
         rw [← ctxParams_eq u c, ← anfangRes_eq u c]
         exact r0
       .ok (e1, b1, r1)
+
+/-- One whole function. A function a transition declaration generates is lowered as
+    the typed expansion of that declaration (`lowerTransitionAt`); a function of the
+    generated name range that matches no declaration is refused, never lowered as an
+    ordinary function. -/
+def lowerFnAt (u : UProg) (c : Fin u.fns.length) :
+    Except String (EnsTy u c × RumpTy u c × ReqTy u c) :=
+  match transitionOfFn u c with
+  | some (state, tr) => lowerTransitionAt u c state tr
+  | none =>
+    if (fnAt u c).name.startsWith "#transition#" then
+      .error "generated transition function without declaration"
+    else lowerFnPlain u c
 
 /-- Every function lowers (the success check of `lowerAllg`;
     the values ride `lowerFnAt` directly). -/

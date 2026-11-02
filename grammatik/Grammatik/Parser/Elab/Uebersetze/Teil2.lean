@@ -8,6 +8,7 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
+public import Grammatik.Parser.Elab.Uebersetze.Transition.Data
 
 @[expose] public section
 

@@ -8,6 +8,7 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Reason
+public import Grammatik.Parser.Elab.Uebersetze.Transition.Elaborate
 
 @[expose] public section
 
@@ -161,36 +162,24 @@ def uWhys (items : List SItemTief) (alias : List (String × (Int × Int)) := [])
 
 /-! ## States -/
 
-/-- The stage names of a `state`, in the order they are first written. -/
-def uStufenNamen : List (SExpr × SExpr × SExpr) → List String → Except String (List String)
-  | [], acc => .ok acc
-  | (_, .variable a, .variable c) :: rest, acc =>
-    let acc1 := if acc.any (strEq · a) then acc else acc ++ [a]
-    let acc2 := if acc1.any (strEq · c) then acc1 else acc1 ++ [c]
-    uStufenNamen rest acc2
-  | _ :: _, _ => .error "state stage without G form"
-
-/-- One `state` item: stages 0, 1, 2, .. in written order, one allowed pair per transition line. A
-    `requires` or an `effects` at a state transition has no form here. -/
-def uZustand (n : String) (ts : List STrans) : Except String UZustand :=
-  if !ts.all (fun tr => tr.voraus.isNone && tr.wirkung.isEmpty) then .error "state transition clause without G form"
-  else
-    let schritte := ts.flatMap (·.schritte)
-    match uStufenNamen schritte [] with
-    | .error e => .error e
-    | .ok stufen =>
-      let nr : SExpr → Nat := fun e => match e with
-        | .variable a => (stufen.findIdx? (strEq · a)).getD 0
-        | _ => 0
-      .ok { name := n, stufen, paare := schritte.map fun (_, a, c) => (nr a, nr c) }
-
 /-- The governed fields: each `transition` statement of a body names its table, field and state; a field
     governed by two states is refused. -/
-def uRegiert (fns : List UFn) : Except String (List (String × String × String)) :=
+def uRegiert (fns : List UFn) (states : List UZustand := []) : Except String (List (String × String × String)) :=
+  let globals := states.flatMap fun state => state.transitions.flatMap fun tr =>
+    tr.writes.filterMap fun write => match write.place with
+      | .glob name => some (name, state.name)
+      | _ => none
+  if !globals.all (fun x => globals.all (fun y => !strEq x.1 y.1 || strEq x.2 y.2)) then
+    .error "a global governed by two states"
+  else
   let alle := fns.flatMap fun f => f.body.filterMap fun st => match st with
     | .shiftTab tb fld _ s _ _ => some (tb, fld, s)
     | _ => none
-  let eins := alle.foldl (fun acc x => if acc.any (fun y => strEq y.1 x.1 && strEq y.2.1 x.2.1 && strEq y.2.2 x.2.2)
+  let declared := states.flatMap fun state => state.transitions.flatMap fun tr =>
+    if tr.primitive then [] else tr.writes.filterMap fun write => match write.place with
+      | .slot table field _ => some (table, field, state.name)
+      | _ => none
+  let eins := (alle ++ declared).foldl (fun acc x => if acc.any (fun y => strEq y.1 x.1 && strEq y.2.1 x.2.1 && strEq y.2.2 x.2.2)
     then acc else acc ++ [x]) []
   if eins.all (fun x => eins.all (fun y => !(strEq x.1 y.1 && strEq x.2.1 y.2.1) || strEq x.2.2 y.2.2)) then .ok eins
   else .error "a field governed by two states"

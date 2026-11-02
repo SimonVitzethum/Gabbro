@@ -101,12 +101,21 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   match uInvs consts typeEnv tabs locks globs ms with
   | .error e => .error e
   | .ok invs =>
-  match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts) | _ => none)) with
+  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [],
+    res := none, fname := "transition", alias := typeEnv, lits := consts, globs }
+  match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
   | .error e => .error e
   | .ok zustaende =>
+  if (uEindeutig (zustaende.map (·.name))).length != zustaende.length then
+    .error "duplicate state identity" else
+  match uGenerateTransitions tabs globs zustaende with
+  | .error e => .error e
+  | .ok transitionFns =>
+  if transitionFns.any (fun g => fnItems.any (fun (s, _) => strEq s.name g.name)) then
+    .error "generated transition function conflicts with an explicit function" else
   let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
   let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
-  let zb := fnItems.length
+  let zb := fnItems.length + transitionFns.length
   match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
       elabZeigerTyp consts typeEnv tabs locks globs whys sums zeiger zb j r)) with
   | .error e => .error e
@@ -130,6 +139,7 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
         (uKonstArrays typeEnv functions consts ms))) with
   | .error e => .error e
   | .ok fns =>
+  let fns := fns ++ transitionFns
   match uWurzeln tabs fns ms with
   | .error e => .error e
   | .ok roots =>
@@ -138,7 +148,7 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   | .error e => .error e
   | .ok gestartet =>
     if !uU003 locks (fns ++ zeigerPaare.map (·.2)) invs then .error "a writer of an invariant's carrier does not hold all its locks" else
-    match uRegiert fns with
+    match uRegiert fns zustaende with
     | .error e => .error e
     | .ok regiert =>
     let u : UProg :=

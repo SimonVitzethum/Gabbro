@@ -45,6 +45,9 @@ module
 public import Grammatik.Alle.Teil1
 public import Grammatik.Alle.Teil2
 public import Grammatik.Parser.Elab.Uebersetze.ReasonProben
+public import Grammatik.Kern.Semantik.Semantik.TransitionGuardZeuge
+public import Grammatik.Kern.Semantik.Semantik.TransitionShift
+public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.Refusals
 
 @[expose] public section
 

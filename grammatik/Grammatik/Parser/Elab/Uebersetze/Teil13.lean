@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 
 @[expose] public section
 
@@ -241,12 +242,21 @@ def elabU : List SItemTief → Except String UProg
     match uInvs consts alias tabs locks globs ms with
     | .error e => .error e
     | .ok invs =>
-    match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts) | _ => none)) with
+    let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [],
+      res := none, fname := "transition", alias, lits := consts, globs }
+    match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
     | .error e => .error e
     | .ok zustaende =>
+    if (uEindeutig (zustaende.map (·.name))).length != zustaende.length then
+      .error "duplicate state identity" else
+    match uGenerateTransitions tabs globs zustaende with
+    | .error e => .error e
+    | .ok transitionFns =>
+    if transitionFns.any (fun g => fnItems.any (fun (s, _) => strEq s.name g.name)) then
+      .error "generated transition function conflicts with an explicit function" else
     let devs := ms.filterMap (fun | .devT n _ _ _ => some n | _ => none)
     let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
-    let zb := fnItems.length
+    let zb := fnItems.length + transitionFns.length
     match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
         elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r)) with
     | .error e => .error e
@@ -270,6 +280,7 @@ def elabU : List SItemTief → Except String UProg
           (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e
     | .ok fns =>
+    let fns := fns ++ transitionFns
     match uWurzeln tabs fns ms with
     | .error e => .error e
     | .ok roots =>
@@ -278,7 +289,7 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok gestartet =>
       if !uU003 locks (fns ++ zeigerPaare.map (·.2)) invs then .error "a writer of an invariant's carrier does not hold all its locks" else
-      match uRegiert fns with
+      match uRegiert fns zustaende with
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
