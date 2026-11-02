@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+public import Grammatik.Bausteine.Kernzelle.Belegung
 
 @[expose] public section
 
@@ -78,6 +79,34 @@ def uAkkuItem (consts : List (String × Int)) (alias : List (String × (Int × I
           else if !(akkuOperatorOk m) then .error "accumulator operator without G form"
           else .ok ((uAkkuZellen n k).map fun c => { name := c, ty := .int lo hi, init := z, var := true, breite := (uAkkuFormat lo hi).1 }, (List.range k).map fun i => { name := n ++ "#sperre" ++ toString i, rank := boden + Int.ofNat i, guard := [n ++ "#zelle" ++ toString i] })
   | _ => .ok ([], [])
+
+/-- Export a source descriptor once its generated carriers and function bindings
+    have been resolved. Bindings are explicit: no placeholder core query or
+    update/reduction function is invented by the storage expansion. -/
+def uAkkuDecl {D : Deklaration}
+    (consts : List (String × Int)) (alias : List (String × (Int × Int)))
+    (item : SItemTief)
+    (cells : (k : Nat) → Fin k → D.Glob)
+    (locks : (k : Nat) → Fin k → D.Lock)
+    (query update fold : D.Fn) : Except String (Kernzelle.AccumulatorDecl D) := do
+  let .accT name ty merge count := item
+    | .error "expected accumulator declaration"
+  let k ← uAkkuAnzahl consts count
+  let (lo, hi) ← uAkkuBereich alias ty
+  let neutral ← uAkkuNeutral merge lo hi
+  if !(lo ≤ neutral && neutral ≤ hi) then
+    throw "accumulator neutral outside its range without G form"
+  let op ←
+    if strEq merge "max" then pure Kernzelle.AccOperator.max
+    else if strEq merge "min" then pure Kernzelle.AccOperator.min
+    else if strEq merge "add" then pure Kernzelle.AccOperator.add
+    else if strEq merge "or" then pure Kernzelle.AccOperator.or
+    else if strEq merge "and" then pure Kernzelle.AccOperator.and
+    else throw "accumulator operator without G form"
+  return { name := name, kernZahl := k, breite := (uAkkuFormat lo hi).1,
+    vorzeichen := (uAkkuFormat lo hi).2, lo := lo, hi := hi, op := op,
+    zellen := cells k, sperren := locks k, kernAbfrage := query,
+    aktualisiere := update, falte := fold }
 
 /-- The storage of every admitted `accumulates` item of the unit. -/
 def uAkkuErweiterung (consts : List (String × Int)) (alias : List (String × (Int × Int)))
