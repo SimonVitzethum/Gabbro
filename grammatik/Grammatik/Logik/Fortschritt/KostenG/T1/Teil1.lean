@@ -31,6 +31,7 @@ def rufeS (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .onWhy _ arms => rufeGArms Z ZS EW arms
   | .call g _ _ _ => Z g
   | .callInd (n := n) _ _ _ _ => ZS n
+  | .callIndElse (n := n) _ _ _ _ _ err => ZS n && rufeE Z ZS EW err
   | .locks _ _ body => rufeB Z ZS EW body
   | .breaking _ body => rufeB Z ZS EW body
   | .traverse _ _ body => rufeB Z ZS EW body
@@ -63,6 +64,7 @@ def rufeB (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .bind _ rest => rufeB Z ZS EW rest
   | .bindCall g _ _ _ _ rest => Z g && rufeB Z ZS EW rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => ZS n && rufeB Z ZS EW rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => ZS n && rufeE Z ZS EW err && rufeB Z ZS EW rest
   | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z ZS EW err && rufeB Z ZS EW rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeB Z ZS EW rest
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z ZS EW err && rufeB Z ZS EW rest
@@ -106,6 +108,7 @@ def rufeE (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .regReadElse _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
   | .awaits _ _ _ _ _ rest => rufeE Z ZS EW rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => ZS n && rufeE Z ZS EW rest
+  | .bindCallIndElse (n := n) _ _ _ _ _ err rest => ZS n && rufeE Z ZS EW err && rufeE Z ZS EW rest
   | .narrow _ _ _ sonst rest => rufeE Z ZS EW sonst && rufeE Z ZS EW rest
   | .narrowRequired _ _ _ rest => rufeE Z ZS EW rest
   | .exchange _ _ _ _ rest => rufeE Z ZS EW rest

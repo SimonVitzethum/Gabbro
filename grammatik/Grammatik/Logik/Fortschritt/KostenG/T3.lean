@@ -31,6 +31,7 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   -- `ruf`: declared costs plus arguments
   | .call g args _ _ => kostenArgs args + c g
   | .callInd _ args _ _ => kostenArgs args
+  | .callIndElse _ args _ _ _ err => kostenArgs args + kostenKE c err
   -- `Sperrt`, `Bricht`: the body
   | .locks _ _ body => kostenKB c body
   | .breaking _ body => kostenKB c body
@@ -61,6 +62,7 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bind e rest => 1 + kostenExpr e + kostenKB c rest
   | .bindCall g args _ _ _ rest => 1 + kostenArgs args + c g + kostenKB c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKB c rest
+  | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
   -- `LetSonst` over a call: `1 + ruf + block(sonst)`, summed
   | .bindCallElse g args _ _ _ err rest =>
       1 + kostenArgs args + c g + kostenKE c err + kostenKB c rest
@@ -115,6 +117,7 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .regReadElse _ _ _ sonst rest => 2 + kostenKE c sonst + kostenKE c rest
   | .awaits _ _ _ _ _ rest => 1 + kostenKE c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKE c rest
+  | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
   | .retScoped e _ => kostenErg e
@@ -141,6 +144,7 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .onWhy _ arms => 1 + zusatzGArms arms
   | .call .. => 1
   | .callInd .. => 0
+  | .callIndElse _ _ _ _ _ err => zusatzSonst err
   | .locks _ _ body => 2 + zusatzB body
   | .breaking _ body => 1 + zusatzB body
   | .traverse t inv body => 2 + (D.count t).toNat * (zusatzB body + kostenExpr inv + 2)
@@ -169,6 +173,7 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bind _ rest => 1 + zusatzB rest
   | .bindCall _ _ _ _ _ rest => 1 + zusatzB rest
   | .bindCallInd .. => 0
+  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzB rest
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzB rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
@@ -212,6 +217,7 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
   | .bindCallInd .. => 0
+  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
   | .retScoped .. => 1
@@ -238,6 +244,7 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 1 + zusatzSonst rest
   | .bindCallInd .. => 0
+  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
   | .retScoped .. => 2
