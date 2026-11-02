@@ -1,13 +1,9 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
+public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatExpansion
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
-
-/-- Fold temporaries cannot be written as source identifiers. The counter is shared by
-    every operand, including operands inside a traversal body. -/
-def foldName (n : Nat) (suffix : String) : String := "#fold:" ++ toString n ++ ":" ++ suffix
 
 def isFold : XKind → Bool
   | .foldAdd | .foldMin | .foldMax => true
@@ -117,8 +113,7 @@ def foldOneTable (ctx : UCtx) (table : String) : Nat → SExpr → Bool
     args.all (foldOneTable ctx table n)
   | _ + 1, _ => true
 
-/-- The G model has IEEE operations, but this source exporter has no float value
-    reader yet. Name that boundary instead of treating a float as an integer. -/
+/-- Detect IEEE operands before selecting the integer interval calculation. -/
 def foldHasFloat (ctx : UCtx) : Nat → SExpr → Bool
   | 0, _ => false
   | _ + 1, .float _ => true
@@ -126,7 +121,12 @@ def foldHasFloat (ctx : UCtx) : Nat → SExpr → Bool
     match (ctx.names.findIdx? (strEq · name)).bind (ctx.types[·]?) with
     | some (.fl ..) => true
     | _ => false
-  | n + 1, .bin _ a b | n + 1, .index a b => foldHasFloat ctx n a || foldHasFloat ctx n b
+  | n + 1, .bin _ a b => foldHasFloat ctx n a || foldHasFloat ctx n b
+  | n + 1, e@(.index a b) =>
+    foldHasFloat ctx n a || foldHasFloat ctx n b ||
+      (match uWertBody ctx (foldPlaces n e) with
+       | .ok side => (foldFloatType ctx side).any (fun ty => match ty with | .fl .. => true | _ => false)
+       | _ => false)
   | n + 1, e@(.field base _) =>
     foldHasFloat ctx n base || (match uZugriff ctx (foldPlaces n e) with
       | .ok (_, table, field, _) =>
@@ -175,10 +175,10 @@ def expandFold (ctx : UCtx) (serial : Nat) (kind : XKind) (names : List String)
   if declaration.von.isSome || capacity < 0 then throw "fold: finite table capacity required"
   if !(foldOneTable ctx table 1000 filter && foldOneTable ctx table 1000 expression) then
     throw "fold: operands may read only the domain table"
-  if foldHasFloat inner 1000 expression then
-    throw "fold: IEEE float value export is not available"
   let predicate ← uBool inner (foldPlaces 1000 filter)
   let predicate := match membership with | none => predicate | some member => UEns.and member predicate
+  if foldHasFloat inner 1000 expression then
+    return ← expandFloatFold ctx inner serial kind header predicate (foldPlaces 1000 expression) fallback
   let body ← uWertBody inner (foldPlaces 1000 expression)
   let some element := foldRange inner body | throw "fold: numeric operand has no exported integer range"
   let empty ← match kind, fallback with

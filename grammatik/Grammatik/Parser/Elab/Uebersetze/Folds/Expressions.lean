@@ -56,7 +56,12 @@ def expandFoldStmt (ctx : UCtx) (statement : SAnw) :
   | .bind mu name ty value =>
     let (code, ctx, _, value) ← expandFoldExpr 1000 ctx serial value
     let target ← if code.isEmpty then pure none else
-      match ty with | none => pure none | some ty => (uErgBereich ctx.alias ty).map some
+      match ty with
+      | none => pure none
+      | some ty => do
+        match ← uTyp ctx.alias ctx.tabs ty with
+        | .fl .. => pure none
+        | _ => (uErgBereich ctx.alias ty).map some
     foldCheckResult ctx code value target
     pure (code, ctx, .bind mu name ty value)
   | .set target op value =>

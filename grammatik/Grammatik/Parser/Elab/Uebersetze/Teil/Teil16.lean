@@ -86,6 +86,11 @@ def beqUStmt : UStmt → UStmt → Bool
       strEq a b && beqUSide source target && beqUEns inv other
   | .resetRange a x n, .resetRange b y m =>
     strEq a b && beqUSide x y && beqUSide n m
+  | .floatLit a q lo hi, .floatLit b r low high =>
+    strEq a b && decide (q = r) && decide (lo = low) && decide (hi = high)
+  | .float a op x y lo hi, .float b other z w low high =>
+    strEq a b && decide (op = other) && beqUSide x z && beqUSide y w &&
+      decide (lo = low) && decide (hi = high)
   | .ret a, .ret b => beqURet a b
   | .leave a, .leave b | .next a, .next b => strEq a b
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>

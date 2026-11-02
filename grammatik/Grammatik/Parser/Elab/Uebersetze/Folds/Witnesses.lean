@@ -124,15 +124,14 @@ public theorem annotated_overflow_refused_zeuge :
 public theorem empty_sum_range_zeuge : foldSumRange 0 (-9, 12) = (0, 0) := rfl
 public theorem signed_sum_range_zeuge : foldSumRange 3 (-9, 12) = (-27, 36) := rfl
 
-/-- Floats are parsed without reassociation; the missing existing IEEE source export
-    is a named refusal, not an integer conversion or a differently ordered fold. -/
+/-- Float folds retain their source expression for ordered IEEE expansion. -/
 public theorem float_syntax_zeuge :
     beqTop (parseTop [.wort "add", .ident "k", .wort "in", .wort "slots", .wort "of",
       .ident "T", .zeichen ":", .float "1.0", .ende])
       (.ok (.ext .foldAdd ["k", "slots"] [.variable "T", .tru, .float "1.0"])) = true := rfl
 
-public theorem float_export_refused_zeuge :
-    (expandFold context 0 .foldAdd ["k", "slots"] [.variable "T", .tru, .float "1.0"]).toOption.isNone = true := rfl
+public theorem float_export_zeuge :
+    (expandFold context 0 .foldAdd ["k", "slots"] [.variable "T", .tru, .float "1.0"]).toOption.isSome = true := rfl
 
 /-- Deferred source typing must not turn a placeholder into a proved zero range. -/
 public theorem unknown_local_range_zeuge :
