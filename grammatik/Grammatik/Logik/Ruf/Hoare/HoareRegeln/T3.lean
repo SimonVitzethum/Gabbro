@@ -216,10 +216,11 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         | mk idx nutz =>
             cases idx with
             | mk k hk =>
-                exact armsOhneRuf_RunabhaengigAux O passes R₁ R₂ b rest
+                have hx := armsOhneRuf_RunabhaengigAux O passes R₁ R₂ b rest
                   (fun σ ρ => ihb σ ρ)
                   (fun w σ ρ => ihr w σ ρ)
-                  k hk nutz σ ρ)
+                  k hk (Fall.toNutzlast _ _ _ _ nutz) σ ρ
+                rwa [Fall.of_to] at hx)
     (fun r σ ρ => by exact r.elim0)
     (fun b rest hb hr ihb ihr r σ ρ => by
       cases r with

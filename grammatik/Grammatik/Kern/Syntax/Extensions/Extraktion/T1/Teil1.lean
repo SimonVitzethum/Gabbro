@@ -57,8 +57,6 @@ def stmtKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires _ _ _ _ => []
   | .ret _ _ => []
   | .retWhy _ _ => []
-  | .retScoped _ _ => []
-  | .retWhyScoped _ _ => []
   | .leave _ => []
   | .next _ => []
 
