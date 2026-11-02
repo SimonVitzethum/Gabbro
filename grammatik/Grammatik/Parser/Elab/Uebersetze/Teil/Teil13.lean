@@ -27,7 +27,7 @@ set_option maxRecDepth 100000
   it raw, `STyp.raw`) into a head like a function's and a signature with an empty body (`UProg.ptrs`). Its number
   stands behind the functions'; a function conforms to it by `Deklaration.passt` (`passtAt`, decided: structural
   `SigPasst` plus the decidable contract inclusion `vertragPasstAt`). The contract rides the type into `UProg.ptrs`
-  (`needs`/`gives`, lowered to `Programm.ptrVertrag` once the full O43 duty is bound); `costs` travels nowhere,
+  (`needs`/`gives`, lowered to `Programm.ptrVertrag` by `lowerPtrAt`); `costs` travels nowhere,
   as at a function. No lock crosses an indirect call (a `locks` effect at the type is refused, as `N036` does, and
   so is `requires Held(..)`): the floor of the type is one above the highest rank of the unit. -/
 
@@ -52,13 +52,12 @@ def uZeigerParams : Nat → Nat → List Token → Except String (List (String �
 
 /-- The contract of a pointer type (C06): `needs`/`gives` ride the type into
     `UProg.ptrs`, elaborated exactly like a function's (`elabKlauseln`, with
-    `refines` inlined). The lowering guard `ptrVertragGebunden` in
-    `UebersetzeAllg3.Rest2` repeats the remaining refusal at `lowerAllg`: a
-    nontrivial `needs`/`gives` on a pointer type never silently becomes
-    `trivial`; the export admits the target only where the full O43 duty
-    (`PtrVerfeinert`, candidate table, interface caller duty) is bound.
-    `costs` travels nowhere, as at a function. `requires Held(..)` is refused
-    by the caller: no lock crosses an indirect call. -/
+    `refines` inlined), and lower to `Programm.ptrVertrag` (`lowerPtrAt`,
+    mirroring `lowerFnPlain`'s contract part). Conformance is per-pair
+    (`passtAt` with `vertragPasstAt`): a function value is admitted only where
+    it includes the interface contract. `costs` travels nowhere, as at a
+    function. `requires Held(..)` is refused by the caller: no lock crosses
+    an indirect call. -/
 def uZeigerVertrag (ctx : UCtx) : List SKlausel → Except String (List UEns × List UEns)
   | ks => elabKlauseln ctx ks
 
