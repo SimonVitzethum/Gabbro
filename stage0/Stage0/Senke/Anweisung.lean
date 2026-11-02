@@ -8,9 +8,10 @@
   callee's frame at the first free slot (`callC`). `layout.internalResult` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the shared ensures/invariant epilogue, which
   a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  give on every way out), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`,
-  `leave` and `next`; the latter two retain the enclosing loop targets.
+  `bindCallIndElse`, `leave` and `next`; the latter two retain the enclosing loop targets. Statements also
+  lower the fallible indirect call `callIndElse` (value discarded, reason to its end block).
 -/
 module
 public import Stage0.Senke.Ausdruck
@@ -164,7 +165,11 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         else none
       else none
     | _, _ => none
-  | _, _, _, _, .callIndElse .., _ => none
+  | _, Γ, _, _, .callIndElse (n := n) p args _ _ _ err, reserved => do
+    let cc ← lowIndElse (reserved := reserved) L p args
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 [] ce.1,
+      max cc.2 (max ((frei Γ reserved) + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n)) + 1) ce.2))
   | _, Γ, _, _, .locks Lk _ body, reserved =>
     if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
@@ -253,7 +258,12 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
-  | _, _, _, _, .bindCallIndElse .., _ => none
+  | _, Γ, _, _, .bindCallIndElse (n := n) p args _ _ _ err rest, reserved => do
+    let cc ← lowIndElse (reserved := reserved) L p args
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 cr.1 ce.1,
+      elseTopInd (D := D) n (frei Γ reserved) cc.2 cr.2 ce.2)
   | _, Γ, _, _, .bindAxiomOptElse (e := none) a args _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, none =>
@@ -418,7 +428,12 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
-  | _, _, _, .bindCallIndElse .., _ => none
+  | _, Γ, _, .bindCallIndElse (n := n) p args _ _ _ err rest, reserved => do
+    let cc ← lowIndElse (reserved := reserved) L p args
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+    pure (elseC (D.sigNr n) (frei Γ reserved) cc.1 cr.1 ce.1,
+      elseTopInd (D := D) n (frei Γ reserved) cc.2 cr.2 ce.2)
   | _, Γ, _, .bindAxiomOptElse (e := none) a args _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, none =>
