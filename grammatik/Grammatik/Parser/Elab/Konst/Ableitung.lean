@@ -60,6 +60,12 @@ inductive ConstSourceResult (c : ConstProgram) (locals : ConstLocals Γ) :
   | empty => exact .empty
   | val h => exact .val h.rein
 
+/-- Extend lexical scope, preserving the positions of all outer locals. -/
+def ConstLocals.extend (locals : ConstLocals Γ) (name : String) (mutable : Bool)
+    (τ : Ty) : ConstLocals (τ :: Γ) :=
+  (name, mutable, ⟨τ, .here⟩) :: locals.map (fun (n, m, ⟨t, x⟩) =>
+    (n, m, ⟨t, .there x⟩))
+
 /-- End-block provenance for returns and ordered mutable-local assignments.
     Unsupported forms have no derivation. -/
 inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
@@ -74,6 +80,17 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       ConstSourceEnd c locals
         (.block (.set (.variable name) "=" source :: rest) ending)
         (.cons (.assignVar x e) body)
+  | bind (value : ConstSourceExpr c locals source e)
+      (tail : ConstSourceEnd c (locals.extend name mutable τ)
+        (.block rest ending) body) :
+      ConstSourceEnd c locals
+        (.block (.bind mutable name none source :: rest) ending) (.bind e body)
+  | condChain (condition : ConstSourceExpr c locals source test)
+      (yesProof : ConstSourceEnd c locals yes yesBody)
+      (tail : ConstSourceEnd c locals (.cond next branch chain fallback) noBody) :
+      ConstSourceEnd c locals
+        (.cond source yes (.elsif next branch :: chain) fallback)
+        (.ite test yesBody noBody)
   | cond (condition : ConstSourceExpr c locals source test)
       (yesProof : ConstSourceEnd c locals yes yesBody)
       (noProof : ConstSourceEnd c locals no noBody) :
@@ -85,6 +102,8 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
   | ret value => exact .ret value.rein
   | endRet value => exact .ret value.rein
   | set _ value _ ih => exact .cons (.assignVar value.rein) ih
+  | bind value _ ih => exact .bind value.rein ih
+  | condChain condition _ _ hy hn => exact .ite condition.rein hy hn
   | cond condition _ _ hy hn => exact .ite condition.rein hy hn
 
 /-- First source-signature slice: closed Boolean functions with absent clauses.
