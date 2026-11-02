@@ -5,9 +5,7 @@
              (`vertreter`, one per constructor of `Ty`), not written per cell.
 -/
 module
-public import Grammatik.Gen.Abdeckung.Waehlen
-public import Grammatik.Gen.Fein.Zellen
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -38,6 +36,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Abdeckung.Waehlen
+public import Grammatik.Gen.Fein.Zellen
+import all Init.Data.Repr
 @[expose] public section
 
 

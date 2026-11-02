@@ -1,10 +1,5 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil13
-public import Grammatik.Parser.Elab.UebersetzeSum
-public import Grammatik.GabbroV.GvStartPflicht
-
-import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -35,6 +30,11 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Parser.Elab.Uebersetze.Teil13
+public import Grammatik.Parser.Elab.UebersetzeSum
+public import Grammatik.GabbroV.GvStartPflicht
+
+import all Init.Data.Repr
 
 @[expose] public section
 

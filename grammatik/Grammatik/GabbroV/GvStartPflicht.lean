@@ -19,18 +19,7 @@
   interpreter, no import from `programmlogik/`.
 -/
 module
-public import Grammatik.Parser.Elab.Uebersetze
-public import Grammatik.Parser.Elab.UebersetzeAllg
-public import Grammatik.Parser.Elab.UebersetzeAllg3
-public import Grammatik.Kern.Syntax.Typen.Teil2
-public import Grammatik.Kern.Syntax.Syntax.Teil2
-public import Grammatik.Kern.Semantik.Semantik
-public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.VertragOrtB
-public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-public import Grammatik.Zielsatz.Kern.Spec
-public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -61,6 +50,18 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+import all Init.Data.Repr
 @[expose] public section
 
 

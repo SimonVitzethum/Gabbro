@@ -26,10 +26,7 @@
   its call is the named stop `HaltArt.nieZurueck`, not a hardware stop.
 -/
 module
-public import Grammatik.Zielsatz.Kern.SpecProben
-public import Grammatik.Zielsatz.Kern.Akzeptiert
-public import Grammatik.Logik.Vertraege.EinpassenVoll
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -60,6 +57,10 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+import all Init.Data.Repr
 @[expose] public section
 
 

@@ -13,9 +13,7 @@
              hold for every member (`fam_gueltig_vollst`, `fam_bad_vollst`).
 -/
 module
-public import Grammatik.Gen.Familie.Spez
-public import Grammatik.Gen.Erzeuger.Gueltig
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -46,6 +44,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Familie.Spez
+public import Grammatik.Gen.Erzeuger.Gueltig
+import all Init.Data.Repr
 @[expose] public section
 
 

@@ -10,8 +10,7 @@
              (`Extraktion.endblockOrte` is NOT this: it leaves out the table a `shift` moves, which the footprint reads.)
 -/
 module
-public import Grammatik.Gen.Abdeckung.Zellen
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -42,6 +41,8 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Abdeckung.Zellen
+import all Init.Data.Repr
 @[expose] public section
 
 
