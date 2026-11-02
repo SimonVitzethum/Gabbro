@@ -101,6 +101,27 @@ def beqSKlauselList : List SKlausel → List SKlausel → Bool
   | _, _ => false
 end
 
+/-- Translation-time parameters; ordinary parameter types remain unchanged. -/
+inductive SGenericParam
+  | type : String → List String → SGenericParam
+  | constant : String → STyp → SGenericParam
+  | function : String → STyp → SGenericParam
+  deriving Repr
+
+def SGenericParam.name : SGenericParam → String
+  | .type n _ | .constant n _ | .function n _ => n
+
+def beqSGenericParam : SGenericParam → SGenericParam → Bool
+  | .type n bs, .type m cs => strEq n m && beqWorte bs cs
+  | .constant n t, .constant m u | .function n t, .function m u =>
+    strEq n m && beqSTyp t u
+  | _, _ => false
+
+def beqSGenericParams : List SGenericParam → List SGenericParam → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqSGenericParam x y && beqSGenericParams xs ys
+  | _, _ => false
+
 /- A function head: SYNTAX.md section 6 `fndecl` up to the body.
     `art` is the modifier word (`impl`, `spec`, `library`,
     `const`, `raw`, `divergent`, `prim`, `extern`, else `""` for a
@@ -114,6 +135,7 @@ structure FnSig where
   res : Option STyp
   fehler : Option String
   klauseln : List SKlausel
+  generics : List SGenericParam := []
   deriving Repr
 
 def beqParam : (String × STyp) → (String × STyp) → Bool
@@ -127,7 +149,8 @@ def beqParamList : List (String × STyp) → List (String × STyp) → Bool
 def beqFnSig : FnSig → FnSig → Bool
   | s, t => strEq s.art t.art && strEq s.name t.name &&
     beqParamList s.params t.params && beqSTypOpt s.res t.res &&
-    beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln
+    beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln &&
+    beqSGenericParams s.generics t.generics
 
 /- One slot/format field: SYNTAX.md sections 9-10 `slotfeld`
     and `field`. `pos` is the raw `@bitpos`, `bezug` the raw

@@ -142,9 +142,10 @@ def namenK (lok : List String) : SKlausel → List String
 /-- The names a function head writes: parameter and result types, the reason, every clause (the
     parameters are locals there). -/
 def namenSig (s : FnSig) : List String :=
-  let lok := s.params.map Prod.fst
+  let lok := s.generics.map SGenericParam.name ++ s.params.map Prod.fst
   s.params.flatMap (fun p => namenT p.2) ++ namenTO s.res ++ s.fehler.toList ++
     s.klauseln.flatMap (namenK lok)
+  |>.filter (fun name => !(s.generics.map SGenericParam.name).contains name)
 
 /-- The names a table member's head writes: field types, constant types and field conditions. -/
 def namenTeil : STabTeil → List String

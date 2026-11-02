@@ -86,11 +86,11 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .typeT fl n args ord t => .typeT fl (k.eigen n) (args.map (typ k)) ord (typO k t)
   | .constT n t v => .constT (k.eigen n) (typ k t) (konst k v)
   | .globT m n t v al s sh => .globT m (k.eigen n) (typ k t) (konst k v) (ausO k al) s sh
-  | .fnT s b => .fnT (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+  | .fnT s b => .fnT (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .transT target s b =>
-    .transT (k.ref target) (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+    .transT (k.ref target) (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .protoT s => .protoT (sig k s)
-  | .specT s p => .specT (sig k s) (aus (k.mit (s.params.map Prod.fst)) p)
+  | .specT s p => .specT (sig k s) (aus (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) p)
   | .asmT s h => .asmT (sig k s) h
   | .tableT n v c b o sh ps => .tableT (k.eigen n) (v.map k.ref) (ausO k c) b o sh (ps.map (tabTeil k))
   | .lockT n ps rk h sh m i =>

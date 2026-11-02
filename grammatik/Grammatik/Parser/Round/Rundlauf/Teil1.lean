@@ -94,6 +94,14 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
   | .all => druckQuant "forall" ns ts
   | .any => druckQuant "exists" ns ts
   | .count => druckQuant "count" ns ts
+  | .instantiate => match ns with
+    | name :: words =>
+      let raw := fun s => match lex s with
+        | .ok tokens => tokens.filter (fun | .ende => false | _ => true)
+        | .error _ => [.ende]
+      raw name ++ [.zeichen "::", .zeichen "["] ++ kommaToks (words.map raw) ++
+        [.zeichen "]", .zeichen "("] ++ kommaToks ts ++ [.zeichen ")"]
+    | [] => [.ende]
   | .label => match ns, ts with
     | [name], [value] => nameTok name :: .zeichen ":" :: value
     | _, _ => [.ende]

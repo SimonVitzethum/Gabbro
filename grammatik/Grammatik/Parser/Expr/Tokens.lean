@@ -71,17 +71,6 @@ def istKopfForm (w : String) : List Token → Bool
   | .wort s :: rest => strEq s w && !istOrtsFort rest
   | _ => false
 
-/-- One token as raw text (for unsplit headers). -/
-def zeigeTok : Token → String
-  | .ident s => s
-  | .wort s => s
-  | .num n => toString n
-  | .float s => s
-  | .text s => "\"" ++ s ++ "\""
-  | .zeichen s => s
-  | .doku s => "///" ++ s
-  | .ende => "<ende>"
-
 /-- Collect raw words until the stop word at depth zero (braces
     tracked). Used for loop headers and other unsplit prefixes. -/
 def nimmBisWort (stopp : String) : List Token → Nat → Except String (String × List Token)

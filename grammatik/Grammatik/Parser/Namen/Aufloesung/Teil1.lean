@@ -98,6 +98,8 @@ def aus (k : Kontext) : SExpr → SExpr
     else match aufloeseK k.q ⟨none, []⟩ k.von [g, f] with
       | some c => .variable (schluessel k.q.namen c)
       | none => .why g f
+  | .ext .instantiate (name :: words) xs =>
+    .ext .instantiate (k.ref name :: words) (ausL k xs)
   | .ext .all (x :: d :: ns) xs => .ext .all (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .any (x :: d :: ns) xs => .ext .any (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .count (x :: d :: ns) xs => .ext .count (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
@@ -223,11 +225,11 @@ end
 
 /-- **A function head, resolved**: its own key; parameters are locals of its clauses. -/
 def sig (k : Kontext) (s : FnSig) : FnSig :=
-  let k' := k.mit (s.params.map Prod.fst)
+  let k' := k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)
   { s with
     name := k.eigen s.name
-    params := s.params.map fun (n, t) => (n, typ k t)
-    res := typO k s.res
+    params := s.params.map fun (n, t) => (n, typ k' t)
+    res := typO k' s.res
     fehler := s.fehler.map k.ref
     klauseln := s.klauseln.map (klausel k') }
 
