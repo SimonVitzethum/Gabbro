@@ -293,7 +293,7 @@ def elabU : List SItemTief → Except String UProg
         elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r)) with
     | .error e => .error e
     | .ok zeigerPaare =>
-    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb)) with
+    match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces)) with
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>

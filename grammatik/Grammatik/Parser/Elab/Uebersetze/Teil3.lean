@@ -185,8 +185,8 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
   | t => .error ("type without G form: " ++ sTypText t)
 
 /-- The canonical reader in a declaration environment without named value schemas. -/
-def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty :=
-  uTypIn alias tabs []
+def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : List String := []) : STyp → Except String Ty :=
+  uTypIn alias tabs [] spaces
 
 /-- Collect constant functions independently of their statement body shape. -/
 def uKonstFns : List SItemTief → List UKonstFn
