@@ -142,11 +142,11 @@ theorem gs_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   · cases h2 : AkzeptiertX (P.mitRumpf r) S fs ls cs ws
     · rfl
     · rw [akzeptiertX_iff _ _ _ _ _ _ []] at h2
-      obtain ⟨h2k, _⟩ := h2
+      obtain ⟨h2k, _, hr⟩ := h2
       have : AkzeptiertX P S fs ls cs ws = true :=
         (akzeptiertX_iff _ _ _ _ _ _ []).2 ⟨fun c => by
           rw [← gs_komp P r h S fs ls cs ws hvoll hls hcs c]; exact h2k c,
-        Gabbro.Grammatik.Kernzelle.accumulatorB_leer⟩
+        Gabbro.Grammatik.Kernzelle.accumulatorB_leer, hr⟩
       rw [this] at h1; cases h1
   · have h1' := (akzeptiertX_iff _ _ _ _ _ _ []).1 h1
     exact (akzeptiertX_iff _ _ _ _ _ _ []).2 ⟨fun c => by

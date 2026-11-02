@@ -257,6 +257,7 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   bibliothek : LibraryAdmission P := trivial
   -- the accumulator admission (C15, 2026-11-02)
   akku : Kernzelle.AccumulatorAdmission P fs A
+  reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
 
 /-- **The ownership start of a unit** (2026-10-24): every arena is empty in the declared start
     memory (nothing used, the free list full), and no declared start or run-time root is handed an
