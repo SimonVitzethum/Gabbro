@@ -338,4 +338,3 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   14. C16 G/GX replay and ownership conservation.
   15. C16 counterprobe binding, artifact identity and measured status.
   16. C16 connected export/Stage-0 correctness with emitted sample work.
-- **C01 mapping walk correctness (`Bausteine/Walk/Correctness.lean`) does not build** (21 errors after the C01 merge: invariant-world transport, `WalkHit` child names, node vs entry index, renaming contexts, `walkExpand_ok`); the module is excluded from the `Alle` collector until fixed, so its theorems are NOT proved. Error list: lead scratch `.scratch-walk-errors.txt`.
