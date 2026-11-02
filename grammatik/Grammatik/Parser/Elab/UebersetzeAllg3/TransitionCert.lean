@@ -51,18 +51,14 @@ theorem lowerAllg_fields (u : UProg) (P : Programm (declOf u)) (fs : List (declO
   · cases h
   · split at h
     · cases h
-    · injection h with h1
-      injection h1 with h2 h3
-      subst h2
+    · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
       obtain ⟨v, hv⟩ := lowerEach_all_ok u (List.finRange u.fns.length) c (List.mem_finRange c)
         ‹lowerEach u (List.finRange u.fns.length) = .ok ()›
       refine ⟨v, hv, ?_, ?_, ?_⟩
       · exact congrArg Prod.fst (lowerAtPair_of_ok u c _ hv)
       · exact congrArg (fun p => p.2.1) (lowerAtPair_of_ok u c _ hv)
       · intro hne
-        show reqOf u _ c = v.2.2
-        unfold reqOf
-        rw [if_neg hne]
+        simp only [progOfFn, reqOf, hne, ↓reduceIte]
         exact congrArg (fun p => p.2.2) (lowerAtPair_of_ok u c _ hv)
 
 /-- The pieces of a lowered transition of stores. -/
@@ -155,17 +151,14 @@ theorem lowerTransitionAt_shift_spec (u : UProg) (c : Fin u.fns.length) (state :
       HEq v.2.1 (Endblock.cons edge.statement
         (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))) := by
   unfold lowerTransitionAt at h
+  simp only [hs, ↓reduceIte] at h
   split at h
   · cases h
   · split at h
     · split at h
       · cases h
       · rename_i hne
-        split at h
-        · exact ⟨hne, lowerShiftAt_spec u c tr h⟩
-        · rename_i hshift
-          rw [hs] at hshift
-          exact absurd hshift (by decide)
+        exact ⟨hne, lowerShiftAt_spec u c tr h⟩
     · cases h
 
 /-- **Expansion certificate (stores).** In a successful lowering, the function
@@ -219,7 +212,7 @@ theorem lowerAllg_transition_certified (u : UProg) (P : Programm (declOf u))
     simp only [lowerFnAt, hc, hname, ↓reduceIte, reduceCtorEq] at hv
   | some pair =>
     obtain ⟨state, tr⟩ := pair
-    refine ⟨state, tr, hc, ?_⟩
+    refine ⟨state, tr, rfl, ?_⟩
     cases hs : uTransitionShift tr with
     | false => exact Or.inl (lowerAllg_transition_stores u P fs h c state tr hc hs)
     | true => exact Or.inr (lowerAllg_transition_shift u P fs h c state tr hc hs)

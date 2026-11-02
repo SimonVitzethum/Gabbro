@@ -61,7 +61,8 @@ theorem TransitionShiftExpansion.call_correct {P : Programm D} {f : D.Fn}
   dsimp only at shifted
   obtain ⟨runShift, -, slotsEq, globsEq⟩ := shifted
   obtain ⟨world, hWorld, worldSlots, worldGlobs⟩ : ∃ world,
-      execStmt O passes (rufAt P O passes fuel) expansion.shift.statement checked env =
+      execStmt O passes (rufAt P O passes fuel) expansion.shift.statement
+          (entry.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) env =
         .ok world env ∧
       world.slots = (transitionWorld [expansion.shift.write] checked env checked).slots ∧
       world.globs = (transitionWorld [expansion.shift.write] checked env checked).globs :=

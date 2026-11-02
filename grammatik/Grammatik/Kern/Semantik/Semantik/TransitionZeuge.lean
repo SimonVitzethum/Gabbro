@@ -37,9 +37,9 @@ namespace Gabbro.Grammatik.TransitionProben
 theorem writes_frozen : ∀ write ∈ writes, write.Frozen := by
   intro write member
   rcases List.mem_cons.mp member with same | member
-  · subst same; exact .slot _ _ rfl firstIndex firstSource firstTarget _
+  · subst same; exact TransitionWrite.Frozen.slot (D := D) () () rfl firstIndex firstSource firstTarget _
   · rcases List.mem_cons.mp member with same | member
-    · subst same; exact .slot _ _ rfl secondIndex secondSource secondTarget _
+    · subst same; exact TransitionWrite.Frozen.slot (D := D) () () rfl secondIndex secondSource secondTarget _
     · cases member
 
 theorem writes_rights : ∀ write ∈ writes, write.Permitted (vertragVon D ()) := by
@@ -200,10 +200,10 @@ theorem transition_constant_shift_zeuge (O : Orakel constantD) (passes : Nat)
     let value : Wert constantD (constantD.typ () ()) := ⟨7, by decide, by decide⟩
     let shifted := (constantEntry.lese [] [.inl ()]).schreibSlot () [] 0 () value
     let stored := constantEntry.schreibSlot () [] 0 () value
-    execStmt O passes R (Stmt.shift (V := vertragVon constantD ()) (l := false)
+    execStmt O passes R (Stmt.shift (V := vertragVon constantD ()) (l := false) (Γ := [.index 8]) (Λ := [])
       () () rfl (.var .here) 0 7 (by decide) rfl rfl (by intro w h; cases h))
       constantEntry constantEnv = .ok shifted constantEnv ∧
-    execStmt O passes R (Stmt.assignSlot (V := vertragVon constantD ()) (l := false)
+    execStmt O passes R (Stmt.assignSlot (V := vertragVon constantD ()) (l := false) (Γ := [.index 8]) (Λ := [])
       () () (.var .here) (.widen (by decide) (by decide) (.lit 7)) rfl
       (by intro w h; cases h)) constantEntry constantEnv = .ok stored constantEnv ∧
     shifted.slots = stored.slots ∧ shifted.globs = stored.globs :=

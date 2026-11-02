@@ -5,23 +5,60 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Fixtures
 namespace Gabbro.Grammatik.Parser.Measures.Fixtures
 open Uebersetze UebersetzeAllg UebersetzeAllg2
 
-/-- The common call/continuation case in the witnesses. This is only an outcome case split;
-    the program, measure gate and execution semantics remain the existing G definitions. -/
-private theorem call_continuation {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    (g : D.Fn) (hr : D.gruende g = 0) (out : RufAusgang g)
-    (next : World D → EndAusgang V l Γ) (target : D.Fn)
-    (safe : out ≠ .logik (.abstieg target))
-    (rest : ∀ state, next state ≠ .logik (.abstieg target)) :
-    (match out with
-      | .ok state _ => next state
-      | .why _ reason => keinGrund hr reason
-      | .logik error => .logik error
-      | .hardware error => .hardware error) ≠ EndAusgang.logik (.abstieg target) := by
-  cases out with
-  | ok state value => exact rest state
-  | why state reason => have := reason.isLt; omega
-  | logik error => intro bad; apply safe; cases bad; rfl
-  | hardware error => intro bad; cases bad
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Compute the lowering once; duty proofs rewrite this equation instead of unfolding the exporter. -/
+private theorem countP_rumpf : countP.rumpf 0 =
+    .cons (.ite (.lt (.lit 0) (.var .here))
+      (.cons (.call 0 (.cons (.widen (by decide) (by decide) (.lit 0)) .nil)
+        (rufPasstB_ok (u := countdown) (by decide)) (by rfl)) .nil) .nil)
+      (.ret .empty (List.Perm.refl [])) := by rfl
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- The left member calls the right member with the literal zero. -/
+private theorem mutualP_rumpf_zero : mutualP.rumpf 0 =
+    .cons (.ite (.lt (.lit 0) (.var .here))
+      (.cons (.call 1 (.cons (.widen (by decide) (by decide) (.lit 0)) .nil)
+        (rufPasstB_ok (u := mutualU) (by decide)) (by rfl)) .nil) .nil)
+      (.ret .empty (List.Perm.refl [])) := by rfl
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- The right member calls the left member with the literal zero. -/
+private theorem mutualP_rumpf_one : mutualP.rumpf 1 =
+    .cons (.ite (.lt (.lit 0) (.var .here))
+      (.cons (.call 0 (.cons (.widen (by decide) (by decide) (.lit 0)) .nil)
+        (rufPasstB_ok (u := mutualU) (by decide)) (by rfl)) .nil) .nil)
+      (.ret .empty (List.Perm.refl [])) := by rfl
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Both calls survive lowering, including the call before the final call. -/
+private theorem nonTailP_rumpf : nonTailP.rumpf 0 =
+    .cons (.ite (.lt (.lit 0) (.var .here))
+      (.cons (.call 0 (.cons (.widen (by decide) (by decide) (.lit 0)) .nil)
+        (rufPasstB_ok (u := nonTail) (by decide)) (by rfl))
+        (.cons (.call 0 (.cons (.widen (by decide) (by decide) (.lit 0)) .nil)
+          (rufPasstB_ok (u := nonTail) (by decide)) (by rfl)) .nil)) .nil)
+      (.ret .empty (List.Perm.refl [])) := by rfl
+
+set_option maxRecDepth 100000 in
+/-- The actual exported component is the widened entry parameter, with its original footprint proof. -/
+private theorem countM_mass : countM.mass 0 =
+    [⟨1, .widen (by decide) (by decide) (.var .here), rfl⟩] := by rfl
+
+set_option maxRecDepth 100000 in
+private theorem mutualM_mass_zero : mutualM.mass 0 =
+    [⟨1, .widen (by decide) (by decide) (.var .here), rfl⟩] := by rfl
+
+set_option maxRecDepth 100000 in
+private theorem mutualM_mass_one : mutualM.mass 1 =
+    [⟨1, .widen (by decide) (by decide) (.var .here), rfl⟩] := by rfl
+
+set_option maxRecDepth 100000 in
+private theorem nonTailM_mass : nonTailM.mass 0 =
+    [⟨1, .widen (by decide) (by decide) (.var .here), rfl⟩] := by rfl
 
 /-- The countdown's exported `n` is its actual nonnegative entry argument. -/
 theorem countdown_value_zeuge (state : World (declOf countdown)) (n : Zahl 0 1) :
@@ -32,6 +69,7 @@ theorem countdown_duty_zeuge (passes : Nat) (Q : AxEns (declOf countdown))
     (S : SperrInv (declOf countdown)) (T : (declOf countdown).Tab ⊕ (declOf countdown).Glob → Prop) :
     MassPflicht countP passes Q S T countM.mass (zykS countP [0]) 0 := by
   intro O _ _ _ U _ A _ R _ noDescent _ state env _ target _
+  rw [countP_rumpf]
   cases env with
   | cons n tail =>
     cases tail
@@ -39,23 +77,16 @@ theorem countdown_duty_zeuge (passes : Nat) (Q : AxEns (declOf countdown))
     have casesN : n = 0 ∨ n = 1 := by omega
     rcases casesN with zero | one
     · subst n
-      intro bad
-      cases bad
+      simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
     · subst n
-      have safe : (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-        | .ok state' _ => .zurueck (A [] state') ()
-        | .why _ reason => keinGrund (by rfl) reason
-        | .logik error => .logik error
-        | .hardware error => .hardware error) ≠
-          (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf countdown) 0) false [.int 0 1]) :=
-          call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
       intro bad
-      apply safe
+      have safe := noDescent 0 (A [] (A [] state))
+        (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
       cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
       | why world reason => exact Fin.elim0 reason
-      | _ => simpa [countP, program, countM, exported, execEndHA, execStmtHA, execBlockHA,
-          massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
-          leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
+      | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+          countM_mass, lexLt, eval, evalArgs, evalErg, Env.get, Expr.orte, Args.orte,
+          leseA, World.lese, World.merke, wahr?, Zahl.weiter]
 
 /-- Both functions of the mutual cycle carry the same singleton tuple. -/
 theorem mutual_lengths_zeuge :
@@ -70,8 +101,8 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutualU))
   rcases f with ⟨index, bound⟩
   have casesF : index = 0 ∨ index = 1 := by change index < 2 at bound; omega
   rcases casesF with first | second <;> subst index
-  all_goals
-    intro O _ _ _ U _ A _ R _ noDescent _ state env _ target _
+  · intro O _ _ _ U _ A _ R _ noDescent _ state env _ target _
+    rw [mutualP_rumpf_zero]
     cases env with
     | cons n tail =>
       cases tail
@@ -79,44 +110,42 @@ theorem mutual_duty_zeuge (passes : Nat) (Q : AxEns (declOf mutualU))
       have casesN : n = 0 ∨ n = 1 := by omega
       rcases casesN with zero | one
       · subst n
-        intro bad
-        cases bad
+        simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
       · subst n
-        first
-        | have safe : (match R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-            | .ok state' _ => .zurueck (A [] state') ()
-            | .why _ reason => keinGrund (by rfl) reason
-            | .logik error => .logik error
-            | .hardware error => .hardware error) ≠
-              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutualU) 0) false [.int 0 1]) :=
-              call_continuation 1 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
-          intro bad
-          apply safe
-          cases hr : R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-          | why world reason => exact Fin.elim0 reason
-          | _ => simpa [mutualP, program, mutualM, exported, execEndHA, execStmtHA, execBlockHA,
-              massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
-              leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
-        | have safe : (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-            | .ok state' _ => .zurueck (A [] state') ()
-            | .why _ reason => keinGrund (by rfl) reason
-            | .logik error => .logik error
-            | .hardware error => .hardware error) ≠
-              (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf mutualU) 0) false [.int 0 1]) :=
-              call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
-          intro bad
-          apply safe
-          cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-          | why world reason => exact Fin.elim0 reason
-          | _ => simpa [mutualP, program, mutualM, exported, execEndHA, execStmtHA, execBlockHA,
-              massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
-              leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
+        intro bad
+        have safe := noDescent 1 (A [] (A [] state))
+          (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
+        cases hr : R 1 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+        | why world reason => exact Fin.elim0 reason
+        | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+            mutualM_mass_zero, mutualM_mass_one, lexLt, eval, evalArgs, evalErg, Env.get,
+            Expr.orte, Args.orte, leseA, World.lese, World.merke, wahr?, Zahl.weiter]
+  · intro O _ _ _ U _ A _ R _ noDescent _ state env _ target _
+    rw [mutualP_rumpf_one]
+    cases env with
+    | cons n tail =>
+      cases tail
+      rcases n with ⟨n, lower, upper⟩
+      have casesN : n = 0 ∨ n = 1 := by omega
+      rcases casesN with zero | one
+      · subst n
+        simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
+      · subst n
+        intro bad
+        have safe := noDescent 0 (A [] (A [] state))
+          (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
+        cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
+        | why world reason => exact Fin.elim0 reason
+        | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+            mutualM_mass_zero, mutualM_mass_one, lexLt, eval, evalArgs, evalErg, Env.get,
+            Expr.orte, Args.orte, leseA, World.lese, World.merke, wahr?, Zahl.weiter]
 
 /-- The first call of this cycle is not in tail position; both calls really decrease the measure. -/
 theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
     (S : SperrInv (declOf nonTail)) (T : (declOf nonTail).Tab ⊕ (declOf nonTail).Glob → Prop) :
     MassPflicht nonTailP passes Q S T nonTailM.mass (zykS nonTailP [0]) 0 := by
   intro O _ _ _ U _ A _ R _ noDescent _ state env _ target _
+  rw [nonTailP_rumpf]
   cases env with
   | cons n tail =>
     cases tail
@@ -124,36 +153,24 @@ theorem nonTail_duty_zeuge (passes : Nat) (Q : AxEns (declOf nonTail))
     have casesN : n = 0 ∨ n = 1 := by omega
     rcases casesN with zero | one
     · subst n
-      intro bad
-      cases bad
+      simp [execEndHA, execStmtHA, execBlockHA, eval, Env.get, wahr?]
     · subst n
-      have safe : (match R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-        | .ok state' _ =>
-          match R 0 (A [] state') (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
-          | .ok state'' _ => .zurueck (A [] state'') ()
-          | .why _ reason => keinGrund (by rfl) reason
-          | .logik error => .logik error
-          | .hardware error => .hardware error
-        | .why _ reason => keinGrund (by rfl) reason
-        | .logik error => .logik error
-        | .hardware error => .hardware error) ≠
-          (EndAusgang.logik (.abstieg target) : EndAusgang (vertragVon (declOf nonTail) 0) false [.int 0 1]) := by
-        apply call_continuation 0 rfl _ _ target (noDescent _ _ _ target)
-        intro state'
-        exact call_continuation 0 rfl _ _ target (noDescent _ _ _ target) (fun _ bad => by cases bad)
       intro bad
-      apply safe
+      have safe := noDescent 0 (A [] (A [] state))
+        (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
       cases hr : R 0 (A [] (A [] state)) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
       | why world reason => exact Fin.elim0 reason
       | ok world value =>
+        have safeNext := noDescent 0 (A [] world)
+          (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) target
         cases hs : R 0 (A [] world) (.cons (⟨0, by decide, by decide⟩ : Zahl 0 1) .nil) with
         | why world' reason => exact Fin.elim0 reason
-        | _ => simpa [nonTailP, program, nonTailM, exported, execEndHA, execStmtHA, execBlockHA,
-            massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
-            leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr, hs] using bad
-      | _ => simpa [nonTailP, program, nonTailM, exported, execEndHA, execStmtHA, execBlockHA,
-          massTor, Mass.wert, eval, evalArgs, evalErg, Expr.orte, Args.orte,
-          leseA, World.lese, World.merke, wahr?, Zahl.weiter, hr] using bad
+        | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+            nonTailM_mass, lexLt, eval, evalArgs, evalErg, Env.get, Expr.orte, Args.orte,
+            leseA, World.lese, World.merke, wahr?, Zahl.weiter]
+      | _ => simp_all [execEndHA, execStmtHA, execBlockHA, massTor, Mass.wert,
+          nonTailM_mass, lexLt, eval, evalArgs, evalErg, Env.get, Expr.orte, Args.orte,
+          leseA, World.lese, World.merke, wahr?, Zahl.weiter]
 
 /-- Acyclic source functions reuse the existing vacuous-cycle theorem, with their real exported measure. -/
 theorem acyclic_duty_zeuge (passes : Nat) (Q : AxEns (declOf acyclic))
@@ -161,7 +178,7 @@ theorem acyclic_duty_zeuge (passes : Nat) (Q : AxEns (declOf acyclic))
     MassPflicht acyclicP passes Q S T acyclicM.mass (zykS acyclicP [0]) 0 :=
   massPflicht_ohne_zyklus acyclicP [0] passes Q S T acyclicM.mass 0 (by
     intro g
-    have hg : g = 0 := Fin.ext (by have := g.isLt; change g.val < 1 at this; omega)
+    have hg : g = 0 := Fin.fin_one_eq_zero g
     subst g
     decide +kernel)
 
