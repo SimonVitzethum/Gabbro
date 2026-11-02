@@ -324,3 +324,7 @@ public import Grammatik.Parser.Profil.Register
 public import Grammatik.Parser.Profil.RegisterZeuge
 public import Grammatik.Parser.Profil.Auswahl
 public import Grammatik.Parser.Profil.Pipeline
+public import Grammatik.Parser.Profil.AuswahlZeuge
+public import Grammatik.Speichermodell.Adressen.Platzierung
+public import Grammatik.Parser.Profil.Platzierung
+public import Grammatik.Parser.Profil.PlatzierungZeuge
