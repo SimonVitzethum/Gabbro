@@ -32,6 +32,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
@@ -367,10 +368,10 @@ def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
     (`libraryB_immer`); the content is source-level (`Uebersetzung.lean`). -/
 def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
-    (aks : List (Kernzelle.AccumulatorDecl D) := []) : Bool :=
+    (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs cs aks
+    antwortenB P fs && maskenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs cs aks && checkB P (tabsOf cs) (globsOf cs) fs checks
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 

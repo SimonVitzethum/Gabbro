@@ -37,5 +37,6 @@ public import Grammatik.Kern.Syntax.Satz.T2
 public import Grammatik.Kern.Syntax.Satz.T3
 public import Grammatik.Kern.Syntax.Satz.T4
 public import Grammatik.Kern.Syntax.Satz.T5
+public import Grammatik.Kern.Syntax.Satz.Pruefung
 @[expose] public section
 

@@ -52,3 +52,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil13
 public import Grammatik.Parser.Elab.Uebersetze.Teil14
 public import Grammatik.Parser.Elab.Uebersetze.Teil15
 public import Grammatik.Parser.Elab.Uebersetze.Teil16
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge

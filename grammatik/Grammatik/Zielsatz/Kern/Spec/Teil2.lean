@@ -18,6 +18,7 @@ public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 
 @[expose] public section
 
@@ -257,6 +258,9 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   bibliothek : LibraryAdmission P := trivial
   -- the accumulator admission (C15, 2026-11-02)
   akku : Kernzelle.AccumulatorAdmission P fs A
+  -- the declared checks (C16, 2026-11-02): the admitted checks of this value
+  checks : List (CheckDecl D) := []
+  pruef : CheckAdmission P fs checks
   reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
 
 /-- **The ownership start of a unit** (2026-10-24): every arena is empty in the declared start

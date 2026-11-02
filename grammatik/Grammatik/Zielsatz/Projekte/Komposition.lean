@@ -59,7 +59,10 @@ def komponiereP (B : Programm D) (ps : List (Projekt D)) : Programm D :=
 def qAlle (ps : List (Projekt D)) : AxEns D :=
   fun a σ v => ps.all (fun p => p.E.Q a σ v)
 
-/-- **The composed unit.** -/
+/-- **The composed unit.** Checks are lifted per project (each project's declared
+    checks travel with it); admitting them across the link is the open remainder
+    (C16: the composed admission needs cross-unit gate consumption and name
+    separation, as for `verbinde`). -/
 def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
   P := komponiereP B.P ps
   S := B.S
@@ -68,6 +71,7 @@ def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
   sp0 := B.sp0
   gestartet := ps.flatMap (·.E.gestartet)
   arenen := ps.flatMap (·.E.arenen)
+  pruefungen := ps.flatMap (·.E.pruefungen)
 
 /-- Every function is owned by some project of the list. -/
 def Deckend (ps : List (Projekt D)) : Prop := ∀ f, ∃ p ∈ ps, p.eigen f = true
