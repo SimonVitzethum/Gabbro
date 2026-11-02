@@ -63,11 +63,11 @@ theorem ownerActivations_length {ks : List (Σ f : D.Fn, Env D (D.params f) × W
   | eintritt ks log f rho s0 h ih =>
     simpa only [ownerActivations, List.length_cons] using congrArg Nat.succ ih
   | rueck ks log f rho s0 v s1 h ih =>
-    simpa only [ownerActivations, List.length_tail, List.length_cons, Nat.add_sub_cancel] using
-      congrArg (fun n => n - 1) ih
+    simp only [ownerActivations, List.length_tail, List.length_cons] at ih ⊢
+    omega
   | why ks log f rho s0 r s1 h ih =>
-    simpa only [ownerActivations, List.length_tail, List.length_cons, Nat.add_sub_cancel] using
-      congrArg (fun n => n - 1) ih
+    simp only [ownerActivations, List.length_tail, List.length_cons] at ih ⊢
+    omega
 
 /-- Exact identity of one invocation: resolved callee, arguments, old-entry
     world, immutable log prefix, caller serial and its suspended ancestors. -/
@@ -120,7 +120,7 @@ def Outcome (c : OwnerInvocation D) (ev : RufEreignisF D) : Prop :=
     the original invocation even after nested calls or equal-key later calls.
     Keeping the immutable prefix also excludes a different historical entry. -/
 structure Return (c : OwnerInvocation D) (P : Programm D) (O : Orakel D) (passes : Nat)
-    (M M' : RufMaschineG D) : Prop where
+    (M M' : RufMaschineG D) : Type where
   step : RufSchrittG P O passes M c.thread M'
   nested : List (RufEreignisF D)
   event : RufEreignisF D
