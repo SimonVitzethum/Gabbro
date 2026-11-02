@@ -138,6 +138,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, Γ, _, _, .leave _, reserved => if lit32 (16 + ex.1) then some ([ci 18 (16 + ex.1) 0 0], (frei Γ reserved)) else none
   | _, Γ, _, _, .next _, reserved => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], (frei Γ reserved)) else none
   | _, Γ, _, _, .axiomCall a args _ _ _ _ _, reserved => torC0 (reserved := reserved) L a args ((frei Γ reserved))
+  | _, Γ, _, _, .axiomCallElse _ _ _ _ _ _ _ _ _, reserved => none
   | _, Γ, _, _, .locks Lk _ body, reserved =>
     if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
@@ -213,6 +214,8 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       pure (narrowC ((frei Γ reserved)) low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max (frei Γ reserved + 1) cr.2)))
     else none
   | _, Γ, _, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
+  | _, Γ, _, _, .bindAxiomOpt _ _ _ _ _ _ _ _, reserved => none
+  | _, Γ, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ _, reserved => none
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
@@ -336,6 +339,8 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
       pure (narrowC ((frei Γ reserved)) low high ce.1 (stopC 107 (frei Γ reserved)) cr.1, max ce.2 (max ((frei Γ reserved) + 4) (max (frei Γ reserved + 1) cr.2)))
     else none
   | _, Γ, _, .bindAxiom a args _ _ _ _ _ rest, reserved => do
+  | _, Γ, _, .bindAxiomOpt _ _ _ _ _ _ _ _, reserved => none
+  | _, Γ, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ _, reserved => none
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
