@@ -1038,8 +1038,16 @@ The concrete implementation's actual signature and contracts still govern ordina
 Explicit `Shape::area::[T](copy)` uses the same application representation and resolution path.
 `Parser/Elab/Generic/BoundsWitness.lean` contains source and AST witnesses for the plan's
 `total[T: Shape, N: const u32 in 1 .. 4096]` header instantiated for Circles, direct area calls,
-instance effects, missing implementations and parametricity refusals. Its two-element sum spells
-out the fold body: the surface `add i in 0 ..< N : ...` fold parser is not present in this branch.
+instance effects, missing implementations and parametricity refusals. The exact source form is
+`return add i in 0 ..< N : Shape::area(xs[i]);`. Before generic instantiation, the front end
+expands this return into a mutable integer accumulator and an existing
+`traverse i over elems of xs by unvisited` whose body binds the `area` call result and adds it.
+The range must start at zero, its upper bound must equal the indexed array's declared length,
+and the function must declare an integer result. Symbolic constant parameters are supported:
+`[T; N]` and `0 ..< N` agree before substitution. Other range folds are refused by name;
+table-domain folds retain their existing rules. The ordinary overflow, call-contract, effect
+and cost obligations still apply to the generated statements. The Circles witness checks the
+complete generated traverse and its direct implementation call after instantiation at `N = 2`.
 These witnesses have been added for integration checking; no new Lean build result is claimed.
 
 

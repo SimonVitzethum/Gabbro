@@ -17,6 +17,8 @@ structure Walk where
   typeRewrite : STyp → Except String STyp := Except.ok
   exprRewrite : Locals → Option STyp → SExpr → Except String SExpr := fun _ _ e => .ok e
   statementCheck : Locals → SAnw → Except String Unit := fun _ _ => .ok ()
+  /-- Source sugar is expanded before the same visitor checks its ordinary statements. -/
+  statementRewrite : Locals → Option STyp → SAnw → Except String SAnw := fun _ _ s => .ok s
   rawCheck : Locals → String → Except String Unit := fun _ _ => .ok ()
   /-- Earlier checks may infer symbolic template results before concrete spec resolution. -/
   infer : Locals → SExpr → Option STyp := fun _ _ => none
@@ -158,6 +160,7 @@ mutual
 def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String SAnw
   | 0, _ => .error "spec.expansion.fuel"
   | f + 1, s => do
+    let s ← w.statementRewrite locals w.result s
     w.statementCheck locals s
     let ex := { w with expected := none }.expr locals f
     let ty := w.type locals f
@@ -226,10 +229,13 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .child body => return .child (← st body)
     | .block ss ending =>
       let (ss, env) ← w.statements locals f ss
-      let ending ← ending.mapM fun
-        | .ret e => return .ret (← e.mapM ({ w with expected := w.result }.expr env f))
-        | e => pure e
-      return .block ss ending
+      match ending with
+      | some (.ret e) =>
+        match ← w.statement env f (.ret e) with
+        | .ret e => return .block ss (some (.ret e))
+        | .block prefix ending => return .block (ss ++ prefix) ending
+        | tail => return .block (ss ++ [tail]) none
+      | ending => return .block ss ending
     | .other raw => return .other (← w.raw raw locals)
     | s => return s
 

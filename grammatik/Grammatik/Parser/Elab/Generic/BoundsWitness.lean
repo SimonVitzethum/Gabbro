@@ -6,8 +6,7 @@ namespace Gabbro.Grammatik.Parser.Generic
 set_option maxRecDepth 100000
 set_option maxHeartbeats 4000000
 
-/-- The plan's total header and effect/cost expressions. The two-element body isolates
-    spec-bound instantiation from the independently missing surface fold parser. -/
+/-- The plan's exact total header and effect/cost expressions. -/
 def totalSignature : FnSig :=
   { art := "", name := "total", params := [("xs", .array (.atom "T") (.variable "N"))],
     res := some (.atom "u64"), fehler := none,
@@ -16,10 +15,17 @@ def totalSignature : FnSig :=
       .cost (.bin "*" (.variable "N") (.lit 60))] }
 
 def totalBody (area : String := "Shape::area") : SAnw :=
-  .block [.bind false "first" none (.index (.variable "xs") (.lit 0)),
-    .bind false "a" none (.call area [.variable "first"]),
-    .bind false "b" none (.call area [.index (.variable "xs") (.lit 1)])]
-    (some (.ret (some (.bin "+" (.variable "a") (.variable "b")))))
+  .block [] (some (.ret (some (.ext .foldAdd ["i", "range"]
+    [.lit 0, .variable "N", .tru, .call area [.index (.variable "xs") (.variable "i")]]))))
+
+/-- The fold's ordinary expansion, with a direct call in the generated traverse body. -/
+def totalExpandedBody (area : String := "Shape::area") : SAnw :=
+  .block [.bind true "$rangeFold$acc$0" (some (.atom "u64")) (.lit 0),
+    .each "i" none "elems" (.variable "xs") "unvisited" "" none
+      (.block [.bind false "$rangeFold$value$0" none
+        (.call area [.index (.variable "xs") (.variable "i")]),
+        .set (.variable "$rangeFold$acc$0") "+=" (.variable "$rangeFold$value$0")] none)]
+    (some (.ret (some (.variable "$rangeFold$acc$0"))))
 
 def totalKey : Instance := ⟨"total", ["index into Circles", "2"]⟩
 
@@ -47,13 +53,13 @@ theorem multiple_bounds_parser_zeuge :
       | _ => false) = .ok true := by decide +kernel
 
 
-/-- Both area calls become calls to the Circles implementation, with no abstract call left.
+/-- The traverse body calls the Circles implementation directly, with no abstract call left.
     The instance effect becomes reads Circles and its constant budget becomes 2 * 60. -/
 theorem total_circles_direct_calls_zeuge :
     boundedExpansion.map (fun items => items.any fun
       | .fnT sig body => strEq sig.name (instanceName totalKey) &&
           beqSTypList (sig.params.map Prod.snd) [.array (.index false "Circles") (.lit 2)] &&
-          beqSAnw body (totalBody (Spec.implementationName 0 "area")) &&
+          beqSAnw body (totalExpandedBody (Spec.implementationName 0 "area")) &&
           beqSKlauselList sig.klauseln [.effs [.reads (.variable "Circles")],
             .cost (.bin "*" (.lit 2) (.lit 60))]
       | _ => false) = .ok true := rfl
@@ -161,8 +167,7 @@ theorem explicit_bound_statement_zeuge :
             beqSAnw body (.block [.call "$spec$0$area" [.variable "x"]] none)
         | _ => false) = .ok true := rfl
 
-/-- Full source parsing, instance closure and declaration expansion, with the plan's header.
-    The explicit sum is the two-element fold expansion; surface add-fold parsing is separate. -/
+/-- Full source parsing, instance closure and declaration expansion of the exact plan example. -/
 def boundedText : String :=
   "table Circles count 4 { slot { r: u64, } } " ++
   "spec Shape[T; effects E] { fn area(s: T) -> u64 " ++
@@ -172,7 +177,7 @@ def boundedText : String :=
   "effects { reads Circles } costs <= 20 ops { return 3 * Circles[s].r * Circles[s].r + 1; } } " ++
   "fn total[T: Shape, N: const u32 in 1 .. 4096](xs: [T; N]) -> u64 " ++
   "effects { Shape[T] } costs <= N * 60 ops { " ++
-  "let first = xs[0]; let a = Shape::area(first); let b = Shape::area(xs[1]); return a + b; } " ++
+  "return add i in 0 ..< N : Shape::area(xs[i]); } " ++
   "fn measure(xs: [index into Circles; 2]) -> u64 { " ++
   "let result_value = total::[index into Circles, 2](xs); return result_value; }"
 
@@ -180,7 +185,26 @@ theorem bounded_source_direct_calls_zeuge :
     ((parsedSource boundedText).bind expand |>.bind exportDeclarationUnit).map
       (fun items => items.any fun
         | .fnT sig body => strEq sig.name (instanceName totalKey) &&
-            beqSAnw body (totalBody "$spec$0$area")
+            beqSAnw body (totalExpandedBody "$spec$0$area")
         | _ => false) = .ok true := by decide +kernel
+
+/-- The source witness actually parses the fold, rather than supplying a pre-expanded body. -/
+theorem bounded_source_exact_fold_zeuge :
+    (parsedSource boundedText).map (fun items => items.any fun
+      | .fnT sig body => strEq sig.name "total" && beqSAnw body totalBody
+      | _ => false) = .ok true := by decide +kernel
+
+/-- Symbolic N agrees with the array length before any concrete instance exists. -/
+theorem total_symbolic_traverse_zeuge :
+    ((SourceFolds.prepare boundedSource).map fun items => items.any fun
+      | .fnT sig body => strEq sig.name "total" && beqSAnw body totalExpandedBody
+      | _ => false) = .ok true := rfl
+
+theorem total_range_length_refused_zeuge :
+    SourceFolds.returnFold boundedSource [("xs", .array (.atom "T") (.lit 3))]
+      (some (.atom "u64"))
+      (.ret (some (.ext .foldAdd ["i", "range"] [.lit 0, .lit 2, .tru,
+        .call "Shape::area" [.index (.variable "xs") (.variable "i")]]))) =
+      .error "fold range: upper bound must equal the array length" := rfl
 
 end Gabbro.Grammatik.Parser.Generic

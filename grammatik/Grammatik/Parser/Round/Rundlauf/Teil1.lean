@@ -116,6 +116,9 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
 where
   druckFold (word : String) (names : List String) (operands : List (List Token)) : List Token :=
     match names, operands with
+    | [binder, "range"], [lo, hi, filter, value] =>
+      [.zeichen "(", .wort word, nameTok binder, .wort "in"] ++ lo ++ [.zeichen "..<"] ++ hi ++
+        [.wort "where"] ++ filter ++ [.zeichen ":"] ++ value ++ [.zeichen ")"]
     | [binder, domain], [subject, filter, value] =>
       [.zeichen "(", .wort word, nameTok binder, .wort "in"] ++ domToks domain [] [subject] ++
         [.wort "where"] ++ filter ++ [.zeichen ":"] ++ value ++ [.zeichen ")"]

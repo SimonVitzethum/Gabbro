@@ -26,6 +26,12 @@ def namenA (lok : List String) : SExpr → List String
   | .ext .any (x :: _ :: ns) xs => ns ++ namenL (x :: lok) xs
   | .ext .count (x :: _ :: ns) xs => ns ++ namenL (x :: lok) xs
   | .ext .mem (_ :: ns) xs => ns ++ namenL lok xs
+  | .ext kind (binder :: domain :: names) args =>
+    if kind == .foldAdd || kind == .foldMin || kind == .foldMax then
+      let count := if domain == "range" then 2 else 1
+      names ++ namenL lok (args.take count) ++ namenL (binder :: lok) ((args.drop count).take 2) ++
+        namenL lok ((args.drop count).drop 2)
+    else namenL lok args
   | .ext _ _ xs => namenL lok xs
   | _ => []
 def namenL (lok : List String) : List SExpr → List String

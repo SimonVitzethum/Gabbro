@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.TaggedDispatch.Expressions
 public import Grammatik.Parser.Dyn.Frontend
 public import Grammatik.Parser.Stmt.LibrarySource
+public import Grammatik.Parser.SourceFolds.Range
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser
@@ -35,6 +36,7 @@ def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) :
 
 /-- Shared declaration-expansion entry point, before ordinary item admission. -/
 def exportDeclarationUnit (items : List SItemTief) : Except String (List SItemTief) := do
+  let items ← SourceFolds.prepare items
   let (closed, items) ← Dyn.prepare items
   let items ← exportTaggedUnit items
   let output ← Spec.prepare (Dyn.finish closed items)

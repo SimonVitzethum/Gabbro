@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Generic.Body
 public import Grammatik.Parser.Elab.Generic.Parametricity
+public import Grammatik.Parser.SourceFolds.Range
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
 
@@ -101,6 +102,7 @@ def expandSpecificationContracts (specs : List (String × List String × SExpr))
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
 def expandTemplatesWithRequirements (source : List SItemTief) :
     Except String (List SItemTief × List (STyp × String)) := do
+  let source ← SourceFolds.prepare source
   Spec.check source
   let env := environment source
   let names := source.filterMap sourceName
