@@ -21,32 +21,37 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
   induction ks with
   | nil =>
       intro σ ρ hh σ' h
-      simp only [traverseLauf] at h
-      split at h
+      simp only [traverseLauf] at h ⊢
+      split at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hi σ ρ hh
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | cons k ks ih =>
       intro σ ρ hh σ' h
-      simp only [traverseLauf] at h
-      split at h
+      simp only [traverseLauf] at h ⊢
+      split at h ⊢
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 (.cons k ρ) (hinv.heldB hh)
-        split at h
+        split at h ⊢
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1.tail (g1.heldB hh) σ' h)
+          exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1.tail (g1.heldB hh) σ' h)
+          exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          split at h <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
+          split at h ⊢ <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
           subst h; exact g1.trans (hi σ1 ρ1.tail (g1.heldB hh))
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          rw [hs1] at hstep
+          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          rw [hs1] at hstep
+          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -61,30 +66,35 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
   induction n with
   | zero =>
       intro σ ρ hh σ' h
-      simp only [retryLauf] at h
-      split at h
+      simp only [retryLauf] at h ⊢
+      split at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
-      · exact (hb σ ρ hh).trans (hu _ ρ ((hb σ ρ hh).heldB hh) σ' h)
+      · exact (GutAusgang.vor (hb σ ρ hh) (hu _ ρ ((hb σ ρ hh).heldB hh))) σ' h
   | succ n ih =>
       intro σ ρ hh σ' h
-      simp only [retryLauf] at h
-      split at h
+      simp only [retryLauf] at h ⊢
+      split at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
       · have hinv := hb σ ρ hh
         have hstep := hs (bis σ ρ).1 ρ (hinv.heldB hh)
-        split at h
+        split at h ⊢
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 (g1.heldB hh) σ' h)
+          exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 (g1.heldB hh) σ' h)
+          exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+          rw [hs1] at hstep
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          rw [hs1] at hstep
+          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          rw [hs1] at hstep
+          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -99,24 +109,29 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
   | zero => intro σ ρ _ σ' h; simp only [Ausgang.welt, foreverLauf, reduceCtorEq] at h
   | succ n ih =>
       intro σ ρ hh σ' h
-      simp only [foreverLauf] at h
-      split at h
+      simp only [foreverLauf] at h ⊢
+      split at h ⊢
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 ρ (hinv.heldB hh)
-        split at h
+        split at h ⊢
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 (g1.heldB hh) σ' h)
+          exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
+          rw [hs1] at hstep
           have g1 := hinv.trans (hstep σ1 (by rw [hs1]; rfl))
-          exact g1.trans (ih σ1 ρ1 (g1.heldB hh) σ' h)
+          exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+          rw [hs1] at hstep
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          rw [hs1] at hstep
+          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          exact hinv.trans (hstep _ (by rw [hs1]; rfl))
+          rw [hs1] at hstep
+          exact hinv.transRetV (hstep _ (by rw [hs1]; rfl))
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -237,6 +252,151 @@ def StufenOk (P : Programm D) : Prop :=
 
 theorem stufenOk_ohne (P : Programm D) (h : ∀ f : D.Fn, (D.signatur f).boden = none) :
     StufenOk P := fun f c hc => by rw [h f] at hc; cases hc
+
+/-! ### Scope validity of scoped returns (C11)
+
+    `scopesOk haelt boden`: every `retScoped`/`retWhyScoped` in the syntax releases
+    only locks outside the residual (`haelt`) and at or above the floor. The Satz
+    needs it at every scoped return to transport the caller's holdings through a
+    releasing handler return: required locks survive (spare) and extras survive
+    (rank + `RufPasst.hx`). The checker establishes it with the exact scope
+    discipline (`RueckRessourcen.genau`); here it is a premise (`ScopesOkProg`),
+    threaded like `BodenOk`. -/
+
+section Scopes
+
+variable {V : vertrag D}
+
+def scopesOkScopes (haelt : List D.Lock) (boden : Option Int) : List D.Lock → Bool
+  | [] => true
+  | L :: Ls => decide (L ∉ haelt) &&
+      (match boden with | none => true | some c => decide (c ≤ D.rang L)) &&
+      scopesOkScopes haelt boden Ls
+
+/-- Every scope of the list avoids the residual and respects the floor. -/
+theorem scopesOkScopes_mem {haelt : List D.Lock} {boden : Option Int} {Ls : List D.Lock}
+    (h : scopesOkScopes haelt boden Ls = true) {L : D.Lock} (hm : L ∈ Ls) :
+    L ∉ haelt ∧ ∀ c, boden = some c → c ≤ D.rang L := by
+  induction Ls with
+  | nil => simp only [List.not_mem_nil] at hm
+  | cons M Ms ih =>
+      simp only [scopesOkScopes, Bool.and_eq_true, decide_eq_true_eq] at h
+      obtain ⟨⟨hM, hrM⟩, hMs⟩ := h
+      simp only [List.mem_cons] at hm
+      rcases hm with rfl | hm
+      · exact ⟨hM, fun c hc => of_decide_eq_true (hc ▸ hrM)⟩
+      · exact ih hMs hm
+
+mutual
+
+def Stmt.scopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (haelt : List D.Lock)
+    (boden : Option Int) : Stmt D V l Γ Λ Λ' → Bool
+  | .ite _ t e => t.scopesOk haelt boden && e.scopesOk haelt boden
+  | .onOption _ p a => p.scopesOk haelt boden && a.scopesOk haelt boden
+  | .onTag _ arms => arms.scopesOk haelt boden
+  | .onWhy _ arms => arms.scopesOk haelt boden
+  | .callIndElse _ _ _ _ _ err => err.scopesOk haelt boden
+  | .locks _ _ body => body.scopesOk haelt boden
+  | .breaking _ body => body.scopesOk haelt boden
+  | .traverse _ _ body => body.scopesOk haelt boden
+  | .consumeTraverse _ _ _ _ _ _ body => body.scopesOk haelt boden
+  | .retry _ _ body ueber => body.scopesOk haelt boden && ueber.scopesOk haelt boden
+  | .forever _ _ body => body.scopesOk haelt boden
+  | .axiomCallElse _ _ _ _ _ _ _ _ err => err.scopesOk haelt boden
+  | .retScoped _ R => scopesOkScopes haelt boden R.scopes
+  | .retWhyScoped _ R => scopesOkScopes haelt boden R.scopes
+  | _ => true
+
+def Block.scopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (haelt : List D.Lock)
+    (boden : Option Int) : Block D V l Γ Λ Λ' → Bool
+  | .nil => true
+  | .cons s rest => s.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bind _ rest => rest.scopesOk haelt boden
+  | .bindCall _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindCallInd _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindCallIndElse _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bindCallElse _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .regRead _ _ rest => rest.scopesOk haelt boden
+  | .regReadElse _ _ _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .awaits _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .exchange _ _ _ _ rest => rest.scopesOk haelt boden
+  | .narrow _ _ _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .narrowRequired _ _ _ rest => rest.scopesOk haelt boden
+  | .check _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .float _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .floatLit _ _ _ rest => rest.scopesOk haelt boden
+  | .floatOf _ _ _ rest => rest.scopesOk haelt boden
+  | .floatNarrow _ _ _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
+
+def Endblock.scopesOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (haelt : List D.Lock)
+    (boden : Option Int) : Endblock D V l Γ Λ → Bool
+  | .ret .. => true
+  | .retWhy .. => true
+  | .retScoped _ R => scopesOkScopes haelt boden R.scopes
+  | .retWhyScoped _ R => scopesOkScopes haelt boden R.scopes
+  | .leave .. => true
+  | .next .. => true
+  | .cons s rest => s.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bind _ rest => rest.scopesOk haelt boden
+  | .bindCall _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindCallElse _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .bindAxiomOpt _ _ _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .regRead _ _ rest => rest.scopesOk haelt boden
+  | .regReadElse _ _ _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .awaits _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindCallInd _ _ _ _ _ rest => rest.scopesOk haelt boden
+  | .bindCallIndElse _ _ _ _ _ err rest => err.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .narrow _ _ _ sonst rest => sonst.scopesOk haelt boden && rest.scopesOk haelt boden
+  | .narrowRequired _ _ _ rest => rest.scopesOk haelt boden
+  | .exchange _ _ _ _ rest => rest.scopesOk haelt boden
+  | .ite _ t e => t.scopesOk haelt boden && e.scopesOk haelt boden
+
+def Arms.scopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (haelt : List D.Lock) (boden : Option Int) : Arms D V l Γ Λ Λ' cs → Bool
+  | .nil => true
+  | .cons b rest => b.scopesOk haelt boden && rest.scopesOk haelt boden
+
+def GrundArms.scopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (haelt : List D.Lock) (boden : Option Int) : GrundArms D V l Γ Λ Λ' n → Bool
+  | .nil => true
+  | .cons b rest => b.scopesOk haelt boden && rest.scopesOk haelt boden
+
+end
+
+/-- The scoped returns of a body respect residual and floor (vacuous without any). -/
+abbrev Stmt.ScopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') : Prop := s.scopesOk V.haelt V.boden = true
+abbrev Block.ScopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ') : Prop := b.scopesOk V.haelt V.boden = true
+abbrev Endblock.ScopesOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (b : Endblock D V l Γ Λ) : Prop := b.scopesOk V.haelt V.boden = true
+abbrev Arms.ScopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (a : Arms D V l Γ Λ Λ' cs) : Prop := a.scopesOk V.haelt V.boden = true
+abbrev GrundArms.ScopesOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
+    (a : GrundArms D V l Γ Λ Λ' n) : Prop := a.scopesOk V.haelt V.boden = true
+
+end Scopes
+/-- **The scoped returns of a program respect residual and floor** (decidable per
+    program): every `retScoped`/`retWhyScoped` in every body releases only locks
+    outside the residual and at or above the floor. The checker establishes it
+    with the exact scope discipline; the Satz carries it as a premise. -/
+def ScopesOkProg (P : Programm D) : Prop :=
+  ∀ f, (P.rumpf f).scopesOk (D.signatur f).haelt (D.signatur f).boden = true
+
+set_option hygiene false in
+/-- Scope bookkeeping: the scope premise of a sub-block from the enclosing one (`hscope`). -/
+macro "scopes_tac" : tactic => `(tactic|
+  (have hsc := hscope
+   simp only [Stmt.scopesOk, Block.scopesOk, Endblock.scopesOk, Arms.scopesOk,
+     GrundArms.scopesOk, Bool.and_eq_true] at hsc
+   first | exact hsc | exact hsc.1 | exact hsc.2 | exact hsc.2.1 | exact hsc.2.2 | exact hsc.1.1 | exact hsc.1.2))
 
 set_option hygiene false in
 /-- Floor bookkeeping: the floor premise of a sub-block from the enclosing one (`hbo`). -/
