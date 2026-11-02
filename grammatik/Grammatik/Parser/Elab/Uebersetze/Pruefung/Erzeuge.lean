@@ -11,8 +11,9 @@
    probe: probes elaborate against the written heads only, so naming a
    probe is an unknown-function error, never an independent invocation.
    A generated name that meets a written function, a foreign body or an
-   earlier probe is refused, never merged. Read-only shape, Boolean
-   exits and gate consumption are decided by the checker
+   earlier probe is refused, never merged. The probe consumes and produces the
+   check's Duty (`dutyName` as both `nimmt` and `gibt`, C16 mark threading);
+   read-only shape, Boolean exits and gate consumption are decided by the checker
    (`CheckAdmission`), not here. -/
 module
 
@@ -45,7 +46,7 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
       let ctx := uCtxVon alias consts tabs locks globs kopf pname [] whys sums regs zustaende specs arrKonst
       match elabFn ctx koepfe [] (.block ss ende) with
       | .error e => .error e
-      | .ok (gives, needs, body, r) => .ok { name := pname, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := schreibt, gputs := [], gives := gives, needs := needs, body := body, ret := r, boden := none }
+      | .ok (gives, needs, body, r) => .ok { name := pname, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := schreibt, gputs := [], nimmt := [dutyName c.cname], gibt := [dutyName c.cname], gives := gives, needs := needs, body := body, ret := r, boden := none }
   | _ => .error "check body without G form"
 
 /-- A generated name that meets a written function or foreign body is refused. -/
