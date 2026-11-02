@@ -191,7 +191,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
     ∀ (σ : World D) (ρ : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
       (∀ nodev, binding.entries σ nodev = tbl) →
       ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-        execBlock oracle passes calls
+        execBlock oracle passes calls (l := true)
           (.cons (.ite (code.descend (binding.renameEntry rename) (.var .here))
             (.cons (.onOption (Expr.prodGet (.var .here) binding.child)
               (.cons (binding.expand guard code level
@@ -202,18 +202,18 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
   intro σ ρ hstab
   simp only [execBlock]
   have hdesc : ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-      execStmt oracle passes calls
+      execStmt oracle passes calls (l := true)
         (.ite (code.descend (binding.renameEntry rename) (.var .here))
           (.cons (.onOption (Expr.prodGet (.var .here) binding.child)
             (.cons (binding.expand guard code level
               (fun x => .there (binding.renameEntry rename x)) (.var .here)
-              ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil)) σ ρ =
+              ((binding.fullPath path).map (fun value => value.weaken))) .nil) .nil) .nil) .nil) σ ρ =
       .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
     simp only [execStmt]
     split
     · -- `dwhen` holds: follow the checked optional child.
       have honOpt : ∃ (σ' : World D) (ρ' : Env D (binding.entryTy :: .index (D.count binding.iterator) :: Γ)),
-          execStmt oracle passes calls
+          execStmt oracle passes calls (l := true)
             (.onOption (Expr.prodGet (.var .here) binding.child)
               (.cons (binding.expand guard code level
                 (fun x => .there (binding.renameEntry rename x)) (.var .here)
@@ -230,7 +230,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             have hstabRec : ∀ nodev, binding.entries
                 ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese resources (Expr.prodGet (.var .here) binding.child).orte) nodev = tbl :=
               fun nodev => hstab nodev
-            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ hstabRec
+            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (loop' := true) (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ hstabRec
             simp only [execBlock, hrec]
             exact ⟨_, _, rfl, hc3⟩
       obtain ⟨σ', ρ', honOpt, hcOpt⟩ := honOpt
