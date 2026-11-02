@@ -53,6 +53,30 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       (tail : ConstSourceEnd c locals (.block rest ending) body) :
       ConstSourceEnd c locals (.block (.cases source sources :: rest) ending)
         (.cons (.onTag e branches) body)
+  | option (value : ConstSourceExpr c locals source e)
+      (present : ConstSourceBlock c (locals.extend name false (.index n)) yes p)
+      (absent : ConstSourceBlock c locals no a)
+      (tail : ConstSourceEnd c locals (.block rest ending) body) :
+      ConstSourceEnd c locals
+        (.block (.cases source [.arm "Some" (some name) yes, .arm "None" none no] :: rest) ending)
+        (.cons (.onOption e p a) body)
+  | reason (value : ConstSourceExpr c locals source e)
+      (arms : ConstSourceReasonArms c locals sources branches)
+      (tail : ConstSourceEnd c locals (.block rest ending) body) :
+      ConstSourceEnd c locals (.block (.cases source sources :: rest) ending)
+        (.cons (.onWhy e branches) body)
+  | binding (scope : ConstScope c.D)
+      (resolved : (name, c.sourceId f) ∈ scope.declarations)
+      (arguments : ConstSourceArgs c locals sources args)
+      (he : c.D.erg f = some τ)
+      (hp : RufPasst c.D V (c.D.signatur f) []) (hr : c.D.gruende f = 0)
+      (resourceEq : nach c.D f [] = [])
+      (body : Endblock c.D V l (τ :: Γ) (nach c.D f []))
+      (tail : ConstSourceEnd c (locals.extend binder mutable τ)
+        (.block rest ending) (resourceEq ▸ body)) :
+      ConstSourceEnd c locals
+        (.block (.bind mutable binder none (.call name sources) :: rest) ending)
+        (.bindCall f args he hp hr body)
   | call (scope : ConstScope c.D)
       (resolved : (name, c.sourceId f) ∈ scope.declarations)
       (arguments : ConstSourceArgs c locals sources args)
@@ -72,6 +96,10 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
   | condChain condition _ _ hy hn => exact .ite condition.rein hy hn
   | cond condition _ _ hy hn => exact .ite condition.rein hy hn
   | dispatch v a _ ih => exact .cons (.onTag v.rein a.rein) ih
+  | option v p a _ ih => exact .cons (.onOption v.rein p.rein a.rein) ih
+  | reason v a _ ih => exact .cons (.onWhy v.rein a.rein) ih
+  | binding _ _ arguments he hp hr resourceEq body _ ih =>
+      exact .bindCall _ _ he hp hr resourceEq body arguments.rein ih
   | call _ _ arguments hp hr resourceEq _ ih =>
       exact .cons (.call _ _ hp hr resourceEq arguments.rein) ih
 
