@@ -470,7 +470,7 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : Akzeptiert
     | fnptr n =>
       simp only [tyR] at hT
       exact Ty.noConfusion hT
-    | ptr t rw =>
+    | ptr cap =>
       simp only [tyR] at hT
       exact Ty.noConfusion hT
     | ref t =>
