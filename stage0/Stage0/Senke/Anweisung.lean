@@ -229,6 +229,7 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ cr.1, max ct.2 cr.2)
   | _, _, _, _, .bindCallIndElse .., _ => none
+  | _, Γ, _, _, .bindAxiomOptElse (e := none) _ _ _ _ _ _ _ _ _ _, reserved => none
   | _, Γ, _, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>
@@ -244,7 +245,6 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         else none
       else none
     | _, _ => none
-  | _, Γ, _, _, .bindAxiomOptElse (e := none) .., reserved => none
   | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>
@@ -378,6 +378,7 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ cr.1, max ct.2 cr.2)
   | _, _, _, .bindCallIndElse .., _ => none
+  | _, Γ, _, .bindAxiomOptElse (e := none) _ _ _ _ _ _ _ _ _ _, reserved => none
   | _, Γ, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
     | some b, some (.int lo' hi') =>
@@ -393,7 +394,6 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
         else none
       else none
     | _, _ => none
-  | _, Γ, _, .bindAxiomOptElse (e := none) .., reserved => none
   | _, Γ, _, .awaits g _ _ _ _ rest, reserved =>
     if lit32 (L.ga g) && aggregateFits (D.gtyp g) then do
       let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
