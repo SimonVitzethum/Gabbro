@@ -96,6 +96,17 @@ public import Stage0.Frontend.MeasureWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
+public import Stage0.Zeugen.BuiltinWitness
+public import Stage0.Zeugen.StateWitness
+public import Stage0.Zeugen.LibraryWitness
+public import Stage0.Zeugen.CheckWitness
+public import Stage0.Zeugen.AccWitness
+public import Stage0.Zeugen.ResetRangeWitness
+public import Stage0.Zeugen.TypedSumWitness
+public import Stage0.Zeugen.PointerContractWitness
+public import Stage0.Zeugen.MeasureWitness
+public import Stage0.Zeugen.ConstControlWitness
+public import Stage0.Zeugen.TransitionContractWitness
 @[expose] public section
 public import Stage0.Zeugen.WriteOnlyCapabilityWitness
 public import Stage0.Zeugen.RightsUnionWitness
