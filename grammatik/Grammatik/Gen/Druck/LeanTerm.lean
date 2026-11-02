@@ -167,6 +167,10 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .intBuiltin2 op a b => do .ok s!"(Expr.intBuiltin2 (D := z.deklaration) {ib op} {← drE N a} {← drE N b})"
   | _, .count n body => do .ok s!"(Expr.count (D := z.deklaration) {n} {← drE N body})"
 
+  -- Products are not generated yet (C01 stage 1); a printed generator term never holds one.
+  | _, .prod .. => .error "product value in a printed term"
+  | _, .prodGet .. => .error "product projection in a printed term"
+  | _, .prodSet .. => .error "product update in a printed term"
 /-- A payload expression. -/
 def drN (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {o : Option Ty} → NutzlastExpr D Γ Λ o → Except String String
   | _, .empty => .ok s!"(NutzlastExpr.empty (D := z.deklaration))"

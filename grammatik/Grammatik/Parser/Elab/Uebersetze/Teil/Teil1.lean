@@ -106,6 +106,13 @@ inductive USide
   | zaehle : String → String → UEns → USide
   | zaehleBaum : String → String → String → Bool → UIdx → UEns → USide
   | zaehleFeld : USide → String → UEns → USide
+  /-- A product value: the declaration number, whether the source order differs from the
+      declaration order, and the fields in SOURCE order with their expected types. The lowering
+      elaborates every field and reorders into declaration order (`uRecordValues`); projections
+      and replacements resolve names against the nominal schema, never run-time strings. -/
+  | product : Nat → Bool → List (Ty × USide) → USide
+  | field : USide → String → USide
+  | replace : USide → String → USide → USide
   /-- Typed tagged payloads use the same value tree as arguments and array elements. -/
   | truth : Bool → USide
   | taggedEmpty : List (Option Ty) → Nat → USide
@@ -430,6 +437,8 @@ inductive UKonst
   | cons : UKonst → UKonst → UKonst
   /-- A case of a tagged type: its position and its payload (`null` without one). -/
   | fall : Nat → UKonst → UKonst
+  /-- A product constant: the declaration number and every field constant in order. -/
+  | product : Nat → List UKonst → UKonst
   deriving DecidableEq, Repr
 
 /-- One elaborated static (`static [mut] n : T = init;`): `init` is its `sp0` value (a numeral, `0`/`1` for a

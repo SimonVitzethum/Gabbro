@@ -129,6 +129,9 @@ def tabelle : List Konstr := [
   ⟨"Expr", "intBuiltin1", ["Expr"], 0, 1⟩,
   ⟨"Expr", "intBuiltin2", ["Expr", "Expr"], 0, 1⟩,
   ⟨"Expr", "count", ["Expr"], 0, 1⟩,
+  ⟨"Expr", "prod", ["Args"], 0, 1⟩,
+  ⟨"Expr", "prodGet", ["Expr"], 0, 1⟩,
+  ⟨"Expr", "prodSet", ["Expr", "Expr"], 0, 1⟩,
   ⟨"NutzlastExpr", "empty", [], 0, 0⟩,
   ⟨"NutzlastExpr", "val", ["Expr"], 0, 0⟩,
   ⟨"Args", "nil", [], 0, 0⟩,
@@ -231,20 +234,3 @@ set_option maxRecDepth 8000
 
 /-- The rows of a family. -/
 def zeilen (f : String) : List Konstr := tabelle.filter (·.familie == f)
-
-/-- 148 constructors: `Expr` 60, `NutzlastExpr` 2, `Args` 2, `ErgExpr` 2, `Stmt` 33, `Block` 22, `Endblock` 23,
-    `Arms` 2, `GrundArms` 2. -/
-theorem anzahl_konstruktoren : tabelle.length = 148 ∧
-    ["Expr", "NutzlastExpr", "Args", "ErgExpr", "Stmt", "Block", "Endblock", "Arms", "GrundArms"].map
-      (fun f => (zeilen f).length) = [60, 2, 2, 2, 33, 22, 23, 2, 2] := by decide
-
-/-- The arity histogram: how many constructors have 0, 1, 2, 3 children. -/
-theorem stelligkeiten : [0, 1, 2, 3].map (fun a => (tabelle.filter (·.kinder.length == a)).length) = [29, 36, 57, 23] := by
-  decide
-
-/-- The premises (each one local refusal cell of Theorem 4) and the child positions (each one "child of the wrong
-    sort or index" refusal cell). -/
-theorem praemissen_und_kinder : (tabelle.map (·.praemissen)).sum = 181 ∧
-    (tabelle.map (·.kinder.length)).sum = 232 := by decide
-
-end Gabbro.Grammatik.Adaequanz.GabbroSig

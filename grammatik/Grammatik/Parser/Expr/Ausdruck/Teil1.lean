@@ -23,6 +23,8 @@ set_option maxRecDepth 100000
     * `call`: `subs = callee :: args` (a call through a place, `v->f(x)`). -/
 inductive XKind
   | all | any | count | mem | reach | imp | text | call
+  /-- One labelled call argument: `names = [label]`, `subs = [value]`. -/
+  | label
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool

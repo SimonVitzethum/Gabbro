@@ -46,7 +46,7 @@ namespace Gabbro.Grammatik.Gen.Fein
 
 open Gabbro.Grammatik
 
-theorem kopf_lt (τ : Ty) : τ.kopf < 12 := by cases τ <;> simp only [Ty.kopf, Nat.zero_lt_succ, Nat.reduceLT, Nat.lt_add_one]
+theorem kopf_lt (τ : Ty) : τ.kopf < 13 := by cases τ <;> simp only [Ty.kopf, Nat.zero_lt_succ, Nat.reduceLT, Nat.lt_add_one]
 
 theorem kopfOk_none (τ : Ty) : kopfOk none τ.kopf = true := decide_eq_true (kopf_lt τ)
 
@@ -242,6 +242,9 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .intBuiltin1 _ a => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl (kc (kopf_frei a) rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a (kopfOk_none _) _)) all_nil)) (fzE_ok hax a))
   | .intBuiltin2 _ a b => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc (kopf_frei a) (kc (kopf_frei b) rfl))) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ b (kopfOk_none _) _)) all_nil))) (fzE_ok hax a)) (fzE_ok hax b))
   | .count _ body => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ body rfl _)) all_nil)) (fzE_ok hax body))
+  | .prod _ args => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kA_kind args _)) all_nil)) (fzA_ok hax args))
+  | .prodGet v _ => by simp only [fzE]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ v rfl _)) all_nil)) (fzE_ok hax v))
+  | .prodSet v _ e => by simp only [fzE]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ v rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) all_nil))) (fzE_ok hax v)) (fzE_ok hax e))
   | .arrSet a i v => by simp only [fzE]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp only [exprReqs, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, tk,
   Ty.index, koepfeOk, kopfOk, kopf_lt, decide_true, Bool.and_self, Bool.and_true, Bool.true_and, beq_iff_eq] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ v (kopfOk_none _) _)) all_nil)))) (fzE_ok hax a)) (fzE_ok hax i)) (fzE_ok hax v))
 

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Zucker
+public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil4
 
@@ -8,6 +9,18 @@ public import Grammatik.Parser.Elab.UebersetzeAllg.Teil4
 
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
+
+/-- Elaborate product fields positionally in schema order against the evaluated sides. The caller
+    has validated the nominal schema; every field is elaborated at exactly its declared type. -/
+def lowProductArgs (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (elab : (τ : Ty) → USide → Except String (Expr (declOf u) Γ Λ τ)) :
+    (fs : List Ty) → List USide → Except String (Args (declOf u) Γ Λ fs)
+  | [], [] => .ok .nil
+  | _ :: _, [] | [], _ :: _ => .error "source export: record arity disagrees with its fields"
+  | τ :: τs, s :: ss => do
+    let e ← elab τ s
+    let rest ← lowProductArgs u Γ Λ elab τs ss
+    .ok (.cons e rest)
 
 mutual
 
@@ -143,6 +156,31 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .ib2 bi w a b =>
     (lowZwei (lowIb2 bi w) (zahlVon (lowWertE u Γ Λ fn er a)) (zahlVon (lowWertE u Γ Λ fn er b))).map LowSide.wert
   | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count is read only in a comparison of a predicate"
+  /-- A nominal product value: every field elaborated at its carried type, then checked against
+      a declared nominal schema -- no structural guess, no default field. -/
+  | .product identity _ sides => do
+    u.exportGate
+    let args ← lowProductArgs u Γ Λ fn er (lowWertAtE u Γ Λ fn er) (sides.map (·.1)) (sides.map (·.2))
+    match uRecordOf u.records (.prod identity (sides.map (·.1))) with
+    | .error e => .error e
+    | .ok _ => .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩
+  /-- A field projection from a by-value product: the position comes from the nominal schema. -/
+  | .field base name => do
+    u.exportGate
+    let ⟨τ, e⟩ ← lowWertE u Γ Λ fn er base
+    let ⟨sch, hsch⟩ ← uRecordOf u.records τ
+    let ⟨fieldTy, pos⟩ ← uRecordPosition sch.fields name
+    let baseE : Expr (declOf u) Γ Λ sch.ty := cast (congrArg (Expr (declOf u) Γ Λ) hsch.symm) e
+    pure ⟨fieldTy, Expr.prodGet baseE pos⟩
+  /-- A field replacement on a by-value product: read/modify/write of the whole local value. -/
+  | .replace base name value => do
+    u.exportGate
+    let ⟨τ, e⟩ ← lowWertE u Γ Λ fn er base
+    let ⟨sch, hsch⟩ ← uRecordOf u.records τ
+    let ⟨fieldTy, pos⟩ ← uRecordPosition sch.fields name
+    let baseE : Expr (declOf u) Γ Λ sch.ty := cast (congrArg (Expr (declOf u) Γ Λ) hsch.symm) e
+    let v ← lowWertAtE u Γ Λ fn er fieldTy value
+    pure ⟨sch.ty, Expr.prodSet baseE pos v⟩
 termination_by value => 3 * sizeOf value
 decreasing_by all_goals simp_wf; omega
 

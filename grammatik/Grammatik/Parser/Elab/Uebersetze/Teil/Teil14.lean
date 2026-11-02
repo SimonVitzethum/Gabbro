@@ -302,6 +302,7 @@ def lowerIdxLies : UIdx →
 
 def lowerSeiteLies (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteL
+  | .product .. | .field .. | .replace .. => .error "product without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with
@@ -354,6 +355,7 @@ structure USeiteE where
 def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
     (types : List Ty) (res : Option (Int × Int)) :
     USide → Except String USeiteE
+  | .product .. | .field .. | .replace .. => .error "product without G form in the 104 lowering"
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"

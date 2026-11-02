@@ -94,6 +94,9 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
   | .all => druckQuant "forall" ns ts
   | .any => druckQuant "exists" ns ts
   | .count => druckQuant "count" ns ts
+  | .label => match ns, ts with
+    | [name], [value] => nameTok name :: .zeichen ":" :: value
+    | _, _ => [.ende]
 where
   druckQuant (w : String) (ns : List String) (ts : List (List Token)) : List Token :=
     match ns, ts.reverse with
@@ -118,6 +121,7 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
   · split <;> simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
   · split <;> simp only [List.append_assoc, List.cons_append, List.nil_append, ne_eq, List.append_eq_nil_iff, reduceCtorEq, and_false, not_false_eq_true, List.cons_ne_self]
+  · split <;> simp only [ne_eq, List.cons_ne_self, not_false_eq_true]
 
 mutual
 def druckToks : SExpr → List Token

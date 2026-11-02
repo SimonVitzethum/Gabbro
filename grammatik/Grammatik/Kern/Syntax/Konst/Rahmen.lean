@@ -89,6 +89,13 @@ theorem constWeltRahmenAlle (c : ConstProgram) (σ₁ σ₂ : World c.D) : WeltR
 /-! ### Pure evaluation observes only the frame. -/
 
 mutual
+
+/-- Pure product tuples agree field by field. -/
+theorem constEvalGleichProd (c : ConstProgram) {Γ : Ctx} {τs : List Ty} {e : Args c.D Γ [] τs} (hp : ConstArgs c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalProd σ₁ e σ₁ ρ₁ = evalProd σ₂ e σ₂ ρ₂ := by
+  match hp with
+  | .nil => by simp only [evalProd]
+  | .cons he hrest => by simp only [evalProd, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ, constEvalGleichProd c hrest σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+
 theorem constEvalGleichExpr (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.D Γ [] τ} (hp : ConstExpr c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : eval σ₁ e σ₁ ρ₁ = eval σ₂ e σ₂ ρ₂ :=
   match hp with
   | .pureLit => by simp only [eval]
@@ -147,14 +154,6 @@ theorem constEvalGleichExpr (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
     have ih : ∀ k, eval σ₁ _ σ₁ (.cons k ρ₁) = eval σ₂ _ σ₂ (.cons k ρ₂) :=
       fun k => constEvalGleichExpr c hbody σ₁ σ₂ (.cons k ρ₁) (.cons k ρ₂) hW (.cons rfl hρ)
     simp only [eval, ih]
-theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ :=
-  match hp with
-  | .empty => by simp only [evalNutz]
-  | .val he => by simp only [evalNutz, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
-theorem constEvalGleichArgs (c : ConstProgram) {Γ : Ctx} {ts : List Ty} {e : Args c.D Γ [] ts} (hp : ConstArgs c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalArgs σ₁ e σ₁ ρ₁ = evalArgs σ₂ e σ₂ ρ₂ :=
-  match hp with
-  | .nil => by simp only [evalArgs]
-  | .cons he hrest => by simp only [evalArgs, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ, constEvalGleichArgs c hrest σ₁ σ₂ ρ₁ ρ₂ hW hρ]
-end
-
-end Gabbro.Grammatik
+  | .pureProd hargs => by simp only [eval, constEvalGleichProd c hargs σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+  | .pureProdGet hv => by simp only [eval, constEvalGleichExpr c hv σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+  | .pureProdSet hv he => by simp only [eval, constEvalGleichExpr c hv σ₁ σ₂ ρ₁ ρ₂ hW hρ, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]

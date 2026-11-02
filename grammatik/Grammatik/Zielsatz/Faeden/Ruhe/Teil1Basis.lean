@@ -159,6 +159,7 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .ref _, _ => Iff.rfl
   | .arr _ _, _ => Iff.rfl
   | .str _, _ => Iff.rfl
+  | .prod _ _, _ => Iff.rfl
 
 /-- **An answer class of `D.mitRuhe` is empty exactly when it is in `D`**: the shifted types
     have the shifted values (`valR`/`valZ`), and no shifted pointer type names the root. -/

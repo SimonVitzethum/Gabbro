@@ -5712,3 +5712,76 @@ remain additional obligations. The same file's `itemMetadata` still refuses func
 kinds other than ordinary, impl and the specially handled library form, so these
 Konst theorems alone do not admit const function declarations through Stage 0;
 declared costs and the other unbound clauses listed in section 120 remain refused.
+
+## 122. C07: fallible indirect calls (2026-11-02)
+
+`Stmt.callIndElse` and `Block.bindCallIndElse` (also the end-block binding)
+carry a function pointer, arguments, result-type equality, `RufPasst`, a positive
+reason count and a typed reason handler; the binding additionally carries the
+successful continuation. `indSonst` and `indSonstE` in the canonical semantics
+evaluate the pointer and arguments and dispatch the call's result or reason to
+the corresponding continuation.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/T4/Teil1.lean`:
+
+* **`indSonst_gutB`**: Given `GutR`, call admission, the held-resource and initial `Gut` conditions, and `GutAusgang` for both continuations, every returned world satisfies `Gut` relative to the original world.
+* **`indSonstE_gutB`**: Under the corresponding end-continuation premises, every returned world of `indSonstE` satisfies `Gut` relative to the original world.
+
+`grammatik/Grammatik/Logik/Vertraege/RahmenTreu/Teil1.lean`:
+
+* **`indSonst_treu`**: Given `TreuR`, call admission, an initially faithful world and faithful success and reason continuations, every returned world of `indSonst` is faithful to the original world.
+* **`indSonstE_treu`**: The same frame preservation holds for `indSonstE` with faithful end continuations.
+
+`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/EigenZustandD/T3/Teil1Basis.lean`:
+
+* **`callIndElse_slots_fest`**: A `callIndElse` statement executed with `keinRuf` cannot produce the world required by the slot-preservation premise, so its unchanged-slot conclusion follows vacuously.
+
+Machine integration is in
+`grammatik/Grammatik/Logik/Ruf/Maschine/RufMaschineG/Schritt/G3.lean`:
+`dannBindCallIndElse` and `dannCallIndElse` push the evaluated indirect target
+with the appropriate success/reason continuation. Their arms in
+`RufMaschineG/T4/Teil1.lean` and `BudgetMonoton/Teil1.lean` transport these
+steps through the machine invariant and budget arguments. The cost arms in
+`Logik/Fortschritt/KostenG/` include pointer and argument evaluation, the call
+and reason continuation; these are generic arms, not a source-to-IR theorem.
+
+The existing indirect-call witnesses in
+`grammatik/Grammatik/Logik/Ruf/Schnittstellen/Zeuge.lean`
+(`ptrVerfeinert_zeuge`, `hoare_callInd_zeuge`) concern refinement and ordinary
+indirect calls; they do not witness fallible indirect lowering.
+
+Stage-0 boundary: `bindElse` in
+`grammatik/Grammatik/Parser/Elab/Export/ExportControl.lean` exports
+`bindCallIndElse`, but `lowB` and `lowEnd` in
+`stage0/Stage0/Senke/Anweisung.lean` still return `none` for it.
+`lowInd` in `Stage0/Senke/Anweisung/Faelle/Hilfen.lean` requires
+`(D.sigNr n).gruende = 0`, excluding signatures with reasons.
+
+## 123. C09: checked call-boundary escrow supplement (2026-11-02)
+
+This supplements section 110. `OwnerFlow.EscrowReady` in
+`Kern/Syntax/Marken/Owner/Interface.lean` requires a valid flow, owner inputs
+disjoint from ordinary consumption, and a declared eigner for every input;
+`RufPasst.ownerReady` now requires this escrow condition.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Escrow.lean`:
+
+* **`OwnerFlow.escrow_outputs_conserve`**: Escrow readiness implies distinct output identities, an input for every output, and owner status with an in-range stage for every output.
+* **`escrow_call_outputs_present`**: Every owner output occurs as a mark resource in `nachSig`.
+* **`escrow_call_ready`**: Call admission makes every owner input available in the caller's resource list.
+* **`escrow_push_preserved`**: A canonical invocation push preserves `OwnerInvG`.
+* **`escrow_pop_preserved`**: A canonical invocation return, on either channel, preserves `OwnerInvG`.
+* **`escrow_loan_roundtrip`**: A successful borrow from a valid ledger is restored to the exact original state by the matching return.
+* **`OwnerFlow.escrowReady_map`**: A declaration embedding transports escrow readiness to the embedded signature.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Witness.lean`:
+
+* **`escrow_handoff_ready_zeuge`**: The concrete handoff signature satisfies escrow readiness.
+* **`escrow_call_admitted_zeuge`**: The concrete handoff call satisfies `RufPasst` with its supplied owner resources.
+* **`escrow_outputs_conserve_zeuge`**: The concrete handoff outputs have distinct identities and each comes from an explicit input.
+* **`escrow_move_return_exists_zeuge`**: The moved owner can be transferred from the grandchild back to the child frame with a fresh grant.
+
+Stage-0 boundary: the elaborator still exports `Marke := Empty`, so these
+model-level escrow proofs do not open the source owner-flow gate or establish
+connected owner lowering. The ghost ledger remains an identity fold while
+recorded events carry no owner payload.

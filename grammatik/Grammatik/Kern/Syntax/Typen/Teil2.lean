@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 public import Grammatik.Kern.Syntax.Typen.Teil1
+public import Grammatik.Kern.Syntax.Typen.Produkt
 
 @[expose] public section
 
