@@ -23,7 +23,7 @@ public import Grammatik.Kern.Syntax.Typen.Fall
 
 namespace Gabbro.Code.Lower
 
-open Gabbro.Grammatik (Nutzlast Wert Zahl Ty Deklaration)
+open Gabbro.Grammatik (Nutzlast Wert Zahl Ty Deklaration Fall)
 
 variable {D : Deklaration}
 

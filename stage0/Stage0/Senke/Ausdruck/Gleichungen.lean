@@ -248,7 +248,7 @@ theorem lowE_literal_boundaries_zeuge :
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
     else none) := by rfl
 
-@[lowE_eqs] theorem lowE_case (cs : List (Option (Int × Int))) (i : Fin cs.length)
+@[lowE_eqs] theorem lowE_case (cs : List (Option Ty)) (i : Fin cs.length)
       (nutz : NutzlastExpr D Γ Λ (cs.get i)) :
     lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.case cs i nutz) d =
     (if sumFits cs then lowN L (reserved := reserved) i.val nutz d else none) := by rfl
@@ -256,8 +256,8 @@ theorem lowE_literal_boundaries_zeuge :
 @[lowE_eqs] theorem lowN_empty (tag : Nat) :
     lowN L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag .empty d = some ([ci 1 d tag 0], d + 1) := by rfl
 
-@[lowE_eqs] theorem lowN_num (tag : Nat) (e : Expr D Γ Λ (.int lo hi)) :
-    lowN L (reserved := reserved) tag (.num e) d = (do
+@[lowE_eqs] theorem lowN_val (tag : Nat) {lo hi : Int} (e : Expr D Γ Λ (.int lo hi)) :
+    lowN L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag (.val e) d = (do
       let ce ← lowE L (reserved := reserved) e d
       pure (packSum d lo tag ce)) := by rfl
 

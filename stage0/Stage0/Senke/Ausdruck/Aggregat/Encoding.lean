@@ -4,6 +4,7 @@ public import Stage0.Senke.Welt.Lay
 public import Stage0.Senke.Ausdruck.Aggregat.Layout
 public import Stage0.Senke.Ausdruck.Aggregat.Wert
 public import Stage0.Senke.Ausdruck.Aggregat.Kopie
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -34,13 +35,14 @@ theorem wordsAt_append {m : Runner.Mem} {fp : Runner.W} {base : Nat} (xs ys : Li
       simpa only [List.getElem_append_right (by omega : xs.length ≤ i)] using read
 
 /-- The payload's distance from the lower bound; a bare arm has offset zero. -/
-def sumOff : (c : Option (Int × Int)) → Nutzlast c → Nat
+def sumOff : (c : Option Ty) → Nutzlast D.Fn D.passt c → Nat
   | none, _ => 0
-  | some (lo, _), v => (v.n - lo).toNat
+  | some (.int lo _), v => (v.n - lo).toNat
+  | some _, _ => 0
 
 /-- The representation shared by frames, tables and globals. -/
-def sumN {cs : List (Option (Int × Int))} (v : Wert D (.sum cs)) : Nat :=
-  v.1.val + 256 * sumOff (cs.get v.1) v.2
+def sumN {cs : List (Option Ty)} (v : Wert D (.sum cs)) : Nat :=
+  v.1.val + 256 * sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)
 
 /-- The number of an option: `-1` for absent, the index otherwise. -/
 def optN {n : Int} : Option (Zahl 0 (n - 1)) → Int
@@ -169,7 +171,7 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .fnptr _, v => [BitVec.ofNat 64 (L.fa v.1)]
   | .sum cs, v => if sumFits cs then [BitVec.ofNat 64 (sumN v)] else
       integerEncoding (integerWords 0 (cs.length - 1)) v.1.val ++
-        integerEncoding (sumPayloadWords cs) (sumOff (cs.get v.1) v.2)
+        integerEncoding (sumPayloadWords cs) (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2))
   | .arr τ n, v => if n = 0 then [0] else elementEncoding n (fun i => encodeWords L τ (v i))
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
       BitVec.ofNat 64 v.1.length :: v.1.map (fun b => BitVec.ofInt 64 b.n) ++

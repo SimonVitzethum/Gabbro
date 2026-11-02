@@ -76,15 +76,21 @@ theorem bin_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {τa τb : Ty} {
   omega
 
 theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
-    {a : Option (Int × Int)} → (e : NutzlastExpr D Γ Λ a) → (d : Nat) → (c : List II) →
+    {a : Option Ty} → (e : NutzlastExpr D Γ Λ a) → (d : Nat) → (c : List II) →
     (top : Nat) → lowN L (reserved := reserved) tag e d = some (c, top) → d < top
   | _, .empty, d, c, top, h => by
     simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h; omega
-  | _, .num e, d, c, top, h => by
-    simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨⟨ce, te⟩, _, he⟩ := h
-    simp only [packSum, bin2, Prod.mk.injEq] at he
-    omega
+  | some τ, .val e, d, c, top, h => by
+    cases τ with
+    | int lo hi =>
+      simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+      obtain ⟨⟨ce, te⟩, _, he⟩ := h
+      simp only [packSum, bin2, Prod.mk.injEq] at he
+      omega
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ => by
+      have hnone : lowN L (reserved := reserved) tag e d = none := rfl
+      rw [hnone] at h
+      cases h
 
 theorem readBytesL_top (L : Lay D) (t : D.Tab) (f : D.Feld t) (idx : Nat → Option (List II × Nat)) :
     (n j d : Nat) → (c : List II) → (top : Nat) →

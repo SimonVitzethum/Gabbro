@@ -6,6 +6,7 @@ module
 public import Stage0.Senke.Anweisung.Verzweigung
 public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Anweisung
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -57,7 +58,7 @@ theorem tagPayload_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {Γ : Ctx}
       ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++
         [ci 3 s s (s + 1)]) ρ W)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w)
-    (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (some (lo, hi)) v)) :
+    (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (some (.int lo hi)) v)) :
     Ok m pc fp K s
       ([ci 1 (s + 1) 8 0, ci 12 s s (s + 1)] ++ (wordConstant (s + 1) lo).1 ++
         [ci 3 s s (s + 1)])
@@ -82,18 +83,18 @@ theorem tagPayload_ok {m : Runner.Mem} {pc fp : Runner.W} {K s : Nat} {Γ : Ctx}
 /-- Remove the payload binding after any outcome of an arm. -/
 theorem Sim.schrumpfArm {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     {ρ0 : Env D (D.params f)} {rp cfp fp : Runner.W} {lo K : Nat} {pr : List Nat}
-    {l : Bool} {Γ : Ctx} {c : Option (Int × Int)} {o : Ausgang (vertragVon D f) l (ArmCtx Γ c)}
+    {l : Bool} {Γ : Ctx} {c : Option Ty} {o : Ausgang (vertragVon D f) l (ArmCtx Γ c)}
     {t : T} {m : Runner.Mem} {e eL eN : Runner.W}
     (h : Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN o) :
     Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr t m e eL eN (o.schrumpfArm c) := by
   cases c with
   | none => exact h
-  | some p => rcases p with ⟨a, b⟩; exact Sim.schrumpf h
+  | some _ => exact Sim.schrumpf h
 
 /-- A predicate over every block of a tagged dispatch, respecting each payload context. -/
-def ArmsAll {V : Vertrag D} (H : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
+def ArmsAll {V : vertrag D} (H : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     Block D V l Γ Λ Λ' → Prop) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → Prop
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop
   | _, _, _, _, _, .nil => True
   | _, _, _, _, _, .cons b rest => H b ∧ ArmsAll H rest
 
@@ -119,14 +120,14 @@ def BlockRuns (O : Orakel D) (passes : Nat)
 
 local notation "BR" => BlockRuns (reserved := reserved) O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K ens pr
 
-theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int × Int)}
+theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
     {b : Block D (vertragVon D f) l (ArmCtx Γ c) Λ Λ'} {cp cb : List II} {tb : Nat} {ex : Int × Int}
     (hb : BR b) (hcb : lowB (reserved := reserved) passes A L (functionFrame P f) ens pr ex b = some (cb, tb)) (htb : tb + cap ≤ Ks)
     (hcp : tagPayloadC (frei Γ reserved) c = some cp) (hs : 16 * (cp.length + cb.length) < 2 ^ 31)
     (hK : frei Γ reserved + 3 ≤ Ks) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
     (hlo0 : lo = (functionFrame P f).internalResult) (hlo2 : lo ≤ frei Γ reserved) (hpr : ∀ j ∈ pr, j < frei Γ reserved)
     {m : Runner.Mem} {pc : Runner.W} {σ : World D} {ρ : Env D Γ} {w : Runner.W}
-    (v : Nutzlast c) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
+    (v : Nutzlast D.Fn D.passt c) (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
     (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff c v))
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) (cp ++ cb) ρ) (hu : Umf L A C dv m fp Ks K)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
@@ -139,35 +140,39 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option (Int
     simp only [tagPayloadC, Option.some.injEq] at hcp
     subst cp
     exact hb ex cb tb hcb htb (by simpa using hs) m pc σ ρ hp hlo2 hu hk hWa hpr
-  | some p =>
-    rcases p with ⟨a, z⟩
-    simp only [tagPayloadC] at hcp
-    split at hcp
-    · next ha =>
-      simp only [decide_eq_true_eq] at ha
-      simp only [Option.some.injEq] at hcp
-      subst cp
-      have hks := hW.ks
-      have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-      obtain ⟨m1, st, a1s, w1, r1, e1⟩ := tagPayload_ok (by omega) hpw hw hoff
-      have a1 := Agree.widen a1s hks
-      have hq := hp.next a1 (Nat.le_refl _) (by omega)
-      have hfr : frei (ArmCtx Γ (some (a, z))) reserved = frei Γ reserved + valueWords (.int a z) := by simp [frei, ArmCtx, Nat.add_assoc]
-      have hp1 : PreS (reserved := reserved) L m1 _ fp K (frei (ArmCtx Γ (some (a, z))) reserved) cb (armEnv v ρ) :=
-        ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env (ValueAt.of_enc ha r1 e1),
-         trivial, wstab_true _ _⟩
-      have ih := hb ex cb tb hcb htb (by omega) m1 _ σ _ hp1
-        (by rw [hfr]; omega)
-        (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
-        (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega))
-        (hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _)))
-        (fun j hj => by have := hpr j hj; rw [hfr]; omega)
-      rw [pc_add1]
-      exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
-        (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
-    · cases hcp
+  | some τ =>
+    cases τ with
+    | int a z =>
+      simp only [tagPayloadC] at hcp
+      split at hcp
+      · next ha =>
+        simp only [decide_eq_true_eq] at ha
+        simp only [Option.some.injEq] at hcp
+        subst cp
+        have hks := hW.ks
+        have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
+        obtain ⟨m1, st, a1s, w1, r1, e1⟩ := tagPayload_ok (by omega) hpw hw hoff
+        have a1 := Agree.widen a1s hks
+        have hq := hp.next a1 (Nat.le_refl _) (by omega)
+        have hfr : frei (ArmCtx Γ (some (.int a z))) reserved = frei Γ reserved + valueWords (.int a z) := by simp [frei, ArmCtx, Nat.add_assoc]
+        have hp1 : PreS (reserved := reserved) L m1 _ fp K (frei (ArmCtx Γ (some (.int a z))) reserved) cb (armEnv v ρ) :=
+          ⟨by simp [frei, ArmCtx], hq.small, hq.frame, hq.code, hq.far, envAt_cons hq.env (ValueAt.of_enc ha r1 e1),
+          trivial, wstab_true _ _⟩
+        have ih := hb ex cb tb hcb htb (by omega) m1 _ σ _ hp1
+          (by rw [hfr]; omega)
+          (hu.agreeW hW (agreeW_of (a1.mono hlo2)) hlo)
+          (hk.agreeW hW (agreeW_of (a1.mono hlo2)) (by omega))
+          (hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _)))
+          (fun j hj => by have := hpr j hj; rw [hfr]; omega)
+        rw [pc_add1]
+        exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
+          (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
+      · cases hcp
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ => by
+      simp only [tagPayloadC, reduceCtorEq] at hcp
+      cases hcp
 theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs)
     (hblocks : ArmsAll (fun b => BR b) arms) {k : Nat} {cd : List II} {top : Nat}
     (hc : lowTags (reserved := reserved) passes A L (functionFrame P f) ens pr ex arms k = some (cd, top)) (ht : top + cap ≤ Ks)
     (hs : 16 * cd.length < 2 ^ 31) (hW : WIn L fp Ks K) (hlo : FB ≤ lo)
@@ -176,7 +181,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (v : Wert D (.sum cs)) (hi : k + v.1.val < 256)
     (hw : m.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w)
     (htag : w &&& 255 = BitVec.ofNat 64 (k + v.1.val))
-    (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) v.2))
+    (hoff : w >>> 8 = BitVec.ofNat 64 (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)))
     (hp : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) cd ρ) (hu : Umf L A C dv m fp Ks K)
     (hk : Kopf L f m fp K rp cfp ρ0 P σ0) (hWa : WeltAt m L σ) :
     Sim (reserved := reserved) L P f σ0 ρ0 rp cfp fp lo K pr ⟨pc, fp⟩ m (pc + BitVec.ofNat 64 (16 * cd.length))
@@ -218,7 +223,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         have hr : m'.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some w := by
           rw [agree_rd_low ha hp.frame.room (by omega) (by have := hW.ks; omega)]; exact hw
         exact tagArm_ok hblocks.1 hcb (by omega) hcp (by omega) (by omega) hW hlo hlo0 hlo2 hpr
-          nutz hr hoff hp1 hu1 hk1 hw1
+          (Fall.toNutzlast _ _ _ _ nutz) hr hoff hp1 hu1 hk1 hw1
       · have hn : v.1.val ≠ 0 := by intro hz; simp only [hz, Nat.add_zero, beq_self_eq_true] at hb; cases hb
         rcases v with ⟨⟨i, hiv⟩, nutz⟩
         cases i with
@@ -235,7 +240,7 @@ theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 termination_by cs.length
 
-theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {v : Expr D Γ Λ (.sum cs)} {arms : Arms D (vertragVon D f) l Γ Λ Λ' cs}
     {cv ca : List II} {tv ta : Nat} {ex : Int × Int}
     (hblocks : ArmsAll (fun b => BR b) arms)
@@ -264,7 +269,7 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
     simp only [sumFits, Bool.and_eq_true, decide_eq_true_eq] at this; exact this.1
   have htag : w &&& 255 = BitVec.ofNat 64 (0 + (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ).1.val) := by
     rw [hen.2, sumWord_tag (D := D) hen.1, Nat.zero_add]
-  have hoff : w >>> 8 = BitVec.ofNat 64 (sumOff _ (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ).2) := by
+  have hoff : w >>> 8 = BitVec.ofNat 64 (sumOff _ (Fall.toNutzlast _ _ _ _ (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ).2)) := by
     rw [hen.2]; exact sumWord_off (D := D) hen.1 _
   have ih := lowTags_ok (σ := σ.lese Λ v.orte) arms hblocks hca hta (by omega) hW hlo hlo0 hlo2 hpr
     (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ)
@@ -280,7 +285,7 @@ theorem onTag_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Optio
 /-- A dispatch with a bare arm and a payload arm is accepted, including a negative lower bound. -/
 theorem onTag_ok_zeuge (A : D.Fn → Nat) (L : Lay D) (lo : Nat) (ens : List II × Nat)
     (pr : List Nat) (ex : Int × Int) (f : D.Fn) :
-    let cs := [none, some (-7, 13)]
+    let cs := [none, some (.int (-7) 13)]
     let arms : Arms D (vertragVon D f) false [.sum cs] [] [] cs := .cons .nil (.cons .nil .nil)
     ∃ code top, lowS passes A L (functionFrame P f) ens pr ex (.onTag (.var .here) arms) = some (code, top) := by
   exact ⟨_, _, rfl⟩

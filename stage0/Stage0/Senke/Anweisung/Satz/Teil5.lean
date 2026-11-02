@@ -240,7 +240,7 @@ theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {σ0 : World D} {ρ0 : Env D (D.params f)} {cens : List II} {tens : Nat}
     (hlo0 : lo = (functionFrame P f).internalResult) (hens : lowPost L (functionFrame P f) P f (lo + returnWords (D.erg f) (D.gruende f)) = some (cens, tens))
     {reserved : Nat} {pr : List Nat} (hW : WIn L fp Ks K) (hlo : FB ≤ lo) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
     (arms : Arms D (vertragVon D f) l Γ Λ Λ' cs) →
     ArmsAll (fun b => BlockRuns O passes R L A C dv cap P f σ0 ρ0 rp cfp fp lo Ks K (cens, tens) pr b reserved) arms
   | _, _, _, _, _, .nil => trivial
