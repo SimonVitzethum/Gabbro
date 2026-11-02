@@ -81,7 +81,8 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
             | .ok (it, r) => .ok (it, r)
           else match parseFnSig f (letzteArt mods) nach with
           | .error e => .error e
-          | .ok (sig, r) => parseFnRest f sig r        else if strEq s "translator" then parseTranslatorTief f nach
+          | .ok (sig, r) => parseFnRest f sig r
+        else if strEq s "translator" then parseTranslatorTief f nach
         else if strEq s "profile" then parseProfilTief f false rest
         else if strEq s "requires" then match rest with
           | .wort t :: rest' =>

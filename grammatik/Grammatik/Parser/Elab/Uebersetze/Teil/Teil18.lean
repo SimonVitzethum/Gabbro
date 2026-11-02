@@ -19,8 +19,8 @@
 
   Every refusal is a named `Except` error at desugar time; elaboration never sees a new
   constructor. The identity of the desugaring with the explicit form is definitional
-  (`entfalteFrage_beispiel`, `frageZuElse_ist_else`); end-to-end witnesses elaborate
-  the     desugared programs (`Parser/Elab/Proben/Formen/UebersetzeProben42`).
+   (`entfalteFrage_beispiel`, `frageZuElse_ist_else`); end-to-end witnesses elaborate
+   the desugared programs (`Parser/Elab/Proben/Formen/UebersetzeProben42`).
 -/
 module
 
