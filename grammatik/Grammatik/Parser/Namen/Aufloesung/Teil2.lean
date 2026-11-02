@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 public import Grammatik.Parser.Namen.Namensraum
 public import Grammatik.Parser.Namen.Aufloesung.Teil1
 
@@ -150,7 +150,7 @@ def loeseI (q : Quelle) (von : Pfad) : SItemTief → List SItemTief
   | .modT p b => loeseL q (von ++ segmente p) b
   | .useT _ => []
   | .pubT it => loeseI q von it
-  | it => [item ⟨q, von, []⟩ it]
+  | it => [item { q, von, lok := [] } it]
 def loeseL (q : Quelle) (von : Pfad) : List SItemTief → List SItemTief
   | [] => []
   | it :: rest => loeseI q von it ++ loeseL q von rest
@@ -187,7 +187,7 @@ theorem ref_lokal {k : Kontext} {s : String} (h : k.lok.any (strEq · s) = true)
 /-- **A name that resolves names its item's key.** -/
 theorem ref_aufgeloest {k : Kontext} {s : String} {c : Pfad} (hl : k.lok.any (strEq · s) = false)
     (h : aufloeseK k.q ⟨none, []⟩ k.von (segmente s) = some c) :
-    k.ref s = schluessel k.q.namen c := by
+    k.ref s = k.key c := by
   simp only [Kontext.ref, hl, Bool.false_eq_true, ↓reduceIte, h]
 
 /-- **A name of an item that is not visible from here is poisoned**: no item carries the text. -/

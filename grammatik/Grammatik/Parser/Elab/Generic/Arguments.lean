@@ -31,6 +31,8 @@ structure Environment where
   aliases : List (String × (Int × Int))
   globals : List String := []
   source : List SItemTief := []
+  /-- Module substitution precedes function instantiation and therefore retains applications. -/
+  deferApplications : Bool := false
 
 def tokens (text : String) : Except String (List Token) :=
   match lex text with
@@ -72,6 +74,13 @@ def substituteRaw (bindings : Bindings) (text : String) : Except String String :
       | .ende => []
       | _ => [token]
   pure (String.intercalate " " (output.map zeigeTok))
+
+/-- Keep a forwarded static argument in source form until its own instantiation phase. A lifted
+    literal's internal name is not source syntax and must never be reparsed as an argument. -/
+def substituteArgument (bindings : Bindings) (word : String) : Except String String :=
+  match bindings.functionArguments.find? (fun entry => strEq entry.1 word) with
+  | some (_, canonical) => .ok canonical
+  | none => substituteRaw bindings word
 
 /-- A declaration must be unique even when its generic body is unreachable. -/
 def declaration (env : Environment) (name : String) : Except String (FnSig × SAnw) :=

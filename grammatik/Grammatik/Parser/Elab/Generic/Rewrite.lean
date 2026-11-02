@@ -33,9 +33,9 @@ def rewriteExpression (env : Environment) (bindings : Bindings) : SExpr → Rewr
   | .built n args => return .built n (← args.mapM (rewriteExpression env bindings))
   | .old e => return .old (← rewriteExpression env bindings e)
   | .ext .instantiate (n :: words) args => do
-    -- Spec applications share the explicit-argument AST, but resolve after instantiation.
-    if !env.declarations.any (fun p => strEq p.1.name n) then
-      return .ext .instantiate (n :: (← liftResult (words.mapM (substituteRaw bindings))))
+    -- Module applications and spec calls remain pending until their own expansion phase.
+    if env.deferApplications || !env.declarations.any (fun p => strEq p.1.name n) then
+      return .ext .instantiate (n :: (← liftResult (words.mapM (substituteArgument bindings))))
         (← args.mapM (rewriteExpression env bindings))
     let key ← liftResult (normalize env bindings n words)
     modify (fun requests => requests ++ [key])

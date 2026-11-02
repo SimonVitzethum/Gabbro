@@ -32,15 +32,17 @@ def parseUseTief : List Token → Except String (SItemTief × List Token)
     | .error e => .error e
     | .ok r1 => match nimmPfad r1 with
       | .error e => .error e
-      | .ok (p, r2) => match p, r2 with
-        | [alias], .zeichen "=" :: rest => do
-          let (target, rest) ← nimmPfad rest
-          let rest ← fordereZeichen "::" rest
-          let rest ← fordereZeichen "[" rest
-          let (args, rest) ← genericArguments rest [] [] []
-          let rest ← fordereZeichen ";" rest
-          pure (.moduleUseT alias target args, rest)
-        | _, _ => match fordereZeichen ";" r2 with
+      | .ok (p, r2) => match r2 with
+        | .zeichen "=" :: rest => match p with
+          | [alias] => do
+            let (target, rest) ← nimmPfad rest
+            let rest ← fordereZeichen "::" rest
+            let rest ← fordereZeichen "[" rest
+            let (args, rest) ← genericArguments rest [] [] []
+            let rest ← fordereZeichen ";" rest
+            pure (.moduleUseT alias target args, rest)
+          | _ => .error "module instance alias must be one identifier"
+        | _ => match fordereZeichen ";" r2 with
           | .error e => .error e
           | .ok r => .ok (.useT p, r)
 
