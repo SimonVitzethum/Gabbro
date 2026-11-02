@@ -71,64 +71,9 @@ theorem pz_quelle : (platzierungVon pzItems).toOption = some pzEintraege := by d
 theorem pz_zulaessig : platzB pzPol pzEintraege = true := by decide
 
 /-- The declaration with two globals (`false` and `true`), no tables. -/
-def pzSig : Signatur Empty Bool Empty Empty where
-  params := []
-  erg := none
-  gruende := 0
-  haelt := []
-  schreibt := fun t => nomatch t
-  gschreibt := fun _ => true
-  konsumiert := []
-  produziert := []
+def pzSig : Signatur Empty Bool Empty Empty := { params := [], erg := none, gruende := 0, haelt := [], schreibt := fun t => (nomatch t), gschreibt := fun _ => true, konsumiert := [], produziert := [] }
 
-def pzD : Deklaration where
-  Tab := Empty
-  decTab := inferInstance
-  count := fun t => t.elim
-  Feld := fun t => t.elim
-  decFeld := fun t => t.elim
-  typ := fun t => t.elim
-  erlaubt := fun t => t.elim
-  tabNr := fun _ => none
-  Glob := Bool
-  decGlob := inferInstance
-  gtyp := fun _ => .int 0 255
-  nutzlast := fun _ => []
-  atomar := fun _ => false
-  geteilt := fun t => t.elim
-  ggeteilt := fun _ => false
-  Lock := Empty
-  decLock := inferInstance
-  rang := fun L => L.elim
-  maskiert := fun L => L.elim
-  Marke := Empty
-  decMarke := inferInstance
-  stufen := fun m => m.elim
-  braucht := fun t => t.elim
-  gbraucht := fun _ => []
-  eigner := fun _ => []
-  Fn := Unit
-  sig := fun _ => 0
-  sigNr := fun _ => pzSig
-  eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
-  Inv := Empty
-  traeger := fun i => nomatch i
-  invs := []
-  Ax := Empty
-  aparams := fun a => nomatch a
-  aerg := fun a => nomatch a
-  aschreibt := fun a => nomatch a
-  agschreibt := fun a => nomatch a
-  Reg := Empty
-  rtyp := fun r => nomatch r
-  rklasse := fun r => nomatch r
-  spiegel := fun r => nomatch r
-  rzusage := fun r => nomatch r
-  Annahme := Unit
-  a10 := ()
-  geteilt_bewacht := fun t => t.elim
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
+def pzD : Deklaration := { Tab := Empty, decTab := inferInstance, count := fun t => t.elim, Feld := fun t => t.elim, decFeld := fun t => t.elim, typ := fun t => t.elim, erlaubt := fun t => t.elim, tabNr := fun _ => none, Glob := Bool, decGlob := inferInstance, gtyp := fun _ => .int 0 255, nutzlast := fun _ => [], atomar := fun _ => false, geteilt := fun t => t.elim, ggeteilt := fun _ => false, Lock := Empty, decLock := inferInstance, rang := fun L => L.elim, maskiert := fun L => L.elim, Marke := Empty, decMarke := inferInstance, stufen := fun m => m.elim, braucht := fun t => t.elim, gbraucht := fun _ => [], eigner := fun _ => [], Fn := Unit, sig := fun _ => 0, sigNr := fun _ => pzSig, eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h, Inv := Empty, traeger := fun i => (nomatch i), invs := [], Ax := Empty, aparams := fun a => (nomatch a), aerg := fun a => (nomatch a), aschreibt := fun a => (nomatch a), agschreibt := fun a => (nomatch a), Reg := Empty, rtyp := fun r => (nomatch r), rklasse := fun r => (nomatch r), spiegel := fun r => (nomatch r), rzusage := fun r => (nomatch r), Annahme := Unit, a10 := (), geteilt_bewacht := fun t => t.elim, invarianten_gehalten := fun _ i => (nomatch i), ggeteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h }
 
 /-- `true` is `buffer`, `false` is `table_ro`. -/
 def pzGl : pzD.Glob → PlatzEintrag
