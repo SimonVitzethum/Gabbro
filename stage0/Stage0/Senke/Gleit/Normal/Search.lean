@@ -93,10 +93,10 @@ def routineTopAuxL (a : Nat → Option (List II × Nat)) :
     Nat → Nat → Option (List II × Nat)
   | 0, d => some ([ci 1 d 0 0], d + 1)
   | fuel + 1, d =>
-    let shifted := fun j => wordK 12 j (a j) (2 ^ fuel)
+    let shifted := fun j => wordK 12 j (a j) (Int.ofNat (2 ^ fuel))
     let zero := fun j => wordK 14 j (shifted j) 0
     let high := fun j => wordL 3 j
-      (some ([ci 1 j (2 ^ fuel) 0], j + 1)) (routineTopAuxL shifted fuel (j + 1))
+      (some ([ci 1 j (Int.ofNat (2 ^ fuel)) 0], j + 1)) (routineTopAuxL shifted fuel (j + 1))
     routineChooseL d zero (routineTopAuxL a fuel) high
 
 theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
@@ -172,9 +172,17 @@ theorem routineLeadingZeros_zeuge :
     routineTopWordAux 6 (BitVec.ofNat 64 (2 ^ 64 - 1)) = 63 := by
   decide +kernel
 
+theorem routineTopAuxL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
+    WordCode (L := L) ρ W
+      (routineTopAuxL (fun d => some ([ci 1 d 8 0], d + 1)) 6) 3 := by
+  have search := routineTopAuxL_ok (L := L) (ρ := ρ) (W := W)
+    (WordCode.const 8 (by decide)) 6 (by decide)
+  simpa only [show routineTopWordAux 6 8 = 3 from by decide +kernel] using search
+
 #print axioms routineTopNat_bounds
 #print axioms routineTopWordAux_canonical
 #print axioms routineTopAuxL_ok
 #print axioms routineLeadingZerosL_ok
 #print axioms routineLeadingZeros_zeuge
+#print axioms routineTopAuxL_ok_zeuge
 end Gabbro.Stage0.Senke
