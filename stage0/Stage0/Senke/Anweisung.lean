@@ -139,6 +139,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, Γ, _, _, .next _, reserved => if lit32 (16 + ex.2) then some ([ci 18 (16 + ex.2) 0 0], (frei Γ reserved)) else none
   | _, Γ, _, _, .axiomCall a args _ _ _ _ _, reserved => torC0 (reserved := reserved) L a args ((frei Γ reserved))
   | _, Γ, _, _, .axiomCallElse _ _ _ _ _ _ _ _ _, reserved => none
+  | _, _, _, _, .callIndElse .., _ => none
   | _, Γ, _, _, .locks Lk _ body, reserved =>
     if retFreiB body = true ∧ lit32 (16 + ex.1 + 16 * 30) = true ∧ lit32 (16 + ex.2) = true then do
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
@@ -218,12 +219,17 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
+<<<<<<< HEAD
   | _, Γ, _, _, .bindAxiomOpt (e := some τ) a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
   | _, Γ, _, _, .bindAxiomOpt (e := none) _ _ _ _ _ _ _ _, reserved => none
+=======
+  | _, Γ, _, _, .bindAxiomOpt _ _ _ _ _ _ _ _, reserved => none
+  | _, _, _, _, .bindCallIndElse .., _ => none
+>>>>>>> s0-c07-arms
   | _, Γ, _, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ _, reserved => none
   | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
     match L.tor a, D.aerg a with
@@ -348,12 +354,17 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
+<<<<<<< HEAD
   | _, Γ, _, .bindAxiomOpt (e := some τ) a args _ _ _ _ _ rest, reserved => do
     let ct ← torC0 (reserved := reserved) L a args ((frei Γ reserved))
     let ck ← chkC (D.aerg a) ((frei Γ reserved))
     let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
     pure (ct.1 ++ ck ++ cr.1, max ct.2 (max ((frei Γ reserved) + 10) cr.2))
   | _, Γ, _, .bindAxiomOpt (e := none) _ _ _ _ _ _ _ _, reserved => none
+=======
+  | _, Γ, _, .bindAxiomOpt _ _ _ _ _ _ _ _, reserved => none
+  | _, _, _, .bindCallIndElse .., _ => none
+>>>>>>> s0-c07-arms
   | _, Γ, _, .bindAxiomOptElse _ _ _ _ _ _ _ _ _ _, reserved => none
   | _, Γ, _, .awaits g _ _ _ _ rest, reserved =>
     if lit32 (L.ga g) && aggregateFits (D.gtyp g) then do

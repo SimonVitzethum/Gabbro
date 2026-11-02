@@ -33,6 +33,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .forever _ _ body => 1 + counterDepthB body
   | .axiomCall _ _ _ _ _ _ _ => 0
   | .axiomCallElse _ _ _ _ _ _ _ _ err => counterDepthE err
+  | .callIndElse _ _ _ _ _ err => counterDepthE err
   | .regWrite _ _ _ => 0
   | .transition .. => 0
   | .publish _ _ _ _ _ _ => 0
@@ -55,6 +56,7 @@ def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCall _ _ _ _ _ rest => counterDepthB rest
   | .bindCallInd _ _ _ _ _ rest => counterDepthB rest
   | .bindCallElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthB rest)
+  | .bindCallIndElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthB rest)
   | .bindAxiom _ _ _ _ _ _ _ rest => counterDepthB rest
   | .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ rest => counterDepthB rest
   | .bindAxiomOpt (e := none) _ _ _ _ _ _ _ rest => counterDepthB rest
@@ -84,6 +86,7 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bind _ rest => counterDepthE rest
   | .bindCall _ _ _ _ _ rest => counterDepthE rest
   | .bindCallElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
+  | .bindCallIndElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
   | .bindAxiom _ _ _ _ _ _ _ rest => counterDepthE rest
   | .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ rest => counterDepthE rest
   | .bindAxiomOpt (e := none) _ _ _ _ _ _ _ rest => counterDepthE rest

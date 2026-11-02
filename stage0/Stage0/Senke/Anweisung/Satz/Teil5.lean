@@ -129,6 +129,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
     exact axiomCall_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (a := a) (args := args) (hn := hn) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 arg14 hWa hpr
   | _, _, _, _, .axiomCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
+  | _, _, _, _, .callIndElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, Γ, Λ, _, .retWhy r hp0, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
@@ -175,7 +176,12 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       lowB_ok_bindAxiom (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest)
   | _, Γ, Λ, _, .bindAxiomElse a args he proof0 proof1 proof2 proof3 proof4 err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_bindAxiomElse (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3) (proof4 := proof4) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err)
+<<<<<<< HEAD
   | _, _, _, _, .bindAxiomOpt (e := none) .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+=======
+  | _, _, _, _, .bindAxiomOpt .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+  | _, _, _, _, .bindCallIndElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
+>>>>>>> s0-c07-arms
   | _, _, _, _, .bindAxiomOptElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
   | _, _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowB] at h
@@ -238,7 +244,12 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
       lowEnd_ok_bindAxiom (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
   | _, Γ, Λ, .bindAxiomElse a args he proof0 proof1 proof2 proof3 proof4 err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_bindAxiomElse (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (a := a) (args := args) (he := he) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3) (proof4 := proof4) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
+<<<<<<< HEAD
   | _, _, _, .bindAxiomOpt (e := none) .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
+=======
+  | _, _, _, .bindAxiomOpt .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
+  | _, _, _, .bindCallIndElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
+>>>>>>> s0-c07-arms
   | _, _, _, .bindAxiomOptElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
   | _, _, _, .regRead .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
   | _, _, _, .regReadElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h

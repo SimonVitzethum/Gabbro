@@ -1,0 +1,1311 @@
+⚠ [2/59] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:44: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:318:6: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:17: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:328:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:330:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [3/59] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil2
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:49:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:50:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:51:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:55:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:56:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:57:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:72:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:73:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:74:18: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:78:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:79:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:80:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:86:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:87:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:88:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:99:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:100:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:101:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:105:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:106:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:107:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:114:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:115:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:116:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:124:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:125:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:126:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:130:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:131:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:132:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:159:21: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+⚠ [5/59] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1Basis
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:23:22: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:53:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:76:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:77:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:69: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:69: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:9: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:47: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:127:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:129:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:131:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:144:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:146:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:148:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:150:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:153:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:159:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:161:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:169:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:171:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:177:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:192:22: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [6/59] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:23:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:27:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:117:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:118:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:125:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:126:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:151:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:152:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:159:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:160:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:193:26: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:203:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:204:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:206:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+ℹ [9/59] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:162:0: 'Gabbro.Grammatik.Gleitkomma.rundeBruch_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:163:0: 'Gabbro.Grammatik.Gleitkomma.add_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:164:0: 'Gabbro.Grammatik.Gleitkomma.sub_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:165:0: 'Gabbro.Grammatik.Gleitkomma.mul_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:166:0: 'Gabbro.Grammatik.Gleitkomma.div_finite' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:167:0: 'Gabbro.Grammatik.Gleitkomma.ofInt_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:168:0: 'Gabbro.Grammatik.Gleitkomma.ofRat_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:169:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:170:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_tie' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:171:0: 'Gabbro.Grammatik.Gleitkomma.wertExakt_neg_some' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:172:0: 'Gabbro.Grammatik.Gleitkomma.findeExp_unten' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:173:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_add01' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:174:0: 'Gabbro.Grammatik.Gleitkomma.sub_selbst' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:175:0: 'Gabbro.Grammatik.Gleitkomma.add_null_null' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:176:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_nullNplusNullN64' depends on axioms: [propext]
+⚠ [11/59] Replayed Grammatik.Kern.Syntax.Typen.Reason
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:59:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:61:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [13/59] Replayed Grammatik.Kern.Syntax.Typen.DataCap
+warning: Grammatik/Kern/Syntax/Typen/DataCap.lean:59:8: Variable name `middle` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _middle
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [16/59] Replayed Grammatik.Kern.Syntax.Typen.Teil2
+warning: Grammatik/Kern/Syntax/Typen/Teil2.lean:30:63: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [zahlZuBytes, List.length_cons, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:118:0: 'Gabbro.Grammatik.eigner_nachRuf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:119:0: 'Gabbro.Grammatik.eigner_lauf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:120:0: 'Gabbro.Grammatik.eigner_aus_leer_nie' depends on axioms: [propext]
+⚠ [18/59] Replayed Grammatik.Kern.Syntax.Syntax.Teil1
+warning: Grammatik/Kern/Syntax/Syntax/Teil1.lean:537:51: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+⚠ [22/59] Replayed Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:59:105: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [Bool.false_eq_true, ↓reduceIte, Nat.zero_add, Nat.zero_mul, Nat.one_mul]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:115:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:116:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:118:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:119:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:121:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:123:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:129:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:131:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:135:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:136:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:138:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:140:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:146:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:147:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:149:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:150:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:222:0: 'Gabbro.Grammatik.Gleitkomma.ausBits_zuBits' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:223:0: 'Gabbro.Grammatik.Gleitkomma.zuBits_lt' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:224:0: 'Gabbro.Grammatik.Gleitkomma.add_wf' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:225:0: 'Gabbro.Grammatik.Gleitkomma.mul_wf' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:226:0: 'Gabbro.Grammatik.Gleitkomma.div_wf' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/GleitkommaBits.lean:227:0: 'Gabbro.Grammatik.Gleitkomma.rundeBruch_wf' depends on axioms: [propext, Quot.sound]
+⚠ [23/59] Replayed Grammatik.Kern.Semantik.Evaluation.Ueberlauf
+warning: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:74:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:393:0: 'Gabbro.Grammatik.zweiPow_pos' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:394:0: 'Gabbro.Grammatik.clamp_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:395:0: 'Gabbro.Grammatik.Zahl.addS_n' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:396:0: 'Gabbro.Grammatik.addS_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:397:0: 'Gabbro.Grammatik.addS_exakt_wenn_passt' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:398:0: 'Gabbro.Grammatik.addS_exakt_wenn_passt_zeuge' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:399:0: 'Gabbro.Grammatik.addW_c_gleich' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:400:0: 'Gabbro.Grammatik.subW_c_gleich' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:401:0: 'Gabbro.Grammatik.mulW_c_gleich' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:402:0: 'Gabbro.Grammatik.wrapping_nur_exakt' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Kern/Semantik/Evaluation/Ueberlauf.lean:403:0: 'Gabbro.Grammatik.wrapping_nur_exakt_kein_mod8' depends on axioms: [propext, Quot.sound]
+⚠ [24/59] Replayed Grammatik.Kern.Syntax.Extensions.Bits.T1.Teil1
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:73:62: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [ctzAux, hne, ↓reduceIte, heven, Nat.zero_ne_one]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:108:74: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [ctzAux, hne, ↓reduceIte, heven, Nat.zero_ne_one, hgen]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:291:46: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [rotln, hlo, hhi, Nat.add_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:299:64: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [rotrn, hmod, hmodhi, hdiv, hdivhi, Nat.zero_add]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:319:50: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [rotln, ht, hlo, hhi, Nat.add_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Kern/Syntax/Extensions/Bits/T1/Teil1.lean:331:56: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [popcountn, hrot, hLHS, hRHS, Nat.add_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [38/59] Replayed Grammatik.Code.Model.Cells
+warning: Grammatik/Code/Model/Cells.lean:91:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Model/Cells.lean:91:33: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Model/Cells.lean:101:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Code/Model/Cells.lean:119:60: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [natBytes, List.length_cons, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Code/Model/Cells.lean:155:70: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Code/Model/Cells.lean:171:0: automatically included section variable(s) unused in theorem `Gabbro.Code.zuBits_lt`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Cells.lean:192:70: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Code/Model/Cells.lean:200:70: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+⚠ [39/59] Replayed Grammatik.Code.Model.Memory
+warning: Grammatik/Code/Model/Memory.lean:67:0: automatically included section variable(s) unused in theorem `Gabbro.Code.setBlk_same`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Memory.lean:70:0: automatically included section variable(s) unused in theorem `Gabbro.Code.setBlk_other`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Memory.lean:96:18: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Grammatik/Code/Model/Memory.lean:91:0: automatically included section variable(s) unused in theorem `Gabbro.Code.alloc_wf`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Memory.lean:100:0: automatically included section variable(s) unused in theorem `Gabbro.Code.alloc_fresh`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Memory.lean:106:0: automatically included section variable(s) unused in theorem `Gabbro.Code.alloc_blks_old`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Memory.lean:114:0: automatically included section variable(s) unused in theorem `Gabbro.Code.alloc_size`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Memory.lean:154:6: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Model/Memory.lean:190:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Model/Memory.lean:190:21: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Model/Memory.lean:200:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Code/Model/Memory.lean:200:21: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [42/59] Replayed Grammatik.Code.Model.Facts
+warning: Grammatik/Code/Model/Facts.lean:46:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Instr.oracular_of_plain`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Facts.lean:50:0: automatically included section variable(s) unused in theorem `Gabbro.Code.legal_of_not_oracular`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Facts.lean:130:0: automatically included section variable(s) unused in theorem `Gabbro.Code.enter_nophi`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [43/59] Replayed Grammatik.Code.Model.Layout
+warning: Grammatik/Code/Model/Layout.lean:44:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Ty.roundUp_ge`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Model/Layout.lean:53:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Ty.roundUp_zero`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [44/59] Replayed Grammatik.Code.Lower.Arith
+warning: Grammatik/Code/Lower/Arith.lean:66:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Lower/Arith.lean:66:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Lower/Arith.lean:69:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Code/Lower/Arith.lean:69:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [46/59] Replayed Grammatik.Code.Lower.Rep
+warning: Grammatik/Code/Lower/Rep.lean:66:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.memTy_scalar`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Lower/Rep.lean:152:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.encM_ty`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Lower/Rep.lean:154:75: This simp argument is unused:
+  Val.bool
+
+Hint: Omit it from the simp argument list.
+  [apply] simp_all [supp, encM, encR, memTy, regTy, Val.ty, Val.ofInt]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Grammatik/Code/Lower/Rep.lean:197:5: Variable name `hk` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hk
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [49/59] Replayed Grammatik.Code.Lower.Stmt.Teil1
+warning: Grammatik/Code/Lower/Stmt/Teil1.lean:83:26: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Code/Lower/Stmt/Teil1.lean:79:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.retryOk_fits`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Lower/Stmt/Teil1.lean:148:15: Variable name `lay` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _lay
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Lower/Stmt/Teil1.lean:148:32: Variable name `cenv` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _cenv
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [50/59] Replayed Grammatik.Code.Lower.Stmt.Teil2
+warning: Grammatik/Code/Lower/Stmt/Teil2.lean:140:30: Variable name `k` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _k
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Lower/Stmt/Teil2.lean:141:33: Variable name `k` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _k
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Lower/Stmt/Teil2.lean:216:36: Variable name `k` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _k
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Lower/Stmt/Teil2.lean:217:39: Variable name `k` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _k
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [52/59] Replayed Grammatik.Code.Refine.Struct.Mono.Teil1
+warning: Grammatik/Code/Refine/Struct/Mono/Teil1.lean:27:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.cvt_mono`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Refine/Struct/Mono/Teil1.lean:38:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.loadG_mono`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Refine/Struct/Mono/Teil1.lean:122:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.cvtM_mono`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+⚠ [53/59] Replayed Grammatik.Code.Refine.Struct.Mono.Teil2
+warning: Grammatik/Code/Refine/Struct/Mono/Teil2.lean:57:24: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Code/Refine/Struct/Mono/Teil2.lean:81:24: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+⚠ [57/59] Replayed Grammatik.Code.Refine.Struct.Labels.Teil1
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:74:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:76:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:79:0: automatically included section variable(s) unused in theorem `Gabbro.Code.Lower.lowerWhy_lbl`:
+  [Conf]
+consider restructuring your `variable` declarations so that the variables are not in scope or explicitly omit them:
+  omit [Conf] in theorem ...
+
+Note: This linter can be disabled with `set_option linter.unusedSectionVars false`
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:164:5: Variable name `hlt` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hlt
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:193:5: Variable name `hlt` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hlt
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:217:5: Variable name `hlt` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hlt
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:240:5: Variable name `hlt` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hlt
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:302:5: Variable name `hlt` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hlt
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Grammatik/Code/Refine/Struct/Labels/Teil1.lean:323:5: Variable name `hlt` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _hlt
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✖ [59/59] Building Grammatik.Code.Refine.Struct.Labels.Teil4 (10s)
+trace: .> LEAN_PATH=/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Cli/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/batteries/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Qq/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/aesop/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/importGraph/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/plausible/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/mathlib/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean /home/simon/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean -j2 -M16384 -DElab.async=true -DmaxHeartbeats=400000 /home/simon/Dokumente/gabbro-c1/grammatik/Grammatik/Code/Refine/Struct/Labels/Teil4.lean -o /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Code/Refine/Struct/Labels/Teil4.olean -i /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Code/Refine/Struct/Labels/Teil4.ilean -c /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Code/Refine/Struct/Labels/Teil4.c --setup /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Code/Refine/Struct/Labels/Teil4.setup.json --json
+warning: Grammatik/Code/Refine/Struct/Labels/Teil4.lean:162:33: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Code/Refine/Struct/Labels/Teil4.lean:162:33: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Code/Refine/Struct/Labels/Teil4.lean:184:23: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+error: Grammatik/Code/Refine/Struct/Labels/Teil4.lean:12:8: fail to show termination for
+  Gabbro.Code.Lower.lowerS_lbl
+  Gabbro.Code.Lower.lowerGA_lbl
+  Gabbro.Code.Lower.lowerB_lbl
+  Gabbro.Code.Lower.lowerEnd_lbl
+  Gabbro.Code.Lower.lowerAr_lbl
+with errors
+failed to infer structural recursion:
+Not considering parameter #1 of Gabbro.Code.Lower.lowerS_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter D of Gabbro.Code.Lower.lowerS_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Code.Lower.lowerS_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter lay of Gabbro.Code.Lower.lowerS_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter #17 of Gabbro.Code.Lower.lowerS_lbl:
+  its type Nat.le is an inductive family and indices are not variables
+    (Nat.succ x✝⁶).le x✝⁴.l
+Not considering parameter #18 of Gabbro.Code.Lower.lowerS_lbl:
+  its type Eq is an inductive family and indices are not variables
+    lowerS lay cenv lv x✝⁷ x✝⁶ x✝⁵ x✝⁴ = some (x✝², x✝³)
+Not considering parameter #1 of Gabbro.Code.Lower.lowerGA_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter D of Gabbro.Code.Lower.lowerGA_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Code.Lower.lowerGA_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter lay of Gabbro.Code.Lower.lowerGA_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter #18 of Gabbro.Code.Lower.lowerGA_lbl:
+  its type Nat.le is an inductive family and indices are not variables
+    (x✝⁶ + x✝⁸).le x✝⁴.l
+Not considering parameter #19 of Gabbro.Code.Lower.lowerGA_lbl:
+  its type Eq is an inductive family and indices are not variables
+    lowerGA lay cenv lv x✝⁷ x✝⁶ x✝⁵ x✝⁴ = some (x✝², x✝³)
+Not considering parameter #1 of Gabbro.Code.Lower.lowerB_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter D of Gabbro.Code.Lower.lowerB_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Code.Lower.lowerB_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter lay of Gabbro.Code.Lower.lowerB_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter #17 of Gabbro.Code.Lower.lowerB_lbl:
+  its type Nat.le is an inductive family and indices are not variables
+    (Nat.succ x✝⁶).le x✝⁴.l
+Not considering parameter #18 of Gabbro.Code.Lower.lowerB_lbl:
+  its type Eq is an inductive family and indices are not variables
+    lowerB lay cenv lv x✝⁷ x✝⁶ x✝⁵ x✝⁴ = some (x✝², x✝³)
+Not considering parameter #1 of Gabbro.Code.Lower.lowerEnd_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter D of Gabbro.Code.Lower.lowerEnd_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Code.Lower.lowerEnd_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter lay of Gabbro.Code.Lower.lowerEnd_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter #15 of Gabbro.Code.Lower.lowerEnd_lbl:
+  its type Nat.le is an inductive family and indices are not variables
+    (Nat.succ x✝⁵).le x✝⁴.l
+Not considering parameter #16 of Gabbro.Code.Lower.lowerEnd_lbl:
+  its type Eq is an inductive family and indices are not variables
+    lowerEnd lay cenv lv x✝⁶ x✝⁵ x✝⁴ = some (x✝², x✝³)
+Not considering parameter #1 of Gabbro.Code.Lower.lowerAr_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter D of Gabbro.Code.Lower.lowerAr_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter V of Gabbro.Code.Lower.lowerAr_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter lay of Gabbro.Code.Lower.lowerAr_lbl:
+  it is unchanged in the recursive calls
+Not considering parameter #22 of Gabbro.Code.Lower.lowerAr_lbl:
+  its type Nat.le is an inductive family and indices are not variables
+    (x✝⁶ + x✝⁸.length).le x✝⁴.l
+Not considering parameter #23 of Gabbro.Code.Lower.lowerAr_lbl:
+  its type Eq is an inductive family and indices are not variables
+    lowerAr lay cenv lv top W L ov x✝⁷ x✝⁶ x✝⁵ x✝⁴ = some (x✝², x✝³)
+Too many possible combinations of parameters of type Nat (or please indicate the recursive argument explicitly using `termination_by structural`).
+Too many possible combinations of parameters of type St (or please indicate the recursive argument explicitly using `termination_by structural`).
+Too many possible combinations of parameters of type List
+  (Res D) (or please indicate the recursive argument explicitly using `termination_by structural`).
+Skipping arguments of type Int, as Gabbro.Code.Lower.lowerS_lbl has no compatible argument.
+Skipping arguments of type Opd, as Gabbro.Code.Lower.lowerS_lbl has no compatible argument.
+Skipping arguments of type List (Option Grammatik.Ty), as Gabbro.Code.Lower.lowerS_lbl has no compatible argument.
+Cannot use parameters cenv of Gabbro.Code.Lower.lowerS_lbl, cenv of Gabbro.Code.Lower.lowerGA_lbl, cenv of Gabbro.Code.Lower.lowerB_lbl, cenv of Gabbro.Code.Lower.lowerEnd_lbl, and cenv of Gabbro.Code.Lower.lowerAr_lbl:
+  failed to eliminate recursive application
+    lowerB_lbl lay cenv lv tb
+Cannot use parameters lv of Gabbro.Code.Lower.lowerS_lbl, lv of Gabbro.Code.Lower.lowerGA_lbl, lv of Gabbro.Code.Lower.lowerB_lbl, lv of Gabbro.Code.Lower.lowerEnd_lbl, and lv of Gabbro.Code.Lower.lowerAr_lbl:
+  the type Lbl × Lbl does not have a `.brecOn` recursor
+Cannot use parameters #11 of Gabbro.Code.Lower.lowerS_lbl, #12 of Gabbro.Code.Lower.lowerGA_lbl, #11 of Gabbro.Code.Lower.lowerB_lbl, #10 of Gabbro.Code.Lower.lowerEnd_lbl, and #16 of Gabbro.Code.Lower.lowerAr_lbl:
+  failed to eliminate recursive application
+    lowerB_lbl lay (a :: cenv) lv b st.l k { r := r2, l := st.l + 1 } s1 bb
+      (id (Decidable.byContradiction fun a => lowerAr_lbl._proof_12 cs' lb st lo✝ hi✝ a)) hb1
+Cannot use parameters #16 of Gabbro.Code.Lower.lowerS_lbl, #17 of Gabbro.Code.Lower.lowerGA_lbl, #16 of Gabbro.Code.Lower.lowerB_lbl, #14 of Gabbro.Code.Lower.lowerEnd_lbl, and #21 of Gabbro.Code.Lower.lowerAr_lbl:
+  insufficient number of parameters at recursive application 
+    lowerB_lbl lay cenv lv tb
+Cannot use parameters #7 of Gabbro.Code.Lower.lowerS_lbl, #7 of Gabbro.Code.Lower.lowerGA_lbl, #7 of Gabbro.Code.Lower.lowerB_lbl, #7 of Gabbro.Code.Lower.lowerEnd_lbl, and #11 of Gabbro.Code.Lower.lowerAr_lbl:
+  the type Bool does not have a `.brecOn` recursor
+Cannot use parameters #8 of Gabbro.Code.Lower.lowerS_lbl, #8 of Gabbro.Code.Lower.lowerGA_lbl, #8 of Gabbro.Code.Lower.lowerB_lbl, #8 of Gabbro.Code.Lower.lowerEnd_lbl, and #12 of Gabbro.Code.Lower.lowerAr_lbl:
+  failed to eliminate recursive application
+    lowerB_lbl lay cenv lv tb
+
+
+Could not find a decreasing measure.
+The basic measures relate at each recursive call as follows:
+(<, ≤, =: relation proved, ? all proofs failed, _: no proof attempted)
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 27:193-218:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  =  _  _  _  _  _  _  _ _  _  _   _
+#22  _  =  _  _  _  _  _  _ _  _  _   _
+#23  _  _  =  _  _  _  _  _ _  _  _   _
+#24  _  _  _  =  _  _  _  _ _  _  _   _
+#25  _  _  _  _  =  _  _  _ _  _  _   _
+#26  _  _  _  _  _  =  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  ? _  _  _   _
+k    _  _  _  _  _  _  _  _ ?  _  _   _
+#28  _  _  _  _  _  _  _  _ _  ?  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 27:241-266:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  =  _  _  _  _  _  _  _ _  _  _   _
+#22  _  =  _  _  _  _  _  _ _  _  _   _
+#23  _  _  =  _  _  _  _  _ _  _  _   _
+#24  _  _  _  =  _  _  _  _ _  _  _   _
+#25  _  _  _  _  =  _  _  _ _  _  _   _
+#26  _  _  _  _  _  =  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 57:31-58:54:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  =  _  _  _  _  _  _  _ _  _  _   _
+#22  _  =  _  _  _  _  _  _ _  _  _   _
+#23  _  _  =  _  _  _  _  _ _  _  _   _
+#24  _  _  _  =  _  _  _  _ _  _  _   _
+#25  _  _  _  _  =  _  _  _ _  _  _   _
+#26  _  _  _  _  _  =  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 60:31-61:54:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  ?  _  _  _  _  _  _  _ _  _  _   _
+#22  _  =  _  _  _  _  _  _ _  _  _   _
+#23  _  _  =  _  _  _  _  _ _  _  _   _
+#24  _  _  _  ?  _  _  _  _ _  _  _   _
+#25  _  _  _  _  =  _  _  _ _  _  _   _
+#26  _  _  _  _  _  =  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerAr_lbl at 77:31-79:82:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#40  _  _  _  _  _  _  _  _ _  _  _   _
+#41  _  =  _  _  _  _  _  _ _  _  _   _
+#42  _  _  ?  _  _  _  _  _ _  _  _   _
+W    _  _  _  _  _  _  _  _ _  _  _   _
+L    _  _  _  _  ?  _  _  _ _  _  _   _
+#43  _  _  _  _  _  ?  _  _ _  _  _   _
+#44  _  _  _  _  _  _  <  _ _  _  _   _
+#45  _  _  _  _  _  _  _  _ _  _  _   _
+#46  _  _  _  _  _  _  _  _ _  _  _   _
+#47  _  _  _  _  _  _  _  _ _  _  _   _
+#48  _  _  _  _  _  _  _  _ _  _  _   _
+#49  _  _  _  _  _  _  _  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#50  _  _  _  _  _  _  _  _ _  _  _   _
+#51  _  _  _  _  _  _  _  _ _  _  _   _
+#52  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerGA_lbl at 121:31-122:66:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#11  _  _  _  _  _  _  _  _ _  _  _   _
+#12  _  =  _  _  _  _  _  _ _  _  _   _
+#13  _  _  _  _  _  _  _  _ _  _  _   _
+#14  _  _  _  _  _  _  _  _ _  _  _   _
+#15  _  _  _  _  _  _  _  _ _  _  _   _
+#16  _  _  _  _  _  _  _  _ _  _  _   _
+n    _  _  _  _  _  _  <  _ _  _  _   _
+#17  _  _  _  _  _  _  _  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#18  _  _  _  _  _  _  _  _ _  _  _   _
+#19  _  _  _  _  _  _  _  _ _  _  _   _
+#20  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 175:31-176:58:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  _  _  _  _  _  _  _  _ _  _  _   _
+#22  _  ?  _  _  _  _  _  _ _  _  _   _
+#23  _  _  _  _  _  _  _  _ _  _  _   _
+#24  _  _  _  _  _  _  _  _ _  _  _   _
+#25  _  _  _  _  _  _  _  _ _  _  _   _
+#26  _  _  _  _  _  _  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 175:31-176:58:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  _  _  _  _  _  _  _  _ _  _  _   _
+#22  _  _  _  _  _  _  _  _ _  _  _   _
+#23  _  _  _  _  _  _  _  _ _  _  _   _
+#24  _  _  _  _  _  _  _  _ _  _  _   _
+#25  _  _  _  _  _  _  _  _ _  _  _   _
+#26  _  _  _  _  _  _  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 195:31-196:58:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  _  _  _  _  _  _  _  _ _  _  _   _
+#22  _  _  _  _  _  _  _  _ _  _  _   _
+#23  _  _  _  _  _  _  _  _ _  _  _   _
+#24  _  _  _  _  _  _  _  _ _  _  _   _
+#25  _  _  _  _  _  _  _  _ _  _  _   _
+#26  _  _  _  _  _  _  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 198:31-199:54:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  _  _  _  _  _  _  _  _ _  _  _   _
+#22  _  _  _  _  _  _  _  _ _  _  _   _
+#23  _  _  _  _  _  _  _  _ _  _  _   _
+#24  _  _  _  _  _  _  _  _ _  _  _   _
+#25  _  _  _  _  _  _  _  _ _  _  _   _
+#26  _  _  _  _  _  _  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerS_lbl to Gabbro.Code.Lower.lowerB_lbl at 205:12-68:
+    #1 #2 #3 #4 #5 #6 #7 lb k #8 #9 #10
+#21  _  _  _  _  _  _  _  _ _  _  _   _
+#22  _  _  _  _  _  _  _  _ _  _  _   _
+#23  _  _  _  _  _  _  _  _ _  _  _   _
+#24  _  _  _  _  _  _  _  _ _  _  _   _
+#25  _  _  _  _  _  _  _  _ _  _  _   _
+#26  _  _  _  _  _  _  _  _ _  _  _   _
+#27  _  _  _  _  _  _  <  _ _  _  _   _
+lb   _  _  _  _  _  _  _  _ _  _  _   _
+k    _  _  _  _  _  _  _  _ _  _  _   _
+#28  _  _  _  _  _  _  _  _ _  _  _   _
+#29  _  _  _  _  _  _  _  _ _  _  _   _
+#30  _  _  _  _  _  _  _  _ _  _  _   _
+Call from Gabbro.Code.Lower.lowerGA_lbl to Gabbro.Code.Lower.lowerB_lbl at 462:29-115:
+    #11 #12 #13 #14 #15 #16 n #17 lb k #18 #19 #20
+#21   _   _   _   _   _   _ _   _  _ _   _   _   _
+#22   _   _   _   _   _   _ _   _  _ _   _   _   _
+#23   _   _   _   _   _   _ _   _  _ _   _   _   _
+#24   _   _   _   _   _   _ _   _  _ _   _   _   _
+#25   _   _   _   _   _   _ _   _  _ _   _   _   _
+#26   _   _   _   _   _   _ _   _  _ _   _   _   _
+#27   _   _   _   _   _   _ ?   _  _ _   _   _   _
+lb    _   _   _   _   _   _ _   _  _ _   _   _   _
+k     _   _   _   _   _   _ _   _  _ _   _   _   _
+#28   _   _   _   _   _   _ _   _  _ _   _   _   _
+#29   _   _   _   _   _   _ _   _  _ _   _   _   _
+#30   _   _   _   _   _   _ _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerGA_lbl to Gabbro.Code.Lower.lowerGA_lbl at 463:29-464:46:
+ #11 #12 #13 #14 #15 #16 n #17 lb k #18 #19 #20
+   _   _   _   _   _   _ _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerS_lbl at 233:186-210:
+    #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+#1    _   _   _   _   _   _   _  _ _   _   _   _
+#2    _   _   _   _   _   _   _  _ _   _   _   _
+#3    _   _   _   _   _   _   _  _ _   _   _   _
+#4    _   _   _   _   _   _   _  _ _   _   _   _
+#5    _   _   _   _   _   _   _  _ _   _   _   _
+#6    _   _   _   _   _   _   _  _ _   _   _   _
+#7    _   _   _   _   _   _   _  _ _   _   _   _
+lb    _   _   _   _   _   _   _  _ _   _   _   _
+k     _   _   _   _   _   _   _  _ _   _   _   _
+#8    _   _   _   _   _   _   _  _ _   _   _   _
+#9    _   _   _   _   _   _   _  _ _   _   _   _
+#10   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 233:235-262:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 246:29-247:51:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 250:207-234:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerEnd_lbl at 250:262-292:
+    #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+#31   _   _   _   _   _   _   _  _ _   _   _   _
+#32   _   _   _   _   _   _   _  _ _   _   _   _
+#33   _   _   _   _   _   _   _  _ _   _   _   _
+#34   _   _   _   _   _   _   _  _ _   _   _   _
+#35   _   _   _   _   _   _   _  _ _   _   _   _
+#36   _   _   _   _   _   _   _  _ _   _   _   _
+lb    _   _   _   _   _   _   _  _ _   _   _   _
+#37   _   _   _   _   _   _   _  _ _   _   _   _
+#38   _   _   _   _   _   _   _  _ _   _   _   _
+#39   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 263:29-264:51:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 271:36-101:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerEnd_lbl at 272:36-100:
+    #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+#31   _   _   _   _   _   _   _  _ _   _   _   _
+#32   _   _   _   _   _   _   _  _ _   _   _   _
+#33   _   _   _   _   _   _   _  _ _   _   _   _
+#34   _   _   _   _   _   _   _  _ _   _   _   _
+#35   _   _   _   _   _   _   _  _ _   _   _   _
+#36   _   _   _   _   _   _   _  _ _   _   _   _
+lb    _   _   _   _   _   _   _  _ _   _   _   _
+#37   _   _   _   _   _   _   _  _ _   _   _   _
+#38   _   _   _   _   _   _   _  _ _   _   _   _
+#39   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerEnd_lbl at 308:29-309:52:
+    #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+#31   _   _   _   _   _   _   _  _ _   _   _   _
+#32   _   _   _   _   _   _   _  _ _   _   _   _
+#33   _   _   _   _   _   _   _  _ _   _   _   _
+#34   _   _   _   _   _   _   _  _ _   _   _   _
+#35   _   _   _   _   _   _   _  _ _   _   _   _
+#36   _   _   _   _   _   _   _  _ _   _   _   _
+lb    _   _   _   _   _   _   _  _ _   _   _   _
+#37   _   _   _   _   _   _   _  _ _   _   _   _
+#38   _   _   _   _   _   _   _  _ _   _   _   _
+#39   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 311:29-312:52:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerB_lbl to Gabbro.Code.Lower.lowerB_lbl at 325:68-120:
+ #21 #22 #23 #24 #25 #26 #27 lb k #28 #29 #30
+   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerEnd_lbl to Gabbro.Code.Lower.lowerS_lbl at 334:179-203:
+    #31 #32 #33 #34 #35 #36 lb #37 #38 #39
+#1    _   _   _   _   _   _  _   _   _   _
+#2    _   _   _   _   _   _  _   _   _   _
+#3    _   _   _   _   _   _  _   _   _   _
+#4    _   _   _   _   _   _  _   _   _   _
+#5    _   _   _   _   _   _  _   _   _   _
+#6    _   _   _   _   _   _  _   _   _   _
+#7    _   _   _   _   _   _  _   _   _   _
+lb    _   _   _   _   _   _  _   _   _   _
+k     _   _   _   _   _   _  _   _   _   _
+#8    _   _   _   _   _   _  _   _   _   _
+#9    _   _   _   _   _   _  _   _   _   _
+#10   _   _   _   _   _   _  _   _   _   _
+Call from Gabbro.Code.Lower.lowerEnd_lbl to Gabbro.Code.Lower.lowerEnd_lbl at 334:230-259:
+ #31 #32 #33 #34 #35 #36 lb #37 #38 #39
+   _   _   _   _   _   _  _   _   _   _
+Call from Gabbro.Code.Lower.lowerEnd_lbl to Gabbro.Code.Lower.lowerEnd_lbl at 347:29-348:51:
+ #31 #32 #33 #34 #35 #36 lb #37 #38 #39
+   _   _   _   _   _   _  _   _   _   _
+Call from Gabbro.Code.Lower.lowerEnd_lbl to Gabbro.Code.Lower.lowerEnd_lbl at 385:68-120:
+ #31 #32 #33 #34 #35 #36 lb #37 #38 #39
+   _   _   _   _   _   _  _   _   _   _
+Call from Gabbro.Code.Lower.lowerAr_lbl to Gabbro.Code.Lower.lowerB_lbl at 409:17-103:
+    #40 #41 #42 W L #43 #44 #45 #46 #47 #48 #49 lb k #50 #51 #52
+#21   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#22   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#23   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#24   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#25   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#26   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#27   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+lb    _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+k     _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#28   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#29   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#30   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerAr_lbl to Gabbro.Code.Lower.lowerAr_lbl at 410:29-411:68:
+ #40 #41 #42 W L #43 #44 #45 #46 #47 #48 #49 lb k #50 #51 #52
+   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerAr_lbl to Gabbro.Code.Lower.lowerB_lbl at 431:29-432:52:
+    #40 #41 #42 W L #43 #44 #45 #46 #47 #48 #49 lb k #50 #51 #52
+#21   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#22   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#23   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#24   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#25   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#26   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#27   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+lb    _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+k     _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#28   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#29   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+#30   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+Call from Gabbro.Code.Lower.lowerAr_lbl to Gabbro.Code.Lower.lowerAr_lbl at 437:29-438:68:
+ #40 #41 #42 W L #43 #44 #45 #46 #47 #48 #49 lb k #50 #51 #52
+   _   _   _ _ _   _   _   _   _   _   _   _  _ _   _   _   _
+
+
+#1: sizeOf cenv
+#2: sizeOf lv
+#3: sizeOf l
+#4: sizeOf Γ
+#5: sizeOf Λ
+#6: sizeOf Λ'
+#7: sizeOf s
+#8: sizeOf st
+#9: sizeOf st'
+#10: sizeOf blks
+#11: sizeOf cenv
+#12: sizeOf lv
+#13: sizeOf l
+#14: sizeOf Γ
+#15: sizeOf Λ
+#16: sizeOf Λ'
+#17: sizeOf arms
+#18: sizeOf st
+#19: sizeOf st'
+#20: sizeOf blks
+#21: sizeOf cenv
+#22: sizeOf lv
+#23: sizeOf l
+#24: sizeOf Γ
+#25: sizeOf Λ
+#26: sizeOf Λ'
+#27: sizeOf b
+#28: sizeOf st
+#29: sizeOf st'
+#30: sizeOf blks
+#31: sizeOf cenv
+#32: sizeOf lv
+#33: sizeOf l
+#34: sizeOf Γ
+#35: sizeOf Λ
+#36: sizeOf b
+#37: sizeOf st
+#38: sizeOf st'
+#39: sizeOf blks
+#40: sizeOf cenv
+#41: sizeOf lv
+#42: sizeOf top
+#43: sizeOf ov
+#44: sizeOf l
+#45: sizeOf Γ
+#46: sizeOf Λ
+#47: sizeOf Λ'
+#48: sizeOf cs
+#49: sizeOf arms
+#50: sizeOf st
+#51: sizeOf st'
+#52: sizeOf blks
+
+Please use `termination_by` to specify a decreasing measure.
+Some required targets logged failures:
+- Grammatik.Code.Refine.Struct.Labels.Teil4
+error: build failed

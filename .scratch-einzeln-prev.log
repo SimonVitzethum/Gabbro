@@ -1,0 +1,90 @@
+modules: 2041
+[50/2041] Grammatik.Kern.Syntax.Satz.T2
+[100/2041] Grammatik.Logik.Ruf.Maschine.RufMaschineF.T2.Teil2
+FAIL [112/2041] Grammatik.Logik.Ruf.Maschine.RufMaschineG.T2
+error: Grammatik/Logik/Ruf/Maschine/RufMaschineG/T2.lean:77:0: (kernel) constant has already been declared 'Gabbro.Grammatik.RufSchrittG.endeBindAxiomOpt'
+[150/2041] Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T6.Teil1
+[200/2041] Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T9.Teil1
+[250/2041] Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt.Teil2
+FAIL [262/2041] Grammatik.Kern.Syntax.Extensions.Extraktion.T7.Teil1
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `axiomCall` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `regWrite` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `transition` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `publish` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `advances` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `retires` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `ret` has not been provided
+error: Grammatik/Kern/Syntax/Extensions/Extraktion/T7/Teil1.lean:30:2: Alternative `retWhy` has not been provided
+[300/2041] Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.Basis
+[350/2041] Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T1
+[400/2041] Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T2
+[450/2041] Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.AkteurSFaelle.Teil18
+[500/2041] Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.B.Teil9Basis
+[550/2041] Grammatik.Logik.Fortschritt.KostenG.T1.Teil1a
+FAIL [595/2041] Grammatik.Bausteine.Arena.ArenaDyn.Teil1
+error: Grammatik/Bausteine/Arena/ArenaDyn/Teil1.lean:14:2: unexpected identifier; expected command
+error: Grammatik/Bausteine/Arena/ArenaDyn/Teil1.lean:15:65: unexpected identifier; expected command
+error: Grammatik/Bausteine/Arena/ArenaDyn/Teil1.lean:20:52: unexpected identifier; expected command
+error: Grammatik/Bausteine/Arena/ArenaDyn/Teil1.lean:25:36: unexpected token; expected ':'
+error: Grammatik/Bausteine/Arena/ArenaDyn/Teil1.lean:33:12: unexpected identifier; expected ':'
+error: Grammatik/Bausteine/Arena/ArenaDyn/Teil1.lean:215:0: Invalid name after `end`: Expected `ArenaDyn.puts.builds`, but found `Gabbro.Grammatik.ArenaDyn`
+[600/2041] Grammatik.Bausteine.Arena.Struktur.ArenaFrei.Teil1Basis
+[650/2041] Grammatik.Bausteine.Arena.Ownership.Body.Check.Sound.Teil1
+[700/2041] Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil9Basis
+[750/2041] Grammatik.Nichtinterferenz.Fluss
+[800/2041] Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge.T2
+[850/2041] Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T4
+[900/2041] Grammatik.Zielsatz.Atomar.AtomarMasken
+[950/2041] Grammatik.Korpus.Zeugnis.Zeugnis.T4
+[1000/2041] Grammatik.Kern.Syntax.Extensions.Bits.T2
+[1050/2041] Grammatik.Parser.Item.ElementTief.Defs5a
+FAIL [1058/2041] Grammatik.Parser.Elab.Export.ExportMetadata
+error: Grammatik/Parser/Elab/Export/ExportMetadata.lean:251:9: Application type mismatch: The argument
+error: Grammatik/Parser/Elab/Export/ExportMetadata.lean:307:74: Tactic `rfl` failed: The left-hand side
+error: Grammatik/Parser/Elab/Export/ExportMetadata.lean:314:19: Application type mismatch: The argument
+FAIL [1091/2041] Grammatik.Parser.Elab.Konst.Dispatch
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:20:33: Application type mismatch: The argument
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:56:36: Function expected at
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:64:38: Function expected at
+error: Grammatik/Parser/Elab/Konst/Dispatch.lean:71:41: Function expected at
+FAIL [1095/2041] Grammatik.Kern.Syntax.Konst.ReinBKlangAnweisung
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:41:35: Type mismatch
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:95:2: (deterministic) timeout at `whnf`, maximum number of heartbeats (400000) has been reached
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:235:11: Unknown identifier `constStmtB_soundGen`
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:240:11: Unknown identifier `constBlockB_soundGen`
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:245:11: Unknown identifier `constEndB_soundGen`
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:250:11: Unknown identifier `constArmsB_soundGen`
+error: Grammatik/Kern/Syntax/Konst/ReinBKlangAnweisung.lean:255:11: Unknown identifier `constReasonArmsB_soundGen`
+[1100/2041] Grammatik.Logik.Vertraege.HandlerKongruenz.Teil2Basis
+[1150/2041] Grammatik.Speichermodell.Atomar.AtomarRuhe.Teil1a
+[1200/2041] Grammatik.Logik.Vertraege.Uebersetzung
+[1250/2041] Grammatik.Parser.Round.Rundlauf4.Teil2
+[1300/2041] Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.AkteurGFaelle.Teil10
+[1350/2041] Grammatik.Nebenlaeufigkeit.Allgemein.TravLese.Teil1
+FAIL [1356/2041] Grammatik.Korpus.Zeugnis.ZeugnisStmt2.Teil2
+error: Grammatik/Korpus/Zeugnis/ZeugnisStmt2/Teil2.lean:76:21: Tactic `decide` failed to reduce
+[1400/2041] Grammatik.Korpus.Programme.TermIdent104
+[1450/2041] Grammatik.Zielsatz.Faeden.FaedenZeuge.Teil2
+[1500/2041] Grammatik.Korpus.Programme.Korpus109.Teil1a
+[1550/2041] Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbschnitt
+[1600/2041] Grammatik.Logik.Ruf.FremdRuf.T5
+[1650/2041] Grammatik.GabbroV.GvSplits
+[1700/2041] Grammatik.Code.Refine.Bits.OpRest
+FAIL [1720/2041] Grammatik.Code.Refine.Calls.CallDef
+error: Grammatik/Code/Refine/Calls/CallDef.lean:102:20: Application type mismatch: The argument
+error: Grammatik/Code/Refine/Calls/CallDef.lean:102:26: `simp` made no progress
+error: Grammatik/Code/Refine/Calls/CallDef.lean:102:26: `simp` made no progress
+[1750/2041] Grammatik.Code.Conc.Thread
+FAIL [1787/2041] Grammatik.Gen.Abdeckung.Mitglieder
+error: Grammatik/Gen/Abdeckung/Mitglieder.lean:183:2: Missing cases:
+error: Grammatik/Gen/Abdeckung/Mitglieder.lean:217:2: Missing cases:
+error: Grammatik/Gen/Abdeckung/Mitglieder.lean:239:2: Missing cases:
+error: Grammatik/Gen/Abdeckung/Mitglieder.lean:274:2: Missing cases:
+error: Grammatik/Gen/Abdeckung/Mitglieder.lean:305:2: Missing cases:
+error: Grammatik/Gen/Abdeckung/Mitglieder.lean:328:2: Missing cases:
+[1800/2041] Grammatik.Gen.Erzeuger.Kompakt.Anweisung
+[1850/2041] Grammatik.Gen.Text.Delab.Teil1
+[1900/2041] Grammatik.Gen.Fein.Zellen
+[1950/2041] Grammatik.Berechenbarkeit.BrainfuckG.Lege
+[2000/2041] Grammatik.Logik.WP.HA.Pflicht
+DONE 2041 modules, 9 failed (dependents skipped)

@@ -1,0 +1,405 @@
+⚠ [2/23] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:312:44: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:318:6: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:326:17: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:328:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil1.lean:330:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+⚠ [3/23] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T1.Teil2
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:49:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:50:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:51:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:55:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:56:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:57:16: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:72:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:73:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:74:18: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:78:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:79:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:80:18: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:86:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:87:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:88:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:99:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:100:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:101:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:105:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:106:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:107:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:114:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:115:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:116:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:124:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:125:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:126:20: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:130:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:131:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:132:20: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T1/Teil2.lean:159:21: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+⚠ [5/23] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1Basis
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:23:22: `if_false` has been deprecated: Use `ite_false` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵f̵a̵l̵s̵e̵i̲t̲e̲_̲f̲a̲l̲s̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:51:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:53:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:54:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:74:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:76:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:77:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:95:69: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:57: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:104:69: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:9: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:112:47: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:127:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:129:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:131:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:144:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:146:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:148:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:150:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:153:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:159:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:161:16: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:169:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:171:14: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:177:14: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1Basis.lean:192:22: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [6/23] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T2.Teil1
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:23:8: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:27:8: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:117:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:118:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:125:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:126:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:151:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:152:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:159:12: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:160:12: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:193:26: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:203:10: `if_pos` has been deprecated: Use `ite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵p̵o̵s̵i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:204:10: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+warning: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T2/Teil1.lean:206:6: `if_neg` has been deprecated: Use `ite_eq_right` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵n̵e̵g̵i̲t̲e̲_̲e̲q̲_̲r̲i̲g̲h̲t̲
+ℹ [9/23] Replayed Grammatik.Bausteine.Gleitkomma.Gleitkomma.T3
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:162:0: 'Gabbro.Grammatik.Gleitkomma.rundeBruch_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:163:0: 'Gabbro.Grammatik.Gleitkomma.add_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:164:0: 'Gabbro.Grammatik.Gleitkomma.sub_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:165:0: 'Gabbro.Grammatik.Gleitkomma.mul_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:166:0: 'Gabbro.Grammatik.Gleitkomma.div_finite' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:167:0: 'Gabbro.Grammatik.Gleitkomma.ofInt_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:168:0: 'Gabbro.Grammatik.Gleitkomma.ofRat_finite' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:169:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_monoton' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:170:0: 'Gabbro.Grammatik.Gleitkomma.rundeInt_tie' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:171:0: 'Gabbro.Grammatik.Gleitkomma.wertExakt_neg_some' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:172:0: 'Gabbro.Grammatik.Gleitkomma.findeExp_unten' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:173:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_add01' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:174:0: 'Gabbro.Grammatik.Gleitkomma.sub_selbst' depends on axioms: [propext, Quot.sound]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:175:0: 'Gabbro.Grammatik.Gleitkomma.add_null_null' depends on axioms: [propext]
+info: Grammatik/Bausteine/Gleitkomma/Gleitkomma/T3.lean:176:0: 'Gabbro.Grammatik.Gleitkomma.zeuge_nullNplusNullN64' depends on axioms: [propext]
+⚠ [11/23] Replayed Grammatik.Kern.Syntax.Typen.Reason
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:59:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+warning: Grammatik/Kern/Syntax/Typen/Reason.lean:61:6: `dif_pos` has been deprecated: Use `dite_eq_left` instead
+
+Hint: Replace the deprecated name:
+  d̵i̵f̵_̵p̵o̵s̵d̲i̲t̲e̲_̲e̲q̲_̲l̲e̲f̲t̲
+⚠ [13/23] Replayed Grammatik.Kern.Syntax.Typen.DataCap
+warning: Grammatik/Kern/Syntax/Typen/DataCap.lean:59:8: Variable name `middle` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _middle
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+⚠ [16/23] Replayed Grammatik.Kern.Syntax.Typen.Teil2
+warning: Grammatik/Kern/Syntax/Typen/Teil2.lean:30:63: This simp argument is unused:
+  Nat.add_left_cancel_iff
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [zahlZuBytes, List.length_cons, ih]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:118:0: 'Gabbro.Grammatik.eigner_nachRuf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:119:0: 'Gabbro.Grammatik.eigner_lauf_aus_anfang' depends on axioms: [propext]
+info: Grammatik/Kern/Syntax/Typen/Teil2.lean:120:0: 'Gabbro.Grammatik.eigner_aus_leer_nie' depends on axioms: [propext]
+⚠ [18/23] Replayed Grammatik.Kern.Syntax.Syntax.Teil1
+warning: Grammatik/Kern/Syntax/Syntax/Teil1.lean:537:51: `if_true` has been deprecated: Use `ite_true` instead
+
+Hint: Replace the deprecated name:
+  i̵f̵_̵t̵r̵u̵e̵i̲t̲e̲_̲t̲r̲u̲e̲
+✖ [23/23] Building Grammatik.Adaequanz.Gabbro.Signatur (1.7s)
+trace: .> LEAN_PATH=/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Cli/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/batteries/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/Qq/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/aesop/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/proofwidgets/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/importGraph/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/plausible/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/packages/mathlib/.lake/build/lib/lean:/home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean /home/simon/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean -j2 -M16384 -DElab.async=true -DmaxHeartbeats=400000 /home/simon/Dokumente/gabbro-c1/grammatik/Grammatik/Adaequanz/Gabbro/Signatur.lean -o /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Adaequanz/Gabbro/Signatur.olean -i /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/lib/lean/Grammatik/Adaequanz/Gabbro/Signatur.ilean -c /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Adaequanz/Gabbro/Signatur.c --setup /home/simon/Dokumente/gabbro-c1/grammatik/.lake/build/ir/Grammatik/Adaequanz/Gabbro/Signatur.setup.json --json
+error: Grammatik/Adaequanz/Gabbro/Signatur.lean:239:75: Tactic `decide` proved that the proposition
+  tabelle.length = 145 ∧
+    List.map (fun f => (zeilen f).length)
+        ["Expr", "NutzlastExpr", "Args", "ErgExpr", "Stmt", "Block", "Endblock", "Arms", "GrundArms"] =
+      [60, 2, 2, 2, 32, 21, 22, 2, 2]
+is false
+error: Grammatik/Adaequanz/Gabbro/Signatur.lean:243:2: Tactic `decide` proved that the proposition
+  List.map (fun a => (List.filter (fun x => x.kinder.length == a) tabelle).length) [0, 1, 2, 3] = [29, 36, 57, 22]
+is false
+error: Grammatik/Adaequanz/Gabbro/Signatur.lean:248:52: Tactic `decide` proved that the proposition
+  (List.map (fun x => x.praemissen) tabelle).sum = 172 ∧ (List.map (fun x => x.kinder.length) tabelle).sum = 221
+is false
+Some required targets logged failures:
+- Grammatik.Adaequanz.Gabbro.Signatur
+error: build failed
