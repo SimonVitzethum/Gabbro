@@ -5,6 +5,7 @@ public import Grammatik.Gen.Abdeckung.Satz.MerkmalZerlegt
 public import Grammatik.Zielsatz.Faeden.Verbund.T1
 public import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
 public import Grammatik.Logik.Terminierung.Entscheidung.Teil1
+public import Grammatik.Logik.Terminierung.Entscheidung.Teil1a
 
 @[expose] public section
 

@@ -28,6 +28,7 @@
 -/
 module
 public import Grammatik.Speichermodell.Atomar.AtomarInv
+public import Grammatik.Speichermodell.Atomar.AtomarInva
 public import Grammatik.Speichermodell.Atomar.AtomarZeuge
 public import Grammatik.Speichermodell.Atomar.AtomarFortschritt
 @[expose] public section

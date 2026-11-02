@@ -4,6 +4,7 @@ public import Grammatik.Kern.Syntax.Marken.Owner.Activation
 public import Grammatik.Kern.Syntax.Marken.Owner.InvocationFlow
 public import Grammatik.Kern.Syntax.Marken.Owner.Fixture
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T6
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T6a
 
 @[expose] public section
 
