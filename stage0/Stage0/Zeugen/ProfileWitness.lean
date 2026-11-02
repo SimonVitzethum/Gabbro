@@ -43,7 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The current compiler retains the explicit refusal for this source form. -/
+/-- Profile binding exists in `Parser.Profil`, but Stage0 has no certificate transport
+    from that binding to the selected image and its named hardware assumptions. -/
 theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
 
 end Gabbro.Stage0.ProfileWitness

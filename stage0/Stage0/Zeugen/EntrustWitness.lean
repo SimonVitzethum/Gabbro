@@ -43,7 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The current compiler retains the explicit refusal for this source form. -/
+/-- Parser.Profil.Eintritt deliberately refuses source entrust: the syntax
+    supplies no proved isolation or invocation service for the guest boundary. -/
 theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
 
 end Gabbro.Stage0.EntrustWitness
