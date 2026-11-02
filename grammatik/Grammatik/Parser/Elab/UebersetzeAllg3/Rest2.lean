@@ -495,4 +495,19 @@ def pre108 (items : List SItemTief) : List SItemTief :=
 
 /-! ## 108 pins: strip, normalise, elaborate, lower -/
 
+/-! ## C18 fixture: a closed static-array reset through the generic lowering -/
+
+/-- **A unit with a static-array reset** (C18): `static mut A : [u8; 4]` and one writer that
+    zeroes `[1, 3)` via `reset A at 1 count 2;`. Closed: literals only, no parameters. -/
+def uReset : UProg :=
+  { tabs := [], locks := [],
+    fns := [{ name := "leere", params := [], kinds := [], res := none, held := [], puts := [],
+              gputs := ["A"], gives := [], body := [.resetRange "A" (.lit 1) (.lit 2)],
+              ret := .empty }],
+    globs := [{ name := "A", ty := .wert (.arr (.int 0 255) 4), init := 0, var := true }] }
+
+/-- The generic lowering accepts the reset unit: the range elaborates, checks, and expands
+    into the typed array store. -/
+theorem uReset_lower : (lowerAllg uReset).toOption.isSome = true := by decide
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

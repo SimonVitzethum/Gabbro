@@ -17,6 +17,7 @@ public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
+public import Grammatik.Bausteine.Arena.ArenaStaticReset
 
 @[expose] public section
 
@@ -151,7 +152,8 @@ def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop 
     calls an axiom or reads a register at a declared answer type without a value, except an
     axiom whose result is `never` (`antworten`, since 2026-09-15, W1); every function an
     interrupt handler's call graph reaches takes only locks declared `masks irqs` (`masken`,
-    since 2026-09-26, Opus agent H: the Rust `H102`). -/
+    since 2026-09-26, Opus agent H: the Rust `H102`); every declared static array admits
+    zero (`reset`, since C18: no `fnptr`/`ref`/`ptr` zero, no floats). -/
 structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
@@ -164,6 +166,8 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
   -- the handler discipline `H102` (Opus agent H, 2026-09-26, OFFEN O19)
   masken : MaskenDisziplin P fs
+  -- checked static-array reset admission (C18): every declared static array admits zero
+  reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
 
 end Pruefer
 
