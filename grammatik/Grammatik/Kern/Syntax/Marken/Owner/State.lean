@@ -89,9 +89,7 @@ def recordMint (N : OwnerNamespace D) (d : OwnerMintDecl D)
     match s.ledger.allocate f (N.key d.mark) with
     | none => none
     | some (ledger, h) => some
-        ({ s with ledger := ledger,
-            spent := fun m => if m = d.mark then true else s.spent m,
-            stage := fun m => if m = d.mark then d.stage else s.stage m },
+        ({ s with ledger := ledger, spent := fun m => if m = d.mark then true else s.spent m, stage := fun m => if m = d.mark then d.stage else s.stage m },
          ⟨d.mark, d.stage, h⟩)
   else none
 
