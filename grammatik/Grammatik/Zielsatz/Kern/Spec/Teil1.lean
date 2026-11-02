@@ -75,11 +75,12 @@ def Aufzaehlung (α : Type) : Type := {l : List α // ∀ a, a ∈ l}
       the ownership interface of every function (`ArenaIface`: which parameter is handed which
       allocation, which result returns one). Default `[]`: a unit without an arena is the unit of
       before.
-    * `akku` (NEW 2026-11-02, C15 scalar/initialization stage) -- the unit's per-core
-      accumulators (`AccumulatorDecl`: core count, width, signedness, range, operator, private
-      cells and locks, core-query and generated update/reduction functions). Default `[]`: a
-      unit without an accumulator is the unit of before (the elaborator still refuses `accT`,
-      so every elaborated unit has `akku = []`).
+    * `akku` (NEW 2026-11-02, C15) -- the unit's per-core accumulators (`AccumulatorDecl`:
+      core count, width, signedness, range, operator, private cells and locks, core-query and
+      generated update/reduction functions). Default `[]`: a unit without an accumulator is
+      the unit of before (the elaborator expands admitted `accT` declarations to guarded
+      storage but refuses every use, so every elaborated unit still has `akku = []`; the
+      storage is inert).
     The exporter's output is exactly one such value; a different `starts` (say `[]`) is a
     DIFFERENT program, whose run the statement then describes (`laufzeit_nur_erklaert`). -/
 structure Einheit (D : Deklaration) where

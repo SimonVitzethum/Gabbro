@@ -74,7 +74,8 @@ def schnittstelleB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn →
     ((verbinde e E₁ E₂).ws.all fun w =>
       !(mehrfachB (verbinde e E₁ E₂).ws w) || poolSicherVB fs cs e E₁ E₂ w) &&
     (fs.all fun w => !(E₁.P.unterbricht w) || fs.all fun h =>
-      !(huelleB fs e E₁ E₂ w h) || mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h))
+      !(huelleB fs e E₁ E₂ w h) || mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h)) &&
+    Kernzelle.accumulatorB (verbinde e E₁ E₂).P fs cs (verbinde e E₁ E₂).akku
 
 variable {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} {e : D.Fn → Bool} {E₁ E₂ : Einheit D}
 
@@ -303,10 +304,10 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
   unfold schnittstelleB
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩
+  · rintro ⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩
     refine ⟨(platzhalterB_iff hvoll).mp h1, (platzhalterB_iff hvoll).mp h2,
       (keinRueckrufB_iff hvoll).mp h3, fun c hc => ?_, fun c hB hA => ?_, fun w hw => ?_,
-      fun w hw h hh => ?_⟩
+      fun w hw h hh => ?_, (Kernzelle.accumulatorB_iff hvoll hcs).mp h8⟩
     · have h := List.all_eq_true.mp h4 c (hcs c)
       rw [(lokBedarfB_iff hvoll).mpr hc, Bool.not_true, Bool.false_or] at h
       exact (getrenntVB_iff hvoll).mp h
@@ -323,8 +324,8 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
       rw [(huelleB_iff hvoll).mpr hh, Bool.not_true, Bool.false_or] at h2
       exact h2
   · intro h
-    refine ⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
-      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
+    refine ⟨⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
+      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
     · refine List.all_eq_true.mpr fun c _ => ?_
       cases hc : lokBedarfB fs e E₁ E₂ c
       · rfl
@@ -349,6 +350,7 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
         · rfl
         · rw [Bool.not_true, Bool.false_or]
           exact h.masken w hw k ((huelleB_iff hvoll).mp hk)
+    · exact (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku
 
 end Bool
 
@@ -368,10 +370,11 @@ variable [DecidableEq D.Fn]
     nothing IS the unit. The statement `GabbroZiel` is unchanged by this diff; this lemma says
     the new operation does not move a single unit either. -/
 theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestartet = [])
-    (h3 : E'.arenen = []) : verbinde (fun _ => true) E E' = E := by
+    (h3 : E'.arenen = []) (h4 : E'.akku = []) :
+    verbinde (fun _ => true) E E' = E := by
   cases E
   unfold verbinde verbindeP mitRumpf
-  rw [h1, h2, h3, List.append_nil, List.append_nil, List.append_nil]
+  rw [h1, h2, h3, h4, List.append_nil, List.append_nil, List.append_nil, List.append_nil]
   rfl
 
 /-- **The linked unit is accepted by the concrete checker** -- so it can be linked again: a
@@ -379,12 +382,13 @@ theorem verbinde_leer (E E' : Einheit D) (h1 : E'.starts = []) (h2 : E'.gestarte
 theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws = true)
-    (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws = true) (hV : Verbindbar E₁ E₂)
+    (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true)
+    (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku = true) (hV : Verbindbar E₁ E₂)
     (hS : schnittstelleB fs cs e E₁ E₂ = true) :
-    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws = true :=
-  (akzeptiert_iff hvoll hls hcs []).mpr (akzeptiertSpec_verbinde hvoll
-    ((akzeptiert_iff hvoll hls hcs []).mp h₁) ((akzeptiert_iff hvoll hls hcs []).mp h₂) hV
+    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws
+      (verbinde e E₁ E₂).akku = true :=
+  (akzeptiert_iff hvoll hls hcs _).mpr (akzeptiertSpec_verbinde hvoll
+    ((akzeptiert_iff hvoll hls hcs _).mp h₁) ((akzeptiert_iff hvoll hls hcs _).mp h₂) hV
     ((schnittstelleB_iff hvoll hcs).mp hS))
 
 /-- **The user duty of the linked unit, restricted to what the two users own** (`a₁` inside

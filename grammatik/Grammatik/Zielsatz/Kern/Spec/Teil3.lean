@@ -165,6 +165,8 @@ def verbinde (e : D.Fn → Bool) (E₁ E₂ : Einheit D) : Einheit D where
   gestartet := E₁.gestartet ++ E₂.gestartet
   -- both units' arenas; ownership across a link is not claimed (NOT CLAIMED)
   arenen := E₁.arenen ++ E₂.arenen
+  -- both units' accumulators (C15 link transport; the link check admits them)
+  akku := E₁.akku ++ E₂.akku
 
 /-- The OWNER's program of `f` (unit 1 iff `e f`). -/
 def teilP (e : D.Fn → Bool) (E₁ E₂ : Einheit D) (f : D.Fn) : Programm D :=
@@ -259,6 +261,8 @@ structure SchnittstelleSpec (fs : List D.Fn) (e : D.Fn → Bool) (E₁ E₂ : Ei
   -- an interrupt handler's COMPOSED hull takes only masked locks (Opus agent H, 2026-09-26)
   masken : ∀ w, E₁.P.unterbricht w = true → ∀ h, HuelleV fs e E₁ E₂ w h →
     mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h) = true
+  -- the linked accumulators, over the linked program (C15 link transport)
+  akku : Kernzelle.AccumulatorAdmission (verbinde e E₁ E₂).P fs (verbinde e E₁ E₂).akku
 
 /-- **The user's logic of ONE unit** (the part of (b) a separately compiled unit owes): the
     bodies it OWNS at every budget, its lock and axiom families read only their carriers, and

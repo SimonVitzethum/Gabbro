@@ -242,6 +242,7 @@ public import Grammatik.Bausteine.Kernzelle.Belegung
 public import Grammatik.Bausteine.Kernzelle.Verlauf
 public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
+public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.Zeuge
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip

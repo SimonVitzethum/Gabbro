@@ -248,18 +248,30 @@
   the lock ranks, `(c - 1)·(h·F + k·Wn + F) + F`). The hold time is a premise: that the checker's `held <= N ops`
   bounds the steps of a section in machine G is not proved (Lebendigkeit.lean, the two missing bridges).
 
-  PER-CORE ACCUMULATORS (2026-11-02, C15 scalar/initialization stage; a reviewed change of
-  meaning in the sense of §1, not yet a goal leg). One `accumulates` declaration becomes N
-  private global cells with one exclusive lock each, a core-query binding and generated
-  update/reduction functions. The checker admits the descriptor, the neutral initialization
-  at the start memory and the storage/contract shape (`AccumulatorAdmission` in (a) with the
-  Bool `accumulatorB`, `AkkuStart` beside it); the core identity provenance, the range facts
-  and the quiescence condition are source-derived user duties in (b). The operators, neutral
-  elements and fold/permutation/RMW laws are proved on the typed encodings
+  PER-CORE ACCUMULATORS (2026-11-02, C15 concurrency/link/export slice; a reviewed change
+  of meaning in the sense of §1, staged beside the goal). One `accumulates` declaration
+  becomes N private global cells with one exclusive lock each, a core-query binding and
+  generated update/reduction functions. The checker admits the descriptor, the neutral
+  initialization at the start memory and the storage/contract shape (`AccumulatorAdmission`
+  in (a) with the Bool `accumulatorB`, `AkkuStart` beside it); the core identity provenance,
+  the range facts and the quiescence condition are source-derived user duties in (b). The
+  operators, neutral elements and fold/permutation/RMW laws are proved on the typed encodings
   (`Bausteine/Kernzelle`); the sampled fold equals the contribution fold under a proved
-  quiescent history (`ruhigFalte`). What is NOT claimed yet: updates lower (the elaborator
-  still refuses `accT`), the cells' run-level history correspondence, and any race exemption
-  or universal quiescence (existing race/time qualifications are retained).
+  quiescent history (`ruhigFalte`). Since this slice: each cell is proved guarded by its
+  exclusive lock, so the ordinary race leg covers accumulator cells with no per-core
+  exemption (`SperrProtokoll.akkuRennfreiAbgedeckt`; group invariants and `KernHaltEA`
+  still apply); the quiescent collapse to the completed fold and the neutral-start RMW
+  chain are proved at the ghost level with the staged added conjunct `AkkuZielErweitert`
+  beside `ZielX`/`ZielFX`; the admission and neutral initialization cross separately
+  compiled units through the link check (`SchnittstelleSpec.akku`, `BindeSpec.akku` with
+  `akkuStart`, decided by the link Bools); the elaborator expands admitted declarations
+  (`max`/`min`/`add`/`or` over integer ranges with a positive constant `per cpu` count) to
+  guarded storage while updates, reads and the core query stay refused (they need the C08
+  core-query contract); a full-program admission is witnessed on a non-degenerate two-cell
+  fixture (`akkuProgramm_zeuge`). What is NOT claimed yet: the run-level existence of such
+  a history for every reachable machine (needs the GX replay of the update stores), so the
+  goal has no accumulator leg yet; any race exemption or universal quiescence (existing
+  race/time qualifications are retained).
 
   NOT CLAIMED:
   * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
@@ -283,9 +295,12 @@
     unguarded PLAIN payload (refused);
   * the run-level cell/history correspondence of per-core cells and their quiescent reduction
     (OFFEN O17; staged in C15, 2026-11-02: the descriptor, neutral initialization and admission
-    are checked in (a) (`AccumulatorAdmission`, `AkkuStart`), semantic query, range and
-    quiescence facts are source-derived user duties in (b), but updates are still refused at
-    elaboration and the goal has no accumulator leg yet);
+    are checked in (a) (`AccumulatorAdmission`, `AkkuStart`), per-cell guardedness and the
+    ghost-level quiescent reduction are proved (`SperrProtokoll`, `AkkuZielErweitert`), the
+    admission crosses the link (`SchnittstelleSpec.akku`, `BindeSpec.akku/akkuStart`) and
+    admitted declarations expand to guarded storage, but updates, reads and the core query
+    are still refused at elaboration (they need C08) and the goal has no accumulator leg
+    yet);
   * floats beyond the kernel IEEE model (that the FPU computes it is `gleitkomma_ieee`, a hardware fact);
   * an invariant inside a running writer or false in the start memory or reading carriers (tables or globals) outside its declared
     `traeger`; a lock invariant inside its holder's section (claimed: no other thread observes it there);

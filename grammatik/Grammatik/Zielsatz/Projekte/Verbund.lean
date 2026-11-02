@@ -95,6 +95,10 @@ structure BindeSpec [DecidableEq D.Fn] (fs : List D.Fn) (B : Einheit D) (ps : Li
   besitzFremd : ∀ a ∈ (komponiere B ps).arenen, ∀ f,
     (∀ p, besitzerVon ps f = some p → a ∉ p.E.arenen) → CheckedAt (komponiere B ps).P a.A a.I f
   besitzStart : BesitzStart (komponiere B ps)
+  -- the linked accumulators, over the composed program (C15 link transport)
+  akku : Kernzelle.AccumulatorAdmission (komponiere B ps).P fs (komponiere B ps).akku
+  -- their neutral initialization at the composed start memory
+  akkuStart : Kernzelle.AkkuStart (komponiere B ps) (komponiere B ps).akku
 
 /-! ## Each unit's own verdict -/
 
@@ -148,8 +152,8 @@ end Teil
 /-! ## The linked unit is accepted -/
 
 /-- **Each unit checked alone and the link check give the whole program's acceptance.**
-    The accumulator admission does not cross the link yet (C15 staging); the conclusion
-    carries it vacuously. -/
+    The link check carries the accumulator admission and neutral initialization
+    over the composed program (C15 link transport). -/
 theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs)
     {B : Einheit D} {ps : List (Projekt D)} (hne : ps ≠ []) (hD : Deckend ps)
     (hV : ∀ p ∈ ps, Passend B p)
@@ -158,7 +162,7 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
       (komponiere B ps).arenen (komponiere B ps).akku := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
   refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_,
-    Kernzelle.accumulatorAdmission_leer _ _, (hA p0 hp0).reset⟩
+    hL.akku, (hA p0 hp0).reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -203,7 +207,9 @@ noncomputable def bindeB [DecidableEq D.Fn] (fs : List D.Fn) (cs : List (D.Tab �
   abgAlleB (komponiere B ps).P fs && fussWXB (komponiere B ps).P (komponiere B ps).S fs (komponiere B ps).ws &&
     einzelnPoolB (komponiere B ps).P fs cs (komponiere B ps).ws &&
     rennB (komponiere B ps).P fs cs (komponiere B ps).ws && maskenB (komponiere B ps).P fs &&
-    besitzB (komponiere B ps) fs
+    besitzB (komponiere B ps) fs &&
+    Kernzelle.accumulatorB (komponiere B ps).P fs cs (komponiere B ps).akku &&
+    Kernzelle.akkuStartB (komponiere B ps) (komponiere B ps).akku
 
 /-- **The decided link check is sound.** -/
 theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
@@ -211,11 +217,12 @@ theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D
     (h : bindeB fs cs B ps = true) : BindeSpec fs B ps := by
   unfold bindeB at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h1
   obtain ⟨hb, -, hs⟩ := besitzB_sound hvoll h6
   exact ⟨hAbg, fussWXB_ok hvoll hAbg h2, (einzelnPoolB_iff hvoll hcs).mp h3, (rennB_iff hvoll hcs).mp h4,
-    (maskenB_iff hvoll).mp h5, fun a ha f _ => (checked_iff _ _ _).mp (hb a ha) f, hs⟩
+    (maskenB_iff hvoll).mp h5, fun a ha f _ => (checked_iff _ _ _).mp (hb a ha) f, hs,
+    (Kernzelle.accumulatorB_iff hvoll hcs).mp h7, Kernzelle.akkuStartB_sound h8⟩
 
 /-- **The checker that decides the specification**: accepts exactly what `AkzeptiertSpecX`, the
     ownership start and neutral initialization establish (the strongest checker the statement admits). -/
@@ -253,9 +260,7 @@ theorem gabbro_ziel_verbund_n : GabbroZielVerbundN := by
     fun p hp => (C.korrekt p.E fs ls cs (hC p hp)).1
   have hK' : specPruefer.akzeptiert (komponiere B ps) fs.1 ls.1 cs.1 = true :=
     @decide_eq_true _ (Classical.propDecidable _)
-      ⟨akzeptiertSpecX_komponiere fs.2 hne hD hV hA hL, hL.besitzStart,
-       fun a ha => absurd ha (by show a ∉ ([] : List (Kernzelle.AccumulatorDecl D));
-         exact List.not_mem_nil a)⟩
+      ⟨akzeptiertSpecX_komponiere fs.2 hne hD hV hA hL, hL.besitzStart, hL.akkuStart⟩
   exact gabbro_ziel specPruefer D (komponiere B ps) fs ls cs hK'
     (nutzerPflichtA_komponiere hV hne hD hDS hN) O hH passes sp init hLz lebt0 K hK
 
@@ -333,7 +338,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     · exact @decide_eq_true _ (Classical.propDecidable _) ⟨hA, hBS, hAS⟩
     · exact ohne_wurzeln_akzeptiert hA hAS
   have hL' : BindeSpec fs.1 E (schnitt E eigen) := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [hkomp]
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rw [hkomp]
     · exact hA.abg
     · exact hA.fuss
     · exact hA.einzeln
@@ -341,6 +346,8 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     · exact hA.masken
     · exact fun a ha f _ => (checked_iff _ _ _).mp (hA.besitz a ha) f
     · exact hBS
+    · exact hA.akku
+    · exact hAS
   exact gabbro_ziel_verbund_n specPruefer D E (schnitt E eigen) fs ls cs hC (schnitt_passend E eigen)
     (by simp only [schnitt, ne_eq, reduceCtorEq, not_false_eq_true]) (schnitt_deckend E eigen) (schnitt_deckendS E eigen) hL' (schnitt_nutzer hN) O
     (by rw [hkomp]; exact hH) passes sp init (by rw [hkomp]; exact hL) lebt0 K hK
