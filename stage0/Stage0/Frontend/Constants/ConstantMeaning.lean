@@ -44,7 +44,7 @@ def ConstantMeaning (types : List (String × (Int × Int))) (fns : List UKonstFn
   match item with
   | .constT name ty (.one expr) => ∃ lo hi binding,
     values.find? (fun entry => strEq entry.1 name) = some binding ∧
-    uTyp types [] ty = .ok (.int lo hi) ∧
+    uTyp types [] [] ty = .ok (.int lo hi) ∧
     uKonstWert lo hi fns values 64 expr = some binding.2
   | _ => True
 

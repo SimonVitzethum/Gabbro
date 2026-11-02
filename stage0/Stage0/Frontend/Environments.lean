@@ -41,7 +41,7 @@ open Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-- A dependent exclusive range is checked with the previous binding, without widening it. -/
 theorem typedItem_sound_zeuge :
     ∃ lo hi value,
-      uTyp [("LIMIT", (42, 42))] []
+      uTyp [("LIMIT", (42, 42))] [] []
         (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true) =
           .ok (.int lo hi) ∧
       uKonstWert lo hi [] [("LIMIT", 42)] 64 (.variable "LIMIT") = some value ∧

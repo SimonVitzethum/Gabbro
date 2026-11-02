@@ -21,7 +21,7 @@ theorem UKonstFn.returnExpr?_eq_some (fn : UKonstFn) (expression : SExpr) :
 /-- Compile-time function types denote the same canonical integer types as runtime signatures. -/
 theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi : Int)
     (h : uFeldTyp env ty = .ok (lo, hi)) :
-    uTyp env [] ty = .ok (.int lo hi) := by
+    uTyp env [] [] ty = .ok (.int lo hi) := by
   cases ty <;> simp only [uFeldTyp] at h
   all_goals try contradiction
   case atom name => simp [uTyp, uTypIn, h]
