@@ -34,13 +34,15 @@ private theorem mapM_valid {α β : Type} (f : α → Option β) (valid : β →
         · subst y; exact step x value first
         · exact ih values rest y tail
 
+mutual
 /-- Every existing canonical constant initializer retains recursive representation validity. -/
 theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
     ∀ (k : UKonst) (v : Wert D τ), GabbroV.konstWert τ k = some v → ValueValid L τ v := by
-  induction τ with
+  cases τ with
   | ref n => intro k v made; cases k <;> simp [GabbroV.konstWert] at made
   | fl a b => intro k v made; cases k <;> simp [GabbroV.konstWert] at made
-  | arr τ n ih =>
+  | arr τ n =>
+    have ih := initialConstant_valid L τ
     intro k v made
     by_cases zero : k = .null
     · subst k
@@ -62,7 +64,37 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
             exact mapM_valid (GabbroV.konstWert τ) (ValueValid L τ) (fun x y h => ih x y h)
               ks vs values _ (List.get_mem _ _)
           · simp [items, values, length] at made
+  | prod name fs =>
+    intro k v made
+    cases k <;> simp only [GabbroV.konstWert] at made
+    split at made
+    · exact prodKonst_valid L fs _ v made
+    · contradiction
   | _ => intro _ _ _; trivial
+termination_by sizeOf τ
+
+/-- Successful product initialization preserves every field's representation obligations. -/
+theorem prodKonst_valid {D : Deklaration} (L : Lay D) (fs : List Ty) :
+    ∀ (ks : List UKonst) (v : ProdVal D.Fn D.passt fs),
+      GabbroV.prodKonst GabbroV.konstWert fs ks = some v → ProdValid L fs v := by
+  cases fs with
+  | nil => intro ks v made; trivial
+  | cons τ fs =>
+    intro ks v made
+    cases ks with
+    | nil => simp [GabbroV.prodKonst] at made
+    | cons k ks =>
+      cases first : GabbroV.konstWert (F := D.Fn) (P := D.passt) τ k with
+      | none => simp [GabbroV.prodKonst, first] at made
+      | some x =>
+        cases rest : GabbroV.prodKonst GabbroV.konstWert fs ks with
+        | none => simp [GabbroV.prodKonst, first, rest] at made
+        | some xs =>
+          simp only [GabbroV.prodKonst, first, rest, Option.bind_some, Option.some.injEq] at made
+          subst v
+          exact ⟨initialConstant_valid L τ k x first, prodKonst_valid L fs ks xs rest⟩
+termination_by sizeOf fs
+end
 
 /-- The initial source world uses exactly the existing canonical memory constructor. -/
 def initialWorld (u : UProg) (valid : GabbroV.sp0OkB u = true) : World (declOf u) where
