@@ -22,10 +22,13 @@ open Gabbro.Grammatik Speichermodell
 
 variable {D : Deklaration}
 
-/-- **A unit cut into two projects** at the boundary `eigen`. -/
+/-- **A unit cut into two projects** at the boundary `eigen`: the first keeps the whole
+    unit (including its declared checks), the second is the check-free fragment
+    without roots (its checks stay with the first half; linked check admission is
+    open, as for `verbinde`, so `komponiere` recombines exactly the first half's). -/
 def schnitt (E : Einheit D) (eigen : D.Fn → Bool) : List (Projekt D) :=
   [⟨eigen, fun _ => true, E⟩,
-    ⟨fun f => !eigen f, fun _ => false, { E with starts := [], gestartet := [], arenen := [] }⟩]
+    ⟨fun f => !eigen f, fun _ => false, { E with starts := [], gestartet := [], arenen := [], pruefungen := [] }⟩]
 
 theorem gleichAuf_refl (S : List (D.Tab ⊕ D.Glob)) (σ : World D) : GleichAuf S σ σ :=
   ⟨fun _ _ => rfl, fun _ _ => rfl⟩

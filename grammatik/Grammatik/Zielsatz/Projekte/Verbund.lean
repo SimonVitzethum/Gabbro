@@ -155,7 +155,8 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
     AkzeptiertSpecX (komponiere B ps).P (komponiere B ps).S fs (komponiere B ps).ws
       (komponiere B ps).arenen := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
-  refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_⟩
+  refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_, [],
+    CheckAdmission.nil _ _⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -278,16 +279,17 @@ theorem nutzerTeilO_wachs {p : Projekt D} {T₁ : D.Tab ⊕ D.Glob → Prop}
 theorem lokW_ohne_wurzeln [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) (c : D.Tab ⊕ D.Glob) : lokW P fs [] c = true :=
   @decide_eq_true _ (Classical.propDecidable _) fun _ h => nomatch h
 
-/-- **A unit without roots and arenas is accepted alone** whenever the unit it is cut from is: what
-    depends on roots holds vacuously, the rest is per body. -/
+/-- **A unit without roots, arenas and checks is accepted alone** whenever the unit it
+    is cut from is: what depends on roots holds vacuously, the rest is per body.
+    The cut drops the checks (linked check admission is open, as for `verbinde`). -/
 theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.Fn}
     (hA : AkzeptiertSpecX E.P E.S fs E.ws E.arenen) :
-    specPruefer.akzeptiert { E with starts := [], gestartet := [], arenen := [] } fs [] [] = true := by
-  have hws : ({ E with starts := [], gestartet := [], arenen := [] } : Einheit D).ws = [] := rfl
+    specPruefer.akzeptiert { E with starts := [], gestartet := [], arenen := [], pruefungen := [] } fs [] [] = true := by
+  have hws : ({ E with starts := [], gestartet := [], arenen := [], pruefungen := [] } : Einheit D).ws = [] := rfl
   refine @decide_eq_true _ (Classical.propDecidable _) ⟨⟨hA.frag, hA.abg, (fun f => ?_), hA.stufen,
     hA.sperrOrte, (fun w h => by rw [hws] at h; cases h), (fun _ h => ?_),
     (fun _ _ _ w h => by rw [hws] at h; cases h), hA.antworten,
-    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h)⟩,
+    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), [], CheckAdmission.nil _ _⟩,
     ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩⟩
   · show FussSX E.P E.S (lokW E.P fs []) _ f
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by

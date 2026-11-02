@@ -77,11 +77,13 @@ section Spec
 
 variable [DecidableEq D.Fn]
 
-/-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.** -/
+/-- **EMBEDDING: every unit the goal's checker specification accepts, the new one accepts.**
+    The checks ride along unchanged (the admission is over the same program). -/
 theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
     (h : AkzeptiertSpec P S fs ws) : AkzeptiertSpecX P S fs ws [] :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
-    h.einzeln, h.renn, h.antworten, h.masken, (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    h.einzeln, h.renn, h.antworten, h.masken, (fun _ h => nomatch h), (fun _ h => nomatch h),
+    h.checks, h.pruef⟩
 
 /-- **The ownership judgment added to the checker's facts**: the facts of `AkzeptiertSpecX` that
     do not read the arenas hold for every arena list. -/
@@ -270,12 +272,13 @@ def fussWXB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
         geteiltVB P fs c) &&
     ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || getrenntW P fs ws c)
 
-/-- **The checker with the atomic rely**: `Akzeptiert` with `fussWXB` in place of `fussWB`. -/
+/-- **The checker with the atomic rely**: `Akzeptiert` with `fussWXB` in place of `fussWB`.
+    The declared checks ride along as in `Akzeptiert` (`checks`, C16, 2026-11-02). -/
 def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (checks : List (CheckDecl D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs
+    antwortenB P fs && maskenB P fs && checkB P (tabsOf cs) (globsOf cs) fs checks
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
@@ -303,18 +306,22 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
         cases this
     · exact Or.inl (by simp only [Bool.or_true])
 
-/-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. -/
+/-- **The Bool decides (a)**: `AkzeptiertX` gives `AkzeptiertSpecX`. The value
+    carries the Bool's checks. (The reverse direction is open: it needs
+    `FussSX`-completeness of `fussWXB`, which no chain uses yet.) -/
 theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : AkzeptiertX P S fs ls cs ws = true) :
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
+    (h : AkzeptiertX P S fs ls cs ws checks = true) :
     AkzeptiertSpecX P S fs ws [] := by
   unfold AkzeptiertX at h
   simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact ⟨h1, hAbg, fussWXB_ok hvoll hAbg h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
     (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
-    (fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    (fun _ h => nomatch h), (fun _ h => nomatch h), checks,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h11⟩
 
 /-- The old footprint component implies the new one. -/
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by
@@ -326,14 +333,16 @@ theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = tr
   simp only [Bool.or_eq_true] at h2 ⊢
   exact Or.inl h2
 
-/-- **EMBEDDING, as Bools: every unit the goal's checker accepts, `AkzeptiertX` accepts.** -/
-theorem akzeptiertX_of_akzeptiert (h : Akzeptiert P S fs ls cs ws = true) :
-    AkzeptiertX P S fs ls cs ws = true := by
+/-- **EMBEDDING, as Bools: every unit the goal's checker accepts, `AkzeptiertX` accepts.**
+    The checks ride along unchanged. -/
+theorem akzeptiertX_of_akzeptiert {checks : List (CheckDecl D)}
+    (h : Akzeptiert P S fs ls cs ws checks = true) :
+    AkzeptiertX P S fs ls cs ws checks = true := by
   unfold Akzeptiert at h
   unfold AkzeptiertX
   simp only [Bool.and_eq_true] at h ⊢
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩ := h
-  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩ := h
+  exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩
 
 end Bool
 

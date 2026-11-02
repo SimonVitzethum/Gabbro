@@ -24,6 +24,7 @@ module
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 public import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
 public import Grammatik.Zielsatz.Kern.Beweis
+public import Grammatik.Zielsatz.Faeden.Ruhe.Teil3
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -136,7 +137,8 @@ theorem fussSX_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs
         rw [sigB_mitRuhe]
         exact h3.imp id (lokW_mitRuhe P hvoll hAbg)
 
-/-- **Transfer of the checker's facts with the rely to `P.mitRuhe`.** -/
+/-- **Transfer of the checker's facts with the rely to `P.mitRuhe`.** The declared
+    checks ride along under `some`, as in `akzeptiertSpec_mitRuhe`. -/
 theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hA : AkzeptiertSpecX P S fs ws B) :
     AkzeptiertSpecX P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) (B.map (·.mitRuhe)) where
@@ -167,6 +169,8 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)} (h
   worte a' ha' := by
     obtain ⟨a, ha, rfl⟩ := List.mem_map.mp ha'
     exact hA.worte a ha
+  checks := hA.checks.map CheckDecl.mitRuhe
+  pruef := CheckAdmission.mitRuhe P hvoll hA.abg hA.pruef
 
 end Transfer
 
@@ -202,16 +206,18 @@ theorem besitzB_leer {E : Einheit D} {fs : List D.Fn} (hB : E.arenen = []) : bes
 
 end Besitz
 
-/-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. -/
+/-- **The concrete checker with the rely**: its Bool is `AkzeptiertX`. The Bool runs
+    on the unit's declared checks (`E.pruefungen`). -/
 def akzeptiertX_pruefer : PrueferX where
-  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws && besitzB E fs
+  akzeptiert := fun E fs ls cs => AkzeptiertX E.P E.S fs ls cs E.ws E.pruefungen && besitzB E fs
   korrekt := fun _ fs ls cs h => by
     have h := (Bool.and_eq_true _ _).mp h
     obtain ⟨hb, hw, hs⟩ := besitzB_sound fs.2 h.2
     exact ⟨(akzeptiertSpecX_of fs.2 ls.2 cs.2 h.1).mitBesitz hb hw, hs⟩
 
 /-- **Every checker of the goal, with the ownership acceptance, is a checker for the rely**
-    (`akzeptiertSpecX_of_spec`, `besitzB_sound`). -/
+    (`akzeptiertSpecX_of_spec`, `besitzB_sound`). The checks ride along through
+    `C.korrekt` (the lifted checker judges the unit's declared checks). -/
 def Pruefer.alsX (C : Pruefer) : PrueferX where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && besitzB E fs
   korrekt := fun E fs ls cs h => by

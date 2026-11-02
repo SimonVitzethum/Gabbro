@@ -16,6 +16,8 @@ public import Grammatik.Speichermodell.Adressen.Layout
 public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
+public import Grammatik.Kern.Syntax.Satz.Pruefung
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 
 @[expose] public section
 
@@ -61,6 +63,10 @@ structure Einheit (D : Deklaration) where
   sp0 : Speicher D
   gestartet : List (Σ w : D.Fn, Env D (D.params w)) := []
   arenen : List (ArenaOwnership.Body.ArenaIface D) := []
+  /-- The unit's declared checks (C16): kernel descriptors of every `check` item,
+      elaborated by the exporter (`UCheck.probe` names the generated producer).
+      Default `[]`: a unit without a check is the unit of before. -/
+  pruefungen : List (CheckDecl D) := []
 
 /-- The thread roots the checker judges: the declared starts, and every run-time root TWICE
     (since 2026-09-26): a root the program may spawn is a pool routine (`Mehrfach`), so `einzeln`
@@ -150,7 +156,9 @@ def MaskenDisziplin [DecidableEq D.Fn] (P : Programm D) (fs : List D.Fn) : Prop 
     calls an axiom or reads a register at a declared answer type without a value, except an
     axiom whose result is `never` (`antworten`, since 2026-09-15, W1); every function an
     interrupt handler's call graph reaches takes only locks declared `masks irqs` (`masken`,
-    since 2026-09-26, Opus agent H: the Rust `H102`). -/
+    since 2026-09-26, Opus agent H: the Rust `H102`); the declared checks are admitted
+    (`pruef` over `checks`, since 2026-11-02, C16: exact probe expansion, the read-only
+    call-graph frame and one-to-one gate consumption, decided by `checkB`). -/
 structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
@@ -163,6 +171,9 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   antworten : ∀ f, ∀ x ∈ (P.rumpf f).ants, StelleOk D x
   -- the handler discipline `H102` (Opus agent H, 2026-09-26, OFFEN O19)
   masken : MaskenDisziplin P fs
+  -- the declared checks (C16, 2026-11-02): the admitted checks of this value
+  checks : List (CheckDecl D) := []
+  pruef : CheckAdmission P fs checks
 
 end Pruefer
 

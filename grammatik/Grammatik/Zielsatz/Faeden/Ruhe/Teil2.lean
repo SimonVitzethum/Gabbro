@@ -3,6 +3,7 @@ module
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
 public import Grammatik.Zielsatz.Faeden.Ruhe.Teil1
+public import Grammatik.Zielsatz.Faeden.Ruhe.Teil3
 
 @[expose] public section
 
@@ -13,13 +14,15 @@ section Transfer
 variable [DecidableEq D.Fn] (P : Programm D) {S : SperrInv D} {fs ws : List D.Fn}
 
 /-- **The checker's Bool on `P.mitRuhe` follows from the Bool on `P`**
-    (the member lists of locks and carriers are the same). -/
+    (the member lists of locks and carriers are the same; the checks ride
+    along under `some`, transported with the value). -/
 theorem akzeptiert_mitRuhe {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :
-    Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) = true :=
-  (akzeptiert_iff (fsRuhe_voll hvoll) hls hcs).mpr
-    (akzeptiertSpec_mitRuhe P hvoll (akzeptiertSpec_of hvoll hls hcs h))
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {checks : List (CheckDecl D)}
+    (h : Akzeptiert P S fs ls cs ws checks = true) :
+    Akzeptiert P.mitRuhe S.mitRuhe (fsRuhe fs) ls cs (wsRuhe ws) (checks.map CheckDecl.mitRuhe) = true :=
+  spec_akzeptiert (fsRuhe_voll hvoll) hls hcs
+    (h := akzeptiertSpec_mitRuhe P hvoll (akzeptiertSpec_of hvoll hls hcs h))
 
 /-- **The root is an idle start of `P.mitRuhe`.** -/
 theorem ruhig_mitRuhe : Ruhig P.mitRuhe (fsRuhe fs) none :=

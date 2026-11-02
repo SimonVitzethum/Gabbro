@@ -6,7 +6,7 @@
              (`zellenStimmen`); here it is proved for all of them, one component at a time.
 
   Hypotheses: the member lists are complete (`hvoll`: every function, `hls`: every lock, `hcs`: every carrier), as in
-  `akzeptiert_iff`. All ten components are proved here (`urteil_0` .. `urteil_9`), and `akzeptiertX_zellen` puts them together; the
+  `akzeptiertSpec_of`/`spec_akzeptiert`. All ten components are proved here (`urteil_0` .. `urteil_9`), and `akzeptiertX_zellen` puts them together; the
   feature-set tools are in `MerkmalUnd`, `MerkmalZerlegt` and `MerkmalGOk`.
 -/
 module

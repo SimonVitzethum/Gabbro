@@ -1,24 +1,20 @@
-/- C16: admission of declared checks -- the decider, the Prop and the site duty.
+/- C16: the check decider is exact, and the site duty follows from it.
 
-   `checkOkB` decides one check: the probe answers `Bool` on a reason-free channel,
-   threads exactly the Duty, is read-only over the declared carriers, every gate
-   consumes the Duty, the gates are pairwise distinct, the probe is none of its
-   gates, and every other function the probe may call is read-only and forges no
-   Duty. `checkB` lifts this over the unit with pairwise-distinct check names.
-   `CheckAdmission` is the same as a Prop, with the call-graph closure
-   (`CheckRahmen`, through `reachB`) beside the exact expansion. `checkB_iff`
-   ties them: the Bool decides exactly the Prop, given complete member lists.
+   `toreEindeutig_iff`/`checkOkB_iff`/`checkB_iff` tie the Bool decider
+   (`CheckDecide.checkB`, over complete member lists) to exactly the Prop
+   (`CheckDecide.CheckAdmission`, with the call-graph closure `CheckRahmen`
+   beside the exact expansion).
 
    `CheckSitePflicht` is the site duty of one declared check: the probe and every
    declared gate meet their body duties, tied to the same Duty by the expansion.
    `checkSitePflicht_aus` derives it from the admission and the user's logic.
 
-   Folding the admission into `AkzeptiertSpec`/`AkzeptiertSpecX` and the goal chain
-   is the lead's build step: every `AkzeptiertSpec` construction site moves together. -/
+   The admission enters `AkzeptiertSpec`/`AkzeptiertSpecX` and the goal chain
+   through the `checks`/`pruef` fields and the `E.pruefungen` of the unit. -/
 module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil2
-public import Grammatik.Kern.Syntax.Satz.Pruefung
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 
 @[expose] public section
 
@@ -31,79 +27,6 @@ variable {D : Deklaration}
 section Pruefung
 
 variable [DecidableEq D.Fn]
-
-/-- Gate names are pairwise distinct: one Duty is never duplicated across them. -/
-def toreEindeutig : List D.Fn → Bool
-  | [] => true
-  | g :: rest => decide (∀ x ∈ rest, x ≠ g) && toreEindeutig rest
-
-/-- Gate-name distinctness as a Prop. -/
-theorem toreEindeutig_iff {gs : List D.Fn} :
-    toreEindeutig gs = true ↔ gs.Nodup := by
-  induction gs with
-  | nil => simp [toreEindeutig]
-  | cons g rest ih =>
-    have hmem : (∀ x ∈ rest, x ≠ g) ↔ g ∉ rest := by
-      constructor
-      · intro h hm
-        exact h g hm rfl
-      · intro h x hx heq
-        subst heq
-        exact h hx
-    simp only [toreEindeutig, List.nodup_cons, Bool.and_eq_true, decide_eq_true_eq]
-    rw [ih]
-    exact and_congr hmem Iff.rfl
-
-/-- Every other function the probe may call is read-only and forges no Duty. -/
-def rahmenOkB (P : Programm D) (tabs : List D.Tab) (globs : List D.Glob) (fns : List D.Fn)
-    (c : CheckDecl D) : Bool :=
-  fns.all fun f => !(reachB P fns c.probe f) || decide (f = c.probe) ||
-    (tabs.all (fun t => !((D.signatur f).schreibt t)) &&
-     globs.all (fun g => !((D.signatur f).gschreibt g)) &&
-     decide (c.duty ∉ (D.signatur f).produziert))
-
-/-- One check, decided. -/
-def checkOkB (P : Programm D) (tabs : List D.Tab) (globs : List D.Glob) (fns : List D.Fn)
-    (c : CheckDecl D) : Bool :=
-  decide (D.erg c.probe = some .bool) &&
-  decide ((D.signatur c.probe).gruende = 0) &&
-  decide ((D.signatur c.probe).konsumiert = [c.duty]) &&
-  decide ((D.signatur c.probe).produziert = [c.duty]) &&
-  tabs.all (fun t => !((D.signatur c.probe).schreibt t)) &&
-  globs.all (fun g => !((D.signatur c.probe).gschreibt g)) &&
-  c.gates.all (fun g => decide (c.duty ∈ (D.signatur g).konsumiert) && decide (g ∈ fns)) &&
-  toreEindeutig c.gates &&
-  decide (c.probe ∉ c.gates) &&
-  decide (c.probe ∈ fns) &&
-  rahmenOkB P tabs globs fns c
-
-/-- Check names are pairwise distinct. -/
-def eindeutigeNamen : List (CheckDecl D) → Bool
-  | [] => true
-  | c :: rest => decide (∀ d ∈ rest, d.name ≠ c.name) && eindeutigeNamen rest
-
-/-- The checks of a unit, decided. -/
-def checkB (P : Programm D) (tabs : List D.Tab) (globs : List D.Glob) (fns : List D.Fn)
-    (checks : List (CheckDecl D)) : Bool :=
-  checks.all (checkOkB P tabs globs fns) && eindeutigeNamen checks
-
-/-- The call-graph closure of one check: whatever the probe may call (other than
-    itself) is read-only and produces no Duty. -/
-def CheckRahmen (P : Programm D) (fs : List D.Fn) (c : CheckDecl D) : Prop :=
-  ∀ f, reachB P fs c.probe f = true → f ≠ c.probe →
-    (∀ t, (D.signatur f).schreibt t = false) ∧
-    (∀ g, (D.signatur f).gschreibt g = false) ∧
-    c.duty ∉ (D.signatur f).produziert
-
-/-- The admission of declared checks: every check expands exactly, its call graph
-    keeps the frame, probe and gates are functions of the unit, and no two checks
-    share a name. -/
-def CheckAdmission (P : Programm D) (fs : List D.Fn) (checks : List (CheckDecl D)) : Prop :=
-  (∀ c ∈ checks, CheckExpansion P c) ∧
-  (∀ c ∈ checks, CheckRahmen P fs c) ∧
-  (∀ c ∈ checks, c.probe ∈ fs) ∧
-  (∀ c ∈ checks, ∀ g ∈ c.gates, g ∈ fs) ∧
-  List.Nodup (checks.map CheckDecl.name)
 
 /-- Distinct names as a Prop: no two checks share a name. -/
 theorem eindeutig_iff {checks : List (CheckDecl D)} :

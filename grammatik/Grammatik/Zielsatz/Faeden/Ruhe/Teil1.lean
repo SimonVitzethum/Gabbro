@@ -419,30 +419,5 @@ theorem stufen_mitRuhe (h : StufenM P) : StufenM P.mitRuhe
       rw [rumpf_mitRuhe_mE]
       exact h f
 
-/-- **Transfer of the checker's facts to `P.mitRuhe`.** -/
-theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) (hA : AkzeptiertSpec P S fs ws) :
-    AkzeptiertSpec P.mitRuhe S.mitRuhe (fsRuhe fs) (wsRuhe ws) where
-  frag := frag_mitRuhe P hA.frag
-  abg := abg_mitRuhe P hvoll hA.abg
-  fuss := fussS_mitRuhe P hvoll hA.abg hA.fuss
-  stufen := stufen_mitRuhe P hA.stufen
-  sperrOrte := fun L c hc => (bewacht_mitRuhe (D := D) c L).mpr (hA.sperrOrte L c hc)
-  wurzeln := fun w' hw' => by
-    obtain ⟨w, hw, rfl⟩ := mem_wsRuhe.mp hw'
-    exact hA.wurzeln w hw
-  einzeln := einzelnPool_mitRuhe P hvoll hA.abg hA.einzeln
-  renn := fun c hB hAt => schreibGetrennt_mitRuhe P hvoll hA.abg
-    (hA.renn c (fun L hL => hB L ((bewacht_mitRuhe (D := D) c L).mpr hL)) hAt)
-  antworten
-    | none, _, hx => absurd hx List.not_mem_nil
-    | some f, x, hx => (stelleOk_mitRuhe (D := D) x).mpr
-        (hA.antworten f x (by rw [← rumpf_mitRuhe_ants P f]; exact hx))
-  masken
-    | none, hw, _, _ => Bool.noConfusion hw
-    | some w, hw, f', hf' => by
-        obtain ⟨f, rfl, hf⟩ := reach_mitRuhe_cases P hvoll hA.abg hf'
-        rw [rumpf_mitRuhe_mE]
-        exact hA.masken w hw f hf
-
 end Transfer
 end Gabbro.Grammatik
