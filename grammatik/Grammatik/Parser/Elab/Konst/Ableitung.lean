@@ -51,10 +51,11 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       ConstSourceEnd c locals (.cond source yes [] (some no)) (.ite test yesBody noBody)
   | dispatch (value : ConstSourceExpr c locals source e)
       (arms : ConstSourceTagArms c locals sources branches)
-      (canonicalNames : List String)
+      (sumInfo : USum)
+      (shape : sumInfo.spec = cs)
       (indices : ∀ i arm, sources[i]? = some arm →
         ∃ label binder armBody, arm = .arm label binder armBody ∧
-          canonicalNames.findIdx? (fun name => strEq name label) = some i)
+          sumInfo.cases.findIdx? (fun entry => strEq entry.1 label) = some i)
       (tail : ConstSourceEnd c locals (.block rest ending) body) :
       ConstSourceEnd c locals (.block (.cases source sources :: rest) ending)
         (.cons (.onTag e branches) body)
@@ -100,7 +101,7 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
   | bind value _ ih => exact .bind value.rein ih
   | condChain condition _ _ hy hn => exact .ite condition.rein hy hn
   | cond condition _ _ hy hn => exact .ite condition.rein hy hn
-  | dispatch v a _ _ _ ih => exact .cons (.onTag v.rein a.rein) ih
+  | dispatch v a _ _ _ _ ih => exact .cons (.onTag v.rein a.rein) ih
   | option v p a _ ih => exact .cons (.onOption v.rein p.rein a.rein) ih
   | reason v a _ ih => exact .cons (.onWhy v.rein a.rein) ih
   | binding _ _ arguments he hp hr resourceEq body _ ih =>
@@ -122,6 +123,14 @@ inductive ConstSourceParams (scope : ConstScope D) :
       (tail : ConstSourceParams scope sources ts locals) :
       ConstSourceParams scope ((name, source) :: sources) (τ :: ts)
         (locals.extend name false τ)
+
+/-- Result signatures determine the ensures scope, including the void case. -/
+inductive ConstSourceSignatureResult (scope : ConstScope D) (locals : ConstLocals Γ) :
+    Option STyp → (result : Option Ty) → ConstLocals (ErgCtx Γ result) → Prop where
+  | empty : ConstSourceSignatureResult scope locals none none locals
+  | value (typed : ConstSourceType scope source τ) :
+      ConstSourceSignatureResult scope locals (some source) (some τ)
+        (locals.extend "result" false τ)
 
 /-- Only predicate clauses belong to this source slice. -/
 inductive ConstSourceClauses (c : ConstProgram) (entry : ConstLocals Γ)
@@ -154,9 +163,7 @@ inductive ConstElaborates (items : List SItemTief) :
       (member : SItemTief.fnT sig source ∈ items)
       (kind : sig.art = "const")
       (params : ConstSourceParams scope sig.params (c.D.params f) locals)
-      (result : sig.res = some sourceType)
-      (typedResult : c.D.erg f = some τ)
-      (resultType : ConstSourceType scope sourceType τ)
+      (result : ConstSourceSignatureResult scope locals sig.res (c.D.erg f) exitLocals)
       (reasons : sig.fehler = none)
       (resolved : (sig.name, c.sourceId f) ∈ scope.declarations)
       (clauses : ConstSourceClauses c locals exitLocals sig.klauseln
@@ -169,6 +176,6 @@ inductive ConstElaborates (items : List SItemTief) :
     ConstEnd c (c.emptyEntry f ▸ c.P.rumpf f) := by
   cases h with
   | function _ _ _ _ _ _ _ _ _ _ _ body => exact body.rein
-  | general _ _ _ _ _ _ _ _ _ body => exact body.rein
+  | general _ _ _ _ _ _ _ body => exact body.rein
 
 end Gabbro.Grammatik.Parser
