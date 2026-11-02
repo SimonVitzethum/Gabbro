@@ -1,5 +1,5 @@
-/- Part 2 of 7 of `RufMaschineG`: the step relation of the call machine G. Its 80 rules live in
-   `RufMaschineG/Schritt/G1` … `G6` (one inductive per group, every file below 500 lines); this file
+/- Part 2 of 7 of `RufMaschineG`: the step relation of the call machine G. Its 86 rules live in
+   `RufMaschineG/Schritt/G1` … `G7` (one inductive per group, every file below 500 lines); this file
    joins them and generates the constructor theorems `RufSchrittG.blatt` … with the old signatures. -/
 module
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.G1
@@ -8,6 +8,7 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.G3
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.G4
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.G5
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.G6
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.Schritt.G7
 public meta import Lean.Elab.Command
 
 @[expose] public section
@@ -50,6 +51,8 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
       (h : RufSchrittG5 P O passes M f M') : RufSchrittG P O passes M f M'
   | g6 {M : RufMaschineG D} {f : Faden} {M' : RufMaschineG D}
       (h : RufSchrittG6 P O passes M f M') : RufSchrittG P O passes M f M'
+  | g7 {M : RufMaschineG D} {f : Faden} {M' : RufMaschineG D}
+      (h : RufSchrittG7 P O passes M f M') : RufSchrittG P O passes M f M'
 
 end Gabbro.Grammatik
 
@@ -59,7 +62,7 @@ end Gabbro.Grammatik
 meta def ruf_schritt_konstruktoren : Lean.Elab.Command.CommandElabM Unit :=
   Lean.Elab.Command.liftTermElabM do
     let env ← Lean.getEnv
-    for k in List.range 6 do
+    for k in List.range 7 do
       let grp := Lean.Name.mkStr `Gabbro.Grammatik s!"RufSchrittG{k + 1}"
       let some (.inductInfo ind) := env.find? grp | throwError "missing {grp}"
       let wrap := Lean.Name.mkStr `Gabbro.Grammatik.RufSchrittG s!"g{k + 1}"
