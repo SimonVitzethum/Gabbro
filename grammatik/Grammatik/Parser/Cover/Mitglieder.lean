@@ -81,6 +81,9 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .strWeit _ e => "Expr.strWeit" :: eE e
   | .wenn c a b => "Expr.wenn" :: (eE c ++ eE a ++ eE b)
   | .eng e _ _ s => "Expr.eng" :: (eE e ++ eE s)
+  | .intBuiltin1 _ a => "Expr.intBuiltin1" :: eE a
+  | .intBuiltin2 _ a b => "Expr.intBuiltin2" :: (eE a ++ eE b)
+  | .count _ body => "Expr.count" :: eE body
 
 def eN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List String
   | .empty => ["NutzlastExpr.empty"]

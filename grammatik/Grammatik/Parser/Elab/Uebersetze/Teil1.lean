@@ -22,6 +22,26 @@ inductive UIdx
   | param : String → UIdx
   deriving DecidableEq, Repr
 
+/-- C13: the closed integer builtins of the source (`+%`, `-%`, `*%`, `<<%`, `+|`, `clz`, `ctz`, `log2_floor`,
+    `popcount`, `rotl`, `rotr`, `bswap`). The storage width `W` rides with the use (`USide.ib1/ib2`), read from the
+    declaration, never from an interval. -/
+inductive UBi
+  | addW | subW | mulW | shlW | addS | clz | ctz | log2Floor | popcount | rotl | rotr | bswap
+  deriving DecidableEq, Repr
+
+/-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
+    read of an option field through a pointer (`slot`) or at a table (`tab`). -/
+inductive UOpt
+  | nichts : UOpt
+  | etwas : UIdx → UOpt
+  | var : String → UOpt
+  | slot : String → String → UIdx → UOpt
+  | tab : String → String → UIdx → UOpt
+  /-- An option static (`static mut frei : option index into T`). -/
+  | glob : String → UOpt
+  deriving DecidableEq, Repr
+
+mutual
 /-- One side of an `ensures` comparison: a literal, a numeric
     parameter, a slot read through a pointer parameter (`slot`)
     or at a table (`tab`), the entry value (`alt`), or the
@@ -70,18 +90,20 @@ inductive USide
   /-- A number narrowed to `lo .. hi` where the guard of the branch it stands in says so (`Expr.eng`; the
       fallback is unreachable there): the binder of an `update` body. -/
   | eng : USide → Int → Int → USide
-  deriving DecidableEq, Repr
-
-/-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
-    read of an option field through a pointer (`slot`) or at a table (`tab`). -/
-inductive UOpt
-  | nichts : UOpt
-  | etwas : UIdx → UOpt
-  | var : String → UOpt
-  | slot : String → String → UIdx → UOpt
-  | tab : String → String → UIdx → UOpt
-  /-- An option static (`static mut frei : option index into T`). -/
-  | glob : String → UOpt
+  /-- C13: a closed integer builtin with one operand / two operands, at the declared storage width `W` in bits
+      (`0` where the operation carries none, `+|`). The lowering checks the operand ranges, the zero-excluding
+      scans, the shift amount and the full-word rotates before it builds a G term. -/
+  | ib1 : UBi → Nat → USide → USide
+  | ib2 : UBi → Nat → USide → USide → USide
+  /-- C13: `count x in D : p` as a NUMBER (`Expr.count`, range `0 .. n`, `n` the cardinality of the domain). The
+      domain `slots of T` (the table and the binder; the body reads `x` as an index into `T`), a tree domain
+      `descendants of s` / `ancestors of s` (the table, the binder, the edge field, whether the walk is reversed,
+      the outer seed, the body: the membership is the checked `reaches` filter, exactly as `UEns.filtered`), and
+      `elems of a` (the array value, the binder, the body: the binder is an INDEX into the exact index domain of
+      the array, LANGUAGE section 6). -/
+  | zaehle : String → String → UEns → USide
+  | zaehleBaum : String → String → String → Bool → UIdx → UEns → USide
+  | zaehleFeld : USide → String → UEns → USide
   deriving DecidableEq, Repr
 
 /-- One `ensures` predicate: a comparison, truth values, or a
@@ -121,6 +143,7 @@ inductive UEns
   /-- Universal/existential iteration over the exact index domain of a fixed array. -/
   | arrayElements : Bool → USide → String → UEns → UEns
   deriving DecidableEq, Repr
+end
 
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
 inductive USVal
@@ -341,6 +364,10 @@ structure UTab where
   kanten : List (String × String) := []
   /-- The `index into T` fields: the field and the name of `T` (their range is set by `uIdxTabs`). -/
   idxNamen : List (String × String) := []
+  /-- C13: the declared STORAGE width in bits of each field written as a bare unsigned word (`u8` .. `u64`, with or
+      without a range, or an alias of one): what a builtin over a read of the field names its width from. A field
+      of any other type has no entry. -/
+  breiten : List (String × Nat) := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -407,6 +434,8 @@ structure UGlob where
   /-- The payload of an atomic (`atomic A : T publishes { p, q }`, `D.nutzlast`): the names of statics, in the
       written order. -/
   nutzlast : List String := []
+  /-- C13: the declared STORAGE width in bits of a static of a bare unsigned word type (`0`: none). -/
+  breite : Nat := 0
   deriving DecidableEq, Repr
 
 /-- A source reason declaration, retaining its resolved descriptor for the channel migration. -/

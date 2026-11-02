@@ -348,6 +348,8 @@ def lowerSeiteEnsLies (tabs : List UTab) (names : List String)
   | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"
   | .eng .. => .error "narrowing without G form in the 104 lowering"
+  | .ib1 .. | .ib2 .. => .error "builtin without G form in the 104 lowering"
+  | .zaehle .. | .zaehleBaum .. | .zaehleFeld .. => .error "count without G form in the 104 lowering"
   | .lit n => .ok { range := (n, n), term := Expr.lit n }
   | .param p =>
     match uStelle ["k", "i"] p with

@@ -281,6 +281,23 @@ theorem eval_liest_nur_speicher {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
       simp only [eval]
       rw [hs]
       exact eng_kongr he _
+  | .intBuiltin1 _ a =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha]
+  | .intBuiltin2 _ a b =>
+      have ha := eval_liest_nur_speicher a σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      have hb := eval_liest_nur_speicher b σ₀ σ₀' σ σ' ρ hS hG h0S h0G
+      simp only [eval]
+      rw [ha, hb]
+  | .count n body =>
+      have hbody : ∀ k : Zahl 0 ((n : Int) - 1), k ∈ alleIndizes (n : Int) →
+          wahr? (eval σ₀ body σ (.cons k ρ)) = wahr? (eval σ₀' body σ' (.cons k ρ)) := by
+        intro k _
+        exact congrArg wahr? (eval_liest_nur_speicher body σ₀ σ₀' σ σ' (.cons k ρ)
+          hS hG h0S h0G)
+      simp only [eval]
+      exact zaehleWahr_congr n _ _ hbody
 
 /-- The payload reads only its places: the second half of the stone. -/
 

@@ -441,6 +441,8 @@ def beqUSide : USide → USide → Bool
   | .div a b, .div c d | .rem a b, .rem c d | .shl a b, .shl c d | .shr a b, .shr c d =>
     beqUSide a c && beqUSide b d
   | .neg a, .neg b => beqUSide a b
+  | .ib1 o w a, .ib1 p v b => o == p && w == v && beqUSide a b
+  | .ib2 o w a b, .ib2 p v c d => o == p && w == v && beqUSide a c && beqUSide b d
   | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
   | _, _ => false
 

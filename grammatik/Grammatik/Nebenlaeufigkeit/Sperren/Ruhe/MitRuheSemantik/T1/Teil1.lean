@@ -108,6 +108,15 @@ theorem slot_cast_worldR (σ : World D) (t : D.Tab) (f : D.Feld t)
       (hf ▸ σ.slots t k f : Wert D (.opt (D.count t))) :=
   opt_cast_gen (D.typ t f) (D.count t) hf hf' (σ.slots t k f)
 
+/-- The translated builtin on a translated operand is the translated result. -/
+theorem eval_ib1_ru {τ1 τ : Ty} (op : IntBuiltin [τ1] τ) (x : Wert D τ1) :
+    evalIntBuiltin1 (ibR op) (valR τ1 x) = valR τ (evalIntBuiltin1 op x) := by
+  cases op <;> rfl
+
+theorem eval_ib2_ru {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (x : Wert D τ1) (y : Wert D τ2) :
+    evalIntBuiltin2 (ibR op) (valR τ1 x) (valR τ2 y) = valR τ (evalIntBuiltin2 op x y) := by
+  cases op <;> rfl
+
 /-! ## 2. Expressions -/
 
 mutual
@@ -250,6 +259,22 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
       show (if h : lo' ≤ (eval _ (ruE e) _ _).n ∧ (eval _ (ruE e) _ _).n ≤ hi' then _ else eval _ (ruE s) _ _) = _
       rw [eval_ru σ₀ σ s ρ]
       exact eng_kongr (eval_ru σ₀ σ e ρ) _
+  | _, _, _, .intBuiltin1 op a, ρ => by
+      show evalIntBuiltin1 (ibR op) (eval (worldR σ₀) (ruE a) (worldR σ) (envR ρ)) =
+        valR _ (evalIntBuiltin1 op (eval σ₀ a σ ρ))
+      rw [eval_ru σ₀ σ a ρ]
+      exact eval_ib1_ru op _
+  | _, _, _, .intBuiltin2 op a b, ρ => by
+      show evalIntBuiltin2 (ibR op) (eval (worldR σ₀) (ruE a) (worldR σ) (envR ρ))
+          (eval (worldR σ₀) (ruE b) (worldR σ) (envR ρ)) =
+        valR _ (evalIntBuiltin2 op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ))
+      rw [eval_ru σ₀ σ a ρ, eval_ru σ₀ σ b ρ]
+      exact eval_ib2_ru op _ _
+  | _, _, _, .count n body, ρ => by
+      show zaehleWahr n (fun k => wahr? (eval (worldR σ₀) (ruE body) (worldR σ) (Env.cons k (envR ρ)))) =
+        zaehleWahr n (fun k => wahr? (eval σ₀ body σ (Env.cons k ρ)))
+      refine zaehleWahr_congr n _ _ (fun k _ => ?_)
+      exact congrArg wahr? (eval_ru σ₀ σ body (Env.cons k ρ))
 
 theorem evalNutz_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)}
     (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ),

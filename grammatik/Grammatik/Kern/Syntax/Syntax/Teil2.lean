@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Typen.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil1
+public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 
 @[expose] public section
 
@@ -130,6 +131,15 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   /-- `e` narrowed to `lo' .. hi'`, else `sonst`: the binder of an `update` body under the guard of its branch,
       where `sonst` is unreachable (stage 0, 2026-10-26). -/
   | eng (e : Expr Γ Λ (.int lo hi)) (lo' hi' : Int) (sonst : Expr Γ Λ (.int lo' hi')) : Expr Γ Λ (.int lo' hi')
+  /-- C13: a closed typed integer builtin with ONE operand (`clz`, `ctz`, `log2Floor`, `popcount`,
+      `bswap16/32/64`); its width is in the operation (`IntBuiltin`), never read off an interval. -/
+  | intBuiltin1 (op : IntBuiltin [τ1] τ) (a : Expr Γ Λ τ1) : Expr Γ Λ τ
+  /-- C13: a closed typed integer builtin with TWO operands (`addW`, `subW`, `mulW`, `shlW`, `addS`,
+      `rotl`, `rotr`). -/
+  | intBuiltin2 (op : IntBuiltin [τ1, τ2] τ) (a : Expr Γ Λ τ1) (b : Expr Γ Λ τ2) : Expr Γ Λ τ
+  /-- C13: the bounded count fold -- how many of the `n` indices `0 ..< n` satisfy the predicate; the
+      binder carries the index, the result is at most `n`. -/
+  | count (n : Nat) (body : Expr (.index (n : Int) :: Γ) Λ .bool) : Expr Γ Λ (.int 0 (n : Int))
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
   | empty : NutzlastExpr Γ Λ none

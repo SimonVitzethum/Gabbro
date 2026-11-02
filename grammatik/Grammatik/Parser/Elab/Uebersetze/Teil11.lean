@@ -274,7 +274,8 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
         | .error e => .error e
         | .ok gs => .ok ({ name := n, ty, init := z, initK := k, var := m, shared := sh,
                            optName := match t with | .index true tn => some tn | _ => none,
-                           sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none } :: gs)
+                           sumName := match ty, t with | .wert (.sum _), .atom a => some a | _, _ => none,
+                           breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
   | .atomT n t pub _ obs :: rest =>
     if obs.isSome then .error "atomic observed by a device without G form"
     else
@@ -294,7 +295,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
           match uGlobs consts alias rest with
           | .error e => .error e
           | .ok gs => .ok ({ name := n, ty, init := 0, var := true, atomic := true, shared := true,
-                             nutzlast := nl } :: gs)
+                             nutzlast := nl, breite := match ty with | .int _ _ => uSpeicherBreite alias t | _ => 0 } :: gs)
   | _ :: rest => uGlobs consts alias rest
 
 /-- The arenas of a unit as the PAIR the specification names (`ArenaZucker`): a table of `hi` slots with the one
@@ -318,7 +319,8 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
           | .error e => .error e
           | .ok (ts, gs) =>
             if 0 < h then
-              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true } :: ts,
+              .ok ({ name := n, count := h, cols := [("wert", r)], arena := true,
+                       breiten := (let w := uSpeicherBreite alias t; if 0 < w then [("wert", w)] else []) } :: ts,
                    { name := n ++ "#used", ty := GTy.int 0 h, init := 0, var := true } :: gs)
             else .error "arena of no slots"
   | _ :: rest => uArenen consts alias rest

@@ -116,6 +116,9 @@ def Expr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) : Expr
   | .strWeit m e => .strWeit m (e.ren r)
   | .wenn c a b => .wenn (c.ren r) (a.ren r) (b.ren r)
   | .eng e lo hi s => .eng (e.ren r) lo hi (s.ren r)
+  | .intBuiltin1 op a => .intBuiltin1 op (a.ren r)
+  | .intBuiltin2 op a b => .intBuiltin2 op (a.ren r) (b.ren r)
+  | .count n body => .count n (body.ren (Var.hoch r))
 
 def NutzlastExpr.ren {Γ Γ' : Ctx} (r : ∀ {τ : Ty}, Var Γ τ → Var Γ' τ) :
     NutzlastExpr D Γ Λ c → NutzlastExpr D Γ' Λ c
