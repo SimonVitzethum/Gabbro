@@ -1,18 +1,13 @@
 module
-
 public import Grammatik.Code.Refine.Struct.Mono
 public import Grammatik.Code.Refine.Struct.Shape.Teil2
-
 @[expose] public section
-
 namespace Gabbro.Code.Lower
 variable [Conf]
 open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 variable {D : Deklaration}
 variable {V : Vertrag D}
-
 mutual
-
 theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ')
       (lb k : Lbl) (st st' : St) (blks : List Block),
@@ -205,7 +200,6 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerS, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact ⟨⟨_, _, rfl, rfl⟩, by simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq], Nat.le_refl _⟩
-
 theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Gabbro.Grammatik.Block D V l Γ Λ Λ')
       (lb k : Lbl) (st st' : St) (blks : List Block),
@@ -338,7 +332,6 @@ theorem lowerB_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, h => by
       simp only [lowerB, reduceCtorEq] at h
-
 theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ)
       (lb : Lbl) (st st' : St) (blks : List Block),
@@ -400,20 +393,15 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .regRead .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .regReadElse .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .awaits .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
-
   | _, _, _, .bindCallInd .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .narrowRequired .., _, _, _, _, _, _ => by simp only [lowerEnd, reduceCtorEq] at h
-
 /-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
 theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
     (ov : Opd) :
@@ -473,7 +461,6 @@ theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top 
         have a2 := S2.2
         simp only at m1 m2 a1 a2 ⊢
         omega
-
 /-- The arms of a `match` on a reason: no phis, the register counter does not fall. -/
 theorem lowerGA_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -501,7 +488,5 @@ theorem lowerGA_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       · have a1 := S1.2.2
         have a2 := S2.2
         omega
-
 end
-
 end Gabbro.Code.Lower
