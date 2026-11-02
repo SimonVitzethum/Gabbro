@@ -90,14 +90,16 @@ theorem speicherfest_speicher
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
-  | retScoped e hΛ =>
+  | retScoped e Rr =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
-  | retWhyScoped r hΛ =>
+      obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher (σ.lese Λ e.orte) Rr.scopes
+      simp only [World.speicher, hs, hg]
+  | retWhyScoped r Rr =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher σ Rr.scopes
+      simp only [World.speicher, hs, hg]
   | leave h =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep

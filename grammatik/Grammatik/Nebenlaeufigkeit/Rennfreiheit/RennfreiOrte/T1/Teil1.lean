@@ -197,5 +197,14 @@ theorem evOk_sperre (e : Ereignis D) (he : zugriffVon e = none) : EvOk C W [e] :
   rw [he] at hz
   cases hz
 
+/-- Scope releases record no carrier access. -/
+theorem evOk_gibt (Ls : List D.Lock) :
+    EvOk (D := D) C W (Ls.map fun L => Ereignis.gibt (D := D) L) := by
+  induction Ls with
+  | nil => exact evOk_nil
+  | cons L Ls ih =>
+      simp only [List.map_cons]
+      exact evOk_append (evOk_sperre _ rfl) ih
+
 end Ev
 end Gabbro.Grammatik
