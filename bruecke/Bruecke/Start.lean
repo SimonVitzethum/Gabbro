@@ -79,10 +79,10 @@ theorem lowerAllg_requires (u : UProg) (P : Programm (declOf u)) (fs : List (dec
   · cases h
   · split at h
     · cases h
-    · injection h with h1
-      injection h1 with h2 h3
-      subst h2
-      intro f
-      simp only [progOfFn, reqOf, hn f, ↓reduceIte]
+    · split at h
+      · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
+        intro f
+        simp only [progOfFn, reqOf, hn f, ↓reduceIte]
+      · cases h
 
 end Gabbro.Bruecke

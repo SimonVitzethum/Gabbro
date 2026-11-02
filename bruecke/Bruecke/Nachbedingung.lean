@@ -71,24 +71,26 @@ theorem gesenkt_of {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   · split at h
     · cases h
     · rename_i hall
-      injection h with h1
-      injection h1 with h2 h3
-      subst h2
-      refine ⟨hreq, fun f => ?_, fun f => ?_⟩
-      · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
-        obtain ⟨v, hv⟩ := w
-        obtain ⟨e0, b0, he, hb, he', _⟩ := lowerFnAt_ok f hv
-        refine ⟨e0, he, ?_⟩
-        show HEq (lowerAtPair u f _).1 e0
-        rw [lowerAtPair_eq f _ hv]
-        exact he'
-      · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
-        obtain ⟨v, hv⟩ := w
-        obtain ⟨e0, b0, he, hb, _, hb'⟩ := lowerFnAt_ok f hv
-        refine ⟨b0, hb, ?_⟩
-        show HEq (lowerAtPair u f _).2.1 b0
-        rw [lowerAtPair_eq f _ hv]
-        exact hb'
+      split at h
+      ·
+        obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq h
+        refine ⟨hreq, fun f => ?_, fun f => ?_⟩
+        · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
+          obtain ⟨v, hv⟩ := w
+          obtain ⟨e0, b0, he, hb, he', _⟩ := lowerFnAt_ok f hv
+          refine ⟨e0, he, ?_⟩
+          show HEq (lowerAtPair u f _).1 e0
+          rw [lowerAtPair_eq f _ hv]
+          exact he'
+        · have w := lowerEach_all_ok u (List.finRange u.fns.length) f (List.mem_finRange f) hall
+          obtain ⟨v, hv⟩ := w
+          obtain ⟨e0, b0, he, hb, _, hb'⟩ := lowerFnAt_ok f hv
+          refine ⟨b0, hb, ?_⟩
+          show HEq (lowerAtPair u f _).2.1 b0
+          rw [lowerAtPair_eq f _ hv]
+          exact hb'
+
+      · cases h
 
 /-! ## The answer and the `ensures` environment -/
 
