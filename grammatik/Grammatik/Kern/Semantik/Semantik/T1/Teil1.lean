@@ -159,16 +159,19 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
   | .intBuiltin1 _ a => a.orte
   | .intBuiltin2 _ a b => a.orte ++ b.orte
   | .count _ body => body.orte
+  | .prod _ args => args.orte
+  | .prodGet v _ => v.orte
+  | .prodSet v _ e => v.orte ++ e.orte
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
   | .val e => e.orte
 
-end
 def Args.orte : Args D Γ Λ τs → List (D.Tab ⊕ D.Glob)
   | .nil => []
   | .cons e rest => e.orte ++ rest.orte
 
+end
 def ErgExpr.orte : ErgExpr D Γ Λ e → List (D.Tab ⊕ D.Glob)
   | .empty => []
   | .val e => e.orte
@@ -260,10 +263,18 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .intBuiltin1 op a, σ, ρ => evalIntBuiltin1 op (eval σ₀ a σ ρ)
   | .intBuiltin2 op a b, σ, ρ => evalIntBuiltin2 op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .count n body, σ, ρ => zaehleWahr n fun k => wahr? (eval σ₀ body σ (.cons k ρ))
+  | .prod _ args, σ, ρ => evalProd σ₀ args σ ρ
+  | .prodGet v i, σ, ρ => prodGetW i (eval σ₀ v σ ρ)
+  | .prodSet v i e, σ, ρ => prodSetW i (eval σ₀ v σ ρ) (eval σ₀ e σ ρ)
 
 def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast D.Fn D.passt c
   | .empty, _, _ => ()
   | .val e, σ, ρ => eval σ₀ e σ ρ
+
+/-- The tuple of the evaluated field arguments, in declaration order (C01). -/
+def evalProd (σ₀ : World D) : Args D Γ Λ fs → World D → Env D Γ → ProdVal D.Fn D.passt fs
+  | .nil, _, _ => ()
+  | .cons e rest, σ, ρ => (eval σ₀ e σ ρ, evalProd σ₀ rest σ ρ)
 
 end
 
@@ -475,6 +486,8 @@ def einpassen (z : Int → Option D.Fn) : (τ : Ty) → Int → Option (Wert D �
   -- An aggregate is not one raw word: the checker admits no foreign or register answer of such a type.
   | .arr _ _, _ => Option.none
   | .str _, _ => Option.none
+  -- A product is not one raw word either (C01 stage 1): no foreign or register answer of product type.
+  | .prod _ _, _ => Option.none
 
 def einpassenErg (z : Int → Option D.Fn) : (τ : Option Ty) → Int → Option (ErgVal D τ)
   | Option.none, _ => some ()

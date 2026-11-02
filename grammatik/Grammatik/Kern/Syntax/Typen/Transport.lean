@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Typen.Teil1
+public import Grammatik.Kern.Syntax.Typen.Produkt
 
 @[expose] public section
 
@@ -21,6 +22,12 @@ def Ty.mapNumbers (sn tn : Nat → Nat) : Ty → Ty
   | .ref n => .ref (tn n)
   | .arr τ n => .arr (Ty.mapNumbers sn tn τ) n
   | .str n => .str n
+  | .prod name fs => .prod name (Ty.mapFields sn tn fs)
+
+/-- The same traversal on field lists; order is preserved. -/
+def Ty.mapFields (sn tn : Nat → Nat) : List Ty → List Ty
+  | [] => []
+  | τ :: τs => Ty.mapNumbers sn tn τ :: Ty.mapFields sn tn τs
 
 /-- The same traversal on case lists; order and payload presence are preserved. -/
 def Ty.mapCases (sn tn : Nat → Nat) : List (Option Ty) → List (Option Ty)
@@ -32,8 +39,14 @@ end
 @[simp] theorem Ty.mapCases_length (sn tn : Nat → Nat) (cs : List (Option Ty)) :
     (Ty.mapCases sn tn cs).length = cs.length := by
   induction cs with
-  | nil => rfl
+  | nil => simp only [Ty.mapCases, List.length_nil]
   | cons c cs ih => cases c <;> simp only [Ty.mapCases, List.length_cons, ih]
+
+@[simp] theorem Ty.mapFields_length (sn tn : Nat → Nat) (fs : List Ty) :
+    (Ty.mapFields sn tn fs).length = fs.length := by
+  induction fs with
+  | nil => simp only [Ty.mapFields, List.length_nil]
+  | cons τ τs ih => simp only [Ty.mapFields, List.length_cons, ih]
 
 mutual
 @[simp] theorem Ty.mapNumbers_id : ∀ τ : Ty, Ty.mapNumbers id id τ = τ
@@ -41,6 +54,11 @@ mutual
   | .ptr ⟨space, rights, .table n⟩ => rfl
   | .sum cs => congrArg Ty.sum (Ty.mapCases_id cs)
   | .arr τ n => congrArg (fun t => Ty.arr t n) (Ty.mapNumbers_id τ)
+  | .prod name fs => congrArg (Ty.prod name) (Ty.mapFields_id fs)
+
+@[simp] theorem Ty.mapFields_id : ∀ fs : List Ty, Ty.mapFields id id fs = fs
+  | [] => rfl
+  | τ :: τs => by simp only [Ty.mapFields, Ty.mapNumbers_id τ, Ty.mapFields_id τs]
 
 @[simp] theorem Ty.mapCases_id : ∀ cs : List (Option Ty), Ty.mapCases id id cs = cs
   | [] => rfl
@@ -80,6 +98,7 @@ def Val.relocate {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Boo
   | .ref _, v => v
   | .arr τ _, v => fun i => Val.relocate sn tn pointer τ (v i)
   | .str _, v => v
+  | .prod _ fs, v => ProdVal.relocate sn tn pointer fs v
 termination_by τ _ => sizeOf τ
 
 /-- Transport the selected case, retaining exactly its tag and full payload. -/
@@ -99,6 +118,15 @@ def Val.relocateSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → 
     let tail := Val.relocateSum sn tn pointer cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩
     ⟨tail.1.succ, tail.2⟩
 termination_by cs _ => sizeOf cs
+
+/-- Transport a whole product value field by field under the same map. -/
+def ProdVal.relocate {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F // p f n = true} → {f : F' // p' f (sn n) = true}) :
+    (fs : List Ty) → ProdVal F p fs → ProdVal F' p' (Ty.mapFields sn tn fs)
+  | [], _ => ()
+  | τ :: τs, v => (Val.relocate sn tn pointer τ v.1, ProdVal.relocate sn tn pointer τs v.2)
+termination_by fs _ => sizeOf fs
 end
 
 mutual
@@ -120,6 +148,7 @@ def Val.restrict {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Boo
   | .ref _, v => v
   | .arr τ _, v => fun i => Val.restrict sn tn pointer τ (v i)
   | .str _, v => v
+  | .prod _ fs, v => ProdVal.restrict sn tn pointer fs v
 termination_by τ _ => sizeOf τ
 
 /-- Pull back the full active payload without inspecting inactive cases. -/
@@ -138,6 +167,15 @@ def Val.restrictSum {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → 
     let tail := Val.restrictSum sn tn pointer cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩
     ⟨tail.1.succ, tail.2⟩
 termination_by cs _ => sizeOf cs
+
+/-- Pull a whole product value back field by field. -/
+def ProdVal.restrict {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
+    (sn tn : Nat → Nat)
+    (pointer : ∀ n, {f : F' // p' f (sn n) = true} → {f : F // p f n = true}) :
+    (fs : List Ty) → ProdVal F' p' (Ty.mapFields sn tn fs) → ProdVal F p fs
+  | [], _ => ()
+  | τ :: τs, v => (Val.restrict sn tn pointer τ v.1, ProdVal.restrict sn tn pointer τs v.2)
+termination_by fs _ => sizeOf fs
 end
 
 /-- Transport a complete optional payload under the same pointer map as its sum. -/
@@ -210,6 +248,7 @@ theorem Val.restrict_relocate : ∀ (τ : Ty) (v : Val F p τ),
   | .fnptr n, v => hleft n v
   | .arr τ _, v => funext fun i => Val.restrict_relocate sn tn forward backward hleft τ (v i)
   | .sum cs, v => Val.restrict_relocateSum sn tn forward backward hleft cs v
+  | .prod _ fs, v => ProdVal.restrict_relocate sn tn forward backward hleft fs v
 termination_by τ _ => sizeOf τ
 
 /-- The inverse also preserves the complete active tag/payload pair. -/
@@ -226,6 +265,15 @@ theorem Val.restrict_relocateSum : ∀ (cs : List (Option Ty)) (v : Val F p (.su
     let lift (z : Val F p (.sum cs)) : Val F p (.sum (c :: cs)) := ⟨z.1.succ, z.2⟩
     cases c <;> exact congrArg lift ih
 termination_by cs _ => sizeOf cs
+
+/-- The left inverse also preserves whole product values, field by field. -/
+theorem ProdVal.restrict_relocate : ∀ (fs : List Ty) (v : ProdVal F p fs),
+    ProdVal.restrict sn tn backward fs (ProdVal.relocate sn tn forward fs v) = v
+  | [], _ => rfl
+  | τ :: τs, v => ProdVal.pcons_congr
+      (Val.restrict_relocate sn tn forward backward hleft τ v.1)
+      (ProdVal.restrict_relocate τs v.2)
+termination_by fs _ => sizeOf fs
 end
 
 end Inverse
@@ -246,6 +294,7 @@ theorem Val.relocate_restrict : ∀ (τ : Ty) (v : Val F' p' (Ty.mapNumbers sn t
   | .fnptr n, v => hright n v
   | .arr τ _, v => funext fun i => Val.relocate_restrict sn tn forward backward hright τ (v i)
   | .sum cs, v => Val.relocate_restrictSum sn tn forward backward hright cs v
+  | .prod _ fs, v => ProdVal.relocate_restrict sn tn forward backward hright fs v
 termination_by τ _ => sizeOf τ
 
 theorem Val.relocate_restrictSum : ∀ (cs : List (Option Ty))
@@ -267,6 +316,16 @@ theorem Val.relocate_restrictSum : ∀ (cs : List (Option Ty))
       (Val.relocate_restrictSum sn tn forward backward hright cs
         ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
 termination_by cs _ => sizeOf cs
+
+/-- The right inverse also preserves whole product values, field by field. -/
+theorem ProdVal.relocate_restrict : ∀ (fs : List Ty)
+    (v : ProdVal F' p' (Ty.mapFields sn tn fs)),
+    ProdVal.relocate sn tn forward fs (ProdVal.restrict sn tn backward fs v) = v
+  | [], _ => rfl
+  | τ :: τs, v => ProdVal.pcons_congr
+      (Val.relocate_restrict sn tn forward backward hright τ v.1)
+      (ProdVal.relocate_restrict τs v.2)
+termination_by fs _ => sizeOf fs
 end
 
 end RightInverse

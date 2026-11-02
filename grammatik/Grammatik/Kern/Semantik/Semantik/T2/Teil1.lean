@@ -110,6 +110,7 @@ def roh : {τ : Ty} → Wert D τ → Int
   -- an aggregate has no raw word (the checker writes none to a register)
   | .arr _ _, _ => 0
   | .str _, _ => 0
+  | .prod _ _, _ => 0
 
 /-- Die Gleitkommarechnung der Maschine: IEEE-754 binary64, exact result rounded once to
     nearest-even (`Gleitkomma.add/sub/mul/div`) -- kernel-computable since 2026-09-14. -/
