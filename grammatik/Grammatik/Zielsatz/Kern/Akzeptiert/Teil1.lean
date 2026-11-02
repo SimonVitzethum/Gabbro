@@ -3,6 +3,7 @@ module
 public import Grammatik.Zielsatz.Kern.Spec
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Logik.Vertraege.EinpassenVoll
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
 
 @[expose] public section
 
@@ -334,7 +335,7 @@ def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.L
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs
+    antwortenB P fs && maskenB P fs && resetB cs
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 

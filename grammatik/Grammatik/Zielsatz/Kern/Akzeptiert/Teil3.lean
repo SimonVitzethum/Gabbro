@@ -122,4 +122,142 @@ theorem resetAdmission_zeuge {g : D.Glob}
 #print axioms resetAdmissionB_iff
 
 end ResetAdmission
+
+section ResetKomponente
+
+/-- **The reset component** (C18): every static-array carrier of the list admits zero.
+    Non-array globals and tables pass; an array over a zero-less element type refuses. -/
+def resetCarrierB : D.Tab ⊕ D.Glob → Bool
+  | .inl _ => true
+  | .inr g =>
+    match D.gtyp g with
+    | .arr elem _ => zeroAdmittingB elem
+    | _ => true
+
+/-- The reset component over a carrier list. -/
+def resetB (cs : List (D.Tab ⊕ D.Glob)) : Bool :=
+  cs.all resetCarrierB
+
+/-- One carrier decides its reset admission. -/
+theorem resetCarrierB_iff {g : D.Glob} :
+    resetCarrierB (.inr g) = true ↔
+      ∀ (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem := by
+  cases h : D.gtyp g with
+  | int lo hi =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | bool =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | opt n =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | sum cs =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | why n =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | never =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | fl _ =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | fnptr s =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | ptr t rw =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | ref t =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+  | arr elem n =>
+    simp only [resetCarrierB, h, zeroAdmittingB_iff]
+    constructor
+    · intro hn e l harr
+      rw [h] at harr
+      cases harr
+      exact hn
+    · intro hh
+      exact hh elem n h
+  | str n =>
+    simp only [resetCarrierB, h]
+    constructor
+    · intro _ elem len harr
+      rw [h] at harr
+      exact Ty.noConfusion harr
+    · intro _
+      rfl
+
+/-- **The reset component decides its field** (`AkzeptiertSpec.reset`, C18). -/
+theorem resetB_iff {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
+    resetB cs = true ↔
+      ∀ (g : D.Glob) (elem : Ty) (len : Nat),
+        D.gtyp g = .arr elem len → ZeroAdmitting elem := by
+  unfold resetB
+  rw [List.all_eq_true]
+  constructor
+  · intro h g elem len harr
+    exact (resetCarrierB_iff.mp (h _ (hcs _)) elem len harr)
+  · intro h c hmem
+    cases c with
+    | inl t => rfl
+    | inr g =>
+      rw [resetCarrierB_iff]
+      intro elem len harr
+      exact h g elem len harr
+
+end ResetKomponente
 end Gabbro.Grammatik

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Bausteine.Arena.ArenaStaticReset
 
 @[expose] public section
 
@@ -24,6 +25,23 @@ namespace Gabbro.Grammatik
   | .ref t => .ref t
   | .arr τ n => .arr (tyR τ) n
   | .str n => .str n
+
+/-- `tyR` preserves zero admission (C18): the idle root shifts only function-pointer numbers,
+    which never admit zero. -/
+theorem zeroAdmitting_tyR {τ : Ty} (h : ZeroAdmitting τ) : ZeroAdmitting (tyR τ) := by
+  induction h with
+  | intZero h1 h2 =>
+    simp only [tyR]
+    exact .intZero h1 h2
+  | boolZero =>
+    simp only [tyR]
+    exact .boolZero
+  | arrZero h' ih =>
+    simp only [tyR]
+    exact .arrZero ih
+  | strZero =>
+    simp only [tyR]
+    exact .strZero
 
 /-- A signature with its types shifted. -/
 def sigR {Tab Glob Lock Marke : Type} (S : Signatur Tab Glob Lock Marke) :
