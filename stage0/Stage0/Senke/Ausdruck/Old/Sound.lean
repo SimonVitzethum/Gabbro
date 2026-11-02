@@ -194,6 +194,21 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
     rw [pa, pb]
     simp only [wahr?]
     exact or_word _ _
+  | _, .intBuiltin1 op a, d, code, top, lower, fits, saved, before, m, pc, pre =>
+    BitBuiltin.unary_ok op (eval σ0 a σ ρ)
+      (fun q cc tt hc ht m pc hp => lowEnsAt_ok layout start σ0 σ hWL hLay full ρ paramsOfFull context
+        a q cc tt hc ht saved before m pc hp) d code top lower fits m pc pre
+  | _, .intBuiltin2 op a b, d, code, top, lower, fits, saved, before, m, pc, pre =>
+    intBuiltin2L_ok op (eval σ0 a σ ρ) (eval σ0 b σ ρ)
+      (fa := lowEnsAt L layout start a)
+      (fb := lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)
+      (fun q cc tt hc ht m pc hp => lowEnsAt_ok layout start σ0 σ hWL hLay full ρ paramsOfFull context
+        a q cc tt hc ht (fun env => (saved env).left)
+        (by simp only [oldCells, EntrySnapshots.words_append] at before; omega) m pc hp)
+      (fun q cc tt hc ht m pc hp => lowEnsAt_ok layout (start + EntrySnapshots.words (oldCells a))
+        σ0 σ hWL hLay full ρ paramsOfFull context b q cc tt hc ht (fun env => (saved env).right)
+        (by simp only [oldCells, EntrySnapshots.words_append] at before; omega) m pc hp)
+      lower fits pre
   | _, e@(.lit ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.tru ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.fls ..), d, code, top, lower, fits, saved, before, m, pc, pre
@@ -237,6 +252,7 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
   | _, e@(.strLt ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.strWeit ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.wenn ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.count ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.eng ..), d, code, top, lower, fits, saved, before, m, pc, pre => by
     subst e
     exact lowE_ok (reserved := layout.ensReserved) σ0 σ hWL hLay _ d code top lower fits m pc ρ

@@ -96,6 +96,9 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, e@(.strLt ..), _, h
   | _, e@(.strWeit ..), _, h
   | _, e@(.wenn ..), _, h
+  | _, e@(.intBuiltin1 ..), _, h
+  | _, e@(.intBuiltin2 ..), _, h
+  | _, e@(.count ..), _, h
   | _, e@(.eng ..), _, h => by subst e; simp only [entryIndex] at h; cases h
 
 theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List (Res D)} :
@@ -145,6 +148,8 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
       wideBinaryL_top (by simpa only [lowEnsAt, wideLtL] using h)
   | _, .le a b, d, c, top, h =>
       wideBinaryL_top (by simpa only [lowEnsAt, wideLeL] using h)
+  | _, .intBuiltin1 op a, d, c, top, h => BitBuiltin.unary_top op h
+  | _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h
   | _, e@(.lit ..), d, c, top, h
   | _, e@(.tru ..), d, c, top, h
   | _, e@(.fls ..), d, c, top, h
@@ -188,12 +193,13 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
   | _, e@(.strLt ..), d, c, top, h
   | _, e@(.strWeit ..), d, c, top, h
   | _, e@(.wenn ..), d, c, top, h
+  | _, e@(.count ..), d, c, top, h
   | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (reserved := layout.ensReserved) _ d c top h
 
 
 theorem lowEns_top (layout : FrameLayout) {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} (e : Expr D Γ Λ τ) (d : Nat) (code : List II) (top : Nat)
     (emitted : lowEns L layout e d = some (code, top)) : d < top :=
-  lowEnsAt_top layout layout.snapshotBase e d code top emitted
+    lowEnsAt_top layout layout.snapshotBase e d code top emitted
 
 end Gabbro.Stage0.Senke

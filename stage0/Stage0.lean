@@ -82,4 +82,5 @@ public import Stage0.Frontend.ExportCorrectness
 public import Stage0.Frontend.MeasureWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 @[expose] public section
