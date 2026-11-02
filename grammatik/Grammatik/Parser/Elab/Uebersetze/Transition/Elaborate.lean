@@ -13,7 +13,7 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
   match steps with
   | [] => .ok acc
   | (_, a, b) :: rest =>
-    let add := fun names e => match e with
+    let add := fun (names : List String) (e : SExpr) => match e with
       | .variable n =>
         if values.any (strEq · n) || names.any (strEq · n) then names else names ++ [n]
       | _ => names

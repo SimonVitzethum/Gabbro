@@ -247,6 +247,8 @@ def elabU : List SItemTief → Except String UProg
     match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
     | .error e => .error e
     | .ok zustaende =>
+    if (uEindeutig (zustaende.map (·.name))).length != zustaende.length then
+      .error "duplicate state identity" else
     match uGenerateTransitions transitionCtx zustaende with
     | .error e => .error e
     | .ok transitionFns =>

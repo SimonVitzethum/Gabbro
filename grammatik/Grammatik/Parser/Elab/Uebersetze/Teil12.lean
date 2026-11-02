@@ -181,6 +181,13 @@ def uWhys : List SItemTief → Except String (List UWhy)
 /-- The governed fields: each `transition` statement of a body names its table, field and state; a field
     governed by two states is refused. -/
 def uRegiert (fns : List UFn) (states : List UZustand := []) : Except String (List (String × String × String)) :=
+  let globals := states.flatMap fun state => state.transitions.flatMap fun tr =>
+    tr.writes.filterMap fun write => match write.place with
+      | .glob name => some (name, state.name)
+      | _ => none
+  if !globals.all (fun x => globals.all (fun y => !strEq x.1 y.1 || strEq x.2 y.2)) then
+    .error "a global governed by two states"
+  else
   let alle := fns.flatMap fun f => f.body.filterMap fun st => match st with
     | .shiftTab tb fld _ s _ _ => some (tb, fld, s)
     | _ => none
