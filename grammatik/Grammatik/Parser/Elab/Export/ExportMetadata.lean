@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportMetadata
@@ -34,13 +35,15 @@ def bodyMetadata : Nat → SAnw → Bool
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
-  | .cost _ | .limit _ | .induc _ | .load _ | .moves .. | .quits _ | .drops _ | .keeps _ | .part _ | .arch _ | .refs _ => true
+  | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
+  | .cost _ | .limit _ | .induc _ | .load _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
 
 /-- Payload clauses are consumed by the certified C02 expansion, so they do not refuse a library head. Every other cost/scheduling/proof clause still refuses. -/
 def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any fun
   | .load _ => false
-  | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .drops _ | .keeps _ | .part _ | .arch _ | .refs _ => true
+  | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
+  | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
 
 /-- The closed C15 merge operators: storage expansion only binds these five. -/
@@ -249,5 +252,21 @@ theorem required_allocation_refused_zeuge :
     by the canonical RufPasst.ownerReady escrow boundary. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
+
+end Gabbro.Grammatik.Parser.ExportMetadata
+
+namespace Gabbro.Grammatik.Parser.ExportMetadata
+
+/-- C17 retains the exact source tree. Unit alias checks, duplicate-clause refusal and
+    certified measure lowering remain mandatory in `uMeasureClause` and Stage 0. -/
+theorem drops_bound (e : SExpr)
+    (h : (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone = false) :
+    clausesMetadata [.drops e] = false := by
+  simp [clausesMetadata, h]
+
+theorem drops_zeuge :
+    clausesMetadata [.drops (.variable "n")] = false ∧
+    clausesMetadata [.drops (.old (.variable "n"))] = true := by
+  exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata

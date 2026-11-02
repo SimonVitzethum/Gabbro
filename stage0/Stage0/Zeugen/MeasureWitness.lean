@@ -43,8 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The export gate refuses the unbound decreases proof duty. -/
-theorem candidate_refused :
-    emit text 64 = .error "source export: function type/proof/header duties lack a checked source binding: countdown" := by decide +kernel
+/-- The source measure passes the gate and the connected certified Stage-0 emitter. -/
+theorem candidate_accepted :
+    (emit text 64).toOption.isSome = true := by decide +kernel
 
 end Gabbro.Stage0.MeasureWitness
