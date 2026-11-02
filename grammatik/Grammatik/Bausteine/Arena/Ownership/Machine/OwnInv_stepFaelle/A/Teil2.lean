@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
-public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil1
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.A.Teil1
 
 @[expose] public section
 
