@@ -236,6 +236,7 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             refine ⟨σ₃, ρ₃.tail, ?_, hc3⟩
             simp only [execBlock]
             rw [hrec]
+            rfl
       obtain ⟨σ', ρ', honOpt, hcOpt⟩ := honOpt
       simp only [execBlock, honOpt]
       exact ⟨_, _, rfl, hcOpt⟩
@@ -309,9 +310,10 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
           (eval σread (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ)))
             σread (.cons k ρ₁)) (.cons k ρ₁)
         obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite σread ρread hstabBind
-        simp only [WalkBinding.levelBody, execBlock]
+        simp only [WalkBinding.levelBody, WalkBinding.otherwise, execBlock]
         refine ⟨σ₂, ρ₂.tail, ?_, hcnite⟩
         rw [hnite]
+        rfl
       obtain ⟨σ', ρ', hstep, hcstep⟩ := hstep
       exact ⟨_, _, hstep, hcstep⟩
   | succ level ih =>
@@ -372,6 +374,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
         simp only [WalkBinding.levelBody, execBlock]
         refine ⟨σ₂, ρ₂.tail, ?_, hcnite⟩
         rw [hnite]
+        rfl
       obtain ⟨σ', ρ', hstep, hcstep⟩ := hstep
       exact ⟨_, _, hstep, hcstep⟩
 
