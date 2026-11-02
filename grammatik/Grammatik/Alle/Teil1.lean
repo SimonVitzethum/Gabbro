@@ -329,12 +329,12 @@ public import Grammatik.Korpus.Programme.Korpus124
 public import Grammatik.Logik.Ruf.Ohne.RufOhneHardware
 public import Grammatik.Logik.Ruf.Ohne.RufOhneHardwareZeuge
 public import Grammatik.Logik.Vertraege.RahmenTreu
-public import Grammatik.Logik.Vertraege.Getrennt
-public import Grammatik.Logik.Vertraege.GetrenntZeuge
-public import Grammatik.Logik.Vertraege.Objekte
+public import Grammatik.Logik.Vertraege.Getrennt.Getrennt
+public import Grammatik.Logik.Vertraege.Getrennt.GetrenntZeuge
+public import Grammatik.Logik.Vertraege.Objekt.Objekte
 public import Grammatik.Logik.Vertraege.ObjektRahmen
-public import Grammatik.Logik.Vertraege.ObjektWurzel
-public import Grammatik.Logik.Vertraege.ObjektZeuge
+public import Grammatik.Logik.Vertraege.Objekt.ObjektWurzel
+public import Grammatik.Logik.Vertraege.Objekt.ObjektZeuge
 public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil2
 public import Grammatik.Logik.Ruf.RufTiefe
 public import Grammatik.Logik.Ruf.RufLogik

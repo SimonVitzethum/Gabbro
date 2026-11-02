@@ -22,7 +22,7 @@
   finer than carriers (obstruction 1).
 -/
 module
-public import Grammatik.Logik.Vertraege.Getrennt
+public import Grammatik.Logik.Vertraege.Getrennt.Getrennt
 @[expose] public section
 
 

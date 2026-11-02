@@ -32,7 +32,7 @@
       `r014_ruf_rahmen` gives the frame for every run (`zeuge_r014_ruf_rahmen`).
 -/
 module
-public import Grammatik.Logik.Vertraege.ObjektWurzel
+public import Grammatik.Logik.Vertraege.Objekt.ObjektWurzel
 @[expose] public section
 
 
