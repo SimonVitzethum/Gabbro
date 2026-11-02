@@ -226,7 +226,8 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
   | _, _, Λ, _, .retScoped e R, σ, ρ =>
       execStmt_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, _, _, .retWhy .., σ, ρ => rfl
-  | _, _, _, _, .retWhyScoped .., σ, ρ => rfl
+  | _, _, _, _, .retWhyScoped r Rr, σ, ρ =>
+      execStmt_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, _, _, .leave _, σ, ρ => rfl
   | _, _, _, _, .next _, σ, ρ => rfl
 
@@ -282,7 +283,8 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, Λ, .retScoped e R, σ, ρ =>
       execEnd_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, _, .retWhy .., σ, ρ => rfl
-  | _, _, _, .retWhyScoped .., σ, ρ => rfl
+  | _, _, _, .retWhyScoped r Rr, σ, ρ =>
+      execEnd_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, _, .leave _, σ, ρ => rfl
   | _, _, _, .next _, σ, ρ => rfl
   | _, _, _, .cons s rest, σ, ρ =>

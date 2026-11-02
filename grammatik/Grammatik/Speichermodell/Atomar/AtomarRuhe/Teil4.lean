@@ -91,7 +91,8 @@ theorem execStmtHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List
   | _, _, Λ, _, .retScoped e R, σ, ρ =>
       execStmtHA_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .retWhy .., σ, ρ => Or.inl rfl
-  | _, _, _, _, .retWhyScoped .., σ, ρ => Or.inl rfl
+  | _, _, _, _, .retWhyScoped r Rr, σ, ρ =>
+      execStmtHA_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, _, .next _, σ, ρ => Or.inl rfl
 
@@ -149,7 +150,8 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
   | _, _, Λ, .retScoped e R, σ, ρ =>
       execEndHA_ru_retScoped (e := e) (R := R) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, .retWhy .., σ, ρ => Or.inl rfl
-  | _, _, _, .retWhyScoped .., σ, ρ => Or.inl rfl
+  | _, _, _, .retWhyScoped r Rr, σ, ρ =>
+      execEndHA_ru_retWhyScoped (r := r) (R := Rr) (σ := σ) (ρ := ρ) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
   | _, _, _, .leave _, σ, ρ => Or.inl rfl
   | _, _, _, .next _, σ, ρ => Or.inl rfl
   | _, _, _, .cons s rest, σ, ρ =>
