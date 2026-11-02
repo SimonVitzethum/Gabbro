@@ -20,7 +20,8 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
     (hdevs : ∀ d ∈ devs, d = "Dev") (hgriff : mitGriff = true → "Dev" ∈ devs)
     (hreg : ∀ r : z.deklaration.Reg, mitGriff = true)
     (als : List (String × (Int × Int))) (annahmen : List String) (sums : List USum) (zustaende : List UZustand)
-    (hs : sums = []) (hsize : sizeOf (P.rumpf f) < 1000000) (sig : FnSig) (koerper : SAnw)
+    (hs : sums = []) (hzu : ∀ n, uNamedTransition zustaende n = none)
+    (hsize : sizeOf (P.rumpf f) < 1000000) (sig : FnSig) (koerper : SAnw)
     (hd : delabFn z P mitGriff f = .ok (.fnT sig koerper)) (ufn : UFn) (hu : uOfFn z gNr P f = some ufn) :
     elabUFunktion [] als tabs locks globs koepfe sig koerper annahmen whys sums devs regs zustaende zeiger zb =
       .ok ufn := by
@@ -100,9 +101,9 @@ theorem fn_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaratio
       klauseln := hkl }
   have hkopf := kopf_ok z gNr P f tabs locks globs whys devs mitGriff [] als sums zeiger zb ps ks res req ens hps hks hres hV
   have H := fnCtx_sinv hL hM f devs mitGriff ps ks hps hks hdevs (fun r => ⟨hreg r, hgriff (hreg r)⟩) als
-    (nFn (fN z f)) annahmen sums zustaende hs zeiger zb hzb
+    (nFn (fN z f)) annahmen sums zustaende hs zeiger zb hzb hzu
   unfold elabUFunktion
-  simp only [hkopf]
+  simp only [hkopf, klauselnVon_measure z P f req ens (fun k hk => (hkl k hk).1)]
   set ctx := { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) (nFn (fN z f)) annahmen whys
     sums regs zustaende with zeiger := zeiger, zeigerBasis := zb } with hctx
   rw [elabFn_eq ctx _ _ _ _ rfl, gibt_klauseln _ P f req ens hreqF, braucht_klauseln _ P f req ens hensF]

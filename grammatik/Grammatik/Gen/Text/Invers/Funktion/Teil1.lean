@@ -185,6 +185,10 @@ def KlauselOk : SKlausel → Prop
   | .effs _ => True
   | _ => False
 
+/-- A clause the generator writes carries no `decreases` measure. -/
+theorem klauselOk_dropsOf {k : SKlausel} (h : KlauselOk k) : dropsOf k = none := by
+  cases k <;> simp_all [KlauselOk, dropsOf]
+
 theorem ohneKlauselForm_ok : ∀ (ks : List SKlausel), (∀ k ∈ ks, KlauselOk k) → uOhneKlauselForm ks = .ok ()
   | [], _ => rfl
   | k :: ks, h => by

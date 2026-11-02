@@ -226,6 +226,7 @@ theorem SInv.pushZ {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art 
   reg := H.reg
   kanal := H.kanal
   zb := H.zb
+  transFrei := H.transFrei
 
 theorem SInv.fnFremd {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) (i : Nat) : ∃ e, uParamNr ctx (nFn i) = .error e :=
@@ -240,7 +241,7 @@ theorem anw1_call {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {Γ :
     (hd : delabA z args = .ok as) (hu : uOfArgs z art args = some xs) :
     uAnw1 ctx tabs koepfe (.call (nFn (fN z f)) as) = .ok (.call (nFn (fN z f)) xs) := by
   obtain ⟨e, he⟩ := H.fnFremd (fN z f)
-  simp only [uAnw1, uFnZeiger, he, ruf_ok H tabs f k hf hK hh args as xs hd hu, hK.kanal0 hr, Option.isSome_none,
+  simp only [uAnw1, uFnZeiger, he, H.transFrei, ruf_ok H tabs f k hf hK hh args as xs hd hu, hK.kanal0 hr, Option.isSome_none,
     Bool.false_eq_true, ite_false, hK.ext]
 
 /-- `let p = &f;` -/
@@ -278,7 +279,7 @@ theorem anw1_callInd {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {�
   have hz : uFnZeiger (ctxMit ctx (nZeiger p) (.fnptr i) (.fnptr i) 0 [] ls) koepfe (nZeiger p) = some (.ok k) := by
     unfold uFnZeiger; rw [hp]; simp only [ctxMit, uArtBei, hb, ↓reduceIte, hk]
   have hR := ruf_ok H' tabs f k hf hK hh args as xs hd hu
-  simp only [uAnw1, hz, hR, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, hK.name]
+  simp only [uAnw1, hz, hR, H'.transFrei, hK.kanal0 hr, Option.isSome_none, Bool.false_eq_true, ite_false, hK.name]
 
 /-- `let x = f(..);` -/
 theorem bindWert_call {gNr : Nat → Nat} {koepfe : List UFnKopf} {ctx : UCtx} {Γ : Ctx}

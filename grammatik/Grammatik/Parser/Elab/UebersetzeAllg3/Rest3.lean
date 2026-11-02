@@ -310,7 +310,7 @@ theorem parse108 : beqTopTief (parseTopTief toks108) (.ok items108) = true := by
 /-- The elaborated 108 program (`elab108` checks it against
     the elaborator run after `pre108`). -/
 
-def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"], exportGate := ExportMetadata.check (uMembers (pre108 items108)) }
+def uExp108 : UProg := { tabs := [{ name := "T", count := 4, cols := [("v", 0, 4294967295)], breiten := [("v", 32)] }], locks := [], fns := [{ name := "read_a", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 0)) }, { name := "read_c", params := [], kinds := [], res := some (0, 4294967295), held := [], puts := [], gives := [], body := [], ret := .val (.tab "T" "v" (.lit 1)) }], roots := ["read_a", "read_c"], exportGate := ExportMetadata.check (uMembers (pre108 items108)) }
 
 theorem elab108 : beqElabU (elabU (pre108 items108)) (.ok uExp108) = true := by
   decide

@@ -93,7 +93,8 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     (hdevs : ∀ d ∈ devs, d = "Dev") (hgriff : ∀ r : z.deklaration.Reg, mitGriff = true ∧ "Dev" ∈ devs)
     (als : List (String × (Int × Int))) (name : String) (annahmen : List String) (sums : List USum)
     (zustaende : List UZustand) (hs : sums = []) (zeiger : List String) (zb : Nat)
-    (hzb : ∀ g : z.deklaration.Fn, z.deklaration.sig g < zb) :
+    (hzb : ∀ g : z.deklaration.Fn, z.deklaration.sig g < zb)
+    (hzu : ∀ n, uNamedTransition zustaende n = none) :
     SInv z (vertragVon z.deklaration f)
       { uCtxVon als [] tabs locks globs (kopfVon z gNr devs f ps ks mitGriff) name annahmen whys sums regs zustaende with
         zeiger := zeiger, zeigerBasis := zb }
@@ -166,6 +167,7 @@ theorem fnCtx_sinv {gNr : Nat → Nat} {tabs : List UTab} {locks : List ULock} {
     obtain ⟨w, h1, h2, _, h4⟩ := hL.why f h
     exact ⟨_, w, by simp only [uCtxVon, kopfVon, kanalVon, h, ↓reduceIte, Deklaration.gruende], h1, h2, h4⟩
   zb := hzb
+  transFrei := hzu
 
 /-- The `requires`/`ensures` context: the body context with the held resources of `Λ'` (its locks held). -/
 theorem SInv.vertragE {V : Vertrag z.deklaration} {ctx : UCtx} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)}

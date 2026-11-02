@@ -234,6 +234,9 @@ structure SInv (ctx : UCtx) (Γ : Ctx) (Λ : List (Res z.deklaration)) (art : Na
     ∀ r, r < V.gruende → w.cases.findIdx? (strEq · (nFall r)) = some r
   /-- every function's own signature number (its head number) lies below the pointer-type base -/
   zb : ∀ f : z.deklaration.Fn, z.deklaration.sig f < ctx.zeigerBasis
+  /-- No transition declaration carries the name of a generated function (C04 routes such a
+      call to the transition, `uNamedTransition`); the generator declares no transitions. -/
+  transFrei : ∀ n, uNamedTransition ctx.zustaende n = none
 
 variable {z V}
 
@@ -436,6 +439,7 @@ theorem SInv.push {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   reg := H.reg
   kanal := H.kanal
   zb := H.zb
+  transFrei := H.transFrei
 
 theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art : Nat → UParamArt}
     (H : SInv z V ctx Γ Λ art) (L : z.deklaration.Lock) :
@@ -471,6 +475,7 @@ theorem SInv.lock {ctx : UCtx} {Γ : Ctx} {Λ : List (Res z.deklaration)} {art :
   reg := H.reg
   kanal := H.kanal
   zb := H.zb
+  transFrei := H.transFrei
 
 /-! ### Values of a `let`: a truth value is never read as a number -/
 

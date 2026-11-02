@@ -364,7 +364,7 @@ theorem u104parse : beqTopTief (parseTopTief tt104) (.ok items104) = true := by
     the elaborator). -/
 def uExp104 : UProg :=
   { tabs := [{ name := "Konto", count := 2,
-                   cols := [("stand", (0, 100))] }],
+                   cols := [("stand", (0, 100))], breiten := [("stand", 32)] }],
     locks := [{ name := "M", rank := 0, guard := ["Konto"] }],
     fns := [
       { name := "einzahlen",

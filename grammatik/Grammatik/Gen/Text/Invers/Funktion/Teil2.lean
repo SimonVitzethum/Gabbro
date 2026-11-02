@@ -41,6 +41,21 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen Gabbro.Grammatik.Parser Gabbro.Gramma
 section Kopf
 variable (z : Spez)
 
+/-- The clauses the generator writes carry no `decreases` measure. -/
+theorem klauselnVon_measure (P : Programm z.deklaration) (f : Fin z.fns.length) (req ens : List SKlausel)
+    (h : ∀ k ∈ req ++ ens, KlauselOk k) : uMeasureClause (klauselnVon z P f req ens) = .ok none := by
+  have hall : ∀ k ∈ klauselnVon z P f req ens, dropsOf k = none := by
+    intro k hk
+    unfold klauselnVon at hk
+    simp only [List.mem_append] at hk
+    rcases hk with ((h1 | h2) | h3) | h4
+    · unfold heldKlausel at h1; split at h1 <;> simp_all [dropsOf]
+    · exact klauselOk_dropsOf (h k (List.mem_append_left _ h2))
+    · exact klauselOk_dropsOf (h k (List.mem_append_right _ h3))
+    · unfold effKlausel at h4; split at h4 <;> simp_all [dropsOf]
+  have hnil : (klauselnVon z P f req ens).filterMap dropsOf = [] := List.filterMap_eq_nil_iff.mpr hall
+  unfold uMeasureClause; rw [hnil]
+
 /-- **The head read back.** -/
 theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklaration.Fn) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (devs : List String) (mitGriff : Bool)
@@ -157,8 +172,9 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
     simp only [hwirk, effListe]
     exact eff_alle hE _ _ _ hV.tab hV.glob hV.sperren
   have himpl : strEq "impl" "impl" = true := by decide
+  have hmc := klauselnVon_measure z P f req ens (fun k hk => (hV.klauseln k hk).1)
   unfold elabKopf
-  simp only [hog, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ite_false, hok, hseq, hgeh]
+  simp only [hog, himpl, Bool.true_or, Bool.not_true, Bool.false_eq_true, ite_false, hmc, hok, hseq, hgeh]
   have hkn' : ∀ x, (match (if S.gruende = 0 then none else some (nGrund S.gruende)) with
       | none => Except.ok none
       | some r =>

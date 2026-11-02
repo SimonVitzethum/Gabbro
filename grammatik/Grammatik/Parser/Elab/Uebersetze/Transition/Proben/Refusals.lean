@@ -1,6 +1,37 @@
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.Export
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 public section
 
@@ -35,8 +66,7 @@ theorem lock_effect_does_not_acquire_zeuge :
   decide +kernel
 
 @[expose] def atomicCtx : UCtx :=
-  { ctx with globs := { name := "A", ty := .int 0 2, init := 0, var := true,
-             atomic := true, shared := true } :: ctx.globs }
+  { ctx with globs := { name := "A", ty := .int 0 2, init := 0, var := true, atomic := true, shared := true } :: ctx.globs }
 
 theorem shared_atomic_precondition_refused_zeuge :
     refused (uZustand "S" [{ ordered with voraus := some (.bin "==" (.variable "A") (.lit 0)) }]
@@ -73,13 +103,10 @@ theorem unbound_capture_refused_zeuge :
   let generated ← (uGenerateTransition ctx.tabs ctx.globs state.name tr).toOption
   let args ← (uTransitionArguments tr relative).toOption
   let caller : UFn :=
-    { name := "caller", params := [], kinds := [], res := none, held := callerHeld,
-      puts := generated.puts, gputs := generated.gputs, gives := [],
-      body := [.call generated.name args], ret := .empty }
+    { name := "caller", params := [], kinds := [], res := none, held := callerHeld, puts := generated.puts, gputs := generated.gputs, gives := [], body := [.call generated.name args], ret := .empty }
   let fns := [caller, generated]
   let regiert ← (uRegiert fns [state]).toOption
-  pure (uMitBoden { tabs := ctx.tabs, locks := ctx.locks, globs := ctx.globs,
-                    fns := fns, zustaende := [state], regiert := regiert })
+  pure (uMitBoden { tabs := ctx.tabs, locks := ctx.locks, globs := ctx.globs, fns := fns, zustaende := [state], regiert := regiert })
 
 @[expose] def candidateCallLowers (tr : STrans) (callerHeld : List String := ["L"])
     (relative : Option UIdx := none) : Bool :=
@@ -105,8 +132,10 @@ theorem unbound_capture_refused_zeuge :
 
 theorem ordinary_call_lowering_zeuge : candidateCallLowers ordered = true := by decide +kernel
 
+/-- An out-of-range endpoint: the generated function is refused, so the unit does not lower
+    (the caller's call itself is ordinary). -/
 theorem out_of_range_endpoint_refused_zeuge :
-    candidateCallLowers { ordered with schritte := [(slot 0 "s", .lit 0, .lit 3)] } = false := by
+    generatedLowers { ordered with schritte := [(slot 0 "s", .lit 0, .lit 3)] } = false := by
   decide +kernel
 
 theorem ordinary_resource_check_retained_zeuge : candidateCallLowers ordered [] = false := by

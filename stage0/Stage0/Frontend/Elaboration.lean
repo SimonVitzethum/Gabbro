@@ -102,7 +102,7 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
   | .error e => .error e
   | .ok invs =>
   let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [],
-    res := none, fname := "transition", alias := typeEnv, lits := consts, globs }
+                                res := none, fname := "transition", alias := typeEnv, lits := consts, globs }
   match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
   | .error e => .error e
   | .ok zustaende =>
