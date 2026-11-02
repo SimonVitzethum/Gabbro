@@ -75,6 +75,31 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
   | call _ _ arguments hp hr resourceEq _ ih =>
       exact .cons (.call _ _ hp hr resourceEq arguments.rein) ih
 
+/-- Resolved aliases preserve the complete canonical type, including aggregates. -/
+inductive ConstSourceType (scope : ConstScope D) : STyp → Ty → Prop where
+  | named (found : (name, τ) ∈ scope.aliases) :
+      ConstSourceType scope (.atom name) τ
+  | boolean : ConstSourceType scope (.atom "bool") .bool
+
+/-- Parameter provenance also constructs the immutable lexical context. -/
+inductive ConstSourceParams (scope : ConstScope D) :
+    List (String × STyp) → (ts : List Ty) → ConstLocals ts → Prop where
+  | empty : ConstSourceParams scope [] [] []
+  | cons (typed : ConstSourceType scope source τ)
+      (tail : ConstSourceParams scope sources ts locals) :
+      ConstSourceParams scope ((name, source) :: sources) (τ :: ts)
+        (locals.extend name false τ)
+
+/-- Only predicate clauses belong to this source slice. -/
+inductive ConstSourceClauses (c : ConstProgram) (entry : ConstLocals Γ)
+    (exitLocals : ConstLocals Δ) :
+    List SKlausel → Expr c.D Γ [] .bool → Expr c.D Δ [] .bool → Prop where
+  | empty : ConstSourceClauses c entry exitLocals [] .tru .tru
+  | predicates (pre : ConstSourceExpr c entry sourcePre pre)
+      (post : ConstSourceExpr c exitLocals sourcePost post) :
+      ConstSourceClauses c entry exitLocals
+        [.needs sourcePre, .gives sourcePost] pre post
+
 /-- First source-signature slice: closed Boolean functions with absent clauses.
     More signatures require explicit typed parameter and clause derivations. -/
 inductive ConstElaborates (items : List SItemTief) :
@@ -91,11 +116,26 @@ inductive ConstElaborates (items : List SItemTief) :
       (ensures : c.emptyExit f ▸ c.P.ensures f = .tru)
       (body : ConstSourceEnd c [] source (c.emptyEntry f ▸ c.P.rumpf f)) :
       ConstElaborates items scope (.fnT sig source) f
+  | general {c : ConstProgram} {scope : ConstScope c.D} {sig : FnSig}
+      {source : SAnw} {f : c.D.Fn}
+      (member : SItemTief.fnT sig source ∈ items)
+      (kind : sig.art = "const")
+      (params : ConstSourceParams scope sig.params (c.D.params f) locals)
+      (result : sig.res = some sourceType)
+      (typedResult : c.D.erg f = some τ)
+      (resultType : ConstSourceType scope sourceType τ)
+      (reasons : sig.fehler = none)
+      (resolved : (sig.name, c.sourceId f) ∈ scope.declarations)
+      (clauses : ConstSourceClauses c locals exitLocals sig.klauseln
+        (c.emptyEntry f ▸ c.P.requires f) (c.emptyExit f ▸ c.P.ensures f))
+      (body : ConstSourceEnd c locals source (c.emptyEntry f ▸ c.P.rumpf f)) :
+      ConstElaborates items scope (.fnT sig source) f
 
  theorem ConstElaborates.rein
     (h : ConstElaborates items (c := c) scope item f) :
     ConstEnd c (c.emptyEntry f ▸ c.P.rumpf f) := by
   cases h with
   | function _ _ _ _ _ _ _ _ _ _ _ body => exact body.rein
+  | general _ _ _ _ _ _ _ _ _ body => exact body.rein
 
 end Gabbro.Grammatik.Parser
