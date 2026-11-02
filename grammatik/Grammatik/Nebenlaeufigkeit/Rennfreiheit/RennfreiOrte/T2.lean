@@ -247,14 +247,14 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         simp only [GRest.oR, blockOrteP, stmtOrteP, List.all_append, Bool.and_eq_true] at hC
         subst hs0
         exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ (by
-          simp only [List.all_append, Bool.and_eq_true]; exact hC.1.1)⟩
+          simp only [List.all_append, Bool.and_eq_true]; exact hC.1.1.1.1)⟩
     | rufCallInd l Γ Λ n p args hp hr rest ρ hhead hΛ s0 hs0 g hg hv rho hrho neu hneu =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         simp only [GRest.oR, endblockOrteP, stmtOrteP, List.all_append, Bool.and_eq_true] at hC
         subst hs0
         exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ (by
-          simp only [List.all_append, Bool.and_eq_true]; exact hC.1)⟩
+          simp only [List.all_append, Bool.and_eq_true]; exact hC.1.1.1)⟩
     | dannBindCallInd l Γ Λ Λ' Λ'' τ n p args he hp hr rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho
         neu hneu =>
         simp only [rufUpdateG_self]
@@ -262,7 +262,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         simp only [GRest.oR, blockOrteP, List.all_append, Bool.and_eq_true] at hC
         subst hs0
         exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ (by
-          simp only [List.all_append, Bool.and_eq_true]; exact hC.1.1)⟩
+          simp only [List.all_append, Bool.and_eq_true]; exact hC.1.1.1.1)⟩
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ hh g hfg rho hrho s0
         hs0 hΛ s1 hs1 v hv he neu hneu =>
         simp only [rufUpdateG_self]

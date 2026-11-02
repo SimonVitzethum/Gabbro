@@ -68,7 +68,9 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [execStmtHA, execStmtH, leseA_frei hA h1] <;> (try rfl)
   | .callInd p args _ hr, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
-      simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
+      have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h =>
+        hT x (List.mem_append_left _ (List.mem_append_left _ h))
+      simp only [execStmtHA, execStmtH, leseA_frei hA h1] <;> (try rfl)
   | .locks L _ body, hT, σ, ρ => by
       simp only [execStmtHA, execStmtH, Block.execHA_frei body hT] <;> (try rfl)
   | .breaking _ body, hT, σ, ρ => by

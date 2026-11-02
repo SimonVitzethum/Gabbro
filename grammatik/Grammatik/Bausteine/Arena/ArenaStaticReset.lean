@@ -80,7 +80,7 @@ theorem zeroAdmittingB_iff {τ : Ty} : zeroAdmittingB τ = true ↔ ZeroAdmittin
     simp only [zeroAdmittingB]
     constructor
     · intro _; exact .boolZero
-    · intro _; rfl
+    · intro _; trivial
   | opt n =>
     simp only [zeroAdmittingB]
     constructor
@@ -130,14 +130,22 @@ theorem zeroAdmittingB_iff {τ : Ty} : zeroAdmittingB τ = true ↔ ZeroAdmittin
     simp only [zeroAdmittingB]
     constructor
     · intro _; exact .strZero
-    · intro _; rfl
+    · intro _; trivial
 
 /-- The zero of a zero-admitting type, as a value. -/
 def zeroValue {F : Type} {passt : F → Nat → Bool} : (τ : Ty) → ZeroAdmitting τ → Val F passt τ
-  | _, .intZero h1 h2 => ⟨0, h1, h2⟩
-  | _, .boolZero => false
-  | _, .arrZero h' => fun _ => zeroValue _ h'
-  | _, .strZero => ⟨[], Nat.zero_le _⟩
+  | .int _ _, h => ⟨0, by cases h with | intZero h1 _ => exact h1, by cases h with | intZero _ h2 => exact h2⟩
+  | .bool, _ => false
+  | .arr τ _, h => fun _ => zeroValue τ (by cases h with | arrZero h' => exact h')
+  | .str _, _ => ⟨[], Nat.zero_le _⟩
+  | .opt _, h => absurd h (by intro h; cases h)
+  | .sum _, h => absurd h (by intro h; cases h)
+  | .why _, h => absurd h (by intro h; cases h)
+  | .never, h => absurd h (by intro h; cases h)
+  | .fl _ _, h => absurd h (by intro h; cases h)
+  | .fnptr _, h => absurd h (by intro h; cases h)
+  | .ptr _ _, h => absurd h (by intro h; cases h)
+  | .ref _, h => absurd h (by intro h; cases h)
 
 /-- The range store as a pure update: `zero` at every index of
     `[i, i + k)`, the old value everywhere else. -/
@@ -150,14 +158,14 @@ theorem resetFinW_get_in {α : Type} {n : Nat} (a : Fin n → α) (i k : Nat)
     (zero : α) (j : Fin n) (h1 : i ≤ j.val) (h2 : j.val < i + k) :
     resetFinW a i k zero j = zero := by
   have hc : i ≤ j.val ∧ j.val < i + k := ⟨h1, h2⟩
-  simp only [resetFinW, hc, ↓reduceIte]
+  unfold resetFinW; exact if_pos hc
 
 /-- An index outside the range keeps its old value, including padding and
     metadata outside the payload contract. -/
 theorem resetFinW_get_out {α : Type} {n : Nat} (a : Fin n → α) (i k : Nat)
     (zero : α) (j : Fin n) (h : ¬ (i ≤ j.val ∧ j.val < i + k)) :
     resetFinW a i k zero j = a j := by
-  simp only [resetFinW, h, ↓reduceIte]
+  unfold resetFinW; exact if_neg h
 
 /-- The checked reset derivation for one resolved static-array global: the
     global has array type `.arr elem len`, the range `[i, i + k)` is valid
@@ -167,8 +175,9 @@ theorem resetFinW_get_out {α : Type} {n : Nat} (a : Fin n → α) (i k : Nat)
 structure ResetRange (D : Deklaration) (g : D.Glob) where
   len : Nat
   elem : Ty
-  arr : D.gtyp g = .arr elem len
-  i k : Nat
+  arr : D.gtyp g = (.arr elem len)
+  i : Nat
+  k : Nat
   startOk : i ≤ len
   countOk : k ≤ len - i
   zero : ZeroAdmitting elem

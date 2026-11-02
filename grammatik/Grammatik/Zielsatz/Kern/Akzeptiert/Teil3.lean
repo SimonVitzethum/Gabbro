@@ -38,52 +38,52 @@ theorem resetAdmissionB_iff {g : D.Glob} :
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | bool =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | opt n =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | sum cs =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | why n =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | never =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | fl _ =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | fnptr s =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | ptr t rw =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | ref t =>
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
   | arr elem n =>
     simp only [resetAdmissionB, h, zeroAdmittingB_iff]
     constructor
@@ -95,7 +95,7 @@ theorem resetAdmissionB_iff {g : D.Glob} :
     simp only [resetAdmissionB, h]
     constructor
     · intro hc; exact absurd hc Bool.false_ne_true
-    · rintro ⟨_, _, harr, _⟩; exact Ty.noConfusion harr
+    · rintro ⟨_, _, harr, _⟩; rw [h] at harr; cases harr
 
 /-- The joint reset and page-return admission for one static global: the
     checked array derivation, the return binding, and a resident backing
