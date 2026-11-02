@@ -240,5 +240,14 @@ theorem capability_unbound_zeuge :
     typeMetadata (.ptr "guest" "r" (.atom "T")) = true ∧
     typeMetadata (.entry "main" none) = true := by
   exact ⟨rfl, rfl⟩
+/-- Required allocation remains refused: arenaAllocRequired has no connected
+    provider/storage-availability duty or source-to-IR lowering yet. -/
+theorem required_allocation_refused_zeuge :
+    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = true := by rfl
+
+/-- Owner production cannot be admitted while nonempty OwnerFlow is refused
+    by the canonical RufPasst.ownerReady escrow boundary. -/
+theorem owner_mint_type_refused_zeuge :
+    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 
 end Gabbro.Grammatik.Parser.ExportMetadata
