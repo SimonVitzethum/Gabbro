@@ -3,6 +3,7 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Stage0.Senke.Welt.WeltAt
+public import Stage0.Senke.Welt.AlignUp
 public import Mathlib.Basic.IsEmpty.Defs
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -77,8 +78,13 @@ theorem fieldless_table_layout (u : UProg) (t : Fin u.tabs.length)
 /-- The bytes of all tables. -/
 def tabsSz (u : UProg) : Nat := ((List.finRange u.tabs.length).map (tabSz u)).sum
 
-def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : Lay (declOf u) where
-  ga g := b + (((List.finRange u.globs.length).map (globSz u)).take g.val).sum
+/-- Alignment retained by source elaboration; absent placement imposes no padding. -/
+def globAlign (u : UProg) (g : Fin u.globs.length) : Nat :=
+  ((globAt u g).placement.map (·.ausrichtung)).getD 1
+
+def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
+    (align : Fin u.globs.length → Nat := fun _ => 1) : Lay (declOf u) where
+  ga g := alignUp (b + (((List.finRange u.globs.length).map (globSz u)).take g.val).sum) (align g)
   col t f := b + globsSz u + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
     (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum
   lo := b
