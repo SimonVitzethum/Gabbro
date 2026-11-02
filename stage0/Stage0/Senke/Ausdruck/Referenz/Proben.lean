@@ -191,7 +191,7 @@ theorem read_simulation_zeuge :
   have hc : (readCode.flatMap encII).length ≤ 4096 := by decide +kernel
   have hp := PreS.welt (pre readCode hc (by decide +kernel)) (Nat.le_refl _) (world_memory readCode hc) layout_in (by decide)
   refine ⟨lowering_zeuge.1, hp, ?_⟩
-  exact (lowE_ok world world (fun _ h => h) layout_in checks 6 readCode readTop lowering_zeuge.1
+  exact (lowE_ok (same := by intro _; rfl) world world (fun _ h => h) layout_in checks 6 readCode readTop lowering_zeuge.1
     (by decide +kernel) (memory readCode) 0 env hp).word trivial
 
 def value : Expr D Γ [] (.int 0 255) := .widen (by decide) (by decide) (.lit 73)
@@ -218,9 +218,9 @@ theorem write_simulation_zeuge :
     decide +kernel
   obtain ⟨m', hs, ha, hw'⟩ := slotStoreC_ok (σ := world) (kn := 1) made (by decide +kernel) (by decide)
     layout_in layout_dis (by decide) (PreS.welt hp (Nat.le_refl _) hw layout_in (by decide))
-    (fun m pc hp => lowE_ok world world (fun _ h => h) layout_in value 6 valueCode 7
+    (fun m pc hp => lowE_ok (same := by intro _; rfl) world world (fun _ h => h) layout_in value 6 valueCode 7
       (by decide +kernel) (by decide) m pc env hp)
-    (fun m pc hp => ((lowE_ok world world (fun _ h => h) layout_in second 7 [ci 2 7 4 0] 8
+    (fun m pc hp => ((lowE_ok (same := by intro _; rfl) world world (fun _ h => h) layout_in second 7 [ci 2 7 4 0] 8
       (by decide +kernel) (by decide) m pc env hp).word trivial).mono fun w hw => hw.1)
   refine ⟨m', hs, ha, envAt_agreeW hp.env ha (by decide) (by decide) (by decide) (by decide), hw', ?_, ?_⟩
   · obtain ⟨w, hr, he⟩ := ValueAt.cellWord (by show WordCompatible (.int 0 255); trivial) (hw'.1 () () 0 (by decide))

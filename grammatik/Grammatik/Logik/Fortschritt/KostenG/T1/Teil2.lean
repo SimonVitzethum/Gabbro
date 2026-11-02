@@ -48,8 +48,6 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
-  | _, _, .bindCallIndElse p args he hp hr err rest => by
-      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .narrowRequired _ _ _ rest => by
@@ -95,8 +93,6 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
-  | _, _, .bindCallIndElse p args he hp hr err rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .narrowRequired _ _ _ rest => by
@@ -117,7 +113,7 @@ theorem kostenBlock_armWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : 
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩ => by
       simp only [armWahlG, kostenArms]; omega
   | _, .cons b rest, ⟨⟨n + 1, h⟩, nutz⟩ => by
-      have ih := kostenBlock_armWahlG c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, by simpa using nutz⟩
+      have ih := kostenBlock_armWahlG c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       simp only [armWahlG, kostenArms]; omega
 
 theorem rufeB_armWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}

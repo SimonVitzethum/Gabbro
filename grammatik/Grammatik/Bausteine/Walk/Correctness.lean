@@ -227,9 +227,15 @@ theorem walkDescendOk {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
             exact ⟨_, _, rfl, fun nodev => hstab nodev⟩
         | some c =>
             simp only [hchild]
-            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (loop' := true) (fun x => .there (binding.renameEntry rename x)) (.var .here) ((binding.fullPath path).map (fun value => value.weaken)) _ _ (fun nodev => hstab nodev)
-            simp only [execBlock, hrec]
-            exact ⟨_, _, rfl, hc3⟩
+            obtain ⟨σ₃, ρ₃, hrec, hc3⟩ := ih (loop' := true)
+              (fun x => .there (binding.renameEntry rename x)) (.var .here)
+              ((binding.fullPath path).map (fun value => value.weaken))
+              ((σ.lese resources (code.descend (binding.renameEntry rename) (.var .here)).orte).lese
+                resources (Expr.prodGet (.var .here) binding.child).orte)
+              (.cons c ρ) (fun nodev => hstab nodev)
+            refine ⟨σ₃, ρ₃.tail, ?_, hc3⟩
+            simp only [execBlock]
+            rw [hrec]
       obtain ⟨σ', ρ', honOpt, hcOpt⟩ := honOpt
       simp only [execBlock, honOpt]
       exact ⟨_, _, rfl, hcOpt⟩
@@ -297,10 +303,15 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1) (.cons k ρ₁) =
           .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
+        let σread := (σ₁.lese resources (code.invariant rename 0 path).orte).lese resources
+          (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ))).orte
+        let ρread := Env.cons
+          (eval σread (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ)))
+            σread (.cons k ρ₁)) (.cons k ρ₁)
+        obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite σread ρread hstabBind
         simp only [WalkBinding.levelBody, execBlock]
-        obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite _ _ hstabBind
-        simp only [hnite]
-        exact ⟨_, _, rfl, hcnite⟩
+        refine ⟨σ₂, ρ₂.tail, ?_, hcnite⟩
+        rw [hnite]
       obtain ⟨σ', ρ', hstep, hcstep⟩ := hstep
       exact ⟨_, _, hstep, hcstep⟩
   | succ level ih =>
@@ -352,10 +363,15 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
                                 let read := state.lese resources invariant.orte
                                 (read, wahr? (eval read invariant read env))) σ₁ ρ₁).1) (.cons k ρ₁) =
           .ok σ' ρ' ∧ ∀ nodev, binding.entries σ' nodev = tbl := by
+        let σread := (σ₁.lese resources (code.invariant rename (level + 1) path).orte).lese resources
+          (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ))).orte
+        let ρread := Env.cons
+          (eval σread (binding.readEntry guard node.weaken (binding.levelIndex (Γ := Γ)))
+            σread (.cons k ρ₁)) (.cons k ρ₁)
+        obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite σread ρread hstabBind
         simp only [WalkBinding.levelBody, execBlock]
-        obtain ⟨σ₂, ρ₂, hnite, hcnite⟩ := hnite _ _ hstabBind
-        simp only [hnite]
-        exact ⟨_, _, rfl, hcnite⟩
+        refine ⟨σ₂, ρ₂.tail, ?_, hcnite⟩
+        rw [hnite]
       obtain ⟨σ', ρ', hstep, hcstep⟩ := hstep
       exact ⟨_, _, hstep, hcstep⟩
 

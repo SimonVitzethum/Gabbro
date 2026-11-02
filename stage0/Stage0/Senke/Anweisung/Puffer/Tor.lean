@@ -81,7 +81,7 @@ theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : 
   have hpU := hp.up (d' := s + 1) (by omega)
   have hq : PreS L m pc fp K (s + 1) ca ρ reserved := hpU.left.left.left.left.left
   have hpw := PreS.welt hq hks hWa hl (by omega)
-  obtain ⟨m1, s1, a1, hA1⟩ := lowR_ok σ σ (fun _ h => h) hW.lay args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
+  obtain ⟨m1, s1, a1, hA1⟩ := lowR_ok (same := rfl) σ σ (fun _ h => h) hW.lay args (s + 1) ca ta hca (by omega) (by omega) m pc ρ hpw
   have hW1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1.mono (Nat.zero_le _))
   -- the cells' words
   let ws : Nat → Runner.W := fun k => wAt m (L.elem t f k)

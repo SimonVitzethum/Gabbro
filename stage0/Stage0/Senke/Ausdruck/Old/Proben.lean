@@ -117,9 +117,11 @@ def slotExpr : Expr QuantProbe.D [] [] (.opt 4) :=
 
 theorem oldS_literal_zeuge : lowEns tableLayout frameLayout slotExpr 5 = some (readCode, 6) := by rfl
 
-theorem oldS_parameter_refused_zeuge :
-    lowEns tableLayout frameLayout (Expr.oldS (Γ := [.index 4]) QuantProbe.tab QuantProbe.field
-      (.var .here) QuantProbe.access) 6 = none := by rfl
+theorem oldS_parameter_zeuge :
+    lowEns tableLayout {frameLayout with snapshotWords := 4}
+      (Expr.oldS (Γ := [.index 4]) QuantProbe.tab QuantProbe.field
+        (.var .here) QuantProbe.access) 9 =
+      some ([ci 2 10 8 0] ++ selectFrameSpan 1 4 9 10 11, 12) := by rfl
 
 theorem multiple_occurrences_zeuge :
     EntrySnapshots.capture layout [.glob (), .glob ()] 4 =

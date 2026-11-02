@@ -25,7 +25,7 @@
 module
 
 public import Grammatik.Parser.Item.ElementTief
-public import Grammatik.Parser.Namen.Aufloesung.Teil1
+public import Grammatik.Parser.Namen.Gebunden
 
 @[expose] public section
 

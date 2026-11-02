@@ -57,9 +57,12 @@ def uSpecKlauseln (ctx : UCtx) (params : List String) (ks : List SKlausel) : Exc
       | .refs _ => .error "refines without one spec fn"
       | .keeps _ | .induc _ => .ok r
       | k => .ok (k :: r)) (.ok [])
-/-- Pass two: contracts and body of one function. -/
-def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
-    (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
+/-- The contracts of one head: `gives` (with `refines` inlined) and `needs`
+    beside `Held(..)` (which rides `kopf.held`, never a predicate). Shared by
+    functions (`elabFn`) and pointer types (`elabZeigerTyp`, C06): the two
+    lists are the normalised predicate lists the conformance check compares. -/
+def elabKlauseln (ctx : UCtx) (klauseln0 : List SKlausel) :
+    Except String (List UEns × List UEns) :=
   match (if ctx.specs.isEmpty then .ok klauseln0 else uSpecKlauseln ctx ctx.names klauseln0) with
   | .error e => .error e
   | .ok klauseln =>
@@ -73,7 +76,13 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
       | .needs e => some (uBool ctx e)
       | _ => none))) with
     | .error e => .error e
-    | .ok needs =>
+    | .ok needs => .ok (gives, needs)
+/-- Pass two: contracts and body of one function. -/
+def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
+    (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
+  match elabKlauseln ctx klauseln0 with
+  | .error e => .error e
+  | .ok (gives, needs) =>
     match koerper with
     | .block ss ende =>
       match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with

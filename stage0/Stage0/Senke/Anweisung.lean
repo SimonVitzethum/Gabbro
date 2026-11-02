@@ -112,7 +112,8 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         ((wordConstant (frei Γ reserved) nach).1 ++ ca.1 ++ [stC ((frei Γ reserved))])),
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
-  | _, Γ, _, _, .traverse t inv body, reserved =>
+  | _, Γ, _, _, .traverse t inv body, reserved
+  | _, Γ, _, _, .consumeTraverse t _ _ inv _ _ body, reserved => /- C11: lowers today's canonical fixed sweep; selection and measure are unused by execStmt. -/
     if inW (D.count t) (D.count t) then do
       let ci' ← lowE (reserved := reserved) L inv ((frei Γ reserved) + 1)
       let cb ← lowB (reserved := reserved) passes A L layout ens ((frei Γ reserved) :: pr) (48, 0) body
@@ -172,7 +173,6 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
       pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
-  | _, _, _, _, .consumeTraverse .., reserved => none
   -- C11 execStmt still ignores R.scopes: scope unwinding and invariant
   -- restoration are OPEN in Kern/Semantik/Semantik/T2/Teil2.lean.
   -- Keep both scoped returns refused until the canonical semantics is complete.

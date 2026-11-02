@@ -5,6 +5,7 @@ public import Grammatik.Kern.Syntax.Typen.ProduktZeuge
 public import Grammatik.Bausteine.Walk.Abbildung
 public import Grammatik.Bausteine.Walk.AbbildungZeuge
 public import Grammatik.Bausteine.Walk.BindingZeuge
+public import Grammatik.Bausteine.Walk.Correctness
 public import Grammatik.Bausteine.Walk.CorrectnessEnum
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
@@ -353,6 +354,7 @@ public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
 public import Grammatik.Logik.Ruf.RufLogikZeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Zeuge
+public import Grammatik.Logik.Ruf.Schnittstellen.Bruecke
 public import Grammatik.Logik.Ruf.Schnittstellen.SchnittstellenZeugen
 public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
 public import Grammatik.Logik.Ruf.Schnittstellen.Pruefung

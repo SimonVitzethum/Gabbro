@@ -201,7 +201,7 @@ theorem anw_bindElse (x : String) (hx : x ≠ "mut") (ty : Option STyp) (e : SEx
   have hE := ausdruck e he (.wort "else" :: .zeichen "(" :: nameTok f :: .zeichen ")" :: (druckAnw b ++ rest))
     (F' + 1) rfl rfl rfl (by omega)
   have hB := hb rest (F' + 1) (by simp only [fbA]; omega)
-  simp only [parseLetExpr, bind, Except.bind, hE, nimmName, nameText_nameTok, fordereZeichen, strEq_self,
+  simp only [parseLetExpr, strEq_semi_frage, Bool.false_eq_true, bind, Except.bind, hE, nimmName, nameText_nameTok, fordereZeichen, strEq_self,
   ↓reduceIte, hB, pure, Except.pure]
 
 /-- A raw text inside braces (`awaits`/`publishes` payloads). -/
@@ -235,6 +235,6 @@ theorem anw_await (n : String) (hx : n ≠ "mut") (ty : Option STyp) (q : SExpr)
   have hN := nimmBisZeichen_roh "}" ts (.zeichen ";" :: rest)
     (fun t ht => ⟨(hts t ht).1, fun e => (hts t ht).2 (Or.inl e), fun e => (hts t ht).2 (Or.inr e),
       fun e => (hts t ht).2 (Or.inr e)⟩)
-  simp only [parseLetExpr, bind, Except.bind, hQ, hN, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
+  simp only [parseLetExpr, strEq_semi_frage, Bool.false_eq_true, bind, Except.bind, hQ, hN, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
 
 end Gabbro.Grammatik.Parser

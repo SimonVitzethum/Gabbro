@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.UebersetzeAllg.Konform
 
 @[expose] public section
 
@@ -13,18 +14,6 @@ open Gabbro.Grammatik.Parser.Uebersetze
 
 /-! ## Declaration data looked up from `UProg` -/
 
-/-- The table at an index. -/
-def tabAt (u : UProg) (t : Fin u.tabs.length) : UTab :=
-  u.tabs.get t
-
-/-- The lock at an index. -/
-def lockAt (u : UProg) (l : Fin u.locks.length) : ULock :=
-  u.locks.get l
-
-/-- The function at an index. -/
-def fnAt (u : UProg) (f : Fin u.fns.length) : UFn :=
-  u.fns.get f
-
 /-- The field count of a table. -/
 def fieldCount (u : UProg) (t : Fin u.tabs.length) : Nat :=
   (tabAt u t).cols.length
@@ -35,15 +24,6 @@ def tabIdx : (tabs : List UTab) → (n : String) → Except String (Fin tabs.len
   | t :: rest, n =>
     if t.name == n then .ok 0
     else match tabIdx rest n with
-      | .error e => .error e
-      | .ok j => .ok j.succ
-
-/-- A lock index by name. -/
-def lockIdx : (locks : List ULock) → (n : String) → Except String (Fin locks.length)
-  | [], n => .error ("lock unknown: " ++ n)
-  | l :: rest, n =>
-    if l.name == n then .ok 0
-    else match lockIdx rest n with
       | .error e => .error e
       | .ok j => .ok j.succ
 
@@ -106,8 +86,6 @@ def needsAt (u : UProg) (t : Fin u.tabs.length) :
     if (lockAt u l).guard.any (· == (tabAt u t).name) then some (.inl l)
     else none
 
-def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
-
 /-- The guards of a static: the locks whose `protects` list names it (`gbraucht`). -/
 def gneedsAt (u : UProg) (g : Fin u.globs.length) :
     List (Fin u.locks.length ⊕ (Empty × Nat)) :=
@@ -126,11 +104,6 @@ def uaxIdx : (xs : List UAx) → (n : String) → Except String (Fin xs.length)
     else match uaxIdx rest n with
       | .error e => .error e
       | .ok j => .ok j.succ
-
-/-- The held locks of a function, as indices (names the declaration
-    does not know are dropped; `elabU` output never has them). -/
-def heldAt (u : UProg) (f : UFn) : List (Fin u.locks.length) :=
-  f.held.filterMap fun n => (lockIdx u.locks n).toOption
 
 /-- A static by name. -/
 def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.length)
@@ -178,14 +151,6 @@ def rtraegerAt (u : UProg) (r : Fin u.regs.length) : List (Fin u.tabs.length ⊕
     | some t => some (.inl t)
     | none => (globIdx u.globs n).toOption.map .inr
 
-/-- The write flag of a function at a static. -/
-def writesGAt (u : UProg) (f : UFn) (g : Fin u.globs.length) : Bool :=
-  f.gputs.any (· == (globAt u g).name)
-
-/-- The write flag of a function at a table. -/
-def writesAt (u : UProg) (f : UFn) (t : Fin u.tabs.length) : Bool :=
-  f.puts.any (· == (tabAt u t).name)
-
 /-- The invariant at an index. -/
 def invAt (u : UProg) (i : Fin u.invs.length) : UInv := u.invs.get i
 
@@ -220,90 +185,9 @@ theorem traegerD_of_ok (u : UProg) (i : Fin u.invs.length) (h : invOkB u i = tru
   unfold traegerD
   rw [if_pos h]
 
-/-- The signature of an elaborated function. -/
-def mkSig (u : UProg) (f : UFn) :
-    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
-  params := f.params.map (·.2)
-  erg := f.ergTy
-  gruende := f.gruende
-  haelt := heldAt u f
-  schreibt := writesAt u f
-  gschreibt := writesGAt u f
-  konsumiert := []
-  produziert := []
-  boden := f.boden
-
-/-- The dummy signature: no parameters, no rights. -/
-def dummySig (u : UProg) :
-    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
-  params := []
-  erg := none
-  gruende := 0
-  haelt := []
-  schreibt := fun _ => false
-  gschreibt := fun _ => false
-  konsumiert := []
-  produziert := []
-
-/-- The signatures of the unit: the functions', then the pointer types' (`UProg.ptrs`). -/
-def sigFns (u : UProg) : List UFn := u.fns ++ u.ptrs
-
-/-- The `n`th signature, or the dummy (an out-of-range number names
-    no function and no pointer type). -/
-def sigAt (u : UProg) (n : Nat) :
-    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty :=
-  if h : n < (sigFns u).length then mkSig u ((sigFns u).get ⟨n, h⟩) else dummySig u
-
-/-- **Conformance, decided** (`SigPasst` over the finite carriers of an elaborated unit): the first
-    signature fits the second. -/
-def sigPasstB {a b c : Nat} (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin b) (Fin c) Empty) : Bool :=
-  decide (S.params = T.params) && decide (S.erg = T.erg) && decide (S.gruende = T.gruende) &&
-  (List.finRange a).all (fun t => !S.schreibt t || T.schreibt t) &&
-  (List.finRange b).all (fun g => !S.gschreibt g || T.gschreibt g) &&
-  decide (S.konsumiert = T.konsumiert) && decide (S.produziert = T.produziert) &&
-  S.haelt.all (fun L => decide (L ∈ T.haelt)) &&
-  T.haelt.all (fun L => decide (L ∈ S.haelt) ||
-    (match S.boden with | some c => decide (rang L < c) | none => false)) &&
-  (match T.boden with
-    | none => true
-    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false)
-
-theorem sigPasstB_ok {a b c : Nat} {rang : Fin c → Int} {S T : Signatur (Fin a) (Fin b) (Fin c) Empty}
-    (h : sigPasstB rang S T = true) : SigPasst rang S T := by
-  unfold sigPasstB at h
-  simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨hp, he⟩, hg⟩, hw⟩, hgw⟩, hk⟩, hpr⟩, hh⟩, hx⟩, hb⟩ := h
-  refine ⟨hp, he, hg, fun t ht => ?_, fun g' hg' => ?_, hk, hpr, fun L hL => hh L hL, fun L hL hn => ?_,
-    fun c hc => ?_, (OwnerFlow.empty_of_empty S.owner).trans (OwnerFlow.empty_of_empty T.owner).symm⟩
-  · rcases hw t (List.mem_finRange t) with h1 | h1
-    · rw [ht] at h1; cases h1
-    · exact h1
-  · rcases hgw g' (List.mem_finRange g') with h1 | h1
-    · rw [hg'] at h1; cases h1
-    · exact h1
-  · rcases hx L hL with h1 | h1
-    · exact absurd h1 hn
-    · revert h1
-      cases hS : S.boden with
-      | none => intro h1; cases h1
-      | some c => intro h1; exact ⟨c, rfl, of_decide_eq_true h1⟩
-  · rw [hc] at hb
-    revert hb
-    cases hS : S.boden with
-    | none => intro h1; cases h1
-    | some c' => intro h1; exact ⟨c', rfl, of_decide_eq_true h1⟩
-
-/-- `f` conforms to the signature number `n` of the unit: a live number, and the signatures fit. -/
-def passtAt (u : UProg) (f : Fin u.fns.length) (n : Nat) : Bool :=
-  decide (n < (sigFns u).length) && sigPasstB (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n)
-
-theorem passtAt_ok (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f n = true) :
-    SigPasst (fun l => (lockAt u l).rank) (sigAt u f.val) (sigAt u n) :=
-  sigPasstB_ok (Bool.and_eq_true_iff.mp h).2
-
-theorem passtAt_lt (u : UProg) (f : Fin u.fns.length) (n : Nat) (h : passtAt u f n = true) :
-    n < (sigFns u).length :=
-  of_decide_eq_true (Bool.and_eq_true_iff.mp h).1
+/-- Signatures and conformance (`mkSig` through `passtAt_lt`) live in `Konform`
+    (C06, 2026-11-02, pure move): this file keeps the carrier/field/foreign
+    lookups, the invariant bridge and `declOf`. -/
 
 /-- `invarianten_gehalten` for the declaration of every `UProg`. -/
 theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
@@ -397,7 +281,7 @@ def declOf (u : UProg) : Deklaration where
   sig := fun f => f.val
   sigNr := sigAt u
   passt := passtAt u
-  passt_ok := passtAt_ok u
+  passt_ok := fun f n h => (passtAt_ok u f n h).1
   eigner_nie_erzeugt :=
     fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
   Inv := Fin u.invs.length

@@ -54,7 +54,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
       have hks := hW.ks
       have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)
       obtain ⟨m1, st, a1, w, hw, hen⟩ := floatRangeL_ok σr σr e
-        (fun d c top h hK m pc hp => lowE_ok σr σr (fun _ h => h) hW.lay e d c top h hK m pc ρ hp |>.word trivial)
+        (fun d c top h hK m pc hp => lowE_ok (same := by intro _; rfl) σr σr (fun _ h => h) hW.lay e d c top h hK m pc ρ hp |>.word trivial)
         hl hh hcc (by omega) hpw
       exact ⟨m1, st, Agree.widen a1 hks, w, hw, by simpa only [bool_word] using hen⟩
     · intro hb m' pc' hp' _ hu' hk' hw'
@@ -72,7 +72,7 @@ theorem blockFloatNarrow_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : N
         have hvx := floatPasst_x hv
         refine bindValue_ok (L := L) (τ := .fl low' high') (v := v) hW hlo hlo0 hlo2 hpr (by omega) ?_ ?_ hp' hu' hk' hw'
         · intro m pc hp
-          exact (lowE_ok σr σr (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp).mono
+          exact (lowE_ok (same := by intro _; rfl) σr σr (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp).mono
             fun m hen => ⟨by simpa only [ValueValid, hvx] using hen.1, by simpa only [encodeWords, hvx] using hen.2⟩
         · intro m pc hp hu hk hw
           exact ihRest (ex := ex) cr tr hr (by omega) (by omega) hW m pc σr _ hp hlo

@@ -37,6 +37,7 @@ import all Init.Data.String.ToSlice
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest1
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Measures.Export
+public import Grammatik.Parser.Elab.UebersetzeAllg.Konform
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Gabbro.Grammatik.Parser.Uebersetze
@@ -91,17 +92,121 @@ theorem reqOf_leer (u : UProg) (R : ∀ f : Fin u.fns.length, ReqTy u f) (f : Fi
   unfold reqOf
   rw [if_pos h]
 
+/-! ## Pointer-interface contracts (C06, O43)
+
+  `lowerPtrAt` mirrors `lowerFnPlain`'s contract part in the head's own
+  context: the `needs` as the pre, the `gives` as the post (with the result
+  context), so the lowered `CallContract` states exactly what the source
+  type wrote. Out-of-range numbers carry the trivial contract (like
+  `dummySig`, whose head has empty `needs`/`gives`). -/
+
+/-- The parameter context of the head behind signature number `n`. -/
+def ptrCtxOf (u : UProg) (n : Nat) : Ctx :=
+  (sigAt u n).params
+
+/-- The held resources of a pointer interface: the signature beginning. -/
+def ptrResOf (u : UProg) (n : Nat) : List (Res (declOf u)) :=
+  Signatur.anfang (declOf u) (sigAt u n)
+
+/-- The result type behind `n` read off the head: for a live number the
+    head's `ergTy`, else `none` (like `dummySig`). -/
+theorem ptrErg_eq (u : UProg) (n : Nat) :
+    (sigFnAt u n).ergTy = (sigAt u n).erg := by
+  unfold sigFnAt sigAt
+  by_cases h : n < (sigFns u).length
+  · rw [dif_pos h]
+    rfl
+  · rw [dif_neg h]
+    rfl
+
+/-- Beginning and end agree on every pointer signature: no marks travel
+    (`konsumiert`/`produziert` are `[]`, the owner is empty), so the
+    lowered pre and post share one resource list. -/
+theorem ptrAnfangEnde (u : UProg) (n : Nat) :
+    Signatur.anfang (declOf u) ((declOf u).sigNr n) =
+      (Vertrag.vonSig (declOf u) ((declOf u).sigNr n)).ende := by
+  show Signatur.anfang (declOf u) (sigAt u n) =
+    (Vertrag.vonSig (declOf u) (sigAt u n)).ende
+  have hk : (sigAt u n).konsumiert = [] := by
+    unfold sigAt
+    by_cases h : n < (sigFns u).length
+    · rw [dif_pos h]
+      rfl
+    · rw [dif_neg h]
+      rfl
+  have hpr : (sigAt u n).produziert = [] := by
+    unfold sigAt
+    by_cases h : n < (sigFns u).length
+    · rw [dif_pos h]
+      rfl
+    · rw [dif_neg h]
+      rfl
+  unfold Signatur.anfang Vertrag.ende Vertrag.vonSig Signatur.inputMarks
+    Signatur.outputMarks
+  rw [OwnerFlow.empty_of_empty (sigAt u n).owner]
+  rw [hk, hpr]
+  rfl
+
+/-- One pointer interface, lowered: its `needs` as the pre, its `gives` as
+    the post, mirroring `lowerFnPlain`'s contract part. -/
+def lowerPtrAt (u : UProg) (n : Nat) :
+    Except String (CallContract (declOf u) ((declOf u).sigNr n)) :=
+  match lowEnsList u (ptrCtxOf u n) (ptrResOf u n) (sigFnAt u n) none
+      (sigFnAt u n).needs with
+  | .error e => .error e
+  | .ok r0 =>
+  match lowEnsList u (ErgCtx (ptrCtxOf u n) ((sigAt u n).erg)) (ptrResOf u n)
+      (sigFnAt u n) ((sigFnAt u n).ergTy) (sigFnAt u n).gives with
+  | .error e => .error e
+  | .ok e0 =>
+    have r1 : Expr (declOf u) ((declOf u).sigNr n).params
+        (Signatur.anfang (declOf u) ((declOf u).sigNr n)) .bool := r0
+    have e1 : Expr (declOf u)
+        (ErgCtx ((declOf u).sigNr n).params ((declOf u).sigNr n).erg)
+        (Vertrag.vonSig (declOf u) ((declOf u).sigNr n)).ende .bool := by
+      rw [← ptrAnfangEnde u n]
+      exact e0
+    .ok { pre := r1, post := e1 }
+
+/-- Per-pair conformance gate (C06, O43): every admitted function-to-signature
+    pair also passes contract inclusion. Since `passtAt` conjoins
+    `vertragPasstAt`, this holds wherever `passtAt` holds; it replaces the
+    former whole-unit `ptrVertragGebunden` refusal below: a nontrivial pointer
+    contract is lowered, and only a non-conforming pair is refused, at its
+    value site (`bindFnref`). -/
+def ptrPaarGate (u : UProg) : Bool :=
+  (List.finRange u.fns.length).all fun f =>
+    (List.range (sigFns u).length).all fun n =>
+      !(passtAt u f n) || vertragPasstAt u f n
+
+/-- Every pointer contract lowers (no silent `trivial`). -/
+def ptrLowerOk (u : UProg) : Bool :=
+  (List.range (sigFns u).length).all fun n => (lowerPtrAt u n).isOk
+
+/-- The lowering gate: per-pair inclusion plus successful contract lowering. -/
+def ptrGate (u : UProg) : Bool :=
+  ptrPaarGate u && ptrLowerOk u
+
+/-- The lowered pointer contract, or `trivial` where lowering failed (the
+    gate `ptrGate` refuses such units, so the fallback never silences a bad
+    contract). -/
+def ptrVertragOf (u : UProg) (n : Nat) :
+    CallContract (declOf u) ((declOf u).sigNr n) :=
+  (lowerPtrAt u n).toOption.getD (CallContract.trivial (declOf u) ((declOf u).sigNr n))
+
 /-- Assemble lowered functions to a program (no contract
     content in `requires`, per-function `ensures` and bodies). -/
 def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
     (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f)
-    (I : ∀ i : Fin u.invs.length, InvTy u i) :
+    (I : ∀ i : Fin u.invs.length, InvTy u i)
+    (Pt : ∀ n, CallContract (declOf u) ((declOf u).sigNr n)) :
     Programm (declOf u) where
   invariante := I
   requires := fun f => reqOf u R f
   ensures := fun f => E f
   rumpf := fun f => B f
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
+  ptrVertrag := Pt
 
 /-- The function of no parameter in whose scope an invariant is read. -/
 def leerFn : UFn :=
@@ -180,14 +285,17 @@ def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i =
 
 /-- Pointer interfaces carry no lowered contract until the full O43 duty is
     bound (candidate table, structural `SigPasst`, interface caller duty and
-    `PtrVerfeinert` in `LogikPflicht`). A nontrivial `needs`/`gives` on a
-    pointer type is an explicit refusal here, never a silent `trivial`: the
-    export admits the target only where the full duty is proved. -/
+    `PtrVerfeinert` in `LogikPflicht`). SUPERSEDED (C06, O43): `lowerAllg`
+    now lowers every pointer contract (`lowerPtrAt`) under the per-pair gate
+    `ptrGate`; this whole-unit emptiness check is kept only for reference and
+    is no longer consulted. -/
 def ptrVertragGebunden (u : UProg) : Bool :=
   u.ptrs.all fun p => p.needs.isEmpty && p.gives.isEmpty
 
 /-- The generically lowered program: every function of the
-    elaborated program over the declaration built from it. -/
+    elaborated program over the declaration built from it, with every
+    pointer-interface contract lowered (`lowerPtrAt`) under the per-pair gate
+    `ptrGate` (a non-conforming pair is refused at its value site). -/
 def lowerAllg (u : UProg) :
     Except String (Programm (declOf u) × List (declOf u).Fn) :=
   match hI : lowerInvs u (List.finRange u.invs.length) with
@@ -198,15 +306,15 @@ def lowerAllg (u : UProg) :
   match h : lowerEach u (List.finRange u.fns.length) with
   | .error e => .error e
   | .ok _ =>
-    if ptrVertragGebunden u then
+    if ptrGate u then
     have w : ∀ f : Fin u.fns.length,
         ∃ v, lowerFnAt u f = .ok v := fun f =>
       lowerEach_all_ok u (List.finRange u.fns.length) f
         (List.mem_finRange f) h
     Measures.checkedProgram u (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
       (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
-      (fun i => lowerInvGut u i (wI i)))
-    else .error "contract on a function-pointer type without bound O43 duty"
+      (fun i => lowerInvGut u i (wI i)) (fun n => ptrVertragOf u n))
+    else .error "function does not conform to the pointer type"
 
 /-- The lowered invariant at an index known good: `U003` holds and it reads only declared carriers. -/
 theorem lowerInvGut_facts (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i = .ok v) :

@@ -283,7 +283,7 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .awaits _ _ _ _ _ rest => 2 + kostenSonst c pa rest
   | .bindCallInd p args _ _ _ rest => 2 + kostenExpr p + kostenArgs args + kostenSonst c pa rest
   | .bindCallIndElse p args _ _ _ err rest =>
-      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 1) (kostenSonst c pa rest + 1)
+      2 + kostenExpr p + kostenArgs args + max (kostenSonst c pa err + 2) (kostenSonst c pa rest + 1)
   | .narrow e _ _ sonst rest => 2 + kostenExpr e + max (kostenSonst c pa sonst + 1) (kostenSonst c pa rest + 1)
   | .narrowRequired e _ _ rest => 2 + kostenExpr e + (kostenSonst c pa rest + 1)
   | .exchange _ neu _ _ rest => 2 + kostenExpr neu + kostenSonst c pa rest

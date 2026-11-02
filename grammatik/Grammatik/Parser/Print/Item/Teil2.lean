@@ -115,7 +115,7 @@ def druckItem : SItemTief → List Token
         | ss => [.zeichen "["] ++ druckAnwListe ss ++ [.zeichen "]"]) ++
       (match b with
         | some blk => druckAnw blk
-        | none => [.zeichen ";"])
+        | none => [.zeichen ";"]))
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++
       (match a with

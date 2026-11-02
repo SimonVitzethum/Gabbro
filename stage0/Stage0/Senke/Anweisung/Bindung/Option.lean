@@ -66,7 +66,7 @@ theorem onOption_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D �
         ([ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)))))) ρ := by simpa [List.append_assoc] using hp
     have hks := hW.ks
     have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ o.orte) (σ.lese Λ o.orte) (fun _ h => h) hW.lay o
+    obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (same := by intro _; rfl) (fp := fp) (K := Ks) (σ.lese Λ o.orte) (σ.lese Λ o.orte) (fun _ h => h) hW.lay o
       (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word hn
     have ae := Agree.widen a1s hks
     have q1 := hq.next ae (Nat.le_refl _) (by omega)

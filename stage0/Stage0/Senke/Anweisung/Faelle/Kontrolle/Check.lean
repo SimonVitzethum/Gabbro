@@ -58,7 +58,7 @@ theorem blockCheck_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
   · intro hpc
     have hks := hW.ks
     have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte)
+    obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (same := by intro _; rfl) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte)
       (fun _ h => h) hW.lay cnd (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word trivial
     exact ⟨m1, st, Agree.widen a1 hks, w, hw, hen⟩
   · intro _ m' pc' hp' _ hu' hk' hw'

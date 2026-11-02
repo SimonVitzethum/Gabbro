@@ -53,7 +53,7 @@ theorem simulation_zeuge [Kern] :
   have hp := pre
   refine ⟨by decide +kernel, by decide +kernel, by decide +kernel, hp, ?_⟩
   have packed : Ok memory 0 65536 64 4 Case.code (· = 10753) :=
-    (lowE_ok world world (W := fun _ => True) (fun m _ => hw m) hLay
+    (lowE_ok (same := by intro _; rfl) world world (W := fun _ => True) (fun m _ => hw m) hLay
       Case.expr 4 Case.code Case.top hl (by decide +kernel) memory 0 .nil hp.left
       |>.word (wordCompatB_sound _ (by decide +kernel))).mono
       (fun _ hn => hn.2.trans (by decide +kernel))

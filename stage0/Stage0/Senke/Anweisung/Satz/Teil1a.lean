@@ -169,7 +169,7 @@ theorem lowS_ok_assignGlob {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   have hWaE : WeltAt m L σE := by rw [← hσE]; exact hWa
   obtain ⟨m', s', a', hw'⟩ := globalStoreC_ok (σ := σE) hc (by omega) hW.lay hW.dis hW.lo
     (PreS.welt hp hks hWaE hW.lay hW.lo)
-    (fun m pc hp => lowE_ok σE σE (fun _ h => h) hW.lay e _ ce te he (by have := lowE_top e _ _ _ he; omega) m pc ρ hp)
+    (fun m pc hp => lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay e _ ce te he (by have := lowE_top e _ _ _ he; omega) m pc ρ hp)
   exact ⟨m', s', (a'.widen hks).mono hlo2,
     envAt_agreeW hp.env a' hW.lo (by have := hp.frame.room; omega) (Nat.le_refl _) (by omega), hw',
     keeps_of_agreeW hW (a'.widen hks) hpr (by omega)⟩
@@ -216,7 +216,7 @@ theorem lowS_ok_publish {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R
     have htop := lowE_top e _ _ _ he
     have hin := hW.lay.2.1 g
     obtain ⟨m', s', a', en, hw'⟩ := store_ok (σ := σ.lese Λ e.orte) hp hW hWa (by omega)
-      (fun m pc hp => (lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp).word
+      (fun m pc hp => (lowE_ok (same := by intro _; rfl) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hp).word
         (aggregateFits_compat hl.2))
       (fun m pc hp => (const_ok hp hl.1 (by omega)).mono fun x hx => hx.trans (BitVec.ofInt_natCast _ _))
       ⟨hin.1, by have := hin.2; rw [aggregateFits_width hl.2] at this; omega⟩

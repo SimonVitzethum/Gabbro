@@ -6,6 +6,8 @@ public import Stage0.Senke.Ausdruck.Quant.Selection
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Store
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -20,7 +22,7 @@ theorem singleton_index (i : Zahl 0 ((1 : Int) - 1)) : i.fin (n := 1) = ⟨0, by
   simp only [Zahl.fin]
   omega
 
-theorem arrNil_ok (h : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.arrNil (τ := τ)) d = some (c, top))
+theorem arrNil_ok (h : lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.arrNil (τ := τ)) d = some (c, top))
     (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.arr τ 0) (eval σ₀ (Expr.arrNil (Λ := Λ)) σ ρ) := by
   simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
@@ -29,12 +31,12 @@ theorem arrNil_ok (h : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.arr
   exact (const_ok hp (by decide) (by omega)).mono fun w hw => by simpa [Enc] using hw
 
 theorem arrCons_ok {n : Nat} (a : Expr D Γ Λ τ) (rest : Expr D Γ Λ (.arr τ n))
-    (ih : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ih : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca τ (eval σ₀ a σ ρ))
-    (iht : ∀ ca ta, lowE L (reserved := reserved) rest (d + valueWords τ) = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iht : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + valueWords τ) ca ρ W reserved →
         ValueOk L m pc fp K (d + valueWords τ) ca (.arr τ n) (eval σ₀ rest σ ρ))
-    (h : lowE L (reserved := reserved) (.arrCons a rest) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.arrCons a rest) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.arr τ (n + 1)) (eval σ₀ (.arrCons a rest) σ ρ) := by
   simp only [lowE_eqs] at h
@@ -61,12 +63,12 @@ theorem arrCons_ok {n : Nat} (a : Expr D Γ Λ τ) (rest : Expr D Γ Λ (.arr τ
       exact ⟨head2.2, by simpa only [encodeWords_length] using tail.2⟩
 
 theorem arrGet_ok {n : Nat} (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n))
-    (ih : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ih : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.arr τ n) (eval σ₀ a σ ρ))
-    (ihi : ∀ ca ta, lowE L (reserved := reserved) i (d + valueWords (.arr τ n)) = some (ca, ta) →
+    (ihi : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (.arr τ n)) = some (ca, ta) →
       ta ≤ K → ∀ m pc, Pre L m pc fp K (d + valueWords (.arr τ n)) ca ρ W reserved →
         ValueOk L m pc fp K (d + valueWords (.arr τ n)) ca (.index n) (eval σ₀ i σ ρ))
-    (h : lowE L (reserved := reserved) (.arrGet a i) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.arrGet a i) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c τ (eval σ₀ (.arrGet a i) σ ρ) := by
   simp only [lowE_eqs] at h
@@ -121,17 +123,17 @@ theorem arrGet_ok {n : Nat} (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.i
     · cases h
 
 theorem arrSet_ok {n : Nat} (a : Expr D Γ Λ (.arr τ n)) (i : Expr D Γ Λ (.index n)) (v : Expr D Γ Λ τ)
-    (ih : ∀ ca ta, lowE L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ih : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca τ (eval σ₀ v σ ρ))
-    (iha : ∀ ca ta, lowE L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iha : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) a d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.arr τ n) (eval σ₀ a σ ρ))
-    (ihv : ∀ ca ta, lowE L (reserved := reserved) v (d + valueWords (.arr τ n)) = some (ca, ta) → ta ≤ K →
+    (ihv : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) v (d + valueWords (.arr τ n)) = some (ca, ta) → ta ≤ K →
       ∀ m pc, Pre L m pc fp K (d + valueWords (.arr τ n)) ca ρ W reserved →
         ValueOk L m pc fp K (d + valueWords (.arr τ n)) ca τ (eval σ₀ v σ ρ))
-    (ihi : ∀ ca ta, lowE L (reserved := reserved) i (d + valueWords (.arr τ n) + valueWords τ) = some (ca, ta) →
+    (ihi : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (.arr τ n) + valueWords τ) = some (ca, ta) →
       ta ≤ K → ∀ m pc, Pre L m pc fp K (d + valueWords (.arr τ n) + valueWords τ) ca ρ W reserved →
         ValueOk L m pc fp K (d + valueWords (.arr τ n) + valueWords τ) ca (.index n) (eval σ₀ i σ ρ))
-    (h : lowE L (reserved := reserved) (.arrSet a i v) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.arrSet a i v) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.arr τ n) (eval σ₀ (.arrSet a i v) σ ρ) := by
   simp only [lowE_eqs] at h
