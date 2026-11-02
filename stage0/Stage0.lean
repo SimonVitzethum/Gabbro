@@ -92,3 +92,6 @@ public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 @[expose] public section
+public import Stage0.Zeugen.WriteOnlyCapabilityWitness
+public import Stage0.Zeugen.RightsUnionWitness
+public import Stage0.Zeugen.LibraryBindWitness
