@@ -923,4 +923,86 @@ theorem heldB_ruf {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ
     obtain ⟨c'', hc'', hle'⟩ := hp.hb c' hc'
     exact ⟨c'', hc'', by omega⟩
 
+/-! #### The residual-held invariant (C11 call-branch widening)
+
+    A releasing handler outcome (`GutRetV`) is stated over the CALLEE residual
+    and floor (`S.haelt`/`S.boden`), but the caller continues over its OWN
+    (`V.haelt`/`V.boden`). The widening (`widen_resid`) needs one link: every
+    lock the caller residual requires is statically named in the caller frame
+    (`ResidHeld`), so each released lock either hits the callee spare or is a
+    caller extra below the callee floor (`hx` + rank). Established once at
+    function entry (`residHeld_anfang`) and preserved over steps
+    (`ResidHeld.of_iff`, via the existing `held_iff` facts). -/
+
+/-- **The residual is held (named) in the caller frame**: every lock the
+    contract residual requires (`V.haelt`) is statically named in the current
+    `Λ` — hence held wherever `HeldB` holds. -/
+def ResidHeld (V : Vertrag D) (Λ : List (Res D)) : Prop :=
+  ∀ L ∈ V.haelt, Res.held L ∈ Λ
+
+/-- Preservation over steps: steps keep the held set (`held_iff`), so a named
+    residual stays named. -/
+theorem ResidHeld.of_iff {V : Vertrag D} {Λ Λ' : List (Res D)}
+    (hm : ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ) (h : ResidHeld V Λ) :
+    ResidHeld V Λ' :=
+  fun L hV => (hm L).mpr (h L hV)
+
+/-- At function entry the residual is named: the entry set is exactly the
+    signature locks (plus input marks). -/
+theorem residHeld_anfang (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
+    ResidHeld (Vertrag.vonSig D S) (Signatur.anfang D S) :=
+  fun L hL => (held_anfang S L).mpr hL
+
+/-- Erasing only locks that are absent is the identity. -/
+theorem foldl_erase_of_not_mem : ∀ (Ks : List D.Lock) (h : List D.Lock),
+    (∀ L ∈ Ks, L ∉ h) → Ks.foldl (fun h M => h.erase M) h = h
+  | [], _, _ => rfl
+  | M :: Ms, h, hn => by
+      simp only [List.foldl_cons]
+      rw [List.erase_of_not_mem (hn M List.mem_cons_self)]
+      exact foldl_erase_of_not_mem Ms _ (fun L hL => hn L (List.mem_cons_of_mem _ hL))
+
+/-- Widen a releasing step from the callee residual/floor to the caller one.
+    The floor lifts by `RufPasst.hb`, and every released lock avoids the caller
+    residual: either it is required by the callee (spare) or it is a caller
+    extra below the callee floor (`hx` + rank, via the residual-held
+    invariant). -/
+theorem GutRetV.widen_resid {S : Signatur D.Tab D.Glob D.Lock D.Marke}
+    {Λ : List (Res D)} {W : D.Tab → Bool} {G : D.Glob → Bool} {σ σ1 : World D}
+    (hp : RufPasst D V S Λ) (hresid : ResidHeld V Λ)
+    (h : GutRetV W G S.haelt S.boden σ σ1) :
+    GutRetV W G V.haelt V.boden σ σ1 := by
+  obtain ⟨hr, Ls, heq, hsp, hrk, hgood, hkons⟩ := h
+  refine ⟨hr, Ls, heq, ?spareV, ?rankV, hgood, hkons⟩
+  · intro L hL hV
+    by_cases hS : L ∈ S.haelt
+    · exact absurd hS (hsp L hL)
+    · obtain ⟨c, hc, hlt⟩ := hp.hx L (hresid L hV) hS
+      have hge := hrk L hL c hc
+      omega
+  · intro L hL c hc
+    obtain ⟨c', hc', hle⟩ := hp.hb c hc
+    exact Int.le_trans hle (hrk L hL c' hc')
+
+/-- A releasing step with a vacuous release is a plain step. At function entry
+    (entry set `anfang`, residual `S.haelt`) the release list cannot touch what
+    is held: required locks survive by spare, extras — below the floor — by
+    rank. Used for the `.ok` exit of `rufAt_gut`, whose body may unwind scopes
+    on the way to `.zurueck`. -/
+theorem GutRetV.toGut_entry {S : Signatur D.Tab D.Glob D.Lock D.Marke}
+    {W : D.Tab → Bool} {G : D.Glob → Bool} {σ σ' : World D}
+    (h : GutRetV W G S.haelt S.boden σ σ')
+    (hh : HeldB S.boden (Signatur.anfang D S) σ.haelt) :
+    Gut W G σ σ' := by
+  obtain ⟨hr, Ls, heq, hsp, hrk, hgood, hkons⟩ := h
+  have hnot : ∀ L ∈ Ls, L ∉ σ.haelt := by
+    intro L hL hM
+    by_cases hA : Res.held L ∈ Signatur.anfang D S
+    · exact hsp L hL ((held_anfang S L).mp hA)
+    · obtain ⟨c, hc, hlt⟩ := hh.2 L hM hA
+      have hge := hrk L hL c hc
+      omega
+  have heq2 : σ'.haelt = σ.haelt := heq.trans (foldl_erase_of_not_mem Ls _ hnot)
+  exact ⟨hr, heq2, hgood, hkons⟩
+
 end Gabbro.Grammatik
