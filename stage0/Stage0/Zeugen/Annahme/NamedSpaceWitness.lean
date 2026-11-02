@@ -39,7 +39,7 @@ set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
 def text : String :=
-  "module named_space_probe { table T count 2 owner sharedData { slot { v : u32 in 0 .. 100, } } impl fn read(p : ptr<sharedData, r> T) -> u32 effects { reads p.slots } { return p.slots[0].v; } impl fn main() -> u32 effects { reads T.slots } { return read(&T); } }"
+  "module named_space_probe { table T count 2 owner sharedData { slot { v : u32 in 0 .. 100, } } impl fn main() -> u32 in 0 .. 100 effects { reads T.slots } { return T.slots[0].v; } }"
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
