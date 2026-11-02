@@ -360,13 +360,13 @@ def uTabelleSlots (consts : List (String × Int)) (alias : List (String × (Int 
     are explicit errors (the refused arms of `read_table`). -/
 def uTabelle (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tnames : List String) : SItemTief → Except String UTab
-  | .tableT n .none (.some cnt) .none .none sh parts =>
+  | .tableT n .none (.some cnt) .none _ sh parts =>
     -- `tree { parent p, child c }` names the fields `reaches … via` and the tree domains read; it adds no carrier
     match parts.filter (fun p => match p with | .tTree _ => false | _ => true) with
     | .tSlot fds :: invs => uTabelleSlots consts alias tnames n cnt sh fds invs
         (parts.flatMap (fun p => match p with | .tTree ks => ks | _ => []))
     | _ => .error "table without G form"
-  | .tableT n (.some p) .none .none .none sh (.tSlot fds :: invs) =>
+  | .tableT n (.some p) .none .none _ sh (.tSlot fds :: invs) =>
     if !invs.all (fun p => match p with | .tInv _ => true | _ => false) then .error "table without G form" else
     match uFelder alias tnames fds with
     | .error e => .error e

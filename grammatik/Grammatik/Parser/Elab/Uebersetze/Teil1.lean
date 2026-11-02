@@ -389,6 +389,7 @@ structure UTab where
       without a range, or an alias of one): what a builtin over a read of the field names its width from. A field
       of any other type has no entry. -/
   breiten : List (String × Nat) := []
+  space : Nat := 0
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the

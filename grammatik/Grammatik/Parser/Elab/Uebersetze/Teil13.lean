@@ -220,6 +220,7 @@ def elabU : List SItemTief → Except String UProg
     match uGlobs consts alias ms with
     | .error e => .error e
     | .ok globs0 =>
+    let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
     let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
     match uSeq ((ms.filter (fun
         | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias tnames)) with
@@ -228,7 +229,7 @@ def elabU : List SItemTief → Except String UProg
     match uArenen consts alias ms with
     | .error e => .error e
     | .ok (arTabs, arGlobs) =>
-    let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers alias msE)
+    let tabs := uIdxTabs ((tabs0.map (fun t => { t with space := ((ms.find? (fun | .tableT n .. => strEq n t.name | _ => false)).bind (fun | .tableT _ _ _ _ s _ _ => s | _ => none)).map (fun n => (spaces.zipIdx.find? (fun p => strEq p.1 n)).map (·.2) |>.getD 0) |>.getD 0 })) ++ arTabs ++ uArrayCarriers alias msE)
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
@@ -341,7 +342,7 @@ def elabU : List SItemTief → Except String UProg
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check msE, checks := checks, marken := marken }
+        { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := ExportMetadata.check msE, checks := checks, marken := marken, spaces := spaces }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/

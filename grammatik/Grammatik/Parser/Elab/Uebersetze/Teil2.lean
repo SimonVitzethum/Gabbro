@@ -292,6 +292,7 @@ structure UProg where
       declaration order, then every check's Duty (`dutyName`), deduplicated. Every `nimmt`/`gibt`
       of every function must name a member (`uMarkenPruef`). -/
   marken : List String := []
+  spaces : List String := ["normal"]
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
