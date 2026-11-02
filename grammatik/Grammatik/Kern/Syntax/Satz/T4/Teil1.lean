@@ -55,7 +55,9 @@ end Rumpf
 /-- Joint frame for the two exits of an indirect else-call («C07»): the pointer is
     evaluated once in the recorded world `s0`, the actual conforming function runs
     under its transported caller duty, and both continuations see the transported
-    value (`runOk`) or reason (`runWhy`). The three `*_gutB` cases instantiate it
+    value (`runOk`) or reason (`runWhy`). A propagated reason may release the
+    callee's scopes (`GutRetV`); the continuation's holdings survive by spare,
+    rank and `RufPasst.hx` (`heldB_weiterRet`). The three `*_gutB` cases instantiate it
     with their runners; the branch inventories stay shared, never rolled back. -/
 theorem indSonst_gutB (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (hR : GutR R) (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -71,24 +73,33 @@ theorem indSonst_gutB (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
     (runWhy : ∀ σ1 (r : Fin (D.sigNr n).gruende) (hh1 : HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt),
       GutAusgang V.schreibt V.gschreibt σ1 (why σ1 r))
     (σ' : World D) (h : (indSonst R p args he hr s0 ρ ok why).welt = some σ') :
-    Gut V.schreibt V.gschreibt σ σ' := by
-  simp only [indSonst] at h
-  generalize hpv : eval s0 p s0 ρ = pv at h
+    match (indSonst R p args he hr s0 ρ ok why) with
+    | .zurueck _ _ => GutRetV V.schreibt V.gschreibt V.haelt V.boden σ σ'
+    | .why _ _ => GutRetV V.schreibt V.gschreibt V.haelt V.boden σ σ'
+    | _ => Gut V.schreibt V.gschreibt σ σ' := by
+  simp only [indSonst] at h ⊢
+  generalize hpv : eval s0 p s0 ρ = pv at h ⊢
   obtain ⟨f, hf⟩ := pv
-  simp only at h
-  split at h
+  simp only at h ⊢
+  split at h ⊢
   · rename_i σ1 v hR1
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Gut.weiter hp.hw hp.hg
-      (hR f s0 _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runOk σ1 (ergWert (ergSig hf he) v)
-      (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh) σ' h)
+    have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
+      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
+    rw [hR1] at h2
+    have g1 := hl.trans (Gut.weiter hp.hw hp.hg h2)
+    exact (GutAusgang.vor g1 (runOk σ1 (ergWert (ergSig hf he) v)
+      (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh))) σ' h
   · rename_i σ1 r hR1
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Gut.weiter hp.hw hp.hg
-      (hR f s0 _ (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runWhy σ1 (grundSig hf r)
-      (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh) σ' h)
+    have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ))
+      (heldB_ruf hp hbV (hl.heldB hh)) σ1 (by rw [hR1]; rfl)
+    rw [hR1] at h2
+    have h2w := h2.weiter hp.hw hp.hg
+    have g1 := hl.transRetV h2w
+    have hh1 := heldB_weiterRet (fun L => held_nachSig_iff _ _ L) g1 hh
+      (fun L hL hnS => hp.hx L hL hnS)
+    exact (GutAusgang.vorRetV g1 (runWhy σ1 (grundSig hf r) hh1)) σ' h
   · simp only [Ausgang.welt, reduceCtorEq] at h
   · simp only [Ausgang.welt, reduceCtorEq] at h
 
