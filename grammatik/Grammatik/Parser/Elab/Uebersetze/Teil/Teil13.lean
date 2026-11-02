@@ -7,6 +7,8 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Teil.ZeigerTexte
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
@@ -83,36 +85,6 @@ def uZeigerSig (raw : String) : Except String FnSig :=
           if !(r3.all (fun t => match t with | .ende => true | _ => false)) then .error "pointer type without G form"
           else .ok { art := "impl", name := "", params := ps, res := erg, fehler := fehler, klauseln := ks }
   | .ok _ => .error "pointer type without G form"
-
-/-- The texts of the pointer types a surface type list names (`fn (` raw types). -/
-def uZeigerTexte : List STyp → List String
-  | [] => []
-  | .raw r :: rest => if r.startsWith "fn (" then r :: uZeigerTexte rest else uZeigerTexte rest
-  | _ :: rest => uZeigerTexte rest
-
-/-- The pointer types written at a `let` of a body. -/
-def uZeigerAnw : Nat → SAnw → List String
-  | 0, _ => []
-  | f + 1, a => match a with
-    | .bind _ _ (some t) _ => uZeigerTexte [t]
-    | .bindElse _ (some t) _ _ b => uZeigerTexte [t] ++ uZeigerAnw f b
-    | .bindElse _ none _ _ b => uZeigerAnw f b
-    | .cond _ t es e => uZeigerAnw f t ++ (es.flatMap (uZeigerAnw f)) ++ (match e with | some b => uZeigerAnw f b | none => [])
-    | .elsif _ b => uZeigerAnw f b
-    | .cases _ as => as.flatMap (uZeigerAnw f)
-    | .arm _ _ b => uZeigerAnw f b
-    | .each _ _ _ _ _ _ _ b => uZeigerAnw f b
-    | .retry _ b => uZeigerAnw f b
-    | .loop _ b => uZeigerAnw f b
-    | .waive _ b => uZeigerAnw f b
-    | .trim _ _ b => uZeigerAnw f b
-    | .locks _ _ b => uZeigerAnw f b
-    | .watch _ b => uZeigerAnw f b
-    | .alloc _ _ _ _ _ (some b) => uZeigerAnw f b
-    | .grow _ _ b => uZeigerAnw f b
-    | .child b => uZeigerAnw f b
-    | .block as _ => as.flatMap (uZeigerAnw f)
-    | _ => []
 
 /-- A pointer type of the unit as a head (named `fn#j`) and an elaborated signature with an empty body. -/
 def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
@@ -225,10 +197,7 @@ def elabUroh : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok globs0 =>
     let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
-    -- C12: the resolved owner namespace for `own@m` rights: the `linear` type
-    -- names and every table's `owner` mark, deduplicated. Bare `own` stays
-    -- refused: it is the consumes/allocs sugar and needs the C09 flow.
-    let eigner := uOhneDoppelte ((ms.filterMap fun | .typeT flags n _ _ _ => if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++ (ms.filterMap fun | .tableT _ _ _ _ o _ _ => o | _ => none))
+    let eigner := uOhneDoppelte (uEignerMs ms)
     let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
     match uSeq ((ms.filter (fun
         | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (uTabelle consts alias tnames)) with

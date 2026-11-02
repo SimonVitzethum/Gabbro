@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Eigner
 
 @[expose] public section
 
@@ -109,15 +110,6 @@ def sTypText : STyp → String
   | .raw n => "raw " ++ n
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
-
-/-- Resolve an owner name against the unit's declared owner namespace (C12):
-    the index of the name among the declared owners, `none` for anything else.
-    The namespace is collected by the unit elaborator from the `linear` type
-    items and the tables' `owner` marks; `""` (the implicit owner of bare `own`)
-    never resolves here -- bare `own` is the consumes/allocs sugar and needs
-    the C09 signature flow before admission. -/
-def uEignerNr (eigner : List String) (name : String) : Option Nat :=
-  eigner.findIdx? (fun m => strEq m name)
 
 /-- Normalize the complete table access rights. Owner identities resolve
     against the unit's declared owner namespace; anything else (unknown
