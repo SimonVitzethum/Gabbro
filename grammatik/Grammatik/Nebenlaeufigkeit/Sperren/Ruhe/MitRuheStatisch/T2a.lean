@@ -32,13 +32,14 @@ theorem ruS_mS (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .forever _ _ body => ruB_mB A body
   | _, _, _, _, .axiomCall .. => rfl
   | _, _, _, _, .axiomCallElse e _ _ _ _ _ _ _ err => by
+      have ih0 := ruEnd_mE A err
       cases e with
       | none =>
           simp only [ruS, mS]
-          exact (mS_nachΛ _ _ _).trans ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
+          exact (mS_nachΛ _ _ _).trans ((mE_umΛ _ _ _).trans (ih0))
       | some _ =>
           simp only [ruS, mS]
-          exact (mS_nachΛ _ _ _).trans ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
+          exact (mS_nachΛ _ _ _).trans ((mE_umΛ _ _ _).trans (ih0))
   | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
@@ -67,25 +68,28 @@ theorem ruB_mB (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_mE A err) (ruB_mB A rest)
   | _, _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      have ih0 := ruB_mB A rest
       cases e with
       | none =>
           simp only [ruB, mB]
-          exact (mB_vorΛ _ _ _).trans (ruB_mB A rest)
+          exact (mB_vorΛ _ _ _).trans (ih0)
       | some _ =>
           simp only [ruB, mB]
-          exact (mB_vorΛ _ _ _).trans (ruB_mB A rest)
+          exact (mB_vorΛ _ _ _).trans (ih0)
   | _, _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_mE A err
+      have ih1 := ruB_mB A rest
       cases e with
       | none =>
           simp only [ruB, mB]
           exact kongr₂ (· && ·)
-            ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
-            ((mB_vorΛ _ _ _).trans (ruB_mB A rest))
+            ((mE_umΛ _ _ _).trans (ih0))
+            ((mB_vorΛ _ _ _).trans (ih1))
       | some _ =>
           simp only [ruB, mB]
           exact kongr₂ (· && ·)
-            ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
-            ((mB_vorΛ _ _ _).trans (ruB_mB A rest))
+            ((mE_umΛ _ _ _).trans (ih0))
+            ((mB_vorΛ _ _ _).trans (ih1))
   | _, _, _, _, .regRead _ _ rest => ruB_mB A rest
   | _, _, _, _, .regReadElse _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
@@ -119,25 +123,28 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
       kongr₂ (· && ·) (ruEnd_mE A err) (ruEnd_mE A rest)
   | _, _, _, .bindAxiomOpt e _ _ _ _ _ _ rest => by
+      have ih0 := ruEnd_mE A rest
       cases e with
       | none =>
           simp only [ruEnd, mE]
-          exact (mE_umΛ _ _ _).trans (ruEnd_mE A rest)
+          exact (mE_umΛ _ _ _).trans (ih0)
       | some _ =>
           simp only [ruEnd, mE]
-          exact (mE_umΛ _ _ _).trans (ruEnd_mE A rest)
+          exact (mE_umΛ _ _ _).trans (ih0)
   | _, _, _, .bindAxiomOptElse e _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_mE A err
+      have ih1 := ruEnd_mE A rest
       cases e with
       | none =>
           simp only [ruEnd, mE]
           exact kongr₂ (· && ·)
-            ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
-            ((mE_umΛ _ _ _).trans (ruEnd_mE A rest))
+            ((mE_umΛ _ _ _).trans (ih0))
+            ((mE_umΛ _ _ _).trans (ih1))
       | some _ =>
           simp only [ruEnd, mE]
           exact kongr₂ (· && ·)
-            ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
-            ((mE_umΛ _ _ _).trans (ruEnd_mE A rest))
+            ((mE_umΛ _ _ _).trans (ih0))
+            ((mE_umΛ _ _ _).trans (ih1))
   | _, _, _, .regRead _ _ rest => ruEnd_mE A rest
   | _, _, _, .regReadElse _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_mE A sonst) (ruEnd_mE A rest)

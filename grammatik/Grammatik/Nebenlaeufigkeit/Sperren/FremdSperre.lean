@@ -77,7 +77,8 @@ def DF : Deklaration where
 
 /-- The calling contract: writes the table, holds nothing. -/
 def VF : Vertrag DF :=
-  Vertrag.mk (fun _ => true) (fun g => nomatch g) none 0 [] [] none
+  { schreibt := fun _ => true, gschreibt := (fun g => nomatch g), erg := none, gruende := 0,
+    haelt := [], produziert := [], boden := none }
 
 /-- The static trace: the one guard in hand. -/
 def ΛF : List (Res DF) := [Res.held ()]

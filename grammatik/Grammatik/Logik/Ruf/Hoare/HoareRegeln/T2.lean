@@ -79,6 +79,12 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
+    (fun e a args he hp hd hgd hr err herr iherr σ ρ => by
+        simp only [execStmt]
+        split
+        · rfl
+        · simp only [iherr]
+        · rfl)
     (fun r hk e σ ρ => rfl)
     (fun r hk m hm hl maske bits σ ρ => rfl)
     (fun g e payload hp hw hL σ ρ => rfl)
@@ -89,12 +95,6 @@ theorem stmtOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (fun h σ ρ => rfl)
     (fun h σ ρ => rfl)
     (fun σ ρ => rfl)
-    (fun e a args he hp hd hgd hr err herr iherr σ ρ => by
-        simp only [execStmt]
-        split
-        · rfl
-        · simp only [iherr]
-        · rfl)
     (fun s rest hs hr ihs ihr σ ρ => by
         have hs' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihs σ ρ
         have hr' : ∀ (σ : World D) (ρ : Env D _), _ := fun σ ρ => ihr σ ρ

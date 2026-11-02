@@ -1,5 +1,6 @@
 module
 
+public import Grammatik.Zielsatz.Faeden.FaedenZeuge.Teil1Basis
 public import Grammatik.Zielsatz.Faeden.FaedenVor
 public import Grammatik.Zielsatz.Faeden.PoolZeuge
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
@@ -37,7 +38,6 @@ import all Init.Data.String.ToSlice
 
 @[expose] public section
 
-public import Grammatik.Zielsatz.Faeden.FaedenZeuge.Teil1Basis
 
 namespace Gabbro.Grammatik.Zielsatz
 

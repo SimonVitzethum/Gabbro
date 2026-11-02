@@ -12,9 +12,9 @@ open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 variable {D : Deklaration}
 variable {V : Vertrag D}
 
+set_option linter.unusedSectionVars false in
 /-- The shape of a `traverse` lowering, given the shape of the lowered body: the entry block, the
     three counter blocks and the body. -/
-set_option linter.unusedSectionVars false in
 theorem lowerS_shape_traverse (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
     {l : Bool}
     {Γ : Ctx}
@@ -64,9 +64,9 @@ theorem lowerS_shape_traverse (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lb
       omega
   · simp only [hc, ↓reduceIte, reduceCtorEq] at h
 
+set_option linter.unusedSectionVars false in
 /-- The shape of a C11 consuming traversal: the same four counter blocks and body as `traverse`
     (re-selection is OPEN; the placeholder runs the same fixed sweep). -/
-set_option linter.unusedSectionVars false in
 theorem lowerS_shape_consumeTraverse (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
     {l : Bool}
     {Γ : Ctx}
@@ -120,9 +120,9 @@ theorem lowerS_shape_consumeTraverse (lay : Layout D) (cenv : List Reg) (lv : Lb
       omega
   · simp only [hc, ↓reduceIte, reduceCtorEq] at h
 
+set_option linter.unusedSectionVars false in
 /-- The shape of a C11 required narrowing in a block: the `narrow` test and bind blocks, an
     unreachable trap for the failure leg, and the rest. -/
-set_option linter.unusedSectionVars false in
 theorem lowerB_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
     {l : Bool}
     {Γ : Ctx}
@@ -130,7 +130,6 @@ theorem lowerB_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl
     {Λ' : List (Res D)}
     (lo)
     (hi)
-    (Λ)
     (e)
     (lo')
     (hi')
@@ -163,11 +162,12 @@ theorem lowerB_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl
   simp only [hb] at h
   rcases hb2 : lowerB lay (a :: cenv) lv rest (st.l + 2) k ⟨r4, st.l + 3⟩ with _ | ⟨br, s2⟩
   · simp only [hb2, reduceCtorEq] at h
-  have S1 : Shape st.l ⟨r4, st.l + 3⟩ ⟨r4, st.l + 3⟩ [⟨st.l, [], [], .dead⟩] :=
-    ⟨⟨_, _, rfl, rfl⟩, by intro b hb
-      rw [List.mem_singleton] at hb
-      subst hb
-      rfl, Nat.le_refl _⟩
+  have S1 : Shape st.l ⟨r4, st.l + 3⟩ ⟨r4, st.l + 3⟩ ([⟨st.l, [], [], .dead⟩] : List Block) := by
+    refine ⟨⟨_, _, rfl, rfl⟩, ?_, Nat.le_refl _⟩
+    intro b hb
+    rw [List.mem_singleton] at hb
+    subst hb
+    rfl
   have S2 := ih_lowerB_shape_rest a ⟨r4, st.l + 3⟩ s2 br hb2
   simp only [hb2] at h
   have := Option.some.inj h
@@ -179,23 +179,22 @@ theorem lowerB_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl
     rcases hb with rfl | rfl | hb | hb
     · rfl
     · rfl
-    · exact S1.2.1 b hb
+    · exact S1.2.1 b (List.mem_singleton.mpr hb)
     · exact S2.2.1 b hb
   · have a1 := S1.2.2
     have a2 := S2.2.2
     simp only at m1 m2 m3 m4 a1 a2 ⊢
     omega
 
+set_option linter.unusedSectionVars false in
 /-- The shape of a C11 required narrowing at the top level of a body: the same test, bind and
     trap blocks, with an end-block rest. -/
-set_option linter.unusedSectionVars false in
 theorem lowerEnd_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}
     (lo)
     (hi)
-    (Λ)
     (e)
     (lo')
     (hi')
@@ -227,11 +226,12 @@ theorem lowerEnd_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : L
   simp only [hb] at h
   rcases hb2 : lowerEnd lay (a :: cenv) lv rest (st.l + 2) ⟨r4, st.l + 3⟩ with _ | ⟨br, s2⟩
   · simp only [hb2, reduceCtorEq] at h
-  have S1 : Shape st.l ⟨r4, st.l + 3⟩ ⟨r4, st.l + 3⟩ [⟨st.l, [], [], .dead⟩] :=
-    ⟨⟨_, _, rfl, rfl⟩, by intro b hb
-      rw [List.mem_singleton] at hb
-      subst hb
-      rfl, Nat.le_refl _⟩
+  have S1 : Shape st.l ⟨r4, st.l + 3⟩ ⟨r4, st.l + 3⟩ ([⟨st.l, [], [], .dead⟩] : List Block) := by
+    refine ⟨⟨_, _, rfl, rfl⟩, ?_, Nat.le_refl _⟩
+    intro b hb
+    rw [List.mem_singleton] at hb
+    subst hb
+    rfl
   have S2 := ih_lowerEnd_shape_rest a ⟨r4, st.l + 3⟩ s2 br hb2
   simp only [hb2] at h
   have := Option.some.inj h
@@ -243,7 +243,7 @@ theorem lowerEnd_shape_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : L
     rcases hb with rfl | rfl | hb | hb
     · rfl
     · rfl
-    · exact S1.2.1 b hb
+    · exact S1.2.1 b (List.mem_singleton.mpr hb)
     · exact S2.2.1 b hb
   · have a1 := S1.2.2
     have a2 := S2.2.2

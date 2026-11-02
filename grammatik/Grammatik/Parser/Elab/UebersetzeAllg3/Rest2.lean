@@ -1,6 +1,6 @@
 module
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
-public import Grammatik.Parser.Elab.ExportControl
+public import Grammatik.Parser.Elab.Export.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
 public import Grammatik.Parser.Namen.Oeffentlich

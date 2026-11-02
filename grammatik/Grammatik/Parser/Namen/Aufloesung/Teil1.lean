@@ -1,6 +1,7 @@
 module
 
 
+public import Grammatik.Parser.Namen.Aufloesung.Teil1a
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -37,7 +38,6 @@ import all Init.Data.String.ToSlice
 
 
 
-public import Grammatik.Parser.Namen.Aufloesung.Teil1a
 
 namespace Gabbro.Grammatik.Parser.Aufloesung
 

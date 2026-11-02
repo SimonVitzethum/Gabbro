@@ -321,7 +321,7 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .floatNarrow .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, k, st, st', blks, hlt, h =>
-      lowerB_lbl_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
+      lowerB_lbl_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
         (ih_lowerB_lbl_rest := fun cenv' lb k st st' blks hlt hk => lowerB_lbl lay cenv' lv rest lb k st st' blks hlt hk)
 theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (b : Gabbro.Grammatik.Endblock D V l Γ Λ)
@@ -381,7 +381,7 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, .bindCallInd .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, st, st', blks, hlt, h =>
-      lowerEnd_lbl_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (Λ := Λ) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
+      lowerEnd_lbl_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
         (ih_lowerEnd_lbl_rest := fun cenv' lb st st' blks hlt hk => lowerEnd_lbl lay cenv' lv rest lb st st' blks hlt hk)
 /-- The arms of a `match` on a tagged value: arm `i` has entry label `lb + i` (below `st.l`), the counter
     hands out labels from `st.l`; all labels are distinct. -/
@@ -410,9 +410,7 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       obtain ⟨m2, n2, a2⟩ := lowerAr_lbl lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2
         (by show lb + 1 + cs'.length ≤ s1.l; have := W1.1; omega) hr
       exact lw_arm_cons (n' := cs'.length) hn' W1 ⟨m2, n2, a2⟩
-  | _, _, _, _, _, .cons (c := some τ) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
-      cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
-      rename_i lo hi
+  | _, _, _, _, _, .cons (c := some (.int lo hi)) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h
@@ -437,6 +435,28 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       obtain ⟨m2, n2, a2⟩ := lowerAr_lbl lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2
         (by show lb + 1 + cs'.length ≤ s1.l; have := W1.1; omega) hr
       exact lw_arm_cons (n' := cs'.length) hn' W1 ⟨m2, n2, a2⟩
+  | _, _, _, _, _, .cons (c := some (.bool)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.opt _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.sum _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.why _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.never)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.fl _ _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.fnptr _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.ptr _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.ref _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.arr _ _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
+  | _, _, _, _, _, .cons (c := some (.str _)) _ _, _, _, _, _, _, _, h => by
+      simp only [lowerAr, reduceCtorEq] at h
 /-- The arms of a `match` on a reason: arm `i` has entry label `lb + i` (below `st.l`), the counter hands
     out labels from `st.l`; all labels are distinct. -/
 theorem lowerGA_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :

@@ -15,8 +15,8 @@
    test-driver policy (C14), not an auto-run of every gate. -/
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Teil2
-public import Grammatik.Parser.Elab.Uebersetze.Teil6
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 public section

@@ -147,25 +147,27 @@ theorem ohneAus_execBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b
       teile
       simp only [execBlock]
       split
-      · cases e with
+      · have ihr := fun σ' ρ' => ohneAus_execBlock rest eb h σ' ρ'
+        cases e with
         | none =>
             simp only [Ausgang.weiterOpt]
-            exact ohneAus_execBlock rest eb h _ _
+            exact ihr _ _
         | some τ =>
             simp only [Ausgang.weiterOpt]
-            exact ohneAus_schrumpf (ohneAus_execBlock rest eb h _ _)
+            exact ohneAus_schrumpf (ihr _ _)
       · trivial
   | _, _, _, _, .bindAxiomOptElse e a args he _ _ _ _ err rest, eb, h, σ, ρ => by
       teile
       simp only [execBlock]
       split
-      · cases e with
+      · have ihr := fun σ' ρ' => ohneAus_execBlock rest eb h.2 σ' ρ'
+        cases e with
         | none =>
             simp only [Ausgang.weiterOpt]
-            exact ohneAus_execBlock rest eb h.2 _ _
+            exact ihr _ _
         | some τ =>
             simp only [Ausgang.weiterOpt]
-            exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
+            exact ohneAus_schrumpf (ihr _ _)
       · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.1 _ _))
       · trivial
   | _, _, _, _, .regRead _ _ rest, eb, h, σ, ρ => by
@@ -287,25 +289,27 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
       teile
       simp only [execEnd]
       split
-      · cases e with
+      · have ihr := fun σ' ρ' => ohneAus_execEnd rest eb h σ' ρ'
+        cases e with
         | none =>
             simp only [EndAusgang.weiterOpt]
-            exact ohneAus_execEnd rest eb h _ _
+            exact ihr _ _
         | some τ =>
             simp only [EndAusgang.weiterOpt]
-            exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+            exact endOhneAus_schrumpf (ihr _ _)
       · trivial
   | _, _, _, .bindAxiomOptElse e a args he _ _ _ _ err rest, eb, h, σ, ρ => by
       teile
       simp only [execEnd]
       split
-      · cases e with
+      · have ihr := fun σ' ρ' => ohneAus_execEnd rest eb h.2 σ' ρ'
+        cases e with
         | none =>
             simp only [EndAusgang.weiterOpt]
-            exact ohneAus_execEnd rest eb h.2 _ _
+            exact ihr _ _
         | some τ =>
             simp only [EndAusgang.weiterOpt]
-            exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
+            exact endOhneAus_schrumpf (ihr _ _)
       · exact endOhneAus_schrumpf (ohneAus_execEnd err eb h.1 _ _)
       · trivial
   | _, _, _, .regRead _ _ rest, eb, h, σ, ρ => by

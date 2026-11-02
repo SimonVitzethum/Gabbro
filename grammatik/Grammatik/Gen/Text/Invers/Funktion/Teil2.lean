@@ -69,7 +69,7 @@ theorem kopf_ok (gNr : Nat → Nat) (P : Programm z.deklaration) (f : z.deklarat
       { art := "impl", name := nFn (fN z f), params := mitGriffPs ps mitGriff, res,
         fehler := if (z.deklaration.signatur f).gruende = 0 then none
           else some (nGrund (z.deklaration.signatur f).gruende),
-        klauseln := klauselnVon z P f req ens } devs zeiger zb =
+        klauseln := klauselnVon z P f req ens } devs zeiger zb [] =
       .ok (kopfVon z gNr devs f ps ks mitGriff, uEindeutig ((tNamen z f).map nTab)) := by
   set S := z.deklaration.signatur f with hS
   set np := S.params.length with hnp

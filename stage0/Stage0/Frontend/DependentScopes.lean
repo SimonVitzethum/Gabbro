@@ -198,7 +198,7 @@ theorem elaborateScopes_inline_range_zeuge :
       result.scope.declared = [("Base", (0, 255)), ("Result", (0, 42))] ∧
       result.scope.functionsUseValues = true ∧
       (uFeldTyp result.scope.declared inlineType).toOption.isNone = true ∧
-      uTyp (result.scope.declared ++ [("LIMIT", (42, 42))]) [] inlineType = .ok (.int 0 42) := by
+      uTyp (result.scope.declared ++ [("LIMIT", (42, 42))]) [] [] inlineType = .ok (.int 0 42) := by
   dsimp only
   refine ⟨by decide +kernel, (elaborateScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _

@@ -24,13 +24,13 @@
     from the guards, not assumed.
 -/
 module
+public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeZeugeBasis
 public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaske
 public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeGleich
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
 @[expose] public section
 
-public import Grammatik.Zielsatz.Eigenschaften.CoreMasks.KernMaskeZeugeBasis
 
 namespace Gabbro.Grammatik.Zielsatz.KernMaskeFix
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz

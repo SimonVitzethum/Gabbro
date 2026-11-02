@@ -27,6 +27,15 @@ theorem blockS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ
     (hN : NUnter Ns (groesseBlock b)) (hO : OUnter O (groesseBlock b)) :
     (⟨Λ', b⟩ : SB D V l Γ Λ) ∈ blockS O E Ss Bs Ns (groesseBlock b) := by
   cases b with
+  | narrowRequired =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
+  | bindAxiomOpt =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
+  | bindAxiomOptElse =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
   | nil =>
     simp only [groesseBlock]
     blk bNil, Sz.mem_blatt (by simp only [List.mem_cons, List.not_mem_nil, or_false])
@@ -173,6 +182,21 @@ theorem endS_vollst (O : Orakel V) (E : Sz (SE D Γ Λ)) (Ss : Sz (SS D V l Γ �
     (hu : groesseEnd e < unendlich) (hE : Unter E (groesseEnd e)) (hS : SUnter Ss (groesseEnd e))
     (hO : OUnter O (groesseEnd e)) : e ∈ endS O E Ss (groesseEnd e) := by
   cases e with
+  | narrowRequired =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
+  | retScoped =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
+  | retWhyScoped =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
+  | bindAxiomOpt =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
+  | bindAxiomOptElse =>
+    simp only [groesseBlock, groesseEnd] at hu
+    omega
   | ret x hΛ =>
     simp only [groesseEnd] at hu hE hS hO ⊢
     blk (eRet E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (mem_ergS hE x (by omega)) <|

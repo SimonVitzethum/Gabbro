@@ -8,7 +8,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
-public import Grammatik.Parser.Elab.Uebersetze.Teil13
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil13
 
 @[expose] public section
 

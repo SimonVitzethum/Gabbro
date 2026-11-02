@@ -66,8 +66,8 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .bindCallInd p args he hp hr rest => ⟨rest.alsBlock.1, .bindCallInd p args he hp hr rest.alsBlock.2⟩
   | _, _, .narrow e lo' hi' sonst rest => ⟨rest.alsBlock.1, .narrow e lo' hi' sonst rest.alsBlock.2⟩
   | _, _, .narrowRequired e lo' hi' rest => ⟨rest.alsBlock.1, .narrowRequired e lo' hi' rest.alsBlock.2⟩
-  | _, _, .retScoped e R => ⟨Λ, .cons (.retScoped e R) .nil⟩
-  | _, _, .retWhyScoped r R => ⟨Λ, .cons (.retWhyScoped r R) .nil⟩
+  | _, Λ, .retScoped e R => ⟨Λ, .cons (.retScoped e R) .nil⟩
+  | _, Λ, .retWhyScoped r R => ⟨Λ, .cons (.retWhyScoped r R) .nil⟩
   | _, _, .exchange g neu hw hL rest => ⟨rest.alsBlock.1, .exchange g neu hw hL rest.alsBlock.2⟩
   -- an `if` of two end blocks is a check: true runs `t`, false the end block `e` (`Block.check`)
   | _, _, .ite c t e => ⟨t.alsBlock.1, .check c e t.alsBlock.2⟩
@@ -132,6 +132,12 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       it at the head and the block in front never falls off, so it is never reached and carries
       no obligation (Track P, 2026-10-18). -/
   | leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ
+  /-- C11 pending return: unwind `scopes` innermost first before the outer
+      contract/return epilogue. Inert placeholder: no step rule consumes it
+      yet; the saved result span, per-scope invariant checks and the
+      sequential/replay equality are OPEN. Exact return is `scopes = []`. -/
+  | rueckBereit {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+      (scopes : List D.Lock) → GRest D V l Γ Λ → GRest D V l Γ (scopes.map Res.held ++ Λ)
 
 /-- **The continuation behind a generalized foreign binder** («C08»): void keeps the
     residue, a value pushes a shrink -- the residue half of `Ausgang.weiterOpt`. -/
@@ -139,12 +145,6 @@ def GRest.weiterOpt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     (e : Option Ty) → GRest D V l Γ Λ' → GRest D V l (ErgCtx Γ e) Λ'
   | none, k => k
   | some _, k => .schrumpf k
-  /-- C11 pending return: unwind `scopes` innermost first before the outer
-      contract/return epilogue. Inert placeholder: no step rule consumes it
-      yet; the saved result span, per-scope invariant checks and the
-      sequential/replay equality are OPEN. Exact return is `scopes = []`. -/
-  | rueckBereit {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
-      (scopes : List D.Lock) → GRest D V l Γ Λ → GRest D V l Γ (scopes.map Res.held ++ Λ)
 
 /-- **An end block run as a block means what it meant**: its outcome is
     the end block's, as an `Ausgang` (it never ends normally). -/

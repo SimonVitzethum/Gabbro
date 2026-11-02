@@ -22,7 +22,7 @@ def ArrayMeaning {original : List SItemTief} (u : UProg) (scope : Scopes origina
   | .ok none => True
   | .ok (some (_, ty, payload)) =>
     ∃ τ raw, ∃ term : Expr (declOf u) [] [] τ,
-      uTyp scope.types [] ty = .ok τ ∧
+      uTyp scope.types [] [] ty = .ok τ ∧
       uKonstZeile scope.types scope.functions scope.values τ payload = some raw ∧
       lowLit (u := u) (Γ := []) (Λ := []) τ raw = .ok term
 
@@ -34,7 +34,7 @@ def checkArrayItem {original : List SItemTief} (u : UProg) (scope : Scopes origi
   | .error e => .error e
   | .ok none => .ok ⟨by simp only [ArrayMeaning, hi]⟩
   | .ok (some (name, ty, payload)) =>
-    match ht : uTyp scope.types [] ty with
+    match ht : uTyp scope.types [] [] ty with
     | .error e => .error ("constant " ++ name ++ ": " ++ e)
     | .ok τ =>
       match hv : uKonstZeile scope.types scope.functions scope.values τ payload with

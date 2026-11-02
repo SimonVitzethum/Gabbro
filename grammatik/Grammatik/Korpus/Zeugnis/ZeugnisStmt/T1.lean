@@ -11,14 +11,14 @@
   print format is designed in the docstrings below for the transfer phase.
 -/
 module
+public import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T1Basis
+import all Grammatik.Korpus.Zeugnis.ZeugnisStmt.T1Basis
 public import Grammatik.Korpus.Zeugnis.Zeugnis
 public import Grammatik.Korpus.Referenz.ReferenzB
 @[expose] public section
 
 
 namespace Gabbro.Grammatik
-public import Grammatik.Korpus.Zeugnis.ZeugnisStmt.T1Basis
-import all Grammatik.Korpus.Zeugnis.ZeugnisStmt.T1Basis
 
 /-! ## Statement certificates: plain data over the int fragment
 

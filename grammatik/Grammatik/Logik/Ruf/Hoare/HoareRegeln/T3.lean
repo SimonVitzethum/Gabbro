@@ -78,6 +78,12 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (fun a args h hw hg hd hgd σ ρ => by
   simp only [execStmt]
 )
+    (fun e a args he hp hd hgd hr err herr iherr σ ρ => by
+        simp only [execStmt]
+        split
+        · rfl
+        · simp only [iherr]
+        · rfl)
     (fun r hk e σ ρ => rfl)
     (fun r hk m hm hl maske bits σ ρ => rfl)
     (fun g e payload hp hw hL σ ρ => rfl)
@@ -210,10 +216,11 @@ theorem endOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         | mk idx nutz =>
             cases idx with
             | mk k hk =>
-                exact armsOhneRuf_RunabhaengigAux O passes R₁ R₂ b rest
+                have hx := armsOhneRuf_RunabhaengigAux O passes R₁ R₂ b rest
                   (fun σ ρ => ihb σ ρ)
                   (fun w σ ρ => ihr w σ ρ)
-                  k hk nutz σ ρ)
+                  k hk (Fall.toNutzlast _ _ _ _ nutz) σ ρ
+                rwa [Fall.of_to] at hx)
     (fun r σ ρ => by exact r.elim0)
     (fun b rest hb hr ihb ihr r σ ρ => by
       cases r with
