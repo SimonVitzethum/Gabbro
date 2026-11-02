@@ -2,6 +2,7 @@ module
 
 
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
+public import Grammatik.Parser.Item.ElementTief.FunctionArguments
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -101,6 +102,10 @@ def genericArgument (k : Kontext) (word : String) : String :=
   match lex word with
   | .error _ => word
   | .ok tokens =>
+    let k := match parseFunctionArgument (tokens.length * 4 + 32) tokens with
+      | .ok (.literal sig body) =>
+        { k with lok := sig.params.map Prod.fst ++ literalLocals body }
+      | _ => k
     let tokens := tokens.filter (fun | .ende => false | _ => true)
     String.intercalate " " ((genericArgumentTokens k (tokens.length + 1) tokens).map zeigeTok)
 

@@ -1,6 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Generic.Closure
-public import Grammatik.Parser.Item.ElementTief.FunctionArguments
+public import Grammatik.Parser.Elab.Generic.Literals
 public import Grammatik.Parser.Print.Item.Teil1a
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic
