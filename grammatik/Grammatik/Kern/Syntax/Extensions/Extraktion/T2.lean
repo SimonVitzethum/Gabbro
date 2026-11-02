@@ -266,7 +266,7 @@ def stmtOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ bis body ueber => bis.orte ++ blockOrte body ++ blockOrte ueber
   | .forever _ inv body => inv.orte ++ blockOrte body
   | .axiomCall _ args _ _ _ _ _ => args.orte
-  | .axiomCallElse _ args _ _ _ _ _ _ err => args.orte ++ endblockOrte err
+  | .axiomCallElse _ _ args _ _ _ _ _ err => args.orte ++ endblockOrte err
   | .regWrite _ _ e => e.orte
   | .transition _ _ _ _ _ _ _ => []
   | .publish _ e _ _ _ _ => e.orte
@@ -293,8 +293,8 @@ def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       args.orte ++ endblockOrte err ++ blockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => args.orte ++ blockOrte rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
   | .regRead _ _ rest => blockOrte rest
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrte sonst ++ blockOrte rest
@@ -327,8 +327,8 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       args.orte ++ endblockOrte err ++ endblockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => args.orte ++ endblockOrte rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
   | .regRead _ _ rest => endblockOrte rest
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrte sonst ++ endblockOrte rest

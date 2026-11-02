@@ -65,7 +65,7 @@ def oS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .retry _ _ body ueber => oB body ∧ oB ueber
   | .forever _ _ body => oB body
   | .axiomCall a .. => KeinTabAx a
-  | .axiomCallElse a _ _ _ _ _ _ _ err => KeinTabAx a ∧ oE err
+  | .axiomCallElse _ a _ _ _ _ _ _ err => KeinTabAx a ∧ oE err
   | .regWrite .. => True
   | .transition .. => True
   | .publish .. => True
@@ -87,8 +87,8 @@ def oB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .bindCallElse f args _ _ _ err rest => ObjRufOk objs ps f args ∧ oE err ∧ oB rest
   | .bindAxiom a _ _ _ _ _ _ rest => KeinTabAx a ∧ oB rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oB rest
-  | .bindAxiomOpt a _ _ _ _ _ _ rest => KeinTabAx a ∧ oB rest
-  | .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oB rest
+  | .bindAxiomOpt _ a _ _ _ _ _ rest => KeinTabAx a ∧ oB rest
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oB rest
   | .regRead _ _ rest => oB rest
   | .regReadElse _ _ _ sonst rest => oE sonst ∧ oB rest
   | .awaits _ _ _ _ _ rest => oB rest
@@ -114,8 +114,8 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .bindCallElse f args _ _ _ err rest => ObjRufOk objs ps f args ∧ oE err ∧ oE rest
   | .bindAxiom a _ _ _ _ _ _ rest => KeinTabAx a ∧ oE rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oE rest
-  | .bindAxiomOpt a _ _ _ _ _ _ rest => KeinTabAx a ∧ oE rest
-  | .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oE rest
+  | .bindAxiomOpt _ a _ _ _ _ _ rest => KeinTabAx a ∧ oE rest
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => KeinTabAx a ∧ oE err ∧ oE rest
   | .regRead _ _ rest => oE rest
   | .regReadElse _ _ _ sonst rest => oE sonst ∧ oE rest
   | .awaits _ _ _ _ _ rest => oE rest

@@ -22,7 +22,7 @@ def fremdStmt (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .retry n _ body ueber => n * fremdBlock fa pa body + fremdBlock fa pa ueber
   | .forever _ _ body => pa * fremdBlock fa pa body
   | .axiomCall a _ _ _ _ _ _ => fa a
-  | .axiomCallElse a _ _ _ _ _ _ _ err => fa a + fremdEnd fa pa err
+  | .axiomCallElse _ a _ _ _ _ _ _ err => fa a + fremdEnd fa pa err
   | _ => 0
 
 def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -35,8 +35,8 @@ def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdBlock fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
-  | .bindAxiomOpt a _ _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
-  | .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
+  | .bindAxiomOpt _ a _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
   | .regRead _ _ rest => fremdBlock fa pa rest
   | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
   | .awaits _ _ _ _ _ rest => fremdBlock fa pa rest
@@ -73,8 +73,8 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdEnd fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
   | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdEnd fa pa rest
-  | .bindAxiomOpt a _ _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
-  | .bindAxiomOptElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdEnd fa pa rest
+  | .bindAxiomOpt _ a _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
+  | .bindAxiomOptElse _ a _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdEnd fa pa rest
   | .regRead _ _ rest => fremdEnd fa pa rest
   | .regReadElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdEnd fa pa rest
   | .awaits _ _ _ _ _ rest => fremdEnd fa pa rest

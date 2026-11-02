@@ -48,7 +48,7 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte bis) (ruB_orteP P body)) (ruB_orteP P ueber)
   | _, _, _, _, .forever _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
   | _, _, _, _, .axiomCall _ args _ _ _ _ _ => ruA_orte args
-  | _, _, _, _, .axiomCallElse e args _ _ _ _ _ _ err => by
+  | _, _, _, _, .axiomCallElse e _ args _ _ _ _ _ err => by
       have ih0 := ruEnd_orteP P err
       cases e with
       | none =>

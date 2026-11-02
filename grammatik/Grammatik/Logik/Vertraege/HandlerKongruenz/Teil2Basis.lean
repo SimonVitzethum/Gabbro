@@ -209,7 +209,7 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
             cases ov with
             | none => exact Or.inl rfl
             | some v => exact (ihr _ _).schrumpf
-  | .bindAxiomOptElse e a args he hr' hp hd hgd err rest, σ, ρ => by
+  | .bindAxiomOptElse e a args he hp hd hgd hr' err rest, σ, ρ => by
       have ihr := fun σ ρ => Block.kongruent hR rest σ ρ
       have ihe := fun σ ρ => Endblock.kongruent hR err σ ρ
       cases e with
@@ -382,7 +382,7 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
             cases ov with
             | none => exact Or.inl rfl
             | some v => exact (ihr _ _).schrumpf
-  | .bindAxiomOptElse e a args he hr' hp hd hgd err rest, σ, ρ => by
+  | .bindAxiomOptElse e a args he hp hd hgd hr' err rest, σ, ρ => by
       have ihr := fun σ ρ => Endblock.kongruent hR rest σ ρ
       have ihe := fun σ ρ => Endblock.kongruent hR err σ ρ
       cases e with

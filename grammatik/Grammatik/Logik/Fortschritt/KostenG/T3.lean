@@ -40,7 +40,7 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall _ args _ _ _ _ _ => kostenArgs args
-  | .axiomCallElse _ args _ _ _ _ _ _ err => kostenArgs args + kostenKE c err
+  | .axiomCallElse _ _ args _ _ _ _ _ err => kostenArgs args + kostenKE c err
   | .regWrite _ _ e => 1 + kostenExpr e
   | .transition .. => 0
   | .publish _ e _ _ _ _ => 1 + kostenExpr e

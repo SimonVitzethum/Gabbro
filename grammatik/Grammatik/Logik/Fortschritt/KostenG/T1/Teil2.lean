@@ -34,9 +34,9 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
-  | _, _, .bindAxiomOpt _ args _ _ _ _ _ rest => by
+  | _, _, .bindAxiomOpt _ _ args _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
-  | _, _, .bindAxiomOptElse _ args _ _ _ _ _ _ err rest => by
+  | _, _, .bindAxiomOptElse _ _ args _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .regRead r hk rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
