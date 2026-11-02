@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.Faeden.RuheNutzer.Ptr
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSperre
 
 @[expose] public section
@@ -427,7 +428,7 @@ theorem logikPflicht_mitRuhe {P : Programm D} {S : SperrInv D} {Q : AxEns D}
     | none => ⟨koerperGutS_ruhe P passes _ _, invGutS_ruhe P passes _ _, invGutGrund_ruhe P passes _ _⟩
     | some f => ⟨koerperGutS_mitRuhe (h.1 passes f).1, invGutS_mitRuhe (h.1 passes f).2.1,
         invGutGrund_mitRuhe (h.1 passes f).2.2⟩,
-   sperrInvLokal_mitRuhe h.2.1, axEnsLokal_mitRuhe h.2.2⟩
+   sperrInvLokal_mitRuhe h.2.1, ⟨axEnsLokal_mitRuhe h.2.2.1, ptrVerfeinert_mitRuhe h.2.2.2⟩⟩
 
 theorem axiomSpur_map (tabs : List D.Tab) (globs : List D.Glob) (a : D.Ax) (Λ : List (Res D))
     (h : List D.Lock) :
