@@ -6,7 +6,7 @@
 module
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Return
-public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
 public import Stage0.Senke.Stopp
 public import Stage0.Senke.Tor

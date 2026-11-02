@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Anweisung.Faelle.Binden
 public import Stage0.Senke.Ausdruck.Gleit.Wort
-public import Stage0.Senke.Ausdruck.Gleit.Test
+public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 @[expose] public section
 

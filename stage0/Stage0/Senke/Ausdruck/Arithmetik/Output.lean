@@ -1,7 +1,7 @@
 /- Emitted post-cancellation nearest-even rounding and field packing. -/
 module
 public import Stage0.Senke.Ausdruck.Arithmetik.Distanz
-public import Stage0.Senke.Ausdruck.Gleit.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 @[expose] public section
 
 
