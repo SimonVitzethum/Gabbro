@@ -52,5 +52,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.Refusals
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Proben
 
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
+public import Grammatik.Parser.Elab.Uebersetze.Folds.ExistsWitness
 
 @[expose] public section
