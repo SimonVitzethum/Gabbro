@@ -1,52 +1,14 @@
 module
 
-
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
-import all Init.Data.Repr
-import all Init.Data.String.Basic
-import all Init.Data.String.Bootstrap
-import all Init.Data.String.Decode
-import all Init.Data.String.Defs
-import all Init.Data.String.Extra
-import all Init.Data.String.FindPos
-import all Init.Data.String.Hashable
-import all Init.Data.String.Iter
-import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
-import all Init.Data.String.Iterate
-import all Init.Data.String.Iterator
-import all Init.Data.String.Legacy
-import all Init.Data.String.Length
-import all Init.Data.String.Modify
-import all Init.Data.String.OrderInstances
-import all Init.Data.String.Pattern
-import all Init.Data.String.Pattern.Basic
-import all Init.Data.String.Pattern.Char
-import all Init.Data.String.Pattern.Pred
-import all Init.Data.String.Pattern.String
-import all Init.Data.String.PosRaw
-import all Init.Data.String.Search
-import all Init.Data.String.Slice
-import all Init.Data.String.Stream
-import all Init.Data.String.Subslice
-import all Init.Data.String.Substring
-import all Init.Data.String.TakeDrop
-import all Init.Data.String.Termination
-import all Init.Data.String.ToSlice
 
 @[expose] public section
 
-
-
-
 namespace Gabbro.Grammatik.Parser.Aufloesung
-
 open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Namensraum (Pfad Quelle Platz aufloeseK)
-
 set_option maxRecDepth 100000
 
-/-- What resolution sees at a position: the unit's source, the module and the locals in scope. -/
 structure Kontext where
   q : Quelle
   von : Pfad
@@ -79,6 +41,35 @@ def Kontext.pfad (k : Kontext) : Pfad → Pfad
 def Kontext.nenntItem (k : Kontext) (p : Pfad) : Bool :=
   (aufloeseK k.q ⟨none, []⟩ k.von p).isSome
 
+
+/-- A spec call resolves its group prefix; ordinary qualified function paths resolve as before. -/
+def Kontext.ruf (k : Kontext) (s : String) : String :=
+  let base := fun n =>
+    let p := segmente n
+    if k.nenntItem p then k.ref n
+    else if p.length > 1 && k.nenntItem p.dropLast then
+      k.ref ("::".intercalate p.dropLast) ++ "::" ++ letzter p
+    else k.ref n
+  match s.splitOn "::[" with
+  | [n, raw] => base n ++ "::[" ++ raw
+  | _ => base s
+
+/-- Resolve paths in explicit type tuples before instantiation, including table and alias names. -/
+def typArgumentTokens (k : Kontext) : Nat → List Token → List Token
+  | 0, ts => ts
+  | _ + 1, [] => []
+  | f + 1, t :: ts =>
+    match nameText t with
+    | some n =>
+      let (ps, rest) := sammleSegmente ts [n]
+      .ident (k.ref ("::".intercalate ps)) :: typArgumentTokens k f rest
+    | none => t :: typArgumentTokens k f ts
+
+def Kontext.typArgument (k : Kontext) (s : String) : String :=
+  match lex s with
+  | .error _ => s
+  | .ok ts => " ".intercalate ((typArgumentTokens k (ts.length + 1) ts.dropLast).map instWort)
+
 mutual
 /-- **An expression, resolved.** -/
 def aus (k : Kontext) : SExpr → SExpr
@@ -88,7 +79,7 @@ def aus (k : Kontext) : SExpr → SExpr
   | .arrow x f => .arrow (aus k x) f
   | .un o x => .un o (aus k x)
   | .bin o x y => .bin o (aus k x) (aus k y)
-  | .call f xs => .call (k.ref f) (ausL k xs)
+  | .call f xs => .call (k.ruf f) (ausL k xs)
   | .fnref p => .fnref (k.ref p)
   | .built f xs => .built f (ausL k xs)
   | .old x => .old (aus k x)
@@ -101,6 +92,7 @@ def aus (k : Kontext) : SExpr → SExpr
   | .ext .all (x :: d :: ns) xs => .ext .all (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .any (x :: d :: ns) xs => .ext .any (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .count (x :: d :: ns) xs => .ext .count (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
+  | .ext .inst [n, raw] xs => .ext .inst [k.ruf n, k.typArgument raw] (ausL k xs)
   | .ext .mem (d :: ns) xs => .ext .mem (d :: ns.map k.ref) (ausL k xs)
   | .ext w ns xs => .ext w ns (ausL k xs)
   | e => e
@@ -141,6 +133,7 @@ def effekt (k : Kontext) : SEffekt → SEffekt
   | .allocs n => .allocs (k.ref n)
   | .takes e => .takes (aus k e)
   | .posts e => .posts (aus k e)
+  | .instanceEffects n ts => .instanceEffects (k.ref n) (ts.map (typ k))
   | e => e
 
 /-- **A contract clause, resolved.** -/
@@ -189,7 +182,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .lcall c => .lcall (libraryCall k c)
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
-  | .call f xs => .call (k.ref f) (xs.map (aus k))
+  | .call f xs => .call (k.ruf f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))
   | .elsif c s => .elsif (aus k c) (anw k s)

@@ -129,6 +129,7 @@ def namenTO : Option STyp → List String
 def namenE (lok : List String) : SEffekt → List String
   | .reads e | .writes e | .locks _ e | .takes e | .posts e => namenA lok e
   | .masks n | .allocs n => [n]
+  | .instanceEffects n ts => n :: ts.flatMap namenT
   | _ => []
 
 /-- The names a contract clause writes. -/
@@ -154,6 +155,8 @@ def namenTeil : STabTeil → List String
 
 /-- **The names an item's head writes** -- what an importer reads of it. -/
 def kopfNamen : SItemTief → List String
+  | .specGroupT _ ts es fs =>
+    (fs.flatMap namenSig).filter fun n => !((ts ++ es).any (strEq n))
   | .fnT s _ | .protoT s | .specT s _ | .asmT s _ => namenSig s
   | .transT target s _ => target :: namenSig s
   | .globT _ _ t _ _ _ _ | .constT _ t _ | .atomT _ t _ _ _ | .arenaT _ _ _ _ t _ => namenT t
@@ -167,7 +170,8 @@ def kopfNamen : SItemTief → List String
 /-- **The kinds that can carry `pub`.** -/
 def darfPub : SItemTief → Bool
   | .fnT .. | .protoT .. | .specT .. | .asmT .. | .globT .. | .constT .. | .typeT .. | .atomT ..
-  | .tableT .. | .arenaT .. | .lockT .. | .formatT .. | .devT .. | .whyT .. | .useT .. | .modT .. => true
+  | .tableT .. | .arenaT .. | .lockT .. | .formatT .. | .devT .. | .whyT .. | .useT .. | .modT ..
+  | .specGroupT .. => true
   | _ => false
 
 /-- A `pub` item: where it stands, its path (if it names one) and the item. -/

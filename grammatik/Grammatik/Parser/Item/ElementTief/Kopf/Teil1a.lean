@@ -31,10 +31,14 @@ inductive SEffekt
   | posts : SExpr → SEffekt
   | loops : SEffekt
   | pure : SEffekt
+  | param : String → SEffekt
+  | instanceEffects : String → List STyp → SEffekt
   deriving Repr
 
 mutual
 def beqSEffekt : SEffekt → SEffekt → Bool
+  | .param a, .param b => strEq a b
+  | .instanceEffects a ts, .instanceEffects b us => strEq a b && beqSTypList ts us
   | .reads a, .reads b => beqSExpr a b
   | .writes a, .writes b => beqSExpr a b
   | .locks x a, .locks y b => (x == y) && beqSExpr a b

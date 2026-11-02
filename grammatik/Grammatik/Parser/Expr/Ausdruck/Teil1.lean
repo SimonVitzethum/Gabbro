@@ -25,6 +25,7 @@ inductive XKind
   | all | any | count | mem | reach | imp | text | call
   /-- One labelled call argument: `names = [label]`, `subs = [value]`. -/
   | label
+  | inst
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool
@@ -147,6 +148,27 @@ where
       ds.all istZiffer &&
       (let n := ds.foldl (fun a c => 10 * a + (c.toNat - 48)) 0
        1 ≤ n && n ≤ 64)
+
+/-- Keep explicit call type arguments as source tokens until the type reader is available.
+    `ext inst [callee, arguments] operands` is consumed before export. -/
+def instWort : Token → String
+  | .ident s | .wort s | .zeichen s | .float s => s
+  | .num n => toString n
+  | _ => ""
+
+def parseInstWorte : Nat → List Token → Nat → Except String (List String × List Token)
+  | 0, _, _ => .error "spec.call.arguments: out of fuel"
+  | _ + 1, [], _ => .error "spec.call.arguments: wanted ]"
+  | f + 1, .zeichen "]" :: rest, 0 => .ok ([], rest)
+  | f + 1, .zeichen "]" :: rest, d + 1 => do
+      let (ws, r) ← parseInstWorte f rest d
+      return ("]" :: ws, r)
+  | f + 1, .zeichen "[" :: rest, d => do
+      let (ws, r) ← parseInstWorte f rest (d + 1)
+      return ("[" :: ws, r)
+  | f + 1, t :: rest, d => do
+      let (ws, r) ← parseInstWorte f rest d
+      return (instWort t :: ws, r)
 
 /-- One spelled operator of the `||` level. -/
 def opOder : List Token → Option (List Token)

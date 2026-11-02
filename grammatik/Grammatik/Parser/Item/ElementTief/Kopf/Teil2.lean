@@ -195,14 +195,20 @@ inductive SItemTief
       project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
   | pubT : SItemTief → SItemTief
   | taggedByT : SItemTief → String → SItemTief
-  /-- Closed-dispatch declarations retain signatures and bodies until expansion. -/
-  | specGroupT : String → String → List FnSig → SItemTief
-  | implGroupT : String → STyp → List (FnSig × SAnw) → SItemTief
+  /-- Check model A: type and effect parameters, followed by abstract function heads. -/
+  | specGroupT : String → List String → List String → List FnSig → SItemTief
+  /-- A concrete type tuple, effect arguments and ordinary implementation functions. -/
+  | implGroupT : String → List STyp → List (List SEffekt) → List SItemTief → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
   | none, none => true
   | some (a, x), some (b, y) => beqWorte a b && beqSExpr x y
+  | _, _ => false
+
+def beqEffectArgs : List (List SEffekt) → List (List SEffekt) → Bool
+  | [], [] => true
+  | e :: es, f :: fs => beqSEffektList e f && beqEffectArgs es fs
   | _, _ => false
 
 mutual
@@ -270,12 +276,10 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .gateT a, .gateT b => beqSItemTief a b
   | .pubT a, .pubT b => beqSItemTief a b
   | .taggedByT a s, .taggedByT b t => beqSItemTief a b && strEq s t
-  | .specGroupT n p fs, .specGroupT m q gs =>
-    strEq n m && strEq p q && fs.length == gs.length &&
-      (fs.zip gs).all (fun (f, g) => beqFnSig f g)
-  | .implGroupT n t fs, .implGroupT m u gs =>
-    strEq n m && beqSTyp t u && fs.length == gs.length &&
-      (fs.zip gs).all (fun (f, g) => beqFnSig f.1 g.1 && beqSAnw f.2 g.2)
+  | .specGroupT n ts es fs, .specGroupT m us ds gs =>
+    strEq n m && beqWorte ts us && beqWorte es ds && beqFnSigs fs gs
+  | .implGroupT n ts es fs, .implGroupT m us ds gs =>
+    strEq n m && beqSTypList ts us && beqEffectArgs es ds && beqSItemTiefList fs gs
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true

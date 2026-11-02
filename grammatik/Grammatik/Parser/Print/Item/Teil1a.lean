@@ -25,6 +25,8 @@ def druckPred (e : SExpr) : List Token :=
 
 /-- An effect arm. -/
 def druckEffekt : SEffekt → List Token
+  | .param n => rohToks n
+  | .instanceEffects n ts => rohToks n ++ [.zeichen "["] ++ ((ts.map druckTyp).intersperse [.zeichen ","]).flatten ++ [.zeichen "]"]
   | .reads p => [.wort "reads"] ++ druckToks p
   | .writes p => [.wort "writes"] ++ druckToks p
   | .locks sh p => [.wort "locks"] ++ (if sh then [.wort "shared"] else []) ++ druckToks p

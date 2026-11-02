@@ -195,6 +195,9 @@ def parseKopfStmt (f : Nat) (toks : List Token) :
       | .call c args => match fordereZeichen ";" rest with
         | .ok rest' => .ok (.call c args, rest')
         | .error e => .error e
+      | .ext .inst [c, raw] args => match fordereZeichen ";" rest with
+        | .ok rest' => .ok (.call (c ++ "::[" ++ raw ++ "]") args, rest')
+        | .error e => .error e
       | .ext .call _ (callee :: args) => match fordereZeichen ";" rest with
         | .ok rest' => .ok (.call (druck callee) args, rest')
         | .error e => .error e

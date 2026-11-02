@@ -11,6 +11,7 @@ namespace Gabbro.Grammatik.Parser
 def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) := do
   let declarations := items.filterMap fun | .taggedByT decl spec => some (decl, spec) | _ => none
   if declarations.isEmpty then return items
+  Spec.check items
   let mut generated := []
   let mut bindings := []
   for (decl, spec) in declarations do
@@ -19,9 +20,9 @@ def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) :
     bindings := bindings ++ resolved
   if ¬ (bindings.map (fun b => b.signature.name)).Nodup then
     throw "tagged-dispatch-duplicate-dispatcher"
-  let ordinary := taggedOrdinaryItems items ++ generated
+  let ordinary := items.filter (fun | .taggedByT .. => false | _ => true) ++ generated
   let sources := items.flatMap fun
-    | .specGroupT spec _ fs => fs.map (fun sig => spec ++ "::" ++ sig.name)
+    | .specGroupT spec _ _ fs => fs.map (fun sig => spec ++ "::" ++ sig.name)
     | _ => []
   let globals := ordinary.filterMap fun
     | .globT _ name ty _ _ _ _ | .constT name ty _ => some (name, ty)
@@ -42,6 +43,6 @@ def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) :
 
 /-- Shared declaration-expansion entry point, before ordinary item admission. -/
 def exportDeclarationUnit (items : List SItemTief) : Except String (List SItemTief) := do
-  exportLibraryUnit (← exportTaggedUnit items)
+  exportLibraryUnit (← Spec.prepare (← exportTaggedUnit items))
 
 end Gabbro.Grammatik.Parser

@@ -264,6 +264,10 @@ def normU32Item : SItemTief → SItemTief
   | .tableT n v c a b g parts =>
     .tableT n v c a b g (parts.map normTabTeilU32)
   | .fnT s k => .fnT (normSigU32 s) k
+  | .specGroupT n ts es fs => .specGroupT n ts es (fs.map normSigU32)
+  | .implGroupT n ts es fs => .implGroupT n (ts.map normTypU32) es (fs.map fun
+      | .fnT s b => .fnT (normSigU32 s) b
+      | it => it)
   | it => it
 
 /-- Bare `u32` normalised over a top-level list. -/

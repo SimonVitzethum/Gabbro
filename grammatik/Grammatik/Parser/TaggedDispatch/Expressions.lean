@@ -26,16 +26,13 @@ def taggedExprType (items : List SItemTief) (locals : TaggedLocals) : SExpr → 
           | _ => none
         | _ => none
       match sums with | [ty] => some ty | _ => none
-  | _ => none
+  | e => Spec.inferType items locals 128 e
 
 def taggedResolveCall (items : List SItemTief) (bindings : List TaggedBinding)
     (sources : List String) (locals : TaggedLocals) (name : String) (args : List SExpr) :
     Except String String := do
   let candidates := bindings.filter (fun b => strEq b.source name)
-  if candidates.isEmpty then
-    if sources.any (strEq · name) then
-      throw ("tagged-dispatch-non-dispatchable-call: " ++ name)
-    pure name
+  if candidates.isEmpty then pure name
   else
     let selected := candidates.filter fun b =>
       args.length == b.signature.params.length &&
@@ -43,7 +40,7 @@ def taggedResolveCall (items : List SItemTief) (bindings : List TaggedBinding)
           (fun ty => beqSTyp ty (.atom b.sumName))
     match selected with
     | [b] => pure b.signature.name
-    | [] => throw ("tagged-dispatch-unresolved-receiver: " ++ name)
+    | [] => pure name
     | _ => throw ("tagged-dispatch-ambiguous-call: " ++ name)
 
 mutual

@@ -83,9 +83,18 @@ def syscall (k : Kontext) (c : SSyscall) : SSyscall :=
 /-- **An item, resolved** in its module: its own key and every name it writes. Item kinds without a G
     form pass unchanged (the elaborator refuses them). -/
 def item (k : Kontext) : SItemTief → SItemTief
+  | .taggedByT decl spec => .taggedByT (item k decl) (k.ref spec)
   | .typeT fl n args ord t => .typeT fl (k.eigen n) (args.map (typ k)) ord (typO k t)
   | .constT n t v => .constT (k.eigen n) (typ k t) (konst k v)
   | .globT m n t v al s sh => .globT m (k.eigen n) (typ k t) (konst k v) (ausO k al) s sh
+  | .specGroupT n ts es fs =>
+    .specGroupT (k.eigen n) ts es
+      (fs.map fun s => { sig (k.mit (ts ++ es)) s with name := s.name })
+  | .implGroupT n ts es fs =>
+    .implGroupT (k.ref n) (ts.map (typ k)) (es.map fun xs => xs.map (effekt k))
+      (fs.map fun
+        | .fnT s b => .fnT { sig k s with name := s.name } (anw (k.mit (s.params.map Prod.fst)) b)
+        | it => it)
   | .fnT s b => .fnT (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
   | .transT target s b =>
     .transT (k.ref target) (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)

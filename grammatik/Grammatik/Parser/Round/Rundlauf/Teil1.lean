@@ -76,6 +76,11 @@ def domToks (dk : String) (ds : List String) (ops : List (List Token)) : List To
     the witnesses of `Print/ExtProben` decide it per form. -/
 def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List Token :=
   match k with
+  | .inst => match ns with
+    | [f, raw] => [.ident f, .zeichen "::", .zeichen "["] ++
+        (match lex raw with | .ok tokens => tokens.dropLast | .error _ => []) ++
+        [.zeichen "]", .zeichen "("] ++ kommaToks ts ++ [.zeichen ")"]
+    | _ => [.ende]
   | .text => match ns with
     | [s] => [.text s]
     | _ => [.ende]
@@ -122,6 +127,8 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · split <;> simp only [ne_eq, List.cons_ne_self, List.cons_ne_nil, not_false_eq_true]
   · split <;> simp only [List.append_assoc, List.cons_append, List.nil_append, ne_eq, List.append_eq_nil_iff, reduceCtorEq, and_false, not_false_eq_true, List.cons_ne_self]
   · split <;> simp only [ne_eq, List.cons_ne_self, List.cons_ne_nil, not_false_eq_true]
+
+  · split <;> simp only [List.cons_append, List.nil_append, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
 
 mutual
 def druckToks : SExpr → List Token
