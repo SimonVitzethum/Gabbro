@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.ExportRelations
+public import Grammatik.Parser.Elab.Export.ExportRelations
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.ExportPreservation

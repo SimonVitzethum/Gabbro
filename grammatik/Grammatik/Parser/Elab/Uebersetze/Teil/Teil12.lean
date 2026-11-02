@@ -32,9 +32,9 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
-public import Grammatik.Parser.Elab.ExportMetadata
+public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
-public import Grammatik.Parser.Elab.Uebersetze.Teil11
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Reason
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema

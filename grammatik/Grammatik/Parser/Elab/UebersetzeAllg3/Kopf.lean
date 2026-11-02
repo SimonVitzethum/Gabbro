@@ -36,7 +36,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-public import Grammatik.Parser.Elab.ExportControl
+public import Grammatik.Parser.Elab.Export.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
 public import Grammatik.Parser.Namen.Oeffentlich

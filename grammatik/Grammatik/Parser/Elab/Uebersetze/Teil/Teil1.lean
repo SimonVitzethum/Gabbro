@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
-public import Grammatik.Parser.Elab.ExportMetadata
+public import Grammatik.Parser.Elab.Export.ExportMetadata
 public import Grammatik.Kern.Syntax.Typen.Reason
 import all Init.Data.Repr
 import all Init.Data.String.Defs

@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Elab.Konst.Dispatch
-public import Grammatik.Parser.Elab.Uebersetze.Teil9
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
 
 @[expose] public section
 
