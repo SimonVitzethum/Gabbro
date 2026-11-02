@@ -196,7 +196,10 @@ theorem mHp (caller callee : mD.Fn) {Λ : List (Res mD)}
   hb := fun c hc => by
     have : (vertragVon mD caller).boden = (mD.signatur caller).boden := rfl
     rw [this, hbc] at hc; cases hc
-  hk := by rw [hk]; exact ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
+  hk := by
+    unfold Signatur.inputMarks
+    rw [hk, OwnerFlow.empty_of_empty (mD.signatur callee).owner]
+    exact ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
   hh := hh
   hx := fun L hL hn => absurd (hx L hL) hn
 
