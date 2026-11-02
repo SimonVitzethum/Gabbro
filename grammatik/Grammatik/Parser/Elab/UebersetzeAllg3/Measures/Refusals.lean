@@ -391,8 +391,7 @@ theorem convDenotes :
 
 /-- A conversion through a unit alias lowers once the alias scope travels with the function. -/
 def convAliasU : UProg := { countdown with fns :=
-  [{function "countdown" "countdown" with decreases := some (.conv "A" (.variable "n")),
-      measureTypes := [("A", (0, 7))]}] }
+  [{function "countdown" "countdown" with decreases := some (.conv "A" (.variable "n")), measureTypes := [("A", (0, 7))]}] }
 theorem convAliasLowered : (lowerAllg convAliasU).toOption.isSome = true := by decide +kernel
 def convAliasM := (exported convAliasU convAliasLowered).val
 theorem convAliasSource : SourceTuple convAliasU 0 (convAliasM.mass 0) := convAliasM.source 0

@@ -96,8 +96,7 @@ def elabUFunktion (consts : List (String × Int))
       match uMeasureClause alias sig.klauseln with
       | .error e => .error e
       | .ok decreases =>
-        .ok { name := sig.name,
-              params := kopf.names.zip kopf.types,
+        .ok { name := sig.name, params := kopf.names.zip kopf.types,
               kinds := kopf.kinds,
               res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
               resWhy := kopf.resWhy, resTy := kopf.resTy,
