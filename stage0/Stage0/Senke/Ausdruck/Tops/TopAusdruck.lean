@@ -12,6 +12,19 @@ set_option linter.unusedSectionVars false
 variable [Kern]
 
 variable {D : Deklaration} {L : Lay D}
+
+theorem lowE_top_prodSet {name : Nat} {fs : List Ty} {σ : Ty}
+    (i : FieldAt fs σ) (d : Nat) (v e : Option (List II × Nat))
+    (c : List II) (top : Nat)
+    (h : prodSetL (name := name) i d v e = some (c, top)) : d < top := by
+  simp only [prodSetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, ⟨ce, te⟩, he, _, rfl⟩ := h
+  have positive := valueWords_pos σ
+  have bound := Nat.le_max_right (max tv te)
+    (d + valueWords (.prod name fs) + valueWords σ)
+  omega
+
 theorem lowE_top_prodGet {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
     {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ)
     (v : Expr D Γ Λ (.prod name fs)) (d : Nat) (c : List II) (top : Nat)
