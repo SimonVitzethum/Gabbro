@@ -260,7 +260,7 @@ def elabU : List SItemTief → Except String UProg
     match uWhys ms alias with
     | .error e => .error e
     | .ok whys =>
-    match uSums alias ms tabs with
+    match uSums alias ms tabs spaces with
     | .error e => .error e
     | .ok sums =>
     match uSumGlobs consts sums ms globs with
@@ -317,7 +317,7 @@ def elabU : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok probeFns =>
     match uSeq (fnItems.map (fun (s, b) =>
-        elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+        elabUFunktion (spaces := spaces) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
           (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
           (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e

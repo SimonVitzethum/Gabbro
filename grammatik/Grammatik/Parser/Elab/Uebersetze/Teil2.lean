@@ -74,6 +74,7 @@ def UReg.art (g : UReg) : UParamArt := bif g.bool then .bool else .int
     locks, the held lock names, the optional result range and
     the function name (for errors). -/
 structure UCtx where
+  spaces : List String := []
   names : List String
   kinds : List UParamArt
   types : List Ty

@@ -142,7 +142,7 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
   | .some ty@(.array _ _) | .some ty@(.str _) =>
     if mu then .error "let mut of an aggregate without G form"
     else
-      match uTyp ctx.alias ctx.tabs ty with
+      match uTyp ctx.alias ctx.tabs ctx.spaces ty with
       | .error err => .error err
       | .ok τ =>
         match uWertBody ctx e with
