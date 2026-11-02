@@ -44,6 +44,7 @@
 module
 public import Grammatik.Alle.Teil1
 public import Grammatik.Alle.Teil2
+public import Grammatik.Parser.Elab.Uebersetze.ReasonProben
 
 @[expose] public section
 

@@ -77,5 +77,35 @@ theorem equal_iff {r : ReasonSpec} (a b : ReasonVal r) : equal a b = true ↔ a 
   simp only [equal, decide_eq_true_eq]
   exact ⟨Subtype.ext, congrArg Subtype.val⟩
 
+/-- Openness, rather than the number of declared cases, decides the empty-open boundary. -/
+def inhabitedB (r : ReasonSpec) : Bool := !r.closed || !r.codes.isEmpty
+
+theorem inhabitedB_iff (r : ReasonSpec) : inhabitedB r = true ↔ Nonempty (ReasonVal r) := by
+  cases hc : r.closed with
+  | false =>
+    constructor
+    · intro _
+      exact ⟨⟨⟨0, by decide⟩, by intro h; rw [hc] at h; cases h⟩⟩
+    · intro _
+      simp only [inhabitedB, hc, Bool.not_false, Bool.true_or]
+  | true =>
+    cases hs : r.codes with
+    | nil =>
+      constructor
+      · intro h
+        simp only [inhabitedB, hc, hs, List.isEmpty_nil, Bool.not_true,
+          Bool.false_or, Bool.false_eq_true] at h
+      · rintro ⟨v⟩
+        have hv := v.2 hc
+        rw [hs] at hv
+        cases hv
+    | cons c cs =>
+      constructor
+      · intro _
+        exact ⟨⟨c, by intro _; rw [hs]; exact List.mem_cons_self⟩⟩
+      · intro _
+        simp only [inhabitedB, hc, hs, List.isEmpty_cons, Bool.not_false,
+          Bool.not_true, Bool.false_or]
+
 end ReasonVal
 end Gabbro.Grammatik

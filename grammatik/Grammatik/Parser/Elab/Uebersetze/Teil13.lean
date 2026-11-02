@@ -223,7 +223,7 @@ def elabU : List SItemTief → Except String UProg
     let fnItems := ms.filterMap (fun
       | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
       | _ => none)
-    match uWhys ms with
+    match uWhys ms alias with
     | .error e => .error e
     | .ok whys =>
     match uSums alias ms with

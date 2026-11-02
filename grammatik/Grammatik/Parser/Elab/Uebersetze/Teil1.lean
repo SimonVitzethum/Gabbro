@@ -3,6 +3,7 @@ module
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
+public import Grammatik.Kern.Syntax.Typen.Reason
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
@@ -408,10 +409,12 @@ structure UGlob where
   nutzlast : List String := []
   deriving DecidableEq, Repr
 
-/-- A `reason` declaration: its name and the names of its cases in order (`Ty.why` of their number). -/
+/-- A source reason declaration, retaining its resolved descriptor for the channel migration. -/
 structure UWhy where
   name : String
   cases : List String
+  /-- Absent only in manually supplied intermediate fixtures; never synthesized by source export. -/
+  descriptor : Option ReasonSpec := none
   deriving DecidableEq, Repr
 
 /-- A `tagged type` declaration: its cases in order, each with the range of its payload or none

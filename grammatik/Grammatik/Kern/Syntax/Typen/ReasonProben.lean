@@ -50,10 +50,23 @@ theorem reason_decode_bounded_zeuge :
 theorem reason_nominal_zeuge : closedReason ≠ openReason ∧
     closedReason.codes = openReason.codes := by decide
 
+theorem reason_foreign_declaration_zeuge :
+    closedReason ≠ { closedReason with name := 8 } := by decide
+
+theorem reason_openness_zeuge :
+    closedReason ≠ { closedReason with closed := false } := by decide
+
 theorem reason_unknown_closed_refused : ReasonVal.decode closedReason 4 = none := by decide
 
 theorem reason_negative_refused : ReasonVal.decode openReason (-1) = none := by decide
 
 theorem reason_overflow_refused : ReasonVal.decode openReason (2 ^ 128) = none := by decide
+
+theorem reason_inhabitedB_iff_zeuge :
+    ReasonVal.inhabitedB emptyOpenReason = true ∧ Nonempty (ReasonVal emptyOpenReason) :=
+  ⟨rfl, (ReasonVal.inhabitedB_iff _).mp rfl⟩
+
+theorem reason_empty_closed_refused :
+    ReasonVal.inhabitedB { emptyOpenReason with closed := true } = false := rfl
 
 end Gabbro.Grammatik

@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil11
+public import Grammatik.Parser.Elab.Uebersetze.Reason
 
 @[expose] public section
 
@@ -90,31 +91,8 @@ def uStartNamen : Nat → SAnw → List String
 def uOhneDoppelte (xs : List String) : List String :=
   xs.foldl (fun acc x => if acc.any (fun y => strEq y x) then acc else acc ++ [x]) []
 
-/-- The numeral a token list is. -/
-def uZahlTok : List Token → Option Int
-  | [.num n] => some (Int.ofNat n)
-  | [.zeichen "-", .num n] => some (-(Int.ofNat n))
-  | _ => none
-
-/-- A payload type: a type word, or `T in lo .. hi`. -/
-def uNutzTyp (alias : List (String × (Int × Int))) : List Token → Except String (Int × Int)
-  | [.ident n] => uTypName alias n
-  | [.wort n] => uTypName alias n
-  | ts =>
-    match uTeileBereich [] ts with
-    | some (_ :: .wort "in" :: lo, ex, hi) =>
-      match uZahlTok lo, uZahlTok hi with
-      | some a, some b => .ok (a, if ex then b - 1 else b)
-      | _, _ => .error "payload range without G form"
-    | _ => .error "payload type without G form"
-
-/-- The tokens up to the closing parenthesis, and the rest behind it. -/
-def uBisKlammer : List Token → List Token → Option (List Token × List Token)
-  | _, [] => none
-  | acc, .zeichen ")" :: rest => some (acc.reverse, rest)
-  | acc, t :: rest => uBisKlammer (t :: acc) rest
-
-/-- The cases of a tagged type from its tokens (`Leer , Kurz ( u32 in 0 .. 100 )`), `fuel` bounds the length. -/
+/-- Read payload types with the canonical type parser, preserving nested parentheses.
+    This scalar stage still refuses payloads that have no numeric result elaboration. -/
 def uSumFaelle (alias : List (String × (Int × Int))) :
     Nat → List Token → Except String (List (String × Option (Int × Int)))
   | 0, _ => .error "tagged type too long"
@@ -125,10 +103,10 @@ def uSumFaelle (alias : List (String × (Int × Int))) :
     | .ok r => .ok ((n, none) :: r)
   | _ + 1, [.ident n] => .ok [(n, none)]
   | f + 1, .ident n :: .zeichen "(" :: rest =>
-    match uBisKlammer [] rest with
-    | none => .error "tagged case without G form"
-    | some (ty, rest2) =>
-      match uNutzTyp alias ty with
+    match parseTyp f rest with
+    | .error _ => .error "tagged case without G form"
+    | .ok (ty, .zeichen ")" :: rest2) =>
+      match uErgBereich alias ty with
       | .error e => .error e
       | .ok r =>
         match rest2 with
@@ -138,6 +116,7 @@ def uSumFaelle (alias : List (String × (Int × Int))) :
           | .error e => .error e
           | .ok more => .ok ((n, some r) :: more)
         | _ => .error "tagged case without G form"
+    | .ok _ => .error "tagged case without G form"
   | _ + 1, _ => .error "tagged case without G form"
 
 /-- The `tagged type` items of a unit. -/
@@ -164,17 +143,21 @@ def uSums (alias : List (String × (Int × Int))) : List SItemTief → Except St
       | _ => .error "tagged type without G form"
   | _ :: rest => uSums alias rest
 
-/-- The `reason` items of a unit: the names of their cases in order; a reason that is not `exhaustive` has no
-    G form (`Ty.why n` has exactly `n` reasons). -/
-def uWhys : List SItemTief → Except String (List UWhy)
+/-- Keep the exact descriptor. Open execution stays refused until the channel migration. -/
+def uWhys (items : List SItemTief) (alias : List (String × (Int × Int)) := [])
+    (identity : Nat := 0) : Except String (List UWhy) :=
+  match items with
   | [] => .ok []
   | .whyT n cs ex :: rest =>
-    if !ex then .error "reason that is not exhaustive without G form"
-    else
-      match uWhys rest with
-      | .error e => .error e
-      | .ok r => .ok ({ name := n, cases := cs.map (·.1) } :: r)
-  | _ :: rest => uWhys rest
+    match uReasonSpec alias identity cs ex with
+    | .error e => .error e
+    | .ok descriptor =>
+      if !ex then .error "reason that is not exhaustive without G form"
+      else
+        match uWhys rest alias (identity + 1) with
+        | .error e => .error e
+        | .ok r => .ok ({ name := n, cases := cs.map (·.1), descriptor := some descriptor } :: r)
+  | _ :: rest => uWhys rest alias identity
 
 /-! ## States -/
 

@@ -7,6 +7,13 @@
   GOAL (Simon): a Gabbro user proves only their own logic plus named hardware assumptions; memory safety, race
   freedom, contracts where claimed -- in concurrent runs too -- and time are carried by the language.
 
+  C03 DESCRIPTOR STAGE (2026-11-02). `ReasonSpec`/`ReasonVal` describe nominal u128 codes, including unknown
+  open codes, and source collection retains their identity, code order and closed flag. The current G/GX goals
+  still use finite-index reason channels and scalar raw answers: open transport and typed payloads are NOT
+  claimed by this preparatory stage. The authorized channel migration must extend `KopfHalt`, `InvAmGrundG`,
+  `InvGutGrund` and foreign-answer admission to every admitted open code and every checked structured field,
+  retaining the same named assumptions and user duties; it remains required before C03 is complete.
+
   THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
   `Classical.choice`, `Quot.sound`):
   * `GabbroZiel` -- safety, on every reached machine: the legs of `ZielFX` (below). Proof `gabbro_ziel`.
