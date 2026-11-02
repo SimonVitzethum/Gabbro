@@ -56,6 +56,90 @@ theorem traverseLauf_obj {τ : Ty} {Γ : Ctx} (hlen : LenOk ps Γ)
         · trivial
         · trivial
 
+/-- Object frame of a consuming run: like `traverseLauf_obj`, by induction
+    on the fuel. Selection, measure and invariant reads are premises; every
+    failing check is `.logik .schleife`, which is trivial. -/
+theorem verbrauchLauf_obj {Γ : Ctx} (t : D.Tab) (hlen : LenOk ps Γ)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int)
+    (hs : ∀ σ ρ, ObjInv W ps ρ → ObjA W ps σ (schritt σ ρ))
+    (hi : ∀ σ ρ, SlotRahmen W σ (inv σ ρ).1)
+    (hsel : ∀ σ ρ, SlotRahmen W σ (sel σ ρ).1)
+    (hmass : ∀ σ ρ, SlotRahmen W σ (massW σ ρ).1) :
+    ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ), ObjInv W ps ρ →
+      ObjA W ps σ
+        (verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro σ ρ hρ
+      simp only [verbrauchLauf]
+      trivial
+  | succ n ih =>
+      intro σ ρ hρ
+      simp only [verbrauchLauf]
+      split
+      · trivial
+      · have hselg := hsel (inv σ ρ).1 ρ
+        split
+        · rename_i σr hsel_eq
+          have hselr : SlotRahmen W (inv σ ρ).1 σr := by
+            rw [hsel_eq] at hselg
+            exact hselg
+          exact ⟨(hi σ ρ).trans hselr, hρ⟩
+        · trivial
+        · rename_i σr k hsel_eq
+          have hselr : SlotRahmen W (inv σ ρ).1 σr := by
+            rw [hsel_eq] at hselg
+            exact hselg
+          have gsel : SlotRahmen W σ σr := (hi σ ρ).trans hselr
+          have hmassg := hmass σr ρ
+          have hstep := hs (massW σr ρ).1 (.cons k ρ) (hρ.cons hlen k)
+          split
+          · rename_i σ1 ρ1 hs1
+            rw [hs1] at hstep
+            have g1 : SlotRahmen W σ σ1 :=
+              (gsel.trans hmassg).trans hstep.1
+            have hmassg2 := hmass σ1 ρ1.tail
+            split
+            · have g2 : SlotRahmen W σ (massW σ1 ρ1.tail).1 :=
+                g1.trans hmassg2
+              exact ObjA.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail hstep.2.tail)
+            · trivial
+          · rename_i σ1 ρ1 hs1
+            rw [hs1] at hstep
+            have g1 : SlotRahmen W σ σ1 :=
+              (gsel.trans hmassg).trans hstep.1
+            have hmassg2 := hmass σ1 ρ1.tail
+            split
+            · have g2 : SlotRahmen W σ (massW σ1 ρ1.tail).1 :=
+                g1.trans hmassg2
+              exact ObjA.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail hstep.2.tail)
+            · trivial
+          · rename_i σ1 ρ1 hs1
+            rw [hs1] at hstep
+            have g1 : SlotRahmen W σ σ1 :=
+              (gsel.trans hmassg).trans hstep.1
+            have hmassg2 := hmass σ1 ρ1.tail
+            split
+            · split
+              · exact ⟨g1.trans (hmassg2.trans (hi (massW σ1 ρ1.tail).1 ρ1.tail)),
+                  hstep.2.tail⟩
+              · trivial
+            · trivial
+          · rename_i σ1 v hs1
+            rw [hs1] at hstep
+            exact (gsel.trans hmassg).trans hstep
+          · rename_i σ1 r hs1
+            rw [hs1] at hstep
+            exact (gsel.trans hmassg).trans hstep
+          · trivial
+          · trivial
+
 theorem retryLauf_obj {Γ : Ctx} (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
     (hs : ∀ σ ρ, ObjInv W ps ρ → ObjA W ps σ (schritt σ ρ))

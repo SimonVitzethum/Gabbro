@@ -53,7 +53,7 @@ theorem Stmt.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ'
   | .consumeTraverse t member edge inv bound mass body, h, σ, ρ, e', he => by
       simp only [Stmt.hardwareFrei] at h
       simp only [execStmt] at he
-      exact traverseLauf_ohneHardware _ _
+      exact verbrauchLauf_ohneHardware t _ _ _ _ _
         (fun σ ρ e => Block.hardwareFrei_ok hR body h σ ρ e) _ σ ρ e' he
   | .retry n bis body ueber, h, σ, ρ, e', he => by
       simp only [Stmt.hardwareFrei, Bool.and_eq_true] at h
