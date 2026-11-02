@@ -46,6 +46,7 @@ def _root_.Gabbro.Grammatik.Ty.kopf : Ty → Nat
   | .ref .. => 9
   | .arr .. => 10
   | .str .. => 11
+  | .prod .. => 12
 
 variable {D : Deklaration}
 
@@ -115,6 +116,9 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .intBuiltin1 .. => 57
   | .intBuiltin2 .. => 58
   | .count .. => 59
+  | .prod .. => 60
+  | .prodGet .. => 61
+  | .prodSet .. => 62
 
 def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
@@ -270,6 +274,9 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .intBuiltin1 _ a => [⟨0, 0, 57, false, [tk a]⟩, ⟨1, 0, 57, false, [0, 0, kE a]⟩] ++ fzE a
   | .intBuiltin2 _ a b => [⟨0, 0, 58, false, [tk a, tk b]⟩, ⟨1, 0, 58, false, [0, 0, kE a]⟩, ⟨1, 0, 58, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
   | .count _ body => [⟨0, 0, 59, false, [tk body]⟩, ⟨1, 0, 59, false, [0, 0, kE body]⟩] ++ fzE body
+  | .prod _ args => [⟨0, 0, 60, false, []⟩, ⟨1, 0, 60, false, [0, 2, kA args]⟩] ++ fzA args
+  | .prodGet v _ => [⟨0, 0, 61, false, [tk v]⟩, ⟨1, 0, 61, false, [0, 0, kE v]⟩] ++ fzE v
+  | .prodSet v _ e => [⟨0, 0, 62, false, [tk v, tk e]⟩, ⟨1, 0, 62, false, [0, 0, kE v]⟩, ⟨1, 0, 62, false, [1, 0, kE e]⟩] ++ fzE v ++ fzE e
 
 def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]

@@ -93,6 +93,7 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
   | .ptr _, _ => rfl
   | .arr _ _, _ => rfl
   | .str _, _ => rfl
+  | .prod _ _, _ => rfl
 
 theorem einpassenErg_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn)
     (hz : ∀ k, (z' k).bind id = z k) : ∀ (e : Option Ty) (n : Int),

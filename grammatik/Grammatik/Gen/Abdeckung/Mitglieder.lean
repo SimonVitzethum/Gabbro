@@ -34,6 +34,7 @@ def tyM : Ty → List String
   | .ref _ => ["Ty.ref"]
   | .arr τ _ => "Ty.arr" :: tyM τ
   | .str _ => ["Ty.str"]
+  | .prod _ fs => "Ty.prod" :: fs.foldl (fun acc τ => acc ++ tyM τ) []
 
 /-- The constructor of a variable. -/
 def varM : ∀ {Γ : Ctx} {τ : Ty}, Var Γ τ → List String
@@ -147,16 +148,20 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .intBuiltin1 _ a => "Expr.intBuiltin1" :: "Ty.int" :: exprM a
   | _, _, _, .intBuiltin2 _ a b => "Expr.intBuiltin2" :: "Ty.int" :: exprM a ++ exprM b
   | _, _, _, .count _ body => "Expr.count" :: "Ty.int" :: exprM body
+  | _, _, _, .prod _ args => "Expr.prod" :: "Ty.prod" :: argsM args
+  | _, _, _, .prodGet v _ => "Expr.prodGet" :: exprM v
+  | _, _, _, .prodSet v _ e => "Expr.prodSet" :: "Ty.prod" :: exprM v ++ exprM e
 
 def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, NutzlastExpr D Γ Λ o → List String
   | _, _, _, .empty => ["NutzlastExpr.empty"]
   | _, _, _, .val e => "NutzlastExpr.val" :: exprM e
-end
-
 /-- The members of an argument list. -/
 def argsM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty}, Args D Γ Λ τs → List String
   | _, _, _, .nil => ["Args.nil"]
   | _, _, _, .cons e rest => "Args.cons" :: exprM e ++ argsM rest
+
+end
+
 
 /-- The members of a result expression. -/
 def ergM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, ErgExpr D Γ Λ o → List String

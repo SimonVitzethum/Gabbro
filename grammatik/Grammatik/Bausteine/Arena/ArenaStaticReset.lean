@@ -102,6 +102,7 @@ def zeroValue {F : Type} {passt : F → Nat → Bool} : (τ : Ty) → ZeroAdmitt
   | .fnptr _, h => absurd h (by intro h; cases h)
   | .ptr _, h => absurd h (by intro h; cases h)
   | .ref _, h => absurd h (by intro h; cases h)
+  | .prod _ _, h => absurd h (by intro h; cases h)
 
 /-- The range store as a pure update: `zero` at every index of
     `[i, i + k)`, the old value everywhere else. -/

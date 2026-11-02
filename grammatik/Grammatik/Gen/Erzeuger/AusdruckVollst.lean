@@ -321,6 +321,9 @@ theorem exprS_vollst (Q : (Γ' : Ctx) → Nat → Sz (SE D Γ' Λ)) (E : Sz (SE 
   | intBuiltin1 _ _ => simp only [groesseExpr] at hu; omega
   | intBuiltin2 _ _ _ => simp only [groesseExpr] at hu; omega
   | count _ _ => simp only [groesseExpr] at hu; omega
+  | prod _ _ => simp only [groesseExpr] at hu; omega
+  | prodGet _ _ => simp only [groesseExpr] at hu; omega
+  | prodSet _ _ _ => simp only [groesseExpr] at hu; omega
 
 /-! ## The table by size -/
 

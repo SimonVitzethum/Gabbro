@@ -140,6 +140,13 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   /-- C13: the bounded count fold -- how many of the `n` indices `0 ..< n` satisfy the predicate; the
       binder carries the index, the result is at most `n`. -/
   | count (n : Nat) (body : Expr (.index (n : Int) :: Γ) Λ .bool) : Expr Γ Λ (.int 0 (n : Int))
+  /-- The product `r` from its complete field arguments in declaration order, every field exactly
+      once (C01): the constructor `P(a: .., b: ..)`; no field is missing, defaulted or repeated. -/
+  | prod (r : Nat) (args : Args D Γ Λ fs) : Expr Γ Λ (.prod r fs)
+  /-- `p.f`: the field at a position of a BY-VALUE product. A projection reads the places its base reads. -/
+  | prodGet (v : Expr Γ Λ (.prod r fs)) (i : FieldAt fs σ) : Expr Γ Λ σ
+  /-- The product with the field at a position replaced (a value; `p.f = e` on a local binds it). -/
+  | prodSet (v : Expr Γ Λ (.prod r fs)) (i : FieldAt fs σ) (e : Expr Γ Λ σ) : Expr Γ Λ (.prod r fs)
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option Ty → Type where
   | empty : NutzlastExpr Γ Λ none
