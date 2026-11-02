@@ -232,4 +232,14 @@ theorem groupT_zeuge :
     check [.groupT "G" ["T"] [⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" ∧ check [.tableT "T" none (some (.lit 1)) none none false [.tInv ⟨"valid", .lit 1, true, none, .ext .imp [] [.tru, .tru]⟩]] = .error "source export: invariant cost/runs/by duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
 
+/-- Required allocation remains refused: arenaAllocRequired has no connected
+    provider/storage-availability duty or source-to-IR lowering yet. -/
+theorem required_allocation_refused_zeuge :
+    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = true := by rfl
+
+/-- Owner production cannot be admitted while nonempty OwnerFlow is refused
+    by the canonical RufPasst.ownerReady escrow boundary. -/
+theorem owner_mint_type_refused_zeuge :
+    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
+
 end Gabbro.Grammatik.Parser.ExportMetadata
