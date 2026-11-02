@@ -72,6 +72,13 @@ def storeOnly : String :=
 
 theorem write_only_store_ok : stufe storeOnly = "OK" := by decide +kernel
 
+/-- C12: `own@Marke` resolves against the declared `linear` mark past export;
+    the first use still names the missing C09 owner flow. -/
+def ownAtMarke : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
+theorem ownAtMarke_refused : stufe ownAtMarke = "elab: write through an owned pointer needs the checked C09 owner flow" := by
+  decide +kernel
+
 /-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
 def bnot1 : String :=
   "module m { impl fn f(m : u8) -> u8 { return ~m; } impl fn g(w : u8) -> bool { return (w ^ u8::max) == ~w; } }"
