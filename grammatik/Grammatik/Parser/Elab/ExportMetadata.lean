@@ -25,11 +25,12 @@ def bodyMetadata : Nat → SAnw → Bool
   | _ + 1, .bind _ _ ty _ => ty.any typeMetadata
   | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
-    _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. | _ + 1, .reset .. |
+    _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
     _ + 1, .ret .. | _ + 1, .start .. |
+    _ + 1, .reset .. |
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
@@ -212,5 +213,15 @@ set_option maxRecDepth 100000 in
 theorem accT_zeuge :
     check [.accT "c" (.atom "u32") "add" (some (.lit 2))] = .ok () ∧ check [.accT "c" (.atom "u32") "xor" (some (.lit 2))] = .error "source export: accumulator operator without G form" ∧ check [.accT "c" (.atom "u32") "add" none] = .error "source export: accumulator without per cpu count without G form" := by
   exact ⟨rfl, rfl, rfl⟩
+
+/-- C18 resets are bound by checked range-store expansion. Arena resets elaborate to the used-counter store (`uAnw1`, unknown arenas refused); static-array ranges elaborate operands as body values and travel as `UStmt.resetRange` metadata (`uAnw1`, unknown statics and non-array statics refused), whose range validity and zero observation are discharged by the generic lowering (`lowResetRangeL`, `uReset_lower`). -/
+theorem reset_bound (n : Nat) (a : String) (r : Option (SExpr × SExpr)) : bodyMetadata (n + 1) (.reset a r) = false := by rfl
+
+set_option maxRecDepth 100000 in
+theorem reset_zeuge :
+    let body := SAnw.block [.reset "A" (some (.lit 1, .lit 2))] (some (.ret (some (.lit 23))))
+    let sig : FnSig := ⟨"impl", "main", [], some (.atom "u64"), none, []⟩
+    check [.fnT sig body] = .ok () ∧ check [.fnT ⟨"impl", "main", [], some (.atom "u64"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: main" := by
+  exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata

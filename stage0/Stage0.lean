@@ -9,6 +9,7 @@ public import Stage0.Zeugen.StateWitness
 public import Stage0.Zeugen.LibraryWitness
 public import Stage0.Zeugen.CheckWitness
 public import Stage0.Zeugen.AccWitness
+public import Stage0.Zeugen.ResetRangeWitness
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
