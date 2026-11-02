@@ -119,5 +119,6 @@ public import Stage0.Senke.Gleit.Align
 public import Stage0.Senke.Gleit.AddMag
 public import Stage0.Senke.Gleit.Round
 public import Stage0.Senke.Gleit.Pack
+public import Stage0.Senke.Gleit.Compose
 
 @[expose] public section
