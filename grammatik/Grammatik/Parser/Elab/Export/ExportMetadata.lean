@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
 @[expose] public section
@@ -9,8 +10,9 @@ namespace Gabbro.Grammatik.Parser.ExportMetadata
 def typeMetadata : STyp → Bool
   | .raw _ | .entry .. | .wrap _ | .embed .. => true
   | .ptr _ rights (.atom target) =>
-      !(rights.splitOn "+").all (fun right => right == "r" || right == "w" || right == "rw") ||
-        target == "u8"
+      (match Gabbro.Grammatik.DataRights.decode (fun _ => none) rights with
+        | some r => r.owner.isSome
+        | none => true) || target == "u8"
   | .ptr .. => true
   | .range ty _ _ _ | .array ty _ => typeMetadata ty
   | _ => false
@@ -304,7 +306,14 @@ theorem tableSpace_zeuge :
   exact ⟨rfl, rfl, rfl⟩
 
 theorem namedPointer_bound (space target : String) :
-    typeMetadata (.ptr space "r" (.atom target)) = (target == "u8") := by rfl
+    typeMetadata (.ptr space "r" (.atom target)) = (target == "u8") := by
+  have hd : (match Gabbro.Grammatik.DataRights.decode (fun _ => none) "r" with
+      | some r => r.owner.isSome
+      | none => true) = false := rfl
+  show ((match Gabbro.Grammatik.DataRights.decode (fun _ => none) "r" with
+      | some r => r.owner.isSome
+      | none => true) || target == "u8") = (target == "u8")
+  rw [hd, Bool.false_or]
 
 theorem namedPointer_zeuge :
     typeMetadata (.ptr "sharedData" "r" (.atom "T")) = false ∧
