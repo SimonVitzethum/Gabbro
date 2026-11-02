@@ -11,6 +11,7 @@ appendix, one line each. History is in git.*
 reasoning live in the linked plans, never here. Keep an entry to one short paragraph; if it needs more, write it in a plan and link it.
 
 ## Right now
+- **C14 base-placement duty:** Prove that loader/runner image placement supplies `Nat.lcm 8 N ∣ b` for every positive declared global alignment; the relative layout and `aligned_abs` premise do not yet discharge this duty (THEOREM-MAP §127).
 
 - **Stage 0: every userspace Gabbro form to IR, formally verified (2026-11-01).** The lanes IR-01..IR-14, their checkpoints
   and the C-package designs are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); team, scope and build caps are

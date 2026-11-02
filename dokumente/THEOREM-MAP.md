@@ -5845,3 +5845,49 @@ These model, export and expression-lowering laws do not alone establish connecte
 * **`lowEnd_ok_bindAxiomOptElse_some`**: Successful lowering of the corresponding end-block binding satisfies `Ret` given correctness of both end continuations and the remaining simulation premises.
 
 All four statements require payload `some`; they do not cover void payload `none`.
+
+## 127. Stage 0 C14: aligned globals on a relative common grid (2026-11-02)
+
+The C14 layout threads cumulative padded relative offsets on the `Nat.lcm 8 N`
+grid, then adds the image base; it preserves declared alignment and eight-byte
+storage alignment subject to the base-placement duty below.
+
+`stage0/Stage0/Senke/Welt/AlignUp.lean`:
+
+* **`alignUp`** (definition): Computes the smallest multiple at least the input, with zero imposing no alignment.
+* **`alignUp_zero`**: Zero alignment leaves the input unchanged.
+* **`alignUp_one`**: Unit alignment leaves the input unchanged.
+* **`le_alignUp`**: Padding never decreases the input offset.
+* **`alignUp_le_add`**: The padded offset is at most the input plus the alignment.
+* **`alignUp_dvd`**: A positive alignment divides the padded offset.
+* **`wordAlign`** (definition): Uses `Nat.lcm 8 n` as the common declared and storage alignment grid.
+* **`alignUp_word_grid`**: Padding an eight-byte-aligned relative offset on the common grid preserves divisibility by eight, including zero declared alignment.
+* **`aligned_abs`**: For positive `N` and `Nat.lcm 8 N ∣ b`, the absolute address `b + alignUp off (wordAlign N)` is divisible by both `N` and eight.
+* **`aligned_abs_zeuge`**: Concrete absolute addresses satisfy declared alignments eight, sixteen and twenty-four.
+* **`relative_grid_zeuge`**: Relative offsets for alignments eight, sixteen and twenty-four preserve the base residue modulo eight for bases zero and four.
+
+`stage0/Stage0/Senke/Welt/GlobalOffsets.lean`:
+
+* **`globStartOf_mem`**: Looking up an enumerated global produces a pair belonging to the cumulative padded starts.
+* **`globEnd_ge`**: The final padded end is at least the initial cursor.
+* **`globStarts_bounds`**: Each enumerated global starts at or after the initial cursor and ends no later than the final padded end.
+* **`globStarts_step`**: Every later global starts at or after the preceding global's padded end.
+* **`globStarts_disjoint`**: Distinct globals in the cumulative enumeration occupy disjoint complete spans.
+* **`globEnd_one`**: Unit alignment recovers the initial cursor plus the sum of global sizes.
+* **`globStarts_one`**: Unit alignment recovers the previous prefix-sum offsets at every list index.
+* **`glob_grid`**: With an eight-byte-aligned cursor and sizes, every common-grid start and the final padded end remain eight-byte aligned.
+
+`stage0/Stage0/Senke/Welt/AnordnungLayout.lean`:
+
+* **`layU_spans`**: Distinct present canonical cells occupy disjoint complete byte spans in the padded layout.
+* **`layU_dis`**: The canonical layout satisfies `LayDis`, combining span separation, address uniqueness and the common relative storage grid.
+
+**Named base-placement duty:** Absolute alignment holds under the hypothesis
+`Nat.lcm 8 N ∣ b` on base `b`, for each positive declared alignment `N`;
+the loader/runner must place the image base accordingly. This is a theorem
+premise, not an axiom. Relative grid preservation alone does not discharge it.
+A source search of `runner/` and `stage0/` found `aligned_abs` and its concrete
+witness, plus runner image placement in `Runner/Beweis/Bild.lean` and loader
+entry proofs in `Runner/Beweis/Lader.lean`, but no generic runner proof supplying
+this divisibility premise for the image's declared global alignments.
+This documentation audit ran no Lean checks or builds.
