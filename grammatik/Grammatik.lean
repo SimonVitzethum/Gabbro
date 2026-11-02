@@ -51,4 +51,6 @@ public import Grammatik.Kern.Semantik.Semantik.TransitionShift
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Proben.Refusals
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Proben
 
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
+
 @[expose] public section
