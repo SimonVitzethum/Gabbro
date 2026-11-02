@@ -34,6 +34,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uOptGlobs tabs (globs0 ++ arGlobs) with
   | .error e => .error e
   | .ok globs =>
+  match uTypes consts alias tabs msE with
+  | .error e => .error e
+  | .ok valueScope =>
   -- C16: every `check` item elaborates now, with its generated probe below.
   match uChecks tabs globs ms with
   | .error e => .error e
@@ -82,7 +85,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uInvs consts alias tabs locks globs ms with
   | .error e => .error e
   | .ok invs =>
-  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs }
+  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs, records := valueScope.records, namedTypes := valueScope.types }
   match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
   | .error e => .error e
   | .ok zustaende =>
@@ -97,10 +100,10 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
   let zb := fnItems.length + transitionFns.length
   match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
-      elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r)) with
+      elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r spaces valueScope.types)) with
   | .error e => .error e
   | .ok zeigerPaare =>
-  match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces)) with
+  match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces valueScope.types)) with
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
@@ -124,7 +127,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
-      elabUFunktion (spaces := spaces) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+      elabUFunktion (spaces := spaces) (valueScope := valueScope) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
         (uKonstArrays alias functions consts ms))) with
   | .error e => .error e
@@ -149,7 +152,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     | .error e => .error e
     | .ok regiert =>
     let u : UProg :=
-      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces }
+      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records }
     .ok (uMitBoden u)
 
 end Gabbro.Grammatik.Parser.Uebersetze

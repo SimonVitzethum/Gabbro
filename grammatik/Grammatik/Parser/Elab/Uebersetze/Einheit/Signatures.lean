@@ -117,14 +117,14 @@ def uZeigerAnw : Nat → SAnw → List String
 /-- A pointer type of the unit as a head (named `fn#j`) and an elaborated signature with an empty body. -/
 def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) (zeiger : List String)
-    (zb j : Nat) (raw : String) : Except String (UFnKopf × UFn) :=
+    (zb j : Nat) (raw : String) (spaces : List String := []) (named : List (String × Ty) := []) : Except String (UFnKopf × UFn) :=
   match uZeigerSig raw with
   | .error e => .error e
   | .ok sig =>
     match uZeigerVertrag sig.klauseln with
     | .error e => .error e
     | .ok _ =>
-      match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb with
+      match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb spaces named with
       | .error e => .error e
       | .ok (kopf0, schreibt) =>
         let name := "fn#" ++ toString j
@@ -134,7 +134,7 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
         -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
         -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
         let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
-        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives := [], needs := [], body := [], ret := .empty, boden := boden })
 
 /-- The names a unit declares as memory: tables, arenas, statics, atomics. -/
 def uSpeicherNamen (ms : List SItemTief) : List String :=
