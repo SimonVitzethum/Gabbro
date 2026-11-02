@@ -4,6 +4,7 @@ public import Grammatik.Logik.Fortschritt.Fortschritt
 public import Grammatik.Logik.Fortschritt.PlanLauf
 public import Grammatik.Logik.Fortschritt.Warten
 public import Grammatik.Logik.Fortschritt.Lebendigkeit.T1.Teil1
+public import Grammatik.Logik.Fortschritt.Lebendigkeit.T1.Teil1a
 
 @[expose] public section
 
