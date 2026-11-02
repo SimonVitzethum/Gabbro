@@ -10,46 +10,46 @@ mutual
 /-- Falling-through source blocks used by const dispatch arms. -/
 inductive ConstSourceBlock (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
     {Γ : Ctx} → ConstLocals Γ → SAnw → Block c.D V l Γ [] [] → Prop where
-  | empty : ConstSourceBlock c locals (.block [] none) .nil
-  | option (value : ConstSourceExpr c locals source e)
-      (present : ConstSourceBlock c (locals.extend name false (.index n)) yes p)
-      (absent : ConstSourceBlock c locals no a)
-      (tail : ConstSourceBlock c locals (.block rest ending) body) :
-      ConstSourceBlock c locals
+  | empty {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} : ConstSourceBlock c (V := V) (l := l) locals (.block [] none) .nil
+  | option {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} {n : Nat} {e : Expr c.D Γ [] (.opt n)} (value : ConstSourceExpr c locals source e)
+      (present : ConstSourceBlock c (V := V) (l := l) (locals.extend name false (.index n)) yes p)
+      (absent : ConstSourceBlock c (V := V) (l := l) locals no a)
+      (tail : ConstSourceBlock c (V := V) (l := l) locals (.block rest ending) body) :
+      ConstSourceBlock c (V := V) (l := l) locals
         (.block (.cases source [.arm "Some" (some name) yes, .arm "None" none no] :: rest) ending)
         (.cons (.onOption e p a) body)
-  | tag (value : ConstSourceExpr c locals source e)
-      (arms : ConstSourceTagArms c locals sources branches)
-      (tail : ConstSourceBlock c locals (.block rest ending) body) :
-      ConstSourceBlock c locals (.block (.cases source sources :: rest) ending)
+  | tag {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} (value : ConstSourceExpr c locals source e)
+      (arms : ConstSourceTagArms c (V := V) (l := l) locals sources branches)
+      (tail : ConstSourceBlock c (V := V) (l := l) locals (.block rest ending) body) :
+      ConstSourceBlock c (V := V) (l := l) locals (.block (.cases source sources :: rest) ending)
         (.cons (.onTag e branches) body)
-  | reason (value : ConstSourceExpr c locals source e)
-      (arms : ConstSourceReasonArms c locals sources branches)
-      (tail : ConstSourceBlock c locals (.block rest ending) body) :
-      ConstSourceBlock c locals (.block (.cases source sources :: rest) ending)
+  | reason {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} (value : ConstSourceExpr c locals source e)
+      (arms : ConstSourceReasonArms c (V := V) (l := l) locals sources branches)
+      (tail : ConstSourceBlock c (V := V) (l := l) locals (.block rest ending) body) :
+      ConstSourceBlock c (V := V) (l := l) locals (.block (.cases source sources :: rest) ending)
         (.cons (.onWhy e branches) body)
 
 /-- Tag arms preserve canonical order and payload binding contexts. -/
 inductive ConstSourceTagArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
     {Γ : Ctx} → ConstLocals Γ → List SAnw → {cs : List (Option Ty)} →
     Arms c.D V l Γ [] [] cs → Prop where
-  | empty : ConstSourceTagArms c locals [] .nil
-  | plain (body : ConstSourceBlock c locals source block)
-      (tail : ConstSourceTagArms c locals sources branches) :
-      ConstSourceTagArms c locals (.arm label none source :: sources)
+  | empty {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} : ConstSourceTagArms c (V := V) (l := l) locals [] .nil
+  | plain {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} (body : ConstSourceBlock c (V := V) (l := l) locals source block)
+      (tail : ConstSourceTagArms c (V := V) (l := l) locals sources branches) :
+      ConstSourceTagArms c (V := V) (l := l) locals (.arm label none source :: sources)
         (cs := none :: cs) (.cons block branches)
-  | payload (body : ConstSourceBlock c (locals.extend name false (.int lo hi)) source block)
-      (tail : ConstSourceTagArms c locals sources branches) :
-      ConstSourceTagArms c locals (.arm label (some name) source :: sources)
+  | payload {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} (body : ConstSourceBlock c (V := V) (l := l) (locals.extend name false (.int lo hi)) source block)
+      (tail : ConstSourceTagArms c (V := V) (l := l) locals sources branches) :
+      ConstSourceTagArms c (V := V) (l := l) locals (.arm label (some name) source :: sources)
         (cs := some (.int lo hi) :: cs) (.cons block branches)
 
 inductive ConstSourceReasonArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
     {Γ : Ctx} → ConstLocals Γ → List SAnw → {n : Nat} →
     GrundArms c.D V l Γ [] [] n → Prop where
-  | empty : ConstSourceReasonArms c locals [] .nil
-  | cons (body : ConstSourceBlock c locals source block)
-      (tail : ConstSourceReasonArms c locals sources branches) :
-      ConstSourceReasonArms c locals (.arm label none source :: sources) (.cons block branches)
+  | empty {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} : ConstSourceReasonArms c (V := V) (l := l) locals [] .nil
+  | cons {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {locals : ConstLocals Γ} (body : ConstSourceBlock c (V := V) (l := l) locals source block)
+      (tail : ConstSourceReasonArms c (V := V) (l := l) locals sources branches) :
+      ConstSourceReasonArms c (V := V) (l := l) locals (.arm label none source :: sources) (.cons block branches)
 end
 
 mutual
