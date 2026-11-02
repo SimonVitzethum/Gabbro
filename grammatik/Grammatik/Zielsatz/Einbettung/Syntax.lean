@@ -305,6 +305,13 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
         (.callInd (n := E.val n) (exE E p)
           (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args)) (rufPasstE_nr hS hp)
           (by rw [hS.sigNr]; exact hr))
+  | _, _, Λ, _, .callIndElse (n := n) p args he hp hr err =>
+      Stmt.nachΛ (nachSigE_nr hS n Λ).symm
+        (.callIndElse (n := E.num n) (exE E p)
+          (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
+          (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
+          (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
+          (Endblock.umΓ (by rw [hS.sigNr]; rfl) (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS err))))
   | _, _, _, _, .locks L hr body =>
       .locks (E.lock L) (fun M hM => by
           obtain ⟨M0, rfl, hM0⟩ := E.held_mem_mapE hM
@@ -357,6 +364,12 @@ def exB (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
       .bindCallInd (n := E.val n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
         (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
         (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
+        (Block.vorΛ (nachSigE_nr hS n Λ) (exB hS rest))
+  | _, _, Λ, _, .bindCallIndElse (n := n) p args he hp hr err rest =>
+      .bindCallIndElse (n := E.num n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
+        (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
+        (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
+        (Endblock.umΓ (by rw [hS.sigNr]; rfl) (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS err)))
         (Block.vorΛ (nachSigE_nr hS n Λ) (exB hS rest))
   | _, _, Λ, _, .bindCallElse f args he hp hr err rest =>
       .bindCallElse (E.fn f) (Args.umτs (paramsE hS f) (exA E args))
@@ -431,6 +444,12 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
       .bindCallInd (n := E.val n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
         (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
         (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
+        (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS rest))
+  | _, _, Λ, .bindCallIndElse (n := n) p args he hp hr err rest =>
+      .bindCallIndElse (n := E.num n) (exE E p) (Args.umτs (by rw [hS.sigNr]; rfl) (exA E args))
+        (by rw [hS.sigNr]; show Option.map E.tyE (D.sigNr n).erg = _; rw [he]; rfl)
+        (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
+        (Endblock.umΓ (by rw [hS.sigNr]; rfl) (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS err)))
         (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS rest))
   | _, _, _, .narrow e lo' hi' sonst rest => .narrow (exE E e) lo' hi' (exEnd hS sonst) (exEnd hS rest)
   | _, _, _, .narrowRequired e lo' hi' rest => .narrowRequired (exE E e) lo' hi' (exEnd hS rest)
