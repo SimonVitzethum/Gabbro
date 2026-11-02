@@ -3,6 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Typen.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil3
+public import Grammatik.Kern.Syntax.Syntax.Teil4
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf

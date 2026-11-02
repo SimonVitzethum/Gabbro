@@ -62,6 +62,8 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .bindCallInd p args he hp hr rest => ⟨rest.alsBlock.1, .bindCallInd p args he hp hr rest.alsBlock.2⟩
   | _, _, .narrow e lo' hi' sonst rest => ⟨rest.alsBlock.1, .narrow e lo' hi' sonst rest.alsBlock.2⟩
   | _, _, .narrowRequired e lo' hi' rest => ⟨rest.alsBlock.1, .narrowRequired e lo' hi' rest.alsBlock.2⟩
+  | _, _, .retScoped e R => ⟨Λ, .cons (.retScoped e R) .nil⟩
+  | _, _, .retWhyScoped r R => ⟨Λ, .cons (.retWhyScoped r R) .nil⟩
   | _, _, .exchange g neu hw hL rest => ⟨rest.alsBlock.1, .exchange g neu hw hL rest.alsBlock.2⟩
   -- an `if` of two end blocks is a check: true runs `t`, false the end block `e` (`Block.check`)
   | _, _, .ite c t e => ⟨t.alsBlock.1, .check c e t.alsBlock.2⟩
@@ -126,6 +128,12 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       it at the head and the block in front never falls off, so it is never reached and carries
       no obligation (Track P, 2026-10-18). -/
   | leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ
+  /-- C11 pending return: unwind `scopes` innermost first before the outer
+      contract/return epilogue. Inert placeholder: no step rule consumes it
+      yet; the saved result span, per-scope invariant checks and the
+      sequential/replay equality are OPEN. Exact return is `scopes = []`. -/
+  | rueckBereit {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+      (scopes : List D.Lock) → GRest D V l Γ Λ → GRest D V l Γ (scopes.map Res.held ++ Λ)
 
 /-- **An end block run as a block means what it meant**: its outcome is
     the end block's, as an `Ausgang` (it never ends normally). -/
@@ -224,6 +232,14 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       split
       · exact Endblock.execBlock_alsBlock O passes R t _ _
       · rfl
+  | _, _, .narrowRequired e lo' hi' rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .retScoped _ _, _, _ => rfl
+  | _, _, .retWhyScoped _ _, _, _ => rfl
 
 /-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
     only a BINDING pop may resume it. -/
@@ -332,6 +348,11 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .narrowRequired .. => true
   | .exchange .. => true
   | .ite .. => true
+  /-- C11 scoped returns are terminal in the placeholder: they do not unfold
+      into block position beyond `alsBlock`, and no step rule consumes the
+      pending scope unwinding yet. -/
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
 
 /-- Arm selection for `onTag`: the VALUE's index chooses the arm and the
     VALUE's payload feeds it (like `execArms`, but returning the chosen arm

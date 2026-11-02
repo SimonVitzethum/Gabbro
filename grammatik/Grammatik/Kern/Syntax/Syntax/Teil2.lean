@@ -252,6 +252,12 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (inv : Expr D Γ Λ .bool) (bound : Int)
       (mass : Expr D Γ Λ (.int 0 bound))
       (body : Block true (.index (D.count t) :: Γ) Λ Λ) : Stmt l Γ Λ Λ
+  /-- `return [v]` through locally acquired scopes (C11): exact residual
+      `V.ende` plus `R.scopes` to close innermost first. Placeholder keeps
+      the immediate value pop; unwinding each scope with its owed invariant
+      (`GRest.rueckBereit`) is OPEN. -/
+  | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
+  | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ
@@ -400,6 +406,10 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       `Logik.kapazitaet`, never a clipped value. -/
   | narrowRequired (e : Expr D Γ Λ (.int lo hi)) (lo' hi' : Int)
       (rest : Endblock l (.int lo' hi' :: Γ) Λ) : Endblock l Γ Λ
+  /-- `return [v]` through scopes at the top level of a body (C11):
+      `Stmt.retScoped` in end-block position; same placeholder status. -/
+  | retScoped (e : ErgExpr D Γ Λ V.erg) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
+  | retWhyScoped (r : Fin V.gruende) (R : RueckRessourcen D V Λ) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []
