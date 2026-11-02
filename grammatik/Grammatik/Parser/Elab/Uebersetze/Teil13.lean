@@ -230,7 +230,7 @@ def elabU : List SItemTief → Except String UProg
     match uWhys ms alias with
     | .error e => .error e
     | .ok whys =>
-    match uSums alias ms with
+    match uSums alias ms tabs with
     | .error e => .error e
     | .ok sums =>
     match uSumGlobs consts sums ms globs with

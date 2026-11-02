@@ -62,9 +62,9 @@ def Ausgang.schrumpf : Ausgang V l (τ :: Γ) → Ausgang V l Γ
   | .logik e => .logik e
   | .hardware e => .hardware e
 
-def Ausgang.schrumpfArm : (c : Option (Int × Int)) → Ausgang V l (ArmCtx Γ c) → Ausgang V l Γ
+def Ausgang.schrumpfArm : (c : Option Ty) → Ausgang V l (ArmCtx Γ c) → Ausgang V l Γ
   | Option.none, a => a
-  | Option.some (_, _), a => a.schrumpf
+  | Option.some _, a => a.schrumpf
 
 def EndAusgang.schrumpf : EndAusgang V l (τ :: Γ) → EndAusgang V l Γ
   | .zurueck σ v => .zurueck σ v

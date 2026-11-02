@@ -197,8 +197,8 @@ def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.para
   | _, _, Λ, _, _, ρ, .onTag v arms, rest, k =>
       let σ₁ := (sp.welt spur).lese Λ v.orte
       match armWahlG arms (eval σ₁ v σ₁ ρ) with
-      | ⟨some (lo, hi), b, nutz⟩ =>
-          kLokal st f rho (Γ := .int lo hi :: _) (armEnv nutz ρ) (.dann b (.schrumpf (.dann rest k)))
+      | ⟨some τ, b, nutz⟩ =>
+          kLokal st f rho (Γ := τ :: _) (armEnv nutz ρ) (.dann b (.schrumpf (.dann rest k)))
             σ₁.spur sp
       | ⟨none, b, nutz⟩ => kLokal st f rho (armEnv nutz ρ) (.dann b (.dann rest k)) σ₁.spur sp
   | _, _, Λ, _, _, ρ, .onWhy r arms, rest, k =>

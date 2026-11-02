@@ -296,11 +296,10 @@ theorem stmtAbbR_onTag
     obtain ⟨M3, hs3, hZ3⟩ := peelDannR P O passes f fn stapel rho s0 hl hZ2
     exact ⟨M3, e2, _, .nil, RufLaufG.schritt hs1 (hr2.trans (RufLaufG.einzeln hs3)), hZ3,
       by rw [ho2, (Erw.lese _ _ _).offen]⟩
-  | some lh =>
-    obtain ⟨lo, hi⟩ := lh
+  | some τ =>
     obtain ⟨ρ1, h1, rfl⟩ := abb_schrumpf hex
     obtain ⟨M1, hs1, hZ1⟩ := w_tagSome (P := P) (O := O) (passes := passes) hZ.1
-      v arms rest k ρ rfl lo hi b nutz (by rw [hW]; exact hwahl)
+      v arms rest k ρ rfl τ b nutz (by rw [hW]; exact hwahl)
     rw [hW] at hZ1
     obtain ⟨M2, e2, Λx, r, hr2, hZ2, ho2⟩ := hsim hl _ _ _ _ _ _ h1 M1 _ hZ1
       (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))

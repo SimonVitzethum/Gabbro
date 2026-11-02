@@ -112,7 +112,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       refine Or.inl ⟨_, _, _, _, .dann a (.dann rest k), _, rufUpdateG_self _ _ _, RestG.dann _ _ ha ho.1.2 (RestG.dann _ _ hr ho.2 hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (sem_optNone O passes o p a rest k _ _ hv)
-    | dannOnTagSome l2 Γ2 Λ2 Λ2' Λ2'' cs v arms rest k ρ2 hhead σ₁ hs₁ lo hi b nutz hw neu hneu =>
+    | dannOnTagSome l2 Γ2 Λ2 Λ2' Λ2'' cs v arms rest k ρ2 hhead σ₁ hs₁ τ b nutz hw neu hneu =>
       rw [hR] at hhead
       cases hhead
       subst hs₁
@@ -124,7 +124,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       have hbo := armWahlG_ohne' arms _ hw ho.1
       refine Or.inl ⟨_, _, _, _, .dann b (.schrumpf (.dann rest k)), _, rufUpdateG_self _ _ _, RestG.dann _ _ hbb hbo (RestG.schrumpf _ (RestG.dann _ _ hr ho.2 hk)), ?_⟩
       rw [weltVon_upd]
-      exact REnde.gleich_of_eq (sem_tagSome O passes v arms rest k _ _ lo hi b nutz hw)
+      exact REnde.gleich_of_eq (sem_tagSome O passes v arms rest k _ _ τ b nutz hw)
     | dannOnTagNone l2 Γ2 Λ2 Λ2' Λ2'' cs v arms rest k ρ2 hhead σ₁ hs₁ b nutz hw neu hneu =>
       rw [hR] at hhead
       cases hhead

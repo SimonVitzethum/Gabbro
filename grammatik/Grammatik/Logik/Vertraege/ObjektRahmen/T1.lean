@@ -190,11 +190,11 @@ def LenOk (ps : List (ObjPar D)) (Γ : Ctx) : Prop := ∀ op ∈ ps, op.rw = tru
 theorem LenOk.cons {ps : List (ObjPar D)} {Γ : Ctx} (h : LenOk ps Γ) (τ : Ty) : LenOk ps (τ :: Γ) :=
   fun op hop hrw => by have := h op hop hrw; simp only [List.length_cons]; omega
 
-theorem LenOk.arm {ps : List (ObjPar D)} {Γ : Ctx} (h : LenOk ps Γ) (c : Option (Int × Int)) :
+theorem LenOk.arm {ps : List (ObjPar D)} {Γ : Ctx} (h : LenOk ps Γ) (c : Option Ty) :
     LenOk ps (ArmCtx Γ c) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨lo, hi⟩ := p; exact h.cons _
+  | some p => exact h.cons _
 
 section Inv
 variable {W : D.Tab → Int → Prop} {ps : List (ObjPar D)}
@@ -213,10 +213,10 @@ theorem ObjInv.tail {τ : Ty} {Γ : Ctx} {ρ : Env D (τ :: Γ)} (h : ObjInv W p
   fun op hop hrw k hk => h op hop hrw k (Env.unten_tail_some ρ hk)
 
 theorem ObjInv.arm {Γ : Ctx} {ρ : Env D Γ} (hlen : LenOk ps Γ) (h : ObjInv W ps ρ)
-    {c : Option (Int × Int)} (nutz : Nutzlast c) : ObjInv W ps (armEnv nutz ρ) := by
+    {c : Option Ty} (nutz : Nutzlast D.Fn D.passt c) : ObjInv W ps (armEnv nutz ρ) := by
   cases c with
   | none => exact h
-  | some p => obtain ⟨lo, hi⟩ := p; exact h.cons hlen _
+  | some p => exact h.cons hlen _
 
 end Inv
 /-! ## 3. The object discipline of a body -/
@@ -327,7 +327,7 @@ def oE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .exchange _ _ _ _ rest => oE rest
   | .ite _ t e => oE t ∧ oE e
 
-def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def oA {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → Prop
   | .nil => True
   | .cons b rest => oB b ∧ oA rest
@@ -455,7 +455,7 @@ theorem ObjE.zuAusgang {Γ : Ctx} {σ : World D} {o : EndAusgang V l Γ} (h : Ob
   cases o <;> simp only [ObjE, ObjA, EndAusgang.zuAusgang] at h ⊢
   all_goals exact h
 
-theorem ObjA.schrumpfArm {Γ : Ctx} {σ : World D} (c : Option (Int × Int))
+theorem ObjA.schrumpfArm {Γ : Ctx} {σ : World D} (c : Option Ty)
     {o : Ausgang V l (ArmCtx Γ c)} (h : ObjA W ps σ o) : ObjA W ps σ (o.schrumpfArm c) := by
   cases c with
   | none => exact h

@@ -1,41 +1,45 @@
 module
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
-import all Init.Data.String.Defs
-import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil15
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
-def beqUEns : UEns → UEns → Bool
-  | .cmp o a b, .cmp p c d =>
-    strEq o p && beqUSide a c && beqUSide b d
-  | .tru, .tru => true
-  | .fls, .fls => true
-  | .and a b, .and c d => beqUEns a c && beqUEns b d
-  | .or a b, .or c d => beqUEns a c && beqUEns b d
-  | .not a, .not b => beqUEns a b
-  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .globB a, .globB b => strEq a b
-  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
-  | .ergB, .ergB => true
-  | .held a, .held b => strEq a b
-  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
-  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
-  | .member t a, .member u b => strEq t u && a == b
-  | .arrayElements a source x body, .arrayElements b target y other =>
-      a == b && beqUSide source target && strEq x y && beqUEns body other
-  | .filtered a t x f r s b, .filtered c u y g v z d =>
-      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
-  | .istSome o m, .istSome p n => o == p && m == n
-  | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool
   | [], [] => true

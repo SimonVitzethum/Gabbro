@@ -125,7 +125,7 @@ theorem mB_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
       simp only [mB, mE_und A B sonst, mB_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
 
 theorem mArms_und (A B : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : (a : Arms D V l Γ Λ Λ' cs) → mArms (A.und B) a = (mArms A a && mArms B a)
+    {cs : List (Option Ty)} : (a : Arms D V l Γ Λ Λ' cs) → mArms (A.und B) a = (mArms A a && mArms B a)
   | .nil => rfl
   | .cons b rest => by
       simp only [mArms, mB_und A B b, mArms_und A B rest, Bool.and_assoc, Bool.and_left_comm, Bool.and_comm]
@@ -224,7 +224,7 @@ theorem mB_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .floatOf _ _ _ rest => by simp only [mB, mB_top rest]
   | .floatNarrow _ _ _ sonst rest => by simp only [mB, mE_top sonst, mB_top rest, Bool.and_self]
 
-theorem mArms_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+theorem mArms_top {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → mArms Merkmal.top a = true
   | .nil => rfl
   | .cons b rest => by simp only [mArms, mB_top b, mArms_top rest, Bool.and_self]

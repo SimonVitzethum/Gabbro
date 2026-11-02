@@ -94,7 +94,7 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ite _ t e => t.hardwareFrei && e.hardwareFrei
 
 def Arms.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.hardwareFrei && rest.hardwareFrei
 
@@ -117,7 +117,7 @@ theorem Ausgang.schrumpf_hardware {l : Bool} {Γ : Ctx} {τ : Ty} {o : Ausgang V
     {e : Hardware D} (h : o.schrumpf = .hardware e) : o = .hardware e := by
   cases o <;> simp_all [Ausgang.schrumpf]
 
-theorem Ausgang.schrumpfArm_hardware {l : Bool} {Γ : Ctx} {c : Option (Int × Int)}
+theorem Ausgang.schrumpfArm_hardware {l : Bool} {Γ : Ctx} {c : Option Ty}
     {o : Ausgang V l (ArmCtx Γ c)} {e : Hardware D}
     (h : Ausgang.schrumpfArm c o = .hardware e) : o = .hardware e := by
   cases c with

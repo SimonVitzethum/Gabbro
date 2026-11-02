@@ -371,17 +371,17 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
   | _, _, Λ, .ite c t e, σ, ρ =>
       execEndHA_ru_ite (c := c) (t := t) (e := e) (σ := σ) (ρ := ρ) (ih_execEndHA_ru_e := execEndHA_ru e) (ih_execEndHA_ru_t := execEndHA_ru t) (S := S) (O := O) (U := U) (A := A) (passes := passes) (O' := O') (hO := hO) (U' := U') (A' := A') (R := R) (R' := R') (hU := hU) (hA := hA) (hR := hR)
 theorem execArmsHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ),
     AusRelRu (execArmsHA S.mitRuhe O' U' A' passes R' (ruArms arms) (valR (.sum cs) v)
         (worldR σ) (envR ρ))
       (execArmsHA S O U A passes R arms v σ ρ)
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => execBlockHA_ru b σ ρ
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ =>
+  | _, _, _, _, _, .cons (c := some τ) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ =>
       AusRelRu.schrumpf (execBlockHA_ru b σ (Env.cons nutz ρ))
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArmsHA_ru rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
+  | _, _, _, _, _, .cons (c := some τ) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArmsHA_ru rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
 
 theorem execGrundHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}

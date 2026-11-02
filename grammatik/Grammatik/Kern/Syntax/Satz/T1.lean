@@ -179,11 +179,11 @@ theorem uebergang_erklaert {t : D.Tab} {f : D.Feld t} {hτ : D.typ t f = .int lo
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .shift t f hτ i von nach hn he hw hL) :
     D.erlaubt t f von nach = true := he
 
-/-- Eine Veroeffentlichung nimmt GENAU die erklaerte Nutzlast mit (`V001`-`V004`). -/
+/-- Eine Veroeffentlichung nimmt GENAU die erklaerte Nutzlast D.Fn D.passt mit (`V001`-`V004`). -/
 theorem publish_paart {g : D.Glob} {e} {payload : List D.Glob} {hp : payload = D.nutzlast g} {hw} {hL}
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .publish g e payload hp hw hL) : payload = D.nutzlast g := hp
 
-/-- Ein `awaits` nimmt dieselbe Nutzlast entgegen. -/
+/-- Ein `awaits` nimmt dieselbe Nutzlast D.Fn D.passt entgegen. -/
 theorem awaits_paart {g : D.Glob} {payload : List D.Glob} {hp : payload = D.nutzlast g} {hL} {hat} {rest}
     (_b : Block D V l Γ Λ Λ') (_h : _b = .awaits g payload hp hL hat rest) : payload = D.nutzlast g := hp
 

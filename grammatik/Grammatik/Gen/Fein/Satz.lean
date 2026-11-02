@@ -6,8 +6,7 @@
              below (the type class of an expression child, the loop context of a statement child).
 -/
 module
-public import Grammatik.Gen.Fein.Universum
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -38,6 +37,8 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Fein.Universum
+import all Init.Data.Repr
 @[expose] public section
 
 
@@ -146,7 +147,7 @@ theorem kE_kind (q : Option Nat) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : E
   rw [ite_eq_left_iff.mpr (fun h => absurd rfl h)]
   exact List.any_eq_true.2 ⟨τ.kopf, List.mem_range.2 (kopf_lt τ), by rw [hq, kE_erg e]; rfl⟩
 
-theorem kN_kind {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} (x : NutzlastExpr D Γ Λ o) (lk : Bool) :
+theorem kN_kind {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} (x : NutzlastExpr D Γ Λ o) (lk : Bool) :
     kindOk 1 none lk (kN x) = true := by cases x <;> rfl
 
 theorem kA_kind {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} (x : Args D Γ Λ τs) (lk : Bool) :
@@ -170,7 +171,7 @@ theorem kEnd_kind (hax : D.Ax → False) {l : Bool} {Γ : Ctx} {Λ : List (Res D
     kindOk 6 none l (kEnd x) = true := by
   cases x <;> first | rfl | exact (hax ‹_›).elim | (rename_i h; subst h; rfl)
 
-theorem kArms_kind (hax : D.Ax → False) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem kArms_kind (hax : D.Ax → False) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (x : Arms D V l Γ Λ Λ' cs) : kindOk 7 none l (kArms x) = true := by cases x <;> rfl
 
 theorem kGArms_kind (hax : D.Ax → False) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -244,9 +245,9 @@ theorem fzE_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .arrSet a i v => by simp only [fzE]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (by simp only [exprReqs, ↓reduceIte, Option.some.injEq, List.filterMap_cons_some, List.filterMap_nil, tk,
   Ty.index, koepfeOk, kopfOk, kopf_lt, decide_true, Bool.and_self, Bool.and_true, Bool.true_and, beq_iff_eq] <;> rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ a rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ v (kopfOk_none _) _)) all_nil)))) (fzE_ok hax a)) (fzE_ok hax i)) (fzE_ok hax v))
 
-theorem fzN_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : (e : NutzlastExpr D Γ Λ o) → (fzN e).all moeglich = true
+theorem fzN_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : (e : NutzlastExpr D Γ Λ o) → (fzN e).all moeglich = true
   | .empty .. => by simp only [fzN]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
-  | .num (e := e) .. => by simp only [fzN]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) all_nil)) (fzE_ok hax e))
+  | .val (e := e) .. => by simp only [fzN]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) all_nil)) (fzE_ok hax e))
 
 theorem fzA_ok (hax : D.Ax → False) {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} : (e : Args D Γ Λ τs) → (fzA e).all moeglich = true
   | .nil .. => by simp only [fzA]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
@@ -325,7 +326,7 @@ theorem fzEnd_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {�
   | .exchange (neu := neu) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc (kopf_frei neu) rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ neu (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil))) (fzE_ok hax neu)) (fzEnd_ok hax rest))
   | .ite (c := c) (t := t) (e := e) .. => by simp only [fzEnd]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ c rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax t)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax e)) all_nil)))) (fzE_ok hax c)) (fzEnd_ok hax t)) (fzEnd_ok hax e))
 
-theorem fzArms_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : (e : Arms D V l Γ Λ Λ' cs) → (fzArms e).all moeglich = true
+theorem fzArms_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : (e : Arms D V l Γ Λ Λ' cs) → (fzArms e).all moeglich = true
   | .nil .. => by simp only [fzArms]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .cons (b := b) (rest := rest) .. => by simp only [fzArms]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax b)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kArms_kind hax rest)) all_nil))) (fzB_ok hax b)) (fzArms_ok hax rest))
 

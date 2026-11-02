@@ -247,7 +247,7 @@ def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l 
   | _, _, _, .ite .., _, _ => false
 
 def chkArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → (k c : Context) → Out
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → (k c : Context) → Out
   | _, _, _, _, _, .nil, _, _ => some none
   | _, _, _, _, ca :: _, .cons b rest, k, c =>
     joinR (mapR (fun c1 => armDrop c1 ca) (chkB b k (armBind c ca))) (chkArms rest k c)

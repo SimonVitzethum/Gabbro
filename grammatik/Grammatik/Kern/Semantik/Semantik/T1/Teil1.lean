@@ -162,7 +162,7 @@ def Expr.orte : Expr D Γ Λ τ → List (D.Tab ⊕ D.Glob)
 
 def NutzlastExpr.orte : NutzlastExpr D Γ Λ c → List (D.Tab ⊕ D.Glob)
   | .empty => []
-  | .num e => e.orte
+  | .val e => e.orte
 
 end
 def Args.orte : Args D Γ Λ τs → List (D.Tab ⊕ D.Glob)
@@ -261,11 +261,19 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .intBuiltin2 op a b, σ, ρ => evalIntBuiltin2 op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
   | .count n body, σ, ρ => zaehleWahr n fun k => wahr? (eval σ₀ body σ (.cons k ρ))
 
-def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast c
+def evalNutz (σ₀ : World D) : NutzlastExpr D Γ Λ c → World D → Env D Γ → Nutzlast D.Fn D.passt c
   | .empty, _, _ => ()
-  | .num e, σ, ρ => eval σ₀ e σ ρ
+  | .val e, σ, ρ => eval σ₀ e σ ρ
 
 end
+
+/-- Evaluation commutes with transport of the selected payload type. -/
+theorem evalNutz_cast {c c' : Option Ty} (h : c = c') (σ₀ σ : World D)
+    (e : NutzlastExpr D Γ Λ c) (ρ : Env D Γ) :
+    evalNutz σ₀ (h ▸ e) σ ρ = (h ▸ evalNutz σ₀ e σ ρ) := by
+  cases h
+  rfl
+
 def evalArgs (σ₀ : World D) : Args D Γ Λ τs → World D → Env D Γ → Env D τs
   | .nil, _, _ => .nil
   | .cons e rest, σ, ρ => .cons (eval σ₀ e σ ρ) (evalArgs σ₀ rest σ ρ)
@@ -354,14 +362,36 @@ def gleitPasst (lo hi : Int × Int) (x : GFloat) : Option (Gleit lo hi) :=
 
 /-- The payload of a `tagged` case against its declared payload: a bare case carries `0`
     (the C struct has no `last` member for it), a payload case a number in its range. -/
-def nutzPasst : (c : Option (Int × Int)) → Int → Option (Nutzlast c)
+def nutzPasst : (c : Option Ty) → Int → Option (Nutzlast D.Fn D.passt c)
   | Option.none, p => if p = 0 then some () else Option.none
-  | Option.some (lo, hi), p => if h : lo ≤ p ∧ p ≤ hi then some ⟨p, h.1, h.2⟩ else Option.none
+  | Option.some (.int lo hi), p => if h : lo ≤ p ∧ p ≤ hi then some ⟨p, h.1, h.2⟩ else Option.none
+  | Option.some _, _ => Option.none
+
+/-- Payload shapes supported by the existing integer foreign-answer boundary.
+    Internal construction and matching support every `Ty`; structured foreign
+    answers require the separate raw-answer migration. -/
+def nutzWort : Option Ty → Prop
+  | none => True
+  | some (.int _ _) => True
+  | some _ => False
+
+/-- Whole schemas admitted by the scalar foreign ABI and the compact lowering. -/
+def sumWort (cs : List (Option Ty)) : Bool :=
+  cs.all fun c => match c with
+    | none | some (.int _ _) => true
+    | some _ => false
+
+theorem sumWort_get (cs : List (Option Ty)) (h : sumWort cs = true) (i : Fin cs.length) :
+    nutzWort (cs.get i) := by
+  have hi := List.all_eq_true.mp h (cs.get i) (List.get_mem cs i)
+  cases hc : cs.get i with
+  | none => trivial
+  | some τ => cases τ <;> simp_all [nutzWort]
 
 /-- The number of `tagged` cases, as an `Int`. -/
-abbrev fallZahl (cs : List (Option (Int × Int))) : Int := (cs.length : Int)
+abbrev fallZahl (cs : List (Option Ty)) : Int := (cs.length : Int)
 
-theorem fall_marke_lt (cs : List (Option (Int × Int))) (n : Int) (hk : 0 < cs.length) :
+theorem fall_marke_lt (cs : List (Option Ty)) (n : Int) (hk : 0 < cs.length) :
     (n % fallZahl cs).toNat < cs.length := by
   have h0 : (0 : Int) < fallZahl cs := by unfold fallZahl; omega
   have h1 := Int.emod_nonneg n (Int.ne_of_gt h0)
@@ -381,11 +411,13 @@ theorem fall_marke_lt (cs : List (Option (Int × Int))) (n : Int) (hk : 0 < cs.l
     (`einpassen_voll`, EinpassenVoll.lean); `nutzPasst` then holds the payload against its
     range. A syscall's `ok value | reason r` is such a sum; its generated errno decoding
     (`dekodiere`, Syscall.lean) is the emitted C that forms the pair. -/
-def summePasst (cs : List (Option (Int × Int))) (n : Int) :
-    Option (Σ i : Fin cs.length, Nutzlast (cs.get i)) :=
-  if hk : 0 < cs.length then
+def summePasst (cs : List (Option Ty)) (n : Int) :
+    Option (Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :=
+  if sumWort cs = true then
+   if hk : 0 < cs.length then
     let i : Fin cs.length := ⟨(n % fallZahl cs).toNat, fall_marke_lt cs n hk⟩
     (nutzPasst (cs.get i) (n / fallZahl cs)).map fun x => ⟨i, x⟩
+   else Option.none
   else Option.none
 
 /-- The width of the raw float word: the IEEE-754 binary64 bit pattern is an unsigned

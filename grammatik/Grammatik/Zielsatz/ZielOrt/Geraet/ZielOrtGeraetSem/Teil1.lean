@@ -135,7 +135,7 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .ite _ t e => e.gOk K Rg && t.gOk K Rg
 
 def Arms.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (K : Nat → Bool) (Rg : D.Reg → Bool) :
+    {cs : List (Option Ty)} (K : Nat → Bool) (Rg : D.Reg → Bool) :
     Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.gOk K Rg && rest.gOk K Rg
@@ -240,7 +240,7 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ite _ t e => e.regs ++ t.regs
 
 def Arms.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List D.Reg
+    {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List D.Reg
   | .nil => []
   | .cons b rest => b.regs ++ rest.regs
 

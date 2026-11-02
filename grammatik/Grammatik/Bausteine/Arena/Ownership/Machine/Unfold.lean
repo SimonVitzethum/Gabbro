@@ -107,7 +107,7 @@ theorem run_onOptionNone {Λ Λ' Λ'' : List (Res D)} {n : Int} {o : Expr D Γ �
   exact Next.meta ha ho hm (.run ρ _ hk hf (OR.of_cont ha' hc))
 
 theorem oarms_wahl {V : Vertrag D} {out : Flow.Output A V.erg} :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} {k c c' : Context}
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
       {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' → ∀ v : Wert D (.sum cs),
       ∃ c1, OB A I out k (armBind c (armWahlG arms v).1) (armWahlG arms v).2.1 c1 ∧
         Weaker c' (armDrop c1 (armWahlG arms v).1)
@@ -118,27 +118,27 @@ theorem oarms_wahl {V : Vertrag D} {out : Flow.Output A V.erg} :
     exact oarms_wahl hr _
 
 /-- `match` over a tag with a payload binds it in front of the shrink. -/
-theorem run_onTagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))} {v : Expr D Γ Λ (.sum cs)}
+theorem run_onTagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)} {v : Expr D Γ Λ (.sum cs)}
     {arms : Arms D (vertragVon D f) l Γ Λ Λ' cs} {rest : Block D (vertragVon D f) l Γ Λ' Λ''}
     {r : GRest D (vertragVon D f) l Γ Λ''}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.cons (.onTag v arms) rest) r)) (hm : MetaSame A σ σ')
-    (w : Wert D (.sum cs)) {lo hi : Int} {b : Block D (vertragVon D f) l (.int lo hi :: Γ) Λ Λ'}
-    {nutz : Nutzlast (some (lo, hi))} (hw : armWahlG arms w = ⟨some (lo, hi), b, nutz⟩) :
-    Next A I fr s σ σ' f ⟨l, .int lo hi :: Γ, Λ, armEnv nutz ρ, .dann b (.schrumpf (.dann rest r))⟩ := by
+    (w : Wert D (.sum cs)) {τ : Ty} {b : Block D (vertragVon D f) l (τ :: Γ) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt (some τ)} (hw : armWahlG arms w = ⟨some τ, b, nutz⟩) :
+    Next A I fr s σ σ' f ⟨l, τ :: Γ, Λ, armEnv nutz ρ, .dann b (.schrumpf (.dann rest r))⟩ := by
   obtain ⟨c2, hs, hc⟩ := hr.stmt trivial
   obtain ⟨_, harms⟩ := os_top hs
   · obtain ⟨c1, hb, hwk⟩ := oarms_wahl harms w
     rw [hw] at hb hwk
-    exact Next.holdsMeta hf ha ho hm (fun h => h.arm (some (lo, hi)) nutz) (Nat.le_succ_of_le hk)
+    exact Next.holdsMeta hf ha ho hm (fun h => h.arm (some τ) nutz) (Nat.le_succ_of_le hk)
       (OR.binder hb (Or.inr hwk) hk hc)
 
-theorem run_onTagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))} {v : Expr D Γ Λ (.sum cs)}
+theorem run_onTagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)} {v : Expr D Γ Λ (.sum cs)}
     {arms : Arms D (vertragVon D f) l Γ Λ Λ' cs} {rest : Block D (vertragVon D f) l Γ Λ' Λ''}
     {r : GRest D (vertragVon D f) l Γ Λ''}
     (hk : k.references.length ≤ Γ.length) (hf : FrameOk c g s fr ρ) (ha : s.agrees A σ) (ho : A.FreiOk σ)
     (hr : OR A I (I f).output k c (.dann (.cons (.onTag v arms) rest) r)) (hm : MetaSame A σ σ')
-    (w : Wert D (.sum cs)) {b : Block D (vertragVon D f) l Γ Λ Λ'} {nutz : Nutzlast none}
+    (w : Wert D (.sum cs)) {b : Block D (vertragVon D f) l Γ Λ Λ'} {nutz : Nutzlast D.Fn D.passt none}
     (hw : armWahlG arms w = ⟨none, b, nutz⟩) :
     Next A I fr s σ σ' f ⟨l, Γ, Λ, armEnv nutz ρ, .dann b (.dann rest r)⟩ := by
   obtain ⟨c2, hs, hc⟩ := hr.stmt trivial

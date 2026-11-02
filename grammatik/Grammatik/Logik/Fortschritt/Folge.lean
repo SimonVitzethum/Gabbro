@@ -138,7 +138,7 @@ def fB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Block D V l 
   | .floatNarrow _ _ _ sonst rest => fE e false sonst && fB e w rest
 
 /-- The arms of a `match`: each is a sub-block, entered unarmed. -/
-def fArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+def fArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (e : Bool) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => fB e false b && fArms e rest

@@ -196,7 +196,7 @@ inductive EndOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
       EndOhneRuf (.bind e rest)
 
 inductive ArmsOhneRuf : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → Prop where
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop where
   | nil : ArmsOhneRuf .nil
   | cons (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs)
       (hb : BlockOhneRuf b) (hr : ArmsOhneRuf rest) :
@@ -349,7 +349,7 @@ theorem hoare_konsequenz_stmt (O : Orakel D) (passes : Nat)
 theorem armsOhneRuf_RunabhaengigAux {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (O : Orakel D) (passes : Nat)
     (R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    {c : Option (Int × Int)} {cs' : List (Option (Int × Int))}
+    {c : Option Ty} {cs' : List (Option Ty)}
     (b : Block D V l (ArmCtx Γ c) Λ Λ')
     (rest : Arms D V l Γ Λ Λ' cs')
     (hb : ∀ (σ : World D) (ρ : Env D _),
@@ -357,7 +357,7 @@ theorem armsOhneRuf_RunabhaengigAux {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     (hr : ∀ (w : Wert D (.sum cs')) (σ : World D) (ρ : Env D Γ),
       execArms O passes R₁ rest w σ ρ = execArms O passes R₂ rest w σ ρ)
     (k : Nat) (hk : k < (c :: cs').length)
-    (nutz : Nutzlast ((c :: cs').get ⟨k, hk⟩))
+    (nutz : Nutzlast D.Fn D.passt ((c :: cs').get ⟨k, hk⟩))
     (σ : World D) (ρ : Env D Γ) :
     execArms O passes R₁ (Arms.cons b rest) ⟨⟨k, hk⟩, nutz⟩ σ ρ =
     execArms O passes R₂ (Arms.cons b rest) ⟨⟨k, hk⟩, nutz⟩ σ ρ := by

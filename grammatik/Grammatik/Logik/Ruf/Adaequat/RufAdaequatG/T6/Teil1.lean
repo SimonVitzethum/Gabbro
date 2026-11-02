@@ -156,7 +156,7 @@ theorem endG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, .bind _ rest, he => .bind _ _ (endG_ohneRuf rest he.bind_inv)
 
 theorem armsG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
-    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs), ArmsG A mr arms → ArmsOhneRuf arms
   | _, _, _, _, _, _, .nil, _ => .nil
   | _, _, _, _, _, _, .cons b rest, ha =>

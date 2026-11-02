@@ -26,10 +26,7 @@
   its call is the named stop `HaltArt.nieZurueck`, not a hardware stop.
 -/
 module
-public import Grammatik.Zielsatz.Kern.SpecProben
-public import Grammatik.Zielsatz.Kern.Akzeptiert
-public import Grammatik.Logik.Vertraege.EinpassenVoll
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -60,6 +57,10 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Zielsatz.Kern.SpecProben
+public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Logik.Vertraege.EinpassenVoll
+import all Init.Data.Repr
 @[expose] public section
 
 
@@ -70,7 +71,7 @@ open Gabbro.Grammatik
 /-! ## 1. The declaration -/
 
 /-- The cases of `holen`'s result: `ok (0 .. 10)` and a bare `err`. -/
-abbrev g1Fall : List (Option (Int × Int)) := [some (0, 10), none]
+abbrev g1Fall : List (Option Ty) := [some (.int 0 10), none]
 
 /-- `holen`'s result: `ok (0 .. 10) | err` -- a payload case and a bare case. -/
 abbrev g1Erg : Ty := .sum g1Fall
@@ -241,7 +242,7 @@ theorem g1O_schief_vertrag (Q : AxEns g1D) (t : Int) : AxVertragO Q (g1O 3 t) :=
 theorem g1_holen_dekodiert (v : Wert g1D g1Erg) (t : Int) (σ : World g1D) :
     axiomAntwort (g1O (summeRoh g1Fall v) t) g1Holen σ .nil = (σ.fragt (.inl g1Holen), some v) := by
   show (σ.fragt (.inl g1Holen), summePasst g1Fall (summeRoh g1Fall v)) = (σ.fragt (.inl g1Holen), some v)
-  exact congrArg (Prod.mk (σ.fragt (.inl g1Holen))) (summePasst_voll g1Fall v)
+  exact congrArg (Prod.mk (σ.fragt (.inl g1Holen))) (summePasst_voll g1Fall v (by decide))
 
 /-! ## 4. Both directions -/
 

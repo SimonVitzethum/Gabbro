@@ -50,7 +50,7 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock t]
 
 theorem nB_armWahlG {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     nA S Ax arms = true → nB S Ax (armWahlG arms v).2.1 = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by

@@ -109,7 +109,7 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
 
 /-- Die direkten Rufe der Fallunterscheidung. -/
 def armsKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List D.Fn
   | .nil => []
   | .cons b rest => blockKanten b ++ armsKanten rest

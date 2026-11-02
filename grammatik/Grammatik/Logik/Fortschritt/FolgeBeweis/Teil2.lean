@@ -54,7 +54,7 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
       refine ⟨hc, hr, fun _ hp => ?_, hlog⟩
       rw [hw]
       exact armiert_aus hk (by simpa [Pflichtig] using hp)
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hwahl =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hwahl =>
       kopfF
       have h := fB_armWahlG Φ _ arms (eval σ₁ v σ₁ ρ) hk.1.1
       rw [hwahl] at h

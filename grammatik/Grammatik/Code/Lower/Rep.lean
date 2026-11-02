@@ -44,7 +44,7 @@ def supp : GTy → Bool
   | .ptr _ _ => true
   | .opt n => decide (Ar.Fits (-1) (n - 1) 128)
   | .why n => decide (Ar.Fits 0 ((n : Int) - 1) 128)
-  | .sum cs => decide (Ar.Fits 0 (sumTop cs) 128)
+  | .sum cs => Gabbro.Grammatik.sumWort cs && decide (Ar.Fits 0 (sumTop cs) 128)
   | _ => false
 
 /-- The register type. An `opt n` is the integer `-1` (absent) or the index, in `-1 .. n - 1`; a

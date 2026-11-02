@@ -418,9 +418,9 @@ inductive Var : Ctx → Ty → Type where
   | here : Var (τ :: Γ) τ
   | there : Var Γ τ → Var (σ :: Γ) τ
 
-def ArmCtx (Γ : Ctx) : Option (Int × Int) → Ctx
+def ArmCtx (Γ : Ctx) : Option Ty → Ctx
   | none => Γ
-  | some (lo, hi) => .int lo hi :: Γ
+  | some τ => .int lo hi :: Γ
 
 /-! ## 3. Ausdruecke -- `expr`, `pred`
 

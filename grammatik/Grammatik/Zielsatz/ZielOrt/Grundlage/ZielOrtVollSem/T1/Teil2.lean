@@ -127,7 +127,7 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       exact ⟨Endblock.vOk_of_kOk e h.2, Endblock.vOk_of_kOk t h.1⟩
 
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.kOk = true → a.vOk K = true
   | .nil, _ => rfl
   | .cons b rest, h => by

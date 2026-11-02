@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
+import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 
 @[expose] public section
 
@@ -111,11 +112,11 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .ite _ t e => kongr₂ (· ++ ·) (ruEnd_ants e) (ruEnd_ants t)
 
 theorem ruArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     (ruArms arms).ants = arms.ants
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons (c := none) b rest => kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, .cons (c := some _) b rest =>
       kongr₂ (· ++ ·) (ruB_ants b) (ruArms_ants rest)
 
 theorem ruGArms_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -135,7 +136,9 @@ theorem wertOk_valR : ∀ (τ : Ty) (v : Wert D τ),
   | .int _ _, _ => Iff.rfl
   | .bool, _ => Iff.rfl
   | .opt _, _ => Iff.rfl
-  | .sum _, _ => Iff.rfl
+  | .sum cs, _ => by
+      change sumWort (Ty.mapCases (fun n => n + 1) id cs) = true ↔ sumWort cs = true
+      rw [sumWort_mapCases]
   | .why _, _ => Iff.rfl
   | .never, _ => Iff.rfl
   | .fl _ _, _ => Iff.rfl

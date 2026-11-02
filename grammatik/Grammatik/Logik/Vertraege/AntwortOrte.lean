@@ -98,7 +98,7 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ite _ t e => e.ants ++ t.ants
 
 def Arms.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
+    {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
   | .nil => []
   | .cons b rest => b.ants ++ rest.ants
 
@@ -187,7 +187,7 @@ section Wahl
 variable {V : Vertrag D} {l : Bool}
 
 theorem ants_armWahlG (C : D.Ax ⊕ D.Reg → Bool) {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.ants.all C = true → (armWahlG arms v).2.1.ants.all C = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => by
@@ -243,7 +243,7 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
   cases hs with
   | g1 hs =>
     cases hs with
-    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw =>
+    | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw =>
       kopfAnt
       have h := ants_armWahlG C arms (eval σ₁ v σ₁ ρ) (by simp_all)
       rw [hw] at h

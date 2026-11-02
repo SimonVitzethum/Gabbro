@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil5Rest
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Payload
 
 @[expose] public section
 
@@ -190,23 +191,6 @@ def elabKopf (_consts : List (String × Int))
                 | .ok r =>
                   .ok ({ kopf with res := .some r }, puts)
 
-/-- An option value of the table `num`: `None`, `Some(i)`, or what `uOptEin` reads (its table must be `num`). -/
-def uOpt (ctx : UCtx) (num : Nat) : SExpr → Except String UOpt
-  | .call "None" [] => .ok .nichts
-  | .call "Some" [a] =>
-    match ctx.tabs[num]? with
-    | .none => .error "option table unknown"
-    | .some tb =>
-      match uIndex ctx tb.name num a with
-      | .error e => .error e
-      | .ok ix => .ok (.etwas ix)
-  | e =>
-    match uOptEin ctx e with
-    | .error x => .error x
-    | .ok (o, m) => if m == num then .ok o else .error "option of a foreign table"
-
-/-- A tagged value read off an expression, with the position of its type: a variable, a payload-free case or a
-    case with a payload. -/
 def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
   | .variable v =>
     match uParamNr ctx v with
@@ -234,9 +218,12 @@ def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
         match s.cases.findIdx? (fun x => strEq x.1 c) with
         | .none => .error "tagged value without G form"
         | .some i =>
-          match uWertBody ctx a with
-          | .error e => .error e
-          | .ok sd => .ok (.fall i (.some sd), k)
+          match (s.cases[i]?).bind (·.2) with
+          | none => .error "case has no payload"
+          | some τ =>
+            match uPayload ctx τ a with
+            | .error e => .error e
+            | .ok sd => .ok (.fall i (.some sd), k)
   | _ => .error "tagged value without G form"
 
 /-- A tagged value of the type at `sidx`. -/

@@ -13,6 +13,10 @@
   claimed by this preparatory stage. The authorized channel migration must extend `KopfHalt`, `InvAmGrundG`,
   `InvGutGrund` and foreign-answer admission to every admitted open code and every checked structured field,
   retaining the same named assumptions and user duties; it remains required before C03 is complete.
+  C03 TYPED SOURCE SCHEMAS. Tagged collection now retains complete parsed payload types and resolves every
+  present payload at an explicit kernel-admission gate. The kernel is still numeric-only at that gate;
+  reading a bool, record, array, string or reference schema does not enable its execution as a sum payload.
+  This source-stage refactoring does not yet change the domain or meaning of the goal statements below.
 
   THE STATEMENTS (proofs in Zielsatz/Atomar/BeweisAtomar.lean; `#print axioms` of each is exactly `propext`,
   `Classical.choice`, `Quot.sound`):

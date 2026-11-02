@@ -242,7 +242,7 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannOnTagSome (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
-      (cs : List (Option (Int × Int)))
+      (cs : List (Option Ty))
       (v : Expr D Γ Λ (.sum cs))
       (arms : Arms D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ' cs)
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ' Λ'')
@@ -251,10 +251,10 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hhead : (M.faeden f).kopf.rest =
         ⟨l, Γ, Λ, ρ, .dann (.cons (.onTag v arms) rest) k⟩)
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ v.orte)
-      (lo hi : Int)
-      (b : Block D (vertragVon D (M.faeden f).kopf.f) l (.int lo hi :: Γ) Λ Λ')
-      (nutz : Nutzlast (some (lo, hi)))
-      (hw : armWahlG arms (eval σ₁ v σ₁ ρ) = ⟨some (lo, hi), b, nutz⟩)
+      (τ : Ty)
+      (b : Block D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ Λ')
+      (nutz : Nutzlast D.Fn D.passt (some τ))
+      (hw : armWahlG arms (eval σ₁ v σ₁ ρ) = ⟨some τ, b, nutz⟩)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
       RufSchrittG1 P O passes M f
@@ -262,13 +262,13 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
          rufUpdateG M.faeden f
            ⟨(M.faeden f).stapel,
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-             ⟨l, .int lo hi :: Γ, Λ, armEnv nutz ρ,
+             ⟨l, τ :: Γ, Λ, armEnv nutz ρ,
               .dann b (.schrumpf (.dann rest k))⟩⟩,
             σ₁.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannOnTagNone (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D))
-      (cs : List (Option (Int × Int)))
+      (cs : List (Option Ty))
       (v : Expr D Γ Λ (.sum cs))
       (arms : Arms D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ' cs)
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ' Λ'')
@@ -278,7 +278,7 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
         ⟨l, Γ, Λ, ρ, .dann (.cons (.onTag v arms) rest) k⟩)
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ v.orte)
       (b : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ')
-      (nutz : Nutzlast none)
+      (nutz : Nutzlast D.Fn D.passt none)
       (hw : armWahlG arms (eval σ₁ v σ₁ ρ) = ⟨none, b, nutz⟩)
       (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
@@ -376,7 +376,7 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannNarrowOk (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (lo hi lo' hi' : Int)
-      (e : Expr D Γ Λ (.int lo hi))
+      (e : Expr D Γ Λ (τ))
       (sonst : Endblock D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (.int lo' hi' :: Γ)
         Λ Λ')

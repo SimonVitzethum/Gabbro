@@ -111,7 +111,7 @@ theorem execEnd_cons_zurueck (O : Orakel D) (passes : Nat)
 /-- `execArms` runs the arm `armWahlG` selects. -/
 theorem execArms_wahl (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
       (σ : World D) (ρ : Env D Γ),
     execArms O passes R arms v σ ρ =
       (execBlock O passes R (armWahlG arms v).2.1 σ (armEnv (armWahlG arms v).2.2 ρ)).schrumpfArm

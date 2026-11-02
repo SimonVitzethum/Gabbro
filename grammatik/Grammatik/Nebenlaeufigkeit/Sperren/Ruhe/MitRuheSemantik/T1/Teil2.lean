@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T1.Teil1
+import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 
 @[expose] public section
 
@@ -46,8 +47,7 @@ theorem einpassen_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn
       · rfl
       · split <;> rfl
   | .sum cs, n => by
-      show summePasst cs n = Option.map (valR (D := D) (.sum cs)) (summePasst cs n)
-      cases summePasst cs n <;> rfl
+      exact summePasst_relocate (fun k => k + 1) id (fun _ v => ⟨some v.1, v.2⟩) cs n
   | .why m, n => by
       show einpassen (D := D.mitRuhe) z' (.why m) n =
         Option.map (valR (.why m)) (einpassen (D := D) z (.why m) n)

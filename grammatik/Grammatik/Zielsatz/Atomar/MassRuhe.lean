@@ -305,11 +305,11 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
   | _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
   | _, _, _, .ite _ t e, eb, ie => kongr₂ (· || ·) (ewig_ruEnd e eb ie) (ewig_ruEnd t eb ie)
 
-theorem ewig_ruArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem ewig_ruArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (eb ie : Bool), (befArms eb ie (ruArms arms)).ewig = (befArms eb ie arms).ewig
   | _, _, _, _, _, .nil, _, _ => rfl
   | _, _, _, _, _, .cons (c := none) b rest, eb, ie => kongr₂ (· || ·) (ewig_ruB b eb ie) (ewig_ruArms rest eb ie)
-  | _, _, _, _, _, .cons (c := some (_, _)) b rest, eb, ie => kongr₂ (· || ·) (ewig_ruB b eb ie) (ewig_ruArms rest eb ie)
+  | _, _, _, _, _, .cons (c := some _) b rest, eb, ie => kongr₂ (· || ·) (ewig_ruB b eb ie) (ewig_ruArms rest eb ie)
 
 theorem ewig_ruGArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (arms : GrundArms D V l Γ Λ Λ' n) (eb ie : Bool), (befGArms eb ie (ruGArms arms)).ewig = (befGArms eb ie arms).ewig

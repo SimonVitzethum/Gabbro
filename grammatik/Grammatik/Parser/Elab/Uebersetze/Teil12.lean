@@ -1,14 +1,43 @@
 module
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
-import all Init.Data.String.Defs
-import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Reason
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Elaborate
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 
 @[expose] public section
 
@@ -91,58 +120,6 @@ def uStartNamen : Nat → SAnw → List String
 /-- Each root once, in order. -/
 def uOhneDoppelte (xs : List String) : List String :=
   xs.foldl (fun acc x => if acc.any (fun y => strEq y x) then acc else acc ++ [x]) []
-
-/-- Read payload types with the canonical type parser, preserving nested parentheses.
-    This scalar stage still refuses payloads that have no numeric result elaboration. -/
-def uSumFaelle (alias : List (String × (Int × Int))) :
-    Nat → List Token → Except String (List (String × Option (Int × Int)))
-  | 0, _ => .error "tagged type too long"
-  | _, [] => .ok []
-  | f + 1, .ident n :: .zeichen "," :: rest =>
-    match uSumFaelle alias f rest with
-    | .error e => .error e
-    | .ok r => .ok ((n, none) :: r)
-  | _ + 1, [.ident n] => .ok [(n, none)]
-  | f + 1, .ident n :: .zeichen "(" :: rest =>
-    match parseTyp f rest with
-    | .error _ => .error "tagged case without G form"
-    | .ok (ty, .zeichen ")" :: rest2) =>
-      match uErgBereich alias ty with
-      | .error e => .error e
-      | .ok r =>
-        match rest2 with
-        | [] => .ok [(n, some r)]
-        | .zeichen "," :: rest3 =>
-          match uSumFaelle alias f rest3 with
-          | .error e => .error e
-          | .ok more => .ok ((n, some r) :: more)
-        | _ => .error "tagged case without G form"
-    | .ok _ => .error "tagged case without G form"
-  | _ + 1, _ => .error "tagged case without G form"
-
-/-- The `tagged type` items of a unit. -/
-def uSums (alias : List (String × (Int × Int))) : List SItemTief → Except String (List USum)
-  | [] => .ok []
-  | .typeT ["tagged"] n _ _ (.some (.raw txt)) :: rest =>
-    match lex txt with
-    | .error _ => .error "tagged type without G form"
-    | .ok toks0 =>
-      let toks := toks0.filter (fun k => match k with | .ende => false | _ => true)
-      match toks with
-      | .zeichen "{" :: inner =>
-        match inner.reverse with
-        | .zeichen "}" :: rev =>
-          match uSumFaelle alias 10000 rev.reverse with
-          | .error e => .error e
-          | .ok cs =>
-            if cs.isEmpty then .error "tagged type without cases"
-            else
-              match uSums alias rest with
-              | .error e => .error e
-              | .ok r => .ok ({ name := n, cases := cs } :: r)
-        | _ => .error "tagged type without G form"
-      | _ => .error "tagged type without G form"
-  | _ :: rest => uSums alias rest
 
 /-- Keep the exact descriptor. Open execution stays refused until the channel migration. -/
 def uWhys (items : List SItemTief) (alias : List (String × (Int × Int)) := [])

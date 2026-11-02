@@ -5,9 +5,7 @@
              (`vertreter`, one per constructor of `Ty`), not written per cell.
 -/
 module
-public import Grammatik.Gen.Abdeckung.Waehlen
-public import Grammatik.Gen.Fein.Zellen
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -38,6 +36,9 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Gen.Abdeckung.Waehlen
+public import Grammatik.Gen.Fein.Zellen
+import all Init.Data.Repr
 @[expose] public section
 
 
@@ -47,7 +48,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
 /-- One representative type per type class, in the order of `Ty.kopf`. -/
 def vertreter : List Ty :=
-  [.int 0 0, .bool, .opt 1, .sum [none, some (0, 1)], .why 2, .never, .fl (0, 1) (1, 1), .fnptr 0, .ptr 0 true]
+  [.int 0 0, .bool, .opt 1, .sum [none, some (.int 0 1)], .why 2, .never, .fl (0, 1) (1, 1), .fnptr 0, .ptr 0 true]
 
 theorem vertreter_koepfe : vertreter.map Ty.kopf = List.range 9 := by decide
 
@@ -55,7 +56,7 @@ theorem vertreter_koepfe : vertreter.map Ty.kopf = List.range 9 := by decide
     integers with the ranges the operators need exactly (`int 0 0` for a literal `0`, `int 0 1` for a shift of width
     one, a byte for `getBytes`), the finite classes, the rest. -/
 def gruppen : List (List Ty) :=
-  [[.int 0 0, .int 0 1, .int 0 255], [.bool, .opt 1, .sum [none, some (0, 1)], .why 2],
+  [[.int 0 0, .int 0 1, .int 0 255], [.bool, .opt 1, .sum [none, some (.int 0 1)], .why 2],
    [.never, .fl (0, 1) (1, 1), .fnptr 0, .ptr 0 true]]
 
 theorem gruppen_vertreter : vertreter ⊆ gruppen.flatten := by decide

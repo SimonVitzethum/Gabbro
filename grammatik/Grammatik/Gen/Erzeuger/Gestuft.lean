@@ -48,7 +48,7 @@ class Zahlen where
   listeP : Nat → List (Int × Int)
   memP : ∀ p, kostP p < unendlich → p ∈ listeP (kostP p)
   /-- The sum types (the case lists of a tagged value) that exist: a free choice, every other list costs infinity. -/
-  sfaelle : List (List (Option (Int × Int)))
+  sfaelle : List (List (Option Ty))
   /-- The types a `let`-bound expression may have (a bound variable carries a type of the declaration; a computed range
       is widened to one of them before it is bound). -/
   bindOk : Ty → Bool
@@ -87,7 +87,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
     · simp only [hM, if_false] at h
       exact absurd h (Nat.lt_irrefl _)
   bindOk := fun _ => true
-  sfaelle := let c : List (Option (Int × Int)) := [none, some (0, 0), some (0, 1)]
+  sfaelle := let c : List (Option Ty) := [none, some (.int 0 0), some (.int 0 1)]
     [] :: (c.map fun a => [a]) ++ c.flatMap fun a => c.map fun b => [a, b]
   kostP p := (if p.1.natAbs ≤ M then p.1.natAbs else unendlich) + (if p.2.natAbs ≤ M then p.2.natAbs else unendlich)
   listeP c := (List.range (c + 1)).flatMap fun (a : Nat) =>
@@ -128,7 +128,7 @@ def Zahlen.exakt (M : Nat) : Zahlen where
 
 /-- A finite alphabet: every listed number is a FREE CHOICE (cost zero, like the choice of a table or a field),
     every other number costs infinity. -/
-def Zahlen.kanon (N W : List Int) (NN : List Nat) (NP : List (Int × Int)) (SF : List (List (Option (Int × Int))))
+def Zahlen.kanon (N W : List Int) (NN : List Nat) (NP : List (Int × Int)) (SF : List (List (Option Ty)))
     (BT : List Ty) : Zahlen where
   sfaelle := SF
   bindOk := fun τ => decide (τ ∈ BT)
@@ -370,17 +370,17 @@ theorem kostT_null [Zahlen] {τ : Ty} (h : Zahlen.bindOk τ = true) : Zahlen.kos
   simp only [h, ↓reduceIte]
 
 /-- The sum types that exist, as a free choice. -/
-def sfS [Zahlen] : Sz (List (Option (Int × Int))) := Sz.wahl Zahlen.sfaelle
+def sfS [Zahlen] : Sz (List (Option Ty)) := Sz.wahl Zahlen.sfaelle
 
 /-- The cost of a case list: free if the scheme names it. -/
-def Zahlen.kostS [Zahlen] (cs : List (Option (Int × Int))) : Nat :=
+def Zahlen.kostS [Zahlen] (cs : List (Option Ty)) : Nat :=
   if cs ∈ Zahlen.sfaelle then 0 else unendlich
 
-theorem kostS_null [Zahlen] {cs : List (Option (Int × Int))} (h : cs ∈ Zahlen.sfaelle) : Zahlen.kostS cs = 0 := by
+theorem kostS_null [Zahlen] {cs : List (Option Ty)} (h : cs ∈ Zahlen.sfaelle) : Zahlen.kostS cs = 0 := by
   unfold Zahlen.kostS
   simp only [h, ↓reduceIte]
 
-theorem mem_sfS [Zahlen] {cs : List (Option (Int × Int))} (h : Zahlen.kostS cs < unendlich) :
+theorem mem_sfS [Zahlen] {cs : List (Option Ty)} (h : Zahlen.kostS cs < unendlich) :
     cs ∈ Zahlen.sfaelle := by
   unfold Zahlen.kostS at h
   by_cases hc : cs ∈ Zahlen.sfaelle

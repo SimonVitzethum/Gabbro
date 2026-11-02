@@ -124,7 +124,7 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List (PCAtom D)
   | .nil => []
   | .cons b rest => blockAtome tabs globs b ++ armsAtome tabs globs rest

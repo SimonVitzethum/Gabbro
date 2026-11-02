@@ -329,7 +329,7 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
 
 /-- Die gelesenen Orte der Fallunterscheidung. -/
 def armsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List (D.Tab ⊕ D.Glob)
   | .nil => []
   | .cons b rest => blockOrte b ++ armsOrte rest

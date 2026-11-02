@@ -129,7 +129,7 @@ def tabelle : List Konstr := [
   ⟨"Expr", "intBuiltin2", ["Expr", "Expr"], 0, 1⟩,
   ⟨"Expr", "count", ["Expr"], 0, 1⟩,
   ⟨"NutzlastExpr", "empty", [], 0, 0⟩,
-  ⟨"NutzlastExpr", "num", ["Expr"], 0, 0⟩,
+  ⟨"NutzlastExpr", "val", ["Expr"], 0, 0⟩,
   ⟨"Args", "nil", [], 0, 0⟩,
   ⟨"Args", "cons", ["Expr", "Args"], 0, 0⟩,
   ⟨"ErgExpr", "empty", [], 0, 0⟩,

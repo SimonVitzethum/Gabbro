@@ -28,7 +28,7 @@ theorem StmtG.onOption_inv {Λ Λ' : List (Res D)} {n : Int} {o : Expr D Γ Λ (
   | blatt _ hb => exact absurd hb.art (by simp only [Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | onOption _ _ _ hp ha => exact ⟨hp, ha⟩
 
-theorem StmtG.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem StmtG.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {v : Expr D Γ Λ (.sum cs)} {arms : Arms D V l Γ Λ Λ' cs}
     (h : StmtG A mr (.onTag v arms)) : ArmsG A mr arms := by
   cases h with
@@ -144,8 +144,8 @@ theorem BlockG.gleitNarrow_inv {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
   cases h with
   | floatNarrow _ _ _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
 
-theorem ArmsG.cons_inv {Λ Λ' : List (Res D)} {c : Option (Int × Int)}
-    {cs : List (Option (Int × Int))} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+theorem ArmsG.cons_inv {Λ Λ' : List (Res D)} {c : Option Ty}
+    {cs : List (Option Ty)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
     {rest : Arms D V l Γ Λ Λ' cs} (h : ArmsG A mr (.cons b rest)) :
     BlockG A mr b ∧ ArmsG A mr rest := by
   cases h with
@@ -310,32 +310,32 @@ theorem w_optNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
 
 theorem w_tagSome {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
-    {cs : List (Option (Int × Int))} (v : Expr D Γ Λ (.sum cs))
+    {cs : List (Option Ty)} (v : Expr D Γ Λ (.sum cs))
     (arms : Arms D (vertragVon D z.kopf.f) l Γ Λ Λ' cs)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onTag v arms) rest) k⟩)
-    (lo hi : Int)
-    (b : Block D (vertragVon D z.kopf.f) l (.int lo hi :: Γ) Λ Λ')
-    (nutz : Nutzlast (some (lo, hi)))
+    (τ : Ty)
+    (b : Block D (vertragVon D z.kopf.f) l (τ :: Γ) Λ Λ')
+    (nutz : Nutzlast D.Fn D.passt (some τ))
     (hw : armWahlG arms (eval ((M.weltVon f).lese Λ v.orte) v
-      ((M.weltVon f).lese Λ v.orte) ρ) = ⟨some (lo, hi), b, nutz⟩)
+      ((M.weltVon f).lese Λ v.orte) ρ) = ⟨some τ, b, nutz⟩)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
     ∃ M', RufSchrittG P O passes M f M' ∧
       ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log (armEnv nutz ρ)
         (.dann b (.schrumpf (.dann rest k))) ((M.weltVon f).lese Λ v.orte) := by
   subst hz
   exact ⟨_, RufSchrittG.dannOnTagSome M f l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead _ rfl
-    lo hi b nutz hw _ rfl hΛ, zustandG_neu rfl rfl⟩
+    τ b nutz hw _ rfl hΛ, zustandG_neu rfl rfl⟩
 
 theorem w_tagNone {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)}
-    {cs : List (Option (Int × Int))} (v : Expr D Γ Λ (.sum cs))
+    {cs : List (Option Ty)} (v : Expr D Γ Λ (.sum cs))
     (arms : Arms D (vertragVon D z.kopf.f) l Γ Λ Λ' cs)
     (rest : Block D (vertragVon D z.kopf.f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D z.kopf.f) l Γ Λ'') (ρ : Env D Γ)
     (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons (.onTag v arms) rest) k⟩)
-    (b : Block D (vertragVon D z.kopf.f) l Γ Λ Λ') (nutz : Nutzlast none)
+    (b : Block D (vertragVon D z.kopf.f) l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
     (hw : armWahlG arms (eval ((M.weltVon f).lese Λ v.orte) v
       ((M.weltVon f).lese Λ v.orte) ρ) = ⟨none, b, nutz⟩)
     (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :

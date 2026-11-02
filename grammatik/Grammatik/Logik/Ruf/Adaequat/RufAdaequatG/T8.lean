@@ -77,12 +77,12 @@ theorem nachA_schrumpf {τ : Ty} {Λ : List (Res D)} (o : Ausgang V l (τ :: Γ)
     nachA O passes o.schrumpf k = nachA O passes o (.schrumpf k) := by
   cases o <;> simp only [Ausgang.schrumpf, nachA, semR]
 
-theorem nachA_schrumpfArm (c : Option (Int × Int)) {Λ : List (Res D)}
+theorem nachA_schrumpfArm (c : Option Ty) {Λ : List (Res D)}
     (o : Ausgang V l (ArmCtx Γ c)) (k : GRest D V l Γ Λ) :
     nachA O passes (o.schrumpfArm c) k =
       (match c, o with
        | none, o => nachA O passes o k
-       | some (_, _), o => nachA O passes o (.schrumpf k)) := by
+       | some _, o => nachA O passes o (.schrumpf k)) := by
   cases c with
   | none => rfl
   | some p => exact nachA_schrumpf O passes o k

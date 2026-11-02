@@ -191,7 +191,7 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .exchange _ _ _ _ rest => rest.ueberBoden c
   | .ite _ t e => t.ueberBoden c && e.ueberBoden c
 
-def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (c : Int) : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.ueberBoden c && rest.ueberBoden c
@@ -210,7 +210,7 @@ abbrev Block.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (bo : Option 
     (b : Block D V l Γ Λ Λ') : Prop := ∀ c, bo = some c → b.ueberBoden c = true
 abbrev Endblock.BodenOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (bo : Option Int)
     (b : Endblock D V l Γ Λ) : Prop := ∀ c, bo = some c → b.ueberBoden c = true
-abbrev Arms.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+abbrev Arms.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (bo : Option Int) (a : Arms D V l Γ Λ Λ' cs) : Prop := ∀ c, bo = some c → a.ueberBoden c = true
 abbrev GrundArms.BodenOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
     (bo : Option Int) (a : GrundArms D V l Γ Λ Λ' n) : Prop := ∀ c, bo = some c → a.ueberBoden c = true

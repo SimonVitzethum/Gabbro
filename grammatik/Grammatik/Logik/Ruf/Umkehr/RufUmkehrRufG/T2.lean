@@ -347,7 +347,7 @@ theorem endSGK : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact EndSG.schrumpf (endSGK rest hr ho _ _ _ h1)
 
 theorem armsSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs),
     ArmsR A C mr arms → arms.kOk = true → ∀ (v : Wert D (.sum cs)),
     SGBK O passes R (armWahlG arms v).2.1
   | _, _, _, _, _, _, .nil, _, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

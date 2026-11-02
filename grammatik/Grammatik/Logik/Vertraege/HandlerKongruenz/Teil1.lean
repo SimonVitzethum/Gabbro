@@ -95,7 +95,7 @@ def Fehlermarke.zuEnd {l : Bool} {Γ : Ctx} : Fehlermarke D → EndAusgang V l �
   cases m <;> rfl
 
 @[simp] theorem Fehlermarke.schrumpfArm_zuAusgang {l : Bool} {Γ : Ctx}
-    (c : Option (Int × Int)) (m : Fehlermarke D) :
+    (c : Option Ty) (m : Fehlermarke D) :
     Ausgang.schrumpfArm (V := V) (l := l) (Γ := Γ) c m.zuAusgang = m.zuAusgang := by
   cases c with
   | none => rfl
@@ -149,7 +149,7 @@ theorem AusgangUnter.schrumpf {τ : Ty} {o₁ o₂ : Ausgang V l (τ :: Γ)}
   · exact Or.inl (congrArg Ausgang.schrumpf h)
   · exact Or.inr ⟨m, by rw [h1]; simp only [Fehlermarke.schrumpf_zuAusgang], hE⟩
 
-theorem AusgangUnter.schrumpfArm {c : Option (Int × Int)} {o₁ o₂ : Ausgang V l (ArmCtx Γ c)}
+theorem AusgangUnter.schrumpfArm {c : Option Ty} {o₁ o₂ : Ausgang V l (ArmCtx Γ c)}
     (h : AusgangUnter Er o₁ o₂) :
     AusgangUnter Er (Ausgang.schrumpfArm c o₁) (Ausgang.schrumpfArm c o₂) := by
   rcases h with h | ⟨m, h1, hE⟩

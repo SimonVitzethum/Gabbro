@@ -210,17 +210,17 @@ theorem execEndH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | _, _, Λ, .ite c t e, σ, ρ =>
       execEndH_ru_ite (c := c) (t := t) (e := e) (σ := σ) (ρ := ρ) (ih_execEndH_ru_e := execEndH_ru e) (ih_execEndH_ru_t := execEndH_ru t) (S := S) (O := O) (U := U) (passes := passes) (O' := O') (hO := hO) (U' := U') (R := R) (R' := R') (hU := hU) (hR := hR)
 theorem execArmsH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
     (σ : World D) (ρ : Env D Γ),
     AusRelRu (execArmsH S.mitRuhe O' U' passes R' (ruArms arms) (valR (.sum cs) v)
         (worldR σ) (envR ρ))
       (execArmsH S O U passes R arms v σ ρ)
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ => execBlockH_ru b σ ρ
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ =>
+  | _, _, _, _, _, .cons (c := some τ) b rest, ⟨⟨0, _⟩, nutz⟩, σ, ρ =>
       AusRelRu.schrumpf (execBlockH_ru b σ (Env.cons nutz ρ))
   | _, _, _, _, _, .cons (c := none) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArmsH_ru rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
+  | _, _, _, _, _, .cons (c := some τ) b rest, ⟨⟨i + 1, h⟩, nutz⟩, σ, ρ =>
       execArmsH_ru rest ⟨⟨i, Nat.lt_of_succ_lt_succ h⟩, nutz⟩ σ ρ
 
 theorem execGrundH_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}

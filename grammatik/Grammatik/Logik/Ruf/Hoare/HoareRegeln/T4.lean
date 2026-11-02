@@ -11,7 +11,7 @@ variable {D : Deklaration} {V : Vertrag D}
 theorem armsOhneRuf_Runabhaengig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (O : Orakel D) (passes : Nat)
     (R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    {cs : List (Option (Int × Int))}
+    {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (h : ArmsOhneRuf arms)
     (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ) :
     execArms O passes R₁ arms v σ ρ = execArms O passes R₂ arms v σ ρ :=

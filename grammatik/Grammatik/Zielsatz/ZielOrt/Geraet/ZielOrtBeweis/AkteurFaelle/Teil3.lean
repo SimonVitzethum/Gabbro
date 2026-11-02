@@ -11,7 +11,7 @@ set_option maxHeartbeats 4000000 in
 theorem akteur_dannOnTagNone {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   (hK : ∀ (f : D.Fn), KoerperGut P O passes f) (hFrag : ∀ (f : D.Fn), (P.rumpf f).kOk = true) (e0 : Ereignis D)
   {M : RufMaschineG D} {u : Faden} (hF : FadenOk P O passes (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
-  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -24,11 +24,11 @@ theorem akteur_dannOnTagNone {D : Deklaration} {P : Programm D} {O : Orakel D} {
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
   (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (b : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ')
-  (nutz : Nutzlast none)
+  (nutz : Nutzlast D.Fn D.passt none)
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
       (⟨none, (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+        (c : Option Ty) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
   FadenOk P O passes
       ({ speicher := M.speicher,

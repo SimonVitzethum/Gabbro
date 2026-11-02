@@ -19,18 +19,7 @@
   interpreter, no import from `programmlogik/`.
 -/
 module
-public import Grammatik.Parser.Elab.Uebersetze
-public import Grammatik.Parser.Elab.UebersetzeAllg
-public import Grammatik.Parser.Elab.UebersetzeAllg3
-public import Grammatik.Kern.Syntax.Typen.Teil2
-public import Grammatik.Kern.Syntax.Syntax.Teil2
-public import Grammatik.Kern.Semantik.Semantik
-public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Logik.Vertraege.VertragOrtB
-public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
-public import Grammatik.Zielsatz.Kern.Spec
-public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
-import all Init.Data.Repr
+
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -61,6 +50,18 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
+public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.UebersetzeAllg
+public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Semantik.Maschine
+public import Grammatik.Logik.Vertraege.VertragOrtB
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
+import all Init.Data.Repr
 @[expose] public section
 
 
@@ -86,11 +87,7 @@ def konstListe : UKonst → Option (List UKonst)
   | .cons a r => (konstListe r).map (a :: ·)
   | _ => none
 
-/-- The payload of a constant case: none, or a number inside its range. -/
-def nutzKonst : (o : Option (Int × Int)) → UKonst → Option (Nutzlast o)
-  | none, .null => some ()
-  | some (lo, hi), .zahl n => if h : lo ≤ n ∧ n ≤ hi then some ⟨n, h.1, h.2⟩ else none
-  | _, _ => none
+mutual
 
 /-- **The value of a constant initialiser at the type `τ`**: zero memory (`= 0`) wherever the type holds a zero,
     a number inside its range, a truth value, the bytes of a string under its maximum, an array literal of exactly
@@ -111,7 +108,7 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
   -- zero memory of a tagged value: the first case, its payload zero
   | .sum cs, .null =>
     if h : 0 < cs.length then
-      (nutzKonst (cs.get ⟨0, h⟩) (match cs.get ⟨0, h⟩ with | none => .null | some _ => .zahl 0)).map (⟨⟨0, h⟩, ·⟩)
+      (nutzKonst (cs.get ⟨0, h⟩) .null).map (⟨⟨0, h⟩, ·⟩)
     else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .arr τ n, k =>
@@ -122,6 +119,27 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
       | none => none
     | none => none
   | _, _ => none
+
+termination_by τ _ => sizeOf τ
+decreasing_by
+  all_goals first
+    | decreasing_trivial
+    | have hs := List.sizeOf_get cs ⟨k, h⟩
+      simp only [Ty.sum.sizeOf_spec]
+      omega
+    | have hs := List.sizeOf_get cs ⟨0, h⟩
+      simp only [Ty.sum.sizeOf_spec]
+      omega
+
+/-- Constants use the same complete payload type as ordinary construction. -/
+def nutzKonst {F : Type} {P : F → Nat → Bool} :
+    (o : Option Ty) → UKonst → Option (Nutzlast F P o)
+  | none, .null => some ()
+  | none, _ => none
+  | some τ, value => konstWert τ value
+termination_by c _ => sizeOf c
+
+end
 
 /-- **The per-field `Sp0Ok` test** (`sp0FeldOkB`): the field entry is present and
     is a `bool` field or its recorded range holds `0` (the `none` arm is

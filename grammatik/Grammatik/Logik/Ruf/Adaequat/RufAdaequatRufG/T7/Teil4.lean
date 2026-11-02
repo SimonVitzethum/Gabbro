@@ -309,7 +309,7 @@ theorem alsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | _, _, _, .bind e rest, he =>
       alsRetR_bind (e := e) (rest := rest) (he := he) (ih_alsRetR_rest := alsRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
 theorem armsRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
+    {cs : List (Option Ty)} (arms : Arms D (vertragVon D fn) l Γ Λ Λ' cs),
     ArmsR A C true arms → ∀ (v : Wert D (.sum cs)),
     SimRetBR P O passes f fn caller rst rho s0 A R ziel zielG (armWahlG arms v).2.1
   | _, _, _, _, _, .nil, _, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim

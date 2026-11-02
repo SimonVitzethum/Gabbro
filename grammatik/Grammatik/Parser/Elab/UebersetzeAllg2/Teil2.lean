@@ -255,12 +255,7 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
       | _ => .error "argument without G form"
     | .fnptr _, .fnptr m =>
       match a with
-      | .fnref f =>
-        match fnIdx u.fns f with
-        | .error e => .error e
-        | .ok g =>
-          if h : (declOf u).passt g m = true then .ok (Expr.fnref (D := declOf u) g m h)
-          else .error "function does not conform to the pointer type"
+      | .fnref f => lowFnRef u Γ Λ m f
       | .var p =>
         match paramPos fn.params p with
         | .error e => .error e

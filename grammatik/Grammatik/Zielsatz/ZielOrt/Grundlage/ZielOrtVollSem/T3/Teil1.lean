@@ -82,12 +82,12 @@ theorem semV_optNone {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.
   simp only [execStmt, hv]
   rfl
 
-theorem semV_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semV_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (lo hi : Int) (b : Block D V l (.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+    (τ : Ty) (b : Block D V l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) =
-      ⟨some (lo, hi), b, nutz⟩) :
+      ⟨some τ, b, nutz⟩) :
     semV O passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ =
       semV O passes R (.dann b (.schrumpf (.dann rest k))) (σ.lese Λ v.orte) (armEnv nutz ρ) := by
   rw [semV_dann_cons]
@@ -95,10 +95,10 @@ theorem semV_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int
   rw [execArms_wahl, hw]
   rfl
 
-theorem semV_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semV_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast none)
+    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
     semV O passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ =
       semV O passes R (.dann b (.dann rest k)) (σ.lese Λ v.orte) (armEnv nutz ρ) := by

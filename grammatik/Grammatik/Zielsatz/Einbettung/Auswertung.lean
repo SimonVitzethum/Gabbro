@@ -280,8 +280,14 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
   | _, _, _, .istSome a, ρ, ρ', hρ => by
       have ha := eval_exE h₀ h a ρ ρ' hρ
       simp only [VRel] at ha ⊢; simp only [exE, eval]; rw [ha]; rfl
-  | _, _, _, .case _ _ nutz, ρ, ρ', hρ => by
-      simp only [VRel]; simp only [exE, eval]; rw [evalNutz_exN h₀ h nutz ρ ρ' hρ]; rfl
+  | _, _, _, .case cs i nutz, ρ, ρ', hρ => by
+      have hn := E.nrel_valZ K (cs.get i) _ _ (evalNutz_exN h₀ h nutz ρ ρ' hρ)
+      simp only [VRel, exE, eval, evalNutz_cast]
+      change Val.restrictSum E.num E.tnum (fun n value => K.zeiger n value.1 value.2) cs
+        ⟨⟨i.val, by rw [Ty.mapCases_length]; exact i.isLt⟩,
+          (Ty.mapCases_get E.num E.tnum cs i).symm ▸ evalNutz σ₀' (exN E nutz) σ' ρ'⟩ = _
+      rw [Val.restrictSum_mk]
+      exact congrArg (fun payload => (⟨i, payload⟩ : Wert D (.sum cs))) hn
   | _, _, _, .why _ _, _, _, _ => rfl
   | _, _, _, .forallSlots t body _, ρ, ρ', hρ => by
       simp only [VRel]
@@ -410,13 +416,12 @@ theorem eval_exE (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speich
 
 /-- Payloads. -/
 theorem evalNutz_exN (h₀ : E.Treu K σ₀.speicher σ₀') (h : E.Treu K σ.speicher σ') :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option (Int × Int)} (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ)
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} (n : NutzlastExpr D Γ Λ c) (ρ : Env D Γ)
       (ρ' : Env D' (Γ.map E.tyE)), E.EnvR K ρ ρ' →
-      evalNutz σ₀' (exN E n) σ' ρ' = evalNutz σ₀ n σ ρ
-  | _, _, _, .empty, _, _, _ => rfl
-  | _, _, _, .num e, ρ, ρ', hρ => by
+      E.NRel K c (evalNutz σ₀ n σ ρ) (evalNutz σ₀' (exN E n) σ' ρ')
+  | _, _, _, .empty, _, _, _ => trivial
+  | _, _, _, .val e, ρ, ρ', hρ => by
       have he := eval_exE h₀ h e ρ ρ' hρ
-      simp only [VRel] at he
       exact he
 
 end

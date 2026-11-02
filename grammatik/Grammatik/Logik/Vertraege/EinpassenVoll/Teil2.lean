@@ -10,16 +10,20 @@ variable {D : Deklaration}
 
 /-- A `tagged` case has a payload value: a bare case always, a payload case when its range
     is not empty. -/
-def nutzBar : Option (Int × Int) → Bool
+def nutzBar : Option Ty → Bool
   | none => true
-  | some (lo, hi) => decide (lo ≤ hi)
+  | some (.int lo hi) => decide (lo ≤ hi)
+  | some _ => false
 
-theorem nutzBar_iff : ∀ c : Option (Int × Int), nutzBar c = true ↔ Nonempty (Nutzlast c)
-  | none => ⟨fun _ => ⟨()⟩, fun _ => rfl⟩
-  | some (lo, hi) => by
-      simp only [nutzBar, decide_eq_true_eq]
-      exact ⟨fun h => ⟨(⟨lo, Int.le_refl _, h⟩ : Zahl lo hi)⟩,
-        fun ⟨z⟩ => Int.le_trans (z : Zahl lo hi).lo_le (z : Zahl lo hi).le_hi⟩
+theorem nutzBar_iff : ∀ c : Option Ty,
+    nutzBar c = true ↔ ∃ x : Nutzlast D.Fn D.passt c, nutzWort c
+  | none => ⟨fun _ => ⟨(), trivial⟩, fun _ => rfl⟩
+  | some τ => by
+      cases τ <;> try simp only [nutzBar, nutzWort, Bool.false_eq_true, exists_false]
+      rename_i lo hi
+      simp only [nutzBar, nutzWort, decide_eq_true_eq]
+      exact ⟨fun h => ⟨(⟨lo, Int.le_refl _, h⟩ : Zahl lo hi), trivial⟩,
+        fun ⟨z, _⟩ => Int.le_trans z.lo_le z.le_hi⟩
 
 /-- **A type has an answer, decided** over the program's function list `fs` (a function
     pointer's type is inhabited exactly by the functions of its signature). -/
@@ -27,7 +31,7 @@ def antwortTyB (fs : List D.Fn) : Ty → Bool
   | .int lo hi => decide (lo ≤ hi)
   | .bool => true
   | .opt _ => true
-  | .sum cs => cs.any nutzBar
+  | .sum cs => sumWort cs && cs.any nutzBar
   | .why n => decide (n ≠ 0)
   | .never => false
   | .fl lo hi => gleitBarB lo hi
@@ -51,14 +55,15 @@ theorem antwortTyB_iff {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs) :
   | .bool => ⟨fun _ => ⟨(true : Bool), trivial⟩, fun _ => rfl⟩
   | .opt _ => ⟨fun _ => ⟨(Option.none : Option (Zahl _ _)), trivial⟩, fun _ => rfl⟩
   | .sum cs => by
-      simp only [antwortTyB, List.any_eq_true]
+      simp only [antwortTyB, Bool.and_eq_true, List.any_eq_true]
       constructor
-      · rintro ⟨c, hc, hb⟩
+      · rintro ⟨hs, c, hc, hb⟩
         obtain ⟨i, rfl⟩ := List.get_of_mem hc
-        obtain ⟨x⟩ := (nutzBar_iff _).mp hb
-        exact ⟨(⟨i, x⟩ : Σ i : Fin cs.length, Nutzlast (cs.get i)), trivial⟩
-      · rintro ⟨⟨i, x⟩, _⟩
-        exact ⟨cs.get i, List.get_mem cs i, (nutzBar_iff _).mpr ⟨x⟩⟩
+        obtain ⟨x, _⟩ := (nutzBar_iff _).mp hb
+        exact ⟨(⟨i, x⟩ : Wert D (.sum cs)), hs⟩
+      · rintro ⟨⟨i, x⟩, hs⟩
+        exact ⟨hs, cs.get i, List.get_mem cs i,
+          (nutzBar_iff _).mpr ⟨x, sumWort_get cs hs i⟩⟩
   | .why n => by
       simp only [antwortTyB, decide_eq_true_eq]
       constructor

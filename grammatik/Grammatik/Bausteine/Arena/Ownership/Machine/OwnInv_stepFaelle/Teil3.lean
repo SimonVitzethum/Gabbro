@@ -132,7 +132,7 @@ theorem ownInv_step_dannOnTagSome {D : Deklaration} {P : Programm D}
                     pendWord A (M.faeden t).kopf.rest.snd.snd.snd.snd = some g →
                       M'.speicher.globs g = M.speicher.globs g) →
               OwnInv A I M')
-  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -144,12 +144,12 @@ theorem ownInv_step_dannOnTagSome {D : Deklaration} {P : Programm D}
                 (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
-  (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (lo hi : Int)
-  (b : Block D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+  (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (τ : Ty)
+  (b : Block D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
-      (⟨some (lo, hi), (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+      (⟨some τ, (b, nutz)⟩ :
+        (c : Option Ty) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur))
   (hrely :
     ∀ (t : Faden),
@@ -164,11 +164,11 @@ theorem ownInv_step_dannOnTagSome {D : Deklaration} {P : Programm D}
                               { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                                 rest :=
                                   (⟨l,
-                                      (⟨Ty.int lo hi :: Γ,
+                                      (⟨τ :: Γ,
                                           (⟨Λ, (armEnv nutz ρ, GRest.dann b (GRest.dann rest k).schrumpf)⟩ :
                                             (Λ : List (Res D)) ×
-                                              Env D (Ty.int lo hi :: Γ) ×
-                                                GRest D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ)⟩ :
+                                              Env D (τ :: Γ) ×
+                                                GRest D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ)⟩ :
                                         (Γ : Ctx) ×
                                           (Λ : List (Res D)) ×
                                             Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
@@ -190,11 +190,11 @@ theorem ownInv_step_dannOnTagSome {D : Deklaration} {P : Programm D}
               { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                 rest :=
                   (⟨l,
-                      (⟨Ty.int lo hi :: Γ,
+                      (⟨τ :: Γ,
                           (⟨Λ, (armEnv nutz ρ, GRest.dann b (GRest.dann rest k).schrumpf)⟩ :
                             (Λ : List (Res D)) ×
-                              Env D (Ty.int lo hi :: Γ) ×
-                                GRest D (vertragVon D (M.faeden u).kopf.f) l (Ty.int lo hi :: Γ) Λ)⟩ :
+                              Env D (τ :: Γ) ×
+                                GRest D (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ) Λ)⟩ :
                         (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) ×
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
@@ -234,7 +234,7 @@ theorem ownInv_step_dannOnTagNone {D : Deklaration} {P : Programm D}
                     pendWord A (M.faeden t).kopf.rest.snd.snd.snd.snd = some g →
                       M'.speicher.globs g = M.speicher.globs g) →
               OwnInv A I M')
-  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -247,11 +247,11 @@ theorem ownInv_step_dannOnTagNone {D : Deklaration} {P : Programm D}
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
   (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon u).lese Λ v.orte) (b : Block D (vertragVon D (M.faeden u).kopf.f) l Γ Λ Λ')
-  (nutz : Nutzlast none)
+  (nutz : Nutzlast D.Fn D.passt none)
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
       (⟨none, (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+        (c : Option Ty) × Block D (vertragVon D (M.faeden u).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur))
   (hrely :
     ∀ (t : Faden),

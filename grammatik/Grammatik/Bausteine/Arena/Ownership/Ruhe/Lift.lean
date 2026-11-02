@@ -245,12 +245,12 @@ theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} 
       ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (oe_lift hrest)))
 
-theorem oarms_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} {k c c' : Context}
+theorem oarms_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} {k c c' : Context}
     {arms : Arms D V l Γ Λ Λ' cs}, OArms A I out k c arms c' →
       OArms (liftA A) (liftI I) (outR A out) k c (ruArms arms) c'
   | _, _, _, _, _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, _, _, _, _, .cons (ca := none) b rest hb hw hr => .cons _ _ (ob_lift hb) hw (oarms_lift hr)
-  | _, _, _, _, _, _, _, _, _, .cons (ca := some (_, _)) b rest hb hw hr => .cons _ _ (ob_lift hb) hw (oarms_lift hr)
+  | _, _, _, _, _, _, _, _, _, .cons (ca := some _) b rest hb hw hr => .cons _ _ (ob_lift hb) hw (oarms_lift hr)
 
 theorem ogrund_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} {k c c' : Context}
     {arms : GrundArms D V l Γ Λ Λ' n}, OGrund A I out k c arms c' →

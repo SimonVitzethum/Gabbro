@@ -134,7 +134,7 @@ theorem mB_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         mB_boden rest fun c hc => by have := h c hc; simp_all [Block.ueberBoden]⟩
 
 theorem mArms_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → Arms.BodenOk b a → mArms A a = true
   | .nil, _ => rfl
   | .cons bl rest, h => by
