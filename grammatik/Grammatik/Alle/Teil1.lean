@@ -322,6 +322,7 @@ public import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 public import Grammatik.Parser.Elab.UebersetzeAllg2
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Parser.Elab.UebersetzeAllg3
+public import Grammatik.Parser.Elab.Uebersetze.Records.Proben
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 public import Grammatik.Logik.Fortschritt.Fortschritt
 public import Grammatik.Logik.Fortschritt.FortschrittZeuge

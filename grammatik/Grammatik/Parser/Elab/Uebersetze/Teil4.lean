@@ -8,6 +8,7 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil3
 public import Grammatik.Parser.Elab.Uebersetze.Eingebaut
+public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 
 @[expose] public section
 
@@ -173,34 +174,44 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
         else .error "complement of unknown width"
       | _, _ => .error "complement of unknown width"
   | .call f [a] =>
-    match uTypName ctx.alias f with
-    | .ok (lo, hi) =>
-      match uRechne ctx blatt a with
-      | .error e => .error e
-      | .ok x => .ok (.conv lo hi x)
-    | .error _ =>
-      match uBitEin f with
+    match ctx.records.find? (fun schema => strEq schema.name f) with
+    | some schema => do
+      let values ← uRecordSides ctx (uRechne ctx blatt) [a]
+      uRecordValues schema values
+    | none =>
+      match uTypName ctx.alias f with
+      | .ok (lo, hi) =>
+        match uRechne ctx blatt a with
+        | .error e => .error e
+        | .ok x => .ok (.conv lo hi x)
+      | .error _ =>
+        match uBitEin f with
+        | some bi =>
+          match uRechne ctx blatt a with
+          | .error e => .error e
+          | .ok x =>
+            match uBreite ctx a with
+            | some w => .ok (.ib1 bi w x)
+            | none => .error "builtin of unknown width"
+        | none => blatt (.call f [a])
+  | .call f [a, b] =>
+    match ctx.records.find? (fun schema => strEq schema.name f) with
+    | some schema => do
+      let values ← uRecordSides ctx (uRechne ctx blatt) [a, b]
+      uRecordValues schema values
+    | none =>
+      match uRotEin f with
       | some bi =>
         match uRechne ctx blatt a with
         | .error e => .error e
         | .ok x =>
-          match uBreite ctx a with
-          | some w => .ok (.ib1 bi w x)
-          | none => .error "builtin of unknown width"
-      | none => blatt (.call f [a])
-  | .call f [a, b] =>
-    match uRotEin f with
-    | some bi =>
-      match uRechne ctx blatt a with
-      | .error e => .error e
-      | .ok x =>
-        match uRechne ctx blatt b with
-        | .error e => .error e
-        | .ok y =>
-          match uBreite ctx a with
-          | some w => .ok (.ib2 bi w x y)
-          | none => .error "builtin of unknown width"
-    | none => blatt (.call f [a, b])
+          match uRechne ctx blatt b with
+          | .error e => .error e
+          | .ok y =>
+            match uBreite ctx a with
+            | some w => .ok (.ib2 bi w x y)
+            | none => .error "builtin of unknown width"
+      | none => blatt (.call f [a, b])
   -- C13: `sizeof(e)` is the declared storage size of `e`, a literal only once it is resolved (`uGroesse`)
   | .built "sizeof" [a] =>
     match uGroesse ctx a with
@@ -219,6 +230,31 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
       match uRechne ctx blatt i with
       | .error e => .error e
       | .ok y => .ok (.idx x y)
+  /-- A field projection from a by-value product (`p.f`): the base elaborates first, then the
+      nominal position is resolved from the schema. -/
+  | .field base field =>
+    match blatt (.field base field) with
+    | .ok value => .ok value
+    | .error original =>
+      match uRechne ctx blatt base with
+      | .error _ => .error original
+      | .ok value => .ok (.field value field)
+  /-- An `old` view that is not a carrier read may project a record field of the old value. -/
+  | .old base =>
+    match blatt (.old base) with
+    | .ok value => .ok value
+    | .error _ =>
+      match uRechne ctx blatt base with
+      | .error e => .error e
+      | .ok value => uOldRecord value
+  /-- A record constructor would need the labelled-call surface form, which the parser does not
+      provide on this branch: refuse by name instead of misreading positional arguments. -/
+  | .call name args =>
+    match ctx.records.find? (fun schema => strEq schema.name name) with
+    | some schema => do
+      let values ← uRecordSides ctx (uRechne ctx blatt) args
+      uRecordValues schema values
+    | none => blatt (.call name args)
   | e => blatt e
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/

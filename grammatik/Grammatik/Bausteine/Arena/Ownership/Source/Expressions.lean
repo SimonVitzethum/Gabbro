@@ -52,7 +52,16 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .intBuiltin1 _ a => requirements a
   | .intBuiltin2 _ a b => requirements a ++ requirements b
   | .count .. => [.unsupported]
+  | .prod _ args => requirementsArgs args
+  | .prodGet v _ => requirements v
+  | .prodSet v _ e => requirements v ++ requirements e
   | .lit _ | .tru | .fls | .glob .. | .ptrOf .. | .fnref .. | .oldG .. | .none _ | .why .. => []
+
+/-- Ownership requirements of product field arguments, in order. -/
+def requirementsArgs {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} :
+    Args D Γ Λ τs → List (Requirement D Γ Λ)
+  | .nil => []
+  | .cons e rest => requirements e ++ requirementsArgs rest
 
 def payloadRequirements {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty} :
     NutzlastExpr D Γ Λ c → List (Requirement D Γ Λ)

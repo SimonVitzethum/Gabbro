@@ -404,6 +404,7 @@ structure USeiteT where
 
 def lowerSeiteEin (tabs : List UTab) (names : List String)
     (types : List Ty) : USide → Except String USeiteT
+  | .product .. | .field .. | .replace .. => .error "product without G form in the 104 lowering"
   | .glob _ => .error "static without G form in the 104 lowering"
   | .refSlot .. => .error "reference without G form in the 104 lowering"
   | .idx .. | .len _ | .text _ | .arrNil | .arrCons .. | .upd .. | .typed .. => .error "aggregate without G form in the 104 lowering"

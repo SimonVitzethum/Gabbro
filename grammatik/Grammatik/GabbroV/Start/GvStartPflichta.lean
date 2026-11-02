@@ -86,6 +86,18 @@ def konstListe : UKonst → Option (List UKonst)
   | .cons a r => (konstListe r).map (a :: ·)
   | _ => none
 
+/-- The tuple of constant field values, in declaration order: every field evaluates at its
+    declared type, and arities must agree exactly (C01 products). -/
+def prodKonst {F : Type} {P : F → Nat → Bool}
+    (elab : (τ : Ty) → UKonst → Option (Val F P τ)) :
+    (fs : List Ty) → List UKonst → Option (ProdVal F P fs)
+  | [], [] => some ()
+  | τ :: τs, k :: ks => do
+    let v ← elab τ k
+    let vs ← prodKonst elab τs ks
+    pure (v, vs)
+  | _, _ => none
+
 mutual
 
 /-- **The value of a constant initialiser at the type `τ`**: zero memory (`= 0`) wherever the type holds a zero,
@@ -110,6 +122,8 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
       (nutzKonst (cs.get ⟨0, h⟩) .null).map (⟨⟨0, h⟩, ·⟩)
     else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
+  | .prod name fs, .product name2 ks =>
+    if name == name2 then prodKonst konstWert fs ks else none
   | .arr τ n, k =>
     match konstListe k with
     | some ks =>
