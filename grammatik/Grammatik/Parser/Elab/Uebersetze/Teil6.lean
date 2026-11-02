@@ -32,10 +32,10 @@ where
     | _ :: rest => uHatWirkung rest
 
 /-- Collect exactly one written measure. The surface grammar has one expression, not a tuple. -/
-def uMeasureClause (ks : List SKlausel) : Except String (Option SExpr) :=
+def uMeasureClause (ks : List SKlausel) : Except String (Option UMeasure) :=
   match ks.filterMap (fun | .drops e => some e | _ => none) with
   | [] => .ok none
-  | [e] => .ok (some e)
+  | [e] => (uMeasureSource e).map some
   | _ => .error "duplicate or ambiguous decreases clause"
 
 /-- Clauses without G counterpart (the refused row of `check_fn`): `refines`, `maintains`,

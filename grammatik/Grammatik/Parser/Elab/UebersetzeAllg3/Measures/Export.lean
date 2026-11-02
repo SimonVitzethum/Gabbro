@@ -16,7 +16,7 @@ def SourceTuple (u : UProg) (f : (declOf u).Fn) (tuple : List (Component u f)) :
   | none => tuple = []
   | some source => ∃ c : Component u f, tuple = [c] ∧
       ∀ (entry state : World (declOf u)) (env : Env (declOf u) ((declOf u).params f)),
-        SourceValue (fnAt u f) (fnAt u f).measureConstants env source
+        SourceValue (fnAt u f) (fnAt u f).measureConstants env source.source
           (eval entry c.2.1 state env).n
 
 structure At (u : UProg) (f : (declOf u).Fn) where
@@ -29,7 +29,7 @@ def lowerAt (u : UProg) (f : (declOf u).Fn) : Except String (At u f) :=
   | none => .ok ⟨[], by simp only [SourceTuple, hs]⟩
   | some source => do
     let expression ← lowerExpression u ((declOf u).params f)
-      (Signatur.anfang (declOf u) ((declOf u).signatur f)) (fnAt u f) source
+      (Signatur.anfang (declOf u) ((declOf u).signatur f)) (fnAt u f) source.source
     if hn : 0 ≤ expression.side.range.1 then
       let term := Expr.widen hn (Int.le_refl expression.side.range.2) expression.side.term
       have footprint : term.orte = [] := expression.footprint

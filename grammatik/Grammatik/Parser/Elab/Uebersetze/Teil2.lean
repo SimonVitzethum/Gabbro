@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
+public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 
 @[expose] public section
 
@@ -159,7 +160,7 @@ structure UFn where
   /-- The lock floor (`Signatur.boden`): filled after elaboration by `uMitBoden` with the rule `floorOf`. -/
   boden : Option Int := none
   /-- The original entry-parameter measure; absence is the empty tuple, never an inferred measure. -/
-  decreases : Option SExpr := none
+  decreases : Option UMeasure := none
   /-- Checked scalar constants in the declaration's entry scope. -/
   measureConstants : List (String × Int) := []
   deriving DecidableEq, Repr
