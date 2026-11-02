@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Generic.Expansion
 public import Grammatik.Parser.Namen.Oeffentlich
+public import Grammatik.Parser.Print.Stmt
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Modules
 open Generic
@@ -21,6 +22,24 @@ def signature (env : Environment) (bindings : Bindings) (sig : FnSig) : RewriteM
   let result ← rewriteSignature env bindings sig
   let params ← sig.generics.mapM (parameter env bindings)
   pure { result with generics := params }
+
+/-- Forward a static argument by its canonical source, and respect a literal's own binders when
+    substituting an enclosing module's parameters. Literal materialization remains a later phase. -/
+def argument (env : Environment) (bindings : Bindings) (word : String) : Except String String := do
+  match bindings.functionArguments.find? (fun entry => strEq entry.1 word) with
+  | some (_, canonical) => pure canonical
+  | none =>
+    let ts ← tokens word
+    match parseFunctionArgument (ts.length * 4 + 32) ts with
+    | .ok (.literal sig body) =>
+      let env := { env with declarations := [], deferApplications := true }
+      let ((sig, body), requests) ← (do
+        pure (← signature env bindings sig,
+          ← rewriteBody env (bindings.without (sig.params.map Prod.fst)) body)).run []
+      if !requests.isEmpty then throw "parametric-module-order: literal requested a function instance"
+      let printed := [.wort "fn"] ++ (druckFnSig sig).drop 2 ++ druckAnw body
+      pure (String.intercalate " " (printed.map zeigeTok))
+    | _ => substituteRaw bindings word
 
 mutual
 def constant (env : Environment) (bindings : Bindings) : SKonstWert → RewriteM SKonstWert

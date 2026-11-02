@@ -34,7 +34,7 @@ def rewriteExpression (env : Environment) (bindings : Bindings) : SExpr → Rewr
   | .old e => return .old (← rewriteExpression env bindings e)
   | .ext .instantiate (n :: words) args => do
     if env.deferApplications then
-      return .ext .instantiate (n :: (← liftResult (words.mapM (substituteRaw bindings))))
+      return .ext .instantiate (n :: (← liftResult (words.mapM (substituteArgument bindings))))
         (← args.mapM (rewriteExpression env bindings))
     let key ← liftResult (normalize env bindings n words)
     modify (fun requests => requests ++ [key])

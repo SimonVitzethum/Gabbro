@@ -35,7 +35,7 @@ theorem prepare_existingForms (items target : List SItemTief) (requirements : Li
     | false => simp [prepare, hr, ho] at h
     | true =>
       simp [prepare, hr, ho] at h
-      cases h
+      rcases h with ⟨rfl, rfl⟩
       exact ho
 
 end Gabbro.Grammatik.Parser.Modules

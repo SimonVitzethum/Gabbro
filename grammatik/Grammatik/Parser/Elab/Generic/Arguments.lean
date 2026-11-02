@@ -73,6 +73,13 @@ def substituteRaw (bindings : Bindings) (text : String) : Except String String :
       | _ => [token]
   pure (String.intercalate " " (output.map zeigeTok))
 
+/-- Keep a forwarded static argument in source form until its own instantiation phase. A lifted
+    literal's internal name is not source syntax and must never be reparsed as an argument. -/
+def substituteArgument (bindings : Bindings) (word : String) : Except String String :=
+  match bindings.functionArguments.find? (fun entry => strEq entry.1 word) with
+  | some (_, canonical) => .ok canonical
+  | none => substituteRaw bindings word
+
 /-- A declaration must be unique even when its generic body is unreachable. -/
 def declaration (env : Environment) (name : String) : Except String (FnSig × SAnw) :=
   match env.declarations.filter (fun p => strEq p.1.name name) with

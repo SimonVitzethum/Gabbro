@@ -80,14 +80,19 @@ def visitItem (all : List Template) (base : Quelle) (ancestors : List Pfad)
     let env ← lift (argumentEnvironment base work)
     let k := context base work.locations position
     let arguments ← lift (arguments.mapM fun word =>
-      substituteRaw position.bindings (genericArgument k word))
-    let captured := match position.instance with
-      | some (origin, _) => if origin.isPrefixOf entry.path then position.bindings else {}
+      argument env position.bindings (genericArgument k word))
+    let captured := match position.copy with
+      | some (origin, _) => if origin.isPrefixOf entry.path then
+          { position.bindings with literals := [], requirements := [] } else {}
       | none => ({} : Bindings)
-    let (_, bindings) ← lift (normalizeArguments env {} entry.params arguments
+    let parameterContext := { k with von := entry.path }
+    let params := (Aufloesung.sig parameterContext
+      { art := "", name := "", params := [], res := none, fehler := none,
+        klauseln := [], generics := entry.params }).generics
+    let (_, bindings) ← lift (normalizeArguments env {} params arguments
       (underGenerics captured entry.params))
     let location : Located := { origin := entry.path, destination,
-      instance := some (entry.path, destination), bindings,
+      copy := some (entry.path, destination), bindings,
       exportMembers := position.exported,
       imports := position.imports ++ (sammleL entry.path (ordinaryList entry.body)).2,
       item := .useT [] }

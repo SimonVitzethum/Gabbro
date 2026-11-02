@@ -14,7 +14,7 @@ structure Template where
 structure Located where
   origin : Pfad
   destination : Pfad
-  instance : Option (Pfad × Pfad) := none
+  copy : Option (Pfad × Pfad) := none
   bindings : Bindings := {}
   imports : List (Pfad × Pfad) := []
   exported : Bool := false
@@ -90,7 +90,7 @@ def source (base : Quelle) (items : List Located) : Quelle :=
 
 def instanceKeys (items : List Located) : List (Pfad × String) :=
   items.filterMap fun item => do
-    let _ ← item.instance
+    let _ ← item.copy
     let path ← locatedPath item
     pure (path, memberName path)
 
@@ -104,7 +104,7 @@ def globalKeys (base : Quelle) (items : List Located) : List (Pfad × String) :=
 def context (base : Quelle) (items : List Located) (location : Located) : Kontext :=
   let q := source base items
   let keys := globalKeys base items
-  let (localNames, localKeys) := match location.instance with
+  let (localNames, localKeys) := match location.copy with
     | none => ([], [])
     | some (origin, destination) =>
       let entries := (instanceKeys items).filterMap fun (path, key) =>
@@ -120,7 +120,7 @@ def context (base : Quelle) (items : List Located) (location : Located) : Kontex
 def resolve (env : Environment) (base : Quelle) (items : List Located)
     (location : Located) : Except String SItemTief := do
   let item := Aufloesung.item (context base items location) location.item
-  let item ← match location.instance with
+  let item ← match location.copy with
     | none => pure item
     | some _ => substitute env location.bindings item
   pure (if location.exported then .pubT item else item)

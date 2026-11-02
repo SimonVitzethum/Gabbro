@@ -317,8 +317,8 @@ accdecl    = "accumulates" ident ":" typeexpr
              [ "per" "cpu" constexpr ] ";" ;
 (* `per cpu N` is the CELL COUNT, optional in the grammar and compulsory for lowering. The
    current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
-moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
-usedecl    = [ "pub" ] "use" path ";" ;
+moduledecl = [ "pub" ] "module" path [ "[" gparams "]" ] "{" { item } "}" ;
+usedecl    = [ "pub" ] "use" ( path | ident "=" path "::" "[" garglist "]" ) ";" ;
 (* CHANGED 2026-10-25 (name spaces of linked projects, Lean `Parser/Namen/Namensraum.lean`, no new form):
    a project writes paths from its OWN root. A path whose first segment is the local name of a
    declared dependency (`use store::stock::Shelf;`) goes into the copy of that dependency the
@@ -351,6 +351,39 @@ staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
 
 **Attributes and Lean.** Everything in this section is **declaration-level**: it fixes the
 world before the first body and has no run-time meaning of its own.
+
+**Parametric modules (Lean frontend, check model A).** Module parameters and application arguments
+use the same `gparams` and `garglist` readers as generic functions (§6):
+
+```gabbro
+module stack[T, N: const u32 in 1 .. 65536] {
+    table Items count N { slot { v: T, } }
+    static mut top: u32 in 0 .. N = 0;
+    // Ordinary push/pop function definitions belong here; their bodies and contracts use T and N.
+}
+use Jobs = stack::[index into Tasks, 64];
+use Other = stack::[index into Tasks, 64];
+```
+
+Each written `use` creates its own tables, statics and functions. Equal arguments do not share an
+instance: `Jobs::Items` and `Other::Items` are disjoint carriers. `Alias::item` resolves to the item's
+deterministic instance name. Generated names are checked against all ordinary declarations and
+other generated names. Internal references bind in the template's definition scope before parameter
+substitution; function parameters, local binders and inner generic parameters retain their scopes.
+A private `use` keeps the instance local to the unit; `pub use` exposes its public members subject to
+the existing export-hull check.
+
+The actual `elabU` preparation order is parametric modules, generic functions, specification contracts,
+then function literals as named ordinary functions. Static callback requirements from module arguments
+reach the same `SigPasst` gate as function arguments. The resulting bodies, storage and contracts pass
+the existing G exporter and checker; module instantiation changes no G rule or goal premise.
+Recursive module application is refused as `parametric-module-recursion`, even with identical
+arguments. Expansion-budget exhaustion is `parametric-module-limit`; duplicate aliases and generated
+name collisions are `parametric-module-alias-collision` and `parametric-module-name-collision`.
+An item without a module substitution rule is refused as `parametric-module-item` (raw assembly has
+the separate `parametric-module-assembly` refusal). The Rust frontend still requires the corresponding
+migration. Parser, stack, disjoint-storage and actual-exporter witnesses live in
+`Parser/Elab/Modules/Witness.lean` and `PipelineWitness.lean`; they require Lean checking.
 
 | production | reading | Lean |
 |---|---|---|
@@ -832,7 +865,8 @@ gparam   = ident [ ":" ident { "+" ident } ]
          | ident ":" "const" typeexpr
          | ident ":" intword                         (* shorthand, e.g. `N: u64` *)
          | ident ":" fnptr ;
-gcall    = path "::" "[" garg { "," garg } "]" "(" [ arglist ] ")" ;
+gcall    = path "::" "[" garglist "]" "(" [ arglist ] ")" ;
+garglist = garg { "," garg } ;
 garg     = typeexpr | constexpr | path | fnlit ;
 fnlit    = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract endblock ;
 asmrumpf = "asm" "{" { string }
@@ -887,8 +921,8 @@ recursion at the same instance does not create another copy.
 Static function arguments are ordinary global function paths or function literals. A literal has its
 own parameter and local scopes and captures nothing from the enclosing function. A free name that is
 not a global item is refused as `function-literal-capture: <name>`. State must be passed explicitly.
-Identical literal syntax shares a deterministic, collision-checked top-level function. After module
-resolution, generic functions are instantiated and their calls rewritten; spec calls in their contracts
+Identical literal syntax shares a deterministic, collision-checked top-level function. After parametric
+module instantiation and name resolution, generic functions are instantiated and their calls rewritten; spec calls in their contracts
 are expanded by the existing canonical rule, then literals become ordinary named functions.
 Generic calls inside literal bodies participate in the same finite instance closure.
 

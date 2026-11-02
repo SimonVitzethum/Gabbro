@@ -17,7 +17,7 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
   | .shift place before after => return .shift (← rewriteExpression env bindings place) before after
   | .genericCall name words args => do
     if env.deferApplications then
-      return .genericCall name (← liftResult (words.mapM (substituteRaw bindings)))
+      return .genericCall name (← liftResult (words.mapM (substituteArgument bindings)))
         (← args.mapM (rewriteExpression env bindings))
     match ← rewriteExpression env bindings (.ext .instantiate (name :: words) args) with
     | .call n values => pure (.call n values)
