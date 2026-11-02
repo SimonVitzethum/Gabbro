@@ -18,6 +18,7 @@ public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Logik.Ruf.Schnittstellen.Vertrag
 public import Grammatik.Bausteine.Arena.ArenaStaticReset
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 
 @[expose] public section
 
@@ -168,6 +169,8 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) :
   masken : MaskenDisziplin P fs
   -- checked static-array reset admission (C18): every declared static array admits zero
   reset : ∀ (g : D.Glob) (elem : Ty) (len : Nat), D.gtyp g = .arr elem len → ZeroAdmitting elem
+  -- the C02 library binding (generated programs are ordinary; the content is source-level)
+  bibliothek : LibraryAdmission P := trivial
 
 end Pruefer
 

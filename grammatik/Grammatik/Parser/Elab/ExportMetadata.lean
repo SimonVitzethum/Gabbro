@@ -22,12 +22,13 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .cond _ a bs b => bodyMetadata n a || bs.any (bodyMetadata n) || b.any (bodyMetadata n)
   | n + 1, .elsif _ b | n + 1, .arm _ _ b => bodyMetadata n b
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
-  | _ + 1, .bind _ _ ty _ | _ + 1, .bindLib _ _ ty _ _ => ty.any typeMetadata
+  | _ + 1, .bind _ _ ty _ => ty.any typeMetadata
   | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. | _ + 1, .reset .. |
-    _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
-  | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. | _ + 1, .lcall .. |
+    _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. |
+    _ + 1, .bindLib .. | _ + 1, .lcall .. => true
+  | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
     _ + 1, .ret .. | _ + 1, .start .. => false
 

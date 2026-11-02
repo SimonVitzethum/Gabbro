@@ -5,6 +5,7 @@ public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Logik.Vertraege.EinpassenVoll
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil1
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
+public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 
 @[expose] public section
 
@@ -22,7 +23,7 @@ theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
   unfold poolSicherWB PoolSicherW PoolSicher
   simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
   constructor
-  · rintro ⟨⟨h1, h2⟩, h3⟩
+  · rintro ⟨⟨⟨h1, h2⟩, h3⟩
     refine ⟨h1, h2, fun f hf c hc => ?_⟩
     have h4 := (List.all_eq_true.mp h3) f (hvoll f)
     rw [hf] at h4
@@ -111,15 +112,15 @@ theorem akzeptiert_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩
-    exact { frag := h1, abg := (abgAlleB_iff hvoll).mp h2, fuss := (fussWB_iff hvoll).mp h3, stufen := (stufenB_iff hvoll).mp h4, sperrOrte := (sperrOrteB_iff hls).mp h5, wurzeln := wurzelnB_iff.mp h6, einzeln := (einzelnPoolB_iff hvoll hcs).mp h7, renn := (rennB_iff hvoll hcs).mp h8, antworten := (antwortenB_iff hvoll).mp h9, masken := (maskenB_iff hvoll).mp h10, reset := (resetB_iff hcs).mp h11 }
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩
+    exact { frag := h1, abg := (abgAlleB_iff hvoll).mp h2, fuss := (fussWB_iff hvoll).mp h3, stufen := (stufenB_iff hvoll).mp h4, sperrOrte := (sperrOrteB_iff hls).mp h5, wurzeln := wurzelnB_iff.mp h6, einzeln := (einzelnPoolB_iff hvoll hcs).mp h7, renn := (rennB_iff hvoll hcs).mp h8, antworten := (antwortenB_iff hvoll).mp h9, masken := (maskenB_iff hvoll).mp h10, reset := (resetB_iff hcs).mp h11, bibliothek := (libraryB_iff _ _).mp h12 }
   · intro h
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
       (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
       wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
       (rennB_iff hvoll hcs).mpr h.renn⟩,
       (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
-      (resetB_iff hcs).mpr h.reset⟩
+      (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩
 
 theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (h : Akzeptiert P S fs ls cs ws = true) :

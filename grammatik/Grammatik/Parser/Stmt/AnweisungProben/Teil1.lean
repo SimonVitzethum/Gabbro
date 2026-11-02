@@ -181,7 +181,7 @@ theorem s10_lex :
     lex "let s = @summe#sum() { 10 20 30 40 };" = .ok st10 := by
   decide
 theorem s10 : beqTopStmt (parseTopStmt st10)
-    (.ok (.bindLib false "s" .none "summe" "sum")) = true := by
+    (.ok (.bindLib false "s" .none ⟨["summe"], ["sum"], [], [.num 10, .num 20, .num 30, .num 40]⟩)) = true := by
   decide
 -- beispiele/0107-summe-zwei-rufe.gab:36. Rust: `Let` over a
 -- `LibraryCall` -- same shape (the region is captured balanced,

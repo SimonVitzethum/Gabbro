@@ -1,0 +1,223 @@
+module
+
+public import Grammatik.Logik.Vertraege.Uebersetzung
+import all Init.Data.Repr
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
+@[expose] public section
+
+namespace Gabbro.Grammatik.Uebersetzung
+
+open Gabbro.Grammatik.Parser
+open Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg
+open Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
+/-- Both fixtures retain the whole source. The second translator reverses two rows, rather than
+    returning the input unchanged. Runtime library expansion is deliberately still refused. -/
+def translationText (reverse : Bool) : String :=
+  "module sample { table Rows count 2 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 2]) -> [u8 in 0 .. 10; 2] " ++
+  "effects { pure } { return " ++ (if reverse then "[region[1], region[0]]" else "region") ++
+  "; } impl fn caller() { @sample#consume() { 3 5 }; return; } }"
+
+def translationTokens (reverse : Bool) : List Token :=
+  (lexL (translationText reverse).toList).toOption.getD []
+
+def translationItems (reverse : Bool) : List SItemTief :=
+  (parseTopTief (translationTokens reverse)).toOption.getD []
+
+def translationMembers (reverse : Bool) : List SItemTief :=
+  Aufloesung.loeseL (Aufloesung.quelle (translationItems reverse)) [] (translationItems reverse)
+
+def translationCall : SLibraryCall := ⟨["sample"], ["consume"], [], [.num 3, .num 5]⟩
+
+def translationCaller : FnSig :=
+  { art := "impl", name := "caller", params := [], res := none, fehler := none, klauseln := [] }
+
+def translationCallerBody : SAnw := .block [.lcall translationCall] (some (.ret none))
+
+/-- The exact caller is at member 3 and its call at statement path `[0]`. -/
+def translationSource (reverse : Bool) : LibrarySource where
+  characters := (translationText reverse).toList
+  tokens := translationTokens reverse
+  items := translationItems reverse
+  lexed := by cases reverse <;> rfl
+  parsed := by cases reverse <;> rfl
+  callerIndex := 3
+  caller := translationCaller
+  callerBody := translationCallerBody
+  atCaller := by cases reverse <;> rfl
+  path := [0]
+  call := translationCall
+  atCall := rfl
+
+theorem translation_library_exists (reverse : Bool) :
+    (libraryDecl (translationMembers reverse) translationCall).toOption.isSome = true := by
+  cases reverse <;> decide +kernel
+
+def translationLibrary (reverse : Bool) : ULibrary :=
+  (libraryDecl (translationMembers reverse) translationCall).toOption.get (translation_library_exists reverse)
+
+def translationUnit (reverse : Bool) : UProg :=
+  (elabU (pre108 (translatorItems (translationMembers reverse) (translationLibrary reverse)))).toOption.getD
+    { tabs := [], locks := [], fns := [] }
+
+theorem translation_lower_exists (reverse : Bool) :
+    (lowerAllg (translationUnit reverse)).toOption.isSome = true := by
+  cases reverse <;> decide +kernel
+
+def translationLowered (reverse : Bool) :
+    Programm (declOf (translationUnit reverse)) × List (declOf (translationUnit reverse)).Fn :=
+  (lowerAllg (translationUnit reverse)).toOption.get (translation_lower_exists reverse)
+
+def translationSchema : IntegerSchema := ⟨0, 10, 2⟩
+
+/-- A qualified translator target parses to its joined path. -/
+def ttQual : List Token :=
+  [.wort "translator", .ident "build", .wort "for", .ident "a", .zeichen "::", .ident "sum",
+   .zeichen "(", .ident "region", .zeichen ":", .ident "SumTab",
+   .zeichen ")", .zeichen "->", .ident "SumTab", .wort "effects",
+   .zeichen "{", .wort "pure", .zeichen "}", .wort "costs",
+   .zeichen "<=", .num 8, .wort "ops", .wort "decreases",
+   .ident "region", .zeichen ".", .ident "v", .zeichen "{",
+   .wort "return", .ident "region", .zeichen ";", .zeichen "}",
+   .ende]
+
+/-- Two modules with same-named libraries; the top-level caller qualifies module `a`. -/
+def translationQualText : String :=
+  "module a { table Rows count 2 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 2]) -> [u8 in 0 .. 10; 2] " ++
+  "effects { pure } { return region; } } " ++
+  "module b { table Rows count 2 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 2]) -> [u8 in 0 .. 10; 2] " ++
+  "effects { pure } { return region; } } " ++
+  "impl fn caller() { @a#consume() { 3 5 }; return; }"
+
+def translationQualTokens : List Token := (lexL translationQualText.toList).toOption.getD []
+
+def translationQualItems : List SItemTief := (parseTopTief translationQualTokens).toOption.getD []
+
+def translationQualMembers : List SItemTief :=
+  Aufloesung.loeseL (Aufloesung.quelle translationQualItems) [] translationQualItems
+
+/-- The resolved call: the qualifier joins the function path into the unique item key. -/
+def translationQualCall : SLibraryCall := ⟨["a"], ["a::consume"], [], [.num 3, .num 5]⟩
+
+def translationQualCaller : FnSig :=
+  { art := "impl", name := "caller", params := [], res := none, fehler := none, klauseln := [] }
+
+def translationQualCallerBody : SAnw := .block [.lcall translationQualCall] (some (.ret none))
+
+/-- The exact caller is at member 6 (two opened modules) and its call at statement path `[0]`. -/
+def translationQualSource : LibrarySource where
+  characters := translationQualText.toList
+  tokens := translationQualTokens
+  items := translationQualItems
+  lexed := rfl
+  parsed := rfl
+  callerIndex := 6
+  caller := translationQualCaller
+  callerBody := translationQualCallerBody
+  atCaller := rfl
+  path := [0]
+  call := translationQualCall
+  atCall := rfl
+
+theorem translation_qual_library_zeuge :
+    (libraryDecl translationQualMembers translationQualCall).toOption.isSome = true := by
+  decide +kernel
+
+def translationQualLibrary : ULibrary :=
+  (libraryDecl translationQualMembers translationQualCall).toOption.get translation_qual_library_zeuge
+
+def translationQualUnit : UProg :=
+  (elabU (pre108 (translatorItems translationQualMembers translationQualLibrary))).toOption.getD
+    { tabs := [], locks := [], fns := [] }
+
+theorem translation_qual_lower_zeuge :
+    (lowerAllg translationQualUnit).toOption.isSome = true := by
+  decide +kernel
+
+def translationQualLowered :
+    Programm (declOf translationQualUnit) × List (declOf translationQualUnit).Fn :=
+  (lowerAllg translationQualUnit).toOption.get translation_qual_lower_zeuge
+
+/-- Two library functions under one key refuse as ambiguous, never by first match. -/
+def doppeltMembers : List SItemTief :=
+  [.fnT { art := "library", name := "consume", params := [], res := none, fehler := none, klauseln := [] } (.block [] none),
+   .fnT { art := "library", name := "consume", params := [], res := none, fehler := none, klauseln := [] } (.block [] none)]
+
+/-- A library function without a translator refuses: selection stays unique and total. -/
+def ohneTranslatorMembers : List SItemTief :=
+  [.fnT { art := "library", name := "solo", params := [], res := none, fehler := none, klauseln := [.load ["Rows"]] } (.block [] none)]
+
+/-- A recursive translator: its body calls itself, so no certificate path exists (C17). -/
+def translationRekText : String :=
+  "module sample { table Rows count 1 { slot { v : u8 in 0 .. 10, } } " ++
+  "library fn consume(p : ptr<normal, r> Rows) payload Rows { return; } " ++
+  "translator build for consume(region : [u8 in 0 .. 10; 1]) -> [u8 in 0 .. 10; 1] " ++
+  "effects { pure } { return build(region); } impl fn caller() { @sample#consume() { 3 }; return; } }"
+
+def translationRekTokens : List Token := (lexL translationRekText.toList).toOption.getD []
+
+def translationRekItems : List SItemTief := (parseTopTief translationRekTokens).toOption.getD []
+
+def translationRekMembers : List SItemTief :=
+  Aufloesung.loeseL (Aufloesung.quelle translationRekItems) [] translationRekItems
+
+theorem translation_rek_library_zeuge :
+    (libraryDecl translationRekMembers ⟨["sample"], ["consume"], [], [.num 3]⟩).toOption.isSome = true := by
+  decide +kernel
+
+def translationRekLibrary : ULibrary :=
+  (libraryDecl translationRekMembers ⟨["sample"], ["consume"], [], [.num 3]⟩).toOption.get
+    translation_rek_library_zeuge
+
+def translationRekUnit : UProg :=
+  (elabU (pre108 (translatorItems translationRekMembers translationRekLibrary))).toOption.getD
+    { tabs := [], locks := [], fns := [] }
+
+theorem translation_rek_lower_zeuge : (lowerAllg translationRekUnit).toOption.isSome = true := by
+  decide +kernel
+
+def translationRekLowered :
+    Programm (declOf translationRekUnit) × List (declOf translationRekUnit).Fn :=
+  (lowerAllg translationRekUnit).toOption.get translation_rek_lower_zeuge
+
+end Gabbro.Grammatik.Uebersetzung

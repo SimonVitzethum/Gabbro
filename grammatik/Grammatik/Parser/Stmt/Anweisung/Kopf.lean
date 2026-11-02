@@ -10,6 +10,7 @@
 -/
 module
 public import Grammatik.Parser.Expr.Typ
+public import Grammatik.Parser.Stmt.LibraryCall
 @[expose] public section
 
 
@@ -58,11 +59,11 @@ deriving Repr
 inductive SAnw
   | bind : Bool → String → Option STyp → SExpr → SAnw
   | bindElse : String → Option STyp → SExpr → String → SAnw → SAnw
-  | bindLib : Bool → String → Option STyp → String → String → SAnw
+  | bindLib : Bool → String → Option STyp → SLibraryCall → SAnw
   | set : SExpr → String → SExpr → SAnw
   | shift : SExpr → String → String → SAnw
   | call : String → List SExpr → SAnw
-  | lcall : String → String → Nat → SAnw
+  | lcall : SLibraryCall → SAnw
   | cond : SExpr → SAnw → List SAnw → Option SAnw → SAnw
   | elsif : SExpr → SAnw → SAnw
   | cases : SExpr → List SAnw → SAnw
@@ -128,15 +129,14 @@ def beqSAnw : SAnw → SAnw → Bool
   | .bind m a t x, .bind n b u y => m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
   | .bindElse a t f e b, .bindElse c u g h d =>
     strEq a c && beqSTypOpt t u && beqSExpr f g && strEq e h && beqSAnw b d
-  | .bindLib m a t l f, .bindLib n b u m2 g =>
-    m == n && strEq a b && beqSTypOpt t u && strEq l m2 && strEq f g
+  | .bindLib m a t c, .bindLib n b u d =>
+    m == n && strEq a b && beqSTypOpt t u && beqSLibraryCall c d
   | .set z o x, .set w p y =>
     beqSExpr z w && strEq o p && beqSExpr x y
   | .shift z a b, .shift w c d =>
     beqSExpr z w && strEq a c && strEq b d
   | .call f a, .call g b => strEq f g && beqSExprList a b
-  | .lcall l f n, .lcall m g k =>
-    strEq l m && strEq f g && n == k
+  | .lcall c, .lcall d => beqSLibraryCall c d
   | .cond c t ei s, .cond d u fi v =>
     beqSExpr c d && beqSAnw t u && beqSAnwList ei fi && beqOptAnw s v
   | .elsif c t, .elsif d u => beqSExpr c d && beqSAnw t u
