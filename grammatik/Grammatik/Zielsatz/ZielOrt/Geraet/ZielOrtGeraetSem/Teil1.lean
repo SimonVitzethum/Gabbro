@@ -90,7 +90,7 @@ def Stmt.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .retry _ _ body ueber => body.gOk K Rg && ueber.gOk K Rg
   | .forever _ _ body => body.gOk K Rg
   | .callInd (n := n) .. => K n
-  | .callIndElse (n := n) _ _ _ _ err => K n && err.gOk K Rg
+  | .callIndElse (n := n) _ _ _ _ _ err => K n && err.gOk K Rg
   | _ => true
 
 /-- The block is in the widened fragment: a register read of `r` where

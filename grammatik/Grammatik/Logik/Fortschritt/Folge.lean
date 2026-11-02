@@ -91,7 +91,7 @@ mutual
 def fS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Stmt D V l Γ Λ Λ' → Bool
   | .call g _ _ _ => !Φ.ruf g || w
   | .callInd (n := n) .. => !Φ.ind n || w
-  | .callIndElse (n := n) _ _ _ _ err => (!Φ.ind n || w) && fE e false err
+  | .callIndElse (n := n) _ _ _ _ _ err => (!Φ.ind n || w) && fE e false err
   | .ret .. => !e || w
   | .retWhy .. => !e || w
   | .retScoped .. => !e || w

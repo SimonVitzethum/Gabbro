@@ -34,7 +34,7 @@ def Stmt.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .retry _ _ body ueber => body.vOk K && ueber.vOk K
   | .forever _ _ body => body.vOk K
   | .callInd (n := n) .. => K n
-  | .callIndElse (n := n) _ _ _ _ err => K n && err.vOk K
+  | .callIndElse (n := n) _ _ _ _ _ err => K n && err.vOk K
   | _ => true
 
 /-- The block is in the covered fragment: no register read, no `awaits`. -/

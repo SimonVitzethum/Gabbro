@@ -156,7 +156,7 @@ def befS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig danachLeer 
   | .onWhy _ arms => befGArms ebene imEwig arms
   | .call g _ _ _ => Befund.ruf g imEwig danachLeer
   | .callInd (n := n) _ _ _ _ => Befund.rufInd n imEwig
-  | .callIndElse (n := n) _ _ _ _ err => Befund.rufInd n imEwig ++ befE ebene imEwig err
+  | .callIndElse (n := n) _ _ _ _ _ err => Befund.rufInd n imEwig ++ befE ebene imEwig err
   | .locks _ _ body => befB ebene imEwig body
   | .breaking _ body => befB ebene imEwig body
   | .traverse _ _ body => befB false imEwig body
