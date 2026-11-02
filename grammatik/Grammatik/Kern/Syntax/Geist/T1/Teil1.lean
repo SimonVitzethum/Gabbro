@@ -190,6 +190,7 @@ def g001Grund {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | .cons b rest => g001 b && g001Grund rest
 
 end
+set_option linter.unusedSectionVars false in
 /-! ## Soundness: an accepted body reads no ghost.
 
     The bridge between the `Bool` decision and the `Prop` footprint claim.
@@ -210,7 +211,6 @@ end
     [Bool.and_eq_true]`, which leaves `decide (_ = true)` wrappers this
     toolchain does not strip). -/
 
-set_option linter.unusedSectionVars false in
 theorem g001Stmt_korrekt_assignSlot {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (t)
     (f)

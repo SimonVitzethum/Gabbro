@@ -140,6 +140,7 @@ theorem alleIndizes_length (n : Int) : (alleIndizes n).length ≤ n.toNat := by
   rw [List.length_range] at h
   exact h
 
+set_option hygiene false in
 /-! ## 5. One own step of the head
 
     Every step of thread `f` is one of three kinds (`schrittArt`):
@@ -155,7 +156,6 @@ theorem alleIndizes_length (n : Int) : (alleIndizes n).length ≤ n.toNat := by
     `ZS = fun _ => false` an indirect-call push falls in (B) only
     vacuously: its residue fails `rufeR`. -/
 
-set_option hygiene false in
 /-- Case (A) of `schrittArt`: rewrite the new head and the old head into
     their residues and unfold the costs. -/
 macro "kopfA" : tactic => `(tactic| (
