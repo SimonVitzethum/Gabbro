@@ -222,8 +222,18 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       else .error "lower: register read against its class"
   | _, _, _ + 1, .allocBeg .. :: _, _ =>
     .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
-  | _, _, _ + 1, .bindOptBeg .. :: _, _ | _, _, _ + 1, .bindOptElseBeg .. :: _, _ =>
-    .error "optional bind: model lowering pending"
+  | Γ, fn, n + 1, (.bindOptBeg x c args) :: rest, r =>
+    match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩)
+        (.bindOptBeg x c args :: rest ++ [.ret r]) with
+    | .error e => .error e
+    | .ok (b, []) => .ok b
+    | .ok (_, _) => .error "lower: optional bind leaves trailing statements"
+  | Γ, fn, n + 1, (.bindOptElseBeg x c args e) :: rest, r =>
+    match lowEndL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩)
+        (.bindOptElseBeg x c args e :: rest ++ [.ret r]) with
+    | .error err => .error err
+    | .ok (b, []) => .ok b
+    | .ok (_, _) => .error "lower: optional bind leaves trailing statements"
   | _, _, _ + 1, .allocReqBeg .. :: _, _ =>
     .error "lower: an alloc without else at the top level of a body has no G form (Endblock lacks arenaAllocRequired)"
   | Γ, fn, n + 1, .ret v :: rest, r =>
