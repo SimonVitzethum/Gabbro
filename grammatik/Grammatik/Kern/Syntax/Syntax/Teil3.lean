@@ -266,6 +266,87 @@ theorem verbrauchWahl_zeuge_zwei :
         (fun j k => j == k) = some 1 := by
   constructor <;> rfl
 
+/-! ## Selection transport along a value map
+
+    The `ru` congruence (and every world transport) maps the index domain
+    pointwise (`alleIndizes` through `valR`) with pointwise-equal tests.
+    Selection follows the map. -/
+
+/-- Predecessor scans follow a value map with pointwise-equal tests (the
+    test point is fixed, so no membership travels into the scan). -/
+theorem keinVorgaenger_map {α β : Type} (f : α → β) (ganz : List α)
+    (p : α → Bool) (p' : β → Bool) (e : α → α → Bool) (e' : β → β → Bool)
+    (same : α → α → Bool) (same' : β → β → Bool)
+    (hp : ∀ k ∈ ganz, p' (f k) = p k)
+    (he : ∀ j ∈ ganz, e' (f j) (f k) = e j k)
+    (hsame : ∀ j ∈ ganz, same' (f j) (f k) = same j k)
+    (k : α) :
+    keinVorgaenger (ganz.map f) p' e' same' (f k) =
+      keinVorgaenger ganz p e same k := by
+  induction ganz with
+  | nil => rfl
+  | cons j js ih =>
+      simp only [keinVorgaenger, List.map_cons]
+      have hpj : p' (f j) = p j := hp j (by simp)
+      have hej : e' (f j) (f k) = e j k := he j (by simp)
+      have hsj : same' (f j) (f k) = same j k := hsame j (by simp)
+      rw [hpj, hej, hsj,
+        ih (fun k hk => hp k (List.mem_cons_of_mem _ hk))
+          (fun j hj => he j (List.mem_cons_of_mem _ hj))
+          (fun j hj => hsame j (List.mem_cons_of_mem _ hj))]
+
+/-- Minimality tests follow a value map on the domain. -/
+theorem istMinimalVerbrauch_map {α β : Type} (f : α → β) (ganz : List α)
+    (p : α → Bool) (p' : β → Bool) (e : α → α → Bool) (e' : β → β → Bool)
+    (same : α → α → Bool) (same' : β → β → Bool)
+    (hp : ∀ k ∈ ganz, p' (f k) = p k)
+    (he : ∀ j ∈ ganz, ∀ k ∈ ganz, e' (f j) (f k) = e j k)
+    (hsame : ∀ j ∈ ganz, ∀ k ∈ ganz, same' (f j) (f k) = same j k)
+    (k : α) (hk : k ∈ ganz) :
+    istMinimalVerbrauch (ganz.map f) p' e' same' (f k) =
+      istMinimalVerbrauch ganz p e same k := by
+  simp only [istMinimalVerbrauch, hp k hk,
+    keinVorgaenger_map f ganz p p' e e' same same' hp
+      (fun j hj => he j hj hk) (fun j hj => hsame j hj hk) k]
+
+/-- Selection follows a value map with pointwise-equal tests over the
+    scanned sublist. -/
+theorem verbrauchWahlAux_map {α β : Type} (f : α → β) (ganz ks : List α)
+    (p : α → Bool) (p' : β → Bool) (e : α → α → Bool) (e' : β → β → Bool)
+    (same : α → α → Bool) (same' : β → β → Bool)
+    (hp : ∀ k ∈ ganz, p' (f k) = p k)
+    (he : ∀ j ∈ ganz, ∀ k ∈ ganz, e' (f j) (f k) = e j k)
+    (hsame : ∀ j ∈ ganz, ∀ k ∈ ganz, same' (f j) (f k) = same j k)
+    (hsub : ∀ k ∈ ks, k ∈ ganz) :
+    verbrauchWahlAux (ganz.map f) (ks.map f) p' e' same' =
+      (verbrauchWahlAux ganz ks p e same).map f := by
+  induction ks with
+  | nil => rfl
+  | cons k ks ih =>
+      have hk : k ∈ ganz := hsub k (by simp)
+      have hm := istMinimalVerbrauch_map f ganz p p' e e' same same'
+        hp he hsame k hk
+      simp only [verbrauchWahlAux, List.map_cons, hm]
+      by_cases ht : istMinimalVerbrauch ganz p e same k = true
+      · simp only [ht, ↓reduceIte]
+      · have htf : istMinimalVerbrauch ganz p e same k = false := by
+          cases hpk : istMinimalVerbrauch ganz p e same k with
+          | false => rfl
+          | true => exact absurd hpk ht
+        simp only [htf, ↓reduceIte]
+        exact ih (fun k hk => hsub k (List.mem_cons_of_mem _ hk))
+
+/-- Selection over a domain follows the domain map. -/
+theorem verbrauchWahl_map {α β : Type} (f : α → β) (ks : List α)
+    (p : α → Bool) (p' : β → Bool) (e : α → α → Bool) (e' : β → β → Bool)
+    (same : α → α → Bool) (same' : β → β → Bool)
+    (hp : ∀ k ∈ ks, p' (f k) = p k)
+    (he : ∀ j ∈ ks, ∀ k ∈ ks, e' (f j) (f k) = e j k)
+    (hsame : ∀ j ∈ ks, ∀ k ∈ ks, same' (f j) (f k) = same j k) :
+    verbrauchWahl (ks.map f) p' e' same' =
+      (verbrauchWahl ks p e same).map f :=
+  verbrauchWahlAux_map f ks ks p p' e e' same same' hp he hsame (fun k hk => hk)
+
 #print axioms waehleMinimal_istMitglied
 #print axioms waehleMinimal_keinMitglied
 #print axioms waehleMinimal_alleFalsch
@@ -280,5 +361,9 @@ theorem verbrauchWahl_zeuge_zwei :
 #print axioms verbrauchWahlAux_alleUnminimal
 #print axioms verbrauchWahl_vollstaendig
 #print axioms verbrauchWahl_zeuge_zwei
+#print axioms keinVorgaenger_map
+#print axioms istMinimalVerbrauch_map
+#print axioms verbrauchWahlAux_map
+#print axioms verbrauchWahl_map
 
 end Gabbro.Grammatik
