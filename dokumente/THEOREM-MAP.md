@@ -5942,3 +5942,36 @@ On `c08-export-opt`, `stage0/Stage0/Zeugen/Annahme/OptionalAxiomWitness.lean`:
 * **`optional_constructor`**: The actual sequence lowerer constructs the canonical optional axiom block from the optional binding.
 
 These are elaboration witnesses, not substitutes for generic lowering correctness; this documentation audit ran no Lean checks.
+
+## 132. C15: core-query wiring over the C08 foreign-call path (2026-11-03)
+
+On `c15-uses` (`449dfc4da`, `45c111c1b`, `f3bc0e686`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The accumulator uses (per-core update export, quiescent observation export) and the run-level history existence remain open; the exporter still refuses uses (`uAkkuVerwendung`, `uAkkuFremdVerwendung`).
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrage.lean`:
+
+* **`KernAbfrageGestalt`**: For arbitrary `D : Deklaration`, `q : D.Ax`, `N : Nat`, the exact foreign shape of the core query: positive count, no parameters, answer `0 .. N - 1`, no reason channel, no table or global writes.
+* **`kernAbfrageGestaltB_iff`**: For arbitrary `tabs : List D.Tab`, `globs : List D.Glob`, assuming `hT : forall t, t in tabs` and `hG : forall g, g in globs`, the conclusion is `kernAbfrageGestaltB D q N tabs globs = true <-> KernAbfrageGestalt D q N`.
+* **`KernAbfrageHerkunft`**: For arbitrary `D : Deklaration`, `q : D.Ax`, hardware origin with a named witness: `D.axHerkunft q = some .hardware` and some `w` with `D.axBeleg q = some w`. The one hardware premise beside the named `AxVertragO` ensures.
+* **`kernAbfrageHerkunftB_iff`**: The conclusion is `kernAbfrageHerkunftB D q = true <-> KernAbfrageHerkunft D q`.
+* **`KernAbfrageTreue`**: For arbitrary `kern : Faden -> Nat`, `u : Faden`, `v : Int`, the core identity: the answer is the running core under the declared assignment.
+* **`treueImBereich`**: For arbitrary `kern : Faden -> Nat`, `u : Faden`, `v : Int`, `N : Nat`, assuming `h : KernAbfrageTreue kern u v` and `hk : kern u < N`, the conclusion is `0 <= v /\ v <= (N : Int) - 1`. The scheduler duty (`kern u < N`) is user logic.
+* **`treueEindeutig`**: For arbitrary `kern : Faden -> Nat`, `u : Faden`, `v1 v2 : Int`, assuming both answers satisfy the identity, the conclusion is `v1 = v2`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrageBindung.lean`:
+
+* **`bindetAxS`/`bindetAxB`/`bindetAxArms`/`bindetAxGArms`/`bindetAxE`**: For arbitrary `q : D.Ax`, existence of a `bindAxiom`/`bindAxiomOpt` (plain, `else`, or top-level) of exactly `q`, mirroring the generic feature check `mE` case by case. Foreign calls carry no `reachB` edge, so the update-to-query link is this direct syntactic fact.
+* **`KernAbfrageVerbunden`**: For arbitrary `P : Programm D`, `a : AccumulatorDecl D`, `q : D.Ax`, the connected query: shape, hardware provenance, and the wrapper bind.
+* **`kernAbfrageEinzelB_iff`**: For arbitrary `tabs : List D.Tab`, `globs : List D.Glob`, assuming `hT` and `hG` as above, the conclusion is `kernAbfrageEinzelB P tabs globs a q = true <-> KernAbfrageVerbunden P a q`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrageZeuge.lean`:
+
+* **`qA_ok`**: The two-core unsigned `add` descriptor over `0 .. 255` is valid (non-degenerate: distinct cells, neutral `0`).
+* **`qGestalt`**: The hardware axiom answers `0 .. 1` with no channel and no writes.
+* **`qHerkunft`**: The axiom is hardware-origin with a named witness.
+* **`kernAbfrage_zeuge`**: The connected core query: shape, provenance, and the wrapper's foreign bind.
+* **`treue_zeuge`**: On the constant two-core assignment, thread `0` queries `0`.
+* **`treueBereich_zeuge`**: The identity gives the query range `0 .. 1`.
+* **`ruhigAdd_zeuge`**: Quiescent reduction over the two `add` cells: the sampled fold `[3, 5]` equals the neutral-start RMW chain. Typing the contributions and establishing quiescence stay user duties.
+* **`qN0_abgelehnt`**: `N = 0` is refused (no `Fin 0` core).
+* **`qFalscherKern_abgelehnt`**: A wrong core identity is refused (thread `0` answering `1`).
+* **`qAusserhalb_abgelehnt`**: An out-of-range answer is refused (`5` outside `0 .. 1`).
