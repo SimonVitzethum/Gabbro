@@ -25,6 +25,7 @@
 
 module
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T1a
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T2
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T3
 @[expose] public section

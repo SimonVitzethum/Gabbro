@@ -1,6 +1,7 @@
 /- Part 2 of 3 of `SperreBeweis` (split by instrumente/teile/lean-teilen.py; the umbrella `SperreBeweis.lean` imports all parts). -/
 module
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T1
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis.T1a
 @[expose] public section
 
 
