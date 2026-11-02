@@ -15,23 +15,25 @@ variable {D : Deklaration}
 
 /-- A STARTED thread: its full trace is what a body yields from the empty trace.
     The `start` witness is closed per body by `exec_spur`
-    (see `MaschinenFaden.spawn` below). -/
+    (see `MaschinenFaden.spawn` below). Since C11 a body may unwind scopes on
+    its way out, so the provenance is release-aware (`BravRet`). -/
 structure MaschinenFaden (D : Deklaration) where
   faden : Faden
   voll : List (Ereignis D)
-  start : ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll
+  start : ∃ a b : World D, a.spur = [] ∧ BravRet a b ∧ b.spur = voll
 
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /-- **Thread start.** Running a body from an empty-trace world starts a thread:
-    the outcome world carries the full trace with `Brav` provenance from empty
-    (`exec_spur` read as `Brav`, the same step `Ziel.lean` closes per body). -/
+    the outcome world carries the full trace with `BravRet` provenance from empty
+    (`exec_spur` read as `BravRet`, the same step `Ziel.lean` closes per body). -/
 def MaschinenFaden.spawn (P : Programm D) (O : Orakel D) (passes fuel : Nat)
-    (hO : GutO O) (hP : StufenOk P) (f : Faden) (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hO : GutO O) (hP : StufenOk P) (hS : ScopesOkProg P) (f : Faden) (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
     (hh : HeldGenau Λ σ.haelt) (hempty : σ.spur = [])
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ)
     (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
     MaschinenFaden D :=
-  ⟨f, σ'.spur, σ, σ', hempty, exec_spur P O passes fuel hO hP b σ ρ hh σ' h, rfl⟩
+  ⟨f, σ'.spur, σ, σ', hempty, exec_spur P O passes fuel hO hP hS b σ ρ hh hscope hresid σ' h, rfl⟩
 
 /-! ## 2. The machine run -- interleaving over the grammar, reachable by construction -/
 
