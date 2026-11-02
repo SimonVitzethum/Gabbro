@@ -100,3 +100,9 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 public import Stage0.Zeugen.WriteOnlyCapabilityWitness
 public import Stage0.Zeugen.RightsUnionWitness
 public import Stage0.Zeugen.LibraryBindWitness
+public import Stage0.Zeugen.ProfileWitness
+public import Stage0.Zeugen.RequiresProfileWitness
+public import Stage0.Zeugen.TestBuildWitness
+public import Stage0.Zeugen.AlignmentWitness
+public import Stage0.Zeugen.SectionWitness
+public import Stage0.Zeugen.EntrustWitness
