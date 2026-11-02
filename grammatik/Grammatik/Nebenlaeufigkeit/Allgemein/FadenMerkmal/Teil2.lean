@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil1
+public import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal.Teil1a
 
 @[expose] public section
 
