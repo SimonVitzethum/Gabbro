@@ -71,7 +71,7 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, _, _, .callIndElse p args he hp hr err J owner hJ _ _ hplan herr, σ, ρ, hk, h => by
+  | _, _, Λ, _, _, _, _, _, .callIndElse p args he hp hr err J owner hJ _ _ hplan herr, σ, ρ, hk, h => by
     simp only [execStmt, indSonst]
     generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
     obtain ⟨f, hf⟩ := pv
@@ -187,7 +187,7 @@ theorem ob_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest,
+  | _, _, Λ, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest,
       σ, ρ, hk, h => by
     simp only [execBlock, indSonst]
     generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
@@ -437,7 +437,7 @@ theorem oe_sound (hR : Respects A I.contracts R) (hO : GutO O) :
       exact (Fin.cast ((D.passt_sig hf).gruende.trans hr) r).elim0
     · trivial
     · trivial
-  | _, _, _, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest, σ, ρ,
+  | _, _, Λ, _, _, _, .bindCallIndElse p args he hp hr err rest J owner hJ _ _ hplan herr hrest, σ, ρ,
       hk, h => by
     simp only [execEnd, indSonstE]
     generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
