@@ -70,7 +70,7 @@ field after the call. The buffer lies in the frame, so no other thread sees it. 
 def ptrParam (τs : List Ty) : Option (Nat × Nat × Bool) :=
   match τs.findIdx? isPtr with
   | some j => match τs[j]? with
-    | some (.ptr n rw) => some (j, n, rw)
+    | some (.ptr ⟨0, ⟨true, rw, none⟩, .table n⟩) => some (j, n, rw)
     | _ => none
   | none => none
 
