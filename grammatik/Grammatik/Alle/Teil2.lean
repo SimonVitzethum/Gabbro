@@ -346,3 +346,4 @@ public import Grammatik.Zielsatz.Projekte.Profil
 public import Grammatik.Zielsatz.Projekte.ProfilZeuge
 public import Grammatik.Parser.Profil.Eintritt
 public import Grammatik.Parser.Profil.EintrittZeuge
+public import Grammatik.Parser.Elab.Konst.Calls
