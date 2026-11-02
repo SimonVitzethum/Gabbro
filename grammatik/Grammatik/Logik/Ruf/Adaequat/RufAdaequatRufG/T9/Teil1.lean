@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8a
 
 @[expose] public section
 

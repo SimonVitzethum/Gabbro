@@ -38,6 +38,7 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T5
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T6
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T7
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T8a
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T9
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG.T10
 @[expose] public section

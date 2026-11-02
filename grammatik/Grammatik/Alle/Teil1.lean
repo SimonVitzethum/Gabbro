@@ -54,6 +54,7 @@ public import Grammatik.Bausteine.Arena.Arena
 public import Grammatik.Bausteine.Arena.ArenaZucker
 public import Grammatik.Logik.Ruf.Hoare.HoareRuf
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustand
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustanda
 public import Grammatik.Kern.Semantik.Syscall.SyscallPaarung
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG
 public import Grammatik.Logik.Ruf.Maschine.BudgetMonoton
