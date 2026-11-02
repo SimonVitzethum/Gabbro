@@ -1,12 +1,12 @@
 module
 
+public import Grammatik.Bausteine.Arena.Struktur.ArenaFrei.Teil1Basis
 public import Grammatik.Bausteine.Arena.ArenaDyn
 
 @[expose] public section
 
 
 
-public import Grammatik.Bausteine.Arena.Struktur.ArenaFrei.Teil1Basis
 
 namespace Gabbro.Grammatik
 
