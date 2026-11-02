@@ -70,3 +70,6 @@ qemu_*.core
 /result
 # direnv cache of the flake shell.
 /.direnv/
+
+# Lead and agent scratch (logs, order files, local tools) -- never repository content.
+.scratch-*
