@@ -98,7 +98,8 @@ def expandSpecificationContracts (specs : List (String × List String × SExpr))
 
 /-- The output retains every ordinary item and appends exactly the closed, deterministically named
     body instances. The structural source size bounds work, and exhaustion always refuses. -/
-def expandTemplatesWithRequirements (source : List SItemTief) :
+def expandTemplatesWithRequirements (source : List SItemTief)
+    (seedLiterals : List (FnSig × SAnw) := []) :
     Except String (List SItemTief × List (STyp × String)) := do
   let env := environment source
   let names := source.filterMap sourceName
@@ -112,9 +113,11 @@ def expandTemplatesWithRequirements (source : List SItemTief) :
       | .function _ ty => do
         let _ ← staticParameterType {} ty
         pure ()
-  let (ordinary, roots) ← (do
+  let ((ordinary, seedLiterals), roots) ← (do
     let groups ← source.mapM (rewriteItem env)
-    pure groups.flatten).run []
+    let literals ← seedLiterals.mapM fun (sig, body) => do
+      pure (← rewriteSignature env {} sig, ← rewriteBody env {} body)
+    pure (groups.flatten, literals)).run []
   for root in roots do
     checkRecursion env (env.declarations.length + 1) [] root
   let instances ← boundedInstanceClosure (sizeOf source)
@@ -124,7 +127,7 @@ def expandTemplatesWithRequirements (source : List SItemTief) :
   let generated := results.map (fun result =>
     let ((sig, body), _, _) := result.1
     SItemTief.fnT sig body)
-  let literals := results.flatMap (fun result => result.1.2.1)
+  let literals := seedLiterals ++ results.flatMap (fun result => result.1.2.1)
   let requirements := results.flatMap (fun result => result.1.2.2)
   let specs := ordinary.filterMap fun
     | .specT sig predicate => some (sig.name, sig.params.map Prod.fst, predicate)
@@ -154,6 +157,15 @@ def expandWithRequirements (source : List SItemTief) :
 
 def expand (source : List SItemTief) : Except String (List SItemTief) :=
   (expandWithRequirements source).map Prod.fst
+
+/-- Module literals contribute generic dependencies now, but are materialized only after generic
+    functions and spec contracts, just like function-argument literals. -/
+def expandWithLiterals (source : List SItemTief) (literals : List (FnSig × SAnw)) :
+    Except String (List SItemTief × List (STyp × String)) := do
+  if literals.isEmpty then expandWithRequirements source else
+    let (target, requirements) ← expandTemplatesWithRequirements source literals
+    if target.any genericHeader then throw "generic expansion left a template declaration"
+    pure (target, requirements)
 
 /-- Model A's generic syntactic guarantee: the actual exporter receives ordinary declarations.
     Their safety and contracts are checked by the unchanged G elaboration and checker. -/

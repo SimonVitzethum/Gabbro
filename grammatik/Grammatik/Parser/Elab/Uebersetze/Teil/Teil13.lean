@@ -16,6 +16,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 public import Grammatik.Parser.Elab.Konst.Export
 public import Grammatik.Parser.Elab.Generic.Expansion
 public import Grammatik.Parser.Elab.Generic.StaticConformance
+public import Grammatik.Parser.Elab.Modules.Frontend
 
 @[expose] public section
 
@@ -92,8 +93,7 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
     ordinary calls carrying the declared payload. -/
 def elabU : List SItemTief → Except String UProg
   | items =>
-    let ms0 := uMembers items
-    match Generic.expandWithRequirements ms0 with
+    match Modules.prepare items with
     | .error e => .error e
     | .ok (genericExpanded, staticRequirements) =>
     match Gabbro.Grammatik.Parser.exportLibraryUnit genericExpanded with
