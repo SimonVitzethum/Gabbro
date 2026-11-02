@@ -19,6 +19,7 @@
 -/
 module
 public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Syntax.Zucker.Transition
 @[expose] public section
 
 

@@ -11,42 +11,6 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-! ## 0. Two casts, and the lemmas that make them harmless
-
-    The counter's declared type is `D.gtyp zaehl`, and the sugar needs it AS
-    `int 0 (count tab)`. That is a transport along an equation of `Ty`, and a transport
-    inside a proof is where dependent types usually start to fight. They are confined to
-    the two definitions here; every lemma below is proved by `subst`, which works because
-    BOTH sides are variables in the lemma's own statement. -/
-
-/-- A value at an equal type. -/
-def Wert.umTyp {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
-
-/-- An expression at an equal type. -/
-def Expr.umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ) (e : Expr D Γ Λ τ) :
-    Expr D Γ Λ σ := h ▸ e
-
-@[simp] theorem Wert.umTyp_rfl {τ : Ty} (v : Wert D τ) : Wert.umTyp rfl v = v := by rfl
-
-@[simp] theorem Expr.umTyp_rfl {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) :
-    Expr.umTyp rfl e = e := by rfl
-
-/-- Down and up again is nothing. -/
-@[simp] theorem Wert.umTyp_hin_her {τ σ : Ty} (h : τ = σ) (v : Wert D σ) :
-    Wert.umTyp h (Wert.umTyp (D := D) h.symm v) = v := by subst h; rfl
-
-/-- Evaluating a transported expression is transporting its value: the cast does not
-    change what is read. -/
-@[simp] theorem eval_umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ)
-    (e : Expr D Γ Λ τ) (σ₀ w : World D) (ρ : Env D Γ) :
-    eval σ₀ (Expr.umTyp h e) w ρ = Wert.umTyp h (eval σ₀ e w ρ) := by
-  subst h; rfl
-
-/-- The places a transported expression reads are the places it read. -/
-@[simp] theorem orte_umTyp {Γ : Ctx} {Λ : List (Res D)} {τ σ : Ty} (h : τ = σ)
-    (e : Expr D Γ Λ τ) : (Expr.umTyp h e).orte = e.orte := by
-  subst h; rfl
-
 /-- Recording a read touches the trace alone -- the globals are the globals. -/
 @[simp] theorem World.globs_lese (σ : World D) (Λ : List (Res D))
     (o : List (D.Tab ⊕ D.Glob)) : (σ.lese Λ o).globs = σ.globs := by rfl
