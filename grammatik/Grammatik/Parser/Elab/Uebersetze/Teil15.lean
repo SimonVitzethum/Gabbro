@@ -414,6 +414,7 @@ def beqUIdx : UIdx → UIdx → Bool
   | .param a, .param b => strEq a b
   | _, _ => false
 
+mutual
 def beqUSide : USide → USide → Bool
   | .lit a, .lit b => a == b
   | .param a, .param b => strEq a b
@@ -432,8 +433,40 @@ def beqUSide : USide → USide → Bool
   | .neg a, .neg b => beqUSide a b
   | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
   | .truth a, .truth b => a == b
+  | .predicate a, .predicate b => beqUEns a b
+  | .option n a, .option m b => n == m && a == b
+  | .absent n, .absent m => n == m
+  | .present n a, .present m b => n == m && beqUSide a b
+  | .reason n a, .reason m b => n == m && a == b
+  | .function n a, .function m b => n == m && strEq a b
   | .taggedEmpty cs i, .taggedEmpty ds j => beqPayloads cs ds && i == j
   | .taggedValue cs i a, .taggedValue ds j b => beqPayloads cs ds && i == j && beqUSide a b
   | _, _ => false
+
+def beqUEns : UEns → UEns → Bool
+  | .cmp o a b, .cmp p c d =>
+    strEq o p && beqUSide a c && beqUSide b d
+  | .tru, .tru => true
+  | .fls, .fls => true
+  | .and a b, .and c d => beqUEns a c && beqUEns b d
+  | .or a b, .or c d => beqUEns a c && beqUEns b d
+  | .not a, .not b => beqUEns a b
+  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
+    strEq a b && strEq f g && beqUIdx x y
+  | .globB a, .globB b | .var a, .var b => strEq a b
+  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
+  | .ergB, .ergB => true
+  | .held a, .held b => strEq a b
+  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
+  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
+  | .member t a, .member u b => strEq t u && a == b
+  | .arrayElements a source x body, .arrayElements b target y other =>
+      a == b && beqUSide source target && strEq x y && beqUEns body other
+  | .filtered a t x f r s b, .filtered c u y g v z d =>
+      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
+  | .istSome o m, .istSome p n => o == p && m == n
+  | _, _ => false
+
+end
 
 end Gabbro.Grammatik.Parser.Uebersetze

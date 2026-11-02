@@ -6,7 +6,7 @@ public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.Uebersetze.Teil5
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Payload
 
 @[expose] public section
 
@@ -158,57 +158,6 @@ def elabKopf (_consts : List (String × Int))
                 | .error e => .error e
                 | .ok r =>
                   .ok ({ kopf with res := .some r }, puts)
-
-/-- An option value of the table `num`: `None`, `Some(i)`, or what `uOptEin` reads (its table must be `num`). -/
-def uOpt (ctx : UCtx) (num : Nat) : SExpr → Except String UOpt
-  | .call "None" [] => .ok .nichts
-  | .call "Some" [a] =>
-    match ctx.tabs[num]? with
-    | .none => .error "option table unknown"
-    | .some tb =>
-      match uIndex ctx tb.name num a with
-      | .error e => .error e
-      | .ok ix => .ok (.etwas ix)
-  | e =>
-    match uOptEin ctx e with
-    | .error x => .error x
-    | .ok (o, m) => if m == num then .ok o else .error "option of a foreign table"
-
-/-- A tagged value read off an expression, with the position of its type: a variable, a payload-free case or a
-    case with a payload. -/
-/-- A tagged payload retains its complete type. Literal truth values and typed locals
-    bypass the numeric expression gate; all arithmetic keeps its existing checks. -/
-def uPayload (ctx : UCtx) (τ : Ty) : SExpr → Except String USide
-  | .tru => if τ = .bool then .ok (.truth true) else .error "wrong tagged payload type"
-  | .fls => if τ = .bool then .ok (.truth false) else .error "wrong tagged payload type"
-  | .ext .text [text] [] => .ok (.text (text.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
-  | .variable x =>
-    match uParamNr ctx x with
-    | .ok _ => .ok (.param x)
-    | .error _ =>
-      match τ with
-      | .sum cs =>
-        match ctx.sums.find? (fun s => s.spec = cs) with
-        | none => .error "unknown nested tagged payload type"
-        | some s =>
-          match s.cases.findIdx? (fun c => strEq c.1 x && c.2.isNone) with
-          | some i => .ok (.taggedEmpty cs i)
-          | none => .error "unknown nested tagged case"
-      | _ => uWertBody ctx (.variable x)
-  | .call name [value] =>
-    match τ with
-    | .sum cs =>
-      match ctx.sums.find? (fun s => s.spec = cs) with
-      | none => .error "unknown nested tagged payload type"
-      | some s =>
-        match s.cases.findIdx? (fun c => strEq c.1 name),
-            (s.cases.find? (fun c => strEq c.1 name)).bind (·.2) with
-        | some i, some payloadTy => do
-          let payload ← uPayload ctx payloadTy value
-          pure (.taggedValue cs i payload)
-        | _, _ => .error "missing or extra nested tagged payload"
-    | _ => uWertBody ctx (.call name [value])
-  | e => uWertBody ctx e
 
 def uSValEin (ctx : UCtx) : SExpr → Except String (USVal × Nat)
   | .variable v =>

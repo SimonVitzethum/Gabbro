@@ -22,6 +22,20 @@ inductive UIdx
   | param : String → UIdx
   deriving DecidableEq, Repr
 
+/-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
+    read of an option field through a pointer (`slot`) or at a table (`tab`). -/
+inductive UOpt
+  | nichts : UOpt
+  | etwas : UIdx → UOpt
+  | var : String → UOpt
+  | slot : String → String → UIdx → UOpt
+  | tab : String → String → UIdx → UOpt
+  /-- An option static (`static mut frei : option index into T`). -/
+  | glob : String → UOpt
+  deriving DecidableEq, Repr
+
+mutual
+
 /-- One side of an `ensures` comparison: a literal, a numeric
     parameter, a slot read through a pointer parameter (`slot`)
     or at a table (`tab`), the entry value (`alt`), or the
@@ -74,18 +88,14 @@ inductive USide
   | truth : Bool → USide
   | taggedEmpty : List (Option Ty) → Nat → USide
   | taggedValue : List (Option Ty) → Nat → USide → USide
-  deriving DecidableEq, Repr
-
-/-- An option value over the table `T` (the number rides with the type): `None`, `Some(i)`, a variable, or the
-    read of an option field through a pointer (`slot`) or at a table (`tab`). -/
-inductive UOpt
-  | nichts : UOpt
-  | etwas : UIdx → UOpt
-  | var : String → UOpt
-  | slot : String → String → UIdx → UOpt
-  | tab : String → String → UIdx → UOpt
-  /-- An option static (`static mut frei : option index into T`). -/
-  | glob : String → UOpt
+  /-- A truth-valued expression reuses the canonical predicate tree. -/
+  | predicate : UEns → USide
+  /-- Scalar introductions retain their complete declared type. -/
+  | option : Nat → UOpt → USide
+  | absent : Int → USide
+  | present : Int → USide → USide
+  | reason : Nat → Nat → USide
+  | function : Nat → String → USide
   deriving DecidableEq, Repr
 
 /-- One `ensures` predicate: a comparison, truth values, or a
@@ -125,6 +135,8 @@ inductive UEns
   /-- Universal/existential iteration over the exact index domain of a fixed array. -/
   | arrayElements : Bool → USide → String → UEns → UEns
   deriving DecidableEq, Repr
+
+end
 
 /-- A value of a tagged type over the declaration `T`: a case with its payload (`Expr.case`), or a variable. -/
 inductive USVal

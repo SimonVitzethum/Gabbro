@@ -124,12 +124,16 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     | .ok (.tabelle b, tb, f, ix) =>
       if uBoolFeld ctx tb f then .ok (.tabB b f ix) else .error "ensures clause without G form"
 
+mutual
 /-- `old(..)` or `result` inside a side. -/
 def seiteAltErg : USide → Bool
   | .old .. | .erg => true
   | .add a b | .sub a b | .mul a b | .band a b | .bor a b | .bxor a b | .div a b | .rem a b | .shl a b | .shr a b =>
     seiteAltErg a || seiteAltErg b
-  | .conv _ _ a | .neg a | .taggedValue _ _ a => seiteAltErg a
+  | .conv _ _ a | .neg a | .taggedValue _ _ a | .typed _ a | .len a | .present _ a => seiteAltErg a
+  | .arrCons a b | .idx a b => seiteAltErg a || seiteAltErg b
+  | .upd a i v => seiteAltErg a || seiteAltErg i || seiteAltErg v
+  | .predicate p => ensAltErg p
   | _ => false
 
 /-- `old(..)` or `result` inside a predicate. -/
@@ -137,9 +141,12 @@ def ensAltErg : UEns → Bool
   | .cmp _ a b => seiteAltErg a || seiteAltErg b
   | .and a b | .or a b | .imp a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
-  | .alle _ _ b | .einige _ _ b | .filtered _ _ _ _ _ _ b | .arrayElements _ _ _ b => ensAltErg b
+  | .alle _ _ b | .einige _ _ b | .filtered _ _ _ _ _ _ b => ensAltErg b
+  | .arrayElements _ source _ b => seiteAltErg source || ensAltErg b
   | .ergB => true
   | _ => false
+
+end
 
 /-- A truth value in a BODY (a returned or stored `bool`): the predicate forms of an `ensures`,
     without `old` and `result`. -/

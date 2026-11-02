@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil13
 public import Grammatik.Parser.Elab.UebersetzeSum
+public import Grammatik.GabbroV.GvStartPflicht
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -268,6 +269,99 @@ theorem recursive_schema_refused :
         (some (.raw "{ Wrap(Recursive) }"))] with
       | .ok _ => false | .error _ => true) = true := by decide
 
+/-- Export and lower a source predicate as the selected complete bool payload. -/
+def sourceBoolPayload (locks : List ULock) (source : SExpr) : Bool :=
+  let tabs : List UTab := [{ name := "Flags", count := 2, cols := [("ready", (0, 1))], bools := ["ready"] }]
+  let ctx : UCtx := { names := ["flag", "n"], kinds := [.bool, .int], types := [.bool, .int 0 255], tabs, locks, held := [], res := none, fname := "fixture", alias := [], lits := [], sums }
+  let fn := { scope with params := [("flag", .bool), ("n", .int 0 255)], kinds := [.bool, .int] }
+  match uSVal ctx 0 (.call "Flag" [source]) with
+  | .error _ => false
+  | .ok value =>
+    match lowSVal { unit with tabs, locks } [.bool, .int 0 255] [] fn 0 0 (by decide) value with
+    | .ok _ => true
+    | .error _ => false
+
+theorem source_comparison_payload_zeuge :
+    sourceBoolPayload [] (.bin "<" (.variable "n") (.lit 7)) = true := by decide
+
+theorem source_boolean_payload_zeuge :
+    sourceBoolPayload [] (.bin "&&" (.un "!" (.variable "flag")) (.bin "<" (.variable "n") (.lit 7))) = true := by decide
+
+def sourceFlagRead : SExpr := .field (.index (.field (.variable "Flags") "slots") (.lit 1)) "ready"
+
+theorem source_bool_field_payload_zeuge : sourceBoolPayload [] sourceFlagRead = true := by decide
+
+theorem source_guarded_payload_refused :
+    sourceBoolPayload [{ name := "Guard", rank := 1, guard := ["Flags"] }] sourceFlagRead = false := by decide
+
+theorem source_numeric_bool_payload_refused : sourceBoolPayload [] (.lit 1) = false := by decide
+
+theorem source_old_payload_refused :
+    sourceBoolPayload [] (.old sourceFlagRead) = false := by decide
+
+theorem source_result_payload_refused : sourceBoolPayload [] .res = false := by decide
+
+/-- Scalar introductions are typed by the common value lowerer. -/
+theorem lower_option_payload_zeuge :
+    (match Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertAtE unit [] [] scope none (.sum [some (.opt 4)])
+      (.taggedValue [some (.opt 4)] 0 (.present 4 (.lit 2))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
+theorem lower_option_payload_range_refused :
+    (match Gabbro.Grammatik.Parser.UebersetzeAllg.lowWertAtE unit [] [] scope none (.sum [some (.opt 4)])
+      (.taggedValue [some (.opt 4)] 0 (.present 4 (.lit 4))) with
+      | .ok _ => false | .error _ => true) = true := by decide
+
 end TypedPayload
+
+namespace TypedInitializers
+
+open Gabbro.Grammatik.GabbroV
+
+def inner : USum := { name := "Inner", cases := [("InnerEmpty", none), ("InnerFlag", some .bool)] }
+def outer : USum := { name := "Outer", cases := [("Empty", none), ("Flag", some .bool), ("Text", some (.str 8)), ("Nested", some (.sum inner.spec))] }
+def schemas : List USum := [outer, inner]
+
+theorem static_bool_payload_zeuge :
+    uSumKonst [] schemas outer (.one (.call "Flag" [.tru])) = .ok (.fall 1 (.wahr true)) := by decide
+
+theorem static_string_payload_zeuge :
+    uSumKonst [] schemas outer (.one (.call "Text" [.ext .text ["AB"] []])) =
+      .ok (.fall 2 (.text [65, 66])) := by decide
+
+theorem static_nested_payload_zeuge :
+    uSumKonst [] schemas outer (.one (.call "Nested" [.call "InnerFlag" [.fls]])) =
+      .ok (.fall 3 (.fall 1 (.wahr false))) := by decide
+
+theorem static_missing_payload_refused :
+    uSumKonst [] schemas outer (.one (.variable "Flag")) =
+      .error "missing tagged payload in static initializer" := by decide
+
+theorem static_extra_payload_refused :
+    uSumKonst [] schemas outer (.one (.call "Empty" [.tru])) =
+      .error "missing or extra tagged payload in static initializer" := by decide
+
+/-- The existing initial-world decoder retains the whole recursively typed value. -/
+theorem static_nested_value_zeuge :
+    ((uSumKonst [] schemas outer (.one (.call "Nested" [.call "InnerFlag" [.fls]]))).toOption.bind
+      (konstWert (F := Unit) (P := fun _ _ => true) (.sum outer.spec))) =
+      some ⟨⟨3, by decide⟩, ⟨⟨1, by decide⟩, false⟩⟩ := rfl
+
+theorem static_wrong_payload_refused :
+    ((uSumKonst [] schemas outer (.one (.call "Flag" [.lit 1]))).toOption.bind
+      (konstWert (F := Unit) (P := fun _ _ => true) (.sum outer.spec))) = none := rfl
+
+theorem static_long_string_refused :
+    ((uSumKonst [] schemas outer (.one (.call "Text" [.ext .text ["123456789"] []]))).toOption.bind
+      (konstWert (F := Unit) (P := fun _ _ => true) (.sum outer.spec))) = none := rfl
+
+/-- The actual static-collection path, after canonical schema resolution. -/
+theorem static_export_zeuge :
+    (elabU [.typeT ["tagged"] "FlagType" [] [] (some (.raw "{ Flag(bool), Empty }")),
+      .globT false "MSG" (.atom "FlagType") (.one (.call "Flag" [.tru])) none none false]).map
+      (fun u => u.globs.map (·.initK)) = .ok [.fall 0 (.wahr true)] := by decide
+
+end TypedInitializers
+
 
 end Gabbro.Grammatik.Parser.Uebersetze
