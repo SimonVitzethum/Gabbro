@@ -70,6 +70,7 @@ def itemMetadata : SItemTief → Bool
   | .constT _ ty _ => typeMetadata ty
   | .whyT .. => false
   | .stateT .. => false
+  | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
   | _ => true
 
 def metadataReason : SItemTief → String
@@ -84,6 +85,9 @@ def metadataReason : SItemTief → String
     else if inv.isSome then "lock invariant duties lack a checked source binding"
     else "lock mask duties lack a checked source binding"
   | .specT .. => "spec signature/proof admission lacks a checked source binding"
+  | .checkT c =>
+    if c.sonde.isSome then "check counterprobe duties lack a checked source binding"
+    else "check body duties lack a checked source binding"
   | .fnT sig _ =>
     if sig.klauseln.any (fun | .cost _ => true | _ => false) then
       "declared costs lack a checked source-to-kostenPasst binding: " ++ sig.name
@@ -177,6 +181,17 @@ theorem library_zeuge :
     let caller : FnSig := ⟨"impl", "caller", [], some (.atom "u8"), none, []⟩
     let cbody := SAnw.block [.lcall ⟨["m"], ["f"], [], []⟩] (some (.ret (some (.lit 1))))
     check [.transT "f" trans (SAnw.block [] none), .fnT lib (SAnw.block [] none), .fnT caller cbody] = .ok () ∧ check [.fnT ⟨"library", "f", [], none, none, [.load ["P"], .cost (.lit 0)]⟩ (SAnw.block [] none)] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: f" := by
+  exact ⟨rfl, rfl⟩
+
+/-- C16 declared checks are bound by probe, wrapper and admission. Measures resolve by shape (`uMessOrt`), gates must name unit functions (`uCheck`, unknown gates refused), floors lower with the ordinary predicate reader (`uSichert`), probe bodies elaborate as ordinary Boolean producers (`uProbeFn`, non-block refused), generated names must be fresh (`uProbeNeu`, duplicates refused), wrappers consume exactly one Duty (`uTorHuelle`, parameterised or reason-carrying gates refused, sibling-check gates wait for C14), marks are checked (`uMarkenPruef`), and the checker decides read-only Duty threading with call-graph closure (`checkOkB`/`CheckAdmission`). Counterprobes (`sonde`) stay refused: no binding exists. -/
+theorem checkT_bound (c : SCheck) (s : c.sonde = none) (b : bodyMetadata 10000 c.canFail = false) : itemMetadata (.checkT c) = false := by
+  simp [itemMetadata, s, b]
+
+set_option maxRecDepth 100000 in
+theorem checkT_zeuge :
+    let good : SCheck := ⟨"p", "c", [.variable "x"], ["g"], SAnw.block [] (some (.ret (some .tru))), [.tru], none⟩
+    let bad : SCheck := ⟨"p", "c", [.variable "x"], ["g"], SAnw.block [] (some (.ret (some .tru))), [.tru], some ("probe", "expects")⟩
+    check [.checkT good] = .ok () ∧ check [.checkT bad] = .error "source export: check counterprobe duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
