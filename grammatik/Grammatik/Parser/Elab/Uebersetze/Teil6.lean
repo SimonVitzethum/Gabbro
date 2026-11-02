@@ -84,8 +84,10 @@ def elabKopf (_consts : List (String × Int))
     let params := uOhneGriffe devs params0
     -- a `fn` without a kind word and with a body is an implemented function, like `impl fn` (the checker's
     -- `None | Some(Impl)`)
-    if strEq art "library" then .error "C02: library body needs certified ordinary call expansion"
-    else if !(strEq art "impl" || strEq art "") then .error "fn is not impl"
+    -- A `library fn` is an ordinary implemented function: its body elaborates like `impl`. The
+    -- payload calling convention lives in the CALLERS, expanded by `exportLibraryUnit` before the
+    -- lowering runs; the certificate side is `TranslationDecl`/`LibraryExpansion`.
+    if !(strEq art "impl" || strEq art "" || strEq art "library") then .error "fn is not impl"
     else
       match uOhneKlauselForm klauseln with
       | .error e => .error e

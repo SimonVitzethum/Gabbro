@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
+public import Grammatik.Parser.Stmt.LibrarySource
 
 @[expose] public section
 
@@ -180,19 +181,25 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
   | _ => none
 
 /-- The elaborator: a parsed surface tree to the exported
-    fragment (tables, locks, `impl` functions). -/
+    fragment (tables, locks, `impl` functions). The certified C02 expansion (`exportLibraryUnit`)
+    runs first, so a source program with a library call exports to an ordinary unit: `library`
+    bodies elaborate as ordinary functions, translators are consumed, and calls expand into
+    ordinary calls carrying the declared payload. -/
 def elabU : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
-    let consts := uConstsRech (uKonstFns ms0) ms0 []
-    let alias := uAliase consts ms0 ++ consts.map (fun c => (c.1, (c.2, c.2)))
-    match uRestFehler ms0 with
+    match Gabbro.Grammatik.Parser.exportLibraryUnit ms0 with
+    | .error e => .error e
+    | .ok msE =>
+    let consts := uConstsRech (uKonstFns msE) msE []
+    let alias := uAliase consts msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
+    match uRestFehler msE with
     | .error e => .error e
     | .ok _ =>
-    match ExportMetadata.checkConstants ms0 with
+    match ExportMetadata.checkConstants msE with
     | .error error => .error error
     | .ok () =>
-    let ms := uOhneSenken ms0
+    let ms := uOhneSenken msE
     match uGlobs consts alias ms with
     | .error e => .error e
     | .ok globs0 =>
@@ -204,7 +211,7 @@ def elabU : List SItemTief → Except String UProg
     match uArenen consts alias ms with
     | .error e => .error e
     | .ok (arTabs, arGlobs) =>
-    let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers alias ms0)
+    let tabs := uIdxTabs (tabs0 ++ arTabs ++ uArrayCarriers alias msE)
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
@@ -288,7 +295,7 @@ def elabU : List SItemTief → Except String UProg
                                           gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
           zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
-          exportGate := ExportMetadata.check ms0 }
+          exportGate := ExportMetadata.check msE }
       .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/

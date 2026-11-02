@@ -325,10 +325,12 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
 
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
-    error (the refused rows of `collect`). -/
+    error (the refused rows of `collect`). Translators (`transT`) are consumed by the certified
+    expansion (`exportLibraryUnit` runs before this check): they are certificate input, never
+    runtime items, so they step past here. -/
 def uRestFehler : List SItemTief → Except String Unit
   | [] => .ok ()
-  | .transT .. :: _ => .error "C02: translator export needs source-bound execution and payload expansion certificates"
+  | .transT .. :: rest => uRestFehler rest
   | .constT _ _ _ :: rest => uRestFehler rest
   | .typeT _ _ _ _ _ :: rest => uRestFehler rest
   | .tableT _ _ _ _ _ _ _ :: rest => uRestFehler rest

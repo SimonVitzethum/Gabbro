@@ -212,38 +212,18 @@ theorem translation_measure {source : LibrarySource} {u : UProg}
 /-! ## Per-site payloads and ordinary call expansion.
 
     A certified translator output is materialized as one immutable private payload per source
-    call site, initialized exactly as certified. The source call expands into an ordinary call
-    (or `let`-bound ordinary call) of the resolved library function: the ordinary arguments
-    ride once in source order, the payload fills the final read-only parameter the caller
-    omits. No parallel machine is involved; the output is ordinary `SAnw` through the existing
-    call lowering (`uAnw1`, `uRuf`). Mapping the schema to C01 fields, the selected checked
-    layout and the Stage-0 payload spans belongs to the export and IR-03/06, not here. -/
-
-mutual
-/-- Whether a source statement still contains a library call: the elaborator's C02 refusal
-    matches exactly the two false constructors (`uAnwReihe`). Lists ride in their own
-    helpers, like `beqSAnw`/`beqSAnwList`. -/
-def ohneBibliothekAnw : SAnw → Bool
-  | .bindLib .. | .lcall .. => false
-  | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body | .retry _ body | .loop _ body |
-    .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body | .grow _ _ body |
-    .child body | .each _ _ _ _ _ _ _ body => ohneBibliothekAnw body
-  | .cond _ yes branches no =>
-    ohneBibliothekAnw yes && ohneBibliothekAnwListe branches && ohneBibliothekAnwOpt no
-  | .cases _ arms => ohneBibliothekAnwListe arms
-  | .block statements _ => ohneBibliothekAnwListe statements
-  | .alloc _ _ _ _ _ no => ohneBibliothekAnwOpt no
-  | _ => true
-def ohneBibliothekAnwListe : List SAnw → Bool
-  | [] => true
-  | s :: ss => ohneBibliothekAnw s && ohneBibliothekAnwListe ss
-def ohneBibliothekAnwOpt : Option SAnw → Bool
-  | none => true
-  | some s => ohneBibliothekAnw s
-end
+    call site, initialized exactly as certified. The source-level vocabulary for this stage --
+    the cleanliness predicate (`ohneBibliothekAnw`), the pre-expansion gate
+    (`torZurErweiterung` with its named C01/C17 refusals) and the export shapes
+    (`exportLibraryCall`, `exportLibraryBind`) -- lives in `Parser/Stmt/LibrarySource.lean`, shared
+    with the export pre-pass (`exportLibraryUnit`, run by `elabU`); the certificate-level records
+    and their theorems stay here. Mapping the schema to C01 fields, the selected checked layout
+    and the Stage-0 payload spans belongs to the export and IR-03/06, not here. -/
 
 /-- Expand one source library call into its ordinary call: the resolved library function key,
-    the ordinary arguments once in source order, and the per-site payload appended last. -/
+    the ordinary arguments once in source order, and the per-site payload appended last. The
+    export fixes the payload place to `libraryPayloadArg` (`exportLibraryCall`); the certificate
+    keeps it explicit. -/
 def expandLibraryCall (library : ULibrary) (nutzlast : SExpr) (c : SLibraryCall) : SAnw :=
   .call library.function.name (c.args ++ [nutzlast])
 
@@ -265,6 +245,15 @@ theorem ohneBibliothekAnw_expand (library : ULibrary) (nutzlast : SExpr) (c : SL
 theorem ohneBibliothekAnw_expandBind (bind : Bool) (x : String) (ty : Option STyp)
     (library : ULibrary) (nutzlast : SExpr) (c : SLibraryCall) :
     ohneBibliothekAnw (expandBindLibraryCall bind x ty library nutzlast c) = true := rfl
+
+/-- The export expansion is the certificate shape with the export's payload place. -/
+theorem exportLibraryCall_form (lib : ULibrary) (c : SLibraryCall) :
+    exportLibraryCall lib c = expandLibraryCall lib (libraryPayloadArg lib) c := rfl
+
+/-- The `let`-bound export expansion is the certificate shape with the export's payload place. -/
+theorem exportLibraryBind_form (bind : Bool) (x : String) (ty : Option STyp) (lib : ULibrary)
+    (c : SLibraryCall) :
+    exportLibraryBind bind x ty lib c = expandBindLibraryCall bind x ty lib (libraryPayloadArg lib) c := rfl
 
 /-- One immutable private payload per source call site: the site path and the certified
     translator output as its complete content. Products need the C01 schema export; recursive
@@ -309,35 +298,48 @@ theorem libraryExpansion_ohneBibliothek {source : LibrarySource} {u : UProg}
   · rw [h]; exact ohneBibliothekAnw_expand _ _ _
   · rw [h]; exact ohneBibliothekAnw_expandBind _ _ _ _ _ _
 
-/-- Product payload rows need the C01 schema export; they are refused here by name. No product
-    schema exists yet: `IntegerSchema` is the only decoder and `ImmutablePayload` admits no
-    product. -/
-def produktZeilenVerweigert : String := "C01: product payload rows need the C01 schema export"
+/-- The payload place of a certified expansion is its last call argument, in either call
+    form: the ordinary arguments ride once in source order, the payload fills the final read-only
+    parameter the caller omits. -/
+theorem libraryExpansion_nutzlast_letzt {source : LibrarySource} {u : UProg}
+    {decl : TranslationDecl source u} {certificate : TranslationCertificate decl}
+    {payload : LibraryPayload certificate} (expansion : LibraryExpansion payload) :
+    (∃ fname rest, expansion.aufruf = .call fname (rest ++ [expansion.nutzlastArg])) ∨
+      (∃ m x ty fname rest,
+        expansion.aufruf = .bind m x ty (.call fname (rest ++ [expansion.nutzlastArg]))) := by
+  obtain ⟨nutzlastArg, aufruf, erweitert, _⟩ := expansion
+  rcases erweitert with h | ⟨m, x, ty, h⟩
+  · exact Or.inl ⟨_, _, h.trans rfl⟩
+  · exact Or.inr ⟨m, x, ty, _, _, h.trans rfl⟩
 
-/-- Recursive and general translator maps need C17 instantiation and control rules; they are
-    refused here by name. A translator with callees cannot satisfy `TranslationDecl.noCalls`,
-    `noIndirectCalls` or `noCycle`, so no certificate path exists for it. -/
-def allgemeineAbbildungVerweigert : String :=
-  "C17: recursive and general translator maps need C17 control rules"
+/-- A certified expansion carries the certified content: its payload is the certificate output,
+    not only a value constructed alongside it. The export supplies the place (`nutzlastArg`); the
+    content travels through `vollstaendig`. -/
+theorem libraryExpansion_traegt_zertifikat {source : LibrarySource} {u : UProg}
+    {decl : TranslationDecl source u} {certificate : TranslationCertificate decl}
+    {payload : LibraryPayload certificate} (expansion : LibraryExpansion payload) :
+    payload.inhalt = certificate.output :=
+  payload.vollstaendig
 
-/-- Pre-expansion gate: admit only integer-row, call-free translators into the certificate path.
-    The export supplies the two evidence bits from the resolved declaration; products refuse
-    under the C01 name, callees under the C17 name. Kernel-checked certificate correctness stays
-    a separate proof, never a trusted flag. -/
-def torZurErweiterung (schemaOk ruffrei : Bool) : Except String Unit :=
-  if !schemaOk then .error produktZeilenVerweigert
-  else if !ruffrei then .error allgemeineAbbildungVerweigert
-  else .ok ()
+/-- Compile-time translation has no runtime side effect: the certified execution answers with the
+    same world it started in, for every oracle, pass count and loop budget. There is no hidden
+    runtime input, carrier, foreign, atomic or lock effect behind the payload. -/
+theorem translationCertificate_weltTreu {source : LibrarySource} {u : UProg}
+    {decl : TranslationDecl source u} (certificate : TranslationCertificate decl)
+    (oracle : Orakel (declOf u)) (passes : Nat) (world : World (declOf u)) :
+    ∃ output, rufAt decl.program oracle passes certificate.fuel decl.translator world
+      (decl.arguments certificate.input) = .ok world output :=
+  ⟨_, certificate.execution oracle passes world⟩
 
 /-!
-Open C02 boundaries: the export still refuses library bodies and source library calls
-(`elabKopf`, `uAnwReihe`, `uRestFehler`), so a `TranslationCertificate` with its
-`LibraryPayload` and `LibraryExpansion` alone cannot admit a runtime program. The G-level
-payload frame lemmas (immutable payload never overwritten, disjoint from writable regions),
-the C01 schema-to-row-value export, general C17 maps, the selected layout and image and the
-call/reason closure need their owners. No new language case is claimed complete by this
-module, and the Rust output-only scalar printer has not been promoted to an exact
-translation certificate.
+Open C02 boundaries: the export now runs the certified expansion (`exportLibraryUnit` in `elabU`:
+`library` bodies elaborate as ordinary functions, translators are consumed, calls expand), and the
+lemmas above carry the certified content through the expanded call as theorems. Still open, with
+their owners: the memory-level payload frame (immutable payload never overwritten, disjoint from
+writable regions -- needs C12 capabilities and the IR-03/06 payload spans), the C01
+schema-to-row-value export, general C17 maps, the selected layout and image, and the call/reason
+closure with C14/C08 and Stage 0. No new language case is claimed complete by this module, and the
+Rust output-only scalar printer has not been promoted to an exact translation certificate.
 -/
 
 #print axioms nutzlastZert_mem
