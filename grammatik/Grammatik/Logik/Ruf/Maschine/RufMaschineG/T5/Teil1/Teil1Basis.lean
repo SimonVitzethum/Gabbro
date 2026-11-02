@@ -10,10 +10,17 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- Continuing past an optional result keeps a clean continuation clean. -/
+theorem GRest.weiterOpt_sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') :
+    (GRest.weiterOpt (Λ := Λ) e k).sauber = k.sauber := by
+  cases e <;> simp only [GRest.weiterOpt, GRest.sauber] <;> rfl
+
 /-- Every rule keeps the invariant of the acting thread. The pops are the
     point: a verbatim pop resumes a caller that does not wait (`hnw`), so
     the resumed head is clean; a binding pop resumes the waiting caller's
     continuation as a clean `dann` residue. -/
+
 theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
     (h : RufFadenSauberG (M.faeden f)) : RufFadenSauberG (M'.faeden f) := by
@@ -66,7 +73,7 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
            · exact hst r hr)
   | g3 hs =>
     cases hs with
-    | rueckBind caller rst hpop _ _ _ _ _ restb k _ hcaller =>
+    | rueckBind _ _ caller rst hpop _ _ _ _ _ restb k _ hcaller =>
       obtain ⟨hc, hr⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       refine ⟨?_, hr⟩
@@ -131,12 +138,14 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
            · exact hst r hr)
   | g5 hs =>
     cases hs with
-    | rueckConsGrund _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ hcaller =>
+    | rueckConsGrund =>
+      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk hh hpop hΛ hfg hrho hs0 hrg
       obtain ⟨hc, hr⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       rw [hcaller] at hc
       exact ⟨by simpa [GRest.sauber, GRest.stapelSauber] using hc, hr⟩
-    | dannRetGrund _ _ _ _ _ _ caller rst hpop _ _ _ _ _ _ _ _ _ _ hcaller =>
+    | dannRetGrund =>
+      rename_i ρ caller rst l Γ Λ Λ' τ n err restb k ρc hcaller g rho s0 rg hn r hperm restk kk hh hpop hΛ hfg hrho hs0 hrg
       obtain ⟨hc, hr⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       rw [hcaller] at hc
@@ -147,7 +156,9 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
       simp only [GRest.sauber] at hk
       refine ⟨?_, ?_⟩
       · simp only [GRest.sauber]
-        try exact hk
+        first
+        | exact hk
+        | (rw [GRest.weiterOpt_sauber]; exact hk)
       · first
         | exact hst
         | (intro r hr
