@@ -123,44 +123,14 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernz
         exact hA.masken w hw f hf
   reset := fun g elem len harr => by
     have hT : tyR (D.gtyp g) = .arr elem len := harr
+    revert hT
     cases hτ : D.gtyp g with
-    | int lo hi =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | bool =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | opt n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | sum cs =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | why n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | never =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | fl _ =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | fnptr n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | ptr cap =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
-    | ref t =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
     | arr elem' len' =>
+      intro hT
       simp only [tyR] at hT
       cases hT
-      exact zeroAdmitting_tyR (hA.reset g elem' len' hτ)
-    | str n =>
-      simp only [tyR] at hT
-      exact Ty.noConfusion hT
+      exact zeroAdmitting_tyR (hA.reset g _ _ hτ)
+    | _ => intro hT; simp [tyR] at hT
 
   akku := Kernzelle.accumulatorAdmission_mitRuhe P hvoll hA.abg hA.akku
 

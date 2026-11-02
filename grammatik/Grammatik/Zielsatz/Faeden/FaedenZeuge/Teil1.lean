@@ -377,7 +377,7 @@ theorem zStart_akzeptiert :
 /-- (b): probe B's bodies, and the root's `requires true` at the declared memory. -/
 theorem zStart_nutzerPflicht : NutzerPflicht zStart :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
     ⟨fun _ => rfl, fun a ha => by
       simp only [zStart, List.nil_append, List.mem_singleton] at ha
       subst ha; rfl⟩⟩

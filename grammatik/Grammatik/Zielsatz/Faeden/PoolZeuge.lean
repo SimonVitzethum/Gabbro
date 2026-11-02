@@ -102,7 +102,7 @@ theorem zPool_vor_abgelehnt :
     obligation for both occurrences (`requires true`, lock invariant `true`). -/
 theorem zPool_nutzerPflicht : NutzerPflicht zPool :=
   ⟨⟨fun passes f => ⟨koerperGutS_alle zFs_voll (by decide) zPB_koerper passes f, zInvGutS f,
-      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr⟩,
+      zInvGutGrund f⟩, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩,
     ⟨fun _ => rfl, fun a ha => by
       simp only [zPool, List.append_nil, List.mem_cons, List.not_mem_nil, or_false] at ha
       rcases ha with rfl | rfl <;> rfl⟩⟩

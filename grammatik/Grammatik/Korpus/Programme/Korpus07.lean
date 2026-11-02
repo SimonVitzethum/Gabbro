@@ -160,7 +160,7 @@ def kE : Zielsatz.Einheit kD := ⟨kP, kSI, axWahr kD, [], kSp, [], []⟩
 /-- The VACUOUS premise group on the empty program -- honestly named, never
     `korpus07_nutzer`. -/
 theorem korpus07_nutzer_leer : Zielsatz.NutzerPflicht kE := by
-  refine ⟨⟨?_, ?_, axEnsLokal_wahr⟩, ⟨?_, ?_⟩⟩
+  refine ⟨⟨?_, ?_, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, ⟨?_, ?_⟩⟩
   · intro _ f
     exact (nomatch f)
   · intro _ _ _ _

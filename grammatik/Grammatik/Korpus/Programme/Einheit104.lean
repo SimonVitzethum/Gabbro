@@ -293,7 +293,7 @@ theorem nutzer4 : NutzerPflicht E4 where
         have h := r.isLt
         have h0 : D4.gruende f = 0 := sigGruende_null uExp104 (by decide) f
         omega⟩,
-    fun _ _ _ _ => rfl, axEnsLokal_wahr⟩
+    fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩
   start := ⟨fun _ => rfl, fun _ h => absurd h List.not_mem_nil⟩
 
 /-! ## 6. Witness data: the oracle and the arguments of `einzahlen(k, 0, 7)` -/

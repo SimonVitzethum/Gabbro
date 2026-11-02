@@ -148,8 +148,8 @@ theorem akteurSA_dannCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {
     (fun κ => umsig hg (evalArgs κ args κ ρ))
     (fun _ c hc => by
       rcases List.mem_append.mp hc with hc | hc
-      · exact expr_stabilX (hFS _) p hss.1 c hc
-      · exact args_stabilX (hFS _) args hss.2 c hc)
+      · exact expr_stabilX (hFS _) p hss.1.1.1 c hc
+      · exact args_stabilX (hFS _) args hss.1.1.2 c hc)
     (fun _ => vertrag_stabilX_ind (hFS _) hTV g hg hp (hkand g hg))
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
@@ -312,8 +312,8 @@ theorem akteurSA_rufCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {p
     (fun κ => umsig hg (evalArgs κ args κ ρ))
     (fun _ c hc => by
       rcases List.mem_append.mp hc with hc | hc
-      · exact expr_stabilX (hFS _) p hss.1 c hc
-      · exact args_stabilX (hFS _) args hss.2 c hc)
+      · exact expr_stabilX (hFS _) p hss.1.1.1 c hc
+      · exact args_stabilX (hFS _) args hss.1.1.2 c hc)
     (fun _ => vertrag_stabilX_ind (hFS _) hTV g hg hp (hkand g hg))
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _

@@ -131,7 +131,7 @@ theorem vz_huelle_schreibt :
   ⟨(huelleB_iff zFs_voll).mp (by decide), rfl, by decide⟩
 
 theorem vz_nutzer1 : NutzerTeil vzE vzE1 := by
-  refine ⟨⟨fun passes f hf => ?_, zS_lokal, axEnsLokal_wahr⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
+  refine ⟨⟨fun passes f hf => ?_, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
   · cases f <;> simp only [vzE, Bool.false_eq_true] at hf
     obtain ⟨k, i, g⟩ := zPool_nutzerPflicht.logik.1 passes zHaupt
     exact ⟨(koerper_mitRumpf2 zPB _ zPB.rumpf passes _ _ zHaupt rfl).mpr k,
@@ -141,7 +141,7 @@ theorem vz_nutzer1 : NutzerTeil vzE vzE1 := by
     rcases ha with rfl | rfl <;> rfl
 
 theorem vz_nutzer2 : NutzerTeil (fun f => !vzE f) vzE2 := by
-  refine ⟨⟨fun passes f _ => ?_, zS_lokal, axEnsLokal_wahr⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
+  refine ⟨⟨fun passes f _ => ?_, zS_lokal, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)⟩, ⟨fun _ => rfl, fun a ha => ?_⟩⟩
   · obtain ⟨k, i, g⟩ := zPool_nutzerPflicht.logik.1 passes f
     cases f
     · exact ⟨(koerper_mitRumpf2 zPB _ zPB.rumpf passes _ _ zEin rfl).mpr k,

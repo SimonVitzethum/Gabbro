@@ -116,6 +116,14 @@ theorem ensures_mitRuhe_orte (P : Programm D) (f : D.Fn) :
     (P.mitRuhe.ensures (some f)).orte = (P.ensures f).orte :=
   ((umΓ_orte _ _).trans (umΛ_orte _ _)).trans (ruE_orte _)
 
+theorem ptrPre_mitRuhe_orte (P : Programm D) (n : Nat) :
+    (P.mitRuhe.ptrVertrag (n + 1)).pre.orte = (P.ptrVertrag n).pre.orte :=
+  (umΛ_orte _ _).trans (ruE_orte _)
+
+theorem ptrPost_mitRuhe_orte (P : Programm D) (n : Nat) :
+    (P.mitRuhe.ptrVertrag (n + 1)).post.orte = (P.ptrVertrag n).post.orte :=
+  ((umΓ_orte _ _).trans (umΛ_orte _ _)).trans (ruE_orte _)
+
 theorem invariante_mitRuhe_orte (P : Programm D) (i : D.Inv) :
     (P.mitRuhe.invariante i).orte = (P.invariante i).orte :=
   (umΛ_orte _ _).trans (ruE_orte _)
@@ -178,7 +186,7 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       (orteP_nachΛ _ _ _).trans (kongr₂ (· ++ ·) (ruA_orte args)
         (kongr₂ (· ++ ·) (requires_mitRuhe_orte P g) (ensures_mitRuhe_orte P g)))
   | _, _, _, _, .callInd p args _ _ =>
-      (orteP_nachΛ _ _ _).trans (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args))
+      (orteP_nachΛ _ _ _).trans (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)) (ptrPre_mitRuhe_orte P _)) (ptrPost_mitRuhe_orte P _))
   | _, _, _, _, .locks _ _ body => ruB_orteP P body
   | _, _, _, _, .breaking _ body => ruB_orteP P body
   | _, _, _, _, .traverse _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
@@ -213,7 +221,7 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
         (kongr₂ (· ++ ·) (requires_mitRuhe_orte P g) (ensures_mitRuhe_orte P g)))
         ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
   | _, _, _, _, .bindCallInd p args _ _ _ rest =>
-      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args))
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)) (ptrPre_mitRuhe_orte P _)) (ptrPost_mitRuhe_orte P _))
         ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
   | _, _, _, _, .bindCallElse g args _ _ _ err rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args)
@@ -274,7 +282,7 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
         (ruEnd_orteP P rest)
   | _, _, _, .awaits g _ _ _ _ rest => congrArg (Sum.inr g :: ·) (ruEnd_orteP P rest)
   | _, _, _, .bindCallInd p args _ _ _ rest =>
-      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args))
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)) (ptrPre_mitRuhe_orte P _)) (ptrPost_mitRuhe_orte P _))
         ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
   | _, _, _, .narrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruEnd_orteP P rest)

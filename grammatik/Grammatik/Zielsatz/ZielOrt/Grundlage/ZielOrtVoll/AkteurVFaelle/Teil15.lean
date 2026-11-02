@@ -135,13 +135,13 @@ theorem akteurV_dannCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {p
   have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hss.1 h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hss.1.1.1 h) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
   obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
     (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
-      rw [evalArgs_gleichAuf args (fun _ h => hss.2 h) (hgσ.lese Λ Λ _ _) ρ])
+      rw [evalArgs_gleichAuf args (fun _ h => hss.1.1.2 h) (hgσ.lese Λ Λ _ _) ρ])
     ρ (.dann rest k) (fun hok => (okV_dann_cons hok).2.2)
     (fun O' R σ e hgσ h => by
       rw [semV_dann_cons]
@@ -288,13 +288,13 @@ theorem akteurV_rufCallInd {D : Deklaration} {P : Programm D} {O : Orakel D} {pa
   have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hss.1 h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hss.1.1.1 h) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
   obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
     (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
-      rw [evalArgs_gleichAuf args (fun _ h => hss.2 h) (hgσ.lese Λ Λ _ _) ρ])
+      rw [evalArgs_gleichAuf args (fun _ h => hss.1.1.2 h) (hgσ.lese Λ Λ _ _) ρ])
     ρ (.ende rest) (fun hok => (okV_ende_cons hok).2.2)
     (fun O' R σ e hgσ h => by
       rw [semV_ende_cons]

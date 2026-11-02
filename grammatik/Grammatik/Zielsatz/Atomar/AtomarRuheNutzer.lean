@@ -222,7 +222,7 @@ theorem logikPflichtA_mitRuhe {P : Programm D} {S : SperrInv D} {Q : AxEns D}
         invGutGrundA_ruhe P passes _ _ _⟩
     | some f => ⟨koerperGutSA_mitRuhe (h.1 passes f).1, invGutSA_mitRuhe (h.1 passes f).2.1,
         invGutGrundA_mitRuhe (h.1 passes f).2.2⟩,
-   sperrInvLokal_mitRuhe h.2.1, axEnsLokal_mitRuhe h.2.2⟩
+   sperrInvLokal_mitRuhe h.2.1, ⟨axEnsLokal_mitRuhe h.2.2.1, ptrVerfeinert_mitRuhe h.2.2.2⟩⟩
 
 #print axioms Gabbro.Grammatik.logikPflichtA_mitRuhe
 
