@@ -148,6 +148,7 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
       wideBinaryL_top (by simpa only [lowEnsAt, wideLtL] using h)
   | _, .le a b, d, c, top, h =>
       wideBinaryL_top (by simpa only [lowEnsAt, wideLeL] using h)
+  | _, .intBuiltin1 op a, d, c, top, h => BitBuiltin.unary_top op h
   | _, .intBuiltin2 op a b, d, c, top, h => intBuiltin2L_top op h
   | _, e@(.lit ..), d, c, top, h
   | _, e@(.tru ..), d, c, top, h
@@ -192,7 +193,6 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
   | _, e@(.strLt ..), d, c, top, h
   | _, e@(.strWeit ..), d, c, top, h
   | _, e@(.wenn ..), d, c, top, h
-  | _, e@(.intBuiltin1 ..), d, c, top, h
   | _, e@(.count ..), d, c, top, h
   | _, e@(.eng ..), d, c, top, h => by subst e; exact lowE_top (reserved := layout.ensReserved) _ d c top h
 

@@ -21,7 +21,7 @@
 
   C13 arithmetic shares complete-value wide kernels and masks wrapping results to the declared width.
   Count borrows and restores the ordinary quantifier binder slot. Scans, popcount, rotations and byte swaps
-  remain explicit refusals until their composition with the named Zahl functions is established.
+  compose the same wide kernels; their generic proofs identify the named Zahl functions.
 -/
 module
 public import Lean.Meta.Tactic.Simp.RegisterCommand
@@ -211,10 +211,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | _, _, .slotRef r t _ _ f _, d => do
     let cr ← lowE L (reserved := reserved) r (d + valueWords (D.typ t f)); slotValueC L t f d cr
   | _, _, .wenn c a b, d => wennL d (lowE L (reserved := reserved) c d) (lowE L (reserved := reserved) a d) (lowE L (reserved := reserved) b d)
-  -- Each refused family still needs composition with its named Zahl function.
-  | _, _, .intBuiltin1 op _, _ => match op with
-    | .clz _ | .ctz _ | .log2Floor _ | .popcount _ => none
-    | .bswap16 | .bswap32 | .bswap64 => none
+  | _, _, .intBuiltin1 op a, d => BitBuiltin.unary op (lowE L (reserved := reserved) a) d
   | _, _, .intBuiltin2 op a b, d => intBuiltin2L op d
       (lowE L (reserved := reserved) a) (lowE L (reserved := reserved) b)
   | _, _, .oldG .., _ | _, _, .oldS .., _ => none

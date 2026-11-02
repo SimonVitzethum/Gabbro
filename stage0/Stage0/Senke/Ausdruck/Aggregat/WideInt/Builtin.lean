@@ -2,6 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Mask
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Shift
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Sound
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -58,7 +59,7 @@ theorem intBuiltin2L_ok {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ)
     exact wideShl_ok (w + 1) inputBound shiftBound (by decide) (by decide) x y
       (iha d) (ihb _) emitted fits pre
   | addS lo hi => exact saturatingAddL_ok x y iha ihb h hK hp
-  | rotl w => simp only [intBuiltin2L] at h; cases h
-  | rotr w => simp only [intBuiltin2L] at h; cases h
+  | rotl w => exact BitBuiltin.rotate_ok false w x y iha ihb d c top h hK m pc hp
+  | rotr w => exact BitBuiltin.rotate_ok true w x y iha ihb d c top h hK m pc hp
 
 end Gabbro.Stage0.Senke

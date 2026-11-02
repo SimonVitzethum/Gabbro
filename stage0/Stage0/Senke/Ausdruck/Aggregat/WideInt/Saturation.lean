@@ -10,14 +10,6 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
 
-theorem intConstL_top {lo hi n : Int} {d top : Nat} {c : List II}
-    (h : intConstL lo hi n d = some (c, top)) : d < top := by
-  obtain ⟨rfl, rfl⟩ := Option.some.inj h
-  have size := constWords_span (integerEncoding (integerWords lo hi) n) d
-  have positive := integerWords_pos' lo hi
-  rw [integerEncoding_length] at size
-  omega
-
 theorem intConstL_ok {lo hi : Int} (v : Zahl lo hi)
     {fp pc : Runner.W} {K d top : Nat} {c : List II} {m : Runner.Mem}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}

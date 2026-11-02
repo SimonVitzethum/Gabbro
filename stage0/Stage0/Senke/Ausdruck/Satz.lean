@@ -451,7 +451,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     intBuiltin2L_ok op (eval σ₀ a σ ρ) (eval σ₀ b σ ρ)
       (fun q ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
       (fun q cb tb hb htb m pc hp => lowE_ok σ₀ σ hWL hLay b q cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .intBuiltin1 .., _, _, _, h, _, _, _, _, _
+  | _, _, .intBuiltin1 op a, d, c, top, h, hK, m, pc, ρ, hp =>
+    BitBuiltin.unary_ok op (eval σ₀ a σ ρ)
+      (fun q ca ta ha hta m pc hp => lowE_ok σ₀ σ hWL hLay a q ca ta ha hta m pc ρ hp)
+      d c top h hK m pc hp
   | _, _, .oldG .., _, _, _, h, _, _, _, _, _
   | _, _, .oldS .., _, _, _, h, _, _, _, _, _
     => by simp [lowE_eqs] at h

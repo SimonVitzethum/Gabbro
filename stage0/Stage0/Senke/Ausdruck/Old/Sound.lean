@@ -194,6 +194,10 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
     rw [pa, pb]
     simp only [wahr?]
     exact or_word _ _
+  | _, .intBuiltin1 op a, d, code, top, lower, fits, saved, before, m, pc, pre =>
+    BitBuiltin.unary_ok op (eval σ0 a σ ρ)
+      (fun q cc tt hc ht m pc hp => lowEnsAt_ok layout start σ0 σ hWL hLay full ρ paramsOfFull context
+        a q cc tt hc ht saved before m pc hp) d code top lower fits m pc pre
   | _, .intBuiltin2 op a b, d, code, top, lower, fits, saved, before, m, pc, pre =>
     intBuiltin2L_ok op (eval σ0 a σ ρ) (eval σ0 b σ ρ)
       (fa := lowEnsAt L layout start a)
@@ -248,7 +252,6 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
   | _, e@(.strLt ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.strWeit ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.wenn ..), d, code, top, lower, fits, saved, before, m, pc, pre
-  | _, e@(.intBuiltin1 ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.count ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.eng ..), d, code, top, lower, fits, saved, before, m, pc, pre => by
     subst e

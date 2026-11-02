@@ -78,6 +78,7 @@ def lowEnsAt (L : Lay D) (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : L
         (lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)
   | _, .and a b, d => do let ca ← lowEnsAt L layout start a d; let cb ← lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b (d+1); pure (bin2 8 d ca cb)
   | _, .or a b, d => do let ca ← lowEnsAt L layout start a d; let cb ← lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b (d+1); pure (bin2 9 d ca cb)
+  | _, .intBuiltin1 op a, d => BitBuiltin.unary op (lowEnsAt L layout start a) d
   | _, .intBuiltin2 op a b, d => intBuiltin2L op d
       (lowEnsAt L layout start a)
       (lowEnsAt L layout (start + EntrySnapshots.words (oldCells a)) b)

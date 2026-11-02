@@ -1,15 +1,11 @@
 /- C13 arithmetic code uses complete integer values and exact temporary intervals. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
+public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Code
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
-
-/-- Materialize an integer with the destination interval's complete representation. -/
-def intConstL (lo hi n : Int) (d : Nat) : Option (List II × Nat) :=
-  some (constWords (integerEncoding (integerWords lo hi) n) d)
 
 /-- The sum is computed at its exact interval, before any comparison or clamp.
     Negative ranges and sums needing an additional limb use the same wide kernels. -/
@@ -52,8 +48,7 @@ def wrappingShlL (w d : Nat) (fa fb : Nat → Option (List II × Nat)) : Option 
   let u := (2 : Int) ^ (w + 1) - 1
   wrapL w 0 (u * 2 ^ w) d (fun q => wideShlL 0 u 0 (w : Int) 0 (u * 2 ^ w) q fa fb)
 
-/-- One dispatch shared by ordinary and snapshot-aware expression lowering.
-    Rotates remain refused until their composition with Zahl.rotl/rotr is proved. -/
+/-- One dispatch shared by ordinary and snapshot-aware expression lowering. -/
 def intBuiltin2L {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (d : Nat)
     (fa fb : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
   match op with
@@ -62,7 +57,8 @@ def intBuiltin2L {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ) (d : Nat)
   | .mulW w => wrappingMulL w d fa fb
   | .shlW w => wrappingShlL w d fa fb
   | .addS lo hi => saturatingAddL lo hi d fa fb
-  | .rotl _ | .rotr _ => none
+  | .rotl w => BitBuiltin.rotate false w fa fb d
+  | .rotr w => BitBuiltin.rotate true w fa fb d
 
 theorem intBuiltin2L_top {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ)
     {d top : Nat} {c : List II} {fa fb : Nat → Option (List II × Nat)}
@@ -72,5 +68,6 @@ theorem intBuiltin2L_top {τ1 τ2 τ : Ty} (op : IntBuiltin [τ1, τ2] τ)
     | contradiction
     | exact wideEngL_top h
     | exact wideBinaryL_top h
+    | exact BitBuiltin.cast_top h
 
 end Gabbro.Stage0.Senke

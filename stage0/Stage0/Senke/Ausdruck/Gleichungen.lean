@@ -366,7 +366,8 @@ theorem lowE_literal_boundaries_zeuge :
       countL (frei Γ reserved) d n (lowE L (reserved := reserved) body (d + 3)) := rfl
 
 @[lowE_eqs] theorem lowE_intBuiltin1 (op : IntBuiltin [τ1] τ) (a : Expr D Γ Λ τ1) :
-    lowE L (reserved := reserved) (.intBuiltin1 op a) d = none := by cases op <;> rfl
+    lowE L (reserved := reserved) (.intBuiltin1 op a) d =
+      BitBuiltin.unary op (lowE L (reserved := reserved) a) d := rfl
 
 @[lowE_eqs] theorem lowE_intBuiltin2 (op : IntBuiltin [τ1, τ2] τ)
     (a : Expr D Γ Λ τ1) (b : Expr D Γ Λ τ2) :
