@@ -111,5 +111,7 @@ public import Stage0.Zeugen.Annahme.TestBuildWitness
 public import Stage0.Zeugen.Ablehnung.AlignmentWitness
 public import Stage0.Zeugen.Ablehnung.SectionWitness
 public import Stage0.Zeugen.Ablehnung.EntrustWitness
+public import Stage0.Senke.Gleit.Plan
+public import Stage0.Senke.Gleit.Add
 
 @[expose] public section
