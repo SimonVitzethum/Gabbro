@@ -112,7 +112,7 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retry _ bis body ueber => orteOk (D := D) bis.orte && g001 body && g001 ueber
   | .forever _ inv body => orteOk (D := D) inv.orte && g001 body
   | .axiomCall _ args _ _ _ _ _ => orteOk (D := D) args.orte
-  | .axiomCallElse _ args _ _ _ _ _ _ err =>
+  | .axiomCallElse _ _ args _ _ _ _ _ err =>
       orteOk (D := D) args.orte && g001End err
   | .regWrite _ _ e => orteOk (D := D) e.orte
   | .transition _ _ _ _ _ _ _ => true
@@ -138,8 +138,8 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001 rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001 rest
   | .regRead _ _ rest => g001 rest
   | .regReadElse _ _ zusage sonst rest =>
@@ -177,9 +177,9 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001End rest
   | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001End rest
-  | _, _, _, .bindAxiomOpt _ args _ _ _ _ _ rest =>
+  | _, _, _, .bindAxiomOpt _ _ args _ _ _ _ rest =>
       orteOk (D := D) args.orte && g001End rest
-  | _, _, _, .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | _, _, _, .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001End rest
   | _, _, _, .regRead _ _ rest => g001End rest
   | _, _, _, .regReadElse _ _ zusage sonst rest =>

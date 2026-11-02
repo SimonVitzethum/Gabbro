@@ -159,7 +159,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
       2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
   | .forever _ inv body => 2 + pa * (kostenBlock c pa body + kostenExpr inv + 2)
   | .axiomCall _ args _ _ _ _ _ => 1 + kostenArgs args
-  | .axiomCallElse _ args _ _ _ _ _ _ err => 1 + kostenArgs args + (kostenSonst c pa err + 2)
+  | .axiomCallElse _ _ args _ _ _ _ _ err => 1 + kostenArgs args + (kostenSonst c pa err + 2)
   | .regWrite _ _ e => 1 + kostenExpr e
   | .transition _ _ _ _ _ _ _ => 1
   | .publish _ e _ _ _ _ => 1 + kostenExpr e
@@ -185,8 +185,8 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
   | .regRead _ _ rest => 2 + kostenBlock c pa rest
   | .regReadElse _ _ zusage sonst rest =>
@@ -230,8 +230,8 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
   | .regRead _ _ rest => 5 + kostenSonst c pa rest
   | .regReadElse _ _ zusage sonst rest =>
@@ -265,8 +265,8 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
   | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
-  | .bindAxiomOpt _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
-  | .bindAxiomOptElse _ args _ _ _ _ _ _ err rest =>
+  | .bindAxiomOpt _ _ args _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
+  | .bindAxiomOptElse _ _ args _ _ _ _ _ err rest =>
       4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
   | .regRead _ _ rest => 2 + kostenSonst c pa rest
   | .regReadElse _ _ zusage sonst rest =>
