@@ -1,6 +1,6 @@
 module
 public import Grammatik.Bausteine.Arena.Ownership.Borrow
-public import Grammatik.Bausteine.Arena.Ownership.Witness
+public import Grammatik.Bausteine.Arena.Ownership.Witnesses.Witness
 @[expose] public section
 
 

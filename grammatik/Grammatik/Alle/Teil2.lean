@@ -58,7 +58,7 @@ public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreAbdeckung
 public import Grammatik.Bausteine.Arena.Struktur.Sperre.ArenaSperreMaschZeuge
 public import Grammatik.Bausteine.Schablonen.SchablonenStapel
 public import Grammatik.Bausteine.Arena.ArenaReset
-public import Grammatik.Bausteine.Arena.Ownership.Audit
+public import Grammatik.Bausteine.Arena.Ownership.Witnesses.Audit
 public import Grammatik.Kern.Syntax.Marken.Owner.Witness
 public import Grammatik.Kern.Syntax.Marken.Owner.ActivationWitness
 public import Grammatik.Kern.Syntax.Marken.Owner.Ledger
