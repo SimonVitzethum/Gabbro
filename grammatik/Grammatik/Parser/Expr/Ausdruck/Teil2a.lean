@@ -132,6 +132,18 @@ def parsePrimary (f : Nat) (toks : List Token) :
   | f + 1 => match toks with
     | .num v :: rest => .ok (.lit v, rest)
     | .text t :: rest => .ok (.ext .text [t] [], rest)
+    | .wort "exists" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseQuant f .any x rest
+      | none => .error "exists: binder expected"
+    | .wort "add" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldAdd x rest
+      | none => .error "fold: binder expected"
+    | .wort "min" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldMin x rest
+      | none => .error "fold: binder expected"
+    | .wort "max" :: t :: .wort "in" :: rest => match nameText t with
+      | some x => parseFold f .foldMax x rest
+      | none => .error "fold: binder expected"
     | .wort "count" :: t :: .wort "in" :: rest => match nameText t with
       | some x => parseQuant f .count x rest
       | none => .error "count without a name"
@@ -273,6 +285,27 @@ def parseArg (f : Nat) (toks : List Token) :
         | some label => (parseOr f rest).map (fun (value, remaining) => (.ext .label [label] [value], remaining))
         | none => parseOr f toks
       | _ => parseOr f toks
+/-- Fold operands retain their lexical scopes: the filter and value see the binder;
+    the empty value sees only the surrounding context. -/
+def parseFold (f : Nat) (kind : XKind) (binder : String) (tokens : List Token) :
+    Except String (SExpr × List Token) :=
+  match f with
+  | 0 => .error "fold: parser fuel exhausted"
+  | f + 1 => do
+    let ((domain, names, operands), rest) ← parseDomain f tokens
+    let (filter, rest) ← match rest with
+      | .wort "where" :: rest => parsePred f rest
+      | _ => pure (SExpr.tru, rest)
+    let .zeichen ":" :: rest := rest | throw "fold: colon expected"
+    let (value, rest) ← parseOr f rest
+    match rest with
+    | .wort "else" :: rest =>
+      if kind == .foldAdd then throw "fold add: else is not allowed"
+      let (empty, rest) ← parseOr f rest
+      pure (.ext kind (binder :: domain :: names) (operands ++ [filter, value, empty]), rest)
+    | _ =>
+      if kind != .foldAdd then throw "fold min/max: else is required"
+      pure (.ext kind (binder :: domain :: names) (operands ++ [filter, value]), rest)
 /-- `q x in D : pred` behind the `in` (for `forall`, `exists` and `count`): the layout of `ext`. -/
 def parseQuant (f : Nat) (k : XKind) (x : String) (toks : List Token) :
     Except String (SExpr × List Token) :=

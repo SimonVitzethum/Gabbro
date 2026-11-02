@@ -25,6 +25,8 @@ inductive XKind
   | all | any | count | mem | reach | imp | text | call
   /-- One labelled call argument: `names = [label]`, `subs = [value]`. -/
   | label
+  /-- Folds: binder/domain names; domain operands, filter, value, optional empty value. -/
+  | foldAdd | foldMin | foldMax
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool
