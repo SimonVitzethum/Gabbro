@@ -57,6 +57,7 @@ def itemMetadata : SItemTief → Bool
       flags.any (fun flag => flag != "pub" && flag != "export")
   | .constT _ ty _ => typeMetadata ty
   | .whyT .. => false
+  | .stateT .. => false
   | _ => true
 
 def metadataReason : SItemTief → String
@@ -139,5 +140,15 @@ theorem nested_duties_refused_zeuge :
     bodyMetadata 10000 (.grow "A" (.lit 1) body) = true ∧
     bodyMetadata 10000 (.bind false "value" (some (.wrap (.atom "bool"))) .tru) = true := by
   exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- C04 state transitions are bound by the exporter and the generic lowering. Every place resolves in the declaration scope (`uTransitionPlace`), every effect becomes an ordinary permission (`uEffekte`, pure/store conflict refused), atomic contracts are refused (`uTransitionAtomicFree`), aliasing needs agreement (`uTransitionDisjoint`), and every generated function is certified (`TransitionExpansion` via `lowerAllg_transition_certified`). A primitive edge keeps the constant `Stmt.shift` rule. -/
+theorem stateT_bound (n : String) (ts : List STrans) : itemMetadata (.stateT n ts) = false := by rfl
+
+set_option maxRecDepth 100000 in
+theorem stateT_zeuge :
+    let tr : STrans := ⟨"a", [(.variable "s", .variable "Idle", .variable "Busy")], none, []⟩
+    let body := SAnw.block [] (some (.ret (some (.lit 42))))
+    check [.stateT "S" [tr]] = .ok () ∧ check [.stateT "S" [tr], .fnT ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)]⟩ body] = .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" := by
+  exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata
