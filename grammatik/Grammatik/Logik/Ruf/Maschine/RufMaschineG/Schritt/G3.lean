@@ -441,7 +441,7 @@ inductive RufSchrittG3 (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, reasonTy (D.agruende a) :: Γ, nachSig D (D.asignatur a) Λ,
               (Env.cons (τ := reasonTy (D.agruende a)) r ρ),
-              .dann err.alsBlock.2 (.abbruch k)⟩⟩,
+              .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
 

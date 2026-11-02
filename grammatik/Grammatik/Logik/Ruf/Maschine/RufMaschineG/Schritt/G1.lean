@@ -376,7 +376,7 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
          M.lauf ++ rufEigenG f neu, M.start⟩
   | dannNarrowOk (M : RufMaschineG D) (f : Faden)
       (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (lo hi lo' hi' : Int)
-      (e : Expr D Γ Λ (τ))
+      (e : Expr D Γ Λ (.int lo hi))
       (sonst : Endblock D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
       (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (.int lo' hi' :: Γ)
         Λ Λ')

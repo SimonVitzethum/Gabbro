@@ -204,7 +204,8 @@ def groesseProg (P : Programm D) : Nat :=
     interface family over signature numbers is fixed input, as is `D`;
     an arbitrary function over `Nat` cannot be enumerated by a finite bucket. -/
 def progS (nb nc k : Nat)
-    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n)) :
+    (ptrs : ∀ n, CallContract D (D.sigNr n) := fun n => CallContract.trivial D (D.sigNr n))
+    (axs : ∀ a : D.Ax, CallContract D (D.asignatur a) := fun _ => callVertragWahr D _) :
     List (Programm D) :=
   (Sz.bind (hautS (fun _ _ => true) nb) fun h =>
     Sz.bind (piS (fun i => invS i nc) Aufz.inv) fun is =>
@@ -212,7 +213,7 @@ def progS (nb nc k : Nat)
         Sz.bind (piS (fun f => ensS f nc) Aufz.fn) fun es =>
           Sz.pure { invariante := fun i => is i (Aufz.inv_mem i), requires := fun f => rs f (Aufz.fn_mem f),
                     ensures := fun f => es f (Aufz.fn_mem f), rumpf := h.rumpf,
-                    unterbricht := h.unterbricht, ptrVertrag := ptrs }) k
+                    unterbricht := h.unterbricht, ptrVertrag := ptrs, axVertrag := axs }) k
 
 theorem le_summe {α : Type} {l : List α} {a : α} (f : α → Nat) (h : a ∈ l) : f a ≤ (l.map f).sum := by
   induction l with
@@ -234,7 +235,7 @@ theorem summe_add {α : Type} (l : List α) (f g : α → Nat) :
 theorem progS_vollst (nb nc : Nat) (P : Programm D) (hb : ∀ f, groesseEnd (P.rumpf f) ≤ nb)
     (hc : ∀ f, groesseExpr (P.requires f) ≤ nc ∧ groesseExpr (P.ensures f) ≤ nc)
     (hi : ∀ i, groesseExpr (P.invariante i) ≤ nc) (hu : groesseProg P < unendlich) :
-    P ∈ progS nb nc (groesseProg P) P.ptrVertrag := by
+    P ∈ progS nb nc (groesseProg P) P.ptrVertrag P.axVertrag := by
   have hH : groesseHaut P.haut ≤ groesseProg P := by unfold groesseProg; omega
   have hI : (Aufz.inv.map fun i => groesseExpr (P.invariante i)).sum ≤ groesseProg P := by
     unfold groesseProg; omega
@@ -272,7 +273,8 @@ theorem progS_vollst (nb nc : Nat) (P : Programm D) (hb : ∀ f, groesseEnd (P.r
           Sz.bind (piS (fun f => ensS f nc) Aufz.fn) fun es =>
             Sz.pure ({ invariante := fun i => is i (Aufz.inv_mem i), requires := fun f => rs f (Aufz.fn_mem f),
                        ensures := fun f => es f (Aufz.fn_mem f), rumpf := h.rumpf,
-                       unterbricht := h.unterbricht, ptrVertrag := P.ptrVertrag } : Programm D))
+                       unterbricht := h.unterbricht, ptrVertrag := P.ptrVertrag,
+                       axVertrag := P.axVertrag } : Programm D))
     hh (Sz.mem_bind his (Sz.mem_bind hreq (Sz.mem_bind hens (Sz.mem_pure _))))
   have hs : groesseProg P = groesseHaut P.haut + ((Aufz.inv.map fun i => groesseExpr (P.invariante i)).sum +
       (((Aufz.fn.map fun f => groesseExpr (P.requires f)).sum + ((Aufz.fn.map fun f => groesseExpr (P.ensures f)).sum +
