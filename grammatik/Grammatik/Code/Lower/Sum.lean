@@ -1,5 +1,6 @@
 module
 public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Syntax.Typen.Fall
 @[expose] public section
 
 
@@ -76,40 +77,40 @@ theorem payOff_bounds : ∀ (c : Option Gabbro.Grammatik.Ty) (z : Nutzlast D.Fn 
       omega
 
 /-- The word of a value of `sum cs`. -/
-def packZ {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) : Int :=
-  (v.1.val : Int) + (cs.length : Int) * payOff (cs.get v.1) v.2
+def packZ {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) : Int :=
+  (v.1.val : Int) + (cs.length : Int) * payOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2)
 
-theorem packZ_nonneg {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
+theorem packZ_nonneg {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) :
     0 ≤ packZ v := by
-  have h1 := (payOff_bounds _ v.2).1
+  have h1 := (payOff_bounds _ (Fall.toNutzlast _ _ _ _ v.2)).1
   have h2 : (0 : Int) ≤ (cs.length : Int) := Int.natCast_nonneg _
   have := Int.mul_nonneg h2 h1
   unfold packZ
   have := Int.natCast_nonneg v.1.val
   omega
 
-theorem packZ_lt {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
+theorem packZ_lt {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) :
     packZ v < sumTop cs := by
-  have hb := payOff_bounds _ v.2
+  have hb := payOff_bounds _ (Fall.toNutzlast _ _ _ _ v.2)
   have hs := spreadOf_le_max cs v.1
   have hL : (0 : Int) ≤ (cs.length : Int) := Int.natCast_nonneg _
   have hi : (v.1.val : Int) + 1 ≤ (cs.length : Int) := by exact_mod_cast v.1.isLt
-  have h3 : (cs.length : Int) * payOff (cs.get v.1) v.2 ≤ (cs.length : Int) * (spreadMax cs - 1) :=
+  have h3 : (cs.length : Int) * payOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2) ≤ (cs.length : Int) * (spreadMax cs - 1) :=
     Int.mul_le_mul_of_nonneg_left (by omega) hL
   have e : (cs.length : Int) * (spreadMax cs - 1) = (cs.length : Int) * spreadMax cs - cs.length := by
     rw [Int.mul_sub, Int.mul_one]
   unfold packZ sumTop
   omega
 
-theorem packZ_mod {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
+theorem packZ_mod {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) :
     packZ v % (cs.length : Int) = (v.1.val : Int) := by
   unfold packZ
   have hi : (v.1.val : Int) < (cs.length : Int) := by exact_mod_cast v.1.isLt
   rw [Int.add_mul_emod_self_left]
   exact Int.emod_eq_of_lt (Int.natCast_nonneg _) hi
 
-theorem packZ_div {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
-    packZ v / (cs.length : Int) = payOff (cs.get v.1) v.2 := by
+theorem packZ_div {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Fall D.Fn D.passt cs i) :
+    packZ v / (cs.length : Int) = payOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2) := by
   unfold packZ
   have hi : (v.1.val : Int) < (cs.length : Int) := by exact_mod_cast v.1.isLt
   have hpos : (0 : Int) < (cs.length : Int) := Int.lt_of_le_of_lt (Int.natCast_nonneg _) hi

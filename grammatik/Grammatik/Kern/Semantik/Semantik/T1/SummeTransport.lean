@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
 public import Grammatik.Kern.Syntax.Typen.Transport
+public import Grammatik.Kern.Syntax.Typen.Fall
 
 @[expose] public section
 
@@ -12,7 +13,7 @@ variable {D : Deklaration}
 /-- `summePasst` through its two digits. -/
 theorem summePasst_eq (cs : List (Option Ty)) (n : Int) (i : Fin cs.length) (p : Int)
     (hs : sumWort cs = true) (hi : n % fallZahl cs = (i.val : Int)) (hp : n / fallZahl cs = p) :
-    summePasst cs n = (nutzPasst (cs.get i) p).map fun x => ⟨i, x⟩ := by
+    summePasst cs n = (nutzPasst (cs.get i) p).map fun x => ⟨i, Fall.ofNutzlast _ _ _ _ x⟩ := by
   have hk : 0 < cs.length := Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
   unfold summePasst
   rw [if_pos hs, dif_pos hk]
@@ -74,19 +75,16 @@ theorem summePasst_relocate (cs : List (Option Ty)) (n : Int) :
       have hj : n % fallZahl (Ty.mapCases sn tn cs) = (j.val : Int) := by
         simpa only [fallZahl, Ty.mapCases_length] using hi
       rw [summePasst_eq _ n j _ hs' hj rfl, summePasst_eq cs n i _ hs hi rfl]
-      have payload := nutzPasst_cast (D' := D')
+      have payload₀ := nutzPasst_cast (D' := D')
         (Ty.mapCases_get sn tn cs i).symm (n / fallZahl cs)
-      rw [nutzPasst_relocate sn tn pointer] at payload
-      change ((nutzPasst (D := D') ((Ty.mapCases sn tn cs).get j)
-        (n / fallZahl (Ty.mapCases sn tn cs))).map (fun v => ⟨j, v⟩)) = _
       have radix : fallZahl (Ty.mapCases sn tn cs) = fallZahl cs := by
         simp only [fallZahl, Ty.mapCases_length]
-      rw [radix, payload]
-      cases nutzPasst (D := D) (cs.get i) (n / fallZahl cs) with
+      rw [radix, payload₀, nutzPasst_relocate sn tn pointer]
+      cases hn : nutzPasst (D := D) (cs.get i) (n / fallZahl cs) with
       | none => rfl
       | some v =>
-        simpa only [Option.map_some, Val.relocate] using
-          congrArg some (Val.relocateSum_mk sn tn pointer cs i v).symm
+        simp only [Option.map_some, Val.relocate]
+        exact (Val.relocateSum_mk sn tn pointer cs i v).symm
     · have hk' : ¬ 0 < (Ty.mapCases sn tn cs).length := by
         simpa only [Ty.mapCases_length] using hk
       simp only [summePasst, hs, hs', if_true, hk, hk', dif_neg, Option.map_none]
