@@ -43,7 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The current compiler retains the explicit refusal for this source form. -/
+/-- Placement requests exist in `Parser.Profil.Platzierung`; its policy and
+    layout correspondence are not connected to static elaboration or the Stage0 image. -/
 theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
 
 end Gabbro.Stage0.AlignmentWitness

@@ -43,7 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The current compiler retains the explicit refusal for this source form. -/
+/-- Selection exists in `Parser.Profil.Auswahl`, but Stage0 Prepared.unchanged
+    still requires the original tree; selected-source correctness is not connected. -/
 theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
 
 end Gabbro.Stage0.TestBuildWitness
