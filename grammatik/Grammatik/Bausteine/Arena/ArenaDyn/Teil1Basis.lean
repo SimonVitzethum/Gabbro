@@ -221,6 +221,4 @@ theorem dynGrowListe_zwilling :
     (dynGrowListe Az24 [8, 8]).isSome = true ∧ dynGrowListe Az16 [8, 8] = none :=
   ⟨rfl, rfl⟩
 
-/-! ### The dynamic arena AS A FORM (PLAN-DYNAMIC section 9, server lane 2026-09-28)
-
 end Gabbro.Grammatik.ArenaDyn

@@ -12,218 +12,218 @@ private theorem emptyResources (c : ConstProgram) (rs : List (Res c.D)) : rs = [
 mutual
 theorem constStmtB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (e : Stmt c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
-    (hacc : constStmtB c e = true) : ConstStmt c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .assignVar x e => by
+    (hacc : constStmtB c e = true) : ConstStmt c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, e, hΛ, hΛout, hacc with
+  | _, _, .assignVar x e, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constStmtB] at hacc
       exact .assignVar (constExprB_sound c e hacc)
-  | .ite condition yes no => by
+  | _, _, .ite condition yes no, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
       exact .ite (constExprB_sound c condition h0)
         (constBlockB_soundGen c yes rfl rfl h1) (constBlockB_soundGen c no rfl rfl h2)
-  | .onOption value present absent => by
+  | _, _, .onOption value present absent, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
       exact .onOption (constExprB_sound c value h0)
         (constBlockB_soundGen c present rfl rfl h1) (constBlockB_soundGen c absent rfl rfl h2)
-  | .onTag value arms => by
+  | _, _, .onTag value arms, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .onTag (constExprB_sound c value h0) (constArmsB_soundGen c arms rfl rfl h1)
-  | .onWhy reason arms => by
+  | _, _, .onWhy reason arms, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constStmtB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .onWhy (constExprB_sound c reason h0) (constReasonArmsB_soundGen c arms rfl rfl h1)
-  | .ret value hperm => by
+  | _, _, .ret value hperm, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constStmtB] at hacc
       exact .ret (constResultB_sound c value hacc)
-  | .call f args hp hr => by
+  | _, _, .call f args hp hr, hΛ, hΛout, hacc => by
       cases hΛ
       simp only [constStmtB] at hacc
       exact ConstStmt.call f args hp hr hΛout (constArgsB_sound c args hacc)
-  | .assignSlot .. => by
+  | _, _, .assignSlot .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .assignThru .. => by
+  | _, _, .assignThru .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .assignGlob .. => by
+  | _, _, .assignGlob .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .putBytes .. => by
+  | _, _, .putBytes .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .shift .. => by
+  | _, _, .shift .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .callInd .. => by
+  | _, _, .callInd .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .locks .. => by
+  | _, _, .locks .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .breaking .. => by
+  | _, _, .breaking .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .traverse .. => by
+  | _, _, .traverse .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .retry .. => by
+  | _, _, .retry .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .forever .. => by
+  | _, _, .forever .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .axiomCall .. => by
+  | _, _, .axiomCall .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .regWrite .. => by
+  | _, _, .regWrite .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .transition .. => by
+  | _, _, .transition .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .publish .. => by
+  | _, _, .publish .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .advances .. => by
+  | _, _, .advances .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .retires .. => by
+  | _, _, .retires .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .retWhy .. => by
+  | _, _, .retWhy .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .leave .. => by
+  | _, _, .leave .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .next .. => by
+  | _, _, .next .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .assignSlotRef .. => by
+  | _, _, .assignSlotRef .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .consumeTraverse .. => by
+  | _, _, .consumeTraverse .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .retScoped .. => by
+  | _, _, .retScoped .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
-  | .retWhyScoped .. => by
+  | _, _, .retWhyScoped .., hΛ, hΛout, hacc => by
       simp [constStmtB] at hacc
 theorem constBlockB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} (e : Block c.D V l Γ Λ Λout) (hΛ : Λ = []) (hΛout : Λout = [])
-    (hacc : constBlockB c e = true) : ConstBlock c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .nil => by
+    (hacc : constBlockB c e = true) : ConstBlock c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, e, hΛ, hΛout, hacc with
+  | _, _, .nil, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       exact .nil
-  | .cons stmt rest => by
+  | _, _, .cons stmt rest, hΛ, hΛout, hacc => by
       rename_i mid
       have hmid : mid = [] := emptyResources c mid
       cases hΛ; cases hmid; cases hΛout
       simp only [constBlockB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .cons (constStmtB_soundGen c stmt rfl rfl h0) (constBlockB_soundGen c rest rfl rfl h1)
-  | .bind value rest => by
+  | _, _, .bind value rest, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       simp only [constBlockB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .bind (constExprB_sound c value h0) (constBlockB_soundGen c rest rfl rfl h1)
-  | .bindCall f args he hp hr rest => by
+  | _, _, .bindCall f args he hp hr rest, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       have hcall : nach c.D f [] = [] := emptyResources c _
       simp only [constBlockB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact ConstBlock.bindCall f args he hp hr hcall rest
         (constArgsB_sound c args h0) (constBlockB_soundGen c rest hcall rfl h1)
-  | .bindCallInd .. => by
+  | _, _, .bindCallInd .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .bindCallElse .. => by
+  | _, _, .bindCallElse .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .bindAxiom .. => by
+  | _, _, .bindAxiom .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .bindAxiomElse .. => by
+  | _, _, .bindAxiomElse .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .regRead .. => by
+  | _, _, .regRead .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .regReadElse .. => by
+  | _, _, .regReadElse .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .awaits .. => by
+  | _, _, .awaits .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .exchange .. => by
+  | _, _, .exchange .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .narrow .. => by
+  | _, _, .narrow .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .narrowRequired .. => by
+  | _, _, .narrowRequired .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .check .. => by
+  | _, _, .check .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .float .. => by
+  | _, _, .float .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .floatLit .. => by
+  | _, _, .floatLit .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .floatOf .. => by
+  | _, _, .floatOf .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
-  | .floatNarrow .. => by
+  | _, _, .floatNarrow .., hΛ, hΛout, hacc => by
       simp [constBlockB] at hacc
 theorem constEndB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res c.D)} (e : Endblock c.D V l Γ Λ) (hΛ : Λ = [])
-    (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) := by
-  match e with
-  | .ret value hperm => by
+    (hacc : constEndB c e = true) : ConstEnd c (hΛ ▸ e) :=
+  match Λ, e, hΛ, hacc with
+  | _, .ret value hperm, hΛ, hacc => by
       cases hΛ
       simp only [constEndB] at hacc
       exact .ret (constResultB_sound c value hacc)
-  | .cons stmt rest => by
+  | _, .cons stmt rest, hΛ, hacc => by
       rename_i mid
       have hmid : mid = [] := emptyResources c mid
       cases hΛ; cases hmid
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .cons (constStmtB_soundGen c stmt rfl rfl h0) (constEndB_soundGen c rest rfl h1)
-  | .bind value rest => by
+  | _, .bind value rest, hΛ, hacc => by
       cases hΛ
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact .bind (constExprB_sound c value h0) (constEndB_soundGen c rest rfl h1)
-  | .ite condition yes no => by
+  | _, .ite condition yes no, hΛ, hacc => by
       cases hΛ
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨⟨h0, h1⟩, h2⟩ := hacc
       exact .ite (constExprB_sound c condition h0)
         (constEndB_soundGen c yes rfl h1) (constEndB_soundGen c no rfl h2)
-  | .bindCall f args he hp hr rest => by
+  | _, .bindCall f args he hp hr rest, hΛ, hacc => by
       cases hΛ
       have hcall : nach c.D f [] = [] := emptyResources c _
       simp only [constEndB, Bool.and_eq_true] at hacc
       obtain ⟨h0, h1⟩ := hacc
       exact ConstEnd.bindCall f args he hp hr hcall rest
         (constArgsB_sound c args h0) (constEndB_soundGen c rest hcall h1)
-  | .retWhy .. => by
+  | _, .retWhy .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .leave .. => by
+  | _, .leave .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .next .. => by
+  | _, .next .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .narrowRequired .. => by
+  | _, .narrowRequired .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .retScoped .. => by
+  | _, .retScoped .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .retWhyScoped .. => by
+  | _, .retWhyScoped .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .bindCallElse .. => by
+  | _, .bindCallElse .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .bindAxiom .. => by
+  | _, .bindAxiom .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .bindAxiomElse .. => by
+  | _, .bindAxiomElse .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .regRead .. => by
+  | _, .regRead .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .regReadElse .. => by
+  | _, .regReadElse .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .awaits .. => by
+  | _, .awaits .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .bindCallInd .. => by
+  | _, .bindCallInd .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .narrow .. => by
+  | _, .narrow .., hΛ, hacc => by
       simp [constEndB] at hacc
-  | .exchange .. => by
+  | _, .exchange .., hΛ, hacc => by
       simp [constEndB] at hacc
 theorem constArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} (e : Arms c.D V l Γ Λ Λout cs)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constArmsB c e = true) :
-    ConstArms c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .nil => by
+    ConstArms c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, cs, e, hΛ, hΛout, hacc with
+  | _, _, _, .nil, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       exact .nil
-  | .cons body rest => by
+  | _, _, _, .cons body rest, hΛ, hΛout, hacc => by
       rename_i mid
       have hmid : mid = [] := emptyResources c mid
       cases hΛ; cases hmid; cases hΛout
@@ -233,12 +233,12 @@ theorem constArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ 
 theorem constReasonArmsB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {Λ Λout : List (Res c.D)} {n : Nat} (e : GrundArms c.D V l Γ Λ Λout n)
     (hΛ : Λ = []) (hΛout : Λout = []) (hacc : constReasonArmsB c e = true) :
-    ConstReasonArms c (hΛout ▸ hΛ ▸ e) := by
-  match e with
-  | .nil => by
+    ConstReasonArms c (hΛout ▸ hΛ ▸ e) :=
+  match Λ, Λout, n, e, hΛ, hΛout, hacc with
+  | _, _, _, .nil, hΛ, hΛout, hacc => by
       cases hΛ; cases hΛout
       exact .nil
-  | .cons body rest => by
+  | _, _, _, .cons body rest, hΛ, hΛout, hacc => by
       rename_i mid
       have hmid : mid = [] := emptyResources c mid
       cases hΛ; cases hmid; cases hΛout
