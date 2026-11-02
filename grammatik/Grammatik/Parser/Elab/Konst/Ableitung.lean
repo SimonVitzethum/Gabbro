@@ -1,70 +1,23 @@
 module
 
-public import Grammatik.Kern.Syntax.Konst.Rein
-public import Grammatik.Parser.Item.ElementTief.Kopf.Teil2
+public import Grammatik.Parser.Elab.Konst.Dispatch
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser
 
-/-- Local names retain their mutability and exact typed context position. -/
-abbrev ConstLocals (Γ : Ctx) := List (String × Bool × (Sigma fun τ => Var Γ τ))
+/-- Arguments retain source order and their exact canonical parameter types. -/
+inductive ConstSourceArgs (c : ConstProgram) (locals : ConstLocals Γ) :
+    List SExpr → {ts : List Ty} → Args c.D Γ [] ts → Prop where
+  | empty : ConstSourceArgs c locals [] .nil
+  | cons : ConstSourceExpr c locals source e → ConstSourceArgs c locals sources args →
+      ConstSourceArgs c locals (source :: sources) (.cons e args)
 
-/-- Structural expression provenance. No arbitrary pure-expression escape rule. -/
-inductive ConstSourceExpr (c : ConstProgram) (locals : ConstLocals Γ) :
-    SExpr → {τ : Ty} → Expr c.D Γ [] τ → Prop where
-  | lit (n : Nat) : ConstSourceExpr c locals (.lit n) (.lit (Int.ofNat n))
-  | tru : ConstSourceExpr c locals .tru .tru
-  | fls : ConstSourceExpr c locals .fls .fls
-  | variable (found : (name, mutable, ⟨τ, x⟩) ∈ locals) :
-      ConstSourceExpr c locals (.variable name) (.var x)
-  | neg : ConstSourceExpr c locals source e →
-      ConstSourceExpr c locals (.un "-" source) (.neg e)
-  | boolNot : ConstSourceExpr c locals source e →
-      ConstSourceExpr c locals (.un "!" source) (.not e)
-  | add : ConstSourceExpr c locals sa a → ConstSourceExpr c locals sb b →
-      ConstSourceExpr c locals (.bin "+" sa sb) (.add a b)
-  | sub : ConstSourceExpr c locals sa a → ConstSourceExpr c locals sb b →
-      ConstSourceExpr c locals (.bin "-" sa sb) (.sub a b)
-  | mul : ConstSourceExpr c locals sa a → ConstSourceExpr c locals sb b →
-      ConstSourceExpr c locals (.bin "*" sa sb) (.mul a b)
-  | boolAnd : ConstSourceExpr c locals sa a → ConstSourceExpr c locals sb b →
-      ConstSourceExpr c locals (.bin "&&" sa sb) (.and a b)
-  | boolOr : ConstSourceExpr c locals sa a → ConstSourceExpr c locals sb b →
-      ConstSourceExpr c locals (.bin "||" sa sb) (.or a b)
-
- theorem ConstSourceExpr.rein (h : ConstSourceExpr c locals source e) : ConstExpr c e := by
+ theorem ConstSourceArgs.rein (h : ConstSourceArgs c locals sources args) :
+    ConstArgs c args := by
   induction h with
-  | lit => exact .pureLit
-  | tru => exact .pureTru
-  | fls => exact .pureFls
-  | variable => exact .pureVar
-  | neg _ ih => exact .pureNeg ih
-  | boolNot _ ih => exact .pureNot ih
-  | add _ _ ha hb => exact .pureAdd ha hb
-  | sub _ _ ha hb => exact .pureSub ha hb
-  | mul _ _ ha hb => exact .pureMul ha hb
-  | boolAnd _ _ ha hb => exact .pureAnd ha hb
-  | boolOr _ _ ha hb => exact .pureOr ha hb
-
-/-- Return values preserve absence as well as presence of a source operand. -/
-inductive ConstSourceResult (c : ConstProgram) (locals : ConstLocals Γ) :
-    Option SExpr → {τ : Option Ty} → ErgExpr c.D Γ [] τ → Prop where
-  | empty : ConstSourceResult c locals none .empty
-  | val : ConstSourceExpr c locals source e →
-      ConstSourceResult c locals (some source) (.val e)
-
- theorem ConstSourceResult.rein (h : ConstSourceResult c locals source value) :
-    ConstResult c value := by
-  cases h with
-  | empty => exact .empty
-  | val h => exact .val h.rein
-
-/-- Extend lexical scope, preserving the positions of all outer locals. -/
-def ConstLocals.extend (locals : ConstLocals Γ) (name : String) (mutable : Bool)
-    (τ : Ty) : ConstLocals (τ :: Γ) :=
-  (name, mutable, ⟨τ, .here⟩) :: locals.map (fun (n, m, ⟨t, x⟩) =>
-    (n, m, ⟨t, .there x⟩))
+  | empty => exact .nil
+  | cons v _ ih => exact .cons v.rein ih
 
 /-- End-block provenance for returns and ordered mutable-local assignments.
     Unsupported forms have no derivation. -/
@@ -95,6 +48,19 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
       (yesProof : ConstSourceEnd c locals yes yesBody)
       (noProof : ConstSourceEnd c locals no noBody) :
       ConstSourceEnd c locals (.cond source yes [] (some no)) (.ite test yesBody noBody)
+  | dispatch (value : ConstSourceExpr c locals source e)
+      (arms : ConstSourceTagArms c locals sources branches)
+      (tail : ConstSourceEnd c locals (.block rest ending) body) :
+      ConstSourceEnd c locals (.block (.cases source sources :: rest) ending)
+        (.cons (.onTag e branches) body)
+  | call (scope : ConstScope c.D)
+      (resolved : (name, c.sourceId f) ∈ scope.declarations)
+      (arguments : ConstSourceArgs c locals sources args)
+      (hp : RufPasst c.D V (c.D.signatur f) []) (hr : c.D.gruende f = 0)
+      (resourceEq : nach c.D f [] = [])
+      (tail : ConstSourceEnd c locals (.block rest ending) body) :
+      ConstSourceEnd c locals (.block (.call name sources :: rest) ending)
+        (.cons (resourceEq ▸ Stmt.call c.D V f args hp hr) body)
 
  theorem ConstSourceEnd.rein (h : ConstSourceEnd c locals source body) :
     ConstEnd c body := by
@@ -105,6 +71,9 @@ inductive ConstSourceEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} �
   | bind value _ ih => exact .bind value.rein ih
   | condChain condition _ _ hy hn => exact .ite condition.rein hy hn
   | cond condition _ _ hy hn => exact .ite condition.rein hy hn
+  | dispatch v a _ ih => exact .cons (.onTag v.rein a.rein) ih
+  | call _ _ arguments hp hr resourceEq _ ih =>
+      exact .cons (.call _ _ hp hr resourceEq arguments.rein) ih
 
 /-- First source-signature slice: closed Boolean functions with absent clauses.
     More signatures require explicit typed parameter and clause derivations. -/

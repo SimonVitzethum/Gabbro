@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Konst.Ableitung
+public import Grammatik.Parser.Elab.Konst.Basis
 
 @[expose] public section
 

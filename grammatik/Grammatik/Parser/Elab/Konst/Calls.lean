@@ -1,23 +1,10 @@
 module
 
-public import Grammatik.Parser.Elab.Konst.Dispatch
+public import Grammatik.Parser.Elab.Konst.Ableitung
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser
-
-/-- Arguments retain source order and their exact canonical parameter types. -/
-inductive ConstSourceArgs (c : ConstProgram) (locals : ConstLocals Γ) :
-    List SExpr → {ts : List Ty} → Args c.D Γ [] ts → Prop where
-  | empty : ConstSourceArgs c locals [] .nil
-  | cons : ConstSourceExpr c locals source e → ConstSourceArgs c locals sources args →
-      ConstSourceArgs c locals (source :: sources) (.cons e args)
-
- theorem ConstSourceArgs.rein (h : ConstSourceArgs c locals sources args) :
-    ConstArgs c args := by
-  induction h with
-  | empty => exact .nil
-  | cons v _ ih => exact .cons v.rein ih
 
 /-- A direct call requires both resolved scope membership and source provenance. -/
 structure ConstSourceCallee (items : List SItemTief) (c : ConstProgram)
