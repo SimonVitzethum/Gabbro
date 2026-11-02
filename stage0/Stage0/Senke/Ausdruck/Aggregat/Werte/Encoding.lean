@@ -129,6 +129,19 @@ def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
   | .arr τ _, v => ∀ i, ValueValid L τ (v i)
   | _, _ => True
 
+/-- Representation obligations for each field in declaration order. -/
+def ProdValid (L : Lay D) : (fs : List Ty) → ProdVal D.Fn D.passt fs → Prop
+  | [], _ => True
+  | τ :: rest, v => ValueValid L τ (ProdVal.hd v) ∧ ProdValid L rest (ProdVal.tl v)
+
+/-- A typed field projects its representation obligations. -/
+theorem ProdValid.field {L : Lay D} {fs : List Ty} {σ : Ty}
+    (i : FieldAt fs σ) (v : ProdVal D.Fn D.passt fs)
+    (valid : ProdValid L fs v) : ValueValid L σ (prodGetW i v) := by
+  induction i generalizing v with
+  | head => exact valid.1
+  | tail i ih => exact ih (ProdVal.tl v) valid.2
+
 /-- The memory relation for a complete value span, including all nested elements
     and all validity obligations. It never certifies merely the low limb. -/
 def ValueAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) (base : Nat)
