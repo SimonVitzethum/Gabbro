@@ -38,16 +38,24 @@ theorem alignUp_dvd (a n : Nat) (hn : 0 < n) : n ∣ alignUp a n := by
     rw [Nat.mul_succ]
     omega
 
-/-- Round a requested alignment up to the storage word grid. -/
-def wordAlign (n : Nat) : Nat := 8 * ((n + 7) / 8)
+/-- The common grid preserves both declared and storage alignment. -/
+def wordAlign (n : Nat) : Nat := Nat.lcm 8 n
 
-/-- Relative padding preserves the common word grid, including zero alignment. -/
 theorem alignUp_word_grid (off n : Nat) (h : 8 ∣ off) :
     8 ∣ alignUp off (wordAlign n) := by
   by_cases hz : wordAlign n = 0
   · simpa [hz] using h
-  · obtain ⟨k, hk⟩ := alignUp_dvd off (wordAlign n) (by omega)
-    refine ⟨((n + 7) / 8) * k, ?_⟩
-    simpa [wordAlign, Nat.mul_assoc] using hk
+  · exact Nat.dvd_trans (Nat.dvd_lcm_left 8 n)
+      (alignUp_dvd off (wordAlign n) (by omega))
+
+/-- A grid-aligned base and a produced relative offset meet both alignments. -/
+theorem aligned_abs (b off N : Nat) (hN : 0 < N)
+    (h : Nat.lcm 8 N ∣ b) :
+    N ∣ b + alignUp off (wordAlign N) ∧
+      8 ∣ b + alignUp off (wordAlign N) := by
+  have grid := alignUp_dvd off (wordAlign N) (Nat.lcm_pos (by decide) hN)
+  have total := Nat.dvd_add h grid
+  exact ⟨Nat.dvd_trans (Nat.dvd_lcm_right 8 N) total,
+    Nat.dvd_trans (Nat.dvd_lcm_left 8 N) total⟩
 
 end Gabbro.Stage0.Senke
