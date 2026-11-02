@@ -176,6 +176,113 @@ theorem traverseLauf_ru {τ : Ty}
         | logik => rfl
         | hardware => rfl
 
+/-- A consuming run behaves as translated: selection, measure and
+    invariant transport worlds (`hsel`, `hm`, `hi`), the body by `hs`.
+    By induction on the fuel; every failing check is `.logik .schleife`,
+    which `ausR` keeps. -/
+theorem verbrauchLauf_ru (t : D.Tab)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (schritt' : World D.mitRuhe →
+      Env D.mitRuhe (tyR (.index (D.count t)) :: Γ.map tyR) →
+      Ausgang (vertragR V) true (tyR (.index (D.count t)) :: Γ.map tyR))
+    (inv : World D → Env D Γ → World D × Bool)
+    (inv' : World D.mitRuhe → Env D.mitRuhe (Γ.map tyR) →
+      World D.mitRuhe × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (sel' : World D.mitRuhe → Env D.mitRuhe (Γ.map tyR) →
+      World D.mitRuhe × Option (Wert D.mitRuhe (tyR (.index (D.count t)))) × Bool)
+    (massW : World D → Env D Γ → World D × Int)
+    (massW' : World D.mitRuhe → Env D.mitRuhe (Γ.map tyR) →
+      World D.mitRuhe × Int)
+    (bound : Int)
+    (hs : ∀ σ ρ, schritt' (worldR σ) (envR ρ) = ausR (schritt σ ρ))
+    (hi : ∀ σ ρ, inv' (worldR σ) (envR ρ) =
+      (worldR (inv σ ρ).1, (inv σ ρ).2))
+    (hsel : ∀ σ ρ, sel' (worldR σ) (envR ρ) =
+      (worldR (sel σ ρ).1, ((sel σ ρ).2.1).map (valR _), (sel σ ρ).2.2))
+    (hm : ∀ σ ρ, massW' (worldR σ) (envR ρ) =
+      (worldR (massW σ ρ).1, (massW σ ρ).2)) :
+    ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ),
+      verbrauchLauf (l := l) t schritt' inv' sel' massW' bound fuel
+        (worldR σ) (envR ρ) =
+        ausR (verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ)
+  | 0, σ, ρ => by
+      simp only [verbrauchLauf, ausR, logikR]
+  | n + 1, σ, ρ => by
+      simp only [verbrauchLauf, hi]
+      by_cases hc : (inv σ ρ).2 = false
+      · simp only [hc, if_true, ausR, logikR]
+      · simp only [hc, if_false]
+        have hselc := hsel (inv σ ρ).1 ρ
+        generalize hgen : sel (inv σ ρ).1 ρ = sw at hselc ⊢
+        obtain ⟨σr, w, b⟩ := sw
+        rw [hselc]
+        cases w with
+        | none =>
+            simp only [Option.map_none]
+            cases b with
+            | false => simp only [ausR]
+            | true => simp only [ausR, logikR]
+        | some v =>
+            simp only [Option.map_some]
+            have hmc := hm σr ρ
+            generalize hgm : massW σr ρ = mw at hmc ⊢
+            obtain ⟨σm, m⟩ := mw
+            rw [hmc]
+            simp only []
+            have e := hs σm (Env.cons v ρ)
+            change schritt' (worldR σm) (Env.cons (valR _ v) (envR ρ)) = _ at e
+            rw [e]
+            cases schritt σm (Env.cons v ρ) with
+            | ok σ' ρ' =>
+                simp only [ausR, envR_tail]
+                have hmc' := hm σ' ρ'.tail
+                generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                obtain ⟨σm', m'⟩ := mw'
+                rw [hmc']
+                simp only []
+                by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+                · simp only [hfall, if_true]
+                  exact verbrauchLauf_ru t schritt schritt' inv inv' sel sel'
+                    massW massW' bound hs hi hsel hm n σm' ρ'.tail
+                · simp only [hfall, if_false, ausR, logikR]
+            | next h σ' ρ' =>
+                simp only [ausR, envR_tail]
+                have hmc' := hm σ' ρ'.tail
+                generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                obtain ⟨σm', m'⟩ := mw'
+                rw [hmc']
+                simp only []
+                by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+                · simp only [hfall, if_true]
+                  exact verbrauchLauf_ru t schritt schritt' inv inv' sel sel'
+                    massW massW' bound hs hi hsel hm n σm' ρ'.tail
+                · simp only [hfall, if_false, ausR, logikR]
+            | leave h σ' ρ' =>
+                simp only [ausR, envR_tail]
+                have hmc' := hm σ' ρ'.tail
+                generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                obtain ⟨σm', m'⟩ := mw'
+                rw [hmc']
+                simp only []
+                by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+                · simp only [hfall, if_true]
+                  by_cases hc' : (inv σm' ρ'.tail).2 = true
+                  · simp only [hc', if_true]
+                    rfl
+                  · have hcf : (inv σm' ρ'.tail).2 = false := by
+                      cases h' : (inv σm' ρ'.tail).2 with
+                      | false => rfl
+                      | true => exact absurd h' hc'
+                    simp only [hcf, if_false, ausR, logikR]
+                · simp only [hfall, if_false, ausR, logikR]
+            | zurueck => rfl
+            | why => rfl
+            | logik => rfl
+            | hardware => rfl
+
 theorem retryLauf_ru
     (schritt : World D → Env D Γ → Ausgang V true Γ)
     (schritt' : World D.mitRuhe → Env D.mitRuhe (Γ.map tyR) → Ausgang (vertragR V) true (Γ.map tyR))
