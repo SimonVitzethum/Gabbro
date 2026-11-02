@@ -299,6 +299,11 @@ def GEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .traverse .. => true
   | .retry .. => true
   | .forever .. => true
+  /-- C11 consuming traversal has no unfold step yet: no `GRest` selection
+      continuation is proved, so the machine refuses it here. The sequential
+      `execStmt` placeholder runs it as a fixed sweep; export refuses the
+      source form until the current-state selector bridge lands. -/
+  | .consumeTraverse .. => false
   | _ => false
 
 /-- The end-block formers that the machine unfolds into block position (`endeForm`): the

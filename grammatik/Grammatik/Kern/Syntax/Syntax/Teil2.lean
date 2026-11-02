@@ -238,6 +238,20 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlotRef (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t) (ho : D.offen t = true)
       (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) :
       Stmt l Γ Λ Λ
+  /-- `traverse ... by consuming` (C11): consuming loop over the finite domain
+      of `t` with current-state selection. `member` tests membership of a
+      represented index in the CURRENT world, `edge` the declared edge relation
+      between two represented indices, `inv` the loop invariant, `mass` the
+      strictly falling measure over `0 .. bound`, and `body` the pass over the
+      selected index; the body's declared `touches ... consumes` performs the
+      actual removal. Re-selection runs in the post-body world; empty selection
+      terminates only by selector completeness (minimality/decrease proof open). -/
+  | consumeTraverse (t : D.Tab)
+      (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+      (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+      (inv : Expr D Γ Λ .bool) (bound : Int)
+      (mass : Expr D Γ Λ (.int 0 bound))
+      (body : Block true (.index (D.count t) :: Γ) Λ Λ) : Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ

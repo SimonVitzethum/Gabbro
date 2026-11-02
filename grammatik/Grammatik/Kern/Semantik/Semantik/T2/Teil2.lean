@@ -75,6 +75,14 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       traverseLauf (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (alleIndizes (D.count t)) σ ρ
+  /-- C11 consuming traversal, sequential placeholder: runs the body as a
+      fixed sweep like `traverse` over the initial index list. Current-state
+      re-selection, minimal selection, strict measure fall and removal
+      (Isabelle/Consuming bridge) are OPEN and stay refused at export. -/
+  | .consumeTraverse t _ _ inv _ _ body, σ, ρ =>
+      traverseLauf (fun σ ρ => execBlock body σ ρ)
+        (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
+        (alleIndizes (D.count t)) σ ρ
   | .retry n bis body ueberlauf, σ, ρ =>
       retryLauf (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ bis.orte; (σ, wahr? (eval σ bis σ ρ)))
