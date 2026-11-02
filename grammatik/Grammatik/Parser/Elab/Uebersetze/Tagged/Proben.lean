@@ -221,6 +221,11 @@ theorem lower_bool_zeuge :
     (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 1 (some (.truth true))) with
       | .ok _ => true | .error _ => false) = true := by decide
 
+theorem lower_bool_variable_zeuge :
+    (match lowSVal unit [.bool] [] { scope with params := [("flag", .bool)], kinds := [.bool] }
+      0 0 (by decide) (.fall 1 (some (.param "flag"))) with
+      | .ok _ => true | .error _ => false) = true := by decide
+
 theorem lower_scalar_zeuge :
     (match lowSVal unit [] [] scope 0 0 (by decide) (.fall 2 (some (.lit 37))) with
       | .ok _ => true | .error _ => false) = true := by decide

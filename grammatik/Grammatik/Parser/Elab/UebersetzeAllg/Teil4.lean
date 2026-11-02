@@ -16,7 +16,7 @@ def lowGlobWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (p : String)
   | .error _ => none
   | .ok g =>
     match (globAt u g).ty with
-    | .int .. | .bool => none
+    | .int .. => none
     | _ =>
       some (if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then
         .ok ⟨(declOf u).gtyp g, Expr.glob (D := declOf u) g hd⟩

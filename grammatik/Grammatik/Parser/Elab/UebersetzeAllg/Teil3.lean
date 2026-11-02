@@ -437,6 +437,12 @@ def lowParamWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) 
           | .error error => .error error
           | .ok reference => .ok ⟨.ref region, Expr.var reference⟩
         else .error "source export: reference origin disagrees with its declared region")
+    | _, some (_, τ) =>
+      match τ with
+      | .int .. | .ref _ => none
+      | _ => some (match lowVar Γ (sh + j) τ with
+        | .error e => .error e
+        | .ok v => .ok ⟨τ, Expr.var v⟩)
     | _, _ => none
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg

@@ -76,7 +76,7 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
   -- zero memory of a tagged value: the first case, its payload zero
   | .sum cs, .null =>
     if h : 0 < cs.length then
-      (nutzKonst (cs.get ⟨0, h⟩) (match cs.get ⟨0, h⟩ with | none => .null | some _ => .zahl 0)).map (⟨⟨0, h⟩, ·⟩)
+      (nutzKonst (cs.get ⟨0, h⟩) .null).map (⟨⟨0, h⟩, ·⟩)
     else none
   | .arr τ _, .null => (konstWert τ .null).map (fun z => fun _ => z)
   | .arr τ n, k =>
@@ -88,12 +88,24 @@ def konstWert {F : Type} {P : F → Nat → Bool} : (τ : Ty) → UKonst → Opt
     | none => none
   | _, _ => none
 
+termination_by τ _ => sizeOf τ
+decreasing_by
+  all_goals first
+    | decreasing_trivial
+    | have hs := List.sizeOf_get cs ⟨k, h⟩
+      simp only [Ty.sum.sizeOf_spec]
+      omega
+    | have hs := List.sizeOf_get cs ⟨0, h⟩
+      simp only [Ty.sum.sizeOf_spec]
+      omega
+
 /-- Constants use the same complete payload type as ordinary construction. -/
 def nutzKonst {F : Type} {P : F → Nat → Bool} :
     (o : Option Ty) → UKonst → Option (Nutzlast F P o)
   | none, .null => some ()
   | none, _ => none
   | some τ, value => konstWert τ value
+termination_by c _ => sizeOf c
 
 end
 
