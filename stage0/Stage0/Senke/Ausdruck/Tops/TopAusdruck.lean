@@ -290,4 +290,17 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     => by simp [lowE_eqs] at h
 
 
+/-- Static product projection inherits the operand's depth bound; reserving the
+    selected field's width therefore also stays strictly above the destination. -/
+theorem lowE_top_prodGet {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx}
+    {name : Nat} {fs : List Ty} {σ : Ty} (i : FieldAt fs σ)
+    (v : Expr D Γ Λ (.prod name fs)) (d : Nat) (c : List II) (top : Nat)
+    (h : prodGetL i d (lowE L (reserved := reserved) v d) = some (c, top)) :
+    d < max top (d + valueWords σ) := by
+  simp only [prodGetL, bind, Option.bind_eq_some_iff, pure,
+    Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨cv, tv⟩, hv, _, rfl⟩ := h
+  have := lowE_top v d cv tv hv
+  omega
+
 end Gabbro.Stage0.Senke
