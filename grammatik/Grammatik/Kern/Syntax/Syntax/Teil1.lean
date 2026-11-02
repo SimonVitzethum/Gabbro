@@ -69,7 +69,7 @@
 -/
 module
 
-public import Grammatik.Kern.Syntax.Typen.Teil2
+public import Grammatik.Kern.Syntax.Marken.Owner.Interface
 
 @[expose] public section
 
@@ -102,6 +102,16 @@ structure Signatur (Tab Glob Lock Marke : Type) where
       checker's counterpart is its interprocedural `H006`/`H003` walk; the
       value is computed from the call graph, not written by the user. -/
   boden : Option Int := none
+  /-- Linear ghost handoff; both returning channels leave the same owner inventory. -/
+  owner : OwnerFlow Marke := {}
+
+/-- All mark inputs, with ordinary consumption and explicit owner handoff disjoint. -/
+def Signatur.inputMarks {Tab Glob Lock Marke : Type} (S : Signatur Tab Glob Lock Marke) :=
+  S.konsumiert ++ S.owner.inputs
+
+/-- All mark outputs. Owner outputs transfer existing identities, never ordinary production. -/
+def Signatur.outputMarks {Tab Glob Lock Marke : Type} (S : Signatur Tab Glob Lock Marke) :=
+  S.produziert ++ S.owner.outputs
 
 /-- **A function conforms to a pointer type** (Simon, 2026-10-21: pointer types are STRUCTURAL):
     the function's own signature `S` fits the signature `T` its pointer type names. Equal
@@ -124,12 +134,13 @@ structure SigPasst {Tab Glob Lock Marke : Type} (rang : Lock → Int)
   haelt : ∀ L, L ∈ S.haelt → L ∈ T.haelt
   extra : ∀ L, L ∈ T.haelt → L ∉ S.haelt → ∃ c, S.boden = some c ∧ rang L < c
   boden : ∀ c, T.boden = some c → ∃ c', S.boden = some c' ∧ c ≤ c'
+  owner : S.owner = T.owner := by rfl
 
 /-- A signature conforms to itself. -/
 theorem SigPasst.refl {Tab Glob Lock Marke : Type} (rang : Lock → Int) (S : Signatur Tab Glob Lock Marke) :
     SigPasst rang S S :=
   ⟨rfl, rfl, rfl, fun _ h => h, fun _ h => h, rfl, rfl, fun _ h => h, fun _ h hn => absurd h hn,
-    fun c h => ⟨c, h, Int.le_refl c⟩⟩
+    fun c h => ⟨c, h, Int.le_refl c⟩, rfl⟩
 
 /-- Exactly the signature number: the pointer types before 2026-10-21. -/
 theorem SigPasst.von_eq {Tab Glob Lock Marke F : Type} (rang : Lock → Int) (sig : F → Nat)
@@ -310,15 +321,15 @@ def gdarf (g : D.Glob) (Λ : List (Res D)) : Prop := ∀ w ∈ D.gbraucht g, Res
 
 /-- Nach einem Ruf mit Signatur `S`: die verbrauchten Marken sind weg, die erzeugten da. -/
 def nachSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D)) : List (Res D) :=
-  (S.konsumiert.foldl (fun acc m => acc.erase (Res.vonMarke D m)) Λ)
-    ++ S.produziert.map (Res.vonMarke D)
+  (S.inputMarks.foldl (fun acc m => acc.erase (Res.vonMarke D m)) Λ)
+    ++ S.outputMarks.map (Res.vonMarke D)
 
 def nach (f : D.Fn) (Λ : List (Res D)) : List (Res D) := nachSig D (D.signatur f) Λ
 
 /-- A conforming callee leaves the caller the held set the pointer type promises. -/
 theorem nachSig_passt {S T : Signatur D.Tab D.Glob D.Lock D.Marke} (h : SigPasst D.rang S T)
     (Λ : List (Res D)) : nachSig D S Λ = nachSig D T Λ := by
-  unfold nachSig; rw [h.konsumiert, h.produziert]
+  unfold nachSig Signatur.inputMarks Signatur.outputMarks; rw [h.konsumiert, h.produziert, h.owner]
 
 /-- The signature of a function that conforms to `fnptr n` fits `n`. -/
 theorem Deklaration.passt_sig {f : D.Fn} {n : Nat} (h : D.passt f n = true) :
@@ -334,24 +345,26 @@ structure Vertrag where
   produziert : List (D.Marke × Nat)
   /-- The lock floor of the function (`Signatur.boden`). -/
   boden : Option Int := none
+  /-- The exact owner inventory owed on normal and reason returns. -/
+  owner : OwnerFlow D.Marke := {}
 
 def Vertrag.vonSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) : Vertrag D :=
-  ⟨S.schreibt, S.gschreibt, S.erg, S.gruende, S.haelt, S.produziert, S.boden⟩
+  ⟨S.schreibt, S.gschreibt, S.erg, S.gruende, S.haelt, S.produziert, S.boden, S.owner⟩
 
 /-- Was ein Rumpf am Ende in der Hand haben muss: seine Zeugnisse und die erzeugten Marken. -/
 def Vertrag.ende (V : Vertrag D) : List (Res D) :=
-  V.haelt.map Res.held ++ V.produziert.map (Res.vonMarke D)
+  V.haelt.map Res.held ++ (V.produziert ++ V.owner.outputs).map (Res.vonMarke D)
 
 /-- Womit ein Rumpf anfaengt: die Zeugnisse der Signatur und die verbrauchten Marken. -/
 def Signatur.anfang (S : Signatur D.Tab D.Glob D.Lock D.Marke) : List (Res D) :=
-  S.haelt.map Res.held ++ S.konsumiert.map (Res.vonMarke D)
+  S.haelt.map Res.held ++ S.inputMarks.map (Res.vonMarke D)
 
 /-- Die Signatur eines Rufs passt in den Vertrag des Rufers: Schreibrechte enthalten,
     verbrauchte Marken in der Hand. -/
 structure RufPasst (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D)) : Prop where
   hw : ∀ t, S.schreibt t = true → V.schreibt t = true
   hg : ∀ g, S.gschreibt g = true → V.gschreibt g = true
-  hk : Untermulti (S.konsumiert.map (Res.vonMarke D)) Λ
+  hk : Untermulti (S.inputMarks.map (Res.vonMarke D)) Λ
   /-- Every lock the callee requires (`requires Held(L)`) is held by the caller:
       the callee's held set is a SUBSET of the caller's (relaxed 2026-09-13 from
       the exact held set, verdict note T -- what the checker accepts). The
@@ -375,6 +388,8 @@ structure RufPasst (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke) (�
       | cases hc
       | (simp at hc)
       | exact ⟨c, hc, Int.le_refl c⟩
+  /-- Nonempty owner flows require canonical escrow replay before admission. -/
+  ownerReady : S.owner = {} := by rfl
 
 /-- The exact held set (the form before 2026-09-13) gives the relaxed `hh`. -/
 theorem RufPasst.hh_von {D : Deklaration} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ : List (Res D)}
@@ -393,7 +408,7 @@ theorem RufPasst.vonPasst {D : Deklaration} {V : Vertrag D} {S T : Signatur D.Ta
     {Λ : List (Res D)} (hs : SigPasst D.rang S T) (hp : RufPasst D V T Λ) : RufPasst D V S Λ where
   hw t h := hp.hw t (hs.schreibt t h)
   hg g h := hp.hg g (hs.gschreibt g h)
-  hk := by rw [hs.konsumiert]; exact hp.hk
+  hk := by simpa only [Signatur.inputMarks, hs.konsumiert, hs.owner] using hp.hk
   hh L h := hp.hh L (hs.haelt L h)
   hx L hL hn := by
     by_cases hT : L ∈ T.haelt
@@ -405,6 +420,7 @@ theorem RufPasst.vonPasst {D : Deklaration} {V : Vertrag D} {S T : Signatur D.Ta
     obtain ⟨c', hc', hle⟩ := hp.hb c hc
     obtain ⟨c'', hc'', hle'⟩ := hs.boden c' hc'
     exact ⟨c'', hc'', Int.le_trans hle hle'⟩
+  ownerReady := hs.owner.trans hp.ownerReady
 
 /-! ## 2. Sichtbereich und Variablen -/
 

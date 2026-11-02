@@ -372,7 +372,16 @@ theorem nach_ohne_marken (hM : ∀ m : z.deklaration.Marke, False) (S : Signatur
     cases h : S.produziert with
     | nil => rfl
     | cons x _ => exact (hM x.1).elim
-  simp only [nachSig, h1, List.foldl_nil, h2, List.map_nil, List.append_nil]
+  have h3 : S.owner = {} := by
+    rcases S.owner with ⟨moves, loans⟩
+    cases moves with
+    | cons x _ => exact (hM x.mark).elim
+    | nil => cases loans with
+      | cons x _ => exact (hM x.1).elim
+      | nil => rfl
+  simp only [nachSig, Signatur.inputMarks, Signatur.outputMarks, h1, h2, h3,
+    OwnerFlow.inputs, OwnerFlow.outputs, List.map_nil, List.filterMap_nil,
+    List.append_nil, List.foldl_nil]
 
 /-- A call statement at the head of a run. -/
 theorem reihe_call (tabs : List UTab) (koepfe : List UFnKopf) (f : Nat) (ctx : UCtx) (c : String) (as : List SExpr)

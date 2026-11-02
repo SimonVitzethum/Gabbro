@@ -230,11 +230,14 @@
     arena not empty in the start memory, a start handed an allocation (each refused by the checker's
     `BesitzStart`/`worte`), and what a foreign body does to an arena beyond `GutO`;
   * C09 nominal-owner mint provenance and call-scoped owner-mark transfers/loans on canonical G/GX.
-    `Kern/Syntax/Marken/Owner` supplies resource flow, linear ghost bindings and bookkeeping over the existing
-    grant/escrow ledger, with permanent spent authority. These interfaces do not yet extend `Akzeptiert`,
-    G/GX transitions or `Ziel(X/FX)`. Ordinary signatures still cannot produce owners; no software permission
-    is minted by a hardware assumption. The authorized stronger owner goal awaits the C08 software-call rule,
-    complete root/start admission and reachable-step/frame replay. No new source case is admitted by this work;
+    `Signatur.owner` now contributes exact owner inputs to `Signatur.anfang`, owner outputs to
+    `Vertrag.ende`, and both inventories to `nachSig`; pointer conformance preserves the same flow.
+    This changes the typed entry/exit resource inventory, not the oracle assumptions. Canonical calls
+    still require an empty owner flow (`RufPasst.ownerReady`) until checked dynamic escrow replay is
+    connected. `Kern/Syntax/Marken/Owner` supplies linear ghost bindings and bookkeeping over the existing
+    grant/escrow ledger, with permanent spent authority. No `OwnerInvG/GX` or owner provenance/lifetime leg
+    is yet claimed by `Ziel(X/FX)`. The authorized stronger goal still needs C08 software-call execution,
+    root/start admission and reachable-step/frame replay. No new source case is admitted by this work;
   * for threads spawned at run time: arguments per spawn, a root `requires` holding only at the spawn world,
     `old`-reads at the spawn world, the end of a join wait, the child's stack, a failing spawn, the lowering of the
     spawn;

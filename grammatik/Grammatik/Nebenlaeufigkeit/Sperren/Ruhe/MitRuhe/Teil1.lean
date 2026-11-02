@@ -65,7 +65,7 @@ def passtM (D : Deklaration) : Option D.Fn → Nat → Bool
 theorem SigPasst.sigR {Tab Glob Lock Marke : Type} {rang : Lock → Int} {S T : Signatur Tab Glob Lock Marke}
     (h : SigPasst rang S T) : SigPasst rang (sigR S) (sigR T) :=
   ⟨congrArg (List.map tyR) h.params, congrArg (Option.map tyR) h.erg, h.gruende, h.schreibt, h.gschreibt,
-    h.konsumiert, h.produziert, h.haelt, h.extra, h.boden⟩
+    h.konsumiert, h.produziert, h.haelt, h.extra, h.boden, h.owner⟩
 
 theorem passtM_ok (D : Deklaration) : ∀ f n, passtM D f n = true →
     SigPasst D.rang (sigNrM D (sigM D f)) (sigNrM D n)
@@ -301,7 +301,7 @@ def envZ : {Γ : Ctx} → Env D.mitRuhe (Γ.map tyR) → Env D Γ
 
 /-- A contract of `D` as a contract of `D.mitRuhe`. -/
 def vertragR (V : Vertrag D) : Vertrag D.mitRuhe :=
-  ⟨V.schreibt, V.gschreibt, V.erg.map tyR, V.gruende, V.haelt, V.produziert, V.boden⟩
+  ⟨V.schreibt, V.gschreibt, V.erg.map tyR, V.gruende, V.haelt, V.produziert, V.boden, V.owner⟩
 
 theorem von_rm (w : D.Lock ⊕ (D.Marke × Nat)) : Res.von D.mitRuhe w = resR (Res.von D w) := by
   rcases w with L | ⟨m, s⟩ <;> rfl
@@ -406,13 +406,14 @@ theorem rufPasstR {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke}
   hk := by
     obtain ⟨l, hp, hs⟩ := h.hk
     refine ⟨l.map resR, ?_, hs.map resR⟩
-    have e := map_vonMarke_rm (D := D) S.konsumiert
-    show (S.konsumiert.map (Res.vonMarke D.mitRuhe)).Perm (l.map resR)
+    have e := map_vonMarke_rm (D := D) S.inputMarks
+    show (S.inputMarks.map (Res.vonMarke D.mitRuhe)).Perm (l.map resR)
     rw [← e]
     exact hp.map resR
   hh := fun L hL => held_mem_map.mpr (h.hh L hL)
   hx := fun L hL hn => h.hx L (held_mem_map.mp hL) hn
   hb := h.hb
+  ownerReady := h.ownerReady
 
 /-! ## 4. The syntax translation -/
 

@@ -69,40 +69,56 @@ theorem resource_from_binding_zeuge :
     ∃ b ∈ ghost, b.mark = true ∧ b.stage = 0 :=
   OwnerBindings.resource_from_binding ghost (by decide)
 
-theorem checked_handoff : OwnerCall contract (D.signatur 0) [true] handoff [Res.marke true 0] where
-  ordinary :=
-    { hw := fun _ h => h
-      hg := fun g => nomatch g
-      hk := ⟨[], List.Perm.refl [], List.Sublist.cons _ List.Sublist.slnil⟩
-      hh := fun L => nomatch L
-      hx := fun L => nomatch L
-      hb := by intro c h; cases h }
-  available := ⟨[Res.marke true 0], List.Perm.refl _, List.Sublist.refl _⟩
+/-- The owner flow is part of the real canonical signature. -/
+def handoffSignature : Signatur D.Tab D.Glob D.Lock D.Marke :=
+  { D.signatur 0 with owner := handoff }
+
+def consumeSignature : Signatur D.Tab D.Glob D.Lock D.Marke :=
+  { D.signatur 0 with konsumiert := [(true, 0)] }
+
+theorem checked_consume : RufPasst D contract consumeSignature [Res.marke true 0] where
+  hw := fun _ h => h
+  hg := fun g => nomatch g
+  hk := ⟨[Res.marke true 0], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun L => nomatch L
+  hx := fun L => nomatch L
+  hb := by intro c h; cases h
+
+theorem signature_valid_zeuge : OwnerSignature handoffSignature [true] where
   resolved := fun m hm => ⟨(), hm⟩
   valid := by decide
   ordinaryDisjoint := fun _ h => by cases h
 
 theorem input_available_zeuge : Res.marke true 0 ∈ ([Res.marke true 0] : List (Res D)) :=
-  OwnerCall.input_available checked_handoff (by decide : (true, 0) ∈ handoff.inputs)
+  checked_consume.input_available (by decide : (true, 0) ∈ consumeSignature.inputMarks)
 
 theorem owner_nachSig_from_input_zeuge :
-    Res.marke true 0 ∈ ([Res.marke true 0] : List (Res D)) :=
-  owner_nachSig_from_input (D.signatur 0)
-    (fun m s ⟨t, ho⟩ => D.eigner_nie_erzeugt 0 t m s ho)
-    [Res.marke true 0] ⟨(), by decide⟩ (by decide)
-
-theorem owner_nachSigOwner_from_input_zeuge :
     ∃ before, Res.marke true before ∈ ([Res.marke true 0] : List (Res D)) :=
-  owner_nachSigOwner_from_input (D.signatur 0)
+  owner_nachSig_from_input handoffSignature
     (fun m s ⟨t, ho⟩ => D.eigner_nie_erzeugt 0 t m s ho)
-    handoff [Res.marke true 0]
-    (by
+    [Res.marke true 0] (by
       intro p hp
-      have he : p = (true, 0) := by simpa [handoff, OwnerFlow.inputs] using hp
+      have he : p = (true, 0) := by simpa [handoffSignature, handoff, OwnerFlow.inputs] using hp
       subst p
       decide)
-    ⟨(), by decide⟩ (by decide : Res.marke true 1 ∈ nachSigOwner (D.signatur 0)
-      handoff [Res.marke true 0])
+    ⟨(), by decide⟩ (by decide : Res.marke true 1 ∈ nachSig D handoffSignature [Res.marke true 0])
+
+/-- Static metadata is not yet an admitted canonical owner call. -/
+theorem nonempty_call_refused : ¬ RufPasst D contract handoffSignature [Res.marke true 0] := by
+  intro h
+  have he := congrArg OwnerFlow.inputs h.ownerReady
+  have impossible : [(true, 0)] = ([] : List (Bool × Nat)) := he
+  cases impossible
+
+theorem canonical_start_end_zeuge :
+    Signatur.anfang D handoffSignature = [Res.marke true 0] ∧
+    (Vertrag.vonSig D handoffSignature).ende = [Res.marke true 1] := ⟨rfl, rfl⟩
+
+theorem owner_nachSig_ordinary_zeuge :
+    Res.marke true 0 ∈ ([Res.marke true 0] : List (Res D)) :=
+  owner_nachSig_ordinary (D.signatur 0)
+    (fun m s ⟨t, ho⟩ => D.eigner_nie_erzeugt 0 t m s ho)
+    rfl [Res.marke true 0] ⟨(), by decide⟩ (by decide)
 
 theorem mint_step : OwnerState.recordMint names mint OwnerState.empty root = some (minted, token) := rfl
 
@@ -182,7 +198,7 @@ theorem retire_grant_zeuge : retired.ledger.valid ∧
 theorem retire_cannot_remint_zeuge : OwnerState.recordMint names mint retired root = none :=
   OwnerState.retire_cannot_remint mint_grant_zeuge.1 mint_spends_zeuge retire_step root
 
-#print axioms owner_nachSigOwner_from_input_zeuge
+#print axioms owner_nachSig_from_input_zeuge
 #print axioms mint_valid_zeuge
 #print axioms transfer_grant_zeuge
 #print axioms nested_borrow_return

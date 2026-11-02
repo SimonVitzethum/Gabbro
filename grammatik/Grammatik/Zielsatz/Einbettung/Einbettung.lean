@@ -185,6 +185,7 @@ def sigE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : Signatur D'.Tab D'.Glob D'
   konsumiert := S.konsumiert.map (Prod.map E.marke id)
   produziert := S.produziert.map (Prod.map E.marke id)
   boden := S.boden
+  owner := S.owner.map E.marke
 
 /-- A contract. -/
 def vertragE (V : Vertrag D) : Vertrag D' where
@@ -195,6 +196,7 @@ def vertragE (V : Vertrag D) : Vertrag D' where
   haelt := V.haelt.map E.lock
   produziert := V.produziert.map (Prod.map E.marke id)
   boden := V.boden
+  owner := V.owner.map E.marke
 
 theorem vertragE_vonSig (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
     E.vertragE (Vertrag.vonSig D S) = Vertrag.vonSig D' (E.sigE S) := by rfl

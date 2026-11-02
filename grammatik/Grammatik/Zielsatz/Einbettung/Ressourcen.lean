@@ -110,12 +110,12 @@ theorem map_vonMarkeE (l : List (D.Marke × Nat)) :
       simp only [List.map_cons, ih, E.vonMarke_e]
 
 theorem endeE (V : Vertrag D) : V.ende.map E.resE = (E.vertragE V).ende := by
-  simp only [Vertrag.ende, List.map_append, E.map_heldE, E.map_vonMarkeE]
+  simp only [Vertrag.ende, vertragE, OwnerFlow.outputs_map, List.map_append, E.map_heldE, E.map_vonMarkeE]
   rfl
 
 theorem anfangE (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
     (Signatur.anfang D S).map E.resE = Signatur.anfang D' (E.sigE S) := by
-  simp only [Signatur.anfang, List.map_append, E.map_heldE, E.map_vonMarkeE]
+  simp only [Signatur.anfang, Signatur.inputMarks, sigE, OwnerFlow.inputs_map, List.map_append, E.map_heldE, E.map_vonMarkeE]
   rfl
 
 theorem foldl_erase_mapE (ks : List (D.Marke × Nat)) (Λ : List (Res D)) :
@@ -129,7 +129,7 @@ theorem foldl_erase_mapE (ks : List (D.Marke × Nat)) (Λ : List (Res D)) :
 
 theorem nachSigE (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D)) :
     (nachSig D S Λ).map E.resE = nachSig D' (E.sigE S) (Λ.map E.resE) := by
-  simp only [nachSig, List.map_append, E.map_vonMarkeE, E.foldl_erase_mapE]
+  simp only [nachSig, Signatur.inputMarks, Signatur.outputMarks, sigE, OwnerFlow.inputs_map, OwnerFlow.outputs_map, List.map_append, E.map_vonMarkeE, E.foldl_erase_mapE]
   rfl
 
 theorem nachE {E : Einbettung D D'} (hS : E.SigTreu) (f : D.Fn) (Λ : List (Res D)) :
@@ -170,8 +170,9 @@ theorem rufPasstE {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ
   hk := by
     obtain ⟨l, hp, hs⟩ := h.hk
     refine ⟨l.map E.resE, ?_, hs.map E.resE⟩
-    have e := E.map_vonMarkeE S.konsumiert
-    show ((S.konsumiert.map (Prod.map E.marke _root_.id)).map (Res.vonMarke D')).Perm (l.map E.resE)
+    have e := E.map_vonMarkeE S.inputMarks
+    simp only [sigE, Signatur.inputMarks, OwnerFlow.inputs_map, ← List.map_append]
+    show ((S.inputMarks.map (Prod.map E.marke _root_.id)).map (Res.vonMarke D')).Perm (l.map E.resE)
     rw [← e]
     exact hp.map E.resE
   hh := fun L' hL' => by
@@ -182,6 +183,10 @@ theorem rufPasstE {V : Vertrag D} {S : Signatur D.Tab D.Glob D.Lock D.Marke} {Λ
     obtain ⟨c, hc, hr⟩ := h.hx L hL (fun hm => hn (List.mem_map_of_mem hm))
     exact ⟨c, hc, by rw [E.rang]; exact hr⟩
   hb := h.hb
+  ownerReady := by
+    change S.owner.map E.marke = {}
+    rw [h.ownerReady]
+    rfl
 
 end Einbettung
 

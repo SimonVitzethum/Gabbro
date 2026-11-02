@@ -116,9 +116,11 @@ theorem nach_eq (u : UProg) (i : Fin u.fns.length)
     nach (declOf u) i L = L := by
   have hK := sigKonsumiert_nil u i
   have hP := sigProduziert_nil u i
-  unfold nach nachSig
+  unfold nach nachSig Signatur.inputMarks Signatur.outputMarks
+  rw [OwnerFlow.empty_of_empty ((declOf u).signatur i).owner]
   rw [hK, hP]
-  simp only [List.foldl_nil, List.map_nil, List.append_nil]
+  change L ++ [] = L
+  exact List.append_nil L
 
 /-- The body context is the declared parameter list. -/
 theorem ctxParams_eq (u : UProg) (c : Fin u.fns.length) :
@@ -135,8 +137,9 @@ theorem anfangRes_eq (u : UProg) (c : Fin u.fns.length) :
   have h2 : ((declOf u).signatur c).konsumiert = [] :=
     sigKonsumiert_nil u c
   show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
-  unfold Signatur.anfang
-  rw [h1, h2, List.map_nil, List.append_nil]
+  unfold Signatur.anfang Signatur.inputMarks
+  rw [h1, h2, OwnerFlow.empty_of_empty ((declOf u).signatur c).owner]
+  rfl
 
 /-- The held resources are the contract end. -/
 theorem endeRes_eq (u : UProg) (c : Fin u.fns.length) :

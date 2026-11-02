@@ -295,9 +295,10 @@ def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn
 /-- No consumed marks at a call (`RufPasst.hk`). -/
 theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
     (Λ : List (Res (declOf u))) :
-    Untermulti (((declOf u).signatur callee).konsumiert.map
+    Untermulti (((declOf u).signatur callee).inputMarks.map
       (Res.vonMarke (declOf u))) Λ := by
-  rw [sigKonsumiert_nil u callee]
+  unfold Signatur.inputMarks
+  rw [sigKonsumiert_nil u callee, OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner]
   show Untermulti ([] : List (Res (declOf u))) Λ
   exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
 
