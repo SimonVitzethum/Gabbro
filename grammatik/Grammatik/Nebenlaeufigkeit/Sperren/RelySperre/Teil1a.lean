@@ -147,6 +147,7 @@ theorem blatt_erhaelt_globs
   | call fn args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | callInd p args hp hr => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | callIndElse p args he hp hr err => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | locks Lk hr body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | breaking ii body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
@@ -223,6 +224,14 @@ theorem blatt_erhaelt_globs
       subst hstep
       rfl
   | next hh =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retScoped e R =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
+  | retWhyScoped r R =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
