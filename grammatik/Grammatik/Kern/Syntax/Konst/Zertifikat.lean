@@ -224,7 +224,7 @@ end
 
 /-- Shrinking preserves single-run frame. -/
 theorem schrumpfArmErhaelt (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
-    {k : Option (Int × Int)} {o : Ausgang V l (ArmCtx Γ k)} {σ : World c.D}
+    {k : Option Ty} {o : Ausgang V l (ArmCtx Γ k)} {σ : World c.D}
     (h : AusgangErhaelt c σ o) : AusgangErhaelt c σ (o.schrumpfArm k) := by
   cases k with
   | none => simp only [Ausgang.schrumpfArm]; exact h

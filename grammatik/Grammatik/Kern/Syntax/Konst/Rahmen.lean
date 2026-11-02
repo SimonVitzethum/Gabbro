@@ -147,10 +147,10 @@ theorem constEvalGleichExpr (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
     have ih : ∀ k, eval σ₁ _ σ₁ (.cons k ρ₁) = eval σ₂ _ σ₂ (.cons k ρ₂) :=
       fun k => constEvalGleichExpr c hbody σ₁ σ₂ (.cons k ρ₁) (.cons k ρ₂) hW (.cons rfl hρ)
     simp only [eval, ih]
-theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ :=
+theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ :=
   match hp with
   | .empty => by simp only [evalNutz]
-  | .num he => by simp only [evalNutz, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+  | .val he => by simp only [evalNutz, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
 theorem constEvalGleichArgs (c : ConstProgram) {Γ : Ctx} {ts : List Ty} {e : Args c.D Γ [] ts} (hp : ConstArgs c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalArgs σ₁ e σ₁ ρ₁ = evalArgs σ₂ e σ₂ ρ₂ :=
   match hp with
   | .nil => by simp only [evalArgs]

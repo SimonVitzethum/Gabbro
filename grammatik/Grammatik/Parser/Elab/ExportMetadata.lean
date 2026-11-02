@@ -178,10 +178,10 @@ theorem stateT_zeuge :
 
 /-- C02 library calls are bound by the certified expansion. The payload clause is consumed (`exportLibraryKopf` strips `.load`), the call resolves to exactly one library function plus exactly one translator with exactly one payload (`libraryDecl`), and the translator body must be call-free (`callFreeStmt`, otherwise C17). Unexpanded calls never reach ordinary lowering (`ohneBibliothekAnw`, `uAnwReihe`). Costs and other clauses still refuse via `clausesMetadataWithoutLoad`. -/
 theorem libraryFn_bound (sig : FnSig) (body : SAnw) (h : sig.art = "library") (c : clausesMetadataWithoutLoad sig.klauseln = false) (b : bodyMetadata 10000 body = false) (p : sig.params.any (fun p => typeMetadata p.2) = false) (r : sig.res.any typeMetadata = false) : itemMetadata (.fnT sig body) = false := by
-  simp only [itemMetadata, h, ↓reduceIte, c, b, p, r]
+  simp only [itemMetadata, h, beq_self_eq_true, ↓reduceIte, c, b, p, r, Bool.or_false]
 
 theorem transT_bound (target : String) (translator : FnSig) (body : SAnw) (c : clausesMetadata translator.klauseln = false) (p : translator.params.any (fun p => typeMetadata p.2) = false) (r : translator.res.any typeMetadata = false) : itemMetadata (.transT target translator body) = false := by
-  simp only [itemMetadata, c, p, r]
+  simp only [itemMetadata, c, p, r, Bool.or_false]
 
 set_option maxRecDepth 100000 in
 theorem library_zeuge :

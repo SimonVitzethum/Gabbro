@@ -70,9 +70,9 @@ def constExprB (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {τ : Ty} : E
   | .reaches .. => false
   | .refEq .. => false
   | .slotRef .. => false
-def constPayloadB (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {k : Option (Int × Int)} : NutzlastExpr c.D Γ Λ k → Bool
+def constPayloadB (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {k : Option Ty} : NutzlastExpr c.D Γ Λ k → Bool
   | .empty => true
-  | .num e => constExprB c e
+  | .val e => constExprB c e
 def constArgsB (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {ts : List Ty} : Args c.D Γ Λ ts → Bool
   | .nil => true
   | .cons e rest => constExprB c e && constArgsB c rest
@@ -145,7 +145,7 @@ def constEndB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ : L
   | .bindCallInd .. => false
   | .narrow .. => false
   | .exchange .. => false
-def constArmsB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option (Int × Int))} : Arms c.D V l Γ Λ Λout cs → Bool
+def constArmsB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} : Arms c.D V l Γ Λ Λout cs → Bool
   | .nil => true
   | .cons body rest => constBlockB c body && constArmsB c rest
 def constReasonArmsB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {n : Nat} : GrundArms c.D V l Γ Λ Λout n → Bool

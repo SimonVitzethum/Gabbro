@@ -22,7 +22,7 @@ namespace Gabbro.Grammatik
   certified bound in `Zertifikat`. -/
 
 /-- The tag payload environment respects pointwise agreement. -/
-theorem armEnvGleich (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} (nutz : Nutzlast k)
+theorem armEnvGleich (c : ConstProgram) {Γ : Ctx} {k : Option Ty} (nutz : Nutzlast c.D.Fn c.D.passt k)
     {ρ₁ ρ₂ : Env c.D Γ} (hρ : EnvGleich c ρ₁ ρ₂) :
     EnvGleich c (armEnv nutz ρ₁) (armEnv nutz ρ₂) := by
   cases k with
@@ -31,7 +31,7 @@ theorem armEnvGleich (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} (nu
 
 /-- Shrinking an agreed outcome past a tag arm preserves agreement. -/
 theorem schrumpfArmGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
-    {k : Option (Int × Int)} {o₁ : Ausgang V l (ArmCtx Γ k)} {o₂ : Ausgang V l (ArmCtx Γ k)}
+    {k : Option Ty} {o₁ : Ausgang V l (ArmCtx Γ k)} {o₂ : Ausgang V l (ArmCtx Γ k)}
     (h : AusgangGleich c o₁ o₂) :
     AusgangGleich c (o₁.schrumpfArm k) (o₂.schrumpfArm k) := by
   cases k with

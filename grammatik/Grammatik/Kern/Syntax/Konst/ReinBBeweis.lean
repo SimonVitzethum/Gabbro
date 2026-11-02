@@ -182,15 +182,15 @@ theorem constExprB_sound (c : ConstProgram) {Γ : Ctx} {τ : Ty} (e : Expr c.D �
       intro accepted; simp only [constExprB, Bool.and_eq_true] at accepted
       exact .pureCount (constExprB_sound c body accepted)
   | _ => by simp [constExprB]
-theorem constPayloadB_sound (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} (e : NutzlastExpr c.D Γ [] k) :
+theorem constPayloadB_sound (c : ConstProgram) {Γ : Ctx} {k : Option Ty} (e : NutzlastExpr c.D Γ [] k) :
     constPayloadB c e = true → ConstPayload c e :=
   match e with
   | .empty => by
       intro accepted; simp only [constPayloadB, Bool.and_eq_true] at accepted
       exact .empty
-  | .num e => by
+  | .val e => by
       intro accepted; simp only [constPayloadB, Bool.and_eq_true] at accepted
-      exact .num (constExprB_sound c e accepted)
+      exact .val (constExprB_sound c e accepted)
 theorem constArgsB_sound (c : ConstProgram) {Γ : Ctx} {ts : List Ty} (e : Args c.D Γ [] ts) :
     constArgsB c e = true → ConstArgs c e :=
   match e with
@@ -293,7 +293,7 @@ theorem constEndB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ct
       obtain ⟨h0, h1⟩ := accepted
       exact ConstEnd.bindCall f args he hp hr rfl rest (constArgsB_sound c args h0) (constEndB_sound c rest h1)
   | _ => by simp [constEndB]
-theorem constArmsB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {cs : List (Option (Int × Int))} (e : Arms c.D V l Γ [] [] cs) :
+theorem constArmsB_sound (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {cs : List (Option Ty)} (e : Arms c.D V l Γ [] [] cs) :
     constArmsB c e = true → ConstArms c e :=
   match e with
   | .nil => by
@@ -412,11 +412,11 @@ theorem constExprB_complete (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
       simp only [constExprB, constExprB_complete c h0, constExprB_complete c h1, Bool.and_self]
   | .pureCount h0 => by
       simp only [constExprB, constExprB_complete c h0, Bool.and_self]
-theorem constPayloadB_complete (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} {e : NutzlastExpr c.D Γ [] k} :
+theorem constPayloadB_complete (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} :
     ConstPayload c e → constPayloadB c e = true
   | .empty => by
       simp only [constPayloadB, Bool.and_self]
-  | .num h0 => by
+  | .val h0 => by
       simp only [constPayloadB, constExprB_complete c h0, Bool.and_self]
 theorem constArgsB_complete (c : ConstProgram) {Γ : Ctx} {ts : List Ty} {e : Args c.D Γ [] ts} :
     ConstArgs c e → constArgsB c e = true
@@ -471,7 +471,7 @@ theorem constEndB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ :
   | .bindCall f args he hp hr resourceEq rest h0 h1 => by
       cases resourceEq
       simp only [constEndB, constArgsB_complete c h0, constEndB_complete c h1, Bool.and_self]
-theorem constArmsB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {cs : List (Option (Int × Int))} {e : Arms c.D V l Γ [] [] cs} :
+theorem constArmsB_complete (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {cs : List (Option Ty)} {e : Arms c.D V l Γ [] [] cs} :
     ConstArms c e → constArmsB c e = true
   | .nil => by
       simp only [constArmsB, Bool.and_self]

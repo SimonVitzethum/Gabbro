@@ -86,7 +86,7 @@ structure UFnKopf where
   /-- The reason channel: the position of `R` among the unit's reasons and its number of cases. -/
   kanal : Option (Nat × Nat) := none
   /-- The result is a tagged type: its position and its specification. -/
-  resSum : Option (Nat × List (Option (Int × Int))) := none
+  resSum : Option (Nat × List (Option Ty)) := none
   /-- The result is a reason (`-> R`): the position of `R` among the unit's reasons and its number of cases. -/
   resWhy : Option (Nat × Nat) := none
   bits : List Nat := []

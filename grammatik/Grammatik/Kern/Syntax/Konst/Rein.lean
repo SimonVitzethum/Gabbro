@@ -41,10 +41,14 @@ inductive ConstExpr (c : ConstProgram) : {Γ : Ctx} → {τ : Ty} → Expr c.D �
   | pureNone : ConstExpr c (.none n)
   | pureSome : ConstExpr c e → ConstExpr c (.some e)
   | pureIstSome : ConstExpr c e → ConstExpr c (.istSome e)
-  | pureCase : ConstPayload c payload → ConstExpr c (.case cs i payload)
+  | pureCase {Γ : Ctx} {cs : List (Option Ty)} {i : Fin cs.length}
+      {payload : NutzlastExpr c.D Γ [] (cs.get i)} :
+      ConstPayload c payload → ConstExpr c (.case cs i payload)
   | pureWhy : ConstExpr c (.why n r)
-  | pureForallSlots : ConstExpr c body → ConstExpr c (.forallSlots t body hL)
-  | pureExistsSlots : ConstExpr c body → ConstExpr c (.existsSlots t body hL)
+  | pureForallSlots {Γ : Ctx} {t : c.D.Tab} {body : Expr c.D (.index (c.D.count t) :: Γ) [] .bool}
+      {hL : darf c.D t []} : ConstExpr c body → ConstExpr c (.forallSlots t body hL)
+  | pureExistsSlots {Γ : Ctx} {t : c.D.Tab} {body : Expr c.D (.index (c.D.count t) :: Γ) [] .bool}
+      {hL : darf c.D t []} : ConstExpr c body → ConstExpr c (.existsSlots t body hL)
   | pureArrNil : ConstExpr c (.arrNil)
   | pureArrCons : ConstExpr c a → ConstExpr c rest → ConstExpr c (.arrCons a rest)
   | pureArrGet : ConstExpr c a → ConstExpr c i → ConstExpr c (.arrGet a i)
@@ -57,15 +61,18 @@ inductive ConstExpr (c : ConstProgram) : {Γ : Ctx} → {τ : Ty} → Expr c.D �
   | pureStrLt : ConstExpr c s → ConstExpr c t → ConstExpr c (.strLt s t)
   | pureStrWeit : ConstExpr c s → ConstExpr c (.strWeit m s)
   | pureWenn : ConstExpr c condition → ConstExpr c a → ConstExpr c b → ConstExpr c (.wenn condition a b)
-  | pureEng : ConstExpr c e → ConstExpr c fallback → ConstExpr c (.eng e lo hi fallback)
+  | pureEng {Γ : Ctx} {lo hi lo' hi' : Int} {e : Expr c.D Γ [] (.int lo hi)}
+      {fallback : Expr c.D Γ [] (.int lo' hi')} :
+      ConstExpr c e → ConstExpr c fallback → ConstExpr c (.eng e lo' hi' fallback)
   | pureIntBuiltin1 : ConstExpr c a → ConstExpr c (.intBuiltin1 op a)
   | pureIntBuiltin2 : ConstExpr c a → ConstExpr c b → ConstExpr c (.intBuiltin2 op a b)
-  | pureCount : ConstExpr c body → ConstExpr c (.count n body)
+  | pureCount {Γ : Ctx} {n : Nat} {body : Expr c.D (.index (n : Int) :: Γ) [] .bool} :
+      ConstExpr c body → ConstExpr c (.count n body)
 
-inductive ConstPayload (c : ConstProgram) : {Γ : Ctx} → {k : Option (Int × Int)} →
+inductive ConstPayload (c : ConstProgram) : {Γ : Ctx} → {k : Option Ty} →
     NutzlastExpr c.D Γ [] k → Prop where
   | empty : ConstPayload c .empty
-  | num : ConstExpr c e → ConstPayload c (.num e)
+  | val : ConstExpr c e → ConstPayload c (.val e)
 
 inductive ConstArgs (c : ConstProgram) : {Γ : Ctx} → {ts : List Ty} → Args c.D Γ [] ts → Prop where
   | nil : ConstArgs c .nil
@@ -87,7 +94,7 @@ inductive ConstStmt (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} → {�
   | call {V l Γ} (f : c.D.Fn) (args : Args c.D Γ [] (c.D.params f))
       (hp : RufPasst c.D V (c.D.signatur f) []) (hr : c.D.gruende f = 0)
       (h : nach c.D f [] = []) :
-      ConstArgs c args → ConstStmt c (h ▸ Stmt.call c.D V (l := l) f args hp hr)
+      ConstArgs c args → ConstStmt c (h ▸ Stmt.call (D := c.D) (V := V) (l := l) f args hp hr)
   | ret : ConstResult c value → ConstStmt c (.ret value h)
 
 inductive ConstBlock (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} → {Γ : Ctx} →
@@ -117,7 +124,7 @@ inductive ConstEnd (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} → {Γ
       ConstEnd c (.ite condition yes no)
 
 inductive ConstArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} → {Γ : Ctx} →
-    {cs : List (Option (Int × Int))} → Arms c.D V l Γ [] [] cs → Prop where
+    {cs : List (Option Ty)} → Arms c.D V l Γ [] [] cs → Prop where
   | nil : ConstArms c .nil
   | cons : ConstBlock c body → ConstArms c rest → ConstArms c (.cons body rest)
 

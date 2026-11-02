@@ -76,6 +76,7 @@ theorem move_resources {D : Deklaration} {bs bs' : OwnerBindings D.Marke}
   split at h
   · cases h
   · rename_i b hb
+    dsimp only at h
     split at h
     · cases h
       exact ⟨b, List.mem_of_find?_eq_some hb, rfl⟩
@@ -87,7 +88,8 @@ theorem move_valid {bs bs' : OwnerBindings Marke} {sourceBinder into : Nat}
   unfold move at h
   split at h
   · cases h
-  · split at h
+  · dsimp only at h
+    split at h
     · rename_i hv
       cases h
       exact hv.2

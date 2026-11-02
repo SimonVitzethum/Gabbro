@@ -467,6 +467,39 @@ theorem lowerE_mono (lay : Layout D) (cenv : List Reg) :
       simp only [lowerE, reduceCtorEq] at h
 
 
+
+theorem lowerNutz_mono (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {c : Option Gabbro.Grammatik.Ty}
+      (nutz : Gabbro.Grammatik.NutzlastExpr D Γ Λ c) (r : Nat) (c0 : LR),
+      lowerNutz lay cenv W L i nutz r = some c0 → r ≤ c0.2.2
+  | _, _, _, .empty, r, c0, h => by
+      rw [lowerNutz_empty, Option.some.injEq] at h
+      subst h
+      exact Nat.le_refl _
+  | _, _, _, .val (τ := .int lo hi) e, r, c0, h => by
+      rw [lowerNutz_int] at h
+      rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
+      · simp only [he, reduceCtorEq] at h
+      have m1 := lowerE_mono lay cenv e r _ he
+      simp only [he] at h
+      rcases hn : numCode lo hi W L i oe r1 with ⟨cn, on, r2⟩
+      have m2 := numCode_mono (lo := lo) (hi := hi) (W := W) (L := L) (i := i) (oe := oe) (r := r1)
+      rw [hn] at m2 h
+      simp only [Option.some.injEq] at h
+      subst h
+      simp only at m1 m2 ⊢
+      omega
+  | _, _, _, .val (τ := .bool) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .opt _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .sum _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .why _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .never) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .fl _ _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .fnptr _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .ptr _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .ref _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .arr _ _) _, _, _, h => by cases h
+  | _, _, _, .val (τ := .str _) _, _, _, h => by cases h
 end
 
 end Gabbro.Code.Lower
