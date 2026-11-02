@@ -76,7 +76,7 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
         apply entryColumnL_ok (eval σ0 i σ ρ) (σ0.slots t (eval σ0 i σ ρ).n f)
           bound literal ?_ ?_ lower fits m pc pre
         · intro m env
-          have valid := eval σ0 i σ ρ
+          let valid := eval σ0 i σ ρ
           have range : valid.n.toNat < (D.count t).toNat := by
             have := valid.lo_le
             have := valid.le_hi

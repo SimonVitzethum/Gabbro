@@ -57,6 +57,12 @@ theorem saved : EntrySnapshots.At layout entry memory 4096 (oldCells expr) 4 := 
 theorem layout_in : LayIn layout := by
   refine ⟨?_, (fun g => Fin.elim0 g), by decide⟩
   intro t f k hk
+  obtain ⟨t, ht⟩ := t
+  have zero : t = 0 := by change t < 1 at ht; omega
+  subst t
+  obtain ⟨f, hf⟩ := f
+  have zero : f = 0 := by change f < 1 at hf; omega
+  subst f
   change (k : Int) < 4 at hk
   change 8192 ≤ 8192 + 8 * k ∧ 8192 + 8 * k + 8 ≤ 8224
   omega

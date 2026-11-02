@@ -22,8 +22,9 @@ theorem ValueAt.rebase {m : Runner.Mem} {fp : Runner.W} {base : Nat} {τ : Ty}
   intro i hi
   simpa only [Nat.zero_add, slot_nested] using value.2 i hi
 
-/-- Actual address arithmetic followed by the shared full-span load. The source
-    lies before the two explicit temporaries; every represented limb is copied. -/
+/-- Actual address arithmetic followed by the shared full-span load. Source and
+    destination lie before the two explicit temporaries. Forward-safe overlap or
+    a disjoint upward copy is allowed; every represented limb is copied. -/
 theorem selectFrameSpan_checked_ok {m : Runner.Mem} {pc fp : Runner.W} {K base dst ptr tmp index : Nat}
     {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
     (fits : base + (index + 1) * valueWords τ ≤ ptr)
@@ -37,6 +38,8 @@ theorem selectFrameSpan_checked_ok {m : Runner.Mem} {pc fp : Runner.W} {K base d
   let w := valueWords τ
   have positive : 0 < w := valueWords_pos τ
   have sourceBound : base + index * w + w ≤ ptr := by simpa [Nat.add_mul, Nat.add_assoc] using fits
+  have order' : dst ≤ base + index * w ∨ base + index * w + w ≤ dst := by
+    simpa only [Nat.add_mul, Nat.one_mul, Nat.add_assoc] using order
   have hp : Pre L m pc fp K ptr
       ([ci 1 tmp (8 * w) 0] ++ ([ci 5 ptr ptr tmp] ++
       ([ci 17 tmp base 0] ++ ([ci 3 ptr tmp ptr] ++ loadPointerSpan w dst ptr tmp 0)))) ρ W reserved := pre
@@ -95,7 +98,7 @@ theorem selectFrameSpan_checked_ok {m : Runner.Mem} {pc fp : Runner.W} {K base d
     (by simpa only [Nat.zero_add] using literal) (by rw [addressNat]; omega)
     (by
       rw [addressNat]
-      rcases order with order | order
+      rcases order' with order | order
       · exact Or.inl (by omega)
       · exact Or.inr (by omega)) (Or.inl (by rw [addressNat]; omega))
     next.code (by simpa using next.far) r4 source.rebase
