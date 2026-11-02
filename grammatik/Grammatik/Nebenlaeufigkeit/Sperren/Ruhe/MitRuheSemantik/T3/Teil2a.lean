@@ -189,6 +189,53 @@ theorem execBlock_ru_bindCallInd {V : Vertrag D}
       | hardware e => (try erw [hx]); rfl
 
 set_option linter.unusedSectionVars false in
+theorem execBlock_ru_bindCallIndElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {Λ' : List (Res D)}
+    {zi_τ}
+    (n)
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlock_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execBlock O.mitRuhe passes R' (ruB rest) (worldR σ) (envR ρ) = ausR (execBlock O passes R rest σ ρ))
+    (ih_execEnd_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd err) (worldR σ) (envR ρ) = endR (execEnd O passes R err σ ρ))
+    : execBlock O.mitRuhe passes R' (ruB (.bindCallIndElse (τ := zi_τ) (n := n) p args he hp hr err rest : Block D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execBlock O passes R (.bindCallIndElse (τ := zi_τ) (n := n) p args he hp hr err rest : Block D V l Γ Λ Λ') σ ρ) :=
+  by
+  simp only [ruB, execBlock, indSonst]
+  erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+    kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+  erw [lese_worldR, eval_ru, evalArgs_ru]
+  cases h : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ with
+  | mk g hg =>
+      rw [valR_fnptr]
+      dsimp only
+      erw [umsig_ru hg, hR]
+      cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+      | ok σ' v =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execBlock_vorΛ, ergWert_ru (ergSig hg he)]
+          exact (congrArg Ausgang.schrumpf
+            (ih_execBlock_ru_rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))).trans (ausR_schrumpf _)
+      | why σ' r =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execEnd_umΛ]
+          exact (congrArg (fun a => EndAusgang.zuAusgang (EndAusgang.schrumpf a))
+            (ih_execEnd_ru_err σ' (Env.cons (grundSig hg r) ρ))).trans
+            ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
+      | logik e => (try erw [hx]); rfl
+      | hardware e => (try erw [hx]); rfl
+
+set_option linter.unusedSectionVars false in
 theorem execBlock_ru_bindCallElse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

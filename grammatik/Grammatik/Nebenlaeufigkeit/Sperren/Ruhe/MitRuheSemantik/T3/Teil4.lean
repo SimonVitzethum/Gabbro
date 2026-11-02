@@ -53,6 +53,51 @@ theorem execEnd_ru_bindCallInd {V : Vertrag D}
       | hardware e => (try erw [hx]); rfl
 
 set_option linter.unusedSectionVars false in
+theorem execEnd_ru_bindCallIndElse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_τ}
+    (n)
+    (p)
+    (args)
+    (he)
+    (hp)
+    (hr)
+    (err)
+    (rest)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execEnd_ru_rest : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd rest) (worldR σ) (envR ρ) = endR (execEnd O passes R rest σ ρ))
+    (ih_execEnd_ru_err : ∀ (σ : World D), ∀ (ρ : Env D _), execEnd O.mitRuhe passes R' (ruEnd err) (worldR σ) (envR ρ) = endR (execEnd O passes R err σ ρ))
+    : execEnd O.mitRuhe passes R' (ruEnd (.bindCallIndElse (τ := zi_τ) (n := n) p args he hp hr err rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.bindCallIndElse (τ := zi_τ) (n := n) p args he hp hr err rest : Endblock D V l Γ Λ) σ ρ) :=
+  by
+  simp only [ruEnd, execEnd, indSonstE]
+  erw [show (ruE p).orte ++ (ruA args).orte = p.orte ++ args.orte from
+    kongr₂ (· ++ ·) (ruE_orte p) (ruA_orte args)]
+  erw [lese_worldR, eval_ru, evalArgs_ru]
+  cases h : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ with
+  | mk g hg =>
+      rw [valR_fnptr]
+      dsimp only
+      erw [umsig_ru hg, hR]
+      cases hx : R g (σ.lese Λ (p.orte ++ args.orte)) (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
+      | ok σ' v =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execEnd_umΛ, ergWert_ru (ergSig hg he)]
+          exact (congrArg EndAusgang.schrumpf
+            (ih_execEnd_ru_rest σ' (Env.cons (ergWert (ergSig hg he) v) ρ))).trans (endR_schrumpf _)
+      | why σ' r =>
+          try erw [hx]
+          simp only [rufR]
+          erw [execEnd_umΛ]
+          exact (congrArg EndAusgang.schrumpf
+            (ih_execEnd_ru_err σ' (Env.cons (grundSig hg r) ρ))).trans (endR_schrumpf _)
+      | logik e => (try erw [hx]); rfl
+      | hardware e => (try erw [hx]); rfl
+
+set_option linter.unusedSectionVars false in
 theorem execEnd_ru_narrow {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
@@ -191,6 +236,8 @@ theorem execStmt_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (
       execStmt_ru_call (g := g) (args := args) (hp := hp) (hr := hr) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .callInd (n := n) p args hp hr, σ, ρ =>
       execStmt_ru_callInd (n := n) (p := p) (args := args) (hp := hp) (hr := hr) (σ := σ) (ρ := ρ) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, _, .callIndElse (n := n) p args he hp hr err, σ, ρ =>
+      execStmt_ru_callIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (σ := σ) (ρ := ρ) (ih_execEnd_ru_err := execEnd_ru err) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .locks L hr body, σ, ρ =>
       execStmt_ru_locks (hr := hr) (body := body) (σ := σ) (ρ := ρ) (ih_execBlock_ru_body := execBlock_ru body) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, _, _, .breaking _ body, σ, ρ => by
@@ -240,6 +287,8 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
       execBlock_ru_bindCall (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlock_ru_rest := execBlock_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .bindCallInd (n := n) p args he hp hr rest, σ, ρ =>
       execBlock_ru_bindCallInd (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlock_ru_rest := execBlock_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, _, .bindCallIndElse (n := n) p args he hp hr err rest, σ, ρ =>
+      execBlock_ru_bindCallIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlock_ru_rest := execBlock_ru rest) (ih_execEnd_ru_err := execEnd_ru err) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .bindCallElse g args he hp hr err rest, σ, ρ =>
       execBlock_ru_bindCallElse (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execBlock_ru_rest := execBlock_ru rest) (ih_execEnd_ru_err := execEnd_ru err) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ =>
@@ -299,6 +348,8 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       execEnd_ru_awaits (g := g) (payload := payload) (hp := hp) (hL := hL) (hat := hat) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, .bindCallInd (n := n) p args he hp hr rest, σ, ρ =>
       execEnd_ru_bindCallInd (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
+  | _, _, Λ, .bindCallIndElse (n := n) p args he hp hr err rest, σ, ρ =>
+      execEnd_ru_bindCallIndElse (n := n) (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (ih_execEnd_ru_err := execEnd_ru err) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, .narrow e lo' hi' sonst rest, σ, ρ =>
       execEnd_ru_narrow (e := e) (lo' := lo') (hi' := hi') (sonst := sonst) (rest := rest) (σ := σ) (ρ := ρ) (ih_execEnd_ru_rest := execEnd_ru rest) (ih_execEnd_ru_sonst := execEnd_ru sonst) (O := O) (passes := passes) (R := R) (R' := R') (hR := hR)
   | _, _, Λ, .narrowRequired e lo' hi' rest, σ, ρ =>
