@@ -20,6 +20,7 @@ private theorem discardGate_result {O : Orakel D} {passes : Nat}
     {a : D.Ax} {err : Endblock D (vertragVon D f) l (.why (D.agruende a) :: Γ) Λ}
     {cg ce : List II} {te : Nat} {m : Runner.Mem} {pc : Runner.W} {ρ : Env D Γ}
     {σ' : World D} {answer : World D × Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a))}
+    (hlo0 : lo = (functionFrame P f).internalResult)
     (hwhy : valueWords (.why (D.agruende a)) = 1)
     (hce : lowEnd passes A L (functionFrame P f) (cens, tens) pr ex err reserved = some (ce, te))
     (hroom : frei Γ reserved + 10 ≤ Ks) (hK : te + cap ≤ Ks) (hs : 16 * (cg ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce).length < 2 ^ 31)
@@ -112,7 +113,7 @@ theorem stmtAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
         obtain ⟨rfl, rfl⟩ := hc
         have hg := torElse_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) hτ hτ hb hf hlo' hn ht hck
           (cr := [ci 18 (16 * (ce.length + 1)) 0 0]) hJ (by omega) (by omega) hW hp hWa
-        apply discardGate_result hwhy hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
+        apply discardGate_result hlo0 hwhy hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
         rcases hg with ⟨v, m2, w, ha, st, ag, _, _, hw⟩ | ⟨r, m2, ha, st, ag, wr, hw⟩ | ⟨ha, stop⟩
         · exact .inl ⟨v, m2, ha, by simpa only [List.length_append, fehlC_len] using st, ag, hw⟩
         · exact .inr (.inl ⟨r, m2, ha, by simpa only [List.length_append, List.length_singleton, fehlC_len] using st, ag, wr, hw⟩)
@@ -131,7 +132,7 @@ theorem stmtAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
         obtain ⟨rfl, rfl⟩ := hc
         have hg := torElseNone_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) hτ hb hf hn ht
           (cr := [ci 18 (16 * (ce.length + 1)) 0 0]) hJ (by omega) (by omega) hW hp hWa
-        apply discardGate_result hwhy hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
+        apply discardGate_result hlo0 hwhy hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
         rcases hg with ⟨m2, ha, st, ag, hw⟩ | ⟨r, m2, ha, st, ag, wr, hw⟩
         · exact .inl ⟨(), m2, ha, by simpa only [List.length_append, fehlC_len] using st, ag, hw⟩
         · exact .inr (.inl ⟨r, m2, ha, by simpa only [List.length_append, List.length_singleton, fehlC_len] using st, ag, wr, hw⟩)
