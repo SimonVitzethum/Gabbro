@@ -152,7 +152,8 @@ def stmtOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
   | .onTag v arms => v.orte ++ armsOrteP P arms
   | .onWhy r arms => r.orte ++ grundArmsOrteP P arms
   | .call g args _ _ => args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte)
-  | .callInd p args _ _ => p.orte ++ args.orte
+  | .callInd (n := n) p args _ _ =>
+      p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte
   | .locks _ _ body => blockOrteP P body
   | .breaking _ body => blockOrteP P body
   | .traverse _ inv body => inv.orte ++ blockOrteP P body
@@ -176,7 +177,9 @@ def blockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .bind e rest => e.orte ++ blockOrteP P rest
   | .bindCall g args _ _ _ rest =>
       args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte) ++ blockOrteP P rest
-  | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ blockOrteP P rest
+  | .bindCallInd (n := n) p args _ _ _ rest =>
+      p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
+        blockOrteP P rest
   | .bindCallElse g args _ _ _ err rest =>
       args.orte ++ ((P.requires g).orte ++ (P.ensures g).orte) ++ endblockOrteP P err ++
         blockOrteP P rest
@@ -218,7 +221,9 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .regReadElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
   | .awaits g _ _ _ _ rest => .inr g :: endblockOrteP P rest
-  | .bindCallInd p args _ _ _ rest => p.orte ++ args.orte ++ endblockOrteP P rest
+  | .bindCallInd (n := n) p args _ _ _ rest =>
+      p.orte ++ args.orte ++ (P.ptrVertrag n).pre.orte ++ (P.ptrVertrag n).post.orte ++
+        endblockOrteP P rest
   | .narrow e _ _ sonst rest =>
       e.orte ++ endblockOrteP P sonst ++ endblockOrteP P rest
   | .exchange g neu _ _ rest => .inr g :: neu.orte ++ endblockOrteP P rest
