@@ -82,6 +82,7 @@ mutual
 
 def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     Stmt D V l Γ Λ Λ' → (k c : Context) → Out
+  | _, _, _, _, .axiomCallElse .., _, _ => none
   | _, _, _, _, .assignSlot t f i e _ _, _, c =>
     if decide (NotLink A t f) && checkExpression A c i && checkExpression A c e && storeCheck A c t i then
       some (some c) else none
@@ -156,6 +157,8 @@ def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
 
 def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     Block D V l Γ Λ Λ' → (k c : Context) → Out
+  | _, _, _, _, .bindAxiomOpt .., _, _ => none
+  | _, _, _, _, .bindAxiomOptElse .., _, _ => none
   | _, _, _, _, .nil, _, c => some (some c)
   | _, _, _, _, .cons s rest, k, c =>
     let generic := seqR (chkS s k c) (fun c1 => chkB rest k c1)
@@ -233,6 +236,8 @@ def chkB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     if checkExpression A c e && chkE sonst k c then mapR Context.drop (chkB rest k (c.bind none)) else none
 
 def chkE : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Endblock D V l Γ Λ → (k c : Context) → Bool
+  | _, _, _, .bindAxiomOpt .., _, _ => false
+  | _, _, _, .bindAxiomOptElse .., _, _ => false
   | _, _, _, .ret e _, _, c => out.check A c e
   | _, _, _, .retWhy _ _, _, c => finish c none
   | _, _, _, .leave _, k, c => exitsB k c
