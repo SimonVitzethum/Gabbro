@@ -43,6 +43,7 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
--- Export support is still refused; the lead checks the candidate diagnostic.
+theorem candidate_refused :
+    emit text 64 = .error "source export: type/provider/proof duties lack a checked source binding" := by decide +kernel
 
 end Gabbro.Stage0.OwnerMintWitness

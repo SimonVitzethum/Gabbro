@@ -45,6 +45,6 @@ def candidate : Except String (Emitted text 64) := emit text 64
 
 /-- Placement requests exist in `Parser.Profil.Platzierung`; its policy and
     layout correspondence are not connected to static elaboration or the Stage0 image. -/
-theorem candidate_refused : candidate.toOption.isSome = false := by decide +kernel
+theorem candidate_refused : emit text 64 = .error "static placement without G form" := by decide +kernel
 
 end Gabbro.Stage0.AlignmentWitness

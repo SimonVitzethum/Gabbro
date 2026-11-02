@@ -43,11 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
-
-def output : Emitted text 64 := candidate.toOption.get candidate_present
-
-theorem accepted_image : emit text 64 = .ok output :=
-  Gabbro.Grammatik.except_ok_get candidate_present
+/-- The export gate refuses the unbound decreases proof duty. -/
+theorem candidate_refused :
+    emit text 64 = .error "source export: function type/proof/header duties lack a checked source binding: countdown" := by decide +kernel
 
 end Gabbro.Stage0.MeasureWitness
