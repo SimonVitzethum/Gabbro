@@ -28,6 +28,7 @@ public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T3
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T4
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T5
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T6
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T6a
 public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T7
 @[expose] public section
 
