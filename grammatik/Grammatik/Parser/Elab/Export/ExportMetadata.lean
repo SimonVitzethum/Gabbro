@@ -31,6 +31,12 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .cases _ arms => arms.any (bodyMetadata n)
   | _ + 1, .bind _ _ ty _ => ty.any typeMetadata
   | n + 1, .each _ _ _ _ mode raw _ body => mode != "unvisited" || raw != "" || bodyMetadata n body
+  /-- A required allocation binds a plain index and runs no continuation: the
+      counter narrowing is required, so a full arena is `Logik.kapazitaet` under
+      the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
+      failure-continuation duty can disappear. Mutable and type-annotated binders
+      elaborate to no G form, and the else branch keeps its own refusal below. -/
+  | _ + 1, .alloc false _ none _ _ none => false
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
@@ -76,6 +82,12 @@ def itemMetadata : SItemTief → Bool
         | .tTree _ => false
         | _ => true
   | .lockT _ _ _ held reserve mask inv => held.isSome || reserve.isSome || mask.isSome || inv.isSome
+  /-- A static arena declaration carries no unbound metadata: literal reservation
+      and bound, no dynamic ceiling, a checked element type and no
+      provider/proof binding (`uArenen` refuses the dynamic and placed shapes;
+      the static arena commits all its slots, so the required allocation's only
+      duty is the counter bound under `KoerperGutS/SA`). -/
+  | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
   | .groupT .. => true
   | .globT _ _ ty _ bound proof _ => typeMetadata ty || bound.isSome || proof.isSome
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
@@ -251,10 +263,32 @@ theorem capability_unbound_zeuge :
     typeMetadata (.ptr "guest" "own@holder" (.atom "T")) = true ∧
     typeMetadata (.entry "main" none) = true := by
   exact ⟨rfl, rfl⟩
-/-- Required allocation remains refused: arenaAllocRequired has no connected
-    provider/storage-availability duty or source-to-IR lowering yet. -/
-theorem required_allocation_refused_zeuge :
-    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = true := by rfl
+/-- Required allocation is admitted at the gate: the binder is a plain index
+    (mutable and type-annotated bindings elaborate to no G form) and the value
+    is an ordinary body expression. The elaborator lowers it through
+    `UStmt.allocReqBeg` to `Block.arenaAllocRequired`, whose full-arena outcome
+    is `Logik.kapazitaet` under the caller's `KoerperGutS/SA` duty; Stage 0
+    lowers that like `narrowRequired` (success path plus `stopC 107`). -/
+theorem allocRequired_bound (x an : String) (v : SExpr) (n : Nat) :
+    bodyMetadata (n + 1) (.alloc false x none an v none) = false := by rfl
+
+theorem allocRequired_zeuge :
+    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = false ∧
+    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = true ∧
+    bodyMetadata 1 (.alloc true "i" none "A" (.lit 0) none) = true := by
+  exact ⟨rfl, rfl, rfl⟩
+
+/-- Static arena declarations are admitted at the gate exactly in their
+    elaborated shape: anything dynamic, placed, non-literal or provider-bound
+    stays refused. -/
+theorem arenaT_bound (n : String) (lo hi : Int) (ty : STyp) :
+    itemMetadata (.arenaT n (.lit lo) (.lit hi) none ty none) = typeMetadata ty := by rfl
+
+theorem arenaT_zeuge :
+    itemMetadata (.arenaT "A" (.lit 1) (.lit 2) none (.atom "u32") none) = false ∧
+    itemMetadata (.arenaT "A" (.lit 1) (.lit 2) (some (.lit 8)) (.atom "u32") none) = true ∧
+    itemMetadata (.arenaT "A" (.lit 1) (.lit 2) none (.atom "u32") (some (["P"], (.lit 1)))) = true := by
+  exact ⟨rfl, rfl, rfl⟩
 
 /-- Owner production stays refused: the model admits escrow-ready flows
     (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), but the elaborator

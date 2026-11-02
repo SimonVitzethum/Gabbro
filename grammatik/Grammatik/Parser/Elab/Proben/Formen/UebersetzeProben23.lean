@@ -55,10 +55,12 @@ def alloc_ok : String :=
   "module m { arena R capacity 2 .. 8 of u16; impl fn f(c : bool) -> u16 effects { reads R, writes R } { if c { let a = alloc R (1) else { return 100; }; return R[a]; } return 0; } }"
 theorem alloc_ok_stufe : stufe alloc_ok = "OK" := by decide +kernel
 
-/-- The branch is required. -/
-def alloc_else_refused : String :=
-  "module m { arena R capacity 2 .. 8 of u16; impl fn f(c : bool) effects { writes R } { if c { let a = alloc R (1); } } }"
-theorem alloc_else_refused_stufe : stufe alloc_else_refused = "elab: alloc without else without G form" := by decide +kernel
+/-- No `else` needed: the required allocation runs the shared body, and a full
+    arena is the caller's capacity duty (`Logik.kapazitaet`, excluded by
+    `KoerperGutS/SA`). -/
+def allocRequired_ok : String :=
+  "module m { arena R capacity 2 .. 8 of u16; impl fn f(c : bool) -> u16 effects { reads R, writes R } { if c { let a = alloc R (1); return R[a]; } return 0; } }"
+theorem allocRequired_ok_stufe : stufe allocRequired_ok = "OK" := by decide +kernel
 
 /-- The write right on the arena. -/
 def alloc_right_refused : String :=
