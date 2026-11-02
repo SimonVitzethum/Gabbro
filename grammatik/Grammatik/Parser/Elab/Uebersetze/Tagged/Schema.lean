@@ -79,7 +79,7 @@ theorem resolve_shape {α β : Type} (resolvePayload : α → Except String β)
 end USum
 
 /-- Read complete payload types with the canonical parser, including nested groups.
-    Reading a schema does not admit it as an executable kernel sum. -/
+    Reading a schema does not enable its execution as a kernel sum. -/
 def uSumFaelle : Nat → List Token → Except String (List (String × Option STyp))
   | 0, _ => .error "tagged type too long"
   | _, [] => .ok []
@@ -106,7 +106,7 @@ def uSumFaelle : Nat → List Token → Except String (List (String × Option ST
     `STyp` tree, including types the current kernel cannot yet carry as sum payloads. -/
 def uSumSchemas : List SItemTief → Except String (List (USum STyp))
   | [] => .ok []
-  | .typeT ["tagged"] n _ _ (.some (.raw txt)) :: rest =>
+  | .typeT ["tagged"] n [] [] (.some (.raw txt)) :: rest =>
     match lex txt with
     | .error _ => .error "tagged type without G form"
     | .ok toks0 =>
@@ -122,11 +122,27 @@ def uSumSchemas : List SItemTief → Except String (List (USum STyp))
             else if (cs.map (·.1)).Nodup then
               match uSumSchemas rest with
               | .error e => .error e
-              | .ok schemas => .ok ({ name := n, cases := cs } :: schemas)
+              | .ok schemas =>
+                if schemas.any (fun s => strEq s.name n) then .error "duplicate tagged type name"
+                else .ok ({ name := n, cases := cs } :: schemas)
             else .error "duplicate tagged case name"
         | _ => .error "tagged type without G form"
       | _ => .error "tagged type without G form"
+  | .typeT modifiers _ _ _ _ :: rest =>
+    if modifiers.any (strEq "tagged") then .error "tagged declaration without G form"
+    else uSumSchemas rest
   | _ :: rest => uSumSchemas rest
+
+/-- The current numeric payload gate validates the base before reading its bounds.
+    In particular, a range annotation cannot turn a bool, record or unknown name into an integer.
+    All numeric names, aliases and bounds still use the canonical result-type reader. -/
+def uSumPayload (alias : List (String × (Int × Int))) : STyp → Except String (Int × Int)
+  | .atom name => uErgBereich alias (.atom name)
+  | ty@(.range base _ _ _) =>
+    match uSumPayload alias base with
+    | .error e => .error e
+    | .ok _ => uErgBereich alias ty
+  | ty => .error ("tagged payload without G form: " ++ sTypText ty)
 
 /-- Admission to the current numeric kernel. Typed schemas reach this explicit gate;
     unsupported payloads never become payload-free variants or fabricated ranges. -/
@@ -134,6 +150,6 @@ def uSums (alias : List (String × (Int × Int))) (items : List SItemTief) :
     Except String (List USum) :=
   match uSumSchemas items with
   | .error e => .error e
-  | .ok schemas => schemas.mapM (USum.resolve (uErgBereich alias))
+  | .ok schemas => schemas.mapM (USum.resolve (uSumPayload alias))
 
 end Gabbro.Grammatik.Parser.Uebersetze

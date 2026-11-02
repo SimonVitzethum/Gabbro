@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
+public import Grammatik.Parser.Elab.Uebersetze.Teil13
 
 import all Init.Data.Repr
 import all Init.Data.String.Basic
@@ -50,7 +50,7 @@ theorem uSumFaelle_nested_zeuge :
         ("Empty", none)] := rfl
 
 theorem uSumFaelle_nested_resolved_zeuge :
-    (uSumFaelle 100 nestedPayload).bind (USum.resolveCases (uErgBereich [])) =
+    (uSumFaelle 100 nestedPayload).bind (USum.resolveCases (uSumPayload [])) =
       .ok [("Data", some (3, 10)), ("Empty", none)] := by decide
 
 theorem uSumFaelle_bool_zeuge :
@@ -118,7 +118,7 @@ theorem uSumFaelle_trailing_tokens_refused :
 
 /-- A failed payload resolver refuses the declaration, including a failure after a valid field. -/
 theorem tagged_unsupported_payload_refused :
-    taggedSourceSchema.resolve (uErgBereich []) = .error "result without G form: [u8; ..]" := by
+    taggedSourceSchema.resolve (uSumPayload []) = .error "tagged payload without G form: [u8; ..]" := by
   decide
 
 def taggedItems (body : String) : List SItemTief :=
@@ -142,6 +142,34 @@ theorem uSumSchemas_duplicate_refused :
 theorem uSumSchemas_empty_refused :
     uSumSchemas (taggedItems "{ }") = .error "tagged type without cases" := rfl
 
+theorem uSumSchemas_duplicate_type_refused :
+    uSumSchemas (taggedItems "{ Data(u8) }" ++ taggedItems "{ Empty }") =
+      .error "duplicate tagged type name" := rfl
+
+theorem uSumSchemas_parameters_refused :
+    uSumSchemas [.typeT ["tagged"] "Message" [.atom "u8"] []
+      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := rfl
+
+theorem uSumSchemas_constraints_refused :
+    uSumSchemas [.typeT ["tagged"] "Message" [] ["discarded"]
+      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := rfl
+
+theorem uSumSchemas_linear_refused :
+    uSumSchemas [.typeT ["linear", "tagged"] "Message" [] []
+      (some (.raw "{ Empty }"))] = .error "tagged declaration without G form" := rfl
+
+theorem uSumSchemas_missing_body_refused :
+    uSumSchemas [.typeT ["tagged"] "Message" [] [] none] =
+      .error "tagged declaration without G form" := rfl
+
+theorem uSums_ranged_bool_refused :
+    (match uSums [] (taggedItems "{ Flag(bool in 0 .. 1) }") with
+      | .error _ => true | .ok _ => false) = true := by decide
+
+theorem uSums_ranged_unknown_refused :
+    (match uSums [] (taggedItems "{ Data(Undeclared in 0 .. 1) }") with
+      | .error _ => true | .ok _ => false) = true := by decide
+
 theorem uSums_bool_still_refused :
     (match uSums [] (taggedItems "{ Flag(bool), Empty }") with
       | .error _ => true | .ok _ => false) = true := by decide
@@ -161,5 +189,17 @@ theorem uSums_string_still_refused :
 theorem uSums_record_still_refused :
     (match uSums [] (taggedItems "{ Record({ flag: bool }), Empty }") with
       | .error _ => true | .ok _ => false) = true := by decide
+
+/-- These are the actual exporter's declaration-admission path, not only schema-reader tests. -/
+theorem elabU_tagged_payload_refused :
+    elabU (taggedItems "{ Bytes([u8; 3]), Empty }") =
+      .error "tagged payload without G form: [u8; ..]" := by decide
+
+theorem elabU_tagged_duplicate_refused :
+    elabU (taggedItems "{ Data(u8), Data }") = .error "duplicate tagged case name" := by decide
+
+theorem elabU_tagged_shape_refused :
+    elabU [.typeT ["tagged"] "Message" [] [] none] =
+      .error "tagged declaration without G form" := by decide
 
 end Gabbro.Grammatik.Parser.Uebersetze
