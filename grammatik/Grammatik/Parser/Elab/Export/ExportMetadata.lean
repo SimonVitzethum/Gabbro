@@ -24,6 +24,8 @@ def bodyMetadata : Nat → SAnw → Bool
   | 0, _ => true
   | n + 1, .block ss _ => ss.any (bodyMetadata n)
   | n + 1, .bindElse _ ty _ _ b | n + 1, .bindAxiomOptElse _ ty _ _ b => ty.any typeMetadata || bodyMetadata n b
+  | n + 1, .bindQ _ _ ty _ => ty.any typeMetadata
+  | n + 1, .callQ .. => false
   | n + 1, .waive _ b | n + 1, .locks _ _ b | n + 1, .watch _ b |
     n + 1, .trim _ _ b => bodyMetadata n b
   | n + 1, .cond _ a bs b => bodyMetadata n a || bs.any (bodyMetadata n) || b.any (bodyMetadata n)
@@ -90,6 +92,9 @@ def itemMetadata : SItemTief → Bool
   | .arenaT _ (.lit _) (.lit _) none ty none => typeMetadata ty
   | .groupT .. => true
   | .globT _ _ ty _ bound proof _ => typeMetadata ty || bound.isSome || proof.isSome
+  | .adaptT s ps _ b => (s.art != "" && s.art != "impl") ||
+    clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
+    ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.
   | .typeT [] _ [] [] (some (.raw text)) => !text.startsWith "{"
@@ -126,6 +131,7 @@ def metadataReason : SItemTief → String
     else if sig.klauseln.any (fun | .cost _ => true | _ => false) then
       "declared costs lack a checked source-to-kostenPasst binding: " ++ sig.name
     else "function type/proof/header duties lack a checked source binding: " ++ sig.name
+  | .adaptT s _ _ _ => "adapter without expanded form: " ++ s.name
   | _ => "type/provider/proof duties lack a checked source binding"
 
 def check (items : List SItemTief) : Except String Unit :=

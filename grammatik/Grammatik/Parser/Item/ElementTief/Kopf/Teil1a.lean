@@ -101,6 +101,47 @@ def beqSKlauselList : List SKlausel → List SKlausel → Bool
   | _, _ => false
 end
 
+/- One adapter parameter (`ABSTRACTION-SYNTAX-PLAN.md` §4.1 `adaptparam`): `..` takes over every
+    parameter of the source in its order, `-x` drops the source parameter `x`, `x : T` adds a
+    new parameter. The expansion happens in the desugarer (`Uebersetze/Teil18`); the parser
+    keeps the raw list. -/
+inductive SAdaptParam
+  | alle : SAdaptParam
+  | ohne : String → SAdaptParam
+  | neu : String → STyp → SAdaptParam
+  deriving Repr
+
+def beqSAdaptParam : SAdaptParam → SAdaptParam → Bool
+  | .alle, .alle => true
+  | .ohne a, .ohne b => strEq a b
+  | .neu a t, .neu b u => strEq a b && beqSTyp t u
+  | _, _ => false
+
+def beqSAdaptParamList : List SAdaptParam → List SAdaptParam → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqSAdaptParam x y && beqSAdaptParamList xs ys
+  | _, _ => false
+
+/- The adapter head behind the parameter list (§4.1): the source function `quelle`, the name the
+    call answer is bound to (`gebunden`, `none` for the short `;` body), the explicit `else`
+    handler for a differing reason channel (`sonst`, required then), and the prelude statements
+    that run before the call (`vorspiel`, binding every dropped parameter). -/
+structure SAdapt where
+  quelle : String
+  gebunden : Option String
+  sonst : Option (String × SAnw)
+  vorspiel : List SAnw
+  deriving Repr
+
+def beqOptSonst : Option (String × SAnw) → Option (String × SAnw) → Bool
+  | none, none => true
+  | some (e, b), some (f, d) => strEq e f && beqSAnw b d
+  | _, _ => false
+
+def beqSAdapt : SAdapt → SAdapt → Bool
+  | a, b => strEq a.quelle b.quelle && beqOptWort a.gebunden b.gebunden &&
+    beqOptSonst a.sonst b.sonst && beqSAnwList a.vorspiel b.vorspiel
+
 /- A function head: SYNTAX.md section 6 `fndecl` up to the body.
     `art` is the modifier word (`impl`, `spec`, `library`,
     `const`, `raw`, `divergent`, `prim`, `extern`, else `""` for a

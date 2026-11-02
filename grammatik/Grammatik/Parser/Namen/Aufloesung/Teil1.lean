@@ -158,6 +158,7 @@ def klausel (k : Kontext) : SKlausel → SKlausel
 def gebunden : SAnw → List String
   | .bind _ x _ _ | .bindAxiomOpt x _ _ => [x]
   | .bindElse x _ _ _ _ | .bindAxiomOptElse x _ _ _ _ => [x]
+  | .bindQ _ x _ _ => [x]
   | .bindLib _ x _ _ => [x]
   | .alloc _ x _ _ _ _ => [x]
   | .allocVon _ x _ _ => [x]
@@ -183,6 +184,7 @@ mutual
 def anw (k : Kontext) : SAnw → SAnw
   | .bind m x t e => .bind m x (typO k t) (aus k e)
   | .bindElse x t e g s => .bindElse x (typO k t) (aus k e) g (anw k s)
+  | .bindQ m x t e => .bindQ m x (typO k t) (aus k e)
   | .bindAxiomOpt x t e => .bindAxiomOpt x (typO k t) (aus k e)
   | .bindAxiomOptElse x t e g s => .bindAxiomOptElse x (typO k t) (aus k e) g (anw k s)
   | .bindLib m x t c => .bindLib m x (typO k t) (libraryCall k c)
@@ -190,6 +192,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
   | .call f xs => .call (k.ref f) (xs.map (aus k))
+  | .callQ f xs => .callQ (k.ref f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))
   | .elsif c s => .elsif (aus k c) (anw k s)

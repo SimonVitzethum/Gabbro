@@ -55,6 +55,7 @@ def fnNamenI : SItemTief → List String
   | .fnT s _ => [s.name]
   | .protoT s => [s.name]
   | .asmT s _ => [s.name]
+  | .adaptT s _ _ _ => [s.name]
   | _ => []
 /-- The list form. -/
 def fnNamenL : List SItemTief → List String

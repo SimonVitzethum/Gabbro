@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil18
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Generate
 public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.TaggedDispatch.Frontend
@@ -194,7 +195,7 @@ def uFremdSig : SItemTief → Option (FnSig × Bool)
     runs first, so a source program with a library call exports to an ordinary unit: `library`
     bodies elaborate as ordinary functions, translators are consumed, and calls expand into
     ordinary calls carrying the declared payload. -/
-def elabU : List SItemTief → Except String UProg
+def elabUroh : List SItemTief → Except String UProg
   | items =>
     let ms0 := uMembers items
     match Gabbro.Grammatik.Parser.exportDeclarationUnit ms0 with
@@ -353,6 +354,14 @@ def elabU : List SItemTief → Except String UProg
       let u : UProg :=
         { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces }
       .ok (uMitBoden u)
+
+/-- The elaborator over the Phase-1-sugared unit: `entzuckere` (adapters, `?`) runs first on
+    the flattened members, so machine G never sees the new syntax. On units without the new
+    forms it is the identity and `elabU` is `elabUroh`. -/
+def elabU : List SItemTief → Except String UProg
+  | items => match entzuckere (uMembers items) with
+    | .error e => .error e
+    | .ok msZ => elabUroh msZ
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 

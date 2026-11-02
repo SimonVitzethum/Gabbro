@@ -194,6 +194,12 @@ inductive SItemTief
   /-- `pub item`: the item crosses the boundary of its project (its name is visible to a dependent
       project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
   | pubT : SItemTief → SItemTief
+  /-- An adapter `fn g(adaptparams) [-> T] [or R] from f [=> a [else (e) block]] clauses [prelude]
+      body` (`ABSTRACTION-SYNTAX-PLAN.md` §4.1): `sig` carries the name, result, channel and
+      clauses, the parameter list the raw adapter parameters, and the body is `some` block or
+      `none` for the short `;` form. The desugarer (`Uebersetze/Teil18`) expands it to an
+      ordinary `fnT` before elaboration. -/
+  | adaptT : FnSig → List SAdaptParam → SAdapt → Option SAnw → SItemTief
   | taggedByT : SItemTief → String → SItemTief
   /-- Closed-dispatch declarations retain signatures and bodies until expansion. -/
   | specGroupT : String → String → List FnSig → SItemTief
@@ -269,6 +275,8 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     (a == b) && beqSProfEintragList e f
   | .gateT a, .gateT b => beqSItemTief a b
   | .pubT a, .pubT b => beqSItemTief a b
+  | .adaptT s p a b, .adaptT t q c d =>
+    beqFnSig s t && beqSAdaptParamList p q && beqSAdapt a c && beqOptAnw b d
   | .taggedByT a s, .taggedByT b t => beqSItemTief a b && strEq s t
   | .specGroupT n p fs, .specGroupT m q gs =>
     strEq n m && strEq p q && fs.length == gs.length &&

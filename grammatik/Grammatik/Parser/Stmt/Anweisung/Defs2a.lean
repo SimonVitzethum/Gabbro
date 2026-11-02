@@ -128,6 +128,11 @@ def parseLetExpr (f : Nat) (m : Bool) (name : String) (ty : Option STyp)
       let (k, rest'') ← nimmBisZeichen ";" rest' 0
       let rest3 ← fordereZeichen ";" rest''
       pure (.swap name ty e k, rest3)
+    | .zeichen "?" :: .zeichen ";" :: rest' =>
+      match e with
+      | .call _ _ => pure (.bindQ m name ty e, rest')
+      | _ => .error "? needs a call"
+    | .zeichen "?" :: _ => .error "? without ;"
     | _ => do
       let rest' ← fordereZeichen ";" rest
       pure (.bind m name ty e, rest')
