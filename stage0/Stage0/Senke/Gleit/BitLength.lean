@@ -19,7 +19,7 @@ open Gleitkomma
 theorem bitlen_unique (n b : Nat) (hlo : 2 ^ (b - 1) ≤ n) (hhi : n < 2 ^ b)
     (hn : 0 < n) : bitlen n = b := by
   have hob := bitlen_obere n
-  have hun := bitlen_untere n hn
+  have hun := bitlen_untere n (by omega : n ≠ 0)
   by_contra hne
   rcases lt_or_gt_of_ne hne with hlt | hgt
   · have h1 := Nat.pow_le_pow_right (show 0 < 2 by decide) (show bitlen n ≤ b - 1 by omega)
@@ -40,14 +40,18 @@ theorem bitlen_pow2 (j : Nat) : bitlen (2 ^ j) = j + 1 := by
 theorem bitlen_mul_pow2 (S t : Nat) (hS : 0 < S) :
     bitlen (S * 2 ^ t) = bitlen S + t := by
   have hob := bitlen_obere S
-  have hun := bitlen_untere S hS
+  have hun := bitlen_untere S (by omega : S ≠ 0)
   have hb1 : 1 ≤ bitlen S := by
     rcases Nat.eq_zero_or_pos (bitlen S) with h0 | hpos
     · exfalso; rw [h0] at hob; simp at hob; omega
     · exact hpos
   apply bitlen_unique
-  · have h1 := Nat.mul_le_mul hun (Nat.le_refl (2 ^ t))
-    have h2 : 2 ^ bitlen S * 2 ^ t = 2 ^ (bitlen S + t - 1) := by
+  · have low : 2 ^ (bitlen S - 1) ≤ S := by
+      have he : bitlen S = (bitlen S - 1) + 1 := by omega
+      rw [he, Nat.pow_succ] at hun
+      omega
+    have h1 := Nat.mul_le_mul low (Nat.le_refl (2 ^ t))
+    have h2 : 2 ^ (bitlen S - 1) * 2 ^ t = 2 ^ (bitlen S + t - 1) := by
       rw [← Nat.pow_add]
       congr 1
       omega
@@ -70,9 +74,13 @@ theorem findeExp_scaled (A t j : Nat) (hA : 0 < A) :
       rw [h0] at hob; simp at hob; omega
     · exact hpos
   have hle : 2 ^ (bitlen A + t - 1) ≤ A * 2 ^ t := by
-    have hun := bitlen_untere A hA
-    have h1 := Nat.mul_le_mul hun (Nat.le_refl (2 ^ t))
-    have h2 : 2 ^ bitlen A * 2 ^ t = 2 ^ (bitlen A + t - 1) := by
+    have hun := bitlen_untere A (by omega : A ≠ 0)
+    have low : 2 ^ (bitlen A - 1) ≤ A := by
+      have he : bitlen A = (bitlen A - 1) + 1 := by omega
+      rw [he, Nat.pow_succ] at hun
+      omega
+    have h1 := Nat.mul_le_mul low (Nat.le_refl (2 ^ t))
+    have h2 : 2 ^ (bitlen A - 1) * 2 ^ t = 2 ^ (bitlen A + t - 1) := by
       rw [← Nat.pow_add]
       congr 1
       omega
