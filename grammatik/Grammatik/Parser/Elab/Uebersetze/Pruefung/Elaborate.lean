@@ -4,9 +4,10 @@
    the named refusal. `uCheck` resolves one item: the gates must name unit functions
    or sibling checks (a gate that is neither is refused, never auto-run), the
    floors elaborate with the ordinary predicate reader (a floor over a place whose
-   scope exists only inside the not-yet-generated probe keeps its refusal). The
-   `can_fail` body is validated by the parser and retained in the source tree;
-   its lowering into generated functions is the open remainder. -/
+   scope exists only inside the not-yet-generated probe keeps its refusal), and
+   `probe` records the generated producer name (`Erzeuge.uProbeFns` elaborates the
+   `can_fail` body under that name; a probe never shares its name with a written
+   function). -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil5
@@ -41,8 +42,7 @@ def uCheck (tabs : List UTab) (globs : List UGlob) (fns : List String) (checks :
     { names := [], kinds := [], types := [], tabs := tabs, locks := [], held := [],
       res := none, fname := c.cname, globs := globs }
   let boeden ← uSeq (c.boden.map (uSichert ctx))
-  .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore,
-        boeden := boeden, sonde := c.sonde }
+  .ok { name := c.cname, claim := c.claim, misst := misst, tore := tore, boeden := boeden, sonde := c.sonde, probe := probeFnName c.cname }
 
 def uChecksAux (tabs : List UTab) (globs : List UGlob) (fns namen bekannt : List String) :
     List SCheck → Except String (List UCheck)

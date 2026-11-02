@@ -8,6 +8,7 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 
 @[expose] public section
 
@@ -209,7 +210,7 @@ def elabU : List SItemTief → Except String UProg
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
-    -- C16: every `check` item elaborates now; its codegen refusal stays below.
+    -- C16: every `check` item elaborates now, with its generated probe below.
     match uChecks tabs globs ms with
     | .error e => .error e
     | .ok checks =>
@@ -269,34 +270,36 @@ def elabU : List SItemTief → Except String UProg
     let axKoepfe := axKoepfe0 ++ gateKoepfe
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
+    -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
+    match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) (uKonstArrays alias (uKonstFns ms) consts ms) zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) with
+    | .error e => .error e
+    | .ok probeFns =>
     match uSeq (fnItems.map (fun (s, b) =>
         elabUFunktion consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
           (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
           (uKonstArrays alias (uKonstFns ms) consts ms))) with
     | .error e => .error e
     | .ok fns =>
-    match uWurzeln tabs fns ms with
+    match uWurzeln tabs (fns ++ probeFns) ms with
     | .error e => .error e
     | .ok roots =>
     match uSeq ((uOhneDoppelte (fnItems.flatMap (fun (_, b) => uStartNamen 100000 b))).map
-        (fun d => uStart fns "start" d)) with
+        (fun d => uStart (fns ++ probeFns) "start" d)) with
     | .error e => .error e
     | .ok gestartet =>
-      if !uU003 locks (fns ++ zeigerPaare.map (·.2)) invs then .error "a writer of an invariant's carrier does not hold all its locks" else
-      match uRegiert fns with
+      if !uU003 locks (fns ++ probeFns ++ zeigerPaare.map (·.2)) invs then .error "a writer of an invariant's carrier does not hold all its locks" else
+      match uRegiert (fns ++ probeFns) with
       | .error e => .error e
       | .ok regiert =>
       let u : UProg :=
-        { tabs := tabs, locks := locks, fns := fns, roots := roots, hands := uHandler ms, globs := globs,
+        { tabs := tabs, locks := locks, fns := fns ++ probeFns, roots := roots, hands := uHandler ms, globs := globs,
           gestartet := gestartet,
           axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg,
                                           gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
           zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
           exportGate := ExportMetadata.check ms0, checks := checks }
-      -- C16: the records are retained, but their probe/gate lowering is the open
-      -- remainder -- a unit with a check keeps its named refusal.
-      if !checks.isEmpty then .error "check without G form" else .ok (uMitBoden u)
+      .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 

@@ -5,10 +5,9 @@
    of a named carrier, or an indexed slot -- resolved from the source shape, with
    no guessed table for a dynamically returned region), the resolved gate names,
    the floors as `UEns` predicates, the unique optional external counterprobe and
-   the build mode. The `can_fail` body has no U form yet: lowering it into the
-   generated probe and gate functions is the open remainder, and elaboration
-   keeps refusing any unit with a check (`check without G form`). The mode is
-   the checked shipping default; selection under C14 supplies the test mode. -/
+   the build mode. `probe` names the generated Boolean producer elaborated from
+   the `can_fail` body (`Erzeuge.uProbeFns`); the mode is the checked shipping
+   default, selection under C14 supplies the test mode. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
@@ -36,6 +35,12 @@ structure UCheck where
   sonde : Option (String × String)
   /-- The build mode (`false` = shipping; the test mode comes from C14 selection). -/
   testbau : Bool := false
+  /-- The generated Boolean producer elaborated from the `can_fail` body. -/
+  probe : String := ""
   deriving DecidableEq, Repr
+
+/-- The generated producer of a check: its name cannot collide with a written
+    function, since `#` never stands in a source identifier. -/
+def probeFnName (cname : String) : String := cname ++ "#probe"
 
 end Gabbro.Grammatik.Parser.Uebersetze

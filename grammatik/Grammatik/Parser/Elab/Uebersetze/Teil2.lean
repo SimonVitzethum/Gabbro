@@ -271,9 +271,9 @@ structure UProg where
   ptrKeys : List String := []
   /-- Original-source duty check, consumed by the actual new lowering branches. -/
   exportGate : Except String Unit := .ok ()
-  /-- The unit's declared checks (C16): elaborated records of every `check` item.
-      The `can_fail` bodies lower into generated functions in the next stage; until
-      then any non-empty list keeps the named `check without G form` refusal. -/
+  /-- The unit's declared checks (C16): elaborated records of every `check` item,
+      with each `can_fail` body lowered into its generated Boolean producer in
+      `fns` (named by the check's `probe` field). -/
   checks : List UCheck := []
   deriving DecidableEq, Repr
 
