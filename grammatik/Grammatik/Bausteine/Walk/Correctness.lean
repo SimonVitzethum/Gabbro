@@ -269,7 +269,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
       have hexpand : binding.expand guard code 0 (loop := loop) rename node path =
           binding.expandLevel (loop := loop) guard code 0 rename node path none := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
-      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
+      refine traverseLauf_all_okP (Λ := resources) _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
         (fun σ₁ ρ₁ => ok.invOk rename 0 path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
       intro σ₁ k ρ₁ hstab₁
       have hstabBind : ∀ nodev,
@@ -312,7 +312,7 @@ theorem walkExpand_ok {D : Deklaration} {shape : WalkShape} {V : Vertrag D}
           binding.expandLevel (loop := loop) guard code (level + 1) rename node path
             (some (fun {Δ} rename child pfx => binding.expand guard code level rename child pfx)) := rfl
       rw [hexpand, WalkBinding.expandLevel_run]
-      refine traverseLauf_all_okP _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
+      refine traverseLauf_all_okP (Λ := resources) _ _ (fun σ => ∀ nodev, binding.entries σ nodev = tbl)
         (fun σ₁ ρ₁ => ok.invOk rename (level + 1) path σ₁ ρ₁) (fun σ₁ ρ₁ h => h) ?_ _ σ ρ hstab
       intro σ₁ k ρ₁ hstab₁
       have hstabBind : ∀ nodev,
