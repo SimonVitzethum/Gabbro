@@ -212,7 +212,8 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
   | traverse t inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | retry n bis body ueberlauf => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | forever a inv body => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
-  | axiomCallElse .. => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+  | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
   | axiomCall a args h hw hg hd hgd => exact False.elim hax
   | regWrite r hk e =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
@@ -318,6 +319,36 @@ theorem execEreignis_aus_blatt_ohne_axiomCall
         simp only [stmtTraeger, stmtOrte]
         exact List.mem_append.mpr (Or.inr hmem)
   | retWhy r hΛ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        refine Or.inl ?_
+        simp only [List.not_mem_nil] at he'
+      · intro e' he' o ho
+        simp only [List.not_mem_nil] at he'
+  | retScoped e _ =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      have hspur : σ'.spur =
+          (e.orte).map (fun o => match o with
+            | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
+            | .inr g => Ereignis.gzugriff g false Λ σ.haelt) ++ σ.spur := by
+        rw [← hstep]; rfl
+      rw [hspur] at hneu
+      have hneueq := List.append_cancel_right hneu
+      subst hneueq
+      constructor
+      · intro e' he'
+        refine Or.inl ?_
+        exact (mem_leseEr he').1
+      · intro e' he' o ho
+        have hmem : o ∈ e.orte := (mem_leseEr he').2 o ho
+        simp only [stmtTraeger, stmtOrte]
+        exact List.mem_append.mpr (Or.inr hmem)
+  | retWhyScoped r _ =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       have hspur : σ'.spur = ([] : List (Ereignis D)) ++ σ.spur := by rw [← hstep]; rfl
       rw [hspur] at hneu

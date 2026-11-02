@@ -11,6 +11,8 @@ public import Grammatik.Bausteine.Arena.ArenaZucker
 
 namespace Gabbro.Grammatik.ArenaDyn
 
+/-! ### The dynamic arena AS A FORM (PLAN-DYNAMIC section 9, server lane 2026-09-28)
+
   Everything above is arithmetic on a `Nat` record: it says what a commit
   sequence does, and it says it about numbers. This section puts the same
   discipline where `ArenaZucker.lean` put the static one -- on the EXISTING
