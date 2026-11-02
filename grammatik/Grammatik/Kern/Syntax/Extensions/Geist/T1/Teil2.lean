@@ -263,7 +263,7 @@ theorem g001Stmt_korrekt_consumeTraverse {l : Bool} {Γ : Ctx} {Λ : List (Res D
   · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inl ho'))
   · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inl ho')))
   · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inr (Or.inl ho'))))
-  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inr (Or.inr (Or.inl ho')))))
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inr (Or.inr ho'))))
   · exact ih_g001_korrekt_body h1.2 o ho'
 
 set_option linter.unusedSectionVars false in
