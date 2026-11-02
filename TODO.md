@@ -15,6 +15,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 - **Stage 0: every userspace Gabbro form to IR, formally verified (2026-11-01).** The lanes IR-01..IR-14, their checkpoints
   and the C-package designs are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); team, scope and build caps are
   in [AGENTS.md](AGENTS.md) ("Current work"). No legacy Lean source runtime and no unrelated side project.
+- **C-package integration (2026-11-02).** Integrated into the integration branch: C02, C03, C04, C05, C06, C09, C11,
+  C12, C13, C14, C15, C16, C17, C18. In progress: C01, C07, C08, C10. Refused at the Stage-0 export gate by design:
+  C05 group invariants (cost/runs/by duties unbound), C11 `by consuming` traversal (current-state reselection open). Still
+  refused at the gate, being opened: C14 profile/requires profile/when TESTBUILD/aligned/section/entrust; C12 named spaces,
+  ownership rights, live-byte capabilities, entry handles; C09 owner flows; C18 allocation without else.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
