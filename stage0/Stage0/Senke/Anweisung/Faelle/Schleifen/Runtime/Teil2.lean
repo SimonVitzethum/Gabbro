@@ -58,7 +58,7 @@ theorem forever_source_pass {D : Deklaration} {L : Lay D}
     (Nat.le_refl _) (by omega) (by simpa [stopC, sysC] using hs) hW hlo hlo0 hlo2 hpr
   · intro hpc
     have hpw := PreS.welt hpc hks hw hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, st, a1, w, hr, hen⟩ := lowE_ok (σ.lese Λ inv.orte) (σ.lese Λ inv.orte)
+    obtain ⟨m1, st, a1, w, hr, hen⟩ := lowE_ok (same := by intro _; rfl) (σ.lese Λ inv.orte) (σ.lese Λ inv.orte)
       (fun _ h => h) hW.lay inv (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word trivial
     exact ⟨m1, st, Agree.widen a1 hks, w, hr, hen⟩
   · intro _ m' pc' hp' _ hu' hk' hw'

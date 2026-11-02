@@ -3,6 +3,8 @@ module
 public import Stage0.Senke.Ausdruck.Aggregat.ProdGet
 @[expose] public section
 
+variable {currentOld : Bool}
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
@@ -78,14 +80,14 @@ theorem prodSet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     (v : Expr D Γ Λ (.prod name fs)) (e : Expr D Γ Λ τ)
     {σ₀ σ : World D} {fp pc : Runner.W} {K d top reserved : Nat}
     {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List Runner.IR.II} {m : Runner.Mem}
-    (ihv : ∀ ca ta, lowE L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihv : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved →
         ValueOk L m pc fp K d ca (.prod name fs) (eval σ₀ v σ ρ))
-    (ihe : ∀ ca ta, lowE L (reserved := reserved) e (d + valueWords (.prod name fs)) = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihe : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) e (d + valueWords (.prod name fs)) = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K (d + valueWords (.prod name fs)) ca ρ W reserved →
         ValueOk L m pc fp K (d + valueWords (.prod name fs)) ca τ (eval σ₀ e σ ρ))
-    (h : prodSetL (name := name) i d (lowE L (reserved := reserved) v d)
-      (lowE L (reserved := reserved) e (d + valueWords (.prod name fs))) = some (c, top))
+    (h : prodSetL (name := name) i d (lowE (currentOld := currentOld) L (reserved := reserved) v d)
+      (lowE (currentOld := currentOld) L (reserved := reserved) e (d + valueWords (.prod name fs))) = some (c, top))
     (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.prod name fs)
       (prodSetW i (eval σ₀ v σ ρ) (eval σ₀ e σ ρ)) := by

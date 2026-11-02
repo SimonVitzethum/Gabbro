@@ -97,7 +97,7 @@ theorem lowE_ok_zeuge [Kern] :
     change 65536 ≤ x at hl
     change x < 65536 at hh
     omega
-  simpa only [bit_semantics_zeuge] using lowE_ok world world (W := fun _ => True)
+  simpa only [bit_semantics_zeuge] using lowE_ok (same := by intro _; rfl) world world (W := fun _ => True)
     (fun m _ => hw m) AggregateProbe.hLay checks 4 compiled.1 compiled.2
     bit_lowering_zeuge.1 bit_lowering_zeuge.2.2 memory 0 .nil pre
 

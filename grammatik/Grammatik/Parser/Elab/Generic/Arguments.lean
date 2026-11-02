@@ -89,13 +89,12 @@ def declaration (env : Environment) (name : String) : Except String (FnSig × SA
   | [] => .error ("unknown generic function: " ++ name)
   | _ => .error ("duplicate generic function: " ++ name)
 
-/-- A static parameter type must keep the existing named contract gate until O43 lands. -/
+/-- Parse the static interface now; its contracts are elaborated and checked with the whole unit. -/
 def staticParameterType (bindings : Bindings) (ty : STyp) : Except String STyp := do
   match ty with
   | .raw text =>
     let raw ← substituteRaw bindings text
-    let sig ← Uebersetze.uZeigerSig raw
-    Uebersetze.uZeigerVertrag sig.klauseln
+    let _ ← Uebersetze.uZeigerSig raw
     pure (.raw raw)
   | _ => throw "static function parameter requires a function-pointer type"
 

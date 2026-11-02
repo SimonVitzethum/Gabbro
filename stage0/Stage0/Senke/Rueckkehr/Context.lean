@@ -164,7 +164,7 @@ theorem lowErg_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {e : Option T
   have positive := resultWords_pos e
   omega
 
-theorem lowErg_ok {reserved : Nat} {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+theorem lowErg_ok {reserved : Nat} {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) {same : σ₀ = σ}
     (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {Γ : Ctx} :
     {e : Option Ty} → (x : ErgExpr D Γ Λ e) → (d : Nat) → (c : List II) → (top : Nat) →
     lowErg L x d reserved = some (c, top) → top ≤ K → ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ),
@@ -183,7 +183,7 @@ theorem lowErg_ok {reserved : Nat} {Λ : List (Res D)} {fp : Runner.W} {K : Nat}
     simp only [lowErg, Option.map_eq_some_iff] at h
     obtain ⟨⟨ce, te⟩, he, out⟩ := h
     cases out
-    exact lowE_ok (reserved := reserved) σ₀ σ hWL hLay e d ce te he
+    exact lowE_ok (same := by intro _; exact same) (reserved := reserved) σ₀ σ hWL hLay e d ce te he
       (Nat.le_trans (Nat.le_max_left _ _) hK) m pc ρ hp
 
 theorem codeFar_tail {pc fp : Runner.W} {K : Nat} {a b : List II} (h : CodeFar pc (a ++ b).length fp K) :

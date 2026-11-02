@@ -48,7 +48,7 @@ theorem Pre.up {m : Runner.Mem} {pc fp : Runner.W} {K d d' : Nat} {c : List II} 
   ⟨Nat.le_trans h.ctx hd, h.small, h.frame, h.code, h.far, h.env, h.welt, h.wstab⟩
 
 /-- The arguments land in the parameter slots of the frame at slot `F`, and nothing below `F + FB` changes. -/
-theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D)
+theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat} {W : Runner.Mem → Prop} (σ₀ σ : World D) {same : σ₀ = σ}
     (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) :
     {Γ : Ctx} → {τs : List Ty} → (args : Args D Γ Λ τs) → (c : List II) → (top : Nat) →
     lowA L args (F + FB) reserved = some (c, top) → top ≤ K → F + FB + contextWords τs ≤ K →
@@ -65,9 +65,9 @@ theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat}
     simp only [Prod.mk.injEq] at hc
     obtain ⟨rfl, rfl⟩ := hc
     simp only [contextWords_cons] at hL
-    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok (reserved := reserved) σ₀ σ hWL hLay rest cr tr hr (by omega) (by omega) m pc ρ hp.left
+    obtain ⟨m1, s1, a1, e1⟩ := lowA_ok (same := same) (reserved := reserved) σ₀ σ hWL hLay rest cr tr hr (by omega) (by omega) m pc ρ hp.left
     have hp1 := (hp.next a1 (Nat.le_refl _) (by omega)).up (d' := F + FB + contextWords τs) (by omega)
-    obtain ⟨m2, s2, a2, value⟩ := lowE_ok (fp := fp) (K := K) σ₀ σ hWL hLay e _ ce te he (by omega) m1 _ ρ hp1
+    obtain ⟨m2, s2, a2, value⟩ := lowE_ok (same := by intro _; exact same) (fp := fp) (K := K) σ₀ σ hWL hLay e _ ce te he (by omega) m1 _ ρ hp1
     have hF1 := hp1.frame
     refine ⟨m2, s1.trans (by rw [pc_add1]; exact s2), a1.trans (a2.mono (by omega)), ?_⟩
     simp only [evalArgs]
@@ -93,7 +93,7 @@ theorem lowA_ok {Λ : List (Res D)} {fp : Runner.W} {K F : Nat} {reserved : Nat}
     `F + 2`, nothing below `F` changed. -/
 theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f}
     {reserved : Nat} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap) {Λ : List (Res D)} {Γ : Ctx} {f : D.Fn}
-    (hA : A f < 2 ^ 31) (args : Args D Γ Λ (D.params f)) (σ₀ σ : World D) {ca : List II} {ta : Nat}
+    (hA : A f < 2 ^ 31) (args : Args D Γ Λ (D.params f)) (σ₀ σ : World D) {same : σ₀ = σ} {ca : List II} {ta : Nat}
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks : Nat} {ρ : Env D Γ}
     (hca : lowA L (reserved := reserved) args (frei Γ reserved + FB) = some (ca, ta)) (htop : callTop f (frei Γ reserved) ta + cap ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ reserved) (callC A f (frei Γ reserved) ca) ρ reserved) (hu : Umf L A C dv m fp Ks K)
@@ -117,7 +117,7 @@ theorem callC_ok {A : D.Fn → Nat} {C : D.Fn → List II} {R : ∀ f : D.Fn, Wo
   have hks := hW.ks
   have hp' : PreS L m pc fp K (frei Γ reserved + FB) (ca ++ callTail A f (frei Γ reserved)) ρ reserved := hp.up (by omega)
   have hpw := PreS.welt hp'.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, e1⟩ := lowA_ok (reserved := reserved) (F := frei Γ reserved) σ₀ σ (fun _ h => h) hW.lay args ca ta hca (by omega) (by omega) m pc ρ hpw
+  obtain ⟨m1, s1, a1s, e1⟩ := lowA_ok (same := same) (reserved := reserved) (F := frei Γ reserved) σ₀ σ (fun _ h => h) hW.lay args ca ta hca (by omega) (by omega) m pc ρ hpw
   have a1 := Agree.widen a1s hks
   have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
   have hp1 := hp'.next a1 (Nat.le_refl _) (by omega)

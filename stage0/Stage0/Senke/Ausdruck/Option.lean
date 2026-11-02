@@ -4,6 +4,8 @@ public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
 
+variable {currentOld : Bool}
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {reserved : Nat}
@@ -13,9 +15,9 @@ variable [Kern] {D : Deklaration} {reserved : Nat}
 theorem some_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
     (e : Expr D Γ Λ (.index n)) {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat}
     {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
-    (ih : ∀ d ca ta, lowE L e d reserved = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ih : ∀ d ca ta, lowE (currentOld := currentOld) L e d reserved = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.index n) (eval σ₀ e σ ρ))
-    (h : lowE L (.some e) d reserved = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (.some e) d reserved = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.opt n) (eval σ₀ (.some e) σ ρ) := by
   simp only [lowE_eqs] at h
@@ -52,9 +54,9 @@ theorem some_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
 theorem istSome_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
     (e : Expr D Γ Λ (.opt n)) {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat}
     {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
-    (ih : ∀ ce te, lowE L e d reserved = some (ce, te) → te ≤ K → ∀ m pc,
+    (ih : ∀ ce te, lowE (currentOld := currentOld) L e d reserved = some (ce, te) → te ≤ K → ∀ m pc,
       Pre L m pc fp K d ce ρ W reserved → ValueOk L m pc fp K d ce (.opt n) (eval σ₀ e σ ρ))
-    (h : lowE L (.istSome e) d reserved = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (.istSome e) d reserved = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) : ValueOk L m pc fp K d c .bool (eval σ₀ (.istSome e) σ ρ) := by
     refine Ok.value ?_ rfl
     simp only [lowE_eqs] at h

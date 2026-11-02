@@ -106,7 +106,7 @@ def declOf (u : UProg) : Deklaration where
   sig := fun f => f.val
   sigNr := sigAt u
   passt := passtAt u
-  passt_ok := passtAt_ok u
+  passt_ok := fun f n h => (passtAt_ok u f n h).1
   eigner_nie_erzeugt :=
     fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
   Inv := Fin u.invs.length

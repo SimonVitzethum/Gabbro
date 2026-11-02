@@ -102,7 +102,7 @@ theorem endBind_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   have hks := hW.ks
   have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
   obtain ⟨m1, s1, a1s, value⟩ :=
-    lowE_ok (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hpw
+    lowE_ok (same := by intro _; rfl) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hpw
   have a1 := Agree.widen a1s hks
   have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
   have hf := codeFar_right (n := ce.length) (k := cr.length) (by simpa using hp.far)

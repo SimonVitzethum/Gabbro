@@ -187,11 +187,19 @@ def parseUebergang (f : Nat) (toks : List Token) :
     keeps the call and marks it for reason propagation (the desugarer replaces it by the
     explicit `else` form); otherwise the plain call. -/
 def parseRufSchwanz (c : String) (args : List SExpr) : List Token → Except String (SAnw × List Token)
-  | .zeichen "?" :: .zeichen ";" :: rest => .ok (.callQ c args, rest)
-  | .zeichen "?" :: _ => .error "? without ;"
+  | .zeichen s :: rest0 =>
+    if strEq s "?" then
+      match rest0 with
+      | .zeichen t :: rest => if strEq t ";" then .ok (.callQ c args, rest) else .error "? without ;"
+      | _ => .error "? without ;"
+    else match fordereZeichen ";" (.zeichen s :: rest0) with
+      | .ok rest => .ok (.call c args, rest)
+      | .error e => .error e
   | toks => match fordereZeichen ";" toks with
     | .ok rest => .ok (.call c args, rest)
     | .error e => .error e
+
+theorem strEq_semi_frage : strEq ";" "?" = false := by decide
 
 /-- After the head word: a call through a path or a place, or an
     assignment (`parse.rs` `zuweisung_oder_ruf`). -/

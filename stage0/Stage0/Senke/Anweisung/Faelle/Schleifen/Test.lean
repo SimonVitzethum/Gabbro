@@ -48,7 +48,7 @@ theorem retryTest_ok (hcc : lowE (reserved := reserved) L bis (frei Γ reserved)
   · intro hpc
     have hks := hW.ks
     have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ bis.orte) (σ.lese Λ bis.orte)
+    obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (same := by intro _; rfl) (σ.lese Λ bis.orte) (σ.lese Λ bis.orte)
       (fun _ h => h) hW.lay bis (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word trivial
     exact ⟨m1, st, Agree.widen a1 hks, w, hw, hen⟩
   · intro _ m' pc' hp' _ _ _ hw'

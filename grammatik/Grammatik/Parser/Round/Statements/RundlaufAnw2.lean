@@ -204,7 +204,7 @@ theorem parseLet_ausdruck (x : String) (hx : x ≠ "mut") (e : SExpr) (hg : gut 
 theorem parseLetExpr_aus (x : String) (e : SExpr) (hg : gutPrim e = true) (r : List Token) (f : Nat)
     (hf : brennstoff e ≤ f) :
     parseLetExpr (f + 1) false x none (druckToks e ++ .zeichen ";" :: r) = .ok (.bind false x none e, r) := by
-  simp only [parseLetExpr, bind, Except.bind, or_vor_semi e hg r f hf, fordereZeichen, strEq_self, ↓reduceIte,
+  simp only [parseLetExpr, strEq_semi_frage, Bool.false_eq_true, bind, Except.bind, or_vor_semi e hg r f hf, fordereZeichen, strEq_self, ↓reduceIte,
   pure, Except.pure]
 
 /-- **One simple statement reads back as itself.** -/

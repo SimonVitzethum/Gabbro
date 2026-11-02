@@ -35,7 +35,7 @@ theorem assignVar_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R 
     have hks := hW.ks
     have htop := lowE_top e _ _ _ he
     have hpw := PreS.welt hp.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, value⟩ := lowE_ok (reserved := reserved) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega)
+    obtain ⟨m1, s1, a1s, value⟩ := lowE_ok (same := by intro _; rfl) (reserved := reserved) (σ.lese Λ e.orte) (σ.lese Λ e.orte) (fun _ h => h) hW.lay e _ ce te he (by omega)
       m pc ρ hpw
     have a1 := Agree.widen a1s hks
     have hp1 := hp.next a1 (Nat.le_refl _) (by omega)
@@ -87,7 +87,7 @@ theorem call_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   have hct : frei Γ reserved + FB + (contextWords (D.params callee)) + 1 ≤ callTop callee (frei Γ reserved) ta := by simp only [callTop]; omega
-  have hc := callC_ok hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp hu hW hWa
+  have hc := callC_ok (same := rfl) hS (hA callee) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp hu hW hWa
   simp only [execStmt]
   generalize R callee (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
   cases o with

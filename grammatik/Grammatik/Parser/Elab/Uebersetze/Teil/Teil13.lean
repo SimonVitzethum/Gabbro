@@ -21,19 +21,21 @@ public import Grammatik.Parser.Elab.Generic.Expansion
 public import Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.Modules.Frontend
 
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
-/-! ## Function-pointer types (2026-10-21)
+/-! ## Function-pointer types (2026-10-21, contracts C06 since 2026-11-02)
 
   A `fn(..) [-> T] effects { .. } costs <= e ops` type of the unit is read once by its text (the type reader keeps
   it raw, `STyp.raw`) into a head like a function's and a signature with an empty body (`UProg.ptrs`). Its number
-  stands behind the functions'; a function conforms to it by `Deklaration.passt` (`passtAt`, decided). The model
-  has no contract on a signature: a `requires` (`Held(..)` included) or an `ensures` is refused by name (TODO O43);
-  `costs` travels nowhere, as at a function. No lock crosses an indirect call (a `locks` effect at the type is
-  refused, as `N036` does): the floor of the type is one above the highest rank of the unit. -/
+  stands behind the functions'; a function conforms to it by `Deklaration.passt` (`passtAt`, decided: structural
+  `SigPasst` plus the decidable contract inclusion `vertragPasstAt`). The contract rides the type into `UProg.ptrs`
+  (`needs`/`gives`, lowered to `Programm.ptrVertrag` by `lowerPtrAt`); `costs` travels nowhere,
+  as at a function. No lock crosses an indirect call (a `locks` effect at the type is refused, as `N036` does, and
+  so is `requires Held(..)`): the floor of the type is one above the highest rank of the unit. -/
 
 /-- The names a unit declares as memory: tables, arenas, statics, atomics. -/
 def uSpeicherNamen (ms : List SItemTief) : List String :=

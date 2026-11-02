@@ -4,6 +4,8 @@ public import Stage0.Senke.Ausdruck.Gleit.Wort
 public import Stage0.Senke.Ausdruck.Quant.Frame
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -102,7 +104,7 @@ theorem strLit_ok {n : Nat} {Γ : Ctx} {Λ : List (Res D)}
     {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
     (bs : List (Zahl 0 255)) (hb : bs.length ≤ n)
-    (lower : lowE L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.strLit bs hb) d = some (c, top))
+    (lower : lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (.strLit bs hb) d = some (c, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.str n) (eval σ₀ (Expr.strLit (Λ := Λ) bs hb) σ ρ) := by
   exact constValue_ok (L := L) (τ := .str n) ⟨bs, hb⟩ trivial lower fits pre

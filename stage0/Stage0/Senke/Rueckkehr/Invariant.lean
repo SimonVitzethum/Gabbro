@@ -47,7 +47,7 @@ theorem lowInvs_ok (P : Programm D) (f : D.Fn) (σ : World D)
       have tailBound := lowInvs_scratch L P f d rest cr tr hr
       have exprPre := PreS.welt pre.left (Nat.le_refl K) world layout separated
       obtain ⟨m1, run, changed, b, read, encoded⟩ :=
-        lowE_ok σ σ (fun _ h => h) layout (P.invariante i) d ci ti hi
+        lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) layout (P.invariante i) d ci ti hi
           (by omega) m pc .nil exprPre |>.word trivial
       have next := pre.next changed (Nat.le_refl _) (by omega)
       have frame1 := pre.frame.agree changed

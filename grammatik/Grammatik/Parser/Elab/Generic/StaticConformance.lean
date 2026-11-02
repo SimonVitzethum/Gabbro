@@ -7,7 +7,7 @@ open Uebersetze UebersetzeAllg
 
 def staticSignatureFits (unit : UProg) (actual expected : UFn) : Except String Unit :=
   if sigPasstB (fun lock => (lockAt unit lock).rank)
-      (mkSig unit actual) (mkSig unit expected) then .ok ()
+      (mkSig unit actual) (mkSig unit expected) && vertragPasstB actual expected then .ok ()
   else .error ("static-function-signature-mismatch: " ++ actual.name)
 
 /-- Compute each parameter's pointer signature with the existing elaborator, then check the
@@ -26,7 +26,7 @@ def checkStaticConformance (consts : List (String × Int))
     staticSignatureFits unit (fnAt unit actual) pointer
 
 /-- The successful Boolean gate is the canonical conformance relation, including effects,
-    results, reason channels, held locks and lock floors. -/
+    results, reason channels, held locks and lock floors; contracts use the shared inclusion gate. -/
 theorem staticSignatureFits_ok (unit : UProg) (actual expected : UFn)
     (h : staticSignatureFits unit actual expected = .ok ()) :
     SigPasst (fun lock => (lockAt unit lock).rank)
@@ -34,6 +34,9 @@ theorem staticSignatureFits_ok (unit : UProg) (actual expected : UFn)
   cases hb : sigPasstB (fun lock => (lockAt unit lock).rank)
       (mkSig unit actual) (mkSig unit expected) with
   | false => simp [staticSignatureFits, hb] at h
-  | true => exact sigPasstB_ok hb
+  | true =>
+    cases hc : vertragPasstB actual expected with
+    | false => simp [staticSignatureFits, hb, hc] at h
+    | true => exact sigPasstB_ok hb
 
 end Gabbro.Grammatik.Parser.Generic
