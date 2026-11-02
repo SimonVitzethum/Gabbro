@@ -29,7 +29,7 @@ inductive ConstSourceBlock (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool}
       ConstSourceBlock c locals (.block (.cases source sources :: rest) ending)
         (.cons (.onWhy e branches) body)
 
-/-- Positional tags use their canonical numeric index as their source name. -/
+/-- Tag arms preserve canonical order and payload binding contexts. -/
 inductive ConstSourceTagArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
     {Γ : Ctx} → ConstLocals Γ → List SAnw → {cs : List (Option (Int × Int))} →
     Arms c.D V l Γ [] [] cs → Prop where
@@ -38,6 +38,10 @@ inductive ConstSourceTagArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Boo
       (tail : ConstSourceTagArms c locals sources branches) :
       ConstSourceTagArms c locals (.arm label none source :: sources)
         (cs := none :: cs) (.cons block branches)
+  | payload (body : ConstSourceBlock c (locals.extend name false (.int lo hi)) source block)
+      (tail : ConstSourceTagArms c locals sources branches) :
+      ConstSourceTagArms c locals (.arm label (some name) source :: sources)
+        (cs := some (lo, hi) :: cs) (.cons block branches)
 
 inductive ConstSourceReasonArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
     {Γ : Ctx} → ConstLocals Γ → List SAnw → {n : Nat} →
@@ -62,6 +66,7 @@ mutual
   cases h with
   | empty => exact .nil
   | plain b t => exact .cons b.rein t.rein
+  | payload b t => exact .cons b.rein t.rein
 
  theorem ConstSourceReasonArms.rein (h : ConstSourceReasonArms c locals sources arms) :
     ConstReasonArms c arms := by
