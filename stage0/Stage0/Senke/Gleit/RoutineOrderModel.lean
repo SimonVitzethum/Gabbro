@@ -6,6 +6,7 @@ public import Stage0.Senke.Gleit.RoutineModel
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
+set_option maxRecDepth 4096
 
 /-- Removing the sign bit yields exactly the canonical magnitude key.
     Reuse the shared field extraction theorem rather than a second decoder. -/
