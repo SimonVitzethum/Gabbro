@@ -30,7 +30,7 @@ import all Init.Data.String.Substring
 import all Init.Data.String.TakeDrop
 import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
-public import Grammatik.GabbroV.GvStartPflichta
+public import Grammatik.GabbroV.Start.GvStartPflichta
 import all Init.Data.Repr
 @[expose] public section
 
