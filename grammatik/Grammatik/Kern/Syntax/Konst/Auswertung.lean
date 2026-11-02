@@ -81,6 +81,9 @@ def constExprAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {τ : T
   | .intBuiltin1 _ a => 1 + constExprAufwand c a
   | .intBuiltin2 _ a b => 1 + constExprAufwand c a + constExprAufwand c b
   | .count _ body => 1 + constExprAufwand c body
+  | .prod _ args => 1 + constArgsAufwand c args
+  | .prodGet v _ => 1 + constExprAufwand c v
+  | .prodSet v _ e => 1 + constExprAufwand c v + constExprAufwand c e
   | _ => 1
 def constPayloadAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {k : Option Ty} : NutzlastExpr c.D Γ Λ k → Nat
   | .empty => 1

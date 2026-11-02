@@ -339,6 +339,10 @@ def uSideEng (v : String) (lo hi : Int) : USide → USide
   | .neg a => .neg (uSideEng v lo hi a)
   | .ib1 o w a => .ib1 o w (uSideEng v lo hi a)
   | .ib2 o w a b => .ib2 o w (uSideEng v lo hi a) (uSideEng v lo hi b)
+  | .product identity reordered fields =>
+    .product identity reordered (fields.map (fun (ty, side) => (ty, uSideEng v lo hi side)))
+  | .field base name => .field (uSideEng v lo hi base) name
+  | .replace base name value => .replace (uSideEng v lo hi base) name (uSideEng v lo hi value)
   | s => s
 
 /-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the

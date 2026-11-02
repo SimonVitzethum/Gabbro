@@ -120,7 +120,10 @@ def kTab : List (List Zeile) := [
     ⟨some 0, false, false, [(0, some 0, none), (0, some 0, none)]⟩ /- eng -/,
     ⟨none, false, false, [(0, none, none)]⟩ /- intBuiltin1 -/,
     ⟨none, false, false, [(0, none, none), (0, none, none)]⟩ /- intBuiltin2 -/,
-    ⟨some 0, false, false, [(0, some 1, none)]⟩ /- count -/],
+    ⟨some 0, false, false, [(0, some 1, none)]⟩ /- count -/,
+    ⟨none, false, false, [(2, none, none)]⟩ /- prod -/,
+    ⟨none, false, false, [(0, none, none)]⟩ /- prodGet -/,
+    ⟨none, false, false, [(0, none, none), (0, none, none)]⟩ /- prodSet -/],
   -- NutzlastExpr
   [⟨none, false, false, []⟩ /- empty -/,
     ⟨none, false, false, [(0, some 0, none)]⟩ /- val -/],
@@ -214,7 +217,7 @@ def kAnzahl (f : Nat) : Nat := (kTab.getD f []).length
 
 /-- A type class meets a requirement. -/
 def kopfOk : Option Nat → Nat → Bool
-  | none, h => decide (h < 12)
+  | none, h => decide (h < 13)
   | some q, h => q == h
 
 /-- The type classes of the expression children meet their requirements. -/
@@ -226,7 +229,7 @@ def koepfeOk : List (Option Nat) → List Nat → Bool
 /-- An expression constructor can have the type class `h`. -/
 def ergPasst (k h : Nat) : Bool :=
   match zeile 0 k with
-  | some r => (match r.erg with | none => decide (h < 12) | some q => q == h)
+  | some r => (match r.erg with | none => decide (h < 13) | some q => q == h)
   | none => false
 
 /-- A constructor can stand in the loop context `l`. -/
@@ -241,7 +244,7 @@ def exprReqs (ks : List (Nat × Option Nat × Option Bool)) : List (Option Nat) 
 
 /-- A child of family `cf`, requirement `q`, loop context `lk` can be constructor `k`. -/
 def kindOk (cf : Nat) (q : Option Nat) (lk : Bool) (k : Nat) : Bool :=
-  if cf = 0 then (List.range 12).any (fun i => kopfOk q i && ergPasst k i) else lPasst cf k lk
+  if cf = 0 then (List.range 13).any (fun i => kopfOk q i && ergPasst k i) else lPasst cf k lk
 
 /-- The data of a cell fit its row. -/
 def datenOk (r : Zeile) (l : Bool) : Nat → List Nat → Bool
@@ -286,7 +289,7 @@ def moeglich (c : FZelle) : Bool :=
 
 /-- The type classes a requirement allows. -/
 def kopfListe : Option Nat → List Nat
-  | none => List.range 12
+  | none => List.range 13
   | some q => [q]
 
 /-- The data of a constructor cell. -/

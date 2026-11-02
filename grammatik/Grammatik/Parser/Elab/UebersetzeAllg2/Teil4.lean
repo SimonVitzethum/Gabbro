@@ -71,6 +71,7 @@ def zeroResetExpr (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} :
   | .bool, .boolZero => Expr.fls
   | .arr elem m, .arrZero h' => repZeroArr u (zeroResetExpr u elem h') m
   | .str n, .strZero => Expr.strLit [] (Nat.zero_le n)
+  | .prod _ _, h => absurd h (by intro h; cases h)
 
 /-- A static-array index as an expression (C18): the literal `j` inside `0 ..< len`. -/
 def resetIdxExpr (u : UProg) {Γ : Ctx} {Λ : List (Res (declOf u))} {len : Nat}
