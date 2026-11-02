@@ -77,7 +77,7 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bind _ rest => rest.ohneEwig
   | .bindCall _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
-  | .bindCallIndElse _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindCallElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
@@ -110,7 +110,7 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .regReadElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .awaits _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
-  | .bindCallIndElse _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .narrow _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .narrowRequired _ _ _ rest => rest.ohneEwig
   | .exchange _ _ _ _ rest => rest.ohneEwig
