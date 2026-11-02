@@ -4,6 +4,8 @@ public import Grammatik.Logik.Ruf.Schnittstellen.Kandidaten
 public import Grammatik.Logik.Ruf.Schnittstellen.Lokal
 public import Grammatik.Logik.Ruf.Schnittstellen.Rufstelle
 public import Grammatik.Logik.Ruf.Schnittstellen.Hoare
+public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
+public import Grammatik.Logik.Ruf.Schnittstellen.Pruefung
 
 @[expose] public section
 
@@ -244,6 +246,65 @@ theorem hoare_callInd_zeuge :
   have hp := ht entry arguments ⟨rfl, rfl, rfl⟩ entry arguments rfl
   exact ⟨handler_contracts, refinement, rfl, hp.2⟩
 
+/-- Prefix replay fires on the jointly inhabited call: the interface pre at
+    the operand-entry world replays across a reflexive agreement. -/
+theorem ptrPre_prefix_zeuge :
+    (prog.ptrVertrag 0).preHolds entry arguments ∧
+    (prog.ptrVertrag 0).preHolds entry arguments := by
+  exact ⟨rfl,
+    Gabbro.Grammatik.ptrPre_prefix prog entry entry arguments rfl
+      (GleichAuf.refl _ _)⟩
+
+/-- The local caller duty replays across the prefix and still selects the
+    same target with its concrete requires. -/
+theorem ptrPflicht_prefix_zeuge :
+    PtrRufPflicht prog operand operands entry arguments ∧
+    PtrRufPflicht prog operand operands entry arguments ∧
+      ReqAmEintritt prog true entry (umsig pointer.property arguments) := by
+  have h : PtrRufPflicht prog operand operands entry arguments := rfl
+  have hrep := Gabbro.Grammatik.ptrPflicht_prefix prog operand operands entry entry
+    arguments h (GleichAuf.refl _ _)
+  exact ⟨h, hrep, Gabbro.Grammatik.PtrRufPflicht.req refinement hrep⟩
+
+/-- The replayed duty opens the concrete gate at the same world. -/
+theorem ptrTor_prefix_zeuge :
+    torRuf prog handler true entry (umsig pointer.property arguments) =
+      handler true entry (umsig pointer.property arguments) := by
+  have h := Gabbro.Grammatik.ptrTor_prefix_stmt refinement handler operand operands
+    entry entry arguments rfl (GleichAuf.refl _ _)
+  simpa using h
+
+/-- Indirect closure is already decided: every admitted target of an
+    indirect site is in the closed set. Both same-shape targets are admitted
+    at `0`; the closed set contains the selected one, with all premises
+    (closed graph, site admission, conformance, member list) jointly. -/
+theorem abgK_indirekt_schliesst_zeuge :
+    (fun _ : decl.Fn => true) true = true :=
+  Gabbro.Grammatik.abgK_indirekt_schliesst (P := prog) (fs := [false, true])
+    (Z := fun _ => true) (fun f _ => by cases f <;> rfl) rfl rfl rfl
+    (fun g => by cases g <;> decide)
+
+
+/-- Finite interfaces: nontrivial only at `0`, trivial elsewhere. The table
+    `[0]` carries every nontrivial contract, so the finite check decides the
+    infinite freeness duty. Footprints are empty (value-only predicates), so
+    no shared atomic is hidden. -/
+def progFin : Programm decl :=
+  { prog with ptrVertrag := fun | 0 => prog.ptrVertrag 0 | n + 1 =>
+      CallContract.trivial decl (decl.sigNr (n + 1)) }
+
+theorem progFin_trivial_ausserhalb (n : Nat) (h : n ∉ [0]) :
+    (progFin.ptrVertrag n).pre.orte = [] ∧ (progFin.ptrVertrag n).post.orte = [] := by
+  cases n with
+  | zero => cases h rfl
+  | succ k => exact ⟨rfl, rfl⟩
+
+theorem ptrVertragsFreiB_zeuge :
+    ptrVertragsFreiB progFin [0] (.inl ()) = true ∧
+    PtrVertragsFrei progFin (.inl ()) := by
+  exact ⟨rfl,
+    Gabbro.Grammatik.ptrVertragsFreiB_ok progFin_trivial_ausserhalb rfl⟩
+
 end Gabbro.Grammatik.C06
 
 #print axioms Gabbro.Grammatik.PtrVerfeinert
@@ -251,3 +312,9 @@ end Gabbro.Grammatik.C06
 #print axioms Gabbro.Grammatik.hoare_callInd
 #print axioms Gabbro.Grammatik.C06.refinement
 #print axioms Gabbro.Grammatik.C06.hoare_callInd_zeuge
+#print axioms Gabbro.Grammatik.ptrPre_prefix
+#print axioms Gabbro.Grammatik.ptrPflicht_prefix
+#print axioms Gabbro.Grammatik.ptrVertragsFreiB_ok
+#print axioms Gabbro.Grammatik.abgK_indirekt_schliesst
+#print axioms Gabbro.Grammatik.C06.ptrPre_prefix_zeuge
+#print axioms Gabbro.Grammatik.C06.ptrVertragsFreiB_zeuge
