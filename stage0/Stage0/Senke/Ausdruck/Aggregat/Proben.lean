@@ -271,3 +271,33 @@ theorem narrow_lowered_zeuge :
     (lowE layout (.strEq empty wide) 4).isSome = true := by decide +kernel
 
 end Gabbro.Stage0.Senke.AggregateProbe.Narrow
+
+namespace Gabbro.Stage0.Senke.AggregateProbe.Product
+open Gabbro.Grammatik Runner.IR
+
+/-- Distinct heterogeneous fields exercise both the word order and the typed offset. -/
+def pair : Expr D [] [] (.prod 7 [.int 17 17, .bool]) :=
+  .prod 7 (.cons (.lit 17) (.cons .tru .nil))
+
+theorem prod_ok_zeuge :
+    lowE layout pair 4 = some ([ci 1 4 17 0, ci 1 5 1 0], 6) ∧
+    encodeWords layout (.prod 7 [.int 17 17, .bool])
+      (eval world pair world .nil) = [17, 1] := ⟨rfl, rfl⟩
+
+theorem prodGet_ok_zeuge :
+    lowE layout (.prodGet pair (.tail .head)) 4 =
+      some ([ci 1 4 17 0, ci 1 5 1 0, ci 2 4 5 0], 6) ∧
+    eval world (.prodGet pair (.tail .head)) world .nil = true := ⟨rfl, rfl⟩
+
+theorem prodSet_ok_zeuge :
+    lowE layout (.prodSet pair (.tail .head) .fls) 4 =
+      some ([ci 1 4 17 0, ci 1 5 1 0, ci 1 6 0 0, ci 2 5 6 0], 7) ∧
+    encodeWords layout (.prod 7 [.int 17 17, .bool])
+      (eval world (.prodSet pair (.tail .head) .fls) world .nil) = [17, 0] := ⟨rfl, rfl⟩
+
+/-- The constructor owns the empty marker even though its argument list emits no code. -/
+theorem prod_empty_zeuge :
+    lowE layout (Γ := []) (Λ := []) (.prod 7 .nil) 4 = some ([ci 1 4 0 0], 5) ∧
+    encodeWords layout (.prod 7 []) () = [0] := ⟨rfl, rfl⟩
+
+end Gabbro.Stage0.Senke.AggregateProbe.Product
