@@ -182,6 +182,10 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .locks _ _ body => ruB_orteP P body
   | _, _, _, _, .breaking _ body => ruB_orteP P body
   | _, _, _, _, .traverse _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
+  | _, _, _, _, .consumeTraverse _ member edge inv _ mass body =>
+      kongr₂ (· ++ ·) (ruE_orte member)
+        (kongr₂ (· ++ ·) (ruE_orte edge)
+          (kongr₂ (· ++ ·) (ruE_orte inv) (kongr₂ (· ++ ·) (ruE_orte mass) (ruB_orteP P body))))
   | _, _, _, _, .retry _ bis body ueber =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte bis) (ruB_orteP P body)) (ruB_orteP P ueber)
   | _, _, _, _, .forever _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
@@ -193,6 +197,8 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .retires .. => orteP_nachΛ _ _ _
   | _, _, _, _, .ret e _ => ruErg_orte e
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped e _ => ruErg_orte e
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -227,6 +233,8 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
       kongr₂ (fun x y => (Sum.inr g :: x) ++ y) (ruE_orte neu) (ruB_orteP P rest)
   | _, _, _, _, .narrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
+  | _, _, _, _, .narrowRequired e _ _ rest =>
+      kongr₂ (· ++ ·) (ruE_orte e) (ruB_orteP P rest)
   | _, _, _, _, .check c sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte c) (ruEnd_orteP P sonst)) (ruB_orteP P rest)
   | _, _, _, _, .float _ a b _ _ rest =>
@@ -241,6 +249,8 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     endblockOrteP P.mitRuhe (ruEnd e) = endblockOrteP P e
   | _, _, _, .ret e _ => ruErg_orte e
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped e _ => ruErg_orte e
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_orteP P s) (ruEnd_orteP P rest)
@@ -268,6 +278,8 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
         ((orteP_umΛ _ _ _).trans (ruEnd_orteP P rest))
   | _, _, _, .narrow e _ _ sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P sonst)) (ruEnd_orteP P rest)
+  | _, _, _, .narrowRequired e _ _ rest =>
+      kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P rest)
   | _, _, _, .exchange g neu _ _ rest =>
       kongr₂ (fun x y => (Sum.inr g :: x) ++ y) (ruE_orte neu) (ruEnd_orteP P rest)
   | _, _, _, .ite c t e =>

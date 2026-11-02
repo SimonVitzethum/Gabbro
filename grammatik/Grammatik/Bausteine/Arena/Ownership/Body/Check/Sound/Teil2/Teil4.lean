@@ -55,6 +55,7 @@ theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stm
     exact supports_mono (fun z hz => OS.breaking i body hz) (chkB_sound body k c hk hc)
   | _, _, _, _, .traverse t inv body, k, c, hk, hc =>
       chkS_sound_traverse (t := t) (inv := inv) (body := body) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_body := chkB_sound body) (hvoll := hvoll)
+  | _, _, _, _, .consumeTraverse .., _, _, _, _ => by simp only [chkS]; trivial
   | _, _, _, _, .retry n bis body u, k, c, hk, hc =>
       chkS_sound_retry (n := n) (bis := bis) (body := body) (u := u) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_body := chkB_sound body) (ih_chkB_sound_u := chkB_sound u) (hvoll := hvoll)
   | _, _, _, _, .forever a inv body, k, c, hk, hc =>
@@ -81,6 +82,8 @@ theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stm
   | _, _, _, _, .retWhy r hΛ, k, c, _, _ => by
     simp only [chkS]
     exact supports_ifDead (fun h x => OS.retWhy r hΛ h)
+  | _, _, _, _, .retScoped .., _, _, _, _ => by simp only [chkS]; trivial
+  | _, _, _, _, .retWhyScoped .., _, _, _, _ => by simp only [chkS]; trivial
   | _, _, _, _, .leave hl, k, c, hk, hc => by
     simp only [chkS]
     exact supports_ifDead (fun h x => OS.leave hl (exitsB_sound hk hc h))
@@ -118,6 +121,7 @@ theorem chkB_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Bloc
       chkB_sound_exchange (g := g) (neu := neu) (hw := hw) (hL := hL) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (hvoll := hvoll)
   | _, Γ, _, _, .narrow e lo' hi' voll rest, k, c, hk, hc =>
       chkB_sound_narrow (e := e) (lo' := lo') (hi' := hi') (voll := voll) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (ih_ctr1B_sound_rest := ctr1B_sound rest) (ih_lst1B_sound_rest := lst1B_sound rest) (ih_chkE_sound_voll := chkE_sound voll) (hvoll := hvoll)
+  | _, _, _, _, .narrowRequired _ _ _ _, _, _, _, _ => by simp only [chkB]; trivial
   | _, _, _, _, .check cond sonst rest, k, c, hk, hc =>
       chkB_sound_check (cond := cond) (sonst := sonst) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (ih_chkE_sound_sonst := chkE_sound sonst) (hvoll := hvoll)
   | _, _, _, _, .float op a b lo hi rest, k, c, hk, hc =>
@@ -277,6 +281,9 @@ theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endbloc
   | _, _, _, .bindCallInd p args he hp hr rest, k, c, hk, hc, h =>
       chkE_sound_bindCallInd (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (h := h) (ih_chkE_sound_rest := chkE_sound rest) (hvoll := hvoll)
   | _, _, _, .narrow .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
+  | _, _, _, .narrowRequired .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
+  | _, _, _, .retScoped .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
+  | _, _, _, .retWhyScoped .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
   | _, _, _, .exchange .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
   | _, _, _, .ite .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
 

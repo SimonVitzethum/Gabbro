@@ -305,6 +305,10 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
   | _, _, _, _, .breaking i body => .breaking (E.inv i) (exB hS body)
   | _, _, _, _, .traverse t inv body =>
       .traverse (E.tab t) (exE E inv) (Block.umΓ (by rw [List.map_cons, E.count]; try rfl) (exB hS body))
+  | _, _, _, _, .consumeTraverse t member edge inv bound mass body =>
+      .consumeTraverse (E.tab t) (Expr.umΓ (by rw [List.map_cons, E.count]; try rfl) (exE E member))
+        (Expr.umΓ (by rw [List.map_cons, List.map_cons, E.count]; try rfl) (exE E edge)) (exE E inv)
+        bound (exE E mass) (Block.umΓ (by rw [List.map_cons, E.count]; try rfl) (exB hS body))
   | _, _, _, _, .retry n bis body ueber => .retry n (exE E bis) (exB hS body) (exB hS ueber)
   | _, _, _, _, .forever a inv body => .forever (E.annahme a) (exE E inv) (exB hS body)
   | _, _, _, _, .axiomCall a args h hw hg hd hgd =>
@@ -325,6 +329,10 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
       Stmt.nachΛ (by rw [E.erase_mapE]; rfl) (.retires (E.marke m) s (E.mem_mapE.mpr h) (E.annahme a))
   | _, _, _, _, .ret e hΛ => .ret (exErg E e) ((hΛ.map E.resE).trans (by rw [E.endeE]))
   | _, _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map E.resE).trans (by rw [E.endeE]))
+  | _, _, _, _, .retScoped e R =>
+      .retScoped (exErg E e) ⟨R.scopes.map E.lock, (R.genau.map E.resE).trans (by rw [List.map_append, E.endeE])⟩
+  | _, _, _, _, .retWhyScoped r R =>
+      .retWhyScoped r ⟨R.scopes.map E.lock, (R.genau.map E.resE).trans (by rw [List.map_append, E.endeE])⟩
   | _, _, _, _, .leave h => .leave h
   | _, _, _, _, .next h => .next h
 
@@ -367,6 +375,7 @@ def exB (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
       .exchange (E.glob g) (Expr.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (Expr.umTy (E.gtyp g).symm (exE E neu)))
         (E.gschreibtE hw) (E.gdarfE hL) (Block.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (exB hS rest))
   | _, _, _, _, .narrow e lo' hi' sonst rest => .narrow (exE E e) lo' hi' (exEnd hS sonst) (exB hS rest)
+  | _, _, _, _, .narrowRequired e lo' hi' rest => .narrowRequired (exE E e) lo' hi' (exB hS rest)
   | _, _, _, _, .check c sonst rest => .check (exE E c) (exEnd hS sonst) (exB hS rest)
   | _, _, _, _, .float op a b lo hi rest => .float op (exE E a) (exE E b) lo hi (exB hS rest)
   | _, _, _, _, .floatLit q lo hi rest => .floatLit q lo hi (exB hS rest)
@@ -379,6 +388,10 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
     Endblock D V l Γ Λ → Endblock D' (E.vertragE V) l (Γ.map E.tyE) (Λ.map E.resE)
   | _, _, _, .ret e hΛ => .ret (exErg E e) ((hΛ.map E.resE).trans (by rw [E.endeE]))
   | _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map E.resE).trans (by rw [E.endeE]))
+  | _, _, _, .retScoped e R =>
+      .retScoped (exErg E e) ⟨R.scopes.map E.lock, (R.genau.map E.resE).trans (by rw [List.map_append, E.endeE])⟩
+  | _, _, _, .retWhyScoped r R =>
+      .retWhyScoped r ⟨R.scopes.map E.lock, (R.genau.map E.resE).trans (by rw [List.map_append, E.endeE])⟩
   | _, _, _, .leave h => .leave h
   | _, _, _, .next h => .next h
   | _, _, _, .cons s rest => .cons (exS hS s) (exEnd hS rest)
@@ -413,6 +426,7 @@ def exEnd (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ :
         (rufPasstE_nr hS hp) (by rw [hS.sigNr]; exact hr)
         (Endblock.umΛ (nachSigE_nr hS n Λ) (exEnd hS rest))
   | _, _, _, .narrow e lo' hi' sonst rest => .narrow (exE E e) lo' hi' (exEnd hS sonst) (exEnd hS rest)
+  | _, _, _, .narrowRequired e lo' hi' rest => .narrowRequired (exE E e) lo' hi' (exEnd hS rest)
   | _, _, _, .exchange g neu hw hL rest =>
       .exchange (E.glob g) (Expr.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (Expr.umTy (E.gtyp g).symm (exE E neu)))
         (E.gschreibtE hw) (E.gdarfE hL) (Endblock.umΓ (by rw [List.map_cons, E.gtyp]; try rfl) (exEnd hS rest))

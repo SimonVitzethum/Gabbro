@@ -197,6 +197,7 @@ def drS (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .locks L _ body => do .ok s!"(Stmt.locks (D := z.deklaration) {fin (N.lock L) "z.locks.length"} {bew} {← drB N body})"
   | .breaking i body => do .ok s!"(Stmt.breaking (D := z.deklaration) {fin (N.inv i) "z.invs.length"} {← drB N body})"
   | .traverse t inv body => do .ok s!"(Stmt.traverse (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {← drE N inv} {← drB N body})"
+  | .consumeTraverse t member edge inv bound mass body => do .ok s!"(Stmt.consumeTraverse (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {← drE N member} {← drE N edge} {← drE N inv} {zahl bound} {← drE N mass} {← drB N body})"
   | .retry n bis body ueberlauf => do .ok s!"(Stmt.retry (D := z.deklaration) {n} {← drE N bis} {← drB N body} {← drB N ueberlauf})"
   | .forever a inv body => do .ok s!"(Stmt.forever (D := z.deklaration) {fin (N.annahme a) "(z.annahmen + 1)"} {← drE N inv} {← drB N body})"
   | .axiomCall a args _ _ _ _ _ => do .ok s!"(Stmt.axiomCall (D := z.deklaration) {fin (N.ax a) "z.axs.length"} {← drA N args} {bew} {bew} {bew} {bew} {bew})"
@@ -207,6 +208,8 @@ def drS (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .retires m s _ a => .ok s!"(Stmt.retires (D := z.deklaration) {fin (N.marke m) "z.marken.length"} {s} {bew} {fin (N.annahme a) "(z.annahmen + 1)"})"
   | .ret e _ => do .ok s!"(Stmt.ret (D := z.deklaration) {← drR N e} {bew})"
   | .retWhy r _ => .ok s!"(Stmt.retWhy (D := z.deklaration) {fin r.val "_"} {bew})"
+  | .retScoped e _ => do .ok s!"(Stmt.retScoped (D := z.deklaration) {← drR N e} {bew})"
+  | .retWhyScoped r _ => .ok s!"(Stmt.retWhyScoped (D := z.deklaration) {fin r.val "_"} {bew})"
   | .leave _ => .ok s!"(Stmt.leave (D := z.deklaration) {bew})"
   | .next _ => .ok s!"(Stmt.next (D := z.deklaration) {bew})"
 
@@ -225,6 +228,7 @@ def drB (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .awaits g _ _ _ _ rest => do .ok s!"(Block.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drB N rest})"
   | .exchange g neu _ _ rest => do .ok s!"(Block.exchange (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N neu} {bew} {bew} {← drB N rest})"
   | .narrow e lo' hi' sonst rest => do .ok s!"(Block.narrow (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N sonst} {← drB N rest})"
+  | .narrowRequired e lo' hi' rest => do .ok s!"(Block.narrowRequired (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drB N rest})"
   | .check c sonst rest => do .ok s!"(Block.check (D := z.deklaration) {← drE N c} {← drEnd N sonst} {← drB N rest})"
   | .float op a b lo hi rest => do .ok s!"(Block.float (D := z.deklaration) {gleit op} {← drE N a} {← drE N b} {paar lo} {paar hi} {← drB N rest})"
   | .floatLit q lo hi rest => do .ok s!"(Block.floatLit (D := z.deklaration) {paar q} {paar lo} {paar hi} {← drB N rest})"
@@ -235,6 +239,8 @@ def drB (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
 def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Except String String
   | .ret e _ => do .ok s!"(Endblock.ret (D := z.deklaration) {← drR N e} {bew})"
   | .retWhy r _ => .ok s!"(Endblock.retWhy (D := z.deklaration) {fin r.val "_"} {bew})"
+  | .retScoped e _ => do .ok s!"(Endblock.retScoped (D := z.deklaration) {← drR N e} {bew})"
+  | .retWhyScoped r _ => .ok s!"(Endblock.retWhyScoped (D := z.deklaration) {fin r.val "_"} {bew})"
   | .leave _ => .ok s!"(Endblock.leave (D := z.deklaration) {bew})"
   | .next _ => .ok s!"(Endblock.next (D := z.deklaration) {bew})"
   | .cons s rest => do .ok s!"(Endblock.cons (D := z.deklaration) {← drS N s} {← drEnd N rest})"
@@ -248,6 +254,7 @@ def drEnd (N : Namen D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .awaits g _ _ _ _ rest => do .ok s!"(Endblock.awaits (D := z.deklaration) {fin (N.glob g) "z.globs.length"} _ rfl {bew} {bew} {← drEnd N rest})"
   | .bindCallInd p args _ _ _ rest => do .ok s!"(Endblock.bindCallInd (D := z.deklaration) {← drE N p} {← drA N args} {bew} {bew} {bew} {← drEnd N rest})"
   | .narrow e lo' hi' sonst rest => do .ok s!"(Endblock.narrow (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N sonst} {← drEnd N rest})"
+  | .narrowRequired e lo' hi' rest => do .ok s!"(Endblock.narrowRequired (D := z.deklaration) {← drE N e} {zahl lo'} {zahl hi'} {← drEnd N rest})"
   | .exchange g neu _ _ rest => do .ok s!"(Endblock.exchange (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {← drE N neu} {bew} {bew} {← drEnd N rest})"
   | .ite c t e => do .ok s!"(Endblock.ite (D := z.deklaration) {← drE N c} {← drEnd N t} {← drEnd N e})"
 

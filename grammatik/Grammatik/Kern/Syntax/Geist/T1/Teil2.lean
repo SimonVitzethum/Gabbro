@@ -81,6 +81,36 @@ theorem g001Stmt_korrekt_retWhy {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   exact (List.not_mem_nil ho').elim
 
 set_option linter.unusedSectionVars false in
+theorem g001Stmt_korrekt_retScoped {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (e)
+    (R)
+    (zr_h : g001Stmt (.retScoped e R : Stmt D V l Γ Λ (Λ)) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.stmtOrte (.retScoped e R : Stmt D V l Γ Λ (Λ)))
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) e.orte) = true := h
+  have ho' : o ∈ e.orte := by
+    simpa [Extraktion.stmtOrte] using ho
+  exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
+
+set_option linter.unusedSectionVars false in
+theorem g001Stmt_korrekt_retWhyScoped {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (r)
+    (R)
+    (zr_h : g001Stmt (.retWhyScoped r R : Stmt D V l Γ Λ (Λ)) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.stmtOrte (.retWhyScoped r R : Stmt D V l Γ Λ (Λ)))
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have ho' : o ∈ ([] : List (D.Tab ⊕ D.Glob)) := by simpa [Extraktion.stmtOrte] using ho
+  exact (List.not_mem_nil ho').elim
+
+set_option linter.unusedSectionVars false in
 theorem g001Stmt_korrekt_onOption {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {zi_n}
     (opt)
@@ -205,6 +235,35 @@ theorem g001Stmt_korrekt_traverse {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     Bool.and_eq_true_iff.mp h0
   rcases ho' with ho' | ho'
   · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+  · exact ih_g001_korrekt_body h1.2 o ho'
+
+set_option linter.unusedSectionVars false in
+theorem g001Stmt_korrekt_consumeTraverse {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t)
+    (member)
+    (edge)
+    (inv)
+    (bound)
+    (mass)
+    (body)
+    (zr_h : g001Stmt (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ (Λ)) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.stmtOrte (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ (Λ)))
+    (ih_g001_korrekt_body : ∀ (h : g001 body = true), ∀ (o : D.Tab ⊕ D.Glob), ∀ (ho : o ∈ Extraktion.blockOrte body), ¬ istGeist (D := D) o)
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) (member.orte ++ edge.orte ++ inv.orte ++ mass.orte) && g001 body) = true := h
+  have ho' : o ∈ member.orte ∨ o ∈ edge.orte ∨ o ∈ inv.orte ∨ o ∈ mass.orte ∨ o ∈ Extraktion.blockOrte body := by
+    simpa [Extraktion.stmtOrte] using ho
+  have h1 : ((orteOk (D := D) (member.orte ++ edge.orte ++ inv.orte ++ mass.orte)) = true) ∧ ((g001 body) = true) :=
+    Bool.and_eq_true_iff.mp h0
+  rcases ho' with ho' | ho' | ho' | ho' | ho'
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inl ho'))
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inl ho')))
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inr (Or.inl ho'))))
+  · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o (by simpa using Or.inr (Or.inr (Or.inr (Or.inl ho')))))
   · exact ih_g001_korrekt_body h1.2 o ho'
 
 set_option linter.unusedSectionVars false in

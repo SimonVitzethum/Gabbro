@@ -28,6 +28,7 @@ theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .locks _ _ body => ruB_gOk K Rg body
   | _, _, _, _, .breaking _ body => ruB_gOk K Rg body
   | _, _, _, _, .traverse _ _ body => ruB_gOk K Rg body
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body => ruB_gOk K Rg body
   | _, _, _, _, .retry _ _ body ueber =>
       kongr₂ (· && ·) (ruB_gOk K Rg body) (ruB_gOk K Rg ueber)
   | _, _, _, _, .forever _ _ body => ruB_gOk K Rg body
@@ -39,6 +40,8 @@ theorem ruS_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .retires .. => gOk_nachΛ _ _ _ _
   | _, _, _, _, .ret .. => rfl
   | _, _, _, _, .retWhy .. => rfl
+  | _, _, _, _, .retScoped .. => rfl
+  | _, _, _, _, .retWhyScoped .. => rfl
   | _, _, _, _, .leave _ => rfl
   | _, _, _, _, .next _ => rfl
 
@@ -63,6 +66,7 @@ theorem ruB_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
   | _, _, _, _, .exchange _ _ _ _ rest => ruB_gOk K Rg rest
   | _, _, _, _, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest)
+  | _, _, _, _, .narrowRequired _ _ _ rest => ruB_gOk K Rg rest
   | _, _, _, _, .check _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest)
   | _, _, _, _, .float _ _ _ _ _ rest => ruB_gOk K Rg rest
@@ -75,6 +79,8 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
     {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), Endblock.gOk (D := D.mitRuhe) K Rg (ruEnd e) = e.gOk (kZ K) Rg
   | _, _, _, .ret .. => rfl
   | _, _, _, .retWhy .. => rfl
+  | _, _, _, .retScoped .. => rfl
+  | _, _, _, .retWhyScoped .. => rfl
   | _, _, _, .leave _ => rfl
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_gOk K Rg s) (ruEnd_gOk K Rg rest)
@@ -94,6 +100,7 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
       congrArg (K (n + 1) && ·) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg rest))
   | _, _, _, .narrow _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruEnd_gOk K Rg rest)
+  | _, _, _, .narrowRequired _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .ite _ t e => kongr₂ (· && ·) (ruEnd_gOk K Rg e) (ruEnd_gOk K Rg t)
 

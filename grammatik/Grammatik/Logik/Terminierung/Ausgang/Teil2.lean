@@ -62,6 +62,9 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
   | _, _, _, _, .traverse _ _ body, _, _, h, σ, ρ => by
       teile
       exact ohneAus_traverse _ _ (fun σ ρ => ohneAus_execBlock body false h σ ρ) _ _ _
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body, _, _, h, σ, ρ => by
+      teile
+      exact ohneAus_traverse _ _ (fun σ ρ => ohneAus_execBlock body false h σ ρ) _ _ _
   | _, _, _, _, .retry n _ body ueber, eb, _, h, σ, ρ => by
       teile
       exact ohneAus_retry _ _ _ (fun σ ρ => ohneAus_execBlock body false h.1 σ ρ)
@@ -77,6 +80,8 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
   | _, _, _, _, .retires .., _, _, _, _, _ => trivial
   | _, _, _, _, .ret .., _, _, h, _, _ => by simp only [befS, Bool.true_eq_false] at h
   | _, _, _, _, .retWhy .., _, _, h, _, _ => by simp only [befS, Bool.true_eq_false] at h
+  | _, _, _, _, .retScoped .., _, _, h, _, _ => by simp only [befS, Bool.true_eq_false] at h
+  | _, _, _, _, .retWhyScoped .., _, _, h, _, _ => by simp only [befS, Bool.true_eq_false] at h
   | _, _, _, _, .leave _, _, _, h, _, _ => by simp only [befS] at h; exact h
   | _, _, _, _, .next _, _, _, _, _, _ => trivial
 
@@ -162,6 +167,12 @@ theorem ohneAus_execBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b
       split
       · exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
       · exact endOhneAus_zuAusgang (ohneAus_execEnd sonst eb h.1 _ _)
+  | _, _, _, _, .narrowRequired _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execBlock]
+      split
+      · exact ohneAus_schrumpf (ohneAus_execBlock rest eb h _ _)
+      · trivial
   | _, _, _, _, .check _ sonst rest, eb, h, σ, ρ => by
       teile
       simp only [execBlock]
@@ -197,6 +208,8 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
     (befE eb true e).austritt = false → ∀ σ ρ, EndOhneAus eb (execEnd O passes R e σ ρ)
   | _, _, _, .ret .., _, h, _, _ => by simp only [befE, Bool.true_eq_false] at h
   | _, _, _, .retWhy .., _, h, _, _ => by simp only [befE, Bool.true_eq_false] at h
+  | _, _, _, .retScoped .., _, h, _, _ => by simp only [befE, Bool.true_eq_false] at h
+  | _, _, _, .retWhyScoped .., _, h, _, _ => by simp only [befE, Bool.true_eq_false] at h
   | _, _, _, .leave _, _, h, _, _ => by simp only [befE] at h; exact h
   | _, _, _, .next _, _, _, _, _ => trivial
   | _, _, _, .cons s rest, eb, h, σ, ρ => by
@@ -275,6 +288,12 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
       split
       · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
       · exact ohneAus_execEnd sonst eb h.1 _ _
+  | _, _, _, .narrowRequired _ _ _ rest, eb, h, σ, ρ => by
+      teile
+      simp only [execEnd]
+      split
+      · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)
+      · trivial
   | _, _, _, .exchange _ _ _ _ rest, eb, h, σ, ρ => by
       teile
       exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h _ _)

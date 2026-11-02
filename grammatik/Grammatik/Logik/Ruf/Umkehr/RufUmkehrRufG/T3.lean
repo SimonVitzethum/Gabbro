@@ -157,6 +157,8 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.kOk = e.kOk
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -177,6 +179,8 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
 
   | _, _, .bindCallInd .. => rfl
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]

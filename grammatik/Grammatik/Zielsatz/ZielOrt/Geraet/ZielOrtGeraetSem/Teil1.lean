@@ -86,6 +86,7 @@ def Stmt.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .locks _ _ body => body.gOk K Rg
   | .breaking _ body => body.gOk K Rg
   | .traverse _ _ body => body.gOk K Rg
+  | .consumeTraverse _ _ _ _ _ _ body => body.gOk K Rg
   | .retry _ _ body ueber => body.gOk K Rg && ueber.gOk K Rg
   | .forever _ _ body => body.gOk K Rg
   | .callInd (n := n) .. => K n
@@ -108,6 +109,7 @@ def Block.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .awaits _ _ _ _ _ rest => rest.gOk K Rg
   | .exchange _ _ _ _ rest => rest.gOk K Rg
   | .narrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
+  | .narrowRequired _ _ _ rest => rest.gOk K Rg
   | .check _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
   | .float _ _ _ _ _ rest => rest.gOk K Rg
   | .floatLit _ _ _ rest => rest.gOk K Rg
@@ -118,6 +120,8 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
     (Rg : D.Reg → Bool) : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.gOk K Rg && rest.gOk K Rg
@@ -131,6 +135,7 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .awaits _ _ _ _ _ rest => rest.gOk K Rg
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.gOk K Rg
   | .narrow _ _ _ sonst rest => sonst.gOk K Rg && rest.gOk K Rg
+  | .narrowRequired _ _ _ rest => rest.gOk K Rg
   | .exchange _ _ _ _ rest => rest.gOk K Rg
   | .ite _ t e => e.gOk K Rg && t.gOk K Rg
 
@@ -193,6 +198,7 @@ def Stmt.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => body.regs
   | .breaking _ body => body.regs
   | .traverse _ _ body => body.regs
+  | .consumeTraverse _ _ _ _ _ _ body => body.regs
   | .retry _ _ body ueber => body.regs ++ ueber.regs
   | .forever _ _ body => body.regs
   | _ => []
@@ -213,6 +219,7 @@ def Block.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits _ _ _ _ _ rest => rest.regs
   | .exchange _ _ _ _ rest => rest.regs
   | .narrow _ _ _ sonst rest => sonst.regs ++ rest.regs
+  | .narrowRequired _ _ _ rest => rest.regs
   | .check _ sonst rest => sonst.regs ++ rest.regs
   | .float _ _ _ _ _ rest => rest.regs
   | .floatLit _ _ _ rest => rest.regs
@@ -223,6 +230,8 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → List D.Reg
   | .ret .. => []
   | .retWhy .. => []
+  | .retScoped .. => []
+  | .retWhyScoped .. => []
   | .leave .. => []
   | .next .. => []
   | .cons s rest => s.regs ++ rest.regs
@@ -236,6 +245,7 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => rest.regs
   | .bindCallInd _ _ _ _ _ rest => rest.regs
   | .narrow _ _ _ sonst rest => sonst.regs ++ rest.regs
+  | .narrowRequired _ _ _ rest => rest.regs
   | .exchange _ _ _ _ rest => rest.regs
   | .ite _ t e => e.regs ++ t.regs
 

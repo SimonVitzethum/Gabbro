@@ -63,6 +63,7 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .locks L _ body => A.sperre L && mB A body
   | .breaking _ body => mB A body
   | .traverse _ _ body => mB A body
+  | .consumeTraverse _ _ _ _ _ _ body => mB A body
   | .retry _ _ body ueber => mB A body && mB A ueber
   | .forever _ _ body => mB A body
   | .assignSlot .. => true
@@ -79,6 +80,8 @@ def mS (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .retires .. => true
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
 
@@ -97,6 +100,7 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => mB A rest
   | .exchange _ _ _ _ rest => mB A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mB A rest
+  | .narrowRequired _ _ _ rest => mB A rest
   | .check _ sonst rest => mE A sonst && mB A rest
   | .float _ _ _ _ _ rest => mB A rest
   | .floatLit _ _ _ rest => mB A rest
@@ -117,6 +121,8 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave _ => true
   | .next _ => true
   | .cons s rest => mS A s && mE A rest
@@ -130,6 +136,7 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => mE A rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mE A rest
   | .narrow _ _ _ sonst rest => mE A sonst && mE A rest
+  | .narrowRequired _ _ _ rest => mE A rest
   | .exchange _ _ _ _ rest => mE A rest
   | .ite _ t e => mE A t && mE A e
 end

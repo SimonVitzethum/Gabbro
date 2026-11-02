@@ -120,121 +120,6 @@ theorem ziel_ort_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : List 
   exact fun t ev hev => hI.2 t ev hev
 
 end Ziel
-/-! ## 3. Reason returns: what the machine logs and where the caller goes
-
-    Contracts say nothing about a reason return (`RespektiertVertraege` and
-    `EnsAmRueck` are about normal returns; `VertragAmOrtG` checks entries
-    and normal returns). The statement for reasons is the machine's own:
-    every step that logs `grund g rho r s0 s1` pops a head frame of `g`
-    whose residue is returning exactly that reason, into a caller waiting in
-    `let x = g(…) else { err }`, which continues with `err` and the reason
-    bound. -/
-
-/-- The reason a residue returns right now, if its head is a reason return. -/
-def GRest.grundJetzt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
-    GRest D V l Γ Λ → Option (Fin V.gruende)
-  | .ende (.retWhy r _) => some r
-  | .ende (.cons (.retWhy r _) _) => some r
-  | .dann (.cons (.retWhy r _) _) _ => some r
-  | _ => none
-
-/-- **Reason returns are logged faithfully.** -/
-theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : RufMaschineG D}
-    {u : Faden} (hs : RufSchrittG P O passes M u M') (g : D.Fn) (rho : Env D (D.params g))
-    (r : Fin (D.gruende g)) (s0 s1 : World D)
-    (hlog : (M'.faeden u).log = RufEreignisF.why g rho r s0 s1 :: (M.faeden u).log) :
-    (M.faeden u).kopf.f = g ∧
-    (∃ r' : Fin (vertragVon D (M.faeden u).kopf.f).gruende,
-      (M.faeden u).kopf.rest.2.2.2.2.grundJetzt = some r' ∧ HEq r' r) ∧
-    ∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)) (l : Bool) (Γ : Ctx)
-      (Λ Λ' : List (Res D)) (τ : Ty) (n : Nat)
-      (err : Endblock D (vertragVon D caller.f) l (.why n :: Γ) Λ)
-      (restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ')
-      (k : GRest D (vertragVon D caller.f) l Γ Λ') (ρc : Env D Γ) (hn : D.gruende g = n),
-      (M.faeden u).stapel = caller :: rst ∧
-      caller.rest = ⟨l, Γ, Λ, ρc, .wartetSonst n err restb k⟩ ∧
-      (M'.faeden u).stapel = rst ∧
-      (M'.faeden u).kopf =
-        ⟨caller.f, caller.rho, caller.s0,
-          ⟨l, .why n :: Γ, Λ, Env.cons (τ := .why n) (Fin.cast hn r) ρc,
-            .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩ := by
-  cases hs with
-  | g1 hs =>
-    cases hs with
-    | _ =>
-      simp only [rufUpdateG_self] at hlog
-      first
-        | exact absurd hlog.symm (List.cons_ne_self _ _)
-        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
-  | g2 hs =>
-    cases hs with
-    | _ =>
-      simp only [rufUpdateG_self] at hlog
-      first
-        | exact absurd hlog.symm (List.cons_ne_self _ _)
-        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
-  | g3 hs =>
-    cases hs with
-    | _ =>
-      simp only [rufUpdateG_self] at hlog
-      first
-        | exact absurd hlog.symm (List.cons_ne_self _ _)
-        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
-  | g4 hs =>
-    cases hs with
-    | rueckGrund r0 hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g' hfg rho'
-        hrho s0' hs0 rg hrg hn =>
-      simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
-      obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
-      subst hg
-      subst hfg
-      subst hrg
-      refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
-        hn, hpop, hcaller, rfl, ?_⟩
-      cases hr
-      rfl
-    | _ =>
-      simp only [rufUpdateG_self] at hlog
-      first
-        | exact absurd hlog.symm (List.cons_ne_self _ _)
-        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
-  | g5 hs =>
-    cases hs with
-    | rueckConsGrund r0 hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
-        hfg rho' hrho s0' hs0 rg hrg hn =>
-      simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
-      obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
-      subst hg
-      subst hfg
-      subst hrg
-      refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
-        hn, hpop, hcaller, rfl, ?_⟩
-      cases hr
-      rfl
-    | dannRetGrund r0 hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
-        hfg rho' hrho s0' hs0 rg hrg hn =>
-      simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
-      obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
-      subst hg
-      subst hfg
-      subst hrg
-      refine ⟨rfl, ⟨rg, by rw [hhead]; rfl, hr⟩, caller, rst, l, Γ, Λ, Λ', τ, n, err, restb, k, ρc,
-        hn, hpop, hcaller, rfl, ?_⟩
-      cases hr
-      rfl
-    | _ =>
-      simp only [rufUpdateG_self] at hlog
-      first
-        | exact absurd hlog.symm (List.cons_ne_self _ _)
-        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
-  | g6 hs =>
-    cases hs with
-    | _ =>
-      simp only [rufUpdateG_self] at hlog
-      first
-        | exact absurd hlog.symm (List.cons_ne_self _ _)
-        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
-
 /-! ## 4. The old theorem is a special case -/
 
 section Orakelfrei
@@ -269,6 +154,7 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       simp only [Stmt.kOk] at h
       simp only [execStmt, Block.orakel_kOk body h]
   | .traverse .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
+  | .consumeTraverse .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .retry .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .forever .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .axiomCall .., h, _, _ => by simp only [Stmt.kOk, Bool.false_eq_true] at h
@@ -287,6 +173,8 @@ theorem Stmt.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .., _, _, _ => rfl
   | .ret .., _, _, _ => rfl
   | .retWhy .., _, _, _ => rfl
+  | .retScoped .., _, _, _ => rfl
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -316,6 +204,9 @@ theorem Block.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .narrow _ _ _ sonst rest, h, σ, ρ => by
       simp only [Block.kOk, Bool.and_eq_true] at h
       simp only [execBlock, Endblock.orakel_kOk sonst h.1, Block.orakel_kOk rest h.2]
+  | .narrowRequired _ _ _ rest, h, σ, ρ => by
+      simp only [Block.kOk] at h
+      simp only [execBlock, Block.orakel_kOk rest h]
   | .check _ sonst rest, h, σ, ρ => by
       simp only [Block.kOk, Bool.and_eq_true] at h
       simp only [execBlock, Endblock.orakel_kOk sonst h.1, Block.orakel_kOk rest h.2]
@@ -337,6 +228,8 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       execEnd O passes R e σ ρ = execEnd O' passes R e σ ρ
   | .ret .., _, _, _ => rfl
   | .retWhy .., _, _, _ => rfl
+  | .retScoped .., _, _, _ => rfl
+  | .retWhyScoped .., _, _, _ => rfl
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, h, σ, ρ => by
@@ -353,6 +246,9 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .narrow _ _ _ sonst rest, h, σ, ρ => by
       simp only [Endblock.kOk, Bool.and_eq_true] at h
       simp only [execEnd, Endblock.orakel_kOk sonst h.1, Endblock.orakel_kOk rest h.2]
+  | .narrowRequired _ _ _ rest, h, σ, ρ => by
+      simp only [Endblock.kOk] at h
+      simp only [execEnd, Endblock.orakel_kOk rest h]
   | .exchange _ _ _ _ rest, h, σ, ρ => by
       simp only [Endblock.kOk] at h
       simp only [execEnd, Endblock.orakel_kOk rest h]

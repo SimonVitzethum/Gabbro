@@ -79,6 +79,7 @@ def fNach {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (w : Bool) : Stmt D V l 
   | .locks .. => false
   | .breaking .. => false
   | .traverse .. => false
+  | .consumeTraverse .. => false
   | .retry .. => false
   | .forever .. => false
   | _ => w
@@ -91,6 +92,8 @@ def fS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Stmt D V l �
   | .callInd (n := n) .. => !Φ.ind n || w
   | .ret .. => !e || w
   | .retWhy .. => !e || w
+  | .retScoped .. => !e || w
+  | .retWhyScoped .. => !e || w
   | .ite _ t f => fB e false t && fB e false f
   | .onOption _ p a => fB e false p && fB e false a
   | .onTag _ arms => fArms e arms
@@ -98,6 +101,7 @@ def fS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Stmt D V l �
   | .locks _ _ body => fB e false body
   | .breaking _ body => fB e false body
   | .traverse _ _ body => fB e false body
+  | .consumeTraverse _ _ _ _ _ _ body => fB e false body
   | .retry _ _ body ueber => fB e false body && fB e false ueber
   | .forever _ _ body => fB e false body
   | .assignSlot .. => true
@@ -131,6 +135,7 @@ def fB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Block D V l 
   | .awaits _ _ _ _ _ rest => fB e w rest
   | .exchange _ _ _ _ rest => fB e w rest
   | .narrow _ _ _ sonst rest => fE e false sonst && fB e w rest
+  | .narrowRequired _ _ _ rest => fB e w rest
   | .check _ sonst rest => fE e false sonst && fB e w rest
   | .float _ _ _ _ _ rest => fB e w rest
   | .floatLit _ _ _ rest => fB e w rest
@@ -152,6 +157,8 @@ def fGArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
 def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l Γ Λ → Bool
   | .ret .. => !e || w
   | .retWhy .. => !e || w
+  | .retScoped .. => !e || w
+  | .retWhyScoped .. => !e || w
   | .leave _ => true
   | .next _ => true
   | .cons s rest => fS e w s && fE e (fNach Φ w s) rest
@@ -166,6 +173,7 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   | .awaits _ _ _ _ _ rest => fE e w rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => (!Φ.ind n || w) && fE e false rest
   | .narrow _ _ _ sonst rest => fE e false sonst && fE e w rest
+  | .narrowRequired _ _ _ rest => fE e w rest
   | .exchange _ _ _ _ rest => fE e w rest
   -- as its block form `check c el t`: the false branch is checked unarmed
   | .ite _ t el => fE e false el && fE e w t

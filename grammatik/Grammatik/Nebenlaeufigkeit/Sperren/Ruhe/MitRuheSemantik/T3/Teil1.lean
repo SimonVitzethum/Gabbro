@@ -352,6 +352,32 @@ theorem execStmt_ru_traverse {V : Vertrag D}
   simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
 
 set_option linter.unusedSectionVars false in
+theorem execStmt_ru_consumeTraverse {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (t)
+    (member)
+    (edge)
+    (inv)
+    (bound)
+    (mass)
+    (body)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (ih_execBlock_ru_body : ∀ (σ : World D), ∀ (ρ : Env D _), execBlock O.mitRuhe passes R' (ruB body) (worldR σ) (envR ρ) = ausR (execBlock O passes R body σ ρ))
+    : execStmt O.mitRuhe passes R' (ruS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS, execStmt]
+  conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
+  refine traverseLauf_ru (execBlock O passes R body) (execBlock O.mitRuhe passes R' (ruB body))
+    (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
+    (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
+      wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv) (σ.lese (Λ.map resR) (ruE inv).orte) ρ)))
+    (fun σ ρ => ih_execBlock_ru_body σ ρ) (fun σ ρ => ?_) (alleIndizes (D.count t)) σ ρ
+  simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
+
+set_option linter.unusedSectionVars false in
 theorem execStmt_ru_retry {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}

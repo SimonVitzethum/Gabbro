@@ -44,6 +44,10 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
       simp only [execStmt]
       exact traverseLauf_kongruent _ _ _
         (fun σ' ρ' => Block.kongruent hR body σ' ρ') _ σ ρ
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ => by
+      simp only [execStmt]
+      exact traverseLauf_kongruent _ _ _
+        (fun σ' ρ' => Block.kongruent hR body σ' ρ') _ σ ρ
   | .retry n bis body ueber, σ, ρ => by
       simp only [execStmt]
       exact retryLauf_kongruent _ _ _ _ _
@@ -86,6 +90,8 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
   | .retires .., _, _ => Or.inl rfl
   | .ret .., _, _ => Or.inl rfl
   | .retWhy .., _, _ => Or.inl rfl
+  | .retScoped .., _, _ => Or.inl rfl
+  | .retWhyScoped .., _, _ => Or.inl rfl
   | .leave .., _, _ => Or.inl rfl
   | .next .., _, _ => Or.inl rfl
 
@@ -202,6 +208,10 @@ theorem Block.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
       simp only [execBlock]
       exact AusgangUnter.dite (fun _ => (Block.kongruent hR rest _ _).schrumpf)
         (fun _ => (Endblock.kongruent hR sonst _ ρ).zuAusgang)
+  | .narrowRequired e lo' hi' rest, σ, ρ => by
+      simp only [execBlock]
+      exact AusgangUnter.dite (fun _ => (Block.kongruent hR rest _ _).schrumpf)
+        (fun _ => Or.inl rfl)
   | .check c sonst rest, σ, ρ => by
       simp only [execBlock]
       exact AusgangUnter.ite (Block.kongruent hR rest _ ρ)
@@ -238,6 +248,8 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
       EndUnter Er (execEnd O passes R₁ b σ ρ) (execEnd O passes R₂ b σ ρ)
   | .ret .., _, _ => Or.inl rfl
   | .retWhy .., _, _ => Or.inl rfl
+  | .retScoped .., _, _ => Or.inl rfl
+  | .retWhyScoped .., _, _ => Or.inl rfl
   | .leave .., _, _ => Or.inl rfl
   | .next .., _, _ => Or.inl rfl
   | .cons s rest, σ, ρ => by
@@ -344,6 +356,10 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
       simp only [execEnd]
       exact EndUnter.dite (fun _ => (Endblock.kongruent hR rest _ _).schrumpf)
         (fun _ => Endblock.kongruent hR sonst _ ρ)
+  | .narrowRequired e lo' hi' rest, σ, ρ => by
+      simp only [execEnd]
+      exact EndUnter.dite (fun _ => (Endblock.kongruent hR rest _ _).schrumpf)
+        (fun _ => Or.inl rfl)
   | .exchange g neu hw hL rest, σ, ρ => by
       simp only [execEnd]
       exact (Endblock.kongruent hR rest _ _).schrumpf

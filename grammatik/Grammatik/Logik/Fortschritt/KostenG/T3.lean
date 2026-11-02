@@ -126,6 +126,7 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => spiegelB body
   | .breaking _ body => spiegelB body
   | .traverse _ _ body => spiegelB body
+  | .consumeTraverse .. => false
   | .callInd .. => false
   | .retry .. => false
   | .forever .. => false
@@ -144,6 +145,8 @@ def spiegelS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .publish .. => true
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
   | .leave _ => true
   | .next _ => true
 
@@ -162,6 +165,7 @@ def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits _ _ _ _ _ rest => spiegelB rest
   | .exchange _ _ _ _ rest => spiegelB rest
   | .narrow _ _ _ sonst rest => spiegelE sonst && spiegelB rest
+  | .narrowRequired _ _ _ rest => spiegelB rest
   | .check _ sonst rest => spiegelE sonst && spiegelB rest
   | .float _ _ _ _ _ rest => spiegelB rest
   | .floatLit _ _ _ rest => spiegelB rest
@@ -196,6 +200,9 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd .. => false
   -- the end-block forms of stage 0 are outside the checker's mirror until `kosten.rs` prices them (TODO.md)
   | .narrow .. => false
+  | .narrowRequired .. => false
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
   | .exchange .. => false
   | .ite .. => false
 end
@@ -226,6 +233,7 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .breaking _ body => kostenKB c body
   -- `Traverse`: body times domain bound
   | .traverse t _ body => (D.count t).toNat * kostenKB c body
+  | .consumeTraverse t _ _ _ _ _ body => (D.count t).toNat * kostenKB c body
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall _ args _ _ _ _ _ => kostenArgs args
@@ -237,6 +245,8 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   -- `Return(Some e)`: the expression; `Return(None)`, `Leave`, `Next`: `0`
   | .ret e _ => kostenErg e
   | .retWhy .. => 0
+  | .retScoped e _ => kostenErg e
+  | .retWhyScoped .. => 0
   | .leave _ => 0
   | .next _ => 0
 
@@ -263,6 +273,7 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .exchange _ neu _ _ rest => 1 + kostenExpr neu + kostenKB c rest
   -- `Narrow`: `1 + max(0, sonst)`; the subject is not read (F5)
   | .narrow _ _ _ sonst rest => 1 + kostenKE c sonst + kostenKB c rest
+  | .narrowRequired _ _ _ rest => 1 + kostenKB c rest
   -- a named refusal: `if !c { sonst }` with an always-leaving arm -- the
   -- two-way rule of `block`: condition plus the maximum
   | .check b sonst rest => kostenExpr b + max (kostenKE c sonst) (kostenKB c rest)
@@ -286,6 +297,8 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret e _ => kostenErg e
   | .retWhy .. => 0
+  | .retScoped e _ => kostenErg e
+  | .retWhyScoped .. => 0
   | .leave _ => 0
   | .next _ => 0
   | .cons s rest => kostenKS c s + kostenKE c rest
@@ -300,6 +313,9 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => 1 + kostenKE c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKE c rest
   | .narrow .. => 0
+  | .narrowRequired .. => 0
+  | .retScoped e _ => kostenErg e
+  | .retWhyScoped .. => 0
   | .exchange .. => 0
   | .ite .. => 0
 end
@@ -325,6 +341,9 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => 2 + zusatzB body
   | .breaking _ body => 1 + zusatzB body
   | .traverse t inv body => 2 + (D.count t).toNat * (zusatzB body + kostenExpr inv + 2)
+  | .consumeTraverse t member edge inv _ mass body =>
+      2 + (D.count t).toNat * (zusatzB body + kostenExpr member + kostenExpr edge +
+        kostenExpr inv + kostenExpr mass + 2)
   | .retry .. => 0
   | .forever .. => 0
   | .axiomCall .. => 0
@@ -335,6 +354,8 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .. => 0
   | .ret .. => 1
   | .retWhy .. => 1
+  | .retScoped .. => 1
+  | .retWhyScoped .. => 1
   | .leave _ => 1
   | .next _ => 1
 
@@ -353,6 +374,7 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits _ _ _ _ _ rest => 1 + zusatzB rest
   | .exchange _ _ _ _ rest => 1 + zusatzB rest
   | .narrow e _ _ sonst rest => 3 + kostenExpr e + zusatzSonst sonst + zusatzB rest
+  | .narrowRequired e _ _ rest => 3 + kostenExpr e + zusatzB rest
   | .check _ sonst rest => 1 + max (zusatzSonst sonst + 1) (zusatzB rest)
   | .float _ _ _ _ _ rest => zusatzB rest
   | .floatLit _ _ _ rest => 1 + zusatzB rest
@@ -373,6 +395,8 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
   | .ret .. => 1
   | .retWhy .. => 1
+  | .retScoped .. => 1
+  | .retWhyScoped .. => 1
   | .leave _ => 1
   | .next _ => 1
   | .cons s rest => entfZ s + zusatzS s + zusatzE rest
@@ -386,6 +410,9 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
   | .bindCallInd .. => 0
   | .narrow .. => 0
+  | .narrowRequired .. => 0
+  | .retScoped .. => 1
+  | .retWhyScoped .. => 1
   | .exchange .. => 0
   | .ite .. => 0
 
@@ -394,6 +421,8 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Nat
   | .ret .. => 2
   | .retWhy .. => 2
+  | .retScoped .. => 2
+  | .retWhyScoped .. => 2
   | .leave _ => 2
   | .next _ => 2
   | .cons s rest => zusatzS s + zusatzSonst rest
@@ -407,6 +436,9 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits _ _ _ _ _ rest => 1 + zusatzSonst rest
   | .bindCallInd .. => 0
   | .narrow .. => 0
+  | .narrowRequired .. => 0
+  | .retScoped .. => 2
+  | .retWhyScoped .. => 2
   | .exchange .. => 0
   | .ite .. => 0
 end

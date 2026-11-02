@@ -64,6 +64,7 @@ theorem sGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .locks _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]; rfl
   | .breaking _ body => by simp only [Stmt.gOk, mS, bGOk K body]
   | .traverse _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]
+  | .consumeTraverse _ _ _ _ _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]
   | .retry _ _ body ueber => by simp only [Stmt.gOk, mS, bGOk K body, bGOk K ueber]
   | .forever _ _ body => by simp only [Stmt.gOk, mS, bGOk K body]
   | .assignSlot .. => rfl
@@ -80,6 +81,8 @@ theorem sGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .retires .. => rfl
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
 
@@ -98,6 +101,7 @@ theorem bGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .awaits _ _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .exchange _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .narrow _ _ _ sonst rest => by simp only [Block.gOk, mB, eGOk K sonst, bGOk K rest]
+  | .narrowRequired _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .check _ sonst rest => by simp only [Block.gOk, mB, eGOk K sonst, bGOk K rest]
   | .float _ _ _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
   | .floatLit _ _ _ rest => by simp only [Block.gOk, mB, bGOk K rest]
@@ -118,6 +122,8 @@ theorem eGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
     (e : Endblock D V l Γ Λ) → e.gOk K (fun _ => true) = mE (indMerkmal K) e
   | .ret .. => rfl
   | .retWhy .. => rfl
+  | .retScoped .. => rfl
+  | .retWhyScoped .. => rfl
   | .leave _ => rfl
   | .next _ => rfl
   | .cons s rest => by simp only [Endblock.gOk, mE, sGOk K s, eGOk K rest]
@@ -131,6 +137,7 @@ theorem eGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List
   | .awaits _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .bindCallInd _ _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]; rfl
   | .narrow _ _ _ sonst rest => by simp only [Endblock.gOk, mE, eGOk K sonst, eGOk K rest]
+  | .narrowRequired _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .exchange _ _ _ _ rest => by simp only [Endblock.gOk, mE, eGOk K rest]
   | .ite _ t e => by simp only [Endblock.gOk, mE, eGOk K t, eGOk K e, Bool.and_comm]
 

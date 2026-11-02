@@ -121,6 +121,8 @@ def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .locks _ _ body => "Stmt.locks" :: cB body
   | .breaking _ body => "Stmt.breaking" :: cB body
   | .traverse _ inv body => "Stmt.traverse" :: (eE inv ++ cB body)
+  | .consumeTraverse _ member edge inv _ mass body =>
+      "Stmt.consumeTraverse" :: (eE member ++ eE edge ++ eE inv ++ eE mass ++ cB body)
   | .retry _ bis body ueber => "Stmt.retry" :: (eE bis ++ cB body ++ cB ueber)
   | .forever _ inv body => "Stmt.forever" :: (eE inv ++ cB body)
   | .axiomCall (args := args) .. => "Stmt.axiomCall" :: eA args
@@ -131,6 +133,8 @@ def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .retires .. => ["Stmt.retires"]
   | .ret e _ => "Stmt.ret" :: eR e
   | .retWhy .. => ["Stmt.retWhy"]
+  | .retScoped e _ => "Stmt.retScoped" :: eR e
+  | .retWhyScoped .. => ["Stmt.retWhyScoped"]
   | .leave _ => ["Stmt.leave"]
   | .next _ => ["Stmt.next"]
 
@@ -149,6 +153,7 @@ def cB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .awaits (rest := rest) .. => "Block.awaits" :: cB rest
   | .exchange (neu := neu) (rest := rest) .. => "Block.exchange" :: (eE neu ++ cB rest)
   | .narrow e _ _ sonst rest => "Block.narrow" :: (eE e ++ cE sonst ++ cB rest)
+  | .narrowRequired e _ _ rest => "Block.narrowRequired" :: (eE e ++ cB rest)
   | .check c sonst rest => "Block.check" :: (eE c ++ cE sonst ++ cB rest)
   | .float _ a b _ _ rest => "Block.float" :: (eE a ++ eE b ++ cB rest)
   | .floatLit _ _ _ rest => "Block.floatLit" :: cB rest
@@ -171,6 +176,8 @@ def cGArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Na
 def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → List String
   | .ret e _ => "Endblock.ret" :: eR e
   | .retWhy .. => ["Endblock.retWhy"]
+  | .retScoped e _ => "Endblock.retScoped" :: eR e
+  | .retWhyScoped .. => ["Endblock.retWhyScoped"]
   | .leave _ => ["Endblock.leave"]
   | .next _ => ["Endblock.next"]
   | .cons s rest => "Endblock.cons" :: (cS s ++ cE rest)
@@ -184,6 +191,7 @@ def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .awaits (rest := rest) .. => "Endblock.awaits" :: cE rest
   | .bindCallInd (p := p) (args := args) (rest := rest) .. => "Endblock.bindCallInd" :: (eE p ++ eA args ++ cE rest)
   | .narrow e _ _ sonst rest => "Endblock.narrow" :: (eE e ++ cE sonst ++ cE rest)
+  | .narrowRequired e _ _ rest => "Endblock.narrowRequired" :: (eE e ++ cE rest)
   | .exchange (neu := neu) (rest := rest) .. => "Endblock.exchange" :: (eE neu ++ cE rest)
   | .ite c t e => "Endblock.ite" :: (eE c ++ cE t ++ cE e)
 

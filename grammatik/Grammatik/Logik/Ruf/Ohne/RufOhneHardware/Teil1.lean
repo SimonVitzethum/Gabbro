@@ -45,6 +45,7 @@ def Stmt.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .locks _ _ body => body.hardwareFrei
   | .breaking _ body => body.hardwareFrei
   | .traverse _ _ body => body.hardwareFrei
+  | .consumeTraverse _ _ _ _ _ _ body => body.hardwareFrei
   | .retry _ _ body ueber => body.hardwareFrei && ueber.hardwareFrei
   | .forever .. => false
   | .axiomCall .. => false
@@ -67,6 +68,7 @@ def Block.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .awaits .. => false
   | .exchange _ _ _ _ rest => rest.hardwareFrei
   | .narrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
+  | .narrowRequired _ _ _ rest => rest.hardwareFrei
   | .check _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
   | .float _ _ _ _ _ rest => rest.hardwareFrei
   | .floatLit _ _ _ rest => rest.hardwareFrei
@@ -77,6 +79,8 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.hardwareFrei && rest.hardwareFrei
@@ -90,6 +94,7 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits .. => false
   | .bindCallInd _ _ _ _ _ rest => rest.hardwareFrei
   | .narrow _ _ _ sonst rest => sonst.hardwareFrei && rest.hardwareFrei
+  | .narrowRequired _ _ _ rest => rest.hardwareFrei
   | .exchange _ _ _ _ rest => rest.hardwareFrei
   | .ite _ t e => t.hardwareFrei && e.hardwareFrei
 

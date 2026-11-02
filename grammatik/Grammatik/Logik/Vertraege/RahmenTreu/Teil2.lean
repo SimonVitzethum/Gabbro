@@ -101,6 +101,9 @@ theorem stmt_treu :
   | .traverse t inv body, σ, ρ, σ', h =>
       traverseLauf_treu _ _ (fun σ ρ => block_treu body σ ρ)
         (fun σ ρ => treu_lese σ Λ inv.orte) _ σ ρ σ' h
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ, σ', h =>
+      traverseLauf_treu _ _ (fun σ ρ => block_treu body σ ρ)
+        (fun σ ρ => treu_lese σ Λ inv.orte) _ σ ρ σ' h
   | .retry n bis body ueberlauf, σ, ρ, σ', h =>
       retryLauf_treu _ _ _ (fun σ ρ => block_treu body σ ρ)
         (fun σ ρ => treu_lese σ Λ bis.orte)
@@ -136,6 +139,11 @@ theorem stmt_treu :
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
   | .retWhy .., σ, ρ, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
+  | .retScoped e _, σ, ρ, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact treu_lese σ Λ _
+  | .retWhyScoped .., σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .leave _, σ, ρ, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
@@ -267,6 +275,12 @@ theorem block_treu :
       split at h
       · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
       · exact (TreuEnd.vor hl (end_treu sonst _ ρ)).zuAusgang σ' h
+  | .narrowRequired e lo' hi' rest, σ, ρ, σ', h => by
+      simp only [execBlock] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
+      split at h
+      · exact (TreuAusgang.vor hl (block_treu rest _ _)).schrumpf σ' h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .check c sonst rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
@@ -304,6 +318,11 @@ theorem end_treu :
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
       exact treu_lese σ Λ _
   | .retWhy .., σ, ρ, σ', h => by
+      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
+  | .retScoped e _, σ, ρ, σ', h => by
+      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
+      exact treu_lese σ Λ _
+  | .retWhyScoped .., σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .leave _, σ, ρ, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
@@ -424,6 +443,12 @@ theorem end_treu :
       split at h
       · exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
       · exact (TreuEnd.vor hl (end_treu sonst _ ρ)) σ' h
+  | .narrowRequired e lo' hi' rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
+      split at h
+      · exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .exchange g neu hw hL rest, σ, ρ, σ', h => by
       simp only [execEnd] at h
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (.inr g :: neu.orte)

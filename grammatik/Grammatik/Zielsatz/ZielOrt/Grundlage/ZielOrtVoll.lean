@@ -12,5 +12,6 @@
 module
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T1
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T2
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.T3
 @[expose] public section
 

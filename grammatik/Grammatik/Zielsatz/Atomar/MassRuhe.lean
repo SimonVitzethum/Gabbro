@@ -237,6 +237,7 @@ theorem ewig_ruS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .locks _ _ body, eb, ie, _, _ => ewig_ruB body eb ie
   | _, _, _, _, .breaking _ body, eb, ie, _, _ => ewig_ruB body eb ie
   | _, _, _, _, .traverse _ _ body, _, ie, _, _ => ewig_ruB body false ie
+  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body, _, ie, _, _ => ewig_ruB body false ie
   | _, _, _, _, .retry _ _ body ueber, eb, ie, _, _ => kongr₂ (· || ·) (ewig_ruB body false ie) (ewig_ruB ueber eb ie)
   | _, _, _, _, .forever _ _ body, _, _, _, _ => by simp only [ruS, befS, befund_und_ewig, Bool.true_or]
   | _, _, _, _, .axiomCall .., _, _, _, _ => rfl
@@ -247,6 +248,8 @@ theorem ewig_ruS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .retires .., eb, ie, dl, _ => (ewig_nachΛ _ _ eb ie dl).trans rfl
   | _, _, _, _, .ret .., _, _, _, _ => rfl
   | _, _, _, _, .retWhy .., _, _, _, _ => rfl
+  | _, _, _, _, .retScoped .., _, _, _, _ => rfl
+  | _, _, _, _, .retWhyScoped .., _, _, _, _ => rfl
   | _, _, _, _, .leave _, _, _, _, _ => rfl
   | _, _, _, _, .next _, _, _, _, _ => rfl
 
@@ -272,6 +275,7 @@ theorem ewig_ruB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
   | _, _, _, _, .awaits _ _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
   | _, _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
   | _, _, _, _, .narrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
+  | _, _, _, _, .narrowRequired _ _ _ rest, eb, ie => ewig_ruB rest eb ie
   | _, _, _, _, .check _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
   | _, _, _, _, .float _ _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
   | _, _, _, _, .floatLit _ _ _ rest, eb, ie => ewig_ruB rest eb ie
@@ -282,6 +286,8 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
     (befE eb ie (ruEnd e)).ewig = (befE eb ie e).ewig
   | _, _, _, .ret .., _, _ => rfl
   | _, _, _, .retWhy .., _, _ => rfl
+  | _, _, _, .retScoped .., _, _ => rfl
+  | _, _, _, .retWhyScoped .., _, _ => rfl
   | _, _, _, .leave _, _, _ => rfl
   | _, _, _, .next _, _, _ => rfl
   | _, _, _, .cons s rest, eb, ie => kongr₂ (· || ·) (ewig_ruS s eb ie _ _) (ewig_ruEnd rest eb ie)
@@ -302,6 +308,7 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
       simp only [ruEnd, befE, befund_und_ewig]
       exact kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
   | _, _, _, .narrow _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruEnd rest eb ie)
+  | _, _, _, .narrowRequired _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
   | _, _, _, .exchange _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
   | _, _, _, .ite _ t e, eb, ie => kongr₂ (· || ·) (ewig_ruEnd e eb ie) (ewig_ruEnd t eb ie)
 

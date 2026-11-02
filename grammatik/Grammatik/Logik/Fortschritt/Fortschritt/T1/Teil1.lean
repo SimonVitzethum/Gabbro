@@ -21,6 +21,8 @@ variable {V : Vertrag D}
 def Stmt.istAbschluss {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | _ => false
@@ -41,6 +43,7 @@ def Block.terminal {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .awaits _ _ _ _ _ rest => rest.terminal
   | .exchange _ _ _ _ rest => rest.terminal
   | .narrow _ _ _ _ rest => rest.terminal
+  | .narrowRequired _ _ _ rest => rest.terminal
   | .check _ _ rest => rest.terminal
   | .float _ _ _ _ _ rest => rest.terminal
   | .floatLit _ _ _ rest => rest.terminal
@@ -52,6 +55,8 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), e.alsBlock.2.terminal = true
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons _ rest => by
@@ -75,6 +80,8 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]

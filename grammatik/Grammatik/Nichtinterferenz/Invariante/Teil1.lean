@@ -20,6 +20,8 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
     ∀ {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ), nB S Ax e.alsBlock.2 = nE S Ax e
   | _, _, .ret _ _ => by simp only [Endblock.alsBlock, nB, nS, Bool.and_true, nE]
   | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, nB, nS, Bool.and_self, nE]
+  | _, _, .retScoped _ _ => by simp only [Endblock.alsBlock, nB, nS, Bool.and_true, nE]
+  | _, _, .retWhyScoped _ _ => by simp only [Endblock.alsBlock, nB, nS, Bool.and_self, nE]
   | _, _, .leave _ => by simp only [Endblock.alsBlock, nB, nS, Bool.and_self, nE]
   | _, _, .next _ => by simp only [Endblock.alsBlock, nB, nS, Bool.and_self, nE]
   | _, _, .cons s rest => by
@@ -43,6 +45,8 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .narrow e lo' hi' sonst rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .narrowRequired e lo' hi' rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .exchange g neu hw hL rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]

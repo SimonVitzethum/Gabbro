@@ -107,6 +107,9 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .traverse t inv body, σ, ρ, hbo, hh, σ', h =>
       traverseLauf_gut (Λ := Λ) _ _ (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh)
         (fun σ ρ hh => gut_lese σ Λ _ inv.orte_darf hh.heldIn) _ σ ρ hh σ' h
+  | .consumeTraverse t _ _ inv _ _ body, σ, ρ, hbo, hh, σ', h =>
+      traverseLauf_gut (Λ := Λ) _ _ (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh)
+        (fun σ ρ hh => gut_lese σ Λ _ inv.orte_darf hh.heldIn) _ σ ρ hh σ' h
   | .retry n bis body ueberlauf, σ, ρ, hbo, hh, σ', h =>
       retryLauf_gut (Λ := Λ) _ _ _ (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh)
         (fun σ ρ hh => gut_lese σ Λ _ bis.orte_darf hh.heldIn)
@@ -140,6 +143,11 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ret e _, σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
+  | .retScoped e _, σ, ρ, hbo, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      exact gut_lese σ Λ _ e.orte_darf hh.heldIn
+  | .retWhyScoped .., σ, ρ, hbo, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .retWhy .., σ, ρ, hbo, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, σ, ρ, hbo, hh, σ', h => by
@@ -278,6 +286,12 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
       · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))).zuAusgang σ' h
+  | .narrowRequired e lo' hi' rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execBlock] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
+      split at h
+      · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .check c sonst rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ c.orte_darf hh.heldIn
@@ -315,6 +329,11 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ret e _, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh.heldIn
+  | .retScoped e _, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h
+      exact gut_lese σ Λ _ e.orte_darf hh.heldIn
+  | .retWhyScoped .., σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .retWhy .., σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd, EndAusgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
   | .leave _, σ, ρ, hbo, hh, σ', h => by
@@ -442,6 +461,12 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       split at h
       · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
       · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (hl.heldB hh))) σ' h
+  | .narrowRequired e lo' hi' rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
+      split at h
+      · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
+      · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .exchange g neu hw hL rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_glob hL) neu.orte_darf) hh.heldIn
@@ -470,6 +495,5 @@ theorem grund_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .cons _ rest, ⟨_ + 1, _⟩, σ, ρ, hbo, hh, σ', h => grund_gutB bo hbV rest _ σ ρ (by boden_tac) hh σ' h
 
 end
-
 end Rumpf
 end Gabbro.Grammatik

@@ -129,6 +129,7 @@ def Block.retHier {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ
 /-- The end block is `return x;` of the newest bound variable. -/
 def Endblock.retHier {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret e _ => e.istHier
+  | .retScoped e _ => e.istHier
   | _ => false
 
 /-- The block starts with `return;`. -/
@@ -139,6 +140,7 @@ def Block.retLeer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ
 /-- The end block is `return;`. -/
 def Endblock.retLeer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret e _ => e.istLeer
+  | .retScoped e _ => e.istLeer
   | _ => false
 
 mutual
@@ -157,11 +159,14 @@ def befS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig danachLeer 
   | .locks _ _ body => befB ebene imEwig body
   | .breaking _ body => befB ebene imEwig body
   | .traverse _ _ body => befB false imEwig body
+  | .consumeTraverse _ _ _ _ _ _ body => befB false imEwig body
   | .retry _ _ body ueber => befB false imEwig body ++ befB ebene imEwig ueber
   | .forever _ _ body => { ewig := true } ++ befB true true body
   | .leave _ => { austritt := ebene }
   | .ret .. => { austritt := imEwig }
   | .retWhy .. => { austritt := imEwig }
+  | .retScoped .. => { austritt := imEwig }
+  | .retWhyScoped .. => { austritt := imEwig }
   | _ => {}
 
 def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
@@ -180,6 +185,7 @@ def befB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ebene imEwig : Bool) :
   | .awaits _ _ _ _ _ rest => befB ebene imEwig rest
   | .exchange _ _ _ _ rest => befB ebene imEwig rest
   | .narrow _ _ _ sonst rest => befE ebene imEwig sonst ++ befB ebene imEwig rest
+  | .narrowRequired _ _ _ rest => befB ebene imEwig rest
   | .check _ sonst rest => befE ebene imEwig sonst ++ befB ebene imEwig rest
   | .float _ _ _ _ _ rest => befB ebene imEwig rest
   | .floatLit _ _ _ rest => befB ebene imEwig rest
@@ -199,6 +205,8 @@ def befGArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} (ebene imEw
 def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endblock D V l Γ Λ → Befund D
   | .ret .. => { austritt := imEwig }
   | .retWhy .. => { austritt := imEwig }
+  | .retScoped .. => { austritt := imEwig }
+  | .retWhyScoped .. => { austritt := imEwig }
   | .leave _ => { austritt := ebene }
   | .next _ => {}
   | .cons s rest => befS ebene imEwig rest.retLeer s ++ befE ebene imEwig rest
@@ -213,6 +221,7 @@ def befE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ebene imEwig : Bool) : Endbl
   | .awaits _ _ _ _ _ rest => befE ebene imEwig rest
   | .bindCallInd (n := n) _ _ _ _ _ rest => Befund.rufInd n imEwig ++ befE ebene imEwig rest
   | .narrow _ _ _ sonst rest => befE ebene imEwig sonst ++ befE ebene imEwig rest
+  | .narrowRequired _ _ _ rest => befE ebene imEwig rest
   | .exchange _ _ _ _ rest => befE ebene imEwig rest
   | .ite _ t e => befE ebene imEwig e ++ befE ebene imEwig t
 

@@ -298,6 +298,12 @@ inductive Logik (D : Deklaration) where
       `Hardware.ieee`). That the FPU computes the kernel model is `gleitkomma_ieee`, on the C
       side. -/
   | bereich
+  /-- A required capacity check failed: a `Block/Endblock.narrowRequired`
+      (C11) found its value outside the required range, where the form has
+      no `else`. Like `bereich`, it is the program's logic, excluded by the
+      caller's capacity duty (`KoerperGutS/SA`); a full arena at a required
+      allocation is never a hardware failure and never fabricates a value. -/
+  | kapazitaet
 
 /-- Die Hardware: eine Annahme ueber die Maschine gilt nicht. -/
 inductive Hardware (D : Deklaration) where

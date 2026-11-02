@@ -18,6 +18,8 @@ theorem kostenBlock_alsBlock :
       kostenBlock c pa e.alsBlock.2 = kostenSonst c pa e
   | _, _, .ret _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
   | _, _, .retWhy _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
+  | _, _, .retScoped _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]; omega
+  | _, _, .retWhyScoped _ _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .leave _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .next _ => by simp only [Endblock.alsBlock, kostenBlock, kostenStmt, kostenSonst]
   | _, _, .cons s rest => by
@@ -42,6 +44,8 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .narrowRequired _ _ _ rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .ite _ t _ => by
@@ -53,6 +57,8 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
       rufeB Z ZS EW e.alsBlock.2 = rufeE Z ZS EW e
   | _, _, .ret _ _ => rfl
   | _, _, .retWhy _ _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
   | _, _, .cons s rest => by
@@ -76,6 +82,8 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
   | _, _, .bindCallInd p args he hp hr rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .narrow _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
+  | _, _, .narrowRequired _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .exchange _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
