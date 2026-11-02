@@ -168,6 +168,10 @@ structure UFn where
   /-- The unit's type aliases in the declaration's entry scope: what a conversion `T(e)`
       in `decreases` resolves against (the same table `uRechne` reads as `ctx.alias`). -/
   measureTypes : List (String × (Int × Int)) := []
+  /-- The linear marks the function consumes (`effects { consumes m }`, C16). -/
+  nimmt : List String := []
+  /-- The linear marks the function produces (`effects { allocs m }`, C16). -/
+  gibt : List String := []
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
@@ -284,6 +288,10 @@ structure UProg where
       with each `can_fail` body lowered into its generated Boolean producer in
       `fns` (named by the check's `probe` field). -/
   checks : List UCheck := []
+  /-- The declaration's mark table (C16): the names of the `linear`-flagged type items in
+      declaration order, then every check's Duty (`dutyName`), deduplicated. Every `nimmt`/`gibt`
+      of every function must name a member (`uMarkenPruef`). -/
+  marken : List String := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare

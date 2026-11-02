@@ -106,6 +106,8 @@ structure UFnKopf where
   resTy : Option Ty := none
   /-- The tables a foreign body writes (`ext`). -/
   puts : List String := []
+  nimmt : List String := []
+  gibt : List String := []
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
@@ -258,6 +260,8 @@ structure UEffekte where
   locks : List String
   puts : List String
   gputs : List String := []
+  nimmt : List String := []
+  gibt : List String := []
 
 /-- A written name is a static when it is no parameter and no table. -/
 def uIstGlobName (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) (g : String) : Bool :=
@@ -307,6 +311,17 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
   | .reads _ :: rest => uEffekteAux kopf tabs locks globs rest
   | .pure :: rest => uEffekteAux kopf tabs locks globs rest
   | .loops :: rest => uEffekteAux kopf tabs locks globs rest
+| .allocs m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with gibt := m :: r.gibt }
+  | .takes (.variable m) :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with nimmt := m :: r.nimmt }
   | _ :: _ => .error "effect without G form"
+
+end Gabbro.Grammatik.Parser.Uebersetze
+
 
 end Gabbro.Grammatik.Parser.Uebersetze

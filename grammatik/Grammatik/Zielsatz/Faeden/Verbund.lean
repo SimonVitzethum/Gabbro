@@ -16,7 +16,8 @@
     leaves (`abg_verbinde`: every edge of an owner's view is an edge of the linked program,
     `kante_teil`, and the linked graph is closed, `reachB_ruft` -- the fixpoint of
     `erreichB` is reached within `fs.length` rounds, `erreichB_stabil`, a counting argument).
-    The three whole-program components (thread-locality, write separation, pool safety) are
+    The whole-program components (thread-locality, write separation, pool safety, and the
+    composed check admission) are
     the link check's, over the COMPOSED hulls: the linked graph of a root lies in its composed
     hull (`huelle_of_reach`, from `KeinRueckruf`).
   * (b) `nutzerPflicht_verbinde`: the linked user duty is the two units' duties over the bodies

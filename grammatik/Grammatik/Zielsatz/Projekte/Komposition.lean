@@ -60,9 +60,9 @@ def qAlle (ps : List (Projekt D)) : AxEns D :=
   fun a σ v => ps.all (fun p => p.E.Q a σ v)
 
 /-- **The composed unit.** Checks are lifted per project (each project's declared
-    checks travel with it); admitting them across the link is the open remainder
-    (C16: the composed admission needs cross-unit gate consumption and name
-    separation, as for `verbinde`). -/
+    checks travel with it); their joint admission over the composed program is the
+    link check's `pruef` field (`BindeSpec`): cross-unit gate consumption and name
+    separation, without which the link is refused. -/
 def komponiere (B : Einheit D) (ps : List (Projekt D)) : Einheit D where
   P := komponiereP B.P ps
   S := B.S
