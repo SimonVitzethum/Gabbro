@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Stmt.Anweisung
 public import Grammatik.Parser.Item.ElementTief.Defs6
+public import Grammatik.Parser.TaggedDispatch.Declarations
 
 @[expose] public section
 
@@ -70,57 +71,65 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match sammleModifikatoren toks with
-    | (mods, nach) => match nach with
-      | .wort s :: rest =>
-        if strEq s "module" then parseModulTief f nach
-        else if strEq s "use" then parseUseTief nach
-        else if strEq s "fn" then match parseFnSig f (letzteArt mods) nach with
-          | .error e => .error e
-          | .ok (sig, r) => parseFnRest f sig r
-        else if strEq s "translator" then parseTranslatorTief f nach
-        else if strEq s "profile" then parseProfilTief f false rest
-        else if strEq s "requires" then match rest with
-          | .wort t :: rest' =>
-            if strEq t "profile" then parseProfilTief f true rest'
-            else .error "requires without profile"
-          | _ => .error "requires without profile"
-        else if strEq s "concurrent" then parseNebenTief f nach
-        else if strEq s "type" then parseTypTief f mods nach
-        else if strEq s "const" then match rest with
-          | .wort t :: _ =>
-            if strEq t "fn" then match parseFnSig f "const" rest with
-              | .error e => .error e
-              | .ok (sig, r) => parseFnRest f sig r
-            else match nimmWort "const" nach with
+  | f + 1 =>
+    let group := match toks with
+      | .wort "spec" :: .wort "fn" :: _ | .wort "impl" :: .wort "fn" :: _ => none
+      | .wort "spec" :: rest => some (true, rest)
+      | .wort "impl" :: rest => some (false, rest)
+      | _ => none
+    match group with
+    | some (spec, rest) => parseTaggedGroup f spec rest
+    | none => match sammleModifikatoren toks with
+      | (mods, nach) => match nach with
+        | .wort s :: rest =>
+          if strEq s "module" then parseModulTief f nach
+          else if strEq s "use" then parseUseTief nach
+          else if strEq s "fn" then match parseFnSig f (letzteArt mods) nach with
+            | .error e => .error e
+            | .ok (sig, r) => parseFnRest f sig r
+          else if strEq s "translator" then parseTranslatorTief f nach
+          else if strEq s "profile" then parseProfilTief f false rest
+          else if strEq s "requires" then match rest with
+            | .wort t :: rest' =>
+              if strEq t "profile" then parseProfilTief f true rest'
+              else .error "requires without profile"
+            | _ => .error "requires without profile"
+          else if strEq s "concurrent" then parseNebenTief f nach
+          else if strEq s "type" then parseTypTief f mods nach
+          else if strEq s "const" then match rest with
+            | .wort t :: _ =>
+              if strEq t "fn" then match parseFnSig f "const" rest with
+                | .error e => .error e
+                | .ok (sig, r) => parseFnRest f sig r
+              else match nimmWort "const" nach with
+                | .error e => .error e
+                | .ok r1 => parseKonstNach f r1
+            | _ => match nimmWort "const" nach with
               | .error e => .error e
               | .ok r1 => parseKonstNach f r1
-          | _ => match nimmWort "const" nach with
-            | .error e => .error e
-            | .ok r1 => parseKonstNach f r1
-        else if strEq s "static" then parseGlobTief f nach
-        else if strEq s "format" then parseFormatTief f nach
-        else if strEq s "table" then parseTabellenTief f nach
-        else if strEq s "arena" then parseArenaTief f nach
-        else if strEq s "reason" then parseGrundTief f nach
-        else if strEq s "state" then parseZustandTief f nach
-        else if strEq s "device" then parseGeraetTief f nach
-        else if strEq s "assume" then parseAnnahmeTief nach
-        else if strEq s "axiom" then parseAxiomTief f nach
-        else if strEq s "check" then parsePruefungTief f nach
-        else if strEq s "atomic" then parseAtomarTief f nach
-        else if strEq s "lock" then parseSperreTief f nach
-        else if strEq s "rcu" then parseRcuTief f nach
-        else if strEq s "group" then parseGruppeTief f nach
-        else if strEq s "accumulates" then parseAkkumTief f nach
-        else if strEq s "walk" then parseWegTief f nach
-        else if strEq s "entry" then parseEingangTief f nach
-        else if strEq s "entrust" then parseAnvertrautTief f nach
-        else if strEq s "boot" then parseStartTief f nach
-        else if strEq s "syscall" then parseSysrufTief f nach
-        else if strEq s "target" then parseGoal f nach
-        else .error "item expected"
-      | _ => .error "item expected"
+          else if strEq s "static" then parseGlobTief f nach
+          else if strEq s "format" then parseFormatTief f nach
+          else if strEq s "table" then parseTabellenTief f nach
+          else if strEq s "arena" then parseArenaTief f nach
+          else if strEq s "reason" then parseGrundTief f nach
+          else if strEq s "state" then parseZustandTief f nach
+          else if strEq s "device" then parseGeraetTief f nach
+          else if strEq s "assume" then parseAnnahmeTief nach
+          else if strEq s "axiom" then parseAxiomTief f nach
+          else if strEq s "check" then parsePruefungTief f nach
+          else if strEq s "atomic" then parseAtomarTief f nach
+          else if strEq s "lock" then parseSperreTief f nach
+          else if strEq s "rcu" then parseRcuTief f nach
+          else if strEq s "group" then parseGruppeTief f nach
+          else if strEq s "accumulates" then parseAkkumTief f nach
+          else if strEq s "walk" then parseWegTief f nach
+          else if strEq s "entry" then parseEingangTief f nach
+          else if strEq s "entrust" then parseAnvertrautTief f nach
+          else if strEq s "boot" then parseStartTief f nach
+          else if strEq s "syscall" then parseSysrufTief f nach
+          else if strEq s "target" then parseGoal f nach
+          else .error "item expected"
+        | _ => .error "item expected"
 
 end
 

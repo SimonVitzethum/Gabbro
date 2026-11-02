@@ -165,6 +165,9 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | profT _ _ => rfl
   | gateT _ => rfl
   | pubT _ => rfl
+  | taggedByT _ _ => rfl
+  | specGroupT _ _ _ => rfl
+  | implGroupT _ _ _ => rfl
 
 /-- **Is this item accepted by the item check?** Exactly the kinds `uRestFehler` recurses on (accepted
     heads step past; off-fragment heads refuse at once). -/
@@ -240,6 +243,9 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | profT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | gateT _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | pubT _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | taggedByT _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | specGroupT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | implGroupT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
 
 /-- **A head that is neither accepted nor excused fails at once.** With
     no fragment excuse (`istGegenstand` false) and no accepted shape
@@ -287,6 +293,9 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | profT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | gateT _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | pubT _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | taggedByT _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | specGroupT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | implGroupT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
 
 /-- **An off-fragment item anywhere fails the item check.** Induction:
     empty lists hold no witness; a bad head fails at once, otherwise the

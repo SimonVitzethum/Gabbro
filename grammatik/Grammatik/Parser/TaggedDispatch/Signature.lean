@@ -7,15 +7,18 @@ public import Grammatik.Parser.TaggedDispatch.Expansion
 namespace Gabbro.Grammatik.Parser
 
 /-- Substitute the spec receiver throughout a surface signature type. -/
-def taggedSubstituteSelf (variant : STyp) : STyp → STyp
-  | .atom "Self" => variant
-  | .ptr r w t => .ptr r w (taggedSubstituteSelf variant t)
-  | .range t a b closed => .range (taggedSubstituteSelf variant t) a b closed
-  | .array t n => .array (taggedSubstituteSelf variant t) n
-  | .wrap t => .wrap (taggedSubstituteSelf variant t)
-  | .embed t n e => .embed (taggedSubstituteSelf variant t) n e
-  | .entry args result => .entry args (result.map (taggedSubstituteSelf variant))
+def taggedSubstituteType (parameter : String) (variant : STyp) : STyp → STyp
+  | .atom name => if strEq name parameter then variant else .atom name
+  | .ptr r w t => .ptr r w (taggedSubstituteType parameter variant t)
+  | .range t a b closed => .range (taggedSubstituteType parameter variant t) a b closed
+  | .array t n => .array (taggedSubstituteType parameter variant t) n
+  | .wrap t => .wrap (taggedSubstituteType parameter variant t)
+  | .embed t n e => .embed (taggedSubstituteType parameter variant t) n e
+  | .entry args result => .entry args (result.map (taggedSubstituteType parameter variant))
   | t => t
+
+def taggedSubstituteSelf (variant : STyp) : STyp → STyp :=
+  taggedSubstituteType "Self" variant
 
 /-- Conservative occurrence check, including nested result types. -/
 def taggedContainsSelf : STyp → Bool
@@ -71,7 +74,7 @@ def taggedSignatureHeld (signature : FnSig) : Bool :=
 def checkTaggedGroup (functions : List FnSig)
     (variants : List (String × Option STyp)) (impls : List TaggedImplementation) :
     Except String (List (FnSig × List TaggedDispatchCase)) := do
-  if !(functions.map (·.name)).Nodup then
+  if ¬ (functions.map (·.name)).Nodup then
     throw "tagged-dispatch-duplicate-spec-function"
   let mut resolved := []
   for expected in functions do
