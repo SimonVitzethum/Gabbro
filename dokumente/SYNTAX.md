@@ -915,6 +915,76 @@ lose an obligation, it can only say where one rests.
 
 ---
 
+### 6.1 Spec groups and implementations (check model A)
+
+A spec group names an interface over a nonempty tuple of types and optional effect parameters.
+It is distinct from the predicate helper `spec fn`: the token after `spec` or `impl` selects
+between a group name and the existing `fn` modifier form.
+
+```ebnf
+item       += specdecl | impldecl ;
+specdecl    = [ "pub" ] "spec" ident "[" ident { "," ident } [ ";" effparams ] "]"
+              "{" { specfn } "}" ;
+effparams   = "effects" ident { "," ident } ;
+specfn      = "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+              [ "requires" predlist ] [ "ensures" predlist ]
+              "effects" "{" efflist "}" "costs" "<=" expr "ops" ";" ;
+impldecl    = "impl" ident "[" typelist [ ";" effargs ] "]" "{" { fndecl } "}" ;
+effargs     = "effects" "{" efflist "}" { "," "{" efflist "}" } ;
+efflist    += ident | ident "[" typelist "]" ;
+call       += path "::" ident [ "::[" typelist "]" ] "(" [ arglist ] ")" ;
+```
+
+Here `typelist` is nonempty. An effect list may be empty. An identifier in the effect list
+of a spec function denotes its declared effect parameter; `Shape[T]` denotes the effects
+of the corresponding instance. Type and effect arguments are substituted before checking.
+
+```gabbro
+spec Shape[T; effects E] {
+    fn area(s: T) -> u64 ensures result >= 1 effects { E } costs <= 50 ops;
+}
+impl Shape[index into Circles; effects { reads Circles }] {
+    fn area(s: index into Circles) -> u64
+        ensures result >= 1 effects { reads Circles } costs <= 20 ops
+    { return 3 * Circles[s].r * Circles[s].r + 1; }
+}
+// c: index into Circles
+let a = Shape::area(c);
+let b = Shape::area::[index into Circles](c);
+```
+
+Conformance is decidable (`Parser.Spec.conforms`). After instance substitution, each
+implementation precondition conjunct must occur in the spec preconditions, and each spec
+postcondition conjunct in the implementation postconditions. Predicate helpers are expanded
+as at `refines`; conjunctions are flattened, parentheses are absent from the syntax tree,
+and inclusion ignores order and duplicate conjuncts. Implementation parameter names are
+renamed to the corresponding spec parameters for comparison. Parameter types, result type
+and reason channel must agree. Implementation effects are a subset of the substituted
+spec effects, and its explicit constant-evaluable cost bound is no greater than the spec's.
+
+A spec function may contain no `Held(L)`. Every declared function must have one implementation
+body, with no additional functions or other items. There is at most one implementation for
+each spec and type tuple, independently of its effect arguments; aliases are transparent.
+Missing implementations, stronger preconditions, weaker postconditions, greater effects or
+costs, duplicate implementations and every other conformance failure are named refusals
+(`spec.function.missing`, `spec.requires`, `spec.ensures`, `spec.effects`, `spec.cost`,
+`spec.implementation.duplicate`, respectively). There are no default bodies or overlapping
+implementations.
+
+The front end infers the type tuple from typed arguments or uses the explicit tuple, then
+rewrites the call to the unique implementation's ordinary direct function. If an argument
+does not determine a type parameter, an explicit tuple is required (`spec.call.type.required`).
+The implementation's own signature and contracts are retained and checked by the ordinary
+elaborator. No dynamic dispatch or new G constructor is introduced; `Akzeptiert` is unchanged.
+The instantiation order is parametric modules, generic functions, spec calls, then function
+literals (§5.4 of `ABSTRACTION-SYNTAX-PLAN.md`).
+
+The Lean implementation is `Parser/Spec/`, wired into `elabU`; its output-form theorem is
+`Spec.expand_ordinary`, and `Spec/Zeugen.lean` contains acceptance, resolution and refusal
+witnesses. This entry describes the Lean front-end rule; Rust mirroring and the lead's
+integration checks are separate acceptance work. Calls hidden in uninterpreted loop headers
+are refused as `spec.call.raw.header` until their ordinary header elaborator supports expansion.
+
 ## 7. Statements
 
 ```ebnf
