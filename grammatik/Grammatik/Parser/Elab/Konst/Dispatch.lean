@@ -31,7 +31,7 @@ inductive ConstSourceBlock (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool}
 
 /-- Tag arms preserve canonical order and payload binding contexts. -/
 inductive ConstSourceTagArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
-    {Γ : Ctx} → ConstLocals Γ → List SAnw → {cs : List (Option (Int × Int))} →
+    {Γ : Ctx} → ConstLocals Γ → List SAnw → {cs : List (Option Ty)} →
     Arms c.D V l Γ [] [] cs → Prop where
   | empty : ConstSourceTagArms c locals [] .nil
   | plain (body : ConstSourceBlock c locals source block)
@@ -41,7 +41,7 @@ inductive ConstSourceTagArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Boo
   | payload (body : ConstSourceBlock c (locals.extend name false (.int lo hi)) source block)
       (tail : ConstSourceTagArms c locals sources branches) :
       ConstSourceTagArms c locals (.arm label (some name) source :: sources)
-        (cs := some (lo, hi) :: cs) (.cons block branches)
+        (cs := some (.int lo hi) :: cs) (.cons block branches)
 
 inductive ConstSourceReasonArms (c : ConstProgram) : {V : Vertrag c.D} → {l : Bool} →
     {Γ : Ctx} → ConstLocals Γ → List SAnw → {n : Nat} →

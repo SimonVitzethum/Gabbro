@@ -125,12 +125,13 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
 theorem zeugeProgramm_rund : parseTopTief (druckItems zeugeProgramm ++ [.ende]) = .ok zeugeProgramm :=
   parseTopTief_druck zeugeProgramm zeugeProgramm_gut
 
+set_option maxHeartbeats 2000000 in
 /-- The witness program from its rendered source text: lexer, then the program reader. -/
 theorem zeugeProgramm_text :
     (match lex (renderText (druckItems zeugeProgramm)) with
       | .ok toks => parseTopTief toks
       | .error _ => .error "lex") = .ok zeugeProgramm :=
-  rundlauf_programm zeugeProgramm zeugeProgramm_gut (tokGut_of_all _ (by decide))
+  rundlauf_programm zeugeProgramm zeugeProgramm_gut (tokGut_of_all _ (by decide +kernel))
 
 
 /-- A device with a mirror and two registers -- a range type, an address, a class with its stages,

@@ -171,7 +171,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | assignSlot (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
       (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
   /-- A store requires write permission independently of read permission, plus the contract frame and guards. -/
-  | assignThru (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab) (ht : D.capTab space n = some t)
+  | assignThru {read : Bool} (p : Expr D Γ Λ (.ptr (.table n (read, true) space))) (t : D.Tab) (ht : D.capTab space n = some t)
       (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
   | assignGlob (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)

@@ -74,7 +74,7 @@ def constEndCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ
   | .bindCallInd .. => []
   | .narrow .. => []
   | .exchange .. => []
-def constArmsCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option (Int × Int))} : Arms c.D V l Γ Λ Λout cs → List c.D.Fn
+def constArmsCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} : Arms c.D V l Γ Λ Λout cs → List c.D.Fn
   | .nil => []
   | .cons body rest => constBlockCalls c body ++ constArmsCalls c rest
 def constReasonArmsCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {n : Nat} : GrundArms c.D V l Γ Λ Λout n → List c.D.Fn

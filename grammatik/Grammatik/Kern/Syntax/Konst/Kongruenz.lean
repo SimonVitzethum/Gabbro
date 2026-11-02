@@ -22,7 +22,7 @@ namespace Gabbro.Grammatik
   certified bound in `Zertifikat`. -/
 
 /-- The tag payload environment respects pointwise agreement. -/
-theorem armEnvGleich (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} (nutz : Nutzlast k)
+theorem armEnvGleich (c : ConstProgram) {Γ : Ctx} {k : Option Ty} (nutz : Nutzlast c.D.Fn c.D.passt k)
     {ρ₁ ρ₂ : Env c.D Γ} (hρ : EnvGleich c ρ₁ ρ₂) :
     EnvGleich c (armEnv nutz ρ₁) (armEnv nutz ρ₂) := by
   cases k with
@@ -30,8 +30,8 @@ theorem armEnvGleich (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} (nu
   | some _ => simp only [armEnv]; exact .cons rfl hρ
 
 /-- Shrinking an agreed outcome past a tag arm preserves agreement. -/
-theorem schrumpfArmGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
-    {k : Option (Int × Int)} {o₁ : Ausgang V l (ArmCtx Γ k)} {o₂ : Ausgang V l (ArmCtx Γ k)}
+theorem schrumpfArmGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
+    {k : Option Ty} {o₁ : Ausgang V l (ArmCtx Γ k)} {o₂ : Ausgang V l (ArmCtx Γ k)}
     (h : AusgangGleich c o₁ o₂) :
     AusgangGleich c (o₁.schrumpfArm k) (o₂.schrumpfArm k) := by
   cases k with
@@ -48,7 +48,7 @@ theorem schrumpfArmGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : 
     | hardware _ _ he => simp only [Ausgang.schrumpf]; exact AusgangGleich.hardware he
 
 mutual
-theorem constStmtGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constStmtGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Stmt c.D V l Γ [] []} (h : ConstStmt c body)
     (O₁ O₂ : Orakel c.D) (p₁ p₂ : Nat)
     (R₁ R₂ : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -115,7 +115,7 @@ theorem constStmtGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ct
       have hev := constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ
       simp only [execStmt, evalErg, hev]
       exact AusgangGleich.zurueck hW.1 hW.2 rfl
-theorem constBlockGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constBlockGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Block c.D V l Γ [] []} (h : ConstBlock c body)
     (O₁ O₂ : Orakel c.D) (p₁ p₂ : Nat)
     (R₁ R₂ : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -166,7 +166,7 @@ theorem constBlockGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : C
     | logik _ _ he => dsimp only; exact AusgangGleich.logik he
     | hardware _ _ he => dsimp only; exact AusgangGleich.hardware he
     | why _ _ r₁ _ _ _ _ => exact Fin.elim0 (Fin.cast hr r₁)
-theorem constEndGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {body : Endblock c.D V l Γ []} (h : ConstEnd c body)
     (O₁ O₂ : Orakel c.D) (p₁ p₂ : Nat)
     (R₁ R₂ : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -229,7 +229,7 @@ theorem constEndGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx
       exact constEndGleich c hyes O₁ O₂ p₁ p₂ R₁ R₂ σ₁ σ₂ ρ₁ ρ₂ hW hρ agree
     · simp only [if_neg hcond]
       exact constEndGleich c hno O₁ O₂ p₁ p₂ R₁ R₂ σ₁ σ₂ ρ₁ ρ₂ hW hρ agree
-theorem constArmsGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constArmsGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {arms : Arms c.D V l Γ [] [] cs} (h : ConstArms c arms)
     (O₁ O₂ : Orakel c.D) (p₁ p₂ : Nat)
     (R₁ R₂ : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)
@@ -254,7 +254,7 @@ theorem constArmsGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ct
     | succ _ =>
       simp only [execArms]
       exact constArmsGleich c hrest O₁ O₂ p₁ p₂ R₁ R₂ _ _ rfl σ₁ σ₂ ρ₁ ρ₂ hW hρ agree
-theorem constReasonGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem constReasonGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {arms : GrundArms c.D V l Γ [] [] n} (h : ConstReasonArms c arms)
     (O₁ O₂ : Orakel c.D) (p₁ p₂ : Nat)
     (R₁ R₂ : ∀ g : c.D.Fn, World c.D → Env c.D (c.D.params g) → RufAusgang g)

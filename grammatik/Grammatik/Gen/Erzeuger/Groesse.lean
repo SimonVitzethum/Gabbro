@@ -177,8 +177,6 @@ def groesseEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l �
   | _, _, _, .retWhy _ _ => 1
   | _, _, _, .retScoped e _ => unendlich + 1 + groesseErg e
   | _, _, _, .retWhyScoped _ _ => unendlich + 1
-  | _, _, _, .retScoped e _ => 1 + groesseErg e
-  | _, _, _, .retWhyScoped _ _ => 1
   | _, _, _, .leave _ => 1
   | _, _, _, .next _ => 1
   | _, _, _, .cons s rest => 1 + groesseStmt s + groesseEnd rest

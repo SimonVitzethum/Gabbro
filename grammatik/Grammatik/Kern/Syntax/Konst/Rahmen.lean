@@ -52,7 +52,7 @@ theorem envGleichTail (c : ConstProgram) {Γ : Ctx} {τ : Ty} {ρ₁ ρ₂ : Env
   | cons _ hrest => simp only [Env.tail]; exact hrest
 
 /-- Two statement outcomes agree: same shape, same values, framed worlds. -/
-@[expose] inductive AusgangGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Ausgang V l Γ → Prop where
+@[expose] inductive AusgangGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} : Ausgang V l Γ → Ausgang V l Γ → Prop where
   | ok : σ₁.slots = σ₂.slots → σ₁.globs = σ₂.globs → EnvGleich c ρ₁ ρ₂ → AusgangGleich c (.ok σ₁ ρ₁) (.ok σ₂ ρ₂)
   | zurueck : σ₁.slots = σ₂.slots → σ₁.globs = σ₂.globs → v₁ = v₂ → AusgangGleich c (.zurueck σ₁ v₁) (.zurueck σ₂ v₂)
   | why : σ₁.slots = σ₂.slots → σ₁.globs = σ₂.globs → r₁ = r₂ → AusgangGleich c (.why σ₁ r₁) (.why σ₂ r₂)
@@ -62,7 +62,7 @@ theorem envGleichTail (c : ConstProgram) {Γ : Ctx} {τ : Ty} {ρ₁ ρ₂ : Env
   | hardware : e₁ = e₂ → AusgangGleich c (.hardware e₁) (.hardware e₂)
 
 /-- Two end-block outcomes agree: same shape, same values, framed worlds. -/
-@[expose] inductive EndGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → EndAusgang V l Γ → Prop where
+@[expose] inductive EndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} : EndAusgang V l Γ → EndAusgang V l Γ → Prop where
   | zurueck : σ₁.slots = σ₂.slots → σ₁.globs = σ₂.globs → v₁ = v₂ → EndGleich c (.zurueck σ₁ v₁) (.zurueck σ₂ v₂)
   | why : σ₁.slots = σ₂.slots → σ₁.globs = σ₂.globs → r₁ = r₂ → EndGleich c (.why σ₁ r₁) (.why σ₂ r₂)
   | leave : h₁ = h₂ → σ₁.slots = σ₂.slots → σ₁.globs = σ₂.globs → EnvGleich c ρ₁ ρ₂ → EndGleich c (.leave h₁ σ₁ ρ₁) (.leave h₂ σ₂ ρ₂)
@@ -147,10 +147,10 @@ theorem constEvalGleichExpr (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
     have ih : ∀ k, eval σ₁ _ σ₁ (.cons k ρ₁) = eval σ₂ _ σ₂ (.cons k ρ₂) :=
       fun k => constEvalGleichExpr c hbody σ₁ σ₂ (.cons k ρ₁) (.cons k ρ₂) hW (.cons rfl hρ)
     simp only [eval, ih]
-theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option (Int × Int)} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ :=
+theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ :=
   match hp with
   | .empty => by simp only [evalNutz]
-  | .num he => by simp only [evalNutz, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
+  | .val he => by simp only [evalNutz, constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ]
 theorem constEvalGleichArgs (c : ConstProgram) {Γ : Ctx} {ts : List Ty} {e : Args c.D Γ [] ts} (hp : ConstArgs c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalArgs σ₁ e σ₁ ρ₁ = evalArgs σ₂ e σ₂ ρ₂ :=
   match hp with
   | .nil => by simp only [evalArgs]

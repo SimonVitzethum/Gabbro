@@ -92,7 +92,7 @@ theorem Sim.schrumpfArm {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
   | some _ => exact Sim.schrumpf h
 
 /-- A predicate over every block of a tagged dispatch, respecting each payload context. -/
-def ArmsAll {V : vertrag D} (H : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
+def ArmsAll {V : Vertrag D} (H : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     Block D V l Γ Λ Λ' → Prop) : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
     {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop
   | _, _, _, _, _, .nil => True

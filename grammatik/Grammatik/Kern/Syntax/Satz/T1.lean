@@ -109,7 +109,7 @@ theorem zuweisung_hat_recht {t : D.Tab} {f : D.Feld t} {i} {e} {hw : V.schreibt 
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignSlot t f i e hw hL) : V.schreibt t = true := hw
 
 /-- Eine Zuweisung DURCH einen Zeiger verlangt einen `rw`-Zeiger UND das Schreibrecht. -/
-theorem zeiger_schreibt_mit_recht {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (read, true) space))}
+theorem zeiger_schreibt_mit_recht {read : Bool} {t : D.Tab} {f : D.Feld t} {p : Expr D Γ Λ (.ptr (.table n (read, true) space))}
     {ht} {i} {e} {hw : V.schreibt t = true} {hL}
     (_s : Stmt D V l Γ Λ Λ) (_h : _s = .assignThru p t ht f i e hw hL) : V.schreibt t = true := hw
 

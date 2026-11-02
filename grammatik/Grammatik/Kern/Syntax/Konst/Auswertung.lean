@@ -82,16 +82,16 @@ def constExprAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {τ : T
   | .intBuiltin2 _ a b => 1 + constExprAufwand c a + constExprAufwand c b
   | .count _ body => 1 + constExprAufwand c body
   | _ => 1
-def constPayloadAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {k : Option (Int × Int)} : NutzlastExpr c.D Γ Λ k → Nat
+def constPayloadAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {k : Option Ty} : NutzlastExpr c.D Γ Λ k → Nat
   | .empty => 1
-  | .num e => 1 + constExprAufwand c e
+  | .val e => 1 + constExprAufwand c e
 def constArgsAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {ts : List Ty} : Args c.D Γ Λ ts → Nat
   | .nil => 1
   | .cons e rest => 1 + constExprAufwand c e + constArgsAufwand c rest
 def constErgAufwand (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {τ : Option Ty} : ErgExpr c.D Γ Λ τ → Nat
   | .empty => 1
   | .val e => 1 + constExprAufwand c e
-def constStmtAufwand (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Stmt c.D V l Γ Λ Λout → Nat
+def constStmtAufwand (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Stmt c.D V l Γ Λ Λout → Nat
   | .assignVar _ e => 1 + constExprAufwand c e
   | .ite condition yes no => 1 + constExprAufwand c condition + constBlockAufwand c yes + constBlockAufwand c no
   | .onOption value present absent => 1 + constExprAufwand c value + constBlockAufwand c present + constBlockAufwand c absent
@@ -100,23 +100,23 @@ def constStmtAufwand (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} 
   | .ret value _ => 1 + constErgAufwand c value
   | .call _ args _ _ => 2 + constArgsAufwand c args
   | _ => 1
-def constBlockAufwand (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Block c.D V l Γ Λ Λout → Nat
+def constBlockAufwand (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} : Block c.D V l Γ Λ Λout → Nat
   | .nil => 1
   | .cons stmt rest => 1 + constStmtAufwand c stmt + constBlockAufwand c rest
   | .bind value rest => 1 + constExprAufwand c value + constBlockAufwand c rest
   | .bindCall _ args _ _ _ rest => 2 + constArgsAufwand c args + constBlockAufwand c rest
   | _ => 1
-def constEndAufwand (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} {Λ : List (Res c.D)} : Endblock c.D V l Γ Λ → Nat
+def constEndAufwand (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ : List (Res c.D)} : Endblock c.D V l Γ Λ → Nat
   | .ret value _ => 1 + constErgAufwand c value
   | .cons stmt rest => 1 + constStmtAufwand c stmt + constEndAufwand c rest
   | .bind value rest => 1 + constExprAufwand c value + constEndAufwand c rest
   | .ite condition yes no => 1 + constExprAufwand c condition + constEndAufwand c yes + constEndAufwand c no
   | .bindCall _ args _ _ _ rest => 2 + constArgsAufwand c args + constEndAufwand c rest
   | _ => 1
-def constArmsAufwand (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option (Int × Int))} : Arms c.D V l Γ Λ Λout cs → Nat
+def constArmsAufwand (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {cs : List (Option Ty)} : Arms c.D V l Γ Λ Λout cs → Nat
   | .nil => 1
   | .cons body rest => 1 + constBlockAufwand c body + constArmsAufwand c rest
-def constReasonAufwand (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {n : Nat} : GrundArms c.D V l Γ Λ Λout n → Nat
+def constReasonAufwand (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λout : List (Res c.D)} {n : Nat} : GrundArms c.D V l Γ Λ Λout n → Nat
   | .nil => 1
   | .cons body rest => 1 + constBlockAufwand c body + constReasonAufwand c rest
 end

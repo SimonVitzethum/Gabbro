@@ -21,11 +21,11 @@ namespace Gabbro.Grammatik
 /-- Nullary test signature: no params, no result, no reasons, no rights,
     no marks, no held locks. -/
 def TestSig0 : Signatur Unit Unit Unit Empty :=
-  ⟨[], none, 0, [], fun _ => false, fun _ => false, [], [], none⟩
+  ⟨[], none, 0, [], fun _ => false, fun _ => false, [], [], none, {}⟩
 
 /-- Unary test signature: one int param -- for the negative call probe. -/
 def TestSig1 : Signatur Unit Unit Unit Empty :=
-  ⟨[.int 0 5], none, 0, [], fun _ => false, fun _ => false, [], [], none⟩
+  ⟨[.int 0 5], none, 0, [], fun _ => false, fun _ => false, [], [], none, {}⟩
 
 /-- A one-glob, one-table, one-lock test world: every access is guarded. -/
 def TestD : Deklaration where
@@ -74,11 +74,11 @@ def TestD : Deklaration where
 
 /-- Procedure contract: no result, holds nothing, produces nothing. -/
 def TestV : Vertrag TestD :=
-  ⟨fun _ => true, fun _ => true, none, 0, [], [], none⟩
+  ⟨fun _ => true, fun _ => true, none, 0, [], [], none, {}⟩
 
 /-- Value contract: returns an int in `1 .. 1`. -/
 def TestVw : Vertrag TestD :=
-  ⟨fun _ => true, fun _ => true, some (.int 1 1), 0, [], [], none⟩
+  ⟨fun _ => true, fun _ => true, some (.int 1 1), 0, [], [], none, {}⟩
 
 /-- The nullary call fits the procedure contract at empty resources: no
     rights to check (both write maps are `false`), nothing consumed, and the
@@ -89,6 +89,7 @@ theorem TestHp : RufPasst TestD TestV (TestD.signatur false) [] where
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
   hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+  ownerReady := OwnerFlow.empty_of_empty _
 
 /-- Same fit for the unary callee: `RufPasst` never constrained the params,
     so the same vacuous proofs go through -- and the table still rejects the
@@ -99,6 +100,7 @@ theorem TestHp1 : RufPasst TestD TestV (TestD.signatur true) [] where
   hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
   hh := RufPasst.hh_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
   hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+  ownerReady := OwnerFlow.empty_of_empty _
 
 /-! ## Witness pairs: acceptance and rejection, both by `decide` -/
 

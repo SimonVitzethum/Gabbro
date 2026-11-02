@@ -437,16 +437,34 @@ def lowerNutz (lay : Layout D) (cenv : List Reg) (W L i : Nat) :
     {Γ : Ctx} → {Λ : List (Gabbro.Grammatik.Res D)} → {c : Option Gabbro.Grammatik.Ty} →
       Gabbro.Grammatik.NutzlastExpr D Γ Λ c → Nat → Option LR
   | _, _, _, .empty, r => some ([], .int W (i : Int), r)
-  | _, _, some (.int lo hi), .val e, r =>
-      match lowerE lay cenv e r with
-      | some (ce, oe, r1) =>
-          match numCode lo hi W L i oe r1 with
-          | (cn, on, r2) => some (ce ++ cn, on, r2)
-      | none => none
-
-  | _, _, some _, .val _, _ => none
+  | _, _, some τ, .val e, r =>
+      match τ, e with
+      | .int lo hi, e =>
+        match lowerE lay cenv e r with
+        | some (ce, oe, r1) =>
+            match numCode lo hi W L i oe r1 with
+            | (cn, on, r2) => some (ce ++ cn, on, r2)
+        | none => none
+      | _, _ => none
 
 end
+
+/-- Unfolding `lowerNutz` at an empty payload. -/
+theorem lowerNutz_empty (lay : Layout D) (cenv : List Reg) (W L i : Nat) {Γ : Ctx}
+    {Λ : List (Gabbro.Grammatik.Res D)} (r : Nat) :
+    lowerNutz lay cenv W L i (.empty : Gabbro.Grammatik.NutzlastExpr D Γ Λ none) r =
+      some ([], .int W (i : Int), r) := rfl
+
+/-- Unfolding `lowerNutz` at an integer payload. -/
+theorem lowerNutz_int (lay : Layout D) (cenv : List Reg) (W L i : Nat) {Γ : Ctx}
+    {Λ : List (Gabbro.Grammatik.Res D)} {lo hi : Int}
+    (e : Gabbro.Grammatik.Expr D Γ Λ (.int lo hi)) (r : Nat) :
+    lowerNutz lay cenv W L i (.val e) r =
+      (match lowerE lay cenv e r with
+        | some (ce, oe, r1) =>
+            match numCode lo hi W L i oe r1 with
+            | (cn, on, r2) => some (ce ++ cn, on, r2)
+        | none => none) := rfl
 
 /-- The lowering of the arguments of a call: the code, the operands that hold the values (their
     register images, in order), and the next free register. -/

@@ -81,7 +81,7 @@ def eintrittB (fns : List String) (e : SEingang) : Bool :=
   (wertVon .arch e.arch).isSome && (e.vektor.isNone && (e.via.isNone &&
     (e.regIn.isEmpty && (e.regOut.isEmpty && (e.erhaelt.isEmpty && (e.kills.isEmpty &&
     (strEq e.stapel "" && ((e.perCpu == false) && (e.ist.isNone && (e.nest.isNone &&
-    e.dispatch.all (fun w => fns.any (fun f => strEq f w)))))))))))
+    e.dispatch.all (fun w => fns.any (fun f => strEq f w))))))))))))
 
 /-- The binding of an admitted entry. -/
 def eintrittVon (fns : List String) (e : SEingang) : Option UserEntryBinding :=

@@ -28,6 +28,7 @@ theorem nutzPasst_nutzRoh : ∀ (c : Option Ty) (x : Nutzlast D.Fn D.passt c),
       rename_i lo hi
       show (if h : lo ≤ x.n ∧ x.n ≤ hi then some ⟨x.n, h.1, h.2⟩ else none) = some x
       rw [dif_pos ⟨x.lo_le, x.le_hi⟩]
+      rfl
 
 /-- A decoded raw payload has exactly a supported payload shape. -/
 theorem nutzPasst_wort (c : Option Ty) (n : Int) (v : Nutzlast D.Fn D.passt c)
@@ -61,7 +62,9 @@ theorem summePasst_voll (cs : List (Option Ty))
     unfold summeRoh
     rw [Int.add_mul_ediv_left _ _ (Int.ne_of_gt hk), Int.ediv_eq_zero_of_lt hi0 hi1, Int.zero_add]
   rw [summePasst_eq cs _ v.1 _ hv hmod hdiv, nutzPasst_nutzRoh _ _ (sumWort_get cs hv v.1)]
-  simp only [Fall.of_to]
+  show some (⟨v.1, Fall.ofNutzlast _ _ _ _ (Fall.toNutzlast _ _ _ _ v.2)⟩ :
+    Val D.Fn D.passt (.sum cs)) = some v
+  rw [Fall.of_to]
 
 /-! ## 2. Floats -/
 
@@ -170,10 +173,11 @@ theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v 
   | _, .bool, _, _, _ => trivial
   | _, .opt _, _, _, _ => trivial
   | _, .sum cs, n, v, h => by
-      unfold einpassen summePasst at h
-      split at h
+      have h' : summePasst cs n = some v := h
+      unfold summePasst at h'
+      split at h'
       · assumption
-      · cases h
+      · cases h'
   | _, .why _, _, _, _ => trivial
   | _, .never, _, _, _ => trivial
   | _, .fnptr _, _, _, _ => trivial

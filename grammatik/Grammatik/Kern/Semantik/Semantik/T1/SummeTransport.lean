@@ -13,7 +13,7 @@ variable {D : Deklaration}
 /-- `summePasst` through its two digits. -/
 theorem summePasst_eq (cs : List (Option Ty)) (n : Int) (i : Fin cs.length) (p : Int)
     (hs : sumWort cs = true) (hi : n % fallZahl cs = (i.val : Int)) (hp : n / fallZahl cs = p) :
-    summePasst cs n = (nutzPasst (cs.get i) p).map fun x => ⟨i, Fall.ofNutzlast _ _ _ _ x⟩ := by
+    summePasst cs n = (nutzPasst (cs.get i) p).map fun x => ⟨i, Fall.ofNutzlast D.Fn D.passt cs i x⟩ := by
   have hk : 0 < cs.length := Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
   unfold summePasst
   rw [if_pos hs, dif_pos hk]
@@ -83,13 +83,16 @@ theorem summePasst_relocate (cs : List (Option Ty)) (n : Int) :
       cases hn : nutzPasst (D := D) (cs.get i) (n / fallZahl cs) with
       | none => rfl
       | some v =>
-        simp only [Option.map_some, Val.relocate]
-        exact (Val.relocateSum_mk sn tn pointer cs i v).symm
+        exact congrArg some (Val.relocateSum_mk sn tn pointer cs i v).symm
     · have hk' : ¬ 0 < (Ty.mapCases sn tn cs).length := by
         simpa only [Ty.mapCases_length] using hk
-      simp only [summePasst, hs, hs', if_true, hk, hk', dif_neg, Option.map_none]
+      unfold summePasst
+      rw [if_pos hs', dif_neg hk', if_pos hs, dif_neg hk]
+      rfl
   · have hs' : ¬ sumWort (Ty.mapCases sn tn cs) = true := by rw [guard]; exact hs
-    simp only [summePasst, hs, hs', if_false, Option.map_none]
+    unfold summePasst
+    rw [if_neg hs', if_neg hs]
+    rfl
 
 /-- A nonzero selected tag and nonzero integer payload exercise the scalar law. -/
 theorem summePasst_relocate_zeuge :

@@ -18,11 +18,11 @@ public import Grammatik.Code.Refine.Struct.LblWf
 
 namespace Gabbro.Code.Lower
 
-open Gabbro.Grammatik (Deklaration Expr Ctx Var Res vertrag ErgExpr Args)
+open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 
 variable [Conf] {D : Deklaration}
 
-variable {V : vertrag D}
+variable {V : Vertrag D}
 
 set_option linter.unusedSectionVars false in
 theorem lowerB_lbl_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl)
@@ -64,12 +64,13 @@ theorem lowerB_lbl_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl �
   · simp only [hb2, reduceCtorEq] at h
   simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  have W1 : ([⟨st.l, [], [], .dead⟩].map Block.lbl).Nodup ∧
-      ∀ x ∈ [⟨st.l, [], [], .dead⟩], x.nl = st.l ∨ (st.l + 3 ≤ x.nl ∧ x.nl < (⟨r4, st.l + 3⟩ : St).l) :=
-    ⟨by simp only [List.map_cons, List.map_nil, List.nodup_cons, List.not_mem_nil, not_false_eq_true, List.nodup_nil, and_self], by intro x hx
-      rw [List.mem_singleton] at hx
-      subst hx
-      exact Or.inl rfl⟩
+  have W1 : (([(⟨st.l, [], [], .dead⟩ : Block)] : List Block).map Block.lbl).Nodup ∧
+      ∀ x ∈ ([(⟨st.l, [], [], .dead⟩ : Block)] : List Block), x.nl = st.l ∨ (st.l + 3 ≤ x.nl ∧ x.nl < (⟨r4, st.l + 3⟩ : St).l) := by
+    refine ⟨by simp only [List.map_cons, List.map_nil, List.nodup_cons, List.not_mem_nil, not_false_eq_true, List.nodup_nil, and_self], ?_⟩
+    intro x hx
+    rw [List.mem_singleton] at hx
+    subst hx
+    exact Or.inl rfl
   obtain ⟨m2, n2, a2⟩ := ih_lowerB_lbl_rest (a :: cenv) (st.l + 2) k ⟨r4, st.l + 3⟩ s2 br
     (by show (st.l + 2 : Nat) < st.l + 3; omega) hb2
   exact lw_narrow (b0 := ⟨lb, [], cc, .br oc (st.l + 1) st.l⟩) (b1 := ⟨st.l + 1, [], ce ++ cv ++ cb, .jmp (st.l + 2)⟩)
@@ -113,12 +114,13 @@ theorem lowerEnd_lbl_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl
   · simp only [hb2, reduceCtorEq] at h
   simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  have W1 : ([⟨st.l, [], [], .dead⟩].map Block.lbl).Nodup ∧
-      ∀ x ∈ [⟨st.l, [], [], .dead⟩], x.nl = st.l ∨ (st.l + 3 ≤ x.nl ∧ x.nl < (⟨r4, st.l + 3⟩ : St).l) :=
-    ⟨by simp only [List.map_cons, List.map_nil, List.nodup_cons, List.not_mem_nil, not_false_eq_true, List.nodup_nil, and_self], by intro x hx
-      rw [List.mem_singleton] at hx
-      subst hx
-      exact Or.inl rfl⟩
+  have W1 : (([(⟨st.l, [], [], .dead⟩ : Block)] : List Block).map Block.lbl).Nodup ∧
+      ∀ x ∈ ([(⟨st.l, [], [], .dead⟩ : Block)] : List Block), x.nl = st.l ∨ (st.l + 3 ≤ x.nl ∧ x.nl < (⟨r4, st.l + 3⟩ : St).l) := by
+    refine ⟨by simp only [List.map_cons, List.map_nil, List.nodup_cons, List.not_mem_nil, not_false_eq_true, List.nodup_nil, and_self], ?_⟩
+    intro x hx
+    rw [List.mem_singleton] at hx
+    subst hx
+    exact Or.inl rfl
   obtain ⟨m2, n2, a2⟩ := ih_lowerEnd_lbl_rest (a :: cenv) (st.l + 2) ⟨r4, st.l + 3⟩ s2 br
     (by show (st.l + 2 : Nat) < st.l + 3; omega) hb2
   exact lw_narrow (b0 := ⟨lb, [], cc, .br oc (st.l + 1) st.l⟩) (b1 := ⟨st.l + 1, [], ce ++ cv ++ cb, .jmp (st.l + 2)⟩)

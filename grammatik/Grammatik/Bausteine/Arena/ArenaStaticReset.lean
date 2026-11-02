@@ -69,68 +69,24 @@ def zeroAdmittingB : Ty → Bool
   | .str _ => true
   | _ => false
 
-theorem zeroAdmittingB_iff {τ : Ty} : zeroAdmittingB τ = true ↔ ZeroAdmitting τ := by
-  induction τ with
-  | int lo hi =>
-    simp only [zeroAdmittingB, Bool.and_eq_true, decide_eq_true_eq]
-    constructor
-    · rintro ⟨h1, h2⟩; exact .intZero h1 h2
-    · intro h; cases h with | intZero h1 h2 => exact ⟨h1, h2⟩
-  | bool =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro _; exact .boolZero
-    · intro _; trivial
-  | opt n =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | sum cs =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | why n =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | never =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | fl _ =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | fnptr s =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | ptr cap =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | ref t =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact absurd h Bool.false_ne_true
-    · intro h; cases h
-  | arr τ _ ih =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro h; exact .arrZero (ih.mp h)
-    · intro h; cases h with | arrZero h' => exact ih.mpr h'
-  | str n =>
-    simp only [zeroAdmittingB]
-    constructor
-    · intro _; exact .strZero
-    · intro _; trivial
+theorem zeroAdmitting_of_B : (τ : Ty) → zeroAdmittingB τ = true → ZeroAdmitting τ
+  | .int lo hi, h => by
+    simp only [zeroAdmittingB, Bool.and_eq_true, decide_eq_true_eq] at h
+    exact .intZero h.1 h.2
+  | .bool, _ => .boolZero
+  | .arr τ _, h => .arrZero (zeroAdmitting_of_B τ (by simpa only [zeroAdmittingB] using h))
+  | .str _, _ => .strZero
+  | .opt _, h | .sum _, h | .why _, h | .never, h | .fl _ _, h | .fnptr _, h | .ptr _, h
+  | .ref _, h => by simp [zeroAdmittingB] at h
+
+theorem zeroAdmittingB_of {τ : Ty} : ZeroAdmitting τ → zeroAdmittingB τ = true
+  | .intZero h1 h2 => by simp [zeroAdmittingB, h1, h2]
+  | .boolZero => rfl
+  | .arrZero h => by simpa only [zeroAdmittingB] using zeroAdmittingB_of h
+  | .strZero => rfl
+
+theorem zeroAdmittingB_iff {τ : Ty} : zeroAdmittingB τ = true ↔ ZeroAdmitting τ :=
+  ⟨zeroAdmitting_of_B τ, zeroAdmittingB_of⟩
 
 /-- The zero of a zero-admitting type, as a value. -/
 def zeroValue {F : Type} {passt : F → Nat → Bool} : (τ : Ty) → ZeroAdmitting τ → Val F passt τ

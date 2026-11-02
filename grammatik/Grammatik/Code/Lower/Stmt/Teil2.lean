@@ -280,7 +280,7 @@ def lowerB (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
   | _, _, _, _, .check c sonst rest, lb, k, s =>
       match lowerE lay cenv c s.r with
       | some (cc, oc, r1) =>
-          match lowerEnd lay cenv lv sonst s.l s with
+          match lowerEnd lay cenv lv sonst s.l ⟨r1, s.l + 2⟩ with
           | some (be, s1) =>
               match lowerB lay cenv lv rest (s.l + 1) k s1 with
               | some (br, s2) => some (⟨lb, [], cc, .br oc (s.l + 1) s.l⟩ :: (be ++ br), s2)

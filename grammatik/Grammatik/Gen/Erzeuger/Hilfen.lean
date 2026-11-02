@@ -46,7 +46,7 @@ structure OUnter {V : Vertrag D} (O : Orakel V) (K : Nat) : Prop where
 /-! ## Matchers on an optional or integer type -/
 
 /-- The bounds of an integer type. -/
-def tySchranken : Ty → Option Ty
+def tySchranken : Ty → Option (Int × Int)
   | .int lo hi => some (lo, hi)
   | _ => none
 

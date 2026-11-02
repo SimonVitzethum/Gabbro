@@ -282,7 +282,7 @@ theorem lowerNutz_ok_empty (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat)
     (hc : (∀ x ∈ cenv, x < r))
     : Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff (Option.none) (Gabbro.Grammatik.evalNutz σ₀ (.empty : Gabbro.Grammatik.NutzlastExpr D Γ Λ (Option.none)) σ ρ))) :=
   by
-  simp only [lowerNutz, Option.some.injEq] at h
+  rw [lowerNutz_empty, Option.some.injEq] at h
   subst h
   have e : ∀ u : Gabbro.Grammatik.Nutzlast D.Fn D.passt none, (i : Int) + L * payOff none u = i := fun u => by simp only [payOff, Int.mul_zero, Int.add_zero]
   rw [e]
@@ -310,7 +310,7 @@ theorem lowerNutz_ok_num (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat)
     (ih_lowerE_ok_e : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv e r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.int lo hi) (eval σ₀ e σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.int lo hi))
     : Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff (Option.some (.int lo hi)) (Gabbro.Grammatik.evalNutz σ₀ (.val (τ := .int lo hi) e : Gabbro.Grammatik.NutzlastExpr D Γ Λ (Option.some (.int lo hi))) σ ρ))) :=
   by
-  simp only [lowerNutz] at h
+  rw [lowerNutz_int] at h
   rcases he : lowerE lay cenv e r with _ | ⟨ce, oe, r1⟩
   · simp only [he, reduceCtorEq] at h
   simp only [he] at h
@@ -325,6 +325,7 @@ theorem lowerNutz_ok_num (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat)
   rw [hn] at F
   exact F
 
+set_option maxHeartbeats 1600000 in
 mutual
 
 /-- **Every lowered expression computes what `eval` computes.** -/
@@ -411,8 +412,12 @@ theorem lowerE_ok (lay : Layout D) (hL : LayoutOk lay) :
   | _, _, _, .case cs i nutz, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
       simp only [lowerE] at h
       split at h
-      · exact ⟨lowerNutz_ok lay hL _ _ _ nutz cenv r c h σ₀ σ ρ m rs hR hE hc,
-          fitsT_nonint (fun lo hi e => nomatch e)⟩
+      · have hk := lowerNutz_ok lay hL _ _ _ nutz cenv r c h σ₀ σ ρ m rs hR hE hc
+        refine ⟨?_, fitsT_nonint (fun lo hi e => nomatch e)⟩
+        show Frag m rs r c (Val.ofInt _ (packZ (⟨i, Gabbro.Grammatik.Fall.ofNutzlast _ _ _ _
+          (Gabbro.Grammatik.evalNutz σ₀ nutz σ ρ)⟩ : Σ i : Fin cs.length, Gabbro.Grammatik.Fall D.Fn D.passt cs i)))
+        simp only [packZ, Gabbro.Grammatik.Fall.to_of]
+        exact hk
       · simp only [reduceCtorEq] at h
   | _, _, _, .why n i, cenv, r, c, h, σ₀, σ, ρ, m, rs, hR, hE, hc =>
       lowerE_ok_why (lay := lay) (hL := hL) (n := n) (i := i) (cenv := cenv) (r := r) (c := c) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc)
@@ -433,10 +438,19 @@ theorem lowerNutz_ok (lay : Layout D) (hL : LayoutOk lay) (W L i : Nat) :
         Frag m rs r c0 (Val.ofInt W ((i : Int) + L * payOff c (Gabbro.Grammatik.evalNutz σ₀ nutz σ ρ)))
   | _, _, _, .empty, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc =>
       lowerNutz_ok_empty (lay := lay) (hL := hL) (W := W) (L := L) (i := i) (cenv := cenv) (r := r) (c0 := c0) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc)
-  | _, _, _, .val (τ := τ) e, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc => by
-      cases τ <;> try { simp only [lowerNutz, reduceCtorEq] at h }
-      rename_i lo hi
-      exact lowerNutz_ok_num (lay := lay) (hL := hL) (W := W) (L := L) (i := i) (lo := lo) (hi := hi) (e := e) (cenv := cenv) (r := r) (c0 := c0) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc) (ih_lowerE_ok_e := fun lay hL => lowerE_ok lay hL e)
+  | _, _, _, .val (τ := .int lo hi) e, cenv, r, c0, h, σ₀, σ, ρ, m, rs, hR, hE, hc =>
+      lowerNutz_ok_num (lay := lay) (hL := hL) (W := W) (L := L) (i := i) (lo := lo) (hi := hi) (e := e) (cenv := cenv) (r := r) (c0 := c0) (h := h) (σ₀ := σ₀) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (hR := hR) (hE := hE) (hc := hc) (ih_lowerE_ok_e := fun lay hL => lowerE_ok lay hL e)
+  | _, _, _, .val (τ := .bool) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .opt _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .sum _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .why _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .never) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .fl _ _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .fnptr _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .ptr _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .ref _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .arr _ _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
+  | _, _, _, .val (τ := .str _) _, _, _, _, h, _, _, _, _, _, _, _, _ => by cases h
 end
 
 end Gabbro.Code.Lower

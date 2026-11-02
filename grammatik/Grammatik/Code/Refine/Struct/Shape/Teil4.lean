@@ -8,9 +8,9 @@ public import Grammatik.Code.Refine.Struct.Shape.Teil2
 
 namespace Gabbro.Code.Lower
 variable [Conf]
-open Gabbro.Grammatik (Deklaration Expr Ctx Var Res vertrag ErgExpr Args)
+open Gabbro.Grammatik (Deklaration Expr Ctx Var Res Vertrag ErgExpr Args)
 variable {D : Deklaration}
-variable {V : vertrag D}
+variable {V : Vertrag D}
 
 /-- The shape of a `traverse` lowering, given the shape of the lowered body: the entry block, the
     three counter blocks and the body. -/

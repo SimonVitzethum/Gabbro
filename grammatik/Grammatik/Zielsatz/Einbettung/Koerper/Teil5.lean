@@ -393,7 +393,7 @@ theorem sim_end_narrow {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact hR
 
 set_option linter.unusedSectionVars false in
-theorem sim_end_narrowRequired {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+theorem sim_end_narrowRequired {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {zi_lo}
     {zi_hi}
     (e)

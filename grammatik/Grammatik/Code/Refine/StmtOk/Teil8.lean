@@ -28,7 +28,7 @@ namespace Gabbro.Code.Lower
 variable [Conf]
 open Gabbro.Grammatik (Deklaration World Env Wert Ctx Res Vertrag Orakel Ausgang EndAusgang RufAusgang
   ErgVal ErgExpr execStmt execBlock execEnd eval evalErg Zahl alleIndizes evalArgs ergWert)
-variable {D : Deklaration} {V : vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 
 set_option linter.unusedSectionVars false in
 theorem lowerEnd_ok_retScoped (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel D) (passes : Nat) (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)

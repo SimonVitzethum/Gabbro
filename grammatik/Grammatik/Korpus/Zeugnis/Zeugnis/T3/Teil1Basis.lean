@@ -141,11 +141,11 @@ example : ¬ certBlockGueltig TestD TestV [] [Res.held ()] [Res.held ()] (.ret) 
 /-- `let x = 1; return x`: the binding recomputes `(1, 1)`, the return reads
     variable `0` at `(1, 1)` against a matching contract. -/
 example : certBlockGueltig TestD TestVw [] [] []
-    (.bind (.lit 1) 1 1 (.retWert (.var 0) 1 1)) := by decide
+    (.bind (.lit 1) 1 1 (.retWert (.var 0) 1 1)) := by decide +kernel
 
 /-- MISMATCHED return: `x` is `(1, 1)`, claimed as `(2, 2)`. -/
 example : ¬ certBlockGueltig TestD TestVw [] [] []
-    (.bind (.lit 1) 1 1 (.retWert (.var 0) 2 2)) := by decide
+    (.bind (.lit 1) 1 1 (.retWert (.var 0) 2 2)) := by decide +kernel
 
 /-- MISMATCHED binding: `1` claimed as `(9, 9)` -- the tail never gets its
     context, because the head already fails. -/

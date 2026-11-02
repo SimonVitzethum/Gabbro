@@ -199,6 +199,7 @@ variable {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
   (backward : ∀ n, {f : F' // p' f (sn n) = true} → {f : F // p f n = true})
   (hleft : ∀ n v, backward n (forward n v) = v)
 
+include hleft in
 mutual
 /-- A signature-wise left inverse remains a left inverse through typed payloads. -/
 theorem Val.restrict_relocate : ∀ (τ : Ty) (v : Val F p τ),
@@ -206,22 +207,22 @@ theorem Val.restrict_relocate : ∀ (τ : Ty) (v : Val F p τ),
   | .int _ _, _ | .bool, _ | .opt _, _ | .why _, _ | .never, _ | .fl _ _, _
   | .ptr _, _ | .ref _, _ | .str _, _ => rfl
   | .fnptr n, v => hleft n v
-  | .arr τ _, v => funext fun i => Val.restrict_relocate sn tn forward backward hleft τ (v i)
-  | .sum cs, v => Val.restrict_relocateSum sn tn forward backward hleft cs v
+  | .arr τ _, v => funext fun i => Val.restrict_relocate τ (v i)
+  | .sum cs, v => Val.restrict_relocateSum cs v
 
 /-- The inverse also preserves the complete active tag/payload pair. -/
 theorem Val.restrict_relocateSum : ∀ (cs : List (Option Ty)) (v : Val F p (.sum cs)),
     Val.restrictSum sn tn backward cs (Val.relocateSum sn tn forward cs v) = v
   | [], ⟨i, _⟩ => i.elim0
   | none :: _, ⟨⟨0, _⟩, _⟩ => rfl
-  | some τ :: _, ⟨⟨0, _⟩, v⟩ => by
-    apply Sigma.ext rfl
-    exact heq_of_eq (Val.restrict_relocate sn tn forward backward hleft τ v)
-  | c :: cs, ⟨⟨i + 1, hi⟩, v⟩ => by
-    have ih := Val.restrict_relocateSum sn tn forward backward hleft cs
-      ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩
-    let lift (z : Val F p (.sum cs)) : Val F p (.sum (c :: cs)) := ⟨z.1.succ, z.2⟩
-    cases c <;> exact congrArg lift ih
+  | some τ :: cs, ⟨⟨0, h⟩, v⟩ =>
+    congrArg (fun w => (⟨⟨0, h⟩, w⟩ : Val F p (.sum (some τ :: cs)))) (Val.restrict_relocate τ v)
+  | none :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
+    congrArg (fun z : Val F p (.sum cs) => (⟨z.1.succ, z.2⟩ : Val F p (.sum (none :: cs))))
+      (Val.restrict_relocateSum cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+  | some τ :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
+    congrArg (fun z : Val F p (.sum cs) => (⟨z.1.succ, z.2⟩ : Val F p (.sum (some τ :: cs))))
+      (Val.restrict_relocateSum cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
 end
 
 end Inverse
@@ -233,6 +234,7 @@ variable {F F' : Type} {p : F → Nat → Bool} {p' : F' → Nat → Bool}
   (backward : ∀ n, {f : F' // p' f (sn n) = true} → {f : F // p f n = true})
   (hright : ∀ n v, forward n (backward n v) = v)
 
+include hright in
 mutual
 /-- A signature-wise right inverse also preserves nested tagged values. -/
 theorem Val.relocate_restrict : ∀ (τ : Ty) (v : Val F' p' (Ty.mapNumbers sn tn τ)),
@@ -240,53 +242,56 @@ theorem Val.relocate_restrict : ∀ (τ : Ty) (v : Val F' p' (Ty.mapNumbers sn t
   | .int _ _, _ | .bool, _ | .opt _, _ | .why _, _ | .never, _ | .fl _ _, _
   | .ptr _, _ | .ref _, _ | .str _, _ => rfl
   | .fnptr n, v => hright n v
-  | .arr τ _, v => funext fun i => Val.relocate_restrict sn tn forward backward hright τ (v i)
-  | .sum cs, v => Val.relocate_restrictSum sn tn forward backward hright cs v
+  | .arr τ _, v => funext fun i => Val.relocate_restrict τ (v i)
+  | .sum cs, v => Val.relocate_restrictSum cs v
 
 theorem Val.relocate_restrictSum : ∀ (cs : List (Option Ty))
     (v : Val F' p' (.sum (Ty.mapCases sn tn cs))),
     Val.relocateSum sn tn forward cs (Val.restrictSum sn tn backward cs v) = v
   | [], ⟨i, _⟩ => i.elim0
   | none :: _, ⟨⟨0, _⟩, _⟩ => rfl
-  | some τ :: _, ⟨⟨0, _⟩, v⟩ => by
-    apply Sigma.ext rfl
-    exact heq_of_eq (Val.relocate_restrict sn tn forward backward hright τ v)
+  | some τ :: cs, ⟨⟨0, h⟩, v⟩ =>
+    congrArg (fun w => (⟨⟨0, h⟩, w⟩ : Val F' p' (.sum (Ty.mapCases sn tn (some τ :: cs)))))
+      (Val.relocate_restrict τ v)
   | none :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
     congrArg (fun z : Val F' p' (.sum (Ty.mapCases sn tn cs)) =>
       (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (none :: Ty.mapCases sn tn cs))))
-      (Val.relocate_restrictSum sn tn forward backward hright cs
-        ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+      (Val.relocate_restrictSum cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
   | some τ :: cs, ⟨⟨i + 1, hi⟩, v⟩ =>
     congrArg (fun z : Val F' p' (.sum (Ty.mapCases sn tn cs)) =>
       (⟨z.1.succ, z.2⟩ : Val F' p' (.sum (some (Ty.mapNumbers sn tn τ) :: Ty.mapCases sn tn cs))))
-      (Val.relocate_restrictSum sn tn forward backward hright cs
-        ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+      (Val.relocate_restrictSum cs ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
 end
 
 end RightInverse
 
 namespace TypedPayloadTransport
 
+/-- Every function fits every pointer type. -/
+def allP : Bool → Nat → Bool := fun _ _ => true
+
 def schema : Ty := .sum [some (.arr (.sum [none, some (.fnptr 3)]) 1)]
-def value : Val Bool (fun _ _ => true) schema :=
+def value : Val Bool allP schema :=
   ⟨⟨0, by decide⟩, fun _ => ⟨⟨1, by decide⟩, ⟨true, rfl⟩⟩⟩
 
-def forward (n : Nat) (v : {f : Bool // (fun _ _ => true) f n = true}) :
-    {f : Bool // (fun _ _ => true) f (n + 1) = true} := ⟨v.1, rfl⟩
-def backward (n : Nat) (v : {f : Bool // (fun _ _ => true) f (n + 1) = true}) :
-    {f : Bool // (fun _ _ => true) f n = true} := ⟨v.1, rfl⟩
+def forward (n : Nat) (v : {f : Bool // allP f n = true}) :
+    {f : Bool // allP f (n + 1) = true} := ⟨v.1, rfl⟩
+def backward (n : Nat) (v : {f : Bool // allP f (n + 1) = true}) :
+    {f : Bool // allP f n = true} := ⟨v.1, rfl⟩
 
 theorem restrict_relocate_zeuge :
     Val.restrict (fun n => n + 1) id backward schema
       (Val.relocate (fun n => n + 1) id forward schema value) = value :=
-  Val.restrict_relocate (fun n => n + 1) id forward backward (fun _ _ => rfl) schema value
+  Val.restrict_relocate (p := allP) (p' := allP)
+    (fun n => n + 1) id forward backward (fun _ _ => rfl) schema value
 
 theorem relocate_restrict_zeuge :
     Val.relocate (fun n => n + 1) id forward schema
       (Val.restrict (fun n => n + 1) id backward schema
         (Val.relocate (fun n => n + 1) id forward schema value)) =
       Val.relocate (fun n => n + 1) id forward schema value :=
-  Val.relocate_restrict (fun n => n + 1) id forward backward (fun _ _ => rfl) schema _
+  Val.relocate_restrict (p := allP) (p' := allP)
+    (fun n => n + 1) id forward backward (fun _ _ => rfl) schema _
 
 end TypedPayloadTransport
 
