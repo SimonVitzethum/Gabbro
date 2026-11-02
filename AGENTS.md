@@ -363,7 +363,7 @@ Re-measure instead of trusting this table: `grep -rho '\bN[0-9]\{3\}\b' crates/ 
 | Model | `Kern/` (syntax, machine G, semantics), `Nebenlaeufigkeit/`, `Speichermodell/`, `Logik/`, `Bausteine/` (arenas, regions, ownership, floats) |
 | Code model and lowering | `grammatik/Grammatik/Code/` (`Model`, `Lower`, `Refine`, `Conc`, `Gate`) |
 | Test sets M and N | `grammatik/Grammatik/Gen/` (generator, coverage cells, fine cells) |
-| Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md` |
+| Plans | `dokumente/IR-COMPILATION-LANES.md`, `dokumente/PLAN-SELF-HOSTING.md`, `dokumente/PLAN-LONG-RANGE.md`, `dokumente/LOW-LEVEL-SYNTAX-PLAN.md`, `dokumente/ABSTRACTION-SYNTAX-PLAN.md` |
 | Theorem map | `dokumente/THEOREM-MAP.md` (new sections at the end) |
 | Known absences | `TODO.md` |
 | Guardians | `instrumente/abnahme.py` and the four `instrumente/pruefe-*.py` (`dokumente/TOOLBOX.md`) |

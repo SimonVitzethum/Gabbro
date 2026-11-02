@@ -77,28 +77,31 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 3. **Remaining O-items:** interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate
    preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37). See §2.
 4. **Termination, waiting bounds, fairness, stack depth,** floats beyond the IEEE kernel.
-5. **Benchmark against GCC `-O3`:** only after the compiler lowers much more and strong optimisation is in (Simon).
-6. **Housekeeping:** see §3 (legacy cleanup); file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`); the frozen
+5. **Zero-cost abstractions without objects** (owner, 2026-11-02; after the C packages): adapters, embedding, specs,
+   generics, parametric modules, `tagged … by`, `dyn`, O43, then the slow-code diagnostics. Plan:
+   [ABSTRACTION-SYNTAX-PLAN.md](dokumente/ABSTRACTION-SYNTAX-PLAN.md).
+6. **Benchmark against GCC `-O3`:** only after the compiler lowers much more and strong optimisation is in (Simon).
+7. **Housekeeping:** see §3 (legacy cleanup); file split to an average under 500 lines (`instrumente/teile/lean-teilen.py`); the frozen
    Isabelle `.thy` set.
-7. *Done 2026-10-18 (Simon's decision):* comments as in most languages: `//`, nesting `/* */`, `///` doc comment as trivia
+8. *Done 2026-10-18 (Simon's decision):* comments as in most languages: `//`, nesting `/* */`, `///` doc comment as trivia
    (`Token.doku`); the `--` comment is removed everywhere. Lean first, then `lex.rs`, then ~1270 files (THEOREM-MAP 83).
    Left: a formatter or doc tool that reads `Token.doku`/`Art::Doku`.
-8. **Adequacy of the generated test set** (Simon, 2026-10-18). Goal: if a program-neutral checker/compiler handles every generated test
+9. **Adequacy of the generated test set** (Simon, 2026-10-18). Goal: if a program-neutral checker/compiler handles every generated test
    program, it handles all valid programs correctly. Result in Lean (`grammatik/Grammatik/Adaequanz/`, `CHECKER.md`† §16, THEOREM-MAP 85):
    program-neutral alone admits NO finite test set (`kein_endlicher_test`). With a state bound the W-method set is sufficient and
    astronomically large for Gabbro. For the class "verdict = conjunction of local premises and whole-program patterns" the answer is exact
    and small: one single-fault program per isolable refusal cell plus valid programs covering the accepted cells (124 premise cells, 146
    child-position cells, at most 4 540 pattern cells, independent of program size). EXACT CELLS (2026-10-20, `CHECKER.md`† §16.6a): the global patterns are 124 cells with 20 bad, not 4 540; `gen-zellen` witnesses 75 of 104 good and 9 of 20 bad cells strictly (valid program / single-fault program), from a generator that emits each program with its proof (`Gutes`, `Schlechtes`), against the Lean model only (the Rust checker is never an oracle). Open: the local refusal cells need source mutants,
    so the G-to-source printer of Track P; the coarse accepted cells (4 of 459 covered); the metamorphic tests for hypotheses H1-H8.
-9. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
+10. **Refinement down to the binary: EETV-R version 3** (the ONLY refinement item; Simon's design, 2026-10-18). LLVM stays an UNTRUSTED
    producer; Lean checks the binary against the certificate through a small UB-free core K, bridge steps justified by Gabbro facts, and a
    backend validator over chip-learned instruction semantics. Nothing built; the first steps start with extending `Code`. Full design,
    hardware contract and research risks: `PLAN-TRANSLATION-VALIDATION.md`† §9c.
-10. **One-off corpus of ALL generated programs** in a git submodule (at most 30 GiB, counting-and-unranking generation). Not started.
+11. **One-off corpus of ALL generated programs** in a git submodule (at most 30 GiB, counting-and-unranking generation). Not started.
     `dokumente/PLAN-LONG-RANGE.md` §1.
-11. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
+12. **`async fn` and `.await`** as a verified state-machine transformation (sugar; machine G and `Spec.lean` stay untouched). Not started.
     `dokumente/PLAN-LONG-RANGE.md` §2.
-12. **Self-hosted checker and compiler in Gabbro** (Simon, 2026-10-25): Lean specifies and proves, Gabbro computes (checking,
+13. **Self-hosted checker and compiler in Gabbro** (Simon, 2026-10-25): Lean specifies and proves, Gabbro computes (checking,
     compiling, generating and running M, N, R, coverage, IR validation); `gpruef` and `gkomp` proved terminating, deterministic
     and neutral, correct on every program through M and N, the adequacy theorem and GabbroV logic proofs; LLVM stays the back
     end. Not started; first the language needs (region release, strings in G, file-gate contracts, measure-based loops).
