@@ -46,6 +46,7 @@ public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben

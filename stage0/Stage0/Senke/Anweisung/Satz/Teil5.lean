@@ -30,6 +30,7 @@ public import Stage0.Senke.Anweisung.Faelle.Ends.EndRuf
 public import Stage0.Senke.Anweisung.Faelle.Ends.EndWahl
 public import Stage0.Senke.Anweisung.Faelle.Ends.EndFehler
 public import Stage0.Senke.Anweisung.Faelle.Ends.EndAtomar
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElse
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.NarrowCases
 public import Stage0.Senke.Anweisung.Faelle.BlockFehler
@@ -132,7 +133,10 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .axiomCall a args hn proof0 proof1 proof2 proof3, c, top, h, hK, arg4, hW, m, pc, σ, ρ, hp, arg11, hlo2, arg13, arg14, hWa, hpr => by
     exact axiomCall_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (a := a) (args := args) (hn := hn) (proof0 := proof0) (proof1 := proof1) (proof2 := proof2) (proof3 := proof3)
       c top h hK arg4 hW m pc σ ρ hp arg11 hlo2 arg13 arg14 hWa hpr
-  | _, _, _, _, .axiomCallElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
+  | _, Γ, Λ, _, .axiomCallElse e a args he hcall hd hgd hr err, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact stmtAxiomElse_case hS hA hlo0 hens
+      (fun {pr ex} => lowEnd_ok hS hA hlo0 hens err)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, _, _, _, .callIndElse .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, _, _, _, .regWrite .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
   | _, _, _, _, .transition .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
