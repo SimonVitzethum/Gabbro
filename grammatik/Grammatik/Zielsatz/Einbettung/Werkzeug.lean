@@ -97,6 +97,7 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
   | .ref t, _, n => by by_cases h : 0 ≤ n <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
   | .arr _ _, _, _ => rfl
   | .str _, _, _ => rfl
+  | .prod _ _, _, _ => rfl
 
 /-- A register answer, on both sides. -/
 theorem regLies_wert (hZ : E.Rueck) (z : Int → Option D.Fn) (z' : Int → Option D'.Fn)

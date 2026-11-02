@@ -86,16 +86,20 @@ def groesseExpr : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ 
   | _, _, _, .intBuiltin1 _ a => unendlich + 1 + groesseExpr a
   | _, _, _, .intBuiltin2 _ a b => unendlich + 1 + groesseExpr a + groesseExpr b
   | _, _, _, .count _ body => unendlich + 1 + groesseExpr body
+  | _, _, _, .prod _ args => unendlich + 1 + groesseArgs args
+  | _, _, _, .prodGet v _ => unendlich + 1 + groesseExpr v
+  | _, _, _, .prodSet v _ e => unendlich + 1 + groesseExpr v + groesseExpr e
 
 def groesseNutz : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, NutzlastExpr D Γ Λ o → Nat
   | _, _, _, .empty => 1
   | _, _, _, .val e => 1 + groesseExpr e
-end
-
 /-- The size of an argument list. -/
 def groesseArgs : ∀ {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty}, Args D Γ Λ τs → Nat
   | _, _, _, .nil => 1
   | _, _, _, .cons e rest => 1 + groesseExpr e + groesseArgs rest
+
+end
+
 
 /-- The size of a result expression. -/
 def groesseErg : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, ErgExpr D Γ Λ o → Nat

@@ -174,9 +174,6 @@ def uConstantValue : USide → Except String UKonst
     | _ => throw "source export: record initializer conversion requires a number"
   | _ => .error "source export: record initializer requires explicit constant fields"
 
-/-- Elaborate labelled record fields with the given value elaborator. Labels are resolved here;
-    positions come from the schema at lowering. (The labelled-call surface form is not parsed on
-    this branch: construction stays refused until the parser provides it.) -/
 /-- Elaborate labelled record constructor arguments with the given value elaborator: `P(a: v, …)`
     arrives as `.ext .label` applications, one per field, in source order. -/
 def uRecordSides (ctx : UCtx) (rechne : SExpr → Except String USide) :

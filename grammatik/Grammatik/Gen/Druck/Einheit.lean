@@ -75,6 +75,7 @@ def Spez.druckTy (z : Spez) : Ty → Except String String
   | .ref n => if n < z.tabs.length then .ok s!"index into T{n}" else .error "unsupported type: reference to no table"
   | .arr τ n => do .ok s!"[{← z.druckTy τ}; {n}]"
   | .str n => .ok s!"string max {n}"
+  | .prod .. => .error "unsupported type: product"
 
 /-- The names of the entities of a member. -/
 def Spez.namen (z : Spez) : Namen z.deklaration where

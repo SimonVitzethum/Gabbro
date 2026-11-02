@@ -391,6 +391,7 @@ def uRestFehler : List SItemTief → Except String Unit
     if akkuFormZulaessig it then uRestFehler rest
     else if !akkuOperatorOk m then .error "accumulator operator without G form"
     else .error "accumulator without per cpu count without G form"
+  | .walkT walk :: _ => .error ("source export: walk requires a proved safe child binding, va scale and traversal correspondence: " ++ walk.name)
   | _ :: _ => .error "item without G form"
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/
 def uStart (fns : List UFn) (quelle d : String) : Except String String :=

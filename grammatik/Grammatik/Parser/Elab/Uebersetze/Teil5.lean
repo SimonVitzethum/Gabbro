@@ -196,6 +196,9 @@ def seiteAltErg : USide → Bool
   | .zaehleFeld a _ b => seiteAltErg a || ensAltErg b
   | .taggedValue _ _ a | .typed _ a | .len a | .present _ a => seiteAltErg a
   | .arrCons a b | .idx a b => seiteAltErg a || seiteAltErg b
+  | .product _ _ fields => fields.any (fun (_, side) => seiteAltErg side)
+  | .field a _ => seiteAltErg a
+  | .replace a _ b => seiteAltErg a || seiteAltErg b
   | .upd a i v => seiteAltErg a || seiteAltErg i || seiteAltErg v
   | .predicate p => ensAltErg p
   | _ => false

@@ -61,6 +61,9 @@ inductive ConstExpr (c : ConstProgram) : {Γ : Ctx} → {τ : Ty} → Expr c.D �
   | pureIntBuiltin1 : ConstExpr c a → ConstExpr c (.intBuiltin1 op a)
   | pureIntBuiltin2 : ConstExpr c a → ConstExpr c b → ConstExpr c (.intBuiltin2 op a b)
   | pureCount : ConstExpr c body → ConstExpr c (.count n body)
+  | pureProd : ConstArgs c args → ConstExpr c (.prod r args)
+  | pureProdGet : ConstExpr c v → ConstExpr c (.prodGet v i)
+  | pureProdSet : ConstExpr c v → ConstExpr c e → ConstExpr c (.prodSet v i e)
 
 inductive ConstPayload (c : ConstProgram) : {Γ : Ctx} → {k : Option (Int × Int)} →
     NutzlastExpr c.D Γ [] k → Prop where

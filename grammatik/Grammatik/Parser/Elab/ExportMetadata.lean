@@ -70,6 +70,8 @@ def itemMetadata : SItemTief → Bool
   | .groupT .. => true
   | .globT _ _ ty _ bound proof _ => typeMetadata ty || bound.isSome || proof.isSome
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
+  -- A record schema resolves through the checked record collector, not metadata.
+  | .typeT [] _ [] [] (some (.raw text)) => !text.startsWith "{"
   | .typeT flags _ args order body => !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
       flags.any (fun flag => flag != "pub" && flag != "export")
   | .constT _ ty _ => typeMetadata ty
