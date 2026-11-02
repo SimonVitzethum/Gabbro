@@ -3,7 +3,7 @@ module
 public import Stage0.Senke.Ausdruck.Old.Sound
 public import Stage0.Senke.Ausdruck.Old.Distinct
 public import Stage0.Senke.Ausdruck.Old.EnvironmentProbe
-public import Stage0.Senke.Ausdruck.FnptrProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 @[expose] public section
 

@@ -1,7 +1,7 @@
 /- Joint high-bit source/compiler/frame witness for mixed scalar ordering. -/
 module
 public import Stage0.Senke.Ausdruck.Arithmetik.Scalar
-public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 @[expose] public section
 
 

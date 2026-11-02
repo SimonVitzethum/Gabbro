@@ -2,7 +2,7 @@
   Subject: Joint, successful witnesses of the indirect-call simulation premises.
 -/
 module
-public import Stage0.Senke.Ausdruck.FnptrProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrProben
 @[expose] public section
 
 

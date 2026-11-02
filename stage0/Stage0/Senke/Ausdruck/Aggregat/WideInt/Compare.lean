@@ -9,7 +9,7 @@
 -/
 module
 public import Stage0.Senke.Welt.WeltAt
-public import Stage0.Senke.Ausdruck.Wort
+public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Ausdruck.Arithmetik.Interval
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Operands

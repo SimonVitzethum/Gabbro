@@ -7,7 +7,7 @@ public import Stage0.Senke.Ausdruck.Referenz.Lesen
 public import Stage0.Senke.Ausdruck.Gleit.Fall
 public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Wenn
-public import Stage0.Senke.Ausdruck.Fnptr
+public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
 public import Stage0.Senke.Ausdruck.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
@@ -20,7 +20,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Builtin
 public import Stage0.Senke.Ausdruck.Aggregat.StringOps
 public import Stage0.Senke.Ausdruck.Option
-public import Stage0.Senke.Ausdruck.Bytes
+public import Stage0.Senke.Ausdruck.Wort.Bytes
 public import Stage0.Senke.Ausdruck.Quant.Satz
 public import Stage0.Senke.Ausdruck.Quant.Count
 public import Stage0.Senke.Ausdruck.Quant.Reach

@@ -41,7 +41,7 @@
       the re-view and its source are not separated.
 -/
 module
-public import Grammatik.Logik.Vertraege.Objekte
+public import Grammatik.Logik.Vertraege.Objekt.Objekte
 @[expose] public section
 
 

@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Logik.Vertraege.GetrenntZeuge
+public import Grammatik.Logik.Vertraege.Getrennt.GetrenntZeuge
 public import Grammatik.Speichermodell.Adressen.NamedSpaces
 
 @[expose] public section

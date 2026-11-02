@@ -44,7 +44,7 @@
     The frame at the model's call is `ObjektRahmen.lean`, the roots `ObjektWurzel.lean`.
 -/
 module
-public import Grammatik.Logik.Vertraege.Getrennt
+public import Grammatik.Logik.Vertraege.Getrennt.Getrennt
 @[expose] public section
 
 

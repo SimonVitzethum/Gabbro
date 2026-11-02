@@ -2,7 +2,7 @@
   Subject: Joint witnesses of normal and reason call premises, including false ensures on reason paths.
 -/
 module
-public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Anweisung.Faelle.CallElse
 @[expose] public section
 

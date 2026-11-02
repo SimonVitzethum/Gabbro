@@ -1,7 +1,7 @@
 /- Joint actual-memory witness for the complete scalar result contract. -/
 module
 public import Stage0.Senke.Ausdruck.Arithmetik.Scalar
-public import Stage0.Senke.Ausdruck.FnptrAufrufProben
+public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 @[expose] public section
 
 
