@@ -2,7 +2,7 @@
    holder releasing while WAIT is pending; it is not a fairness assumption. -/
 module
 public import Stage0.Senke.Sperre.Retry
-public import Stage0.Senke.Sperre.Wake
+public import Stage0.Senke.Sperre.Waiting.Wake
 public import Stage0.Senke.Sperre.ContendedProbe
 @[expose] public section
 

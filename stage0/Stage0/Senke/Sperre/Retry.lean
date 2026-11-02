@@ -1,7 +1,7 @@
 /- The acquisition retry at instruction 17, after contended WAIT. These facts
    cover finite sequential-thread executions; eventual release is a premise. -/
 module
-public import Stage0.Senke.Sperre.Wait
+public import Stage0.Senke.Sperre.Waiting.Wait
 @[expose] public section
 
 
