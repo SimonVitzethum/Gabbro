@@ -135,6 +135,13 @@
   the second case of `GabbroZielLeben`.
 
   THE READING -- not premises, assumptions of reading the statements as statements about the BINARY:
+  * C02 translators use exact source-bound map correspondence, in addition to output typing
+    (`Logik/Vertraege/Uebersetzung.lean`). Compile-time row collections are immutable by-value
+    arrays, not runtime table capabilities. The goal applies to the generated accepted ordinary
+    program; a translation certificate alone does not establish payload initialization, library
+    call expansion or image correspondence. Those source cases remain refused until their generic
+    bridges are connected. This strengthens the former output-only translation promise and adds
+    no hardware assumption or change to the existing G/GX safety, contract, call-log or time legs.
   * Machine G (over GX) is the meaning of the compiled code at G's step granularity. The compiler is the LLVM path
     (`gabbro build`: checker, LLVM IR from `llvm.rs`, `opt`, `llc`, `ld.lld`); the bridge is translation validation
     (source -> model -> final machine bytes, checked in Lean; dokumente/PLAN-TRANSLATION-VALIDATION.md), which is

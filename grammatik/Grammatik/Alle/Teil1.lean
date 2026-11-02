@@ -64,6 +64,7 @@ public import Grammatik.Proben.AuditW5
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG
 public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatRufG
 public import Grammatik.Logik.Vertraege.Uebersetzung
+public import Grammatik.Parser.Stmt.LibraryWitnesses
 public import Grammatik.Logik.Ruf.Umkehr.RufUmkehrRufG
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt

@@ -328,6 +328,7 @@ def uArenen (consts : List (String × Int)) (alias : List (String × (Int × Int
     error (the refused rows of `collect`). -/
 def uRestFehler : List SItemTief → Except String Unit
   | [] => .ok ()
+  | .transT .. :: _ => .error "C02: translator export needs source-bound execution and payload expansion certificates"
   | .constT _ _ _ :: rest => uRestFehler rest
   | .typeT _ _ _ _ _ :: rest => uRestFehler rest
   | .tableT _ _ _ _ _ _ _ :: rest => uRestFehler rest

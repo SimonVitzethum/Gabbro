@@ -95,8 +95,7 @@ theorem s35 : beqTopStmt (parseTopStmt st35)
     (.ok (.lcall ⟨"spirv", "kernel", [.variable "n"], [.wort "dispatch", .num 0]⟩)) = true := by
   decide
 -- SYNTAX.md §7 (the library-call example). Rust: `LibraryCall`
--- in statement position -- same shape (one argument, region
--- skipped balanced).
+-- in statement position: the argument and balanced region tokens are retained.
 
 end Gabbro.Grammatik.Parser
 
