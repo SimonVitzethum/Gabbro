@@ -1,7 +1,7 @@
 /- Subject: Execution of the branch-free span comparison: the accumulated word folds every XOR pair. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
-public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
 

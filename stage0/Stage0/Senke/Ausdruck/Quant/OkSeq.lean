@@ -4,7 +4,7 @@
              run one after the other, and a binary instruction against a literal.
 -/
 module
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 @[expose] public section
 
 

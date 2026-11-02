@@ -8,7 +8,7 @@ public import Stage0.Senke.Ausdruck.Gleit.Fall
 public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Wenn
 public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
-public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz

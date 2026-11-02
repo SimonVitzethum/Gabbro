@@ -9,7 +9,7 @@ public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Images.Hilfe
 public import Stage0.Senke.Ausdruck.Sim
 public import Stage0.Senke.Ausdruck.Wort.Wort
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 public import Stage0.Senke.Ausdruck.Lesen
 public import Stage0.Senke.Ausdruck.Satz
 public import Stage0.Senke.Umgebung

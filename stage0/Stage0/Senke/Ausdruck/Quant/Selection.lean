@@ -1,7 +1,7 @@
 /- Typed frame selection uses the common physical pointer transport. -/
 module
 public import Stage0.Senke.Ausdruck.Quant.Memory
-public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
 

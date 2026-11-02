@@ -2,7 +2,7 @@
   Subject: Function references are the code addresses carried by the layout.
 -/
 module
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 @[expose] public section
 
 

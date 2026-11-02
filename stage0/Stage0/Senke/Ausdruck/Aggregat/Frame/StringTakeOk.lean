@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
 public import Stage0.Senke.Ausdruck.Aggregat.StringOps
-public import Stage0.Senke.Ausdruck.Eng
+public import Stage0.Senke.Ausdruck.Tops.Eng
 @[expose] public section
 
 

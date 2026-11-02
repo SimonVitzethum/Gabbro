@@ -4,7 +4,7 @@
              operands' lowerings (as induction hypotheses) give the operation's word. Split out of `Satz.lean`.
 -/
 module
-public import Stage0.Senke.Ausdruck.Top
+public import Stage0.Senke.Ausdruck.Tops.Top
 public import Stage0.Senke.Ausdruck.Wort.Wort
 public import Stage0.Senke.Ausdruck.Aggregat.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
