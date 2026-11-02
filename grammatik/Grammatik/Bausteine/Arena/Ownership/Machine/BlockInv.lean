@@ -47,6 +47,13 @@ def BTop (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output 
       ∃ c1, OB A I out k
         (resultContext (c.afterCall (modeList (I f).parameters) (originList c args)) (I f).output) rest c1 ∧
         DropW cout c1
+  | _, _, _, _, .bindCallIndElse (n := n) p args _ _ _ err rest =>
+      ∃ (J : Modes (D.sigNr n).params) (owner : Bool), SigCompatible I n J owner ∧
+        checkExpression A c p = true ∧ checkArguments A c args = true ∧
+        planFits c (modeList J) (originList c args) = true ∧
+        OE A I out k ((c.afterCall (modeList J) (originList c args)).bind none) err ∧
+        ∃ c1, OB A I out k (resultContextB (c.afterCall (modeList J) (originList c args)) owner) rest c1 ∧
+          DropW cout c1
   | _, _, _, _, .bindAxiom a args _ _ _ _ _ rest =>
       AxiomFree A a ∧ checkArguments A c args = true ∧
       ∃ c1, OB A I out k (c.bind none) rest c1 ∧ DropW cout c1
@@ -88,6 +95,9 @@ theorem BTop.weaken {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c cout c2 :
   | bindCallInd =>
     obtain ⟨J, o, h1, h2, h3, h4, c1, h5, h6⟩ := h
     exact ⟨J, o, h1, h2, h3, h4, c1, h5, h6.weaken hw⟩
+  | bindCallIndElse =>
+    obtain ⟨J, o, h1, h2, h3, h4, herr, c1, h5, h6⟩ := h
+    exact ⟨J, o, h1, h2, h3, h4, herr, c1, h5, h6.weaken hw⟩
   | bindCallElse => exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.elim fun c1 h => ⟨c1, h.1, h.2.weaken hw⟩⟩
   | bindAxiom => exact ⟨h.1, h.2.1, h.2.2.elim fun c1 h => ⟨c1, h.1, h.2.weaken hw⟩⟩
   | bindAxiomElse => exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.elim fun c1 h => ⟨c1, h.1, h.2.weaken hw⟩⟩
@@ -118,6 +128,8 @@ theorem ob_top : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c cout : C
     ⟨J, owner, hJ, hpc, ha, hplan, _, hrest, Or.inl rfl⟩
   | _, _, _, _, _, _, _, _, .bindCallElse _ _ _ _ _ _ _ ha hplan herr hrest =>
     ⟨ha, hplan, herr, _, hrest, Or.inl rfl⟩
+  | _, _, _, _, _, _, _, _, .bindCallIndElse _ _ _ _ _ _ _ J owner hJ hpc ha hplan herr hrest =>
+    ⟨J, owner, hJ, hpc, ha, hplan, herr, _, hrest, Or.inl rfl⟩
   | _, _, _, _, _, _, _, _, .bindAxiom _ _ _ _ _ _ _ _ hfree ha hrest => ⟨hfree, ha, _, hrest, Or.inl rfl⟩
   | _, _, _, _, _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ _ hfree ha herr hrest =>
     ⟨hfree, ha, herr, _, hrest, Or.inl rfl⟩
@@ -150,6 +162,12 @@ def STop (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output 
       ∃ (J : Modes (D.sigNr n).params) (owner : Bool), SigCompatible I n J owner ∧
         checkExpression A c p = true ∧ checkArguments A c args = true ∧
         planFits c (modeList J) (originList c args) = true ∧
+        c2 = dropContextB (c.afterCall (modeList J) (originList c args)) owner
+  | _, _, _, _, .callIndElse (n := n) p args _ _ _ err =>
+      ∃ (J : Modes (D.sigNr n).params) (owner : Bool), SigCompatible I n J owner ∧
+        checkExpression A c p = true ∧ checkArguments A c args = true ∧
+        planFits c (modeList J) (originList c args) = true ∧
+        OE A I out k ((c.afterCall (modeList J) (originList c args)).bind none) err ∧
         c2 = dropContextB (c.afterCall (modeList J) (originList c args)) owner
   | _, _, _, _, .locks _ _ body => OB A I out k c body c2
   | _, _, _, _, .breaking _ body => OB A I out k c body c2
@@ -187,6 +205,8 @@ theorem os_top : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c2 : Con
   | _, _, _, _, _, _, _, _, .onWhy _ _ hr ha => ⟨hr, ha⟩
   | _, _, _, _, _, _, _, _, .call _ _ _ _ ha hplan => ⟨ha, hplan, rfl⟩
   | _, _, _, _, _, _, _, _, .callInd _ _ _ _ J owner hJ hpc ha hplan => ⟨J, owner, hJ, hpc, ha, hplan, rfl⟩
+  | _, _, _, _, _, _, _, _, .callIndElse _ _ _ _ _ _ J owner hJ hpc ha hplan herr =>
+    ⟨J, owner, hJ, hpc, ha, hplan, herr, rfl⟩
   | _, _, _, _, _, _, _, _, .locks _ _ _ hb => hb
   | _, _, _, _, _, _, _, _, .breaking _ _ hb => hb
   | _, _, _, _, _, _, _, _, .traverse _ _ _ hentry hinv hb hback => ⟨hentry, hinv, _, hb, hback⟩

@@ -47,6 +47,13 @@ theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stm
       simp only [Bool.and_eq_true] at h
       exact OS.callInd p args hp hr _ _ (sigCompatB_sound hvoll h.1.2) h.1.1.1 h.1.1.2 h.2)
       (dropContextB_bounded (afterCall_bounded hc) _)
+  | _, _, _, _, .callIndElse p args he hp hr err, k, c, hk, hc => by
+    simp only [chkS]
+    exact supports_if (fun h => by
+      simp only [Bool.and_eq_true] at h
+      exact OS.callIndElse p args he hp hr err _ _ (sigCompatB_sound hvoll h.1.1.2) h.1.1.1.1 h.1.1.1.2
+        h.1.2 (chkE_sound err k _ hk (Context.bindNone_bounded (afterCall_bounded hc)) h.2))
+      (dropContextB_bounded (afterCall_bounded hc) _)
   | _, _, _, _, .locks L hr body, k, c, hk, hc => by
     simp only [chkS]
     exact supports_mono (fun z hz => OS.locks L hr body hz) (chkB_sound body k c hk hc)
@@ -107,6 +114,8 @@ theorem chkB_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Bloc
       chkB_sound_bindCallInd (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (hvoll := hvoll)
   | _, _, _, _, .bindCallElse f args he hp hr err rest, k, c, hk, hc =>
       chkB_sound_bindCallElse (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (ih_chkE_sound_err := chkE_sound err) (hvoll := hvoll)
+  | _, _, _, _, .bindCallIndElse p args he hp hr err rest, k, c, hk, hc =>
+      chkB_sound_bindCallIndElse (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (ih_chkE_sound_err := chkE_sound err) (hvoll := hvoll)
   | _, _, _, _, .bindAxiom a args he hw hg hd hgd rest, k, c, hk, hc =>
       chkB_sound_bindAxiom (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (ih_chkB_sound_rest := chkB_sound rest) (hvoll := hvoll)
   | _, _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, k, c, hk, hc =>
@@ -149,7 +158,7 @@ theorem relB_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : B
           exact ⟨g, e2, hwK, hLK, rest1, rfl, h.1, h.2, hx⟩)
       | _ => simp only [relB]; trivial
     | .nil => by simp only [relB]; trivial
-    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [relB]; trivial
 
@@ -170,7 +179,7 @@ theorem ctr2B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
           exact ⟨g, e2, hwG, hLG, rest1, rfl, h.1, h.2, hx⟩)
       | _ => simp only [ctr2B]; trivial
     | .nil => by simp only [ctr2B]; trivial
-    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [ctr2B]; trivial
 
@@ -195,7 +204,7 @@ theorem ctr1B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
           exact ⟨t, f, i, ev, hw, hL, rest1, rfl, h.1.1.1, h.1.1.2, h.1.2, h.2, hx⟩)
       | _ => simp only [ctr1B]; trivial
     | .nil => by simp only [ctr1B]; trivial
-    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [ctr1B]; trivial
 
@@ -217,7 +226,7 @@ theorem lst2B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
           exact ⟨t, f, i, ev, hw, hL, rest1, rfl, h.1.1.1, h.1.1.2, h.1.2, h.2, hx⟩)
       | _ => simp only [lst2B]; trivial
     | .nil => by simp only [lst2B]; trivial
-    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [lst2B]; trivial
 
@@ -243,7 +252,7 @@ theorem lst1B_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (rest : 
           exact ⟨g, e2, hwK, hLK, rest1, rfl, h.1, slotIsLink_sound h.2, hx⟩)
       | _ => simp only [lst1B]; trivial
     | .nil => by simp only [lst1B]; trivial
-    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
+    | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallIndElse .. | .bindCallElse .. | .bindAxiom .. | .bindAxiomElse ..
     | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check .. | .float ..
     | .floatLit .. | .floatOf .. | .floatNarrow .. => by simp only [lst1B]; trivial
 
@@ -266,6 +275,8 @@ theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endbloc
       chkE_sound_bindCall (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (h := h) (ih_chkE_sound_rest := chkE_sound rest) (hvoll := hvoll)
   | _, _, _, .bindCallElse f args he hp hr err rest, k, c, hk, hc, h =>
       chkE_sound_bindCallElse (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (h := h) (ih_chkE_sound_err := chkE_sound err) (ih_chkE_sound_rest := chkE_sound rest) (hvoll := hvoll)
+  | _, _, _, .bindCallIndElse p args he hp hr err rest, k, c, hk, hc, h =>
+      chkE_sound_bindCallIndElse (p := p) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (h := h) (ih_chkE_sound_err := chkE_sound err) (ih_chkE_sound_rest := chkE_sound rest) (hvoll := hvoll)
   | _, _, _, .bindAxiom a args he hw hg hd hgd rest, k, c, hk, hc, h =>
       chkE_sound_bindAxiom (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (rest := rest) (k := k) (c := c) (hk := hk) (hc := hc) (h := h) (ih_chkE_sound_rest := chkE_sound rest) (hvoll := hvoll)
   | _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, k, c, hk, hc, h =>

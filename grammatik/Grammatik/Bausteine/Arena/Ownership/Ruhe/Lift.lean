@@ -128,6 +128,13 @@ theorem os_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
         (n := n + 1) (ruE p) (ruA args) (rufPasstR hp) hr (modesR J) owner (sigCompatible_lift hJ)
         (by rw [checkExpression_ruE]; exact hpc) ((checkArguments_ruA A _ args).trans ha)
         ((planFits_lift _ J args).trans hplan)))
+  | _, _, _, _, k, c, _, _, .callIndElse (n := n) p args he hp hr err J owner hJ hpc ha hplan herr =>
+    os_nach _ (os_post (congrArg (fun x => dropContextB x owner) (afterCall_lift c J args))
+      (OS.callIndElse (A := liftA A) (I := liftI I) (V := vertragR V) (out := outR A out) (k := k) (c := c)
+        (n := n + 1) (ruE p) (ruA args) he (rufPasstR hp) hr (ruEnd err) (modesR J) owner
+        (sigCompatible_lift hJ) (by rw [checkExpression_ruE]; exact hpc)
+        ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
+        (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ J args)) (oe_lift herr)))))
   | _, _, _, _, _, _, _, _, .locks L hr body hb => .locks _ _ _ (ob_lift hb)
   | _, _, _, _, _, _, _, _, .breaking i body hb => .breaking _ _ (ob_lift hb)
   | _, _, _, _, _, _, _, _, .traverse t inv body hentry hinv hb hback =>
@@ -172,6 +179,13 @@ theorem ob_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
       ((planFits_lift _ _ args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ _ args)) (oe_lift herr)))
       (ob_vor _ (ob_pre ((congrArg (fun x => resultContext x _) (afterCall_lift _ _ args)).trans (resultContext_outR _ _)) (ob_lift hrest)))
+  | _, _, _, _, _, _, _, _, .bindCallIndElse (n := n) p args he hp hr err rest J owner hJ hpc ha hplan
+      herr hrest =>
+    .bindCallIndElse _ _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ)
+      (by rw [checkExpression_ruE]; exact hpc)
+      ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
+      (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ J args)) (oe_lift herr)))
+      (ob_vor _ (ob_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (ob_lift hrest)))
   | _, _, _, _, _, _, _, _, .bindAxiom a args he hw hg hd hgd rest hfree ha hrest =>
     .bindAxiom _ _ _ _ _ _ _ _ hfree ((checkArguments_ruA A _ args).trans ha) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest hfree ha herr hrest =>
@@ -232,6 +246,13 @@ theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} 
       ((planFits_lift _ _ args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ _ args)) (oe_lift herr)))
       (oe_um _ (oe_pre ((congrArg (fun x => resultContext x _) (afterCall_lift _ _ args)).trans (resultContext_outR _ _)) (oe_lift hrest)))
+  | _, _, _, _, _, _, .bindCallIndElse (n := n) p args he hp hr err rest J owner hJ hpc ha hplan herr
+      hrest =>
+    .bindCallIndElse _ _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ)
+      (by rw [checkExpression_ruE]; exact hpc)
+      ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
+      (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ J args)) (oe_lift herr)))
+      (oe_um _ (oe_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (oe_lift hrest)))
   | _, _, _, _, _, _, .bindAxiom a args he hw hg hd hgd rest hfree ha hrest =>
     .bindAxiom _ _ _ _ _ _ _ _ hfree ((checkArguments_ruA A _ args).trans ha) (oe_lift hrest)
   | _, _, _, _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest hfree ha herr hrest =>
