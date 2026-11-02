@@ -96,13 +96,17 @@ theorem rufUpdateG_noteq (m : Faden → RufFadenG D) (f g : Faden) (h : g ≠ f)
 /-- Compounds with an unfold step: `ite`, `onOption`, `onTag`, `onGrund`,
     `locks`, `breaking` and the bounded loops. `call`/`callInd` are excluded
     (the `ruf`/`rufDann` and `callInd` steps handle them); the bind-call and
-    register/atomic/float `Block` forms have their own `dann` steps. -/
+    register/atomic/float `Block` forms have their own `dann` steps.
+    `callIndElse` unfolds through `endeEntf` into `bindCallIndElse` with an
+    empty success tail (`dannCallIndElse`), so both statement positions share
+    the one dispatch. -/
 def GEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .ite .. => true
   | .onOption .. => true
   | .onTag .. => true
   | .onWhy .. => true
+  | .callIndElse .. => true
   | .locks .. => true
   | .breaking .. => true
   | .traverse .. => true
@@ -136,6 +140,7 @@ def EndEntfaltbar {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse .. => true
   | .awaits .. => true
   | .bindCallInd .. => true
+  | .bindCallIndElse .. => true
   | .narrow .. => true
   | .narrowRequired .. => true
   | .exchange .. => true

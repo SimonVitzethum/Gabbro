@@ -156,6 +156,7 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
   | _, _, _, _, _, .callInd .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .callIndElse .., _, ho => by simp only [Stmt.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .locks L hr body, hs, ho => by
       intro σ σ' ρ h
       obtain ⟨_, hb, _⟩ := hs.locks_inv
@@ -243,6 +244,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
         | why _ r => exact (Fin.cast hr r).elim0
         | _ => trivial
   | _, _, _, _, _, .bindCallInd .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
+  | _, _, _, _, _, .bindCallIndElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .bindCallElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .bindAxiom .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho
   | _, _, _, _, _, .bindAxiomElse .., _, ho => by simp only [Block.kOk, Bool.false_eq_true] at ho

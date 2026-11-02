@@ -220,6 +220,7 @@ theorem stmtRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .call g args hp hr, zzh1 =>
       stmtRetR_call (g := g) (args := args) (hp := hp) (hr := hr) (zzh1 := zzh1) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .callIndElse .., hs => absurd hs.art (by simp only [Stmt.rArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs =>
       stmtRetR_locks (hr := hr) (body := body) (hs := hs) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .breaking i body, hs =>
@@ -258,6 +259,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCall g args he hp hr rest, hb =>
       blockRetR_bindCall (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, .bindCallIndElse .., hb => by cases hb
   | _, _, _, _, .bindCallElse g args he hp hr err rest, hb =>
       blockRetR_bindCallElse (g := g) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (hb := hb) (ih_blockRetR_rest := blockRetR rest) (ih_alsRetR_err := alsRetR err) (P := P) (O := O) (passes := passes) (f := f) (fn := fn) (caller := caller) (rst := rst) (rho := rho) (s0 := s0) (A := A) (R := R) (C := C) (ziel := ziel) (zielG := zielG) (hRuf := hRuf)
   | _, _, _, _, .bindAxiom .., hb => by cases hb

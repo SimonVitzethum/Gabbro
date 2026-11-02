@@ -137,6 +137,8 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | dannBindCall _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | dannBindCallInd _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | dannBindCallElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | dannBindCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+    | dannCallIndElse _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | rueckBind _ _ hpop _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
     | dannLeaveTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep _ _ _ hs₁ hw => kopfweg
     | dannNextTrav _ _ _ _ _ _ _ _ _ _ _ _ hhead _ _ _ hstep => kopfweg

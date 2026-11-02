@@ -82,6 +82,7 @@ theorem stmtKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact grundKein arms ha _ _ _ _ _ hex
   | _, _, _, _, .call .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .callInd .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
+  | _, _, _, _, .callIndElse .., hs => absurd hs.art (by simp only [Stmt.gArt, Stmt.blattArt, Bool.false_eq_true, not_false_eq_true])
   | _, _, _, _, .locks L hr body, hs => by
       intro σ σ' ρ v hex
       obtain ⟨_, hb⟩ := hs.locks_inv
@@ -123,6 +124,7 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       exact blockKein rest hr _ _ _ _ (schrumpf_zurueck hex)
   | _, _, _, _, .bindCall .., hb => by cases hb
   | _, _, _, _, .bindCallInd .., hb => by cases hb
+  | _, _, _, _, .bindCallIndElse .., hb => by cases hb
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
   | _, _, _, _, .bindAxiomElse .., hb => by cases hb

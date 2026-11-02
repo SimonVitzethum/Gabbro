@@ -33,6 +33,7 @@ def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .bind _ rest => rest.ohneOrakel
   | .bindCall _ _ _ _ _ rest => rest.ohneOrakel
   | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
   | .bindAxiomElse .. => false
@@ -66,6 +67,7 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .regReadElse .. => false
   | .awaits .. => false
   | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
+  | .bindCallIndElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .narrow _ _ _ sonst rest => sonst.ohneOrakel && rest.ohneOrakel
   | .narrowRequired _ _ _ rest => rest.ohneOrakel
   | .exchange _ _ _ _ rest => rest.ohneOrakel

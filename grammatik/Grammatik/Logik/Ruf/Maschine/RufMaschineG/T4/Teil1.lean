@@ -264,6 +264,71 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
           simp only [rufUpdateG_self]
         rw [heq]
         exact hkeys
+    | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
+        hs0 g hg hv rho hrho neu hneu =>
+        have hkeys := rufPushG_passt (M.faeden f)
+          ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+           ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err rest k⟩⟩
+          ⟨g, rho, s0,
+           ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+            rho, .ende (P.rumpf g)⟩⟩
+          rfl g rho s0 rfl s0.spur h
+        have heq : (⟨M.speicher,
+            rufUpdateG M.faeden f
+              ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+                 ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err rest k⟩⟩ ::
+                 (M.faeden f).stapel,
+               ⟨g, rho, s0,
+                ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+                 rho, .ende (P.rumpf g)⟩⟩,
+               s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
+            M.lauf ++ rufEigenG f neu,
+            M.start⟩ : RufMaschineG D).faeden f =
+            (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+                ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err rest k⟩⟩ ::
+                (M.faeden f).stapel,
+             ⟨g, rho, s0,
+              ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+               rho, .ende (P.rumpf g)⟩⟩,
+             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
+              RufFadenG D) := by
+          simp only [rufUpdateG_self]
+        rw [heq]
+        exact hkeys
+    | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0
+        hs0 g hg hv rho hrho neu hneu =>
+        have hkeys := rufPushG_passt (M.faeden f)
+          ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+           ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
+             (.dann rest k)⟩⟩
+          ⟨g, rho, s0,
+           ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+            rho, .ende (P.rumpf g)⟩⟩
+          rfl g rho s0 rfl s0.spur h
+        have heq : (⟨M.speicher,
+            rufUpdateG M.faeden f
+              ⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+                 ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
+                   (.dann rest k)⟩⟩ ::
+                 (M.faeden f).stapel,
+               ⟨g, rho, s0,
+                ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+                 rho, .ende (P.rumpf g)⟩⟩,
+               s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩,
+            M.lauf ++ rufEigenG f neu,
+            M.start⟩ : RufMaschineG D).faeden f =
+            (⟨⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+                ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
+                  (.dann rest k)⟩⟩ ::
+                (M.faeden f).stapel,
+             ⟨g, rho, s0,
+              ⟨false, D.params g, Signatur.anfang D (D.signatur g),
+               rho, .ende (P.rumpf g)⟩⟩,
+             s0.spur, (RufEreignisF.eintritt g rho s0) :: (M.faeden f).log⟩ :
+              RufFadenG D) := by
+          simp only [rufUpdateG_self]
+        rw [heq]
+        exact hkeys
     | rueckBind caller rest hpop l Γ Λ Λ' τ restb k ρc hcaller Γc Λc e hperm ρ
         hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv he neu hneu =>
         have hhead : RufSchluesselG (M.faeden f).kopf =
@@ -416,59 +481,5 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
     | _ =>
         simp only [rufUpdateG_self]
         exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
-
-/-- One step preserves the invariant at an UNTOUCHED thread: the
-    result machine's thread state equals the old one. `hne` selects the
-    untouched side and is consumed by the simp set. -/
-theorem rufSchrittG_passt_anders (P : Programm D) (O : Orakel D) (passes : Nat)
-    (M M' : RufMaschineG D) (f f' : Faden) (hne : f' ≠ f)
-    (hs : RufSchrittG P O passes M f M') :
-    M'.faeden f' = M.faeden f' := by
-  (rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs) <;> (simp_all [rufUpdateG_noteq])
-
-/-- One step preserves the invariant for EVERY thread. Both `hact`
-    (acting side) and the untouched side feed the conclusion; `hne`
-    selects the side. -/
-theorem rufSchrittG_passt (P : Programm D) (O : Orakel D) (passes : Nat)
-    (M M' : RufMaschineG D) (f : Faden)
-    (h : RufMaschinePasstG M)
-    (hs : RufSchrittG P O passes M f M') :
-    RufMaschinePasstG M' := by
-  intro f'
-  by_cases hne : f' = f
-  · subst hne
-    exact rufSchrittG_passt_acting P O passes M M' f' (h f') hs
-  · rw [rufSchrittG_passt_anders P O passes M M' f f' hne hs]
-    exact h f'
-
-/-- The invariant holds at every reachable machine. Both `hbase` (start
-    evidence) and the step evidence feed the conclusion. -/
-theorem rufErreichbarG_passt (P : Programm D) (O : Orakel D) (passes : Nat)
-    (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (M : RufMaschineG D)
-    (h : RufErreichbarG P O passes (RufStartG P sp init) M) :
-    RufMaschinePasstG M := by
-  induction h with
-  | start => exact rufStartG_passt P sp init
-  | schritt M M' f hbase hs ih =>
-      exact rufSchrittG_passt P O passes M M' f ih hs
-
-/-- **Return fidelity.** Every `rueck` event in a reachable thread log has
-    its matching `eintritt` event in the same log. Every premise is used:
-    `h` selects the reachable machine, `hmem` the log event. -/
-theorem rufG_treu (P : Programm D) (O : Orakel D) (passes : Nat) (sp : Speicher D)
-    (init : Faden → Σ f : D.Fn, Env D (D.params f)) (M : RufMaschineG D)
-    (h : RufErreichbarG P O passes (RufStartG P sp init) M) (f : Faden) :
-    ∀ (g : D.Fn) (rho : Env D (D.params g)) (v : ErgVal D (D.erg g)) (s0 s1 : World D),
-      RufEreignisF.rueck g rho v s0 s1 ∈ (M.faeden f).log →
-      RufEreignisF.eintritt g rho s0 ∈ (M.faeden f).log := by
-  have hmach := rufErreichbarG_passt P O passes sp init M h
-  have hthread := hmach f
-  unfold RufFadenPasstG at hthread
-  have hged := rufLogPasstG_gedeckt (RufFadenSchluesselG (M.faeden f))
-    (M.faeden f).log hthread
-  unfold rufRueckGedecktG at hged
-  intro g rho v s0 s1 hmem
-  exact hged g rho v s0 s1 hmem
 
 end Gabbro.Grammatik

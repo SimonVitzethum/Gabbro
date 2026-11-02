@@ -30,7 +30,8 @@ variable {D : Deklaration}
   agreement (`wartet_einig`; with the value half, `wartet_einig_voll` in
   `RufUmkehrRufG.lean`), and a NOTE (`befund_vertrag`). What is NOT proved:
 
-  - Indirect calls (`callInd`, `bindCallInd`): the callee is the pointer's
+  - Indirect calls (`callInd`, `callIndElse`, `bindCallInd`,
+    `bindCallIndElse`): the callee is the pointer's
     VALUE, so the admission is a premise over every function of the
     signature; `D.Fn` is an arbitrary type in the model (no finiteness),
     so such a premise is not over finitely many functions -- not done.

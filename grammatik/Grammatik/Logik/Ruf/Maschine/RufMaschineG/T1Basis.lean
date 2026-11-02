@@ -60,6 +60,8 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .regReadElse r hk z sonst rest => ⟨rest.alsBlock.1, .regReadElse r hk z sonst rest.alsBlock.2⟩
   | _, _, .awaits g pl hp hL hat rest => ⟨rest.alsBlock.1, .awaits g pl hp hL hat rest.alsBlock.2⟩
   | _, _, .bindCallInd p args he hp hr rest => ⟨rest.alsBlock.1, .bindCallInd p args he hp hr rest.alsBlock.2⟩
+  | _, _, .bindCallIndElse p args he hp hr err rest =>
+      ⟨rest.alsBlock.1, .bindCallIndElse p args he hp hr err rest.alsBlock.2⟩
   | _, _, .narrow e lo' hi' sonst rest => ⟨rest.alsBlock.1, .narrow e lo' hi' sonst rest.alsBlock.2⟩
   | _, _, .narrowRequired e lo' hi' rest => ⟨rest.alsBlock.1, .narrowRequired e lo' hi' rest.alsBlock.2⟩
   | _, _, .retScoped e R => ⟨Λ, .cons (.retScoped e R) .nil⟩
@@ -215,6 +217,16 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
         cases execEnd O passes R rest _ _ <;> rfl
       · rename_i r _
         exact keinGrundSig hf hr r
+      · rfl
+      · rfl
+  | _, _, .bindCallIndElse p args he hp hr err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      rename_i f hf _
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · cases execEnd O passes R err _ _ <;> rfl
       · rfl
       · rfl
   | _, _, .narrow e lo' hi' sonst rest, σ, ρ => by

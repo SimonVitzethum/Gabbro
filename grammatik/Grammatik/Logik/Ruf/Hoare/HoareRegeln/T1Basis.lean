@@ -43,7 +43,7 @@ def STTripel (O : Orakel D) (passes : Nat)
   ∀ σ ρ, Pre σ ρ →
     ∀ σ' ρ', execStmt O passes R s σ ρ = Ausgang.ok σ' ρ' → Post σ' ρ'
 
-/- A statement performs no call: `call`/`callInd` are excluded; nested
+/- A statement performs no call: `call`/`callInd`/`callIndElse` are excluded; nested
     blocks (branches, lock bodies, loops, breaking) must preserve the
     property. Oracle/hardware leaves (`axiomCall`, registers, transitions,
     publish/awaits) stay allowed: they are not calls. -/
