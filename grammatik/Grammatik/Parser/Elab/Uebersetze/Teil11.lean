@@ -99,10 +99,7 @@ def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int)
     (fname : String) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
     (regs : List UReg := []) (zustaende : List UZustand := [])
     (specs : List (String × List String × SExpr) := []) (arrKonst : List (String × USide) := []) : UCtx :=
-  { names := kopf.names, kinds := kopf.kinds, types := kopf.types, tabs := tabs, locks := locks, held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt,
-    fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums,
-    resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2),
-    zustaende, specs, arrKonst }
+  { names := kopf.names, kinds := kopf.kinds, types := kopf.types, tabs := tabs, locks := locks, held := kopf.held, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, fname, bits := kopf.bits, alias, lits, globs, annahmen, whys, kanal := kopf.kanal, sums, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, regs, griffe := kopf.griffe.map (·.2), zustaende, specs, arrKonst }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -117,22 +114,14 @@ def elabUFunktion (consts : List (String × Int))
   match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst with
-                 zeiger := zeiger, zeigerBasis := zb }
+    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst with zeiger := zeiger, zeigerBasis := zb }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>
       match uMeasureClause alias sig.klauseln with
       | .error e => .error e
       | .ok decreases =>
-        .ok { name := sig.name, params := kopf.names.zip kopf.types,
-              kinds := kopf.kinds,
-              res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum,
-              resWhy := kopf.resWhy, resTy := kopf.resTy,
-              gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held,
-              puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r,
-               decreases, measureConstants := if decreases.isSome then consts else [],
-               measureTypes := if decreases.isSome then alias else [] }
+.ok { name := sig.name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives, needs, body, ret := r, decreases, measureConstants := if decreases.isSome then consts else [], measureTypes := if decreases.isSome then alias else [] }
 
 /-- The payload of an `atomic` item: statics named bare (a table payload, `T.slots`, has no form: `D.nutzlast`
     lists statics). -/
@@ -403,6 +392,10 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
   -- G form yet (the model's foreign bodies carry no caller duty)
   | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
+  -- `accumulates` (C15): the descriptor is `Kernzelle.AccumulatorDecl`, but lowering needs the
+  -- core-query contract (C08) and the per-cell lock protocol -- still refused, by name below in
+  -- `GvParserFragment.istGegenstand` and here
+  | .accT .. :: _ => .error "item without G form"
   | _ :: _ => .error "item without G form"
 
 /-- A start names one parameterless function of the unit (`check_starts` of `lean_g.rs`). -/

@@ -32,6 +32,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Korpus.Referenz.ReferenzB
 
 @[expose] public section
@@ -359,7 +360,7 @@ theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.
     (h : AkzeptiertSpecVor P S fs ws) (hM : MaskenDisziplin P fs)
     (hR : ∀ (g : D.Glob) (elem : Ty) (len : Nat),
       D.gtyp g = .arr elem len → ZeroAdmitting elem) :
-    AkzeptiertSpec P S fs ws := by
+    AkzeptiertSpec P S fs ws [] := by
   have hlok : lokWVor P fs ws = lokW P fs ws := by
     funext c
     have e : GetrenntVor P fs ws c ↔ Getrennt P fs ws c := by
@@ -371,7 +372,7 @@ theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.
     unfold lokWVor lokW
     exact @decide_eq_decide _ _ (Classical.propDecidable _) (Classical.propDecidable _) |>.mpr e
   exact ⟨h.frag, h.abg, hlok ▸ h.fuss, h.stufen, h.sperrOrte, h.wurzeln,
-    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM, hR⟩
+    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM, hR, Kernzelle.accumulatorAdmission_leer _ _⟩
 
 end PoolBool
 
@@ -380,18 +381,19 @@ end PoolBool
     so `GabbroZiel`'s `∀ C : Pruefer` ranges over at least every checker it ranged over
     before. Since Opus agent H (2026-09-26) an old checker is conjoined with the handler
     component `maskenB` it never judged (an old program declares no handler, where the
-    conjunct is `true`: `maskenB_ohne`). -/
+    conjunct is `true`: `maskenB_ohne`); since C15 with the accumulator admission it never
+    judged (an old program declares no accumulator, where it holds vacuously). -/
 def pruefer_vor_neu
     (akz : ∀ {D : Deklaration} [DecidableEq D.Fn],
       Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool)
     (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
       (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
       akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
-  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs && resetB cs
+  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs && resetB cs && Kernzelle.accumulatorB E.P fs cs E.akku
   korrekt := fun E fs ls cs h => by
     simp only [Bool.and_eq_true] at h
-    exact akzeptiertSpecVor_neu (korr E fs ls cs h.1.1) ((maskenB_iff fs.2).mp h.1.2)
-      ((resetB_iff cs.2).mp h.2)
+    exact (akzeptiertSpecVor_neu (korr E fs ls cs h.1.1.1) ((maskenB_iff fs.2).mp h.1.1.2)
+      ((resetB_iff cs.2).mp h.1.2)).mitAkku ((Kernzelle.accumulatorB_iff fs.2 cs.2).mp h.2)
 
 /-- **(d) OF THE REVIEWED DIFF: every run admitted before is admitted now.** The old
     `Laufzeit.einmal` (no declared start on two threads) implies the new one. -/

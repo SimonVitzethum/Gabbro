@@ -134,7 +134,7 @@ theorem kP_koerper : ∀ f : kD.Fn, KoerperGutS kP 0 (axWahr kD) kSI f := by
   · exact kP_koerper_P
 
 theorem kP_inv : ∀ f : kD.Fn, InvGutS kP 0 (axWahr kD) kSI f :=
-  fun _ => invGutS_ohne fun i _ => nomatch i
+  fun _ => invGutS_ohne fun i _ => (nomatch i)
 
 theorem kP_ohneEwig : ohneEwigB kP kFs = true := by decide
 
@@ -163,19 +163,19 @@ theorem kE_nutzerPflicht : Zielsatz.NutzerPflicht kE :=
 
 /-- No axiom, no register, no global: the oracle is empty. -/
 def kO : Orakel kD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
-  regSchreib := fun r _ => nomatch r
-  sichtbar := fun g => nomatch g
+  wirkt := fun a => (nomatch a)
+  regLies := fun r => (nomatch r)
+  regSchreib := fun r _ => (nomatch r)
+  sichtbar := fun g => (nomatch g)
 
-theorem kO_gut : GutO kO := fun a => nomatch a
+theorem kO_gut : GutO kO := fun a => (nomatch a)
 
 theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g _ _ _ => nomatch g)⟩
 
 theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
 
 theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [()] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] = true; exact kP_akzeptiert)
+  (by show Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] [] = true; exact kP_akzeptiert)
 
 /-- **The goal theorem on `beispiele/124`**: for every oracle meeting (c), every
     budget, every runtime start meeting (d), and every reachable machine of

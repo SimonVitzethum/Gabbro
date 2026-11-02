@@ -85,49 +85,49 @@ def g1Sig : Signatur Empty Empty Empty Empty where
   erg := none
   gruende := 0
   haelt := []
-  schreibt := fun e => nomatch e
-  gschreibt := fun e => nomatch e
+  schreibt := fun e => (nomatch e)
+  gschreibt := fun e => (nomatch e)
   konsumiert := []
   produziert := []
 
 def g1D : Deklaration where
   Tab := Empty
   decTab := inferInstance
-  count := fun e => nomatch e
-  Feld := fun e => nomatch e
-  decFeld := fun e => nomatch e
-  typ := fun e => nomatch e
-  erlaubt := fun e => nomatch e
+  count := fun e => (nomatch e)
+  Feld := fun e => (nomatch e)
+  decFeld := fun e => (nomatch e)
+  typ := fun e => (nomatch e)
+  erlaubt := fun e => (nomatch e)
   tabNr := fun _ => none
   Glob := Empty
   decGlob := inferInstance
-  gtyp := fun e => nomatch e
-  nutzlast := fun e => nomatch e
-  atomar := fun e => nomatch e
-  geteilt := fun e => nomatch e
-  ggeteilt := fun e => nomatch e
+  gtyp := fun e => (nomatch e)
+  nutzlast := fun e => (nomatch e)
+  atomar := fun e => (nomatch e)
+  geteilt := fun e => (nomatch e)
+  ggeteilt := fun e => (nomatch e)
   Lock := Empty
   decLock := inferInstance
-  rang := fun e => nomatch e
-  maskiert := fun e => nomatch e
+  rang := fun e => (nomatch e)
+  maskiert := fun e => (nomatch e)
   Marke := Empty
   decMarke := inferInstance
-  stufen := fun e => nomatch e
-  braucht := fun e => nomatch e
-  gbraucht := fun e => nomatch e
-  eigner := fun e => nomatch e
+  stufen := fun e => (nomatch e)
+  braucht := fun e => (nomatch e)
+  gbraucht := fun e => (nomatch e)
+  eigner := fun e => (nomatch e)
   Fn := Unit
   sig := fun _ => 0
   sigNr := fun _ => g1Sig
-  eigner_nie_erzeugt := fun _ t => nomatch t
+  eigner_nie_erzeugt := fun _ t => (nomatch t)
   Inv := Empty
-  traeger := fun e => nomatch e
+  traeger := fun e => (nomatch e)
   invs := []
   Ax := Unit
   aparams := fun _ => []
   aerg := fun _ => some g1Erg
-  aschreibt := fun _ e => nomatch e
-  agschreibt := fun _ e => nomatch e
+  aschreibt := fun _ e => (nomatch e)
+  agschreibt := fun _ e => (nomatch e)
   Reg := Unit
   rtyp := fun _ => g1Temp
   rklasse := fun _ => .r
@@ -135,9 +135,9 @@ def g1D : Deklaration where
   rzusage := fun _ _ => true
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun e => nomatch e
-  invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  geteilt_bewacht := fun e => (nomatch e)
+  invarianten_gehalten := fun _ i => (nomatch i)
+  ggeteilt_bewacht := fun e => (nomatch e)
 
 instance g1D_fn_deq : DecidableEq g1D.Fn := inferInstanceAs (DecidableEq Unit)
 
@@ -159,14 +159,14 @@ def g1RegStmt : Stmt g1D (vertragVon g1D g1Haupt) false [] [] [] :=
 /-- **Probe G1-A**: probe A's contract (`ensures false`) behind one call of an axiom with an
     `ok | err` result. -/
 def g1PA : Programm g1D where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons g1AxStmt (.ret .empty List.Perm.nil)
 
 /-- **Probe G1-R**: probe A's contract behind one read of a float register. -/
 def g1PR : Programm g1D where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .fls
   rumpf _ := .cons g1RegStmt (.ret .empty List.Perm.nil)
@@ -189,7 +189,7 @@ def g1O (w t : Int) : Orakel g1D where
   wirkt := fun _ σ _ => (σ, w)
   regLies := fun _ _ => t
   regSchreib := fun _ _ => ()
-  sichtbar := fun e => nomatch e
+  sichtbar := fun e => (nomatch e)
 
 theorem g1O_gut (w t : Int) : GutO (g1O w t) := fun _ σ _ =>
   ⟨Rahmen.refl _ _ σ, rfl, fun _ _ =>
@@ -320,7 +320,7 @@ theorem g1PR_lauf (S : SperrInv g1D) (σ : World g1D) :
 theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     (hQ : ∃ (v : Wert g1D g1Erg) (σ₀ : World g1D), E.Q g1Holen σ₀ v = true) :
     ¬ NutzerPflicht E := by
-  obtain ⟨P, S, Q, st, s⟩ := E
+  obtain ⟨P, S, Q, st, s, _, _, _⟩ := E
   obtain rfl : P = g1PA := hP
   intro h
   obtain ⟨v, σ₀, hq⟩ := hQ

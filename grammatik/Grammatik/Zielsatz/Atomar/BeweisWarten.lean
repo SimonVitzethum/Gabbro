@@ -56,7 +56,8 @@ variable [DecidableEq D.Fn]
 /-- **Every float range check passes at every machine GX reaches**, from the premise groups (as `zielX_aus`). -/
 theorem bereich_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (ws : List D.Fn)
-    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws)) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (M : RufMaschineG D) (hX : RufErreichbarGX P O passes (GeteiltV P ws) (RufStartG P sp init) M) :

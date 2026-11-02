@@ -91,7 +91,7 @@ def kSig (e : Option Ty) (gs : List QGlob) :
   erg := e
   gruende := 0
   haelt := []
-  schreibt := fun t => nomatch t
+  schreibt := fun t => (nomatch t)
   gschreibt := fun g => decide (g ∈ gs)
   konsumiert := []
   produziert := []
@@ -110,10 +110,10 @@ def kSigOf : QFn → Nat
 def kD : Deklaration where
   Tab := Empty
   decTab := inferInstance
-  count := fun e => nomatch e
-  Feld := fun e => nomatch e
-  decFeld := fun e => nomatch e
-  typ := fun e => nomatch e
+  count := fun e => (nomatch e)
+  Feld := fun e => (nomatch e)
+  decFeld := fun e => (nomatch e)
+  typ := fun e => (nomatch e)
   erlaubt := fun _ _ _ _ => false
   tabNr := fun _ => none
   Glob := QGlob
@@ -121,7 +121,7 @@ def kD : Deklaration where
   gtyp := fun _ => .int 0 4294967295
   nutzlast := fun _ => []
   atomar := fun _ => false
-  geteilt := fun e => nomatch e
+  geteilt := fun e => (nomatch e)
   ggeteilt := fun _ => true
   Lock := QLock
   decLock := inferInstance
@@ -129,31 +129,31 @@ def kD : Deklaration where
   maskiert := fun _ => false
   Marke := Empty
   decMarke := inferInstance
-  stufen := fun e => nomatch e
-  braucht := fun e => nomatch e
+  stufen := fun e => (nomatch e)
+  braucht := fun e => (nomatch e)
   gbraucht := fun _ => [.inl QLock.w]
-  eigner := fun e => nomatch e
+  eigner := fun e => (nomatch e)
   Fn := QFn
   sig := kSigOf
   sigNr := kSigNr
-  eigner_nie_erzeugt := fun _ t _ _ _ => nomatch t
+  eigner_nie_erzeugt := fun _ t _ _ _ => (nomatch t)
   Inv := Empty
-  traeger := fun i => nomatch i
+  traeger := fun i => (nomatch i)
   invs := []
   Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  aparams := fun e => (nomatch e)
+  aerg := fun e => (nomatch e)
+  aschreibt := fun e => (nomatch e)
+  agschreibt := fun e => (nomatch e)
   Reg := Empty
-  rtyp := fun e => nomatch e
-  rklasse := fun e => nomatch e
-  spiegel := fun e => nomatch e
-  rzusage := fun e => nomatch e
+  rtyp := fun e => (nomatch e)
+  rklasse := fun e => (nomatch e)
+  spiegel := fun e => (nomatch e)
+  rzusage := fun e => (nomatch e)
   Annahme := Unit
   a10 := ()
-  geteilt_bewacht := fun e => nomatch e
-  invarianten_gehalten := fun _ i => nomatch i
+  geteilt_bewacht := fun e => (nomatch e)
+  invarianten_gehalten := fun _ i => (nomatch i)
   ggeteilt_bewacht := fun g _ => by cases g; exact Or.inl (by decide)
 
 def kLese : kD.Fn := QFn.lese
@@ -197,7 +197,7 @@ def kRumpfLese : Endblock kD (vertragVon kD kLese) false [] [] :=
 /-- **The program of `beispiele/125`** (value-faithful `lese_schreibe`);
     trivial contracts (the source declares no `requires`/`ensures`). -/
 def kP : Programm kD where
-  invariante := fun i => nomatch i
+  invariante := fun i => (nomatch i)
   requires := fun _ => .tru
   ensures := fun _ => .tru
   rumpf
@@ -233,12 +233,12 @@ def kCs : List (kD.Tab ⊕ kD.Glob) := [.inr QGlob.z]
 
 theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
   rcases c with t | g
-  · exact nomatch t
+  · exact (nomatch t)
   · cases g; simp only [kCs, List.mem_cons, List.not_mem_nil, or_false]
 
 /-- **The checker accepts the program** with its declared starts
     `lese_schreibe`, `setze_null` (the `concurrent` members). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true := by decide
 
 /-! ## 3. The blocking facts, proved -/
 
@@ -329,7 +329,7 @@ theorem kP_koerper : ∀ f : kD.Fn, KoerperGutS kP 0 (axWahr kD) kSI f := by
   · exact kP_koerper_setzeNull
 
 theorem kP_inv : ∀ f : kD.Fn, InvGutS kP 0 (axWahr kD) kSI f :=
-  fun _ => invGutS_ohne fun i _ => nomatch i
+  fun _ => invGutS_ohne fun i _ => (nomatch i)
 
 theorem kP_ohneEwig : ohneEwigB kP kFs = true := by decide
 
@@ -372,19 +372,19 @@ theorem korpus125_nutzer : Zielsatz.NutzerPflicht kE :=
     carrier, not a device); nothing awaits, so visibility is constantly
     false. -/
 def kO : Orakel kD where
-  wirkt := fun a => nomatch a
-  regLies := fun r => nomatch r
-  regSchreib := fun r _ => nomatch r
+  wirkt := fun a => (nomatch a)
+  regLies := fun r => (nomatch r)
+  regSchreib := fun r _ => (nomatch r)
   sichtbar := fun _ _ => false
 
-theorem kO_gut : GutO kO := fun a => nomatch a
+theorem kO_gut : GutO kO := fun a => (nomatch a)
 
 theorem kO_lokal : RegLokal kO := ⟨(fun r _ _ _ => nomatch r), (fun g σ σ' _ => rfl)⟩
 
 theorem kO_hw : Zielsatz.HardwareAnnahmen kO kE.Q := ⟨kO_gut, kO_lokal, axVertragO_wahr kO⟩
 
 theorem kE_akzeptiert : akzeptiert_pruefer.akzeptiert kE kFs [QLock.w] kCs = true :=
-  (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] = true; exact kP_akzeptiert)
+  (by show Akzeptiert kP kSI kFs [QLock.w] kCs [kLese, kSetzeNull] [] = true; exact kP_akzeptiert)
 
 /-- **The goal theorem on the 125 program** -- `gabbro_ziel` with
     the concrete checker. -/

@@ -11,6 +11,7 @@
 -/
 module
 public import Grammatik.Gen.Abdeckung.Satz.MerkmalGOk
+public import Grammatik.Bausteine.Kernzelle.Zulassung
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -259,24 +260,33 @@ def alleZellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.L
   (List.finRange 10).flatMap (zellen P S fs ls cs ws)
 
 /-- **Step 1.** The Lean model's Bool accepts a program exactly when the program has no bad cell. This is what makes
-    the checker of the goal theorem a CONJUNCTIVE checker over the cells (the class of Theorems 4 and 5). -/
+    the checker of the goal theorem a CONJUNCTIVE checker over the cells (the class of Theorems 4 and 5). The
+    accumulator admission (C15) has no cells in this coverage; it rides beside. -/
 theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
+    (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D))
+    (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
-    AkzeptiertX P S fs ls cs ws = true ↔ ∀ z ∈ alleZellen P S fs ls cs ws, z.schlecht = false := by
+    AkzeptiertX P S fs ls cs ws aks = true ↔
+      (∀ z ∈ alleZellen P S fs ls cs ws, z.schlecht = false) ∧
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true := by
   rw [akzeptiertX_iff]
   constructor
-  · intro h z hz
+  · intro h
+    refine ⟨?_, h.2⟩
+    intro z hz
     obtain ⟨c, _, hzc⟩ := List.mem_flatMap.1 hz
     have := urteil_komp P S fs ls cs ws hvoll hls hcs c
-    rw [h c] at this
+    rw [h.1 c] at this
     have h2 := (List.all_eq_true.1 this) z hzc
     simpa using h2
-  · intro h c
+  · intro h
+    refine ⟨?_, h.2⟩
+    intro c
     rw [← urteil_komp P S fs ls cs ws hvoll hls hcs c]
     apply List.all_eq_true.2
     intro z hz
-    have := h z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
+    have := h.1 z (List.mem_flatMap.2 ⟨c, List.mem_finRange c, hz⟩)
     simp only [this, Bool.not_false]
 
 end Gabbro.Grammatik.Gen

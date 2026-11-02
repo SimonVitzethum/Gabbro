@@ -26,6 +26,7 @@
   | `masken`       | `maskenB`              | `MaskenDisziplin P fs`: every function a handler's (`P.unterbricht`) call graph reaches takes only `masks irqs` locks | `kernHaltE_aus` (the leg `keinKernHalt`; Opus agent H, 2026-09-26, the Rust `H102`) |
   | `reset`        | `resetB`               | every declared static array admits zero (C18)          | the checked range-store expansion (`lowResetRangeL`) |
   | `bibliothek`   | `libraryB`             | `LibraryAdmission P`: generated programs are ordinary (C02 source certificates in `Uebersetzung.lean` carry the content) | by construction (`libraryB_immer`) |
+  | `akku`           | `accumulatorB`                  | `AccumulatorAdmission P fs aks`: every per-core accumulator is admitted (descriptor, private cells with one exclusive lock each, exact core-query shape, confined and floored update/reduction graphs) | the staged accumulator leg (C15, 2026-11-02; no goal leg yet) |
 
   **Member lists.** `fs` (functions), `ls` (locks), `cs` (carriers:
   tables and globals). `D.Fn`, `D.Lock`, `D.Tab`, `D.Glob` carry no

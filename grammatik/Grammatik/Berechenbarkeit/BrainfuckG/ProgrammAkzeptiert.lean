@@ -30,7 +30,7 @@ theorem prog_klasse_zeuge : klasse prog [()] (fun _ => false) () = .bedingt := b
 /-- **The core checker accepts the program.** -/
 theorem prog_accepted_zeuge :
     Akzeptiert prog ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
-      [.inl (), .inr 0, .inr 1, .inr 2, .inr 3, .inr 4, .inr 5, .inr 6] [()] = true := by decide +kernel
+      [.inl (), .inr 0, .inr 1, .inr 2, .inr 3, .inr 4, .inr 5, .inr 6] [()] [] = true := by decide +kernel
 
 
 /-- **The accepted function runs**: with budget 2 it returns normally, and its run is the halting Brainfuck run of `.`

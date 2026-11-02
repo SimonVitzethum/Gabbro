@@ -1,5 +1,4 @@
 module
-
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
 import all Init.Data.String.Decode
@@ -35,9 +34,7 @@ public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.ExportMetadata
 import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Uebersetze.Teil14
-
 @[expose] public section
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 

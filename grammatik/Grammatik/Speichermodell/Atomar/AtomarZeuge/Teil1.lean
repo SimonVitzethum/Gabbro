@@ -120,7 +120,8 @@ theorem fussWAB_of_fussWB (h : fussWB P S fs ws = true) : fussWAB P S fs ws = tr
   exact Or.inl h2
 
 /-- **EMBEDDING: every program the goal's checker accepts, `AkzeptiertA` accepts.** -/
-theorem akzeptiertA_of_akzeptiert (h : Akzeptiert P S fs ls cs ws = true) :
+theorem akzeptiertA_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
+    (h : Akzeptiert P S fs ls cs ws aks = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
   unfold AkzeptiertA
@@ -406,7 +407,7 @@ theorem n1_start (sp : Speicher nD) :
       · rw [h, h'] at he; cases he
     · rw [h]; exact ruhe_ruhig
   req _ := by rfl
-  sperren L := nomatch L
+  sperren L := (nomatch L)
 
 /-- **THE FLAG, COVERED: on configuration 1 every W step is a GA step, and plain tables read
     the newest write** -- for every order assignment, every budget, every start memory. -/

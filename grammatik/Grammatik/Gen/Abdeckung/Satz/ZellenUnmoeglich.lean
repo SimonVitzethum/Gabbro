@@ -169,7 +169,7 @@ theorem zelle_6_0_nicht_gueltig (P : Programm D) (S : SperrInv D) (fs : List D.F
     (hbad : (hh || gg) = true) : (⟨6, 0, true, [m, hh, gg]⟩ : Zelle) ∉ alleZellen P S fs ls cs ws := by
   intro h
   obtain ⟨h5, hs⟩ := zelle_6_0_braucht_5 P S fs ls cs ws m hh gg hbad h
-  have := (akzeptiertX_zellen P S fs ls cs ws hvoll hls hcs).1 hv _ h5
+  have := ((akzeptiertX_zellen P S fs ls cs ws [] hvoll hls hcs).1 hv).1 _ h5
   rw [hs] at this
   cases this
 

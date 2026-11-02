@@ -6,7 +6,7 @@
   `E.P`, lock invariants `E.S`, axiom ensures `E.Q`, declared starts
   `E.starts`, initial memory `E.sp0`; since 2026-09-15):
   * (a) `C.akzeptiert E … = true` -- `C.korrekt` -> `AkzeptiertSpec E.P E.S
-    fs E.ws` -> `akzeptiertSpec_mitRuhe` -> `AkzeptiertSpec P.mitRuhe
+    fs E.ws E.akku` -> `akzeptiertSpec_mitRuhe` -> `AkzeptiertSpec P.mitRuhe
     S.mitRuhe (fsRuhe fs) (wsRuhe ws)` (Zielsatz/Ruhe.lean);
   * (b) `NutzerPflicht E` = `LogikPflicht E.P E.S E.Q` (-> `logikPflicht_mitRuhe`
     -> the obligation on `P.mitRuhe` with `S.mitRuhe` and `axEnsRuhe Q`,
@@ -134,8 +134,8 @@ variable [DecidableEq D.Fn]
 /-- **The legs of `Ziel` from the premise groups** (generic in the
     declaration; no event needed). -/
 theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlung D.Fn)
-    (ls : Aufzaehlung D.Lock) (ws : List D.Fn)
-    (hA : AkzeptiertSpec P S fs.1 ws) (hN : LogikPflicht P S Q) (O : Orakel D)
+    (ls : Aufzaehlung D.Lock) (ws : List D.Fn) {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs.1 ws A) (hN : LogikPflicht P S Q) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs.1 ws sp init)
     (M : RufMaschineG D) (hr : RufErreichbarG P O passes (RufStartG P sp init) M) :
@@ -192,8 +192,8 @@ theorem ziel_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlu
     (the bridge `fadenErreichbar_G` and `ziel_aus`), and the spawn and join legs
     (Zielsatz/Faeden.lean) from the same premise groups. -/
 theorem zielF_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) (fs : Aufzaehlung D.Fn)
-    (ls : Aufzaehlung D.Lock) (ws : List D.Fn)
-    (hA : AkzeptiertSpec P S fs.1 ws) (hN : LogikPflicht P S Q) (O : Orakel D)
+    (ls : Aufzaehlung D.Lock) (ws : List D.Fn) {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpec P S fs.1 ws A) (hN : LogikPflicht P S Q) (O : Orakel D)
     (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs.1 ws sp init)
     (lebt0 : Faden → Bool) (K : FadenMaschine D)

@@ -1,7 +1,6 @@
 /-
   File:      Grammatik/GabbroV/GvStartPflicht.lean
   Subject:   GabbroV bridge: `StartPflicht` without the `Initially` assumption (lane 1387).
-
   GabbroV duty files assume `Initially s0` (well-typed initial world, every
   invariant holds; `programmlogik/Duty/Duty104Referenz.lean`), while the goal
   theorem's premise (b) `StartPflicht E` is a duty of the user over the

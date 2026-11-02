@@ -156,6 +156,6 @@ theorem program_termination_zeuge : klasse program [()] (fun _ => false) () = .e
 
 theorem program_accepted_zeuge :
     Akzeptiert program ⟨fun L => L.elim, fun L => L.elim⟩ [()] []
-      [.inl (), .inr 0, .inr 1, .inr 2, .inr 3] [()] = true := by decide +kernel
+      [.inl (), .inr 0, .inr 1, .inr 2, .inr 3] [()] [] = true := by decide +kernel
 
 end Gabbro.Grammatik.Berechenbarkeit.Storage.GStack.Witnesses
