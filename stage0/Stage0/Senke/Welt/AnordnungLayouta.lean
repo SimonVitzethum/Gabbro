@@ -84,15 +84,15 @@ def globAlign (u : UProg) (g : Fin u.globs.length) : Nat :=
 
 def layU (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat)
     (align : Fin u.globs.length → Nat := fun g => wordAlign (globAlign u g)) : Lay (declOf u) where
-  ga g := globStartOf (List.finRange u.globs.length) b (globSz u) align g
-  col t f := globEnd (List.finRange u.globs.length) b (globSz u) align + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
+  ga g := b + globStartOf (List.finRange u.globs.length) 0 (globSz u) align g
+  col t f := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + (((List.finRange u.tabs.length).map (tabSz u)).take t.val).sum +
     (((List.finRange (fieldCount u t)).map (colSz u t)).take f.val).sum
   lo := b
-  hi := globEnd (List.finRange u.globs.length) b (globSz u) align + tabsSz u
+  hi := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + tabsSz u
   tor := tor
   byte t := (List.finRange (fieldCount u t)).find? (fun f => decide ((declOf u).typ t f = .int 0 255))
-  lk L := globEnd (List.finRange u.globs.length) b (globSz u) align + tabsSz u + 24 * L.val
-  sye := globEnd (List.finRange u.globs.length) b (globSz u) align + tabsSz u + 24 * u.locks.length
+  lk L := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + tabsSz u + 24 * L.val
+  sye := b + globEnd (List.finRange u.globs.length) 0 (globSz u) align + tabsSz u + 24 * u.locks.length
 
 /-- The words of the locks after the tables, three each. -/
 theorem layU_sync (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) : LaySync (layU u tor b) := by
@@ -136,11 +136,11 @@ theorem layU_in (u : UProg) (tor : (declOf u).Ax → Option TorB) (b : Nat) (h :
     have h2 := col_le u tor b t f
     simp only [Lay.elem]
     constructor
-    · have lower := globEnd_ge (List.finRange u.globs.length) b (globSz u)
+    · have lower := b + globEnd_ge (List.finRange u.globs.length) 0 (globSz u)
         (fun g => wordAlign (globAlign u g))
       simp only [layU]; omega
     · omega
-  · have hg := globStarts_bounds (List.finRange u.globs.length) b (globSz u)
+  · have hg := globStarts_bounds (List.finRange u.globs.length) 0 (globSz u)
       (fun g => wordAlign (globAlign u g)) g _ (globStartOf_mem _ _ _ _ g (by simp))
     simp only [layU, globEnd_one, globSz] at *
     omega

@@ -107,4 +107,22 @@ theorem globStarts_one {G : Type} (gs : List G) (o : Nat) (sz : G → Nat) :
       | zero => simp [globStarts]
       | succ k => simpa [globStarts, Nat.add_assoc] using ih (o + sz g) k
 
+/-- Relative padding preserves the storage grid, including zero alignment. -/
+theorem glob_grid {G : Type} (gs : List G) (o : Nat) (sz alignment : G → Nat)
+    (ho : 8 ∣ o) (hs : ∀ g, 8 ∣ sz g) :
+    (∀ g start, (g, start) ∈ globStarts gs o sz (fun g => wordAlign (alignment g)) →
+      8 ∣ start) ∧ 8 ∣ globEnd gs o sz (fun g => wordAlign (alignment g)) := by
+  induction gs generalizing o with
+  | nil => exact ⟨by simp [globStarts], ho⟩
+  | cons g gs ih =>
+      have ha := alignUp_word_grid o (alignment g) ho
+      have tail := ih _ (Nat.dvd_add ha (hs g))
+      constructor
+      · intro h start hm
+        simp only [globStarts, List.mem_cons] at hm
+        rcases hm with hm | hm
+        · cases hm; exact ha
+        · exact tail.1 h start hm
+      · exact tail.2
+
 end Gabbro.Stage0.Senke
