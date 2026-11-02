@@ -73,7 +73,9 @@ theorem canonical_source : CanonicalSourceProgram output.compiled :=
 def statementText : String :=
   "module fallible_indirect_statement_probe { reason R { Empty = 1 \"empty\" exhaustive } impl fn target(x : u8) -> u8 or R { if x == 0 { return R::Empty; } return x; } impl fn main() -> u8 { let pointer = &target; pointer(0) else (e) { match e { Empty => { return 23; } } return 0; } return 7; } }"
 
-/-- `callIndElse` exists in G and the IR lowerer, but has no statement-else parser path. -/
+/-- SYNTAX.md §7 has no statement-else spelling: `let ignored = pointer(0) else (e)
+    { ... }` emits bindCallIndElse, as the accepted image above shows. Stmt.callIndElse
+    has no source producer; its existing G-to-IR support is a separate model case. -/
 theorem statement_parser_refused :
     ((Gabbro.Grammatik.Parser.lex statementText).mapError (fun _ => "lex")).bind
       Gabbro.Grammatik.Parser.parseTopTief = .error "wanted ;" := by

@@ -72,8 +72,9 @@ theorem canonical_source : CanonicalSourceProgram output.compiled :=
 def statementText : String :=
   "module optional_foreign_statement_probe { reason R { Denied = 9 \"denied\" exhaustive } axiom value() -> u8 effects { pure } unfalsifiable \"probe\"; syscall action() -> u8 or R via sys_action effects { pure } costs <= 8 ops; syscall sys_action; impl fn main() -> u8 { let answer? = value(); action() else (e) { match e { Denied => { return 9; } } return 0; } return answer; } }"
 
-/-- There is no source statement-else node: `parseRufSchwanz` expects a semicolon.
-    The optional-binding image above prevents this earlier refusal from hiding that case. -/
+/-- SYNTAX.md §7 defines handlers only on bindings: `parseRufSchwanz` requires `;` here.
+    `let ignored = action() else (e) { ... }` instead emits bindAxiomElse; no source
+    producer emits Stmt.axiomCallElse. The optional image above remains independent. -/
 theorem statement_parser_refused :
     ((Gabbro.Grammatik.Parser.lex statementText).mapError (fun _ => "lex")).bind
       Gabbro.Grammatik.Parser.parseTopTief = .error "wanted ;" := by
