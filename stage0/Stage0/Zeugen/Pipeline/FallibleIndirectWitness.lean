@@ -68,6 +68,8 @@ theorem image_shape :
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
 
+theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
+
 /-- The value-discarding statement variant needs the same explicit reason handler.
     It is kept separate so its parser refusal cannot mask the accepted binding form. -/
 def statementText : String :=

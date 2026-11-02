@@ -48,25 +48,53 @@ def text : String :=
 theorem source_present : (Frontend.source text).toOption.isSome = true := by
   decide +kernel
 
-/-- The actual compiler's scoped elaborator does not run `entzuckere` before `uRestFehler`. -/
-theorem compilation_refused : compile text = .error "item without G form" := by
+/-- This candidate uses the production compiler and image emitter, including shared expansion. -/
+def candidate : Except String (Emitted text 256) := emit text 256
+
+theorem candidate_present : candidate.toOption.isSome = true := by
   decide +kernel
 
-/-- The real image endpoint preserves that elaboration refusal. -/
-theorem image_refused : emit text 64 = .error "item without G form" := by
+def output : Emitted text 256 := candidate.toOption.get candidate_present
+
+theorem accepted_image : emit text 256 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
+
+/-- The adapter and both reason-propagating functions survive into a nonempty IR image. -/
+theorem image_shape :
+    output.compiled.unit.fns.map (·.name) = ["original", "adapted", "propagate", "main"] ∧
+    output.compiled.unit.whys.map (·.name) = ["R"] ∧
+    (output.compiled.unit.fns.flatMap (·.body)).countP
+      (fun | .bindElse .. => true | _ => false) = 3 ∧
+    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
   decide +kernel
+
+theorem canonical_source : CanonicalSourceProgram output.compiled :=
+  compile_source_program text output.compiled
+
+theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
 
 /-- Isolate `?` from the earlier adapter refusal, retaining a live reason return and handler. -/
 def propagationText : String :=
   "module reason_propagation_probe { reason R { Empty = 1 \"empty\" exhaustive } impl fn original(x : u8) -> u8 or R { if x == 0 { return R::Empty; } return x; } impl fn propagate(x : u8) -> u8 or R { let y = original(x) ?; return y; } impl fn main() -> u8 { let answer = propagate(0) else (e) { match e { Empty => { return 23; } } return 0; } return answer; } }"
 
-/-- The same scoped elaborator reaches the unexpanded query statement when no adapter precedes it. -/
-theorem propagation_compilation_refused :
-    compile propagationText = .error "stmt without G form: let query" := by
+/-- Keep the standalone propagation case, so adapter expansion cannot hide a missing `?` path. -/
+def propagationCandidate : Except String (Emitted propagationText 256) := emit propagationText 256
+
+theorem propagation_candidate_present : propagationCandidate.toOption.isSome = true := by
   decide +kernel
 
-theorem propagation_image_refused :
-    emit propagationText 64 = .error "stmt without G form: let query" := by
+def propagationOutput : Emitted propagationText 256 :=
+  propagationCandidate.toOption.get propagation_candidate_present
+
+theorem propagation_accepted_image : emit propagationText 256 = .ok propagationOutput :=
+  Gabbro.Grammatik.except_ok_get propagation_candidate_present
+
+theorem propagation_image_shape :
+    propagationOutput.compiled.unit.fns.length = 3 ∧
+    0 < propagationOutput.image.code.length ∧ 16 < propagationOutput.image.bytes.length := by
   decide +kernel
+
+theorem propagation_canonical_source : CanonicalSourceProgram propagationOutput.compiled :=
+  compile_source_program propagationText propagationOutput.compiled
 
 end Gabbro.Stage0.Pipeline.AdapterReasonWitness

@@ -35,6 +35,7 @@ import all Init.Data.String.ToSlice
 
 
 namespace Gabbro.Stage0.Pipeline.TaggedDispatchWitness
+open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
@@ -48,13 +49,32 @@ def text : String :=
 theorem source_present : (Frontend.source text).toOption.isSome = true := by
   decide +kernel
 
-/-- Scoped Stage-0 elaboration calls item admission before `exportDeclarationUnit`.
-    Consequently the spec group is refused before its dispatcher can be generated. -/
-theorem compilation_refused : compile text = .error "item without G form" := by
+/-- The candidate includes spec resolution, both implementation bodies and the generated dispatcher. -/
+def candidate : Except String (Emitted text 256) := emit text 256
+
+theorem candidate_present : candidate.toOption.isSome = true := by
   decide +kernel
 
-/-- This is a source-to-image refusal, not an isolated declaration-expansion probe. -/
-theorem image_refused : emit text 64 = .error "item without G form" := by
+def output : Emitted text 256 := candidate.toOption.get candidate_present
+
+theorem accepted_image : emit text 256 = .ok output :=
+  Gabbro.Grammatik.except_ok_get candidate_present
+
+/-- Both case implementations and the dispatcher are emitted with the caller; the sum is retained. -/
+theorem image_shape :
+    output.compiled.unit.fns.length = 4 ∧
+    output.compiled.unit.sums.map (·.name) = ["Choice"] ∧
+    output.compiled.unit.fns.any (fun fn => fn.name ==
+      Gabbro.Grammatik.Parser.taggedDispatchName "Choice" "Select" "choose") = true ∧
+    (fnAt output.compiled.unit output.compiled.main).body.countP
+      (fun | .bindCall _ callee _ => callee ==
+        Gabbro.Grammatik.Parser.taggedDispatchName "Choice" "Select" "choose" | _ => false) = 2 ∧
+    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
   decide +kernel
+
+theorem canonical_source : CanonicalSourceProgram output.compiled :=
+  compile_source_program text output.compiled
+
+theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
 
 end Gabbro.Stage0.Pipeline.TaggedDispatchWitness

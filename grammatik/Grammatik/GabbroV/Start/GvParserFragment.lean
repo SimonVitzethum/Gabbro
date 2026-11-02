@@ -334,15 +334,15 @@ theorem uRestFehler_faellt (l : List SItemTief)
 /-- **A failing item check fails the elaboration.** `elabU` runs the certified expansion and
     then `uRestFehler`; a refused expanded item list refuses the unit. -/
 theorem elabU_bei_RestFehler (ms msE : List SItemTief) (e : String)
-    (hE : exportDeclarationUnit (uMembers ms) = .ok msE)
+    (hE : expandU ms = .ok msE)
     (hR : uRestFehler msE = .error e) :
     elabU ms = .error e := by
-  simp only [elabU, hE, hR]
+  simp only [elabU, hE, bind, Except.bind, elabUExpanded, checkCanonicalConstants, hR]
 
 /-- **Units whose expansion carries an off-fragment item are refused.** The premise is read where
     `elabU` checks: after the certified expansion. -/
 theorem elabU_verweigert_noch (items msE : List SItemTief)
-    (hE : exportDeclarationUnit (uMembers items) = .ok msE)
+    (hE : expandU items = .ok msE)
     (h : ∃ it ∈ msE, istGegenstand it = true) :
     ∃ e, elabU items = .error e := by
   have hR := uRestFehler_faellt _ h
