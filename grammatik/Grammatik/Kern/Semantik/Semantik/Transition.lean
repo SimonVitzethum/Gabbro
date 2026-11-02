@@ -37,6 +37,9 @@ theorem statement_frozen (write : TransitionWrite D Γ Λ) (frozen : write.Froze
   | glob global numeric source target guard =>
       simp only [statement, execStmt, orte_umTyp, Expr.orte, eval_umTyp, eval,
         World.lese, World.merke, List.map_nil, List.nil_append, writtenWorld]
+  | slotConst table field numeric index source target sourceRange targetRange guard =>
+      simp only [constEdge, statement, execStmt, orte_umTyp, Expr.orte, List.append_nil,
+        eval_umTyp, eval, World.lese, World.merke, List.map_nil, List.nil_append, writtenWorld]
 
 /-- The ordinary frame theorem is retained by the snapshot specification. -/
 theorem writtenWorld_frame (write : TransitionWrite D Γ Λ) (right : write.Permitted V)
@@ -62,6 +65,9 @@ theorem writtenWorld_target (write : TransitionWrite D Γ Λ) (frozen : write.Fr
   | glob global numeric source target guard =>
       simp [targetEq, eval_umTyp, eval, writtenWorld, World.schreibGlob,
         World.storeGlob, World.merke, Wert.umTyp_hin_her, wahr?]
+  | slotConst table field numeric index source target sourceRange targetRange guard =>
+      simp [constEdge, targetEq, eval_umTyp, eval, writtenWorld, schreibSlot_slots_same,
+        Wert.umTyp_hin_her, wahr?]
 
 /-- Later stores must preserve an earlier target. Distinct places discharge
     this obligation; aliases require an actual equal-result proof. -/

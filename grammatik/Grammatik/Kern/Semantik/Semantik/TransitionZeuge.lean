@@ -71,7 +71,7 @@ theorem writes_rights : ∀ write ∈ writes, write.Permitted (vertragVon D ()) 
   result_none := rfl
   resources := rfl
   requires_exact := rfl
-  ensures_exact := rfl
+  ensures_exact := HEq.rfl
   body_exact := rfl
 
 /-- Capture reads both targets from the same entry memory. In particular,

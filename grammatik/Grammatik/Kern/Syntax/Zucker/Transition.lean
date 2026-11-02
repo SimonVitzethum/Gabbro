@@ -21,8 +21,21 @@ inductive TransitionWrite (D : Deklaration) (Γ : Ctx) (Λ : List (Res D)) where
 
 namespace TransitionWrite
 
-/-- All operands are already captured parameters. This syntax condition
-    prevents a later write from re-reading an earlier write's target. -/
+/-- A finite constant edge of one table field at a captured index: both
+    endpoints are literals inside the field's range, so reading them
+    touches no memory. This is the write whose ordinary store the primitive
+    `Stmt.shift` agrees with under a legal entry. -/
+@[expose] def constEdge (table : D.Tab) (field : D.Feld table) {lo hi : Int}
+    (numeric : D.typ table field = .int lo hi) (index : Var Γ (.index (D.count table)))
+    (source target : Int) (sourceRange : lo ≤ source ∧ source ≤ hi)
+    (targetRange : lo ≤ target ∧ target ≤ hi) (guard : darf D table Λ) :
+    TransitionWrite D Γ Λ :=
+  .slot table field numeric (.var index)
+    (Expr.widen sourceRange.1 sourceRange.2 (Expr.lit source))
+    (Expr.widen targetRange.1 targetRange.2 (Expr.lit target)) guard
+
+/-- All operands are already captured parameters (or literals). This syntax
+    condition prevents a later write from re-reading an earlier write's target. -/
 inductive Frozen : TransitionWrite D Γ Λ → Prop where
   | slot (table : D.Tab) (field : D.Feld table) {lo hi : Int}
       (numeric : D.typ table field = .int lo hi)
@@ -32,6 +45,12 @@ inductive Frozen : TransitionWrite D Γ Λ → Prop where
   | glob (global : D.Glob) {lo hi : Int} (numeric : D.gtyp global = .int lo hi)
       (source target : Var Γ (.int lo hi)) (guard : gdarf D global Λ) :
       Frozen (.glob global numeric (.var source) (.var target) guard)
+  | slotConst (table : D.Tab) (field : D.Feld table) {lo hi : Int}
+      (numeric : D.typ table field = .int lo hi)
+      (index : Var Γ (.index (D.count table))) (source target : Int)
+      (sourceRange : lo ≤ source ∧ source ≤ hi) (targetRange : lo ≤ target ∧ target ≤ hi)
+      (guard : darf D table Λ) :
+      Frozen (constEdge table field numeric index source target sourceRange targetRange guard)
 
 /-- Write effects remain the ordinary function's permissions. -/
 @[expose] def Permitted (V : Vertrag D) : TransitionWrite D Γ Λ → Prop
@@ -99,10 +118,32 @@ structure TransitionExpansion (P : Programm D) (function : D.Fn) where
   result_none : D.erg function = none
   resources : Signatur.anfang D (D.signatur function) = (vertragVon D function).ende
   requires_exact : P.requires function = transitionRequires writes clause
-  ensures_exact : P.ensures function = (by
-    simpa only [result_none, ErgCtx, resources] using transitionEnsures writes)
+  /-- The result-less ensures context is the parameter context, so the
+      two expressions live at provably equal types. -/
+  ensures_exact : HEq (P.ensures function) (transitionEnsures writes)
   body_exact : P.rumpf function = transitionEnd (vertragVon D function) writes rights
     (transitionReturn (vertragVon D function) result_none (by rw [resources]; exact List.Perm.refl _))
+
+/-- Transport an expansion built in a context and resource list that are only
+    propositionally equal to the function's (the lowering builds it over the
+    parameter list of the source function and casts afterwards). -/
+@[expose] def TransitionExpansion.ofHEq {P : Programm D} {function : D.Fn}
+    (hΓ : Γ = D.params function) (hΛ : Λ = Signatur.anfang D (D.signatur function))
+    (writes : List (TransitionWrite D Γ Λ)) (clause : Expr D Γ Λ .bool)
+    (frozen : ∀ write ∈ writes, write.Frozen)
+    (rights : ∀ write ∈ writes, write.Permitted (vertragVon D function))
+    (result_none : D.erg function = none)
+    (resources : Λ = (vertragVon D function).ende)
+    (requires_exact : HEq (P.requires function) (transitionRequires writes clause))
+    (ensures_exact : HEq (P.ensures function) (transitionEnsures writes))
+    (body_exact : HEq (P.rumpf function) (transitionEnd (vertragVon D function) writes rights
+      (transitionReturn (vertragVon D function) result_none
+        (by rw [resources]; exact List.Perm.refl _)))) :
+    TransitionExpansion P function := by
+  subst hΓ
+  subst hΛ
+  exact { writes, clause, frozen, rights, result_none, resources, ensures_exact,
+    requires_exact := eq_of_heq requires_exact, body_exact := eq_of_heq body_exact }
 
 
 end Gabbro.Grammatik

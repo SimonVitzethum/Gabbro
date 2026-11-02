@@ -66,7 +66,7 @@ theorem guardedRights : ∀ w ∈ guardedWrites, w.Permitted (vertragVon guarded
   result_none := rfl
   resources := rfl
   requires_exact := rfl
-  ensures_exact := rfl
+  ensures_exact := HEq.rfl
   body_exact := rfl
 
 @[expose] def guardedEntry : World guardedD :=

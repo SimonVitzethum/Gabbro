@@ -54,7 +54,7 @@ theorem transition_call_inversion (P : Programm D) (O : Orakel D) (passes fuel :
     · cases success
     · cases success
 
-private theorem transitionReturn_world {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
+theorem transitionReturn_world {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
     (void : V.erg = none) (resources : Λ.Perm V.ende)
     (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
