@@ -265,15 +265,15 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have h1 := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldB hh).heldIn
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg h1)
+        have ihr := fun ρ' => block_gutB bo hbV rest σ1 ρ' (by boden_tac)
+          (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)
         cases e with
         | none =>
             simp only [Ausgang.weiterOpt] at h
-            exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)) σ' h)
+            exact g1.trans ((ihr _) σ' h)
         | some τ =>
             simp only [Ausgang.weiterOpt] at h
-            exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+            exact g1.trans ((ihr _).schrumpf σ' h)
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
@@ -284,15 +284,15 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 v ha
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg h1)
+        have ihr := fun ρ' => block_gutB bo hbV rest σ1 ρ' (by boden_tac)
+          (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)
         cases e with
         | none =>
             simp only [Ausgang.weiterOpt] at h
-            exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)) σ' h)
+            exact g1.trans ((ihr _) σ' h)
         | some τ =>
             simp only [Ausgang.weiterOpt] at h
-            exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+            exact g1.trans ((ihr _).schrumpf σ' h)
       · rename_i σ1 r ha
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg h1)
@@ -473,15 +473,15 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have h1 := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldB hh).heldIn
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg h1)
+        have ihr := fun ρ' => end_gutB bo hbV rest σ1 ρ' (by boden_tac)
+          (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)
         cases e with
         | none =>
             simp only [EndAusgang.weiterOpt] at h
-            exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)) σ' h)
+            exact g1.trans ((ihr _) σ' h)
         | some τ =>
             simp only [EndAusgang.weiterOpt] at h
-            exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+            exact g1.trans ((ihr _).schrumpf σ' h)
       · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execEnd] at h
@@ -492,15 +492,15 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · rename_i σ1 v ha
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg h1)
+        have ihr := fun ρ' => end_gutB bo hbV rest σ1 ρ' (by boden_tac)
+          (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)
         cases e with
         | none =>
             simp only [EndAusgang.weiterOpt] at h
-            exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)) σ' h)
+            exact g1.trans ((ihr _) σ' h)
         | some τ =>
             simp only [EndAusgang.weiterOpt] at h
-            exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac)
-              (heldB_weiter (fun L => held_nachSig_iff _ _ L) g1 hh)).schrumpf σ' h)
+            exact g1.trans ((ihr _).schrumpf σ' h)
       · rename_i σ1 r ha
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hp.hw hp.hg h1)

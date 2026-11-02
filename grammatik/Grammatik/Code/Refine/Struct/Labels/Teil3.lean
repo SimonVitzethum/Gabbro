@@ -32,7 +32,6 @@ theorem lowerB_lbl_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl �
     {Λ' : List (Res D)}
     (lo)
     (hi)
-    (Λ)
     (e)
     (lo')
     (hi')
@@ -83,7 +82,6 @@ theorem lowerEnd_lbl_narrowRequired (lay : Layout D) (cenv : List Reg) (lv : Lbl
     {Λ : List (Res D)}
     (lo)
     (hi)
-    (Λ)
     (e)
     (lo')
     (hi')
