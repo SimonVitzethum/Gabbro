@@ -303,6 +303,12 @@ inductive UStmt
   | ifEnde : UEns → UStmt
   /-- An array traversal binds its actual element under the private finite index. -/
   | arrayLoopBeg : String → USide → UEns → UStmt
+  /-- `reset A at i count n;` at a zero-initialized static array (C18): the static as
+      written and the two evaluated operands. The lowering refuses it until the checked
+      range-store expansion and the page-return bridge are proved; the whole-arena
+      `reset A;` keeps its counter store below. Appended at the end, so earlier
+      constructor positions keep their names. -/
+  | resetRange : String → USide → USide → UStmt
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per

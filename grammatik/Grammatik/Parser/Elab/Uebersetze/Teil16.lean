@@ -80,6 +80,8 @@ def beqUStmt : UStmt → UStmt → Bool
   | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
   | .arrayLoopBeg a source inv, .arrayLoopBeg b target other =>
       strEq a b && beqUSide source target && beqUEns inv other
+  | .resetRange a x n, .resetRange b y m =>
+    strEq a b && beqUSide x y && beqUSide n m
   | .ret a, .ret b => beqURet a b
   | .leave a, .leave b | .next a, .next b => strEq a b
   | .regRead a d r, .regRead b e s | .regReadElse a d r, .regReadElse b e s =>

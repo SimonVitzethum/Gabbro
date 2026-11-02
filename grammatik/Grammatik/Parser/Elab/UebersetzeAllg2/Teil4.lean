@@ -80,6 +80,10 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .assignRef r f v => lowAssignRefL u caller Γ fn Λ r f v
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
+  /- `reset A at i count n;` over a static array (C18): the checked range-store
+      expansion and the page-return bridge are not proved yet, so the lowering refuses
+      it by name instead of emitting an unchecked store loop. -/
+  | .resetRange .. => .error "lower: static-array reset range has no G form yet (C18)"
   | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindW .. | .tausch .. | .ifEnde .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
