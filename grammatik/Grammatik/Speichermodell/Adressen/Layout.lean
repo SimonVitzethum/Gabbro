@@ -4,9 +4,10 @@
 
   Machine G has no addresses: a table is a function of its index. A real memory lays the carriers out in bytes.
   `AdressLayout` is any such layout: an address space, a base and an element size per table, an offset and a size per
-  field, an address and a size per global. An address is a pair (space, byte): the closed tables and the globals lie
-  in space `0`; every OPEN region (`Deklaration.offen`, no element ceiling) has a space of its own and reaches up
-  without an end, so its growth can meet no other carrier. `LayoutOk` says what every layout a correct loader produces must satisfy: the
+  field, an address and a size per global. An address is a pair (backing region, byte). Backing regions map to
+  declared nominal data spaces; several distinct regions may have the same nominal space. Every OPEN region
+  (`Deklaration.offen`, no element ceiling) has its own backing identity and reaches up without an end, so its
+  growth can meet no other carrier. A nominal name alone establishes no separation. `LayoutOk` requires that the
   fields of an element lie inside it and apart, and the regions of different carriers lie apart.
 
   * `zelle_im_bereich` -- every byte of a cell `(t, k, f)` with `k` in the declared extent lies in the region of `t`;
@@ -23,11 +24,10 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
-/-- An address: an address space and a byte in it. -/
+/-- An address: a backing-region identity and a byte in it. -/
 abbrev Adresse : Type := Nat × Nat
 
-/-- **An address layout**: an address space, a base and an element size per table, an offset and a size per field;
-    an address and a size per global (globals lie in space `0`). -/
+/-- A byte layout with separate backing-region and declared nominal-space identities. -/
 structure AdressLayout (D : Deklaration) where
   raum : D.Tab → Nat
   basis : D.Tab → Nat
@@ -36,6 +36,10 @@ structure AdressLayout (D : Deklaration) where
   groesse : ∀ t, D.Feld t → Nat
   gbasis : D.Glob → Nat
   ggroesse : D.Glob → Nat
+  /-- The backing region of a global. -/
+  graum : D.Glob → Nat := fun _ => 0
+  /-- Realization of backing regions in the finite nominal-space registry. -/
+  nominal : Nat → Nat := fun _ => 0
 
 namespace AdressLayout
 
@@ -53,16 +57,19 @@ def inTabelle (t : D.Tab) (a : Adresse) : Prop :=
   a.1 = lay.raum t ∧ lay.basis t ≤ a.2 ∧ (D.offen t = true ∨ a.2 < lay.basis t + (D.count t).toNat * lay.breite t)
 
 /-- Byte `a` lies in the region of global `g`. -/
-def inGlobal (g : D.Glob) (a : Adresse) : Prop := a.1 = 0 ∧ lay.gbasis g ≤ a.2 ∧ a.2 < lay.gbasis g + lay.ggroesse g
+def inGlobal (g : D.Glob) (a : Adresse) : Prop :=
+  a.1 = lay.graum g ∧ lay.gbasis g ≤ a.2 ∧ a.2 < lay.gbasis g + lay.ggroesse g
 
 end AdressLayout
 
 /-- **What a correct layout satisfies.** -/
 structure LayoutOk (lay : AdressLayout D) : Prop where
-  /-- A closed table lies in space `0`, with the globals. -/
-  geschlossen : ∀ t, D.offen t = false → lay.raum t = 0
-  /-- An open region lies in a space other than `0`. -/
-  offen : ∀ t, D.offen t = true → lay.raum t ≠ 0
+  /-- A table's backing realizes its declared nominal space, which must exist. -/
+  tabellenRaum : ∀ t, D.tableSpace t < D.dataSpaces.length ∧
+    lay.nominal (lay.raum t) = D.tableSpace t
+  /-- An unbounded region has a distinct backing identity even within one nominal space. -/
+  offen : ∀ t, D.offen t = true →
+    (∀ t', t ≠ t' → lay.raum t ≠ lay.raum t') ∧ (∀ g, lay.raum t ≠ lay.graum g)
   /-- A field lies inside its element. -/
   feld : ∀ t (f : D.Feld t), lay.versatz t f + lay.groesse t f ≤ lay.breite t
   /-- Two fields of an element share no byte. -/
@@ -74,8 +81,24 @@ structure LayoutOk (lay : AdressLayout D) : Prop where
   tabGlob : ∀ t g a, lay.inTabelle t a → ¬ lay.inGlobal g a
   /-- Two globals share no byte. -/
   globale : ∀ g g' a, g ≠ g' → lay.inGlobal g a → ¬ lay.inGlobal g' a
+  /-- Globals obey the same declaration-to-backing correspondence as tables. -/
+  globalerRaum : ∀ g, D.globalSpace g < D.dataSpaces.length ∧
+    lay.nominal (lay.graum g) = D.globalSpace g := by
+      intro g; exact ⟨by decide, rfl⟩
 
 variable {lay : AdressLayout D}
+
+/-- A cell's backing realizes its table's declared logical space. -/
+theorem zelle_im_raum (hL : LayoutOk lay) {t : D.Tab} {k : Int} {f : D.Feld t}
+    {a : Adresse} (ha : lay.inZelle t k f a) : lay.nominal a.1 = D.tableSpace t := by
+  rw [ha.1]
+  exact (hL.tabellenRaum t).2
+
+/-- A global's bytes realize its declared logical space. -/
+theorem global_im_raum (hL : LayoutOk lay) {g : D.Glob} {a : Adresse}
+    (ha : lay.inGlobal g a) : lay.nominal a.1 = D.globalSpace g := by
+  rw [ha.1]
+  exact (hL.globalerRaum g).2
 
 /-- **A cell in its extent lies in the region of its table.** -/
 theorem zelle_im_bereich (hL : LayoutOk lay) {t : D.Tab} {k : Int} (hk : ImBereich D t k) (f : D.Feld t)

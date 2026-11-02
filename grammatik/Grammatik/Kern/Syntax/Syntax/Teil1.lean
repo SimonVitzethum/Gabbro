@@ -267,6 +267,13 @@ structure Deklaration where
       ghost -- `Geist.lean` says what that means. Default: none is ghost. -/
   geist : Tab → Bool := fun _ => false
   ggeist : Glob → Bool := fun _ => false
+  /-- Finite nominal data-space registry. A name alone promises no physical isolation. -/
+  dataSpaces : List String := ["normal"]
+  /-- The declared logical space of each table and global. -/
+  tableSpace : Tab → Nat := fun _ => 0
+  globalSpace : Glob → Nat := fun _ => 0
+  /-- Resolved owner identities; exclusive movement still needs the ownership rules. -/
+  ownerNr : Nat → Option Marke := fun _ => none
 
 attribute [instance] Deklaration.decTab Deklaration.decFeld Deklaration.decGlob
   Deklaration.decLock Deklaration.decMarke
