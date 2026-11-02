@@ -405,7 +405,7 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
 /-- The arms of a `match` on a tagged value: no phis, the register counter does not fall. -/
 theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
     (ov : Opd) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
       (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Lbl) (st st' : St) (blks : List Block),
       lowerAr lay cenv lv top W L ov arms lb k st = some (blks, st') →
       (∀ b ∈ blks, b.phis = []) ∧ st.r ≤ st'.r
@@ -430,7 +430,9 @@ theorem lowerAr_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top 
       · have a1 := S1.2.2
         have a2 := S2.2
         omega
-  | _, _, _, _, _, .cons (c := some (lo, hi)) b rest, lb, k, st, st', blks, h => by
+  | _, _, _, _, _, .cons (c := some τ) b rest, lb, k, st, st', blks, h => by
+      cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
+      rename_i lo hi
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h

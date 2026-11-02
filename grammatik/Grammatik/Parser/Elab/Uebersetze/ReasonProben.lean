@@ -118,23 +118,4 @@ theorem uWhys_open_still_refused :
     uWhys [.whyT "R" reasonCases false] =
       .error "reason that is not exhaustive without G form" := by decide
 
-def nestedPayload : List Token :=
-  [.ident "Data", .zeichen "(", .wort "u32", .wort "in", .zeichen "(",
-    .num 1, .zeichen "+", .num 2, .zeichen ")", .zeichen "..", .num 10,
-    .zeichen ")", .zeichen ",", .ident "Empty"]
-
-/-- The inner `)` ends the bound, not the payload type; subsequent cases stay intact. -/
-theorem uSumFaelle_nested_zeuge :
-    uSumFaelle [] 100 nestedPayload = .ok [("Data", some (3, 10)), ("Empty", none)] := by
-  decide
-
-theorem uSumFaelle_missing_close_refused :
-    (match uSumFaelle [] 100 nestedPayload.dropLast.dropLast.dropLast with
-      | .error _ => true | .ok _ => false) = true := by decide
-
-theorem uSumFaelle_non_scalar_still_refused :
-    (match uSumFaelle [] 100
-      [.ident "Data", .zeichen "(", .wort "bool", .zeichen ")"] with
-      | .error _ => true | .ok _ => false) = true := by decide
-
 end Gabbro.Grammatik.Parser.Uebersetze

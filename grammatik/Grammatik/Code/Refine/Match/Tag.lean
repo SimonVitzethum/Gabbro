@@ -28,7 +28,7 @@ variable {D : Deklaration} {V : Vertrag D}
 theorem onTag_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl)
     (O : Orakel D) (passes : Nat)
     (R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f)
-    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
     (v : Gabbro.Grammatik.Expr D Γ Λ (.sum cs))
     (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs)
     (IH : ∀ i : Fin cs.length, ArmBOk lay cenv lv O passes R (cs.get i) (garmT arms i))

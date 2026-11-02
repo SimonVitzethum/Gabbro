@@ -382,7 +382,7 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
     hands out labels from `st.l`; all labels are distinct. -/
 theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : Int) (W L : Nat)
     (ov : Opd) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Gabbro.Grammatik.Ty)}
       (arms : Gabbro.Grammatik.Arms D V l Γ Λ Λ' cs) (lb k : Nat) (st st' : St) (blks : List Block),
       lb + cs.length ≤ st.l → lowerAr lay cenv lv top W L ov arms lb k st = some (blks, st') →
       st.l ≤ st'.l ∧ (blks.map Block.lbl).Nodup ∧
@@ -405,7 +405,9 @@ theorem lowerAr_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) (top : 
       obtain ⟨m2, n2, a2⟩ := lowerAr_lbl lay cenv lv top W L ov rest (lb + 1) k s1 s2 b2
         (by show lb + 1 + cs'.length ≤ s1.l; have := W1.1; omega) hr
       exact lw_arm_cons (n' := cs'.length) hn' W1 ⟨m2, n2, a2⟩
-  | _, _, _, _, _, .cons (c := some (lo, hi)) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
+  | _, _, _, _, _, .cons (c := some τ) (cs := cs') b rest, lb, k, st, st', blks, hn, h => by
+      cases τ <;> try { simp only [lowerAr, reduceCtorEq] at h }
+      rename_i lo hi
       simp only [lowerAr] at h
       rcases hp : payCode top W L lo hi ov st.r with _ | ⟨cp, op, r1⟩
       · simp only [hp, reduceCtorEq] at h

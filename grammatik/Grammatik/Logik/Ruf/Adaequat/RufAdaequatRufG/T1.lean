@@ -128,7 +128,7 @@ inductive StmtR {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
       (a : Block D V l Γ Λ Λ') (hp : BlockR A C mr p) (ha : BlockR A C mr a) :
       StmtR A C mr (.onOption o p a)
   | onTag {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-      {cs : List (Option (Int × Int))} (v : Expr D Γ Λ (.sum cs))
+      {cs : List (Option Ty)} (v : Expr D Γ Λ (.sum cs))
       (arms : Arms D V l Γ Λ Λ' cs) (ha : ArmsR A C mr arms) :
       StmtR A C mr (.onTag v arms)
   | onWhy {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat}
@@ -254,11 +254,11 @@ inductive EndR {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
 
 inductive ArmsR {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
     Bool → {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
-    {cs : List (Option (Int × Int))} → Arms D V l Γ Λ Λ' cs → Prop where
+    {cs : List (Option Ty)} → Arms D V l Γ Λ Λ' cs → Prop where
   | nil {mr : Bool} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       ArmsR A C mr (.nil : Arms D V l Γ Λ Λ [])
   | cons {mr : Bool} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-      {c : Option (Int × Int)} {cs : List (Option (Int × Int))}
+      {c : Option Ty} {cs : List (Option Ty)}
       (b : Block D V l (ArmCtx Γ c) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs)
       (hb : BlockR A C mr b) (hr : ArmsR A C mr rest) : ArmsR A C mr (.cons b rest)
 

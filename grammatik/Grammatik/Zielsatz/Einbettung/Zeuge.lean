@@ -29,20 +29,10 @@ def passtE : D.Fn ⊕ Unit → Nat → Bool
   | .inr _, n => D.passt g₀ n
 
 /-- A value of the extension back in `D`: the callback stands for `g₀`. -/
-def zurueck : (τ : Ty) → Val (D.Fn ⊕ Unit) (passtE D g₀) τ → Wert D τ
-  | .int _ _, v => v
-  | .bool, v => v
-  | .opt _, v => v
-  | .sum _, v => v
-  | .why _, v => v
-  | .never, v => v
-  | .fl _ _, v => v
-  | .fnptr _, ⟨.inl f, h⟩ => ⟨f, h⟩
-  | .fnptr _, ⟨.inr _, h⟩ => ⟨g₀, h⟩
-  | .ptr _ _, v => v
-  | .ref _, v => v
-  | .arr τ _, v => fun j => zurueck τ (v j)
-  | .str _, v => v
+def zurueck (τ : Ty) (v : Val (D.Fn ⊕ Unit) (passtE D g₀) τ) : Wert D τ :=
+  Val.restrict id id (fun _ value => match value with
+    | ⟨.inl f, h⟩ => ⟨f, h⟩
+    | ⟨.inr _, h⟩ => ⟨g₀, h⟩) τ ((Ty.mapNumbers_id τ).symm ▸ v)
 
 /-- **The extension**: `D` and one callback outside it. -/
 def erweitert : Deklaration where
@@ -241,15 +231,14 @@ theorem arr_cast {F : Type} {P : F → Nat → Bool} {a b : Ty} {n : Nat}
   obtain rfl : a = b := (Ty.arr.inj h).1
   rfl
 
-theorem zurueck_cast : ∀ (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D τ),
-    zurueck D g₀ τ (h ▸ (einE D g₀).valE τ v) = v
-  | .arr τ n, h, v => by
-    funext j
-    exact (congrArg (zurueck D g₀ τ) (arr_cast (F := D.Fn ⊕ Unit) (P := passtE D g₀)
-      (a := (einE D g₀).tyE τ) (b := τ) h (fun j => (einE D g₀).valE τ (v j)) j)).trans
-      (zurueck_cast τ _ (v j))
-  | .int _ _, _, _ | .bool, _, _ | .opt _, _, _ | .sum _, _, _ | .why _, _, _ | .never, _, _
-  | .fl _ _, _, _ | .fnptr _, _, _ | .ptr _ _, _, _ | .ref _, _, _ | .str _, _, _ => rfl
+theorem zurueck_cast (τ : Ty) (h : (einE D g₀).tyE τ = τ) (v : Wert D τ) :
+    zurueck D g₀ τ (h ▸ (einE D g₀).valE τ v) = v := by
+  change Val.restrict id id (fun _ value => match value with
+    | ⟨.inl f, h⟩ => ⟨f, h⟩
+    | ⟨.inr _, h⟩ => ⟨g₀, h⟩) τ
+      (castW h.symm (castW h ((einE D g₀).valE τ v))) = v
+  rw [castW_symm]
+  exact Val.restrict_relocate id id _ _ (fun _ _ => rfl) τ v
 
 theorem sigTreu_einE : (einE D g₀).SigTreu where
   sigNr := fun n => (sigE_einE D g₀ (D.sigNr n)).symm

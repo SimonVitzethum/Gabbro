@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Semantik.Semantik
+public import Grammatik.Kern.Semantik.Semantik.T1.SummeTransport
 
 @[expose] public section
 
@@ -13,48 +14,35 @@ variable {D : Deklaration}
 /-! ## 1. Sums -/
 
 /-- The payload of a case as a raw number (a bare case: `0`). -/
-def nutzRoh : (c : Option (Int × Int)) → Nutzlast c → Int
+def nutzRoh : (c : Option Ty) → Nutzlast D.Fn D.passt c → Int
   | Option.none, _ => 0
-  | Option.some (_, _), z => z.n
+  | Option.some (.int _ _), z => z.n
+  | Option.some _, _ => 0
 
-theorem nutzPasst_nutzRoh : ∀ (c : Option (Int × Int)) (x : Nutzlast c),
-    nutzPasst c (nutzRoh c x) = some x
-  | Option.none, x => by
-      show (if (0 : Int) = 0 then some () else Option.none) = some x
-      rw [if_pos rfl]
-      rfl
-  | Option.some (lo, hi), z => by
-      show (if h : lo ≤ (z : Zahl lo hi).n ∧ (z : Zahl lo hi).n ≤ hi then
-        some ⟨(z : Zahl lo hi).n, h.1, h.2⟩ else Option.none) = some z
-      rw [dif_pos ⟨(z : Zahl lo hi).lo_le, (z : Zahl lo hi).le_hi⟩]
-      rfl
+theorem nutzPasst_nutzRoh : ∀ (c : Option Ty) (x : Nutzlast D.Fn D.passt c),
+    nutzWort c → nutzPasst c (nutzRoh c x) = some x
+  | none, x, _ => by cases x; rfl
+  | some τ, x, h => by
+      cases τ <;> try exact h.elim
+      rename_i lo hi
+      show (if h : lo ≤ x.n ∧ x.n ≤ hi then some ⟨x.n, h.1, h.2⟩ else none) = some x
+      rw [dif_pos ⟨x.lo_le, x.le_hi⟩]
+
+/-- A decoded raw payload has exactly a supported payload shape. -/
+theorem nutzPasst_wort (c : Option Ty) (n : Int) (v : Nutzlast D.Fn D.passt c)
+    (h : nutzPasst c n = some v) : nutzWort c := by
+  cases c with
+  | none => trivial
+  | some τ => cases τ <;> first | trivial | cases h
 
 /-- **The raw word of a `tagged` value**: `marke + |cases| * last`. -/
-def summeRoh (cs : List (Option (Int × Int))) (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) :
+def summeRoh (cs : List (Option Ty)) (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
     Int :=
   (v.1.val : Int) + fallZahl cs * nutzRoh (cs.get v.1) v.2
 
-/-- `summePasst` through its two digits. -/
-theorem summePasst_eq (cs : List (Option (Int × Int))) (n : Int) (i : Fin cs.length) (p : Int)
-    (hi : n % fallZahl cs = (i.val : Int)) (hp : n / fallZahl cs = p) :
-    summePasst cs n = (nutzPasst (cs.get i) p).map fun x => ⟨i, x⟩ := by
-  have hk : 0 < cs.length := Nat.lt_of_le_of_lt (Nat.zero_le _) i.2
-  unfold summePasst
-  rw [dif_pos hk]
-  dsimp only
-  rw [hp]
-  generalize hI : (⟨(n % fallZahl cs).toNat, fall_marke_lt cs n hk⟩ : Fin cs.length) = I
-  have e : I = i := by
-    rw [← hI]
-    apply Fin.ext
-    show (n % fallZahl cs).toNat = i.val
-    rw [hi, Int.toNat_natCast]
-  subst e
-  rfl
-
 /-- **Every `tagged` value is the decoding of its raw word.** -/
-theorem summePasst_voll (cs : List (Option (Int × Int)))
-    (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) : summePasst cs (summeRoh cs v) = some v := by
+theorem summePasst_voll (cs : List (Option Ty))
+    (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) (hv : sumWort cs = true) : summePasst cs (summeRoh cs v) = some v := by
   have hk : (0 : Int) < fallZahl cs := by
     have := v.1.2
     unfold fallZahl
@@ -71,7 +59,7 @@ theorem summePasst_voll (cs : List (Option (Int × Int)))
   have hdiv : summeRoh cs v / fallZahl cs = nutzRoh (cs.get v.1) v.2 := by
     unfold summeRoh
     rw [Int.add_mul_ediv_left _ _ (Int.ne_of_gt hk), Int.ediv_eq_zero_of_lt hi0 hi1, Int.zero_add]
-  rw [summePasst_eq cs _ v.1 _ hmod hdiv, nutzPasst_nutzRoh]
+  rw [summePasst_eq cs _ v.1 _ hv hmod hdiv, nutzPasst_nutzRoh _ _ (sumWort_get cs hv v.1)]
   rfl
 
 /-! ## 2. Floats -/
@@ -127,6 +115,7 @@ theorem zeigerPasst_voll (m : Nat) (v : {f : D.Fn // D.passt f m = true}) :
 /-- The values an answer can have: every value, and for a float a well-formed one (every
     value the kernel IEEE model computes is well-formed, `GleitkommaBits.lean`). -/
 def WertOk : (τ : Ty) → Wert D τ → Prop
+  | .sum cs, _ => sumWort cs = true
   | .fl _ _, v => Gleitkomma.wf Gleitkomma.f64 (v : Gleit _ _).x
   -- an aggregate is not one raw word: no answer has such a value
   | .arr _ _, _ => False
@@ -156,7 +145,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
           refine ⟨fun _ => Option.none, k.n, ?_⟩
           simp only [einpassen]
           rw [dif_pos ⟨k.lo_le, k.le_hi⟩]
-  | .sum cs, v, _ => ⟨fun _ => Option.none, summeRoh cs v, summePasst_voll cs v⟩
+  | .sum cs, v, h => ⟨fun _ => Option.none, summeRoh cs v, summePasst_voll cs v h⟩
   | .why m, r, _ => ⟨fun _ => Option.none, ((r : Fin m).val : Int), by
       simp only [einpassen]
       rw [dif_pos ⟨Int.natCast_nonneg _, by have := (r : Fin m).2; omega⟩]
@@ -179,7 +168,11 @@ theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v 
   | _, .int _ _, _, _, _ => trivial
   | _, .bool, _, _, _ => trivial
   | _, .opt _, _, _, _ => trivial
-  | _, .sum _, _, _, _ => trivial
+  | _, .sum cs, n, v, h => by
+      unfold einpassen summePasst at h
+      split at h
+      · assumption
+      · cases h
   | _, .why _, _, _, _ => trivial
   | _, .never, _, _, _ => trivial
   | _, .fnptr _, _, _, _ => trivial

@@ -30,7 +30,7 @@ theorem StmtR.onOption_inv {Λ Λ' : List (Res D)} {n : Int} {o : Expr D Γ Λ (
   | call _ _ hg _ => simp only [Stmt.rufZiel, reduceCtorEq] at hg
   | onOption _ _ _ hp ha => exact ⟨hp, ha⟩
 
-theorem StmtR.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem StmtR.onTag_inv {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {v : Expr D Γ Λ (.sum cs)} {arms : Arms D V l Γ Λ Λ' cs}
     (h : StmtR A C mr (.onTag v arms)) : ArmsR A C mr arms := by
   cases h with
@@ -152,8 +152,8 @@ theorem BlockR.gleitNarrow_inv {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
   cases h with
   | floatNarrow _ _ _ _ _ hs hr => exact ⟨rfl, hr, hs, rfl⟩
 
-theorem ArmsR.cons_inv {Λ Λ' : List (Res D)} {c : Option (Int × Int)}
-    {cs : List (Option (Int × Int))} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+theorem ArmsR.cons_inv {Λ Λ' : List (Res D)} {c : Option Ty}
+    {cs : List (Option Ty)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
     {rest : Arms D V l Γ Λ Λ' cs} (h : ArmsR A C mr (.cons b rest)) :
     BlockR A C mr b ∧ ArmsR A C mr rest := by
   cases h with

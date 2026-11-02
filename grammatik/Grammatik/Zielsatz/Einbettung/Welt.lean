@@ -22,11 +22,28 @@ open Gabbro.Grammatik
 
 variable {D D' : Deklaration}
 
-/-- A type that is not a function pointer: its values name no function. -/
+mutual
+/-- A type whose complete value contains no function-pointer leaf. -/
 def _root_.Gabbro.Grammatik.Ty.zeigerfrei : Ty → Bool
   | .fnptr _ => false
   | .arr τ _ => τ.zeigerfrei
+  | .sum cs => Ty.casesZeigerfrei cs
   | _ => true
+termination_by τ => sizeOf τ
+
+/-- Sum traversal for the same pointer-free predicate, without a depth bound. -/
+def _root_.Gabbro.Grammatik.Ty.casesZeigerfrei : List (Option Ty) → Bool
+  | [] => true
+  | none :: cs => Ty.casesZeigerfrei cs
+  | some τ :: cs => τ.zeigerfrei && Ty.casesZeigerfrei cs
+termination_by cs => sizeOf cs
+end
+
+@[simp] theorem _root_.Gabbro.Grammatik.Ty.casesZeigerfrei_eq_all (cs : List (Option Ty)) :
+    Ty.casesZeigerfrei cs = cs.all (fun | none => true | some τ => τ.zeigerfrei) := by
+  induction cs with
+  | nil => rfl
+  | cons c cs ih => cases c <;> simp only [Ty.casesZeigerfrei, List.all_cons, ih, Bool.true_and]
 
 /-- A value transported along a type equation. -/
 def castW {τ σ : Ty} (h : τ = σ) (v : Wert D τ) : Wert D σ := h ▸ v
@@ -93,32 +110,34 @@ def Rueck.zeiger (K : E.Rueck) (n : Nat) (f' : D'.Fn) (h' : D'.passt f' (E.num n
 variable (K : E.Rueck)
 
 /-- **A value of `D'` back in `D`**: a function pointer to its name in `D`, everything else as is. -/
-def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ
-  | .int _ _, v => v
-  | .bool, v => v
-  | .opt _, v => v
-  | .sum _, v => v
-  | .why _, v => v
-  | .never, v => v
-  | .fl _ _, v => v
-  | .fnptr n, v => K.zeiger n v.1 v.2
-  | .ptr _ _, v => v
-  | .ref _, v => v
-  | .arr τ _, v => fun j => valZ τ (v j)
-  | .str _, v => v
+def valZ : (τ : Ty) → Wert D' (E.tyE τ) → Wert D τ :=
+  Val.restrict E.num E.tnum (fun n v => K.zeiger n v.1 v.2)
+
+/-- Restricting an embedded value returns its complete source, including payloads. -/
+theorem valZ_valE (τ : Ty) (v : Wert D τ) : E.valZ K τ (E.valE τ v) = v :=
+  Val.restrict_relocate E.num E.tnum _ _ (fun n value => by
+    obtain ⟨f, h⟩ := value
+    simp only [Rueck.zeiger, E.fnZ_fn]) τ v
 
 /-- **A value of `D` beside a value of `D'`**: equal through the embedding, except that a head of
     `D` stands beside every function outside the image of its signature. -/
 def VRel : (τ : Ty) → Wert D τ → Wert D' (E.tyE τ) → Prop
   | .fnptr n, v, v' => v'.1 = E.fn v.1 ∨ (E.fnZ v'.1 = none ∧ K.rep n = some v.1)
   | .arr τ _, v, v' => ∀ j, VRel τ (v j) (v' j)
+  | .sum cs, v, v' => E.valZ K (.sum cs) v' = v
   | τ, v, v' => v' = E.valE τ v
+
+/-- Payload relations use the same function representatives as all other values. -/
+def NRel : (c : Option Ty) → Nutzlast D.Fn D.passt c →
+    Nutzlast D'.Fn D'.passt (c.map E.tyE) → Prop
+  | none, _, _ => True
+  | some τ, v, v' => E.VRel K τ v v'
 
 theorem vrel_valE : ∀ (τ : Ty) (v : Wert D τ), E.VRel K τ v (E.valE τ v)
   | .int _ _, _ => rfl
   | .bool, _ => rfl
   | .opt _, _ => rfl
-  | .sum _, _ => rfl
+  | .sum cs, v => E.valZ_valE K (.sum cs) v
   | .why _, _ => rfl
   | .never, _ => rfl
   | .fl _ _, _ => rfl
@@ -155,7 +174,7 @@ theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.V
   | .int _ _, _, _, h => by subst h; rfl
   | .bool, _, _, h => by subst h; rfl
   | .opt _, _, _, h => by subst h; rfl
-  | .sum _, _, _, h => by subst h; rfl
+  | .sum _, _, _, h => h
   | .why _, _, _, h => by subst h; rfl
   | .never, _, _, h => by subst h; rfl
   | .fl _ _, _, _, h => by subst h; rfl
@@ -180,13 +199,73 @@ theorem valZ_vrel : ∀ (τ : Ty) {v : Wert D τ} {v' : Wert D' (E.tyE τ)}, E.V
   | .arr τ _, _, _, h => funext fun j => valZ_vrel τ (h j)
   | .str _, _, _, h => by subst h; rfl
 
+/-- Restricting related payloads returns the complete source payload. -/
+theorem nrel_valZ : ∀ (c : Option Ty) (v : Nutzlast D.Fn D.passt c)
+    (v' : Nutzlast D'.Fn D'.passt (c.map E.tyE)), E.NRel K c v v' →
+      Nutzlast.restrict E.num E.tnum (fun n value => K.zeiger n value.1 value.2) c v' = v
+  | none, v, v', _ => by cases v; cases v'; rfl
+  | some τ, _, _, h => E.valZ_vrel K τ h
+
+/-- The value relation names exactly the unique source produced by restriction.
+    For sums this recursively compares the active tag and the complete payload;
+    foreign function representatives inside a payload remain visible. -/
+theorem vrel_iff_valZ (τ : Ty) (v : Wert D τ) (v' : Wert D' (E.tyE τ)) :
+    E.VRel K τ v v' ↔ E.valZ K τ v' = v :=
+  ⟨E.valZ_vrel K τ, fun h => h ▸ E.vrel_valZ K τ v'⟩
+
+mutual
+/-- Pointer-free values have a two-sided transport even when the larger
+    declaration also contains foreign function representatives. -/
+theorem valE_valZ_frei : ∀ (τ : Ty), τ.zeigerfrei = true →
+    ∀ v : Wert D' (E.tyE τ), E.valE τ (E.valZ K τ v) = v
+  | .int _ _, _, _ | .bool, _, _ | .opt _, _, _ | .why _, _, _ | .never, _, _
+  | .fl _ _, _, _ | .ptr _ _, _, _ | .ref _, _, _ | .str _, _, _ => rfl
+  | .fnptr _, h, _ => by simp only [Ty.zeigerfrei, Bool.false_eq_true] at h
+  | .arr τ _, h, v => funext fun i => E.valE_valZ_frei K τ h (v i)
+  | .sum cs, h, v => by
+    simp only [Ty.zeigerfrei, Ty.casesZeigerfrei_eq_all] at h
+    exact E.valE_valZSum_frei K cs h v
+termination_by τ _ _ => sizeOf τ
+
+theorem valE_valZSum_frei : ∀ (cs : List (Option Ty)),
+    (cs.all fun | none => true | some τ => τ.zeigerfrei) = true →
+    ∀ v : Wert D' (.sum (Ty.mapCases E.num E.tnum cs)),
+      Val.relocateSum E.num E.tnum
+        (fun _ value => ⟨E.fn value.1, (E.passt value.1 _).trans value.2⟩) cs
+        (Val.restrictSum E.num E.tnum (fun n value => K.zeiger n value.1 value.2) cs v) = v
+  | [], _, ⟨i, _⟩ => i.elim0
+  | none :: _, _, ⟨⟨0, _⟩, _⟩ => rfl
+  | some τ :: _, h, ⟨⟨0, _⟩, v⟩ => by
+    apply Sigma.ext rfl
+    exact heq_of_eq (E.valE_valZ_frei K τ (Bool.and_eq_true.mp h).1 v)
+  | none :: cs, h, ⟨⟨i + 1, hi⟩, v⟩ =>
+    congrArg (fun z : Wert D' (.sum (Ty.mapCases E.num E.tnum cs)) =>
+      (⟨z.1.succ, z.2⟩ : Wert D' (.sum (none :: Ty.mapCases E.num E.tnum cs))))
+      (E.valE_valZSum_frei K cs (Bool.and_eq_true.mp h).2
+        ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+  | some τ :: cs, h, ⟨⟨i + 1, hi⟩, v⟩ =>
+    congrArg (fun z : Wert D' (.sum (Ty.mapCases E.num E.tnum cs)) =>
+      (⟨z.1.succ, z.2⟩ : Wert D' (.sum (some (E.tyE τ) :: Ty.mapCases E.num E.tnum cs))))
+      (E.valE_valZSum_frei K cs (Bool.and_eq_true.mp h).2
+        ⟨⟨i, Nat.lt_of_succ_lt_succ hi⟩, v⟩)
+termination_by cs _ _ => sizeOf cs
+end
+
 /-- Pointer-free values are related exactly when they are equal through the embedding. -/
 theorem vrel_frei : ∀ (τ : Ty), τ.zeigerfrei = true → ∀ (v : Wert D τ) (v' : Wert D' (E.tyE τ)),
     E.VRel K τ v v' ↔ v' = E.valE τ v
   | .int _ _, _, _, _ => Iff.rfl
   | .bool, _, _, _ => Iff.rfl
   | .opt _, _, _, _ => Iff.rfl
-  | .sum _, _, _, _ => Iff.rfl
+  | .sum cs, h, v, v' => by
+      constructor
+      · intro hv
+        have ht := E.valE_valZ_frei K (.sum cs) h v'
+        rw [hv] at ht
+        exact ht.symm
+      · intro hv
+        rw [hv]
+        exact E.valZ_valE K (.sum cs) v
   | .why _, _, _, _ => Iff.rfl
   | .never, _, _, _ => Iff.rfl
   | .fl _ _, _, _, _ => Iff.rfl

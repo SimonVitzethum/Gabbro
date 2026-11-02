@@ -148,9 +148,9 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
   | _, _, _, .intBuiltin2 _ a b => "Expr.intBuiltin2" :: "Ty.int" :: exprM a ++ exprM b
   | _, _, _, .count _ body => "Expr.count" :: "Ty.int" :: exprM body
 
-def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)}, NutzlastExpr D Γ Λ o → List String
+def nutzM : ∀ {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty}, NutzlastExpr D Γ Λ o → List String
   | _, _, _, .empty => ["NutzlastExpr.empty"]
-  | _, _, _, .num e => "NutzlastExpr.num" :: exprM e
+  | _, _, _, .val e => "NutzlastExpr.val" :: exprM e
 end
 
 /-- The members of an argument list. -/
@@ -251,7 +251,7 @@ def endStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, En
   | _, _, _, .next .. => []
 
 /-- The statements directly in the arms of a tag match. -/
-def armsStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
+def armsStmts {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String
   | _, _, _, _, _, .nil => []
   | _, _, _, _, _, .cons b rest => blockStmts b ++ armsStmts rest
@@ -340,7 +340,7 @@ def endM : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}, Endblock D V l Γ Λ �
   | _, _, _, .exchange _ neu _ _ rest => "Endblock.exchange" :: exprM neu ++ endM rest
   | _, _, _, .ite c t e => "Endblock.ite" :: exprM c ++ endM t ++ endM e
 
-def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))},
+def armsM : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)},
     Arms D V l Γ Λ Λ' cs → List String
   | _, _, _, _, _, .nil => ["Arms.nil"]
   | _, _, _, _, _, .cons b rest => "Arms.cons" :: blockM b ++ armsM rest

@@ -93,7 +93,7 @@ theorem ergS_rep {E : Sz (SE D Γ Λ)} {K : Nat} (hE : ERU E K) {o : Option Ty} 
     · glfertig
 
 theorem armsS_rep {O : Orakel V} {K : Nat} (hO : ORU O K) :
-    ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option (Int × Int))} {Λ' : List (Res D)}
+    ∀ {Γ : Ctx} {Λ : List (Res D)} {cs : List (Option Ty)} {Λ' : List (Res D)}
       (a : Arms D V l Γ Λ Λ' cs), groesseArms a ≤ K →
       ∃ a' : Arms D V l Γ Λ Λ' cs,
         (⟨Λ', a'⟩ : Σ Λ' : List (Res D), Arms D V l Γ Λ Λ' cs) ∈ armsS O l Γ Λ cs (groesseArms a') ∧ GlArms a' a

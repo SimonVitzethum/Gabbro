@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 public import Grammatik.Kern.Syntax.Typen.Reason
+public import Grammatik.Kern.Syntax.Typen.Shape
 
 @[expose] public section
 
@@ -38,44 +39,6 @@ namespace Gabbro.Grammatik
 
 /-! ## 1. Die Typen -/
 
-/-- Die Typen der Kernsprache. -/
-inductive Ty where
-  /-- `intty "in" range` -- eine Zahl in `lo .. hi`. -/
-  | int (lo hi : Int)
-  | bool
-  /-- `option index into T` -- abwesend, oder ein Index in `0 ..< n`. -/
-  | opt (n : Int)
-  /-- `tagged type` -- die Faelle, je mit oder ohne Zahl-Nutzlast im Bereich. -/
-  | sum (cases : List (Option (Int × Int)))
-  /-- `reason` -- `n` Gruende. -/
-  | why (n : Nat)
-  /-- `never` -- der Typ ohne Wert: die Antwort einer `divergent`/`prim` Funktion. -/
-  | never
-  /-- `f32`/`f64 in lo .. hi` («F») -- die Schranken als Brueche `(z, n)`, weil `0.5` eine
-      Schranke ist. Der Wert ist eine ENDLICHE Gleitkommazahl der Maschine im Bereich. -/
-  | fl (lo hi : Int × Int)
-  /-- `fn(…) -> T effects {…} costs …` -- a function pointer («B8»): the value is a function whose
-      own signature CONFORMS to signature number `sig` (`Deklaration.passt`, `SigPasst`; structural
-      since 2026-10-21). -/
-  | fnptr (sig : Nat)
-  /-- `ptr<space, rights> T` -- ein Zeiger auf den Traeger Nummer `t` (M3). Der Wert ist die
-      FAEHIGKEIT, `t` anzusprechen; jeder Zugriff hindurch braucht die Waechter von `t`
-      wie ein direkter. Zwei Zeiger auf `t` sind damit zwei Namen fuer EINE Welt unter EINEM
-      Waechter -- der Alias kostet keine Sicherheit, nur Logik (§15.8). -/
-  | ptr (t : Nat) (rw : Bool)
-  /-- `index into T` at an open table `T` -- a reference into the OPEN table number `t` (a region without a declared element ceiling,
-      `Deklaration.offen`). The value is a cell number without an upper bound. A reference is made ONLY by the program's
-      memory provider: the answer of a provider item (`syscall`/`extern`), whose contract (user logic) says the cell
-      is fresh. That the provider has memory to give is user logic too (Simon, 2026-10-24: OOM is user logic). G itself makes no reference, and never one
-      from an integer. Every access through it carries the guards of `t` like a slot access. -/
-  | ref (t : Nat)
-  /-- `[T; N]` as a VALUE (2026-10-25, Simon: aggregate values in G, lifting O15): `n` values of `τ`. Passed,
-      returned and bound by copy; an element is read and replaced by index. -/
-  | arr (τ : Ty) (n : Nat)
-  /-- `string max N` as a VALUE (lane 261, in G since 2026-10-25): at most `n` bytes. -/
-  | str (n : Nat)
-  deriving DecidableEq, Repr
-
 /-- Ein Index in `0 ..< n`: der Typ, den `index into T` erzeugt. -/
 abbrev Ty.index (n : Int) : Ty := .int 0 (n - 1)
 
@@ -86,11 +49,6 @@ structure Zahl (lo hi : Int) where
   n : Int
   lo_le : lo ≤ n
   le_hi : n ≤ hi
-
-/-- Die Nutzlast eines Falls. -/
-def Nutzlast : Option (Int × Int) → Type
-  | none => Unit
-  | some (lo, hi) => Zahl lo hi
 
 /-- **The model's float: an IEEE-754 binary64 value as DATA** (`Gleitkomma.lean`, the
     kernel-computable model; until the switch of 2026-09-14 this was Lean's opaque
@@ -139,7 +97,10 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .int lo hi => Zahl lo hi
   | .bool => Bool
   | .opt n => Option (Zahl 0 (n - 1))
-  | .sum cs => Σ i : Fin cs.length, Nutzlast (cs.get i)
+  | .sum cs => Σ i : Fin cs.length,
+      match cs.get i with
+      | none => Unit
+      | some τ => Val F passt τ
   | .why n => Fin n
   | .never => Empty
   | .fl lo hi => Gleit lo hi
@@ -148,6 +109,18 @@ def Val (F : Type) (passt : F → Nat → Bool) : Ty → Type
   | .ref _ => Nat
   | .arr τ n => Fin n → Val F passt τ
   | .str n => { bs : List (Zahl 0 255) // bs.length ≤ n }
+termination_by τ => sizeOf τ
+decreasing_by
+  all_goals first
+    | decreasing_trivial
+    | have h := List.sizeOf_get cs i
+      simp_all only [Ty.sum.sizeOf_spec, Option.some.sizeOf_spec]
+      omega
+
+/-- The selected payload uses the same function image as its enclosing value. -/
+def Nutzlast (F : Type) (passt : F → Nat → Bool) : Option Ty → Type
+  | none => Unit
+  | some τ => Val F passt τ
 
 /-- The cell number of a reference. -/
 def Val.zelle {F : Type} {passt : F → Nat → Bool} {n : Nat} (v : Val F passt (.ref n)) : Nat := v

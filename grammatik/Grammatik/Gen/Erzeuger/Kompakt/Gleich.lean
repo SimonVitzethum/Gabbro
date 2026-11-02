@@ -90,7 +90,7 @@ structure GlN [Aufz D] [Zahlen] (e' e : Endblock D V l Γ Λ) : Prop where
   groesse : groesseEnd e' ≤ groesseEnd e
 
 /-- `a'` stands for the arms `a`. -/
-structure GlArms [Aufz D] [Zahlen] {Λ' : List (Res D)} {cs : List (Option (Int × Int))} (a' a : Arms D V l Γ Λ Λ' cs) :
+structure GlArms [Aufz D] [Zahlen] {Λ' : List (Res D)} {cs : List (Option Ty)} (a' a : Arms D V l Γ Λ Λ' cs) :
     Prop where
   m : ∀ A : Merkmal D, mArms A a' = mArms A a
   g : ∀ K Rg, a'.gOk K Rg = a.gOk K Rg

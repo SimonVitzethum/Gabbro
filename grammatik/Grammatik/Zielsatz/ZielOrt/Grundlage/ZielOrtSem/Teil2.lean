@@ -12,10 +12,10 @@ variable (O : Orakel D) (passes : Nat)
   (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D}
 variable {l : Bool} {Γ : Ctx}
 
-theorem semZ_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem semZ_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
     (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
     (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast none)
+    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
     (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
     semZ O passes R (.dann b (.dann rest k)) (σ.lese Λ v.orte) (armEnv nutz ρ) =
       semZ O passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ := by
@@ -340,16 +340,16 @@ theorem okZ_ende_cons {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
 
 /-- The chosen arm of `onTag` is in the fragment and reads inside the arms. -/
 theorem armWahlG_orteP {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     blockOrteP P (armWahlG arms v).2.1 ⊆ armsOrteP P arms
   | _, .nil, ⟨⟨k, hk⟩, _⟩ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩ => fun _ hx => List.mem_append_left _ hx
   | _, .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩ => fun _ hx =>
       List.mem_append_right _ (armWahlG_orteP rest _ hx)
 
-theorem armWahlG_orteP' {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
-    (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) {c : Option (Int × Int)}
-    {b : Block D V l (ArmCtx Γ c) Λ Λ'} {nutz : Nutzlast c}
+theorem armWahlG_orteP' {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) {c : Option Ty}
+    {b : Block D V l (ArmCtx Γ c) Λ Λ'} {nutz : Nutzlast D.Fn D.passt c}
     (hw : armWahlG arms v = ⟨c, b, nutz⟩) : blockOrteP P b ⊆ armsOrteP P arms := by
   have h := armWahlG_orteP (P := P) arms v
   rw [hw] at h

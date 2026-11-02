@@ -103,7 +103,7 @@ theorem rufeB_mB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
   | _, _, _, _, .floatOf _ _ _ rest => by simp only [rufeB, mB, rufeB_mB rest]
   | _, _, _, _, .floatNarrow _ _ _ sonst rest => by simp only [rufeB, mB, rufeE_mE sonst, rufeB_mB rest]
 
-theorem rufeArms_mArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem rufeArms_mArms : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs), rufeArms Z ZS true arms = mArms ⟨Z, ZS, fun _ => true⟩ arms
   | _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, .cons b rest => by simp only [rufeArms, mArms, rufeB_mB b, rufeArms_mArms rest]
@@ -242,7 +242,7 @@ theorem rufeB_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : 
       simp only [befB, befund_und_ewig, Bool.or_eq_false_iff] at h
       simp only [rufeB, rufeE_ohneEwig sonst eb ie h.1, rufeB_ohneEwig rest eb ie h.2]
 
-theorem rufeArms_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem rufeArms_ohneEwig : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (eb ie : Bool), (befArms eb ie arms).ewig = false →
       rufeArms Z ZS false arms = rufeArms Z ZS true arms
   | _, _, _, _, _, .nil, _, _, _ => rfl

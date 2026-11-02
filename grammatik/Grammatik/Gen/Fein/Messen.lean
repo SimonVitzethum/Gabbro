@@ -29,7 +29,7 @@ def Kenner.mitM : Kenner D :=
 /-- **The filtered body tables of a member**: per function the bodies by size up to `nb` that bring a fine cell or a
     register member not seen before (the filter `okFuer` of components 3 and 8 as in `Spez.tabellen`). A search aid
     for fine-cell witnesses, not the coverage driver's tables: measured 2026-10-22, the novelty filter drops the
-    payload case `NutzlastExpr.num` of member 12 that the unfiltered tables reach at size 7. -/
+    payload case `NutzlastExpr.val` of member 12 that the unfiltered tables reach at size 7. -/
 def _root_.Gabbro.Grammatik.Gen.Spez.tabellenF (z : Spez) (nb : Nat) (p3 p8 : Bool) :
     List (Σ f : z.deklaration.Fn, List (List (Rumpf z.deklaration f))) :=
   letI : Zahlen := z.zahlen

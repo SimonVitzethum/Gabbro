@@ -94,10 +94,10 @@ theorem ergWert_ru {τ : Ty} : ∀ {e : Option Ty} (he : e = some τ)
     ergWert (D := D.mitRuhe) he' (ergR e v) = valR τ (ergWert he v)
   | _, rfl, _, _ => rfl
 
-theorem armEnv_ru {Γ : Ctx} : ∀ {c : Option (Int × Int)} (nutz : Nutzlast c) (ρ : Env D Γ),
-    HEq (envR (armEnv nutz ρ)) (armEnv (D := D.mitRuhe) nutz (envR ρ))
+theorem armEnv_ru {Γ : Ctx} : ∀ {c : Option Ty} (nutz : Nutzlast D.Fn D.passt c) (ρ : Env D Γ),
+    HEq (envR (armEnv nutz ρ)) (armEnv (D := D.mitRuhe) (nutzR c nutz) (envR ρ))
   | none, _, _ => HEq.rfl
-  | some (_, _), _, _ => HEq.rfl
+  | some _, _, _ => HEq.rfl
 
 theorem map_valR_int (lo hi : Int) (l : List (Zahl lo hi)) :
     l.map (valR (D := D) (.int lo hi)) = l := by

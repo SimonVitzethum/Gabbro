@@ -155,7 +155,7 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
 
 theorem NutzlastExpr.orte_darf : (e : NutzlastExpr D Γ Λ c) → ∀ o ∈ e.orte, OrtDarf Λ o
   | .empty, _, h => by simp only [NutzlastExpr.orte, List.not_mem_nil] at h
-  | .num e, o, h => e.orte_darf o h
+  | .val e, o, h => e.orte_darf o h
 end
 theorem Args.orte_darf : (a : Args D Γ Λ τs) → ∀ o ∈ a.orte, OrtDarf Λ o
   | .nil, _, h => by simp only [orte, List.not_mem_nil] at h
@@ -340,7 +340,7 @@ theorem GutAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
   intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
     (subst hs; exact h _ rfl)
 
-theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option (Int × Int))
+theorem GutAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
     {o : Ausgang V l (ArmCtx Γ c)} (h : GutAusgang W G σ o) :
     GutAusgang W G σ (o.schrumpfArm c) := by
   cases c with

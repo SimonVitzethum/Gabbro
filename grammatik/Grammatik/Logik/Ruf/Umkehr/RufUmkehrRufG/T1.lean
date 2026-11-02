@@ -101,7 +101,7 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallInd .. => false
 
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
+    {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Bool
   | .nil => true
   | .cons b rest => b.kOk && rest.kOk
 
@@ -112,7 +112,7 @@ def GrundArms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 end
 theorem armWahlG_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     arms.kOk = true → (armWahlG arms v).2.1.kOk = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => by
@@ -134,9 +134,9 @@ theorem grundWahlG_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       exact grundWahlG_kOk rest _ h.2
 
 theorem armWahlG_kOk' {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs)
-    (v : Wert D (.sum cs)) {c : Option (Int × Int)} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
-    {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.kOk = true) :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (v : Wert D (.sum cs)) {c : Option Ty} {b : Block D V l (ArmCtx Γ c) Λ Λ'}
+    {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩) (h : arms.kOk = true) :
     b.kOk = true := by
   have h0 := armWahlG_kOk arms v h
   rw [hw] at h0
@@ -144,16 +144,16 @@ theorem armWahlG_kOk' {V : Vertrag D} {l : Bool} {Γ : Ctx}
 
 theorem armWahlG_R {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} {mr l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
+    ∀ {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
     ArmsR A C mr arms → BlockR A C mr (armWahlG arms v).2.1
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
   | _, .cons _ _, ⟨⟨0, _⟩, _⟩, h => h.cons_inv.1
   | _, .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩, h => armWahlG_R rest _ h.cons_inv.2
 
 theorem armWahlG_R' {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} {mr l : Bool}
-    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
-    (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) {c : Option (Int × Int)}
-    {b : Block D V l (ArmCtx Γ c) Λ Λ'} {nutz : Nutzlast c} (hw : armWahlG arms v = ⟨c, b, nutz⟩)
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
+    (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) {c : Option Ty}
+    {b : Block D V l (ArmCtx Γ c) Λ Λ'} {nutz : Nutzlast D.Fn D.passt c} (hw : armWahlG arms v = ⟨c, b, nutz⟩)
     (h : ArmsR A C mr arms) : BlockR A C mr b := by
   have h1 := armWahlG_R arms v h
   rw [hw] at h1

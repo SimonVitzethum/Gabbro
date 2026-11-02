@@ -64,7 +64,7 @@ def assignsE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endbloc
   | .bindCallInd _ _ _ _ _ rest => assignsE rest
   | _ => []
 
-def assignsArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def assignsArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List Nat
   | .nil => []
   | .cons b rest => assignsB b ++ assignsArms rest
@@ -150,12 +150,12 @@ theorem dropContextB_bounded {c : Context} (hc : c.bounded) (owner : Bool) : (dr
   · exact hc
   · exact Context.drop_bounded (Context.bindFresh_bounded hc)
 
-theorem armBind_bounded {c : Context} (hc : c.bounded) (ca : Option (Int × Int)) : (armBind c ca).bounded := by
+theorem armBind_bounded {c : Context} (hc : c.bounded) (ca : Option Ty) : (armBind c ca).bounded := by
   cases ca
   · exact hc
   · exact Context.bindNone_bounded hc
 
-theorem armDrop_bounded {c : Context} (hc : c.bounded) (ca : Option (Int × Int)) : (armDrop c ca).bounded := by
+theorem armDrop_bounded {c : Context} (hc : c.bounded) (ca : Option Ty) : (armDrop c ca).bounded := by
   cases ca
   · exact hc
   · exact Context.drop_bounded hc

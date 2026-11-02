@@ -198,7 +198,7 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
         and_self]
 
 theorem Arms.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → a.vOk K = true → a.gOk K Rg = true ∧ a.regs = []
   | .nil, _ => ⟨rfl, rfl⟩
   | .cons b rest, h => by

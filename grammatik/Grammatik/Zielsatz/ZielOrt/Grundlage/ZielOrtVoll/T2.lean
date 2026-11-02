@@ -361,7 +361,7 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEnd, Endblock.orakel_kOk t h.1, Endblock.orakel_kOk e h.2]
 
 theorem Arms.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
-    {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) → arms.kOk = true →
+    {cs : List (Option Ty)} → (arms : Arms D V l Γ Λ Λ' cs) → arms.kOk = true →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
         execArms O passes R arms v σ ρ = execArms O' passes R arms v σ ρ
   | _, .nil, _, ⟨⟨k, hk⟩, _⟩, _, _ => (Nat.not_lt_zero k hk).elim

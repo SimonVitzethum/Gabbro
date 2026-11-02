@@ -16,7 +16,7 @@ theorem ohneAbbruch_schrumpf {τ : Ty} {o : Ausgang V l (τ :: Γ)} (h : o.ohneA
     o.schrumpf.ohneAbbruch := by
   cases o <;> simp_all [Ausgang.schrumpf, Ausgang.ohneAbbruch]
 
-theorem ohneAbbruch_schrumpfArm (c : Option (Int × Int)) {o : Ausgang V l (ArmCtx Γ c)}
+theorem ohneAbbruch_schrumpfArm (c : Option Ty) {o : Ausgang V l (ArmCtx Γ c)}
     (h : o.ohneAbbruch) : (o.schrumpfArm c).ohneAbbruch := by
   cases c with
   | none => exact h
@@ -192,7 +192,7 @@ theorem ende_schrumpf {l : Bool} {τ : Ty} (o : Ausgang V l (τ :: Γ)) :
     o.schrumpf.ende? = o.ende? := by
   cases o <;> rfl
 
-theorem ende_schrumpfArm {l : Bool} (c : Option (Int × Int)) (o : Ausgang V l (ArmCtx Γ c)) :
+theorem ende_schrumpfArm {l : Bool} (c : Option Ty) (o : Ausgang V l (ArmCtx Γ c)) :
     (o.schrumpfArm c).ende? = o.ende? := by
   cases c with
   | none => rfl

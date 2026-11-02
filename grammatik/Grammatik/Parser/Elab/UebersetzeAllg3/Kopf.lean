@@ -280,7 +280,7 @@ structure LowStufe (u : UProg) (caller : Fin u.fns.length) where
   struct : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
     Except String (Stmt (declOf u) (verOf u caller) l Γ Λ Λ × List UStmt)
   arms : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ →
-    (cs : List (Option (Int × Int))) → List String → List UStmt →
+    (cs : List (Option Ty)) → List String → List UStmt →
     Except String (Arms (declOf u) (verOf u caller) l Γ Λ Λ cs × List UStmt)
   garms : {l : Bool} → (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → (m : Nat) →
     List UStmt → Except String (GrundArms (declOf u) (verOf u caller) l Γ Λ Λ m × List UStmt)

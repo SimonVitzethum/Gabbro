@@ -85,7 +85,7 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   | none (n : Int) : Expr Γ Λ (.opt n)
   | some (e : Expr Γ Λ (.index n)) : Expr Γ Λ (.opt n)
   | istSome (e : Expr Γ Λ (.opt n)) : Expr Γ Λ .bool
-  | case (cs : List (Option (Int × Int))) (i : Fin cs.length)
+  | case (cs : List (Option Ty)) (i : Fin cs.length)
       (nutz : NutzlastExpr Γ Λ (cs.get i)) : Expr Γ Λ (.sum cs)
   | why (n : Nat) (r : Fin n) : Expr Γ Λ (.why n)
   /-- `forall k in slots of T : pred` / `elems of` / `queue` -- der Binder traegt den Index. -/
@@ -141,9 +141,9 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
       binder carries the index, the result is at most `n`. -/
   | count (n : Nat) (body : Expr (.index (n : Int) :: Γ) Λ .bool) : Expr Γ Λ (.int 0 (n : Int))
 
-inductive NutzlastExpr : Ctx → List (Res D) → Option (Int × Int) → Type where
+inductive NutzlastExpr : Ctx → List (Res D) → Option Ty → Type where
   | empty : NutzlastExpr Γ Λ none
-  | num (e : Expr Γ Λ (.int lo hi)) : NutzlastExpr Γ Λ (some (lo, hi))
+  | val (e : Expr Γ Λ τ) : NutzlastExpr Γ Λ (some τ)
 
 end
 
@@ -230,7 +230,7 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | transition (r : D.Reg) (hk : (D.rklasse r).schreibbar = true) (m : D.Reg)
       (hm : D.spiegel r = some m) (hl : (D.rklasse m).lesbar = true) (maske bits : Int) :
       Stmt l Γ Λ Λ
-  /-- `A = e publishes { p, q };` -- die Nutzlast ist die erklaerte (`V001`-`V004` als Form);
+  /-- `A = e publishes { p, q };` -- die Nutzlast D.Fn D.passt ist die erklaerte (`V001`-`V004` als Form);
       die Sichtbarkeit ist das Speichermodell, Annahme A10. -/
   | publish (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (payload : List D.Glob)
       (hp : payload = D.nutzlast g) (hw : V.gschreibt g = true) (hL : gdarf D g Λ) : Stmt l Γ Λ Λ
@@ -386,7 +386,7 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
   /-- `if c { … } else { … }` as the last statement of a body, both branches ending (stage 0, 2026-10-26). -/
   | ite (c : Expr D Γ Λ .bool) (t e : Endblock l Γ Λ) : Endblock l Γ Λ
 
-inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
+inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option Ty) → Type where
   | nil : Arms l Γ Λ Λ []
   | cons (b : Block l (ArmCtx Γ c) Λ Λ') (rest : Arms l Γ Λ Λ' cs) : Arms l Γ Λ Λ' (c :: cs)
 

@@ -116,9 +116,9 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .intBuiltin2 .. => 58
   | .count .. => 59
 
-def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → Nat
+def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
-  | .num .. => 1
+  | .val .. => 1
 
 def kA {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} : Args D Γ Λ τs → Nat
   | .nil .. => 0
@@ -197,7 +197,7 @@ def kEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D 
   | .exchange .. => 15
   | .ite .. => 16
 
-def kArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Nat
+def kArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil .. => 0
   | .cons .. => 1
 
@@ -268,9 +268,9 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .intBuiltin2 _ a b => [⟨0, 0, 58, false, [tk a, tk b]⟩, ⟨1, 0, 58, false, [0, 0, kE a]⟩, ⟨1, 0, 58, false, [1, 0, kE b]⟩] ++ fzE a ++ fzE b
   | .count _ body => [⟨0, 0, 59, false, [tk body]⟩, ⟨1, 0, 59, false, [0, 0, kE body]⟩] ++ fzE body
 
-def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List FZelle
+def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]
-  | .num (e := e) .. => [⟨0, 1, 1, false, [tk e]⟩, ⟨1, 1, 1, false, [0, 0, kE e]⟩] ++ fzE e
+  | .val (e := e) .. => [⟨0, 1, 1, false, [tk e]⟩, ⟨1, 1, 1, false, [0, 0, kE e]⟩] ++ fzE e
 
 def fzA {Γ : Ctx} {Λ : List (Res D)} {τs : List Ty} : Args D Γ Λ τs → List FZelle
   | .nil .. => [⟨0, 2, 0, false, []⟩]
@@ -349,7 +349,7 @@ def fzEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D
   | .exchange (neu := neu) (rest := rest) .. => [⟨0, 6, 15, l, [tk neu]⟩, ⟨1, 6, 15, l, [0, 0, kE neu]⟩, ⟨1, 6, 15, l, [1, 6, kEnd rest]⟩] ++ fzE neu ++ fzEnd rest
   | .ite (c := c) (t := t) (e := e) .. => [⟨0, 6, 16, l, [tk c]⟩, ⟨1, 6, 16, l, [0, 0, kE c]⟩, ⟨1, 6, 16, l, [1, 6, kEnd t]⟩, ⟨1, 6, 16, l, [2, 6, kEnd e]⟩] ++ fzE c ++ fzEnd t ++ fzEnd e
 
-def fzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List FZelle
+def fzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List FZelle
   | .nil .. => [⟨0, 7, 0, l, []⟩]
   | .cons (b := b) (rest := rest) .. => [⟨0, 7, 1, l, []⟩, ⟨1, 7, 1, l, [0, 5, kB b]⟩, ⟨1, 7, 1, l, [1, 7, kArms rest]⟩] ++ fzB b ++ fzArms rest
 

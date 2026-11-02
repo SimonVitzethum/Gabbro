@@ -400,31 +400,21 @@ def beqOptIntPair : Option (Int × Int) → Option (Int × Int) → Bool
   | some a, some b => beqIntPair a b
   | _, _ => false
 
-def beqOptIntPairList : List (Option (Int × Int)) →
-    List (Option (Int × Int)) → Bool
+def beqPayloads : List (Option Ty) →
+    List (Option Ty) → Bool
   | [], [] => true
-  | x :: xs, y :: ys => beqOptIntPair x y && beqOptIntPairList xs ys
+  | x :: xs, y :: ys => decide (x = y) && beqPayloads xs ys
   | _, _ => false
 
-/-- Shape equality on `Ty` as a `Bool` (kernel evaluation,
-    no nested `decide`). -/
-def beqTy : Ty → Ty → Bool
-  | .int a b, .int c d => a == c && b == d
-  | .bool, .bool => true
-  | .opt n, .opt m => n == m
-  | .sum cs, .sum ds => beqOptIntPairList cs ds
-  | .why n, .why m => n == m
-  | .never, .never => true
-  | .fl a b, .fl c d => beqIntPair a c && beqIntPair b d
-  | .fnptr n, .fnptr m => n == m
-  | .ptr t w, .ptr s v => t == s && w == v
-  | _, _ => false
+/-- Complete shape equality, including recursively typed payloads and arrays. -/
+def beqTy (a b : Ty) : Bool := decide (a = b)
 
 def beqUIdx : UIdx → UIdx → Bool
   | .lit a, .lit b => a == b
   | .param a, .param b => strEq a b
   | _, _ => false
 
+mutual
 def beqUSide : USide → USide → Bool
   | .lit a, .lit b => a == b
   | .param a, .param b => strEq a b
@@ -444,6 +434,41 @@ def beqUSide : USide → USide → Bool
   | .ib1 o w a, .ib1 p v b => o == p && w == v && beqUSide a b
   | .ib2 o w a b, .ib2 p v c d => o == p && w == v && beqUSide a c && beqUSide b d
   | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
+  | .truth a, .truth b => a == b
+  | .predicate a, .predicate b => beqUEns a b
+  | .option n a, .option m b => n == m && a == b
+  | .absent n, .absent m => n == m
+  | .present n a, .present m b => n == m && beqUSide a b
+  | .reason n a, .reason m b => n == m && a == b
+  | .function n a, .function m b => n == m && strEq a b
+  | .taggedEmpty cs i, .taggedEmpty ds j => beqPayloads cs ds && i == j
+  | .taggedValue cs i a, .taggedValue ds j b => beqPayloads cs ds && i == j && beqUSide a b
   | _, _ => false
+
+def beqUEns : UEns → UEns → Bool
+  | .cmp o a b, .cmp p c d =>
+    strEq o p && beqUSide a c && beqUSide b d
+  | .tru, .tru => true
+  | .fls, .fls => true
+  | .and a b, .and c d => beqUEns a c && beqUEns b d
+  | .or a b, .or c d => beqUEns a c && beqUEns b d
+  | .not a, .not b => beqUEns a b
+  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
+    strEq a b && strEq f g && beqUIdx x y
+  | .globB a, .globB b | .var a, .var b => strEq a b
+  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
+  | .ergB, .ergB => true
+  | .held a, .held b => strEq a b
+  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
+  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
+  | .member t a, .member u b => strEq t u && a == b
+  | .arrayElements a source x body, .arrayElements b target y other =>
+      a == b && beqUSide source target && strEq x y && beqUEns body other
+  | .filtered a t x f r s b, .filtered c u y g v z d =>
+      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
+  | .istSome o m, .istSome p n => o == p && m == n
+  | _, _ => false
+
+end
 
 end Gabbro.Grammatik.Parser.Uebersetze

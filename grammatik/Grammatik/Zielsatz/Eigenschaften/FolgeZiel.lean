@@ -183,12 +183,12 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
       kongr₂ (· && ·) (ruEnd_fE Φ e false f) (ruEnd_fE Φ e w t)
 
 theorem ruArms_fArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (e : Bool)
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} (e : Bool)
     (arms : Arms D V l Γ Λ Λ' cs), fArms Φ.mitRuhe e (ruArms arms) = fArms Φ e arms
   | _, _, _, _, _, _, .nil => rfl
   | _, _, _, _, _, e, .cons (c := none) b rest =>
       kongr₂ (· && ·) (ruB_fB Φ e false b) (ruArms_fArms Φ e rest)
-  | _, _, _, _, _, e, .cons (c := some (_, _)) b rest =>
+  | _, _, _, _, _, e, .cons (c := some _) b rest =>
       kongr₂ (· && ·) (ruB_fB Φ e false b) (ruArms_fArms Φ e rest)
 
 theorem ruGArms_fGArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}

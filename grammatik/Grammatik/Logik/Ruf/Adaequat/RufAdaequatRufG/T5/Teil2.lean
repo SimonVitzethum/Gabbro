@@ -304,11 +304,10 @@ theorem stmtOkR_onTag
     obtain ⟨M2, e2, hr2, hZ2, ho2⟩ := hsim _ _ _ _ _ hex M1 _ hZ1
       (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))
     exact ⟨M2, _, RufLaufG.schritt hs1 hr2, hZ2, by rw [ho2, (Erw.lese _ _ _).offen]⟩
-  | some lh =>
-    obtain ⟨lo, hi⟩ := lh
+  | some τ =>
     obtain ⟨w', hw'⟩ := schrumpf_ok hex
     obtain ⟨M1, hs1, hZ1⟩ := w_tagSome (P := P) (O := O) (passes := passes) hZ.1
-      v arms rest k ρ rfl lo hi b nutz (by rw [hW]; exact hwahl)
+      v arms rest k ρ rfl τ b nutz (by rw [hW]; exact hwahl)
     rw [hW] at hZ1
     obtain ⟨M2, e2, hr2, hZ2, ho2⟩ := hsim _ _ _ _ _ hw' M1 _ hZ1
       (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1))

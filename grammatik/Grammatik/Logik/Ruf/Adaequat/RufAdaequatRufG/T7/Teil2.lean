@@ -117,10 +117,9 @@ theorem stmtRetR_onTag
     rw [hW] at hZ1
     exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
       (hsim _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ) (hA.lauf (RufLaufG.einzeln hs1)))
-  | some lh =>
-    obtain ⟨lo, hi⟩ := lh
+  | some τ =>
     obtain ⟨M1, hs1, hZ1⟩ := w_tagSome (P := P) (O := O) (passes := passes) hZ.1
-      w arms rest k ρ rfl lo hi b nutz (by rw [hW]; exact hwahl)
+      w arms rest k ρ rfl τ b nutz (by rw [hW]; exact hwahl)
     rw [hW] at hZ1
     exact gepoppt_vorR P O passes f fn rst rho s0 ziel zielG hs1 (Erw.lese _ _ _).offen
       (hsim _ _ _ _ hpe hex M1 _ hZ1 (heldB_lese _ hΛ)

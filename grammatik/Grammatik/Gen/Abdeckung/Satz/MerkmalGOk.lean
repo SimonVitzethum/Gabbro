@@ -105,7 +105,7 @@ theorem bGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : 
   | .floatNarrow _ _ _ sonst rest => by simp only [Block.gOk, mB, eGOk K sonst, bGOk K rest]
 
 theorem aGOk (K : Nat → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} : (a : Arms D V l Γ Λ Λ' cs) → a.gOk K (fun _ => true) = mArms (indMerkmal K) a
+    {cs : List (Option Ty)} : (a : Arms D V l Γ Λ Λ' cs) → a.gOk K (fun _ => true) = mArms (indMerkmal K) a
   | .nil => rfl
   | .cons b rest => by simp only [Arms.gOk, mArms, bGOk K b, aGOk K rest]
 

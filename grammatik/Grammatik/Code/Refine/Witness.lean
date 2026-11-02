@@ -212,7 +212,7 @@ def rMt : Endblock wD (vertragVon wD WFn.mt) false []
           (.widen (lo := 2) (hi := 2) (by decide) (by decide) (.lit 2)) rfl (wDarf _)) .nil)
         (.cons .nil .nil))))
   (.cons (.onTag (cs := [none, some (0, 9)])
-      (.case [none, some (0, 9)] ⟨1, by decide⟩
+      (.case [none, some (.int 0 9)] ⟨1, by decide⟩
         (.num (.widen (lo := 5) (hi := 5) (by decide) (by decide) (.lit 5))))
       (.cons .nil (.cons (c := some (0, 9))
         (.cons (.assignSlot () ()

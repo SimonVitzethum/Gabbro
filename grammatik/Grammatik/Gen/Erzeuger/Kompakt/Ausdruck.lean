@@ -50,15 +50,15 @@ theorem orte_of_eSchl {τ : Ty} {e' e : Expr D Γ Λ τ} (h : eSchl (⟨τ, e'�
   rw [← istIn_iff, ← istIn_iff (l := e.orte), h2]
 
 /-- The payload of a sum, its expression replaced by a representative. -/
-theorem ersetzeN (P : SE D Γ Λ → Prop) {o : Option (Int × Int)} (x : NutzlastExpr D Γ Λ o)
+theorem ersetzeN (P : SE D Γ Λ → Prop) {o : Option Ty} (x : NutzlastExpr D Γ Λ o)
     (h : ∀ y ∈ x.teile, ∃ y' : Expr D Γ Λ y.1, P ⟨y.1, y'⟩ ∧ GlE y' y.2) :
     ∃ x' : NutzlastExpr D Γ Λ o, (∀ c, c ∈ x'.orte ↔ c ∈ x.orte) ∧ groesseNutz x' ≤ groesseNutz x ∧
       ∀ y ∈ x'.teile, P y := by
   cases x with
   | empty => exact ⟨.empty, fun _ => Iff.rfl, Nat.le_refl _, by simp only [NutzlastExpr.teile, List.not_mem_nil, false_implies, implies_true]⟩
-  | num e =>
+  | val e =>
     obtain ⟨e', h1, g1⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y e := h ⟨_, e⟩ (by simp only [NutzlastExpr.teile, List.mem_cons, List.not_mem_nil, or_false])
-    exact ⟨.num e', fun c => by simp only [NutzlastExpr.orte, g1.orte c],
+    exact ⟨.val e', fun c => by simp only [NutzlastExpr.orte, g1.orte c],
       by have := g1.groesse; simp only [groesseNutz]; omega, by simp only [NutzlastExpr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq, h1]⟩
 
 set_option maxHeartbeats 4000000 in

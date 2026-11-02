@@ -12,7 +12,7 @@ theorem rufSchrittG_haeltInv_dannOnTagSome {D : Deklaration} {P : Programm D} {O
   {passes : Nat} (hO : GutO O) {M : RufMaschineG D} {f : Faden} (h : HaeltInvG (M.faeden f))
   (hk0 : GRest.kette (D.haelt (M.faeden f).kopf.f) (M.faeden f).kopf.rest.snd.snd.snd.snd)
   (hh0 : HeldIn (M.faeden f).kopf.rest.snd.snd.fst (offen (M.faeden f).spur)) (l : Bool) (Γ : Ctx)
-  (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -24,12 +24,12 @@ theorem rufSchrittG_haeltInv_dannOnTagSome {D : Deklaration} {P : Programm D} {O
                 (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)⟩ :
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ))
-  (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ v.orte) (lo hi : Int)
-  (b : Block D (vertragVon D (M.faeden f).kopf.f) l (Ty.int lo hi :: Γ) Λ Λ') (nutz : Nutzlast (some (lo, hi)))
+  (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ v.orte) (τ : Ty)
+  (b : Block D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
-      (⟨some (lo, hi), (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden f).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+      (⟨some τ, (b, nutz)⟩ :
+        (c : Option Ty) × Block D (vertragVon D (M.faeden f).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur) (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
   HaeltInvG
     ({ speicher := M.speicher,
@@ -40,11 +40,11 @@ theorem rufSchrittG_haeltInv_dannOnTagSome {D : Deklaration} {P : Programm D} {O
                   { f := (M.faeden f).kopf.f, rho := (M.faeden f).kopf.rho, s0 := (M.faeden f).kopf.s0,
                     rest :=
                       (⟨l,
-                          (⟨Ty.int lo hi :: Γ,
+                          (⟨τ :: Γ,
                               (⟨Λ, (armEnv nutz ρ, GRest.dann b (GRest.dann rest k).schrumpf)⟩ :
                                 (Λ : List (Res D)) ×
-                                  Env D (Ty.int lo hi :: Γ) ×
-                                    GRest D (vertragVon D (M.faeden f).kopf.f) l (Ty.int lo hi :: Γ) Λ)⟩ :
+                                  Env D (τ :: Γ) ×
+                                    GRest D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ)⟩ :
                             (Γ : Ctx) ×
                               (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)⟩ :
                         (l : Bool) ×
@@ -64,7 +64,7 @@ theorem rufSchrittG_haeltInv_dannOnTagNone {D : Deklaration} {P : Programm D} {O
   {passes : Nat} (hO : GutO O) {M : RufMaschineG D} {f : Faden} (h : HaeltInvG (M.faeden f))
   (hk0 : GRest.kette (D.haelt (M.faeden f).kopf.f) (M.faeden f).kopf.rest.snd.snd.snd.snd)
   (hh0 : HeldIn (M.faeden f).kopf.rest.snd.snd.fst (offen (M.faeden f).spur)) (l : Bool) (Γ : Ctx)
-  (Λ Λ' Λ'' : List (Res D)) (cs : List (Option (Int × Int))) (v : Expr D Γ Λ (Ty.sum cs))
+  (Λ Λ' Λ'' : List (Res D)) (cs : List (Option Ty)) (v : Expr D Γ Λ (Ty.sum cs))
   (arms : Arms D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ' cs)
   (rest : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ' Λ'')
   (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ'') (ρ : Env D Γ)
@@ -77,11 +77,11 @@ theorem rufSchrittG_haeltInv_dannOnTagNone {D : Deklaration} {P : Programm D} {O
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ))
   (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ v.orte) (b : Block D (vertragVon D (M.faeden f).kopf.f) l Γ Λ Λ')
-  (nutz : Nutzlast none)
+  (nutz : Nutzlast D.Fn D.passt none)
   (hw :
     armWahlG arms (eval σ₁ v σ₁ ρ) =
       (⟨none, (b, nutz)⟩ :
-        (c : Option (Int × Int)) × Block D (vertragVon D (M.faeden f).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast c))
+        (c : Option Ty) × Block D (vertragVon D (M.faeden f).kopf.f) l (ArmCtx Γ c) Λ Λ' × Nutzlast D.Fn D.passt c))
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur) (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
   HaeltInvG
     ({ speicher := M.speicher,

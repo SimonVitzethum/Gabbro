@@ -132,7 +132,7 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       simp only [kostenBlock, kostenKB, zusatzB]; omega
 
 theorem spiegel_arms (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+    {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     (arms : Arms D V l Γ Λ Λ' cs) → spiegelArms arms = true →
       kostenArms c pa arms ≤ kostenKArms c arms + zusatzArms arms
   | .nil, _ => by simp only [kostenArms, kostenKArms, zusatzArms]; omega
@@ -336,7 +336,7 @@ theorem rufeE_of_EndR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {l : 
   | .retWhy _ _ => rfl
 
 theorem rufeArms_of_ArmsR (Z : D.Fn → Bool) (hZ : ∀ g, C g → Z g = true) {mr l : Bool}
-    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     {arms : Arms D V l Γ Λ Λ' cs} : ArmsR A C mr arms → rufeArms Z (fun _ => false) true arms = true
   | .nil => rfl
   | .cons _ _ hb hr => by

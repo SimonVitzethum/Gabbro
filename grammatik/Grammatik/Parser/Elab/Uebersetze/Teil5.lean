@@ -193,6 +193,10 @@ def seiteAltErg : USide → Bool
   | .zaehle _ _ b => ensAltErg b
   | .zaehleBaum _ _ _ _ _ b => ensAltErg b
   | .zaehleFeld a _ b => seiteAltErg a || ensAltErg b
+  | .taggedValue _ _ a | .typed _ a | .len a | .present _ a => seiteAltErg a
+  | .arrCons a b | .idx a b => seiteAltErg a || seiteAltErg b
+  | .upd a i v => seiteAltErg a || seiteAltErg i || seiteAltErg v
+  | .predicate p => ensAltErg p
   | _ => false
 
 /-- `old(..)` or `result` inside a predicate. -/
@@ -200,7 +204,8 @@ def ensAltErg : UEns → Bool
   | .cmp _ a b => seiteAltErg a || seiteAltErg b
   | .and a b | .or a b | .imp a b => ensAltErg a || ensAltErg b
   | .not a => ensAltErg a
-  | .alle _ _ b | .einige _ _ b | .filtered _ _ _ _ _ _ b | .arrayElements _ _ _ b => ensAltErg b
+  | .alle _ _ b | .einige _ _ b | .filtered _ _ _ _ _ _ b => ensAltErg b
+  | .arrayElements _ source _ b => seiteAltErg source || ensAltErg b
   | .ergB => true
   | _ => false
 end

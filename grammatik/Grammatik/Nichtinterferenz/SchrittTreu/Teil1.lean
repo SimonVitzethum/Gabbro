@@ -116,7 +116,7 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufMaschineG.weltVon] at hv
       rw [hv]
       rfl
-  | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ lo hi b nutz hw neu hneu hΛ =>
+  | dannOnTagSome l Γ Λ Λ' Λ'' cs v arms rest k ρ hhead σ₁ hs₁ τ b nutz hw neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann, kDannCons, GEntfaltbar, kEntf, if_true]

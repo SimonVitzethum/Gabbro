@@ -36,11 +36,11 @@ def _root_.Gabbro.Grammatik.ArenaOwnership.Source.Context.assign (c : Context) {
   { c with references := c.references.set x.unten o }
 
 /-- The context inside a case arm: a payload binder carries no grant. -/
-def armBind (c : Context) : Option (Int × Int) → Context
+def armBind (c : Context) : Option Ty → Context
   | none => c
   | some _ => c.bind none
 
-def armDrop (c : Context) : Option (Int × Int) → Context
+def armDrop (c : Context) : Option Ty → Context
   | none => c
   | some _ => c.drop
 
@@ -410,7 +410,7 @@ inductive OE (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
 
 /-- **The arms of a `match` over a tagged value.** All arms end in one context. -/
 inductive OArms (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Output A V.erg) :
-    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option (Int × Int))} →
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
       Context → Context → Arms D V l Γ Λ Λ' cs → Context → Prop where
   | nil {l Γ Λ k c c'} : OArms A I out (l := l) (Γ := Γ) (Λ := Λ) k c .nil c'
   | cons {l Γ Λ Λ' k c c' c1 ca cs} (b : Block D V l (ArmCtx Γ ca) Λ Λ') (rest : Arms D V l Γ Λ Λ' cs)

@@ -160,7 +160,7 @@ theorem cut3_sound {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
           simp only [certCut3PayloadOk] at hp
           have he : certRange D Γ Λ e = some (lo, hi2) := of_decide_eq_true hp
           obtain ⟨ee, _⟩ := zeugnis_sound e lo hi2 he
-          exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.num ee),
+          exact ⟨.sum cs, Expr.case cs ⟨i, hi⟩ (hget'.symm ▸ NutzlastExpr.val ee),
             trivial⟩
   | why n r =>
     simp only [certCut3Ok] at h
@@ -211,7 +211,7 @@ example : ¬ certCut3Ok TestD [] []
 /-- The `zahl` case: `fall` at index `0` with a payload that recomputes the
     cased range. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
-  cut3_sound (.case [some (0, 0)] 0 (some (.lit 0))) () (by decide)
+  cut3_sound (.case [some (.int 0 0)] 0 (some (.lit 0))) () (by decide)
 
 /-- The caseless arm: `fall` at index `0` with no payload. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
@@ -219,7 +219,7 @@ example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=
 
 /-- FORGED payload: the `zahl` arm carries `1`, cased at `(0, 0)`. -/
 example : ¬ certCut3Ok TestD [] []
-    (.case [some (0, 0)] 0 (some (.lit 1))) := by decide
+    (.case [some (.int 0 0)] 0 (some (.lit 1))) := by decide
 
 /-- `grund 1 of 2` elaborates to `Expr.grund`. -/
 example : ∃ τ, ∃ _ : Expr TestD [] [] τ, True :=

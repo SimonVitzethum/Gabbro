@@ -247,7 +247,7 @@ inductive CertCut3 (D : Deklaration) where
   | none (n : Int)
   | some (e : CertExpr D) (n : Int)
   | istSome (o : CertCut3 D) (n : Int)
-  | case (cs : List (Option (Int × Int))) (i : Nat) (p : Option (CertExpr D))
+  | case (cs : List (Option Ty)) (i : Nat) (p : Option (CertExpr D))
   | why (n r : Nat)
   | forallSlots (t : D.Tab)
   | existsSlots (t : D.Tab)
@@ -267,10 +267,10 @@ def certCut3IsOpt : CertCut3 D → Int → Bool
     certificate that recomputes EXACTLY the cased range. Anything else (an
     out-of-range index, a shape mismatch) is `false`, not a diagnostic. -/
 def certCut3PayloadOk (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
-    (slot : Option (Option (Int × Int))) (p : Option (CertExpr D)) : Bool :=
+    (slot : Option (Option Ty)) (p : Option (CertExpr D)) : Bool :=
   match slot, p with
   | some none, none => true
-  | some (some (lo, hi)), some e => decide (certRange D Γ Λ e = some (lo, hi))
+  | some (some (.int lo hi)), some e => decide (certRange D Γ Λ e = some (lo, hi))
   | _, _ => false
 
 /-- CUT-3 validity, recomputed on the Lean side (mirror of the `certRange`

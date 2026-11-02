@@ -22,28 +22,31 @@ public import Grammatik.Kern.Semantik.Semantik
 
 namespace Gabbro.Code.Lower
 
-open Gabbro.Grammatik (Nutzlast Wert Zahl)
+open Gabbro.Grammatik (Nutzlast Wert Zahl Ty Deklaration)
+
+variable {D : Deklaration}
 
 /-- The number of values a payload may take (`1` for a case without one). -/
-def spreadOf : Option (Int × Int) → Int
+def spreadOf : Option Gabbro.Grammatik.Ty → Int
   | none => 1
-  | some (lo, hi) => hi - lo + 1
+  | some (.int lo hi) => hi - lo + 1
+  | some _ => 1
 
 /-- The largest spread over all cases, and at least `1`. -/
-def spreadMax (cs : List (Option (Int × Int))) : Int :=
+def spreadMax (cs : List (Option Gabbro.Grammatik.Ty)) : Int :=
   cs.foldr (fun c a => max (spreadOf c) a) 1
 
 /-- The words of `sum cs` are below this bound. -/
-def sumTop (cs : List (Option (Int × Int))) : Int := (cs.length : Int) * spreadMax cs
+def sumTop (cs : List (Option Gabbro.Grammatik.Ty)) : Int := (cs.length : Int) * spreadMax cs
 
-theorem spreadMax_pos (cs : List (Option (Int × Int))) : 1 ≤ spreadMax cs := by
+theorem spreadMax_pos (cs : List (Option Gabbro.Grammatik.Ty)) : 1 ≤ spreadMax cs := by
   induction cs with
   | nil => exact Int.le_refl _
   | cons c cs ih =>
       simp only [spreadMax, List.foldr_cons] at ih ⊢
       exact Int.le_trans ih (Int.le_max_right _ _)
 
-theorem spreadOf_le_max (cs : List (Option (Int × Int))) (i : Fin cs.length) :
+theorem spreadOf_le_max (cs : List (Option Gabbro.Grammatik.Ty)) (i : Fin cs.length) :
     spreadOf (cs.get i) ≤ spreadMax cs := by
   induction cs with
   | nil => exact Fin.elim0 i
@@ -57,24 +60,26 @@ theorem spreadOf_le_max (cs : List (Option (Int × Int))) (i : Fin cs.length) :
           exact Int.le_trans this (Int.le_max_right _ _)
 
 /-- The payload of a value, as a non-negative offset. -/
-def payOff : (c : Option (Int × Int)) → Nutzlast c → Int
+def payOff : (c : Option Gabbro.Grammatik.Ty) → Nutzlast D.Fn D.passt c → Int
   | none, _ => 0
-  | some (lo, hi), z => (z : Zahl lo hi).n - lo
+  | some (.int lo hi), z => (z : Zahl lo hi).n - lo
+  | some _, _ => 0
 
-theorem payOff_bounds : ∀ (c : Option (Int × Int)) (z : Nutzlast c),
+theorem payOff_bounds : ∀ (c : Option Gabbro.Grammatik.Ty) (z : Nutzlast D.Fn D.passt c),
     0 ≤ payOff c z ∧ payOff c z ≤ spreadOf c - 1
   | none, _ => by simp only [payOff, Std.le_refl, spreadOf, Int.sub_self, and_self]
-  | some (lo, hi), z => by
-      have h1 := (z : Zahl lo hi).lo_le
-      have h2 := (z : Zahl lo hi).le_hi
+  | some τ, z => by
+      cases τ <;> try exact ⟨Int.le_refl 0, Int.le_refl 0⟩
+      have h1 := z.lo_le
+      have h2 := z.le_hi
       simp only [payOff, spreadOf]
       omega
 
 /-- The word of a value of `sum cs`. -/
-def packZ {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) : Int :=
+def packZ {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) : Int :=
   (v.1.val : Int) + (cs.length : Int) * payOff (cs.get v.1) v.2
 
-theorem packZ_nonneg {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) :
+theorem packZ_nonneg {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
     0 ≤ packZ v := by
   have h1 := (payOff_bounds _ v.2).1
   have h2 : (0 : Int) ≤ (cs.length : Int) := Int.natCast_nonneg _
@@ -83,7 +88,7 @@ theorem packZ_nonneg {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length
   have := Int.natCast_nonneg v.1.val
   omega
 
-theorem packZ_lt {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) :
+theorem packZ_lt {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
     packZ v < sumTop cs := by
   have hb := payOff_bounds _ v.2
   have hs := spreadOf_le_max cs v.1
@@ -96,14 +101,14 @@ theorem packZ_lt {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length, Nu
   unfold packZ sumTop
   omega
 
-theorem packZ_mod {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) :
+theorem packZ_mod {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
     packZ v % (cs.length : Int) = (v.1.val : Int) := by
   unfold packZ
   have hi : (v.1.val : Int) < (cs.length : Int) := by exact_mod_cast v.1.isLt
   rw [Int.add_mul_emod_self_left]
   exact Int.emod_eq_of_lt (Int.natCast_nonneg _) hi
 
-theorem packZ_div {cs : List (Option (Int × Int))} (v : Σ i : Fin cs.length, Nutzlast (cs.get i)) :
+theorem packZ_div {cs : List (Option Gabbro.Grammatik.Ty)} (v : Σ i : Fin cs.length, Nutzlast D.Fn D.passt (cs.get i)) :
     packZ v / (cs.length : Int) = payOff (cs.get v.1) v.2 := by
   unfold packZ
   have hi : (v.1.val : Int) < (cs.length : Int) := by exact_mod_cast v.1.isLt

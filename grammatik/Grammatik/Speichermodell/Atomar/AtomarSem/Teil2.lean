@@ -278,7 +278,7 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
         Endblock.execHA_frei e h3] <;> (try rfl)
 
 theorem Arms.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    {cs : List (Option (Int × Int))} :
+    {cs : List (Option Ty)} :
     (a : Arms D V l Γ Λ Λ' cs) → (∀ c ∈ armsOrteP P a, ¬ T c) →
       ∀ (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
       execArmsHA S O U A passes R a v σ ρ = execArmsH S O U passes R a v σ ρ

@@ -85,9 +85,9 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .intBuiltin2 _ a b => "Expr.intBuiltin2" :: (eE a ++ eE b)
   | .count _ body => "Expr.count" :: eE body
 
-def eN {Γ : Ctx} {Λ : List (Res D)} {o : Option (Int × Int)} : NutzlastExpr D Γ Λ o → List String
+def eN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → List String
   | .empty => ["NutzlastExpr.empty"]
-  | .num e => "NutzlastExpr.num" :: eE e
+  | .val e => "NutzlastExpr.val" :: eE e
 
 end
 
@@ -156,7 +156,7 @@ def cB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .floatNarrow e _ _ sonst rest => "Block.floatNarrow" :: (eE e ++ cE sonst ++ cB rest)
 
 /-- The members the arms of a tagged match use. -/
-def cArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
+def cArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} :
     Arms D V l Γ Λ Λ' cs → List String
   | .nil => ["Arms.nil"]
   | .cons b rest => "Arms.cons" :: (cB b ++ cArms rest)

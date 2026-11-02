@@ -13,30 +13,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil15
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
-def beqUEns : UEns → UEns → Bool
-  | .cmp o a b, .cmp p c d =>
-    strEq o p && beqUSide a c && beqUSide b d
-  | .tru, .tru => true
-  | .fls, .fls => true
-  | .and a b, .and c d => beqUEns a c && beqUEns b d
-  | .or a b, .or c d => beqUEns a c && beqUEns b d
-  | .not a, .not b => beqUEns a b
-  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
-    strEq a b && strEq f g && beqUIdx x y
-  | .globB a, .globB b => strEq a b
-  | .alle t x p, .alle s y q | .einige t x p, .einige s y q => strEq t s && strEq x y && beqUEns p q
-  | .ergB, .ergB => true
-  | .held a, .held b => strEq a b
-  | .imp a b, .imp c d => beqUEns a c && beqUEns b d
-  | .reach t f a b, .reach u g c d => strEq t u && strEq f g && a == c && b == d
-  | .member t a, .member u b => strEq t u && a == b
-  | .arrayElements a source x body, .arrayElements b target y other =>
-      a == b && beqUSide source target && strEq x y && beqUEns body other
-  | .filtered a t x f r s b, .filtered c u y g v z d =>
-      a == c && strEq t u && strEq x y && strEq f g && r == v && s == z && beqUEns b d
-  | .istSome o m, .istSome p n => o == p && m == n
-  | _, _ => false
-
 def beqUEnsList : List UEns → List UEns → Bool
   | [], [] => true
   | x :: xs, y :: ys => beqUEns x y && beqUEnsList xs ys

@@ -280,7 +280,7 @@ theorem chkE_sound : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (eb : Endbloc
   | _, _, _, .exchange .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
   | _, _, _, .ite .., _, _, _, _, h => by simp only [chkE, Bool.false_eq_true] at h
 
-theorem chkArms_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
+theorem chkArms_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (k c : Context),
     k.bounded → c.bounded → Supports (OArms A I out k c arms) (chkArms A I fs out arms k c)
   | _, _, _, _, _, .nil, k, c, _, _ => by

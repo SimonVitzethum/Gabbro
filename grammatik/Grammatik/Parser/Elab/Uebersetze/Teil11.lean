@@ -110,20 +110,64 @@ def uNutzItem : List SExpr → Except String (List String)
   | _ :: _ => .error "payload of a table without G form"
 
 mutual
-/-- The initial value of a static of a tagged type: a payload-free case, or a case with a numeral payload. -/
-def uSumKonst (consts : List (String × Int)) (sm : USum) : SKonstWert → Except String UKonst
-  | .one (.variable c) =>
-    match sm.cases.findIdx? (fun x => strEq x.1 c) with
-    | some i => .ok (.fall i .null)
-    | none => .error ("case unknown: " ++ c)
-  | .one (.call c [e]) =>
-    match sm.cases.findIdx? (fun x => strEq x.1 c), (sm.cases.find? (fun x => strEq x.1 c)).bind (·.2) with
-    | some i, some (lo, hi) =>
-      match uKonstWert lo hi [] consts 64 e with
-      | some z => .ok (.fall i (.zahl z))
-      | none => .error "static initialiser without G form"
-    | _, _ => .error "static initialiser without G form"
+/-- A tagged initializer checks payload presence, then uses the canonical typed
+    constant reader for the complete selected value. -/
+def uSumKonst (consts : List (String × Int)) (sums : List USum) (sm : USum) :
+    SKonstWert → Except String UKonst
+  | .one (.variable name) =>
+    match sm.cases.findIdx? (fun c => strEq c.1 name), sm.cases.find? (fun c => strEq c.1 name) with
+    | some i, some (_, none) => .ok (.fall i .null)
+    | some _, some (_, some _) => .error "missing tagged payload in static initializer"
+    | _, _ => .error ("case unknown: " ++ name)
+  | .one (.call name [value]) =>
+    match sm.cases.findIdx? (fun c => strEq c.1 name), (sm.cases.find? (fun c => strEq c.1 name)).bind (·.2) with
+    | some i, some τ => (uKonst consts sums (some τ) (.one value)).map (.fall i)
+    | _, _ => .error "missing or extra tagged payload in static initializer"
   | _ => .error "static initialiser without G form"
+termination_by value => 2 * sizeOf value
+decreasing_by all_goals simp_wf; omega
+
+/-- Constants use their declared type throughout nested tagged and array values.
+    The later value decoder still checks exact shape, ranges and string bounds. -/
+def uKonst (consts : List (String × Int)) (sums : List USum) (expected : Option Ty) :
+    SKonstWert → Except String UKonst
+  | value =>
+    match expected, value with
+    | some (.sum cs), _ =>
+      match sums.find? (fun sm => sm.spec = cs) with
+      | some sm => uSumKonst consts sums sm value
+      | none => .error "unknown tagged type in static initializer"
+    | some (.int lo hi), .one e =>
+      match uKonstWert lo hi [] consts 64 e with
+      | some z => .ok (.zahl z)
+      | none => .error "static initialiser outside its declared range"
+    | _, .one (.lit 0) => .ok .null
+    | _, .one (.call "None" []) => .ok .null
+    | _, .one (.lit k) => .ok (.zahl (Int.ofNat k))
+    | _, .one (.un "-" (.lit k)) => .ok (.zahl (-(Int.ofNat k)))
+    | _, .one .tru => .ok (.wahr true)
+    | _, .one .fls => .ok (.wahr false)
+    | _, .one (.variable c) => (uSuch "const" consts c).map .zahl
+    | _, .one (.ext .text [text] []) =>
+      .ok (.text (text.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
+    | some (.arr element _), .rows ks => uKonstReihe consts sums (some element) ks
+    | _, .rows ks => uKonstReihe consts sums none ks
+    | _, .one _ => .error "static initialiser without G form"
+termination_by value => 2 * sizeOf value + 1
+decreasing_by all_goals simp_wf; omega
+
+/-- Read all array elements under their declared element type. -/
+def uKonstReihe (consts : List (String × Int)) (sums : List USum) (element : Option Ty) :
+    List SKonstWert → Except String UKonst
+  | [] => .ok .nil
+  | k :: ks =>
+    match uKonst consts sums element k, uKonstReihe consts sums element ks with
+    | .ok a, .ok r => .ok (.cons a r)
+    | .error e, _ | _, .error e => .error e
+termination_by values => 2 * sizeOf values
+decreasing_by all_goals simp_wf; omega
+
+end
 
 /-- The statics of a tagged type with their type, read once the `tagged type`s are known. -/
 def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SItemTief) :
@@ -138,7 +182,7 @@ def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SIte
       | some k, some sm =>
         match ms.findSome? (fun m => match m with | .globT _ n _ v .. => if strEq n g.name then some v else none | _ => none) with
         | some v =>
-          match uSumKonst consts sm v with
+          match uSumKonst consts sums sm v with
           | .ok kv => .ok ({ g with ty := .wert (.sum sm.spec), initK := kv, sumNum := some k } :: gs)
           | .error e => .error e
         | none => .error ("static unknown: " ++ g.name)
@@ -182,29 +226,6 @@ def uOptGlobs (tabs : List UTab) : List UGlob → Except String (List UGlob)
       | .ok (num, c) => .ok ({ g with ty := .wert (.opt c), optNum := some num } :: gs)
       | .error e => .error e
 
-/-- The initial value of an aggregate static: `0` is zero memory, a numeral or constant a number, a string literal
-    its bytes, a row literal its elements. -/
-def uKonst (consts : List (String × Int)) : SKonstWert → Except String UKonst
-  | .one (.lit 0) => .ok .null
-  | .one (.call "None" []) => .ok .null
-  | .one (.lit k) => .ok (.zahl (Int.ofNat k))
-  | .one (.un "-" (.lit k)) => .ok (.zahl (-(Int.ofNat k)))
-  | .one .tru => .ok (.wahr true)
-  | .one .fls => .ok (.wahr false)
-  | .one (.variable c) =>
-    match uSuch "const" consts c with
-    | .error e => .error e
-    | .ok z => .ok (.zahl z)
-  | .one (.ext .text [t] []) => .ok (.text (t.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
-  | .one _ => .error "static initialiser without G form"
-  | .rows ks => uKonstReihe consts ks
-def uKonstReihe (consts : List (String × Int)) : List SKonstWert → Except String UKonst
-  | [] => .ok .nil
-  | k :: ks =>
-    match uKonst consts k, uKonstReihe consts ks with
-    | .ok a, .ok r => .ok (.cons a r)
-    | .error e, _ | _, .error e => .error e
-end
 
 /-- Scalar initializers keep their declared range at every constant-evaluator intermediate.
     Existing literal/constant encodings retain their canonical admission; new expressions are checked. -/
@@ -261,7 +282,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
       | .ok (ty, z) =>
         match (match ty, t with
             | .wert (.sum _), _ => .ok .null
-            | .wert _, _ => uKonst consts v
+            | .wert τ, _ => uKonst consts [] (some τ) v
             | _, _ => .ok .null : Except String UKonst) with
         | .error e => .error e
         | .ok k =>
