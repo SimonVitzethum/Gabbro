@@ -5104,3 +5104,531 @@ until the IR layout proofs consume it. `Zielsatz/Projekte/Profil.lean` states `G
 proved isolation service has a form. Witnesses sit beside each module (`*Zeuge.lean`, `ProfilZeuge.lean`).
 Open: the entry/service correspondence and the guest service (C08/C12), function-tail gates, the `Verbund` profile
 transport, and the layout/startup/relocation proofs of placement.
+
+
+## 106. C02: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `733f1b65b` (`feat(grammar): bind C02 library admission into the checker`).
+
+`grammatik/Grammatik/Gen/Erzeuger/Gueltig.lean`:
+
+* **`akzeptiertX_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`stufenOk_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`antwortOk_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`okFuer_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gueltig_korrekt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gueltig_vollst`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gueltig_alle`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`bad_korrekt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`bad_vollst`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`bad_alle`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gueltig_oder_nicht`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gueltigAlle_vollst`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Speichermodell/Atomar/AtomarZeuge/Teil1.lean`:
+
+* **`atomarB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussWAB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussWAB_of_fussWB`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertA_of_akzeptiert`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussSA_mono`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertA_ok`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`schwach_ist_gA_akzeptiert`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gaInv_rang`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`kein_warteZyklusGA`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`keine_verklemmungGA`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`laufW_erreichbar`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`w_sprache_akzeptiertA`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean`:
+
+* **`akzeptiertSpecX_of_spec`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`AkzeptiertSpecX.mitBesitz`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`AkzeptiertSpecX.mitAkku`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fragX_ok`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`geteiltV_nicht_stabil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`rennfreiBis_of_GA`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ziel_atomar_spec`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`rennfrei_atomar_spec`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`vertragsFreiB_ok`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussWXB_ok`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertSpecX_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussWXB_of_fussWB`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Faeden/PoolSym/Teil1.lean`:
+
+* **`pool_filter_nil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nodup_filter_length_le_one`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`einzelnPool_of_nodup`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`einzelnPoolB_of_einzelnB`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`einzelnPool_paar`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`getrenntW_nodup`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiert_nodup_gleich`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertVor_nodup`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiert_vor_neu`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertSpecVor_neu`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`laufzeit_vor_neu`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`pool_schreibt_nicht_lauf`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Bibliothek.lean`:
+
+* **`LibraryAdmission`**: the package definition used by the following certificates.
+* **`libraryB_immer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`libraryB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Teil1.lean`:
+
+* **`mehrfach_filter`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`mehrfachB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nicht_mehrfach_of_nodup`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`getrenntW_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`getrenntW_eq_lokW`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`schreibGetrenntW_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ausgenommenB_false`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`rennB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`abgAlleB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussWB_iff'`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussWB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`stufenB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Teil2.lean`:
+
+* **`poolSicherWB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`einzelnPoolB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`maskenB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`maskenB_ohne`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`tabsOf_voll`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`globsOf_voll`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertSpec_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`spec_akzeptiert`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ruheB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`getrenntK_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`schreibGetrenntK_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`wurzel_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Spec/Teil1.lean`:
+
+* **`AkzeptiertSpec.mitAkku`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+
+Stage-0 boundary: Unexpanded library calls and translators with calls are refused; declared costs and other unbound clauses remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `libraryFn_bound`, `transT_bound`, `library_zeuge`.
+
+
+## 107. C03: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `33d5d68bd` (`test(grammatik): cover typed payload lowering and refusal boundaries`).
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Tagged/Proben.lean`:
+
+* **`uSumFaelle_nested_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_nested_resolved_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_bool_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_array_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_string_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_reference_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_record_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`tagged_resolve_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`USum.resolveCases_shape_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`USum.resolve_shape_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`uSumFaelle_missing_close_refused`**: The unsupported source form is rejected.
+* **`uSumFaelle_extra_payload_refused`**: The unsupported source form is rejected.
+
+Stage-0 boundary: Typed payload support does not bypass metadata checks; nested duties and unsupported local type metadata remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 108. C04: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `0eaeaabbd` (`feat(export): admit state transitions to Stage 0`).
+
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`:
+
+* **`constantExpansion`**: the package definition used by the following certificates.
+* **`check_sound`**: Successful checking entails the specified semantic or admission property.
+* **`check_clear`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`check_sound_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`checkConstants_sound`**: Successful checking entails the specified semantic or admission property.
+* **`invariant_refused_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`nested_duties_refused_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`stateT_bound`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`stateT_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`libraryFn_bound`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`transT_bound`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`library_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+`stage0/Stage0/Zeugen/StateWitness.lean`:
+
+* **`candidate_present`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`accepted_image`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+
+Stage-0 boundary: Atomic transition contracts, conflicting effects and incompatible aliases remain refused by transition elaboration. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `stateT_bound`, `stateT_zeuge`.
+
+
+## 109. C06: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `d060d11a4` (`feat(c06): add witnesses for prefix replay and checker binding`).
+
+`grammatik/Grammatik/Logik/Ruf/Schnittstellen/Zeuge.lean`:
+
+* **`refinement`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ptrVerfeinert_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`ptrRufPflicht_req_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`concrete_contracts_differ`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`default_does_not_discharge_O43`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`inventory_functions`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`inventory_signatures`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ptrVerfeinert_iff_kandidaten_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`old_world_and_read_only_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`weaker_second_target_post_refused`**: The unsupported source form is rejected.
+* **`stronger_interface_post_refused`**: The unsupported source form is rejected.
+* **`handler_contracts`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+
+Stage-0 boundary: Indirect calls require interface refinement and caller duties; a pointer contract alone does not establish an executable source binding. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 110. C09: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `36662142d` (`feat(owner): ghost run ledger with G/GX conservation and root admission`).
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Admission.lean`:
+
+* **`OwnerAdmission`**: the package definition used by the following certificates.
+* **`ownerB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerAdmission_of_ownerB`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`owner_single_not_twice`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`owner_root_once`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fadenSpawn_m_G`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`owner_step_mint_refused_G`**: The unsupported source form is rejected.
+* **`owner_step_mint_refused_X`**: The unsupported source form is rejected.
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Ledger.lean`:
+
+* **`ownerLedgerOf`**: the package definition used by the following certificates.
+* **`foldStep_id`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`foldl_ledger_id`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerThreadStep_id`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerLedger_fold_eq`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerLedger_eq_base`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerLedger_of_ledger_eq`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerInvG_start`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerInvG_schritt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerInvG_erreichbar`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`push_transfer_valid`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`push_borrow_valid`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/LedgerGX.lean`:
+
+* **`ownerInvGX_of_G`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerInvGX_schritt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerInvGX_erreichbar`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ownerInvF_schritt_X`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fadenSpawn_m_X`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/LedgerZeuge.lean`:
+
+* **`ownerLedger_zeuge_valid`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`ownerLedger_zeuge_spent`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`ownerLedger_zeuge_grant`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`ownerLedger_zeuge_run`**: Concrete witness for the stated acceptance, refusal or certificate.
+
+Stage-0 boundary: Nominal owner flow and escrow admission do not bypass the source metadata gate or establish a provider binding. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 111. C11: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `8abb7bd47` (`feat(grammatik): lower C11 traversal forms with verified refinement`).
+
+`grammatik/Grammatik/Code/Refine/StmtOk/Teil6.lean`:
+
+* **`lowerS_ok`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerB_ok`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerEnd_ok`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerAr_ok`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerGA_ok`**: The stated lowering preserves its certificate or succeeds on the specified input.
+`grammatik/Grammatik/Code/Refine/StmtOk/Teil7.lean`:
+
+* **`lowerS_ok_consumeTraverse`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerS_ok_retScoped`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerS_ok_retWhyScoped`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerB_ok_narrowRequired`**: The stated lowering preserves its certificate or succeeds on the specified input.
+`grammatik/Grammatik/Code/Refine/StmtOk/Teil8.lean`:
+
+* **`lowerEnd_ok_retScoped`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerEnd_ok_retWhyScoped`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerEnd_ok_narrowRequired`**: The stated lowering preserves its certificate or succeeds on the specified input.
+`grammatik/Grammatik/Code/Refine/Struct/Labels/Teil3.lean`:
+
+* **`lowerB_lbl_narrowRequired`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerEnd_lbl_narrowRequired`**: The stated lowering preserves its certificate or succeeds on the specified input.
+`grammatik/Grammatik/Code/Refine/Struct/Shape/Teil3.lean`:
+
+* **`lowerS_shape`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerB_shape`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerEnd_shape`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerAr_shape`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerGA_shape`**: The stated lowering preserves its certificate or succeeds on the specified input.
+`grammatik/Grammatik/Code/Refine/Struct/Shape/Teil4.lean`:
+
+* **`lowerS_shape_traverse`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerS_shape_consumeTraverse`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerB_shape_narrowRequired`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerEnd_shape_narrowRequired`**: The stated lowering preserves its certificate or succeeds on the specified input.
+`grammatik/Grammatik/Code/Refine/WitnessC11.lean`:
+
+* **`zeuge_c11_consume_lower`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_consume_ok`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_narrow_lower`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_narrow_ok`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_ret_lower`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_ret_ok`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_retWhy_lower`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`zeuge_c11_retWhy_ok`**: Concrete witness for the stated acceptance, refusal or certificate.
+
+Stage-0 boundary: Traversal lowering retains narrowing, capacity and cleanup duties; metadata-bearing unsupported nested forms remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 112. C12: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `4f246049c` (`feat(c12): compose owner-preserving capability attenuation`).
+
+`grammatik/Grammatik/Kern/Syntax/Typen/DataCap.lean`:
+
+* **`attenuates_sound`**: Successful checking entails the specified semantic or admission property.
+* **`attenuates_trans`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`attenuates_trans_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`write_only_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`attenuates_sound_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+
+Stage-0 boundary: Capability attenuation preserves ownership; descriptors alone do not establish a source memory provider binding. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 113. C13: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `0891322a6` (`merge: Stage-0 witness for a C13 builtin`).
+
+`stage0/Stage0/Zeugen/BuiltinWitness.lean`: **`candidate_present`** proves that compilation produces a candidate; **`accepted_image`** proves `emit text 64 = .ok output` for the builtin fixture.
+
+
+Stage-0 boundary: The builtin witness establishes its concrete emitted image; unsupported source metadata remains refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 114. C14: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entry admission and guest boundary`).
+
+`grammatik/Grammatik/Parser/Profil/Eintritt.lean`:
+
+* **`isNone_eq`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`isEmpty_eq`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`eintrittB_sound`**: Successful checking entails the specified semantic or admission property.
+* **`eintritt_ohne_registerzustand`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gast_ohne_dienst_abgelehnt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gastVon_abgelehnt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Parser/Profil/EintrittZeuge.lean`:
+
+* **`ez_zulaessig`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_bindung`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_ohne_register`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_vektor`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_via`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_register`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_stapel`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_percpu`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_arch`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_wurzel`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_kills`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ez_gast_mit_dienst`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Projekte/Profil.lean`:
+
+* **`hardware_iff_komponenten`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`profilKomponenten_eq`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`profilAnnahmen_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ProfilEinheit.bindung_zulaessig`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`profil_modell_einheit`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`profil_bindung_einheit`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gabbro_ziel_profil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`eintritt_wurzel_in_ws`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`eintritt_laufzeit`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+
+Stage-0 boundary: Profile-bound admission does not discharge unsupported source metadata or supply guest environment contracts. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 115. C15: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `24ba84fa8` (`feat(grammatik): C15 per-cell protocol, link transport and program witness`).
+
+`grammatik/Grammatik/Bausteine/Kernzelle/SperrProtokoll.lean`:
+
+* **`akkuZelleBewacht`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akkuZellenBewacht`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akkuRennfreiAbgedeckt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zellFalteRuhig`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`verlaufGleichRuhig`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akkuRuhigReduktion`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akkuRuhigTreue`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akkuZielErweitert_aus`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akkuStartB_vollst`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Bausteine/Kernzelle/Zeuge.lean`:
+
+* **`zMax_okB`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zOr_okB`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zMax_ok`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zOr_ok`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zMax_neutral`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zOr_neutral`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`maxFalte_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`minFalte_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`addKette_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`orFalte_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`andFalte_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`ruhigMax_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+`grammatik/Grammatik/Zielsatz/Atomar/BeweisAtomar/Teil2.lean`:
+
+* **`gabbro_ziel_gx`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nutzerPflichtA_ohne_atomar`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ziel_of_X`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`zielF_of_X`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`geteiltA_leer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`geteiltV_leer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gabbro_ziel_sc_aus`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertSpec_verbindeX`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nutzerTeil_of_A`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nutzerTeilA_of`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gabbro_ziel_verbund`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`gabbro_ziel_verbund_sc_aus`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Faeden/Verbund/T2.lean`:
+
+* **`p2_eq`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`verbindeP_rumpf`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`teilP_gleich`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`teilP_teil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussOrteG_teil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussOrte_teil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`kandB_teil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`ruftB_teil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`huelle_of_reach`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`teil_abg`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`kante_teil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`mle_rufM`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Faeden/Verbund/T3.lean`:
+
+* **`schreibGetrenntVB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`poolSicherVB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`schnittstelleB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`verbinde_leer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`verbinde_akzeptiert`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nutzerTeil_verbinde`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Spec/Teil1.lean`:
+
+* **`AkzeptiertSpec.mitAkku`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Projekte/Komposition.lean`:
+
+* **`passend_P`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`koerperVon_besitzer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`geteiltA_offen`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`koerperGutSA_Q`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`invGutSA_Q`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`invGutGrundA_Q`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`axVertragO_qAlle`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`axEnsLokal_qAlle`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`koerperGutSA_mitRumpf2`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`invGutSA_mitRumpf2`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`invGutGrundA_mitRumpf2`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nutzerPflichtA_komponiere`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Projekte/Verbund.lean`:
+
+* **`checked_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`besitzer_mem`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`besitzer_da`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`komponiere_rumpf`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`fussOrteG_besitzer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`kandB_besitzer`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`mem_ws_komponiere`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`mem_arenen_komponiere`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertSpecX_komponiere`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`bindeB_sound`**: Successful checking entails the specified semantic or admission property.
+* **`gabbro_ziel_verbund_n`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`nutzerTeilO_wachs`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+
+Stage-0 boundary: Only the five bound operators with an explicit per-cpu count pass the metadata gate; accumulator uses in bodies and contracts remain refused pending C08. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `accT_bound`, `accT_zeuge`.
+
+
+## 116. C16: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `161338497` (`feat(grammatik): C16 witnesses for admission, fidelity and transport`).
+
+`grammatik/Grammatik/Zielsatz/Faeden/Ruhe/Teil3.lean`:
+
+* **`nodup_map_some`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`CheckExpansion.mitRuhe`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`CheckRahmen.mitRuhe`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`CheckAdmission.mitRuhe`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`akzeptiertSpec_mitRuhe`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`pruef_expansion_mitRuhe_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/CheckDecide.lean`:
+
+* **`CheckAdmission`**: the package definition used by the following certificates.
+* **`CheckAdmission.nil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Akzeptiert/Teil3.lean`:
+
+* **`ResetAdmission`**: the package definition used by the following certificates.
+* **`resetAdmissionB`**: the package definition used by the following certificates.
+* **`resetAdmissionB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`PageAdmission`**: the package definition used by the following certificates.
+* **`resetAdmission_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+* **`resetCarrierB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`resetB_iff`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+`grammatik/Grammatik/Zielsatz/Kern/Spec/Teil4.lean`:
+
+* **`checkTreue_zeuge`**: Concrete witness for the stated acceptance, refusal or certificate.
+
+Stage-0 boundary: Counterprobes remain refused; parameterised and reason-carrying gates and unbound sibling-check gates remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `checkT_bound`, `checkT_zeuge`.
+
+
+## 117. C17: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `aeea4a7bc` (`feat(const): prove soundness of checked const calls`).
+
+`grammatik/Grammatik/Kern/Syntax/Konst/Zertifikat.lean`:
+
+* **`constStmtErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`constBlockErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`constEndErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`constArmsErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`constReasonErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`schrumpfArmErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`constRufErhaelt`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`const_call_sound`**: Successful checking entails the specified semantic or admission property.
+* **`const_call_eindeutig`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`const_call_stabil`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`const_call_fehlerVertrag`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`const_call_fehlerErschoepft`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+
+Stage-0 boundary: Checked constant evaluation retains the original metadata obligations; declared costs without a checked binding remain refused. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; `nested_duties_refused_zeuge` and `invariant_refused_zeuge` pin inherited refusals (there is no package-specific `_bound` theorem in this gate).
+
+
+## 118. C18: integrated definitions, certificates and export boundary (2026-11-02)
+
+Integration evidence: `1e93b2e57` (`feat(grammatik): witness a closed static-array reset through lowering`).
+
+`grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Rest2.lean`:
+
+* **`lowerAllg104fragment`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerAllg104fuss`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lowerAllg104data`**: The stated lowering preserves its certificate or succeeds on the specified input.
+* **`lexL104real`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`lex104real`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`kette104`**: Establishes the stated model, transport or lowering relation under its explicit premises.
+* **`uReset_lower`**: The stated lowering preserves its certificate or succeeds on the specified input.
+
+Stage-0 boundary: Unknown arenas, unknown statics and non-array statics remain refused; range validity and zero observation remain lowering obligations. The shared gate is `itemMetadata` in
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`; its exact boundary witnesses are `reset_bound`, `reset_zeuge`.
+
+
+## 119. C05: refused invariant gate (2026-11-02)
+
+`grammatik/Grammatik/Parser/Elab/ExportMetadata.lean`:
+
+* **`groupT_still_refused`**: `itemMetadata (.groupT g ts vs) = true` for every group declaration.
+* **`groupT_zeuge`**, **`invariant_refused_zeuge`**: concrete group and table invariant declarations return the missing cost/runs/by binding error.
+
+Stage 0 still refuses all group and table invariants: mandatory cost/runs/by duties have no checked source binding.
