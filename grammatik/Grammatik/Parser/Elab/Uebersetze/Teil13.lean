@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil12
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 
 @[expose] public section
 
@@ -208,6 +209,10 @@ def elabU : List SItemTief → Except String UProg
     match uOptGlobs tabs (globs0 ++ arGlobs) with
     | .error e => .error e
     | .ok globs =>
+    -- C16: every `check` item elaborates now; its codegen refusal stays below.
+    match uChecks tabs globs ms with
+    | .error e => .error e
+    | .ok checks =>
     match uSeq ((ms.filter (fun
         | .lockT _ _ _ _ _ _ _ => true | _ => false)).map (fun item => uSperre globs tabs item consts)) with
     | .error e => .error e
@@ -288,8 +293,10 @@ def elabU : List SItemTief → Except String UProg
                                           gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }),
           annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs,
           zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger,
-          exportGate := ExportMetadata.check ms0 }
-      .ok (uMitBoden u)
+          exportGate := ExportMetadata.check ms0, checks := checks }
+      -- C16: the records are retained, but their probe/gate lowering is the open
+      -- remainder -- a unit with a check keeps its named refusal.
+      if !checks.isEmpty then .error "check without G form" else .ok (uMitBoden u)
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 

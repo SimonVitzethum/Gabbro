@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil1
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 @[expose] public section
 
@@ -270,6 +271,10 @@ structure UProg where
   ptrKeys : List String := []
   /-- Original-source duty check, consumed by the actual new lowering branches. -/
   exportGate : Except String Unit := .ok ()
+  /-- The unit's declared checks (C16): elaborated records of every `check` item.
+      The `can_fail` bodies lower into generated functions in the next stage; until
+      then any non-empty list keeps the named `check without G form` refusal. -/
+  checks : List UCheck := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare

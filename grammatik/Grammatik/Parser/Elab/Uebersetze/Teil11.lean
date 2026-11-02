@@ -339,6 +339,8 @@ def uRestFehler : List SItemTief → Except String Unit
   | .assumT .. :: rest => uRestFehler rest
   | .whyT .. :: rest => uRestFehler rest
   | .callT .. :: rest => uRestFehler rest
+  -- `check` items elaborate into `UProg.checks` (C16); their codegen refusal lives in `elabU`.
+  | .checkT _ :: rest => uRestFehler rest
   | .varT .. :: rest => uRestFehler rest
   | .goalT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
