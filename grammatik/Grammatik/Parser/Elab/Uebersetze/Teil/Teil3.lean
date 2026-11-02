@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
+public import Grammatik.Parser.Elab.Konst.Funktionen
 
 @[expose] public section
 
