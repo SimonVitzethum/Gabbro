@@ -84,8 +84,13 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) : ∀ (s : Stm
   | .breaking _ body, σ, ρ, hbo, hh, σ', h => block_gutB bo hbV body σ ρ (by boden_tac) hh σ' h
   | .traverse t inv body, σ, ρ, hbo, hh, σ', h =>
       traverseLauf_gut (Λ := Λ) _ _ (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh) (fun σ ρ hh => gut_lese σ Λ _ inv.orte_darf hh.heldIn) _ σ ρ hh σ' h
-  | .consumeTraverse t _ _ inv _ _ body, σ, ρ, hbo, hh, σ', h =>
-      traverseLauf_gut (Λ := Λ) _ _ (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh) (fun σ ρ hh => gut_lese σ Λ _ inv.orte_darf hh.heldIn) _ σ ρ hh σ' h
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ, hbo, hh, σ', h =>
+      verbrauchLauf_gut (Λ := Λ) t _ _ _ _ _
+        (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh)
+        (fun σ ρ hh => gut_lese σ Λ _ inv.orte_darf hh.heldIn)
+        (fun σ ρ hh => gut_lese σ Λ _ (orte_append member.orte_darf edge.orte_darf) hh.heldIn)
+        (fun σ ρ hh => gut_lese σ Λ _ mass.orte_darf hh.heldIn)
+        _ σ ρ hh σ' h
   | .retry n bis body ueberlauf, σ, ρ, hbo, hh, σ', h =>
       retryLauf_gut (Λ := Λ) _ _ _ (fun σ ρ hh => block_gutB bo hbV body σ ρ (by boden_tac) hh) (fun σ ρ hh => gut_lese σ Λ _ bis.orte_darf hh.heldIn) (fun σ ρ hh => block_gutB bo hbV ueberlauf σ ρ (by boden_tac) hh) n σ ρ hh σ' h
   | .forever a inv body, σ, ρ, hbo, hh, σ', h =>

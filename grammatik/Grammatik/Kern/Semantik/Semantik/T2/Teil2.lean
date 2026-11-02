@@ -80,14 +80,23 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
       traverseLauf (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (alleIndizes (D.count t)) σ ρ
-  /- C11 consuming traversal, sequential placeholder: runs the body as a
-      fixed sweep like `traverse` over the initial index list. Current-state
-      re-selection, minimal selection, strict measure fall and removal
-      (Isabelle/Consuming bridge) are OPEN and stay refused at export. -/
-  | .consumeTraverse t _ _ inv _ _ body, σ, ρ =>
-      traverseLauf (fun σ ρ => execBlock body σ ρ)
+  /- C11 consuming traversal: every round selects, in the CURRENT world, the
+      least remaining member that is minimal w.r.t. `edge` (`verbrauchSel`
+      over `alleIndizes`: first minimal index in ascending order), checks
+      `inv`, reads `mass`, and runs `body` on the selected index; the next
+      round re-selects in the post-body world. The loop ends when no member
+      is left; a cyclic edge with members left, a failed `inv`, and a
+      post-body measure that does not strictly fall inside `0 .. bound` are
+      the writer's logic (`.logik .schleife`), like a failed `decreases` at
+      `traverse`. Fuel bounds the run by the domain size plus the measure
+      span; `edge j k` means "`j` precedes `k`" (the candidate is bound
+      second). -/
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ =>
+      verbrauchLauf t (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
-        (alleIndizes (D.count t)) σ ρ
+        (verbrauchSel t member edge)
+        (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+        bound ((D.count t).toNat + bound.toNat + 1) σ ρ
   | .retry n bis body ueberlauf, σ, ρ =>
       retryLauf (fun σ ρ => execBlock body σ ρ)
         (fun σ ρ => let σ := σ.lese Λ bis.orte; (σ, wahr? (eval σ bis σ ρ)))

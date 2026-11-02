@@ -94,11 +94,17 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
   /-- `traverse ... by consuming` (C11): consuming loop over the finite domain
       of `t` with current-state selection. `member` tests membership of a
       represented index in the CURRENT world, `edge` the declared edge relation
-      between two represented indices, `inv` the loop invariant, `mass` the
+      between two represented indices (`edge j k` means "`j` precedes `k`",
+      the candidate bound second), `inv` the loop invariant, `mass` the
       strictly falling measure over `0 .. bound`, and `body` the pass over the
       selected index; the body's declared `touches ... consumes` performs the
-      actual removal. Re-selection runs in the post-body world; empty selection
-      terminates only by selector completeness (minimality/decrease proof open). -/
+      actual removal. Each round selects the least remaining member that is
+      minimal w.r.t. `edge` (first in ascending index order) in the current
+      world, checks `inv`, reads `mass` and runs `body`; the next round
+      re-selects in the post-body world. The loop ends when no member is
+      left; a cyclic edge with members left, a failed `inv` and a post-body
+      measure that does not strictly fall inside `0 .. bound` are the
+      writer's logic (`.logik .schleife`), like a failed `decreases`. -/
   | consumeTraverse (t : D.Tab)
       (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
       (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)

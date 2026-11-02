@@ -50,6 +50,100 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
 
+/-- **Frame of a consuming run** (`traverse … by consuming`, C11): like
+    `traverseLauf_gut`, by induction on the fuel. Selection, measure and
+    invariant reads are premises (`hsel`, `hmass`, `hi`); every failing
+    check is `.logik .schleife`, which carries no world. -/
+theorem verbrauchLauf_gut (t : D.Tab)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int)
+    (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → GutAusgang W G σ (schritt σ ρ))
+    (hi : ∀ σ ρ, HeldB bo Λ σ.haelt → Gut W G σ (inv σ ρ).1)
+    (hsel : ∀ σ ρ, HeldB bo Λ σ.haelt → Gut W G σ (sel σ ρ).1)
+    (hmass : ∀ σ ρ, HeldB bo Λ σ.haelt → Gut W G σ (massW σ ρ).1) :
+    ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ), HeldB bo Λ σ.haelt →
+      GutAusgang W G σ
+        (verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro σ ρ _ σ' h
+      simp only [verbrauchLauf, Ausgang.welt, reduceCtorEq] at h
+  | succ n ih =>
+      intro σ ρ hh σ' h
+      simp only [verbrauchLauf] at h
+      split at h
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · have hinv := hi σ ρ hh
+        have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
+        split at h
+        · rename_i σr hsel_eq
+          simp only [Ausgang.welt, Option.some.injEq] at h
+          subst h
+          have hselr : Gut W G (inv σ ρ).1 σr := by
+            rw [hsel_eq] at hselg
+            exact hselg
+          exact hinv.trans hselr
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · rename_i σr k hsel_eq
+          have hselr : Gut W G (inv σ ρ).1 σr := by
+            rw [hsel_eq] at hselg
+            exact hselg
+          have gsel : Gut W G σ σr := hinv.trans hselr
+          have hmassg := hmass σr ρ (gsel.heldB hh)
+          have hstep := hs (massW σr ρ).1 (.cons k ρ)
+            ((gsel.trans hmassg).heldB hh)
+          split at h
+          · rename_i σ1 ρ1 hstep_eq
+            have g1 : Gut W G σ σ1 :=
+              (gsel.trans hmassg).trans (hstep σ1 (by rw [hstep_eq]; rfl))
+            have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
+            split at h
+            · have g2 : Gut W G σ (massW σ1 ρ1.tail).1 :=
+                g1.trans hmassg2
+              exact g2.trans (ih (massW σ1 ρ1.tail).1 ρ1.tail
+                (g2.heldB hh) σ' h)
+            · simp only [Ausgang.welt, reduceCtorEq] at h
+          · rename_i σ1 ρ1 hstep_eq
+            have g1 : Gut W G σ σ1 :=
+              (gsel.trans hmassg).trans (hstep σ1 (by rw [hstep_eq]; rfl))
+            have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
+            split at h
+            · have g2 : Gut W G σ (massW σ1 ρ1.tail).1 :=
+                g1.trans hmassg2
+              exact g2.trans (ih (massW σ1 ρ1.tail).1 ρ1.tail
+                (g2.heldB hh) σ' h)
+            · simp only [Ausgang.welt, reduceCtorEq] at h
+          · rename_i σ1 ρ1 hstep_eq
+            have g1 : Gut W G σ σ1 :=
+              (gsel.trans hmassg).trans (hstep σ1 (by rw [hstep_eq]; rfl))
+            have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
+            split at h
+            · split at h
+              · simp only [Ausgang.welt, Option.some.injEq] at h
+                subst h
+                have h3 := hi (massW σ1 ρ1.tail).1 ρ1.tail
+                  ((g1.trans hmassg2).heldB hh)
+                exact g1.trans (hmassg2.trans h3)
+              · simp only [Ausgang.welt, reduceCtorEq] at h
+            · simp only [Ausgang.welt, reduceCtorEq] at h
+          · rename_i σ1 v hstep_eq
+            simp only [Ausgang.welt, Option.some.injEq] at h
+            subst h
+            exact (gsel.trans hmassg).trans
+              (hstep _ (by rw [hstep_eq]; rfl))
+          · rename_i σ1 r hstep_eq
+            simp only [Ausgang.welt, Option.some.injEq] at h
+            subst h
+            exact (gsel.trans hmassg).trans
+              (hstep _ (by rw [hstep_eq]; rfl))
+          · simp only [Ausgang.welt, reduceCtorEq] at h
+          · simp only [Ausgang.welt, reduceCtorEq] at h
+
 theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
     (hs : ∀ σ ρ, HeldB bo Λ σ.haelt → GutAusgang W G σ (schritt σ ρ))
