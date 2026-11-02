@@ -64,6 +64,9 @@ public import Grammatik.Kern.Syntax.Marken.Owner.ActivationWitness
 public import Grammatik.Kern.Syntax.Marken.Owner.Ledger
 public import Grammatik.Kern.Syntax.Marken.Owner.LedgerGX
 public import Grammatik.Kern.Syntax.Marken.Owner.Escrow
+public import Grammatik.Kern.Syntax.Marken.Owner.EscrowFixture
+public import Grammatik.Kern.Syntax.Marken.Owner.EscrowRun
+public import Grammatik.Kern.Syntax.Marken.Owner.EscrowRunZeuge
 public import Grammatik.Kern.Syntax.Marken.Owner.Admission
 public import Grammatik.Kern.Syntax.Marken.Owner.LedgerZeuge
 public import Grammatik.Logik.Ruf.FremdRuf
