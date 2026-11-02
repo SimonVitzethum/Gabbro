@@ -32,6 +32,7 @@
 
 module
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1a
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T2
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T3
 @[expose] public section

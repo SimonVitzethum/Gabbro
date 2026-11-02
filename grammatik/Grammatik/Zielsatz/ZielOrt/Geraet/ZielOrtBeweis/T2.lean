@@ -1,6 +1,7 @@
 /- Part 2 of 3 of `ZielOrtBeweis` (split by instrumente/teile/lean-teilen.py; the umbrella `ZielOrtBeweis.lean` imports all parts). -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1a
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.Teil9
 @[expose] public section
 
