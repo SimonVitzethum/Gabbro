@@ -160,11 +160,11 @@ def csCertBind : CertEnd2 csD (csV .fBind) :=
 
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fBind) false [.int 3 3] [] csCertBind = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fBind) false [.int 3 3] [], True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertBind (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertBind (by decide +kernel)
 
 /-- Printer output for `let y : K = x; y = y + 0; return y;`, `K = 0 .. 10`. -/
 def csCertVar : CertEnd2 csD (csV .fVar) :=
@@ -175,12 +175,12 @@ def csCertVar : CertEnd2 csD (csV .fVar) :=
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fVar) false [.int 0 10, .int 0 10] []
     csCertVar = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fVar) false [.int 0 10, .int 0 10] [],
     True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertVar (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertVar (by decide +kernel)
 
 /-- Printer output for `let y : K = x; if y < 3 { y = y + 0; } return y;`. -/
 def csCertWenn : CertEnd2 csD (csV .fWenn) :=
@@ -192,12 +192,12 @@ def csCertWenn : CertEnd2 csD (csV .fWenn) :=
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fWenn) false [.int 0 10, .int 0 10] []
     csCertWenn = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fWenn) false [.int 0 10, .int 0 10] [],
     True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertWenn (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertWenn (by decide +kernel)
 
 /-- Printer output for `T.slots[0].x = 42; return;` (`count 2`, `0 .. 100`). -/
 def csCertSlot : CertEnd2 csD (csV .fSlot) :=
@@ -206,11 +206,11 @@ def csCertSlot : CertEnd2 csD (csV .fSlot) :=
 
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fSlot) false [] [] csCertSlot = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fSlot) false [] [], True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertSlot (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertSlot (by decide +kernel)
 
 /-- Printer output for `return 5;` at result `0 .. 10`: the literal
     narrows under `wide`, exactly where the checker elaborates `weiter`. -/
@@ -219,11 +219,11 @@ def csCertWide5 : CertEnd2 csD (csV .fRet) :=
 
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fRet) false [] [] csCertWide5 = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fRet) false [] [], True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertWide5 (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertWide5 (by decide +kernel)
 
 /-- VERBATIM printer output for `doppelt` (`beispiele/0093-const-scalars.gab`):
     `const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000`
@@ -234,11 +234,11 @@ def csCertDoppelt : CertEnd2 csD (csV .fDoppelt) :=
 /-- The print is valid, by `decide`. -/
 example : certEnd2Ok csD (csV .fDoppelt) false [.int 0 1000] []
     csCertDoppelt = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock csD (csV .fDoppelt) false [.int 0 1000] [], True :=
-  zeugnisStmt2_sound csD _ false _ _ csCertDoppelt (by decide)
+  zeugnisStmt2_sound csD _ false _ _ csCertDoppelt (by decide +kernel)
 
 /-! ## 3. The 104 record: what the printer says about the reference program
 

@@ -19,7 +19,7 @@ def D : Deklaration :=
   { Geist.Zeuge.GD with
     sigNr := fun _ =>
       { params := [.sum schema], erg := some (.sum schema), gruende := 0,
-        haelt := [], schreibt := fun _ => false, gschreibt := fun g => nomatch g,
+        haelt := [], schreibt := fun _ => false, gschreibt := (fun g => nomatch g),
         konsumiert := [], produziert := [] }
     passt := fun _ _ => false
     passt_ok := fun _ _ h => by cases h
@@ -28,11 +28,11 @@ def D : Deklaration :=
 def V : Vertrag D := vertragVon D ()
 
 def world : World D :=
-  { slots := fun _ _ _ => false, globs := fun g => nomatch g, spur := [] }
+  { slots := fun _ _ _ => false, globs := (fun g => nomatch g), spur := [] }
 
 def oracle : Orakel D :=
-  { wirkt := fun a => nomatch a, regLies := fun r => nomatch r,
-    regSchreib := fun r => nomatch r, sichtbar := fun g => nomatch g }
+  { wirkt := (fun a => nomatch a), regLies := (fun r => nomatch r),
+    regSchreib := (fun r => nomatch r), sichtbar := fun g => nomatch g }
 
 /-- An arm returns its complete payload under the same tag, including arrays,
     strings and the nested sum; no projection or default value is substituted. -/
@@ -51,7 +51,7 @@ def arms : Arms D V false [.sum schema] [] [] schema :=
 
 def program : Programm D :=
   { requires := fun _ => .tru, ensures := fun _ => .tru,
-    invariante := fun i => nomatch i,
+    invariante := (fun i => nomatch i),
     rumpf := fun _ => .cons (.onTag (.var .here) arms)
       (.ret (.val (.var .here)) (List.Perm.refl [])) }
 
