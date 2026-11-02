@@ -368,21 +368,21 @@ def uExp104 : UProg :=
     locks := [{ name := "M", rank := 0, guard := ["Konto"] }],
     fns := [
       { name := "einzahlen",
-        params := [("k", .ptr 0 true), ("i", .index 2),
+        params := [("k", .ptr (.table 0 (true, true))), ("i", .index 2),
           ("b", .int 0 10)],
-        kinds := [.ptr 0 true, .index 0, .int],
+        kinds := [.ptr (.table 0 (true, true)), .index 0, .int],
         res := .none,
         held := ["M"], puts := ["Konto"],
         gives := [.cmp "<="
           (.old "k" "stand" (.param "i"))
           (.slot "k" "stand" (.param "i"))],
         body := [.assign "k" "stand" (.param "i") (.lit 100),
-          .call "lies" [.freshPtr "Konto" false,
+          .call "lies" [.freshPtr "Konto" (.table 0 (true, false)),
             .val (.param "i")]],
         ret := .empty, boden := some 1 },
       { name := "lies",
-        params := [("k", .ptr 0 false), ("i", .index 2)],
-        kinds := [.ptr 0 false, .index 0],
+        params := [("k", .ptr (.table 0 (true, false))), ("i", .index 2)],
+        kinds := [.ptr (.table 0 (true, false)), .index 0],
         res := .some (0, 100),
         held := ["M"], puts := [],
         gives := [.cmp "==" .erg
@@ -417,7 +417,7 @@ def beqTy : Ty → Ty → Bool
   | .never, .never => true
   | .fl a b, .fl c d => beqIntPair a c && beqIntPair b d
   | .fnptr n, .fnptr m => n == m
-  | .ptr t w, .ptr s v => t == s && w == v
+  | .ptr a, .ptr b => decide (a = b)
   | _, _ => false
 
 def beqUIdx : UIdx → UIdx → Bool

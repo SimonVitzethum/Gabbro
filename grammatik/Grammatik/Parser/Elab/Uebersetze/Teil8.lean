@@ -400,7 +400,7 @@ def uSchleifenKopf (ctx : UCtx) (b : String) (o : Option SExpr) (k : String) (s 
             | .error e => .error e
             | .ok j =>
               match uArtBei ctx.kinds j with
-              | .ok (.ptr num _) =>
+              | .ok (.ptr ⟨_, _, .table num⟩) =>
                 match ctx.tabs[num]? with
                 | .some tb => .ok (tb.name, num)
                 | .none => .error "pointer table unknown"

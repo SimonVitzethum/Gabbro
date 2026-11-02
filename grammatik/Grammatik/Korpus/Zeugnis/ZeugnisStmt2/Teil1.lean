@@ -190,7 +190,7 @@ theorem fall_typed (D : Deklaration) (Γ : Ctx) (Λ : List (Res D))
 def certStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     (Λ Λ' : List (Res D)) : CertStmt2 D V → Prop
   | .assignThru t f n rw i e =>
-    rw = true ∧ D.tabNr n = some t ∧
+    rw = true ∧ D.capTab (D.tableSpace t) n = some t ∧
       certRange D Γ Λ i = some (0, D.count t - 1) ∧
       certRange D Γ Λ e ≠ none ∧
       certRange D Γ Λ e = intVonTyp (D.typ t f) ∧
@@ -210,7 +210,7 @@ def decStmt2Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     Decidable (certStmt2Gueltig D V l Γ Λ Λ' s) :=
   match s with
   | .assignThru t f n rw i e =>
-    inferInstanceAs (Decidable (rw = true ∧ D.tabNr n = some t ∧
+    inferInstanceAs (Decidable (rw = true ∧ D.capTab (D.tableSpace t) n = some t ∧
       certRange D Γ Λ i = some (0, D.count t - 1) ∧
       certRange D Γ Λ e ≠ none ∧
       certRange D Γ Λ e = intVonTyp (D.typ t f) ∧
@@ -260,7 +260,7 @@ theorem assignDurch_sound (D : Deklaration) (V : Vertrag D) (l : Bool)
     have hτ : D.typ t f = .int lo hi' := intVonTyp_eq hft
     obtain ⟨ee, _⟩ := zeugnis_sound e lo hi' he
     have ee' : Expr D Γ Λ (D.typ t f) := by rw [hτ]; exact ee
-    exact ⟨Stmt.assignThru (Expr.ptrOf t n htab true) t htab f ei ee' hw hL,
+    exact ⟨Stmt.assignThru (Expr.ptrOf t n htab (true, true)) t htab f ei ee' hw hL,
       trivial⟩
 
 /-- `callInd` soundness (nullary callees, the R-2 fragment): the signature

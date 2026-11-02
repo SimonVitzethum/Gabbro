@@ -69,7 +69,7 @@ def loadG (τ : GTy) (p : Opd) (r : Nat) : Option LR :=
   | .bool =>
       some ([.load r (.int 8) p, .cast (r + 1) .trunc (.int 8) (.int 1) (.reg r)],
             .reg (r + 1), r + 2)
-  | .ptr _ _ => some ([.load r .ptr p], .reg r, r + 1)
+  | .ptr _ => some ([.load r .ptr p], .reg r, r + 1)
   | .opt n =>
       if Ar.Fits (-1) (n - 1) 128 then some ([.load r (.int (Ar.wid (-1) (n - 1))) p], .reg r, r + 1) else none
   | .why n =>

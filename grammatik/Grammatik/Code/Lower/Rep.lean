@@ -41,7 +41,7 @@ variable [Conf]
 def supp : GTy → Bool
   | .int lo hi => decide (Ar.Fits lo hi 128)
   | .bool => true
-  | .ptr _ _ => true
+  | .ptr _ => true
   | .opt n => decide (Ar.Fits (-1) (n - 1) 128)
   | .why n => decide (Ar.Fits 0 ((n : Int) - 1) 128)
   | .sum cs => decide (Ar.Fits 0 (sumTop cs) 128)
@@ -52,7 +52,7 @@ def supp : GTy → Bool
 def regTy : GTy → Ty
   | .int lo hi => .int (Ar.wid lo hi)
   | .bool => .int 1
-  | .ptr _ _ => .ptr
+  | .ptr _ => .ptr
   | .opt n => .int (Ar.wid (-1) (n - 1))
   | .why n => .int (Ar.wid 0 ((n : Int) - 1))
   | .sum cs => .int (Ar.wid 0 (sumTop cs))
@@ -136,7 +136,7 @@ def wbool (v : Wert D .bool) : Bool := v
 def encR (lay : Layout D) : (τ : GTy) → Wert D τ → Val
   | .int lo hi, v => Val.ofInt (Ar.wid lo hi) v.n
   | .bool, b => Val.bool b
-  | .ptr n _, _ => match D.tabNr n with
+  | .ptr ⟨_, _, .table n⟩, _ => match D.tabNr n with
       | some t => .ptr (lay.gblk t) 0
       | none => .ptr nullBlk 0
   | .opt n, v => Val.ofInt (Ar.wid (-1) (n - 1)) (Gabbro.Grammatik.roh v)
@@ -152,7 +152,8 @@ def encM (lay : Layout D) : (τ : GTy) → Wert D τ → Val
 theorem encM_ty (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = true) :
     (encM lay τ v).ty = memTy τ := by
   cases τ <;> simp_all [supp, encM, encR, memTy, regTy, Val.ty, Val.ofInt, Val.bool]
-  rename_i n rw
+  rename_i cap
+  rcases cap with ⟨space, rights, ⟨n⟩⟩
   cases D.tabNr n <;> simp only
 
 theorem dec_enc_encM (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = true) :
@@ -160,7 +161,8 @@ theorem dec_enc_encM (lay : Layout D) {τ : GTy} (v : Wert D τ) (h : supp τ = 
   cases τ with
   | int lo hi => exact dec_enc_int _ _
   | bool => exact dec_enc_int _ _
-  | ptr n rw =>
+  | ptr cap =>
+      rcases cap with ⟨space, rights, ⟨n⟩⟩
       simp only [memTy, regTy, encM, encR]
       cases D.tabNr n <;> exact dec_enc_ptr _ _
   | opt n => exact dec_enc_int _ _

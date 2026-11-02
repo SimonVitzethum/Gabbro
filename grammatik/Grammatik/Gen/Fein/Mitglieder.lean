@@ -47,7 +47,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Gen
 
 /-- One representative type per type class, in the order of `Ty.kopf`. -/
 def vertreter : List Ty :=
-  [.int 0 0, .bool, .opt 1, .sum [none, some (0, 1)], .why 2, .never, .fl (0, 1) (1, 1), .fnptr 0, .ptr 0 true]
+  [.int 0 0, .bool, .opt 1, .sum [none, some (0, 1)], .why 2, .never, .fl (0, 1) (1, 1), .fnptr 0, .ptr (.table 0 (true, true))]
 
 theorem vertreter_koepfe : vertreter.map Ty.kopf = List.range 9 := by decide
 
@@ -56,7 +56,7 @@ theorem vertreter_koepfe : vertreter.map Ty.kopf = List.range 9 := by decide
     one, a byte for `getBytes`), the finite classes, the rest. -/
 def gruppen : List (List Ty) :=
   [[.int 0 0, .int 0 1, .int 0 255], [.bool, .opt 1, .sum [none, some (0, 1)], .why 2],
-   [.never, .fl (0, 1) (1, 1), .fnptr 0, .ptr 0 true]]
+   [.never, .fl (0, 1) (1, 1), .fnptr 0, .ptr (.table 0 (true, true))]]
 
 theorem gruppen_vertreter : vertreter ⊆ gruppen.flatten := by decide
 

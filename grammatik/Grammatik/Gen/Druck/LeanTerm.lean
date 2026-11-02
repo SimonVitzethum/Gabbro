@@ -90,7 +90,7 @@ def drE (N : Namen D) {Γ : Ctx} {Λ : List (Res D)} : {τ : Ty} → Expr D Γ �
   | _, .glob g _ => .ok s!"(Expr.glob (D := z.deklaration) {fin (N.glob g) "z.globs.length"} {bew})"
   | _, .slot t f i _ => do .ok s!"(Expr.slot (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
   | _, .thru p t _ f i _ => do .ok s!"(Expr.thru (D := z.deklaration) {← drE N p} {fin (N.tab t) "z.tabs.length"} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {← drE N i} {bew})"
-  | _, .ptrOf t n _ rw => .ok s!"(Expr.ptrOf (D := z.deklaration) {fin (N.tab t) "z.tabs.length"} {n} {bew} {rw})"
+  | _, .ptrOf (space := space) t n _ rw => .ok s!"(Expr.ptrOf (D := z.deklaration) (space := {space}) {fin (N.tab t) "z.tabs.length"} {n} {bew} ({rw.1}, {rw.2}))"
   | _, .refEq a b => do .ok s!"(Expr.refEq (D := z.deklaration) {← drE N a} {← drE N b})"
   | _, .slotRef r t _ _ f _ => do .ok s!"(Expr.slotRef (D := z.deklaration) {← drE N r} {fin (N.tab t) "z.tabs.length"} {bew} {bew} {fin (N.feld t f) s!"(z.tabs.get ⟨{N.tab t}, by decide⟩).felder.length"} {bew})"
   | _, .fnref f n _ => .ok s!"(Expr.fnref (D := z.deklaration) {fin (N.fn f) "z.fns.length"} {n} {bew})"

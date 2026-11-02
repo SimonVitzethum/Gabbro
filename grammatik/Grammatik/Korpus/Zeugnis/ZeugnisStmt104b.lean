@@ -69,7 +69,7 @@ def certEnd104Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     V.erg = some (.int lo hi) ∧ certRange D Γ Λ e = some (lo, hi) ∧
       Λ.Perm V.ende
   | .retDurch t f n i =>
-    D.tabNr n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧
+    D.capTab (D.tableSpace t) n = some t ∧ certRange D Γ Λ i = some (0, D.count t - 1) ∧
       V.erg = some (D.typ t f) ∧ darf D t Λ ∧ Λ.Perm V.ende
 
 /-- Body validity as `Decidable`, by structural recursion. -/
@@ -102,7 +102,7 @@ def decEnd104Gueltig (D : Deklaration) (V : Vertrag D) (l : Bool) (Γ : Ctx)
     inferInstanceAs (Decidable (V.erg = some (.int lo hi) ∧
       certRange D Γ Λ e = some (lo, hi) ∧ Λ.Perm V.ende))
   | .retDurch t f n i =>
-    inferInstanceAs (Decidable (D.tabNr n = some t ∧
+    inferInstanceAs (Decidable (D.capTab (D.tableSpace t) n = some t ∧
       certRange D Γ Λ i = some (0, D.count t - 1) ∧
       V.erg = some (D.typ t f) ∧ darf D t Λ ∧ Λ.Perm V.ende))
 
@@ -143,7 +143,7 @@ inductive End104Args (D : Deklaration) (V : Vertrag D) :
   | retWert (e : CertExpr D) (lo hi : Int) :
     End104Args D V Γ Λ (.retWert e lo hi)
   | retDurch (t : D.Tab) (f : D.Feld t) (n : Nat) (i : CertExpr D)
-    {rw : Bool} (p : Expr D Γ Λ (.ptr n rw)) :
+    {rw : Bool} (p : Expr D Γ Λ (.ptr (.table n (true, rw) (D.tableSpace t)))) :
     End104Args D V Γ Λ (.retDurch t f n i)
 
 /-- Body soundness: a valid body print IMPLIES the judgement behind the
@@ -254,7 +254,7 @@ def witDurch104 : CertEnd104 refD (vertragVon refD refLies) :=
 def witDurchArgs104 :
     End104Args refD (vertragVon refD refLies) []
       [Res.held (D := refD) ()] witDurch104 :=
-  (.retDurch _ _ _ _ (Expr.ptrOf () 0 rfl true))
+  (.retDurch _ _ _ _ (Expr.ptrOf () 0 rfl (true, true)))
 
 /-- Inhabitation witness for `end104_sound` (the call shape): ALL premises
     instantiated JOINTLY -- print, proofs, acceptance -- plus the
@@ -299,11 +299,11 @@ theorem zeugnisStmt104b_sound_zeuge :
     qualify to the export's constructors; the printed `?hp` fills with the
     export's `gHp_einzahlen_lies` (the `Args` list beside it passes the
     pointer the export passes: a fresh read-only `ptrOf`, since the
-    caller's `rw` pointer is no `.ptr 0 false`); the pointer behind
+    caller's `rw` pointer is no `.ptr (.table 0 (true, false))`); the pointer behind
     `retDurch` is the parameter itself. Each `example` runs the Lean
     checker (`certEnd104Ok ... = true` by `decide`); each soundness
     corollary applies `zeugnisStmt104b_sound`. Contexts list the head
-    first: `gCtx_einzahlen = [.ptr 0 true, .index 2, .int 0 10]`, so the
+    first: `gCtx_einzahlen = [.ptr (.table 0 (true, true)), .index 2, .int 0 10]`, so the
     index variable `i` reads as `(.var 1)` and recomputes `(0, 1)`. -/
 
 /-- Verbatim printer output for `einzahlen`: the pointer write with the
@@ -327,7 +327,7 @@ def args104_einzahlen :
       cert104_einzahlen :=
   (.cons2 _ _
     (.consCall _ _ _ G104_referenz.gHp_einzahlen_lies
-      (.cons (Expr.ptrOf G104_referenz.GTab.Konto 0 rfl false)
+      (.cons (Expr.ptrOf G104_referenz.GTab.Konto 0 rfl (true, false))
         (.cons (Expr.var (.there .here)) .nil))
       (.lift2 _)))
 

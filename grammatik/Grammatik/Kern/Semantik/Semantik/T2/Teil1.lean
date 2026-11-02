@@ -105,7 +105,7 @@ def roh : {τ : Ty} → Wert D τ → Int
   | .never, v => v.elim
   | .fl _ _, v => gleitRoh v.x
   | .fnptr _, _ => 0
-  | .ptr _ _, _ => 0
+  | .ptr _, _ => 0
   | .ref _, v => (v.zelle : Int)
   -- an aggregate has no raw word (the checker writes none to a register)
   | .arr _ _, _ => 0

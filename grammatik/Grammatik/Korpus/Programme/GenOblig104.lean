@@ -89,7 +89,7 @@ inductive GFn where
   deriving DecidableEq
 
 def gSig_einzahlen : Signatur GTab Empty GLock Empty where
-  params := [.ptr 0 true, .index 2, (.int 0 10)]
+  params := [.ptr (.table 0 (true, true)), .index 2, (.int 0 10)]
   erg := none
   gruende := 0
   haelt := [GLock.M]
@@ -100,7 +100,7 @@ def gSig_einzahlen : Signatur GTab Empty GLock Empty where
   produziert := []
 
 def gSig_lies : Signatur GTab Empty GLock Empty where
-  params := [.ptr 0 false, .index 2]
+  params := [.ptr (.table 0 (true, false)), .index 2]
   erg := some ((.int 0 100))
   gruende := 0
   haelt := [GLock.M]
@@ -159,9 +159,9 @@ abbrev gD : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-abbrev gCtx_einzahlen : Ctx := [.ptr 0 true, .index 2, (.int 0 10)]
+abbrev gCtx_einzahlen : Ctx := [.ptr (.table 0 (true, true)), .index 2, (.int 0 10)]
 def g_einzahlen : gD.Fn := GFn.einzahlen
-abbrev gCtx_lies : Ctx := [.ptr 0 false, .index 2]
+abbrev gCtx_lies : Ctx := [.ptr (.table 0 (true, false)), .index 2]
 def g_lies : gD.Fn := GFn.lies
 
 abbrev gL_einzahlen : List (Res gD) := [Res.held (D := gD) GLock.M]
@@ -185,7 +185,7 @@ def gEns_lies : Expr gD (ErgCtx (gD.params g_lies) (gD.erg g_lies)) (vertragVon 
   (.eq (.var .here) (Expr.thru (D := gD) (.var (.there .here)) GTab.Konto rfl GKontoFeld.stand ((.var (.there (.there .here)))) gDarf_lies_Konto))
 
 def gBody_einzahlen : Endblock gD (vertragVon gD g_einzahlen) false gCtx_einzahlen gL_einzahlen :=
-  (.cons (.assignThru (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) ((.widen (by decide) (by decide) (((.lit 100)) : Expr gD gCtx_einzahlen gL_einzahlen (.int 100 100))) : Expr gD gCtx_einzahlen gL_einzahlen (.int 0 100)) (by decide) gDarf_einzahlen_Konto) (.cons (.call g_lies (.cons (.ptrOf GTab.Konto 0 rfl false) (.cons (.var (.there .here)) .nil)) gHp_einzahlen_lies rfl) (.ret .empty (List.Perm.refl _))))
+  (.cons (.assignThru (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) ((.widen (by decide) (by decide) (((.lit 100)) : Expr gD gCtx_einzahlen gL_einzahlen (.int 100 100))) : Expr gD gCtx_einzahlen gL_einzahlen (.int 0 100)) (by decide) gDarf_einzahlen_Konto) (.cons (.call g_lies (.cons (.ptrOf GTab.Konto 0 rfl (true, false)) (.cons (.var (.there .here)) .nil)) gHp_einzahlen_lies rfl) (.ret .empty (List.Perm.refl _))))
 
 def gBody_lies : Endblock gD (vertragVon gD g_lies) false gCtx_lies gL_lies :=
   (.ret (.val (Expr.thru (D := gD) (.var .here) GTab.Konto rfl GKontoFeld.stand ((.var (.there .here))) gDarf_lies_Konto)) (List.Perm.refl _))

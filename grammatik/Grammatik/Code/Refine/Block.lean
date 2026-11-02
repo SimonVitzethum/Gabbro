@@ -112,7 +112,7 @@ theorem cvtM_frag (lay : Layout D) (τ : GTy) (v : Wert D τ) (hs : supp τ = tr
       rw [e2]
       cases hb : wbool v <;>
         simp only [stepI, hv, Val.ofInt, hb, Bool.false_eq_true, ↓reduceIte, BitVec.ofInt_ofNat, Val.ty, Val.cast, Nat.reduceLeDiff, Nat.pow_one, Nat.zero_lt_succ, BitVec.setWidth_ofNat_of_le_of_lt, Option.map_some, Nat.lt_add_one]
-  | ptr n rw =>
+  | ptr cap =>
       simp only [cvtM] at h
       obtain rfl := Option.some.inj h
       exact ⟨rs, rfl, Nat.le_refl _, fun _ _ => rfl, hlt, hv⟩

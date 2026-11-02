@@ -52,7 +52,7 @@ theorem execStmt_ru_assignThru {V : Vertrag D}
     (hL)
     (σ : World D)
     (ρ : Env D Γ)
-    : execStmt O.mitRuhe passes R' (ruS (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.assignThru (n := zi_n) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
+    : execStmt O.mitRuhe passes R' (ruS (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmt]
   rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from

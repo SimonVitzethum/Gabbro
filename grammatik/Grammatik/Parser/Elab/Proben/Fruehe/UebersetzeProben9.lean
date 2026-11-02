@@ -51,7 +51,7 @@ set_option maxRecDepth 100000
 def prog (body : List UStmt) (held : List String := ["L"]) : UProg :=
   { tabs := [{ name := "T", count := 2, cols := [("f", 0, 1)], bools := ["f"] }],
     locks := [{ name := "L", rank := 0, guard := ["T"] }],
-    fns := [{ name := "w", params := [("k", .ptr 0 true)], kinds := [.ptr 0 true], res := none,
+    fns := [{ name := "w", params := [("k", .ptr (.table 0 (true, true)))], kinds := [.ptr (.table 0 (true, true))], res := none,
               held := held, puts := ["T"], gives := [], body := body, ret := .empty }],
     roots := [] }
 

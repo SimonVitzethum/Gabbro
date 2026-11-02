@@ -44,7 +44,7 @@ inductive GFn where
   deriving DecidableEq
 
 def gSig_gib : Signatur GTab Empty GLock Empty where
-  params := [.ptr 0 true, .ptr 1 true]
+  params := [.ptr (.table 0 (true, true)), .ptr (.table 1 (true, true))]
   erg := none
   gruende := 0
   haelt := [GLock.K]
@@ -54,7 +54,7 @@ def gSig_gib : Signatur GTab Empty GLock Empty where
   produziert := []
 
 def gSig_nimm : Signatur GTab Empty GLock Empty where
-  params := [.ptr 0 true, .ptr 1 true]
+  params := [.ptr (.table 0 (true, true)), .ptr (.table 1 (true, true))]
   erg := none
   gruende := 0
   haelt := [GLock.K]
@@ -112,13 +112,13 @@ abbrev gD : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
-abbrev gCtx_gib : Ctx := [.ptr 0 true, .ptr 1 true]
+abbrev gCtx_gib : Ctx := [.ptr (.table 0 (true, true)), .ptr (.table 1 (true, true))]
 abbrev gL_gib : List (Res gD) := [Res.held (D := gD) GLock.K]
 def g_gib : gD.Fn := GFn.gib
 theorem gDarf_gib_A : darf gD GTab.A gL_gib := by unfold darf; decide
 theorem gDarf_gib_B : darf gD GTab.B gL_gib := by unfold darf; decide
 
-abbrev gCtx_nimm : Ctx := [.ptr 0 true, .ptr 1 true]
+abbrev gCtx_nimm : Ctx := [.ptr (.table 0 (true, true)), .ptr (.table 1 (true, true))]
 abbrev gL_nimm : List (Res gD) := [Res.held (D := gD) GLock.K]
 def g_nimm : gD.Fn := GFn.nimm
 theorem gDarf_nimm_A : darf gD GTab.A gL_nimm := by unfold darf; decide

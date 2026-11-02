@@ -68,7 +68,17 @@
   * `speicherSicher` (`SpurInv`) -- every recorded access carries its carrier's guards, whose locks are held. (c).
   * `speicherAdressen` -- if foreign code writes inside the declared extents (`ImBereichO`, inside the leg), every
     cell the run changed lies in its extent and, under every correct byte layout (`AdressLayout`, `LayoutOk`), with
-    all its bytes in its table's region; different cells share no byte (Speichermodell/Adressen/). (c).
+    all its bytes in its table's region; different cells share no byte (Speichermodell/Adressen/). Addresses
+    distinguish backing-region identities from the finite declared nominal data spaces. Tables and globals
+    realize their declared spaces; every open extent retains its own backing identity even when several
+    extents inhabit one nominal space. Names imply neither physical separation nor a check/copy snapshot.
+    Separation remains a separate `LayoutOk` obligation. This generalizes the former fixed space-0/nonzero
+    interpretation without removing `ImBereichO` or the outside-write/extent guarantees. (c).
+    Table capabilities now retain these nominal spaces and independent read/write flags. Every admitted
+    dereference resolves the exact table in a registered space; stores still require the signature's write
+    frame and the table's guards. Write-only access does not grant reads. Owner identities are retained in
+    types but are not usable without the separately checked ownership flow. Live byte grants and restricted
+    entry handles remain outside this table-only stage; no lifetime or code/data provenance claim is added.
   * `rennfrei` (`RennfreiBisGA`) -- two accesses of different threads to a non-atomic carrier, one a write, are
     lock-ordered, on every run with racing atomics. (a), (c).
   * `schwach` (`SchwachX`) -- every step of the weak machine W is a GX step, its presented memory G's outside the

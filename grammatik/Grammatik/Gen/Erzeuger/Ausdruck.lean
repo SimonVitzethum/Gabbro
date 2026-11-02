@@ -47,15 +47,16 @@ theorem mem_flS {E : Sz (SE D Γ Λ)} {i : Nat} {lo hi : Int × Int} {a : Expr D
     (⟨lo, hi, a⟩ : Σ lo hi : Int × Int, Expr D Γ Λ (.fl lo hi)) ∈ flS E i :=
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
-/-- The pointer-typed expressions of a stream. -/
-def ptrS (E : Sz (SE D Γ Λ)) : Sz (Σ (n : Nat) (rw : Bool), Expr D Γ Λ (.ptr n rw)) := fun i =>
+/-- Readable table capabilities, retaining their space and independent write flag. -/
+def ptrS (E : Sz (SE D Γ Λ)) : Sz (Σ (space n : Nat) (rw : Bool), Expr D Γ Λ (.ptr (.table n (true, rw) space))) := fun i =>
   (E i).filterMap fun p => match p with
-    | ⟨.ptr n rw, a⟩ => some ⟨n, rw, a⟩
+    | ⟨.ptr ⟨space, ⟨true, rw, none⟩, .table n⟩, a⟩ => some ⟨space, n, rw, a⟩
     | _ => none
 
-theorem mem_ptrS {E : Sz (SE D Γ Λ)} {i : Nat} {n : Nat} {rw : Bool} {a : Expr D Γ Λ (.ptr n rw)}
-    (h : (⟨.ptr n rw, a⟩ : SE D Γ Λ) ∈ E i) :
-    (⟨n, rw, a⟩ : Σ (n : Nat) (rw : Bool), Expr D Γ Λ (.ptr n rw)) ∈ ptrS E i :=
+theorem mem_ptrS {E : Sz (SE D Γ Λ)} {i space n : Nat} {rw : Bool}
+    {a : Expr D Γ Λ (.ptr (.table n (true, rw) space))}
+    (h : (⟨.ptr (.table n (true, rw) space), a⟩ : SE D Γ Λ) ∈ E i) :
+    (⟨space, n, rw, a⟩ : Σ (space n : Nat) (rw : Bool), Expr D Γ Λ (.ptr (.table n (true, rw) space))) ∈ ptrS E i :=
   List.mem_filterMap.2 ⟨_, h, rfl⟩
 
 /-- The reference-typed expressions of a stream. -/
@@ -155,15 +156,15 @@ def gOldS : Sz (SE D Γ Λ) :=
     Sz.bind (tyS E (.index (D.count t))) fun i => Sz.wenn (darf D t Λ) fun h => Sz.pure ⟨_, .oldS t f i h⟩)
 
 def gThru : Sz (SE D Γ Λ) :=
-  Sz.knoten (Sz.bind (ptrS E) fun ⟨n, _, p⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
-    Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
+  Sz.knoten (Sz.bind (ptrS E) fun ⟨space, n, _, p⟩ => Sz.bind (Sz.wahl Aufz.tab) fun t =>
+    Sz.wenn (D.capTab space n = some t) fun ht => Sz.bind (Sz.wahl (Aufz.feld t)) fun f =>
       Sz.bind (tyS E (.index (D.count t))) fun i => Sz.wenn (darf D t Λ) fun hL =>
         Sz.pure ⟨_, .thru p t ht f i hL⟩)
 
 def gPtrOf : Sz (SE D Γ Λ) :=
   Sz.knoten (Sz.bind nS fun n => Sz.bind (Sz.wahl Aufz.tab) fun t =>
-    Sz.wenn (D.tabNr n = some t) fun ht => Sz.bind (Sz.wahl [true, false]) fun rw =>
-      Sz.pure ⟨.ptr n rw, .ptrOf t n ht rw⟩)
+    Sz.wenn (D.capTab (D.tableSpace t) n = some t) fun ht => Sz.bind (Sz.wahl [(true, true), (true, false), (false, true), (false, false)]) fun rw =>
+      Sz.pure ⟨.ptr (.table n rw (D.tableSpace t)), .ptrOf t n ht rw⟩)
 
 def gRefEq : Sz (SE D Γ Λ) :=
   Sz.knoten (Sz.bind (refS E) fun ⟨n, a⟩ => Sz.bind (tyS E (.ref n)) fun b => Sz.pure ⟨.bool, .refEq a b⟩)

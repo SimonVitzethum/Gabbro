@@ -92,7 +92,7 @@ theorem einpassen_E (z : Int → Option D.Fn) (z' : Int → Option D'.Fn) :
       show gleitWortPasst lo hi n = Option.map _ (gleitWortPasst lo hi n)
       cases gleitWortPasst lo hi n <;> rfl
   | .fnptr _, h, _ => absurd h (by simp only [Ty.zeigerfrei, Bool.false_eq_true, not_false_eq_true])
-  | .ptr t rw, _, n => rfl
+  | .ptr ⟨space, rights, .table t⟩, _, n => rfl
   | .ref t, _, n => by by_cases h : 0 ≤ n <;> (simp only [einpassen, h, dite_true, dite_false, not_false_eq_true]) <;> rfl
   | .arr _ _, _, _ => rfl
   | .str _, _, _ => rfl

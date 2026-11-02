@@ -94,7 +94,14 @@ theorem axGDarfE {Λ : List (Res D)} {a : D.Ax} (h : ∀ g, D.agschreibt a g = t
     exact E.gdarfE (h g hg')
 
 theorem tabNrE {n : Nat} {t : D.Tab} (h : D.tabNr n = some t) : D'.tabNr (E.tnum n) = some (E.tab t) := by
-  rw [E.tabNr, h]; rfl
+  rw [E.tabNr.1, h]; rfl
+
+/-- Capability resolution transports the table and retains its registered nominal space. -/
+theorem capTabE {space n : Nat} {t : D.Tab} (h : D.capTab space n = some t) :
+    D'.capTab space (E.tnum n) = some (E.tab t) := by
+  obtain ⟨hn, hs, hb⟩ := Deklaration.capTab_sound h
+  exact Deklaration.capTab_of (E.tabNrE hn) (hs.trans (E.tabNr.2.1 t).symm)
+    (by simpa only [E.tabNr.2.2] using hb)
 
 theorem countE (t : D.Tab) : Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) := by
   rw [E.count]
@@ -171,9 +178,9 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
         (Expr.slot (D := D') (E.tab t) (E.feld t f) (Expr.umTy (E.countE t) (exE i)) (E.darfE hL))
   | _, _, _, .thru p t ht f i hL =>
       Expr.umTy (E.typ t f)
-        (Expr.thru (D := D') (exE p) (E.tab t) (E.tabNrE ht) (E.feld t f)
+        (Expr.thru (D := D') (exE p) (E.tab t) (E.capTabE ht) (E.feld t f)
           (Expr.umTy (E.countE t) (exE i)) (E.darfE hL))
-  | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D') (E.tab t) (E.tnum n) (E.tabNrE ht) rw
+  | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D') (E.tab t) (E.tnum n) (E.capTabE ht) rw
   | _, _, _, .fnref f n h => .fnref (D := D') (E.fn f) (E.num n) ((E.passt f n).trans h)
   | _, _, _, .refEq a b => .refEq (exE a) (exE b)
   | _, _, _, .slotRef r t ht ho f hL =>
@@ -269,7 +276,7 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
       .assignSlot (E.tab t) (E.feld t f) (Expr.umTy (E.countE t) (exE E i))
         (Expr.umTy (E.typ t f).symm (exE E e)) (E.schreibtE hw) (E.darfE hL)
   | _, _, _, _, .assignThru p t ht f i e hw hL =>
-      .assignThru (exE E p) (E.tab t) (E.tabNrE ht) (E.feld t f) (Expr.umTy (E.countE t) (exE E i))
+      .assignThru (exE E p) (E.tab t) (E.capTabE ht) (E.feld t f) (Expr.umTy (E.countE t) (exE E i))
         (Expr.umTy (E.typ t f).symm (exE E e)) (E.schreibtE hw) (E.darfE hL)
   | _, _, _, _, .assignSlotRef r t ht ho f e hw hL =>
       .assignSlotRef (exE E r) (E.tab t) (E.tabNrE ht) (by rw [E.offen]; exact ho) (E.feld t f)

@@ -278,7 +278,7 @@ theorem lowerS_ok_assignThru (lay : Layout D) (hL : LayoutOk lay) (cenv : List R
     (st : St)
     (st' : St)
     (blks : List Block)
-    (h : lowerS lay cenv lv (.assignThru (n := zi_n) (Λ := Λ) p t ht f i e zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) lb k st = some (blks, st'))
+    (h : lowerS lay cenv lv (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) (Λ := Λ) p t ht f i e zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) lb k st = some (blks, st'))
     (M : Modl)
     (S : Sees)
     (fn : Nat)
@@ -297,7 +297,7 @@ theorem lowerS_ok_assignThru (lay : Layout D) (hL : LayoutOk lay) (cenv : List R
     (hE : EnvRep lay rs m cenv ρ)
     (hW : WfL lay m)
     (hc : (∀ x ∈ cenv, x < st.r))
-    : OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R (.assignThru (n := zi_n) (Λ := Λ) p t ht f i e zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) σ ρ) :=
+    : OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) (Λ := Λ) p t ht f i e zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) σ ρ) :=
   by
   simp only [lowerS] at h
   have hs : supp (D.typ t f) = true := by
@@ -352,7 +352,7 @@ theorem lowerS_ok_assignThru (lay : Layout D) (hL : LayoutOk lay) (cenv : List R
     have h1 : op.ev rsA = op.ev rsP := ev_agree hagA hltP
     have h2 : op.ev rsB = op.ev rsA := ev_agree hagB (fun x hx => Nat.lt_of_lt_of_le (hltP x hx) hrA)
     rw [h2, h1, hevP]
-    simp only [encR, ht]
+    simp only [encR, (Deklaration.capTab_sound ht).1]
   have hltA2 : OpdLt oi r3 := fun x hx => Nat.lt_of_lt_of_le (hltA x hx) hrB
   have hltP2 : OpdLt op r3 := fun x hx =>
     Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le (hltP x hx) hrA) hrB

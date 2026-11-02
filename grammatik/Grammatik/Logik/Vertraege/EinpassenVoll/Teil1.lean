@@ -164,7 +164,7 @@ theorem einpassen_voll : ∀ (τ : Ty) (v : Wert D τ), WertOk τ v →
   | .never, v, _ => (v : Empty).elim
   | .fl lo hi, v, hw => ⟨fun _ => Option.none, _, gleitWortPasst_voll lo hi v hw⟩
   | .fnptr m, v, _ => ⟨fun _ => some (v : {f : D.Fn // D.passt f m = true}).1, 0, zeigerPasst_voll m v⟩
-  | .ptr _ _, _, _ => ⟨fun _ => Option.none, 0, rfl⟩
+  | .ptr _, _, _ => ⟨fun _ => Option.none, 0, rfl⟩
   | .ref _, r, _ => ⟨fun _ => Option.none, ((Val.zelle r : Nat) : Int), by
       simp only [einpassen, if_pos (Int.natCast_nonneg _), Int.toNat_natCast]
       rfl⟩
@@ -183,7 +183,7 @@ theorem einpassen_wertOk : ∀ (z : Int → Option D.Fn) (τ : Ty) (n : Int) (v 
   | _, .why _, _, _, _ => trivial
   | _, .never, _, _, _ => trivial
   | _, .fnptr _, _, _, _ => trivial
-  | _, .ptr _ _, _, _, _ => trivial
+  | _, .ptr _, _, _, _ => trivial
   | _, .ref _, _, _, _ => trivial
 
 /-- **The answer class is empty EXACTLY when the type is** (G1 repair): no raw word decodes

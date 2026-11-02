@@ -8,7 +8,8 @@
   index `index (D.count t)`. `ObjPar` names such a pair: `idx` (the index parameter),
   `cap` (the capability), both counted from the BOTTOM of the context (`Var.unten`), so a
   position stays the same under every `let` a body pushes; `rw` is the right of the
-  capability (`own` travels as read-write, `lean_g.rs::param_ty`). In an environment `ρ`
+  capability's ordinary write flag. Exclusive owner rights are refused by the Lean exporter
+  until checked ownership flow is connected. In an environment `ρ`
   the pair names the object `⟨tab, value of idx⟩` (`ObjPar.obj`). The identity is a VALUE
   the caller chooses -- which the type alone could not say (slice 2's obstruction 1).
 
@@ -115,18 +116,21 @@ theorem Env.unten_set : ∀ {Γ : Ctx} {τ : Ty} (ρ : Env D Γ) (x : Var Γ τ)
 /-! ## 2. Object parameters, the objects of a call frame, the declared frame -/
 
 /-- **An object parameter**: the index parameter at bottom position `idx` together with the
-    capability at bottom position `cap`, on table `tab`, with right `rw` (writable or `own`). -/
+    capability at bottom position `cap`, on table `tab`, with ordinary write flag `rw`. -/
 structure ObjPar (D : Deklaration) where
   idx : Nat
   cap : Nat
   tab : D.Tab
   rw : Bool
+  read : Bool := true
+  space : Nat := 0
+  owner : Option Nat := none
 
 /-- The pair is faithful to the context: the index has the generated index type of its
     table, and the capability is a pointer to that table with the pair's right. -/
 def ObjParTreu (D : Deklaration) (Γ : Ctx) (op : ObjPar D) : Prop :=
   Γ.reverse[op.idx]? = some (.index (D.count op.tab)) ∧
-    ∃ n, Γ.reverse[op.cap]? = some (.ptr n op.rw) ∧ D.tabNr n = some op.tab
+    ∃ n, Γ.reverse[op.cap]? = some (.ptr ⟨op.space, ⟨op.read, op.rw, op.owner⟩, .table n⟩) ∧ D.tabNr n = some op.tab
 
 /-- The object the pair names in an environment: its table, at the value of its index. -/
 def ObjPar.obj {Γ : Ctx} (op : ObjPar D) (ρ : Env D Γ) : Option (Obj D) :=
@@ -139,7 +143,7 @@ def objVon {Γ : Ctx} (ps : List (ObjPar D)) (ρ : Env D Γ) : Fin ps.length →
 /-- Which object parameters count for separation. -/
 def rwVon (ps : List (ObjPar D)) : Fin ps.length → Bool := fun i => (ps.get i).rw
 
-/-- **`ObjGetrennt` on a call frame**: the objects the writable-or-`own` parameters name differ
+/-- **`ObjGetrennt` on a call frame**: the objects the writable parameters name differ
     from every other parameter's object. -/
 def ObjGetrennt {Γ : Ctx} (ps : List (ObjPar D)) (ρ : Env D Γ) : Prop :=
   ObjGetrenntL (rwVon ps) (objVon ps ρ)

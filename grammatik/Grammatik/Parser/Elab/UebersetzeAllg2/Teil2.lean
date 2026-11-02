@@ -48,12 +48,12 @@ def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr num true) =>
+    | some (.ptr ⟨0, ⟨read, true, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok bh =>
-          match lowVar Γ j (.ptr num true) with
+          match lowVar Γ j (.ptr (.table num (read, true))) with
           | .error e => .error e
           | .ok pv =>
             match lowIdx u Γ Λ
@@ -143,64 +143,37 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
       (Expr (declOf u) Γ Λ t)
   | a =>
     match k, t with
-    | .ptr num w, .ptr n w' =>
-      match a with
-      | .var p =>
-        if hN : n = num then
-          if hW : w' = w then
-            match paramPos fn.params p with
+    | .ptr cap, .ptr ⟨0, ⟨read, write, none⟩, .table n⟩ =>
+      let target := DataCapTy.table n (read, write)
+      if hK : cap = target then
+        match a with
+        | .var name =>
+          match paramPos fn.params name with
+          | .error e => .error e
+          | .ok j =>
+            match fn.kinds[j]? with
+            | some (.ptr source) =>
+              if source = target then
+                match lowVar Γ j (.ptr target) with
+                | .error e => .error e
+                | .ok x => .ok (Expr.var x)
+              else .error "pointer argument requires an explicit checked attenuation"
+            | _ => .error "pointer argument without G form"
+        | .freshPtr name descriptor =>
+          if descriptor = target then
+            match tabIdx u.tabs name with
             | .error e => .error e
-            | .ok j =>
-              match fn.kinds[j]? with
-              | some (.ptr num2 w2) =>
-                if hC : num2 = num then
-                  if w2 = w then
-                    match lowVar Γ j
-                        (.ptr n w') with
-                    | .error e => .error e
-                    | .ok x => .ok (Expr.var x)
-                  else
-                    if h : num < u.tabs.length then
-                      have eP : Expr (declOf u) Γ
-                          Λ (.ptr n w') := by
-                        rw [hN, hW]
-                        exact Expr.ptrOf (D := declOf u) ⟨num, h⟩
-                          num (tabNr_some u num h) w
-                      .ok eP
-                    else .error "pointer table unknown"
-                else .error "argument of foreign table"
-              | _ => .error "pointer argument without G form"
-          else .error "argument type without G form"
-        else .error "argument type without G form"
-      | .freshPtr tname w2 =>
-        if hN : n = num then
-          if hW : w' = w then
-            if hW2 : w2 = w then
-              match tabIdx u.tabs tname with
-              | .error e => .error e
-              | .ok ft =>
-                if hT : ft.val = num then
-                  have hTlt : num < u.tabs.length := by
-                    rw [← hT]
-                    exact ft.isLt
-                  have hE : (⟨num, hTlt⟩ :
-                      Fin u.tabs.length) = ft := by
-                    apply Fin.ext
-                    show num = ft.val
-                    exact hT.symm
-                  have ht : (declOf u).tabNr num = some ft := by
-                    rw [← hE]
-                    exact tabNr_some u num hTlt
-                  have eP : Expr (declOf u) Γ
-                      Λ (.ptr n w') := by
-                    rw [hN, hW]
-                    exact Expr.ptrOf (D := declOf u) ft num ht w
-                  .ok eP
-                else .error "argument of foreign table"
-            else .error "argument right without G form"
-          else .error "argument type without G form"
-        else .error "argument type without G form"
-      | .val _ | .bval _ | .oval _ | .gval _ | .fnref _ => .error "value for pointer without G form"
+            | .ok ft =>
+              if hT : ft.val = n then
+                have hn : n < u.tabs.length := hT ▸ ft.isLt
+                have ht : (declOf u).tabNr n = some ft := by
+                  have he : (⟨n, hn⟩ : Fin u.tabs.length) = ft := Fin.ext hT.symm
+                  simpa only [he] using tabNr_some u n hn
+                .ok (Expr.ptrOf (D := declOf u) ft n (Deklaration.capTab_of ht rfl (by decide)) (read, write))
+              else .error "argument of foreign table"
+          else .error "argument capability without G form"
+        | _ => .error "value for pointer without G form"
+      else .error "argument capability without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>

@@ -326,7 +326,7 @@ abbrev UKoerpEin :=
     (positions are the known signature; anything else is an
     explicit error). -/
 def varNumEin : (j : Nat) → (τ : Ty) → Except String (Var UCtxEin τ)
-  | 0, .ptr 0 true => .ok .here
+  | 0, .ptr (.table 0 (true, true)) => .ok .here
   | 1, .int 0 1 => .ok (.there .here)
   | 2, .int 0 10 => .ok (.there (.there .here))
   | _, _ => .error "parameter without G form"
