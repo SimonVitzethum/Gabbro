@@ -322,7 +322,7 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts `hauptA`,
     `hauptB` (`concurrent { hauptA, hauptB }`). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [()] kCs [kHauptA, kHauptB] [] = true := by decide
 
 /-! ## 3. The user obligations -/
 

@@ -32,6 +32,7 @@
 module
 public import Grammatik.Gen.Erzeuger.Programm
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
+public import Grammatik.Bausteine.Kernzelle.Zulassung
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -90,14 +91,21 @@ def komp (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (
   | 8 => antwortenB P fs
   | 9 => maskenB P fs
 
-/-- The Bool of the checker is the conjunction of the ten components. -/
+/-- The Bool of the checker is the conjunction of the ten components and the
+    accumulator admission (C15, 2026-11-02): the generated programs carry no
+    accumulator, so the admission is decided empty there. -/
 theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
-    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn) :
-    AkzeptiertX P S fs ls cs ws = true ↔ ∀ c, komp P S fs ls cs ws c = true := by
+    (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
+    (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D)) :
+    AkzeptiertX P S fs ls cs ws aks = true ↔
+      (∀ c, komp P S fs ls cs ws c = true) ∧
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true := by
   unfold AkzeptiertX
   simp only [Bool.and_eq_true]
   constructor
-  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩ c
+  · rintro ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩
+    refine ⟨?_, h10⟩
+    intro c
     rcases c with ⟨n, hn⟩
     match n, hn with
     | 0, _ => exact h0
@@ -111,8 +119,8 @@ theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls :
     | 8, _ => exact h8
     | 9, _ => exact h9
     | n + 10, hn => exact absurd hn (by omega)
-  · intro h
-    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩
+  · rintro ⟨h, h10⟩
+    exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨h 0, h 1⟩, h 2⟩, h 3⟩, h 4⟩, h 5⟩, h 6⟩, h 7⟩, h 8⟩, h 9⟩, h10⟩
 
 /-- **Refused only by component `c`**: `c` is false, the other nine components are true. -/
 def NurAn (c : Fin 10) (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
@@ -188,7 +196,7 @@ theorem gueltig_korrekt {n k : Nat} {P : Programm D} (h : P ∈ genGueltig S fs 
 theorem gueltig_vollst (hvoll : ∀ g : D.Fn, g ∈ fs) {n : Nat} (h : Haut D)
     (hv : AkzeptiertX h.programm S fs ls cs ws = true) (hn : ∀ f, groesseEnd (h.rumpf f) ≤ n)
     (hu : ∀ f, groesseEnd (h.rumpf f) < unendlich) : h.programm ∈ genGueltig S fs ls cs ws n (groesseHaut h) := by
-  have hk := (akzeptiertX_iff _ S fs ls cs ws).1 hv
+  have hk := ((akzeptiertX_iff _ S fs ls cs ws []).1 hv).1
   have hok : ∀ f, okFuer true true fs f (h.rumpf f) = true := fun f =>
     okFuer_of (P := h.programm) hvoll (fun _ => hk 3) (fun _ => hk 8) f
   unfold genGueltig
@@ -237,7 +245,7 @@ theorem gueltig_oder_nicht (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
   by_cases h : AkzeptiertX P S fs ls cs ws = true
   · exact Or.inl h
   · right
-    refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws).2 fun c => ?_)
+    refine Classical.byContradiction fun hn => h ((akzeptiertX_iff P S fs ls cs ws []).2 ⟨fun c => ?_, Gabbro.Grammatik.Kernzelle.accumulatorB_leer⟩)
     cases hc : komp P S fs ls cs ws c
     · exact absurd ⟨c, hc⟩ hn
     · rfl

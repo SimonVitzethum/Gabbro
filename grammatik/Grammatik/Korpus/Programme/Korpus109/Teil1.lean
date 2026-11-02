@@ -309,7 +309,7 @@ theorem kCs_voll : ∀ c : kD.Tab ⊕ kD.Glob, c ∈ kCs := fun c => by
 
 /-- **The checker accepts the program** with its declared starts
     `distribute_a`, `distribute_b` (the two entry dispatch roots). -/
-theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] = true := by decide
+theorem kP_akzeptiert : Akzeptiert kP kSI kFs [KLock.l, KLock.m] kCs [kDistA, kDistB] [] = true := by decide
 
 /-! ## 3. The user obligations -/
 

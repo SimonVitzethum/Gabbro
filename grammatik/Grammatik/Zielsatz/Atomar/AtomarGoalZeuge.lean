@@ -41,8 +41,8 @@ theorem n1E_gabbro (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine nD
     lebt0 K hK
 
 /-- The checker facts of configuration 1, as `AkzeptiertSpecX`. -/
-theorem n1_specX : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] :=
-  akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll n1_akzeptiertX
+theorem n1_specX : AkzeptiertSpecX nP SchwachZeuge.nS nFs n1ws [] [] :=
+  akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX
 
 /-- `ZielX` at every machine GX reaches from configuration 1's start. -/
 theorem n1_zielX (sp : Speicher nD) (passes : Nat) (M : RufMaschineG nD)

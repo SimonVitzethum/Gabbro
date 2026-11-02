@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert
+public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Korpus.Referenz.ReferenzB
 
 @[expose] public section
@@ -315,9 +316,11 @@ structure AkzeptiertSpecVor (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn
 /-- **The old specification implies the new one** (Prop side of (a)): with distinct
     starts the occurrence form of `Getrennt` is the routine form. Since Opus agent H
     (2026-09-26) the handler discipline is an extra premise (it holds on every program with
-    no handler, `maskenB_ohne`). -/
+    no handler, `maskenB_ohne`). The accumulator admission is decided empty here
+    (C15: old programs declare no accumulator); `mitAkku` lifts it. -/
 theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}
-    (h : AkzeptiertSpecVor P S fs ws) (hM : MaskenDisziplin P fs) : AkzeptiertSpec P S fs ws := by
+    (h : AkzeptiertSpecVor P S fs ws) (hM : MaskenDisziplin P fs) :
+    AkzeptiertSpec P S fs ws [] := by
   have hlok : lokWVor P fs ws = lokW P fs ws := by
     funext c
     have e : GetrenntVor P fs ws c ↔ Getrennt P fs ws c := by
@@ -329,7 +332,7 @@ theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.
     unfold lokWVor lokW
     exact @decide_eq_decide _ _ (Classical.propDecidable _) (Classical.propDecidable _) |>.mpr e
   exact ⟨h.frag, h.abg, hlok ▸ h.fuss, h.stufen, h.sperrOrte, h.wurzeln,
-    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM⟩
+    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM, Kernzelle.accumulatorAdmission_leer _ _⟩
 
 end PoolBool
 
@@ -338,17 +341,21 @@ end PoolBool
     so `GabbroZiel`'s `∀ C : Pruefer` ranges over at least every checker it ranged over
     before. Since Opus agent H (2026-09-26) an old checker is conjoined with the handler
     component `maskenB` it never judged (an old program declares no handler, where the
-    conjunct is `true`: `maskenB_ohne`). -/
+    conjunct is `true`: `maskenB_ohne`); since C15 with the accumulator admission it never
+    judged (an old program declares no accumulator, where it holds vacuously). -/
 def pruefer_vor_neu
     (akz : ∀ {D : Deklaration} [DecidableEq D.Fn],
       Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool)
     (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
       (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
       akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
-  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs
+  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs &&
+    Kernzelle.accumulatorB E.P fs cs E.akku
   korrekt := fun E fs ls cs h => by
-    rw [Bool.and_eq_true] at h
-    exact akzeptiertSpecVor_neu (korr E fs ls cs h.1) ((maskenB_iff fs.2).mp h.2)
+    rw [Bool.and_eq_true, Bool.and_eq_true] at h
+    obtain ⟨⟨h1, h2⟩, h3⟩ := h
+    exact (akzeptiertSpecVor_neu (korr E fs ls cs h1) ((maskenB_iff fs.2).mp h2)).mitAkku
+      ((Kernzelle.accumulatorB_iff fs.2 cs.2).mp h3)
 
 /-- **(d) OF THE REVIEWED DIFF: every run admitted before is admitted now.** The old
     `Laufzeit.einmal` (no declared start on two threads) implies the new one. -/

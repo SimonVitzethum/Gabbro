@@ -220,7 +220,8 @@ variable [DecidableEq D.Fn]
     user's logic with the rely, (c) the hardware assumptions and an admissible start. -/
 theorem zielX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
-    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws))
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws))
     (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (M : RufMaschineG D)
@@ -348,7 +349,8 @@ theorem budget_unecht {M : RufMaschineG D} {t : Faden} (hF : FortschrittG P O (p
 /-- **Every leg of `ZielFX` on every thread machine over GX.** -/
 theorem zielFX_aus (P : Programm D) (S : SperrInv D) (Q : AxEns D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) {ls : List D.Lock} (hls : ∀ L : D.Lock, L ∈ ls) (ws : List D.Fn)
-    {B : List (ArenaOwnership.Body.ArenaIface D)} (hA : AkzeptiertSpecX P S fs ws B) (hN : LogikPflichtA P S Q (GeteiltA P ws))
+    {B : List (ArenaOwnership.Body.ArenaIface D)} {A : List (Kernzelle.AccumulatorDecl D)}
+    (hA : AkzeptiertSpecX P S fs ws B A) (hN : LogikPflichtA P S Q (GeteiltA P ws))
     (O : Orakel D) (hH : HardwareAnnahmen O Q) (passes : Nat) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f)) (hZ : StartZulaessig P S fs ws sp init)
     (hS : ∀ a ∈ B, ArenaOwnership.Machine.StartOwn a.A a.I sp init)
@@ -426,7 +428,7 @@ end Ruhe
 /-- **GABBRO_ZIEL WITH THE ATOMIC RELY, PROVED.** -/
 theorem gabbro_ziel : GabbroZiel := by
   intro C D _ E fs ls cs hC hN O hH passes sp init hL lebt0 K hK
-  obtain ⟨hA0, hBS⟩ := C.korrekt E fs ls cs hC
+  obtain ⟨hA0, hBS, _⟩ := C.korrekt E fs ls cs hC
   have hA := akzeptiertSpecX_mitRuhe E.P fs.2 hA0
   have heq := geteiltV_mitRuhe_eq E.P (ws := E.ws) fs.2 hA0.abg
   have hN' : LogikPflichtA E.P.mitRuhe E.S.mitRuhe (axEnsRuhe E.Q)

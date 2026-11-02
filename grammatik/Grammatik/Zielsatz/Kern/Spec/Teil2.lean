@@ -230,12 +230,14 @@ def GeteiltV (P : Programm D) (ws : List D.Fn) (c : D.Tab ⊕ D.Glob) : Prop :=
   GeteiltA P ws c ∧ VertragsFrei P c
 
 /-- **(a) with the atomic rely**: `AkzeptiertSpec` with the footprint property `FussSX` over the
-    admitted shared atomics `GeteiltV`, and (since 2026-10-24) the ownership judgment of every
+    admitted shared atomics `GeteiltV`, (since 2026-10-24) the ownership judgment of every
     arena in `B`: every body passes the ownership check against the arena's interfaces
     (`Checked`), and the arena's allocator words are plain (`ArenaPlain`: no weak-memory answer
-    reaches them). Every other field is `AkzeptiertSpec`'s. -/
+    reaches them), and (since 2026-11-02, C15) the accumulator admission of every
+    accumulator in `A`. Every other field is `AkzeptiertSpec`'s. -/
 structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
-    (B : List (ArenaOwnership.Body.ArenaIface D)) : Prop where
+    (B : List (ArenaOwnership.Body.ArenaIface D))
+    (A : List (Kernzelle.AccumulatorDecl D)) : Prop where
   frag : programmImFragmentG P fs = true
   abg : ∀ w, AbgK P fs (reachB P fs w)
   fuss : ∀ f, FussSX P S (lokW P fs ws) (GeteiltV P ws) f
@@ -250,6 +252,8 @@ structure AkzeptiertSpecX (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   -- the ownership judgment (2026-10-24): every body, against every arena's interfaces
   besitz : ∀ a ∈ B, ArenaOwnership.Body.Checked P a.A a.I
   worte : ∀ a ∈ B, ArenaOwnership.Machine.ArenaPlain a.A
+  -- the accumulator admission (C15, 2026-11-02)
+  akku : Kernzelle.AccumulatorAdmission P fs A
 
 /-- **The ownership start of a unit** (2026-10-24): every arena is empty in the declared start
     memory (nothing used, the free list full), and no declared start or run-time root is handed an
@@ -280,7 +284,8 @@ structure PrueferX where
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen ∧ BesitzStart E
+    akzeptiert E fs.1 ls.1 cs.1 = true →
+      AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku ∧ BesitzStart E ∧ Kernzelle.AkkuStart E E.akku
 
 /-- **The logic of the bodies with the atomic rely over `T`.** -/
 def LogikPflichtA (P : Programm D) (S : SperrInv D) (Q : AxEns D) (T : D.Tab ⊕ D.Glob → Prop) :

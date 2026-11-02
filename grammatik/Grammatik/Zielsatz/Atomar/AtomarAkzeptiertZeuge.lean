@@ -106,7 +106,7 @@ theorem n1_ziel_atomar (sp : Speicher nD) (ord : nD.Glob → Ordnung) (passes : 
     ∀ W : RufMaschineW nD, RufErreichbarW nP nO passes ord (RufStartW (RufStartG nP sp init1)) W →
       ZielAtomar nP SchwachZeuge.nS nO passes ord (GeteiltV nP n1ws) (RufStartG nP sp init1) W :=
   ziel_atomar_spec nP SchwachZeuge.nS (axWahr nD) nFs_voll (ls := []) (fun L => nomatch L) n1ws
-    (akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll n1_akzeptiertX)
+    (akzeptiertSpecX_of nFs_voll (fun L => nomatch L) nCs_voll [] n1_akzeptiertX)
     (n1_logikA _) nO ⟨nO_gut, nO_lokal, axVertragO_wahr nO⟩ passes ord sp init1
     (AtomarZeuge.n1_start sp)
 

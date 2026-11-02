@@ -47,7 +47,7 @@ theorem akzeptiert_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
     (ws : List D.Fn) (sp : Speicher D)
     (init : Faden → Σ f : D.Fn, Env D (D.params f))
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : Akzeptiert P S fs ls cs ws = true) (hZ : StartZulaessig P S fs ws sp init)
+    (hA : Akzeptiert P S fs ls cs ws [] = true) (hZ : StartZulaessig P S fs ws sp init)
     (hSL : SperrInvLokal S) (hlok : AxEnsLokal Q)
     (hK : ∀ f : D.Fn, KoerperGutS P passes Q S f) (hI : ∀ f : D.Fn, InvGutS P passes Q S f)
     (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) :
@@ -57,7 +57,7 @@ theorem akzeptiert_mehrfaden (P : Programm D) (O : Orakel D) (passes : Nat) (Q :
           AnPruefungG M t → ∃ M', RufSchrittG P O passes M t M') ∧
       InvAmOrtG P M) ∧ StartEndeG P M := by
   obtain ⟨hFrag, hAbg, hW, hFuss, hSO, hStart, hSs, hex, -, -, -⟩ :=
-    Akzeptiert_ok hvoll (akzeptiertSpec_of hvoll hls hcs hA) hZ
+    Akzeptiert_ok hvoll (akzeptiertSpec_of hvoll hls hcs [] hA) hZ
   exact ziel_ort_mehrfaden_ende_bei P O passes Q S fs sp init (kVon P fs init) hO hRL hQ hlok
     ((sperrInvOk_iff S).mpr ⟨hSO, hSL⟩) hvoll hFrag hAbg hW hFuss hK hStart hSs hex hI
 
@@ -66,11 +66,11 @@ theorem akzeptiert_verklemmung {P : Programm D} {O : Orakel D} {passes : Nat} {S
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : Akzeptiert P S fs ls cs ws = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
+    (hA : Akzeptiert P S fs ls cs ws [] = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
     {M : RufMaschineG D} (hr : RufErreichbarG P O passes (RufStartG P sp init) M)
     (hW : ∀ t, ¬ FertigG M t → WartetG M t) : ∀ t, FertigG M t := by
   obtain ⟨-, -, -, -, -, -, -, -, hSt, hLeer, -⟩ :=
-    Akzeptiert_ok hvoll (akzeptiertSpec_of hvoll hls hcs hA) hZ
+    Akzeptiert_ok hvoll (akzeptiertSpec_of hvoll hls hcs [] hA) hZ
   exact keine_verklemmungG hO hSt sp init hLeer ls hls hr hW
 
 /-- **Race freedom for every carrier from `Akzeptiert`** (`rennfreiBis_of`). -/
@@ -78,9 +78,9 @@ theorem akzeptiert_rennfrei {P : Programm D} {O : Orakel D} {passes : Nat} {S : 
     {fs : List D.Fn} {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    (hA : Akzeptiert P S fs ls cs ws = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
+    (hA : Akzeptiert P S fs ls cs ws [] = true) (hZ : StartZulaessig P S fs ws sp init) (hO : GutO O)
     (M : RufMaschineG D) : RennfreiBis P O passes (RufStartG P sp init) M :=
-  rennfreiBis_of hvoll (akzeptiertSpec_of hvoll hls hcs hA) hZ hO passes M
+  rennfreiBis_of hvoll (akzeptiertSpec_of hvoll hls hcs [] hA) hZ hO passes M
 
 /-- **`frame_schritte_beschraenkt`** for a function admitted at call depth
     `n + 1`. The time premise is no longer a component of `Akzeptiert`
@@ -111,7 +111,7 @@ theorem mCs_voll : ∀ c : mD.Tab ⊕ mD.Glob, c ∈ mCs := fun c => by
 /-- **`Akzeptiert` holds on the two-thread fixture**, its declared starts
     being `hauptA` and `hauptB`: each writes its OWN private table
     unguarded, and `konto` is guarded (race component). -/
-theorem mP_akzeptiert : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] = true := by decide
+theorem mP_akzeptiert : Akzeptiert mP mSI mFs [()] mCs [mHauptA, mHauptB] [] = true := by decide
 
 /-- `mInit` as a start table: thread 0 `hauptA`, thread 1 `hauptB`, every
     other thread `ruhe`. -/
@@ -191,12 +191,12 @@ theorem x104Fs_voll : ∀ g : x104D.Fn, g ∈ x104Fs := fun g => by
 
 /-- **`Akzeptiert` holds on the export** with the starts it declares: none
     (`104` dropped `concurrent` for `N240`, tests/referenz.rs). -/
-theorem gP_akzeptiert : Akzeptiert x104P x104S x104Fs x104Ls x104Cs [] = true := by decide
+theorem gP_akzeptiert : Akzeptiert x104P x104S x104Fs x104Ls x104Cs [] [] = true := by decide
 
 /-- With its two functions as starts the export is refused by the start
     component (both hold `M` by signature); the other components hold. -/
 theorem gP_als_starts :
-    Akzeptiert x104P x104S x104Fs x104Ls x104Cs x104Fs = false ∧ wurzelnB x104Fs = false ∧
+    Akzeptiert x104P x104S x104Fs x104Ls x104Cs x104Fs [] = false ∧ wurzelnB x104Fs = false ∧
     (programmImFragmentG x104P x104Fs && abgAlleB x104P x104Fs &&
       fussWB x104P x104S x104Fs x104Fs && stufenB x104P x104Fs && sperrOrteB x104S x104Ls &&
       rennB x104P x104Fs x104Cs x104Fs) = true := by
@@ -384,7 +384,7 @@ theorem akCs_voll : ∀ c : akD.Tab ⊕ akD.Glob, c ∈ akCs := fun c => by
     footprint check and the race component refuse; every other component
     holds. -/
 theorem ak1_zwei_schreiber :
-    Akzeptiert akP1 akS akFs [()] akCs [akA, akB] = false ∧
+    Akzeptiert akP1 akS akFs [()] akCs [akA, akB] [] = false ∧
     fussWB akP1 akS akFs [akA, akB] = false ∧ rennB akP1 akFs akCs [akA, akB] = false ∧
     (programmImFragmentG akP1 akFs && abgAlleB akP1 akFs && stufenB akP1 akFs &&
       sperrOrteB akS [()] && wurzelnB [akA, akB]) = true := by
@@ -394,7 +394,7 @@ theorem ak1_zwei_schreiber :
     then a start running `b` (not declared, not idle) or `a` twice is not
     admitted. -/
 theorem ak1_ein_schreiber :
-    Akzeptiert akP1 akS akFs [()] akCs [akA] = true ∧
+    Akzeptiert akP1 akS akFs [()] akCs [akA] [] = true ∧
     startB akP1 akS akFs [()] akCs [akA] ⟨[⟨akA, .nil⟩], ⟨akRuhe, .nil⟩⟩ akSp = true ∧
     startB akP1 akS akFs [()] akCs [akA] ⟨[⟨akA, .nil⟩, ⟨akB, .nil⟩], ⟨akRuhe, .nil⟩⟩ akSp =
       false ∧
@@ -406,7 +406,7 @@ theorem ak1_ein_schreiber :
     of rank `0`. Every other component holds: the floor check alone
     refuses. -/
 theorem ak2_boden_falsch :
-    Akzeptiert akP2 akS akFs [()] akCs [akA] = false ∧
+    Akzeptiert akP2 akS akFs [()] akCs [akA] [] = false ∧
     stufenB akP2 akFs = false ∧
     (programmImFragmentG akP2 akFs && abgAlleB akP2 akFs && fussWB akP2 akS akFs [akA] &&
       sperrOrteB akS [()] && wurzelnB [akA] && rennB akP2 akFs akCs [akA]) = true := by
@@ -442,7 +442,7 @@ def akzeptiertAlt {D : Deklaration} [DecidableEq D.Fn] (P : Programm D) (S : Spe
     the new Bool REFUSES it, and only by the race component. -/
 theorem ak3_zwei_schreiber_ohne_lesen :
     akzeptiertAlt akP3 akS akFs [()] [akA, akB] = true ∧
-    Akzeptiert akP3 akS akFs [()] akCs [akA, akB] = false ∧
+    Akzeptiert akP3 akS akFs [()] akCs [akA, akB] [] = false ∧
     rennB akP3 akFs akCs [akA, akB] = false ∧
     (programmImFragmentG akP3 akFs && abgAlleB akP3 akFs && fussWB akP3 akS akFs [akA, akB] &&
       stufenB akP3 akFs && sperrOrteB akS [()] && wurzelnB [akA, akB]) = true := by

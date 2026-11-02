@@ -95,7 +95,7 @@ structure PrueferVor where
     Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool
   korrekt : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
-    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 (E.starts.map (·.1))
+    akzeptiert E fs.1 ls.1 cs.1 = true → AkzeptiertSpec E.P E.S fs.1 (E.starts.map (·.1)) E.akku
 
 /-- An old checker as a new one: it refuses what it never judged (a unit with run-time
     roots) and says what it said on every other unit. -/
@@ -160,7 +160,7 @@ theorem mehrfach_gestartet (E : Einheit D) (a : Σ w : D.Fn, Env D (D.params w))
     a lifted `child` region, `N456`/`N457`): no signature lock, no reasons, and pool-safe --
     every carrier its graph may write is guarded or atomic. -/
 theorem akzeptiertSpec_gestartet [DecidableEq D.Fn] (E : Einheit D) (fs : List D.Fn)
-    (hA : AkzeptiertSpec E.P E.S fs E.ws) (a : Σ w : D.Fn, Env D (D.params w))
+    (hA : AkzeptiertSpec E.P E.S fs E.ws E.akku) (a : Σ w : D.Fn, Env D (D.params w))
     (ha : a ∈ E.gestartet) :
     D.haelt a.1 = [] ∧ D.gruende a.1 = 0 ∧ PoolSicherW E.P fs a.1 := by
   have hm := mehrfach_gestartet E a ha
