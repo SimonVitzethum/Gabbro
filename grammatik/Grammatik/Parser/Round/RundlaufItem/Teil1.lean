@@ -280,6 +280,7 @@ def EffGut : SEffekt → Prop
   | .locks sh p => gut p = true ∧ (sh = false → ∀ ts, druckToks p ≠ .wort "shared" :: ts)
   | .takes p => gut p = true
   | .posts p => gut p = true
+  | .param _ | .instance _ _ => False
   | _ => True
 
 /-- What follows an effect arm: `,` or `}`. -/
@@ -351,6 +352,9 @@ theorem effekt_rund (e : SEffekt) (he : EffGut e) (R : List Token) (hR : EffFolg
     simp only [druckEffekt, List.cons_append, List.nil_append]
     simp only [parseEffekt, (by decide : strEq "pure" "reads" = false), (by decide : strEq "pure" "writes" = false), (by decide : strEq "pure" "locks" = false), (by decide : strEq "pure" "masks" = false), (by decide : strEq "pure" "allocs" = false), (by decide : strEq "pure" "consumes" = false), (by decide : strEq "pure" "publishes" = false), (by decide : strEq "pure" "diverges" = false), (by decide : strEq "pure" "pure" = true), Bool.false_eq_true, ite_false, ite_true]
 
+  | param _ => cases he
+  | instance _ _ => cases he
+
 theorem effekte_rund : ∀ (es : List SEffekt) (R : List Token) (F : Nat), es ≠ [] → (∀ e ∈ es, EffGut e) →
     8 * (druckEffekte es).length + 41 ≤ F →
     parseEffektListe F (druckEffekte es ++ .zeichen "}" :: R) = .ok (es, .zeichen "}" :: R) := by
@@ -374,8 +378,10 @@ theorem effekte_rund : ∀ (es : List SEffekt) (R : List Token) (F : Nat), es �
       have hE := effekt_rund e he (.zeichen "," :: (druckEffekte (e2 :: es2) ++ .zeichen "}" :: R))
         (Or.inl ⟨_, rfl⟩) F' (by omega)
       have hR := ih R F' (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) (fun x hx => hg x (List.mem_cons_of_mem _ hx)) (by omega)
+      have he2 := hg e2 (List.mem_cons_of_mem _ (List.mem_cons_self ..))
       have hk : istZeichenZ "}" (druckEffekte (e2 :: es2) ++ .zeichen "}" :: R) = false := by
-        cases e2 <;> cases es2 <;> simp only [istZeichenZ, druckEffekte, druckEffekt, List.cons_append, List.nil_append, List.append_assoc] <;> (try split) <;> rfl
+        cases e2 <;> cases es2 <;> simp only [EffGut] at he2 <;> try contradiction
+        all_goals simp only [istZeichenZ, druckEffekte, druckEffekt, List.cons_append, List.nil_append, List.append_assoc] <;> (try split) <;> rfl
       simp only [List.append_assoc, List.cons_append] at hE ⊢
       simp only [parseEffektListe, hE, hk, Bool.false_eq_true, ite_false, hR]
 

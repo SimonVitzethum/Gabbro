@@ -307,4 +307,15 @@ def parseTypNach (f : Nat) (basis : STyp) (toks : List Token) :
     | _ => .ok (basis, toks)
 end
 
+/-- A nonempty tuple of types; leaves `]` or `;` for its caller. -/
+def parseSpecTypes : Nat → List Token → Except String (List STyp × List Token)
+  | 0, _ => .error "spec.types: out of fuel"
+  | f + 1, ts => do
+      let (t, r) ← parseTyp f ts
+      match r with
+      | .zeichen "," :: rest =>
+        let (types, tail) ← parseSpecTypes f rest
+        return (t :: types, tail)
+      | _ => return ([t], r)
+
 end Gabbro.Grammatik.Parser

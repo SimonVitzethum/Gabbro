@@ -31,6 +31,8 @@ inductive SEffekt
   | posts : SExpr → SEffekt
   | loops : SEffekt
   | pure : SEffekt
+  | param : String → SEffekt
+  | instance : String → List STyp → SEffekt
   deriving Repr
 
 mutual
@@ -44,6 +46,8 @@ def beqSEffekt : SEffekt → SEffekt → Bool
   | .posts a, .posts b => beqSExpr a b
   | .loops, .loops => true
   | .pure, .pure => true
+  | .param a, .param b => strEq a b
+  | .instance a ts, .instance b us => strEq a b && beqSTypList ts us
   | _, _ => false
 def beqSEffektList : List SEffekt → List SEffekt → Bool
   | [], [] => true
@@ -128,6 +132,12 @@ def beqFnSig : FnSig → FnSig → Bool
   | s, t => strEq s.art t.art && strEq s.name t.name &&
     beqParamList s.params t.params && beqSTypOpt s.res t.res &&
     beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln
+
+/-- Structural equality of a spec's function signatures. -/
+def beqFnSigs : List FnSig → List FnSig → Bool
+  | [], [] => true
+  | s :: ss, t :: ts => beqFnSig s t && beqFnSigs ss ts
+  | _, _ => false
 
 /- One slot/format field: SYNTAX.md sections 9-10 `slotfeld`
     and `field`. `pos` is the raw `@bitpos`, `bezug` the raw

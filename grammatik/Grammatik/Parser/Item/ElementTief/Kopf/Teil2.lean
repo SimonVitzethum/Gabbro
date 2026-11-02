@@ -194,11 +194,20 @@ inductive SItemTief
   /-- `pub item`: the item crosses the boundary of its project (its name is visible to a dependent
       project, its signature may name only what crosses too -- `Parser/Namen/Oeffentlich.lean`). -/
   | pubT : SItemTief → SItemTief
+  /-- Check model A: type and effect parameters, followed by abstract function heads. -/
+  | specGroupT : String → List String → List String → List FnSig → SItemTief
+  /-- A concrete type tuple, effect arguments and ordinary implementation functions. -/
+  | implGroupT : String → List STyp → List (List SEffekt) → List SItemTief → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
   | none, none => true
   | some (a, x), some (b, y) => beqWorte a b && beqSExpr x y
+  | _, _ => false
+
+def beqEffectArgs : List (List SEffekt) → List (List SEffekt) → Bool
+  | [], [] => true
+  | e :: es, f :: fs => beqSEffektList e f && beqEffectArgs es fs
   | _, _ => false
 
 mutual
@@ -265,6 +274,10 @@ def beqSItemTief : SItemTief → SItemTief → Bool
     (a == b) && beqSProfEintragList e f
   | .gateT a, .gateT b => beqSItemTief a b
   | .pubT a, .pubT b => beqSItemTief a b
+  | .specGroupT n ts es fs, .specGroupT m us ds gs =>
+    strEq n m && beqWorte ts us && beqWorte es ds && beqFnSigs fs gs
+  | .implGroupT n ts es fs, .implGroupT m us ds gs =>
+    strEq n m && beqSTypList ts us && beqEffectArgs es ds && beqSItemTiefList fs gs
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true

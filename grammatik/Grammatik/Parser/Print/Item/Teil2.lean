@@ -85,6 +85,17 @@ def druckItem : SItemTief → List Token
   | .concT ps => ([.wort "concurrent", .zeichen "{"] ++ druckStarts ps ++ [.zeichen "}", .zeichen ";"])
   | .gateT it => [.wort "when", .ident "TESTBUILD"] ++ druckItem it
   | .pubT it => .wort "pub" :: druckItem it
+  | .specGroupT n ts es fs =>
+    [.wort "spec", nameTok n, .zeichen "["] ++ druckNamen ts ++
+    (if es.isEmpty then [] else [.zeichen ";", .wort "effects"] ++ druckNamen es) ++
+    [.zeichen "]", .zeichen "{"] ++
+    fs.flatMap (fun s => druckFnSig { s with art := "" } ++ [.zeichen ";"]) ++ [.zeichen "}"]
+  | .implGroupT n ts es fs =>
+    [.wort "impl", nameTok n, .zeichen "["] ++ druckTypListe ts ++
+    (if es.isEmpty then [] else [.zeichen ";", .wort "effects"] ++
+      (es.flatMap fun e => [.zeichen "{"] ++ druckEffekte e ++ [.zeichen "}", .zeichen ","]).dropLast) ++
+    [.zeichen "]", .zeichen "{"] ++ druckItems fs ++ [.zeichen "}"]
+
   | .assumT n a s k =>
     ([.wort "assume", nameTok n] ++
       (match a with

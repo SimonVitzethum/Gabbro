@@ -408,6 +408,8 @@ def parseEingangTief (f : Nat) (toks : List Token) :
 /-- The leading `fn`/`type` modifiers (`parse.rs` `item`); `const`
     is NOT among them (`const fn` splits on the next word). -/
 def sammleModifikatoren : List Token → List String × List Token
+  | .wort "spec" :: .ident n :: rest => ([], .wort "spec" :: .ident n :: rest)
+  | .wort "impl" :: .ident n :: rest => ([], .wort "impl" :: .ident n :: rest)
   | .wort s :: rest =>
     if istMod s then
       let (ms, r) := sammleModifikatoren rest

@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Stmt.Anweisung
-public import Grammatik.Parser.Item.ElementTief.Defs6
+public import Grammatik.Parser.Spec.Parse
 
 @[expose] public section
 
@@ -73,7 +73,9 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
   | f + 1 => match sammleModifikatoren toks with
     | (mods, nach) => match nach with
       | .wort s :: rest =>
-        if strEq s "module" then parseModulTief f nach
+        if strEq s "spec" then parseSpecGroup f nach
+        else if strEq s "impl" then parseImplGroup f nach
+        else if strEq s "module" then parseModulTief f nach
         else if strEq s "use" then parseUseTief nach
         else if strEq s "fn" then match parseFnSig f (letzteArt mods) nach with
           | .error e => .error e
