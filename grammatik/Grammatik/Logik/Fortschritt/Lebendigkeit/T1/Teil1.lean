@@ -284,6 +284,12 @@ theorem sperre_schritt {M M' : RufMaschineG D} {t : Faden} {L : D.Lock}
         exfalso
         rw [‹(M.faeden t).kopf.rest = _›] at hK
         simp only [GRest.kopfSperre, reduceCtorEq, Block.sperreVon, Stmt.sperreVon] at hK
+  | g7 hs =>
+    cases hs with
+    | _ =>
+        exfalso
+        rw [‹(M.faeden t).kopf.rest = _›] at hK
+        simp only [GRest.kopfSperre, reduceCtorEq, Block.sperreVon, Stmt.sperreVon] at hK
 
 end MaschineG
 end Gabbro.Grammatik

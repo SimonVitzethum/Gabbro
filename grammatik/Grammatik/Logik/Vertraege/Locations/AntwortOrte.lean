@@ -197,6 +197,11 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     | _ =>
       kopfAnt
       all_goals simp_all
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      kopfAnt
+      all_goals simp_all
 
 /-! ## 4. The frame invariant -/
 
