@@ -117,4 +117,20 @@ theorem compile_source_program (text : String) {options : Profil.Options} (resul
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted, result.arrayConstants, result.metadata⟩
 
+/-- Every function the compiled unit generated for a transition declaration is in the lowered
+    G program and carries its expansion certificate there (the program before the old(global)
+    restoration, which replaces only `ensures`; a generated function has no `old` clause, so
+    the restoration keeps its `ensures`). The call theorems of the certificate relate every
+    successful call of it to the declaration's full pre/post relation and frame; no generated
+    function is emitted without this certificate because `lowerAllg` refuses its name otherwise. -/
+theorem compile_transitions_certified {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    ∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
+      OldSource.restore (uMembers (pre108 result.source.items)) result.unit raw = .ok result.program ∧
+      ∀ c : Fin result.unit.fns.length, (fnAt result.unit c).name.startsWith "#transition#" = true →
+        ∃ (state : UZustand) (tr : UTransition), transitionOfFn result.unit c = some (state, tr) ∧
+          (Nonempty (TransitionExpansion raw c) ∨ Nonempty (TransitionShiftExpansion raw c)) := by
+  obtain ⟨raw, fs, hl, hr⟩ := result.lowered
+  exact ⟨raw, fs, hl, hr, fun c hname => lowerAllg_transition_certified result.unit raw fs hl c hname⟩
+
 end Gabbro.Stage0
