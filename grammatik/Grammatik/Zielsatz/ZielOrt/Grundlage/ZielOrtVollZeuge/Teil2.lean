@@ -257,3 +257,41 @@ theorem ziel_ort_voll_zeuge :
 #print axioms Gabbro.Grammatik.ziel_ort_voll_zeuge
 
 end Gabbro.Grammatik
+
+namespace Gabbro.Grammatik
+
+/-- A waiting caller and a callee returning the first reason. -/
+def vGrundCaller : RufRahmenG vD :=
+  ⟨vMid, .nil, vSp.welt [],
+    ⟨false, [], [], .nil,
+      .wartetSonst (vD.gruende vErr) vErrBlock .nil
+        (.ende (.ret .empty List.Perm.nil))⟩⟩
+
+def vGrundM : RufMaschineG vD :=
+  { RufStartG vP vSp vInit with
+    faeden := fun _ => ⟨[vGrundCaller],
+      ⟨vErr, .nil, vSp.welt [], ⟨false, [], [], .nil, .ende vRumpfErr⟩⟩,
+      [], []⟩ }
+
+/-- The generic faithful-reason theorem on an actual reason-pop step. -/
+theorem rufG_grund_treu_zeuge :
+    ∃ M' : RufMaschineG vD,
+      RufSchrittG vP vO 0 vGrundM 0 M' ∧
+      (M'.faeden 0).log =
+        [RufEreignisF.why vErr .nil vR0 (vSp.welt []) (vGrundM.weltVon 0)] ∧
+      (vGrundM.faeden 0).kopf.f = vErr ∧
+      (∃ r' : Fin (vertragVon vD (vGrundM.faeden 0).kopf.f).gruende,
+        (vGrundM.faeden 0).kopf.rest.2.2.2.2.grundJetzt = some r' ∧ HEq r' vR0) ∧
+      (M'.faeden 0).stapel = [] := by
+  have hs := RufSchrittG.rueckGrund (P := vP) (O := vO) (passes := 0)
+    vGrundM 0 vR0 List.Perm.nil Env.nil rfl vGrundCaller [] rfl
+    false [] [] [] .bool (vD.gruende vErr) vErrBlock .nil
+    (.ende (.ret .empty List.Perm.nil)) .nil rfl
+    (vHg0 (show offen (vGrundM.faeden 0).spur = [] from rfl)).heldIn
+    vErr rfl .nil rfl (vSp.welt []) rfl vR0 rfl rfl
+  have ht := rufG_grund_treu hs vErr .nil vR0 (vSp.welt [])
+    (vGrundM.weltVon 0) (by simp only [rufUpdateG_self]; rfl)
+  exact ⟨_, hs, by simp only [rufUpdateG_self]; rfl,
+    ht.1, ht.2.1, by simp only [rufUpdateG_self]⟩
+
+end Gabbro.Grammatik
