@@ -43,6 +43,7 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .onWhy _ arms => ruGArms_ants arms
   | _, _, _, _, .call .. => ants_nachΛ _ _
   | _, _, _, _, .callInd .. => ants_nachΛ _ _
+  | _, _, _, _, .callIndElse .. => ants_nachΛ _ _
   | _, _, _, _, .locks _ _ body => ruB_ants body
   | _, _, _, _, .breaking _ body => ruB_ants body
   | _, _, _, _, .traverse _ _ body => ruB_ants body
@@ -69,6 +70,9 @@ theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .bind _ rest => ruB_ants rest
   | _, _, _, _, .bindCall _ _ _ _ _ rest => (ants_vorΛ _ _).trans (ruB_ants rest)
   | _, _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_vorΛ _ _).trans (ruB_ants rest)
+  | _, _, _, _, .bindCallIndElse _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) ((ants_umΛ _ _).trans (ruEnd_ants err))
+        ((ants_vorΛ _ _).trans (ruB_ants rest))
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest =>
       kongr₂ (· ++ ·) ((ants_umΛ _ _).trans (ruEnd_ants err))
         ((ants_vorΛ _ _).trans (ruB_ants rest))
@@ -111,6 +115,9 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       congrArg (Sum.inr r :: ·) (kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest))
   | _, _, _, .awaits _ _ _ _ _ rest => ruEnd_ants rest
   | _, _, _, .bindCallInd _ _ _ _ _ rest => (ants_umΛ _ _).trans (ruEnd_ants rest)
+  | _, _, _, .bindCallIndElse _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) ((ants_umΛ _ _).trans (ruEnd_ants err))
+        ((ants_umΛ _ _).trans (ruEnd_ants rest))
   | _, _, _, .narrow _ _ _ sonst rest => kongr₂ (· ++ ·) (ruEnd_ants sonst) (ruEnd_ants rest)
   | _, _, _, .narrowRequired _ _ _ rest => ruEnd_ants rest
   | _, _, _, .exchange _ _ _ _ rest => ruEnd_ants rest

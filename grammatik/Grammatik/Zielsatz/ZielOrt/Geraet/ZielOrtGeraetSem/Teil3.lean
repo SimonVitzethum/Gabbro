@@ -58,6 +58,10 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .callInd .., h => by
       simp only [Stmt.vOk] at h
       exact ⟨h, rfl⟩
+  | .callIndElse _ _ _ _ _ err, h => by
+      simp only [Stmt.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.2
+      simp only [Stmt.gOk, Stmt.regs, h.1, he.1, he.2, Bool.and_self, and_self]
   | .assignSlot .., _ => ⟨rfl, rfl⟩
   | .assignThru .., _ | .assignSlotRef .., _ => ⟨rfl, rfl⟩
   | .assignGlob .., _ => ⟨rfl, rfl⟩
@@ -97,6 +101,12 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       simp only [Block.vOk, Bool.and_eq_true] at h
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
       simp only [Block.gOk, Block.regs, h.1, hr.1, hr.2, Bool.and_self, and_self]
+  | .bindCallIndElse _ _ _ _ _ err rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1.2
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
+      simp only [Block.gOk, Block.regs, h.1.1, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
+        and_self]
   | .bindCallElse _ _ _ _ _ err rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h
       have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
@@ -192,6 +202,12 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       simp only [Endblock.vOk, Bool.and_eq_true] at h
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
       simp only [Endblock.gOk, Endblock.regs, h.1, hr.1, hr.2, Bool.and_self, and_self]
+  | .bindCallIndElse _ _ _ _ _ err rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1.2
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
+      simp only [Endblock.gOk, Endblock.regs, h.1.1, he.1, hr.1, he.2, hr.2, Bool.and_self,
+        List.append_nil, and_self]
   | .narrow _ _ _ sonst rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h
       have hs : sonst.gOk K Rg = true ∧ sonst.regs = [] := Endblock.gOk_of_vOk sonst h.1
