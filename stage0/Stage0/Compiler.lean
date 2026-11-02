@@ -69,6 +69,16 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
               | .ok false => throw "refused by the checker (AkzeptiertX)"
               | .ok true => pure ⟨source, unit, main, program, elaborated, hm, ⟨raw, fs, hl, hr⟩, ha, arrays.down, hi, hc, rfl⟩
 
+/-- The actual source program keeps all declared table/global carriers and their exact read bound. -/
+theorem Compiled.invariants {text : String} {options : Profil.Options} (result : Compiled text options)
+    (i : Fin result.unit.invs.length) :
+    (declOf result.unit).traeger i = invTraeger result.unit i ∧
+      ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i := by
+  obtain ⟨raw, fs, lowered, restored⟩ := result.lowered
+  have same := OldSource.restore_invariante _ result.unit raw result.program restored
+  rw [same]
+  exact lowerAllg_traeger result.unit raw fs lowered i
+
 /-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
     certified declaration permutation, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
@@ -109,12 +119,15 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
       OldSource.restore original result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
     (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
-    result.unit.exportGate = ExportMetadata.check original
+    result.unit.exportGate = ExportMetadata.check original ∧
+    (∀ i : Fin result.unit.invs.length,
+      (declOf result.unit).traeger i = invTraeger result.unit i ∧
+      ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i)
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.unchanged, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
-    result.accepted, result.arrayConstants, result.metadata⟩
+    result.accepted, result.arrayConstants, result.metadata, result.invariants⟩
 
 end Gabbro.Stage0

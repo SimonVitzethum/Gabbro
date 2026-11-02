@@ -6,12 +6,13 @@
    parameters above the internal result/status and counters. Ensures sees the
    original parameters. Normal returns check ensures before publishing the complete
    result and status; reasons publish their canonical span without running ensures.
-   Owed invariant checks remain refused until their return lowering is connected. -/
+   The shared epilogue checks owed table/global predicates after ensures. -/
 module
 public import Stage0.Senke.Anweisung
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 public import Stage0.Senke.Stopp
 public import Stage0.Senke.Ausdruck.Old.Sound
+public import Stage0.Senke.Rueckkehr.EpilogueCode
 @[expose] public section
 
 
@@ -40,9 +41,9 @@ theorem functionFrame_prefix (P : Programm D) (f : D.Fn) :
 def lowFun (passes : Nat) (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D.Fn) : Option (List II × Nat) :=
   let layout := functionFrame P f
   let cells := oldCells (P.ensures f)
-  if (D.invs.filter (schuldet f)).isEmpty then do
+  do
     let req ← lowE L (P.requires f) layout.canonicalResult
-    let ens ← lowEns L layout (P.ensures f) layout.internalStatus
+    let ens ← lowPost L layout P f layout.internalStatus
     let body ← lowEnd (reserved := layout.bodyReserved) passes A L layout ens [] (0, 0) (P.rumpf f)
     let snap ← EntrySnapshots.capture L cells layout.snapshotBase
     let original := relocateC FB layout.ensReserved layout.parameterWords
@@ -50,6 +51,5 @@ def lowFun (passes : Nat) (P : Programm D) (A : D.Fn → Nat) (L : Lay D) (f : D
     pure (guardC 2 105 layout.canonicalResult ++ req.1 ++
       guardC layout.canonicalResult 101 layout.canonicalResult ++ original ++ snap ++ lexical ++ body.1,
       max (retTop layout) (max req.2 (max (layout.bodyParams + layout.parameterWords) body.2)))
-  else none
 
 end Gabbro.Stage0.Senke

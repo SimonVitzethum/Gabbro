@@ -1,4 +1,4 @@
-/- Complete return values stay internal until the ordinary ensures guard succeeds. -/
+/- Complete return values stay internal until the shared ensures/invariant epilogue succeeds. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Layout
 public import Stage0.Senke.Stopp
@@ -13,10 +13,10 @@ def publishC (layout : FrameLayout) : List II :=
   copyWords (resultWords layout.result) layout.canonicalResult layout.internalResult ++
     [ci 1 layout.canonicalStatus 1 0, ci 2 2 layout.canonicalResult 0, ci 21 0 0 0]
 
-/-- All normal returns use the shared guard and the canonical publication tail. -/
+/-- All normal returns use the checked epilogue and the canonical publication tail. -/
 def retC (layout : FrameLayout) (source : Nat) (ens : List II) : List II :=
   copyWords (resultWords layout.result) layout.internalResult source ++ ens ++
-    guardC layout.internalStatus 102 layout.internalStatus ++ publishC layout
+    publishC layout
 
 /-- Reasons bypass ensures, preserving the existing source semantics. -/
 def retWhyC (layout : FrameLayout) (reason : Nat) : List II :=
