@@ -85,8 +85,8 @@ theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ)) σ1 (by rw [hR1]; rfl)
     rw [hR1] at h2
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-    exact (TreuAusgang.vor g1 (runOk σ1 (ergWert (ergSig hf he) v))) σ' h
+    have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+    exact (TreuAusgang.vorRet g1 (runOk σ1 (ergWert (ergSig hf he) v))) σ' h
   · rename_i σ1 r hR1
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ)) σ1 (by rw [hR1]; rfl)
@@ -123,8 +123,8 @@ theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ)) σ1 (by rw [hR1]; rfl)
     rw [hR1] at h2
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-    exact (TreuEnd.vor g1 (runOk σ1 (ergWert (ergSig hf he) v))) σ' h
+    have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+    exact (TreuEnd.vorRet g1 (runOk σ1 (ergWert (ergSig hf he) v))) σ' h
   · rename_i σ1 r hR1
     replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
     have h2 := hR f s0 (umsig hf (evalArgs s0 args s0 ρ)) σ1 (by rw [hR1]; rfl)

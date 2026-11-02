@@ -78,7 +78,7 @@ theorem stmt_treu :
         simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        exact hl.trans (Treu.weiter hp.hw hp.hg h2)
+        exact hl.transRet (h2.weiter hp.hw hp.hg)
       · rename_i σ1 r _; exact keinGrund hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -94,7 +94,7 @@ theorem stmt_treu :
         replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have h2 := hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        exact hl.trans (Treu.weiter hp.hw hp.hg h2)
+        exact hl.transRet (h2.weiter hp.hw hp.hg)
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -198,8 +198,8 @@ theorem block_treu :
       · rename_i σ1 v hR1
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuAusgang.vorRet g1 ((block_treu rest σ1 _).schrumpf)) σ' h
       · rename_i σ1 r _; exact keinGrund hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -215,8 +215,8 @@ theorem block_treu :
         replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have h2 := hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        exact g1.trans (g2.schrumpf σ' h)
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuAusgang.vorRet g1 g2.schrumpf) σ' h
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -232,8 +232,8 @@ theorem block_treu :
       · rename_i σ1 v hR1
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuAusgang.vorRet g1 ((block_treu rest σ1 _).schrumpf)) σ' h
       · rename_i σ1 r hR1
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
@@ -425,8 +425,8 @@ theorem end_treu :
       · rename_i σ1 v hR1
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuEnd.vorRet g1 ((end_treu rest σ1 _).schrumpf)) σ' h
       · rename_i σ1 r _; exact keinGrund hr r
       · simp only [EndAusgang.welt, reduceCtorEq] at h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
@@ -437,8 +437,8 @@ theorem end_treu :
       · rename_i σ1 v hR1
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuEnd.vorRet g1 ((end_treu rest σ1 _).schrumpf)) σ' h
       · rename_i σ1 r hR1
         have h2 := hR f (σ.lese Λ args.orte) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
@@ -553,8 +553,8 @@ theorem end_treu :
         replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
         have h2 := hR f (σ.lese Λ (p.orte ++ args.orte)) _ σ1 (by rw [hR1]; rfl)
         rw [hR1] at h2
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        exact g1.trans (g2.schrumpf σ' h)
+        have g1 := hl.transRet (h2.weiter hp.hw hp.hg)
+        exact (TreuEnd.vorRet g1 g2.schrumpf) σ' h
       · rename_i σ1 r _; exact keinGrundSig hf hr r
       · simp only [EndAusgang.welt, reduceCtorEq] at h
       · simp only [EndAusgang.welt, reduceCtorEq] at h

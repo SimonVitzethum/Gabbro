@@ -397,12 +397,14 @@ theorem gutO_treuO {O : Orakel D} (hO : GutO O) : TreuO O :=
   fun a σ ρ => ⟨(hO a σ ρ).1, (hO a σ ρ).2.1⟩
 
 /-- **The handler's half**, WITHOUT the `HeldB` premise of `GutR`. A completed
-    call keeps frame and locks; a propagated reason may release the scopes the
-    callee unwound (`TreuRet`), never more. -/
+    call keeps the frame; EITHER exit may release the scopes the callee
+    unwound (`TreuRet`), never more. Unlike `GutR` there is no held-lock
+    premise, so a release can never be collapsed back to an equality — it is
+    carried explicitly on both channels. -/
 def TreuR (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
   ∀ f σ ρ σ', (R f σ ρ).welt = some σ' →
     match (R f σ ρ) with
-    | .ok _ _ => Treu (D.schreibt f) (D.gschreibt f) σ σ'
+    | .ok _ _ => TreuRet (D.schreibt f) (D.gschreibt f) σ σ'
     | .why _ _ => TreuRet (D.schreibt f) (D.gschreibt f) σ σ'
     | .logik _ => True
     | .hardware _ => True
