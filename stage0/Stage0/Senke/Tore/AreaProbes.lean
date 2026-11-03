@@ -197,7 +197,7 @@ theorem area_contract_zeuge :
     omega
   · exact ⟨(fun t => Fin.elim0 t), (fun g => Fin.elim0 g),
       world.2.2.keep (writeSpan_wr _ _ _)⟩
-  · refine .inl ⟨value, ?_, rfl, payload⟩
+  · refine .inl ⟨value, ?_, Or.inl rfl, payload⟩
     decide +kernel
 
 /-- The exact layout/oracle pair jointly satisfies all inherited gate
