@@ -103,4 +103,28 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     · cases made
 termination_by cs.length
 
+/-- Every arm needs at least a test, conditional branch and trailing jump. Thus
+    the tag-count gate rejects only an already unrepresentable code image. -/
+theorem lowSumTags_code_bound {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {cs : List (Option Ty)} (arms : Arms D V l Γ Λ Λ' cs)
+    (layout : FrameLayout) (span k : Nat) {code : List II} {top : Nat}
+    (made : lowSumTags (reserved := reserved) passes A L layout ens pr ex arms span k = some (code, top)) :
+    5 * cs.length ≤ code.length := by
+  cases arms with
+  | nil =>
+    simp only [lowSumTags, Option.some.injEq, Prod.mk.injEq] at made
+    obtain ⟨rfl, rfl⟩ := made
+    decide
+  | cons b rest =>
+    simp only [lowSumTags] at made
+    split at made
+    · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at made
+      obtain ⟨⟨cr, tr⟩, restMade, ⟨cb, tb⟩, _, rfl, rfl⟩ := made
+      have bound := lowSumTags_code_bound rest layout span (k + 1) restMade
+      simp only [List.length_cons, List.length_append, List.length_nil, sumSpanTestC]
+      omega
+    · cases made
+termination_by cs.length
+
 end Gabbro.Stage0.Senke
+
