@@ -123,6 +123,11 @@ theorem false_noreturn_refused :
     ({ guest with behavior := .noreturn }).check =
       .error "entrust: noreturn service needs a never result" := by decide
 
+theorem hidden_capability_refused :
+    GuestBoundary.inputsB [.arr (.ptr data) 1] = false ∧
+    GuestBoundary.inputsB [.ref 1] = false ∧
+    GuestBoundary.inputsB [.fnptr 0] = false := by decide
+
 def protectedGrant : Konzession D := { tab := false, basis := 0, laenge := 8 }
 def guestStorage : Konzession D := { tab := true, basis := 0, laenge := 8 }
 
