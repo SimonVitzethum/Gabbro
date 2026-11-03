@@ -289,6 +289,12 @@ def GRest.okV (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
       inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .travRest _ inv body _ k =>
       inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+  | _, _, _, .verbrauch _ member edge inv _ mass body _ k =>
+      member.orte ⊆ S ∧ edge.orte ⊆ S ∧ inv.orte ⊆ S ∧ mass.orte ⊆ S ∧
+        body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+  | _, _, _, .verbrauchRest _ member edge inv _ mass body _ _ k =>
+      member.orte ⊆ S ∧ edge.orte ⊆ S ∧ inv.orte ⊆ S ∧ mass.orte ⊆ S ∧
+        body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .wieder _ bis body ueber k =>
       bis.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧
         ueber.vOk (kandP P S) = true ∧
