@@ -125,12 +125,10 @@ theorem map_vonMarkeE (l : List (D.Marke × Nat)) :
 
 theorem endeE (V : Vertrag D) : V.ende.map E.resE = (E.vertragE V).ende := by
   simp only [Vertrag.ende, vertragE, OwnerFlow.outputs_map, List.map_append, E.map_heldE, E.map_vonMarkeE]
-  rfl
 
 theorem anfangE (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
     (Signatur.anfang D S).map E.resE = Signatur.anfang D' (E.sigE S) := by
   simp only [Signatur.anfang, Signatur.inputMarks, sigE, OwnerFlow.inputs_map, List.map_append, E.map_heldE, E.map_vonMarkeE]
-  rfl
 
 theorem foldl_erase_mapE (ks : List (D.Marke × Nat)) (Λ : List (Res D)) :
     (ks.foldl (fun acc m => acc.erase (Res.vonMarke D m)) Λ).map E.resE =
@@ -144,7 +142,6 @@ theorem foldl_erase_mapE (ks : List (D.Marke × Nat)) (Λ : List (Res D)) :
 theorem nachSigE (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (Res D)) :
     (nachSig D S Λ).map E.resE = nachSig D' (E.sigE S) (Λ.map E.resE) := by
   simp only [nachSig, Signatur.inputMarks, Signatur.outputMarks, sigE, OwnerFlow.inputs_map, OwnerFlow.outputs_map, List.map_append, E.map_vonMarkeE, E.foldl_erase_mapE]
-  rfl
 
 theorem nachE {E : Einbettung D D'} (hS : E.SigTreu) (f : D.Fn) (Λ : List (Res D)) :
     (nach D f Λ).map E.resE = nach D' (E.fn f) (Λ.map E.resE) := by
