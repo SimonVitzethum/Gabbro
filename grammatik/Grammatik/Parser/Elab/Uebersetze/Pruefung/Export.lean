@@ -37,7 +37,8 @@ def uCheckIdx (u : UProg) (c : UCheck) : Except String (Fin u.fns.length × List
   if !(u.marken.any fun m => strEq m c.duty) then .error ("duty unknown: " ++ c.duty)
   else
     let p ← UebersetzeAllg.fnIdx u.fns c.probe
-    let gs ← uSeq (c.tore.map (UebersetzeAllg.fnIdx u.fns))
+    let gs ← uSeq (c.tore.map fun gate =>
+      UebersetzeAllg.fnIdx u.fns (torHuellenName c.name gate))
     .ok (p, gs)
 
 /-- The resolution read back as names. -/
@@ -50,13 +51,13 @@ def uCheckAufloesung (u : UProg) (c : UCheck) :
 example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
     match u.checks with
     | [c] => uCheckAufloesung u c
-    | _ => .error "shape") = .ok ("p#probe", ["g"]) := rfl
+    | _ => .error "shape") = .ok ("p#probe", ["p#tor#g"]) := rfl
 
 /-- A gate naming no function is refused on the resolved unit. -/
 example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
     match u.checks with
     | [c] => uCheckIdx u { c with tore := ["h"] }
-    | _ => .error "shape") = .error "function unknown: h" := rfl
+    | _ => .error "shape") = .error "function unknown: p#tor#h" := rfl
 
 /-- A Duty outside the mark table is refused on the resolved unit. -/
 example : ((elabU [probenFn, .checkT probenCheck]).bind fun u =>
@@ -102,7 +103,7 @@ example : (elabText checkText).map (fun u => u.marken) = .ok ["p#duty"] := rfl
 example : ((elabText checkText).bind fun u =>
     match u.checks with
     | [c] => uCheckAufloesung u c
-    | _ => .error "shape") = .ok ("p#probe", ["g"]) := rfl
+    | _ => .error "shape") = .ok ("p#probe", ["p#tor#g"]) := rfl
 
 /-- A gate naming no function is refused from source text. -/
 def checkTextFremdTor : String :=
