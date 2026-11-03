@@ -91,9 +91,8 @@ theorem end_bindCall_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have h2 := hT₁ f _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r => exact EndUnter.refl _
     | logik e => exact EndUnter.refl _
@@ -132,9 +131,8 @@ theorem end_bindCallElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have h2 := hT₁ f _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r =>
         have h2 := hT₁ f _ _ hentry σ1 (by rw [h, hx]; rfl)
@@ -142,9 +140,8 @@ theorem end_bindCallElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have gcall : Treu V.schreibt V.gschreibt (σ.lese Λ args.orte) σ1 :=
           (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
         have g1 := hl.trans gcall
-        have heq := ih_err σ1 _ hscope_err
+        have heq := ih_err σ1 (.cons r ρ) hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | logik e => exact EndUnter.refl _
     | hardware e => exact EndUnter.refl _
@@ -184,9 +181,8 @@ theorem end_bindCallInd_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have h2 := hT₁ g _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert (ergSig hg he) v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r => exact EndUnter.refl _
     | logik e => exact EndUnter.refl _
@@ -233,9 +229,8 @@ theorem end_bindCallIndElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden
         have h2 := hT₁ g _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert (ergSig hg he) v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r =>
         have h2 := hT₁ g _ _ hentry σ1 (by rw [h, hx]; rfl)
@@ -244,9 +239,8 @@ theorem end_bindCallIndElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden
             (σ.lese Λ (p.orte ++ args.orte)) σ1 :=
           (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
         have g1 := hl.trans gcall
-        have heq := ih_err σ1 _ hscope_err
+        have heq := ih_err σ1 (.cons (grundSig hg r) ρ) hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | logik e => exact EndUnter.refl _
     | hardware e => exact EndUnter.refl _
@@ -280,10 +274,8 @@ theorem end_bindAxiom_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
           have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
             (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
           rw [hx] at h1
-          simp only [hx] at ⊢
           have g1 := hl.trans (Treu.weiter hw hg h1)
-          have heq := ih_rest σ1 _ hscope_rest (g1.heldB hh)
-          simp only [hx] at ⊢
+          have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest (g1.heldB hh)
           exact heq.schrumpf
 
 theorem end_bindAxiomElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -319,19 +311,15 @@ theorem end_bindAxiomElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
       · exact EndUnter.refl _
       · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [hx] at h1
-        simp only [hx] at ⊢
+        rw [← axiomAntwortSonst_fst, hx] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        have heq := ih_rest σ1 _ hscope_rest (g1.heldB hh)
-        simp only [hx] at ⊢
+        have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest (g1.heldB hh)
         exact heq.schrumpf
       · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [hx] at h1
-        simp only [hx] at ⊢
+        rw [← axiomAntwortSonst_fst, hx] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        have heq := ih_err σ1 _ hscope_err (g1.heldB hh)
-        simp only [hx] at ⊢
+        have heq := ih_err σ1 (.cons r ρ) hscope_err (g1.heldB hh)
         exact heq.schrumpf
 
 theorem end_bindAxiomOpt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -364,9 +352,8 @@ theorem end_bindAxiomOpt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
               have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
                 (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
               rw [hx] at h1
-              simp only [hx] at ⊢
               have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-              have heq := ihr σ1 _
+              have heq := ihr σ1 (ergEnv none (he ▸ v) ρ)
                 (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
               exact heq
   | some τ =>
@@ -380,11 +367,9 @@ theorem end_bindAxiomOpt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
               have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
                 (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
               rw [hx] at h1
-              simp only [hx] at ⊢
               have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-              have heq := ihr σ1 _
+              have heq := ihr σ1 (ergEnv (some τ) (he ▸ v) ρ)
                 (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-              simp only [hx] at ⊢
               exact heq.schrumpf
 
 theorem end_bindAxiomOptElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -422,20 +407,17 @@ theorem end_bindAxiomOptElse_unter (bo : Option Int) (hbV : BodenUnter bo V.bode
           · exact EndUnter.refl _
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := ihr σ1 _
+            have heq := ihr σ1 (ergEnv none (he ▸ v) ρ)
               (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
             exact heq
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := (ihe σ1 _
+            have heq := (ihe σ1 (.cons r ρ)
               (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf
-            simp only [hx] at ⊢
             exact heq
   | some τ =>
       simp only [execEnd, EndAusgang.weiterOpt]
@@ -446,21 +428,17 @@ theorem end_bindAxiomOptElse_unter (bo : Option Int) (hbV : BodenUnter bo V.bode
           · exact EndUnter.refl _
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := (ihr σ1 _
+            have heq := (ihr σ1 (ergEnv (some τ) (he ▸ v) ρ)
               (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf
-            simp only [hx] at ⊢
             exact heq
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := (ihe σ1 _
+            have heq := (ihe σ1 (.cons r ρ)
               (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf
-            simp only [hx] at ⊢
             exact heq
 
 end KongruenzDiszEnd

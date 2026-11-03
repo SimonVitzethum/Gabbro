@@ -1,9 +1,8 @@
 /-
   File:      Grammatik/HandlerKongruenz/Teil7.lean
   Subject:   **CONGRUENCE UNDER AN ERROR SET: DECISION ARMS** -- the
-              `narrow`/`check`/float arms (both sorts) and the end-block
-              register read as standalone theorems taking the mutual IHs as
-              premises.
+              `check`/float arms and the option/reason arm dispatch as
+              standalone theorems taking the mutual IHs as premises.
 -/
 module
 
@@ -29,31 +28,6 @@ variable (O : Orakel D) (passes : Nat)
 include hR hT₁ hO
 set_option linter.unusedSectionVars false
 
-theorem block_narrow_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {lo hi lo' hi' : Int}
-    (e : Expr D Γ Λ (.int lo hi)) (sonst : Endblock D V l Γ Λ)
-    (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
-    (ih_rest : ∀ (σ : World D) (ρ : Env D (.int lo' hi' :: Γ)), rest.ScopesOk →
-      HeldB bo Λ σ.haelt →
-      AusgangUnter Er (execBlock O passes R₁ rest σ ρ) (execBlock O passes R₂ rest σ ρ))
-    (ih_sonst : ∀ (σ : World D) (ρ : Env D Γ), sonst.ScopesOk →
-      HeldB bo Λ σ.haelt →
-      EndUnter Er (execEnd O passes R₁ sonst σ ρ) (execEnd O passes R₂ sonst σ ρ))
-    (σ : World D) (ρ : Env D Γ)
-    (hscope : (Block.narrow e lo' hi' sonst rest).ScopesOk)
-    (hh : HeldB bo Λ σ.haelt) :
-    AusgangUnter Er (execBlock O passes R₁ (Block.narrow e lo' hi' sonst rest) σ ρ)
-      (execBlock O passes R₂ (Block.narrow e lo' hi' sonst rest) σ ρ) := by
-  have hscope_rest : rest.ScopesOk := by scopes_treu
-  have hscope_sonst : sonst.ScopesOk := by scopes_treu
-  simp only [execBlock]
-  have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-  by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
-    (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;>
-    simp only [hc, dif_pos, dif_neg] at ⊢
-  · exact (ih_rest _ _ hscope_rest (hl.heldB hh)).schrumpf
-  · exact (ih_sonst _ _ hscope_sonst (hl.heldB hh)).zuAusgang
-
 theorem block_check_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (c : Expr D Γ Λ .bool) (sonst : Endblock D V l Γ Λ)
@@ -73,7 +47,7 @@ theorem block_check_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
   by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;>
-    simp only [hc, ite_true, ite_false, Bool.true_eq_true, Bool.false_eq_true] at ⊢
+    simp only [hc, ite_true, ite_false] at ⊢
   · exact ih_rest _ ρ hscope_rest (hl.heldB hh)
   · exact (ih_sonst _ _ hscope_sonst (hl.heldB hh)).zuAusgang
 
@@ -92,15 +66,13 @@ theorem block_float_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (a.orte ++ b.orte)
-  generalize hv : gleitPasst lo hi (gleitRechne op
+  cases hv : gleitPasst lo hi (gleitRechne op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
-      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = ov at ⊢
-  cases ov with
+      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) with
+  | none => exact AusgangUnter.refl _
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      simp only [hv] at ⊢
-      exact heq.schrumpf
+      exact (ih_rest (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ)
+        hscope_rest (hl.heldB hh)).schrumpf
 
 theorem block_floatLit_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -115,13 +87,10 @@ theorem block_floatLit_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
       (execBlock O passes R₂ (Block.floatLit q lo hi rest) σ ρ) := by
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execBlock]
-  generalize hv : gleitPasst lo hi (bruch q) = ov at ⊢
-  cases ov with
+  cases hv : gleitPasst lo hi (bruch q) with
+  | none => exact AusgangUnter.refl _
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest σ _ hscope_rest hh
-      simp only [hv] at ⊢
-      exact heq.schrumpf
+      exact (ih_rest σ (.cons v ρ) hscope_rest hh).schrumpf
 
 theorem block_floatOf_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int}
@@ -138,14 +107,11 @@ theorem block_floatOf_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-  generalize hv : gleitPasst lo hi
-      (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = ov at ⊢
-  cases ov with
+  cases hv : gleitPasst lo hi
+      (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
+  | none => exact AusgangUnter.refl _
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      simp only [hv] at ⊢
-      exact heq.schrumpf
+      exact (ih_rest (σ.lese Λ e.orte) (.cons v ρ) hscope_rest (hl.heldB hh)).schrumpf
 
 theorem block_floatNarrow_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {l1 h1 : Int × Int}
@@ -166,44 +132,12 @@ theorem block_floatNarrow_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_sonst : sonst.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-  generalize hv : gleitPasst lo hi
-      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = ov at ⊢
-  cases ov with
+  cases hv : gleitPasst lo hi
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-      simp only [hv] at ⊢
-      exact heq.schrumpf
+      exact (ih_rest (σ.lese Λ e.orte) (.cons v ρ) hscope_rest (hl.heldB hh)).schrumpf
   | none =>
-      simp only [hv] at ⊢
-      have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
-      simp only [hv] at ⊢
-      exact heq.zuAusgang
-
-theorem end_narrow_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {lo hi lo' hi' : Int}
-    (e : Expr D Γ Λ (.int lo hi)) (sonst : Endblock D V l Γ Λ)
-    (rest : Endblock D V l (.int lo' hi' :: Γ) Λ)
-    (ih_rest : ∀ (σ : World D) (ρ : Env D (.int lo' hi' :: Γ)), rest.ScopesOk →
-      HeldB bo Λ σ.haelt →
-      EndUnter Er (execEnd O passes R₁ rest σ ρ) (execEnd O passes R₂ rest σ ρ))
-    (ih_sonst : ∀ (σ : World D) (ρ : Env D Γ), sonst.ScopesOk →
-      HeldB bo Λ σ.haelt →
-      EndUnter Er (execEnd O passes R₁ sonst σ ρ) (execEnd O passes R₂ sonst σ ρ))
-    (σ : World D) (ρ : Env D Γ)
-    (hscope : (Endblock.narrow e lo' hi' sonst rest).ScopesOk)
-    (hh : HeldB bo Λ σ.haelt) :
-    EndUnter Er (execEnd O passes R₁ (Endblock.narrow e lo' hi' sonst rest) σ ρ)
-      (execEnd O passes R₂ (Endblock.narrow e lo' hi' sonst rest) σ ρ) := by
-  have hscope_rest : rest.ScopesOk := by scopes_treu
-  have hscope_sonst : sonst.ScopesOk := by scopes_treu
-  simp only [execEnd]
-  have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-  by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
-    (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;>
-    simp only [hc, dif_pos, dif_neg] at ⊢
-  · exact (ih_rest _ _ hscope_rest (hl.heldB hh)).schrumpf
-  · exact ih_sonst _ _ hscope_sonst (hl.heldB hh)
+      exact (ih_sonst (σ.lese Λ e.orte) ρ hscope_sonst (hl.heldB hh)).zuAusgang
 
 end KongruenzDiszTest
 
@@ -236,7 +170,7 @@ theorem arms_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
       simp only [execArms]
       have heq := ih_block b σ (armEnv (Fall.toNutzlast _ _ _ _ nutz) ρ)
         hscope_b hh
-      rw [heq]
+      exact heq.schrumpfArm
   | .cons b rest, ⟨⟨i + 1, hk⟩, nutz⟩, σ, ρ, hscope, hh => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execArms]
