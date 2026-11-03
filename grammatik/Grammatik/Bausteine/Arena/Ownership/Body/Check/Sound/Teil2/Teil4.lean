@@ -23,6 +23,8 @@ theorem chkS_sound : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (st : Stm
       chkS_sound_assignSlot (t := t) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (k := k) (c := c) (zzh1 := zzh1) (hc := hc) (hvoll := hvoll)
   | _, _, _, _, .assignThru p t ht f i e hw hL, k, c, zzh1, hc =>
       chkS_sound_assignThru (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (k := k) (c := c) (zzh1 := zzh1) (hc := hc) (hvoll := hvoll)
+  | _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hm hw hL, k, c, zzh1, hc =>
+      chkS_sound_assignThruOwn (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (m := m) (s := s) (ho := ho) (he := he) (hg := hg) (hm := hm) (hw := hw) (hL := hL) (k := k) (c := c) (zzh1 := zzh1) (hc := hc) (hvoll := hvoll)
   | _, _, _, _, .assignGlob g e hw hL, k, c, zzh1, hc =>
       chkS_sound_assignGlob (g := g) (e := e) (hw := hw) (hL := hL) (k := k) (c := c) (zzh1 := zzh1) (hc := hc) (hvoll := hvoll)
   | _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL, k, c, zzh1, hc =>
