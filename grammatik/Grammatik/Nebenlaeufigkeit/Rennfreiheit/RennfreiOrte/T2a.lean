@@ -7,6 +7,31 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- Reading foreign arguments and applying the declared oracle frame bounds the
+    whole event delta, independently of the result channel and continuation. -/
+theorem axiom_lese_ev (O : Orakel D) (hO : GutO O)
+    {C W : D.Tab ⊕ D.Glob → Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (σ : World D) (ρ : Env D Γ)
+    (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+    (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+    (hh : HeldIn Λ σ.haelt)
+    (hw : ∀ t, D.aschreibt a t = true → W (.inl t) = true)
+    (hg : ∀ g, D.agschreibt a g = true → W (.inr g) = true)
+    (hC : args.orte.all C = true) {σ' : World D}
+    (hσ : σ' = (O.wirkt a ((σ.lese Λ args.orte).fragt (.inl a))
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).1) :
+    ∃ X, σ'.spur = X ++ σ.spur ∧ EvOk C W X := by
+  have hl := gut_lese (W := fun _ => true) (G := fun _ => true) σ Λ _
+    (Args.orte_darf args) hh
+  obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := W) O hO a
+    ((σ.lese Λ args.orte).fragt (.inl a))
+    (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+    hd hgd (hl.heldIn hh) hw hg
+  refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv σ Λ args.orte), ?_,
+    evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese σ Λ hC))⟩
+  rw [hσ, hX, List.append_assoc]
+  rfl
+
 /-- **The events of a leaf**: its reads lie on its read carriers
     (`stmtOrteP`), its writes on carriers its contract may write. -/
 theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)

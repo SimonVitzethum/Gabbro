@@ -70,7 +70,8 @@ theorem Mass.wert_mitRuhe (m : Mass D) (f : D.Fn) (σ : World D) (ρ : Env D (D.
   intro e _
   show ((eval (worldR σ) (Expr.umΛ (anfang_map (D.signatur f)) (ruE e.2.1)) (worldR σ) (envR ρ) :
     Zahl 0 e.1)).n.toNat = _
-  rw [eval_umΛ', eval_ru]
+  rw [eval_umΛ']
+  exact congrArg (fun v : Zahl 0 e.1 => v.n.toNat) (eval_ru σ σ e.2.1 ρ)
 
 theorem Mass.laenge_mitRuhe (m : Mass D) (f : D.Fn) : (m.mitRuhe (some f)).length = (m f).length :=
   List.length_map _

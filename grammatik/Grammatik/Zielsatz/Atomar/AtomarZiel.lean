@@ -213,6 +213,9 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
     | str n =>
       simp only [tyR] at hT
       exact Ty.noConfusion hT
+    | prod name fields =>
+      simp only [tyR] at hT
+      exact Ty.noConfusion hT
 
   checks := hA.checks.map CheckDecl.mitRuhe
   pruef := CheckAdmission.mitRuhe P hvoll hA.abg hA.pruef

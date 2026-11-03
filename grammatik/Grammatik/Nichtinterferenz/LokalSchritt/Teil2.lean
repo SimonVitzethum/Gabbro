@@ -430,6 +430,7 @@ theorem kr_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGleic
   | wartetSonst n err b k => exact KRel.none_l _
   | rueckBereit scopes k => exact KRel.none_l _
   | abbruch k => exact KRel.none_l _
+  | rueckBereit => exact KRel.none_l _
   | leer => exact KRel.none_l _
 
 end Schritt
