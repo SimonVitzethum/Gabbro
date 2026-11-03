@@ -1,5 +1,5 @@
-/- Candidate emission for current-state consuming traversal. Admission requires
-   the connected simulation; this module does not authorize lowS to emit it. -/
+/- Emission for current-state consuming traversal. The connected statement
+   simulation composes the instruction paths from Consuming.Execution. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
 @[expose] public section
