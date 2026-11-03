@@ -100,7 +100,7 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .traverse t inv body, σ, ρ, hscope, hh => by
       have hscope_body : body.ScopesOk := by scopes_treu
       simp only [execStmt]
-      exact traverseLauf_unter O passes R₁ R₂ bo body
+      exact traverseLauf_unter O passes R₁ R₂ bo body body
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (fun σ ρ hs₁ hs₂ hh => block_unter bo hbV body σ ρ hs₁ hh)
         (fun σ ρ hs hh => block_treu O passes R₁ hT₁ hO bo hbV body σ ρ hs hh)
@@ -109,7 +109,7 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .consumeTraverse t member edge inv bound mass body, σ, ρ, hscope, hh => by
       have hscope_body : body.ScopesOk := by scopes_treu
       simp only [execStmt]
-      exact verbrauchLauf_unter O passes R₁ R₂ bo t body
+      exact verbrauchLauf_unter O passes R₁ R₂ bo t body body
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (verbrauchSel t member edge)
         (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
@@ -124,9 +124,9 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_body : body.ScopesOk := by scopes_treu
       have hscope_ueber : ueber.ScopesOk := by scopes_treu
       simp only [execStmt]
-      exact retryLauf_unter O passes R₁ R₂ bo body
+      exact retryLauf_unter O passes R₁ R₂ bo body body
         (fun σ ρ => let σ := σ.lese Λ bis.orte; (σ, wahr? (eval σ bis σ ρ)))
-        ueber
+        ueber ueber
         (fun σ ρ hs₁ hs₂ hh => block_unter bo hbV body σ ρ hs₁ hh)
         (fun σ ρ hs hh => block_treu O passes R₁ hT₁ hO bo hbV body σ ρ hs hh)
         (fun σ ρ hs₁ hs₂ hh => block_unter bo hbV ueber σ ρ hs₁ hh)
@@ -135,7 +135,7 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .forever a inv body, σ, ρ, hscope, hh => by
       have hscope_body : body.ScopesOk := by scopes_treu
       simp only [execStmt]
-      exact foreverLauf_unter O passes R₁ R₂ bo a body
+      exact foreverLauf_unter O passes R₁ R₂ bo a body body
         (fun σ ρ => let σ := σ.lese Λ inv.orte; (σ, wahr? (eval σ inv σ ρ)))
         (fun σ ρ hs₁ hs₂ hh => block_unter bo hbV body σ ρ hs₁ hh)
         (fun σ ρ hs hh => block_treu O passes R₁ hT₁ hO bo hbV body σ ρ hs hh)
@@ -172,13 +172,13 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         p args he hp hr err
         (fun σ ρ hs hh => end_unter bo hbV err σ ρ hs hh)
         σ ρ hscope hh
-  | .assignSlot .., _, _, _, _ => exact AusgangUnter.refl _
-  | .assignThru .., _, _, _, _ | .assignSlotRef .., _, _, _, _ => exact AusgangUnter.refl _
-  | .assignGlob .., _, _, _, _ => exact AusgangUnter.refl _
-  | .putBytes .., _, _, _, _ => exact AusgangUnter.refl _
-  | .assignVar .., _, _, _, _ => exact AusgangUnter.refl _
-  | .shift .., _, _, _, _ => exact AusgangUnter.refl _
-  | .axiomCall .., _, _, _, _ => exact AusgangUnter.refl _
+  | .assignSlot .., _, _, _, _ => AusgangUnter.refl _
+  | .assignThru .., _, _, _, _ | .assignSlotRef .., _, _, _, _ => AusgangUnter.refl _
+  | .assignGlob .., _, _, _, _ => AusgangUnter.refl _
+  | .putBytes .., _, _, _, _ => AusgangUnter.refl _
+  | .assignVar .., _, _, _, _ => AusgangUnter.refl _
+  | .shift .., _, _, _, _ => AusgangUnter.refl _
+  | .axiomCall .., _, _, _, _ => AusgangUnter.refl _
   | .axiomCallElse _ a args _ hp _ _ _ err, σ, ρ, hscope, hh => by
       have hscope_err : err.ScopesOk := by scopes_treu
       simp only [execStmt]
@@ -197,23 +197,23 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
             have heq := end_unter bo hbV err σ2 _ hscope_err (g1.heldB hh)
             simp only [hx] at ⊢
             exact heq.schrumpf.zuAusgang
-  | .regWrite .., _, _, _, _ => exact AusgangUnter.refl _
-  | .transition .., _, _, _, _ => exact AusgangUnter.refl _
-  | .publish .., _, _, _, _ => exact AusgangUnter.refl _
-  | .advances .., _, _, _, _ => exact AusgangUnter.refl _
-  | .retires .., _, _, _, _ => exact AusgangUnter.refl _
-  | .ret .., _, _, _, _ => exact AusgangUnter.refl _
-  | .retWhy .., _, _, _, _ => exact AusgangUnter.refl _
-  | .retScoped .., _, _, _, _ => exact AusgangUnter.refl _
-  | .retWhyScoped .., _, _, _, _ => exact AusgangUnter.refl _
-  | .leave .., _, _, _, _ => exact AusgangUnter.refl _
-  | .next .., _, _, _, _ => exact AusgangUnter.refl _
+  | .regWrite .., _, _, _, _ => AusgangUnter.refl _
+  | .transition .., _, _, _, _ => AusgangUnter.refl _
+  | .publish .., _, _, _, _ => AusgangUnter.refl _
+  | .advances .., _, _, _, _ => AusgangUnter.refl _
+  | .retires .., _, _, _, _ => AusgangUnter.refl _
+  | .ret .., _, _, _, _ => AusgangUnter.refl _
+  | .retWhy .., _, _, _, _ => AusgangUnter.refl _
+  | .retScoped .., _, _, _, _ => AusgangUnter.refl _
+  | .retWhyScoped .., _, _, _, _ => AusgangUnter.refl _
+  | .leave .., _, _, _, _ => AusgangUnter.refl _
+  | .next .., _, _, _, _ => AusgangUnter.refl _
 /-- **A block under two gatedly-related handlers.** -/
 theorem block_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ), b.ScopesOk →
     HeldB bo Λ σ.haelt →
     AusgangUnter Er (execBlock O passes R₁ b σ ρ) (execBlock O passes R₂ b σ ρ)
-  | .nil, _, _, _, _ => exact AusgangUnter.refl _
+  | .nil, _, _, _, _ => AusgangUnter.refl _
   | .cons s rest, σ, ρ, hscope, hh =>
       block_cons_unter O passes R₁ R₂ hR hT₁ hO bo hbV s rest
         (fun σ ρ hs hh => stmt_unter bo hbV s σ ρ hs hh)
@@ -271,7 +271,7 @@ theorem block_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execBlock]
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
-      | none => exact AusgangUnter.refl _
+      | none => AusgangUnter.refl _
       | some v =>
           have heq := block_unter bo hbV rest _ (.cons v ρ) hscope_rest hh
           simp only [hx] at ⊢
@@ -350,12 +350,12 @@ theorem end_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (b : Endblock D V l Γ Λ) (σ : World D) (ρ : Env D Γ), b.ScopesOk →
     HeldB bo Λ σ.haelt →
     EndUnter Er (execEnd O passes R₁ b σ ρ) (execEnd O passes R₂ b σ ρ)
-  | .ret e _, _, _, _, _ => exact EndUnter.refl _
-  | .retWhy .., _, _, _, _ => exact EndUnter.refl _
-  | .retScoped e R, _, _, _, _ => exact EndUnter.refl _
-  | .retWhyScoped _ R, _, _, _, _ => exact EndUnter.refl _
-  | .leave .., _, _, _, _ => exact EndUnter.refl _
-  | .next .., _, _, _, _ => exact EndUnter.refl _
+  | .ret e _, _, _, _, _ => EndUnter.refl _
+  | .retWhy .., _, _, _, _ => EndUnter.refl _
+  | .retScoped e R, _, _, _, _ => EndUnter.refl _
+  | .retWhyScoped _ R, _, _, _, _ => EndUnter.refl _
+  | .leave .., _, _, _, _ => EndUnter.refl _
+  | .next .., _, _, _, _ => EndUnter.refl _
   | .cons s rest, σ, ρ, hscope, hh =>
       end_cons_unter O passes R₁ R₂ hR hT₁ hO bo hbV s rest
         (fun σ ρ hs hh => stmt_unter bo hbV s σ ρ hs hh)
@@ -403,7 +403,7 @@ theorem end_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execEnd]
       cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) with
-      | none => exact EndUnter.refl _
+      | none => EndUnter.refl _
       | some v =>
           have heq := end_unter bo hbV rest _ (.cons v ρ) hscope_rest hh
           simp only [hx] at ⊢
