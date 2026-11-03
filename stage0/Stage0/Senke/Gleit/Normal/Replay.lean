@@ -17,8 +17,6 @@ theorem softRound_power_congr (S t₁ j₁ t₂ j₂ : Nat)
     (scale : t₁ + j₂ = t₂ + j₁) :
     rundeInt ((S * 2 ^ t₁) / 2 ^ j₁) ((S * 2 ^ t₁) % 2 ^ j₁) (2 ^ j₁) =
       rundeInt ((S * 2 ^ t₂) / 2 ^ j₂) ((S * 2 ^ t₂) % 2 ^ j₂) (2 ^ j₂) := by
-  -- The arithmetic transport has an unused kernel parameter, discharged without an assumption.
-  letI : Runner.IR.Kern := ⟨fun _ _ _ _ => False⟩
   apply softRound_congr _ _ _ _ _ _
     (Nat.mod_lt _ (Nat.two_pow_pos _)) (Nat.mod_lt _ (Nat.two_pow_pos _))
   rw [Nat.div_add_mod', Nat.div_add_mod', Nat.mul_assoc, ← Nat.pow_add,

@@ -37,6 +37,7 @@ theorem softForm_rat (S : Nat) :
   rw [Nat.mul_comm (2 ^ softNormK S) (S / 2 ^ softNormK S)] at h
   omega
 
+omit [Runner.IR.Kern] in
 /-- `rundeInt` depends only on the rational value: two triples naming the
     same rational round identically. Quotients agree first (floor
     uniqueness), then remainders cross-multiply, then each comparison
