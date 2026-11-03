@@ -303,7 +303,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       · rw [hhead]; exact hperm
   | g5 hs =>
     cases hs with
-    | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+    | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
       refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
       · simp only [rufUpdateG_self]
         rw [hs₂, hs₁]
@@ -312,7 +312,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
-    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
       · simp only [rufUpdateG_self]
         rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
@@ -321,7 +321,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
-    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
       · simp only [rufUpdateG_self]
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
@@ -330,7 +330,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
       · simp only [rufUpdateG_self]
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
@@ -339,12 +339,12 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only; rw [hcaller]
       · rw [hhead]; exact hperm
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], ?_, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only; rw [hcaller]

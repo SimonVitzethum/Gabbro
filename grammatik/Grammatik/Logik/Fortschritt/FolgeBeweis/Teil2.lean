@@ -256,7 +256,7 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
       all_goals (simp_all [fB_von_false, fR_von_false]; done)
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
         g hfg rho hrho s0 hs0 rg hrg hn =>
       subst hfg
       dsimp only; rw [rufUpdateG_self]
@@ -271,7 +271,7 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
         exact ⟨hc.1, hc.2.2⟩
       · rw [hw]
         exact armiert_aus hk.1 (by simpa [Pflichtig] using hp)
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
         hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
       subst hfg
       dsimp only; rw [rufUpdateG_self]

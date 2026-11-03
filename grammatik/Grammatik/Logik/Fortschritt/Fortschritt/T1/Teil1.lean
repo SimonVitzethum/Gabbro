@@ -228,7 +228,7 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     | _ => kopfLokal
   | g5 hs =>
     cases hs with
-    | rueckConsGrund _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | rueckConsGrund _ _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       refine ⟨?_, rfl, hr, hkt⟩
@@ -240,7 +240,7 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
         Bool.or_eq_true, Bool.not_eq_true', Endblock.alsBlock_terminal, Bool.or_true, and_true]
       intro hc1
       simp_all
-    | dannRetGrund _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | dannRetGrund _ _ _ _ _ _ _ _ caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       obtain ⟨hc, hr, _, hkt⟩ := hpopS caller rst hpop
       simp only [rufUpdateG_self]
       refine ⟨?_, rfl, hr, hkt⟩

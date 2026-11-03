@@ -310,14 +310,14 @@ theorem schrittOrte {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       all_goals simp_all
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], fun C => ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only
       rw [hcaller]; dsimp only
       simp only [GRest.oR, blockOrteP_alsBlock]
       exact fun h => ⟨h.1, h.2.2⟩
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         by dsimp only; rw [rufUpdateG_self], fun C => ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only

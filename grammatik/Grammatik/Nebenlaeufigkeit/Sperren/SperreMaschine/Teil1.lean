@@ -289,12 +289,12 @@ theorem rahmenStapelS_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       exact rahmenStapelS_speicher h hmem
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
         hfg rho hrho s0 hs0 rg hrg hn =>
       simp only [rufUpdateG_self]
       rw [hpop] at h
       exact rahmenStapelS_pop (G := RufSchluesselG (M.faeden u).kopf) (caller := caller) h hmem
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
         hfg rho hrho s0 hs0 rg hrg hn =>
       simp only [rufUpdateG_self]
       rw [hpop] at h
