@@ -39,6 +39,6 @@ theorem named_printable_zeuge : AnwGut .anw named := by
   apply AnwGut.callIndElse
   · decide
   · decide
-  · exact .block [] (some (.ret none)) (by intro s h; cases h) trivial (Or.inl (by decide))
+  · exact .block [] (some (.ret none)) (by intro s h; cases h) trivial (by intro h; cases h)
 
 end Gabbro.Grammatik.Parser.IndirectElseProben
