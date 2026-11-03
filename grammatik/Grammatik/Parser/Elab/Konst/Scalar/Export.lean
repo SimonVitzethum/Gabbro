@@ -127,6 +127,7 @@ def argumentValues (fns : List UKonstFn) (env : List (String × Int)) :
     List (String × Ty) → List SExpr → Except String (List Int)
   | [], [] => .ok []
   | (_, .int lo hi) :: rest, source :: sources => do
+    let _ ← integer (← expression (D := declaration [] (.int lo hi)) [] source)
     match uKonstWert lo hi fns env 64 source with
     | none => throw "const argument is not a compile-time value in its declared range"
     | some value => return value :: (← argumentValues fns env rest sources)
