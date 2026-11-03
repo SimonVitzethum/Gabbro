@@ -377,6 +377,14 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
+  | Γ, fn, n + 1, Λ, (.consumeLoopBeg b t p m e i mass effects) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ())
+        (.consumeLoopBeg b t p m e i mass effects) rest with
+    | .error error => .error error
+    | .ok (⟨Λ₁, st⟩, rest') =>
+      match lowBodyF u caller Γ fn n Λ₁ rest' r with
+      | .error error => .error error
+      | .ok body => .ok (Endblock.cons st body)
   | Γ, fn, n + 1, Λ, (.retryBeg c b) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.retryBeg c b) rest with
     | .error e => .error e
