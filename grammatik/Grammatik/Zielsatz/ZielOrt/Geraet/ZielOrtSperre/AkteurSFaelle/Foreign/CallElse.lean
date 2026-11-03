@@ -132,7 +132,7 @@ theorem akteurS_dannAxiomCallElseGrund {D : Deklaration} {P : Programm D} {O : O
   rw [semH_dann_cons]
   simp only [execStmtH, axiomAntwortSonst, hwk,
     (show O'.zeiger = O.zeiger from hz), hv]
-  rw [semH_alsBlock_schrumpf]
-  cases execEndH S O' U passes R err (axWeltF a ((σ.lese Λ args.orte).fragt (.inl a)) σ₂) (.cons r ρ) <;> rfl
+  simp only [semH_alsBlock_schrumpf]
+  cases execEndH S O' U passes R err (axWeltF a ((σ.lese Λ args.orte).fragt (.inl a)) σ₂) (Env.cons (τ := reasonTy (D.agruende a)) r ρ) <;> rfl
 
 end Gabbro.Grammatik

@@ -40,7 +40,7 @@ theorem akteurSA_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel
            ⟨(M.faeden u).stapel,
             ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
-              .dann rest (GRest.weiterOpt e k)⟩⟩,
+              .dann rest (GRest.weiterOpt (Λ := Λ') e k)⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
          M.lauf ++ rufEigenG u neu, M.start⟩
     FadenSA P O passes Q S lok Tg m zyk (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
@@ -59,7 +59,7 @@ theorem akteurSA_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel
   subst hs₁
   cases e with
   | none =>
-    refine ⟨fadenSA_ax hF hhead (ergEnv none (he ▸ v) ρ) (.dann rest (GRest.weiterOpt none k)) σ₂.spur
+    refine ⟨fadenSA_ax hF hhead ρ (.dann rest k) σ₂.spur
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by simpa [blockOrteP] using (teil_append hok.2.1).1))
@@ -71,10 +71,10 @@ theorem akteurSA_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel
     apply ZErgG.folgt_of_eq
     show weiterHA S O' U A passes R k
       (execBlockHA S O' U A passes R (.bindAxiomOpt none a args he hp hd hgd rest) σ0 ρ) = _
-    simp only [execBlockHA, axiomAntwort, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
+    simp only [execBlockHA, axiomAntwort, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
-    refine ⟨fadenSA_ax hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (GRest.weiterOpt (some τ) k)) σ₂.spur
+    refine ⟨fadenSA_ax hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by simpa [blockOrteP] using (teil_append hok.2.1).1))
@@ -86,7 +86,7 @@ theorem akteurSA_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel
     apply ZErgG.folgt_of_eq
     show weiterHA S O' U A passes R k
       (execBlockHA S O' U A passes R (.bindAxiomOpt (some τ) a args he hp hd hgd rest) σ0 ρ) = _
-    simp only [execBlockHA, axiomAntwort, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
+    simp only [execBlockHA, axiomAntwort, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
 
 set_option maxHeartbeats 4000000 in
@@ -125,7 +125,7 @@ theorem akteurSA_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : 
            ⟨(M.faeden u).stapel,
             ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
              ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
-              .dann rest (GRest.weiterOpt e k)⟩⟩,
+              .dann rest (GRest.weiterOpt (Λ := Λ') e k)⟩⟩,
             σ₂.spur, (M.faeden u).log⟩,
          M.lauf ++ rufEigenG u neu, M.start⟩
     FadenSA P O passes Q S lok Tg m zyk (nextMachine.faeden u) (nextMachine.weltVon u) ∧ LogOk P (nextMachine.faeden u).log := by
@@ -144,7 +144,7 @@ theorem akteurSA_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : 
   subst hs₁
   cases e with
   | none =>
-    refine ⟨fadenSA_ax hF hhead (ergEnv none (he ▸ v) ρ) (.dann rest (GRest.weiterOpt none k)) σ₂.spur
+    refine ⟨fadenSA_ax hF hhead ρ (.dann rest k) σ₂.spur
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append (teil_append h2).1).1))
@@ -157,10 +157,10 @@ theorem akteurSA_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : 
     apply ZErgG.folgt_of_eq
     show weiterHA S O' U A passes R k
       (execBlockHA S O' U A passes R (.bindAxiomOptElse none a args he hp hd hgd hr err rest) σ0 ρ) = _
-    simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
+    simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
-    refine ⟨fadenSA_ax hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (GRest.weiterOpt (some τ) k)) σ₂.spur
+    refine ⟨fadenSA_ax hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append (teil_append h2).1).1))
@@ -173,7 +173,7 @@ theorem akteurSA_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : 
     apply ZErgG.folgt_of_eq
     show weiterHA S O' U A passes R k
       (execBlockHA S O' U A passes R (.bindAxiomOptElse (some τ) a args he hp hd hgd hr err rest) σ0 ρ) = _
-    simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
+    simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
 
 set_option maxHeartbeats 4000000 in
@@ -245,6 +245,6 @@ theorem akteurSA_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O
   show weiterHA S O' U A passes R k
     (execBlockHA S O' U A passes R (.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ0 ρ) = _
   simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv]
-  rw [semHA_alsBlock_schrumpf]
+  simp only [semHA_alsBlock_schrumpf]
 
 end Gabbro.Grammatik

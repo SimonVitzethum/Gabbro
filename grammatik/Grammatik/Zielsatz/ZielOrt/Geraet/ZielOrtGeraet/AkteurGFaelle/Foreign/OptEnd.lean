@@ -51,26 +51,25 @@ theorem akteurG_endeBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
   subst hs₁
   cases e with
   | none =>
-    refine ⟨fadenG_ax e0 hF hhead (ergEnv none (he ▸ v) ρ) (.ende rest) σ₂.spur a args
+    refine ⟨fadenG_ax e0 hF hhead ρ (.ende rest) σ₂.spur a args
       (fun hok => ⟨hok.1, by simpa [endblockOrteP] using (teil_append hok.2).2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show zErg (execEnd O' passes R (.bindAxiomOpt none a args he hp hd hgd rest) σ ρ) = _
-    simp only [execEnd, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
+    simp only [execEnd, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, EndAusgang.weiterOpt]
     rfl
   | some τ =>
-    refine ⟨fadenG_ax e0 hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.ende rest) σ₂.spur a args
+    refine ⟨fadenG_ax e0 hF hhead (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur a args
       (fun hok => ⟨hok.1, by simpa [endblockOrteP] using (teil_append hok.2).2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show zErg (execEnd O' passes R (.bindAxiomOpt (some τ) a args he hp hd hgd rest) σ ρ) = _
-    simp only [execEnd, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
-    rw [zErg_schrumpf]
-    rfl
+    simp only [execEnd, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, EndAusgang.weiterOpt]
+    simp only [zErg_schrumpf] <;> rfl
 
 set_option maxHeartbeats 4000000 in
 theorem akteurG_endeBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -119,7 +118,7 @@ theorem akteurG_endeBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
   subst hs₁
   cases e with
   | none =>
-    refine ⟨fadenG_ax e0 hF hhead (ergEnv none (he ▸ v) ρ) (.ende rest) σ₂.spur a args
+    refine ⟨fadenG_ax e0 hF hhead ρ (.ende rest) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Endblock.gOk, Bool.and_eq_true] at h1; exact h1.2,
         by have h2 := hok.2; simp only [endblockOrteP] at h2; exact (teil_append h2).2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
@@ -127,10 +126,10 @@ theorem akteurG_endeBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show zErg (execEnd O' passes R (.bindAxiomOptElse none a args he hp hd hgd hr err rest) σ ρ) = _
-    simp only [execEnd, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
+    simp only [execEnd, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, EndAusgang.weiterOpt]
     rfl
   | some τ =>
-    refine ⟨fadenG_ax e0 hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.ende rest) σ₂.spur a args
+    refine ⟨fadenG_ax e0 hF hhead (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Endblock.gOk, Bool.and_eq_true] at h1; exact h1.2,
         by have h2 := hok.2; simp only [endblockOrteP] at h2; exact (teil_append h2).2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
@@ -138,9 +137,8 @@ theorem akteurG_endeBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
       hfr (fun O' R σ hz hwk => ?_), hL⟩
     apply ZErg.folgt_of_eq
     show zErg (execEnd O' passes R (.bindAxiomOptElse (some τ) a args he hp hd hgd hr err rest) σ ρ) = _
-    simp only [execEnd, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, EndAusgang.weiterOpt, ergEnv]
-    rw [zErg_schrumpf]
-    rfl
+    simp only [execEnd, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, EndAusgang.weiterOpt]
+    simp only [zErg_schrumpf] <;> rfl
 
 set_option maxHeartbeats 4000000 in
 theorem akteurG_endeBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
@@ -197,7 +195,6 @@ theorem akteurG_endeBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O 
   apply ZErg.folgt_of_eq
   show zErg (execEnd O' passes R (.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ ρ) = _
   simp only [execEnd, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv]
-  rw [zErg_schrumpf]
-  rfl
+  simp only [zErg_schrumpf] <;> rfl
 
 end Gabbro.Grammatik
