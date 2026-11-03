@@ -88,7 +88,17 @@ theorem wide_float_overflow_zeuge :
       computedFloatRangeReject (-(2 ^ 1025), 1) (2 ^ 1025, 1) (ofInt f64 z) = true := by
   decide +kernel
 
+/-- The declared interval is checked after rounding: the even tie reaches
+    its upper endpoint, while a nonzero discarded tail crosses it. -/
+theorem wide_float_range_boundary_zeuge :
+    computedFloatRangeReject (0, 1) (2 ^ 80, 1)
+      (ofInt f64 (2 ^ 80 + 2 ^ 27)) = false ∧
+    computedFloatRangeReject (0, 1) (2 ^ 80, 1)
+      (ofInt f64 (2 ^ 80 + 2 ^ 27 + 1)) = true := by
+  decide +kernel
+
 #print axioms wide_float_images_zeuge
 #print axioms computedFloatOfE_wide_ok_zeuge
 #print axioms wide_float_overflow_zeuge
+#print axioms wide_float_range_boundary_zeuge
 end Gabbro.Stage0.Senke.WideFloatProbe
