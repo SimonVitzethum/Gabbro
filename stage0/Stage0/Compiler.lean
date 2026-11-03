@@ -19,10 +19,10 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   unit : UProg
   main : (declOf unit).Fn
   program : Programm (declOf unit)
-  elaborated : (Frontend.elabWithScopes
+  elaborated : ((Frontend.elabWithScopes
     (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
-    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) |>.map
+    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options)).map
       (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))}) = .ok unit
   entry : fnIdx unit.fns (Profil.entryName options) = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
@@ -58,9 +58,9 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
     | .error e => throw e
     | .ok candidate => do
       let unit := {candidate with exportGate := ExportMetadata.check members}
-      have elaborated : (Frontend.elabWithScopes declarations
+      have elaborated : ((Frontend.elabWithScopes declarations
           source.scopes.values source.scopes.types source.scopes.functions
-          (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) |>.map
+          (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options)).map
             (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
         rw [he]
         rfl
@@ -129,8 +129,8 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.checkInitializers original result.unit = .ok () ∧
     ExportMetadata.checkConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
-    (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
-      (Frontend.tableWithEmpty scope.values scope.types)).bind (Profil.selectUnit options) |>.map
+    ((Frontend.elabWithScopes declarations scope.values scope.types scope.functions
+      (Frontend.tableWithEmpty scope.values scope.types)).bind (Profil.selectUnit options)).map
         (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
