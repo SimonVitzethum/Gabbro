@@ -21,16 +21,18 @@ theorem sigAt_produziert (u : UProg) (i : Fin u.fns.length) :
     (sigAt u i.val).produziert = gibtAt u (fnAt u i) := by
   rw [sigAt_get]; rfl
 
-/-- No signature number carries an owner flow yet (the C09 handoff wires real flows). -/
-theorem sigNrOwner_nil (u : UProg) (n : Nat) : (sigAt u n).owner = {} := by
+/-- The owner flow of a signature number: the loans of the resolved function
+    (C12) -- the dummy has none. -/
+theorem sigAt_owner (u : UProg) (n : Nat) (h : n < (sigFns u).length) :
+    (sigAt u n).owner = { loans := leihtAt u ((sigFns u).get ⟨n, h⟩) } := by
   unfold sigAt
-  split <;> rfl
+  rw [dif_pos h]
 
-/-- No elaborated function carries an owner flow yet. -/
-theorem signaturOwner_nil (u : UProg) (f : Fin u.fns.length) :
-    ((declOf u).signatur f).owner = {} := by
-  show (sigAt u f.val).owner = {}
-  exact sigNrOwner_nil u f.val
+/-- The owner flow of an elaborated function: its resolved call-scoped loans. -/
+theorem signaturOwner (u : UProg) (f : Fin u.fns.length) :
+    ((declOf u).signatur f).owner = { loans := leihtAt u (fnAt u f) } := by
+  show (sigAt u f.val).owner = _
+  rw [sigAt_get]
 
 /-- Parameters through the declaration. -/
 theorem params_eq (u : UProg) (i : Fin u.fns.length) :
@@ -47,15 +49,17 @@ theorem haelt_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).haelt i = heldAt u (fnAt u i) := by
   simp only [declOf, Deklaration.haelt, Deklaration.signatur, sigAt_haelt]
 
-/-- The contract end: held locks plus produced marks (resolved, C16). -/
+/-- The contract end: held locks plus produced marks (resolved, C16) plus the
+    returned call-scoped loans (C12) -- loans come back on normal return. -/
 theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
     (vertragVon (declOf u) f).ende =
       (heldAt u (fnAt u f)).map (Res.held (D := declOf u)) ++
-        ((gibtAt u (fnAt u f)).map (Res.vonMarke (declOf u))) := by
-  have hO : ((declOf u).signatur f).owner = {} := signaturOwner_nil u f
+        (((gibtAt u (fnAt u f)) ++ (leihtAt u (fnAt u f))).map (Res.vonMarke (declOf u))) := by
+  have hO : ((declOf u).signatur f).owner = { loans := leihtAt u (fnAt u f) } :=
+    signaturOwner u f
   simp only [vertragVon, Vertrag.vonSig, Vertrag.ende, Deklaration.signatur,
     declOf, sigAt_haelt, sigAt_produziert, hO, OwnerFlow.outputs,
-    List.filterMap_nil, List.append_nil]
+    List.filterMap_nil, List.nil_append]
 
 /-- Every field index has its recorded range. -/
 theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
