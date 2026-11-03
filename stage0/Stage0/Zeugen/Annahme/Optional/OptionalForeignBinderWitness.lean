@@ -68,6 +68,14 @@ theorem image_shape :
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
     0 < output.image.code.length ∧ 16 < output.image.bytes.length := by decide +kernel
 
+/-- The void gates are real selected bindings, including the errno-to-reason map. -/
+theorem binding_shape :
+    ((List.finRange output.compiled.unit.axs.length).map
+      (fun a => (output.tor a).map (·.nr))) = [some 39, some 3, some 3] ∧
+    ((List.finRange output.compiled.unit.axs.length).map
+      (fun a => (output.tor a).map (·.fehler))) = [some [], some [(-9, 0)], some [(-9, 0)]] := by
+  decide +kernel
+
 /-- Retain the generic certificate, rather than a program-specific lowering rule. -/
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
   compile_source_program text output.compiled
