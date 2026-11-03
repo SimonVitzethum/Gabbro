@@ -87,9 +87,11 @@ theorem canonical_array_functions_zeuge :
         ⟨"const", "identity", [("x", .atom "Small")], some (.atom "Small"), none, []⟩
         (.block [] (some (.ret (some (.variable "x"))))),
       .constT "VALUES" (.array (.atom "Small") (.lit 1)) (.rows [.one (.call "identity" [.lit 42])])]
-    uKonstArrays [("Small", (0, 100))] (constantFunctions [("Small", (0, 100))] items) [] items =
+    uKonstArrays [("Small", (0, 100))] (constantFunctions [("Small", (0, 100))] items) [] items []
+      (uRecordConstant [] [("Small", (0, 100))] (constantFunctions [("Small", (0, 100))] items) []) true =
       [("VALUES", .typed (.arr (.int 0 100) 1) (.arrCons (.lit 42) .arrNil))] ∧
-    uKonstArrays [("Small", (0, 100))] (uKonstFns items) [] items = [] := by
+    uKonstArrays [("Small", (0, 100))] (uKonstFns items) [] items []
+      (uRecordConstant [] [("Small", (0, 100))] (uKonstFns items) []) true = [] := by
   decide +kernel
 
 end Gabbro.Stage0.Frontend

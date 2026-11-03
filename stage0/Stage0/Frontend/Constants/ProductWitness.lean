@@ -61,4 +61,14 @@ theorem constantMeaning_scalarStep_zeuge :
   constantMeaning_scalarStep productConstantScope _
     (checkConstantMeaning_sound _ _ _ _ (by decide +kernel))
 
+/-- Reuse the existing typed fixture to witness generic retention with production parameters. -/
+theorem uKonstArrays_retains_zeuge :
+    ∃ ty raw, ("VALUES", USide.typed ty raw) ∈
+      uKonstArrays productConstantScope.types productConstantScope.functions productConstantScope.values
+        productConstantFixture (uRecordConstantTypes productConstantUnit.records)
+        (uRecordConstant productConstantUnit.records productConstantScope.types
+          productConstantScope.functions productConstantScope.values) true := by
+  obtain ⟨ty, raw, _, _, _, retained, _⟩ := constantMeaning_typed_retained_zeuge
+  exact ⟨ty, raw, retained⟩
+
 end Gabbro.Stage0.Frontend

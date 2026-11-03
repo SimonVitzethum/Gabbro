@@ -204,6 +204,8 @@ def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (c
   | .arr τ _, .rows ks => uKonstZeilen alias fns consts τ ks leaf
   | τ, .one e => leaf τ e
   | _, _ => none
+termination_by sizeOf value
+decreasing_by all_goals simp_wf; omega
 def uKonstZeilen (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
     (ty : Ty) (values : List SKonstWert) (leaf : Ty → SExpr → Option USide := fun _ _ => none) : Option USide :=
   match ty, values with
@@ -212,6 +214,8 @@ def uKonstZeilen (alias : List (String × (Int × Int))) (fns : List UKonstFn) (
     match uKonstZeile alias fns consts τ k leaf, uKonstZeilen alias fns consts τ ks leaf with
     | some a, some r => some (.arrCons a r)
     | _, _ => none
+termination_by sizeOf values
+decreasing_by all_goals simp_wf; omega
 end
 
 /-- The constant arrays of a unit (`const T : [u32; N] = [..]`): each as its folded literal at its type. -/

@@ -2,7 +2,7 @@ module
 public import Stage0.Frontend.Environments
 public import Stage0.Frontend.Constants.ConstantMeaning
 public import Grammatik.Parser.Elab.UebersetzeAllg
-public import Grammatik.Parser.Elab.Uebersetze.Records.Constants
+public import Grammatik.Parser.Elab.Uebersetze.Records.ConstantLaws
 @[expose] public section
 
 namespace Gabbro.Stage0.Frontend
@@ -84,9 +84,9 @@ theorem constantMeaning_collected {original : List SItemTief} (u : UProg) (scope
     (h : ArrayMeaning u scope (.constT name ty payload)) : ArrayCollected u scope name := by
   obtain ⟨τ, raw, term, ht, hv, he, _⟩ := h
   refine ⟨τ, raw, term, ?_, he⟩
-  apply List.mem_filterMap.mpr
-  refine ⟨_, hm, ?_⟩
-  cases ty <;> simp only [ht, hv, Option.map_some, Bool.true_eq_true, ↓reduceIte]
+  exact uKonstArrays_retains scope.types scope.functions scope.values original
+    (uRecordConstantTypes u.records) (uRecordConstant u.records scope.types scope.functions scope.values)
+    name ty payload τ raw hm ht hv
 
 /-- The existing array retention interface also covers product-valued elements. -/
 theorem arrayMeaning_collected {original : List SItemTief} (u : UProg) (scope : Scopes original)
@@ -110,9 +110,9 @@ theorem constantMeaning_typed_retained {original : List SItemTief} (u : UProg) (
       lowLit (u := u) (Γ := []) (Λ := []) τ raw = .ok term := by
   obtain ⟨τ, raw, term, ht, hv, he, _⟩ := h
   refine ⟨τ, raw, term, ht, hv, ?_, he⟩
-  apply List.mem_filterMap.mpr
-  refine ⟨_, hm, ?_⟩
-  cases ty <;> simp only [ht, hv, Option.map_some, Bool.true_eq_true, ↓reduceIte]
+  exact uKonstArrays_retains scope.types scope.functions scope.values original
+    (uRecordConstantTypes u.records) (uRecordConstant u.records scope.types scope.functions scope.values)
+    name ty payload τ raw hm ht hv
 
 /-- The mandatory final literal gate rechecks scalar binding semantics as well. Its successful
     certificate supplies the scalar classifier premise internally, including scope fallback. -/

@@ -20,6 +20,7 @@ def uRecordConstant (records : List URecord) (alias : List (String × (Int × In
     (uRecordValues schema.val values).toOption
   | τ, expr => uKonstZeile alias fns consts τ (.one expr)
 termination_by sizeOf source
+decreasing_by all_goals simp_wf; omega
 
 /-- Read and evaluate labelled arguments in source order before the existing schema arranger
     checks completeness/uniqueness and puts the values in declaration order. -/
@@ -34,6 +35,7 @@ def uRecordConstantFields (records : List URecord) (alias : List (String × (Int
     pure ((label, side) :: tail)
   | _ => none
 termination_by source => sizeOf source
+decreasing_by all_goals simp_wf; omega
 end
 
 /-- The exact nominal type names consumed by constant validation and collection. -/

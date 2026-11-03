@@ -82,6 +82,7 @@ def lowLit {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : (τ : Ty) → U
     | none => .error "string literal outside bytes"
   | _, _ => .error "constant without G form"
 termination_by _ value => sizeOf value
+decreasing_by all_goals simp_wf; omega
 
 /-- Literal fields use the declared ordered schema and their complete canonical types. -/
 def lowLitFields {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
@@ -94,6 +95,7 @@ def lowLitFields {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
     pure (.cons head tail)
   | _, _ => .error "source export: record arity disagrees with its fields"
 termination_by _ values => sizeOf values
+decreasing_by all_goals simp_wf; omega
 end
 
 /-- The integer side of a value. -/

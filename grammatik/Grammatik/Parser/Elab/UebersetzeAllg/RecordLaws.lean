@@ -13,13 +13,52 @@ theorem record_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : U
     (er : Option Ty) (identity : Nat) (reordered : Bool) (sides : List (Ty × USide))
     (args : Args (declOf u) Γ Λ (sides.map (·.1)))
     (gate : u.exportGate = .ok ())
-    (lowered : lowProductArgs u Γ Λ fn er (lowWertAtE u Γ Λ fn er)
-      (sides.map (·.1)) (sides.map (·.2)) = .ok args)
+    (lowered : lowProductArgs u Γ Λ fn er sides = .ok args)
     (schema : { s : URecord // s.ty = .prod identity (sides.map (·.1)) })
     (hschema : uRecordOf u.records (.prod identity (sides.map (·.1))) = .ok schema) :
     lowWertE u Γ Λ fn er (.product identity reordered sides) =
       .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩ := by
   simp only [lowWertE, gate, hschema, lowered]
+
+/-- Product fields use the actual checking-mode lowerer, with no separate callback instance. -/
+theorem lowProductArgs_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (ty : Ty) (side : USide) (rest : List (Ty × USide)) :
+    lowProductArgs u Γ Λ fn er ((ty, side) :: rest) = (do
+      let head ← lowWertAtE u Γ Λ fn er ty side
+      let tail ← lowProductArgs u Γ Λ fn er rest
+      pure (.cons head tail)) := by
+  rw [lowProductArgs]
+
+/-- Typed literals travel through the same actual literal lowerer in body and contract scopes. -/
+theorem typed_literal_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) (ty : Ty) (raw : USide) :
+    lowWertE u Γ Λ fn er (.typed ty raw) = (lowLit ty raw).map (⟨ty, ·⟩) := by
+  rw [lowWertE]
+
+/-- Nominal literal construction retains every identity, schema and field-type check. -/
+theorem lowLit_product (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (identity actual : Nat) (fields : List Ty) (reordered : Bool) (values : List (Ty × USide)) :
+    lowLit (u := u) (Γ := Γ) (Λ := Λ) (.prod identity fields) (.product actual reordered values) = (do
+      if identity != actual then throw "source export: constant has a foreign record identity"
+      let _ ← uRecordOf u.records (.prod identity fields)
+      let args ← lowLitFields fields values
+      pure (.prod identity args)) := by
+  rw [lowLit]
+
+theorem lowLit_bool (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (value : Bool) :
+    lowLit (u := u) (Γ := Γ) (Λ := Λ) .bool (.truth value) =
+      .ok (if value then Expr.tru else Expr.fls) := by
+  cases value <;> rw [lowLit]
+
+/-- The literal field helper also checks the carried field type before its recursive step. -/
+theorem lowLitFields_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (ty actual : Ty) (fields : List Ty) (value : USide) (values : List (Ty × USide)) :
+    lowLitFields (u := u) (Γ := Γ) (Λ := Λ) (ty :: fields) ((actual, value) :: values) = (do
+      if ty != actual then throw "source export: constant record field has a foreign type"
+      let head ← lowLit ty value
+      let tail ← lowLitFields fields values
+      pure (.cons head tail)) := by
+  rw [lowLitFields]
 
 /-- Product projection and replacement use the canonical semantics, with the whole base footprint. -/
 theorem record_replace_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {identity : Nat}

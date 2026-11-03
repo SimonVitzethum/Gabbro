@@ -11,18 +11,6 @@ public import Grammatik.Parser.Elab.Generic.C09Sig
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
-/-- Elaborate product fields positionally in schema order against the evaluated sides. The caller
-    has validated the nominal schema; every field is elaborated at exactly its declared type. -/
-def lowProductArgs (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
-    (elab : (τ : Ty) → USide → Except String (Expr (declOf u) Γ Λ τ)) :
-    (fs : List Ty) → List USide → Except String (Args (declOf u) Γ Λ fs)
-  | [], [] => .ok .nil
-  | _ :: _, [] | [], _ :: _ => .error "source export: record arity disagrees with its fields"
-  | τ :: τs, s :: ss => do
-    let e ← elab τ s
-    let rest ← lowProductArgs u Γ Λ elab τs ss
-    .ok (.cons e rest)
-
 mutual
 
 /-- A value of any type (`LowWert`), in an `ensures` (`er` the result type) or a body (`er = none`): literals,
@@ -161,7 +149,7 @@ def lowWertE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       a declared nominal schema -- no structural guess, no default field. -/
   | .product identity _ sides => do
     u.exportGate
-    let args ← lowProductArgs u Γ Λ fn er (lowWertAtE u Γ Λ fn er) (sides.map (·.1)) (sides.map (·.2))
+    let args ← lowProductArgs u Γ Λ fn er sides
     match uRecordOf u.records (.prod identity (sides.map (·.1))) with
     | .error e => .error e
     | .ok _ => .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩
@@ -199,6 +187,18 @@ def lowWertAtE (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (e
     | .error e => .error e
 
 termination_by _ value => 3 * sizeOf value + 1
+decreasing_by all_goals simp_wf; omega
+
+/-- Elaborate the existing ordered typed field list, keeping recursive calls visible to the
+    shared termination proof. Every component uses the same canonical checking-mode lowerer. -/
+def lowProductArgs (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (er : Option Ty) :
+    (sides : List (Ty × USide)) → Except String (Args (declOf u) Γ Λ (sides.map (·.1)))
+  | [] => .ok .nil
+  | (ty, side) :: rest => do
+    let head ← lowWertAtE u Γ Λ fn er ty side
+    let tail ← lowProductArgs u Γ Λ fn er rest
+    pure (.cons head tail)
+termination_by sides => 3 * sizeOf sides + 2
 decreasing_by all_goals simp_wf; omega
 
 /-- One comparison in `ensures` (G folds all but `lt`/`le`/`eq`). -/
