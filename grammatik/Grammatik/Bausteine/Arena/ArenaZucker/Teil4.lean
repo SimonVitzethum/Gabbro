@@ -23,7 +23,7 @@ variable {D : Deklaration}
     declared ceiling is a capacity bound. -/
 
 namespace Endblock
-variable {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
 /-- The body of an end-block allocation: the store, then the bump, ending in an
     end block. Named, because all four theorems below speak about it. -/
@@ -32,7 +32,7 @@ def arenaRumpf (A : ArenaForm D)
     (hwT : V.schreibt A.tab = true) (hLT : darf D A.tab Λ)
     (hwG : V.gschreibt A.zaehl = true) (hLG : gdarf D A.zaehl Λ)
     (rest : Endblock D V l (Ty.index (D.count A.tab) :: Γ) Λ) :
-    Endblock D V l Γ Λ :=
+    Endblock D V l (Ty.index (D.count A.tab) :: Γ) Λ :=
   .cons (.assignSlot A.tab A.feld (Expr.var .here) (Expr.weaken v) hwT hLT)
     (.cons (.assignGlob A.zaehl (Block.arenaBump A) hwG hLG) rest)
 
@@ -66,7 +66,7 @@ end Endblock
 
 section Bedeutung
 variable (O : Orakel D) (passes : Nat)
-variable {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 
 /-- **Below the hard bound, an end-block `alloc` does not take its `else`** -- the
