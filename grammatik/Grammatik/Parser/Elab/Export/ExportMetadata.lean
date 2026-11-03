@@ -114,13 +114,15 @@ def itemMetadata : SItemTief → Bool
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
     adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
     ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
-  -- A bare linear declaration introduces only a nominal resource, resolved
-  -- by markFin and checked by the dependent G inventory; it has no value body.
-  | .typeT ["linear"] _ [] [] none => false
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.
   | .typeT [] _ [] [] (some (.raw text)) => !text.startsWith "{"
-  | .typeT flags _ args order body => !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
+  | .typeT flags _ args order body =>
+    if flags.any (· == "linear") then
+      -- Nominal resources carry checked order metadata, never a copyable value body.
+      !args.isEmpty || body.isSome ||
+        flags.any (fun flag => flag != "linear" && flag != "ghost" && flag != "pub" && flag != "export")
+    else !args.isEmpty || !order.isEmpty || body.any typeMetadata ||
       flags.any (fun flag => flag != "pub" && flag != "export")
   | .constT _ ty _ => typeMetadata ty
   | .whyT .. => false
@@ -332,11 +334,10 @@ theorem arenaT_zeuge :
     itemMetadata (.arenaT "A" (.lit 1) (.lit 2) none (.atom "u32") (some (["P"], (.lit 1)))) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
-/-- Ghost owner values still lack a checked source binding. Nominal marks
-    travel only as resources; mint effects retain their metadata refusal
-    until their C08 software-call and root-once admission are connected. -/
-theorem owner_mint_type_refused_zeuge :
-    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
+/-- A ghost linear declaration carries a nominal resource and its stage order;
+    this does not admit copyable owner values or a mint effect. -/
+theorem linear_ghost_mark_metadata_zeuge :
+    itemMetadata (.typeT ["linear", "ghost"] "Mark" [] ["Raw", "Ready", "Done"] none) = false := by rfl
 
 end Gabbro.Grammatik.Parser.ExportMetadata
 
@@ -410,7 +411,7 @@ theorem mint_effect_metadata_refused :
     clausesMetadataWithoutLoad [.effs [.mints "Mark"]] = true := by
   exact ⟨rfl, rfl⟩
 
-/-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
+/-- Plain marks carry no erased body or proof metadata. -/
 theorem linear_mark_metadata_zeuge :
     itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
     bodyMetadata 1 (.retires "Mark") = false := by
