@@ -196,7 +196,7 @@ theorem blatt_slots_t_gleich
           rw [hslot]
           exact lese_slots_gleich _ _ _ _ _ _
         exact hgoal
-  | assignThruOwn p u ht fld i e m s ho he hg hm hw hL =>
+  | assignThruOwn p u ht fld i e m s ho he hg hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       by_cases htu : u = t
