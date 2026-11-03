@@ -611,7 +611,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Block.awaits` | yes J/Seq:237 | partial A:316, one load | `lowB_ok`, P:211 | A:320: `else none` unless address and `aggregateFits`; no waiting liveness claim |
 | `Block.exchange` | yes J/Seq:230 | partial A:321, CAS loop | `lowB_ok`, P:213 | A:327/:328: `else none` for code-size/address/single-word guards |
 | `Block.narrow` | yes J/Seq:191 | partial A:233 | `lowB_ok`, P:215 | A:239: `else none` unless input/bounds fit signed words |
-| `Block.check` | no producer in `Parser/Elab/**` | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | source export absent; no named constructor-specific refusal |
+| `Block.check` | skipped: no standalone surface statement in `SAnw` or `parseStmt` (`Parser/Stmt/Anweisung/Kopf.lean:95`, `Defs2a.lean:92`); C16 `check` is an item | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | no standalone source check syntax; format-field checks are not a statement producer |
 | `Block.float` | yes J/Seq:78 | yes A:330, software IEEE add/sub/mul/div | `lowB_ok`, P:221 | recursive values/range/code guards; stale TODO claim that this constructor is wholly refused is superseded |
 | `Block.floatLit` | yes J/Seq:73 | yes A:211, `floatLiteralL` | `lowB_ok`, P:225 | kernel-rounded binary64 value and range |
 | `Block.floatOf` | skipped: no integer-to-float surface conversion in the Lean parser (`Parser/Expr/Ausdruck/Teil2a.lean:110`–`:280`); `as f64` is absent from SYNTAX.md | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | no parser conversion to export; computed conversion helper's supported integer representation |
