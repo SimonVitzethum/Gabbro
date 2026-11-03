@@ -1,6 +1,6 @@
 /- One connected fallible foreign theorem for complete values and nominal errors. -/
 module
-public import Stage0.Senke.Tore.ForeignCode
+public import Stage0.Senke.Tore.Code
 public import Stage0.Senke.Tore.AreaElse
 @[expose] public section
 
