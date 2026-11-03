@@ -116,6 +116,10 @@ def ersetzeSExprIn (shadowed : List String) (fns : List UKonstFn) : SExpr → Ex
     | .ok e' => .ok (.old e')
   | .res => .ok .res
   | .why g f => .ok (.why g f)
+  | .ext kind (binder :: domain :: names) subs =>
+    if kind == .all || kind == .any || kind == .count then
+      (ersetzeQuantOperandsIn shadowed fns binder subs).map (.ext kind (binder :: domain :: names))
+    else (ersetzeSExprListIn shadowed fns subs).map (.ext kind (binder :: domain :: names))
   | .ext k names subs =>
     match ersetzeSExprListIn shadowed fns subs with
     | .error e => .error e
@@ -126,6 +130,14 @@ def ersetzeSExprListIn (shadowed : List String) (fns : List UKonstFn) : List SEx
     match ersetzeSExprIn shadowed fns e, ersetzeSExprListIn shadowed fns rest with
     | .ok e', .ok rest' => .ok (e' :: rest')
     | .error e, _ | _, .error e => .error e
+/-- Only the last quantifier operand is scoped by its binder. -/
+def ersetzeQuantOperandsIn (shadowed : List String) (fns : List UKonstFn) (binder : String) :
+    List SExpr → Except String (List SExpr)
+  | [] => .ok []
+  | [body] => (ersetzeSExprIn (binder :: shadowed) fns body).map (fun body => [body])
+  | operand :: rest => do
+    return (← ersetzeSExprIn shadowed fns operand) :: (← ersetzeQuantOperandsIn shadowed fns binder rest)
+
 end
 
 /-- Names introduced by a statement belong to its continuation only. -/
