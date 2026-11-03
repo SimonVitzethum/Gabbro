@@ -40,20 +40,55 @@ def checkFloorAtom : CheckAtom → Option Bool
 
 /-- Decode a source-indexed reporter activation. Missing locals are explicitly
     absent; missing required arguments or floor values refuse the record. -/
-def decodeCheckReturn (site : UCheckReturn) (atoms : List (Option CheckAtom))
-    (verdict : Bool) : Option CheckReport := do
-  let samples ← site.samples.mapM fun (place, position) => do
+def decodeCheckSamples (site : UCheckReturn) (atoms : List (Option CheckAtom)) :
+    Option (List CheckProbe) :=
+  site.samples.mapM fun (place, position) => do
     match position with
     | none => pure { ort := place, punkt := site.point, wert := 0, gelesen := false }
     | some position =>
       let atom ← (atoms[position]?).join
       pure { ort := place, punkt := site.point, wert := atom.sample, gelesen := true }
-  let floors ← (List.range site.floorCount).mapM fun i => do
+def decodeCheckFloors (site : UCheckReturn) (atoms : List (Option CheckAtom)) :
+    Option (List Bool) :=
+  (List.range site.floorCount).mapM fun i => do
     let atom ← (atoms[site.floorStart + i]?).join
     checkFloorAtom atom
-  let written ← (atoms[site.floorStart + site.floorCount]?).join >>= checkFloorAtom
+
+def decodeCheckWritten (site : UCheckReturn) (atoms : List (Option CheckAtom)) : Option Bool :=
+  (atoms[site.floorStart + site.floorCount]?).join >>= checkFloorAtom
+
+def decodeCheckReturn (site : UCheckReturn) (atoms : List (Option CheckAtom))
+    (verdict : Bool) : Option CheckReport := do
+  let samples ← decodeCheckSamples site atoms
+  let floors ← decodeCheckFloors site atoms
+  let written ← decodeCheckWritten site atoms
   if verdict != floors.foldl (fun result floor => result && floor) written then none
   else pure { proben := samples, boeden := floors, urteil := verdict }
+
+/-- Every successful record proves its actual samples, every floor result,
+    and the exact conjunction with the written verdict. An unrelated Bool or
+    a report with fabricated sample values cannot satisfy this statement. -/
+theorem decodeCheckReturn_origin (site : UCheckReturn) (atoms : List (Option CheckAtom))
+    (verdict : Bool) (report : CheckReport)
+    (origin : decodeCheckReturn site atoms verdict = some report) :
+    decodeCheckSamples site atoms = some report.proben ∧
+      decodeCheckFloors site atoms = some report.boeden ∧
+      ∃ written, decodeCheckWritten site atoms = some written ∧
+        report.urteil = report.boeden.foldl (fun result floor => result && floor) written := by
+  cases hs : decodeCheckSamples site atoms with
+  | none => simp [decodeCheckReturn, hs] at origin
+  | some samples =>
+    cases hf : decodeCheckFloors site atoms with
+    | none => simp [decodeCheckReturn, hs, hf] at origin
+    | some floors =>
+      cases hw : decodeCheckWritten site atoms with
+      | none => simp [decodeCheckReturn, hs, hf, hw] at origin
+      | some written =>
+        by_cases hv : verdict = floors.foldl (fun result floor => result && floor) written
+        · simp [decodeCheckReturn, hs, hf, hw, hv] at origin
+          cases origin
+          exact ⟨hs, hf, written, hw, hv⟩
+        · simp [decodeCheckReturn, hs, hf, hw, hv] at origin
 
 /-- Read the actual saved arguments and actual returned Bool of a private
     reporter. No values are recovered from a later shared-memory snapshot. -/
@@ -132,6 +167,15 @@ def checkGhostHistory (u : UProg) (c : CheckDecl (declOf u))
     CheckGhostState (declOf u) :=
   log.reverse.foldl (checkGhostStep u c consumer gate) {}
 
+/-- Each new G/GX call event updates the existing history once. The real
+    machine prepends events; replay reverses that convention exactly once. -/
+theorem checkGhostHistory_event (u : UProg) (c : CheckDecl (declOf u))
+    (consumer gate : (declOf u).Fn) (event : RufEreignisF (declOf u))
+    (log : List (RufEreignisF (declOf u))) :
+    checkGhostHistory u c consumer gate (event :: log) =
+      checkGhostStep u c consumer gate (checkGhostHistory u c consumer gate log) event := by
+  simp [checkGhostHistory, List.reverse_cons, List.foldl_append]
+
 /-- An actually run check cannot finish with an unconsumed Duty or an invalid
     second consumption. Merely declaring a check still makes no run occur. -/
 def checkGhostComplete {D : Deklaration} (state : CheckGhostState D) : Bool :=
@@ -143,11 +187,14 @@ theorem replayEintrag_from_samples (u : UProg) (c : CheckDecl (declOf u))
     (site : UCheckReturn) {Γ : Ctx} (env : Env (declOf u) Γ)
     (verdict : Bool) (report : CheckReport) (gate : (declOf u).Fn)
     (origin : decodeCheckReturn site (checkEnvAtoms env) verdict = some report) :
-    decodeCheckReturn site (checkEnvAtoms env) verdict =
-      some (replayEintrag c report gate).bericht ∧
-      (replayEintrag c report gate).bericht.proben = report.proben ∧
-      (replayEintrag c report gate).bericht.boeden = report.boeden :=
-  ⟨origin, rfl, rfl⟩
+    decodeCheckSamples site (checkEnvAtoms env) =
+      some (replayEintrag c report gate).bericht.proben ∧
+    decodeCheckFloors site (checkEnvAtoms env) =
+      some (replayEintrag c report gate).bericht.boeden ∧
+    ∃ written, decodeCheckWritten site (checkEnvAtoms env) = some written ∧
+      (replayEintrag c report gate).bericht.urteil =
+        report.boeden.foldl (fun result floor => result && floor) written :=
+  decodeCheckReturn_origin site (checkEnvAtoms env) verdict report origin
 
 /-- No report can be consumed twice without another producer completion. -/
 theorem consumeCheckEntry_once (D : Deklaration) (c : CheckDecl D)
