@@ -59,8 +59,8 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .foreverBeg k :: rest =>
     (R.struct Γ fn Λ pe (.foreverBeg k) rest).bind fun (st, rest') =>
       (R.seq Γ fn Λ pe rest').bind fun (b, r) => .ok (Block.cons st b, r)
-  | Γ, fn, Λ, pe, .axCallElseBeg c args reason :: rest =>
-    (R.struct Γ fn Λ pe (.axCallElseBeg c args reason) rest).bind fun (statement, tail) =>
+  | Γ, fn, Λ, pe, st@(.callIndElseBeg ..) :: rest | Γ, fn, Λ, pe, st@(.axCallElseBeg ..) :: rest =>
+    (R.struct Γ fn Λ pe st rest).bind fun (statement, tail) =>
       (R.seq Γ fn Λ pe tail).bind fun (body, remaining) => .ok (Block.cons statement body, remaining)
   | Γ, fn, Λ, pe, .bind x d v :: rest =>
     (lowBindWert u Γ Λ fn d v).bind fun s =>
