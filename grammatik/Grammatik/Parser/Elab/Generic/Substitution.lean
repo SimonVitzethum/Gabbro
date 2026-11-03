@@ -41,10 +41,9 @@ def surfaceType (types : List (String × STyp)) (values : List (String × SExpr)
     values before bounded integer evaluation. Expansion cannot erase an unchecked call. -/
 def constantArgument (lo hi : Int) (fns : List Uebersetze.UKonstFn)
     (env : List (String × Int)) (arg : SExpr) : Except String Int := do
-  let closed := expression (env.map (fun (name, value) =>
-    (name, Konst.literalVonInt value))) arg
-  let replaced ← Konst.ersetzeSExpr fns closed
-  match Uebersetze.uKonstWert lo hi [] [] 64 replaced with
+  let functions := fns.map (fun fn => { fn with constants := env ++ fn.constants })
+  let replaced ← Konst.ersetzeSExpr functions arg
+  match Uebersetze.uKonstWert lo hi [] env 64 replaced with
   | some n => .ok n
   | none => .error "generic constant argument: C17 evaluation failed or exceeded its bound"
 
