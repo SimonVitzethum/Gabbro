@@ -172,11 +172,13 @@ def parseAnvertrautTief (f : Nat) (toks : List Token) :
   let (code, r) ← nimmName r
   let r ← nimmWort "arch" r
   let (arch, r) ← nimmName r
+  let (service, r) ← match r with
+    | .wort "via" :: r => do
+      let (service, r) ← nimmName r
+      pure (some service, r)
+    | _ => pure (none, r)
   match r with
-  | .wort "via" :: r =>
-    let (service, r) ← nimmName r
-    let r ← fordereZeichen ";" r
-    pure (.trustT name code arch [] "" "" (some service), r)
+  | .zeichen ";" :: r => pure (.trustT name code arch [] "" "" service, r)
   | _ =>
     let r ← fordereZeichen "{" r
     let r ← nimmWort "regs" r
@@ -188,7 +190,8 @@ def parseAnvertrautTief (f : Nat) (toks : List Token) :
     let (assumption, r) ← nimmName r
     let r ← fordereZeichen ";" r
     let r ← fordereZeichen "}" r
-    pure (.trustT name code arch registers stack assumption none, r)
+    pure (.trustT name code arch registers stack assumption service, r)
+
 
 def parseBootSchritte (f : Nat) (toks : List Token) :
     Except String (List SBootSchritt × List Token) :=
