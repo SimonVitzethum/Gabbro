@@ -72,6 +72,12 @@ theorem kopfRest_typFolge (fehler : Option String) (ks : List SKlausel) (hk : �
       rw [this]
       apply gen w _ <;> intro e <;> subst e <;> exact absurd hw (by decide)
 
+/-- No generic list: a parameter list follows the name directly. -/
+theorem parseGenericParams_klammer (fuel : Nat) (X : List Token) :
+    parseGenericParams fuel (Token.zeichen "(" :: X) = .ok ([], Token.zeichen "(" :: X) := by
+  rw [parseGenericParams.eq_def]
+  split <;> simp_all
+
 theorem fnSig_rund (s : FnSig) (hs : SigGut s) (R : List Token) (hR : KlauselEnde R) (F : Nat)
     (hF : 8 * (sigToks s).length + 42 ≤ F) :
     parseFnSig F s.art (sigToks s ++ R) = .ok (s, R) := by
@@ -129,7 +135,7 @@ theorem fnSig_rund (s : FnSig) (hs : SigGut s) (R : List Token) (hR : KlauselEnd
     (by omega)
   simp only [List.append_assoc, List.cons_append, List.nil_append, List.singleton_append] at hP hErg hK ⊢
   simp only [parseFnSig, nimmWort, strEq_self, ↓reduceIte, nimmName, nameText_nameTok,
-    bind, Except.bind, pure, Except.pure, parseGenericParams, List.any_nil, Bool.false_eq_true, hP, hErg, hK]
+    bind, Except.bind, pure, Except.pure, parseGenericParams_klammer, List.any_nil, Bool.false_eq_true, hP, hErg, hK]
 
 /-! ### Items -/
 
@@ -178,7 +184,8 @@ theorem item_use (p : List String) (hp : p ≠ []) : ItemBein (.useT p) := by
   have hP := nimmPfad_pfad p (.zeichen ";" :: rest) hp
     (by intro r e; injection e with e1; injection e1 with e2; exact absurd e2 (by decide))
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_use]
-  simp only [parseUseTief, nimmWort, strEq_self, ↓reduceIte, hP, fordereZeichen]
+  simp only [parseUseTief, nimmWort, strEq_self, ↓reduceIte, hP]
+  split <;> simp_all [fordereZeichen, strEq_self]
 
 /-- `= v ;` behind a type: the initialiser follow. -/
 theorem typ_gleich (t : STyp) (ht : TypGut t) (X : List Token) (F : Nat) (hF : fbT t ≤ F) :
