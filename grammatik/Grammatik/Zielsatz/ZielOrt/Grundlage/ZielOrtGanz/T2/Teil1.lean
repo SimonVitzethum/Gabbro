@@ -26,6 +26,20 @@ theorem EndAusgang.zuAusgang_logik {l : Bool} {Γ : Ctx} {o : EndAusgang V l Γ}
     {e : Logik D} (h : o.zuAusgang = .logik e) : o = .logik e := by
   cases o <;> simp_all [EndAusgang.zuAusgang]
 
+theorem Ausgang.weiterOpt_logik {l : Bool} {Γ : Ctx} {e : Option Ty}
+    {o : Ausgang V l (ErgCtx Γ e)} {x : Logik D} (h : Ausgang.weiterOpt e o = .logik x) :
+    o = .logik x := by
+  cases e with
+  | none => exact h
+  | some τ => exact Ausgang.schrumpf_logik h
+
+theorem EndAusgang.weiterOpt_logik {l : Bool} {Γ : Ctx} {e : Option Ty}
+    {o : EndAusgang V l (ErgCtx Γ e)} {x : Logik D} (h : EndAusgang.weiterOpt e o = .logik x) :
+    o = .logik x := by
+  cases e with
+  | none => exact h
+  | some τ => exact EndAusgang.schrumpf_logik h
+
 theorem Ausgang.mapWelt_logik {l : Bool} {Γ : Ctx} {o : Ausgang V l Γ}
     {f : World D → World D} {e : Logik D} (h : o.mapWelt f = .logik e) : o = .logik e := by
   cases o <;> simp_all [Ausgang.mapWelt]
@@ -159,6 +173,14 @@ theorem Stmt.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
   | .retWhyScoped .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .leave .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
   | .next .., _, _, _, _, he => by simp only [execStmt, reduceCtorEq] at he
+  | .axiomCallElse _ a args _ _ _ _ _ err, h, σ, ρ, e', he' => by
+      simp only [Stmt.logikFrei] at h
+      simp only [execStmt] at he'
+      split at he'
+      · cases he'
+      · exact Endblock.logikFrei_ok hR err h _ _ _
+          (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he'))
+      · cases he'
 
 theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e → Ok e)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -199,7 +221,7 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
         cases he
         exact hR _ _ _ _ heq
       · cases he
-  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+  | .bindCallIndElse p args he' hp hr err rest, h, σ, ρ, e, he => by
       simp only [Block.logikFrei, Bool.and_eq_true] at h
       simp only [execBlock, indSonst] at he
       generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
@@ -235,6 +257,20 @@ theorem Block.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik e �
       simp only [execBlock] at he
       split at he
       · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.schrumpf_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _
+          (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he))
+      · cases he
+  | .bindAxiomOpt _ a args he' hp hd hgd rest, h, σ, ρ, e, he => by
+      simp only [Block.logikFrei] at h
+      simp only [execBlock] at he
+      split at he
+      · exact Block.logikFrei_ok hR rest h _ _ _ (Ausgang.weiterOpt_logik he)
+      · cases he
+  | .bindAxiomOptElse _ a args he' hp hd hgd hr err rest, h, σ, ρ, e, he => by
+      simp only [Block.logikFrei, Bool.and_eq_true] at h
+      simp only [execBlock] at he
+      split at he
+      · exact Block.logikFrei_ok hR rest h.2 _ _ _ (Ausgang.weiterOpt_logik he)
       · exact Endblock.logikFrei_ok hR err h.1 _ _ _
           (EndAusgang.schrumpf_logik (EndAusgang.zuAusgang_logik he))
       · cases he
@@ -356,6 +392,19 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
       · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.schrumpf_logik he)
       · exact Endblock.logikFrei_ok hR err h.1 _ _ _ (EndAusgang.schrumpf_logik he)
       · cases he
+  | .bindAxiomOpt _ a args he' hp hd hgd rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.weiterOpt_logik he)
+      · cases he
+  | .bindAxiomOptElse _ a args he' hp hd hgd hr err rest, h, σ, ρ, e, he => by
+      simp only [Endblock.logikFrei, Bool.and_eq_true] at h
+      simp only [execEnd] at he
+      split at he
+      · exact Endblock.logikFrei_ok hR rest h.2 _ _ _ (EndAusgang.weiterOpt_logik he)
+      · exact Endblock.logikFrei_ok hR err h.1 _ _ _ (EndAusgang.schrumpf_logik he)
+      · cases he
   | .regRead r hk rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei] at h
       simp only [execEnd] at he
@@ -391,7 +440,7 @@ theorem Endblock.logikFrei_ok (hR : ∀ g σ ρ e, R g σ ρ = RufAusgang.logik 
         cases he
         exact hR _ _ _ _ heq
       · cases he
-  | .bindCallIndElse p args he hp hr err rest, h, σ, ρ, e, he => by
+  | .bindCallIndElse p args he' hp hr err rest, h, σ, ρ, e, he => by
       simp only [Endblock.logikFrei, Bool.and_eq_true] at h
       simp only [execEnd, indSonstE] at he
       generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at he
