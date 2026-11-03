@@ -99,7 +99,10 @@ def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D 
   | _, _, _, _, .consumeTraverse .. => false
   | _, _, _, _, .retScoped .. => false
   | _, _, _, _, .retWhyScoped .. => false
-  | _, _, _, _, _ => false
+  | _, _, _, _, .retry .. | _, _, _, _, .forever ..
+  | _, _, _, _, .regWrite .. | _, _, _, _, .transition ..
+  | _, _, _, _, .ret .. | _, _, _, _, .retWhy ..
+  | _, _, _, _, .assignSlotRef .. => false
 
 def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → Bool
   | _, _, _, _, .nil => true
@@ -113,7 +116,11 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .exchange _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiomOpt (e := none) .. | _, _, _, _, .bindAxiomOptElse .. => false
   | _, _, _, _, .bindCallIndElse .. => false
-  | _, _, _, _, _ => false
+  | _, _, _, _, .bindCallElse .. | _, _, _, _, .bindAxiomElse ..
+  | _, _, _, _, .regRead .. | _, _, _, _, .regReadElse ..
+  | _, _, _, _, .narrow .. | _, _, _, _, .check ..
+  | _, _, _, _, .float .. | _, _, _, _, .floatNarrow ..
+  | _, _, _, _, .narrowRequired .. => false
 def retFreiArms : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
     Arms D V l Γ Λ Λ' cs → Bool
   | _, _, _, _, _, .nil => true

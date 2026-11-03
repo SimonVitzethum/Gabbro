@@ -37,6 +37,7 @@
 -/
 module
 public import Stage0.Senke.Rekursion
+import Stage0.Senke.Anweisung.Refusal
 public import Stage0.Senke.Welt.AlignUp
 public import Stage0.Senke.Welt.StartLayout
 public import Runner.Prog.IRAsm
@@ -135,7 +136,9 @@ def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String)
         " has an entry snapshot outside the checked storage layout"
       else if (lowInvs Y P g (functionFrame P g).internalStatus D.invs).isNone then
         " owes an invariant whose predicate is outside the IR expression fragment"
-      else " uses a form outside the IR fragment")
+      else match refusedForm (P.rumpf g) with
+        | some form => " contains unsupported device form " ++ form
+        | none => " uses a form outside the IR fragment")
 
 /-- Every function of `fs`, lowered with the addresses `A`. -/
 def lowAll (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) : List D.Fn → Except String (List (List II × Nat))

@@ -245,7 +245,7 @@ def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option Ty} 
   | some (.int lo _), .val e => do
       let ce ← lowE (currentOld := currentOld) L (reserved := reserved) e d
       pure (packSum d lo tag ce)
-  | _, _ => none
+  | _, .val _ => none
 
 /-- Traverse the actual argument spine in the expression's mutual recursion. -/
 def lowProdArgs (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {fs : List Ty}

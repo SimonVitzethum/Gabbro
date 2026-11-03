@@ -162,7 +162,8 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     else none
   | _, Γ, _, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
-  | _, _, _, _, _, reserved => none
+  | _, _, _, _, .regWrite .., _ => none
+  | _, _, _, _, .transition .., _ => none
 
 def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → (reserved : Nat := 0) → Option (List II × Nat)
@@ -282,9 +283,10 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         pure (exC ((frei Γ reserved)) (L.ga g) cn.1 ++ cr.1, max (max cn.2 ((frei Γ reserved) + 4)) cr.2)
       else none
     else none
-  -- Binary64 add uses the proved integer routine; sub, mul and div stay refused.
+  -- Binary64 arithmetic uses the proved software routines.
   | _, Γ, _, _, .float op a b low high rest, reserved => floatArithmeticBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a) (lowE (reserved := reserved) L b) (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
-  | _, _, _, _, _, reserved => none
+  | _, _, _, _, .regRead .., _ => none
+  | _, _, _, _, .regReadElse .., _ => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
     are measured from the end of the entire dispatch. The empty case is unreachable. -/
@@ -435,7 +437,8 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
     pure (cg.1 ++ cr.1 ++ ce.1, max cg.2 (max cr.2 ce.2))
   | _, Γ, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
-  | _, _, _, _, reserved => none
+  | _, _, _, .regRead .., _ => none
+  | _, _, _, .regReadElse .., _ => none
 
 end
 
