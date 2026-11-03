@@ -85,10 +85,10 @@ theorem checkGhostStep_form (u : UProg) (c : CheckDecl (declOf u))
       · split
         · exact checkGhostConsume_form _ form
         · split
-          · cases capture : actualCheckReturn u f env value with
+          · cases captured : actualCheckReturn u f env value with
             | none => exact form
-            | some capture =>
-              rcases capture with ⟨name, report⟩
+            | some sampled =>
+              rcases sampled with ⟨name, report⟩
               split <;> exact form
           · exact form
 
