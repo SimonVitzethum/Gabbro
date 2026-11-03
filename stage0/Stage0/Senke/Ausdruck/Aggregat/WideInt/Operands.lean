@@ -51,19 +51,23 @@ theorem wideBinary_ok {lo1 hi1 lo2 hi2 : Int} (x : Zahl lo1 hi1) (y : Zahl lo2 h
     -- the first operand
     obtain ⟨m1, run1, ch1, vx1⟩ := iha ca ta heqa (by omega) m pc hp'.left
     have n1 := hp'.next ch1 (Nat.le_refl d) (by omega)
+    have wx1 := vx1.2
+    erw [encodeWords_int] at wx1
     -- its extension to `ka` limbs
     obtain ⟨m2, run2, ch2, wx2⟩ := wideExtend_run (extSigned lo1) x.n positiveA hka (wideFits_zahl x)
-      n1.frame n1.small (by omega) n1.left.code n1.left.far vx1.2
+      n1.frame n1.small (by omega) n1.left.code n1.left.far wx1
     have n2 := n1.next ch2 (by omega : d ≤ d + ka) (by omega)
     -- the second operand, behind it
     obtain ⟨m3, run3, ch3, vy3⟩ := ihb cb tb heqb (by omega) m2 _ n2.left
     have n3 := n2.next ch3 (Nat.le_refl (d + ka)) (by omega)
+    have wy3 := vy3.2
+    erw [encodeWords_int] at wy3
     have room := n3.frame.room
     have wx3 : WordsAt m3 fp d (integerEncoding ka x.n) :=
       wx2.agree_low ch3 n2.frame.room (by simp only [integerEncoding_length]; omega) (by omega)
     -- its extension
     obtain ⟨m4, run4, ch4, wy4⟩ := wideExtend_run (extSigned lo2) y.n positiveB hkb (wideFits_zahl y)
-      n3.frame n3.small (by omega) n3.left.code n3.left.far vy3.2
+      n3.frame n3.small (by omega) n3.left.code n3.left.far wy3
     have n4 := n3.next ch4 (Nat.le_refl (d + ka)) (by omega)
     have wx4 : WordsAt m4 fp d (integerEncoding ka x.n) :=
       wx3.agree_low ch4 n3.frame.room (by simp only [integerEncoding_length]; omega) (by omega)
@@ -99,8 +103,10 @@ theorem wideUnary_ok {lo hi : Int} (x : Zahl lo hi) {ka : Nat} (hka : integerWor
       simpa only [List.append_assoc] using hp
     obtain ⟨m1, run1, ch1, vx1⟩ := iha ca ta heqa (by omega) m pc hp'.left
     have n1 := hp'.next ch1 (Nat.le_refl d) (by omega)
+    have wx1 := vx1.2
+    erw [encodeWords_int] at wx1
     obtain ⟨m2, run2, ch2, wx2⟩ := wideExtend_run (extSigned lo) x.n positive hka (wideFits_zahl x)
-      n1.frame n1.small (by omega) n1.left.code n1.left.far vx1.2
+      n1.frame n1.small (by omega) n1.left.code n1.left.far wx1
     have n2 := n1.next ch2 (Nat.le_refl d) (by omega)
     obtain ⟨m3, run3, ch3, post⟩ := kernel m2 _ n2 (by omega) wx2
     refine ⟨m3, ?_, ch1.trans (ch2.trans ch3), post⟩

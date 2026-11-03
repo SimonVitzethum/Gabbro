@@ -70,20 +70,20 @@ theorem softMulSpecialL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
   have sa := unpackSignL_ok ha
   have sb := unpackSignL_ok hb
   have sign := xorSignL_ok sa sb
-  have invalidA := WordCode.bin ia zb (g := fun x y => some (x &&& y))
+  have invalidA : WordCode (L := L) ρ W _ _ := WordCode.bin ia zb (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
-  have invalidB := WordCode.bin za ib (g := fun x y => some (x &&& y))
+  have invalidB : WordCode (L := L) ρ W _ _ := WordCode.bin za ib (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
   rw [flagAnd] at invalidA invalidB
-  have invalid := WordCode.bin invalidA invalidB (g := fun x y => some (x ||| y))
+  have invalid : WordCode (L := L) ρ W _ _ := WordCode.bin invalidA invalidB (g := fun x y => some (x ||| y))
     rfl rfl (by decide : 9 < 256)
-  have infinity := WordCode.bin ia ib (g := fun x y => some (x ||| y))
+  have infinity : WordCode (L := L) ρ W _ _ := WordCode.bin ia ib (g := fun x y => some (x ||| y))
     rfl rfl (by decide : 9 < 256)
-  have isZero := WordCode.bin za zb (g := fun x y => some (x ||| y))
+  have isZero : WordCode (L := L) ρ W _ _ := WordCode.bin za zb (g := fun x y => some (x ||| y))
     rfl rfl (by decide : 9 < 256)
   rw [flagOr] at invalid infinity isZero
-  have zero := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
-  have inf := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
+  have zero : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
+  have inf : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
   have finiteOrZero := routineChooseL_ok isZero
     (fun _ => packL_ok sign zero zero) (fun _ => hf)
   have infOrFinite := routineChooseL_ok infinity

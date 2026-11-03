@@ -1,3 +1,5 @@
+module
+public import Stage0.Senke.Welt.AnordnungLayouta
 /-! Absolute alignment of canonical global addresses.
 
     The relative layout (`globStarts` on the common `wordAlign` grid) preserves
@@ -6,8 +8,6 @@
     by its declared alignment and by eight. The base-grid premise is the
     loader/runner base-placement duty (THEOREM-MAP 127): relative geometry alone
     does not discharge it. -/
-module
-public import Stage0.Senke.Welt.AnordnungLayouta
 @[expose] public section
 
 

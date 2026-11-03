@@ -233,6 +233,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
   | .call f xs => .call (k.ruf f) (xs.map (aus k))
+  | .callElse f xs reason body => .callElse (k.ruf f) (xs.map (aus k)) reason (anw (k.mit [reason]) body)
   | .callQ f xs => .callQ (k.ruf f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))

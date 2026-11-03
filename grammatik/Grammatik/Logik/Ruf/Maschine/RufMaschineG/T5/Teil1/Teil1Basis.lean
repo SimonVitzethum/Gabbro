@@ -184,6 +184,23 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
              simp only [GRest.sauber, GRest.stapelSauber]
              try exact hk
            · exact hst r hr)
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self]
+      rw [‹(M.faeden f).kopf.rest = _›] at hk
+      simp only [GRest.sauber] at hk
+      refine ⟨?_, ?_⟩
+      · simp only [GRest.sauber]
+        try exact hk
+      · first
+        | exact hst
+        | (intro r hr
+           rcases List.mem_cons.1 hr with hr | hr
+           · subst hr
+             simp only [GRest.sauber, GRest.stapelSauber]
+             try exact hk
+           · exact hst r hr)
 
 /-- Every step keeps the invariant at every thread. -/
 theorem rufSchrittG_sauber {P : Programm D} {O : Orakel D} {passes : Nat}

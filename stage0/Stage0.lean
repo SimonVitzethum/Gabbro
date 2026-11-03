@@ -51,7 +51,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ConsumeRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Run
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 public import Stage0.Senke.Tore.Proben
 
@@ -65,6 +65,7 @@ public import Stage0.Senke.Ausdruck.Referenz.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.MulProben
+public import Stage0.Senke.Anweisung.Faelle.Gleit.DivProben
 
 public import Stage0.Senke.Ausdruck.Old.Proben
 public import Stage0.Senke.Ausdruck.Old.FunctionProbe
@@ -106,8 +107,11 @@ public import Stage0.Frontend.ExportCorrectness
 public import Stage0.Zeugen.Pipeline.ProductRecordWitness
 public import Stage0.Zeugen.Pipeline.ProductValueWitness
 public import Stage0.Frontend.MeasureWitness
+public import Stage0.Frontend.ConstWitness
+public import Stage0.Frontend.ConstValuesWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
+public import Stage0.Senke.Rueckkehr.ScopedZeuge
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 public import Stage0.Zeugen.Annahme.TypedSumWitness
 public import Stage0.Zeugen.Annahme.PointerContractWitness

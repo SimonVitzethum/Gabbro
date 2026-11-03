@@ -85,7 +85,7 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.softAddOperandL_ok
 #print axioms Gabbro.Stage0.Senke.softSub_model_zeuge
 #print axioms Gabbro.Stage0.Senke.softSubRoutine_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.floatArithmeticBlockL_supported
+#print axioms Gabbro.Stage0.Senke.floatArithmeticBlockL_eq
 #print axioms Gabbro.Stage0.Senke.softMul_model
 #print axioms Gabbro.Stage0.Senke.softMul_product
 #print axioms Gabbro.Stage0.Senke.softMulHighL_word
@@ -100,6 +100,20 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_subnormal_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_invalid_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge
+
+-- Binary64 division: exact restoring quotient, rational replay and connected IR.
+#print axioms Gabbro.Stage0.Senke.softDivQR_model
+#print axioms Gabbro.Stage0.Senke.softDivJam_interval
+#print axioms Gabbro.Stage0.Senke.softDiv_exponent
+#print axioms Gabbro.Stage0.Senke.softDiv_replay
+#print axioms Gabbro.Stage0.Senke.softDiv_model
+#print axioms Gabbro.Stage0.Senke.softDivQuotientC_ok
+#print axioms Gabbro.Stage0.Senke.softDivQuotientL_ok
+#print axioms Gabbro.Stage0.Senke.softDivFiniteWord_model
+#print axioms Gabbro.Stage0.Senke.softDivRoutine_ok
+#print axioms Gabbro.Stage0.Senke.softDivRoutineL_ok
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_div_cases_accepted_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_div_images_accepted_zeuge
 
 -- C14 Stage-0 image placement and profile certificate transport.
 #print axioms Gabbro.Stage0.Senke.layU_ga_lcm_dvd

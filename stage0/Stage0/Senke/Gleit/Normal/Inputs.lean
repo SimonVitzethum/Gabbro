@@ -1,6 +1,7 @@
 /- Evaluate source operands once and run a checked arithmetic routine on their retained words. -/
 module
 public import Stage0.Senke.Gleit.Mul.Correct
+public import Stage0.Senke.Gleit.Div.Correct
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 @[expose] public section
 
@@ -10,11 +11,12 @@ open Gabbro.Grammatik Gleitkomma Runner.IR Runner.Mem
 /-- Arithmetic kernels share operand retention and frame preservation.
     Subtraction is addition after its existing sign-bit adapter. -/
 inductive SoftFloatKernel where
-  | add | mul
+  | add | mul | div
 
 def SoftFloatKernel.apply : SoftFloatKernel → GFloat → GFloat → GFloat
   | .add => add f64
   | .mul => mul f64
+  | .div => div f64
 
 def SoftFloatKernel.emit (kind : SoftFloatKernel) : Nat →
     (Nat → Option (List II × Nat)) → (Nat → Option (List II × Nat)) →
@@ -22,12 +24,14 @@ def SoftFloatKernel.emit (kind : SoftFloatKernel) : Nat →
   match kind with
   | .add => softAddRoutineL
   | .mul => softMulRoutineL
+  | .div => softDivRoutineL
 
 theorem SoftFloatKernel.preserves (kind : SoftFloatKernel) (a b : GFloat)
     (ha : wf f64 a) (hb : wf f64 b) : wf f64 (kind.apply a b) := by
   cases kind with
   | add => exact add_wf f64 f64_p a b ha hb
   | mul => exact mul_wf f64 f64_p a b ha hb
+  | div => exact div_wf f64 f64_p a b ha hb
 
 variable [Kern] {D : Deklaration} {L : Lay D}
 
@@ -43,6 +47,7 @@ theorem SoftFloatKernel.emit_ok (kind : SoftFloatKernel)
   cases kind with
   | add => exact softAddRoutineL_ok a b ha hb hl hr
   | mul => exact softMulRoutineL_ok a b ha hb hl hr
+  | div => exact softDivRoutineL_ok a b ha hb hl hr
 
 /-- Two retained operands precede all routine temporaries. The final copy
     places the result in the ordinary expression destination. -/

@@ -23,7 +23,7 @@ def columnFits (t : D.Tab) (f : D.Feld t) : Bool :=
 @[simp] theorem column_words (t : D.Tab) (f : D.Feld t) (first n : Nat) :
     words (column t f first n) = n * valueWords (D.typ t f) := by
   induction n generalizing first with
-  | zero => rfl
+  | zero => simp only [column, words, Nat.zero_mul]
   | succ n ih => simp only [column, words, Zelle.ty, ih, Nat.succ_mul]; omega
 
 /-- Every in-range runtime index has its own saved complete span. -/

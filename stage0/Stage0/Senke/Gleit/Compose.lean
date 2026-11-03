@@ -16,7 +16,8 @@
     `softAddComposed_bits` is the word identity the routine correctness
     reuses. Subtraction composes this entry point with a sign-bit xor in
     `Normal/Sub.lean`; multiplication has its own exact-product continuation
-    in `Mul/`, sharing operand retention and packing. Division remains refused. -/
+    in `Mul/`, sharing operand retention and packing with the rational
+    division continuation in `Div/`. -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Stage0.Senke.Gleit.Add
@@ -29,6 +30,7 @@ public import Stage0.Senke.Gleit.Align
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 open Gleitkomma
+variable [Runner.IR.Kern]
 
 /-- Composed software addition on words: the dispatcher decides special
     inputs; the silent finite path runs the kernel `rundeExakt` of the

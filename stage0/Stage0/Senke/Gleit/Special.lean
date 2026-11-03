@@ -85,21 +85,24 @@ theorem softIsNan_model (a : UInt64) :
     softIsNan a = true ↔ klasse f64 (u64ToG a) = .nan := by
   rw [softClass_model a]
   unfold softIsNan
-  by_cases hb : softBexp a = 2047 <;> by_cases hf : softFrac a = 0 <;> simp_all
+  by_cases hb : softBexp a = 2047 <;> by_cases hz : softBexp a = 0 <;>
+    by_cases hf : softFrac a = 0 <;> simp_all
 
 /-- The infinity word test decides the kernel infinity class. -/
 theorem softIsInf_model (a : UInt64) :
     softIsInf a = true ↔ klasse f64 (u64ToG a) = .unendlich := by
   rw [softClass_model a]
   unfold softIsInf
-  by_cases hb : softBexp a = 2047 <;> by_cases hf : softFrac a = 0 <;> simp_all
+  by_cases hb : softBexp a = 2047 <;> by_cases hz : softBexp a = 0 <;>
+    by_cases hf : softFrac a = 0 <;> simp_all
 
 /-- The zero word test decides the kernel zero class. -/
 theorem softIsZero_model (a : UInt64) :
     softIsZero a = true ↔ klasse f64 (u64ToG a) = .null := by
   rw [softClass_model a]
   unfold softIsZero
-  by_cases hb : softBexp a = 0 <;> by_cases hf : softFrac a = 0 <;> simp_all
+  by_cases hb : softBexp a = 0 <;> by_cases hm : softBexp a = 2047 <;>
+    by_cases hf : softFrac a = 0 <;> simp_all
 
 /-- The word `1` at any base, for `1 - test` negations. -/
 def constOneL : Nat → Option (List II × Nat) := fun j => some ([ci 1 j 1 0], j + 1)

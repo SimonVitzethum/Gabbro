@@ -81,7 +81,7 @@ def fsZ : List (declOf uZ).Fn := ((lowerAllg uZ).toOption.get low_some).2
 
 theorem lowZ : lowerAllg uZ = .ok (PZ, fsZ) := except_ok_get low_some
 
-theorem stimmigZ : Stimmig uZ := stimmig_of (by decide)
+theorem stimmigZ : Stimmig uZ := stimmig_of (by decide) (by decide)
 
 /-- The rank check refuses the unit: `h` calls itself. -/
 theorem rang_faellt : rangB uZ (rangAuto uZ) = false := by decide
@@ -236,7 +236,7 @@ theorem rz_nlogik (f : (declOf uZ).Fn) (σ : World (declOf uZ)) (ρ : Env (declO
     split <;> (intro h; cases h)
   · intro h; cases h
 
-theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of stimmigZ.ohneReq lowZ
+theorem gesenktZ : Gesenkt uZ PZ := gesenkt_of stimmigZ.ohneReq stimmigZ.ohneTransition lowZ
 
 theorem tabZ : tabIdx uZ.tabs "T" = .ok tT := rfl
 
@@ -293,7 +293,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
     simp [fnAt, fI, uZ, paramPos] at hj
   obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
-    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen O0 0 RZ σ7 ρ₀ _ hW0 hL0
+    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen (fun c => (stimmigZ.art c).2.1) O0 0 RZ σ7 ρ₀ _ hW0 hL0
   have hcallee : callee = gI := by
     rcases callee with ⟨_ | _ | _ | n, hc⟩
     · simp [fnAt, uZ] at hname

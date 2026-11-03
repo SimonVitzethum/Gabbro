@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Parser.Round.Statements.RundlaufPred
-public import Grammatik.Parser.Round.RundlaufQuant.Teil1
+public import Grammatik.Parser.Round.RundlaufQuant.Ausdruck
 
 @[expose] public section
 
@@ -49,14 +49,15 @@ inductive PredGut : SExpr → Prop
   | nicht (x : SExpr) : PredGut x → PredGut (.un "!" x)
   | folgt (a b : SExpr) : PredGut a → PredGut b → PredGut (.ext .imp [] [a, b])
 
-/-- The fuel of a predicate's atom and of its failing expression read. -/
+/-- Fuel bounds for predicate atoms and expression attempts. -/
 def bP (e : SExpr) : Nat := 8 * (druckToks e).length + 42
-def bE (e : SExpr) : Nat := 8 * (druckToks e).length + 12
+def bE (e : SExpr) : Nat := 8 * (druckToks e).length + 30
 
 /-- What the induction carries. -/
 structure PredBein (e : SExpr) : Prop where
   atom : ∀ R G, AtomFolge R → bP e ≤ G → parsePredAtom G (atomTeil e ++ R) = .ok (atomWert e, R)
-  fehlt : gut e = false → ∀ R, Fehlt parseUnary (bE e) (druckToks e ++ R)
+  expr : ∀ R G, AtomFolge R → bE e ≤ G →
+    AusdruckAntwort (parseUnary G (druckToks e ++ R)) e R
   kopf : ∃ t ts, druckToks e = t :: ts ∧ (t = .zeichen "!" → nichtKopf e = true) ∧
     (gut e = false → t = .zeichen "(" ∨ t = .zeichen "!")
 
@@ -170,9 +171,11 @@ theorem quant_innen (k : XKind) (hk : k = .all ∨ k = .any) (x dk : String) (ns
 
 theorem bein_expr (e : SExpr) (hg : gut e = true) : PredBein e := by
   have hL : 1 ≤ (druckToks e).length := by
-    obtain ⟨t, ts, hd, -⟩ := druck_kopf_pred e hg; rw [hd]; simp only [List.length_cons, Nat.le_add_left]
+    obtain ⟨t, ts, hd, -⟩ := druck_kopf_pred e hg
+    rw [hd]; simp only [List.length_cons, Nat.le_add_left]
   refine ⟨fun R G hR hG => atom_gut e hg R hR G (by simp only [fb, bP] at hG ⊢; omega),
-    (fun h => by rw [hg] at h; cases h), ?_⟩
+    fun R G hR hG => Or.inl ((legs_tok e hg).2.1 R G hR.suff hR.gleit
+      (by simp only [fb, bE] at hG ⊢; omega)), ?_⟩
   obtain ⟨t, ts, hd, -, hbang⟩ := druck_kopf_pred e hg
   refine ⟨t, ts, hd, fun ht => ?_, (fun h => by rw [hg] at h; cases h)⟩
   obtain ⟨x, rfl⟩ := hbang ht
@@ -180,30 +183,89 @@ theorem bein_expr (e : SExpr) (hg : gut e = true) : PredBein e := by
 
 theorem nichtKopf_ext (k : XKind) (ns : List String) (xs : List SExpr) : nichtKopf (.ext k ns xs) = false := by rfl
 
+/-- Expression attempts for a predicate can be lifted to comparisons without changing
+    a successful tree or tail. -/
+theorem bein_cmp (e : SExpr) (h : PredBein e) (R : List Token) (hR : AtomFolge R) :
+    ∀ G, bE e + 6 ≤ G → AusdruckAntwort (parseCmp G (druckToks e ++ R)) e R :=
+  antwort_cmp (bE e) (druckToks e) R e hR.cmp
+    (fun G hG => h.expr R G hR (by omega))
+
+/-- The atom reader accepts the exact expression result or its predicate fallback. -/
+theorem atom_klammer_antwort (G : Nat) (T R : List Token) (e : SExpr) (hR : AtomFolge R)
+    (hC : AusdruckAntwort (parseCmp G (.zeichen "(" :: T)) e R)
+    (hP : parsePred G T = .ok (e, .zeichen ")" :: R)) :
+    parsePredAtom (G + 1) (.zeichen "(" :: T) = .ok (e, R) := by
+  rcases hC with hC | ⟨m, hC⟩
+  · exact predAtom_aus' G _ R e
+      (by intro x r h; cases h) (by intro x r h; cases h) hC hR.nichtIn hR.nichtReach
+  · exact atom_klammer G T R e m hC hP
+
+/-- The complete printed existential also round-trips through the expression reader. -/
+theorem exists_unary_rund (x dk : String) (ns : List String) (ops : List SExpr)
+    (hd : DomGut dk ns ops) (body : SExpr) (hb : PredBein body) (R : List Token) (G : Nat)
+    (hG : bE (.ext .any (x :: dk :: ns) (ops ++ [body])) ≤ G) :
+    parseUnary G (druckToks (.ext .any (x :: dk :: ns) (ops ++ [body])) ++ R) =
+      .ok (.ext .any (x :: dk :: ns) (ops ++ [body]), R) := by
+  have hdr := quant_druck .any (Or.inr rfl) x dk ns ops body
+  simp only [bE] at hG
+  rw [hdr] at hG ⊢
+  simp only [List.length_append, List.length_cons, List.length_nil] at hG
+  simp only [quantWort, List.cons_append, List.nil_append, List.append_assoc,
+    List.singleton_append]
+  obtain ⟨g, rfl⟩ : ∃ g, G = g + 11 := ⟨G - 11, by omega⟩
+  have hD := dom_rund dk ns ops hd (druckToks body ++ .zeichen ")" :: R) g (by omega)
+  have hB := bein_top body hb (.zeichen ")" :: R) g
+    ⟨rfl, rfl, rfl, by simp, by simp, by simp⟩ (by simp only [bP]; omega)
+  have hP := exists_prim_rund x dk ns ops body _ (.zeichen ")" :: R) g hD hB
+  have hU : parseUnary (g + 3) (.wort "exists" :: nameTok x :: .wort "in" ::
+      (domToks dk ns (druckToksViele ops) ++ .zeichen ":" ::
+        (druckToks body ++ .zeichen ")" :: R))) =
+      .ok (.ext .any (x :: dk :: ns) (ops ++ [body]), .zeichen ")" :: R) := by
+    simp only [parseUnary, hP]
+  have hStop : CmpStop (.zeichen ")" :: R) := ⟨rfl, rfl, rfl, rfl⟩
+  have hUnd : opUnd (.zeichen ")" :: R) = none := rfl
+  have hOder : opOder (.zeichen ")" :: R) = none := rfl
+  have hO : parseOr (g + 9) (.wort "exists" :: nameTok x :: .wort "in" ::
+      (domToks dk ns (druckToksViele ops) ++ .zeichen ":" ::
+        (druckToks body ++ .zeichen ")" :: R))) =
+      .ok (.ext .any (x :: dk :: ns) (ops ++ [body]), .zeichen ")" :: R) := by
+    simp only [parseOr, parseAnd, parseCmp, parseBit, parseAdd, parseMul, hU,
+      parseMulL, parseAddL, parseBitL, parseAndL, parseOrL, hStop.mul, hStop.add,
+      hStop.bit, hStop.vgl, hUnd, hOder]
+  exact un_paren_fall _ _ _ _ (paren_arm _ _ _ _ hO)
+
 theorem bein_quant (k : XKind) (hk : k = .all ∨ k = .any) (x dk : String) (ns : List String) (ops : List SExpr)
     (hd : DomGut dk ns ops) (body : SExpr) (hb : PredBein body) :
     PredBein (.ext k (x :: dk :: ns) (ops ++ [body])) := by
-  have hq : quantWort k = "forall" ∨ quantWort k = "exists" := by rcases hk with rfl | rfl <;> simp only [quantWort, String.reduceEq, or_false, or_true]
   have hdr := quant_druck k hk x dk ns ops body
-  have hF : ∀ R, Fehlt parseUnary 2 (druckToks (.ext k (x :: dk :: ns) (ops ++ [body])) ++ R) := by
-    intro R
-    rw [hdr]
-    simp only [List.cons_append, List.nil_append, List.append_assoc]
-    exact fehlt_klammer (fehlt_quant _ hq _)
-  refine ⟨?_, fun _ R => fehlt_mono (hF R) (by simp only [bE]; omega), ?_⟩
+  have hE : ∀ R G, AtomFolge R → bE (.ext k (x :: dk :: ns) (ops ++ [body])) ≤ G →
+      AusdruckAntwort (parseUnary G (druckToks (.ext k (x :: dk :: ns) (ops ++ [body])) ++ R))
+        (.ext k (x :: dk :: ns) (ops ++ [body])) R := by
+    intro R G _ hG
+    rcases hk with rfl | rfl
+    · apply Or.inr
+      have hF : Fehlt parseUnary 2
+          (druckToks (.ext .all (x :: dk :: ns) (ops ++ [body])) ++ R) := by
+        rw [quant_druck .all (Or.inl rfl) x dk ns ops body]
+        simp only [quantWort, List.cons_append, List.nil_append, List.append_assoc]
+        exact fehlt_klammer (fehlt_quant _)
+      exact hF G (by simp only [bE] at hG; omega)
+    · exact Or.inl (exists_unary_rund x dk ns ops hd body hb R G hG)
+  refine ⟨?_, hE, ?_⟩
   · intro R G hR hG
     obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
     simp only [atomTeil, atomWert]
-    obtain ⟨m, hm⟩ := fehlt_cmp_u (hF R) G' (by simp only [bP] at hG; omega)
+    have hC := antwort_cmp (bE (.ext k (x :: dk :: ns) (ops ++ [body])))
+      (druckToks (.ext k (x :: dk :: ns) (ops ++ [body]))) R _ hR.cmp
+      (fun F hF => hE R F hR (by omega)) G' (by simp only [bP, bE] at hG ⊢; omega)
     simp only [bP] at hG
-    rw [hdr] at hm hG ⊢
-    simp only [List.cons_append, List.nil_append, List.append_assoc] at hm ⊢
+    rw [hdr] at hC hG ⊢
+    simp only [List.cons_append, List.nil_append, List.append_assoc] at hC ⊢
     simp only [List.length_append, List.length_cons, List.length_nil] at hG
     obtain ⟨G5, rfl⟩ : ∃ G5, G' = G5 + 5 := ⟨G' - 5, by omega⟩
-    exact atom_klammer _ _ R _ m hm (quant_innen k hk x dk ns ops hd body hb R G5 (by omega)
-      (by simp only [bP]; omega))
+    exact atom_klammer_antwort _ _ R _ hR hC
+      (quant_innen k hk x dk ns ops hd body hb R G5 (by omega) (by simp only [bP]; omega))
   · rw [hdr]
     exact ⟨_, _, rfl, by simp only [Token.zeichen.injEq, String.reduceEq, false_implies], fun _ => Or.inl rfl⟩
-
 
 end Gabbro.Grammatik.Parser

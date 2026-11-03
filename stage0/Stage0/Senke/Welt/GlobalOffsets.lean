@@ -1,6 +1,6 @@
-/-! Cumulative padding for ordered global storage. -/
 module
 public import Stage0.Senke.Welt.AlignUp
+/-! Cumulative padding for ordered global storage. -/
 
 @[expose] public section
 namespace Gabbro.Stage0.Senke

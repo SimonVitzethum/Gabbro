@@ -41,7 +41,7 @@ theorem oldGlobal_ok {Λ : List (Res D)} {Γ : Ctx} (σ₀ σ : World D)
     (world : ∀ m, W m → WeltAt m L σ) (g : D.Glob) (access : gdarf D g Λ)
     {fp pc : Runner.W} {K d top : Nat} {code : List II} {m : Runner.Mem} {ρ : Env D Γ}
     (same : currentOld = true → σ₀ = σ)
-    (made : lowE (currentOld := currentOld) L (.oldG g access) d reserved = some (code, top))
+    (made : lowE (Γ := Γ) (currentOld := currentOld) L (.oldG (Γ := Γ) g access) d reserved = some (code, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d code ρ W reserved) :
     ValueOk L m pc fp K d code (D.gtyp g) (eval σ₀ (.oldG g access) σ ρ) := by
   simp only [lowE_eqs] at made

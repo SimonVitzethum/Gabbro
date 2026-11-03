@@ -6121,6 +6121,130 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 * **`ohneBibliothekAnw_kein_lcall`**, **`ohneBibliothekAnw_kein_bindLib`**, **`libraryExpansion_trifft_kein_bibliothekruf`**: Every certified expansion is definitionally no library call, so the generic lowering treats it exactly like an ordinary call.
 
 Open: the lead build of this branch (single-module checks of the four new modules and their importers, then the guardians); the Stage-0/IR payload spans (IR-03/06) and the C01 schema export stay with their owners; no language case is claimed complete by these modules.
+## 140. C17: original-source normalization and typed const replacements (2026-11-03)
+
+Implementation branch `c17-const2`, continued from `cb63c4f9a`.
+**Implementation attempts only: no Lean/lake/build or runner execution by this worker.**
+`Spec.lean`, machine G and the goal theorem statement are unchanged. The lead must check
+`gabbro_ziel` on the standard axioms; no new compiled source-to-IR case is claimed here.
+
+### Original names and canonical integer evaluation
+
+`Parser/Elab/Konst/Scalar/Expression.lean`, `Names.lean`, `Arguments.lean`:
+
+* `Code.equation`, `expression_denotes`: typed expressions have world-independent G
+  denotations at every typed environment. Arithmetic still uses the canonical G operators.
+  Unary interpretation is shared; Boolean equality uses ordinary Boolean constructors.
+* `SourceMeaning` is a structural source-to-G judgment over original expressions. Its
+  literal, local, resolved-global, result, type-limit, unary and binary rules retain the
+  actual resolved value, typed position and source operator. Qualified names are compared
+  as complete identities; locals shadow globals and type-limit fields keep their namespace.
+* `SourceMeaning.normalized` proves by structural induction that normalization elaborates
+  to exactly the original source-derived G code, including its type. `normalize` constructs
+  this derivation with the code; `Normalized` never asks the caller to supply denotation.
+* `IntegerArgument` retains original argument syntax, its normalization derivation, exact
+  bounded canonical candidate and agreement with its source-derived G value. `checkArguments`
+  checks every argument at its own declared interval and returns `ArgumentMeaning` jointly
+  for the ordered list. Boolean truth cannot become an integer argument.
+* `IntegerArgument.normalized_denotation` states equality between bounded canonical evaluation
+  of the normalized original argument and evaluation of its original G expression at every
+  pair of worlds. The candidate and agreement premises are generated certificate fields.
+
+`Scalar/Export.lean`, `Scalar/KExpr.lean`:
+
+* `SourceFunction` retains the original body/signature, `Normalized` derivation, its equality
+  to the G body, and normalization equations for both original predicate lists.
+* `CheckedCall` retains those fields, original argument derivations, typed bindings, the
+  canonical bounded candidate, the structural KExpr quotation and exact result agreement.
+* `SourceFunction.normalized` connects that structural induction to the exact retained G body.
+  `CheckedCall.normalized_denotation` connects canonical evaluation of the normalized body
+  to the G evaluation of the original source-derived body, with no separate caller duty.
+* `Function.call_equation`, `Function.Certificate.sound`, `CheckedCall.sound` retain the
+  ordinary G call, exact required return narrowing, requires/ensures and unchanged world,
+  for every world/oracle/pass budget and positive call depth.
+* `KExpr.evalInt`, `KExpr.ofInt_eval`, `quote`, `quoteBinary`, `quote_denotes` and
+  `KExpr_to_G_denotation` remain the integer quotation path. Unresolved syntax yields no
+  value; division/remainder retain G truncation. The historical Nat table evaluator is unchanged.
+
+### Portable result shapes and their exact literals
+
+`Parser/Elab/Konst/Values/{Expression,Quotation,Export}.lean`:
+
+* `expression`, `payloadExpression`, `adapt` elaborate results at their declared types.
+  Bool uses typed Boolean expressions; option uses `none`/`some` at its declared finite
+  bound; tags retain named constructors and complete typed payloads; short strings retain
+  checked UTF-8 bytes and their declared maximum. `resultSchemas` keeps ordinary closed
+  reason values tied to their declared owner even when a foreign owner has equal cardinality.
+* `Values.Function.call_equation` and `Certificate.sound` use ordinary typed G return and
+  both original predicates, independent of world/oracle/pass budget/positive call depth.
+  Portable candidates are evaluated by canonical G semantics, not a second source interpreter.
+* `LiteralMeaning`/`PayloadMeaning` relate exact source literals to complete typed values,
+  including resolved tag names, selected cases and payloads. `reify`/`reifyPayload` construct
+  those judgments and G-evaluation equations; `reify_denotes` exposes the generic equation.
+  Quotation never encodes a noninteger as zero. String spelling is retained from source and
+  checked against its complete byte list, including the empty and zero-maximum cases.
+* `Values.CheckedCall.sound` connects original source elaboration, the ordinary G call,
+  the quoted G literal and its source-literal judgment to the same complete result value.
+* The existing `UebersetzeAllg.bytesZahl` and `bytesZahl_laenge` were moved unchanged to
+  `Uebersetze/Folds/ConstantBytes.lean`; both const and runtime literal readers reuse them.
+
+`Parser/Elab/Konst/{Scope,Replacement,Ersetzung,ErsetzungTor}.lean`:
+
+* `collectFunctions` resolves original signatures through canonical types, finite table
+  domains, tagged schemas and exhaustive reasons, retaining original bodies/predicates and
+  the constant environment. The canonical `uTypIn` now resolves optional index types.
+  Units without const functions bypass this additional scope work.
+* `checkReplacement` is the common entry point. `ReplacementEvidence.Sound` and
+  `Replacement.sound` retain either the bounded/KExpr integer theorem or the complete
+  portable-value call/literal theorem, with no unchecked semantic premise.
+* `ersetzeSExpr_call_certified` derives the actual replacement certificate and its complete
+  soundness from success of the production recursive pass. Closedness is derived from that
+  success; callers do not supply it or a denotation proof.
+* Original call arguments reach this checker before names are closed. The former unchecked
+  whole-unit `closeConstantNames` pass is deleted. The traversal explicitly carries parameter,
+  sequential-local, pattern, loop, reason and quantifier scopes; only the last quantifier
+  operand is under its binder. Runtime expressions keep canonical source name resolution.
+* `Generic.constantArgument` also retains original syntax until certified replacement;
+  specialization cannot erase a failing contract or an uncertified global-name rewrite.
+* `checkSourceMetadata_sound`, `checkSourceMetadata_runtime_sound`, `checkSourceConstants_sound`
+  retain original runtime metadata checks and the successful checked rewrite/residual check.
+  Only const function declarations leave that runtime domain.
+
+### Connected consumers, witnesses and remaining boundaries
+
+`stage0/Stage0/Compiler.lean`, `Frontend/Source.lean`, `Frontend/ExportCorrectness.lean`
+continue to consume the original-source gates through ordinary G lowering, old-state
+restoration and `AkzeptiertX`. `compile_source_program`, `Compiled.const_substitution`,
+`Compiled.exports_metadata`, `Compiled.constant_exports_metadata` and the existing image
+proof retain their original metadata and admission guarantees; no runner was added.
+
+`Values/Witness.lean` (included by the grammar root) contains exact-value witnesses for
+both Bool results; None/Some; bare tags and numeric/Boolean/string payloads; closed reason
+owner/case identity; empty/one-byte/zero-maximum strings; original qualified names in body
+and argument; and joint instantiations of the normalization, argument, quotation, common
+replacement and actual substitution theorems. Negative witnesses cover wrong result/payload
+types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
+reason owner, and parameter/local/pattern/quantifier shadowing.
+
+`stage0/Stage0/Frontend/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
+source/initializer compilation, generic-contract bypass and argument-type refusals.
+`ConstValuesWitness.lean` adds source-text Bool, Some/None, tagged numeric payload, short
+string and original/qualified captured-global compilation declarations, with canonical-admission and conditional
+production-image witnesses. `Stage0.lean` includes both. These witness declarations are
+**unbuilt**; the image theorem still has an explicit successful-emission premise and no
+emitted or executed image is claimed.
+
+This is the expression-result slice with integer parameters. Still refused: noninteger
+parameters, block/control bodies, calls inside bodies/contracts needing parameter binding,
+statement-position const calls, wider/nonportable result types, and operators without a typed
+source rule (including source-width-dependent shifts). Standalone noninteger constant bindings
+still need a typed Stage-0 scope; function-result replacement does not claim that separate A28
+binding path. No safety, metadata, range, contract, cost or hardware obligation was weakened.
+
+Measured locally: static diff/whitespace checks, module headers and <500-line limits for the
+22 changed Lean modules, no forbidden proof tokens added, directory caps, and no cycles among
+2897 reachable local imports. The lead still owes changed-module/dependent checks, final witness
+integration, standard-axiom inspection and the guardians. **Zero new compiled/executed cases.**
 
 ## 150. C14: bounded guest service from source to Stage 0 (2026-11-03)
 

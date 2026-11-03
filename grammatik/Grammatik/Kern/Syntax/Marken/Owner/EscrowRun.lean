@@ -121,6 +121,7 @@ theorem M0E_kopf :
         RufFadenG escrowD) := by
     simp only [M0E]
     rw [hstart, hif]
+    rfl
   have hrumpf : progE.rumpf false = callerBodyE := rfl
   rw [hM, hrumpf]
 

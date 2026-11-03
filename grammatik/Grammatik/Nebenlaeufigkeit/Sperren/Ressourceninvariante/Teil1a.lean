@@ -295,12 +295,13 @@ theorem blatt_erhaelt_slots
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'
+      rw [(World.gibt_foldl_speicher _ _).1]
       exact lese_slots_gleich _ _ _ _ _ _
   | retWhyScoped =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).1]
   | ret e hΛe =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep

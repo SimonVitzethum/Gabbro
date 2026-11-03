@@ -89,8 +89,8 @@ theorem lowN_top {reserved : Nat} {Λ : List (Res D)} {Γ : Ctx} {tag : Nat} :
       obtain ⟨⟨ce, te⟩, _, he⟩ := h
       simp only [packSum, bin2, Prod.mk.injEq] at he
       omega
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ => by
-      have hnone : lowN (currentOld := currentOld) L (reserved := reserved) tag e d = none := rfl
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ =>
+      have hnone : lowN (currentOld := currentOld) L (reserved := reserved) tag (.val e) d = none := rfl
       rw [hnone] at h
       cases h
 

@@ -141,8 +141,13 @@ theorem wordsAt_arrSet {m3 m4 : Runner.Mem} {fp : Runner.W} {d ptr n : Nat} {τ 
   have nonempty : n ≠ 0 := by have := j.isLt; omega
   have positive := valueWords_pos τ
   have lengths : ∀ i, (encodeWords L τ (a i)).length = valueWords τ := fun i => encodeWords_length L τ _
+  rw [encodeWords.eq_def L (.arr τ n) a] at kept
+  dsimp only at kept
+  rw [if_neg nonempty] at kept
+  rw [encodeWords.eq_def L (.arr τ n) (arrSetW a j v)]
+  dsimp only
+  rw [if_neg nonempty]
   intro p hp
-  simp only [encodeWords, if_neg nonempty] at hp kept ⊢
   have hlen : (elementEncoding n (fun i => encodeWords L τ (arrSetW a j v i))).length = n * valueWords τ :=
     elementEncoding_length n _ _ (fun i => encodeWords_length L τ _)
   have pBound : p < n * valueWords τ := by omega

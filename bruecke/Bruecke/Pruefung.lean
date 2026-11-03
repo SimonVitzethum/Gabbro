@@ -69,6 +69,15 @@ def stimmigB (u : UProg) : Bool :=
     u.fns.all fun fn =>
     artB fn && namenB fn && freiB fn && oldsB u fn && postB u fn && schreibtB u fn
 
+/-- Generated transition bodies are lowered separately and have no Body simulation. -/
+def ohneTransitionB (u : UProg) : Bool :=
+  (List.finRange u.fns.length).all fun c => (transitionOfFn u c).isNone
+
+theorem ohneTransitionB_ok {u : UProg} (h : ohneTransitionB u = true) :
+    OhneGenerierteTransitions u := by
+  intro c
+  exact Option.isNone_iff_eq_none.mp (List.all_eq_true.mp h c (List.mem_finRange c))
+
 theorem oldName_mem : ∀ i, oldName i ∈ oldNamen := by
   intro i
   match i with
@@ -159,7 +168,7 @@ theorem keinBoolB_ok (h : keinBoolB u = true) :
     simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, Option.isNone_iff_eq_none] at this
     exact ⟨this.1.1.1.1, this.1.1.1.2, this.1.1.2, this.1.2, this.2⟩
 
-theorem stimmig_of (h : stimmigB u = true) : Stimmig u := by
+theorem stimmig_of (h : stimmigB u = true) (hPlain : ohneTransitionB u = true) : Stimmig u := by
   simp only [stimmigB, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨hk, ht⟩, hq⟩, hi⟩, hg⟩, hf⟩ := h
   have hc : ∀ c : Fin u.fns.length, (artB (fnAt u c) && namenB (fnAt u c) && freiB (fnAt u c) &&
@@ -177,7 +186,7 @@ theorem stimmig_of (h : stimmigB u = true) : Stimmig u := by
       have := List.all_eq_true.mp hq g hg
       simp only [Bool.and_eq_true, beq_iff_eq] at this
       exact this.2,
-    List.isEmpty_iff.mp hi, List.isEmpty_iff.mp hg⟩
+    List.isEmpty_iff.mp hi, List.isEmpty_iff.mp hg, ohneTransitionB_ok hPlain⟩
 
 /-! ## The rank -/
 

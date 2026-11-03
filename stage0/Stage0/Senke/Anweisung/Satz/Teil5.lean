@@ -14,6 +14,7 @@ public import Stage0.Senke.Anweisung.Faelle.Gleit.Add
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Wahl
 public import Stage0.Senke.Anweisung.Bindung.Option
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Why
+public import Stage0.Senke.Anweisung.Faelle.RueckgabeScoped
 public import Stage0.Senke.Anweisung.Faelle.CallElse
 public import Stage0.Senke.Anweisung.Faelle.Fnptr
 public import Stage0.Senke.Anweisung.Bytes.Shift
@@ -152,12 +153,17 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
   | _, Γ, Λ, _, .consumeTraverse t member edge inv bound mass body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    -- The consuming image recompiles its body with protected control words and resolved exits.
     exact consumeTraverse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
       (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body)
       (fun {pr ex} => lowB_ok hS hA hlo0 hens body)
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  | _, _, _, _, .retScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
-  | _, _, _, _, .retWhyScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowS, resultWords_vertragVon] at h
+  | _, Γ, Λ, _, .retScoped e R, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact retScoped_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (e := e) (Rr := R)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+  | _, Γ, Λ, _, .retWhyScoped r R, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    exact retWhyScoped_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (r := r) (Rr := R)
+      c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
 theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat} (hS : FunSpec L A C R dv cap)
@@ -212,14 +218,10 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       blockNarrowRequired_case hS hA hlo0 hens (fun {pr ex} => lowB_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .check cnd err rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_check (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (cnd := cnd) (err := err) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest) (ih_lowEnd_ok_err := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ err)
-  | _, Γ, Λ, _, .float op a b low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
-      by_cases supported : op ≠ .div
-      · exact blockFloatArithmetic_case op supported hS hA hlo0 hens
-          (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
-          c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-      · have division : op = .div := by simpa only [not_not] using supported
-        subst op
-        simp [lowB, floatArithmeticBlockL] at h
+  | _, Γ, Λ, _, .float op a b low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
+      blockFloatArithmetic_case op hS hA hlo0 hens
+        (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+        c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   | _, Γ, Λ, _, .floatLit q low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_floatLit (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (q := q) (low := low) (high := high) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest)
   | _, Γ, Λ, _, .floatOf e low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
@@ -287,8 +289,12 @@ theorem lowEnd_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f 
       endNarrowRequired_case hS hA hlo0 hens (fun {pr ex} => lowEnd_ok hS hA hlo0 hens) c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   | _, Γ, Λ, .exchange g neu proof0 proof1 rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr =>
       lowEnd_ok_exchange (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (g := g) (neu := neu) (proof0 := proof0) (proof1 := proof1) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowEnd_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowEnd_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ rest)
-  | _, _, _, .retScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
-  | _, _, _, .retWhyScoped .., _, _, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by simp [lowEnd, resultWords_vertragVon] at h
+  | _, Γ, Λ, .retScoped e R, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    exact endRetScoped_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (e := e) (Rr := R)
+      c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
+  | _, Γ, Λ, .retWhyScoped r R, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hu, hk, hWa, hpr => by
+    exact endRetWhyScoped_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens (r := r) (Rr := R)
+      c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
 
 theorem lowArms_all {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}

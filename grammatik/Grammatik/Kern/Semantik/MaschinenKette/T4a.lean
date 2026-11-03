@@ -64,6 +64,7 @@ theorem kette_aus_lauf_bezeugt
       (_hReach' : GenErreichbar P O passes (GenStart sp) M')
       (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
       (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+      (_hleaf : s.istBlatt = true)
       (_hΛ : HeldGenau Λ (offen (M.spuren f)))
       (σ' : World D) (neu : List (Ereignis D))
       (_hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -170,7 +171,7 @@ theorem kette_aus_lauf_bezeugt
             exact hw
           exact hwit_leaf Mmid V l Γ Λ Λ' s ρ hΛ σ' neu hstep hw'
         obtain ⟨J', hJ'w, hJ'l, hmemJ', hJ'f, hJ'code, hLink', hGuard'⟩ :=
-          hWitSchritt Mmid _ hReachMid hReachEnd V l Γ Λ Λ' s ρ hΛ σ' neu hstep
+          hWitSchritt Mmid _ hReachMid hReachEnd V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep
             rfl rfl J hJw hmemJ hW hG hmid_single hGuardT hCovJ hLinkJ hneu_wit
         refine ⟨J', hJ'w, hJ'l, hmemJ', ?_, ?_, hLink', hGuard'⟩
         · exact hJ'f.trans hJfJ

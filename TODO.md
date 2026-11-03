@@ -21,6 +21,25 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
   now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
+  - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
+    refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
+    No builds were run for that audit. Remaining refusals include:
+    - Scoped returns inside lock bodies; source `by consuming`. `consumeTraverse` follows `verbrauchLauf` in Stage 0
+      (`consumeTraverse_case`); lead elaboration pending.
+    - Computed wide-integer-to-float conversion, long string concatenation/order, wide option
+      tests, non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
+      wide statement narrowing, and unsupported entry-snapshot subtrees.
+    - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
+      foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
+    - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual generic calls/module headers, counterprobes,
+      annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
+    - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
+      incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
+  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
+    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
+    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
+  - **Additional branch implementation notes (lead checks pending).**
   - **Stage-0 refusals with their missing step:**
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
