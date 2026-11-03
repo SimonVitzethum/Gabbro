@@ -13,8 +13,7 @@
 -/
 module
 public import Stage0.Senke.Rueckkehr
-public import Stage0.Senke.Tore.RequestModel
-public import Stage0.Senke.Tore.AreaModel
+public import Stage0.Senke.Tore.Model
 public import Stage0.Senke.Welt.Packen
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
