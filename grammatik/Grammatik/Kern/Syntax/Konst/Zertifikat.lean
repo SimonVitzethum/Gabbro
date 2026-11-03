@@ -204,8 +204,7 @@ theorem const_call_eindeutig (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (c.
   obtain ⟨s₁, e₁, _, _⟩ := const_call_sound c f args cert₁ hadm n hterm (constWelt c) (constOrakel c) 0 depth hD₁
   obtain ⟨s₂, e₂, _, _⟩ := const_call_sound c f args cert₂ hadm n hterm (constWelt c) (constOrakel c) 0 depth hD₂
   rw [e₁] at e₂
-  cases e₂
-  rfl
+  exact (RufAusgang.ok.inj e₂).2
 
 /-- Depth stability: past its bound the certified call no longer moves. -/
 theorem const_call_stabil (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (c.D.params f))
@@ -225,7 +224,10 @@ theorem const_call_fehlerVertrag (c : ConstProgram) (f : c.D.Fn) (args : Env c.D
     (haufwand : constArbeitsSchranke c f ≤ limit)
     (h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.vorbedingung g) ∨ rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.nachbedingung g)) :
     evalConstCall c f args limit = ConstCallResult.contract g := by
-  rcases h with h | h <;> simp only [evalConstCall, if_pos haufwand, h]
+  rcases h with h | h <;>
+  (unfold evalConstCall
+   rw [if_pos haufwand]
+   split <;> simp_all)
 
 /-- Error correspondence, exhaustion half: exhausted fuel refuses with the
     used and allowed work. -/
@@ -234,7 +236,9 @@ theorem const_call_fehlerErschoepft (c : ConstProgram) (f : c.D.Fn) (args : Env 
     (haufwand : constArbeitsSchranke c f ≤ limit)
     (h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik (.abstieg g)) :
     evalConstCall c f args limit = ConstCallResult.exhausted (constArbeitsSchranke c f) limit := by
-  simp only [evalConstCall, if_pos haufwand, h]
+  unfold evalConstCall
+  rw [if_pos haufwand]
+  split <;> simp_all
 
 /-- Error correspondence, limit half: work past the limit refuses before
     any reduction. -/
@@ -250,7 +254,9 @@ theorem const_call_fehlerBereich (c : ConstProgram) (f : c.D.Fn) (args : Env c.D
     (haufwand : constArbeitsSchranke c f ≤ limit)
     (h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.logik .bereich) :
     evalConstCall c f args limit = ConstCallResult.range f := by
-  simp only [evalConstCall, if_pos haufwand, h]
+  unfold evalConstCall
+  rw [if_pos haufwand]
+  split <;> simp_all
 
 /-- Error correspondence, dependency half: a hardware answer needed outside
     the closed program refuses as an unresolved dependency. -/
@@ -259,7 +265,9 @@ theorem const_call_fehlerHardware (c : ConstProgram) (f : c.D.Fn) (args : Env c.
     (haufwand : constArbeitsSchranke c f ≤ limit)
     (h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.hardware e) :
     evalConstCall c f args limit = ConstCallResult.dependency f := by
-  simp only [evalConstCall, if_pos haufwand, h]
+  unfold evalConstCall
+  rw [if_pos haufwand]
+  split <;> simp_all
 
 /-- Error correspondence, reason half: the absent reason channel refuses as
     an unresolved dependency. -/
@@ -268,6 +276,8 @@ theorem const_call_fehlerGrund (c : ConstProgram) (f : c.D.Fn) (args : Env c.D (
     (haufwand : constArbeitsSchranke c f ≤ limit)
     (h : rufAt c.P (constOrakel c) 0 (constTiefenSchranke c) f (constWelt c) args = RufAusgang.why w r) :
     evalConstCall c f args limit = ConstCallResult.dependency f := by
-  simp only [evalConstCall, if_pos haufwand, h]
+  unfold evalConstCall
+  rw [if_pos haufwand]
+  split <;> simp_all
 
 end Gabbro.Grammatik
