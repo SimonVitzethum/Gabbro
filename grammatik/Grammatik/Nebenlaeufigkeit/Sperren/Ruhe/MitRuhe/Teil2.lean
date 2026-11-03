@@ -37,10 +37,10 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .var x => .var (varR x)
   | _, _, _, .glob g hL => Expr.glob (D := D.mitRuhe) g (gdarfR hL)
   | _, _, _, .slot t f i hL => Expr.slot (D := D.mitRuhe) t f (ruE i) (darfR hL)
-  | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ht f (ruE i) (darfR hL)
+  | _, _, _, .thru p t ht f i hL => Expr.thru (D := D.mitRuhe) (ruE p) t ((Deklaration.mitRuhe_capTab D _ _).trans ht) f (ruE i) (darfR hL)
   | _, _, _, .thruOwn p t ht f i m s ho he hg hL =>
-      Expr.thruOwn (D := D.mitRuhe) (ruE p) t ht f (ruE i) m s ho he hg (darfR hL)
-  | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ht rw
+      Expr.thruOwn (D := D.mitRuhe) (ruE p) t ((Deklaration.mitRuhe_capTab D _ _).trans ht) f (ruE i) m s ho he hg (darfR hL)
+  | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D.mitRuhe) t n ((Deklaration.mitRuhe_capTab D _ _).trans ht) rw
   | _, _, _, .fnref f n h => .fnref (D := D.mitRuhe) (some f) (n + 1) h
   | _, _, _, .refEq a b => .refEq (ruE a) (ruE b)
   | _, _, _, .slotRef r t ht ho f hL => .slotRef (ruE r) t ht ho f (darfR hL)
@@ -99,9 +99,9 @@ def ruE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
   | _, _, _, .intBuiltin1 op a => .intBuiltin1 (ibR op) (ruE a)
   | _, _, _, .intBuiltin2 op a b => .intBuiltin2 (ibR op) (ruE a) (ruE b)
   | _, _, _, .count n body => .count n (ruE body)
-  | _, _, _, .prod r args => .prod r (ruA args)
-  | _, _, _, .prodGet v i => .prodGet (ruE v) (FieldAt.mapTy tyR i)
-  | _, _, _, .prodSet v i e => .prodSet (ruE v) (FieldAt.mapTy tyR i) (ruE e)
+  | _, _, _, .prod r args => .prod r ((Ty.map_eq_mapFields (fun n => n + 1) id _) ▸ ruA args)
+  | _, _, _, .prodGet v i => .prodGet (ruE v) (FieldAt.mapNumbers (fun n => n + 1) id i)
+  | _, _, _, .prodSet v i e => .prodSet (ruE v) (FieldAt.mapNumbers (fun n => n + 1) id i) (ruE e)
 
 /-- A payload expression, translated. -/
 def ruN : {Γ : Ctx} → {Λ : List (Res D)} → {c : Option Ty} → NutzlastExpr D Γ Λ c →
@@ -132,9 +132,9 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
     Stmt D V l Γ Λ Λ' → Stmt D.mitRuhe (vertragR V) l (Γ.map tyR) (Λ.map resR) (Λ'.map resR)
   | _, _, _, _, .assignSlot t f i e hw hL => .assignSlot t f (ruE i) (ruE e) hw (darfR hL)
   | _, _, _, _, .assignThru p t ht f i e hw hL =>
-      .assignThru (ruE p) t ht f (ruE i) (ruE e) hw (darfR hL)
+      .assignThru (ruE p) t ((Deklaration.mitRuhe_capTab D _ _).trans ht) f (ruE i) (ruE e) hw (darfR hL)
   | _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hw hL =>
-      .assignThruOwn (ruE p) t ht f (ruE i) (ruE e) m s ho he hg hw (darfR hL)
+      .assignThruOwn (ruE p) t ((Deklaration.mitRuhe_capTab D _ _).trans ht) f (ruE i) (ruE e) m s ho he hg hw (darfR hL)
   | _, _, _, _, .assignSlotRef r t ht ho f e hw hL =>
       .assignSlotRef (ruE r) t ht ho f (ruE e) hw (darfR hL)
   | _, _, _, _, .assignGlob g e hw hL => .assignGlob g (ruE e) hw (gdarfR hL)
@@ -155,9 +155,9 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, Λ, _, .callInd (n := n) p args hp hr =>
       Stmt.nachΛ (nachSig_map (D.sigNr n) Λ).symm
         (.callInd (V := vertragR V) (n := n + 1) (ruE p) (ruA args) (rufPasstR hp) hr)
-  | _, _, Λ, _, .callIndElse (n := n) p args he hp hr err =>
+  | _, _, Λ, _, .callIndElse (n := n) (τ := τ) p args he hp hr err =>
       Stmt.nachΛ (nachSig_map (D.sigNr n) Λ).symm
-        (.callIndElse (V := vertragR V) (n := n + 1) (ruE p) (ruA args)
+        (.callIndElse (V := vertragR V) (n := n + 1) (τ := tyR τ) (ruE p) (ruA args)
           (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
           (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd err)))
   | _, _, _, _, .locks L hr body =>
@@ -174,7 +174,7 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, Λ, _, .axiomCallElse e a args he hp hd hgd hr err =>
       Stmt.nachΛ (nachSig_map (D.asignatur a) Λ).symm
         (.axiomCallElse (V := vertragR V) (e.map tyR) a (ruA args)
-          (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) (rufPasstR hp)
+          (by show Option.map tyR (D.aerg a) = _; rw [he]) (rufPasstR hp)
           (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) hr
           (Endblock.umΛ (nachSig_map (D.asignatur a) Λ) (ruEnd err)))
   | _, _, _, _, .regWrite r hk e => .regWrite r hk (ruE e)
@@ -188,9 +188,9 @@ def ruS {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
   | _, _, _, _, .ret e hΛ => .ret (ruErg e) ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, _, .retScoped e R =>
-      .retScoped (ruErg e) ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
+      .retScoped (ruErg e) ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map, List.map_map]; exact List.Perm.refl _)⟩
   | _, _, _, _, .retWhyScoped r R =>
-      .retWhyScoped r ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
+      .retWhyScoped r ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map, List.map_map]; exact List.Perm.refl _)⟩
   | _, _, _, _, .leave h => .leave h
   | _, _, _, _, .next h => .next h
 
@@ -271,9 +271,9 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
   | _, _, _, .ret e hΛ => .ret (ruErg e) ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, .retWhy r hΛ => .retWhy r ((hΛ.map resR).trans (by rw [ende_map]))
   | _, _, _, .retScoped e R =>
-      .retScoped (ruErg e) ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
+      .retScoped (ruErg e) ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map, List.map_map]; exact List.Perm.refl _)⟩
   | _, _, _, .retWhyScoped r R =>
-      .retWhyScoped r ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map])⟩
+      .retWhyScoped r ⟨R.scopes, (R.genau.map resR).trans (by rw [List.map_append, ende_map, List.map_map]; exact List.Perm.refl _)⟩
   | _, _, _, .leave h => .leave h
   | _, _, _, .next h => .next h
   | _, _, _, .cons s rest => .cons (ruS s) (ruEnd rest)
@@ -375,7 +375,7 @@ theorem ru_erg (a : D.Ax) (n : Nat) (herg : (D.asignatur a).erg = some (Ty.ref n
     (D.mitRuhe.asignatur a).erg = some (Ty.ref n) := by
   have h : D.aerg a = some (Ty.ref n) := herg
   show (D.aerg a).map tyR = some (Ty.ref n)
-  simp only [h, Option.map_some, tyR]
+  simp only [h, Option.map_some, tyR, Ty.mapNumbers, id]
 
 /-- **A boundary clause of the foreign item `a` as a clause over `D.mitRuhe`**: the same clause,
     its length expressions translated by `ruE`, the capability index moved along the length
@@ -423,7 +423,7 @@ def Programm.mitRuhe (P : Programm D) : Programm D.mitRuhe where
     | n + 1 => ruCallContract (D.sigNr n) (P.ptrVertrag n)
   -- the foreign contracts keep their pre/post and boundary clauses (C08): the idle root calls
   -- no foreign item, and the contract of an item is the translated contract of `D`
-  axVertrag a := ⟨ruE (P.axVertrag a).pre, Expr.umΓ (ergCtx_map (D.asignatur a).params (D.asignatur a).erg) (ruE (P.axVertrag a).post), (P.axVertrag a).grenzen.map (ruKlausel a)⟩
+  axVertrag a := ⟨ruE (P.axVertrag a).pre, Expr.umΓ (ergCtx_map (D.asignatur a).params (D.asignatur a).erg) (ruE (P.axVertrag a).post), (P.axVertrag a).grenzen.map (ruKlausel (D := D) a)⟩
 
 /-- The member list of `D.mitRuhe`'s functions: the root, then `fs`. -/
 def fsRuhe (fs : List D.Fn) : List D.mitRuhe.Fn := none :: fs.map some

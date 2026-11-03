@@ -420,4 +420,19 @@ def Block.vorΛ {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ₁ Λ₂ Λ' : List (R
 def Endblock.umΛ {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ₁ Λ₂ : List (Res D)} (h : Λ₁ = Λ₂)
     (e : Endblock D V l Γ Λ₁) : Endblock D V l Γ Λ₂ := h ▸ e
 
+
+/-- Table capabilities resolve identically in the shifted declaration. -/
+theorem Deklaration.mitRuhe_capTab (D : Deklaration) (space number : Nat) :
+    D.mitRuhe.capTab space number = D.capTab space number := by
+  unfold Deklaration.capTab
+  cases h : D.tabNr number <;> simp [h] <;> rfl
+
+
+/-- `Ty.mapFields` is the pointwise `Ty.mapNumbers`. -/
+theorem Ty.map_eq_mapFields (sn tn : Nat → Nat) (fs : List Ty) :
+    fs.map (Ty.mapNumbers sn tn) = Ty.mapFields sn tn fs := by
+  induction fs with
+  | nil => rfl
+  | cons τ τs ih => simp only [List.map_cons, Ty.mapFields, ih]
+
 end Gabbro.Grammatik
