@@ -27,11 +27,12 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
     * `max`/`min` select one operand (`wenn`), hence stay in range without a
       check -- no silent wrap, no saturation;
-    * `add`/`or`/`and` compute into a fresh local and `trim` it to `lo .. hi`:
-      a violated prefix duty drops the contribution (update: early return, no
-      store, no history record) or restarts the fold from neutral (reduction:
-      the else returns neutral) -- every overflow is an explicit branch, never
-      an implicit wrap or saturation.
+    * `add`/`or`/`and` compute into a fresh local and narrow it to `lo .. hi`
+      with `trimReq` (`Block/Endblock.narrowRequired`): a violated prefix duty
+      stops with `Logik.kapazitaet` in the update and in the reduction alike,
+      excluded by the caller's capacity duty exactly as C11/C18 required
+      narrowing. No contribution is dropped, no fold restarts from neutral,
+      nothing wraps or saturates silently.
 
     Use sites expand to calls of the generated functions: `n = v;` becomes
     `n#aktualisiere(v)`, `let x [: T] = n;` and `return n;` become the sampled
@@ -90,7 +91,7 @@ def uAkkuAktArm (p : AkkuPlan) (lo hi : Int) (op : String) (i : Nat) : SAnw :=
     else
       let bin := if strEq op "add" then "+" else if strEq op "or" then "|" else "&"
       [.bind false s none (.bin bin (.variable zelle) (.variable "v")),
-        .trim (.variable s) bereich (.block [] (some (.ret none))),
+        .trimReq (.variable s) bereich,
         .set (.variable zelle) "=" (.variable s)])
     none
   .locks false (.variable sperre) gamb
@@ -123,13 +124,12 @@ def uAkkuAktFn (p : AkkuPlan) (t : STyp) (lo hi : Int) (op : String) :
     uAkkuAktKoerper p lo hi op)
 
 /-- One merge step of the reduction into the accumulator `m` for cell `i`. -/
-def uAkkuFaltSchritt (p : AkkuPlan) (lo hi neutral : Int) (op : String)
+def uAkkuFaltSchritt (p : AkkuPlan) (lo hi : Int) (op : String)
     (i : Nat) : List SAnw :=
   let zelle := p.name ++ "#zelle" ++ toString i
   let sperre := p.name ++ "#sperre" ++ toString i
   let s := "s" ++ toString i
   let bereich := uAkkuBereichText lo hi
-  let neu := uAkkuNeutralExpr neutral
   let inner : List SAnw :=
     if strEq op "max" then
       [.cond (.bin "<" (.variable "m") (.variable zelle))
@@ -140,7 +140,7 @@ def uAkkuFaltSchritt (p : AkkuPlan) (lo hi neutral : Int) (op : String)
     else
       let bin := if strEq op "add" then "+" else if strEq op "or" then "|" else "&"
       [.bind false s none (.bin bin (.variable "m") (.variable zelle)),
-        .trim (.variable s) bereich (.block [] (some (.ret (some neu)))),
+        .trimReq (.variable s) bereich,
         .set (.variable "m") "=" (.variable s)]
   [.locks false (.variable sperre) (.block inner none)]
 
@@ -149,7 +149,7 @@ def uAkkuFaltSchritt (p : AkkuPlan) (lo hi neutral : Int) (op : String)
 def uAkkuFaltKoerper (p : AkkuPlan) (t : STyp) (lo hi neutral : Int)
     (op : String) : SAnw :=
   .block ([.bind true "m" (some t) (uAkkuNeutralExpr neutral)] ++
-      (List.range p.kernZahl).flatMap (uAkkuFaltSchritt p lo hi neutral op))
+      (List.range p.kernZahl).flatMap (uAkkuFaltSchritt p lo hi op))
     (some (.ret (some (.variable "m"))))
 
 /-- The reduction function: no parameters, answer `T`, costs counting the
