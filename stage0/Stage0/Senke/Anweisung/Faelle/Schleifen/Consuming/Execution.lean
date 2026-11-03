@@ -132,10 +132,13 @@ theorem correct {O : Orakel D} {passes : Nat}
       have resumed := q.resume false ready2 (by have := entry.2.2; omega)
         oldBound fuelRead2 savedRead σ' ρ' body
       dsimp only at resumed ⊢
-      split at resumed ⊢
-      · obtain ⟨m3, run, frame, kept, next⟩ := resumed
+      by_cases good : 0 ≤ (q.massW σ' ρ'.tail).2 ∧
+          (q.massW σ' ρ'.tail).2 ≤ x.bound ∧ (q.massW σ' ρ'.tail).2 < (q.massW σr ρ).2
+      · simp only [good, Bool.false_eq_true, ↓reduceIte] at resumed ⊢
+        obtain ⟨m3, run, frame, kept, next⟩ := resumed
         exact ⟨m3, prefix.trans run, prefixFrame.trans frame, prefixKept.trans kept, next⟩
-      · exact Stops.prefix prefix resumed
+      · simp only [good, ↓reduceIte] at resumed ⊢
+        exact Stops.prefix prefix resumed
     generalize bodyOutcome : execBlock O passes R body (q.massW σr ρ).1 (.cons k ρ) = outcome at pass ⊢
     cases outcome with
     | ok σ' ρ' => exact again σ' ρ' pass
@@ -144,13 +147,18 @@ theorem correct {O : Orakel D} {passes : Nat}
       have resumed := q.resume true ready2 (by have := entry.2.2; omega)
         oldBound fuelRead2 savedRead σ' ρ' pass
       dsimp only at resumed ⊢
-      split at resumed ⊢
-      · split at resumed ⊢
-        · exact Reach.prefix prefix prefixFrame prefixKept resumed
-        · exact Stops.prefix prefix resumed
-      · exact Stops.prefix prefix resumed
-    | zurueck σ' value => exact RetZ.prefix prefix (prefixFrame.mono (by have := x.low; simp [FB] at *; omega)) pass
-    | why σ' reason => exact RetWhy.prefix prefix (prefixFrame.mono (by have := x.low; simp [FB] at *; omega)) pass
+      by_cases good : 0 ≤ (q.massW σ' ρ'.tail).2 ∧
+          (q.massW σ' ρ'.tail).2 ≤ x.bound ∧ (q.massW σ' ρ'.tail).2 < (q.massW σr ρ).2
+      · simp only [good, ↓reduceIte] at resumed ⊢
+        by_cases valid : (q.invW (q.massW σ' ρ'.tail).1 ρ'.tail).2 = true
+        · simp only [valid, ↓reduceIte] at resumed ⊢
+          exact Reach.prefix prefix prefixFrame prefixKept resumed
+        · simp only [valid, ↓reduceIte] at resumed ⊢
+          exact Stops.prefix prefix resumed
+      · simp only [good, ↓reduceIte] at resumed ⊢
+        exact Stops.prefix prefix resumed
+    | zurueck σ' value => exact RetZ.prefix prefix (prefixFrame.mono x.low) pass
+    | why σ' reason => exact RetWhy.prefix prefix (prefixFrame.mono x.low) pass
     | logik code => exact Stops.prefix prefix pass
     | hardware code => exact Stops.prefix prefix pass
 
