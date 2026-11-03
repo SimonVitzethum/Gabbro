@@ -28,6 +28,12 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
+/-- O43 is a separate user duty for the actual lowered pointer contracts.
+    Structural conformance and Body duties do not establish this refinement. -/
+def SchnittstellenPflicht (u : UProg) : Prop :=
+  ∀ (P : Programm (declOf u)) (fs : List (declOf u).Fn),
+    lowerAllg u = .ok (P, fs) → PtrVerfeinert P
+
 /-! ## 1. The environment for every rank -/
 
 theorem realisiert_alle (S : Stimmig u)
@@ -169,7 +175,7 @@ theorem lauf_P {P : Programm (declOf u)} {fs : List (declOf u).Fn}
         R g σr envA = .logik e) ∧
     (∀ σ' v, execEnd (V := vertragVon (declOf u) c) O' passes R (P.rumpf c) σ ρ = .zurueck σ' v →
       EnsAmRueck P c σ σ' ρ v) := by
-  have G := gesenkt_of S.ohneReq hlow
+  have G := gesenkt_of S.ohneReq S.ohneTransition hlow
   have hlowAll : ∀ c : Fin u.fns.length, ∃ b0,
       lowBody u c (fnAt u c).body (fnAt u c).ret = .ok b0 :=
     fun c => (G.rumpf c).imp fun _ h => h.1
@@ -230,7 +236,7 @@ theorem bruecke_koerperGutR {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   intro passes c O' _ _ R hRR hOV σ ρ _
   have hl := lauf_P hlow S rk hR hZ c O' passes R hRR σ ρ
   refine ⟨hl.2, fun g h => ?_⟩
-  rw [torRuf_eq (gesenkt_of S.ohneReq hlow) R] at h
+  rw [torRuf_eq (gesenkt_of S.ohneReq S.ohneTransition hlow) R] at h
   obtain ⟨g0, σr, envA, hR0⟩ := hl.1 _ h
   exact hOV g0 σr envA _ hR0 g rfl
 
@@ -248,11 +254,13 @@ theorem bruecke_keineLogik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
 /-! ## 5. Premise (b) of the goal theorem -/
 
 /-- **The bodies' logic of premise (b)** (`LogikPflicht`), for the lowered program with the
-    parser's empty lock family and the trivial axiom ensures -- from GabbroV's duties. -/
+    parser's empty lock family and trivial axiom ensures: Body duties establish the body
+    component; `hPtr` separately establishes refinement of every lowered pointer interface. -/
 theorem bruecke_logik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : Stimmig u) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
-      meetsU u (wfU u) (fnAt u c) body) :
+      meetsU u (wfU u) (fnAt u c) body)
+    (hPtr : PtrVerfeinert P) :
     Zielsatz.LogikPflicht P (SperrInv.leer (declOf u)) (axWahr (declOf u)) :=
   ⟨fun passes f => ⟨koerperGutS_leer ⟨koerperGutRQ_of_R _ (bruecke_koerperGutR hlow S rk hR hZ passes f),
       bruecke_keineLogik hlow S rk hR hZ passes _ f⟩,
@@ -262,34 +270,22 @@ theorem bruecke_logik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
       have h := r.isLt
       have h0 : (declOf u).gruende f = 0 := sigGruende_null u S.ohneGrund f
       omega⟩,
-   fun _ _ _ _ => rfl, axEnsLokal_wahr, ptrVerfeinert_trivial (fun f _ _ => by
-     unfold ReqAmEintritt
-     rw [lowerAllg_requires u P fs S.ohneReq hlow]
-     rfl) (by
-       unfold lowerAllg at hlow
-       split at hlow
-       · cases hlow
-       · split at hlow
-         · cases hlow
-         · split at hlow
-           · obtain ⟨rfl, -⟩ := Gabbro.Grammatik.Parser.Measures.checkedProgram_eq hlow
-             intro n
-             rfl
-           · cases hlow)⟩
+   fun _ _ _ _ => rfl, axEnsLokal_wahr, hPtr⟩
 
 /-- **PREMISE (b) OF THE GOAL THEOREM, FROM GABBROV** -- for a unit whose program is the Lean
-    parser's lowering of its source text: the bodies' logic from the duties (S3), the start from
-    the shape of the lowering (S4, `startPflicht_wahr`). -/
+    parser's ordinary-body lowering: the bodies' logic from the duties (S3), O43 from `hPtr`,
+    and the start from the shape of the lowering (S4, `startPflicht_wahr`). -/
 theorem bruecke_nutzer {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : Stimmig u) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body)
+    (hPtr : PtrVerfeinert P)
     (E : Zielsatz.Einheit (declOf u)) (hP : E.P = P) (hS : E.S = SperrInv.leer (declOf u))
     (hQ : E.Q = axWahr (declOf u)) : Zielsatz.NutzerPflicht E := by
-  obtain ⟨EP, ES, EQ, st, sp, ge, arenen, akku, pruefungen⟩ := E
+  obtain ⟨EP, ES, EQ, st, sp, ge, arenen, akku, pruefungen, grants0⟩ := E
   simp only at hP hS hQ
   subst hP hS hQ
-  exact ⟨bruecke_logik hlow S rk hR hZ,
+  exact ⟨bruecke_logik hlow S rk hR hZ hPtr,
     startPflicht_wahr _ (fun _ => rfl) (lowerAllg_requires u _ fs S.ohneReq hlow)⟩
 
 end Gabbro.Bruecke

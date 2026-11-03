@@ -46,8 +46,9 @@ that statement for premise (b) of the goal theorem:
 
 * `Pflichten src` is a `Prop` COMPUTED from the text: the Lean front end `uebersetzeAllg` elaborates
   `src` (`uOf`), and the duties are `meetsU` of every function (the statement a person proves),
-  next to the Bool checks of the unit's shape (`nullB`, `stimmigB`, `rangB`). Nothing printed by
-  Rust is in it.
+  next to the Bool checks of the unit's shape (`nullB`, `stimmigB`, `rangB`,
+  `ohneTransitionB`) and the separate O43 duty (`SchnittstellenPflicht`). Nothing printed by
+  Rust is in it; Body proofs alone no longer close the interface-refinement component.
 * `nutzer_aus_quelle` is the theorem over EVERY `src`: if the front end accepts `src` and
   `Pflichten src` is proved, premise (b) (`NutzerPflicht`, and with the atomic rely
   `NutzerPflichtA`) holds for the unit `einheitAllg` built from what the front end produced.
@@ -154,7 +155,7 @@ def einheitAllg (u : UProg) (P : Programm (declOf u)) (h : nullB u = true) : Zie
     some u` fixes it, so a witness can only be the front end's own output. -/
 def Pflichten (src : String) : Prop :=
   ∃ u : UProg, uOf src = some u ∧ nullB u = true ∧ stimmigB u = true ∧
-    rangB u (rangAuto u) = true ∧
+    rangB u (rangAuto u) = true ∧ ohneTransitionB u = true ∧ SchnittstellenPflicht u ∧
     ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body
 
@@ -198,11 +199,12 @@ theorem nutzer_aus_quelle {src : String} (hp : Pflichten src) {u : UProg}
     {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
     ∃ hn : nullB u = true, Zielsatz.NutzerPflicht (einheitAllg u P hn) := by
-  obtain ⟨u', hu', hn, hs, hr, hz⟩ := hp
+  obtain ⟨u', hu', hn, hs, hr, hPlain, hPtr, hz⟩ := hp
   rw [uOf_eq h] at hu'
   injection hu' with hu'
   subst hu'
-  exact ⟨hn, bruecke_nutzer (lower_of_uebersetze h) (stimmig_of hs) (rangAuto u) (rang_of hr) hz
+  exact ⟨hn, bruecke_nutzer (lower_of_uebersetze h) (stimmig_of hs hPlain) (rangAuto u) (rang_of hr) hz
+    (hPtr P fs (lower_of_uebersetze h))
     _ rfl rfl rfl⟩
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`). -/
