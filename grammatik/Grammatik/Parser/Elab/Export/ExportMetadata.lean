@@ -109,6 +109,9 @@ def itemMetadata : SItemTief → Bool
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
     adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
     ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
+  -- A bare linear declaration introduces only a nominal resource, resolved
+  -- by markFin and checked by the dependent G inventory; it has no value body.
+  | .typeT ["linear"] _ [] [] none => false
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.
   | .typeT [] _ [] [] (some (.raw text)) => !text.startsWith "{"
@@ -325,7 +328,13 @@ theorem arenaT_zeuge :
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 
+/-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
+theorem linear_mark_metadata_zeuge :
+    itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
+    bodyMetadata 1 (.retires "Mark") = false := by rfl
+
 end Gabbro.Grammatik.Parser.ExportMetadata
+
 
 namespace Gabbro.Grammatik.Parser.ExportMetadata
 
@@ -389,5 +398,10 @@ theorem namedPointer_zeuge :
 theorem reset_bound_zeuge :
     bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
   reset_bound 2 "A" (some (.lit 1, .lit 2))
+
+/-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
+theorem linear_mark_metadata_zeuge :
+    itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
+    bodyMetadata 1 (.retires "Mark") = false := by rfl
 
 end Gabbro.Grammatik.Parser.ExportMetadata
