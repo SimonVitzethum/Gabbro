@@ -3,6 +3,7 @@ module
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.T1a
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.Teil9
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis.AkteurFaelle.ScopedZeuge
 @[expose] public section
 
 namespace Gabbro.Grammatik
@@ -178,11 +179,7 @@ theorem akteur (hK : ∀ f, KoerperGut P O passes f) (hFrag : ∀ f, (P.rumpf f)
     | _ =>
       exact absurd (kopf_okZ hF.1 ‹(M.faeden u).kopf.rest = _›)
         (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
-  | g7 hs =>
-    cases hs with
-    | _ =>
-      exact absurd (kopf_okZ hF.1 ‹(M.faeden u).kopf.rest = _›)
-        (by simp only [GRest.okZ, Endblock.kOk, Bool.false_eq_true, false_and, not_false_eq_true, Block.kOk, Stmt.kOk, Bool.false_and, and_false, and_self])
+  | g7 hs => exact akteur_gruppe7 hK e0 hs hF hL
 
 end Akteur
 

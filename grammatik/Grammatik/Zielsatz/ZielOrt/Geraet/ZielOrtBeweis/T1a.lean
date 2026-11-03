@@ -68,8 +68,10 @@ theorem kopf_okZ {F : RufRahmenG D} {W : World D} (h : KopfOk P O passes F W)
     {r : GRest D (vertragVon D F.f) l Γ Λ} (hr : F.rest = ⟨l, Γ, Λ, ρ, r⟩) :
     r.okZ P (fussOrte P F.f) := by
   obtain ⟨_, _, _, _, _, _, _, hok, _⟩ := h
-  rw [hr] at hok
-  exact hok
+  -- Transport the whole packet; its projections have dependent indices.
+  exact (congrArg (fun c : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D),
+    Env D Γ × GRest D (vertragVon D F.f) l Γ Λ =>
+      c.2.2.2.2.okZ P (fussOrte P F.f)) hr).mp hok
 
 /-- **A head-local step** keeps the replay: the stack and the key are
     kept, the residue moves by a sequential step at the sequential world. -/
@@ -85,15 +87,16 @@ theorem fadenOk_lokal {z : RufFadenG D} {W W' : World D} (hF : FadenOk P O passe
         ∀ R, (semZ O passes R r' σ' ρ').gleich (semZ O passes R r σ ρ)) :
     FadenOk P O passes
       ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, ⟨l', Γ', Λ', ρ', r'⟩⟩, spur', z.log⟩ W' := by
-  obtain ⟨⟨H, σ, hreq, hf, hv, hk, hg, hok, heq⟩, hS⟩ := hF
-  have hok' : r.okZ P (fussOrte P z.kopf.f) := by rw [hr] at hok; exact hok
+  have hok' := kopf_okZ hF.1 hr
+  obtain ⟨⟨H, σ, hreq, hf, hv, hk, hg, _, heq⟩, hS⟩ := hF
   have heq' : ∀ R, Passt R H →
       (zErg (execEnd (V := vertragVon D z.kopf.f) O passes R (P.rumpf z.kopf.f) z.kopf.s0
         z.kopf.rho)).gleich (semZ O passes R r σ ρ) := by
     intro R hR
-    have := heq R hR
-    rw [hr] at this
-    exact this
+    exact ZErg.gleich_trans (heq R hR) (ZErg.gleich_of_eq
+      (congrArg (fun c : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D),
+        Env D Γ × GRest D (vertragVon D z.kopf.f) l Γ Λ =>
+          semZ O passes R c.2.2.2.2 σ c.2.2.2.1) hr))
   obtain ⟨σ', hl, hg', hok'', hsem⟩ := hstep σ hg hok'
   exact ⟨⟨H, σ', hreq, hf, hv, kurzH_mono hk hl, hg', hok'',
     fun R hR => ZErg.gleich_trans (heq' R hR) (ZErg.gleich_symm (hsem R))⟩, hS⟩
@@ -152,8 +155,10 @@ theorem pop_ens (hK : ∀ f, KoerperGut P O passes f) {G : RufRahmenG D} {W : Wo
       (evalErg (W.lese Λ e.orte) e (W.lese Λ e.orte) ρ) := by
   obtain ⟨H, σ, hreq, hf, hv, _, hg, _, heq⟩ := hG
   have h1 := heq (rufAus H) (rufAus_passt hf)
-  rw [hr] at h1
-  simp only at h1
+  have hrest := congrArg (fun c : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D),
+    Env D Γ × GRest D (vertragVon D G.f) l Γ Λ =>
+      semZ O passes (rufAus H) c.2.2.2.2 σ c.2.2.2.1) hr
+  have h1 := ZErg.gleich_trans h1 (ZErg.gleich_of_eq hrest)
   rw [hsem] at h1
   obtain ⟨σ'', hex, hsg⟩ := zErg_gleich_zurueck h1
   have hE := (hK G.f (rufAus H) (rufAus_respektiert hv) (rufAus_ohneVorbedingung H) G.s0 G.rho
