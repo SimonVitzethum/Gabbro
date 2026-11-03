@@ -42,7 +42,7 @@ def fragment : List Piece := pieces x.s x.counter x.saved x.fuel
   x.invariant x.member x.edge x.measure x.body
 
 def offset (i : Nat) : Nat := width (x.fragment.take i)
-def at (i : Nat) : W := x.pc + BitVec.ofNat 64 (16 * x.offset i)
+def addr (i : Nat) : W := x.pc + BitVec.ofNat 64 (16 * x.offset i)
 def read (m : Mem) (j : Nat) (v : W) : Prop :=
   m.rd64 (slot x.fp (BitVec.ofNat 64 j)) = some v
 
@@ -83,7 +83,7 @@ theorem Ready.lese {Λ : List (Res D)} {sites : List (D.Tab ⊕ D.Glob)}
 theorem Ready.slice (h : x.Ready m σ ρ) (i : Nat) (piece : Piece) (block : List II)
     (found : x.fragment[i]? = some piece)
     (resolved : resolve x.fragment (x.offset i) piece = some block) :
-    CodeAt m (x.at i) block ∧ CodeFar (x.at i) block.length x.fp x.K := by
+    CodeAt m (x.addr i) block ∧ CodeFar (x.addr i) block.length x.fp x.K := by
   have inside : i < x.fragment.length := by
     by_cases hi : i < x.fragment.length
     · exact hi
@@ -101,23 +101,23 @@ theorem Ready.slice (h : x.Ready m σ ρ) (i : Nat) (piece : Piece) (block : Lis
   constructor
   · apply codeAt_at (xs := prefix) (zs := suffix)
     · simpa only [eq, List.append_assoc] using h.code
-    · simp only [at, offset, len]
+    · simp only [addr, offset, len]
   · have bound : prefix.length + block.length ≤ x.code.length := by
       rw [eq]; simp only [List.length_append]; omega
-    simpa only [at, offset, len] using codeFar_at x.far bound
+    simpa only [addr, offset, len] using codeFar_at x.far bound
 
 theorem Ready.pre (h : x.Ready m σ ρ) (i d : Nat) (block : List II)
     (ctx : frei Γ reserved ≤ d) (found : x.fragment[i]? = some (.code block)) :
-    PreS L m (x.at i) x.fp x.K d block ρ reserved := by
+    PreS L m (x.addr i) x.fp x.K d block ρ reserved := by
   have slice := h.slice i (.code block) block found rfl
   exact mkPreS ctx x.small h.frame slice.1 slice.2 h.env
 
 /-- Repackage an ordinary expression/instruction simulation as a scan path. -/
 theorem Ready.ok (h : x.Ready m σ ρ) {i j d : Nat} {block : List II} {Q : W → Prop}
-    (run : Ok m (x.at i) x.fp x.K d block Q)
-    (endAt : x.at i + BitVec.ofNat 64 (16 * block.length) = x.at j)
+    (run : Ok m (x.addr i) x.fp x.K d block Q)
+    (endAt : x.addr i + BitVec.ofNat 64 (16 * block.length) = x.addr j)
     (ctx : frei Γ reserved ≤ d) (scratch : x.s ≤ d) (room : d ≤ x.K) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at j) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr i) (x.addr j) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp d x.K m m' ∧ ∃ v, x.read m' d v ∧ Q v) := by
   obtain ⟨m', run, a, v, read, value⟩ := run
   rw [endAt] at run
@@ -138,13 +138,13 @@ theorem Ready.jump (h : x.Ready m σ ρ) (i j : Nat) (target : Label)
     (found : x.fragment[i]? = some (.jump target))
     (destination : position target x.fragment 0 = some (x.offset j))
     (originBound : x.offset i ≤ x.code.length) (targetBound : x.offset j ≤ x.code.length) :
-    Star ⟨x.at i, x.fp⟩ m ⟨x.at j, x.fp⟩ m := by
+    Star ⟨x.addr i, x.fp⟩ m ⟨x.addr j, x.fp⟩ m := by
   have code := (h.slice i (.jump target)
     [ci 18 (16 * ((x.offset j : Int) - x.offset i)) 0 0] found
     (by simp only [resolve, destination, bind, Option.bind_some, pure])).1
   have size := assemble_size x.assembled
   have run := jmp_go (fp := x.fp) code (lit_ok (by omega) (by omega))
-  simpa only [at, adr_eq x.pc (by omega)] using run
+  simpa only [addr, adr_eq x.pc (by omega)] using run
 
 /-- Both outcomes of a resolved conditional branch. -/
 theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v : W)
@@ -152,8 +152,8 @@ theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v 
     (destination : position target x.fragment 0 = some (x.offset j))
     (originBound : x.offset i ≤ x.code.length) (targetBound : x.offset j ≤ x.code.length)
     (cellBound : cell < x.K) (read : x.read m cell v)
-    (next : x.at i + 16 = x.at (i + 1)) :
-    Star ⟨x.at i, x.fp⟩ m ⟨(if v = 0 then x.at j else x.at (i + 1)), x.fp⟩ m := by
+    (next : x.addr i + 16 = x.addr (i + 1)) :
+    Star ⟨x.addr i, x.fp⟩ m ⟨(if v = 0 then x.addr j else x.addr (i + 1)), x.fp⟩ m := by
   have code := (h.slice i (.zero cell target)
     [ci 19 cell (16 * ((x.offset j : Int) - x.offset i)) 0] found
     (by simp only [resolve, destination, bind, Option.bind_some, pure])).1
@@ -162,7 +162,7 @@ theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v 
     have size := assemble_size x.assembled
     have run := brz_go code cellBound x.small (lit_ok (by omega) (by omega))
       (by simpa only [zero] using read)
-    simpa only [at, adr_eq x.pc (by omega)] using run
+    simpa only [addr, adr_eq x.pc (by omega)] using run
   · simp only [zero, ↓reduceIte]
     simpa only [next] using brz_stay code cellBound x.small read zero
 
@@ -173,12 +173,12 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
     (lowered : lowE (reserved := reserved) L e (x.s + 4) = some (block, top))
     (topBound : top ≤ x.Ks) (found : x.fragment[i]? = some (.code block))
     (compatible : WordCompatible τ) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at (i + 1)) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr i) (x.addr (i + 1)) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 4) x.K m m' ∧ ∃ v, x.read m' (x.s + 4) v ∧ Enc L τ (eval σ e σ ρ) v) := by
   have pre := h.pre i (x.s + 4) block ctx found
   have preWorld := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
   have ok := lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
-    e (x.s + 4) block top lowered topBound m (x.at i) ρ preWorld |>.word compatible
+    e (x.s + 4) block top lowered topBound m (x.addr i) ρ preWorld |>.word compatible
   apply h.ok ok
   · have inside : i < x.fragment.length := by
       by_contra hn
@@ -186,7 +186,7 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
       cases found
     have element : x.fragment[i] = .code block := by simpa only
       [List.getElem?_eq_getElem inside, Option.some.injEq] using found
-    simp only [at, offset, List.take_succ_eq_append_getElem inside, element]
+    simp only [addr, offset, List.take_succ_eq_append_getElem inside, element]
     have widths : ∀ a b : List Piece, width (a ++ b) = width a + width b := by
       intro a b; induction a with
       | nil => rfl
