@@ -47,8 +47,6 @@ open Zielsatz
 
 variable {D : Deklaration}
 
-/-- Decidable axiom equality, for the accumulator admission the lifted checker conjoins. -/
-variable [DecidableEq D.Ax]
 /-! ## The decidable pool checks, and "never weakened" (fix lane F10)
 
 The Bools `poolSicherWB`/`einzelnPoolB` and their iff lemmas live in
@@ -162,15 +160,31 @@ theorem getrenntW_nodup {P : Programm D} {fs ws : List D.Fn} (hnd : ws.Nodup) :
     (2026-09-26) the Bool has the handler component `maskenB` beside the old conjunction; it
     is `true` on every program with no handler (`maskenB_ohne`). Since C18 it also has the
     reset component `resetB`; it is `true` on every program with no zero-less array static. -/
-theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+theorem akzeptiert_nodup_gleich [DecidableEq D.Ax]
+    {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
     Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs) := by
+  have hSchnitt : schnittstellenB P fs = true := by
+    refine List.all_eq_true.mpr fun f _ => List.all_eq_true.mpr fun x _ => ?_
+    cases x with
+    | inl a =>
+        simp only [schnittstelleB, Bool.and_eq_true, decide_eq_true_eq]
+        exact ⟨⟨⟨rfl, rfl⟩, rfl⟩, rfl⟩
+    | inr _ => rfl
+  have hScopes : stufenB P fs = true → scopesOkProgB P fs = true := by
+    intro h
+    refine List.all_eq_true.mpr fun f hf => ?_
+    exact end_scopesOkH (P.rumpf f) (residHeld_anfang (D.signatur f))
+      (mE_boden_inv f (P.rumpf f) (List.all_eq_true.mp h f hf))
+      (hcount_anfang (D.signatur f))
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true]
-  rw [Kernzelle.accumulatorB_leer]
-  simp only [Bool.true_and]
+  simp only [GuestBoundary.admissionB_nil, Kernzelle.accumulatorB_leer,
+    checkB, List.all_nil, eindeutigeNamen, hSchnitt, Bool.and_true]
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
     (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
+  cases hSt : stufenB P fs
+  · simp only [hSt, Bool.and_false, Bool.false_and]
+  · simp only [hSt, hScopes hSt, Bool.and_true]
 
 /-- The old Bool accepts only distinct starts. -/
 theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
@@ -182,10 +196,10 @@ theorem akzeptiertVor_nodup {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
 
 /-- **Every old acceptance stays an acceptance** -- of a program that meets the handler
     discipline, in particular of every program with no handler (`maskenB_ohne`), and whose
-    static arrays admit zero (`resetB`). -/
-    discipline, in particular of every program with no handler (`maskenB_ohne`). The library
+    static arrays admit zero (`resetB`). The library
     component holds on every program (`libraryB_immer`). -/
-theorem akzeptiert_vor_neu {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+theorem akzeptiert_vor_neu [DecidableEq D.Ax]
+    {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
     (h : AkzeptiertVor P S fs ls cs ws = true) (hM : maskenB P fs = true)
     (hR : resetB cs = true) :
@@ -247,14 +261,18 @@ end PoolBool
     component `maskenB` it never judged (an old program declares no handler, where the
     conjunct is `true`: `maskenB_ohne`); since C15 with the accumulator admission it never
     judged (an old program declares no accumulator, where it holds vacuously). -/
-def pruefer_vor_neu
+noncomputable def pruefer_vor_neu
     (akz : ∀ {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax],
       Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool)
     (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax] (E : Einheit D)
       (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
       akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
-  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs && resetB cs && Kernzelle.accumulatorB E.P fs (tabsOf cs) (globsOf cs) [] E.akku
-  korrekt := fun E fs ls cs h => by
+  akzeptiert := fun {D} _ E fs ls cs =>
+    haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+    akz E fs ls cs && maskenB E.P fs && resetB cs &&
+      Kernzelle.accumulatorB E.P fs (tabsOf cs) (globsOf cs) [] E.akku
+  korrekt := fun {D} _ E fs ls cs h => by
+    haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
     simp only [Bool.and_eq_true] at h
     exact (akzeptiertSpecVor_neu (korr E fs ls cs h.1.1.1) ((maskenB_iff fs.2).mp h.1.1.2)
       ((resetB_iff cs.2).mp h.1.2)).mitAkku (((Kernzelle.accumulatorB_iff fs.2 (tabsOf_voll cs.2) (globsOf_voll cs.2)).mp h.2).1)
