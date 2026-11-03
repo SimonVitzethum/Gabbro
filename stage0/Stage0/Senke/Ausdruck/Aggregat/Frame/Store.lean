@@ -110,6 +110,25 @@ theorem storeFrameWords_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr t
           · exact Or.inl (by omega)
           · exact Or.inr (by omega)), ← natural_slot, agree_rd_low a14 pre.frame.room hs (by omega)]
 
+/-- Typed specialization of the shared arbitrary-word frame store. -/
+theorem storeFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr tmp index : Nat}
+    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
+    (fits : base + (index + 1) * valueWords τ ≤ src) (source : src + valueWords τ ≤ ptr)
+    (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * valueWords τ < 2 ^ 31)
+    (indexWord : m.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 index))
+    (input : ValueAt L m fp src τ v)
+    (pre : Pre L m pc fp K ptr (storeFrameSpan (valueWords τ) base src ptr tmp) ρ W reserved) :
+    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (4 + 3 * valueWords τ)), fp⟩ m' ∧
+      Agree fp base K m m' ∧
+      WordsAt m' fp (base + index * valueWords τ) (encodeWords L τ v) ∧
+      ∀ s, s < ptr → (s < base + index * valueWords τ ∨ base + (index + 1) * valueWords τ ≤ s) →
+        m'.rd64 (slot fp (BitVec.ofNat 64 s)) = m.rd64 (slot fp (BitVec.ofNat 64 s)) := by
+  simpa only [encodeWords_length] using storeFrameWords_ok (encodeWords L τ v)
+    (by simpa only [encodeWords_length] using fits)
+    (by simpa only [encodeWords_length] using source) pt ht
+    (by simpa only [encodeWords_length] using literal) indexWord input.2
+    (by simpa only [encodeWords_length] using pre)
+
 theorem elementEncoding_get {n width : Nat} (f : Fin n → List Runner.W)
     (lengths : ∀ i, (f i).length = width) (j : Fin n) (k : Nat) (hk : k < width) :
     (elementEncoding n f)[j.val * width + k]? = (f j)[k]? := by
@@ -132,28 +151,28 @@ theorem elementEncoding_get {n width : Nat} (f : Fin n → List Runner.W)
 theorem wordsAt_arrSet {m3 m4 : Runner.Mem} {fp : Runner.W} {d ptr n : Nat} {τ : Ty}
     (a : Wert D (.arr τ n)) (v : Wert D τ) (j : Fin n)
     (kept : WordsAt m3 fp d (encodeWords L (.arr τ n) a))
-    (written : WordsAt m4 fp (d + j.val * words.length) words)
-    (preserved : ∀ s, s < ptr → (s < d + j.val * words.length ∨ d + (j.val + 1) * words.length ≤ s) →
+    (written : WordsAt m4 fp (d + j.val * valueWords τ) (encodeWords L τ v))
+    (preserved : ∀ s, s < ptr → (s < d + j.val * valueWords τ ∨ d + (j.val + 1) * valueWords τ ≤ s) →
       m4.rd64 (slot fp (BitVec.ofNat 64 s)) = m3.rd64 (slot fp (BitVec.ofNat 64 s)))
-    (fits : d + n * words.length ≤ ptr) :
+    (fits : d + n * valueWords τ ≤ ptr) :
     WordsAt m4 fp d (encodeWords L (.arr τ n) (arrSetW a j v)) := by
   have nonempty : n ≠ 0 := by have := j.isLt; omega
   have positive := valueWords_pos τ
-  have lengths : ∀ i, (encodeWords L τ (a i)).length = words.length := fun i => encodeWords_length L τ _
+  have lengths : ∀ i, (encodeWords L τ (a i)).length = valueWords τ := fun i => encodeWords_length L τ _
   intro p hp
   simp only [encodeWords, if_neg nonempty] at hp kept ⊢
-  have hlen : (elementEncoding n (fun i => encodeWords L τ (arrSetW a j v i))).length = n * words.length :=
+  have hlen : (elementEncoding n (fun i => encodeWords L τ (arrSetW a j v i))).length = n * valueWords τ :=
     elementEncoding_length n _ _ (fun i => encodeWords_length L τ _)
-  have pBound : p < n * words.length := by omega
-  have split : ∃ q r, r < words.length ∧ p = q * words.length + r :=
-    ⟨p / words.length, p % words.length, Nat.mod_lt _ positive, (Nat.div_add_mod' p _).symm⟩
+  have pBound : p < n * valueWords τ := by omega
+  have split : ∃ q r, r < valueWords τ ∧ p = q * valueWords τ + r :=
+    ⟨p / valueWords τ, p % valueWords τ, Nat.mod_lt _ positive, (Nat.div_add_mod' p _).symm⟩
   obtain ⟨q, r, hr, hp'⟩ := split
   have qLt : q < n := by
     rcases Nat.lt_or_ge q n with below | above
     · exact below
-    · have := Nat.mul_le_mul_right (words.length) above
+    · have := Nat.mul_le_mul_right (valueWords τ) above
       omega
-  have hget : ∀ (g : Fin n → List Runner.W) (hg : ∀ i, (g i).length = words.length)
+  have hget : ∀ (g : Fin n → List Runner.W) (hg : ∀ i, (g i).length = valueWords τ)
       (hp : p < (elementEncoding n g).length),
       (elementEncoding n g)[p] = (g ⟨q, qLt⟩)[r]'(by rw [hg]; exact hr) := by
     intro g hg hp
@@ -168,46 +187,27 @@ theorem wordsAt_arrSet {m3 m4 : Runner.Mem} {fp : Runner.W} {d ptr n : Nat} {τ 
   · have h := written r (by rw [encodeWords_length]; exact hr)
     have hjq : (⟨q, qLt⟩ : Fin n) = j := Fin.ext same
     have e : arrSetW a j v ⟨q, qLt⟩ = v := by simp only [arrSetW]; exact if_pos hjq
-    have ep : d + p = d + j.val * words.length + r := by rw [hp', same, Nat.add_assoc]
+    have ep : d + p = d + j.val * valueWords τ + r := by rw [hp', same, Nat.add_assoc]
     simp only [e]
     rw [ep]
     exact h
   · have hne : (⟨q, qLt⟩ : Fin n) ≠ j := fun h => same (congrArg Fin.val h)
     simp only [arrSetW, if_neg hne]
-    have outside : p < j.val * words.length ∨ (j.val + 1) * words.length ≤ p := by
+    have outside : p < j.val * valueWords τ ∨ (j.val + 1) * valueWords τ ≤ p := by
       rcases Nat.lt_or_gt_of_ne same with lt | gt
       · left
-        have := Nat.mul_le_mul_right (words.length) (Nat.succ_le_of_lt lt)
+        have := Nat.mul_le_mul_right (valueWords τ) (Nat.succ_le_of_lt lt)
         rw [Nat.succ_mul] at this
         omega
       · right
-        exact Nat.le_trans (Nat.mul_le_mul_right (words.length) (Nat.succ_le_of_lt gt)) (by omega)
+        exact Nat.le_trans (Nat.mul_le_mul_right (valueWords τ) (Nat.succ_le_of_lt gt)) (by omega)
     rw [show d + p = d + p by rfl, preserved (d + p) (by omega)
       (by rcases outside with h | h
           · exact Or.inl (by omega)
           · exact Or.inr (by omega))]
-    have hlenA : (elementEncoding n (fun i => encodeWords L τ (a i))).length = n * words.length :=
+    have hlenA : (elementEncoding n (fun i => encodeWords L τ (a i))).length = n * valueWords τ :=
       elementEncoding_length n _ _ lengths
     have hk := kept p (by omega)
     rw [hk, hget (fun i => encodeWords L τ (a i)) lengths (by omega)]
 
 end Gabbro.Stage0.Senke
-
-/-- Typed specialization of the shared arbitrary-word frame store. -/
-theorem storeFrameSpan_ok {m : Runner.Mem} {pc fp : Runner.W} {K base src ptr tmp index : Nat}
-    {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop} {τ : Ty} {v : Wert D τ}
-    (fits : base + (index + 1) * valueWords τ ≤ src) (source : src + valueWords τ ≤ ptr)
-    (pt : ptr < tmp) (ht : tmp < K) (literal : 8 * valueWords τ < 2 ^ 31)
-    (indexWord : m.rd64 (slot fp (BitVec.ofNat 64 ptr)) = some (BitVec.ofNat 64 index))
-    (input : ValueAt L m fp src τ v)
-    (pre : Pre L m pc fp K ptr (storeFrameSpan (valueWords τ) base src ptr tmp) ρ W reserved) :
-    ∃ m', Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * (4 + 3 * valueWords τ)), fp⟩ m' ∧
-      Agree fp base K m m' ∧
-      WordsAt m' fp (base + index * valueWords τ) (encodeWords L τ v) ∧
-      ∀ s, s < ptr → (s < base + index * valueWords τ ∨ base + (index + 1) * valueWords τ ≤ s) →
-        m'.rd64 (slot fp (BitVec.ofNat 64 s)) = m.rd64 (slot fp (BitVec.ofNat 64 s)) := by
-  simpa only [encodeWords_length] using storeFrameWords_ok (encodeWords L τ v)
-    (by simpa only [encodeWords_length] using fits)
-    (by simpa only [encodeWords_length] using source) pt ht
-    (by simpa only [encodeWords_length] using literal) indexWord input.2
-    (by simpa only [encodeWords_length] using pre)
