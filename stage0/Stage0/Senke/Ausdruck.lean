@@ -43,6 +43,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 public import Stage0.Senke.Ausdruck.Aggregat.ProdArgs
+public import Stage0.Senke.Ausdruck.Aggregat.Sum.Code
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinCode
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
@@ -195,7 +196,12 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       let ce ← lowE (currentOld := currentOld) L (reserved := reserved) e d
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
     else lowE (currentOld := currentOld) L (reserved := reserved) e d
-  | _, _, .case cs i nutz, d => if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else none
+  | _, _, .case cs i nutz, d =>
+    if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else
+      sumSpanL cs i d (match nutz with
+        | .empty => some ([], d + integerWords 0 (cs.length - 1))
+        | .val e => lowE (currentOld := currentOld) L (reserved := reserved) e
+            (d + integerWords 0 (cs.length - 1)))
   | _, _, .why n r, d => some (constWords (encodeWords L (.why n) r) d)
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
