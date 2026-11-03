@@ -6,7 +6,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatExpansion
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
 def isFold : XKind → Bool
-  | .foldAdd | .foldMin | .foldMax => true
+  | .foldAdd | .foldMin | .foldMax | .foldAnd | .foldOr => true
   | _ => false
 
 /-- Integer interval calculation reuses the elaborated value tree. Unknown values stay
@@ -184,6 +184,7 @@ def expandFold (ctx : UCtx) (serial : Nat) (kind : XKind) (names : List String)
   let empty ← match kind, fallback with
     | .foldAdd, [] => pure (USide.lit 0)
     | .foldMin, [value] | .foldMax, [value] => uWertBody ctx value
+    | .foldAnd, _ | .foldOr, _ => throw "fold and/or: slots domain not supported, use a range"
     | .foldAdd, _ => throw "fold add: else is not allowed"
     | _, _ => throw "fold min/max: else is required"
   let some emptyRange := foldRange ctx empty | throw "fold: fallback has no exported integer range"

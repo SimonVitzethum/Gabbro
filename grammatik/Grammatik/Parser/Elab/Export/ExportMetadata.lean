@@ -37,20 +37,23 @@ def bodyMetadata : Nat → SAnw → Bool
   /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
       the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
-      failure-continuation duty can disappear. Mutable and type-annotated binders
-      elaborate to no G form, and the else branch keeps its own refusal below. -/
+      failure-continuation duty can disappear. An explicit failure continuation
+      uses the existing arena lowering and is recursively checked here. Mutable
+      and type-annotated binders still elaborate to no G form. -/
   | _ + 1, .alloc false _ none _ _ none => false
+  | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
   | _ + 1, .genericCall .. => true
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
-    _ + 1, .ret .. | _ + 1, .start .. |
+    _ + 1, .ret .. | _ + 1, .start .. | _ + 1, .retires .. |
     _ + 1, .reset .. | _ + 1, .trimReq .. |
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
+  | .effs effects => effects.any (fun | .mints _ => true | _ => false)
   | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
   | .cost _ | .limit _ | .induc _ | .load _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
@@ -58,6 +61,7 @@ def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
 /-- Payload clauses are consumed by the certified C02 expansion, so they do not refuse a library head. Every other cost/scheduling/proof clause still refuses. -/
 def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any fun
   | .load _ => false
+  | .effs effects => effects.any (fun | .mints _ => true | _ => false)
   | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
   | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
@@ -110,6 +114,9 @@ def itemMetadata : SItemTief → Bool
     clausesMetadata s.klauseln || (b.map (bodyMetadata 10000)).getD false ||
     adapter.vorspiel.any (bodyMetadata 10000) || adapter.sonst.any (fun (_, body) => bodyMetadata 10000 body) ||
     ps.any (fun | .neu _ t => typeMetadata t | _ => false) || s.res.any typeMetadata
+  -- A bare linear declaration introduces only a nominal resource, resolved
+  -- by markFin and checked by the dependent G inventory; it has no value body.
+  | .typeT ["linear"] _ [] [] none => false
   | .typeT ["tagged"] _ [] [] (some (.raw _)) => false
   -- A record schema resolves through the checked record collector, not metadata.
   | .typeT [] _ [] [] (some (.raw text)) => !text.startsWith "{"
@@ -207,7 +214,8 @@ theorem nested_duties_refused_zeuge :
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
-    bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0) (some body)) = true ∧
+    bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0)
+      (some (.bind false "value" (some (.wrap (.atom "bool"))) .tru))) = true ∧
     bodyMetadata 10000 (.grow "A" (.lit 1) body) = true ∧
     bodyMetadata 10000 (.bind false "value" (some (.wrap (.atom "bool"))) .tru) = true := by
   exact ⟨rfl, rfl, rfl, rfl⟩
@@ -299,9 +307,16 @@ theorem capability_unbound_zeuge :
 theorem allocRequired_bound (x an : String) (v : SExpr) (n : Nat) :
     bodyMetadata (n + 1) (.alloc false x none an v none) = false := by rfl
 
+/-- Explicit failure branches retain their complete metadata check. The canonical
+    exporter still checks the arena, element value, effects and ending branch;
+    this gate only admits the immutable, unannotated binder it can lower. -/
+theorem allocElse_bound (x an : String) (v : SExpr) (body : SAnw) (n : Nat) :
+    bodyMetadata (n + 1) (.alloc false x none an v (some body)) =
+      bodyMetadata n body := by rfl
+
 theorem allocRequired_zeuge :
     bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = false ∧
-    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = true ∧
+    bodyMetadata 2 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = false ∧
     bodyMetadata 1 (.alloc true "i" none "A" (.lit 0) none) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
@@ -317,16 +332,14 @@ theorem arenaT_zeuge :
     itemMetadata (.arenaT "A" (.lit 1) (.lit 2) none (.atom "u32") (some (["P"], (.lit 1)))) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
-/-- Owner production stays refused: the model admits escrow-ready flows
-    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), and the elaborator
-    exports the nontrivial mark namespace (`Marke := Fin u.marken.length`) with
-    declared owner guards (`eigner`/`braucht`), but every exported signature
-    still carries the empty flow with no produced marks, so no source form
-    can mint an owner. -/
+/-- Ghost owner values still lack a checked source binding. Nominal marks
+    travel only as resources; mint effects retain their metadata refusal
+    until their C08 software-call and root-once admission are connected. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 
 end Gabbro.Grammatik.Parser.ExportMetadata
+
 
 namespace Gabbro.Grammatik.Parser.ExportMetadata
 
@@ -390,5 +403,17 @@ theorem namedPointer_zeuge :
 theorem reset_bound_zeuge :
     bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
   reset_bound 2 "A" (some (.lit 1, .lit 2))
+
+/-- Mint output admission still needs the root-once and software-call bridge. -/
+theorem mint_effect_metadata_refused :
+    clausesMetadata [.effs [.mints "Mark"]] = true ∧
+    clausesMetadataWithoutLoad [.effs [.mints "Mark"]] = true := by
+  exact ⟨rfl, rfl⟩
+
+/-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
+theorem linear_mark_metadata_zeuge :
+    itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
+    bodyMetadata 1 (.retires "Mark") = false := by
+  exact ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser.ExportMetadata

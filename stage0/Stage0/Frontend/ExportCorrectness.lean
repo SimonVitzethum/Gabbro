@@ -53,21 +53,27 @@ theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
   exact record_lower output.compiled.unit Γ Λ fn er identity reordered sides args
     gate lowered schema declared
 
-/-- Original-source admission retains the successful certified const substitution
-    and all remaining runtime metadata checks before G lowering. -/
+/-- The selected original or expanded source retains the successful certified const
+    substitution and all remaining runtime metadata checks before G lowering. -/
 theorem Compiled.const_substitution {text : String} {options : Profil.Options} (result : Compiled text options)
     (h : result.unit.exportGate = .ok ()) :
     ∃ rewritten,
-      Konst.konstErsetzePipeline (uMembers (pre108 result.source.prepared.elaborierbar)) = .ok rewritten ∧
-      Konst.checkErsetzt (uMembers (pre108 result.source.prepared.elaborierbar)) rewritten = .ok () ∧
+      Konst.konstErsetzePipeline result.gateMembers = .ok rewritten ∧
+      Konst.checkErsetzt result.gateMembers rewritten = .ok () ∧
       (Konst.ohneKonst rewritten).any ExportMetadata.itemMetadata = false :=
   Konst.checkSourceMetadata_sound _ (result.metadata.symm.trans h)
 
-/-- All original runtime annotations retain their pre-rewrite metadata check. -/
+/-- Every export retains the pre-rewrite runtime metadata check on the exact
+    original or expanded side selected by the compiler, excluding only const declarations. -/
 theorem Compiled.exports_metadata {text : String} {options : Profil.Options} (result : Compiled text options)
     (h : result.unit.exportGate = .ok ()) :
-    (Konst.ohneKonst (uMembers (pre108 result.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false :=
-  Konst.checkSourceMetadata_runtime_sound _ (result.metadata.symm.trans h)
+    (Konst.ohneKonst (uMembers result.expanded)).any ExportMetadata.itemMetadata = false ∨
+      (Konst.ohneKonst (uMembers (pre108 result.source.prepared.elaborierbar))).any
+        ExportMetadata.itemMetadata = false := by
+  have clean := Konst.checkSourceMetadata_runtime_sound _ (result.metadata.symm.trans h)
+  cases result.gateChecked with
+  | inl checked => exact Or.inl (by simpa only [checked.1] using clean)
+  | inr checked => exact Or.inr (by simpa only [checked.1] using clean)
 
 /-- The entry-global adapter preserves both original operand snapshots inside implication.
     It never treats a current read as an entry read. -/
@@ -113,20 +119,24 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         (universal : Bool) (source : USide) (binder : String) (body : UEns)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowEns output.compiled.unit Γ Λ fn er (.arrayElements universal source binder body) = .ok value →
-        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false ∨
+          (Konst.ohneKonst (uMembers output.compiled.expanded)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (shift : Nat)
         (table field : String) (a b : UIdx) (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowReach output.compiled.unit Γ Λ fn shift table field a b = .ok value →
-        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false ∨
+          (Konst.ohneKonst (uMembers output.compiled.expanded)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (universal reverse : Bool) (table binder field : String) (source : UIdx) (body : UEns)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowEns output.compiled.unit Γ Λ fn er (.filtered universal table binder field reverse source body) = .ok value →
-        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false ∨
+          (Konst.ohneKonst (uMembers output.compiled.expanded)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (shift : Nat)
         (table : String) (source : UIdx) (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowMember output.compiled.unit Γ Λ fn shift table source = .ok value →
-        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false ∨
+          (Konst.ohneKonst (uMembers output.compiled.expanded)).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (op : String) (a b : USide) (n m : Nat)
         (x : Expr (declOf output.compiled.unit) Γ Λ (.str n)) (y : Expr (declOf output.compiled.unit) Γ Λ (.str m))
@@ -134,22 +144,27 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         lowWertE output.compiled.unit Γ Λ fn er a = .ok ⟨.str n, x⟩ →
         lowWertE output.compiled.unit Γ Λ fn er b = .ok ⟨.str m, y⟩ →
         lowCmp output.compiled.unit Γ Λ fn er op a b = .ok value →
-        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) := by
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false ∨
+          (Konst.ohneKonst (uMembers output.compiled.expanded)).any ExportMetadata.itemMetadata = false) := by
   obtain ⟨output, emitted, image, correct, _⟩ := irBild_correct text K bytes h
   refine ⟨output, emitted, image, compile_source_program text output.compiled, correct,
     output.compiled.constantExports, ?_, ?_, ?_, ?_, ?_⟩
   · intro Γ Λ fn er universal source binder body value lowered
-    exact output.compiled.exports_metadata
-      (array_quantifier_gate _ Γ Λ fn er universal source binder body value lowered)
+    exact (output.compiled.exports_metadata
+      (array_quantifier_gate _ Γ Λ fn er universal source binder body value lowered)).elim Or.inr Or.inl
   · intro Γ Λ fn shift table field a b value lowered
-    exact output.compiled.exports_metadata (reach_gate _ Γ Λ fn shift table field a b value lowered)
+    exact (output.compiled.exports_metadata
+      (reach_gate _ Γ Λ fn shift table field a b value lowered)).elim Or.inr Or.inl
   · intro Γ Λ fn er universal reverse table binder field source body value lowered
-    exact output.compiled.exports_metadata
-      (tree_quantifier_gate _ Γ Λ fn er universal reverse table binder field source body value lowered)
+    exact (output.compiled.exports_metadata
+      (tree_quantifier_gate _ Γ Λ fn er universal reverse table binder field source body value lowered)).elim
+      Or.inr Or.inl
   · intro Γ Λ fn shift table source value lowered
-    exact output.compiled.exports_metadata (member_gate _ Γ Λ fn shift table source value lowered)
+    exact (output.compiled.exports_metadata
+      (member_gate _ Γ Λ fn shift table source value lowered)).elim Or.inr Or.inl
   · intro Γ Λ fn er op a b n m x y value first last lowered
-    exact output.compiled.exports_metadata (strings_gate _ Γ Λ fn er op a b n m x y first last value lowered)
+    exact (output.compiled.exports_metadata
+      (strings_gate _ Γ Λ fn er op a b n m x y first last value lowered)).elim Or.inr Or.inl
 
 /-- An actual accepted nonempty nested-array source/image instantiates the generic
     certificate with the original initializer duty and canonical program jointly satisfied. -/

@@ -158,7 +158,7 @@ theorem anw_bind (m : Bool) (x : String) (hx : x ≠ "mut") (ty : Option STyp) (
     list's follow (`KE`). -/
 def anwWortTafel : List (List Char) :=
   ["else", "let", "if", "match", "traverse", "retry", "forever", "breaking", "narrow", "locks", "observes",
-   "leave", "next", "return", "reset", "grow", "free", "child", "transition", "advances"].map
+   "leave", "next", "return", "reset", "grow", "free", "child", "transition", "advances", "retires"].map
     String.toList
 
 /-- A statement head word (see `anwWortTafel`). -/
@@ -183,7 +183,7 @@ theorem parseStmt_ident (f : Nat) (a : String) (r : List Token) (h : ∀ r', r �
       simp only [parseStmt, e "let" rfl, Bool.false_eq_true, ↓reduceIte, e "if" rfl, e "match" rfl,
   e "traverse" rfl, e "retry" rfl, e "forever" rfl, e "breaking" rfl, e "narrow" rfl, e "locks" rfl, e "observes" rfl,
   e "leave" rfl, e "next" rfl, e "return" rfl, e "reset" rfl, e "grow" rfl, e "free" rfl, e "child" rfl,
-  e "transition" rfl, e "advances" rfl, ite_self]
+  e "transition" rfl, e "advances" rfl, e "retires" rfl, ite_self]
   · rw [parseStmt.eq_def]
     simp only
     split <;> simp_all

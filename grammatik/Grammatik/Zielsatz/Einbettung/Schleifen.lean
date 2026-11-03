@@ -2,10 +2,26 @@ module
 public import Grammatik.Zielsatz.Einbettung.Lauf
 public import Grammatik.Zielsatz.Einbettung.Schleifena
 @[expose] public section
+
+
+/-!
+  File:      Grammatik/Zielsatz/Einbettung/Schleifen.lean
+  Subject:   The three loop drivers beside their images (stage E2c, part 3).
+
+  `traverseLauf`, `retryLauf` and `foreverLauf` take the body and the boundary check as
+  functions. When the body of `D` (for every map `Φ` that repeats the keys) runs beside its image
+  and the boundary check does too, the whole loop does: by induction over the indices or the
+  passes, the keys growing at every pass.
+-/
+
 namespace Gabbro.Grammatik.Einbettung
+
 open Gabbro.Grammatik
+
 variable {D D' : Deklaration}
+
 namespace Einbettung
+
 variable (E : Einbettung D D')
 
 /-! ## Consuming runs beside their images -/

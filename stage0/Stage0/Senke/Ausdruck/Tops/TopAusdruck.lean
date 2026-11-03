@@ -115,7 +115,12 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact wordL_top h
-    · cases h
+    · simp only [strLtSpanL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨cs, ts⟩, _, ⟨ct, tt⟩, _, _, rfl⟩ := h
+        omega
+      · cases h
   | _, _, .strGet _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -134,7 +139,12 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · split at h
       · exact lowE_top t d c top h
       · exact lowE_top s d c top h
-    · cases h
+    · simp only [strCatSpanL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨cs, ts⟩, _, ⟨ct, tt⟩, _, _, rfl⟩ := h
+        omega
+      · cases h
   | _, _, .strWeit _ s, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -220,7 +230,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       obtain ⟨⟨ce, te⟩, _, he⟩ := h
       simp only [bin2, Prod.mk.injEq] at he
       omega
-    · cases h
+    · exact lowE_top e d c top h
   | _, _, .le a b, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -255,7 +265,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
   | _, _, .slotRef i _ _ _ _ _, d, c, top, h
-  | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
+  | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h | _, _, .thruOwn _ _ _ _ i _ _ _ _ _ _, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨ci', _, hs⟩ := h
     simp only [slotValueC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hs
@@ -265,7 +275,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact lowN_top nutz _ _ _ h
-    · cases h
+    · exact sumSpanL_top h
   | _, _, .wenn cond a b, d, c, top, h => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, _, ⟨cb, tb⟩, _, h⟩ := h
@@ -290,7 +300,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact readBytesL_top L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) n 0 d c top h
-    · cases h
+    · exact readBytesWideL_top h
   | _, _, .forallSlots .., d, c, top, h | _, _, .existsSlots .., d, c, top, h => by
     simp only [lowE_eqs, quantL] at h
     split at h

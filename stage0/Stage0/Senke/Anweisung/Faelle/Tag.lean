@@ -168,7 +168,7 @@ theorem tagArm_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {c : Option Ty}
         exact Sim.prefix hlo st (agreeW_of (a1.mono hlo2))
           (keeps_of_agreeW hW a1 hpr (by omega)) (Sim.schrumpf ih)
       · cases hcp
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ => by
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ => by
       simp only [tagPayloadC, reduceCtorEq] at hcp
       cases hcp
 theorem lowTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

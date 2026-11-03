@@ -56,6 +56,14 @@ def output : Emitted text 64 := candidate.toOption.get candidate_present
 theorem accepted_image : emit text 64 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
 
+/-- The image passes the original-source gate, rather than only the canonical
+    G allocation emitter. This was the gate that rejected explicit else arms. -/
+theorem original_metadata_zeuge : output.compiled.unit.exportGate = .ok () := by
+  decide +kernel
+
+theorem canonical_source_zeuge : CanonicalSourceProgram output.compiled :=
+  compile_source_program text output.compiled
+
 /-- The same source path with room left: success binds the original counter. -/
 def fitsText : String :=
   "module end_alloc_fits { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { let i = alloc A (10) else { return 7; }; return i; } }"

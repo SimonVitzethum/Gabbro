@@ -2,6 +2,7 @@ module
 public import Grammatik.Parser.Elab.Generic.Body
 public import Grammatik.Parser.Elab.Generic.Parametricity
 public import Grammatik.Parser.SourceFolds.Range
+public import Grammatik.Parser.SourceFolds.Hoist
 public import Grammatik.Parser.TaggedDispatch.Frontend
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Generic

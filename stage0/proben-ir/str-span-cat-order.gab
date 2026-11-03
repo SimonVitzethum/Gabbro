@@ -1,0 +1,53 @@
+// Long concatenation and byte-wise order, with common prefixes and spare capacity.
+module ir_probe {
+impl fn main() -> i32 in -100 .. 300 effects { pure } {
+    let a : string max 12 = "abcdefgh";
+    let b : string max 11 = "ijklm";
+    let c : string max 23 = a + b;
+    let expected : string max 23 = "abcdefghijklm";
+    let prefix : string max 10 = "abcdefgh";
+    let longer : string max 12 = "abcdefghi";
+    let same : string max 14 = "abcdefgh";
+    let empty : string max 8 = "";
+    let short : string max 1 = "a";
+    let shortcat : string max 2 = short + short;
+    if c == expected {
+        if lenof(c) == 13 {
+            if a < b {
+                if b > a {
+                    if prefix < longer {
+                        if longer > prefix {
+                            if a < c {
+                                if c > a {
+                                    if a == same {
+                                        if a < same {
+                                            return 1;
+                                        }
+                                        if same < a {
+                                            return 2;
+                                        }
+                                        if c < a {
+                                            return 3;
+                                        }
+                                        if b < a {
+                                            return 4;
+                                        }
+                                        if empty < short {
+                                            if short > empty {
+                                                if shortcat == "aa" {
+                                                    return 42;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return 5;
+}
+}

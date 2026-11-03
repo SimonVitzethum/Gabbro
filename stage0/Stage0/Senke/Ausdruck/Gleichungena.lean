@@ -87,6 +87,13 @@ theorem lowE_literal_boundaries_zeuge :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.thru p t ht f i hL) d =
     (do let ci' ← lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci') := rfl
 
+@[lowE_eqs] theorem lowE_thruOwn (p : Expr D Γ Λ (.ptr ⟨space, ⟨true, rw, some o⟩, .table n⟩)) (t : D.Tab)
+      (ht : D.capTab space n = some t) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
+      (m : D.Marke) (s : Nat) (ho : D.ownerNr o = some m) (he : m ∈ D.eigner t)
+      (hg : Sum.inr (m, s) ∈ D.braucht t) (hL : darf D t Λ) :
+    lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.thruOwn p t ht f i m s ho he hg hL) d =
+    (do let ci' ← lowE (currentOld := currentOld) L (reserved := reserved) i (d + valueWords (D.typ t f)); slotValueC L t f d ci') := rfl
+
 @[lowE_eqs] theorem lowE_ptrOf (t : D.Tab) (n : Nat) (ht : D.capTab space n = some t) (rw : Bool × Bool) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.ptrOf t n ht rw) d =
     (some ([ci 1 d 0 0], d + 1)) := by rfl
@@ -163,7 +170,8 @@ theorem lowE_literal_boundaries_zeuge :
 @[lowE_eqs] theorem lowE_getBytes (t : D.Tab) (f : D.Feld t) (hf : D.typ t f = .int 0 255) (n : Nat)
       (i : Expr D Γ Λ (.int lo hi)) (hlo : 0 ≤ lo) (hhi : hi + n ≤ D.count t) (hL : darf D t Λ) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.getBytes t f hf n i hlo hhi hL) d =
-    (if n ≤ 8 then readBytesL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) 0 n d else none) := by rfl
+    (if n ≤ 8 then readBytesL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) 0 n d else
+      readBytesWideL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) n d) := by rfl
 
 @[lowE_eqs] theorem lowE_band (h0 : 0 ≤ l1) (h0' : 0 ≤ l2) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) (Expr.band h0 h0' a b) d =

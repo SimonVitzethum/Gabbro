@@ -182,8 +182,8 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
     | .error e => .error e
     | .ok args' => .ok (.call f args')
   | .callElse name args reason body => do
-    let args ← ersetzeSExprList fns args
-    let body ← ersetzeSAnw fns body
+    let args ← ersetzeSExprListIn shadowed fns args
+    let body ← ersetzeSAnwIn (reason :: shadowed) fns body
     pure (.callElse name args reason body)
   | .callQ f args =>
     (ersetzeSExprListIn shadowed fns args).map (fun args' => .callQ f args')
@@ -276,6 +276,7 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
     match ersetzeSExprIn shadowed fns o with
     | .error e => .error e
     | .ok o' => .ok (.swap n ty o' k)
+  | .retires m => .ok (.retires m)
   | .step a b => .ok (.step a b)
   | .ret x =>
     match x with

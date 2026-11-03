@@ -110,6 +110,8 @@ def druckExtToks (k : XKind) (ns : List String) (ts : List (List Token)) : List 
   | .foldAdd => druckFold "add" ns ts
   | .foldMin => druckFold "min" ns ts
   | .foldMax => druckFold "max" ns ts
+  | .foldAnd => druckFold "and" ns ts
+  | .foldOr => druckFold "or" ns ts
   | .label => match ns, ts with
     | [name], [value] => nameTok name :: .zeichen ":" :: value
     | _, _ => [.ende]
@@ -159,6 +161,8 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
 
   · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq,
       List.append_eq_nil_iff, reduceCtorEq, and_false, not_false_eq_true, List.cons_ne_self]
+  · exact druckFold_ne_nil _ _ _
+  · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _

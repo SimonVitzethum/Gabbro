@@ -64,11 +64,13 @@ theorem eignerMarke_inj (u : UProg) (hN : u.eigner.Nodup)
 
 /-! ## C16 ordinary mark flow: `nimmt`/`gibt` through the mark table -/
 
-/-- The consumed ordinary marks of a function (C16): its `nimmt` names resolved
-    against the unit's mark table at stage 0 (`uMarkenPruef` guarantees every name
-    resolves for an elaborated unit). -/
+/-- The consumed ordinary marks (C16), at stage 0. Owner consumption travels
+    through `terminalMovesAt` instead, with the C09 escrow and `after := none`. -/
 def nimmtAt (u : UProg) (f : UFn) : List (Fin u.marken.length × Nat) :=
-  f.nimmt.filterMap fun m => (markFin u.marken m).map (·, 0)
+  f.nimmt.filterMap fun m =>
+    match markFin u.marken m with
+    | none => none
+    | some i => if u.tabs.all (fun t => decide (t.owner ≠ some m)) then some (i, 0) else none
 
 /-- The produced ordinary marks of a function (C16): its `gibt` names resolved
     against the unit's mark table at stage 0, EXCEPT owner marks: signatures never

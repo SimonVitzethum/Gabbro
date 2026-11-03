@@ -144,6 +144,9 @@ theorem eval_ru (σ₀ σ : World D) : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : 
   | _, _, _, .thru _ t _ f i _, ρ =>
       congrArg (fun z : Zahl 0 (D.count t - 1) => valR (D.typ t f) (σ.slots t z.n f))
         (eval_ru σ₀ σ i ρ)
+  | _, _, _, .thruOwn _ t _ f i _ _ _ _ _ _, ρ =>
+      congrArg (fun z : Zahl 0 (D.count t - 1) => valR (D.typ t f) (σ.slots t z.n f))
+        (eval_ru σ₀ σ i ρ)
   | _, _, _, .ptrOf .., _ => rfl
   | _, _, _, .fnref .., _ => rfl
   | _, _, _, .refEq a b, ρ => by

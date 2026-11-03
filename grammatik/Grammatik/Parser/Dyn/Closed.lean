@@ -23,44 +23,6 @@ structure Closed where
   aliases : List STyp := []
   deriving Repr
 
-/-- Measure declared scalar representation, following aliases with bounded fuel.
-    Aggregates are measured for a precise size refusal, but are not dyn payloads. -/
-def payloadBytes (items : List SItemTief) : Nat → STyp → Except String Nat
-  | 0, _ => .error "dyn.payload-type-cycle"
-  | f + 1, .atom n =>
-    if strEq n "bool" then .ok 1
-    else if strEq n "f32" then .ok 4
-    else if strEq n "f64" then .ok 8
-    else match Uebersetze.eingebauteInt.find? (fun p => strEq p.1 n) with
-      | some _ =>
-        match (String.ofList n.toList.tail).toNat? with
-        | some bits => .ok ((bits + 7) / 8)
-        | none => .error "dyn.payload-type"
-      | none =>
-        match items.find? (fun
-          | .typeT _ name [] [] (some _) | .whyT name _ _ => strEq name n
-          | _ => false) with
-        | some (.typeT _ _ _ _ (some t)) => payloadBytes items f t
-        | some (.whyT ..) => .ok 8
-        | _ => .error ("dyn.payload-type: " ++ n)
-  | f + 1, .path [n] => payloadBytes items f (.atom n)
-  | _, .index .. => .ok 8
-  | f + 1, .range t _ _ _ | f + 1, .wrap t => payloadBytes items f t
-  | f + 1, .array t (.lit n) => do
-    return (← payloadBytes items f t) * n
-  | _, _ => .error "dyn.payload-type"
-
-def scalarPayload (items : List SItemTief) : Nat → STyp → Bool
-  | 0, _ => false
-  | f + 1, .atom n =>
-    match items.find? (fun | .typeT _ name [] [] (some _) => strEq name n | _ => false) with
-    | some (.typeT _ _ _ _ (some t)) => scalarPayload items f t
-    | _ => true
-  | f + 1, .path [n] => scalarPayload items f (.atom n)
-  | f + 1, .range t _ _ _ | f + 1, .wrap t => scalarPayload items f t
-  | _, .index .. => true
-  | _, _ => false
-
 /-- Bounds are concrete ordinary effects; the parser retained the balancing closing brace. -/
 def readBound (items : List SItemTief) (raw : String) : Except String (List SEffekt) := do
   let tokens ← lex raw
@@ -73,8 +35,15 @@ def actualEffects (items : List SItemTief) (i : Instance) : Except String (List 
   expandEffects items (groups items) (instances items) [] [] 1000
     (i.functions.flatMap fun | .fnT s _ => functionEffects s | _ => [])
 
-/-- All linked instances are known here. A bound excludes effects before payload-size checking,
-    so an unrelated large implementation cannot invalidate a smaller bound. -/
+/-- All linked instances are known here. A bound excludes effects before case
+    collection, so an unrelated implementation outside the bound never constrains
+    the linked sum. Every implementation whose effects fit the bound becomes a
+    case, carrying its own payload type: scalar or aggregate, of any size. The
+    closed sum travels through the existing tagged sum layout (the declaration
+    below), never through a separate dynamic representation. Lowering premise
+    (Stage 0, branch s0-gaps1): sum payloads beyond one word lower through
+    `sumPayloadWords`/`sumOff` and the `encodeWords` sum branch; the front end
+    here assumes that layout and proves nothing about its words. -/
 def close (items : List SItemTief) (index : Nat) (surface : STyp) : Except String Closed := do
   let .dyn spec raw := surface | throw "dyn.type"
   let some group := (groups items).find? (fun g => strEq g.name spec)
@@ -96,9 +65,6 @@ def close (items : List SItemTief) (index : Nat) (surface : STyp) : Except Strin
       let actual ← actualEffects items i
       if actual.all (fun e => effects.any (beqSEffekt e)) then
         let [payload] := i.types | throw "dyn.spec-type-arity"
-        let bytes ← payloadBytes items 128 payload
-        if bytes > 8 then throw ("dyn.payload-too-large: " ++ spec)
-        if !scalarPayload items 128 payload then throw ("dyn.payload-type: " ++ spec)
         cases := cases ++ [⟨"GabbroDyn" ++ toString index ++ "Case" ++ toString implementation,
           payload, implementation⟩]
   if cases.isEmpty then throw ("dyn.no-implementation: " ++ spec)

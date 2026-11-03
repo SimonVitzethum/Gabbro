@@ -14,7 +14,7 @@ open Gabbro.Grammatik.Parser.Uebersetze
     (`nimmtAt`/`gibtAt`); the call-scoped owner loans are the `leiht` names
     (`leihtAt`, C12) -- the callee holds them during the call, the caller gets
     them back on normal return; the linear handoffs are the `moves` names
-    (`bewegtMovesAt`, C09) and the checked mints the `mints` names (`praegtAt`).
+    (`ownerMovesAt`, C09, including terminal `consumes`) and the checked mints the `mints` names (`praegtAt`).
     Every moved or minted mark is a stage-0 table owner. -/
 def mkSig (u : UProg) (f : UFn) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) where
@@ -27,7 +27,7 @@ def mkSig (u : UProg) (f : UFn) :
   konsumiert := nimmtAt u f
   produziert := gibtAt u f
   boden := f.boden
-  owner := { moves := bewegtMovesAt u f, loans := leihtAt u f, mints := praegtAt u f }
+  owner := { moves := ownerMovesAt u f, loans := leihtAt u f, mints := praegtAt u f }
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
