@@ -155,6 +155,19 @@ theorem ptrTab_of (fn : UFn) (hA : ArtStimmt fn) (b : String) (j num : Nat) (w :
   rw [paramPos_find _ _ _ hj, hτ]
   simp [tabAt, List.getElem?_eq_getElem h]
 
+/-- Typed parameter lookup also identifies a write-only capability's table. -/
+theorem ptrTab_of_type (fn : UFn) (b : String) (j num : Nat) (read write : Bool)
+    (hj : paramPos fn.params b = .ok j)
+    (hp : (fn.params[j]?).map (·.2) = some (.ptr (.table num (read, write))))
+    (h : num < u.tabs.length) : ptrTab u fn b = some (tabAt u ⟨num, h⟩).name := by
+  obtain ⟨τ, hτ⟩ := paramPos_name _ _ _ hj
+  rw [hτ] at hp
+  simp only [Option.map_some, Option.some.injEq] at hp
+  subst hp
+  unfold ptrTab
+  rw [paramPos_find _ _ _ hj, hτ]
+  simp [tabAt, List.getElem?_eq_getElem h]
+
 /-! ## 3. Value sides -/
 
 theorem lowParamSide_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat}
