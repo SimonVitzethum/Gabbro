@@ -32,8 +32,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
       foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
     - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
-      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, residual generic calls/module headers, counterprobes,
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, counterprobes,
       annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
+      Residual generic calls and module-template/use headers now go through the expansion-aware Stage-0 gate
+      (`syntax-s0`, needs the lead build): the gate checks the expanded unit, with the expansion certificate.
     - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
       incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
   - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
@@ -351,7 +353,15 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   16. C16 connected export/Stage-0 correctness with emitted sample work.
 - Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
   `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
-  TODO (Muse): prove generic expansion soundness for the connected implementation.
+  On `syntax-s0` (2026-11-04, needs the lead build): `Stage0.Frontend.ExpansionGate` checks the expanded
+  unit with the expansion certificate (`expansion_gate` ties acceptance to the elaborated unit), and
+  source-text-to-image witnesses cover generics, parametric modules, tagged dispatch and `dyn`
+  (THEOREM-MAP §§138-141). Open: the lead build of the branch.
+- Range folds (§4.4, step 1b): generalized on `syntax-s0` (2026-11-04, needs the lead build) beyond the
+  direct integer add-fold return: arbitrary literal bounds, `min`/`max`/`and`/`or` folds and nested folds
+  over array variables, by expansion to the existing traverse forms, with the `expandNested_ok`
+  elimination theorem and source-text-to-image witnesses (THEOREM-MAP §142). Open: the lead build of
+  the branch; row-projection nesting, symbolic short bounds and non-return positions still refuse.
 - C02 items 1-4 on branch `c02-a` (2026-11-03, needs the lead build): `Logik/Vertraege/UebersetzungDecoder.lean`
   (decoder soundness, immutable payload typing, expansion shape, token-grammar refusals) and
   `Parser/Stmt/LibraryIdentity.lean` (payload position, key correspondence, head normalization,
