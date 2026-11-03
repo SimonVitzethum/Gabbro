@@ -41,7 +41,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 public import Stage0.Senke.Ausdruck.Aggregat.ProdArgs
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Code
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinCode
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
