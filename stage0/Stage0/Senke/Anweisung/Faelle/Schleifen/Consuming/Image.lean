@@ -118,7 +118,7 @@ theorem Ready.ok (h : x.Ready m σ ρ) {i j d : Nat} {block : List II} {Q : W �
     (endAt : x.at i + BitVec.ofNat 64 (16 * block.length) = x.at j)
     (ctx : frei Γ reserved ≤ d) (scratch : x.s ≤ d) (room : d ≤ x.K) :
     ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at j) m
-      (fun m' => x.Ready m' σ ρ ∧ ∃ v, x.read m' d v ∧ Q v) := by
+      (fun m' => x.Ready m' σ ρ ∧ Agree x.fp d x.K m m' ∧ ∃ v, x.read m' d v ∧ Q v) := by
   obtain ⟨m', run, a, v, read, value⟩ := run
   rw [endAt] at run
   have low : x.lo ≤ d := by have := x.controls; have := x.scratch; omega
@@ -131,7 +131,7 @@ theorem Ready.ok (h : x.Ready m σ ρ) {i j d : Nat} {block : List II} {Q : W �
       · omega
       · omega
       · have := x.protected j hj; omega) room,
-    h.agree a ctx (by rw [← x.abi]; omega) room, v, read, value⟩
+    h.agree a ctx (by rw [← x.abi]; omega) room, a, v, read, value⟩
 
 /-- A local jump resolves against the same image and preserves all memory. -/
 theorem Ready.jump (h : x.Ready m σ ρ) (i j : Nat) (target : Label)
@@ -174,7 +174,7 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
     (topBound : top ≤ x.Ks) (found : x.fragment[i]? = some (.code block))
     (compatible : WordCompatible τ) :
     ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at (i + 1)) m
-      (fun m' => x.Ready m' σ ρ ∧ ∃ v, x.read m' (x.s + 4) v ∧ Enc L τ (eval σ e σ ρ) v) := by
+      (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 4) x.K m m' ∧ ∃ v, x.read m' (x.s + 4) v ∧ Enc L τ (eval σ e σ ρ) v) := by
   have pre := h.pre i (x.s + 4) block ctx found
   have preWorld := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
   have ok := lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
