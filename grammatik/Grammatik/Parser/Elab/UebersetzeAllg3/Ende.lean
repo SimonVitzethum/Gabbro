@@ -269,6 +269,9 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .loopBeg bnd tab inv :: rest =>
     (R.struct (l := l) Γ fn Λ pe (.loopBeg bnd tab inv) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
+  | Γ, fn, Λ, pe, .consumeLoopBeg b t p m e i mass effects :: rest =>
+    (R.struct (l := l) Γ fn Λ pe (.consumeLoopBeg b t p m e i mass effects) rest).bind fun (⟨Λ₁, st⟩, rest') =>
+      (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (body, remaining) => .ok (Endblock.cons st body, remaining)
   | Γ, fn, Λ, pe, .retryBeg cnt bis :: rest =>
     (R.struct (l := l) Γ fn Λ pe (.retryBeg cnt bis) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
