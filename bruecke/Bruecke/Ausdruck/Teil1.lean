@@ -110,14 +110,30 @@ theorem lowIdx_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat}
 
 /-! ## 2. Slot terms: the casts of the lowering are the constructors -/
 
-theorem durchTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
+theorem durchTerm_heq {space : Nat} (Γ : Ctx) (Λ : List (Res (declOf u)))
     (num : Nat) (w : Bool) (h : num < u.tabs.length)
-    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr (.table num (true, w))))
+    (fh : FieldHit u ⟨num, h⟩) (v : Var Γ (.ptr ⟨space, ⟨true, w, none⟩, .table num⟩))
+    (hc : (declOf u).capTab space num = some (⟨num, h⟩ : Fin u.tabs.length))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
-    HEq (durchTerm u Γ Λ num w h fh v i hL)
-      (Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (capTab_some u num h) fh.idx i hL) := by
+    HEq (durchTerm u Γ Λ num w h fh v hc i hL)
+      (Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ hc fh.idx i hL) := by
   unfold durchTerm; exact mpr_heq _ _
+
+theorem durchOwnTerm_heq {space : Nat} (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (num : Nat) (w : Bool) (h : num < u.tabs.length) (fh : FieldHit u ⟨num, h⟩)
+    (owner : Nat) (m : Fin u.marken.length)
+    (v : Var Γ (.ptr ⟨space, ⟨true, w, some owner⟩, .table num⟩))
+    (hc : (declOf u).capTab space num = some (⟨num, h⟩ : Fin u.tabs.length))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
+    (hm : eignerMarke u owner = some m) (he : m ∈ eignerAt u ⟨num, h⟩)
+    (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
+    let guards := ownGuard_holds u Λ ⟨num, h⟩ owner m hm he hL
+    HEq (durchOwnTerm u Γ Λ num w h fh owner m v hc i hm he hL)
+      (Expr.thruOwn (D := declOf u) (Expr.var v) ⟨num, h⟩ hc fh.idx i m 0
+        guards.1 guards.2.1 guards.2.2 hL) := by
+  unfold durchOwnTerm
+  exact mpr_heq _ _
 
 theorem slotTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (t : Fin u.tabs.length) (fh : FieldHit u t)
@@ -156,9 +172,11 @@ theorem ptrTab_of (fn : UFn) (hA : ArtStimmt fn) (b : String) (j num : Nat) (w :
   simp [tabAt, List.getElem?_eq_getElem h]
 
 /-- Typed parameter lookup also identifies a write-only capability's table. -/
-theorem ptrTab_of_type (fn : UFn) (b : String) (j num : Nat) (read write : Bool)
+theorem ptrTab_of_type {space : Nat} {owner : Option Nat}
+    (fn : UFn) (b : String) (j num : Nat) (read write : Bool)
     (hj : paramPos fn.params b = .ok j)
-    (hp : (fn.params[j]?).map (·.2) = some (.ptr (.table num (read, write))))
+    (hp : (fn.params[j]?).map (·.2) =
+      some (.ptr ⟨space, ⟨read, write, owner⟩, .table num⟩))
     (h : num < u.tabs.length) : ptrTab u fn b = some (tabAt u ⟨num, h⟩).name := by
   obtain ⟨τ, hτ⟩ := paramPos_name _ _ _ hj
   rw [hτ] at hp
@@ -205,7 +223,7 @@ theorem lowDurch_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Na
   · cases h
   · rename_i j hj
     split at h
-    · rename_i num wr hp
+    · rename_i space wr num hp
       split at h
       · rename_i hlt
         split at h
@@ -219,16 +237,62 @@ theorem lowDurch_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Na
             · rename_i i hi
               split at h
               · rename_i hG
-                cases h
-                refine ⟨_, ptrTab_of fn hA b j num wr hj hp hlt, ?_⟩
-                simp only [Gabbro.Body.eval]
-                rw [lowIdx_sim hi σ₀ σ ρ w β hL]
-                simp only
-                rw [wrel_lies hW _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh]
-                rw [valOf_eval_heq fh.hint.symm _ _
-                  (durchTerm_heq Γ Λ num wr hlt fh v i hG) σ₀ σ ρ]
-                rfl
+                cases hcap : checkedTableCap u space num hlt with
+                | error error => simp [hcap] at h
+                | ok cap =>
+                  cases hparam : checkedPointerParam fn j ⟨space, ⟨true, wr, none⟩, .table num⟩ with
+                  | error error => simp [hcap, hparam] at h
+                  | ok parameter =>
+                    simp only [hcap, hparam, bind, Except.bind] at h
+                    cases h
+                    refine ⟨_, ptrTab_of_type fn b j num true wr hj parameter.down.2 hlt, ?_⟩
+                    simp only [Gabbro.Body.eval]
+                    rw [lowIdx_sim hi σ₀ σ ρ w β hL]
+                    simp only
+                    rw [wrel_lies hW _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh]
+                    rw [valOf_eval_heq fh.hint.symm _ _
+                      (durchTerm_heq Γ Λ num wr hlt fh v cap.down i hG) σ₀ σ ρ]
+                    rfl
               · cases h
+      · cases h
+    · rename_i space wr owner num hp
+      split at h
+      · rename_i hlt
+        split at h
+        · cases h
+        · rename_i fh hfh
+          split at h
+          · cases h
+          · rename_i m hm
+            split at h
+            · cases h
+            · rename_i v hv
+              split at h
+              · cases h
+              · rename_i i hi
+                split at h
+                · rename_i hG
+                  split at h
+                  · rename_i he
+                    cases hcap : checkedTableCap u space num hlt with
+                    | error error => simp [hcap] at h
+                    | ok cap =>
+                      cases hparam : checkedPointerParam fn j
+                          ⟨space, ⟨true, wr, some owner⟩, .table num⟩ with
+                      | error error => simp [hcap, hparam] at h
+                      | ok parameter =>
+                        simp only [hcap, hparam, bind, Except.bind] at h
+                        cases h
+                        refine ⟨_, ptrTab_of_type fn b j num true wr hj parameter.down.2 hlt, ?_⟩
+                        simp only [Gabbro.Body.eval]
+                        rw [lowIdx_sim hi σ₀ σ ρ w β hL]
+                        simp only
+                        rw [wrel_lies hW _ ⟨num, hlt⟩ (hT.1 _) fname fh hfh]
+                        rw [valOf_eval_heq fh.hint.symm _ _
+                          (durchOwnTerm_heq Γ Λ num wr hlt fh owner m v cap.down i hm he hG) σ₀ σ ρ]
+                        rfl
+                  · cases h
+                · cases h
       · cases h
     · cases h
 
@@ -290,13 +354,21 @@ theorem lowAltRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : 
             split at ht
             · rename_i j hj
               split at ht
-              · rename_i num wr hp
+              · rename_i space wr owner num hp
                 split at ht
                 · rename_i hlt
-                  cases ht
-                  rw [ptrTab_of fn hA b j num wr hj hp hlt] at hc
-                  cases hc
-                  exact hT.1 _
+                  cases hcap : checkedTableCap u space num hlt with
+                  | error error => simp [hcap] at ht
+                  | ok cap =>
+                    cases hparam : checkedPointerParam fn j
+                        ⟨space, ⟨true, wr, owner⟩, .table num⟩ with
+                    | error error => simp [hcap, hparam] at ht
+                    | ok parameter =>
+                      simp only [hcap, hparam, bind, Except.bind] at ht
+                      cases ht
+                      rw [ptrTab_of_type fn b j num true wr hj parameter.down.2 hlt] at hc
+                      cases hc
+                      exact hT.1 _
                 · cases ht
               · cases ht
             · rename_i e he
@@ -353,7 +425,7 @@ theorem lowDurchWert_none {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh
   split
   · rfl
   · split
-    · rename_i num _ _
+    · rename_i space wr num hp
       split
       · rename_i hlt
         rw [fieldHitW_none (hT.2 ⟨num, hlt⟩)]

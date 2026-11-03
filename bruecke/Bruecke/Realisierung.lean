@@ -44,32 +44,28 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
   cases st
   case assign b fname ix v =>
     rw [lowStmt_assign S.tab] at h
-    simp only [lowAssignDurch, lowAssignDurchL] at h
-    split at h
-    · cases h
-    · rename_i j hj
-      split at h
-      · rename_i read num hp
-        split at h
-        · rename_i hlt
-          repeat' split at h
-          all_goals try cases h
-          rename_i hw
-          left
-          have hparam : ((fnAt u c).params[j]?).map (·.2) =
-              some (.ptr (.table num (read, true))) := by
-            rw [← ctxOf_get]
-            exact lowVar_typ (ctxOf u c) j _ _ (by assumption)
-          have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
-          simp only [stmtBody, hpt] at hb
-          cases hsv : sideExpr u (fnAt u c) v with
-          | none => rw [hsv] at hb; cases hb
-          | some ve =>
-            rw [hsv] at hb
-            cases hb
-            exact ⟨_, _, _, _, rfl, any_mem hw⟩
-        · cases h
-      · cases h
+    simp only [lowAssignDurch, lowAssignDurchL, bind, Except.bind] at h
+    repeat' split at h
+    all_goals try cases h
+    all_goals
+      match goal with
+      | hv : lowVar (ctxOf u c) ?j
+          (.ptr ⟨?space, ⟨?read, true, ?owner⟩, .table ?num⟩) = .ok ?pv,
+        hj : paramPos (fnAt u c).params b = .ok ?j,
+        hw : writesAt u (fnAt u c) ⟨?num, ?hlt⟩ = true |- _ =>
+        left
+        have hparam : ((fnAt u c).params[j]?).map (·.2) =
+            some (.ptr ⟨space, ⟨read, true, owner⟩, .table num⟩) := by
+          simpa only [ctxOf, List.getElem?_map] using
+            (lowVar_typ (ctxOf u c) j _ pv hv)
+        have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
+        simp only [stmtBody, hpt] at hb
+        cases hsv : sideExpr u (fnAt u c) v with
+        | none => rw [hsv] at hb; cases hb
+        | some ve =>
+          rw [hsv] at hb
+          cases hb
+          exact ⟨_, _, _, _, rfl, any_mem hw⟩
   case assignTab b fname ix v =>
     rw [lowStmt_assignTab S.tab] at h
     simp only [lowAssignTab, lowAssignTabL] at h

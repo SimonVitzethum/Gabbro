@@ -35,14 +35,14 @@ def fnSuch (u : UProg) (n : String) : Option UFn := u.fns.find? (fun f => f.name
 /-- The name of the table a pointer parameter points at. -/
 def ptrTab (u : UProg) (f : UFn) (p : String) : Option String :=
   match f.params.find? (fun q => q.1 == p) with
-  | some (_, .ptr ⟨0, _, .table t⟩) => (u.tabs[t]?).map (·.name)
+  | some (_, .ptr ⟨_, _, .table t⟩) => (u.tabs[t]?).map (·.name)
   | _ => none
 
 /-- The pointer parameter of `f` that points at the table `tab` -- only when there is exactly one
     (a call that passes "a pointer to `tab`" names no variable in `UArg.freshPtr`). -/
 def ptrParam (u : UProg) (f : UFn) (tab : String) : Option String :=
   match f.params.filter (fun q => match q.2 with
-      | .ptr ⟨0, _, .table t⟩ => (u.tabs[t]?).map (·.name) == some tab
+      | .ptr ⟨_, _, .table t⟩ => (u.tabs[t]?).map (·.name) == some tab
       | _ => false) with
   | [q] => some q.1
   | _ => none

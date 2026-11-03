@@ -56,10 +56,11 @@ private theorem parameterRows_coherent (rows : List (String × Ty × UParamArt))
     (coherent : ∀ row ∈ rows, ∀ cap, row.2.2 = .ptr cap → row.2.1 = .ptr cap) :
     ∀ j cap, (rows.map (·.2.2))[j]? = some (.ptr cap) →
       (((rows.map (·.1)).zip (rows.map (·.2.1)))[j]?).map (·.2) = some (.ptr cap) := by
+  revert coherent
   induction rows with
-  | nil => intro j cap kind; simp at kind
+  | nil => intro coherent j cap kind; simp at kind
   | cons row rows ih =>
-    intro j cap kind
+    intro coherent j cap kind
     cases j with
     | zero =>
       have exactType := coherent row (List.mem_cons_self ..) cap (by simpa using kind)
