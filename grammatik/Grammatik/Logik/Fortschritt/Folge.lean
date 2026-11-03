@@ -107,7 +107,7 @@ def fS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Stmt D V l �
   | .retry _ _ body ueber => fB e false body && fB e false ueber
   | .forever _ _ body => fB e false body
   | .assignSlot .. => true
-  | .assignThru .. | .assignSlotRef .. => true
+  | .assignThru .. | .assignThruOwn .. | .assignSlotRef .. => true
   | .assignGlob .. => true
   | .putBytes .. => true
   | .assignVar .. => true
