@@ -164,6 +164,8 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _
+  · exact druckFold_ne_nil _ _ _
+  · exact druckFold_ne_nil _ _ _
 
 mutual
 def druckToks : SExpr → List Token
