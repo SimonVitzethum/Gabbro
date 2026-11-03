@@ -31,9 +31,13 @@ theorem consumeCheckEntry_form {D : Deklaration} {c : CheckDecl D} {gate : D.Fn}
     {history result : List (CheckEvidenz D)} (form : CheckHistoryForm c gate history)
     (consumed : consumeCheckEntry gate history = some result) :
     CheckHistoryForm c gate result := by
+  revert form consumed
   induction history generalizing result with
-  | nil => simp [consumeCheckEntry] at consumed
+  | nil =>
+    intro form consumed
+    simp [consumeCheckEntry] at consumed
   | cons entry rest ih =>
+    intro form consumed
     have head := form entry (List.mem_cons_self)
     have tail : CheckHistoryForm c gate rest := fun item member =>
       form item (List.mem_cons_of_mem _ member)
