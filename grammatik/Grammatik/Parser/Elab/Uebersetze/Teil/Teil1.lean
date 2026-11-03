@@ -172,6 +172,10 @@ inductive UStmt
   | floatOf : String → USide → (Int × Int) → (Int × Int) → UStmt
   /-- `advances a -> b;`: adjacent labels in one declared linear order. -/
   | advances : String → String → UStmt
+  /-- A value-bearing indirect call with a reason continuation, terminated by
+      `blkEnd`. Retain result binder, pointer, resolved signature, arguments and
+      reason binder for the existing typed Block/Endblock lowering. -/
+  | bindCallIndElse : String → String → String → List UArg → String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
