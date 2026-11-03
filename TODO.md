@@ -614,7 +614,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Block.check` | no producer in `Parser/Elab/**` | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | source export absent; no named constructor-specific refusal |
 | `Block.float` | yes J/Seq:78 | yes A:330, software IEEE add/sub/mul/div | `lowB_ok`, P:221 | recursive values/range/code guards; stale TODO claim that this constructor is wholly refused is superseded |
 | `Block.floatLit` | yes J/Seq:73 | yes A:211, `floatLiteralL` | `lowB_ok`, P:225 | kernel-rounded binary64 value and range |
-| `Block.floatOf` | no producer in `Parser/Elab/**` | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | source conversion export absent; computed conversion helper's supported integer representation |
+| `Block.floatOf` | skipped: no integer-to-float surface conversion in the Lean parser (`Parser/Expr/Ausdruck/Teil2a.lean:110`–`:280`); `as f64` is absent from SYNTAX.md | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | no parser conversion to export; computed conversion helper's supported integer representation |
 | `Block.floatNarrow` | no producer in `Parser/Elab/**` | yes A:202, range/fallback | `lowB_ok`, P:229 | source export absent; NaN endpoints lower the fallback |
 | `Block.narrowRequired` | yes J/Seq:200; arena expansion too | partial A:240 | `lowB_ok`, P:217 | A:245: `else none` unless signed-word input/bounds; failed runtime capacity stops 107 |
 | `Block.bindAxiomOpt` | yes J/Seq:154 | yes A:251/:256, some/VOID result | `lowB_ok`, P:197 | non-VOID answers still pass `chkC`; gate restrictions |
