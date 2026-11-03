@@ -1,6 +1,6 @@
 /- Construction of separated sums with the common constant and payload emitters. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Model
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Model
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
 @[expose] public section
 
