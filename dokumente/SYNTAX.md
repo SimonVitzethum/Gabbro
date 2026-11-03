@@ -262,15 +262,19 @@ entrydecl  = "entry" ident [ "vector" constexpr ] [ "via" ident ] "arch" ident "
                entryextra
                "dispatch" path ";"
              "}" ;
-entrustdecl = "entrust" ident "at" ident "arch" ident "{"
-                "regs" "in" "{" [ regbind { "," regbind } [ "," ] ] "}"
-                "stack"  ident
-                "assume" ident ";"
-              "}" ;
-(* `entrust` -- the room whose CONTENT Gabbro does not know. Gabbro says nothing about the
-   guest; what it says is the CONTRACT AT ENTRY. `at` takes a NAME (`N006`): a jump to a
-   computed address is exactly what must not be nameable. `assume` is compulsory and must be
-   falsifiable (`N004`/`N005`), the same rule as `progress`. *)
+entrustdecl = "entrust" ident "at" ident "arch" ident "via" ident ";" ;
+(* `at` names an immutable code-region capability, never a computed address.
+   `via` resolves one declared C08 foreign binding with an explicit failure
+   channel and requires/ensures mentioning the region. The item defines an
+   ordinary wrapper with the binding's parameter, result and reason types;
+   calling it forwards through the existing fallible foreign-call binder.
+   Isolation and implementation correctness are software user-logic duties
+   on that contract; guest instructions receive no Gabbro body guarantee.
+   The Lean source path exports software provenance without a hardware
+   assumption. Additional region arguments need real owner resources and
+   remain refused while the source unit has no owner export. Historical
+   register/stack/assume blocks are parsed only to report named exclusions;
+   they cannot establish software isolation. Unknown ABIs are refused. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 (* Checked since lane S5 («SS-1», §12.1): the user side of a

@@ -80,6 +80,39 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       (`syntax-s0`, needs the lead build): the gate checks the expanded unit, with the expansion certificate.
     - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
       incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
+  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
+    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
+    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
+  - **Additional branch implementation notes (lead checks pending).**
+  - **Stage-0 refusals with their missing step:**
+    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
+    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
+    - C11 `by consuming`: refused by design.
+    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C10 RW locks: reader-wait liveness remains open.
+    - C09 owner flows: escrow simulation in progress.
+    - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
+    - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
+      carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
+      bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
+    - C14 `aligned`/`section`: relative grid (`wordAlign`, `globStarts`) plus the conditional absolute placement
+      lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
+      witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
+      loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
+    - C14 `entrust`: explicit `via SERVICE` source bindings now resolve declared C08 foreign
+      contracts, export software provenance and their exact requires/ensures, generate ordinary
+      fallible wrappers, and retain every descriptor in canonical and Stage-0 admission.
+      The source-to-image witness and named refusal twins are written (THEOREM-MAP §150).
+      Open: lead compilation, witness reduction and standard-axiom checks; no build was run by
+      the implementation worker. Additional source region inputs remain refused until the
+      source adapter can retain each transferred capability with its resolved owner resource;
+      register/privileged handover and unknown ABIs stay refused. `Spec.lean` is unchanged.
+    - C07 fallible indirect calls: Stage-0 arms being added.
+  - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,
+    already expand into the connected `lowB_ok`/`lowEnd_ok` narrowing and store arms. Source-image witnesses now
+    cover both levels and the last fitting slot; semantic witnesses cover success, ceiling preservation and required
+    capacity failure (stop 107). Duplicate counter-depth arms and two witness import paths are corrected.
+    Open: the lead's Lean checks of these witnesses and the connected pipeline; the implementation worker ran no builds.
   - **Conditional refusal follow-up (`s0-gaps1`, 2026-11-03; lead checks pending).** The original metadata
     gate now admits immutable unannotated static-arena allocation with an explicit else, recursively checking
     that continuation. `EndAllocWitness` connects original-gate acceptance, canonical source and image correctness.
@@ -175,7 +208,7 @@ State: GX/W model carries atomics with the rely; release/acquire is enforced.
 1. **Track P and Track L**, both running now in parallel with Phase A.
    Track P: complete Lean parser (coverage matrix, then elaboration replaces `lean_g.rs`). Track L: refinement down to the binary with an
    ISA-neutral `Code` and no CPU model. Plans: `PLAN-TRANSLATION-VALIDATION.md`† §9a/§9b.
-2. **Model gaps behind existing lowerings:** `boot` and `entrust` semantics; aarch64 `vector`/`via` meaning; port space and `asm` (LLVM
+2. **Model/export gaps behind existing lowerings:** `boot` semantics; the `entrust` source/service binding; aarch64 `vector`/`via` meaning; port space and `asm` (LLVM
    lowerings exist without a model).
 3. **Remaining O-items:** interrupts and cores (O19 rest), arenas under concurrency (O20), `child` without a model (O21), gate
    preconditions (O23), strings (O24), source forms without a complete G export (O27), linking (O28), regions in G (O37). See §2.
@@ -368,7 +401,7 @@ Full table: `LLVM-BACKEND.md`† §5.
 - **Lowerings without a Lean model** (2026-10-17; rule: language follows the Lean model). Built, evidenced only by text/qemu: aarch64
   `entry` (the meaning of `vector`/`via` on aarch64 is the lowerer's reading; `LANGUAGE.md` and the model are silent), `masks irqs`, the
   x86_64 port space, assembler bodies. REFUSED because lowering would invent semantics: `boot` and `entrust`. To do: put the aarch64
-  meaning of `vector`/`via` into the model, then fix `boot`/`entrust` in the model.
+  meaning of `vector`/`via` into the model, then connect the `boot` model and bounded `entrust` service export.
 - **O22 (group execution and stack lifecycle; built 2026-10-17).** Every invocation owns a guarded mapping and completion word; all roots start
   before any join; kernel `clear_child_tid` ends the join after actual exit. Open: runtime syscall numbers still belong to the Linux profile;
   OS-neutral bindings/profiles and the target-to-GX proof.

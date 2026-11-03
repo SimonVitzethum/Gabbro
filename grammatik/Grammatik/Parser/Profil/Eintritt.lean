@@ -17,12 +17,11 @@ public import Grammatik.Parser.Profil.Register
     register-state manipulation, a declared stack region that needs the C08 start service and the C12
     forward-only handle) stays REFUSED by name; it is never erased. Extraction runs on the RESOLVED items
     (`pre108`), where dispatch roots and function names are the same keys.
-  * `GuestBoundary`/`gastB` -- an `entrust` item names a code region, an architecture, a register binding, a
-    stack and an `assume` entry. It is admitted only with a PROVED isolation/invocation service, a declared
-    function; the source form carries none, so `gastVon` records `dienst := none` and `gastVon_abgelehnt`
-    refuses every source `entrust` until that service has a form. The historical `assume` field cannot assert
-    OS isolation: it is only checked to resolve in the registry. Guest instructions are never executed as G
-    code and carry no Gabbro body guarantee.
+  * Guest admission is canonical in `Logik/Ruf/Guest/Boundary.lean`; isolation
+    is a `GuestServicePflicht` under C08 user logic. The source form still
+    carries no service binding, so it has a named refusal below. The historical
+    `assume` field cannot supply software isolation. Guest instructions are
+    never executed as G code or given Gabbro body guarantees.
 
   Not here: the generated trampoline, the exact forwarding of C12's `Ty.entry` handle, the stack region and
   the C08 start service, activation/return/join behaviour against `FadenSchritt`/GX starts. Those need the
@@ -120,41 +119,24 @@ theorem eintritt_ohne_registerzustand {fns : List String} {e : SEingang}
   let s := eintrittB_sound h
   ⟨s.2.2.2.1, s.2.2.2.2.1, s.2.2.2.2.2.2.2.1⟩
 
-/-! ## The guest boundary -/
+/-! ## The source guest boundary -/
 
-/-- The boundary of a guest (`entrust`): the code region, the architecture, the proved isolation/invocation
-    service (a declared function) and the `assume` entry. -/
-structure GuestBoundary where
-  name : String
-  region : String
-  arch : String
-  dienst : Option String
-  annahme : String
-  deriving Repr
+/-- Shared source-header admission. Complete service resolution, ownership and
+    contracts are checked by the canonical elaborator against the actual unit;
+    this check never treats a historical assume name as software isolation. -/
+def gastQuellePruefung (arch : String) (registers : List SRegBind)
+    (stack assumption : String) (service : Option String) : Except String Unit := do
+  if (wertVon .arch arch).isNone then throw "entrust: unknown userspace ABI"
+  if !registers.isEmpty then throw "entrust: register-state or privileged transfer is excluded"
+  if service.isNone then throw "entrust: missing isolation service binding"
+  if !stack.isEmpty || !assumption.isEmpty then
+    throw "entrust: register-state or privileged transfer is excluded"
 
-/-- The boundary an `entrust` item states: the source form names no service, so none is recorded. -/
-def gastVon (name region arch annahme : String) : GuestBoundary :=
-  ⟨name, region, arch, none, annahme⟩
-
-/-- **A guest boundary is admitted**: a decodable architecture, a declared code region, a declared service
-    function and a resolved `assume` entry. -/
-def gastB (regionen fns : List String) (reg : List AnnahmeKennung) (g : GuestBoundary) : Bool :=
-  (wertVon .arch g.arch).isSome &&
-    (regionen.any (fun r => strEq r g.region) &&
-    ((match g.dienst with
-      | none => false
-      | some d => fns.any (fun f => strEq f d)) &&
-    aufgeloest reg g.annahme))
-
-/-- **No service, no boundary**: a guest boundary without a proved service is refused. -/
-theorem gast_ohne_dienst_abgelehnt (regionen fns : List String) (reg : List AnnahmeKennung)
-    (g : GuestBoundary) (h : g.dienst = none) : gastB regionen fns reg g = false := by
-  simp [gastB, h]
-
-/-- Every boundary read off an `entrust` item is refused until the service has a source form. -/
-theorem gastVon_abgelehnt (regionen fns : List String) (reg : List AnnahmeKennung)
-    (name region arch annahme : String) :
-    gastB regionen fns reg (gastVon name region arch annahme) = false :=
-  gast_ohne_dienst_abgelehnt regionen fns reg _ rfl
+/-- An absent source service is always refused, regardless of code labels. -/
+theorem gastQuelle_ohne_dienst (arch : String)
+    (ha : (wertVon .arch arch).isNone = false) :
+    gastQuellePruefung arch [] "" "" none =
+      .error "entrust: missing isolation service binding" := by
+  simp [gastQuellePruefung, ha]
 
 end Gabbro.Grammatik.Parser.ProfilBindung

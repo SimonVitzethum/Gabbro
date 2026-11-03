@@ -282,15 +282,15 @@ def fussWXB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
         geteiltVB P fs c) &&
     ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || getrenntW P fs ws c)
 
-/-- **The checker with the atomic rely**: `Akzeptiert` with `fussWXB` in place of `fussWB`.
-    The C02 library conjunct rides along unchanged (`libraryB_immer`). -/
+/-- The atomic-rely checker keeps the same final bounded guest admission.
+    Source adapters must retain the complete descriptor list, as for Akzeptiert. -/
 def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
-    (aqs : List D.Ax := []) : Bool :=
+    (aqs : List D.Ax := []) (guests : List (GuestBoundary D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs
+    antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs && GuestBoundary.admissionB guests
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
@@ -327,7 +327,7 @@ theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Loc
     {checks : List (CheckDecl D)} (h : AkzeptiertX P S fs ls cs ws aks checks = true) :
     AkzeptiertSpecX P S fs ws [] aks := by
   unfold AkzeptiertX at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, _h16⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact ⟨h1, hAbg, fussWXB_ok hvoll hAbg h3, (stufenB_iff hvoll).mp h4,
@@ -344,7 +344,7 @@ theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : AkzeptiertX P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
   unfold AkzeptiertX at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
 
@@ -364,7 +364,7 @@ theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
     AkzeptiertX P S fs ls cs ws aks checks = true := by
   unfold Akzeptiert at h
   unfold AkzeptiertX
-  simp only [Bool.and_eq_true] at h ⊢
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h ⊢
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, hSchnitt⟩, hReset⟩, h11⟩, h12⟩, h13⟩, hS⟩ := h
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, hSchnitt⟩, h11⟩, h12⟩, h13⟩, hReset⟩, hS⟩
 
@@ -434,7 +434,7 @@ theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lo
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
     AkzeptiertX P S fs ls cs ws aks h.checks qs = true := by
   unfold AkzeptiertX
-  simp only [Bool.and_eq_true]
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, fussWXB_vollstaendig hvoll h.fuss⟩,
     (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
     wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,

@@ -5413,8 +5413,6 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`isEmpty_eq`**: For arbitrary `α : Type`, `l : List α`, assuming `h : l.isEmpty = true`, the conclusion is `l = []`.
 * **`eintrittB_sound`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `(∃ a, wertVon .arch e.arch = some a) ∧ e.vektor = none ∧ e.via = none ∧ e.regIn = [] ∧ e.regOut = [] ∧ e.erhaelt = [] ∧ e.kills = [] ∧ e.stapel = "" ∧ e.perCpu = false ∧ e.ist = none ∧ e.nest = none ∧ ∀ w ∈ e.dispatch, ∃ f ∈ fns, strEq f w = true`.
 * **`eintritt_ohne_registerzustand`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `e.regIn = [] ∧ e.regOut = [] ∧ e.stapel = ""`.
-* **`gast_ohne_dienst_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `g : GuestBoundary`, assuming `h : g.dienst = none`, the conclusion is `gastB regionen fns reg g = false`.
-* **`gastVon_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `name region arch annahme : String`, the conclusion is `gastB regionen fns reg (gastVon name region arch annahme) = false`.
 `grammatik/Grammatik/Parser/Profil/EintrittZeuge.lean`:
 
 * **`ez_zulaessig`**: the conclusion is `eintrittB ["worker"] ezE = true`.
@@ -5428,7 +5426,6 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`ez_arch`**: the conclusion is `eintrittB ["worker"] { ezE with arch`.
 * **`ez_wurzel`**: the conclusion is `eintrittB ["worker"] { ezE with dispatch`.
 * **`ez_kills`**: the conclusion is `eintrittB ["worker"] { ezE with kills`.
-* **`ez_gast_mit_dienst`**: the conclusion is `gastB ["guest_image"] ["isolate_svc"] ezReg ⟨"jit", "guest_image", "x86_64", some "isolate_svc", "guest_stays_in_room"⟩ = true`.
 `grammatik/Grammatik/Zielsatz/Projekte/Profil.lean`:
 
 * **`hardware_iff_komponenten`**: For arbitrary `O : Orakel D`, `Q : AxEns D`, the conclusion is `HardwareAnnahmen O Q ↔ ∀ k ∈ hwAlle, k.gilt O Q`.
@@ -6615,3 +6612,78 @@ Measured here: static diff/whitespace check, changed Lean module headers and fil
 500 lines. No Lean, lake, build, guardian or runner invocation; all new proof bodies and witnesses
 await the lead's checks. `Spec.lean` and the `gabbro_ziel` proof are untouched; standard-axiom
 verification remains a required lead check. Dynamic transfer replay and mint admission stay open.
+## 150. C14: bounded guest service from source to Stage 0 (2026-11-03)
+
+Implementation, not build evidence: the implementation worker ran no Lean/lake,
+compiler or guardian checks. Complete proof and reduction attempts are committed;
+the lead must compile them, reduce the witnesses and recheck `gabbro_ziel` on
+exactly the standard axioms. `Spec.lean` and its meaning are unchanged.
+
+`Logik/Ruf/Guest/Boundary.lean` remains the canonical `GuestBoundary`: immutable
+code, an explicit fallible software service, exact pointer inputs, genuine owner
+resources for transferred regions, a closed ordinary userspace ABI and explicit
+return behavior. `Invocation.lower_eq` identifies the existing
+`Block.bindAxiomOptElse`; no guest interpreter, new machine step or hardware
+isolation assumption is introduced. `transfer_owned` connects ownership to the
+actual resource context. `storageDisjointB_iff` decides byte-extent disjointness.
+
+`Guest/Service.lean` retains isolation as `GuestServicePflicht` alongside C08
+`ForeignPflicht`. `guest_service_contract` transports the service's actual C08
+contract under its call-site precondition and implementation-link duties.
+`guest_storage_disjoint` includes initial live grants and all preceding calls;
+`guest_failure_inventory` preserves that same inventory on failure.
+
+The source connections are now implemented:
+
+- `SItemTief.trustT` retains `via SERVICE`; namespace resolution predeclares the
+  generated wrapper and resolves the code region and foreign binding lexically.
+  `Uebersetze/Guest/Source.lean` resolves exactly one C08 prototype or syscall,
+  requires a declared nonempty failure channel and requires/ensures mentioning
+  the code region, and generates one wrapper forwarding every parameter, the
+  success result and every failure reason. The wrapper uses the existing
+  `SAnw.bindAxiomOptElse`; ordinary elaboration and Stage-0 lowering handle it.
+- `guestForeign` elaborates the declared predicates in the binding's parameter
+  and result scope. `UAx.software` records the explicit source binding;
+  `herkunftAt` exports `some .software` and `axBeleg` remains `none`. A conflicting
+  named hardware origin is refused. Direct foreign `requires Held(...)` is
+  refused rather than silently dropped. `Guest/Contracts.lean` lowers every
+  foreign contract; `contractGate` refuses any failed lowering and `progOfFn`
+  fills `Programm.axVertrag`. `lowerAllg_axVertrag` proves exact retention on
+  every successful lowering, including the actual pre/postconditions.
+- `Guest/Export.lean` re-resolves every retained `UGuest` against the actual
+  `declOf u`, constructs the typed boundary and applies its canonical check.
+  `sourceGuests_complete` proves that no descriptor is omitted. Both
+  `Cover.Differenz.akzeptiertU` and production `OldSource.accepts` pass that
+  complete list to `AkzeptiertX`. `OldSource.restore_axVertrag` and
+  `Compiled.foreign_contracts` retain the same foreign contracts through
+  source postcondition restoration; `Compiled.guest_descriptors` exposes
+  completeness and each admitted descriptor after production checking.
+  `SourceGuestPflicht` explicitly ties the software isolation duty to these
+  exported contracts and actual C08 records, never to `HardwareAnnahmen`.
+
+The source frontend now exports resolved owners through C12/C09. This guest
+source adapter still admits immutable code plus scalar inputs and an ordinary
+returning, fallible service; additional region inputs remain refused until it
+retains their exact transfer descriptors and owner resources. No owner is
+fabricated or transferred region discarded.
+Register state, privileged/stack assumption fields, unknown ABI, missing or
+ambiguous service, absent failure channel and absent region contracts remain
+named refusals. Foreign cost claims retain the metadata gate.
+
+`Stage0/Zeugen/Ablehnung/EntrustWitness.lean` now contains the accepted image
+attempt: real source text calls the generated guest wrapper with a code-region
+capability, carries a nontrivial declared region contract and executable C08
+gate, checks both the production `AkzeptiertX` path and explicit `Akzeptiert`,
+and retains the generic canonical-source and image correctness certificates.
+Its source-shape, exact-contract, descriptor-completeness and ordinary fallible
+constructor witnesses prevent an inert or empty-boundary success. Negative
+source twins cover missing service/field, unowned region, register state,
+privileged fields, unknown ABI, infallible service and missing region contract.
+`Guest/Witness.lean` retains the more general owned-region model witnesses.
+None of these new source reductions has yet been measured by this worker.
+
+Worker static checks: 31 changed Lean modules, all using the module system,
+maximum 473 lines; no forbidden proof tokens or folder-entry findings. The
+3,068-file import graph has no cycles and the outgoing diff passes
+`git diff --check`. These checks provide no Lean elaboration or witness-reduction
+evidence.

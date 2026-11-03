@@ -266,9 +266,22 @@ structure UAx where
   /-- The resolved `assume` index witnessing a hardware origin (`none` for
       software items and while unresolved; a dangling index reads as `none`). -/
   beleg : Option Nat := none
+  /-- Explicit software origin, resolved from an entrust service binding. -/
+  software : Bool := false
+  names : List String := []
+  needs : List UEns := []
+  gives : List UEns := []
   deriving DecidableEq, Repr
 
 deriving instance DecidableEq for Except
+
+/-- Exact admitted source descriptor; typed admission resolves both names again. -/
+structure UGuest where
+  name : String
+  code : String
+  arch : String
+  service : String
+  deriving DecidableEq, Repr
 
 /-- The elaborated program and its original-source export admission. -/
 structure UProg where
@@ -277,6 +290,7 @@ structure UProg where
   fns : List UFn
   /-- The foreign bodies (`extern fn`). -/
   axs : List UAx := []
+  guests : List UGuest := []
   /-- The `assume` items, in order (`D.Annahme`). -/
   annahmen : List String := []
   /-- The `reason` declarations, in order. -/

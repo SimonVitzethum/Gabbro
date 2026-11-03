@@ -124,6 +124,7 @@ theorem akzeptiertA_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks = true) :
     AkzeptiertA P S fs ls cs ws = true := by
   unfold Akzeptiert at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true] at h
   unfold AkzeptiertA
   simp only [Bool.and_eq_true] at h ⊢
   -- the handler component `maskenB` (Opus agent H), C18 `resetB`, C02 `libraryB`, C15
