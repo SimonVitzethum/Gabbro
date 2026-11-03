@@ -196,7 +196,7 @@ def seiteAltErg : USide → Bool
   | .zaehleFeld a _ b => seiteAltErg a || ensAltErg b
   | .taggedValue _ _ a | .typed _ a | .len a | .present _ a => seiteAltErg a
   | .arrCons a b | .idx a b => seiteAltErg a || seiteAltErg b
-  | .product _ _ fields => fields.any (fun field => seiteAltErg field.2)
+  | .product _ _ fields => fields.attach.any (fun field => seiteAltErg field.val.2)
   | .field a _ => seiteAltErg a
   | .replace a _ b => seiteAltErg a || seiteAltErg b
   | .upd a i v => seiteAltErg a || seiteAltErg i || seiteAltErg v
@@ -204,10 +204,10 @@ def seiteAltErg : USide → Bool
   | _ => false
 termination_by side => sizeOf side
 decreasing_by
-  all_goals simp_wf at *
+  all_goals simp_wf
   all_goals first
     | omega
-    | have smaller := recordField_sizeOf_lt _ _ ‹_ ∈ _›
+    | have smaller := recordField_sizeOf_lt fields field.val field.property
       omega
 
 /-- `old(..)` or `result` inside a predicate. -/
@@ -221,6 +221,14 @@ def ensAltErg : UEns → Bool
   | _ => false
 termination_by predicate => sizeOf predicate
 decreasing_by
-  all_goals simp_wf at *
+  all_goals simp_wf
   all_goals omega
 end
+
+/-- The occurrence classifier still visits exactly the original product fields. -/
+theorem seiteAltErg_product (name : Nat) (openFields : Bool) (fields : List (Ty × USide)) :
+    seiteAltErg (.product name openFields fields) = fields.any (fun field => seiteAltErg field.2) := by
+  rw [seiteAltErg]
+  simpa only [List.unattach_attach] using
+    (List.any_subtype (l := fields.attach) (g := fun field => seiteAltErg field.2)
+      (fun _ _ => rfl))

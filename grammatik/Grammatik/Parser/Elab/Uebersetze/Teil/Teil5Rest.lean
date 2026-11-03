@@ -207,7 +207,7 @@ theorem uParam_pointer_coherent
   all_goals cases accepted
   all_goals first
     | exact False.elim (uArtVon_ne_ptr _ _ kind)
-    | (cases kind; rfl)
+    | (cases kind <;> rfl)
 
 /-- A result range (the `int_range` of `lean_g.rs` on the
     result type). -/
@@ -345,7 +345,7 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
   | .reads _ :: rest => uEffekteAux kopf tabs locks globs rest
   | .pure :: rest => uEffekteAux kopf tabs locks globs rest
   | .loops :: rest => uEffekteAux kopf tabs locks globs rest
-| .allocs m :: rest =>
+  | .allocs m :: rest =>
     match uEffekteAux kopf tabs locks globs rest with
     | .error e => .error e
     | .ok r => .ok { r with gibt := m :: r.gibt }
