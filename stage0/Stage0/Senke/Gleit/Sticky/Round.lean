@@ -50,6 +50,59 @@ theorem softRound_scaled (j n d t : Nat) (dp : 0 < d) (tp : 0 < t)
   rw [Nat.div_add_mod', Nat.div_add_mod', exactValue]
   ring
 
+/-- Unbounded shift-with-sticky. The quotient retains its low bit; the
+    discarded tail can only set that bit, never replace the quotient. -/
+def softShiftJamNat (a k : Nat) : Nat :=
+  (a >>> k) ||| if a % 2 ^ k = 0 then 0 else 1
+
+/-- A sticky shift is either exact or lies at an odd point whose adjacent
+    even endpoints strictly enclose the unshifted value. -/
+theorem softShiftJamNat_interval (a k : Nat) :
+    let j := softShiftJamNat a k
+    let d := 2 ^ k
+    (a % d = 0 ∧ a = j * d) ∨
+      (j % 2 = 1 ∧ (j - 1) * d < a ∧ a < (j + 1) * d) := by
+  dsimp only
+  have dp : 0 < (2 : Nat) ^ k := Nat.two_pow_pos _
+  have division := Nat.div_add_mod' a (2 ^ k)
+  have remBound := Nat.mod_lt a dp
+  by_cases exactTail : a % 2 ^ k = 0
+  · left
+    have quotient : softShiftJamNat a k = a / 2 ^ k := by
+      simp only [softShiftJamNat, exactTail, ite_true, Nat.or_zero,
+        Nat.shiftRight_eq_div_pow]
+    exact ⟨exactTail, by rw [quotient]; omega⟩
+  · right
+    have jam : softShiftJamNat a k = (a / 2 ^ k) ||| 1 := by
+      simp only [softShiftJamNat, exactTail, ite_false, Nat.shiftRight_eq_div_pow]
+    have odd : softShiftJamNat a k % 2 = 1 := by
+      rw [jam, Nat.or_mod_two_eq_one]
+      exact Or.inr rfl
+    have halves : softShiftJamNat a k / 2 = (a / 2 ^ k) / 2 := by
+      rw [jam, Nat.or_div_two]
+      simp
+    have quotientSplit := Nat.div_add_mod' (a / 2 ^ k) 2
+    have quotientMod := Nat.mod_lt (a / 2 ^ k) (by decide : 0 < 2)
+    have jamSplit := Nat.div_add_mod' (softShiftJamNat a k) 2
+    have lower : softShiftJamNat a k - 1 ≤ a / 2 ^ k := by omega
+    have upper : a / 2 ^ k + 1 ≤ softShiftJamNat a k + 1 := by omega
+    have lowScaled := Nat.mul_le_mul_right (2 ^ k) lower
+    have highScaled := Nat.mul_le_mul_right (2 ^ k) upper
+    exact ⟨odd, by nlinarith, by nlinarith⟩
+
+/-- The emitted word shift is the unbounded operation on the input word's
+    natural value, including shifts wider than the word. -/
+theorem floatShiftJamWord_nat (a k : Runner.W) :
+    (floatShiftJamWord a k).toNat = softShiftJamNat a.toNat k.toNat := by
+  have model := congrArg BitVec.toNat (floatShiftJamWord_model a k)
+  simp only [BitVec.toNat_or, BitVec.toNat_ushiftRight] at model
+  by_cases tail : a.toNat % 2 ^ k.toNat = 0
+  · simpa only [softShiftJamNat, tail, ite_true, ne_eq, not_true_eq_false,
+      decide_false, Runner.IR.bool, Bool.false_eq_true, ite_false,
+      BitVec.toNat_zero] using model
+  · simpa only [softShiftJamNat, tail, ite_false, ne_eq, not_false_eq_true,
+      decide_true, Runner.IR.bool, ite_true] using model
+
 /-- The existing word sticky lemma yields the complete rounding certificate:
     an exact quotient, or an odd word surrounding the original rational.
     The proof keeps the remainder rather than equating a sticky bit to it. -/
@@ -58,37 +111,7 @@ theorem floatShiftJamWord_interval (a k : Runner.W) :
     let d := 2 ^ k.toNat
     (a.toNat % d = 0 ∧ a.toNat = j * d) ∨
       (j % 2 = 1 ∧ (j - 1) * d < a.toNat ∧ a.toNat < (j + 1) * d) := by
-  dsimp only
-  have model := floatShiftJamWord_model a k
-  have toNat := congrArg BitVec.toNat model
-  simp only [BitVec.toNat_or, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow] at toNat
-  have dp : 0 < (2 : Nat) ^ k.toNat := Nat.two_pow_pos _
-  have division := Nat.div_add_mod' a.toNat (2 ^ k.toNat)
-  have remBound := Nat.mod_lt a.toNat dp
-  by_cases exactTail : a.toNat % 2 ^ k.toNat = 0
-  · left
-    have quotient : (floatShiftJamWord a k).toNat = a.toNat / 2 ^ k.toNat := by
-      simpa only [exactTail, ne_eq, not_true_eq_false, decide_false,
-        Runner.IR.bool, Bool.false_eq_true, ite_false, BitVec.toNat_zero, Nat.or_zero] using toNat
-    exact ⟨exactTail, by rw [quotient]; omega⟩
-  · right
-    have jam : (floatShiftJamWord a k).toNat = (a.toNat / 2 ^ k.toNat) ||| 1 := by
-      simpa only [exactTail, ne_eq, not_false_eq_true, decide_true,
-        Runner.IR.bool, ite_true] using toNat
-    have odd : (floatShiftJamWord a k).toNat % 2 = 1 := by
-      rw [jam, Nat.or_mod_two_eq_one]
-      exact Or.inr rfl
-    have halves : (floatShiftJamWord a k).toNat / 2 = (a.toNat / 2 ^ k.toNat) / 2 := by
-      rw [jam, Nat.or_div_two]
-      simp
-    have quotientSplit := Nat.div_add_mod' (a.toNat / 2 ^ k.toNat) 2
-    have quotientMod := Nat.mod_lt (a.toNat / 2 ^ k.toNat) (by decide : 0 < 2)
-    have jamSplit := Nat.div_add_mod' (floatShiftJamWord a k).toNat 2
-    have lower : (floatShiftJamWord a k).toNat - 1 ≤ a.toNat / 2 ^ k.toNat := by omega
-    have upper : a.toNat / 2 ^ k.toNat + 1 ≤ (floatShiftJamWord a k).toNat + 1 := by omega
-    have lowScaled := Nat.mul_le_mul_right (2 ^ k.toNat) lower
-    have highScaled := Nat.mul_le_mul_right (2 ^ k.toNat) upper
-    exact ⟨odd, by nlinarith, by nlinarith⟩
+  simpa only [floatShiftJamWord_nat] using softShiftJamNat_interval a.toNat k.toNat
 
 /-- Right-shift-with-sticky followed by rounding retains the kernel integer
     decision for any gap, including gaps exceeding the entire word width.
@@ -124,6 +147,8 @@ theorem softRound_shiftJam_zeuge :
 
 #print axioms softRound_odd_interval
 #print axioms softRound_scaled
+#print axioms softShiftJamNat_interval
+#print axioms floatShiftJamWord_nat
 #print axioms floatShiftJamWord_interval
 #print axioms softRound_shiftJam
 #print axioms floatShiftJamWord_large
