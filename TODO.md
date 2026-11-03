@@ -59,15 +59,22 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       (`consumeTraverse_case`); lead elaboration pending.
     - Unrepresentable tag dispatch / byte spans, oversized folds/code/addresses,
       and unsupported entry-snapshot subtrees. Aggregate payload and wide byte implementation checks are pending below.
-    - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
-      foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
+    - Fallible indirect statement-else source syntax; foreign gates without an explicit selected binding
+      (named refusal). Optional value/void binders and fallible indirect bindings have IR arms.
+    - **Foreign result completion (`s0-foreign`, 2026-11-03; lead validation pending):** fallible Bool,
+      reference and nominal region-capability answers, plus multiword answers through explicit C14
+      `result area REGISTER`, have implementation/proof/witness declarations connected to the actual
+      lowering path. The result area uses `copyValue_run`; the exact provider write footprint is a
+      binding/user-logic duty. Missing areas and overlapping hidden/source registers remain named refusals.
+      Open: lead checks of the changed grammar/parser/printer modules, Stage-0 dependents and witnesses,
+      standard-axiom/guardian validation and the executable Bool probe. Area profiles combined with
+      pointer-buffer arguments remain refused. Supplying/mapping fresh region storage and original-source
+      provider contract admission are not discharged by capability transport.
     - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
-      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual const/generic calls/module headers, counterprobes,
-      annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual const/generic calls/module headers,
+      counterprobes and annotated placement. Static-arena allocation has connected narrowing/store arms.
       Residual generic calls and module-template/use headers now go through the expansion-aware Stage-0 gate
       (`syntax-s0`, needs the lead build): the gate checks the expanded unit, with the expansion certificate.
-      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, residual generic calls/module headers, counterprobes,
-      annotated placement. Static-arena allocation has connected narrowing/store arms.
     - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
       incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
   - **Conditional refusal follow-up (`s0-gaps1`, 2026-11-03; lead checks pending).** The original metadata

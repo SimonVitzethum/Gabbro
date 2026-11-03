@@ -15,6 +15,8 @@ structure TorB where
   nr : Nat
   regs : List (Option Nat)
   fehler : List (Int × Nat)
+  /-- The hidden argument register for the canonical result area, if declared. -/
+  resultArea : Option Nat := none
   deriving DecidableEq, Repr
 
 structure Lay (D : Deklaration) where

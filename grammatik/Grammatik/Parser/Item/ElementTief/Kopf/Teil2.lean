@@ -59,6 +59,9 @@ structure SBind where
   stack : List String
   dirty : List String
   codes : List (String × Option SExpr × String)
+  /-- Hidden request register carrying the caller-owned canonical result area.
+      The provider writes the declared result span under its user contract. -/
+  resultArea : Option String := none
   deriving Repr
 
 def beqErrsList : List (String × Option SExpr × String) →
@@ -71,7 +74,7 @@ def beqErrsList : List (String × Option SExpr × String) →
 def beqSBind : SBind → SBind → Bool
   | a, b => beqSExpr a.id b.id && beqSRegBindList a.ins b.ins &&
     beqSRegBindList a.outs b.outs && beqWorte a.stack b.stack &&
-    beqWorte a.dirty b.dirty && beqErrsList a.codes b.codes
+    beqWorte a.dirty b.dirty && beqErrsList a.codes b.codes && beqOptWort a.resultArea b.resultArea
 
 /- The contract of a gate: SYNTAX.md section 12.1 `syscontract`. -/
 structure SGate where

@@ -140,6 +140,9 @@ theorem forever_initialize_entry_zeuge [Kern] :
 local instance [Kern] : TorOK callLayout O where
   ans a := nomatch a
   puf a := nomatch a
+  ref_answer a := nomatch a
+  area a := nomatch a
+
 local instance : SichtOK O := ⟨fun _ _ => rfl⟩
 
 /-- The generic block theorem supplies the complete runtime and frame result. -/

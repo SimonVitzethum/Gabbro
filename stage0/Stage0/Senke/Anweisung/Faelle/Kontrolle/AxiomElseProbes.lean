@@ -124,7 +124,8 @@ def observed (result : Option Ty) (nested reason : Bool) : Int :=
 theorem stmtAxiomElse_case_zeuge :
     (image (some (.int 0 10)) false).isOk = true ∧
     (image (some (.int 0 10)) true).isOk = true ∧
-    (image none false).isOk = true ∧ (image none true).isOk = true := by
+    (image none false).isOk = true ∧ (image none true).isOk = true ∧
+    (image (some .bool) false).isOk = true ∧ (image (some .bool) true).isOk = true := by
   decide +kernel
 
 /-- Each compiled fixture has both live outcomes: success keeps local 23, and the
@@ -135,7 +136,9 @@ theorem stmtAxiomElse_paths_zeuge :
     observed (some (.int 0 10)) true false = 23 ∧
     observed (some (.int 0 10)) true true = 9 ∧
     observed none false false = 23 ∧ observed none false true = 9 ∧
-    observed none true false = 23 ∧ observed none true true = 9 := by
+    observed none true false = 23 ∧ observed none true true = 9 ∧
+    observed (some .bool) false false = 23 ∧ observed (some .bool) false true = 9 ∧
+    observed (some .bool) true false = 23 ∧ observed (some .bool) true true = 9 := by
   decide +kernel
 
 /-- Refusals describe unsupported profiles, rather than refusing the entire
@@ -153,7 +156,7 @@ theorem stmtAxiomElse_refused_zeuge :
     lowered (some (.int 0 10)) none = none ∧
     lowered none (some { binding with fehler := [(-9, 1)] }) = none ∧
     lowered (some (.int (-10) 10)) (some binding) = none ∧
-    lowered (some .bool) (some binding) = none := by
+    (lowered (some .bool) (some binding)).isSome = true := by
   decide +kernel
 
 end Gabbro.Stage0.Senke.AxiomElseProbe
