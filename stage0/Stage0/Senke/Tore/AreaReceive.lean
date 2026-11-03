@@ -86,4 +86,21 @@ theorem areaReceive_ok {τ : Ty} {v : Wert D τ} {s reserved : Nat}
   rw [areaReceive, List.length_append, ← pc_add]
   simpa only [copyWords_length] using run1.trans run2
 
+/-- Invalid tags stop even when the declared type has no inhabitant. -/
+theorem areaReceive_nonzero {τ : Ty} {s reserved : Nat}
+    {m : Runner.Mem} {pc fp : Runner.W} {K Ks : Nat} {Γ : Ctx} {ρ : Env D Γ}
+    {tag : Runner.W} (layout : WIn L fp Ks K)
+    (capacity : foreignResultBase s + valueWords τ ≤ Ks)
+    (pre : PreS L m pc fp K s (areaReceive τ s) ρ reserved)
+    (input : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some tag) (nonzero : tag ≠ 0) :
+    Stops ⟨pc, fp⟩ m 110 := by
+  have positive := valueWords_pos τ
+  have ks := layout.ks
+  have short : PreS L m pc fp (s + 10) (s + 1) (areaCheck s) ρ reserved :=
+    ⟨by have := pre.ctx; omega, by have := pre.small; omega,
+      frameOK_sub pre.frame (by unfold foreignResultBase at capacity; omega),
+      pre.left.code, codeFar_sub2 pre.left.far (by unfold foreignResultBase at capacity; omega),
+      pre.env, trivial, wstab_true _ _⟩
+  exact (areaCheck_ok short input).2 nonzero
+
 end Gabbro.Stage0.Senke
