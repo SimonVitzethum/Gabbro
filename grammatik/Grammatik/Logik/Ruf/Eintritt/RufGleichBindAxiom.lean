@@ -65,20 +65,17 @@ theorem block_bindAxiomOptElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.b
           · rfl
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := ihr σ1 _
+            have heq := ihr σ1 (ergEnv none (he ▸ v) ρ)
               (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
             rw [heq]
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := (ihe σ1 _
-              (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf
-            simp only [hx] at ⊢
+            have heq := ihe σ1 (.cons r ρ)
+              (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
             rw [heq]
   | some τ =>
       simp only [execBlock, Ausgang.weiterOpt]
@@ -89,21 +86,17 @@ theorem block_bindAxiomOptElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.b
           · rfl
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := (ihr σ1 _
-              (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf
-            simp only [hx] at ⊢
+            have heq := ihr σ1 (ergEnv (some τ) (he ▸ v) ρ)
+              (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
             rw [heq]
           · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
               (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-            rw [hx] at h1
-            simp only [hx] at ⊢
+            rw [← axiomAntwortSonst_fst, hx] at h1
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-            have heq := (ihe σ1 _
-              (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf
-            simp only [hx] at ⊢
+            have heq := ihe σ1 (.cons r ρ)
+              (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
             rw [heq]
 
 theorem block_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -125,8 +118,8 @@ theorem block_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_rest : rest.ScopesOk := by scopes_treu
   have hscope_sonst : sonst.ScopesOk := by scopes_treu
   simp only [execBlock]
-  have hl0 := treu_fragt σ (.inr (.inl r))
-  rw [← fragt_haelt σ (.inr (.inl r))] at hh
+  have hl0 := treu_fragt (W := V.schreibt) (G := V.gschreibt) σ (.inr (.inl r))
+  replace hh := hl0.heldB hh
   generalize hg : σ.fragt (.inr (.inl r)) = σq at hh ⊢
   cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σq) with
   | none => rfl
@@ -135,11 +128,9 @@ theorem block_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       by_cases hc : wahr? (eval (σq.lese Λ zusage.orte) zusage
           (σq.lese Λ zusage.orte) (.cons v ρ)) = true <;>
         simp only [hx, hc, ite_true, ite_false] at ⊢
-      · have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-        simp only [hx] at ⊢
+      · have heq := ih_rest (σq.lese Λ zusage.orte) (.cons v ρ) hscope_rest (hl.heldB hh)
         rw [heq]
-      · have heq := ih_sonst _ _ hscope_sonst (hl.heldB hh)
-        simp only [hx] at ⊢
+      · have heq := ih_sonst (σq.lese Λ zusage.orte) ρ hscope_sonst (hl.heldB hh)
         rw [heq]
 
 /-! ## Register else arm (Block and Endblock) -/
@@ -163,8 +154,8 @@ theorem end_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_rest : rest.ScopesOk := by scopes_treu
   have hscope_sonst : sonst.ScopesOk := by scopes_treu
   simp only [execEnd]
-  have hl0 := treu_fragt σ (.inr (.inl r))
-  rw [← fragt_haelt σ (.inr (.inl r))] at hh
+  have hl0 := treu_fragt (W := V.schreibt) (G := V.gschreibt) σ (.inr (.inl r))
+  replace hh := hl0.heldB hh
   generalize hg : σ.fragt (.inr (.inl r)) = σq at hh ⊢
   cases hx : einpassen O.zeiger (D.rtyp r) (O.regLies r σq) with
   | none => rfl
@@ -173,11 +164,9 @@ theorem end_regReadElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       by_cases hc : wahr? (eval (σq.lese Λ zusage.orte) zusage
           (σq.lese Λ zusage.orte) (.cons v ρ)) = true <;>
         simp only [hx, hc, ite_true, ite_false] at ⊢
-      · have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
-        simp only [hx] at ⊢
+      · have heq := ih_rest (σq.lese Λ zusage.orte) (.cons v ρ) hscope_rest (hl.heldB hh)
         rw [heq]
-      · have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
-        simp only [hx] at ⊢
+      · have heq := ih_sonst (σq.lese Λ zusage.orte) ρ hscope_sonst (hl.heldB hh)
         rw [heq]
 
 end GleichBindAx
