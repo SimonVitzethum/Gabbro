@@ -260,7 +260,8 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       refine (GutAusgang.vor (gut_fragt σ (.inr (.inl r))) ?_) σ' h; intro σ' h
       rw [← fragt_haelt σ (.inr (.inl r))] at hh
       generalize σ.fragt (.inr (.inl r)) = σ at h hh ⊢; generalize hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = ov at h ⊢; cases ov with
-      | some v => have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ zusage.orte_darf hh.heldIn
+      | some v =>
+        have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ zusage.orte_darf hh.heldIn
         by_cases hc : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
         · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))).schrumpf σ' h
         · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))).zuAusgang σ' h
@@ -285,7 +286,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .narrowRequired e lo' hi' rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execBlock] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn; by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;> simp only [hc, dif_pos, dif_neg] at h ⊢
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ _ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))).schrumpf σ' h
-      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [dite_false, Ausgang.welt, reduceCtorEq] at h
   | .check c sonst rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execBlock] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ c.orte_darf hh.heldIn; by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
       · exact (GutAusgang.vor hl (block_gutB bo hbV rest _ ρ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))) σ' h
@@ -426,7 +427,8 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       refine (GutEnd.vor (gut_fragt σ (.inr (.inl r))) ?_) σ' h; intro σ' h
       rw [← fragt_haelt σ (.inr (.inl r))] at hh
       generalize σ.fragt (.inr (.inl r)) = σ at h hh ⊢; generalize hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = ov at h ⊢; cases ov with
-      | some v => have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ zusage.orte_darf hh.heldIn
+      | some v =>
+        have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ zusage.orte_darf hh.heldIn
         by_cases hc : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
         · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))).schrumpf σ' h
         · exact (GutEnd.vor hl (end_gutB bo hbV sonst _ ρ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))) σ' h
@@ -467,7 +469,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .narrowRequired e lo' hi' rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execEnd] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn; by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;> simp only [hc, dif_pos, dif_neg] at h ⊢
       · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (by scopes_gut) hresid (hl.heldB hh))).schrumpf σ' h
-      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [dite_false, EndAusgang.welt, reduceCtorEq] at h
   | .exchange g neu hw hL rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execEnd] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_glob hL) neu.orte_darf) hh.heldIn
       have g1 := hl.trans (gut_schreibGlob (W := V.schreibt) (G := V.gschreibt) (σ.lese Λ (.inr g :: neu.orte)) g Λ (eval (σ.lese Λ (.inr g :: neu.orte)) neu (σ.lese Λ (.inr g :: neu.orte)) (.cons ((σ.lese Λ (.inr g :: neu.orte)).globs g) ρ))
