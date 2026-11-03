@@ -1,5 +1,4 @@
-/- Source operand lowering for the consuming loop candidate. The statement
-   admission gate remains closed until the concrete loop simulation is proved. -/
+/- Source operand lowering and checked frame placement for consuming traversal. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Code
@@ -16,8 +15,12 @@ variable {D : Deklaration}
 
     `remaining` is the body's simultaneous counter demand. The consuming loop
     needs one additional pair, holding fuel and the saved pre-body measure.
+    counterDepthS includes that pair in the source-derived frame demand.
     The enclosing function must reserve that pair before relocating parameters
-    and locals. The body producer receives all three protected words and its
+    and locals. The selected candidate uses the canonical binder slot frei Γ reserved;
+    the predecessor, live flag and backup occupy the next three words. They
+    are dead at body entry and may be reused by the body. The body producer
+    receives the three persistent protected words and its
     actual leave/next targets. -/
 def lower {Γ : Ctx} {Λ : List (Res D)} (L : Lay D) (layout : FrameLayout)
     (t : D.Tab)
@@ -41,6 +44,42 @@ def lower {Γ : Ctx} {Λ : List (Res D)} (L : Lay D) (layout : FrameLayout)
       invCode memberCode edgeCode measureCode
       (body (s :: pair.1 :: pair.2 :: protected))
   else none
+
+/-- Successful operand lowering exposes the actual four lowE results. The
+    same reserved parameter is used by expressions, binders and the body. -/
+theorem lower_actual {Γ : Ctx} {Λ : List (Res D)}
+    {L : Lay D} {layout : FrameLayout} {t : D.Tab}
+    {member : Expr D (.index (D.count t) :: Γ) Λ .bool}
+    {edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool}
+    {invariant : Expr D Γ Λ .bool} {bound : Int}
+    {measure : Expr D Γ Λ (.int 0 bound)} {reserved remaining : Nat}
+    {protected : List Nat}
+    {body : List Nat → Int × Int → Option (List II × Nat)}
+    {code : List II} {top : Nat}
+    (h : lower L layout t member edge invariant bound measure
+      reserved remaining protected body = some (code, top)) :
+    let pair := counterPair reserved remaining
+    let s := frei Γ reserved
+    layout.internalResult ≤ pair.1 ∧ pair.2 < FB + reserved ∧
+      pair.1 ∉ protected ∧ pair.2 ∉ protected ∧
+    ∃ invCode memberCode edgeCode measureCode : List II × Nat,
+      lowE (reserved := reserved) L invariant (s + 4) = some invCode ∧
+      lowE (reserved := reserved) L member (s + 4) = some memberCode ∧
+      lowE (reserved := reserved) L edge (s + 4) = some edgeCode ∧
+      lowE (reserved := reserved) L measure (s + 4) = some measureCode ∧
+      emit s pair.1 pair.2 ((D.count t).toNat + bound.toNat + 1)
+        (logikCode (D := D) .schleife) (D.count t) bound
+        invCode memberCode edgeCode measureCode
+        (body (s :: pair.1 :: pair.2 :: protected)) = some (code, top) := by
+  unfold lower at h
+  dsimp only
+  split at h
+  · next allocated =>
+    simp only [bind, Option.bind_eq_some_iff] at h
+    obtain ⟨invCode, hi, memberCode, hm, edgeCode, he, measureCode, hmass, emitted⟩ := h
+    exact ⟨allocated.1, allocated.2.1, allocated.2.2.1, allocated.2.2.2,
+      invCode, memberCode, edgeCode, measureCode, hi, hm, he, hmass, emitted⟩
+  · cases h
 
 /-- The adapter cannot silently borrow a local or a caller's protected word
     when the required reserved pair has not been allocated. -/
