@@ -3,6 +3,36 @@ module
 public import Grammatik.Bausteine.Kernzelle.Zeuge
 public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 @[expose] public section
 
@@ -14,7 +44,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
 The empty-list theorems already state their own empty witnesses. -/
 
 private theorem admitted : akkuZulaessig zAP zAFs zA :=
-  akkuProgramm_zeuge.1 zA (by simp)
+  akkuProgramm_zeuge.1.1 zA (by simp)
+
+instance : NeZero zA.kernZahl := ⟨by decide +kernel⟩
 
 theorem akkuNeutralBewohnt_zeuge :
     zA.lo ≤ neutralInt zA.op zA.lo zA.hi zA.breite ∧
@@ -58,7 +90,7 @@ private theorem closed : ∀ w, AbgK zAP zAFs (reachB zAP zAFs w) := by
   cases w <;> decide
 
 theorem traegerSchreibt_mitRuhe_ruhe_zeuge :
-    TraegerSchreibt zAP.mitRuhe none (.inr (zA.zellen 0)) = false :=
+    TraegerSchreibt (D := zAD.mitRuhe) none (.inr (zA.zellen 0)) = false :=
   traegerSchreibt_mitRuhe_ruhe zAP _
 
 theorem akkuZulaessig_mitRuhe_zeuge :
@@ -70,7 +102,7 @@ theorem accumulatorAdmission_mitRuhe_zeuge :
       ([zA].map AccumulatorDecl.mitRuhe) :=
   accumulatorAdmission_mitRuhe zAP zAFs_voll closed akkuProgramm_zeuge.1
 
-private def startUnit : Einheit zAD where
+@[expose] public def startUnit : Einheit zAD where
   P := zAP
   S := ⟨fun _ => [], fun _ _ => true⟩
   Q := axWahr zAD
@@ -81,7 +113,7 @@ private def startUnit : Einheit zAD where
   akku := [zA]
 
 theorem akkuStartB_sound_zeuge : AkkuStart startUnit [zA] :=
-  akkuStartB_sound (by decide)
+  akkuStartB_sound (by decide +kernel)
 
 theorem akkuStartB_vollst_zeuge : akkuStartB startUnit [zA] = true :=
   akkuStartB_vollst akkuProgramm_zeuge.1 akkuStartB_sound_zeuge
