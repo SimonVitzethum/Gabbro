@@ -126,6 +126,12 @@ def parseSchreitet (f : Nat) (toks : List Token) :
           | .ok rest3 => .ok (.step a b, rest3)
           | .error e => .error e
 
+/-- `retires m;`: software resource discharge, without a hardware clause. -/
+def parseRetires (toks : List Token) : Except String (SAnw × List Token) := do
+  let (m, rest) ← nimmName toks
+  let remaining ← fordereZeichen ";" rest
+  pure (.retires m, remaining)
+
 def nimmIdentList (f : Nat) (toks : List Token) :
     Except String (List String × List Token) :=
   match f with
