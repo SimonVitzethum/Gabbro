@@ -63,29 +63,6 @@ def width : List Piece → Nat
   | [] => 0
   | piece :: rest => piece.width + width rest
 
-private theorem encode_length {whole rest : List Piece} {start : Nat} {code : List II}
-    (h : encode whole rest start = some code) : code.length = width rest := by
-  induction rest generalizing start code with
-  | nil => cases h; rfl
-  | cons piece rest ih =>
-    simp only [encode, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨block, resolved, tail, encoded, rfl⟩ := h
-    simp only [List.length_append, width]
-    have blockLength : block.length = piece.width := by
-      cases piece <;> simp_all [resolve, Piece.width]
-    rw [blockLength, ih encoded]
-
-/-- Labels and local branch resolution preserve the symbolic image width. -/
-theorem assemble_length {fragment : List Piece} {code : List II}
-    (h : assemble fragment = some code) : code.length = width fragment := by
-  unfold assemble at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨instructions, encoded, accepted⟩ := h
-  split at accepted
-  · cases accepted
-    exact encode_length encoded
-  · cases accepted
-
 /-- Resolution preserves the width assigned before body relocation. -/
 theorem resolve_width {whole : List Piece} {pc : Nat} {piece : Piece}
     {block : List II} (h : resolve whole pc piece = some block) :
@@ -101,6 +78,27 @@ theorem resolve_width {whole : List Piece} {pc : Nat} {piece : Piece}
     simp only [resolve, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
     obtain ⟨destination, found, rfl⟩ := h
     rfl
+
+private theorem encode_length {whole rest : List Piece} {start : Nat} {code : List II}
+    (h : encode whole rest start = some code) : code.length = width rest := by
+  induction rest generalizing start code with
+  | nil => cases h; rfl
+  | cons piece rest ih =>
+    simp only [encode, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨block, resolved, tail, encoded, rfl⟩ := h
+    simp only [List.length_append, width]
+    rw [resolve_width resolved, ih encoded]
+
+/-- Labels and local branch resolution preserve the symbolic image width. -/
+theorem assemble_length {fragment : List Piece} {code : List II}
+    (h : assemble fragment = some code) : code.length = width fragment := by
+  unfold assemble at h
+  simp only [bind, Option.bind_eq_some_iff] at h
+  obtain ⟨instructions, encoded, accepted⟩ := h
+  split at accepted
+  · cases accepted
+    exact encode_length encoded
+  · cases accepted
 
 private theorem encode_piece (whole before : List Piece) (piece : Piece)
     (after : List Piece) (start : Nat) (code block : List II)
