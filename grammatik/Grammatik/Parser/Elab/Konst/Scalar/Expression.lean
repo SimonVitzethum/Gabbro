@@ -27,6 +27,12 @@ def binary {D : Deklaration} {Γ : Ctx} (op : String)
     (left right : SomeCode D Γ) : Except String (SomeCode D Γ) := do
   if op == "&&" then return ⟨.bool, Code.boolAnd (← boolean left) (← boolean right)⟩
   if op == "||" then return ⟨.bool, Code.boolOr (← boolean left) (← boolean right)⟩
+  if op == "==" || op == "!=" then
+    if let ⟨.bool, a⟩ := left then
+      let b ← boolean right
+      let equal := Code.boolOr (Code.boolAnd a b)
+        (Code.boolAnd (Code.boolNot a) (Code.boolNot b))
+      return ⟨.bool, if op == "==" then equal else Code.boolNot equal⟩
   let ⟨l, h, a⟩ ← integer left
   let ⟨l', h', b⟩ ← integer right
   match op with
