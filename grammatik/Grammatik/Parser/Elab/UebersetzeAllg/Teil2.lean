@@ -21,22 +21,6 @@ theorem sigAt_produziert (u : UProg) (i : Fin u.fns.length) :
     (sigAt u i.val).produziert = gibtAt u (fnAt u i) := by
   rw [sigAt_get]; rfl
 
-/-- The owner flow of a signature number: the moves, loans and mints of the resolved function
-    (C12 loans, C09 moves and mints) -- the dummy has none. -/
-theorem sigAt_owner (u : UProg) (n : Nat) (h : n < (sigFns u).length) :
-    (sigAt u n).owner = { moves := bewegtMovesAt u ((sigFns u).get ⟨n, h⟩),
-      loans := leihtAt u ((sigFns u).get ⟨n, h⟩),
-      mints := praegtAt u ((sigFns u).get ⟨n, h⟩) } := by
-  unfold sigAt
-  rw [dif_pos h]
-
-/-- The owner flow of an elaborated function: its resolved moves, loans and mints. -/
-theorem signaturOwner (u : UProg) (f : Fin u.fns.length) :
-    ((declOf u).signatur f).owner = { moves := bewegtMovesAt u (fnAt u f),
-      loans := leihtAt u (fnAt u f), mints := praegtAt u (fnAt u f) } := by
-  show (sigAt u f.val).owner = _
-  rw [sigAt_get]
-
 /-- Parameters through the declaration. -/
 theorem params_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).params i = (fnAt u i).params.map (·.2) := by
@@ -51,25 +35,6 @@ theorem erg_eq (u : UProg) (i : Fin u.fns.length) :
 theorem haelt_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).haelt i = heldAt u (fnAt u i) := by
   simp only [declOf, Deklaration.haelt, Deklaration.signatur, sigAt_haelt]
-
-/-- The contract end: held locks plus produced marks (resolved, C16), the
-    handed-back moves (C09) and the returned call-scoped loans (C12) -- loans
-    come back on normal return -- plus the checked mints (C09). -/
-theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
-    (vertragVon (declOf u) f).ende =
-      (heldAt u (fnAt u f)).map (Res.held (D := declOf u)) ++
-        (((gibtAt u (fnAt u f)) ++ (bewegtAt u (fnAt u f)) ++ (leihtAt u (fnAt u f)) ++
-          (praegtAt u (fnAt u f))).map (Res.vonMarke (declOf u))) := by
-  have hO : ((declOf u).signatur f).owner = { moves := bewegtMovesAt u (fnAt u f),
-      loans := leihtAt u (fnAt u f), mints := praegtAt u (fnAt u f) } :=
-    signaturOwner u f
-  have hOut : ((declOf u).signatur f).owner.outputs =
-      (bewegtAt u (fnAt u f)) ++ (leihtAt u (fnAt u f)) ++ (praegtAt u (fnAt u f)) := by
-    rw [hO]
-    simp only [OwnerFlow.outputs, bewegtMovesAt_outputs]
-  simp only [vertragVon, Vertrag.vonSig, Vertrag.ende, Deklaration.signatur,
-    declOf, sigAt_haelt, sigAt_produziert, hO, hOut, Signatur.outputMarks,
-    List.map_append]
 
 /-- **Decided call-boundary escrow (C09/C12).** The callee's owner flow is valid over
     its own inputs at stage 0, disjoint from ordinary consumption, and every
