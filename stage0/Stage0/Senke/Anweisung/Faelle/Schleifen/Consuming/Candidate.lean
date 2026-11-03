@@ -9,12 +9,12 @@ variable [Kern] {D : Deklaration} {L : Lay D} {P : Programm D} {f : D.Fn}
 variable {reserved : Nat} {x : Image L P f reserved} {Γ : Ctx} {Λ : List (Res D)}
 variable (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ)
 
-structure CandState (j : Nat) (live : Bool) (m : Mem) : Prop where
+structure CandState (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (j : Nat) (live : Bool) (m : Mem) : Prop where
   ready : x.Ready m σ ρ
   candidateRead : x.read m x.s (BitVec.ofNat 64 j)
   liveRead : x.read m (x.s + 2) (Runner.IR.bool live)
 
-structure CandResult (choice : Option (Wert D (.index (D.count x.table))))
+structure CandResult (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (choice : Option (Wert D (.index (D.count x.table))))
     (live : Bool) (m : Mem) : Prop where
   ready : x.Ready m σ ρ
   candidateRead : ∀ k, choice = some k → x.read m x.s (BitVec.ofInt 64 k.n)
