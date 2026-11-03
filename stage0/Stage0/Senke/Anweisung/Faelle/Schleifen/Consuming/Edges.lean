@@ -42,17 +42,20 @@ theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
     (found : x.fragment[i]? = some (.code [ci 2 cell source 0]))
     (sourceBound : source < x.K) (read : x.read m source value)
     (low : x.lo ≤ cell) (allocated : cell < FB + reserved)
+    (savedCell : cell = x.saved)
     (ctx : frei Γ reserved ≤ x.K)
     (endAt : x.at i + 16 = x.at (i + 1)) :
     ∃ m', Star ⟨x.at i, x.fp⟩ m ⟨x.at (i + 1), x.fp⟩ m' ∧
       AgreeW L x.fp x.lo x.K m m' ∧ x.Ready m' σ ρ ∧
-      Keeps x.fp (x.counter :: x.pr) m m' ∧ x.read m' cell value := by
+      Keeps x.fp (x.counter :: x.pr) m m' ∧ x.read m' cell value ∧
+      (∀ j, j < x.K → j ≠ cell →
+        m'.rd64 (slot x.fp (BitVec.ofNat 64 j)) = m.rd64 (slot x.fp (BitVec.ofNat 64 j))) := by
   have inside : cell < x.K := by unfold frei at ctx; omega
   have slice := h.slice i (.code [ci 2 cell source 0]) _ found rfl
   have run := mov_to slice.1 h.frame inside sourceBound x.small read
   have a := agree_write h.frame.room (lo := cell) (Nat.le_refl _) inside value.toNat
   refine ⟨_, ?_, agreeW_of (a.mono low), h.reserved value low allocated ctx, ?_,
-    rd_same h.frame inside value⟩
+    rd_same h.frame inside value, ?_⟩
   · simpa only [List.length_singleton, endAt] using run
   · apply keeps_write h.frame.room inside
     · intro j hj
@@ -65,6 +68,8 @@ theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
       rcases member with eq | member
       · have := x.controls; omega
       · have := x.protected cell member; omega
+  · intro j insideJ different
+    exact rd_other h.frame.room inside insideJ (Ne.symm different)
 
 /-- Evaluate a scan bound using the existing instruction-level lemma. -/
 theorem Ready.bound (h : x.Ready m σ ρ) {i index j : Nat}
