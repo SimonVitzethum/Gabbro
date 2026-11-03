@@ -339,8 +339,11 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · omega
     | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
       have hbudget := r.scopedWert_budget c pa e R (scopeBalance_von hhead hb) hret
-      refine Or.inl ⟨by simp only [rufUpdateG_self], fun _ => ?_⟩
-      simp only [rufUpdateG_self]
+      dsimp only
+      generalize hw : rufUpdateG M.faeden f _ f = w
+      rw [rufUpdateG_self] at hw
+      subst hw
+      refine Or.inl ⟨rfl, fun _ => ?_⟩
       refine ⟨rfl, ?_⟩
       rw [hhead]
       change R.scopes.length + 1 ≤ potRest c pa r
@@ -348,8 +351,11 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       omega
     | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
       have hbudget := r.scopedGrund_budget c pa grund R (scopeBalance_von hhead hb) hret
-      refine Or.inl ⟨by simp only [rufUpdateG_self], fun _ => ?_⟩
-      simp only [rufUpdateG_self]
+      dsimp only
+      generalize hw : rufUpdateG M.faeden f _ f = w
+      rw [rufUpdateG_self] at hw
+      subst hw
+      refine Or.inl ⟨rfl, fun _ => ?_⟩
       refine ⟨rfl, ?_⟩
       rw [hhead]
       change R.scopes.length + 1 ≤ potRest c pa r
@@ -357,37 +363,57 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       omega
     | rueckFreigabe ρ a L remaining hhead hnonempty =>
       kopfA
-      · rfl
-      · omega
+      omega
     | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
       have hbudget := r.scopedWert_budget c pa e R (scopeBalance_von hhead hb) hret
       rcases rufAntwortG_kosten ha pa with ⟨hst, hroot⟩ | hpop
-      · refine Or.inl ⟨by simpa only [rufUpdateG_self] using hst, fun _ => ?_⟩
-        simp only [rufUpdateG_self]
+      · dsimp only
+        generalize hw : rufUpdateG M.faeden f _ f = w
+        rw [rufUpdateG_self] at hw
+        subst hw
+        refine Or.inl ⟨hst, fun _ => ?_⟩
         obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
         refine ⟨hok, ?_⟩
         rw [hhead, hzero]
         simpa only [hempty, scopedReturnSteps, List.length_nil, Nat.add_zero] using hbudget
-      · exact Or.inr (Or.inr (by simpa only [rufUpdateG_self] using hpop))
+      · dsimp only
+        generalize hw : rufUpdateG M.faeden f _ f = w
+        rw [rufUpdateG_self] at hw
+        subst hw
+        exact Or.inr (Or.inr hpop)
     | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
       have hbudget := r.scopedGrund_budget c pa grund R (scopeBalance_von hhead hb) hret
       rcases rufAntwortG_kosten ha pa with ⟨hst, hroot⟩ | hpop
-      · refine Or.inl ⟨by simpa only [rufUpdateG_self] using hst, fun _ => ?_⟩
-        simp only [rufUpdateG_self]
+      · dsimp only
+        generalize hw : rufUpdateG M.faeden f _ f = w
+        rw [rufUpdateG_self] at hw
+        subst hw
+        refine Or.inl ⟨hst, fun _ => ?_⟩
         obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
         refine ⟨hok, ?_⟩
         rw [hhead, hzero]
         simpa only [hempty, scopedReturnSteps, List.length_nil, Nat.add_zero] using hbudget
-      · exact Or.inr (Or.inr (by simpa only [rufUpdateG_self] using hpop))
+      · dsimp only
+        generalize hw : rufUpdateG M.faeden f _ f = w
+        rw [rufUpdateG_self] at hw
+        subst hw
+        exact Or.inr (Or.inr hpop)
     | rueckFreigabeLetzte ρ a L hhead z ha =>
       rcases rufAntwortG_kosten ha pa with ⟨hst, hroot⟩ | hpop
-      · refine Or.inl ⟨by simpa only [rufUpdateG_self] using hst, fun _ => ?_⟩
-        simp only [rufUpdateG_self]
+      · dsimp only
+        generalize hw : rufUpdateG M.faeden f _ f = w
+        rw [rufUpdateG_self] at hw
+        subst hw
+        refine Or.inl ⟨hst, fun _ => ?_⟩
         obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
         refine ⟨hok, ?_⟩
         rw [hhead, hzero]
         exact Nat.le_refl 1
-      · exact Or.inr (Or.inr (by simpa only [rufUpdateG_self] using hpop))
+      · dsimp only
+        generalize hw : rufUpdateG M.faeden f _ f = w
+        rw [rufUpdateG_self] at hw
+        subst hw
+        exact Or.inr (Or.inr hpop)
 
 /-! ## 6. Counting one thread's steps -/
 
