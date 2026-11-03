@@ -199,7 +199,8 @@ def ptrVertragOf (u : UProg) (n : Nat) :
 def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
     (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f)
     (I : ∀ i : Fin u.invs.length, InvTy u i)
-    (Pt : ∀ n, CallContract (declOf u) ((declOf u).sigNr n)) :
+    (Pt : ∀ n, CallContract (declOf u) ((declOf u).sigNr n))
+    (Ax : ∀ a, CallContract (declOf u) ((declOf u).asignatur a)) :
     Programm (declOf u) where
   invariante := I
   requires := fun f => reqOf u R f
@@ -207,7 +208,7 @@ def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
   rumpf := fun f => B f
   unterbricht := fun f => u.hands.any (fun n => strEq n (fnAt u f).name)
   ptrVertrag := Pt
-  axVertrag := axVertragOf u
+  axVertrag := Ax
 
 /-- The function of no parameter in whose scope an invariant is read. -/
 def leerFn : UFn :=
@@ -307,14 +308,15 @@ def lowerAllg (u : UProg) :
   match h : lowerEach u (List.finRange u.fns.length) with
   | .error e => .error e
   | .ok _ =>
-    if contractGate u then
+    if hC : contractGate u then
+    have hAx : axContractsB u = true := (Bool.and_eq_true.mp hC).2
     have w : ∀ f : Fin u.fns.length,
         ∃ v, lowerFnAt u f = .ok v := fun f =>
       lowerEach_all_ok u (List.finRange u.fns.length) f
         (List.mem_finRange f) h
     Measures.checkedProgram u (progOfFn u (fun f => (lowerAtPair u f (w f)).1)
       (fun f => (lowerAtPair u f (w f)).2.1) (fun f => (lowerAtPair u f (w f)).2.2)
-      (fun i => lowerInvGut u i (wI i)) (fun n => ptrVertragOf u n))
+      (fun i => lowerInvGut u i (wI i)) (fun n => ptrVertragOf u n) (fun a => axVertragOf u a hAx))
     else .error "function does not conform to the pointer type"
 
 /-- The lowered invariant at an index known good: `U003` holds and it reads only declared carriers. -/
