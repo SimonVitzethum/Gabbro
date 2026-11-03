@@ -6190,3 +6190,9 @@ source twins cover missing service/field, unowned region, register state,
 privileged fields, unknown ABI, infallible service and missing region contract.
 `Guest/Witness.lean` retains the more general owned-region model witnesses.
 None of these new source reductions has yet been measured by this worker.
+
+Worker static checks: 31 changed Lean modules, all using the module system,
+maximum 473 lines; no forbidden proof tokens or folder-entry findings. The
+3,068-file import graph has no cycles and the outgoing diff passes
+`git diff --check`. These checks provide no Lean elaboration or witness-reduction
+evidence.
