@@ -91,6 +91,7 @@ def g001Stmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .assignSlot _ _ i e _ _ => orteOk (D := D) (i.orte ++ e.orte)
   | .assignThru p _ _ _ i e _ _ => orteOk (D := D) (p.orte ++ i.orte ++ e.orte)
+  | .assignThruOwn p _ _ _ i e _ _ _ _ _ _ _ => orteOk (D := D) (p.orte ++ i.orte ++ e.orte)
   | .assignSlotRef r _ _ _ _ e _ _ => orteOk (D := D) (r.orte ++ e.orte)
   | .assignGlob _ e _ _ => orteOk (D := D) e.orte
   | .putBytes _ _ _ _ i _ _ e _ _ => orteOk (D := D) (i.orte ++ e.orte)
@@ -278,7 +279,7 @@ theorem g001Stmt_korrekt_ite {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   · exact ih_g001_korrekt_e h1.2 o ho'
 
 set_option linter.unusedSectionVars false in
-theorem g001Stmt_korrekt_assignThru {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+theorem g001Stmt_korrekt_assignThruOwn {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {zi_n}
     (p)
     (t)
@@ -286,11 +287,16 @@ theorem g001Stmt_korrekt_assignThru {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (f)
     (i)
     (e)
+    (m)
+    (s)
+    (ho)
+    (he)
+    (hg)
     (hw)
     (hL)
-    (zr_h : g001Stmt (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)) = true)
+    (zr_h : g001Stmt (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ (Λ)) = true)
     (o : D.Tab ⊕ D.Glob)
-    (zr_ho : o ∈ Extraktion.stmtOrte (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)))
+    (zr_ho : o ∈ Extraktion.stmtOrte (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ (Λ)))
     : ¬ istGeist (D := D) o :=
   by
   revert zr_h zr_ho
