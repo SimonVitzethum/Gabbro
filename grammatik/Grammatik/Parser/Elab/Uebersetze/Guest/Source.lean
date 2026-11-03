@@ -41,9 +41,9 @@ def guestWrapper (name reason : String) (cases : List String) (fallback : String
         (some (.ret (some (.why reason fallback)))))]
       (some (.ret (sig.res.map fun _ => .variable "#guest-result"))))
 
-/-- All non-code region inputs need real owner resources. The current source
-    declaration exports Empty owners, so additional regions fail here by name;
-    no transfer is dropped or repaired with a fabricated owner. -/
+/-- All non-code region inputs need real owner resources and exact transfer
+    descriptors. This source adapter does not export those descriptors yet, so
+    additional regions fail by name rather than losing their owner transfer. -/
 def guestSource (items : List SItemTief) : SItemTief → Except String (UGuest × SItemTief)
   | .trustT name code arch regs stack assumption service => do
     ProfilBindung.gastQuellePruefung arch regs stack assumption service
@@ -99,8 +99,9 @@ def guestSources (items : List SItemTief) : Except String (List UGuest × List S
     manufactured. A hardware query retains its independent named origin. -/
 def guestForeign (alias : List (String × (Int × Int))) (consts : List (String × Int))
     (tabs : List UTab) (globs : List UGlob) (whys : List UWhy)
-    (assumptions : List String) (guests : List UGuest) (k : UFnKopf) : Except String UAx := do
-  let ctx := uCtxVon alias consts tabs [] globs k k.name assumptions whys
+    (assumptions : List String) (guests : List UGuest) (k : UFnKopf)
+    (eigner : List String := []) : Except String UAx := do
+  let ctx := { uCtxVon alias consts tabs [] globs k k.name assumptions whys with eigner := eigner }
   let (gives, needs) ← elabKlauseln ctx k.clauses
   let software := guests.any fun g => strEq g.service k.name
   if software && k.annahme.isSome then

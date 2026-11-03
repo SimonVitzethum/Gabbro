@@ -475,8 +475,7 @@ def uWurzeln (tabs : List UTab) (fns : List UFn) (ms : List SItemTief) : Except 
   let a ← uNebenWurzeln tabs fns ms
   let b ← uEingangsWurzeln fns ms
   pure (a ++ b)
-/-- The clauses an `extern fn` may carry: `effects { pure | diverges | reads .. }` and `costs`; a `requires`,
-    an `ensures` or a write has no form (`D.Ax` carries no contract here). -/
+/-- Foreign effects are checked here; retained pre/postconditions lower through the shared contract gate. -/
 def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
     List SKlausel → Except String UFnKopf
   | [] => .ok kopf
@@ -487,6 +486,8 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
       | .ok eff =>
         uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts), gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
     else .error "foreign fn effect without G form"
+  | .needs (.call "Held" _) :: _ => .error "foreign fn precondition cannot borrow a held lock"
+  | .needs _ :: rest | .gives _ :: rest => uAxKlauseln kopf tabs globs rest
   | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
   | .arch _ :: rest => uAxKlauseln kopf tabs globs rest
   -- `deadline <= n ops arch X falsifier p`: a named hardware outcome outside the goal (`Spec.lean`, NOT CLAIMED:

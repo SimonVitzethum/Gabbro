@@ -132,7 +132,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok gateKoepfe =>
   let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
-  match uSeq (axKoepfe.map (guestForeign alias consts tabs globs whys annahmen guests)) with
+  match uSeq (axKoepfe.map (fun k => guestForeign alias consts tabs globs whys annahmen guests k (eigner := eigner))) with
   | .error e => .error e
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)

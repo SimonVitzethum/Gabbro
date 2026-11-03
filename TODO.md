@@ -90,7 +90,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       The source-to-image witness and named refusal twins are written (THEOREM-MAP §150).
       Open: lead compilation, witness reduction and standard-axiom checks; no build was run by
       the implementation worker. Additional source region inputs remain refused until the
-      unit can export their real owner resources (`declOf` currently has `Marke := Empty`);
+      source adapter can retain each transferred capability with its resolved owner resource;
       register/privileged handover and unknown ABIs stay refused. `Spec.lean` is unchanged.
     - C07 fallible indirect calls: Stage-0 arms being added.
   - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,

@@ -6598,10 +6598,11 @@ The source connections are now implemented:
   `SourceGuestPflicht` explicitly ties the software isolation duty to these
   exported contracts and actual C08 records, never to `HardwareAnnahmen`.
 
-The source frontend currently exports `Marke := Empty`. Consequently, the
-admitted source slice is immutable code plus scalar inputs and an ordinary
-returning, fallible service; additional region inputs are refused by the named
-ownership diagnostic. No owner is fabricated or transferred region discarded.
+The source frontend now exports resolved owners through C12/C09. This guest
+source adapter still admits immutable code plus scalar inputs and an ordinary
+returning, fallible service; additional region inputs remain refused until it
+retains their exact transfer descriptors and owner resources. No owner is
+fabricated or transferred region discarded.
 Register state, privileged/stack assumption fields, unknown ABI, missing or
 ambiguous service, absent failure channel and absent region contracts remain
 named refusals. Foreign cost claims retain the metadata gate.
