@@ -154,7 +154,7 @@ theorem accepted_zeuge :
 
 /-- Each still unsupported operation fails at its own static representation guard. -/
 theorem refused_zeuge :
-    lowE layout (.strCat letter letter) 3 = none ∧
+    lowE layout (.strCat (Expr.strLit (n := 2^31) [] (by decide)) letter) 3 = none ∧
     lowE layout (.strGet letter (.lit (2 ^ 63))) 3 = none := by decide +kernel
 
 /-- The word representation distinguishes empty from a zero byte and preserves byte 255. -/
