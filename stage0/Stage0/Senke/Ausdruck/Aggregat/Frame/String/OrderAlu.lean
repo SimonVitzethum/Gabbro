@@ -82,6 +82,7 @@ theorem stringKey_value {n a k out tmp : Nat} (s : Nat → Runner.W)
     have byteWord : BitVec.ofInt 64 ((bs[k]?).getD ⟨0, by omega, by omega⟩).n =
         BitVec.ofNat 64 ((bs[k]?).getD ⟨0, by omega, by omega⟩).n.toNat := by
       rw [← Int.toNat_of_nonneg byte0, BitVec.ofInt_natCast]
+      simp only [Int.toNat_natCast]
     rw [byteWord]
     by_cases present : k < bs.length
     · have flag : (BitVec.ofInt 64 (k : Int)).ult (BitVec.ofNat 64 bs.length) = true := by

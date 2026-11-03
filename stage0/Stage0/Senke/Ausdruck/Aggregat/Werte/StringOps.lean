@@ -47,6 +47,7 @@ theorem strLen_ok {n : Nat} (s : Expr D Γ Λ (.str n))
     simpa only [encodeWords, if_neg long, List.cons_append, List.getElem_cons_zero,
       Nat.add_zero, eval, strLenW, BitVec.ofInt_natCast] using read
 
+omit [Kern] in
 theorem strBytes_word {n : Nat} (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) (j : Nat) (hj : j < n) :
     (BitVec.ofNat 64 w.1.length :: w.1.map (fun b => BitVec.ofInt 64 b.n) ++
       List.replicate (n - w.1.length) (0 : BitVec 64))[j + 1]? = some (BitVec.ofInt 64 (strGetW w (j : Int)).n) := by

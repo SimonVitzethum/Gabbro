@@ -21,6 +21,7 @@ variable [Kern]
 def slotVal (m : Runner.Mem) (fp : Runner.W) (j : Nat) : Runner.W :=
   BitVec.ofNat 64 (le m (slot fp (BitVec.ofNat 64 j)) 8)
 
+omit [Kern] in
 theorem slotVal_rd {m : Runner.Mem} {fp : Runner.W} {K j : Nat} (hF : FrameOK m fp K) (hj : j < K) :
     m.rd64 (slot fp (BitVec.ofNat 64 j)) = some (slotVal m fp j) := by
   simp only [Runner.Mem.rd64, slotVal, hF.rd j hj, ite_true]

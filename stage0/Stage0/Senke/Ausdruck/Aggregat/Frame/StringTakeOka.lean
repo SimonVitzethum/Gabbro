@@ -58,6 +58,7 @@ theorem strTake_encode (L : Lay D) {n m : Nat} (hn2 : 2 ≤ n) (hm2 : 2 ≤ m) (
   congr 2
   omega
 
+omit [Kern] in
 /-- The length word of a long string span. -/
 theorem span_len_read {n b : Nat} (hn2 : 2 ≤ n) {m : Runner.Mem} {fp : Runner.W} (vs : Wert D (.str n))
     (span : ValueAt L m fp b (.str n) vs) :
