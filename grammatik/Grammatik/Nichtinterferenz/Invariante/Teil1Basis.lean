@@ -202,6 +202,20 @@ theorem kPopGrund_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn)
           · exact hrst F hF
       | _ => exact KErgOk.none
 
+/-- Empty cleanup delivers through the ordinary pop; a nonempty cleanup
+    retains its saved answer in a residue whose flow check is trivial. -/
+theorem kScoped_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st)
+    (f : D.Fn) (rho : Env D (D.params f)) {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
+    (a : ErgVal D (vertragVon D f).erg ⊕ Fin (vertragVon D f).gruende)
+    (σ : World D) (remaining : List D.Lock) :
+    KErgOk P S Ax (kScoped (l := l) st f rho ρ a σ remaining) := by
+  cases remaining with
+  | nil =>
+      cases a with
+      | inl v => exact kPop_ok hst f rho σ v
+      | inr r => exact kPopGrund_ok hst f rho σ.spur σ.speicher r
+  | cons L remaining => exact KErgOk.lokal hst f rho ρ trivial _ _
+
 
 end Ok
 

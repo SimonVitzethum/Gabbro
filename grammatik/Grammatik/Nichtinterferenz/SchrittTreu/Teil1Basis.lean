@@ -71,7 +71,11 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       kstart
       rw [hpop]
       simp only [kr, kEnde, kPop, List.map_cons]
-      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern, GRest.kern] using hnw)]
+      rw [if_neg (by
+        rw [kern_wartend (caller := caller) (r := caller.rest.2.2.2.2) rfl]
+        change ¬caller.wartend = true
+        rw [hnw]
+        exact Bool.false_ne_true)]
       rfl
   | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
       kstart

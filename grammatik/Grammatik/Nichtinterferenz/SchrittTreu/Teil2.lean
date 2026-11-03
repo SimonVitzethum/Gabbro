@@ -210,7 +210,7 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
             let m' := (eval σ₁ mass σ₁ ρ).n
             if 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor then
               kLokal (List.map RufRahmenG.kern (M.faeden f).stapel) (M.faeden f).kopf.f
-                (M.faeden f).kopf.rho ρ (GRest.verbrauch t member edge inv bound mass body rest k)
+                (M.faeden f).kopf.rho ρ (GRest.verbrauch t member edge inv bound mass body rest k.kern)
                 σ₁.spur M.speicher
             else none) = _
       dsimp only

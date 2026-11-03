@@ -165,7 +165,11 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kPop,
         List.map_cons]
-      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern, GRest.kern] using hnw)]
+      rw [if_neg (by
+        rw [kern_wartend (caller := caller) (r := caller.rest.2.2.2.2) rfl]
+        change ¬caller.wartend = true
+        rw [hnw]
+        exact Bool.false_ne_true)]
       rfl
   | rueckCons caller rst hpop Γ Λ e hperm rest ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu
       hnw =>
@@ -174,7 +178,11 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kEnde, kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusEnde, execStmt, kPop,
         List.map_cons]
-      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern, GRest.kern] using hnw)]
+      rw [if_neg (by
+        rw [kern_wartend (caller := caller) (r := caller.rest.2.2.2.2) rfl]
+        change ¬caller.wartend = true
+        rw [hnw]
+        exact Bool.false_ne_true)]
       rfl
   | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
       hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>

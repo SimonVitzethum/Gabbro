@@ -106,9 +106,9 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       · exact KErgOk.lokal hst _ _ _ (by first | exact he.1.2 | (simp only [GRest.nR]; exact he.1.2)) _ _
       · exact KErgOk.none
   | ret e _ => exact kPop_ok hst f rho _ _
-  | retScoped e R => exact KErgOk.lokal hst _ _ _ trivial _ _
+  | retScoped e R => exact kScoped_ok (l := l) hst f rho ρ _ _ R.scopes
   | retWhy r _ => exact kPopGrund_ok hst f rho _ _ r
-  | retWhyScoped r R => exact KErgOk.lokal hst _ _ _ trivial _ _
+  | retWhyScoped r R => exact kScoped_ok (l := l) hst f rho ρ (.inr r) _ R.scopes
   | leave _ => exact KErgOk.none
   | next _ => exact KErgOk.none
 
@@ -312,11 +312,8 @@ theorem kr_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | zurueckgekehrt _ => exact KErgOk.none
   | aufraeumen a remaining =>
       cases remaining with
-      | nil =>
-          cases a.1 with
-          | inl v => exact kPop_ok hst f rho _ v
-          | inr r => exact kPopGrund_ok hst f rho _ _ r
-      | cons L remaining => exact KErgOk.lokal hst _ _ _ trivial _ _
+      | nil => exact KErgOk.none
+      | cons L remaining => exact kScoped_ok (l := l) hst f rho ρ a.1 _ remaining
   | abbruch k => exact KErgOk.none
   | leer => exact KErgOk.none
 

@@ -121,6 +121,8 @@ theorem kRufEnde_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ
       try simp only [kRufEnde]
       split
       exact KErgOk.push hst _ _ _ (by first | exact hr | (simp only [GRest.nR]; exact hr)) _ _ _ _
+  | retScoped e R => exact kScoped_ok (l := l) hst f rho ρ _ _ R.scopes
+  | retWhyScoped r R => exact kScoped_ok (l := l) hst f rho ρ (.inr r) _ R.scopes
   | _ => exact KErgOk.none
 
 theorem kRufDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ)
@@ -135,6 +137,8 @@ theorem kRufDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env
       try simp only [kRufDann]
       split
       exact KErgOk.push hst _ _ _ (by first | exact ⟨hr, hk⟩ | (simp only [GRest.nR]; exact ⟨hr, hk⟩)) _ _ _ _
+  | retScoped e R => exact kScoped_ok (l := l) hst f rho ρ _ _ R.scopes
+  | retWhyScoped r R => exact kScoped_ok (l := l) hst f rho ρ (.inr r) _ R.scopes
   | _ => exact KErgOk.none
 
 theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ)

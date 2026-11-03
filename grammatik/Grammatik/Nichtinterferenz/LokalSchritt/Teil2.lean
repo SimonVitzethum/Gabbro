@@ -434,7 +434,7 @@ theorem kr_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGleic
       cases remaining with
       | nil => exact KRel.none_l _
       | cons L remaining =>
-          exact kScoped_rel st f rho ρ a.1 (hW.gibt L) remaining
+          exact kScoped_rel (l := l) st f rho ρ a.1 (hW.gibt L) remaining
   | abbruch k => exact KRel.none_l _
   | leer => exact KRel.none_l _
 
