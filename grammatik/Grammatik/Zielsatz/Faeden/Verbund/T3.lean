@@ -181,7 +181,7 @@ variable {D : Deklaration}
 
 section Einbettung
 
-variable [DecidableEq D.Fn]
+variable [DecidableEq D.Fn] [DecidableEq D.Ax]
 
 /-- **Linking is conservative**: a unit linked with a partner that owns nothing and starts
     nothing IS the unit. The statement `GabbroZiel` is unchanged by this diff; this lemma says

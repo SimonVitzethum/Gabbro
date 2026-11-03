@@ -271,7 +271,7 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
         have h := (List.all_eq_true.mp h42) f (hvoll f)
         rw [hf] at h
         simp only [Bool.not_true, Bool.false_or, Bool.and_eq_true] at h
-        obtain ⟨⟨hct, hcg⟩, hm⟩ := h
+        obtain ⟨hct, hcg, hm⟩ := h
         refine ⟨fun c hcc => ?_, hm⟩
         cases c with
         | inl t =>
@@ -292,7 +292,7 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
       have h := (List.all_eq_true.mp h53) f (hvoll f)
       rw [hf] at h
       simp only [Bool.not_true, Bool.false_or, Bool.and_eq_true] at h
-      obtain ⟨⟨hct, hcg⟩, hm⟩ := h
+      obtain ⟨hct, hcg, hm⟩ := h
       refine ⟨fun c => ?_, hm⟩
       cases c with
       | inl t =>
@@ -336,16 +336,12 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
       rw [e1, e2, e3]
       simp only [Bool.true_and]
       refine ⟨?_, ?_⟩
-      · exact List.all_eq_true.mpr fun t ht => by
-          have hc := h34 (.inl t)
-          cases hw : TraegerSchreibt a.kernAbfrage (.inl t) with
-          | true => exact absurd (hc hw) (by decide)
-          | false => rfl
-      · exact List.all_eq_true.mpr fun g hg => by
-          have hc := h34 (.inr g)
-          cases hw : TraegerSchreibt a.kernAbfrage (.inr g) with
-          | true => exact absurd (hc hw) (by decide)
-          | false => rfl
+      · exact List.all_eq_true.mpr fun t _ => by
+          simp only [decide_eq_true_eq]
+          exact h34 (.inl t)
+      · exact List.all_eq_true.mpr fun g _ => by
+          simp only [decide_eq_true_eq]
+          exact h34 (.inr g)
     have b4 : (reachB P fs a.aktualisiere a.kernAbfrage &&
         fs.all (fun f => !(reachB P fs a.aktualisiere f) ||
           (tabs.all (fun t => decide (TraegerSchreibt f (.inl t) = false)) &&
@@ -372,7 +368,7 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
           simp only [decide_eq_true_eq]
           cases hw : TraegerSchreibt f (.inl t) with
           | true =>
-            obtain ⟨i, hi⟩ := hcc _ hw
+            obtain ⟨i, hi⟩ := hcc (.inl t) hw
             cases hi
           | false => rfl
         · refine List.all_eq_true.mpr fun g _ => ?_
@@ -398,8 +394,8 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
       cases hf' : reachB P fs a.falte f with
       · exact Or.inl rfl
       · obtain ⟨hcc, hm⟩ := h53 f hf'
-        exact Or.inr ⟨⟨List.all_eq_true.mpr fun t _ => hcc _,
-          List.all_eq_true.mpr fun g _ => hcc _⟩, hm⟩
+        exact Or.inr ⟨⟨List.all_eq_true.mpr fun t _ => decide_eq_true (hcc _),
+          List.all_eq_true.mpr fun g _ => decide_eq_true (hcc _)⟩, hm⟩
     have b6 : qs.any (fun q => kernAbfrageEinzelB P tabs globs a q) = true :=
       List.any_eq_true.mpr ⟨q, hmem, (kernAbfrageEinzelB_iff hT hG).mpr hq⟩
     have b7 : akkuRangOrdnungB a = true := (akkuRangOrdnungB_iff).mpr h7
