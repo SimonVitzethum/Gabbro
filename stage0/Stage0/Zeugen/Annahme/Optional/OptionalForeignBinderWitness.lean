@@ -66,7 +66,7 @@ theorem image_shape :
       (fun | .bindOptBeg .. => true | _ => false) = 1 ∧
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindOptElseBeg .. => true | _ => false) = 2 ∧
-    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by decide +kernel
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by decide +kernel
 
 /-- The void gates are real selected bindings, including the errno-to-reason map. -/
 theorem binding_shape :

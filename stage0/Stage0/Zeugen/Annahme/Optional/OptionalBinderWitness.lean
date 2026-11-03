@@ -101,7 +101,7 @@ def binding (fallible : Bool) : TorB :=
 def image (valued fallible nested : Bool) : Except String (List Runner.B) := do
   let b ← bild 1 (program valued fallible nested)
     (layU (u valued fallible) (fun _ => some (binding fallible)))
-    [entry valued fallible] Fin.val (fun _ => "main") (entry valued fallible) .nil [] 1024
+    [entry valued fallible] Fin.val (fun _ => "main") (entry valued fallible) .nil [] 1024 0
   pure b.bytes
 
 def initial (valued fallible : Bool) : World (D valued fallible) where

@@ -96,7 +96,7 @@ def binding (a : D.Ax) : Option TorB :=
   some ⟨if a.val = 1 then 231 else 39, regsIn 0, []⟩
 
 def imageOf (body : Endblock D (vertragVon D main) false [] []) : Except String (List Runner.B) := do
-  let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main .nil [] 1024
+  let b ← bild 1 (programOf body) (layU u binding) [main] Fin.val (fun _ => "main") main .nil [] 1024 0
   pure b.bytes
 
 theorem boolean_images_zeuge : (imageOf boolBody).isOk = true ∧

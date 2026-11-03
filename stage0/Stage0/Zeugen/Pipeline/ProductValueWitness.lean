@@ -131,7 +131,7 @@ def program : Programm D where
 def image : Except String (List Runner.B) := do
   let result ← bild 1 program
     (layU AggregateProbe.u (fun _ => none)) [entry] Fin.val
-    (fun _ => "main") entry .nil [] 1024
+    (fun _ => "main") entry .nil [] 1024 0
   pure result.bytes
 
 /-- The ordinary block also reaches complete image emission. -/
