@@ -132,7 +132,7 @@ theorem refInv81_release (M : GenMaschine refD) (pc : PCStand) (f : Faden)
               simp only [genUpdate_self] at h
               exact h
             exact False.elim (hff hpost)
-        | assignThruOwn p t ht f i e m s ho he hg hm hw hL =>
+        | assignThruOwn p t ht f i e m s ho he hg hw hL =>
             simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
             have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) (M.weltVon f) Λ _
               (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hΛ.heldIn
