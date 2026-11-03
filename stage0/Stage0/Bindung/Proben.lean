@@ -102,7 +102,7 @@ theorem unbound_foreign_named_zeuge :
 theorem axiom_binding_selected_zeuge :
     (toreVonFor "x86_64" (some "selected")
       [.axiomT "probe" [] (some (.atom "bool")) none [] (.probe "falsifier"),
-       .goalT "selected" (some ("linux", "x86_64", [("probe", binding, .core [])]))]).toOption.map
+       .goalT "selected" (some ("linux", "x86_64", [("probe", { binding with ins := [], codes := [] }, .core [])]))]).toOption.map
       (fun gates => gates.map Tor.name) = some ["probe"] := by rfl
 
 #print axioms uniqueBinding_ok
