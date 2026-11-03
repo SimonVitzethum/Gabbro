@@ -276,13 +276,13 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
     | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
-    | dannBindAxiomOpt l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomOpt (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
-    | dannBindAxiomOptElseOk l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomOptElseOk (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
-    | dannBindAxiomOptElseGrund l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomOptElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
   | g6 h =>

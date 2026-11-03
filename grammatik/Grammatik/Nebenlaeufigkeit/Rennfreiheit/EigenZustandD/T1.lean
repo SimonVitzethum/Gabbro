@@ -387,7 +387,9 @@ theorem uebergang_neu (O : Orakel D) (passes : Nat)
             (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))).spur =
           (σ.lese Λ (.inl t :: i.orte)).spur := rfl
       rw [hspur₂, hspur, List.singleton_append, List.cons_append]
-  exact neu_head h1 hneu
+    exact neu_head h1 hneu
+  · rw [if_neg hvon, Ausgang.welt] at hstep
+    exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 /-- `assignDurchOwn t` records its write event in the recorded list: the same
     underlying table access as `assignDurch`. -/
@@ -453,8 +455,6 @@ theorem assignDurchOwn_neu (O : Orakel D) (passes : Nat)
         (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).spur := rfl
     rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
-  · rw [if_neg hvon, Ausgang.welt] at hstep
-    exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])
 
 
 end Gabbro.Grammatik.EZD

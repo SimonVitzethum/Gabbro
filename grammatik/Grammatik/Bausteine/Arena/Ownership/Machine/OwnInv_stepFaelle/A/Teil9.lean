@@ -334,7 +334,7 @@ theorem ownInv_step_dannNextVerbrauch {D : Deklaration} {P : Programm D}
                     GRest D (vertragVon D (M.faeden u).kopf.f) true (Ty.index (D.count t) :: Γ) Λ)⟩ :
             (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) true Γ Λ)⟩ :
         (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ))
-  (σm : World D) :
+  (σm : World D) (ρr : Env D Γ) :
   OwnInv A I
     { speicher := M.speicher,
       faeden :=
@@ -345,7 +345,7 @@ theorem ownInv_step_dannNextVerbrauch {D : Deklaration} {P : Programm D}
                 rest :=
                   (⟨l,
                       (⟨Γ,
-                          (⟨Λ, (ρ, GRest.verbrauch t member edge inv bound mass body rest k)⟩ :
+                          (⟨Λ, (ρr, GRest.verbrauch t member edge inv bound mass body rest k)⟩ :
                             (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                         (Γ : Ctx) ×
                           (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :

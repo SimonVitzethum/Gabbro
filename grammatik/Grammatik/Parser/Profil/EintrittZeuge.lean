@@ -80,17 +80,17 @@ theorem ez_kills : eintrittB ["worker"] { ezE with kills := ["rax"] } = false :=
 /-- A source declaration without an explicit isolation service is refused. A named
     `assume` does not repair it, even when it names a declared falsifier. -/
 theorem ez_gast_quelle :
-    gastQuellePruefung "x86_64" [] "" "" none = .error "entrust: missing isolation service binding" := by decide
+    gastQuellePruefung "x86_64" [] "" "" none = .error "entrust: missing isolation service binding" := by rfl
 
 /-- Unknown architecture has no ordinary userspace ABI adapter. -/
 theorem ez_gast_abi :
-    gastQuellePruefung "z80" [] "" "" none = .error "entrust: unknown userspace ABI" := by decide
+    gastQuellePruefung "z80" [] "" "" none = .error "entrust: unknown userspace ABI" := by rfl
 
 /-- Register-state handover remains excluded, independently of the guest's
     name, stack or historical assumption. -/
 theorem ez_gast_register :
     gastQuellePruefung "x86_64" [.binds "argument" "rdi"] "" "" none =
-      .error "entrust: register-state or privileged transfer is excluded" := by decide
+      .error "entrust: register-state or privileged transfer is excluded" := by rfl
 
 /-- Joint instance of the generic source refusal theorem. -/
 theorem gastQuelle_ohne_dienst_zeuge :

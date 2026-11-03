@@ -32,6 +32,13 @@ theorem treuAus_ok {W : D.Tab → Bool} {G : D.Glob → Bool} {l : Bool} {Γ : C
   have h2 := h σ1 (by rw [heq]; rfl)
   simpa [heq] using h2
 
+/-- Extract `Treu` from a `TreuAusgang` at a `next` outcome. -/
+theorem treuAus_next {W : D.Tab → Bool} {G : D.Glob → Bool} {Γ : Ctx}
+    {σ σ1 : World D} {ρ1 : Env D Γ} {o : Ausgang V true Γ} {hl : true = true}
+    (h : TreuAusgang W G σ o) (heq : o = Ausgang.next hl σ1 ρ1) : Treu W G σ σ1 := by
+  have h2 := h σ1 (by rw [heq]; rfl)
+  simpa [heq] using h2
+
 section SchleifenGleich
 
 variable (O : Orakel D) (passes : Nat)
@@ -55,27 +62,24 @@ theorem traverseLauf_gleich (bo : Option Int)
       traverseLauf (l := l) (fun σ ρ => execBlock O passes R₂ body σ ρ) inv ks σ ρ
   | [], σ, ρ, _ => by
       simp only [traverseLauf]
-      by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]
-      · rw [if_neg hc, if_neg hc]
   | k :: ks, σ, ρ, hh => by
       simp only [traverseLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]
-      · rw [if_neg hc, if_neg hc]
+      · rw [if_pos hc]
+      · rw [if_neg hc]
         have hinv := hi σ ρ hh
         have heq := ih (inv σ ρ).1 (.cons k ρ) hscope_body (hinv.heldB hh)
         rw [heq]
         cases hx : execBlock O passes R₂ body (inv σ ρ).1 (Env.cons k ρ) with
         | ok σ' ρ' =>
             have hT' := treuAus_ok (hT _ _ hscope_body (hinv.heldB hh))
-              (by rw [heq, hx]; rfl)
+              (by rw [heq, hx])
             have g1 := hinv.trans hT'
             exact traverseLauf_gleich bo body inv ih hT hi hscope_body
               ks σ' ρ'.tail (g1.heldB hh)
         | next hl σ' ρ' =>
-            have hT' := treuAus_ok (hT _ _ hscope_body (hinv.heldB hh))
-              (by rw [heq, hx]; rfl)
+            have hT' := treuAus_next (hT _ _ hscope_body (hinv.heldB hh))
+              (by rw [heq, hx])
             have g1 := hinv.trans hT'
             exact traverseLauf_gleich bo body inv ih hT hi hscope_body
               ks σ' ρ'.tail (g1.heldB hh)
@@ -118,8 +122,8 @@ theorem verbrauchLauf_gleich (bo : Option Int)
   | n + 1, σ, ρ, hh => by
       simp only [verbrauchLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]
-      · rw [if_neg hc, if_neg hc]
+      · rw [if_pos hc]
+      · rw [if_neg hc]
         have hinv := hi σ ρ hh
         have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
         generalize heq_sel : sel (inv σ ρ).1 ρ = selected at hselg ⊢
@@ -140,38 +144,38 @@ theorem verbrauchLauf_gleich (bo : Option Int)
             | ok σ' ρ' =>
                 dsimp only
                 have hT' := treuAus_ok (hT _ _ hscope_body (gm.heldB hh))
-                  (by rw [heq, hx]; rfl)
+                  (by rw [heq, hx])
                 have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
                 have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
                 generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
                 rcases p2 with ⟨σm', m'⟩
                 dsimp only
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · rw [if_pos hfall, if_pos hfall]
+                · rw [if_pos hfall]
                   have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
                   exact verbrauchLauf_gleich bo t body inv sel massW bound
                     ih hT hi hsel hmass hscope_body n σm' ρ'.tail (g2.heldB hh)
-                · rw [if_neg hfall, if_neg hfall]; rfl
+                · rw [if_neg hfall] <;> rfl
             | next hl σ' ρ' =>
                 dsimp only
-                have hT' := treuAus_ok (hT _ _ hscope_body (gm.heldB hh))
-                  (by rw [heq, hx]; rfl)
+                have hT' := treuAus_next (hT _ _ hscope_body (gm.heldB hh))
+                  (by rw [heq, hx])
                 have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
                 have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
                 generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
                 rcases p2 with ⟨σm', m'⟩
                 dsimp only
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · rw [if_pos hfall, if_pos hfall]
+                · rw [if_pos hfall]
                   have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
                   exact verbrauchLauf_gleich bo t body inv sel massW bound
                     ih hT hi hsel hmass hscope_body n σm' ρ'.tail (g2.heldB hh)
-                · rw [if_neg hfall, if_neg hfall]; rfl
-            | leave hl σ' ρ' => simp only; rfl
-            | zurueck σ' v => simp only; rfl
-            | why σ' r => simp only; rfl
-            | logik e => simp only; rfl
-            | hardware e => simp only; rfl
+                · rw [if_neg hfall] <;> rfl
+            | leave hl σ' ρ' => simp only
+            | zurueck σ' v => simp only
+            | why σ' r => simp only
+            | logik e => simp only
+            | hardware e => simp only
 
 end SchleifenGleich
 
@@ -204,28 +208,27 @@ theorem retryLauf_gleich (bo : Option Int)
   | 0, σ, ρ, hh => by
       simp only [retryLauf]
       by_cases hc : (bis σ ρ).2 = true
-      · rw [if_pos hc, if_pos hc]
+      · rw [if_pos hc]
+      · rw [if_neg hc]
         exact ihu (bis σ ρ).1 ρ hscope_ueber ((hb σ ρ hh).heldB hh)
-      · rw [if_neg hc, if_neg hc]
   | n + 1, σ, ρ, hh => by
       simp only [retryLauf]
       by_cases hc : (bis σ ρ).2 = true
-      · rw [if_pos hc, if_pos hc]
-        exact ihu (bis σ ρ).1 ρ hscope_ueber ((hb σ ρ hh).heldB hh)
-      · rw [if_neg hc, if_neg hc]
+      · rw [if_pos hc]
+      · rw [if_neg hc]
         have hinv := hb σ ρ hh
         have heq := ih (bis σ ρ).1 ρ hscope_body (hinv.heldB hh)
         rw [heq]
         cases hx : execBlock O passes R₂ body (bis σ ρ).1 ρ with
         | ok σ' ρ' =>
             have hT' := treuAus_ok (hT _ _ hscope_body (hinv.heldB hh))
-              (by rw [heq, hx]; rfl)
+              (by rw [heq, hx])
             have g1 := hinv.trans hT'
             exact retryLauf_gleich bo body bis ueber ih hT ihu hb
               hscope_body hscope_ueber n σ' ρ' (g1.heldB hh)
         | next hl σ' ρ' =>
-            have hT' := treuAus_ok (hT _ _ hscope_body (hinv.heldB hh))
-              (by rw [heq, hx]; rfl)
+            have hT' := treuAus_next (hT _ _ hscope_body (hinv.heldB hh))
+              (by rw [heq, hx])
             have g1 := hinv.trans hT'
             exact retryLauf_gleich bo body bis ueber ih hT ihu hb
               hscope_body hscope_ueber n σ' ρ' (g1.heldB hh)
@@ -255,21 +258,21 @@ theorem foreverLauf_gleich (bo : Option Int)
   | n + 1, σ, ρ, hh => by
       simp only [foreverLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]
-      · rw [if_neg hc, if_neg hc]
+      · rw [if_pos hc]
+      · rw [if_neg hc]
         have hinv := hi σ ρ hh
         have heq := ih (inv σ ρ).1 ρ hscope_body (hinv.heldB hh)
         rw [heq]
         cases hx : execBlock O passes R₂ body (inv σ ρ).1 ρ with
         | ok σ' ρ' =>
             have hT' := treuAus_ok (hT _ _ hscope_body (hinv.heldB hh))
-              (by rw [heq, hx]; rfl)
+              (by rw [heq, hx])
             have g1 := hinv.trans hT'
             exact foreverLauf_gleich bo a body inv ih hT hi hscope_body
               n σ' ρ' (g1.heldB hh)
         | next hl σ' ρ' =>
-            have hT' := treuAus_ok (hT _ _ hscope_body (hinv.heldB hh))
-              (by rw [heq, hx]; rfl)
+            have hT' := treuAus_next (hT _ _ hscope_body (hinv.heldB hh))
+              (by rw [heq, hx])
             have g1 := hinv.trans hT'
             exact foreverLauf_gleich bo a body inv ih hT hi hscope_body
               n σ' ρ' (g1.heldB hh)

@@ -270,13 +270,15 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · omega
   | g5 hs =>
     cases hs with
-    | dannBindAxiomOpt l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead
         σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       cases e <;> kopfA
+      all_goals (try dsimp only [ErgCtx, GRest.weiterOpt] at *)
       all_goals first | (solve | simp_all) | omega
-    | dannBindAxiomOptElseOk l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead
         σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       cases e <;> kopfA
+      all_goals (try dsimp only [ErgCtx, GRest.weiterOpt] at *)
       all_goals first | (solve | simp_all) | omega
     | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],

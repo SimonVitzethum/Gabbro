@@ -49,9 +49,9 @@ set_option maxRecDepth 100000
 def zeugeProgramm : List SItemTief := [
   .useT ["io", "konsole"],
   .constT "N" (.atom "u32") (.rows [.one (.lit 1), .one (.lit 2)]),
-  .globT true "max" (.atom "u64") (.one (.lit 0)) none none true,
-  .lockT "L" [.variable "max"] (.lit 1) (some (.lit 10)) none none none,
-  .atomT "flag" (.atom "bool") (some [.variable "max"]) (some "release") none,
+  .globT true "peak" (.atom "u64") (.one (.lit 0)) none none true,
+  .lockT "L" [.variable "peak"] (.lit 1) (some (.lit 10)) none none none,
+  .atomT "flag" (.atom "bool") (some [.variable "peak"]) (some "release") none,
   .whyT "Fehler" [("Voll", .lit 1, "voll")] true,
   .modT ("::".intercalate ["kern"]) [
     .fnT { art := "", name := "erhoehe", params := [("x", .atom "u64")], res := some (.atom "u64"),
@@ -59,8 +59,8 @@ def zeugeProgramm : List SItemTief := [
            klauseln := [.needs (.ext .all ["i", "slots"] [.variable "Knoten",
                           .bin "&&" (.bin "<" (.variable "x") (.lit 100))
                             (.ext .any ["t", "threads"] [.bin "==" (.variable "t") (.lit 1)])]),
-                        .effs [.writes (.variable "max")], .cost (.lit 5)] }
-      (.block [.set (.variable "max") "+=" (.variable "x")] (some (.ret (some (.variable "x")))))],
+                        .effs [.writes (.variable "peak")], .cost (.lit 5)] }
+      (.block [.set (.variable "peak") "+=" (.variable "x")] (some (.ret (some (.variable "x")))))],
   .concT [(["kern", "erhoehe"], [])],
   .tableT "Knoten" none (some (.lit 64)) none none true [
     .tSlot [{ fname := "x", ftyp := .atom "u32", pos := none, bezug := none,
@@ -94,7 +94,7 @@ theorem zeugeProgramm_gut : ∀ it ∈ zeugeProgramm, ItemGut it := by
     intro it hit; simp only [List.mem_cons, List.not_mem_nil, or_false] at hit; subst hit
     refine .fnT _ _ ⟨Or.inl rfl, ?_, atom _ (by decide), ?_⟩ ?_
     · intro p hp; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; subst hp; exact atom _ (by decide)
-    · intro k hk; simp only [List.mem_cons, List.not_mem_nil, or_false] at hk
+    · refine ⟨fun k hk => ?_, rfl⟩; simp only [List.mem_cons, List.not_mem_nil, or_false] at hk
       rcases hk with rfl | rfl | rfl
       · exact .quant .all "i" "slots" [] [.variable "Knoten"] _ (Or.inl rfl) (.ort _ _ (Or.inl rfl) (by decide))
           (.und _ _ (.expr _ (by decide))
@@ -196,7 +196,7 @@ theorem zeugeGeraet_gut : ∀ it ∈ zeugeGeraet, ItemGut it := by
           · exact Or.inr rfl
   · have leer : AnwGut .block (.block [] (some (.ret (some (.why "G" "Z"))))) :=
       .block [] _ (by simp only [List.not_mem_nil, false_implies, implies_true]) (show gut (.why "G" "Z") = true by decide) (by intro h; cases h)
-    refine .fnT _ _ ⟨Or.inl rfl, ?_, rng, by simp only [List.not_mem_nil, false_implies, implies_true]⟩ ?_
+    refine .fnT _ _ ⟨Or.inl rfl, ?_, rng, by simp only [List.not_mem_nil, false_implies, implies_true, and_self]⟩ ?_
     · intro p hp; simp only [List.mem_cons, List.not_mem_nil, or_false] at hp; rcases hp with rfl | rfl <;> exact atom _ (by decide)
     · refine .block _ _ ?_ (show gut (.variable "t") = true by decide) (by intro h; cases h)
       intro s hs

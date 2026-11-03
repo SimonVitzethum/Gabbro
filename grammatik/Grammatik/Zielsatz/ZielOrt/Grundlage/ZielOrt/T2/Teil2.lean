@@ -43,12 +43,12 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
             funext k fld
             rcases hc with ⟨L, hB, hfrei⟩ | hW
             · exact blatt_erhaelt_slots O passes hO (genAusG M) u s ρ hleaf σ' hw t L hB hΛ hfrei k fld
-            · exact hR.1 t hW k fld
+            · exact hR.1.1 t hW k fld
         | inr x =>
             show σ'.globs x = M.speicher.globs x
             rcases hc with ⟨L, hB, hfrei⟩ | hW
             · exact blatt_erhaelt_globs O passes hO (genAusG M) u s ρ hleaf σ' hw x L hB hΛ hfrei
-            · exact hR.2 x hW
+            · exact hR.1.2 x hW
     | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
         have hw : (execStmt O passes keinRuf s ((genAusG M).weltVon u) ρ).welt = some σ' := by
           show (execStmt O passes keinRuf s (M.weltVon u) ρ).welt = some σ'
@@ -64,12 +64,12 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
             funext k fld
             rcases hc with ⟨L, hB, hfrei⟩ | hW
             · exact blatt_erhaelt_slots O passes hO (genAusG M) u s ρ hleaf σ' hw t L hB hΛ hfrei k fld
-            · exact hR.1 t hW k fld
+            · exact hR.1.1 t hW k fld
         | inr x =>
             show σ'.globs x = M.speicher.globs x
             rcases hc with ⟨L, hB, hfrei⟩ | hW
             · exact blatt_erhaelt_globs O passes hO (genAusG M) u s ρ hleaf σ' hw x L hB hΛ hfrei
-            · exact hR.2 x hW
+            · exact hR.1.2 x hW
     | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
           have := congrArg Prod.fst hax
