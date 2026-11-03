@@ -19,11 +19,13 @@ theorem softDivQuotientC_aluIns {K d : Nat} (room : d + 26 ≤ K) :
   intro i member
   simp only [softDivQuotientC, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with (rfl | member) | rfl | rfl | rfl
-  · exact AluIns.const _ _ (by omega) (by omega) (by decide)
+  · exact AluIns.const (d + 3) 0 (by omega) (by omega) (by decide)
   · exact wideDivC_aluIns 2 d (by decide) (by omega) i member
-  · exact AluIns.const _ _ (by omega) (by omega) (by decide)
-  · exact AluIns.bin 27 _ _ _ _ rfl (by omega) (by omega) (by omega) (by omega)
-  · exact AluIns.bin 9 _ _ _ _ rfl (by omega) (by omega) (by omega) (by omega)
+  · exact AluIns.const (d + 4) 0 (by omega) (by omega) (by decide)
+  · exact AluIns.bin 27 (d + 4) (d + 4) (d + 2) _ rfl
+      (by omega) (by omega) (by omega) (by omega)
+  · exact AluIns.bin 9 d d (d + 4) _ rfl
+      (by omega) (by omega) (by omega) (by omega)
 
 /-- Nonnegative limbs agree with the word encodings used by float unpacking. -/
 theorem softDiv_limb (n j : Nat) :
