@@ -107,7 +107,7 @@ public theorem scene_alias_payload_closed_zeuge :
 /-- The wide payload reaches the ordinary declaration expansion unchanged. -/
 public theorem scene_wide_payload_accepted_zeuge :
     (exportDeclarationUnit
-      (fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []])).map (fun _ => ())) =
+      (fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []])).map (fun _ => ()) =
     .ok () := rfl
 
 public theorem scene_equality_refused_zeuge :

@@ -22,14 +22,16 @@ theorem except_ok_inj {ε α : Type} {a b : α} (h : (Except.ok a : Except ε α
 theorem hasRangeFoldAnwList_append (a b : List SAnw)
     (ha : hasRangeFoldAnwList a = false) (hb : hasRangeFoldAnwList b = false) :
     hasRangeFoldAnwList (a ++ b) = false := by
+  revert ha
   induction a with
-  | nil => simpa using hb
+  | nil => intro _; simpa using hb
   | cons x xs tail =>
+    intro ha
     cases hxx : hasRangeFoldAnw x with
     | true => simp [hasRangeFoldAnwList, hxx] at ha
     | false =>
       have hxs : hasRangeFoldAnwList xs = false := by simp [hasRangeFoldAnwList, hxx] at ha; exact ha
-      simp [hasRangeFoldAnwList, hxx, tail hxs hb]
+      simp [hasRangeFoldAnwList, hxx, tail hxs]
 
 theorem combineStmts_free (d : FoldDesc) (acc element : String) :
     hasRangeFoldAnwList (combineStmts d acc element) = false := by
@@ -196,7 +198,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
     expandNested fuel source locals chain tags e = .ok (e', s) →
     hasRangeFold e' = false ∧ hasRangeFoldAnwList s = false := by
   intro fuel
-  induction fuel with
+  induction fuel generalizing chain with
   | zero =>
     intro e e' s h
     cases hh : hasRangeFold e with
@@ -230,7 +232,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
           | ok q =>
             simp [h2] at h
             obtain ⟨rfl⟩ := h
-            obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ h1
+            obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ _ h1
             obtain ⟨tailFst, tailSnd⟩ := tail _ _ h2
             exact ⟨by simp [hasRangeFoldList, ihFst, tailFst],
               by simp [List.flatten, hasRangeFoldAnwList_append, ihSnd, tailSnd]⟩
@@ -244,7 +246,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
     | fnref f => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | res => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | why g r => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
-    | field x f =>
+    | field x fieldName =>
       simp [expandNested, matchFoldNode] at h
       cases h1 : expandNested f source locals chain tags x with
       | error e => simp [h1] at h
@@ -252,10 +254,10 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
         obtain ⟨x', sx⟩ := p
         simp [h1] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ h1
+        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ _ h1
         exact ⟨by simp [hasRangeFold, ihFst],
           by simp [hasRangeFoldAnwList_append, ihSnd]⟩
-    | arrow x f =>
+    | arrow x fieldName =>
       simp [expandNested, matchFoldNode] at h
       cases h1 : expandNested f source locals chain tags x with
       | error e => simp [h1] at h
@@ -263,7 +265,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
         obtain ⟨x', sx⟩ := p
         simp [h1] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ h1
+        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ _ h1
         exact ⟨by simp [hasRangeFold, ihFst],
           by simp [hasRangeFoldAnwList_append, ihSnd]⟩
     | un o x =>
@@ -274,7 +276,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
         obtain ⟨x', sx⟩ := p
         simp [h1] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ h1
+        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ _ h1
         exact ⟨by simp [hasRangeFold, ihFst],
           by simp [hasRangeFoldAnwList_append, ihSnd]⟩
     | old x =>
@@ -285,7 +287,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
         obtain ⟨x', sx⟩ := p
         simp [h1] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ h1
+        obtain ⟨ihFst, ihSnd⟩ := ih _ _ _ _ h1
         exact ⟨by simp [hasRangeFold, ihFst],
           by simp [hasRangeFoldAnwList_append, ihSnd]⟩
     | index a b =>
@@ -301,8 +303,8 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
           obtain ⟨b', sb⟩ := pb
           simp [hb] at h
           obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨ihaF, ihaS⟩ := ih _ _ _ ha
-          obtain ⟨ihbF, ihbS⟩ := ih _ _ _ hb
+          obtain ⟨ihaF, ihaS⟩ := ih _ _ _ _ ha
+          obtain ⟨ihbF, ihbS⟩ := ih _ _ _ _ hb
           exact ⟨by simp [hasRangeFold, ihaF, ihbF],
             by simp [hasRangeFoldAnwList_append, ihaS, ihbS]⟩
     | bin o a b =>
@@ -318,8 +320,8 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
           obtain ⟨b', sb⟩ := pb
           simp [hb] at h
           obtain ⟨rfl, rfl⟩ := h
-          obtain ⟨ihaF, ihaS⟩ := ih _ _ _ ha
-          obtain ⟨ihbF, ihbS⟩ := ih _ _ _ hb
+          obtain ⟨ihaF, ihaS⟩ := ih _ _ _ _ ha
+          obtain ⟨ihbF, ihbS⟩ := ih _ _ _ _ hb
           exact ⟨by simp [hasRangeFold, ihaF, ihbF],
             by simp [hasRangeFoldAnwList_append, ihaS, ihbS]⟩
     | call g args =>
@@ -376,8 +378,8 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
               | none =>
                 simp [hEm] at h
                 obtain ⟨rfl, rfl⟩ := h
-                obtain ⟨ihFF, ihFS⟩ := ih _ _ _ hF
-                obtain ⟨ihVF, ihVS⟩ := ih _ _ _ hV
+                obtain ⟨ihFF, ihFS⟩ := ih _ _ _ _ hF
+                obtain ⟨ihVF, ihVS⟩ := ih _ _ _ _ hV
                 have he : ((none : Option SExpr).map hasRangeFold).getD false = false := rfl
                 have hPre := buildFoldPrefix_free d idx filter' value' sF sV [] none tests
                   ihFS ihVS rfl ihFF ihVF he hT
@@ -394,9 +396,9 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
                   obtain ⟨emp', sE⟩ := pE
                   simp [hE] at h
                   obtain ⟨rfl, rfl⟩ := h
-                  obtain ⟨ihFF, ihFS⟩ := ih _ _ _ hF
-                  obtain ⟨ihVF, ihVS⟩ := ih _ _ _ hV
-                  obtain ⟨ihEF, ihES⟩ := ih _ _ _ hE
+                  obtain ⟨ihFF, ihFS⟩ := ih _ _ _ _ hF
+                  obtain ⟨ihVF, ihVS⟩ := ih _ _ _ _ hV
+                  obtain ⟨ihEF, ihES⟩ := ih _ _ _ _ hE
                   have he : ((some emp').map hasRangeFold).getD false = false := by
                     simpa using ihEF
                   have hPre := buildFoldPrefix_free d idx filter' value' sF sV sE (some emp') tests

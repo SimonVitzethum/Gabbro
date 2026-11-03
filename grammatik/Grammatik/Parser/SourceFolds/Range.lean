@@ -52,7 +52,7 @@ def hasRangeFoldAnw : SAnw → Bool
   | .cond c a bs o => hasRangeFold c || hasRangeFoldAnw a ||
       hasRangeFoldAnwList bs || (o.map hasRangeFoldAnw).getD false
   | .elsif c a => hasRangeFold c || hasRangeFoldAnw a
-  | .watch _ a | .child a => hasRangeFoldAnw a
+  | .watch _ a | .child a | .waive _ a => hasRangeFoldAnw a
   | .cases g arms => hasRangeFold g || hasRangeFoldAnwList arms
   | .arm _ _ a => hasRangeFoldAnw a
   | .each _ s _ subj _ _ inv body =>
@@ -70,9 +70,10 @@ def hasRangeFoldAnw : SAnw → Bool
   | .block ss e => hasRangeFoldAnwList ss || hasRangeFoldEnde e
   | .bindLib _ _ _ c | .lcall c => hasRangeFoldList c.args
   | .step _ _ => false
-  | .bindElse _ _ e _ a | .bindAxiomOptElse _ _ e _ _ a =>
+  | .bindElse _ _ e _ a | .bindAxiomOptElse _ _ e _ a =>
       hasRangeFold e || hasRangeFoldAnw a
-  | .genericCall _ _ args | .callElse _ args _ _ => hasRangeFoldList args
+  | .genericCall _ _ args => hasRangeFoldList args
+  | .callElse _ args _ body => hasRangeFoldList args || hasRangeFoldAnw body
 def hasRangeFoldAnwList : List SAnw → Bool
   | [] => false
   | a :: as => hasRangeFoldAnw a || hasRangeFoldAnwList as
