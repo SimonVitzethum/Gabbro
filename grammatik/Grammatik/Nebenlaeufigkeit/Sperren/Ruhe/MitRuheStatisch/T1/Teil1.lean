@@ -21,6 +21,8 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .assignSlot _ _ i e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
   | _, _, _, _, .assignThru p _ _ _ i e _ _ =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruE_orte i)) (ruE_orte e)
+  | _, _, _, _, .assignThruOwn p _ _ _ i e _ _ _ _ _ _ _ =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte p) (ruE_orte i)) (ruE_orte e)
   | _, _, _, _, .assignSlotRef r _ _ _ _ e _ _ => kongr₂ (· ++ ·) (ruE_orte r) (ruE_orte e)
   | _, _, _, _, .assignGlob _ e _ _ => ruE_orte e
   | _, _, _, _, .putBytes _ _ _ _ i _ _ e _ _ => kongr₂ (· ++ ·) (ruE_orte i) (ruE_orte e)
@@ -239,7 +241,7 @@ mutual
 theorem ruS_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), (ruS s).regs = s.regs
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignThru .. | _, _, _, _, .assignSlotRef .. => rfl
+  | _, _, _, _, .assignThru .. | _, _, _, _, .assignThruOwn .. | _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl
