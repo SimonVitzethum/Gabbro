@@ -163,54 +163,32 @@ def parseRcuTief (f : Nat) (toks : List Token) :
               | .error e => .error e
               | .ok r => .ok (.rcuT n ps none, r)
 
-/-- `entrust n at Code arch a via service;`; register handover is parsed for named refusal. -/
+/-- `entrust n at Code arch a via service;`; legacy state is retained for named refusal. -/
 def parseAnvertrautTief (f : Nat) (toks : List Token) :
-    Except String (SItemTief × List Token) :=
-  match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match nimmWort "entrust" toks with
-    | .error e => .error e
-    | .ok r1 => match nimmName r1 with
-      | .error e => .error e
-      | .ok (n, r2) => match nimmWort "at" r2 with
-        | .error e => .error e
-        | .ok r3 => match nimmName r3 with
-          | .error e => .error e
-          | .ok (m, r4) => match nimmWort "arch" r4 with
-            | .error e => .error e
-            | .ok r5 => match nimmName r5 with
-              | .error e => .error e
-              | .ok (a, r6) =>
-  match r6 with
-  | .wort "via" :: tail => do
-    let (service, tail) ← nimmName tail
-    let tail ← fordereZeichen ";" tail
-    pure (.trustT n m a [] "" "" (some service), tail)
-  | _ => match fordereZeichen "{" r6 with
-                | .error e => .error e
-                | .ok r7 => match nimmWort "regs" r7 with
-                  | .error e => .error e
-                  | .ok r8 => match nimmWort "in" r8 with
-                    | .error e => .error e
-                    | .ok r9 => match parseRegBindListe f r9 with
-                      | .error e => .error e
-                      | .ok (ri, r10) => match nimmWort "stack" r10 with
-                        | .error e => .error e
-                        | .ok r11 => match nimmName r11 with
-                          | .error e => .error e
-                          | .ok (st, r12) =>
-                            match nimmWort "assume" r12 with
-                            | .error e => .error e
-                            | .ok r13 => match nimmName r13 with
-                              | .error e => .error e
-                              | .ok (g, r14) =>
-                                match fordereZeichen ";" r14 with
-                                | .error e => .error e
-                                | .ok r15 =>
-                                  match fordereZeichen "}" r15 with
-                                  | .error e => .error e
-                                  | .ok r => .ok
-                                    (.trustT n m a ri st g none, r)
+    Except String (SItemTief × List Token) := do
+  let r ← nimmWort "entrust" toks
+  let (name, r) ← nimmName r
+  let r ← nimmWort "at" r
+  let (code, r) ← nimmName r
+  let r ← nimmWort "arch" r
+  let (arch, r) ← nimmName r
+  match r with
+  | .wort "via" :: r =>
+    let (service, r) ← nimmName r
+    let r ← fordereZeichen ";" r
+    pure (.trustT name code arch [] "" "" (some service), r)
+  | _ =>
+    let r ← fordereZeichen "{" r
+    let r ← nimmWort "regs" r
+    let r ← nimmWort "in" r
+    let (registers, r) ← parseRegBindListe f r
+    let r ← nimmWort "stack" r
+    let (stack, r) ← nimmName r
+    let r ← nimmWort "assume" r
+    let (assumption, r) ← nimmName r
+    let r ← fordereZeichen ";" r
+    let r ← fordereZeichen "}" r
+    pure (.trustT name code arch registers stack assumption none, r)
 
 def parseBootSchritte (f : Nat) (toks : List Token) :
     Except String (List SBootSchritt × List Token) :=
