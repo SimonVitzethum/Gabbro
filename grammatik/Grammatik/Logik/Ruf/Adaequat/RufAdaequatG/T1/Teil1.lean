@@ -235,9 +235,9 @@ inductive BlattG {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List 
       (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
       (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
       (m : D.Marke) (s : Nat) (ho : D.ownerNr o = some m) (he : m ∈ D.eigner t)
-      (hg : Sum.inr (m, s) ∈ D.braucht t) (hm : Res.marke m s ∈ Λ)
+      (hg : Sum.inr (m, s) ∈ D.braucht t)
       (hw : V.schreibt t = true) (hL : darf D t Λ) :
-      BlattG (l := l) (.assignThruOwn p t ht f i e m s ho he hg hm hw hL)
+      BlattG (l := l) (.assignThruOwn p t ht f i e m s ho he hg hw hL)
   | assignSlotRef (n : Nat) (r : Expr D Γ Λ (.ref n)) (t : D.Tab) (ht : D.tabNr n = some t)
       (ho : D.offen t = true) (f : D.Feld t) (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true)
       (hL : darf D t Λ) :
@@ -302,7 +302,7 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
-  | assignThruOwn n o p t ht f i e m s ho he hg hm hw hL =>
+  | assignThruOwn n o p t ht f i e m s ho he hg hw hL _ =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
