@@ -13,11 +13,6 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 def reportFnName (check : String) (point : Nat) : String :=
   check ++ "#report#" ++ toString point
 
-def checkPlaceLabel : UMessOrt → String
-  | .variable n => n
-  | .feld b f => b ++ "." ++ f
-  | .stelle b f i => b ++ "." ++ f ++ "[" ++ toString i ++ "]"
-
 /-- Only an unavailable local is absent. A present but ill-typed measured
     expression is an error, never an invented zero sample. -/
 def checkPlaceAbsent (ctx : UCtx) : SExpr → Bool
@@ -91,8 +86,8 @@ def recordCheckReturn (ctx : UCtx) (c : SCheck) (point : Nat) (value : SExpr) :
     Except String (SAnw × UFn × UFnKopf) := do
   let places ← c.misst.mapM uMessOrt
   let samples ← (c.misst.zip places).mapM fun (expr, place) => do
-    if checkPlaceAbsent ctx expr then pure (checkPlaceLabel place, none)
-    else pure (checkPlaceLabel place, some (expr, ← checkSampleType ctx expr))
+    if checkPlaceAbsent ctx expr then pure (messOrtName place, none)
+    else pure (messOrtName place, some (expr, ← checkSampleType ctx expr))
   let present := samples.filterMap fun (_, capture) => capture
   let sampleParams := present.zipIdx.map fun ((_, ty), i) => ("s" ++ toString i, ty)
   let floorParams := c.boden.zipIdx.map fun (_, i) => ("f" ++ toString i, Ty.bool)
