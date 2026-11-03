@@ -50,6 +50,13 @@ def pointerInputs : List Ty → List DataCapTy
   | .ptr cap :: rest => cap :: pointerInputs rest
   | _ :: rest => pointerInputs rest
 
+/-- The adapter admits explicit top-level region inputs only. A reference,
+    callback or aggregate could hide additional capabilities; its complete
+    transfer interpretation must exist before it can cross this boundary. -/
+def inputsB (inputs : List Ty) : Bool := inputs.all fun
+  | .int .. | .bool | .opt _ | .why _ | .fl .. | .str _ | .ptr _ => true
+  | _ => false
+
 /-- A live nominal table capability, with its declared space preserved. -/
 def regionB (cap : DataCapTy) : Bool :=
   match cap.target with
@@ -84,6 +91,8 @@ def check (g : GuestBoundary D) : Except String Unit := do
   if !regionB (D := D) g.code || !g.code.rights.read || g.code.rights.write ||
       g.code.rights.owner.isSome then
     throw "entrust: code needs an immutable region capability"
+  if !inputsB (D.aparams a) then
+    throw "entrust: nested capability or callback needs an explicit service boundary"
   if !g.transfers.all (transferB g.available) then
     throw "entrust: caller does not own a transferred region"
   if !decide ((g.transfers.map (fun t => t.owner)).Nodup) then
