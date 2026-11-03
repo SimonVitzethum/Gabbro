@@ -88,6 +88,11 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   [`lowRetStmt`/`lowRetEnd`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Returns.lean).
   Shared `locks` still fails `Uebersetze/Teil/Teil10` (“shared lock without G form”); RCU declarations fail `itemMetadata`.
   Open: return-capable physical lock cleanup/admission, mode-aware RW/RCU source-to-IR integration and reader-wait liveness.
+  **Scoped-return model boundary (2026-11-03, static):** counting a pre-release scoped return as `FertigG`
+  contradicts `Ziel.keineVerklemmung`: a finished root can still hold the lock an unfinished thread awaits.
+  `kPop [] = none` also prevents a root cleanup step from satisfying the existing K correspondence.
+  Open: owner decision on completion after cleanup and the corresponding K root transition; see
+  [the scoped-return design boundary](dokumente/THEOREM-MAP.md#182-scoped-return-completion-design-boundary-2026-11-03).
 - **C11 consuming traversal: implemented, connected, with a source producer.**
   [`uLoopExport`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil9.lean), `ExportMetadata.consumingHeader`,
   [`lowStructStep`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Struct.lean) and

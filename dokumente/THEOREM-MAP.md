@@ -6896,3 +6896,32 @@ On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` unt
 `grammatik/Grammatik/Logik/Ruf/RufLogikZeuge.lean`: `nurAbstieg_zeuge_104`/`_108` carry the discipline premise and supply `ScopesOkProg` by computation (`scopes4`, `scopes8`); the undisciplined-frame claim (unprovable in general since C11) is dropped while `heldB_faellt_104` keeps the non-vacuity and the concrete runs keep the non-degeneracy. `RufLogik.lean` header records the closure.
 
 Open: the lead build of this branch (new modules plus `RufLogika.lean`, `RufLogikZeuge.lean` and their importers, then the guardians); `gabbro_ziel` must stay on exactly `propext`/`Classical.choice`/`Quot.sound` with no `sorry`. No language case is claimed complete by these modules.
+
+## 182. Scoped-return completion: design boundary (2026-11-03)
+
+Static inspection at `4286bc606`, on `scoped-returns`; no Lean or build was run, and no rule of
+`RufSchrittG` or definition used by `Spec` was changed. The requested extension would add scope
+release before the value/reason return, changing the transition relation of machine G.
+
+The requested classification of a pre-release scoped return as finished cannot preserve the current
+goal statement. `FertigG` (`Nebenlaeufigkeit/Allgemein/Verklemmung/T2.lean`) tests an empty stack and
+`GRest.anRueck`, without running cleanup. A schematic counterexample has two roots with no signature
+locks: root A acquires L and reaches a scoped return with `R.scopes = [L]`, while root B awaits L.
+`dannLocks` (machine G, group 2) exposes the scoped-return body before any release. If that head counts
+as finished, A is finished while still holding L, and B is unfinished and `WartetG`. Thus every
+unfinished thread waits, but not every thread is finished, contradicting `Ziel.keineVerklemmung`
+(`Zielsatz/Kern/Spec/Teil2.lean`). This is a semantic obstruction, not just a missing proof of
+`fertig_leer`. `World.gibt_foldl_speicher` preserves memory, but changes the actual holdings and cannot
+transfer this lock-freedom conclusion back to the unreleased machine.
+
+There is a second boundary: `kEnde` sends a scoped return through `kPop`, and `kPop [] = none`
+(`Nichtinterferenz/SchrittBasis.lean`). A new root cleanup transition therefore also needs a change to
+the K transition; a new arm of `schrittK_von_g*` alone cannot establish the existing correspondence.
+
+Recommendation pending the owner decision: distinguish pending cleanup from completion. Capture the
+result before releasing, perform cleanup for roots as well as callees, and classify only the released
+return state as finished. This needs an explicit terminal residue carrying the saved result, a matching
+K root transition, and agreement on the definitions of completion used by `Spec`; the existing
+`rueckBereit scopes k` is indexed by still-held scope resources. No weakened deadlock statement or
+finished-holder exception is proposed. Work stopped at this boundary as instructed; machine rules,
+replay/noninterference arms and finished-thread proofs remain open.
