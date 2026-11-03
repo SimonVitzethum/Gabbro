@@ -1,5 +1,6 @@
 /- Accepted multiplication images through the Block hook and retained words.
-   Word checks retain NaN payloads and zero signs that float comparisons omit. -/
+   Word checks retain NaN payloads and zero signs that float comparisons omit.
+   Images are fixtures for the assembly runner; they do not execute here. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 @[expose] public section
