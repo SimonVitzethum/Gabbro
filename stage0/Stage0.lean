@@ -48,7 +48,7 @@ public import Stage0.Senke.Ausdruck.Zeiger.FnptrAufrufProben
 public import Stage0.Senke.Ausdruck.Quant.Proben
 public import Stage0.Senke.Anweisung.Bytes.Proben
 public import Stage0.Senke.Anweisung.Bytes.Span.Proben
-public import Stage0.Senke.Anweisung.Faelle.Sum.Proben
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
@@ -61,7 +61,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.TagProben
-public import Stage0.Senke.Ausdruck.Aggregat.ValueProbe
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.ValueProbe
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Proben
 
 public import Stage0.Senke.Ausdruck.Referenz.Proben
