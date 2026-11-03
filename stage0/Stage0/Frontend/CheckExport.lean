@@ -15,6 +15,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Zulassung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Boden
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Gegenprobe
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Fremdtor
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Treue
 public import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 @[expose] public section
 
@@ -70,5 +71,21 @@ theorem emitted_check_correct [Runner.IR.Kern] [Senke.CloneOK]
     {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : output.Correct :=
   output.correct
+
+/-- The exact emitted source program's ordinary IR simulation and its
+    completed actual-sample history share one declaration and program. Ghost
+    completion records retirement, not truth of the check's prose claim. -/
+theorem emitted_check_history_correct [Runner.IR.Kern] [Senke.CloneOK]
+    {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options)
+    (machine : RufMaschineG (declOf output.compiled.unit)) (thread : Faden)
+    (check : CheckDecl (declOf output.compiled.unit))
+    (consumer gate : (declOf output.compiled.unit).Fn) (declared : gate ∈ check.gates)
+    (complete : checkGhostComplete
+      (checkGhostGX output.compiled.unit machine thread check consumer gate) = true) :
+    output.Correct ∧ Zielsatz.CheckTreueG output.compiled.program [check]
+      (checkGhostGX output.compiled.unit machine thread check consumer gate).history :=
+  ⟨output.correct, checkGhostGX_treu output.compiled.unit output.compiled.program
+    machine thread check consumer gate declared complete⟩
 
 end Gabbro.Stage0
