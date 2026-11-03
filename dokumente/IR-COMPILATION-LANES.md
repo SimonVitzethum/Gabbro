@@ -3433,11 +3433,11 @@ selection/update, invalid float literals). This does not make their constructors
 
 | Inductive | Constructors | LOWERED | CONDITIONAL | REFUSED |
 |---|---:|---:|---:|---:|
-| Expr | 63 | 38 | 25 | 0 |
+| Expr | 63 | 39 | 24 | 0 |
 | Stmt | 33 | 10 | 19 | 4 |
 | Block | 22 | 12 | 8 | 2 |
 | Endblock | 23 | 11 | 8 | 4 |
-| Total | 141 | 71 | 60 | 10 |
+| Total | 141 | 72 | 59 | 10 |
 
 **Implementation follow-up (2026-11-03, branch `s0-gaps1`, not Lean-checked).**
 The source inventory above includes the removal of the width guards for
@@ -3485,7 +3485,47 @@ intervals, plus an accepted multiword-variable witness of the generic hook.
 No Lean, Lake, compiler, runner or guardian was run by the implementation worker.
 Only import traversal, source inspection and `git diff --check` were measured;
 the declarations and their image-acceptance claims need the lead's checks.
-Tagged non-integer payloads and byte spans above eight remain unchanged/open.
+
+**Aggregate sums and byte spans follow-up (`s0-gaps1`, 2026-11-03; UNCHECKED).**
+The constructor table now includes this source-visible implementation change (`case`
+moves from CONDITIONAL to LOWERED); it is not new compiled-coverage measurement.
+Separated sums use a tag span followed by the maximum complete `valueWords` of
+all possible payloads and deterministic zero padding. `encodeSumPayload` and
+`SumValid` recurse through the selected schema. Packed empty/integer sums retain
+`sumOff` and the existing 8/56-bit representation; separated payloads retain their
+own encoding, including signed wide integers, products, floats and strings.
+`sumSpan_ok` feeds the actual `.case` arm of `lowE_ok`; `sumSpanArm_ok`,
+`lowSumTags_ok` and `onSumTag_ok` feed `lowS_ok_onTag` and the mutual lowering
+simulation. Full payload validity is retained in constants and arm bindings.
+The remaining dispatch tag-count gate is necessary for representable generated
+code (`lowSumTags_code_bound`: at least five instructions per case).
+
+`readBytesWordsL` emits the existing `readBytesL` kernel in chunks of at most eight
+bytes, one canonical limb at a time. `bytes_chunk_word` and
+`bytes_chunk_quotient` identify each limb; `readBytesWords_ok` proves the loop by
+induction on chunk count and connects through `getBytes_ok` to `lowE_ok`.
+Wide writes capture the complete value and index before any store, then move one
+captured limb and a pure captured-index expression into the existing
+`putBytesL` kernel. `putBytesChunk_ok`, `putBytesWords_ok` (chunk-count induction)
+and `putBytesWide_ok` connect through `putBytes_ok` to `lowS_ok`; byte order,
+overlapping source/destination reads and the complete world-write trace are
+preserved. Both wide wrappers reject `n >= 2^31` before expansion, where even one
+instruction per byte cannot fit the ordinary code-image bound. Existing column,
+frame, image and operand-emission checks still apply.
+
+`SumSpanProbe.sumSpan_images_zeuge` declares accepted whole images with product,
+float, string, signed-wide and bare payloads, all with dispatch and payload reads;
+`sumSpan_many_tags_zeuge` covers a 257-case construction. Existing source
+`TypedSumWitness` and `Pipeline.TaggedDispatchWitness` are integration imports.
+`ByteSpanProbe.byteSpan_images_zeuge` covers 9, 16 and 17 bytes, partial high limbs,
+zero values and overlapping copies; `byteSpan_model_zeuge` checks all high bits
+and adjacent cells. The old nine-byte refusal is replaced by
+`ByteProbe.getBytes_wide_accepted_zeuge`. `byteSpan_offset_refused_zeuge` and
+`byteSpan_write_offset_refused_zeuge` pin the actual representability gate.
+No Lean, Lake, compiler, runner or guardian was run. Only source inspection,
+import-graph traversal, file-size/forbidden-token scans and `git diff --check`
+were measured. Open: lead single-module checks, standard-axiom audits and image /
+runner validation; none of these declaration-level acceptance claims is measured.
 
 **Proof connection.** All producing expression arms occur in `Ausdruck/Satz.lowE_ok`
 (mutual with `lowN_ok` and `lowE_ok_args`). Statement/block/end arms occur in the
@@ -3505,7 +3545,7 @@ Paths below are relative to `stage0/Stage0/Senke/` unless otherwise stated.
 |---|---|
 | G | `L.ga g + 8 * W(D.gtyp g) < 2^31`; `Welt/Spans/SpanCode.globalValueC/globalStoreC`. |
 | T | `L.col t f < 2^31` and `8 * W(D.typ t f) < 2^31`; `Welt/Spans/CellCode.cellAddressC`, used by `slotValueC/slotStoreC`. `thru` uses the statically resolved table; no numeric pointer conversion. |
-| S | `sumFits cs`: at most 256 cases, each empty or an integer payload with `hi-lo < 2^56`; other typed payloads refused. `lowN` packs only empty/integer payloads. |
+| S | Compact fast path: `sumFits cs` (at most 256 bare/integer cases, `hi-lo < 2^56`) uses `lowN`. Otherwise `sumSpanL` embeds the complete selected payload and zero padding. `onTag` uses `lowSumTags` with `cs.length < 2^31`, a necessary generated-code bound. |
 | Q | Empty domain succeeds without body code; otherwise `N < 2^31` and `1 + N * (body.length + 5) < 2^31`. `quantL` uses `N=count.toNat`; `countL` uses its natural `n`. |
 | A | Singleton array get/set bypasses indexing; otherwise `0 < n` and `8 * W(element) < 2^31` (`arrGetL/arrSetL`). |
 | C | `wennL`: `16 * (then.length + else.length + 2) < 2^31`. `engL/wideEngL`: `16 * (fallback.length + 1) < 2^31`. |
@@ -3543,7 +3583,7 @@ are alternative emitters, not width refusals: wide fallbacks exist.
 | `rem` | LOWERED | Unsigned fast path or wide; `rem_ok`. |
 | `sdiv` | LOWERED | Signed non-minimum fast path or wide; `sdiv_ok`. |
 | `srem` | LOWERED | Signed non-minimum fast path or wide; `srem_ok`. |
-| `getBytes` | CONDITIONAL | `n ≤ 8`, then byte reads through `slotC` (`lit32 column`, one-word byte); `readBytesL_ok`; `ByteProbe.getBytes_wide_refused_zeuge` (path `Anweisung/Bytes/Proben.lean`). |
+| `getBytes` | CONDITIONAL | Existing `slotC` byte-column checks; wide spans require `n < 2^31`. `readBytesWordsL` iterates <=8-byte kernels; `readBytesWords_ok` / `getBytes_ok` connect to `lowE_ok`. Nine-byte and 9/16/17-byte image acceptance declarations are present, unchecked. |
 | `band` | LOWERED | Unsigned word or wide; `band_ok`. |
 | `bor` | LOWERED | Word/resize or wide; `bor_ok`. |
 | `bxor` | LOWERED | Word/resize or wide; `bxor_ok`. |
@@ -3560,7 +3600,7 @@ are alternative emitters, not width refusals: wide fallbacks exist.
 | `none` | LOWERED | Full option encoding; `constValue_ok`. |
 | `some` | LOWERED | Packed for `n ≤ 2^63`, otherwise explicit tag plus full index; `some_ok`. |
 | `istSome` | LOWERED | Packed options compare the sentinel; wide options reuse the first-word tag after complete operand lowering. `istSome_ok` remains connected to `lowE_ok`; `AggregateProbe.simulation_zeuge/image_zeuge` now include zero/high-limb payloads, None and conditional values. Lead check pending. |
-| `case` | CONDITIONAL | S; mutual `lowN_ok`. |
+| `case` | LOWERED | S selects packed `lowN_ok` or complete-span `sumSpan_ok`; both are connected to the actual `lowE_ok` constructor arm. No payload-kind/width refusal remains. |
 | `why` | LOWERED | Complete reason integer encoding; inline `lowE_ok/constValue_ok`. |
 | `forallSlots` | CONDITIONAL | Q; `quantL_ok`; `QuantProbe.quant_refused_zeuge`. |
 | `existsSlots` | CONDITIONAL | Q; `quantL_ok`; same witness. |
@@ -3618,12 +3658,12 @@ called by the generic theorem; where the proof is inline that is stated.
 | `assignSlot` | CONDITIONAL | T; inline `lowS_ok` using `slotStoreC_ok`. |
 | `assignThru` | CONDITIONAL | T; same inline case as `assignSlot`. |
 | `assignGlob` | CONDITIONAL | G; `lowS_ok_assignGlob`. |
-| `putBytes` | CONDITIONAL | `n≤8`, byte-column `slotA` checks; `putBytes_ok`. |
+| `putBytes` | CONDITIONAL | Byte-column `slotA` checks; wide spans require `n < 2^31`. Complete operands are captured before the chunk loop invokes `putBytesL`. `putBytesWords_ok` / `putBytesWide_ok` feed `putBytes_ok` and `lowS_ok`. |
 | `assignVar` | CONDITIONAL | `layout.internalResult ≤ vslot x reserved` and every protected `j` outside `[vslot, vslot+W(type))`; `assignVar_case`. |
 | `shift` | CONDITIONAL | `inW fieldLo fieldHi && inW von von`, `slotC/slotA` column checks; `shift_ok`; failed prestate emits stop 106. |
 | `ite` | LOWERED | Both block continuations; `lowS_ok_ite`. |
 | `onOption` | CONDITIONAL | `n≤2^63`; `lowS_ok_onOption`. |
-| `onTag` | CONDITIONAL | S; `lowTags` requires each tag `<256`, `tagPayloadC` handles empty/integer only; `lowS_ok_onTag`, `lowArms_all`. |
+| `onTag` | CONDITIONAL | S selects packed `lowTags` or separated `lowSumTags`; the latter requires `cs.length < 2^31` and binds complete payloads with preserved validity. `onSumTag_ok` / `lowS_ok_onTag` / `lowArms_all`; shared final frame/code limits remain. |
 | `onWhy` | CONDITIONAL | `n<2^31`, each `lowGrund` index `<2^31`; `lowS_ok_onWhy`, `lowGrund_all`. |
 | `call` | LOWERED | Full argument/return ABI; `call_case`. |
 | `callInd` | LOWERED | `lowInd` requires zero reasons, already guaranteed by constructor; `indStmt_ok`. |
@@ -3766,7 +3806,7 @@ to its current emitter (see the float-add row).
 | `Frontend.checkConstantMeaning_refused_zeuge` | Declared ANSWER=41 disagrees with source dependency value 42. |
 | `Frontend.checkAliasMeaning_refused_zeuge` | Count range 0..100 disagrees with aliased Byte 0..255. |
 | `Senke.ForeignScalarProbe.wide_foreign_values_refused_zeuge` | `int 0 (2^64)` fails register parameter/result profile and `lowR`. |
-| `Senke.ByteProbe.getBytes_wide_refused_zeuge` | Nine-byte `getBytes` returns `none` (Anweisung/Bytes/Proben.lean). |
+| `Senke.ByteSpanProbe.byteSpan_offset_refused_zeuge` / `byteSpan_write_offset_refused_zeuge` | Wide read/write wrappers refuse `n = 2^31` before expansion. The former nine-byte refusal is now `ByteProbe.getBytes_wide_accepted_zeuge`; declarations unchecked. |
 | `Senke.AxiomElseProbe.stmtAxiomElse_refused_zeuge` | Value/void accepted with valid binding; missing binding, bad reason mapping, negative lower bound and Bool fallible answer refused. |
 | `Senke.ConsumeProbe.consumeTraverse_refused_zeuge` | Fixed-sweep consuming traversal refuses a body containing `retScoped`; does not assert all consuming G terms fail. |
 | `Senke.ReferenceProbe.refused_zeuge` | Reference foreign-result decoder and region-provider end body refused. |
@@ -3799,9 +3839,9 @@ statement parser refusal; they do not substitute for the generic proof.
 
 | Package | Forms reaching Stage-0 IR; refused/missing source slice |
 |---|---|
-| C01 | By-value products, construction/projection/replacement, arrays and supported record embedding reach full-span expressions/calls; arbitrary tagged product payloads fail S, owned/region-backed field flows are not supplied by these product arms. |
+| C01 | By-value products, construction/projection/replacement, arrays and supported record embedding reach full-span expressions/calls; tagged product payloads now use complete sum spans and payload binding (lead checks pending); owned/region-backed field flows are not supplied by these product arms. |
 | C02 | Certified library/translator expansion can reach ordinary calls and payload products; call-free translator/unique payload and metadata admission remain required; provider/region payloads and unsupported translator calls are not admitted by F/type gates. |
-| C03 | Empty/integer tagged payloads within S, complete reason returns and bounded reason dispatch reach IR; other tagged payload types, wide reason dispatch (`n≥2^31`), non-exhaustive source reason declarations and unsupported foreign decoders refuse. |
+| C03 | Packed and complete-span tagged payload constructors/dispatch have generic proof connections, including product/float/string/wide values (lead checks pending). Complete reason returns and bounded reason dispatch have IR arms; oversized tag/reason dispatch (`n≥2^31`), non-exhaustive source reason declarations and unsupported foreign decoders refuse. |
 | C04 | Declared table-state `shift` reaches stop-106 checked load/store within signed range; source transition contracts with unbound cost/proof metadata refuse; device-register transitions remain outside scope/refused. |
 | C05 | Model/global reads, stores and return predicates have connected arms, including snapshot `oldG`; source invariant declarations/groups still fail metadata duty binding, so richer global invariants are not end-to-end source coverage. |
 | C06 | Structural function references and indirect calls with source contract-conformance gate reach IR (`lit32` address); contract predicates must themselves lower and restore old state; unsupported clauses/effects/foreign reference results still refuse. |
@@ -3811,7 +3851,7 @@ statement parser refusal; they do not substitute for the generic proof.
 | C10 | Exclusive lock bodies without returns reach release-aware IR; shared locks are explicitly refused by canonical elaboration; full RW/RCU observation/grace/reclaim has no producing form in this inventory. |
 | C11 | Required narrowing uses the full-span N arms with stop 107; the signed-word width refusal is removed (lead check pending). Ordinary traversal reaches IR. G `consumeTraverse` compiles the current fixed-sweep placeholder, but source `by consuming` is refused; scoped value/reason returns explicitly refuse. |
 | C12 | Declared table capabilities with decoded rights/named spaces and safe slot/thru/open-reference access reach T arms; owner-qualified/byte/raw/entry targets, runtime region grants and reference foreign-result decoding refuse. |
-| C13 | Scalar/wide arithmetic, wrapping/saturating builtins, scans/popcount/rotations/bswap and bounded count/quantifiers reach IR under local size checks; `getBytes/putBytes>8`, oversized folds, unsupported old-under-fold snapshots and non-scalar string indices refuse. Layout sugar only reaches IR through its checked literal/expression export, not a new pointer-address conversion. |
+| C13 | Scalar/wide arithmetic, wrapping/saturating builtins, scans/popcount/rotations/bswap and bounded count/quantifiers reach IR under local size checks; byte spans `n>=2^31`, oversized folds, unsupported old-under-fold snapshots and non-scalar string indices refuse. Layout sugar only reaches IR through its checked literal/expression export, not a new pointer-address conversion. |
 | C14 | `when TESTBUILD` selection and consistent `profile`/requirements are prepared before elaboration; plain userspace entry and ordinary layout paths exist. Boot/entrust/hardware entry, incompatible runner ABI, named sections and original aligned/placement metadata refuse at their respective gates; an alignment lemma alone does not bypass original metadata admission. |
 | C15 | Supported per-core accumulator expansion becomes ordinary table/expression/store/traversal code; metadata requires bound per-core count and admitted operator, canonical elaboration checks positive count, integer/neutral range and nonnegative AND. Unsupported operators/counts/neutral values refuse; no new concurrency claim was measured. |
 | C16 | Declared probe/gate/wrapper expansion can reach ordinary Boolean calls and checks after Duty admission; counterprobes (`sonde`), unbound measurement/floor/proof metadata and unsupported gate signatures refuse in canonical export. |
