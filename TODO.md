@@ -26,19 +26,24 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     No builds were run for that audit. Remaining refusals include:
     - Scoped returns inside lock bodies; source `by consuming`; `consumeTraverse` (Stage 0 still lowers the old
       fixed-sweep placeholder, not the new `verbrauchLauf` semantics; re-lowering in progress).
-    - Computed wide-integer-to-float conversion, long string concatenation/order, wide option
-      tests, non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
-      wide statement narrowing, and unsupported entry-snapshot subtrees.
+    - Computed wide-integer-to-float conversion, long string concatenation/order,
+      non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
+      and unsupported entry-snapshot subtrees.
     - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
       foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
     - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
       owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, residual generic calls/module headers, counterprobes,
-      annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
+      annotated placement. Static-arena allocation has connected narrowing/store arms.
     - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
       incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
-  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
-    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
-    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
+  - **Conditional refusal follow-up (`s0-gaps1`, 2026-11-03; lead checks pending).** The original metadata
+    gate now admits immutable unannotated static-arena allocation with an explicit else, recursively checking
+    that continuation. `EndAllocWitness` connects original-gate acceptance, canonical source and image correctness.
+    Block/end `narrow` and `narrowRequired` reuse the complete-span interval kernel; empty target intervals
+    select failure, and required failure remains stop 107. Wide `istSome` uses the canonical presence tag.
+    Generic proof arms and accepted witness declarations cover these changes; no Lean or execution checks
+    were run by the implementation worker. Open: lead validation; long `strCat/strLt` emitters and their
+    connected generic span proofs, retaining only actual frame/code representability limits.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
