@@ -1,5 +1,8 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Ausdruecke
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
@@ -249,7 +252,44 @@ inductive UKonst
   | fall : Nat → UKonst → UKonst
   /-- A product constant: the declaration number and every field constant in order. -/
   | product : Nat → List UKonst → UKonst
-  deriving DecidableEq, Repr
+  deriving Repr
+
+-- Decide the nested constant tree and its product-field lists together.
+mutual
+def UKonst.decEq (a b : UKonst) : Decidable (a = b) := by
+  cases a <;> cases b <;> try (refine isFalse ?_; intro h; cases h; done)
+  case null.null => exact isTrue rfl
+  case zahl.zahl a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [UKonst.zahl.injEq])
+  case wahr.wahr a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [UKonst.wahr.injEq])
+  case text.text a0 b0 =>
+    exact decidable_of_iff (a0 = b0) (by simp only [UKonst.text.injEq])
+  case nil.nil => exact isTrue rfl
+  case cons.cons a0 a1 b0 b1 =>
+    letI := UKonst.decEq a0 b0
+    letI := UKonst.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UKonst.cons.injEq])
+  case fall.fall a0 a1 b0 b1 =>
+    letI := UKonst.decEq a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UKonst.fall.injEq])
+  case product.product a0 a1 b0 b1 =>
+    letI := UKonst.decFields a1 b1
+    exact decidable_of_iff (a0 = b0 ∧ a1 = b1) (by simp only [UKonst.product.injEq])
+termination_by sizeOf a
+
+def UKonst.decFields : (a b : List UKonst) → Decidable (a = b)
+  | [], [] => isTrue rfl
+  | a :: as, b :: bs => by
+      letI := UKonst.decEq a b
+      letI := UKonst.decFields as bs
+      exact decidable_of_iff (a = b ∧ as = bs) (by simp only [List.cons.injEq])
+  | [], _ :: _ | _ :: _, [] => isFalse (by intro h; cases h)
+termination_by a _ => sizeOf a
+end
+
+instance : DecidableEq UKonst := UKonst.decEq
+
 /-- One elaborated static (`static [mut] n : T = init;`): `init` is its `sp0` value (a numeral, `0`/`1` for a
     `bool`). `var` is `mut`: only a `mut` static is written. -/
 structure UGlob where

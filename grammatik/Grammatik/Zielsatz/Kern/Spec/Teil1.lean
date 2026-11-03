@@ -368,6 +368,14 @@ def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r (σ.fragt (.inr (.inl r)))) = none ∧
       ¬ AntwortLeer D (some (D.rtyp r))
   | .nieZurueck, .bindAxiom a .. => D.aerg a = some .never
+  | .hardware, .bindAxiomOpt _ a args .. =>
+      (axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
+      ¬ AntwortLeer D (D.aerg a)
+  | .nieZurueck, .bindAxiomOpt _ a .. => D.aerg a = some .never
+  | .hardware, .bindAxiomOptElse _ a args .. =>
+      (axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | .hardware, .bindAxiomElse a args .. =>
       (axiomAntwortSonst O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
@@ -385,6 +393,14 @@ def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
       ¬ AntwortLeer D (D.aerg a)
   | .nieZurueck, .ende (.bindAxiom a ..) => D.aerg a = some .never
+  | .hardware, @GRest.ende _ _ _ _ Λ (.bindAxiomOpt _ a args ..) =>
+      (axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
+      ¬ AntwortLeer D (D.aerg a)
+  | .nieZurueck, .ende (.bindAxiomOpt _ a ..) => D.aerg a = some .never
+  | .hardware, @GRest.ende _ _ _ _ Λ (.bindAxiomOptElse _ a args ..) =>
+      (axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | .hardware, @GRest.ende _ _ _ _ Λ (.bindAxiomElse a args ..) =>
       (axiomAntwortSonst O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none

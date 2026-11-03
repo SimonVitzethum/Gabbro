@@ -50,8 +50,9 @@ theorem guest_failure_preserves_grants {E : Einheit D} {O : Orakel D}
     (hs : g.service = some (H.get n).ax) (hf : (H.get n).erfolg = false)
     (inventory : List (Konzession D)) :
     grantSchritt inventory (H.get n) = inventory := by
-  obtain ⟨hc, hr⟩ := h.failure n hs hf
-  simp [grantSchritt, hf, hc, hr]
+  obtain ⟨_, hr⟩ := h.failure n hs hf
+  simp only [List.get_eq_getElem] at hf hr
+  simp only [grantSchritt, List.get_eq_getElem, hr, hf]
 
 /-- Software contract transport is exactly C08's transport on the actual
     recorded call. The guest adds no new postcondition and assumes no OS

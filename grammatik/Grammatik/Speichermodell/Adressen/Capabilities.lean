@@ -12,13 +12,13 @@ open GetrenntZeuge
 def writeType : Ty := .ptr (.table 0 (false, true))
 
 /-- A real write through a capability that has no read permission. -/
-def writeOnly : Stmt gD (vertragVon gD gAendern) false [writeType] [] [] :=
+def writeOnly : Stmt GetrenntZeuge.gD (vertragVon GetrenntZeuge.gD gAendern) false [writeType] [] [] :=
   .assignThru (.var .here) GTab.T rfl GFeld.x idx0 wert5 rfl darfT
 
-def writeEnv : Env gD [writeType] := .cons () .nil
+def writeEnv : Env GetrenntZeuge.gD [writeType] := .cons () .nil
 
 theorem write_only_store_zeuge :
-    ((execStmt gO 0 keinRuf writeOnly σ0 writeEnv).welt.map
+    ((execStmt GetrenntZeuge.gO 0 keinRuf writeOnly GetrenntZeuge.σ0 writeEnv).welt.map
       (fun world => (world.slots GTab.T 0 GFeld.x).n)) = some 5 ∧
     (DataCapTy.table 0 (false, true)).rights.read = false ∧
     zaehltFuerTrennung writeType = true := by
@@ -32,8 +32,8 @@ theorem write_only_read_refused :
 
 /-- Labels never split one underlying carrier for separation. -/
 theorem labelled_alias_refused :
-    ¬ ParamGetrenntL gD [writeType, .ptr (.table 0 (true, false) 1)] := by
-  exact leihe_nicht_getrennt (D := gD) (ps := [writeType, .ptr (.table 0 (true, false) 1)]) ⟨0, by decide⟩ ⟨1, by decide⟩
+    ¬ ParamGetrenntL GetrenntZeuge.gD [writeType, .ptr (.table 0 (true, false) 1)] := by
+  exact leihe_nicht_getrennt (D := GetrenntZeuge.gD) (ps := [writeType, .ptr (.table 0 (true, false) 1)]) ⟨0, by decide⟩ ⟨1, by decide⟩
     (by decide) rfl rfl rfl (t := GTab.T) rfl
 
 def namedPointer : Expr NamedSpaces.declaration [] [] (.ptr (.table 0 (true, true) 1)) :=

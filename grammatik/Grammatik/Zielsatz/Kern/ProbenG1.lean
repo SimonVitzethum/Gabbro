@@ -140,6 +140,7 @@ def g1D : Deklaration where
   ggeteilt_bewacht := fun e => (nomatch e)
 
 instance g1D_fn_deq : DecidableEq g1D.Fn := inferInstanceAs (DecidableEq Unit)
+instance g1D_ax_deq : DecidableEq g1D.Ax := inferInstanceAs (DecidableEq Unit)
 
 abbrev g1Haupt : g1D.Fn := ()
 abbrev g1Holen : g1D.Ax := ()
@@ -331,7 +332,7 @@ theorem g1PA_widerlegt (E : Einheit g1D) (hP : E.P = g1PA)
     subst hρ
     have e : some u = some v := hu.symm.trans (congrArg Prod.snd (g1_holen_dekodiert v 0 σ))
     obtain rfl : u = v := Option.some.inj e
-    exact (h.logik.2.2 g1Holen σ σ₀ u (fun t _ => (t : Empty).elim)
+    exact (h.logik.2.2.1 g1Holen σ σ₀ u (fun t _ => (t : Empty).elim)
       (fun g _ => (g : Empty).elim)).trans hq
   have hK := (h.logik.1 0 g1Haupt).1.1 (g1O (summeRoh g1Fall v) 0) (g1O_rahmen _ _)
     (g1O_lokal _ _) hAV (fun L => nomatch L) (g1_havoc S) g1Ruf (g1Ruf_rahmen g1PA) g1Ruf_ohne
@@ -359,7 +360,7 @@ theorem g1_never_leer : AntwortLeer g1D (some .never) := antwortLeer_never
 
 /-- The G1 types are not empty: `ok | err` and `f64 in 0 .. 1` have answers. -/
 theorem g1_nicht_leer : ¬ AntwortLeer g1D (some g1Erg) ∧ ¬ AntwortLeer g1D (some g1Temp) := by
-  refine ⟨nicht_leer_von g1Erg (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg) trivial, ?_⟩
+  refine ⟨nicht_leer_von g1Erg (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg) (by decide), ?_⟩
   obtain ⟨v, hv⟩ := g1_temp_passt
   exact nicht_leer_von g1Temp v (einpassen_wertOk _ _ _ v hv)
 

@@ -199,19 +199,19 @@ theorem antwortLeer_mitRuhe (e : Option Ty) :
         exact h (valZ τ v) ((wertOk_valR τ _).mp hv)
 
 theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
-  | .int _ _ => by simp only [reduceCtorEq]
-  | .bool => by simp only [reduceCtorEq]
-  | .opt _ => by simp only [reduceCtorEq]
-  | .sum _ => by simp only [reduceCtorEq]
-  | .why _ => by simp only [reduceCtorEq]
-  | .never => by simp only
-  | .fl _ _ => by simp only [reduceCtorEq]
-  | .fnptr _ => by simp only [reduceCtorEq]
-  | .ptr _ => by simp only [reduceCtorEq]
-  | .ref _ => by simp only [reduceCtorEq]
-  | .arr _ _ => by simp only [reduceCtorEq]
-  | .str _ => by simp only [reduceCtorEq]
-  | .prod _ _ => by simp only [reduceCtorEq]
+  | .int _ _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .bool => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .opt _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .sum _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .why _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .never => by simp only [tyR, Ty.mapNumbers]
+  | .fl _ _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .fnptr _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .ptr ⟨_, _, .table _⟩ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .ref _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .arr _ _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .str _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
+  | .prod _ _ => by simp only [tyR, Ty.mapNumbers, reduceCtorEq]
 
 theorem stelleAx_mitRuhe (e : Option Ty) :
     (e.map tyR = some .never ∨ ¬ AntwortLeer D.mitRuhe (e.map tyR)) ↔
