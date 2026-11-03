@@ -78,7 +78,7 @@ theorem strLtSpan_ok {n q : Nat} (vs : Wert D (.str n)) (vt : Wert D (.str q))
     obtain ⟨m', run, changed, reads⟩ := alu_run hp.frame hp.small hp.code hp.far admitted vals
       (fun j hj => slotVal_rd hp.frame hj)
     have encoded : Enc L .bool (strLtW vs vt) (Runner.IR.bool (strLtW vs vt)) := by
-      simpa only [Enc, wahr?] using (bool_word (strLtW vs vt))
+      cases bit : strLtW vs vt <;> simp [Enc, wahr?, bit, Runner.IR.bool]
     refine ⟨m', run, changed, ValueAt.of_enc
       (w := Runner.IR.bool (strLtW vs vt)) rfl ?_ encoded⟩
     rw [reads d (by dsimp [acc, b, a] at need; omega), value]
