@@ -115,7 +115,12 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact wordL_top h
-    · cases h
+    · simp only [strLtSpanL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨cs, ts⟩, _, ⟨ct, tt⟩, _, _, rfl⟩ := h
+        omega
+      · cases h
   | _, _, .strGet _ _, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
@@ -134,7 +139,12 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     · split at h
       · exact lowE_top t d c top h
       · exact lowE_top s d c top h
-    · cases h
+    · simp only [strCatSpanL] at h
+      split at h
+      · simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨⟨cs, ts⟩, _, ⟨ct, tt⟩, _, _, rfl⟩ := h
+        omega
+      · cases h
   | _, _, .strWeit _ s, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h
