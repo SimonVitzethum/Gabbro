@@ -101,13 +101,13 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
   have bodyCorrect : ∀ mem world env,
       x.Ready mem world env →
       Sim L P f σ0 ρ0 rp cfp fp lo K (x.s :: x.counter :: x.saved :: pr)
-        ⟨x.at 39, fp⟩ mem (x.at 41) (x.at 44) (x.at 41)
+        ⟨x.addr 39, fp⟩ mem (x.addr 41) (x.addr 44) (x.addr 41)
         (execBlock O passes R body world env) reserved := by
     intro mem world env ready
     have pre := ready.pre 39 (frei (.index (D.count t) :: Γ) reserved) cb.1 (Nat.le_refl _) rfl
     have smallBody : 16 * cb.1.length < 2 ^ 31 := by consume_arith x
     have bodySim := ihBody (pr := x.s :: x.counter :: x.saved :: pr) (ex := exits)
-      cb.1 cb.2 hcb (by omega) smallBody hW mem (x.at 39) world env pre hlo
+      cb.1 cb.2 hcb (by omega) smallBody hW mem (x.addr 39) world env pre hlo
       (by simp only [frei, contextWords_cons, indexWidth]; have := hlo2; unfold frei at this; omega)
       ready.surround ready.head ready.world (by
         intro j hj
@@ -141,10 +141,10 @@ theorem consumeTraverse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Na
   have loopRun := loop.correct (l := l) (outerLeave := pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.1)
     (outerNext := pc + BitVec.ofNat 64 (16 * c.length) + BitVec.ofInt 64 ex.2)
     bodyCorrect x.fuel m1 σ ρ entry
-  have headerAddress : pc + 16 = x.at 2 := by consume_arith x
+  have headerAddress : pc + 16 = x.addr 2 := by consume_arith x
   rw [headerAddress] at initialRun
   have combined := Sim.prefix hlo initialRun initialFrame initialKept loopRun
-  have exitAddress : x.at 50 = pc + BitVec.ofNat 64 (16 * c.length) := by consume_arith x
+  have exitAddress : x.addr 50 = pc + BitVec.ofNat 64 (16 * c.length) := by consume_arith x
   rw [exitAddress] at combined
   simpa only [consumeTraverse_exec, Consuming.Loop.invW, Consuming.Loop.sel,
     Consuming.Loop.massW, loop, x] using combined
