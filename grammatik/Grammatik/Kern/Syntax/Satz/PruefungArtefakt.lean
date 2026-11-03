@@ -67,7 +67,7 @@ theorem sondenNachweisB_sound (checks : List (CheckDecl D)) (c : CheckDecl D)
     have facts : artifact.bild = selectedImage ∧
         c.testbau = artifact.testbau ∧ status = .durchgefallen ∧
         report.urteil = false := by
-      simpa [sondenArtefaktB, identity, nameEq, Bool.and_eq_true] using measured
+      simpa [sondenArtefaktB, identity, nameEq, Bool.and_eq_true, and_assoc] using measured
     exact ⟨⟨text, binding⟩, facts.1, facts.2.2.1, facts.2.2.2,
       by simp [identity], facts.2.1, text, by simpa [nameEq] using identity⟩
 
