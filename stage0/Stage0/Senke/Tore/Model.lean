@@ -1,4 +1,5 @@
-/- The source binding's user duty for an explicit caller-owned result span. -/
+/- The source binding's user duty for an explicit caller-owned result span.
+   This profile describes transport; canonical source semantics stay unchanged. -/
 module
 public import Stage0.Senke.Tore.Code
 public import Stage0.Senke.Welt.WeltAt
