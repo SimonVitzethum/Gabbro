@@ -1,6 +1,7 @@
 /- Compose finite binary64 addition from alignment, normalization and packing. -/
 module
 public import Stage0.Senke.Gleit.Normal.Pack
+public import Stage0.Senke.Gleit.Normal.GuardModel
 public import Stage0.Senke.Gleit.RoutineOrderModel
 public import Stage0.Senke.Gleit.Compose
 @[expose] public section
