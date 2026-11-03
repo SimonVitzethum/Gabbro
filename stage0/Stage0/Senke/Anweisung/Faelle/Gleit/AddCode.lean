@@ -77,7 +77,7 @@ theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     Division has no emitter and is refused before this selection is used. -/
 def softFloatKernel : GleitOp → SoftFloatKernel
   | .mul => .mul
-  | _ => .add
+  | .add | .sub | .div => .add
 
 /-- One rounded-result guard and continuation template serves every checked
     arithmetic kernel. Subtraction keeps its single sign-bit xor adapter. -/
