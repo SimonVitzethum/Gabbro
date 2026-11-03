@@ -243,7 +243,7 @@ def lowerE (lay : Layout D) (cenv : List Reg) :
               | none => none
           | none => none
       | none => none
-  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _, r =>
+  | _, _, _, .thruOwn p t _ f i _ _ _ _ _ _, r =>
       match lowerE lay cenv p r with
       | some (cp, op, r1) =>
           match lowerE lay cenv i r1 with

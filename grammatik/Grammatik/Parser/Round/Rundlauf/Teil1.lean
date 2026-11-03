@@ -254,7 +254,8 @@ def primWortTafel : List (List Char) :=
   [['t','r','u','e'], ['f','a','l','s','e'], ['S','o','m','e'], ['N','o','n','e'],
    ['r','e','s','u','l','t'], ['o','l','d'], ['c','o','u','n','t'], ['a','l','l','o','c'],
    ['t','r','a','n','s','i','t','i','o','n'], ['d','y','n'],
-   ['a','d','d'], ['m','i','n'], ['m','a','x']]
+   ['a','d','d'], ['m','i','n'], ['m','a','x'], ['a','n','d'], ['o','r'],
+   ['r','o','u','n','d','e','d']]
 
 /-- A word that cannot head a printed name: refused as a place (`istKeinPlatz`) or taken by a
     primary arm (`primWortTafel`). -/

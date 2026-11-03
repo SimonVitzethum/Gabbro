@@ -132,14 +132,15 @@ theorem parsePrimary_nameTok (f : Nat) (s : String) (r : List Token) (h : istKop
     subst s
     revert h
     decide
-  have hheads : s ≠ "exists" ∧ s ≠ "add" ∧ s ≠ "min" ∧ s ≠ "max" := by
-    refine ⟨?_, ?_, ?_, ?_⟩ <;> (intro he; subst s; revert h; decide)
-  obtain ⟨hexists, hadd, hmin, hmax⟩ := hheads
+  have hheads : s ≠ "exists" ∧ s ≠ "add" ∧ s ≠ "min" ∧ s ≠ "max" ∧ s ≠ "and" ∧ s ≠ "or" ∧
+      s ≠ "rounded" := by
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> (intro he; subst s; revert h; decide)
+  obtain ⟨hexists, hadd, hmin, hmax, hand, hor, hrounded⟩ := hheads
   have hk := kopf_kp h
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := kopf_ne h
   unfold nameTok
   split
-  · simp [parsePrimary, nameText, hk, hdyn, hexists, hadd, hmin, hmax,
+  · simp [parsePrimary, nameText, hk, hdyn, hexists, hadd, hmin, hmax, hand, hor, hrounded,
       h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
   · simp only [parsePrimary, nameText, hk, Bool.false_eq_true, ↓reduceIte]
 

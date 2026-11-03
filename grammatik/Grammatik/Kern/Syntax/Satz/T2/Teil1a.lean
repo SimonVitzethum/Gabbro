@@ -71,7 +71,7 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact p.orte_darf o h
       · exact hL
       · exact i.orte_darf o h
-  | .thruOwn p t _ _ i _ _ _ _ _ _, o, h => by
+  | .thruOwn p t _ _ i _ _ _ _ _ hL, o, h => by
       simp only [Expr.orte, List.mem_append, List.mem_cons] at h
       rcases h with h | rfl | h
       · exact p.orte_darf o h
