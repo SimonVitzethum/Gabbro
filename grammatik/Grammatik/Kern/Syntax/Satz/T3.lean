@@ -22,35 +22,39 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
   | nil =>
       intro σ ρ hh σ' h
       simp only [traverseLauf] at h ⊢
-      split at h ⊢
+      by_cases hc : (inv σ ρ).snd = true <;>
+        simp only [hc, ite_true, ite_false, Bool.false_eq_true] at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hi σ ρ hh
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | cons k ks ih =>
       intro σ ρ hh σ' h
       simp only [traverseLauf] at h ⊢
-      split at h ⊢
+      by_cases hc : (inv σ ρ).snd = false <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 (.cons k ρ) (hinv.heldB hh)
-        split at h ⊢
+        split at h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1.tail (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
-          split at h ⊢ <;> simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h
+          by_cases hc1 : (inv σ1 ρ1.tail).snd = true <;>
+            simp only [hc1, ite_true, ite_false, Ausgang.welt, Option.some.injEq,
+              reduceCtorEq] at h ⊢
           subst h; exact g1.trans (hi σ1 ρ1.tail (g1.heldB hh))
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -67,33 +71,35 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
   | zero =>
       intro σ ρ hh σ' h
       simp only [retryLauf] at h ⊢
-      split at h ⊢
+      by_cases hc : (bis σ ρ).snd = true <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
       · exact (GutAusgang.vor (hb σ ρ hh) (hu _ ρ ((hb σ ρ hh).heldB hh))) σ' h
   | succ n ih =>
       intro σ ρ hh σ' h
       simp only [retryLauf] at h ⊢
-      split at h ⊢
+      by_cases hc : (bis σ ρ).snd = true <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h; exact hb σ ρ hh
       · have hinv := hb σ ρ hh
         have hstep := hs (bis σ ρ).1 ρ (hinv.heldB hh)
-        split at h ⊢
+        split at h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.trans (hstep _ rfl)
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -110,27 +116,28 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
   | succ n ih =>
       intro σ ρ hh σ' h
       simp only [foreverLauf] at h ⊢
-      split at h ⊢
+      by_cases hc : (inv σ ρ).snd = false <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hstep := hs (inv σ ρ).1 ρ (hinv.heldB hh)
-        split at h ⊢
+        split at h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         · rename_i σ1 ρ1 hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.trans (hstep _ rfl)
         · rename_i σ1 v hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         · rename_i σ1 r hs1; simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          rw [hs1] at hstep
+          simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
@@ -284,7 +291,9 @@ theorem scopesOkScopes_mem {haelt : List D.Lock} {boden : Option Int} {Ls : List
       obtain ⟨⟨hM, hrM⟩, hMs⟩ := h
       simp only [List.mem_cons] at hm
       rcases hm with rfl | hm
-      · exact ⟨hM, fun c hc => of_decide_eq_true (hc ▸ hrM)⟩
+      · refine ⟨hM, fun c hc => ?_⟩
+        rw [hc] at hrM
+        exact of_decide_eq_true hrM
       · exact ih hMs hm
 
 mutual
