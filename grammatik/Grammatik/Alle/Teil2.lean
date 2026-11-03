@@ -115,6 +115,9 @@ public import Grammatik.Speichermodell.Maschine.SperreSemA
 public import Grammatik.Speichermodell.Atomar.Invariants.AtomarRec
 public import Grammatik.Speichermodell.Atomar.AtomarReplay
 public import Grammatik.Speichermodell.Atomar.AtomarAkteur
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.Foreign.CallElse
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.Foreign.OptEnd
+public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.Foreign.OptBlock
 public import Grammatik.Speichermodell.Atomar.AtomarLauf
 public import Grammatik.Speichermodell.Atomar.AtomarW
 public import Grammatik.Speichermodell.Atomar.Invariants.AtomarInv

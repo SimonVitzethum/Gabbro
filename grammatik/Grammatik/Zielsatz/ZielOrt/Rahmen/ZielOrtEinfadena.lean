@@ -57,6 +57,9 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
   cases hs with
   | g1 hs =>
     cases hs with
+    | endeBindAxiomOpt l Γ Λ e a args he hp hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
     | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
@@ -175,6 +178,12 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | g3 hs =>
     cases hs with
+    | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
     | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hleave hhead σ' ρ' neu hstep hneu hkein σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
@@ -262,6 +271,15 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
       cases hStk
   | g5 hs =>
     cases hs with
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
     | dannExchange _ _ l Γ Λ Λ' g neuE hw hLg rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
@@ -309,6 +327,12 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
   | g6 hs =>
     cases hs with
+    | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
     | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
@@ -317,7 +341,27 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
   | g7 hs =>
     cases hs with
-    | _ =>
+    | dannVerbrauch =>
+      have hhead := ‹(M.faeden u).kopf.rest = _›
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | verbrauchWeiter =>
+      have hhead := ‹(M.faeden u).kopf.rest = _›
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | verbrauchLeer =>
+      have hhead := ‹(M.faeden u).kopf.rest = _›
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | verbrauchFort =>
+      have hhead := ‹(M.faeden u).kopf.rest = _›
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannLeaveVerbrauch =>
+      have hhead := ‹(M.faeden u).kopf.rest = _›
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | dannNextVerbrauch =>
       have hhead := ‹(M.faeden u).kopf.rest = _›
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
