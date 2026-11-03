@@ -410,7 +410,7 @@ theorem startB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List 
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (h : startB P S fs ls cs ws st sp = true) : StartZulaessig P S fs ws sp st.init := by
   unfold startB at h
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
+  simp only [Bool.and_eq_true] at h
   obtain ⟨⟨⟨h1, h2⟩, h3⟩, h4⟩ := h
   have hR : ∀ w, ruheB P fs cs w = true → Ruhig P fs w := fun w hw => (ruheB_iff hvoll hcs).mp hw
   have hi : ∀ i, i < st.aktiv.length →
