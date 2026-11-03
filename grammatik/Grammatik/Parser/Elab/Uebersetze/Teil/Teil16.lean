@@ -68,6 +68,7 @@ def beqURet : URet → URet → Bool
   | _, _ => false
 
 def beqUStmt : UStmt → UStmt → Bool
+  | .retires a, .retires b => strEq a b
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignTab a f x s, .assignTab b g y t =>
