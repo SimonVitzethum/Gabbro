@@ -1,93 +1,41 @@
 module
 
-public import Grammatik.Parser.Round.RundlaufQuant.Teil2a
-public import Grammatik.Parser.Round.Statements.RundlaufPred
-public import Grammatik.Parser.Round.RundlaufQuant.Teil1
+public import Grammatik.Parser.Round.RundlaufQuant.Verknuepfung
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
-theorem bein_und (l r : SExpr) (hl : PredBein l) (hr : PredBein r) : PredBein (.bin "&&" l r) := by
-  by_cases hg : gut (.bin "&&" l r) = true
-  · exact bein_expr _ hg
-  · have hgf : gut (.bin "&&" l r) = false := by simpa using hg
-    have hdr : druckToks (.bin "&&" l r) =
-        .zeichen "(" :: (druckToks l ++ .zeichen "&&" :: (druckToks r ++ [.zeichen ")"])) := by
-      simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
-    have hF : ∀ R, Fehlt parseUnary (bE (.bin "&&" l r)) (druckToks (.bin "&&" l r) ++ R) := by
-      intro R
-      rw [hdr]
-      simp only [List.cons_append, List.append_assoc, List.singleton_append]
-      have hL : (druckToks l).length ≥ 1 := by
-        obtain ⟨t, ts, h, -⟩ := hl.kopf; rw [h]; simp only [List.length_cons, ge_iff_le, Nat.le_add_left]
-      have hR' : (druckToks r).length ≥ 1 := by
-        obtain ⟨t, ts, h, -⟩ := hr.kopf; rw [h]; simp only [List.length_cons, ge_iff_le, Nat.le_add_left]
-      apply fehlt_mono (fehlt_klammer (b := bE (.bin "&&" l r) - 2) _)
-      · simp only [bE]; omega
-      · cases hgl : gut l with
-        | false =>
-          exact fehlt_mono (fehlt_or_u (hl.fehlt hgl _)) (by simp only [bE, hdr]; simp only [List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.reduceSubDiff, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega)
-        | true =>
-          have hgr : gut r = false := by
-            cases hgr : gut r
-            · rfl
-            · have : gut (.bin "&&" l r) = true := by simp only [gut, hgl, hgr, Bool.and_true]; decide
-              rw [this] at hgf; cases hgf
-          exact und_fehlt l hgl _ _ _ (fehlt_cmp_u (hr.fehlt hgr _)) (by simp only [fb, bE, hdr]; simp only [List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.reduceSubDiff, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega)
-            (by simp only [bE, hdr]; simp only [List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.reduceSubDiff, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega)
-    refine ⟨?_, fun _ R => hF R, ⟨_, _, hdr, by simp only [Token.zeichen.injEq, String.reduceEq, false_implies], fun _ => Or.inl rfl⟩⟩
-    intro R G hR hG
-    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
-    simp only [atomTeil, atomWert]
-    obtain ⟨m, hm⟩ := fehlt_cmp_u (hF R) G' (by simp only [bP, bE] at hG ⊢; omega)
-    simp only [bP] at hG
-    rw [hdr] at hm hG ⊢
-    simp only [List.cons_append, List.nil_append, List.append_assoc, List.singleton_append] at hm ⊢
-    simp only [List.length_append, List.length_cons, List.length_nil] at hG
-    obtain ⟨G5, rfl⟩ : ∃ G5, G' = G5 + 4 := ⟨G' - 4, by omega⟩
-    exact atom_klammer _ _ R _ m hm (und_innen l r hl hr R G5 (by simp only [bP]; omega) (by simp only [bP]; omega))
+theorem bein_und (l r : SExpr) (hl : PredBein l) (hr : PredBein r) : PredBein (.bin "&&" l r) :=
+  bein_bool "&&" (Or.inl rfl) l r hl hr
 
-theorem bein_oder (l r : SExpr) (hl : PredBein l) (hr : PredBein r) : PredBein (.bin "||" l r) := by
-  by_cases hg : gut (.bin "||" l r) = true
-  · exact bein_expr _ hg
-  · have hgf : gut (.bin "||" l r) = false := by simpa using hg
-    have hdr : druckToks (.bin "||" l r) =
-        .zeichen "(" :: (druckToks l ++ .zeichen "||" :: (druckToks r ++ [.zeichen ")"])) := by
-      simp only [druckToks, List.cons_append, List.nil_append, List.append_assoc]
-    have hF : ∀ R, Fehlt parseUnary (bE (.bin "||" l r)) (druckToks (.bin "||" l r) ++ R) := by
-      intro R
-      rw [hdr]
-      simp only [List.cons_append, List.append_assoc, List.singleton_append]
-      have hL : (druckToks l).length ≥ 1 := by
-        obtain ⟨t, ts, h, -⟩ := hl.kopf; rw [h]; simp only [List.length_cons, ge_iff_le, Nat.le_add_left]
-      have hR' : (druckToks r).length ≥ 1 := by
-        obtain ⟨t, ts, h, -⟩ := hr.kopf; rw [h]; simp only [List.length_cons, ge_iff_le, Nat.le_add_left]
-      apply fehlt_mono (fehlt_klammer (b := bE (.bin "||" l r) - 2) _)
-      · simp only [bE]; omega
-      · cases hgl : gut l with
-        | false =>
-          exact fehlt_mono (fehlt_or_u (hl.fehlt hgl _)) (by simp only [bE, hdr]; simp only [List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.reduceSubDiff, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega)
-        | true =>
-          have hgr : gut r = false := by
-            cases hgr : gut r
-            · rfl
-            · have : gut (.bin "||" l r) = true := by simp only [gut, hgl, hgr, Bool.and_true]; decide
-              rw [this] at hgf; cases hgf
-          exact oder_fehlt l hgl _ _ _ (fehlt_and (fehlt_cmp_u (hr.fehlt hgr _)))
-            (by simp only [fb, bE, hdr]; simp only [List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.reduceSubDiff, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega) (by simp only [bE, hdr]; simp only [List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.reduceSubDiff, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega)
-    refine ⟨?_, fun _ R => hF R, ⟨_, _, hdr, by simp only [Token.zeichen.injEq, String.reduceEq, false_implies], fun _ => Or.inl rfl⟩⟩
-    intro R G hR hG
-    obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
-    simp only [atomTeil, atomWert]
-    obtain ⟨m, hm⟩ := fehlt_cmp_u (hF R) G' (by simp only [bP, bE] at hG ⊢; omega)
-    simp only [bP] at hG
-    rw [hdr] at hm hG ⊢
-    simp only [List.cons_append, List.nil_append, List.append_assoc, List.singleton_append] at hm ⊢
-    simp only [List.length_append, List.length_cons, List.length_nil] at hG
-    obtain ⟨G5, rfl⟩ : ∃ G5, G' = G5 + 4 := ⟨G' - 4, by omega⟩
-    exact atom_klammer _ _ R _ m hm (oder_innen l r hl hr R G5 (by simp only [bP]; omega) (by simp only [bP]; omega))
+theorem bein_oder (l r : SExpr) (hl : PredBein l) (hr : PredBein r) : PredBein (.bin "||" l r) :=
+  bein_bool "||" (Or.inr rfl) l r hl hr
+
+/-- An extra parenthesis around a predicate preserves either expression outcome. -/
+theorem bein_prim_klammer (e : SExpr) (h : PredBein e) (R : List Token) (G : Nat)
+    (hG : bE e + 9 ≤ G) :
+    AusdruckAntwort (parsePrimary G (.zeichen "(" :: (druckToks e ++ .zeichen ")" :: R))) e R := by
+  obtain ⟨g, rfl⟩ : ∃ g, G = g + 1 := ⟨G - 1, by omega⟩
+  apply antwort_klammer
+  exact antwort_or (bE e) (druckToks e) (.zeichen ")" :: R) e (hr_paren R)
+    (fun F hF => h.expr _ F (atomFolge_zeichen ")" R (Or.inr (Or.inr (Or.inr rfl))))
+      (by omega)) g (by omega)
+
+theorem bein_cmp_klammer (e : SExpr) (h : PredBein e) (R : List Token) (hR : CmpStop R)
+    (G : Nat) (hG : bE e + 16 ≤ G) :
+    AusdruckAntwort (parseCmp G (.zeichen "(" :: (druckToks e ++ .zeichen ")" :: R))) e R := by
+  have hU : ∀ F, bE e + 10 + 2 ≤ F →
+      AusdruckAntwort (parseUnary F ((.zeichen "(" :: (druckToks e ++ [.zeichen ")"])) ++ R)) e R := by
+    intro F hF
+    obtain ⟨f, rfl⟩ : ∃ f, F = f + 1 := ⟨F - 1, by omega⟩
+    simp only [List.cons_append, List.append_assoc, List.singleton_append]
+    rw [unary_klammer]
+    exact bein_prim_klammer e h R f (by omega)
+  have hC := antwort_cmp (bE e + 10) (.zeichen "(" :: (druckToks e ++ [.zeichen ")"]))
+    R e hR hU G hG
+  simpa only [List.cons_append, List.append_assoc, List.singleton_append] using hC
 
 theorem bein_nicht (x : SExpr) (hx : PredBein x) : PredBein (.un "!" x) := by
   by_cases hg : gut (.un "!" x) = true
@@ -100,7 +48,10 @@ theorem bein_nicht (x : SExpr) (hx : PredBein x) : PredBein (.un "!" x) := by
     have hW : atomWert (.un "!" x) = x := by simp only [atomWert, strEq_self, ↓reduceIte]
     obtain ⟨t, ts, hxd, hxb, hxk⟩ := hx.kopf
     have hlen : (druckToks x).length + 1 ≤ (druckToks (.un "!" x)).length := by
-      cases ha : istAtom x <;> simp only [druckToks, strEq_bang_klammer, Bool.false_eq_true, ↓reduceIte, ha, List.cons_append, List.nil_append, List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.add_le_add_iff_right, Nat.le_add_right, Std.le_refl]
+      cases ha : istAtom x <;> simp only [druckToks, strEq_bang_klammer, Bool.false_eq_true,
+        ↓reduceIte, ha, List.cons_append, List.nil_append, List.length_cons,
+        List.length_append, List.length_nil, Nat.zero_add, Nat.add_le_add_iff_right,
+        Nat.le_add_right, Std.le_refl]
     refine ⟨?_, ?_, ⟨_, _, hdr, fun _ => nichtKopf_un x, fun _ => Or.inr rfl⟩⟩
     · intro R G hR hG
       rw [hW]
@@ -112,62 +63,76 @@ theorem bein_nicht (x : SExpr) (hx : PredBein x) : PredBein (.un "!" x) := by
         rw [h1, h2] at this
         simpa [atomTeil, strEq_self, ha] using this
       | false =>
-        simp only [atomTeil, strEq_self, ite_true, ha, Bool.false_eq_true, ite_false, List.cons_append,
-          List.nil_append, List.append_assoc, List.singleton_append]
-        obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
-        have hF : Fehlt parseCmp (bE x + 12) (.zeichen "(" :: (druckToks x ++ .zeichen ")" :: R)) :=
-          fehlt_cmp_u (fehlt_klammer (fehlt_or_u (hx.fehlt hgx (.zeichen ")" :: R))))
-        obtain ⟨m, hm⟩ := hF G' (by simp only [bP, bE] at hG ⊢; omega)
-        exact atom_klammer _ _ R _ m hm (bein_top x hx (.zeichen ")" :: R) G'
-          ⟨rfl, rfl, rfl, by simp only [ne_eq, List.cons.injEq, Token.zeichen.injEq, String.reduceEq, false_and, not_false_eq_true, implies_true], by simp only [ne_eq, List.cons.injEq, reduceCtorEq, false_and, not_false_eq_true, implies_true], by simp only [ne_eq, List.cons.injEq, reduceCtorEq, false_and, not_false_eq_true, implies_true]⟩ (by simp only [bP] at hG ⊢; omega))
-    · intro _ R
+        simp only [atomTeil, strEq_self, ite_true, ha, Bool.false_eq_true, ite_false,
+          List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+        obtain ⟨g, rfl⟩ : ∃ g, G = g + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
+        have hlen' : (druckToks (.un "!" x)).length = (druckToks x).length + 3 := by
+          simp only [druckToks, strEq_bang_klammer, Bool.false_eq_true, ite_false, ha,
+            List.length_append, List.length_cons, List.length_nil]; omega
+        have hC := bein_cmp_klammer x hx R hR.cmp g
+          (by simp only [bP, bE, hlen'] at hG ⊢; omega)
+        exact atom_klammer_antwort _ _ R _ hR hC (bein_top x hx (.zeichen ")" :: R) g
+          ⟨rfl, rfl, rfl, by simp, by simp, by simp⟩
+          (by simp only [bP, hlen'] at hG ⊢; omega))
+    · intro R G hR hG
+      obtain ⟨g, rfl⟩ : ∃ g, G = g + 1 := ⟨G - 1, by simp only [bE] at hG; omega⟩
+      have hP : AusdruckAntwort (parsePrimary g (atomTeil (.un "!" x) ++ R)) x R := by
+        cases ha : istAtom x with
+        | true =>
+          have ht : t = .zeichen "(" := by
+            rcases hxk hgx with h | h
+            · exact h
+            · have := hxb h
+              cases x <;> simp_all [istAtom, nichtKopf]
+          simp only [atomTeil, strEq_self, ite_true, ha]
+          have hU := hx.expr R (g + 1) hR (by simp only [bE] at hG ⊢; omega)
+          rw [hxd, ht, List.cons_append, unary_klammer] at hU
+          rw [hxd, ht, List.cons_append]
+          exact hU
+        | false =>
+          simp only [atomTeil, strEq_self, ite_true, ha, Bool.false_eq_true, ite_false,
+            List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
+          have hlen' : (druckToks (.un "!" x)).length = (druckToks x).length + 3 := by
+            simp only [druckToks, strEq_bang_klammer, Bool.false_eq_true, ite_false, ha,
+              List.length_append, List.length_cons, List.length_nil]; omega
+          exact bein_prim_klammer x hx R g (by simp only [bE, hlen'] at hG ⊢; omega)
       rw [hdr, List.cons_append]
-      apply fehlt_mono (fehlt_nicht (b := bE x + 7) _) (by simp only [bE]; omega)
-      cases ha : istAtom x with
-      | true =>
-        have ht : t = .zeichen "(" := by
-          rcases hxk hgx with h | h
-          · exact h
-          · have := hxb h
-            cases x <;> simp_all [istAtom, nichtKopf]
-        simp only [atomTeil, strEq_self, ite_true, ha]
-        have h0 := hx.fehlt hgx R
-        rw [hxd, ht, List.cons_append] at h0
-        rw [hxd, ht, List.cons_append]
-        exact fehlt_mono (fehlt_prim_aus_unary h0) (by omega)
-      | false =>
-        simp only [atomTeil, strEq_self, ite_true, ha, Bool.false_eq_true, ite_false, List.cons_append,
-          List.nil_append, List.append_assoc, List.singleton_append]
-        exact fehlt_mono (fehlt_prim_klammer (fehlt_or_u (hx.fehlt hgx (.zeichen ")" :: R)))) (by omega)
+      rcases hP with hP | ⟨m, hP⟩
+      · exact Or.inl (by simp only [parseUnary, hP])
+      · exact Or.inr ⟨m, by simp only [parseUnary, hP]⟩
 
 theorem bein_folgt (a b : SExpr) (ha : PredBein a) (hb : PredBein b) : PredBein (.ext .imp [] [a, b]) := by
   have hdr := folgt_druck a b
-  have hgf : gut (.ext .imp [] [a, b]) = false := rfl
-  have hL : (druckToks a).length ≥ 1 := by
-    obtain ⟨t, ts, h, -⟩ := ha.kopf; rw [h]; simp only [List.length_cons, ge_iff_le, Nat.le_add_left]
-  have hF : ∀ R, Fehlt parseUnary (bE (.ext .imp [] [a, b])) (druckToks (.ext .imp [] [a, b]) ++ R) := by
-    intro R
+  have hF : ∀ R, Fehlt parseUnary (bE (.ext .imp [] [a, b]))
+      (druckToks (.ext .imp [] [a, b]) ++ R) := by
+    intro R G hG
+    simp only [bE, hdr, List.cons_append, List.nil_append, List.append_assoc,
+      List.length_cons, List.length_append, List.length_nil] at hG
     rw [hdr]
     simp only [List.cons_append, List.nil_append, List.append_assoc, List.singleton_append]
-    have hX : gut a = true ∨ Fehlt parseOr (bE a + 6) (druckToks a ++ .zeichen "=>" ::
-        (druckToks b ++ .zeichen ")" :: R)) := by
-      cases hga : gut a with
-      | true => exact Or.inl rfl
-      | false => exact Or.inr (fehlt_or_u (ha.fehlt hga _))
-    apply fehlt_mono (fehlt_unary_aus_prim (folgt_fehlt a _ (bE a + 6) (bE (.ext .imp [] [a, b]) - 1) hX
-      (by simp only [fb, bE, hdr]; simp only [List.cons_append, List.nil_append, List.append_assoc, List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.add_one_sub_one, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega) (by simp only [bE, hdr]; simp only [List.cons_append, List.nil_append, List.append_assoc, List.length_cons, List.length_append, List.length_nil, Nat.zero_add, Nat.add_one_sub_one, Nat.add_le_add_iff_right, Nat.reduceLeDiff]; omega)))
-    simp only [bE]; omega
-  refine ⟨?_, fun _ R => hF R, ⟨_, _, hdr, by simp only [Token.zeichen.injEq, String.reduceEq, false_implies], fun _ => Or.inl rfl⟩⟩
+    obtain ⟨g, rfl⟩ : ∃ g, G = g + 2 := ⟨G - 2, by omega⟩
+    rw [unary_klammer]
+    have hO := antwort_or (bE a) (druckToks a)
+      (.zeichen "=>" :: (druckToks b ++ .zeichen ")" :: R)) a rfl
+      (fun F hF => ha.expr _ F (atomFolge_zeichen "=>" _ (Or.inr (Or.inr (Or.inl rfl))))
+        (by omega)) g (by simp only [bE]; omega)
+    rcases hO with hO | ⟨m, hO⟩
+    · exact ⟨"( without )", by simp only [parsePrimary, hO, List.cons.injEq,
+        Token.zeichen.injEq, String.reduceEq, false_and, imp_self, implies_true]⟩
+    · exact ⟨m, by simp only [parsePrimary, hO]⟩
+  refine ⟨?_, fun R G _ hG => Or.inr (hF R G hG), ⟨_, _, hdr,
+    by simp only [Token.zeichen.injEq, String.reduceEq, false_implies], fun _ => Or.inl rfl⟩⟩
   intro R G hR hG
-  obtain ⟨G', rfl⟩ : ∃ G', G = G' + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
+  obtain ⟨g, rfl⟩ : ∃ g, G = g + 1 := ⟨G - 1, by simp only [bP] at hG; omega⟩
   simp only [atomTeil, atomWert]
-  obtain ⟨m, hm⟩ := fehlt_cmp_u (hF R) G' (by simp only [bP, bE] at hG ⊢; omega)
+  obtain ⟨m, hm⟩ := fehlt_cmp_u (hF R) g (by simp only [bP, bE] at hG ⊢; omega)
   simp only [bP] at hG
   rw [hdr] at hm hG ⊢
   simp only [List.cons_append, List.nil_append, List.append_assoc, List.singleton_append] at hm ⊢
   simp only [List.length_append, List.length_cons, List.length_nil] at hG
-  obtain ⟨G5, rfl⟩ : ∃ G5, G' = G5 + 4 := ⟨G' - 4, by omega⟩
-  exact atom_klammer _ _ R _ m hm (folgt_innen a b ha hb R G5 (by simp only [bP]; omega) (by simp only [bP]; omega))
+  obtain ⟨g4, rfl⟩ : ∃ g4, g = g4 + 4 := ⟨g - 4, by omega⟩
+  exact atom_klammer _ _ R _ m hm
+    (folgt_innen a b ha hb R g4 (by simp only [bP]; omega) (by simp only [bP]; omega))
 
 /-- **The induction**: every printable predicate has its legs. -/
 theorem pred_bein : ∀ (e : SExpr), PredGut e → PredBein e := by
