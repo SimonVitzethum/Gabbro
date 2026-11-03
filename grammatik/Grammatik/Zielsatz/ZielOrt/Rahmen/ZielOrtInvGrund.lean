@@ -124,7 +124,7 @@ theorem invGrundLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
     | _ => ohneGrund
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ
         g hfg rho hrho s0 hs0 rg hrg hn =>
       intro ev hev
       simp only [rufUpdateG_self] at hev
@@ -137,7 +137,7 @@ theorem invGrundLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
           (fun i hi hs => inv_stabil (hFS _) hperm hi hs)
           (fun O' R U σ => semH_rueckConsGrund S O' U passes R r hperm restk σ ρ)
       · exact Or.inl hev
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller
         hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
       intro ev hev
       simp only [rufUpdateG_self] at hev

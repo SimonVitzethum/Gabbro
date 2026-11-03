@@ -201,7 +201,7 @@ theorem akteurS_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
           intro _ _ _ _ _ _ _ _ _ _ hc hn
           cases hc
           rw [semH_alsBlock_schrumpf]
-          rw [grundSig_eq_cast hg hn r]
+          simp only [grundSig_eq_cast hg hn r]
           exact ZErgG.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
@@ -406,7 +406,7 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
           intro _ _ _ _ _ _ _ _ _ _ hc hn
           cases hc
           rw [semH_alsBlock_schrumpf]
-          rw [grundSig_eq_cast hg hn r]
+          simp only [grundSig_eq_cast hg hn r]
           exact ZErgG.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
