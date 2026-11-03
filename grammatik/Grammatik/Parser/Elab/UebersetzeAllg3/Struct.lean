@@ -25,7 +25,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
     (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
     Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
   | Γ, fn, Λ, pe, .axCallElseBeg c args reason, rest =>
-    (lowAxCallElse u caller R Γ fn Λ pe c args reason rest).map fun (st, rest') => (⟨Λ, st⟩, rest')
+    lowCallElse u caller R Γ fn Λ pe c args reason rest
   | Γ, fn, Λ, pe, .lockBeg g, rest =>
     (lockIdx u.locks g).bind fun L =>
       if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) (L :: pe) rest with

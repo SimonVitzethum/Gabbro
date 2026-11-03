@@ -199,4 +199,41 @@ theorem scoped_reason_return_lower {l : Bool} (u : UProg) (caller : Fin u.fns.le
     lowRetEnd (l := l) u caller Γ fn Λ (lock :: scopes) (.why i) = .ok (.retWhyScoped ⟨i, hi⟩ resources) := by
   simp [lowRetStmt, lowRetEnd, hr, hi, bind, Except.bind]
 
+/-- The indirect discard form keeps the pointer, checked arguments, result type,
+    caller conformance and error scope from the binding sibling. -/
+theorem call_ind_else_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (name reason : String) (args : List UArg)
+    (source tail : List UStmt) (n : Nat) (pointer : Var Γ (.fnptr n))
+    (k : RufKopfN u caller Γ Λ n) (τ : Ty)
+    (hp : lowZeigerN u Γ fn name = .ok ⟨n, pointer⟩)
+    (hk : lowRufKopfN u caller Γ fn Λ n args = .ok k)
+    (hr : 0 < ((declOf u).sigNr n).gruende) (he : ((declOf u).sigNr n).erg = some τ)
+    (handler : Endblock (declOf u) (verOf u caller) l
+      (.why (((declOf u).sigNr n).gruende) :: Γ) (nachSig (declOf u) ((declOf u).sigNr n) Λ))
+    (herr : R.ende (l := l) (.why (((declOf u).sigNr n).gruende) :: Γ)
+      (fn.mitWhy reason 0 (((declOf u).sigNr n).gruende))
+      (nachSig (declOf u) ((declOf u).sigNr n) Λ) top source = .ok (handler, .blkEnd :: tail)) :
+    lowCallIndElse (l := l) u caller R Γ fn Λ top name args reason source =
+      .ok (⟨_, .callIndElse (.var pointer) k.args he k.hp hr handler⟩, tail) := by
+  simp only [lowCallIndElse, hp, hk, bind, Except.bind, hr, ↓reduceIte, withErgN]
+  split
+  · rename_i hn
+    rw [he] at hn
+    contradiction
+  · rename_i τ' ht
+    have same : τ' = τ := Option.some.inj (ht.symm.trans he)
+    subst τ'
+    simp only [herr]
+
+/-- The shared flat marker reaches the indirect producer in the real structural dispatcher. -/
+theorem call_ind_else_dispatch {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (name reason : String) (args : List UArg)
+    (source : List UStmt) (n : Nat)
+    (resolved : (fn.params.find? (fun binding => strEq binding.1 name)).map (·.2) = some (.fnptr n)) :
+    lowStructStep (l := l) u caller R Γ fn Λ top (.axCallElseBeg name args reason) source =
+      lowCallIndElse u caller R Γ fn Λ top name args reason source := by
+  simp only [lowStructStep, lowCallElse, resolved]
+
 end Gabbro.Grammatik.Parser.ExportPreservation

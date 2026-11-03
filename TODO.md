@@ -450,16 +450,16 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 ## Stage-0 coverage inventory (2026-11-03)
 
 Code-reading inventory at `25d1da48044bf96eb657385e54b39fdff2111aba` (`s0-inventar2`, integration snapshot).
-Updated by code inspection on `front-gaps1`: scoped return producers and their preservation/witness arms added.\nNo Lean/lake/build, runner, guardian or executable coverage measurement was run. A **yes** below means an
+Updated by code inspection on `front-gaps1`: scoped return and indirect discard-else producers with preservation/witness arms added.\nNo Lean/lake/build, runner, guardian or executable coverage measurement was run. A **yes** below means an
 implementation/proof arm exists in the inspected source, subject to its guards and recursive operands;
 it does not certify that this snapshot builds or that every parameterization of that constructor compiles.
 Counts are by constructor, not example, operator spelling, type instantiation or helper lemma:
 **143 = 64 Expr + 34 Stmt + 22 Block + 23 Endblock; 135 lowered with a connected generic proof arm,
 0 lowered without such an arm, 8 without lowering (including one missing match arm rather than a refusal).**
-Of the 135, **11 have no connected source producer**, leaving **124 with a source producer and lowering/proof
-arms, 0 with lowering but no proof arm, 19 unavailable at the source-to-IR boundary**. Six of those 19 are
-out-of-scope device forms; the remaining 13 are userspace gaps. These are structural counts, not a claim
-that 124 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
+Of the 135, **10 have no connected source producer**, leaving **125 with a source producer and lowering/proof
+arms, 0 with lowering but no proof arm, 18 unavailable at the source-to-IR boundary**. Six of those 18 are
+out-of-scope device forms; the remaining 12 are userspace gaps. These are structural counts, not a claim
+that 125 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
 inventory and are not added to the 143 syntax cases. `Ty.index n` is the alias `.int 0 (n - 1)`.
 
 Locations use these exact file abbreviations (a suffix `:N` is the source line; e.g. `E:64` means
@@ -596,7 +596,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.retScoped` | yes J/Returns `lowRetStmt` (unbuilt) | yes A:181, `lowRetScoped` | `lowS_ok`, P:161 | exact contract-end resources plus precisely the lexical locks required |
 | `Stmt.retWhyScoped` | yes J/Returns `lowRetStmt` (unbuilt) | yes A:182, `lowRetWhyScoped` | `lowS_ok`, P:164 | same exact-resource check; reason must be in the declared channel |
 | `Stmt.axiomCallElse` | yes J/CallElse:25 | partial A:145 | `lowS_ok`, P:140 | A:170: `\| _, _ => none`; only VOID or nonnegative integer result, checked reason map and branch bounds |
-| `Stmt.callIndElse` | no producer; front end has binding indirect-else only | yes A:171, `lowIndElse`/`elseC` | `lowS_ok`, P:144 | missing discard-result indirect-else source export (U7:216 fallback) |
+| `Stmt.callIndElse` | yes U/CallElse → J/CallElse `lowCallIndElse` (unbuilt) | yes A:171, `lowIndElse`/`elseC` | `lowS_ok`, P:144 | pointer result must be a value; nonempty reason channel, signature conformance and closed ending handler required |
 | `Stmt.assignThruOwn` | yes H1:202/:256 | refused by wildcard | **missing** in `lowS_ok` | A:183: `\| _, _, _, _, _, reserved => none`; owned write lowering/proof missing |
 | `Block.nil` | yes J/Seq:27–29 | yes A:187 | `lowB_ok`, P:181 | — |
 | `Block.cons` | yes J/Seq:32 | yes A:188 | `lowB_ok`, P:183 | recursive statement/rest |
@@ -687,8 +687,8 @@ Shared restrictions and source consistency findings:
   yet J/Ende:58/:63 and J/Rest1:51/:56 reference `Endblock.floatLit`/`Endblock.float`; no definition of
   either name exists in `grammatik/Grammatik/**`. The ordinary function-body path `lowerFnPlain` →
   `lowBody` → `lowBodyF` reaches those references, so a continuing `Block.float` arm does not close the
-  top-level source-float case. J/Seq:222 also refers to `fn.mitTy y τ` although its branch binds `x`
-  at :215. These are source findings, not measured compiler diagnostics; the connected theorem source
+  top-level source-float case. The misspelled indirect-else success binder in J/Seq has been
+  corrected on `front-gaps1`. These are source findings, not measured compiler diagnostics; the connected theorem source
   graph must not be advertised as a checked green pipeline at this snapshot.
 
 Refused/unavailable forms, grouped by the first missing component (overlapping parameter restrictions are
@@ -698,9 +698,8 @@ listed above, not counted as extra constructors):
   forms still lack a canonical form: live byte capabilities (`DataTarget` has no byte target; U3:121/:127),
   and top-level/end-block float introduction/arithmetic (dangling references above). Device ASM/boot/raw
   addresses and register access/transition are outside this userspace inventory's unfinished-work count.
-- **Front end (11 otherwise lowered/proof-connected constructors):** `Expr.getBytes`;
-  `Stmt.putBytes`, `breaking`, `advances`, `retires`, `consumeTraverse`,
-  `callIndElse`; `Block.bindAxiomElse`, `check`, `floatOf`, `floatNarrow`.
+- **Front end (10 otherwise lowered/proof-connected constructors):** `Expr.getBytes`;
+  `Stmt.putBytes`, `breaking`, `advances`, `retires`, `consumeTraverse`; `Block.bindAxiomElse`, `check`, `floatOf`, `floatNarrow`.
   `oldG` has the Stage-0 numeric bridge, not a general canonical
   parser export. Provider-reference initialization and top-level float source compilation remain separate
   connected-path gaps even though their component constructors appear in the positive structural count.
