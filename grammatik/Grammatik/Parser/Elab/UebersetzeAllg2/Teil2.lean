@@ -400,34 +400,36 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
               L ∈ ((declOf u).signatur callee).haelt ∨ floorUeberB u callee L = true then
            if hK : decide (Untermulti (((declOf u).signatur callee).inputMarks.map
                (Res.vonMarke (declOf u))) Λ) = true then
-            have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
-                true → (vertragVon (declOf u) caller).schreibt t =
-                true := fun t ht => by
-              rw [sigSchreibt_eq u callee t] at ht
-              rw [vSchreibt_eq u caller t]
-              exact hW t ht
-            have hx : ∀ L, Res.held (D := declOf u) L ∈
-                Λ →
-                L ∉ ((declOf u).signatur callee).haelt →
-                ∃ c, ((declOf u).signatur callee).boden = some c ∧
-                  (declOf u).rang L < c :=
-              fun L hL hn => by
-                rcases hX L (heldLocksD_mem u _ L hL) with h | h
-                · exact absurd h hn
-                · rw [sigBoden_eq u callee]
-                  unfold floorUeberB at h
-                  cases hf : (fnAt u callee).boden with
-                  | none => rw [hf] at h; simp only [Bool.false_eq_true] at h
-                  | some c =>
-                    rw [hf] at h
-                    exact ⟨c, rfl, of_decide_eq_true h⟩
-            have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
-                true → (vertragVon (declOf u) caller).gschreibt g =
-                true := fun g hg0 => by
-              rw [sigGSchreibt_eq u callee g] at hg0
-              rw [vGSchreibt_eq u caller g]
-              exact hG g hg0
-            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ hK, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (signaturOwner_nil u callee) } }
+            if hO : ownerReadyB u ((declOf u).signatur callee) = true then
+              have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
+                  true → (vertragVon (declOf u) caller).schreibt t =
+                  true := fun t ht => by
+                rw [sigSchreibt_eq u callee t] at ht
+                rw [vSchreibt_eq u caller t]
+                exact hW t ht
+              have hx : ∀ L, Res.held (D := declOf u) L ∈
+                  Λ →
+                  L ∉ ((declOf u).signatur callee).haelt →
+                  ∃ c, ((declOf u).signatur callee).boden = some c ∧
+                    (declOf u).rang L < c :=
+                fun L hL hn => by
+                  rcases hX L (heldLocksD_mem u _ L hL) with h | h
+                  · exact absurd h hn
+                  · rw [sigBoden_eq u callee]
+                    unfold floorUeberB at h
+                    cases hf : (fnAt u callee).boden with
+                    | none => rw [hf] at h; simp only [Bool.false_eq_true] at h
+                    | some c =>
+                      rw [hf] at h
+                      exact ⟨c, rfl, of_decide_eq_true h⟩
+              have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
+                  true → (vertragVon (declOf u) caller).gschreibt g =
+                  true := fun g hg0 => by
+                rw [sigGSchreibt_eq u callee g] at hg0
+                rw [vGSchreibt_eq u caller g]
+                exact hG g hg0
+              .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ hK, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := ownerReadyB_ok u _ hO } }
+            else .error "call: callee owner flow not escrow-ready"
            else .error "call without held mark"
           else .error "call: a held lock does not rank below the callee's floor"
          else .error "call: the caller's lock floor is above the callee's"
