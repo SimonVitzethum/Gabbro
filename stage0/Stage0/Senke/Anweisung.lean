@@ -1,17 +1,9 @@
-/-
-  Anweisung.lean -- the lowering of stage 0, part 2: statements and blocks of machine G into `S0IR`.
+/- Stage-0 statement and block lowering. Bindings and payloads occupy complete
+   canonical frame spans; all calls share the result/parameter ABI. Byte writes
+   capture both operands before using the <=8-byte kernel in chunks. Tagged
+   dispatch preserves the whole input until the selected arm binds its payload.
+   The returned top bounds every scratch slot; unsupported forms return none. -/
 
-  The first free slot of a context `Γ` is `frei Γ`: an expression of a statement is computed there; a `bind`
-  computes its value there, which is then the new variable's slot. `assignVar x e` moves the value into `x`'s slot;
-  `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
-  callee's frame at the first free slot (`callC`). `layout.internalResult` is the lowest slot an assignment may write (a function's
-  body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the shared ensures/invariant epilogue, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), the scoped returns `retScoped`/`retWhyScoped` (the ordinary `ret`/`retWhy` code: the scope
-  release is ghost), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (complete-magnitude binary64 conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
-  number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`, `bindCallIndElse`, `leave`
-  and `next` (keeping the loop targets); statements also lower `callIndElse` (value discarded, reason to its end block).
--/
 module
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
@@ -104,7 +96,7 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let ci' ← lowE (reserved := reserved) L i ((frei Γ reserved) + 1)
       let cb ← putBytesL L (Γ := Γ) (Λ := Λ) t f lo hi (256 ^ n - 1) hlo reserved n 0 (by simpa using hhi)
       pure (ce.1 ++ ci'.1 ++ cb.1, max ce.2 (max ci'.2 cb.2))
-    else putBytesWideL L t f lo hi n hlo hhi
+    else putBytesWideL L (Γ := Γ) (Λ := Λ) t f lo hi n hlo hhi
       (lowE (reserved := reserved) L e (frei Γ reserved))
       (lowE (reserved := reserved) L i (frei Γ reserved + valueWords (.int 0 (256 ^ n - 1)))) reserved
   | _, Γ, _, _, .assignSlotRef r t _ _ f e _ _, reserved => do
