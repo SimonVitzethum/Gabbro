@@ -192,12 +192,14 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
       S.owner.moves.map (fun y => (⟨E.marke y.mark, y.before, y.after⟩ : OwnerMove _)) := rfl
   have hloans : (S.owner.map E.marke).loans =
       S.owner.loans.map (Prod.map E.marke id) := rfl
+  have hmints : (S.owner.map E.marke).mints =
+      S.owner.mints.map (Prod.map E.marke id) := rfl
   rw [hS, hK]
   obtain ⟨hv, hd, hr⟩ := h
   refine ⟨?_, ?_, ?_⟩
   · -- Validity: nodup via injectivity, bounds via the stage agreement.
     rw [OwnerFlow.inputs_map]
-    refine ⟨nodup_map_fst hinj hv.1, ?_, ?_⟩
+    refine ⟨nodup_map_fst hinj hv.1, ?_, ?_, ?_⟩
     · intro x hx
       rw [hmoves] at hx
       obtain ⟨y, hym, heq⟩ := List.mem_map.mp hx
@@ -225,12 +227,32 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung D D')
       have hqmem : E.marke q.1 ∈ ((S.owner.map E.marke).inputs.map Prod.fst) := by
         have hqin : q ∈ S.owner.inputs := by
           simp only [OwnerFlow.inputs]
-          exact List.mem_append.mpr (Or.inr hqm)
+          exact List.mem_append.mpr (Or.inr (Or.inl hqm))
         have hmem : (E.marke q.1, q.2) ∈ (S.owner.map E.marke).inputs := by
           rw [OwnerFlow.inputs_map]
           exact List.mem_map.mpr ⟨q, hqin, rfl⟩
         exact List.mem_map.mpr ⟨(E.marke q.1, q.2), hmem, rfl⟩
-      have hb := hv.2.2 q hqm
+      have hb := hv.2.2.1 q hqm
+      rw [f1, f2]
+      refine ⟨?_, ?_⟩
+      · rw [decide_eq_true_eq]
+        exact hqmem
+      · rw [E.stufen]
+        exact hb.2
+    · intro p hp
+      rw [hmints] at hp
+      obtain ⟨q, hqm, heq⟩ := List.mem_map.mp hp
+      have f1 : p.1 = E.marke q.1 := (congrArg Prod.fst heq).symm
+      have f2 : p.2 = q.2 := (congrArg Prod.snd heq).symm
+      have hqmem : E.marke q.1 ∈ ((S.owner.map E.marke).inputs.map Prod.fst) := by
+        have hqin : q ∈ S.owner.inputs := by
+          simp only [OwnerFlow.inputs]
+          exact List.mem_append.mpr (Or.inr (Or.inr hqm))
+        have hmem : (E.marke q.1, q.2) ∈ (S.owner.map E.marke).inputs := by
+          rw [OwnerFlow.inputs_map]
+          exact List.mem_map.mpr ⟨q, hqin, rfl⟩
+        exact List.mem_map.mpr ⟨(E.marke q.1, q.2), hmem, rfl⟩
+      have hb := hv.2.2.2 q hqm
       rw [f1, f2]
       refine ⟨?_, ?_⟩
       · rw [decide_eq_true_eq]
