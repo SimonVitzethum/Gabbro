@@ -53,7 +53,8 @@ theorem half_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
     (room : 1 < width) (x : Zahl 0 hi) {fa : Emitter} (ia : Runs fa (.int 0 hi) x) :
     Runs (shr hi 1 fa (constant 1 1)) (.int 0 hi) (half x) := by
   exact shr_ok width 1 bound room x (⟨1, by decide, by decide⟩ : Zahl 0 1) (half x)
-    (by simp only [half, natural, Nat.pow_one]; rfl) ia (constant_ok _)
+    (by simp only [half, natural, Nat.pow_one]; rfl) ia
+      (constant_ok (⟨1, by decide, by decide⟩ : Zahl 0 1))
 
 theorem digit_ok {hi : Int} (x : Zahl 0 hi) {fa : Emitter} (ia : Runs fa (.int 0 hi) x) :
     Runs (mask hi 1 fa) (.int 0 1) (digit x) :=
@@ -64,7 +65,9 @@ theorem population_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
     (ia : Runs fa (.int 0 hi) x) :
     Runs (population hi fuel fa) (.int 0 (fuel : Int)) (populationValue fuel x) := by
   induction fuel generalizing x fa with
-  | zero => exact constant_ok _
+  | zero =>
+    change Runs (constant 0 0) (.int 0 0) (⟨0, by decide, by decide⟩ : Zahl 0 0)
+    exact constant_ok (⟨0, by decide, by decide⟩ : Zahl 0 0)
   | succ fuel ih =>
     exact add_ok (digit x) (populationValue fuel (half x)) (populationValue (fuel + 1) x)
       (by simp only [populationValue, natural, digit, half, popAux, Int.natCast_add, Int.toNat_natCast])
@@ -75,7 +78,9 @@ theorem trailing_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
     (ia : Runs fa (.int 0 hi) x) :
     Runs (trailing hi fuel fa) (.int 0 (fuel : Int)) (trailingValue fuel x) := by
   induction fuel generalizing x fa with
-  | zero => exact constant_ok _
+  | zero =>
+    change Runs (constant 0 0) (.int 0 0) (⟨0, by decide, by decide⟩ : Zahl 0 0)
+    exact constant_ok (⟨0, by decide, by decide⟩ : Zahl 0 0)
   | succ fuel ih =>
     let zero : Zahl 0 (fuel + 1 : Nat) := ⟨0, by omega, by omega⟩
     let one : Zahl 0 1 := ⟨1, by decide, by decide⟩
@@ -90,11 +95,21 @@ theorem trailing_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
       have zx : x.n = 0 ↔ x.n.toNat = 0 := by
         have := Int.toNat_of_nonneg x.lo_le; omega
       apply Zahl.ext_n
-      simp [trailingValue, natural, ctzAux, digit, zero, sum, zx, Int.natCast_add]
+      have parity : ((x.n.toNat % 2 : Nat) : Int) = 1 ↔ x.n.toNat % 2 = 1 := by omega
+      by_cases hz : x.n = 0
+      · simp [trailingValue, natural, ctzAux, digit, zero, hz]
+      · have hn : x.n.toNat ≠ 0 := by omega
+        by_cases hd : x.n.toNat % 2 = 1 <;>
+          simp only [trailingValue, natural, ctzAux, digit, zero, sum, hz, hn,
+            parity, hd, decide_true, decide_false, Bool.false_eq_true,
+            ite_true, ite_false, Int.natCast_add]
     rw [value]
-    exact choose_ok _ zero _ (eq_ok x (⟨0, by omega, by omega⟩ : Zahl 0 0) ia (constant_ok _))
+    exact choose_ok (τ := .int 0 (fuel + 1 : Nat)) _ zero _
+      (eq_ok x (⟨0, by omega, by omega⟩ : Zahl 0 0) ia
+        (constant_ok (⟨0, by omega, by omega⟩ : Zahl 0 0)))
       (constant_ok zero)
-      (choose_ok _ zero sum (eq_ok (digit x) one (digit_ok x ia) (constant_ok one))
+      (choose_ok (τ := .int 0 (fuel + 1 : Nat)) _ zero sum
+        (eq_ok (digit x) one (digit_ok x ia) (constant_ok one))
         (constant_ok zero) sumCode)
 
 theorem logarithm_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
@@ -109,7 +124,8 @@ theorem logarithm_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
       change (x.n.toNat.log2 : Int) = 0
       omega
     rw [value]
-    exact constant_ok _
+    change Runs (constant 0 0) (.int 0 0) (⟨0, by omega, by omega⟩ : Zahl 0 0)
+    exact constant_ok (⟨0, by omega, by omega⟩ : Zahl 0 0)
   | succ fuel ih =>
     have halfFits : (half x).n.toNat < 2 ^ (fuel + 1) := by
       change x.n.toNat / 2 < 2 ^ (fuel + 1)
@@ -126,10 +142,17 @@ theorem logarithm_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
         have := Int.toNat_of_nonneg x.lo_le; omega
       apply Zahl.ext_n
       change (x.n.toNat.log2 : Int) = _
-      rw [Nat.log2_def]
-      simp [small, zero, sum, natural, Int.natCast_add, Nat.add_comm]
+      conv_lhs => rw [Nat.log2_def]
+      by_cases hx : x.n < 2
+      · have hn : ¬ 2 ≤ x.n.toNat := small.mp hx
+        simp only [hx, hn, decide_true, ite_true, ite_false, zero]
+      · have hn : 2 ≤ x.n.toNat := by omega
+        simp only [hx, hn, decide_false, Bool.false_eq_true, ite_false, ite_true,
+          sum, natural, Int.natCast_add]
+        omega
     rw [value]
-    exact choose_ok _ zero sum (lt_ok x two ia (constant_ok two)) (constant_ok zero)
+    exact choose_ok (τ := .int 0 (fuel + 1 : Nat)) _ zero sum
+      (lt_ok x two ia (constant_ok two)) (constant_ok zero)
       (add_ok one (logarithmValue fuel (half x) halfFits) sum
         (by simp only [one, logarithmValue, natural, half, sum, Int.toNat_natCast, Int.natCast_add]; rfl)
         (constant_ok one) (ih (half x) halfFits (half_ok width bound room x ia)))
