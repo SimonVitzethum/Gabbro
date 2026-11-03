@@ -1,5 +1,5 @@
-/- Facts recovered from actual consuming candidate emission. These establish
-   relocation and size gates, not the missing instruction-level simulation. -/
+/- Assembly, relocation and size evidence for consuming emission.
+   The instruction paths are composed in Consuming.Execution. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Code
 public section
