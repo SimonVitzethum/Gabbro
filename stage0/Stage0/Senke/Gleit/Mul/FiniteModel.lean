@@ -83,7 +83,7 @@ theorem softMulFiniteDirectionalWord_model (a b : GFloat)
   simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt na64, Nat.mod_eq_of_lt nb64] at compressed
   unfold softMulFiniteDirectionalWord
   rw [softMulSignWord_canonical a b ha hb, canonA.1, canonB.1, canonA.2, canonB.2,
-    BitVec.ofNat_add, BitVec.ofNat_add, compressed,
+    ← BitVec.ofNat_add, ← BitVec.ofNat_add, compressed,
     softMulRoundWord_model (a.sign != b.sign) total m totalBound mb.1 mb.2,
     softMul_product a b special]
   apply congrArg (fun g : GFloat => BitVec.ofNat 64 (zuBits f64 g))
