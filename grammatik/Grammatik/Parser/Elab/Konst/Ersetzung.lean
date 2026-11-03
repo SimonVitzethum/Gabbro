@@ -354,18 +354,17 @@ theorem ersetzeSExpr_call_certified (shadowed : List String) (fns : List UKonstF
     (args args' : List SExpr) (fn : UKonstFn) (replacement : SExpr)
     (arguments : ersetzeSExprListIn shadowed fns args = .ok args')
     (callee : fns.find? (fun k => strEq k.name name) = some fn)
-    (closed : geschlossenSExprListB (args'.map (Scalar.normalizeNames ([] : Scalar.Locals [])
-      (fn.constants.filter (fun entry => !shadowed.contains entry.1)))) = true)
     (success : ersetzeSExprIn shadowed fns (.call name args) = .ok replacement) :
     ∃ checked : Replacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args',
       checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' = .ok checked ∧
       replacement = checked.syntax := by
-  simp only [ersetzeSExprIn, arguments, callee, closed, Bool.not_true,
-    Bool.false_eq_true, ↓reduceIte] at success
-  cases hc : checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' with
-  | error error => simp [hc] at success
-  | ok checked =>
-    refine ⟨checked, hc, ?_⟩
-    simpa [hc] using success.symm
+  simp only [ersetzeSExprIn, arguments, callee] at success
+  split at success
+  · contradiction
+  · cases hc : checkReplacement fn fns (fn.constants.filter (fun entry => !shadowed.contains entry.1)) args' with
+    | error error => simp [hc] at success
+    | ok checked =>
+      refine ⟨checked, hc, ?_⟩
+      simpa [hc] using success.symm
 
 end Gabbro.Grammatik.Parser.Konst
