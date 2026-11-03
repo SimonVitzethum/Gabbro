@@ -144,7 +144,9 @@ theorem Ready.jump (h : x.Ready m σ ρ) (i j : Nat) (target : Label)
     (by simp only [resolve, destination, bind, Option.bind_some, pure])).1
   have size := assemble_size x.assembled
   have run := jmp_go (fp := x.fp) code (lit_ok (by omega) (by omega))
-  simpa only [addr, adr_eq x.pc (by omega)] using run
+  have address := adr_eq x.pc (x := x.offset i) (y := x.offset j)
+    (J := 16 * ((x.offset j : Int) - x.offset i)) (by omega)
+  simpa only [addr, address] using run
 
 /-- Both outcomes of a resolved conditional branch. -/
 theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v : W)
@@ -162,7 +164,9 @@ theorem Ready.branch (h : x.Ready m σ ρ) (i j cell : Nat) (target : Label) (v 
     have size := assemble_size x.assembled
     have run := brz_go code cellBound x.small (lit_ok (by omega) (by omega))
       (by simpa only [zero] using read)
-    simpa only [addr, adr_eq x.pc (by omega)] using run
+    have address := adr_eq x.pc (x := x.offset i) (y := x.offset j)
+      (J := 16 * ((x.offset j : Int) - x.offset i)) (by omega)
+    simpa only [addr, address] using run
   · simp only [zero, ↓reduceIte]
     simpa only [next] using brz_stay code cellBound x.small read zero
 
@@ -181,7 +185,8 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
     e (x.s + 4) block top lowered topBound m (x.addr i) ρ preWorld |>.word compatible
   apply h.ok ok
   · have inside : i < x.fragment.length := by
-      by_contra hn
+      apply Classical.byContradiction
+      intro hn
       simp only [List.getElem?_eq_none (by omega)] at found
       cases found
     have element : x.fragment[i] = .code block := by simpa only
