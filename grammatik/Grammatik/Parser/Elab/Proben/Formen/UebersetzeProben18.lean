@@ -83,6 +83,20 @@ def narrow_top_range_refused : String :=
   "module m { impl fn f(a : u32 in 0 .. 9) -> u32 in 0 .. 4 { narrow a to 0 .. 5 else { return 0; } return a; } }"
 theorem narrow_top_range_refused_stufe : stufe narrow_top_range_refused = "lower: value outside range" := by decide +kernel
 
+/-- Source text reaches `Block.floatNarrow` in a continuing branch. The fallback
+    returns from the function; the success path reads the shadowed float local. -/
+def float_narrow_finite : String :=
+  "module m { impl fn f(x : f64, c : bool) -> u8 { if c { narrow x to finite else { return 0; } let y = x; } return 1; } }"
+
+theorem float_narrow_finite_zeuge : stufe float_narrow_finite = "OK" := by
+  decide +kernel
+
+/-- A fallthrough handler is refused before either integer or float G narrowing. -/
+theorem float_narrow_falls_refused_zeuge :
+    stufe "module m { impl fn f(x : f64, c : bool) -> u8 { if c { narrow x to finite else { } } return 1; } }" =
+      "elab: narrow else falls through" := by
+  decide +kernel
+
 /-! ## `exchange update` -/
 
 /-- The update form at the top level of a body; the binder is the old value, `bounded`/`on_exceeded` belong to
