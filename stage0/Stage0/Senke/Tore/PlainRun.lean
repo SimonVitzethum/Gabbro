@@ -1,8 +1,8 @@
 /- The actual nonfallible foreign prefix preserves the complete value ABI. -/
 module
-public import Stage0.Senke.Tore.ForeignCode
+public import Stage0.Senke.Tore.Code
 public import Stage0.Senke.Tore.AreaReceive
-public import Stage0.Senke.Anweisung.Bindung.TorBind
+public import Stage0.Senke.Anweisung.Bindung.Answer
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
