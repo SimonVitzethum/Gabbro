@@ -16,7 +16,6 @@ theorem routineMagnitudeWord_canonical (a : GFloat) (ha : wf f64 a) :
   have same : routineMagnitudeWord (BitVec.ofNat 64 (zuBits f64 a)) =
       floatFieldWord (BitVec.ofNat 64 (zuBits f64 a)) 0 63 := by
     simp only [routineMagnitudeWord, floatFieldWord, BitVec.ushiftRight_zero]
-    rfl
   rw [same, field]
   have bound := zuBits_f64_lt a ha
   have mag := floatMag_lt ha
