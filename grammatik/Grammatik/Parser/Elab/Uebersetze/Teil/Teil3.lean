@@ -76,7 +76,8 @@ theorem uTableRight_sound (eigner : List String) (text : String) (rights : DataR
   | none => simp [uTableRight, hd] at h
   | some r =>
     have he : r = rights := by simpa [uTableRight, hd] using h
-    subst he; exact hd
+    subst he
+    rfl
 
 /-- Resolve a logical space against the declaration order. Unknown names are refused. -/
 def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
@@ -151,7 +152,7 @@ def uKonstFnsWith (alias : List (String × (Int × Int))) : List SItemTief → L
     if strEq sig.art "const" then
       match sig.res with
       | some result =>
-        match uTyp alias [] result, sig.params.mapM (fun (n, ty) => (uTyp alias [] ty).map (fun t => (n, t))) with
+        match uTyp alias [] [] [] result, sig.params.mapM (fun (n, ty) => (uTyp alias [] [] [] ty).map (fun t => (n, t))) with
         | .ok resultType, .ok parameters =>
           { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFnsWith alias rest
         | _, _ => uKonstFnsWith alias rest
@@ -201,7 +202,7 @@ def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (c
   | τ, .one e => leaf τ e
   | _, _ => none
 termination_by sizeOf value
-decreasing_by all_goals simp_wf; omega
+decreasing_by all_goals (simp_wf <;> omega)
 def uKonstZeilen (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
     (ty : Ty) (values : List SKonstWert) (leaf : Ty → SExpr → Option USide := fun _ _ => none) : Option USide :=
   match ty, values with
@@ -269,7 +270,7 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
       | .some num => .ok ((fname, (0, 1)), UFeldArt.opt num)
       | .none => .error ("table unknown: " ++ tn)
     | .atom "f32" | .atom "f64" | .array _ _ | .str _ =>
-      match uTyp alias [] ftyp with
+      match uTyp alias [] [] [] ftyp with
       | .ok τ => .ok ((fname, (0, 0)), UFeldArt.wert τ)
       | .error e => .error e
     | .atom a =>
