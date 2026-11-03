@@ -35,7 +35,7 @@ variable {D : Deklaration}
 structure OwnerAdmission (P : Programm D) (fs : List D.Fn)
     (d : OwnerMintDecl D) (ws : List D.Fn) : Prop where
   root_declared : d.root ∈ ws
-  root_single : ((ws.filter (fun v => decide (v = d.root)))).length = 1)
+  root_single : ((ws.filter (fun v => decide (v = d.root)))).length = 1
   root_no_caller : ∀ f ∈ fs, ruftB P f d.root = false
   root_clean : D.haelt d.root = [] ∧ D.gruende d.root = 0
 
@@ -98,10 +98,10 @@ theorem fadenSpawn_m_G {P : Programm D} {O : Orakel D} {passes : Nat}
     K'.m = K.m ∨
       ∃ (f : Faden) (M' : RufMaschineG D), RufSchrittG P O passes K.m f M' := by
   cases hs with
-  | lauf K f M' hf hw hs' => exact Or.inr ⟨f, M', hs'⟩
-  | start K p cs hp hw hfrei hcs => exact Or.inl rfl
-  | kind K p c hp hw hc => exact Or.inl rfl
-  | join K p hp hw hf => exact Or.inl rfl
+  | lauf f M' hf hw hs' => exact Or.inr ⟨f, M', hs'⟩
+  | start p cs hp hw hfrei hcs => exact Or.inl rfl
+  | kind p c hp hw hc => exact Or.inl rfl
+  | join p hp hw hf => exact Or.inl rfl
 
 /-- No thread-machine step over G restarts the mint: the ghost ledger is the
     base ledger on both sides, so spent authority stays spent. In particular
