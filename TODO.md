@@ -1,6 +1,7 @@
 # Open work
 
-*Updated 2026-10-20; references and "Right now" updated 2026-11-01 (the entries themselves were not re-audited). Only what is OPEN, in five areas: heap, Lean model, checker, LLVM backend, translation validation.
+*Older work lists date from 2026-10-20; the Stage-0 section was re-audited from source on 2026-11-03.
+It distinguishes implemented paths from open boundaries; the remaining areas are heap, Lean model, checker, LLVM backend and translation validation.
 IDs (`Oxx`) are stable: comments in the tree that say `OFFEN Oxx` or `TODO.md Oxx` mean these entries. Closed and removed items are in the
 appendix, one line each. History is in git.*
 
@@ -11,153 +12,246 @@ appendix, one line each. History is in git.*
 reasoning live in the linked plans, never here. Keep an entry to one short paragraph; if it needs more, write it in a plan and link it.
 
 ## Right now
-- **C14 base-placement duty:** Prove that loader/runner image placement supplies `Nat.lcm 8 N ∣ b` for every positive declared global alignment; the relative layout and `aligned_abs` premise do not yet discharge this duty (THEOREM-MAP §127).
 
-- **Stage 0: every userspace Gabbro form to IR, formally verified (2026-11-01).** The lanes IR-01..IR-14, their checkpoints
-  and the C-package designs are in [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); team, scope and build caps are
-  in [AGENTS.md](AGENTS.md) ("Current work"). No legacy Lean source runtime and no unrelated side project.
-- **C-package status (2026-11-02).** Integrated into `c-runde1`: all C packages except C01 and C10, including C07
-  and C08. Stage 0 admits C12 tables in named spaces and pointers into them (rights decoded by `DataRights.decode`),
-  C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
-  code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
-  now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
-  - **C09/C12 branch inventory before the round-one merge:**
-  - **Stage-0 refusals with their missing step (C09/C12 line):**
-    - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
-    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
-    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
-    - C11 `by consuming`: source export and its generic elaboration arms are implemented on
-      `front-consume`, UNBUILT; the lead must check the connected pipeline.
-    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
-    - C10 RW locks: reader-wait liveness remains open.
-    - C09 owner flows: mint (`mints`) and handback moves (`moves`) elaborate with
-      witnesses and refusals (c09-mint, lead to build). Body-level `retires Mark;` now exports
-      to `Stmt.retires`, removing exactly one held mark; owner `consumes` uses terminal moves
-      (`after := none`), ordinary C16 consumption uses the same retire statement. Positive call/retire
-      and negative drop/loan/unheld/double-retire witnesses, plus the Stage-0 image witness, are
-      implemented on c09-retire, UNBUILT (lead checks). The dynamic escrow replay and C08
-      software-call/root-once mint admission remain open; Stage 0 still refuses mint effects.
-    - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
-    - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
-      as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
-      borrow/return witness and the no-mark/forged-loan refusals (c12-own, lead to build). The Stage-0 Senke
-      side (`lowE`/`lowS` arms reusing the plain slot paths, generic `lowE_ok`/`lowS_ok` arms, `OwnProben`
-      read-then-write image witness) is added on `s0-c12own`, unbuilt; lead to check. Open: byte/raw/entry
-      targets (still refused: no live grant/history interface yet).
-    - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
-      carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
-      bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
-    - C14 `aligned`/`section`: relative grid (`wordAlign`, `globStarts`) plus the conditional absolute placement
-      lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
-      witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
-      loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
-    - C14 `entrust`: refused by the model (no isolation/call service).
-    - C07 fallible indirect calls: Stage-0 arms being added.
-  - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
-    refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
-    No builds were run for that audit. Remaining refusals include:
-    - Scoped returns inside lock bodies. `consumeTraverse` follows `verbrauchLauf` in Stage 0
-      (`consumeTraverse_case`); its consuming source producer, typed contexts, metadata binding and source witness
-      are implemented on `front-consume`, UNBUILT. Missing decreases/touches, absent/ambiguous/non-self edges,
-      invalid measures, insufficient write effects and leave/next of the consuming binder remain named refusals.
-    - Unrepresentable tag dispatch / byte spans, oversized folds/code/addresses,
-      and unsupported entry-snapshot subtrees. Aggregate payload and wide byte implementation checks are pending below.
-    - Foreign gates without an explicit selected binding
-      (named refusal). Optional value/void binders and fallible indirect bindings have IR arms.
-    - **Foreign result completion (`s0-foreign`, 2026-11-03; lead validation pending):** fallible Bool,
-      reference and nominal region-capability answers, plus multiword answers through explicit C14
-      `result area REGISTER`, have implementation/proof/witness declarations connected to the actual
-      lowering path. The result area uses `copyValue_run`; the exact provider write footprint is a
-      binding/user-logic duty. Missing areas and overlapping hidden/source registers remain named refusals.
-      Open: lead checks of the changed grammar/parser/printer modules, Stage-0 dependents and witnesses,
-      standard-axiom/guardian validation and the executable Bool probe. Area profiles combined with
-      pointer-buffer arguments remain refused. Supplying/mapping fresh region storage and original-source
-      provider contract admission are not discharged by capability transport.
-    - Fallible indirect statement-else source syntax is implemented, including expression AST, printer,
-      generic round trip and export to `Stmt.callIndElse`; acceptance/refusal witnesses await the lead build.
-      Fallible void pointer statements and pointer expressions beyond locals/function references remain refused.
-    - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
-      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual const/generic calls/module headers,
-      counterprobes and annotated placement. Static-arena allocation has connected narrowing/store arms.
-      Residual generic calls and module-template/use headers now go through the expansion-aware Stage-0 gate
-      (`syntax-s0`, needs the lead build): the gate checks the expanded unit, with the expansion certificate.
-    - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
-      incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
-  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
-    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
-    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
-  - **Additional branch implementation notes (lead checks pending).**
-  - **Stage-0 refusals with their missing step:**
-    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
-    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
-    - C11 `by consuming`: refused by design.
-    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
-    - C10 RW locks: reader-wait liveness remains open.
-    - C09 owner flows: escrow simulation in progress.
-    - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
-    - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
-      carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
-      bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
-    - C14 `aligned`/`section`: relative grid (`wordAlign`, `globStarts`) plus the conditional absolute placement
-      lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
-      witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
-      loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
-    - C14 `entrust`: explicit `via SERVICE` source bindings now resolve declared C08 foreign
-      contracts, export software provenance and their exact requires/ensures, generate ordinary
-      fallible wrappers, and retain every descriptor in canonical and Stage-0 admission.
-      The source-to-image witness and named refusal twins are written (THEOREM-MAP §150).
-      Open: lead compilation, witness reduction and standard-axiom checks; no build was run by
-      the implementation worker. Additional source region inputs remain refused until the
-      source adapter can retain each transferred capability with its resolved owner resource;
-      register/privileged handover and unknown ABIs stay refused. `Spec.lean` is unchanged.
-    - C07 fallible indirect calls: Stage-0 arms being added.
-  - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,
-    already expand into the connected `lowB_ok`/`lowEnd_ok` narrowing and store arms. Source-image witnesses now
-    cover both levels and the last fitting slot; semantic witnesses cover success, ceiling preservation and required
-    capacity failure (stop 107). Duplicate counter-depth arms and two witness import paths are corrected.
-    Open: the lead's Lean checks of these witnesses and the connected pipeline; the implementation worker ran no builds.
-  - **Conditional refusal follow-up (`s0-gaps1`, 2026-11-03; lead checks pending).** The original metadata
-    gate now admits immutable unannotated static-arena allocation with an explicit else, recursively checking
-    that continuation. `EndAllocWitness` connects original-gate acceptance, canonical source and image correctness.
-    Block/end `narrow` and `narrowRequired` reuse the complete-span interval kernel; empty target intervals
-    select failure, and required failure remains stop 107. Wide `istSome` uses the canonical presence tag.
-    Generic proof arms and accepted witness declarations cover these changes; no Lean or execution checks
-    were run by the implementation worker. Long `strCat` now copies into a fresh complete span at
-    the runtime first length; long/mixed `strLt` uses the descending presence/byte-key scan.
-    Generic helper proofs are attached to `lowE_ok`; typed acceptance/model witnesses and
-    `str-span-cat-order.gab` cover both operand orders, prefixes and different lengths.
-    Only actual capacity/frame/code representability checks remain on these string paths.
-    Open: lead Lean validation of the changed closure, axiom checks and runner regression;
-    the implementation worker ran no Lean, Lake, compiler, runner or guardian checks.
-  - **Computed wide `floatOf` implementation (`s0-gaps1`, 2026-11-03; UNCHECKED).** The binary64
-    compiler hook now normalizes the complete integer magnitude with balanced leading-position
-    comparisons, retains a 56-bit prefix with sticky and reuses the existing IEEE nearest-even packer.
-    Small runtime values inside wide intervals use the proved scalar continuation. Generic field,
-    rounding and hook proofs connect through `blockFloatOfComputed_case` and `lowB_ok_floatOf`;
-    exponent overflow is rejected before the ordinary range test and remains stop 107.
-    `WideFloatProbe` declares accepted image fixtures for ties, sticky tails, signs, carry, maximum
-    finite, overflow and small values in wide intervals, plus a generic-hook variable witness.
-    Open: lead single-module Lean checks, axiom audits, image acceptance and runner execution.
-    No new compiled-coverage measurement is claimed. The implementation worker ran no Lean,
-    Lake, compiler, runner or guardian checks.
-  - **Aggregate sums and byte spans (`s0-gaps1`, 2026-11-03; UNCHECKED).** Actual `.case` and
-    `onTag` lowering now embed and bind complete product/float/string/wide payloads using the
-    shared aggregate encoding, with recursive validity and zero padding; packed integer tags
-    retain `sumOff`. Generic construction/dispatch proofs connect through `lowE_ok` and
-    `lowS_ok_onTag`; constant initialization preserves the selected payload's validity too.
-    `getBytes` captures its start once and emits <=8-byte kernels per canonical limb. `putBytes` captures the full value
-    and index before iterating the existing write kernel; chunk-count induction preserves
-    byte order, overlapping-copy reads and the complete write trace. The actual dispatch /
-    wide-byte paths keep only ordinary layout/frame/code checks and an explicit `<2^31`
-    tag-count / byte-span representability gate. Accepted-image witness declarations cover
-    all payload kinds and 9/13/16/17-byte boundaries, high limbs, zeros and overlap; boundary
-    refusal declarations pin the wrappers. Coverage rows are updated as a source audit only.
-    Open: lead Lean checks of the changed dependency closure, standard-axiom audits, witness
-    image acceptance and runner execution. No Lean, Lake, compiler, runner or guardian ran.
-- **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
-  (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
-  more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
+- **Stage 0: every userspace Gabbro form to IR, formally verified.** Designs and lane checkpoints:
+  [IR-COMPILATION-LANES.md](dokumente/IR-COMPILATION-LANES.md); scope and operating rules: [AGENTS.md](AGENTS.md).
+  The following is a **source audit of `4f1bb9134`, 2026-11-03**, not a compilation or execution measurement.
+  “Implemented, connected” means the implementation and its generic correctness connection are present in this tree;
+  no Lean, Lake, compiler, runner or guardian checks were run for this audit. Witness declarations alone do not establish acceptance.
 
+**Common proof connection.** The actual emitters are [`lowE`](stage0/Stage0/Senke/Ausdruck.lean) and
+[`lowS`/`lowB`/`lowEnd`](stage0/Stage0/Senke/Anweisung.lean). Their generic arms are in
+[`lowE_ok`](stage0/Stage0/Senke/Ausdruck/Satz.lean) and
+[`lowS_ok`/`lowB_ok`/`lowEnd_ok`](stage0/Stage0/Senke/Anweisung/Satz/Teil5.lean), with imported case lemmas.
+[`lowFun_spec`](stage0/Stage0/Senke/Rekursion.lean) uses `lowEnd_ok`; the connection continues through
+[`start_ok`](stage0/Stage0/Senke/Start.lean), [image correctness](stage0/Stage0/Senke/Images/BildSatz.lean), and
+[`Emitted.correct`/`irBild_correct`](stage0/Stage0/IRBild.lean). These are conditional on successful compilation
+and the existing runner, gate, view and initial-memory premises. An impossible-success arm for a refused constructor
+is not an implemented correctness case.
+
+**Source gates.** Parsing starts at `Parser/Item/ElementTief.lean` and `Parser/Stmt/Anweisung/Defs*.lean` under
+`grammatik/Grammatik/`; `Parser/Elab/Uebersetze/` produces `UStmt`, and `Parser/Elab/UebersetzeAllg*/` exports G.
+[`Frontend.source`](stage0/Stage0/Frontend/Source.lean) first checks the original prepared members with
+[`Konst.checkSourceMetadata`](grammatik/Grammatik/Parser/Elab/Konst/ErsetzungTor.lean), including
+[`ExportMetadata`](grammatik/Grammatik/Parser/Elab/Export/ExportMetadata.lean).
+[`compile`](stage0/Stage0/Compiler.lean) subsequently checks original/expanded members and carries the chosen gate
+and canonical source derivation. Its expansion-aware gate does **not** bypass the earlier original-members check.
+Thus a parser/exporter or an expanded-unit certificate can exist while the original source is still refused.
+
+- **C07/C08 calls and optional binders: implemented, connected.** `Stmt.callIndElse`, value-discarding
+  `Stmt.axiomCallElse` (value or void), and Block/Endblock `bindCallIndElse`, `bindAxiom`, `bindAxiomElse`,
+  `bindAxiomOpt` and `bindAxiomOptElse` have actual lowering arms. Optional value **and void** binders use
+  the matching `lowB_ok_*`/`lowEnd_ok_*` arms, including
+  [void](stage0/Stage0/Senke/Anweisung/Satz/Teil2OptNone.lean) and
+  [fallible void](stage0/Stage0/Senke/Anweisung/Satz/Teil2OptNoneElse.lean) cases;
+  statement handlers use [AxiomElse](stage0/Stage0/Senke/Anweisung/Faelle/Kontrolle/AxiomElse.lean) and
+  [IndElseFaelle](stage0/Stage0/Senke/Anweisung/Faelle/IndElseFaelle.lean).
+  Source `callee(...) else (e) { ... };` already parses in
+  [`Defs1`](grammatik/Grammatik/Parser/Stmt/Anweisung/Defs1.lean), resolves through
+  [`uCallElse`/`uCallIndElse`](grammatik/Grammatik/Parser/Elab/Uebersetze/CallElse.lean), and exports through
+  [`lowCallElse`/`lowAxCallElse`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/CallElse.lean);
+  `let name?` is produced by `Defs2a`, `Uebersetze/Teil/Teil10` and `UebersetzeAllg3/{Seq,Ende,Body}`.
+  Gates retain selected bindings, representable addresses/code, supported arguments and complete reason decoding;
+  the indirect statement producer requires a value result and a local pointer or function reference.
+  `OptionalForeignWitness.statement_parser_refused` still asserts the former `wanted ;` result; that declaration
+  predates the producer and is not evidence of a current refusal (it was not checked here).
+  Open: fallible void indirect statements and general indirect callee expressions; lock-contained handlers still fail `retFreiB`.
+- **C08 foreign results: implemented, connected under explicit transport profiles.**
+  [`Tor.chkC`/`fallibleTy`](stage0/Stage0/Senke/Tor.lean) admit one-word Bool, reference and nominal table-capability
+  answers, besides supported integers. [`plainForeignC`/`fallibleForeignC`/`areaC`](stage0/Stage0/Senke/Tore/Code.lean)
+  transport multiword answers through explicit `result area REGISTER`; their
+  [plain](stage0/Stage0/Senke/Tore/PlainRun.lean), [fallible](stage0/Stage0/Senke/Tore/FallibleRun.lean) and
+  [area](stage0/Stage0/Senke/Tore/AreaRun.lean) proofs feed the binder cases above.
+  [`Bindung`](stage0/Stage0/Bindung.lean) parses the selected binding into transport descriptors and rejects missing,
+  ambiguous or overlapping register assignments; `emit` rejects a multiword result without an area.
+  The register profile requires `torGut`, word arguments and a supported optional buffer; the area profile requires
+  scalar nonpointer arguments and a free hidden argument register. Errno/value separation and code-size checks remain.
+  Source foreign declarations and typed result export exist (`Uebersetze/Einheit/Signatures`, `UebersetzeAllg3/Kopf`).
+  Open: result areas combined with pointer-buffer arguments; fresh region storage, grants/history and provider-contract
+  admission are not established by transporting a nominal capability. Owner/byte/raw/entry source types remain gated below.
+- **C09 marks and owner flow: static paths implemented, connected; mint source effects refused.**
+  `mints`, `moves`, `borrows` and owner `consumes` are retained by
+  [`uEffekte`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil5Rest.lean), checked by
+  [`Torhuelle`](grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Torhuelle.lean), and passed through
+  [`ownerReadyB`/`rufPasstB`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg2/Teil3.lean).
+  `Stmt.advances`/`retires` emit empty code with connected `lowS_ok` arms; source `retires Mark;` uses
+  [`lowRetiresL`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg2/Marken.lean), rejecting borrowed, unheld or repeated retirement.
+  Owner consumption uses terminal moves; ordinary mark/Duty consumption uses retirement. `clausesMetadata` still rejects
+  `.effs [.mints ...]`; static call-flow admission is not a dynamic escrow replay theorem.
+  Open: dynamic escrow replay and C08 software-call/root-once mint admission; original owner-qualified type admission (C12).
+- **C10/C11 locks and scoped returns.** Exclusive `Stmt.locks` is implemented, connected only when
+  [`retFreiB`](stage0/Stage0/Senke/Sperre/Code.lean) accepts the body. `Stmt` **and** `Endblock.retScoped`/`retWhyScoped`
+  now lower through [`lowRetScoped`/`lowRetWhyScoped`](stage0/Stage0/Senke/Anweisung/Faelle/Hilfen.lean), with
+  [generic scoped-return cases](stage0/Stage0/Senke/Anweisung/Faelle/RueckgabeScoped.lean) in `lowS_ok`/`lowEnd_ok`.
+  Their scope release is ghost in this simulation; this does not remove the enclosing lock-body refusal.
+  Source returns under scopes are exported by
+  [`lowRetStmt`/`lowRetEnd`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Returns.lean).
+  Shared `locks` still fails `Uebersetze/Teil/Teil10` (“shared lock without G form”); RCU declarations fail `itemMetadata`.
+  Open: return-capable physical lock cleanup/admission, mode-aware RW/RCU source-to-IR integration and reader-wait liveness.
+- **C11 consuming traversal: implemented, connected, with a source producer.**
+  [`uLoopExport`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil9.lean), `ExportMetadata.consumingHeader`,
+  [`lowStructStep`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Struct.lean) and
+  [`ExportQuantifiers`](grammatik/Grammatik/Parser/Elab/Export/ExportQuantifiers.lean) retain domain, edge,
+  decreases and touches duties. `lowS` calls
+  [`Consuming.lower`](stage0/Stage0/Senke/Anweisung/Faelle/Schleifen/Consuming/Lower.lean);
+  [`consumeTraverse_case`](stage0/Stage0/Senke/Anweisung/Faelle/Schleifen/Consume.lean) is selected by `lowS_ok`
+  and follows `verbrauchLauf`, with dynamic selection and strict decrease, not a fixed sweep.
+  Missing/duplicate clauses, invalid or ambiguous optional-self edges, unsupported domains/measures/effects and
+  leave/next of the consuming binder remain named source refusals; scratch/frame limits remain IR refusals.
+  Machine `GRest.rueckBereit`, `verbrauch` and `verbrauchRest` are internal continuations
+  ([definition](grammatik/Grammatik/Logik/Ruf/Maschine/RufMaschineG/T1Basis.lean)); they have no direct source syntax or
+  standalone Stage-0 emitter. `rueckBereit` is still an inert pending-return placeholder without a consuming step rule;
+  its replay/unwind connection remains open. The source constructs use the scoped-return/traversal arms above.
+- **C12 capabilities.** Named table spaces and decoded rights have source export (`Uebersetze/Teil/Teil3`,
+  `Kontext/Eigner`) and connected ordinary `ptrOf`/`thru`/`assignThru`/reference access paths.
+  Owned `Expr.thruOwn` and `Stmt.assignThruOwn` also use those slot paths with real `lowE_ok`/`lowS_ok` arms;
+  the source exporters exist in
+  [`UebersetzeAllg/Teil3`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Teil3.lean) and
+  [`UebersetzeAllg2/Teil1`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg2/Teil1.lean), and `borrows` has call-flow export.
+  **Original `own@...` types still fail `ExportMetadata.typeMetadata`**, even though the canonical owned-access path is connected.
+  Live byte, raw and entry targets remain refused there and/or by `uTypWert`; no source export to live byte/entry operations exists.
+  Open: bind original owner/byte/raw/entry duties to live grants/history and transferred capabilities.
+- **C14 selection, profiles, placement and entrust.**
+  [`Profil.prepareItems`](stage0/Stage0/Profil.lean) selects `when TESTBUILD`, checks `ProfileBinding.bindungB`,
+  and removes admitted `profile` blocks with `ohneProfilL` **before** elaboration; consistent profiles and covered
+  `requires profile` are implemented, connected through `CanonicalSourceProgram` and `Emitted.Correct`.
+  Conflicting bindings, hardware entry registers/vector/stack duties, boot, incompatible runner ABI and named sections
+  retain explicit refusals. Plain entry parsing/export exists, but `entryT` still hits the original `itemMetadata` default refusal.
+  [`uGlobs`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil11.lean) retains `aligned`/`section` placement;
+  original annotated globals still fail `itemMetadata.globT`.
+  The canonical image path **already supplies** the base divisibility: `bodenAusrichtung`/`boden_teilt` in
+  [`GlobalAlignment`](stage0/Stage0/Senke/Welt/GlobalAlignment.lean), `alignUp` in
+  [`bild`](stage0/Stage0/Senke/Images/Bild.lean), and `Emitted.Placed`/`irBild_correct` in `IRBild`.
+  `entrust ... via SERVICE` has a source parser, generated fallible wrappers and retained software service contracts
+  ([source](grammatik/Grammatik/Parser/Elab/Uebersetze/Guest/Source.lean),
+  [export](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Guest/Export.lean), `Compiled.guest_descriptors`).
+  The ordinary call/binder proof path is connected; missing service, privileged/register handover, unknown ABI and
+  additional transferred region inputs remain refused. Software isolation/storage remain user duties.
+  Open: original alignment metadata admission and section relocation policy; additional entrust region inputs and hardware entry lowering.
+- **C17 measures, constants and expansion.** `decreases` has checked source export
+  (`Uebersetze/MeasureSource`, `UebersetzeAllg3/Measures/Export`, `Stage0/Frontend/Measures`).
+  Certified const call-site substitution is **already on the real path**:
+  [`konstErsetzePipeline`/`checkSourceMetadata`](grammatik/Grammatik/Parser/Elab/Konst/ErsetzungTor.lean) and
+  [`elabExpandedWithScopes`](grammatik/Grammatik/Parser/Elab/Uebersetze/Einheit/Elaboration.lean) substitute calls
+  before runtime function export; open arguments and residual calls are refused. Const declarations are dropped
+  only after their certificates, and substituted values use ordinary connected expression arms.
+  [`Modules.prepare`](grammatik/Grammatik/Parser/Elab/Modules/Frontend.lean) expands generics/templates/uses;
+  `Compiler.compile` carries its checked result. However, original module-template/use headers and residual
+  statement-level `genericCall` fail the earlier `Frontend.source` metadata check, before that expanded gate.
+  Open: close that early original-source boundary for these headers/calls without dropping duties; unsupported const evaluation shapes.
+- **C18 narrowing and static arenas: implemented, connected at Block and Endblock level.**
+  `narrow` and `narrowRequired` use the complete-span interval kernel, including empty targets; required failure is stop 107.
+  Source `trim` without else produces `narrowReqBeg` in `Uebersetze/Teil/Teil10` and `narrowRequired` in
+  `UebersetzeAllg3/{Seq,Ende,Body}`: this form has a source producer.
+  Immutable, unannotated static-arena `alloc` with **or without else** passes `ExportMetadata.bodyMetadata`, recursively
+  checking the failure branch. `allocBeg`/`allocReqBeg` export through those same three modules to narrowing/stores
+  ([sugar](grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean));
+  [`NarrowCases`](stage0/Stage0/Senke/Anweisung/Faelle/Kontrolle/NarrowCases.lean) feeds `lowB_ok`/`lowEnd_ok`.
+  [`EndAllocWitness`](stage0/Stage0/Zeugen/Annahme/EndAllocWitness.lean) declares original-gate/source/image witnesses.
+  Arena/static-range `reset` exports to ordinary stores; required reservation/count/type checks remain.
+  Open: mutable/annotated allocation binders; dynamic/provider arenas, grow/free/page-return and live-region storage.
+- **Expression and aggregate follow-ups: implemented, connected.** Wide `istSome`, long/mixed `strCat`/`strLt`,
+  aggregate `Expr.case`/`Stmt.onTag` (product/float/string/wide payloads), and wide `getBytes`/`putBytes` have actual
+  `lowE`/`lowS` and generic proof arms, not detached helpers. String/option/tag source producers exist in
+  `Uebersetze/Teil/{Teil4,Teil5,Teil9,Teil10}` and `UebersetzeAllg/Teil5`; complete payload export uses
+  [`Tagged/Payload`](grammatik/Grammatik/Parser/Elab/Uebersetze/Tagged/Payload.lean).
+  Byte-span IR uses [read](stage0/Stage0/Senke/Anweisung/Bytes/Span/Read.lean) and
+  [write](stage0/Stage0/Senke/Anweisung/Bytes/Span/Write.lean) proofs; **no parser elaboration constructs `getBytes`/`putBytes`**.
+  Tag/byte-span `< 2^31`, fold/code/address/frame limits and scalar string-index checks remain refusals.
+  [`lowEnsAt`](stage0/Stage0/Senke/Ausdruck/Old/Code.lean) supports snapshots only in its explicit subtree fragment;
+  unsupported snapshots (including old under nonempty folds) fail its `currentOld := false` fallback.
+  Open: source production of byte-span operations and unsupported snapshot subtrees.
+- **Float binders: distinguish Block from Endblock.** Block `floatLit`/`float`/`floatOf`/`floatNarrow` have
+  lowering and connected generic arms (`Anweisung`, `Anweisung/Satz/Teil{3,5}`). Computed wide binary64 `floatOf`
+  reaches `computedFloatOfE_ok` → `blockFloatOfComputed_case` → `lowB_ok_floatOf`; overflow/range failure is stop 107.
+  Source binders exist (`Uebersetze/Teil/Teil8`, `UebersetzeAllg3/Seq`). Endblock float binders still fall through
+  `lowEnd` to `none`; literal/arithmetic producers exist (`UebersetzeAllg3/{Ende,Body}`), while those readers
+  lack `floatOf`/`floatNarrow` export arms.
+  Open: Endblock float lowering/proof arms and missing Endblock conversion/narrowing source export.
+- **Other named item duties.** C01 product and C03 tag paths use the connected aggregate arms above; C02 library/translator
+  expansion uses `Modules.prepare` plus `ExportMetadata.clausesMetadataWithoutLoad` (unsupported translators refuse).
+  C04 table `shift` exports through `Transition` and uses connected checked load/store (stop 106, signed range gates).
+  C05 table/group invariants and declared cost/scheduling/proof metadata remain refused by `ExportMetadata`, even though
+  ordinary globals, stores, contracts and supported snapshots lower. C06 structural function references/calls use
+  connected `fnref`/indirect-call arms after contract conformance. C13 arithmetic/builtins/folds use connected expression
+  arms under representability limits. C15 per-CPU accumulators and C16 declared checks/Duty wrappers have checked source
+  expansions (`Uebersetze/Akku`, `Uebersetze/Pruefung`) to those ordinary arms; missing counts, unsupported operators,
+  counterprobes and unbound measurement/floor/proof metadata refuse. Boot, device-register reads/writes/fallible reads/
+  transitions, ASM and privileged instructions remain outside userspace scope; default `lowS`/`lowB`/`lowEnd` arms refuse
+  register operations, and source item metadata rejects unsupported hardware declarations.
+  Open: the named metadata bindings and userspace source gaps above; no additional backend or interpreter project.
+
+- **Lean module system and file limits.** The migration is recorded as integrated in [AGENTS.md](AGENTS.md);
+  the former 2026-11-01 counts and “no grammatik change until merged” restriction are obsolete. No layout measurement was run here.
+
+The table records this audit only. **Gate** is effective original-source admission unless explicitly labelled “G only”;
+“admit” always retains the conditions above. **Proof yes** means an implemented generic lowering arm connects to the
+common image theorem in source, even if an earlier source gate refuses. **Producer yes** means parser + G export exist;
+it does not override metadata or target refusal. Items use their checked expansion/preparation, not an invented `lowS` arm.
+
+| Form | Gate (admit/refuse) | Proof connected | Source producer |
+|---|---|---|---|
+| Block/Endblock `bindAxiom`, `bindAxiomElse` | admit (binding/type/reason profile) | yes | yes |
+| Block/Endblock `bindAxiomOpt`, value / void | admit (binding/type profile) | yes | yes |
+| Block/Endblock `bindAxiomOptElse`, value / void | admit (binding/type/reason profile) | yes | yes |
+| `Stmt.axiomCallElse`, value / void | admit (binding/reasons) | yes | yes |
+| `Stmt.callIndElse`, value result | admit (supported pointer expression) | yes | yes |
+| Block/Endblock `bindCallIndElse` | admit (signature/contract/reasons) | yes | yes |
+| Fallible void indirect statement / general callee expression | refuse (source result/expression gate) | yes (G `callIndElse`) | no (these variants) |
+| Foreign Bool/reference/table-capability results | admit (transport; source type duties remain) | yes | yes |
+| Foreign multiword `result area REGISTER` | admit (scalar arguments/free hidden register) | yes | yes |
+| Foreign call without selected binding / area plus buffer | refuse (binding/transport profile) | no (refused combination) | yes |
+| `advances`, `retires`; ordinary consumes/Duty | admit (held mark/stage/call-flow checks) | yes | yes |
+| Owner `moves` / `borrows` | admit (static call flow; owner-typed signatures refuse) | yes (ordinary calls) | yes |
+| Owner `mints` | refuse (original mint-effect duty) | no (dynamic mint bridge) | yes |
+| `Expr.thruOwn`, `Stmt.assignThruOwn` / `own@...` | refuse (original owner type); admit G only | yes | yes |
+| `ptrOf`, `thru`, `assignThru`, named table spaces | admit (decoded rights/target) | yes | yes |
+| Safe `slotRef`, `assignSlotRef`, `refEq` | admit (declared reference/origin) | yes | yes |
+| Live byte/raw/entry targets | refuse (grant/history/binding duties) | no (live source path) | no (operational export) |
+| Exclusive `locks` | admit (`retFreiB` body only) | yes | yes |
+| Stmt/Endblock `retScoped`, `retWhyScoped` | admit G only; refuse inside source lock body | yes | yes |
+| Shared locks / RCU / watch | refuse (mode/lifetime export) | no | no (full mode-aware export) |
+| `consumeTraverse` / `by consuming` | admit (header/domain/effects/scratch checks) | yes | yes |
+| `GRest.rueckBereit`, `verbrauch`, `verbrauchRest` | refuse as direct IR input (internal continuations) | no (standalone emitter; pending-return replay open) | no (internal only) |
+| Block/Endblock `narrow`, `narrowRequired` / required `trim` | admit (complete-span interval checks) | yes | yes |
+| Static-arena `alloc`, required / else, Block / Endblock | admit (immutable, unannotated, checked continuation) | yes | yes |
+| Mutable/annotated allocation binders | refuse (no G export) | no | no |
+| Static-arena / static-range `reset` | admit (checked range/store expansion) | yes | yes |
+| Dynamic/provider allocation, grow/free/page-return | refuse (storage/provider duties) | no (connected source path) | no (complete G export) |
+| `when TESTBUILD` | admit (canonical selection) | yes | yes |
+| `profile`, `requires profile` | admit (consistent covered binding, stripped before elaboration) | yes | yes |
+| Global `aligned` | refuse (original metadata); admit canonical layout only | yes (placement theorem) | yes |
+| Named `section` | refuse (flat image relocation policy) | no (section relocation) | yes |
+| `entrust ... via SERVICE` | admit (supported software service boundary) | yes (generated calls) | yes |
+| Entrust extra region inputs / privileged handover | refuse (capability adapter/ABI duties) | no (these variants) | no (complete export) |
+| Plain userspace `entry` | refuse (original `entryT` metadata) | no (source-image closure) | yes (canonical dispatch) |
+| Hardware entry/vector/register/stack / incompatible ABI | refuse (image startup/ABI duties) | no | no (complete operational export) |
+| `decreases` | admit (checked source measure) | yes | yes |
+| `const` function closed value calls | admit (certified substitution) | yes (result expression path) | yes |
+| Open/residual const calls | refuse (no certified value) | no | no (certified replacement) |
+| Ordinary generic instances passing early source checks | admit (checked expansion) | yes (expanded ordinary arms) | yes |
+| Module-template/use headers, residual generic statements | refuse (early original metadata) | no (original-source closure) | yes (canonical expansion) |
+| Product/array values, aggregate `.case` / `onTag` | admit (layout and tag-count bounds) | yes | yes |
+| Wide `istSome`; long/mixed `strCat` / `strLt` | admit (capacity/frame/code bounds) | yes | yes |
+| Wide `getBytes` / `putBytes` | admit G only (span `<2^31`) | yes | no |
+| Supported `oldG`/`oldS` ensures subtrees | admit (snapshot fragment) | yes | yes |
+| Unsupported entry-snapshot subtrees / old under nonempty folds | refuse (`currentOld := false` fallback) | no | yes (canonical expressions) |
+| Oversized tags/byte spans/folds/code/addresses; nonscalar string indices | refuse (representability) | no (refused size) | yes except byte-span operations |
+| Block `floatLit`, `float`, `floatNarrow`, computed wide `floatOf` | admit (operand/range/frame/code checks) | yes | yes |
+| Endblock `floatLit`, `float` | refuse (`lowEnd` default) | no | yes |
+| Endblock `floatOf`, `floatNarrow` | refuse (`lowEnd` default; export absent) | no | no |
+| C02 library/translator expansion | admit (certified supported translator) | yes (expanded arms) | yes |
+| C04 table-state `shift` | admit (transition/signed range checks) | yes | yes |
+| C05 table/group invariants; declared costs/scheduling/provider/proof metadata | refuse (unbound source duties) | no (these source duties) | no (complete duty-preserving export) |
+| C06 function references/contract-conforming indirect calls | admit (contract/address/type checks) | yes | yes |
+| C13 arithmetic/builtins/folds | admit (local representability checks) | yes | yes |
+| C15 per-CPU accumulators | admit (count/operator/neutral checks) | yes (expanded arms) | yes |
+| C16 checks/Duty wrappers | admit (probe/gate/measurement admission) | yes (expanded arms) | yes |
+| C16 counterprobes/unbound floor/proof metadata | refuse (missing duty binding) | no | no (complete export) |
+| Device-register read/write/fallible read/transition; ASM/boot/privileged bodies | refuse (outside userspace scope) | no | yes where model export exists; no complete image path |
+
+Pending branches (not audited or credited here): `sammel-c5` (C12 syntax/binders), `sammel-c7` (float end binders,
+axiomCallElse witnesses, C12 Stage-0 bytes), `s0-profile` (C14 profile blocks); some related support already exists in this snapshot.
 
 - **Phase A step 4 (the combined `Spec.lean` diff "M8": arena plus payload) is PAUSED** (Simon, 2026-10-19). Nothing is merged or pushed.
   The arena foundation (M3) is green on Lean/Mathlib 4.35.0 (820 jobs); the full library is not (7 modules, one a real heartbeat
