@@ -127,7 +127,8 @@ theorem fadenS_scopedFreigabe (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO 
     gleichAuf_frei hg spur', trivial, ?_⟩
   intro calls O' U
   apply ZErgG.folgt_of_eq
-  rw [semH_aufraeumen_freigabe, hiσ, if_true]
+  rw [semH_aufraeumen_freigabe, hiσ]
+  rfl
 
 /-- A saved value at completed cleanup still satisfies the function contract. -/
 private theorem kopfS_scopedEns (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
@@ -204,7 +205,7 @@ theorem fadenS_scopedAntwort (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
         intro calls O' U
         apply ZErgG.folgt_of_eq
         simp only [semH, weiterH, scopesInvH, List.all_nil, if_true, List.foldl_nil])
-    simpa only [hs] using hroot
+    simpa only [hs, Speicher.welt_speicher] using hroot
   | cons caller rst =>
     have hSt := hF.2
     rw [hs] at hSt
@@ -219,36 +220,47 @@ theorem fadenS_scopedAntwort (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
       cases ha : antwortRestG z.kopf.f (.inl v) caller.rest with
       | none => simp [rufAntwortG, hs, ha] at hantwort
       | some resp =>
-        simp only [rufAntwortG, hs, ha, Option.bind, Option.some.injEq] at hantwort
+        simp [rufAntwortG, hs, ha] at hantwort
         subst z'
         refine ⟨⟨?_, hSt'⟩, logOk_rueck hL hens⟩
         rcases caller with ⟨cf, crho, cs0, lc, Γc, Λc, ρc, rc⟩
-        cases rc <;> simp only [antwortRestG] at ha
-        all_goals first
-          | (cases ha
-             apply popS_kopf hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
-               hb (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-               _ _ (fun _ h => h) id
-               (fun calls O' U σa X h => h.1 rfl) _ ⟨rfl, rfl⟩)
-          | (split at ha <;> (try contradiction)
-             rename_i he
-             cases ha
-             apply popS_kopf hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
-               hb (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-               _ _ (fun _ h => h) id
-               (fun calls O' U σa X h => h.2 _ _ _ _ _ _ _ _ (Or.inl rfl) he) _ ⟨rfl, rfl⟩)
-          | (split at ha <;> (try contradiction)
-             rename_i he
-             cases ha
-             apply popS_kopf hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
-               hb (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
-               _ _ (fun _ h => h) (fun hok => ⟨hok.2.2.1, hok.2.2.2.1, hok.2.2.2.2⟩)
-               (fun calls O' U σa X h => h.2 _ _ _ _ _ _ _ _ (Or.inr ⟨_, _, rfl⟩) he) _ ⟨rfl, rfl⟩)
+        cases rc with
+        | wartet rest k =>
+          simp only [antwortRestG] at ha
+          split at ha
+          · rename_i he
+            cases ha
+            refine popS_kopf hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
+              hb (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
+              _ (.dann rest (.schrumpf k)) (fun _ h => h) id ?_ _ ⟨rfl, rfl⟩
+            intro calls O' U σa X h
+            exact h.2 _ _ _ _ _ _ _ _ (Or.inl rfl) he
+          · contradiction
+        | wartetSonst n err rest k =>
+          simp only [antwortRestG] at ha
+          split at ha
+          · rename_i he
+            cases ha
+            refine popS_kopf hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
+              hb (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
+              _ (.dann rest (.schrumpf k)) (fun _ h => h) ?_ ?_ _ ⟨rfl, rfl⟩
+            · intro hok
+              exact ⟨hok.2.2.1, hok.2.2.2.1, hok.2.2.2.2⟩
+            · intro calls O' U σa X h
+              exact h.2 _ _ _ _ _ _ _ _ (Or.inr ⟨n, err, rfl⟩) he
+          · contradiction
+        | _ =>
+          simp only [antwortRestG] at ha
+          cases ha
+          exact popS_kopf hWc W (fun σa => .ok σa v) (Or.inl ⟨v, fun _ => rfl, hens⟩)
+            hb (gleichOhne_of_stapelS hRS' _ ⟨rfl, rfl⟩)
+            _ _ (fun _ h => h) id
+            (fun calls O' U σa X h => h.1 rfl) _ ⟨rfl, rfl⟩
     | inr grund =>
       cases ha : antwortRestG z.kopf.f (.inr grund) caller.rest with
       | none => simp [rufAntwortG, hs, ha] at hantwort
       | some resp =>
-        simp only [rufAntwortG, hs, ha, Option.bind, Option.some.injEq] at hantwort
+        simp [rufAntwortG, hs, ha] at hantwort
         subst z'
         refine ⟨⟨?_, hSt'⟩, logOk_grund hL⟩
         rcases caller with ⟨cf, crho, cs0, lc, Γc, Λc, ρc, rc⟩
