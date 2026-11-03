@@ -84,7 +84,7 @@ theorem softMulCompressL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pro
   have result : WordCode (L := L) ρ W _ _ := WordCode.bin jam high (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
   intro fp K d c top h hK m pc hp
-  simpa only [softMulCompressWord, BitVec.ofInt_ofNat] using result h hK m pc hp
+  simpa only [softMulCompressWord, BitVec.ofInt_ofNat, Int.ofNat_eq_coe, BitVec.ofInt_natCast] using result h hK m pc hp
 
 /-- Relate the compressed word to the full product, not to its wrapped low
     limb. Every discarded product bit is represented by the sticky bit. -/

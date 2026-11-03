@@ -102,7 +102,7 @@ theorem trailing_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
         by_cases hd : x.n.toNat % 2 = 1 <;>
           simp only [trailingValue, natural, ctzAux, digit, zero, sum, hz, hn,
             parity, hd, decide_true, decide_false, Bool.false_eq_true,
-            ite_true, ite_false, Int.natCast_add]
+            ite_true, ite_false, Int.natCast_add] <;> (try simp)
     rw [value]
     exact choose_ok (τ := .int 0 (fuel + 1 : Nat)) _ zero _
       (eq_ok x (⟨0, by omega, by omega⟩ : Zahl 0 0) ia
@@ -145,7 +145,7 @@ theorem logarithm_ok {hi : Int} (width : Nat) (bound : hi < (2 : Int) ^ width)
       rw [Nat.log2_def]
       by_cases hx : x.n < 2
       · have hn : ¬ 2 ≤ x.n.toNat := small.mp hx
-        simp only [hx, hn, decide_true, ite_true, ite_false, zero]
+        simp only [hx, hn, decide_true, ite_true, ite_false, zero]; rfl
       · have hn : 2 ≤ x.n.toNat := by omega
         simp only [hx, hn, decide_false, Bool.false_eq_true, ite_false, ite_true,
           sum, natural, Int.natCast_add]

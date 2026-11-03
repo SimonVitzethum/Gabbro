@@ -20,14 +20,14 @@ theorem softRoundNat_aligned_add (large small gap : Nat)
   have dp : 0 < (2 : Nat) ^ gap := Nat.two_pow_pos _
   rcases softShiftJamNat_interval small gap with exactValue | ⟨odd, lo, hi⟩
   · apply softRound_scaled _ _ _ _ dp (by omega)
-    rw [exactValue.2]
+    conv_lhs => rw [exactValue.2]
     ring
   · have jp : 0 < softShiftJamNat small gap := by omega
     have pred : large + softShiftJamNat small gap - 1 =
         large + (softShiftJamNat small gap - 1) := by omega
     apply softRound_odd_interval _ _ _ _ dp tp
     · rw [Nat.add_mod, even, odd]
-      decide
+      try decide
     · rw [pred, Nat.add_mul]
       omega
     · rw [Nat.add_mul] at *
