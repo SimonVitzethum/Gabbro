@@ -191,6 +191,19 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     callee's result type (`Block.bindCall`; a range annotation must contain the result range). -/
 def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool) (x : String)
     (t : Option STyp) (e : SExpr) : Except String (UStmt × UCtx) :=
+  match e with
+  | .call "f32" args | .call "f64" args => do
+    let [operand] := args | throw "floatOf: expected one integer operand"
+    let target ← match t with
+      | some annotation => uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner annotation
+      | none => pure uFloatTy
+    let .fl lo hi := target | throw "floatOf: target is not a declared float type"
+    let side ← match uWertBody ctx operand with
+      | .ok side => pure side
+      | .error err => throw ("floatOf: " ++ err)
+    let muts := if mu then x :: ctx.muts else ctx.muts.filter (fun name => !strEq name x)
+    pure (.floatOf x side lo hi, uMitLokal ctx x .wert (.fl lo hi) muts)
+  | _ =>
   match uRegOrt ctx e with
   | some (.error err) => .error err
   | some (.ok rg) =>
