@@ -105,13 +105,13 @@ theorem fort_abb {M : RufMaschineG D} {t : Faden} (hP : PrueftG O passes M t) (w
           cases w with
           | false =>
               exact ⟨_, RufSchrittG.dannNextVerbrauch M t _ _ Λ1 tb member edge inv bound mass body
-                nr vor k' rest i ρ₀ rfl hx (M.weltVon t) (.cons i ρ₀) [] rfl (by simp)
+                nr vor k' rest i ρ₀ rfl hx (M.weltVon t) (.cons i ρ₀) [] rfl rfl
                 (by simp) _ rfl _ rfl hp.1 neum hneum hΛ⟩
           | true =>
               obtain ⟨neu₁, hneu₁, _⟩ := (Erw.lese (M.weltVon t) Λ1 mass.orte).trans
                 (Erw.lese ((M.weltVon t).lese Λ1 mass.orte) Λ1 inv.orte)
               exact ⟨_, RufSchrittG.dannLeaveVerbrauch M t _ _ Λ1 tb member edge inv bound mass body
-                nr vor k' rest i ρ₀ rfl hx (M.weltVon t) (.cons i ρ₀) [] rfl (by simp)
+                nr vor k' rest i ρ₀ rfl hx (M.weltVon t) (.cons i ρ₀) [] rfl rfl
                 (by simp) _ rfl _ rfl hp.1 _ rfl (hp.2 rfl) neu₁ hneu₁ hΛ⟩
   | wiederRest n bis body ueber k' =>
       obtain ⟨M', hs, _⟩ := w_abbWieder (P := P) (O := O) (passes := passes) rfl w n bis body ueber

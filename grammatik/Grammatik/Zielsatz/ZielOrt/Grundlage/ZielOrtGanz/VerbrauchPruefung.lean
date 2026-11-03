@@ -43,6 +43,44 @@ def verbrauchAbbruchPrueft
     (w = true → let σ₁ := lesen (lesen σ Λ mass.orte) Λ inv.orte
       wahr? (eval σ₁ inv σ₁ ρ) = true)
 
+/-- The consuming boundary check reads only the footprint `S`: the read worlds `σ₁` (after the
+    invariant read) and `σ₂` (after the member and edge reads) may be replaced by worlds that agree
+    with them on `S`. -/
+theorem verbrauchKopfWerte_gleich {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (rest : Nat) (ρ : Env D Γ)
+    {S S' : List (D.Tab ⊕ D.Glob)} (hi : ∀ o ∈ inv.orte, o ∈ S)
+    (hm : ∀ o ∈ member.orte, o ∈ S') (he : ∀ o ∈ edge.orte, o ∈ S')
+    {σ₁ σ₁' σ₂ σ₂' : World D} (g₁ : GleichAuf S σ₁ σ₁') (g₂ : GleichAuf S' σ₂ σ₂') :
+    (0 < rest ∧ wahr? (eval σ₁ inv σ₁ ρ) = true ∧
+      (verbrauchWahl (alleIndizes (D.count t))
+        (fun i => wahr? (eval σ₂ member σ₂ (.cons i ρ)))
+        (fun i j => wahr? (eval σ₂ edge σ₂ (.cons i (.cons j ρ))))
+        (fun i j => decide (i.n = j.n)) = none →
+        ((alleIndizes (D.count t)).all fun i => !(wahr? (eval σ₂ member σ₂ (.cons i ρ)))) = true)) ↔
+    (0 < rest ∧ wahr? (eval σ₁' inv σ₁' ρ) = true ∧
+      (verbrauchWahl (alleIndizes (D.count t))
+        (fun i => wahr? (eval σ₂' member σ₂' (.cons i ρ)))
+        (fun i j => wahr? (eval σ₂' edge σ₂' (.cons i (.cons j ρ))))
+        (fun i j => decide (i.n = j.n)) = none →
+        ((alleIndizes (D.count t)).all fun i => !(wahr? (eval σ₂' member σ₂' (.cons i ρ)))) = true)) := by
+  have ei := eval_gleichAuf inv hi g₁ ρ
+  have em := fun i => eval_gleichAuf member hm g₂ (.cons i ρ)
+  have ee := fun i j => eval_gleichAuf edge he g₂ (.cons i (.cons j ρ))
+  have hf1 : (fun i : Zahl 0 (D.count t - 1) => wahr? (eval σ₂ member σ₂ (Env.cons i ρ))) =
+      (fun i => wahr? (eval σ₂' member σ₂' (Env.cons i ρ))) :=
+    funext fun i => congrArg wahr? (em i)
+  have hf2 : (fun i j : Zahl 0 (D.count t - 1) =>
+      wahr? (eval σ₂ edge σ₂ (Env.cons i (Env.cons j ρ)))) =
+      (fun i j => wahr? (eval σ₂' edge σ₂' (Env.cons i (Env.cons j ρ)))) :=
+    funext fun i => funext fun j => congrArg wahr? (ee i j)
+  have hf3 : (fun i : Zahl 0 (D.count t - 1) => !wahr? (eval σ₂ member σ₂ (Env.cons i ρ))) =
+      (fun i => !wahr? (eval σ₂' member σ₂' (Env.cons i ρ))) :=
+    funext fun i => congrArg (fun b => !b) (congrArg wahr? (em i))
+  rw [hf1, hf2, hf3, ei]
+  exact Iff.rfl
+
 section Checks
 
 variable (O : Orakel D) (passes : Nat)
@@ -71,14 +109,19 @@ theorem semV_verbrauch_pruefung_falsch (rest : Nat) (k : GRest D V l Γ Λ)
       have h := fun hp => h ⟨hn, hp⟩
       by_cases hw : wahr? (eval (World.lese σ Λ inv.orte) inv (World.lese σ Λ inv.orte) ρ) = true
       · have hbad := fun hh => h ⟨hw, hh⟩
-        simp only [not_imp] at hbad
-        obtain ⟨hnone, hkein⟩ := hbad
+        obtain ⟨hnone, hkein⟩ := Classical.not_imp.mp hbad
         have hf : ((alleIndizes (D.count t)).all fun i =>
             !(wahr? (eval (World.lese (World.lese σ Λ inv.orte) Λ (member.orte ++ edge.orte))
               member (World.lese (World.lese σ Λ inv.orte) Λ (member.orte ++ edge.orte)) (.cons i ρ)))) = false :=
           Bool.eq_false_iff.mpr hkein
-        simp only [semV, weiterZ, laufA, verbrauchLauf, leseB, verbrauchSel, hw,
-          Bool.true_eq_false, ite_false, hnone, hf, Bool.not_false]
+        have hsel : verbrauchSel t member edge (World.lese σ Λ inv.orte) ρ =
+            (World.lese (World.lese σ Λ inv.orte) Λ (member.orte ++ edge.orte), none, true) := by
+          refine Prod.ext rfl (Prod.ext hnone ?_)
+          show (!(alleIndizes (D.count t)).all _) = true
+          rw [Bool.not_eq_true']
+          exact hf
+        simp only [semV, weiterZ, laufA, verbrauchLauf, leseB, hw,
+          Bool.true_eq_false, ite_false, hsel]
         exact weiterZ_logik O passes R k _
       · have hf := Bool.eq_false_iff.mpr hw
         simp only [semV, weiterZ, laufA, verbrauchLauf, leseB, hf, ite_true]
@@ -93,8 +136,7 @@ theorem semV_verbrauchRest_falsch (rest : Nat) (vor : Int) (k : GRest D V l Γ �
   show weiterZ O passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
     (.ok σ (.cons i ρ)) = _
   dsimp only [verbrauchAbstiegPrueft] at h
-  dsimp only [weiterZ, Env.tail]
-  rw [if_neg h]
+  simp only [weiterZ, Env.tail, h, ↓reduceIte]
   exact weiterZ_logik O passes R k _
 
 /-- `leave` and `next` expose the same descent check as normal completion. -/
@@ -114,9 +156,8 @@ theorem semV_abbVerbrauch_falsch {Λx : List (Res D)} (rest : Nat) (vor : Int)
       have hfall : ¬ (0 ≤ (eval (World.lese σ Λ mass.orte) mass (World.lese σ Λ mass.orte) ρ).n ∧
           (eval (World.lese σ Λ mass.orte) mass (World.lese σ Λ mass.orte) ρ).n ≤ bound ∧
           (eval (World.lese σ Λ mass.orte) mass (World.lese σ Λ mass.orte) ρ).n < vor) :=
-        fun hf => h ⟨hf, fun hw => Bool.false_ne_true hw⟩
-      dsimp only [weiterZ, Env.tail]
-      rw [if_neg hfall]
+        fun hf => h ⟨hf, fun hw => (Bool.false_ne_true hw).elim⟩
+      simp only [weiterZ, Env.tail, hfall, ↓reduceIte]
       exact weiterZ_logik O passes R k _
   | true =>
       change weiterZ O passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
@@ -128,13 +169,9 @@ theorem semV_abbVerbrauch_falsch {Λx : List (Res D)} (rest : Nat) (vor : Int)
       · have hinv : ¬ (wahr? (eval (World.lese (World.lese σ Λ mass.orte) Λ inv.orte) inv
             (World.lese (World.lese σ Λ mass.orte) Λ inv.orte) ρ) = true) :=
           fun hw => h ⟨hfall, fun _ => hw⟩
-        dsimp only [weiterZ, Env.tail]
-        rw [if_pos hfall]
-        dsimp only [leseB]
-        rw [if_neg hinv]
+        simp only [weiterZ, Env.tail, hfall, leseB, hinv, ↓reduceIte]
         exact weiterZ_logik O passes R k _
-      · dsimp only [weiterZ, Env.tail]
-        rw [if_neg hfall]
+      · simp only [weiterZ, Env.tail, hfall, ↓reduceIte]
         exact weiterZ_logik O passes R k _
 
 

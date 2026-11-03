@@ -146,20 +146,17 @@ theorem fadenR_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     exact weiterZ_logik _ _ _ _ e
 
   · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
-    by_contra hbad
+    refine Classical.byContradiction fun hbad => ?_
     apply hno .schleife
     apply semV_verbrauch_pruefung_falsch
     intro hp
     apply hbad
-    have ei := eval_gleichAuf inv (hok.2.2.1) (hg.lese Λ Λ inv.orte inv.orte) ρ
-    have g₂ := (hg.lese Λ Λ inv.orte inv.orte).lese Λ Λ (member.orte ++ edge.orte) (member.orte ++ edge.orte)
-    have em := fun i => eval_gleichAuf member (hok.1) g₂ (.cons i ρ)
-    have ee := fun i j => eval_gleichAuf edge (hok.2.1) g₂ (.cons i (.cons j ρ))
-    dsimp only [verbrauchKopfPrueft] at hp ⊢
-    simp_rw [ei, em, ee] at hp
-    exact hp
+    exact (verbrauchKopfWerte_gleich tb member edge inv rest ρ hok.2.2.1 hok.1 hok.2.1
+      (hg.lese Λ Λ inv.orte inv.orte)
+      ((hg.lese Λ Λ inv.orte inv.orte).lese Λ Λ (member.orte ++ edge.orte)
+        (member.orte ++ edge.orte))).mp hp
   · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
-    by_contra hbad
+    refine Classical.byContradiction fun hbad => ?_
     apply hno .schleife
     apply semV_verbrauchRest_falsch
     intro hp
@@ -168,7 +165,7 @@ theorem fadenR_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     rw [eval_gleichAuf mass (hok.2.2.2.1) (hg.lese Λ Λ mass.orte mass.orte) ρ] at hp
     exact hp
   · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
-    by_contra hbad
+    refine Classical.byContradiction fun hbad => ?_
     apply hno .schleife
     apply semV_abbVerbrauch_falsch
     intro hp

@@ -51,14 +51,19 @@ theorem semHA_verbrauch_pruefung_falsch (rest : Nat) (k : GRest D V l Γ Λ)
       have h := fun hp => h ⟨hn, hp⟩
       by_cases hw : wahr? (eval ((leseA A) σ Λ inv.orte) inv ((leseA A) σ Λ inv.orte) ρ) = true
       · have hbad := fun hh => h ⟨hw, hh⟩
-        simp only [not_imp] at hbad
-        obtain ⟨hnone, hkein⟩ := hbad
+        obtain ⟨hnone, hkein⟩ := Classical.not_imp.mp hbad
         have hf : ((alleIndizes (D.count t)).all fun i =>
             !(wahr? (eval ((leseA A) ((leseA A) σ Λ inv.orte) Λ (member.orte ++ edge.orte))
               member ((leseA A) ((leseA A) σ Λ inv.orte) Λ (member.orte ++ edge.orte)) (.cons i ρ)))) = false :=
           Bool.eq_false_iff.mpr hkein
-        simp only [semHA, weiterHA, laufA, verbrauchLauf, leseBA, verbrauchSelA, hw,
-          Bool.true_eq_false, ite_false, hnone, hf, Bool.not_false]
+        have hsel : verbrauchSelA A t member edge ((leseA A) σ Λ inv.orte) ρ =
+            ((leseA A) ((leseA A) σ Λ inv.orte) Λ (member.orte ++ edge.orte), none, true) := by
+          refine Prod.ext rfl (Prod.ext hnone ?_)
+          show (!(alleIndizes (D.count t)).all _) = true
+          rw [Bool.not_eq_true']
+          exact hf
+        simp only [semHA, weiterHA, laufA, verbrauchLauf, leseBA, hw,
+          Bool.true_eq_false, ite_false, hsel]
         exact weiterHA_logik S O U A passes R k _
       · have hf := Bool.eq_false_iff.mpr hw
         simp only [semHA, weiterHA, laufA, verbrauchLauf, leseBA, hf, ite_true]
@@ -73,8 +78,7 @@ theorem semHA_verbrauchRest_falsch (rest : Nat) (vor : Int) (k : GRest D V l Γ 
   show weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
     (.ok σ (.cons i ρ)) = _
   dsimp only [verbrauchAbstiegPrueft] at h
-  dsimp only [weiterHA, Env.tail]
-  rw [if_neg h]
+  simp only [weiterHA, Env.tail, h, ↓reduceIte]
   exact weiterHA_logik S O U A passes R k _
 
 /-- `leave` and `next` expose the same descent check as normal completion. -/
@@ -94,9 +98,8 @@ theorem semHA_abbVerbrauch_falsch {Λx : List (Res D)} (rest : Nat) (vor : Int)
       have hfall : ¬ (0 ≤ (eval ((leseA A) σ Λ mass.orte) mass ((leseA A) σ Λ mass.orte) ρ).n ∧
           (eval ((leseA A) σ Λ mass.orte) mass ((leseA A) σ Λ mass.orte) ρ).n ≤ bound ∧
           (eval ((leseA A) σ Λ mass.orte) mass ((leseA A) σ Λ mass.orte) ρ).n < vor) :=
-        fun hf => h ⟨hf, fun hw => Bool.false_ne_true hw⟩
-      dsimp only [weiterHA, Env.tail]
-      rw [if_neg hfall]
+        fun hf => h ⟨hf, fun hw => (Bool.false_ne_true hw).elim⟩
+      simp only [weiterHA, Env.tail, hfall, ↓reduceIte]
       exact weiterHA_logik S O U A passes R k _
   | true =>
       change weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
@@ -108,13 +111,9 @@ theorem semHA_abbVerbrauch_falsch {Λx : List (Res D)} (rest : Nat) (vor : Int)
       · have hinv : ¬ (wahr? (eval ((leseA A) ((leseA A) σ Λ mass.orte) Λ inv.orte) inv
             ((leseA A) ((leseA A) σ Λ mass.orte) Λ inv.orte) ρ) = true) :=
           fun hw => h ⟨hfall, fun _ => hw⟩
-        dsimp only [weiterHA, Env.tail]
-        rw [if_pos hfall]
-        dsimp only [leseBA]
-        rw [if_neg hinv]
+        simp only [weiterHA, Env.tail, hfall, leseBA, hinv, ↓reduceIte]
         exact weiterHA_logik S O U A passes R k _
-      · dsimp only [weiterHA, Env.tail]
-        rw [if_neg hfall]
+      · simp only [weiterHA, Env.tail, hfall, ↓reduceIte]
         exact weiterHA_logik S O U A passes R k _
 
 

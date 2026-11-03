@@ -325,26 +325,23 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     have hPX := umweltAusA_passt Tg hfx'
     have hHA := umweltAusA_ok Tg HX'
     obtain ⟨g₁, g₂⟩ := verbrauch_lese2_gleichAuf hg (expr_stabilX (hFS _) inv hok.2.2.1) hX₂ Λ
-    by_contra hbad
+    refine Classical.byContradiction fun hbad => ?_
     apply hno _ (passtX_teil hsub hPX) hHA .schleife
     apply semHA_verbrauch_pruefung_falsch
     intro hp
     apply hbad
     dsimp only [verbrauchKopfPrueft] at hp ⊢
     rw [(hrec _ hPX hHA).1, (hrec _ hPX hHA).2] at hp
-    have ei := eval_gleichAuf inv (fun _ h => List.mem_append_right _ h) g₁ ρ
-    have em := fun i => eval_gleichAuf member
-      (fun _ h => List.mem_append_right _ (List.mem_append_left _ h)) g₂ (.cons i ρ)
-    have ee := fun i j => eval_gleichAuf edge
-      (fun _ h => List.mem_append_right _ (List.mem_append_right _ h)) g₂ (.cons i (.cons j ρ))
-    simp_rw [ei, em, ee] at hp
-    exact hp
+    exact (verbrauchKopfWerte_gleich tb member edge inv rest ρ
+      (fun _ h => List.mem_append_right _ h)
+      (fun _ h => List.mem_append_right _ (List.mem_append_left _ h))
+      (fun _ h => List.mem_append_right _ (List.mem_append_right _ h)) g₁ g₂).mp hp
   · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
       kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
     obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ mass.orte (M.weltVon t).speicher
     have hPX := umweltAusA_passt Tg hfx'
     have hHA := umweltAusA_ok Tg HX'
-    by_contra hbad
+    refine Classical.byContradiction fun hbad => ?_
     apply hno _ (passtX_teil hsub hPX) hHA .schleife
     apply semHA_verbrauchRest_falsch
     intro hp
@@ -361,7 +358,7 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     have hHA := umweltAusA_ok Tg HX'
     obtain ⟨g₁, g₂⟩ := verbrauch_lese2_gleichAuf hg'
       (expr_stabilX (hFS _) mass hok.2.2.2.2.2.1) (expr_stabilX (hFS _) inv hok.2.2.2.2.1) Λ
-    by_contra hbad
+    refine Classical.byContradiction fun hbad => ?_
     apply hno _ (passtX_teil hsub hPX) hHA .schleife
     apply semHA_abbVerbrauch_falsch
     intro hp

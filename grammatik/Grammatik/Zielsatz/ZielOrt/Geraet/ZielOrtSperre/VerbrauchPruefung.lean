@@ -37,14 +37,19 @@ theorem semH_verbrauch_pruefung_falsch (rest : Nat) (k : GRest D V l Γ Λ)
       have h := fun hp => h ⟨hn, hp⟩
       by_cases hw : wahr? (eval (World.lese σ Λ inv.orte) inv (World.lese σ Λ inv.orte) ρ) = true
       · have hbad := fun hh => h ⟨hw, hh⟩
-        simp only [not_imp] at hbad
-        obtain ⟨hnone, hkein⟩ := hbad
+        obtain ⟨hnone, hkein⟩ := Classical.not_imp.mp hbad
         have hf : ((alleIndizes (D.count t)).all fun i =>
             !(wahr? (eval (World.lese (World.lese σ Λ inv.orte) Λ (member.orte ++ edge.orte))
               member (World.lese (World.lese σ Λ inv.orte) Λ (member.orte ++ edge.orte)) (.cons i ρ)))) = false :=
           Bool.eq_false_iff.mpr hkein
-        simp only [semH, weiterH, laufA, verbrauchLauf, leseB, verbrauchSel, hw,
-          Bool.true_eq_false, ite_false, hnone, hf, Bool.not_false]
+        have hsel : verbrauchSel t member edge (World.lese σ Λ inv.orte) ρ =
+            (World.lese (World.lese σ Λ inv.orte) Λ (member.orte ++ edge.orte), none, true) := by
+          refine Prod.ext rfl (Prod.ext hnone ?_)
+          show (!(alleIndizes (D.count t)).all _) = true
+          rw [Bool.not_eq_true']
+          exact hf
+        simp only [semH, weiterH, laufA, verbrauchLauf, leseB, hw,
+          Bool.true_eq_false, ite_false, hsel]
         exact weiterH_logik S O U passes R k _
       · have hf := Bool.eq_false_iff.mpr hw
         simp only [semH, weiterH, laufA, verbrauchLauf, leseB, hf, ite_true]
@@ -59,8 +64,7 @@ theorem semH_verbrauchRest_falsch (rest : Nat) (vor : Int) (k : GRest D V l Γ �
   show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
     (.ok σ (.cons i ρ)) = _
   dsimp only [verbrauchAbstiegPrueft] at h
-  dsimp only [weiterH, Env.tail]
-  rw [if_neg h]
+  simp only [weiterH, Env.tail, h, ↓reduceIte]
   exact weiterH_logik S O U passes R k _
 
 /-- `leave` and `next` expose the same descent check as normal completion. -/
@@ -80,9 +84,8 @@ theorem semH_abbVerbrauch_falsch {Λx : List (Res D)} (rest : Nat) (vor : Int)
       have hfall : ¬ (0 ≤ (eval (World.lese σ Λ mass.orte) mass (World.lese σ Λ mass.orte) ρ).n ∧
           (eval (World.lese σ Λ mass.orte) mass (World.lese σ Λ mass.orte) ρ).n ≤ bound ∧
           (eval (World.lese σ Λ mass.orte) mass (World.lese σ Λ mass.orte) ρ).n < vor) :=
-        fun hf => h ⟨hf, fun hw => Bool.false_ne_true hw⟩
-      dsimp only [weiterH, Env.tail]
-      rw [if_neg hfall]
+        fun hf => h ⟨hf, fun hw => (Bool.false_ne_true hw).elim⟩
+      simp only [weiterH, Env.tail, hfall, ↓reduceIte]
       exact weiterH_logik S O U passes R k _
   | true =>
       change weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
@@ -94,13 +97,9 @@ theorem semH_abbVerbrauch_falsch {Λx : List (Res D)} (rest : Nat) (vor : Int)
       · have hinv : ¬ (wahr? (eval (World.lese (World.lese σ Λ mass.orte) Λ inv.orte) inv
             (World.lese (World.lese σ Λ mass.orte) Λ inv.orte) ρ) = true) :=
           fun hw => h ⟨hfall, fun _ => hw⟩
-        dsimp only [weiterH, Env.tail]
-        rw [if_pos hfall]
-        dsimp only [leseB]
-        rw [if_neg hinv]
+        simp only [weiterH, Env.tail, hfall, leseB, hinv, ↓reduceIte]
         exact weiterH_logik S O U passes R k _
-      · dsimp only [weiterH, Env.tail]
-        rw [if_neg hfall]
+      · simp only [weiterH, Env.tail, hfall, ↓reduceIte]
         exact weiterH_logik S O U passes R k _
 
 
