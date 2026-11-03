@@ -183,6 +183,10 @@ structure UFn where
   nimmt : List String := []
   /-- The linear marks the function produces (`effects { allocs m }`, C16). -/
   gibt : List String := []
+  /-- The owner marks the function borrows for the call (`effects { borrows m }`, C12):
+      call-scoped loans (`OwnerFlow.loans`) -- the callee holds them during the
+      call, the caller gets them back on normal return. -/
+  leiht : List String := []
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
