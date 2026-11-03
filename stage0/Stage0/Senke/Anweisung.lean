@@ -15,6 +15,7 @@
 module
 public import Stage0.Senke.Ausdruck
 public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
+public import Stage0.Senke.Ausdruck.Gleit.Wide.Range
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
 public import Stage0.Senke.Stopp
 public import Stage0.Senke.Tor
@@ -211,7 +212,7 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     match e with
     | .lit n => floatLiteralL ((frei Γ reserved)) (n, 1) low high (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
     | _ => do
-      let cc ← canonicalFloatRangeL (frei Γ reserved) low high
+      let cc ← computedFloatRangeL (frei Γ reserved) low high
         (fun d => computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e d)
       let ce ← computedFloatOfE (reserved := reserved) L Gleitkomma.f64 e (frei Γ reserved)
       let cr ← lowB (reserved := reserved) passes A L layout ens pr ex rest
