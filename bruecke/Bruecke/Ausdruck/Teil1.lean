@@ -116,7 +116,7 @@ theorem durchTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
     HEq (durchTerm u Γ Λ num w h fh v i hL)
-      (Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (tabNr_some u num h) fh.idx i hL) := by
+      (Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (capTab_some u num h) fh.idx i hL) := by
   unfold durchTerm; exact mpr_heq _ _
 
 theorem slotTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
