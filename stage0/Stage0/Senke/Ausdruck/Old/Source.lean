@@ -152,6 +152,7 @@ def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool := do
   let ls : List (declOf u).Lock := List.finRange u.locks.length
   let cs : List ((declOf u).Tab ⊕ (declOf u).Glob) :=
     (List.finRange u.tabs.length).map Sum.inl ++ (List.finRange u.globs.length).map Sum.inr
-  pure (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws)
+  let guests ← sourceGuests u
+  pure (AkzeptiertX P (sperrFamilie u) (List.finRange u.fns.length) ls cs ws [] [] [] guests)
 
 end Gabbro.Stage0.OldSource
