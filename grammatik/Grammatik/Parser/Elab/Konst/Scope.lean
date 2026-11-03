@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst
@@ -24,7 +24,12 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
   let types := uAliase values items ++ values.map (fun (name, value) => (name, (value, value)))
   let domains ← constDomains values items
   let schemas ← uSums types items domains
-  let named := schemas.map (fun schema => (schema.name, Ty.sum schema.spec))
+  let reasons ← uWhys items types
+  let reasonSchemas : List USum := reasons.map (fun reason =>
+    { name := reason.name, cases := reason.cases.map (fun name => (name, none)) })
+  let named := schemas.map (fun schema => (schema.name, Ty.sum schema.spec)) ++
+    reasons.map (fun reason => (reason.name, Ty.why reason.cases.length))
+  let schemas := schemas ++ reasonSchemas
   items.foldrM (fun item rest =>
     match item with
     | .fnT signature body => do
