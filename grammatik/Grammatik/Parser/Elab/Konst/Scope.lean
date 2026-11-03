@@ -18,6 +18,8 @@ def constDomains (values : List (String × Int)) : List SItemTief → Except Str
 /-- Resolve every const signature in the same canonical value/type environment.
     Original source bodies and predicates remain available to their certificates. -/
 def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) := do
+  if !items.any (fun | .fnT signature _ => strEq signature.art "const" | _ => false) then
+    return []
   let initial := uConstsRech (uKonstFns items) items []
   let aliases := uAliase initial items
   let values := uConstsRech (uKonstFnsWith aliases items) items []
