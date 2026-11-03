@@ -120,7 +120,7 @@ def packL (d : Nat) (s e f : Nat → Option (List II × Nat)) :
     (f (d + 1))
 
 /-- Compositional IR simulation for packing. -/
-{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem packL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {s e f : Nat → Option (List II × Nat)} {sv ev fv : Runner.W}
     (hs : WordCode (L := L) (reserved := reserved) ρ W s sv) (he : WordCode (L := L) (reserved := reserved) ρ W e ev)
     (hf : WordCode (L := L) (reserved := reserved) ρ W f fv) :
