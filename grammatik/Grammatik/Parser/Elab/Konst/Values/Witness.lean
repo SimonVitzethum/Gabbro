@@ -154,6 +154,25 @@ theorem portable_post_refused_zeuge :
       (.call "positive" [.lit 3]) =
       .error "const contract violated at `positive`: ensures failed" := rfl
 
+theorem portable_requires_refused_zeuge :
+    ersetzeSExpr [{ positive with signature := { positive.signature with klauseln := [.needs .fls] } }]
+      (.call "positive" [.lit 3]) =
+      .error "const contract violated at `positive`: requires failed" := rfl
+
+theorem tag_missing_payload_refused_zeuge :
+    ersetzeSExpr [{ emptyTag with rumpf := .block [] (some (.ret (some (.variable "Data")))) }]
+      (.call "tagged" []) =
+      .error "const tagged constructor payload does not match its declared type" := rfl
+
+/-- Statement-position calls keep their call-log-sensitive refusal after value expansion. -/
+theorem portable_statement_refused_zeuge :
+    let signature : FnSig := { art := "impl", name := "main", params := [],
+      res := none, fehler := none, klauseln := [] }
+    let items := [SItemTief.fnT positive.signature positive.rumpf,
+      .fnT signature (.block [.call "positive" [.lit 3]] (some (.ret none)))]
+    checkErsetzt items items =
+      .error "const call without certified value: refusing runtime export" := rfl
+
 def captured : UKonstFn where
   name := "captured"
   params := [("x", .int 0 10)]
