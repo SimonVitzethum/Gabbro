@@ -53,12 +53,15 @@ theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
   exact record_lower output.compiled.unit Γ Λ fn er identity reordered sides args
     gate lowered schema declared
 
-/-- Every admitted new export is in the metadata domain checked on its original source,
-    before old/global normalization or G lowering can discard an annotation. -/
+/-- Original-source admission retains the successful certified const substitution
+    and all remaining runtime metadata checks before G lowering. -/
 theorem Compiled.exports_metadata {text : String} {options : Profil.Options} (result : Compiled text options)
     (h : result.unit.exportGate = .ok ()) :
-    (uMembers (pre108 result.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false :=
-  ExportMetadata.check_sound _ (result.metadata.symm.trans h)
+    ∃ rewritten,
+      Konst.konstErsetzePipeline (uMembers (pre108 result.source.prepared.elaborierbar)) = .ok rewritten ∧
+      Konst.checkErsetzt (uMembers (pre108 result.source.prepared.elaborierbar)) rewritten = .ok () ∧
+      (Konst.ohneKonst rewritten).any ExportMetadata.itemMetadata = false :=
+  Konst.checkSourceMetadata_sound _ (result.metadata.symm.trans h)
 
 /-- The entry-global adapter preserves both original operand snapshots inside implication.
     It never treats a current read as an entry read. -/
