@@ -293,7 +293,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   have hL0 : LRel (fnAt uZ fI) 0 ρ₀ (eintritt uZ fI σ7 .nil).local' := fun p j hj => by
     simp [fnAt, fI, uZ, paramPos] at hj
   obtain ⟨callee, σr, envA, hname, _, hsl, _, _, _, hcases, _⟩ :=
-    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen O0 0 RZ σ7 ρ₀ _ hW0 hL0
+    lowCall_sim fI (show lowCall uZ fI "g" [] = .ok gst from hgst) hx (stimmigZ.art fI) stimmigZ.tab stimmigZ.namen (fun c => (stimmigZ.art c).2.1) O0 0 RZ σ7 ρ₀ _ hW0 hL0
   have hcallee : callee = gI := by
     rcases callee with ⟨_ | _ | _ | n, hc⟩
     · simp [fnAt, uZ] at hname
