@@ -102,14 +102,14 @@ def uPraemisse (e : String) : Bool :=
     strEq e "read through pointer without read right"
 
 /-- Reading a place through a parameter needs read permission, including in contracts and old views.
-    An owned capability is refused by name: the owner mark travels only through
-    the checked C09 owner flow, never through the read flag. -/
+    An owned capability with read permission elaborates (C12): the owner mark travels only through
+    the checked owner flow and guards (never via the read/write flags alone); the lowering
+    admits the read only where the table's owner guard is held (`darf` over `braucht`). -/
 def uReadThrough (ctx : UCtx) (name : String) : Except String Unit := do
   let j ← uParamNr ctx name
   let kind ← uArtBei ctx.kinds j
   match kind with
-  | .ptr ⟨_, ⟨true, _, none⟩, _⟩ => .ok ()
-  | .ptr ⟨_, ⟨_, _, some _⟩, _⟩ => .error "read through an owned pointer needs the checked C09 owner flow"
+  | .ptr ⟨_, ⟨true, _, _⟩, _⟩ => .ok ()
   | .ptr _ => .error "read through pointer without read right"
   | _ => .error "place without G form"
 

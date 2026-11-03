@@ -14,8 +14,9 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
 /-- `place = v;` at a slot or a static (the place reader decides which).
-    An owned capability is refused by name: the owner mark travels only through
-    the checked C09 owner flow, never through the write flag. -/
+    An owned capability with write permission elaborates (C12): the owner mark travels only through
+    the checked owner flow and guards; the lowering admits the store only where the table's
+    owner guard is held (`darf` over `braucht`). -/
 def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
   match uZugriff ctx ziel with
   | .error e => uGlobSchreib ctx ziel wert e
@@ -24,7 +25,7 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
     | .error e => .error e
     | .ok j =>
       match uArtBei ctx.kinds j with
-      | .ok (.ptr ⟨0, ⟨_, true, none⟩, .table _⟩) =>
+      | .ok (.ptr ⟨0, ⟨_, true, _⟩, .table _⟩) =>
         if (uOptFeld ctx tb f).isSome then
           match uOptFeld ctx tb f with
           | .none => .error "option field without G form"
@@ -41,8 +42,6 @@ def uSetzePlatz (ctx : UCtx) (ziel wert : SExpr) : Except String UStmt :=
           match uWertBody ctx wert with
           | .error e => .error e
           | .ok v => .ok (.assign b f ix (uWrap ctx tb f v))
-      | .ok (.ptr ⟨_, ⟨_, _, some _⟩, _⟩) =>
-        .error "write through an owned pointer needs the checked C09 owner flow"
       | _ => .error "write through a read pointer"
   | .ok (.tabelle b, tb, f, ix) =>
     if (uOptFeld ctx tb f).isSome then

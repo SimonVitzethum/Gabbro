@@ -137,8 +137,9 @@ def lowGrund (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (n :
 
 /-- One call argument against the callee parameter kind and the
     recorded parameter type (the `tr_arg` of `lean_g.rs`). An owned callee
-    capability is refused by name: the owner mark travels only through the
-    checked C09 owner flow, never through a re-view. -/
+    capability passes only with its identity preserved and its owner guard
+    held (`darf` over `braucht`, whose `.inr` entry is the owner mark resolved
+    through `eignerMarke`); the caller's `RufPasst.ownerReady` carries the flow. -/
 def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u)))
     (k : UParamArt) (t : Ty) : UArg →
@@ -177,8 +178,31 @@ def lowCallArgOneL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
           else .error "argument capability without G form"
         | _ => .error "value for pointer without G form"
       else .error "argument capability without G form"
-    | .ptr _, .ptr ⟨_, ⟨_, _, some _⟩, .table _⟩ =>
-      .error "owned pointer argument needs the checked C09 owner flow"
+    | .ptr cap, .ptr ⟨space, ⟨read, write, some owner⟩, .table n⟩ =>
+      let target : DataCapTy := ⟨space, ⟨read, write, some owner⟩, .table n⟩
+      if hK : cap = target then
+        match eignerMarke u owner with
+        | none => .error "owned pointer argument without a declared owner mark"
+        | some _ =>
+          if hT : n < u.tabs.length then
+            if hL : ∀ wdd ∈ (declOf u).braucht ⟨n, hT⟩, Res.von (declOf u) wdd ∈ Λ then
+              match a with
+              | .var name =>
+                match paramPos fn.params name with
+                | .error e => .error e
+                | .ok j =>
+                  match fn.kinds[j]? with
+                  | some (.ptr source) =>
+                    if source = target then
+                      match lowVar Γ j (.ptr target) with
+                      | .error e => .error e
+                      | .ok x => .ok (Expr.var x)
+                    else .error "pointer argument requires an explicit checked attenuation"
+                  | _ => .error "pointer argument without G form"
+              | _ => .error "owned fresh pointer without G form"
+            else .error "owned pointer argument without held guard"
+          else .error "pointer table unknown"
+      else .error "argument capability without G form"
     | .index num, t =>
       match t with
       | .int lo hi =>

@@ -72,11 +72,14 @@ def storeOnly : String :=
 
 theorem write_only_store_ok : stufe storeOnly = "OK" := by decide +kernel
 
-/-- C12: `own@Marke` resolves against the declared `linear` mark past export;
-    the first use still names the missing C09 owner flow. -/
+/-- C12: `own@Marke` resolves against the declared `linear` mark past export.
+    The source gates admit the owned capability; the lowering still refuses the
+    dereference by name: the model has no owned-access rule yet, and the body
+    holds no owner mark (`darf` over the `.inr` guard fails) -- the C09 owner
+    flow and its machine rule come later. -/
 def ownAtMarke : String :=
   "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
-theorem ownAtMarke_refused : stufe ownAtMarke = "elab: write through an owned pointer needs the checked C09 owner flow" := by
+theorem ownAtMarke_refused : stufe ownAtMarke = "lower: place without G form" := by
   decide +kernel
 
 /-- C12: a table `owner M` where `M` is no declared linear mark is refused by name.
