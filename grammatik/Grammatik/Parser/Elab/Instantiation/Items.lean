@@ -88,7 +88,7 @@ def item (scope : Scope) : SItemTief → SurfaceFacts
   | .groupT _ _ invs => gather (invs.map (invariant scope))
   | .concT roots => gather (roots.map fun (path, args) =>
       merge (globalReference (String.intercalate "::" path)) (expressions scope args))
-  | .accT _ ty _ value => merge (inspectType scope ty) (optional (expression scope) value)
+  | .accT _ ty _ value _ => merge (inspectType scope ty) (optional (expression scope) value)
   | .walkT walk => gather [expression scope walk.stufen, inspectType scope walk.node,
       expression scope walk.dwhen, expression scope walk.blatt,
       gather (walk.invarianten.map (invariant scope))]

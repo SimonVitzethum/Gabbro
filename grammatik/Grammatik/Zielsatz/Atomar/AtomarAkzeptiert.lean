@@ -242,7 +242,7 @@ end Spec
 
 section Bool
 
-variable [DecidableEq D.Fn] {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
+variable [DecidableEq D.Fn] [DecidableEq D.Ax] {P : Programm D} {S : SperrInv D} {fs : List D.Fn}
   {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
 
 /-- **No contract mentions `c`**: no `requires`, no `ensures`, no owed invariant of a function
@@ -286,10 +286,11 @@ def fussWXB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
     The C02 library conjunct rides along unchanged (`libraryB_immer`). -/
 def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
-    (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := []) : Bool :=
+    (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
+    (aqs : List D.Ax := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs cs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs
+    antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
@@ -334,7 +335,8 @@ theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Loc
     (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
     (schnittstellenB_iff hvoll).mp h11,
     (fun _ h => nomatch h), (fun _ h => nomatch h), (libraryB_iff _ _).mp h12,
-    (Kernzelle.accumulatorB_iff hvoll hcs).mp h13, checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14, (resetB_iff hcs).mp h15⟩
+    ((Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h13).1,
+    checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14, (resetB_iff hcs).mp h15⟩
 
 /-- **The atomic checker establishes the scope discipline** (C11): from the
     Bool, outside `Spec` (which has no scope field). -/
@@ -422,21 +424,22 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
     exact h
 
 /-- **The reverse direction**: `AkzeptiertSpecX` gives `AkzeptiertX`, at the value's own
-    checks. The footprint needs exactly the completeness above; every other component
+    checks and the listed query axioms. The footprint needs exactly the completeness above; every other component
     already decides both ways. The arena fields are dropped: the Bool has none. The
     scope conjunct is derived from the floor field (`scopesOkProg_of_stufenM`),
     not taken as a premise. -/
 theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : List (ArenaOwnership.Body.ArenaIface D)}
-    {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks) :
-    AkzeptiertX P S fs ls cs ws aks h.checks = true := by
+    {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks)
+    (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
+    AkzeptiertX P S fs ls cs ws aks h.checks qs = true := by
   unfold AkzeptiertX
   simp only [Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, fussWXB_vollstaendig hvoll h.fuss⟩,
     (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
     wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
     (rennB_iff hvoll hcs).mpr h.renn⟩, (antwortenB_iff hvoll).mpr h.antworten⟩,
-    (maskenB_iff hvoll).mpr h.masken⟩, (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku⟩,
+    (maskenB_iff hvoll).mpr h.masken⟩, (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨h.akku, hq⟩⟩,
     (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩, (resetB_iff hcs).mpr h.reset⟩,
     (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_stufenM h.stufen)⟩
 

@@ -46,7 +46,7 @@ def bodyMetadata : Nat → SAnw → Bool
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
     _ + 1, .ret .. | _ + 1, .start .. |
-    _ + 1, .reset .. |
+    _ + 1, .reset .. | _ + 1, .trimReq .. |
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
@@ -118,7 +118,7 @@ def itemMetadata : SItemTief → Bool
   | .whyT .. => false
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
-  | .accT _ _ m p => p.isNone || !accOperatorBound m
+  | .accT _ _ m p _ => p.isNone || !accOperatorBound m
   | _ => true
 
 def metadataReason : SItemTief → String
@@ -136,7 +136,7 @@ def metadataReason : SItemTief → String
   | .checkT c =>
     if c.sonde.isSome then "check counterprobe duties lack a checked source binding"
     else "check body duties lack a checked source binding"
-  | .accT _ _ m p =>
+  | .accT _ _ m p _ =>
     if !accOperatorBound m then "accumulator operator without G form"
     else "accumulator without per cpu count without G form"
   | .fnT sig _ =>
@@ -248,15 +248,19 @@ theorem checkT_zeuge :
     check [.checkT good] = .ok () ∧ check [.checkT bad] = .error "source export: check counterprobe duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
 
-/-- C15 accumulators are bound by storage expansion. Admitted operators and per-cpu counts expand to private cells plus guarding locks (`uAkkuItem`, `uAkkuErweiterung` with neutral, range and count checked by name); any use in bodies or contracts stays refused (`uAkkuVerwendung`, `uAkkuFremdVerwendung` demand C08). Bad operators and missing counts keep the exact downstream refusals. -/
-theorem accT_bound (n : String) (t : STyp) (m : String) (p : Option SExpr) (o : accOperatorBound m = true) (e : p.isSome = true) : itemMetadata (.accT n t m p) = false := by
+/-- C15 accumulators are bound by storage expansion. Admitted operators and per-cpu counts expand to
+    private cells plus guarding locks (`uAkkuItem`, `uAkkuErweiterung` with neutral, range and count
+    checked by name); uses expand to the generated query, update and reduction (`Akku.Expand`),
+    and unsupported positions keep their narrow refusals there.
+    Bad operators and missing counts keep the exact downstream refusals. -/
+theorem accT_bound (n : String) (t : STyp) (m : String) (p : Option SExpr) (q : Option String) (o : accOperatorBound m = true) (e : p.isSome = true) : itemMetadata (.accT n t m p q) = false := by
   cases p with
   | none => simp at e
   | some _ => simp [itemMetadata, o]
 
 set_option maxRecDepth 100000 in
 theorem accT_zeuge :
-    check [.accT "c" (.atom "u32") "add" (some (.lit 2))] = .ok () ∧ check [.accT "c" (.atom "u32") "xor" (some (.lit 2))] = .error "source export: accumulator operator without G form" ∧ check [.accT "c" (.atom "u32") "add" none] = .error "source export: accumulator without per cpu count without G form" := by
+    check [.accT "c" (.atom "u32") "add" (some (.lit 2)) none] = .ok () ∧ check [.accT "c" (.atom "u32") "xor" (some (.lit 2)) none] = .error "source export: accumulator operator without G form" ∧ check [.accT "c" (.atom "u32") "add" none none] = .error "source export: accumulator without per cpu count without G form" := by
   exact ⟨rfl, rfl, rfl⟩
 
 /-- C18 resets are bound by checked range-store expansion. Arena resets elaborate to the used-counter store (`uAnw1`, unknown arenas refused); static-array ranges elaborate operands as body values and travel as `UStmt.resetRange` metadata (`uAnw1`, unknown statics and non-array statics refused), whose range validity and zero observation are discharged by the generic lowering (`lowResetRangeL`, `uReset_lower`). -/

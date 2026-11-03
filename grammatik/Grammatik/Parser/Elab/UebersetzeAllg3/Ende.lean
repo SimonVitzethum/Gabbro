@@ -72,6 +72,15 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
             (R.ende (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest').bind fun (b, r) => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
+  /-- Required narrowing at the top level of a body (C15): no `else`, no
+      `blkEnd`; out of range is `Logik.kapazitaet`
+      (`Endblock.narrowRequired`). -/
+  | Γ, fn, Λ, pe, .narrowReqBeg x lo hi :: rest =>
+    (paramPos fn.params x).bind fun j => match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        (lowVar Γ j (.int l1 h1)).bind fun v =>
+          (R.ende (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest).bind fun (b, r) => .ok (Endblock.narrowRequired (D := declOf u) (Expr.var v) lo hi b, r)
+      | _ => .error "lower: narrow of a non-number"
   | Γ, fn, Λ, pe, .bindFnref x f m :: rest =>
     (fnIdx u.fns f).bind fun g =>
       if h : (declOf u).passt g m = true then

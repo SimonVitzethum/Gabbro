@@ -3,6 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.Generic.Signatures
+public import Grammatik.Parser.Elab.UebersetzeAllg.Beleg
 
 @[expose] public section
 
@@ -119,6 +120,8 @@ def declOf (u : UProg) : Deklaration where
   agschreibt := fun a g => (uaxAt u a).gputs.any (· == (globAt u g).name)
   agruende := fun a => (uaxAt u a).gruende
   anbieter := anbieterAt u
+  axHerkunft := herkunftAt u
+  axBeleg := belegAt u
   anbieter_passt := fun t a h => by
     unfold anbieterAt at h
     split at h

@@ -245,6 +245,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .loop l s => .loop l (anw k s)
   | .waive gs s => .waive gs (anw k s)
   | .trim e g s => .trim (aus k e) g (anw k s)
+  | .trimReq e g => .trimReq (aus k e) g
   | .locks sh p s => .locks sh (aus k p) (anw k s)
   | .watch d s => .watch (k.ref d) (anw k s)
   | .emit a b p => .emit (aus k a) (aus k b) p

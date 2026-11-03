@@ -16,7 +16,7 @@ variable {D : Deklaration}
 
 section Bool
 
-variable [DecidableEq D.Fn]
+variable [DecidableEq D.Fn] [DecidableEq D.Ax]
 
 /-- `Platzhalter`, decided: every function the unit does not own calls nothing. -/
 def platzhalterB (fs : List D.Fn) (eigen : D.Fn → Bool) (P : Programm D) : Bool :=
@@ -68,7 +68,7 @@ def poolSicherVB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn → B
     through an imported function, thread-locality, write separation and pool safety over
     the COMPOSED hulls, and both units' declared checks admitted over the linked program. -/
 def schnittstelleB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn → Bool)
-    (E₁ E₂ : Einheit D) : Bool :=
+    (E₁ E₂ : Einheit D) (qs : List D.Ax := []) : Bool :=
   platzhalterB fs e E₁.P && platzhalterB fs (fun f => !e f) E₂.P && keinRueckrufB fs e E₁ E₂ &&
     (cs.all fun c => !(lokBedarfB fs e E₁ E₂ c) || getrenntVB fs e E₁ E₂ (verbinde e E₁ E₂).ws c) &&
     (cs.all fun c => ausgenommenB c || schreibGetrenntVB fs e E₁ E₂ (verbinde e E₁ E₂).ws c) &&
@@ -76,7 +76,7 @@ def schnittstelleB (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (e : D.Fn →
       !(mehrfachB (verbinde e E₁ E₂).ws w) || poolSicherVB fs cs e E₁ E₂ w) &&
     (fs.all fun w => !(E₁.P.unterbricht w) || fs.all fun h =>
       !(huelleB fs e E₁ E₂ w h) || mE (NurMaskiert D) ((teilP e E₁ E₂ h).rumpf h)) &&
-    Kernzelle.accumulatorB (verbinde e E₁ E₂).P fs cs (verbinde e E₁ E₂).akku && checkB (verbindeP e E₁ E₂) (tabsOf cs) (globsOf cs) fs (E₁.pruefungen ++ E₂.pruefungen)
+    Kernzelle.accumulatorB (verbinde e E₁ E₂).P fs (tabsOf cs) (globsOf cs) qs (verbinde e E₁ E₂).akku && checkB (verbindeP e E₁ E₂) (tabsOf cs) (globsOf cs) fs (E₁.pruefungen ++ E₂.pruefungen)
 
 variable {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} {e : D.Fn → Bool} {E₁ E₂ : Einheit D}
 

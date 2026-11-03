@@ -206,10 +206,13 @@ def druckItem : SItemTief → List Token
       (match ivs with
         | [] => [.zeichen ";"]
         | _ => [.zeichen "{"] ++ druckGruppenInvs ivs ++ [.zeichen "}"]))
-  | .accT n ty m p =>
+  | .accT n ty m p q =>
     ([.wort "accumulates", nameTok n, .zeichen ":"] ++ druckTyp ty ++ [.wort "merge", .wort m] ++
       (match p with
         | some e => [.wort "per", .wort "cpu"] ++ druckToks e
+        | none => []) ++
+      (match q with
+        | some a => [.wort "assume", nameTok a]
         | none => []) ++ [.zeichen ";"])
   | .walkT w =>
     ([.wort "walk", nameTok w.name, .wort "levels"] ++ druckToks w.stufen ++

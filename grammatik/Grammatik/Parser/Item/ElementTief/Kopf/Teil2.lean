@@ -178,7 +178,7 @@ inductive SItemTief
   | groupT : String → List String → List SGruppenInv → SItemTief
   /-- `concurrent { m::f, m::g(a, b) }`: each start's path and its arguments (none: a function without parameters). -/
   | concT : List (List String × List SExpr) → SItemTief
-  | accT : String → STyp → String → Option SExpr → SItemTief
+  | accT : String → STyp → String → Option SExpr → Option String → SItemTief
   | walkT : SWeg → SItemTief
   | entryT : SEingang → SItemTief
   | trustT : String → String → String → List SRegBind → String → String → SItemTief
@@ -273,8 +273,8 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .groupT a m i, .groupT b n j =>
     strEq a b && beqWorte m n && beqSGruppenInvList i j
   | .concT a, .concT b => beqStartListe a b
-  | .accT a t m p, .accT b u n q =>
-    strEq a b && beqSTyp t u && strEq m n && beqOptExpr p q
+  | .accT a t m p q, .accT b u n r s =>
+    strEq a b && beqSTyp t u && strEq m n && beqOptExpr p r && beqOptWort q s
   | .walkT a, .walkT b => beqSWeg a b
   | .entryT a, .entryT b => beqSEingang a b
   | .trustT a b c r s t, .trustT d e f u v w =>

@@ -8,11 +8,9 @@ import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
-
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
 mutual
 /-- Expand expression folds before processing the ordinary statement forms. -/
 def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
@@ -23,7 +21,6 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     let (prefix, ctx, statement) ← expandFoldStmt ctx statement
     let (code, ctx) ← uAnwReiheCore tabs koepfe fuel ctx (statement :: rest)
     pure (prefix ++ code, ctx)
-
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
@@ -417,6 +414,16 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
           match uAnwReihe tabs koepfe f ctx' rest with
           | .error err => .error err
           | .ok (xs, cE) => .ok ([UStmt.narrowBeg x lo hi] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
+  /-- Required narrowing (C15, from `SAnw.trimReq`): the rest of the run reads
+      `x` at the narrowed range; out of range is `Logik.kapazitaet`, so unlike
+      `trim` there is no `else` and no `blkEnd`. -/
+  | f + 1, ctx, .trimReq (.variable x) t :: rest =>
+    match uNarrowKopf ctx x t with
+    | .error err => .error err
+    | .ok (lo, hi, ctx') =>
+      match uAnwReihe tabs koepfe f ctx' rest with
+      | .error err => .error err
+      | .ok (xs, cE) => .ok ([UStmt.narrowReqBeg x lo hi] ++ xs, cE)
   | _ + 1, _, .waive .. :: _ =>
     .error "source export: invariant cost/runs/by duties lack a checked source binding"
   | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
@@ -487,7 +494,6 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
-
 end
 
 end Gabbro.Grammatik.Parser.Uebersetze

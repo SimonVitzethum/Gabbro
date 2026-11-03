@@ -56,6 +56,7 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
   | .retry label body => return .retry label (← rewriteBody env bindings body)
   | .loop label body => return .loop label (← rewriteBody env bindings body)
   | .waive reasons body => return .waive reasons (← rewriteBody env bindings body)
+  | .trimReq e tag => return .trimReq (← rewriteExpression env bindings e) tag
   | .trim e tag body => return .trim (← rewriteExpression env bindings e) tag (← rewriteBody env bindings body)
   | .locks shared lock body => return .locks shared (← rewriteExpression env bindings lock)
       (← rewriteBody env bindings body)

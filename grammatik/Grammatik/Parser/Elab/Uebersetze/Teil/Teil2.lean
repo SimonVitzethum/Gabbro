@@ -249,6 +249,9 @@ structure UAx where
   puts : List String := []
   /-- The statics it writes. -/
   gputs : List String := []
+  /-- The resolved `assume` index witnessing a hardware origin (`none` for
+      software items and while unresolved; a dangling index reads as `none`). -/
+  beleg : Option Nat := none
   deriving DecidableEq, Repr
 
 deriving instance DecidableEq for Except

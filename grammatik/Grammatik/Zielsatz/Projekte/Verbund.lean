@@ -208,17 +208,17 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
     checker (closed graphs, footprints with shared atomics, pool safety, write separation, masks),
     every body against every arena, and the ownership start. (Each body against the arenas of its
     own unit is checked again: membership of an arena cannot be decided, a re-check can.) -/
-noncomputable def bindeB [DecidableEq D.Fn] (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (B : Einheit D)
-    (ps : List (Projekt D)) : Bool :=
+noncomputable def bindeB [DecidableEq D.Fn] [DecidableEq D.Ax] (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob)) (B : Einheit D)
+    (ps : List (Projekt D)) (qs : List D.Ax := []) : Bool :=
   abgAlleB (komponiere B ps).P fs && fussWXB (komponiere B ps).P (komponiere B ps).S fs (komponiere B ps).ws &&
     einzelnPoolB (komponiere B ps).P fs cs (komponiere B ps).ws &&
     rennB (komponiere B ps).P fs cs (komponiere B ps).ws && maskenB (komponiere B ps).P fs &&
     besitzB (komponiere B ps) fs &&
-    Kernzelle.accumulatorB (komponiere B ps).P fs cs (komponiere B ps).akku &&
+    Kernzelle.accumulatorB (komponiere B ps).P fs (tabsOf cs) (globsOf cs) qs (komponiere B ps).akku &&
     Kernzelle.akkuStartB (komponiere B ps) (komponiere B ps).akku && checkB (komponiere B ps).P (tabsOf cs) (globsOf cs) fs (komponiere B ps).pruefungen
 
 /-- **The decided link check is sound.** -/
-theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
+theorem bindeB_sound [DecidableEq D.Fn] [DecidableEq D.Ax] {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} (hvoll : ∀ g : D.Fn, g ∈ fs)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : Einheit D} {ps : List (Projekt D)}
     (h : bindeB fs cs B ps = true) : BindeSpec fs B ps := by
   unfold bindeB at h
@@ -228,7 +228,8 @@ theorem bindeB_sound [DecidableEq D.Fn] {fs : List D.Fn} {cs : List (D.Tab ⊕ D
   obtain ⟨hb, -, hs⟩ := besitzB_sound hvoll h6
   exact ⟨hAbg, fussWXB_ok hvoll hAbg h2, (einzelnPoolB_iff hvoll hcs).mp h3, (rennB_iff hvoll hcs).mp h4,
     (maskenB_iff hvoll).mp h5, fun a ha f _ => (checked_iff _ _ _).mp (hb a ha) f, hs,
-    (Kernzelle.accumulatorB_iff hvoll hcs).mp h7, Kernzelle.akkuStartB_sound h8, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h9⟩
+    ((Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h7).1,
+    Kernzelle.akkuStartB_sound h8, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h9⟩
 
 /-- **The checker that decides the specification**: accepts exactly what `AkzeptiertSpecX`, the
     ownership start and neutral initialization establish (the strongest checker the statement admits). -/

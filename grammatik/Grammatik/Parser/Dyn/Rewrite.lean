@@ -108,7 +108,7 @@ def checkStatement (items : List SItemTief) (closed : List Closed)
     (locals : Locals) : SAnw → Except String Unit
   | .cases value _ =>
     if (dynamicType items closed locals value).isSome then .error "dyn.implementation-test" else .ok ()
-  | .trim value _ _ =>
+  | .trim value _ _ | .trimReq value _ =>
     if (dynamicType items closed locals value).isSome then .error "dyn.downcast" else .ok ()
   | _ => .ok ()
 

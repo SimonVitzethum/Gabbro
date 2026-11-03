@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Kernzelle.Verlauf
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 
@@ -86,6 +87,8 @@ theorem finRangeAll_iff {n : Nat} {p : Fin n → Bool} :
 
 variable [DecidableEq D.Fn]
 
+variable [DecidableEq D.Ax]
+
 /-- The descriptor validity, decided. -/
 def akkuOkB (a : AccumulatorDecl D) : Bool :=
   decide (1 ≤ a.kernZahl) && decide (1 ≤ a.breite) &&
@@ -101,13 +104,42 @@ theorem akkuOkB_iff {a : AccumulatorDecl D} : akkuOkB a = true ↔ akkuOk D a :=
   simp only [Bool.and_eq_true, decide_eq_true_eq, akkuGueltigB_iff, akkuBreitePasstB_iff,
     finRangeAll_iff, injFinB_iff]
 
-/-! ## 3. The admission -/
+/-! ## 3. Lock-rank order for the index-order fold -/
+
+/-- **Rank order of the cell locks**: ranks grow strictly with the cell
+    index, so the reduction's index-order acquisition cannot deadlock. -/
+def akkuRangOrdnung (a : AccumulatorDecl D) : Prop :=
+  ∀ i j : Fin a.kernZahl, i.val < j.val → D.rang (a.sperren i) < D.rang (a.sperren j)
+
+/-- The rank order, decided. -/
+def akkuRangOrdnungB (a : AccumulatorDecl D) : Bool :=
+  (List.finRange a.kernZahl).all fun i =>
+    (List.finRange a.kernZahl).all fun j =>
+      decide (i.val < j.val → D.rang (a.sperren i) < D.rang (a.sperren j))
+
+/-- The Bool decides the rank order. -/
+theorem akkuRangOrdnungB_iff {a : AccumulatorDecl D} :
+    akkuRangOrdnungB a = true ↔ akkuRangOrdnung a := by
+  unfold akkuRangOrdnungB akkuRangOrdnung
+  constructor
+  · intro h i j hij
+    have h1 := (finRangeAll_iff).mp ((finRangeAll_iff).mp h i) j
+    simp only [decide_eq_true_eq] at h1
+    exact h1 hij
+  · intro h
+    exact (finRangeAll_iff).mpr fun i => (finRangeAll_iff).mpr fun j => by
+      simp only [decide_eq_true_eq]
+      exact h i j
+
+/-! ## 4. The admission -/
 
 /-- **Per-declaration admission**: descriptor validity, one exclusive lock
     per private cell, storage privacy (no other body reads or writes a
     cell), the exact core-query shape, the update's queried core with its
-    confined and floored call graph, and the reduction's read-only floored
-    graph. Complete call graphs are the global `abgAlleB` (already in
+    confined and floored call graph, the reduction's read-only floored
+    graph, the connected core query (shape, hardware provenance and the
+    wrapper's foreign bind) and the lock-rank order for the index-order
+    fold. Complete call graphs are the global `abgAlleB` (already in
     `Akzeptiert`) together with these per-graph body checks; semantic query,
     range and quiescence facts are source-derived user duties, not Bool
     checks. -/
@@ -129,7 +161,9 @@ def akkuZulaessig (P : Programm D) (fs : List D.Fn) (a : AccumulatorDecl D) : Pr
   (D.params a.falte = [] ∧ D.erg a.falte = some (Ty.int a.lo a.hi) ∧
     ∀ f, reachB P fs a.falte f = true →
       (∀ c, TraegerSchreibt f c = false) ∧
-      mE (bodenM f) (P.rumpf f) = true)
+      mE (bodenM f) (P.rumpf f) = true) ∧
+  (∃ q, KernAbfrageVerbunden P a q) ∧
+  akkuRangOrdnung a
 
 /-- All cells of the admission, as one list. -/
 def alleZellen (A : List (AccumulatorDecl D)) : List D.Glob :=
@@ -152,11 +186,12 @@ theorem accumulatorAdmission_leer (P : Programm D) (fs : List D.Fn) :
   refine ⟨fun a ha => absurd ha List.not_mem_nil, ?_, ?_⟩ <;> simp only [alleZellen, alleSperren,
     List.flatMap_nil, List.nodup_nil]
 
-/-! ## 4. The Bool -/
+/-! ## 5. The Bool -/
 
-/-- One declaration, decided (over the member lists `fs`/`cs`). -/
-def akkuEinzelB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
-    (a : AccumulatorDecl D) : Bool :=
+/-- One declaration, decided (over the member lists `fs`/`tabs`/`globs` and
+    the listed query axioms `qs`). -/
+def akkuEinzelB (P : Programm D) (fs : List D.Fn) (tabs : List D.Tab)
+    (globs : List D.Glob) (qs : List D.Ax) (a : AccumulatorDecl D) : Bool :=
   akkuOkB a &&
   (List.finRange a.kernZahl).all
     (fun i => decide (D.gbraucht (a.zellen i) = [Sum.inl (a.sperren i)])) &&
@@ -167,24 +202,32 @@ def akkuEinzelB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
   (decide (D.params a.kernAbfrage = []) &&
     decide (D.erg a.kernAbfrage = some (Ty.int 0 ((a.kernZahl : Int) - 1))) &&
     decide (D.gruende a.kernAbfrage = 0) &&
-    cs.all (fun c => decide (TraegerSchreibt a.kernAbfrage c = false))) &&
+    tabs.all (fun t => decide (TraegerSchreibt a.kernAbfrage (.inl t) = false)) &&
+    globs.all (fun g => decide (TraegerSchreibt a.kernAbfrage (.inr g) = false))) &&
   (reachB P fs a.aktualisiere a.kernAbfrage &&
     fs.all (fun f => !(reachB P fs a.aktualisiere f) ||
-      (cs.all (fun c => !(TraegerSchreibt f c) ||
-        (List.finRange a.kernZahl).any fun i => decide (c = .inr (a.zellen i))) &&
+      (tabs.all (fun t => decide (TraegerSchreibt f (.inl t) = false)) &&
+      globs.all (fun g => !(TraegerSchreibt f (.inr g)) ||
+        (List.finRange a.kernZahl).any fun i =>
+          decide ((.inr g : D.Tab ⊕ D.Glob) = .inr (a.zellen i))) &&
       mE (bodenM f) (P.rumpf f))) &&
     decide (D.params a.aktualisiere = [Ty.int a.lo a.hi]) &&
     decide (D.erg a.aktualisiere = none)) &&
   (decide (D.params a.falte = []) &&
     decide (D.erg a.falte = some (Ty.int a.lo a.hi)) &&
     fs.all (fun f => !(reachB P fs a.falte f) ||
-      (cs.all (fun c => decide (TraegerSchreibt f c = false)) &&
-      mE (bodenM f) (P.rumpf f))))
+      (tabs.all (fun t => decide (TraegerSchreibt f (.inl t) = false)) &&
+      globs.all (fun g => decide (TraegerSchreibt f (.inr g) = false)) &&
+      mE (bodenM f) (P.rumpf f)))) &&
+  qs.any (fun q => kernAbfrageEinzelB P tabs globs a q) &&
+  akkuRangOrdnungB a
 
-/-- One declaration: the Bool decides the admission. -/
-theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
-    {a : AccumulatorDecl D} : akkuEinzelB P fs cs a = true ↔ akkuZulaessig P fs a := by
+/-- One declaration: the Bool decides the admission and the listed query. -/
+theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
+    {globs : List D.Glob} {qs : List D.Ax} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hT : ∀ t : D.Tab, t ∈ tabs) (hG : ∀ g : D.Glob, g ∈ globs)
+    {a : AccumulatorDecl D} : akkuEinzelB P fs tabs globs qs a = true ↔
+      (akkuZulaessig P fs a ∧ ∃ q ∈ qs, KernAbfrageVerbunden P a q) := by
   unfold akkuEinzelB akkuZulaessig
   constructor
   · intro h
@@ -192,8 +235,13 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
     rw [Bool.and_eq_true] at h; obtain ⟨h1, h⟩ := h
     rw [Bool.and_eq_true] at h; obtain ⟨h2, h⟩ := h
     rw [Bool.and_eq_true] at h; obtain ⟨h3, h⟩ := h
-    rw [Bool.and_eq_true] at h; obtain ⟨h4, h5⟩ := h
-    refine ⟨(akkuOkB_iff).mp h0, fun i => ?_, fun f hf1 hf2 i => ?_, ?_, ?_, ?_⟩
+    rw [Bool.and_eq_true] at h; obtain ⟨h4, h⟩ := h
+    rw [Bool.and_eq_true] at h; obtain ⟨h5, h⟩ := h
+    rw [Bool.and_eq_true] at h; obtain ⟨h6, h7⟩ := h
+    obtain ⟨q, hmem, hqB⟩ := List.any_eq_true.mp h6
+    have hq : KernAbfrageVerbunden P a q := (kernAbfrageEinzelB_iff hT hG).mp hqB
+    refine ⟨⟨(akkuOkB_iff).mp h0, fun i => ?_, fun f hf1 hf2 i => ?_, ?_, ?_, ?_,
+      ⟨q, hq⟩, (akkuRangOrdnungB_iff).mp h7⟩, q, hmem, hq⟩
     · have := (finRangeAll_iff).mp h1 i
       simp only [decide_eq_true_eq] at this
       exact this
@@ -205,12 +253,18 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
       · have h2i := (finRangeAll_iff).mp h2f i
         simp only [Bool.and_eq_true, decide_eq_true_eq] at h2i
         exact h2i
-    · obtain ⟨h31, h32, h33, h34⟩ := h3
+    · obtain ⟨h31, h32, h33, h34, h35⟩ := h3
       simp only [decide_eq_true_eq] at h31 h32 h33
       refine ⟨h31, h32, h33, fun c => ?_⟩
-      have := (List.all_eq_true.mp h34) c (hcs c)
-      simp only [decide_eq_true_eq] at this
-      exact this
+      cases c with
+      | inl t =>
+        have := (List.all_eq_true.mp h34) t (hT t)
+        simp only [decide_eq_true_eq] at this
+        exact this
+      | inr g =>
+        have := (List.all_eq_true.mp h35) g (hG g)
+        simp only [decide_eq_true_eq] at this
+        exact this
     · rw [Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true] at h4
       obtain ⟨h41, h42, h43, h44⟩ := h4
       refine ⟨h41, fun f hf => ?_, h43, h44⟩
@@ -218,30 +272,45 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
         have h := (List.all_eq_true.mp h42) f (hvoll f)
         rw [hf] at h
         simp only [Bool.not_true, Bool.false_or, Bool.and_eq_true] at h
-        obtain ⟨hc, hm⟩ := h
+        obtain ⟨hct, hcg, hm⟩ := h
         refine ⟨fun c hcc => ?_, hm⟩
-        have hcc' := (List.all_eq_true.mp hc) c (hcs c)
-        rw [hcc] at hcc'
-        simp only [Bool.not_true, Bool.false_or] at hcc'
-        obtain ⟨i, _, heq⟩ := List.any_eq_true.mp hcc'
-        simp only [decide_eq_true_eq] at heq
-        exact ⟨i, heq⟩
+        cases c with
+        | inl t =>
+          have ht := (List.all_eq_true.mp hct) t (hT t)
+          simp only [decide_eq_true_eq] at ht
+          rw [hcc] at ht
+          exact absurd ht (by decide)
+        | inr g =>
+          have hg := (List.all_eq_true.mp hcg) g (hG g)
+          rw [hcc] at hg
+          simp only [Bool.not_true, Bool.false_or] at hg
+          obtain ⟨i, _, heq⟩ := List.any_eq_true.mp hg
+          simp only [decide_eq_true_eq] at heq
+          exact ⟨i, heq⟩
     · obtain ⟨h51, h52, h53⟩ := h5
       simp only [decide_eq_true_eq] at h51 h52
       refine ⟨h51, h52, fun f hf => ?_⟩
       have h := (List.all_eq_true.mp h53) f (hvoll f)
       rw [hf] at h
       simp only [Bool.not_true, Bool.false_or, Bool.and_eq_true] at h
-      obtain ⟨hc, hm⟩ := h
+      obtain ⟨hct, hcg, hm⟩ := h
       refine ⟨fun c => ?_, hm⟩
-      have := (List.all_eq_true.mp hc) c (hcs c)
-      simp only [decide_eq_true_eq] at this
-      exact this
-  · rintro ⟨h0, h1, h2, h3, h4, h5⟩
+      cases c with
+      | inl t =>
+        have := (List.all_eq_true.mp hct) t (hT t)
+        simp only [decide_eq_true_eq] at this
+        exact this
+      | inr g =>
+        have := (List.all_eq_true.mp hcg) g (hG g)
+        simp only [decide_eq_true_eq] at this
+        exact this
+  · rintro ⟨⟨h0, h1, h2, h3, h4, h5, h6, h7⟩, q, hmem, hq⟩
     have b0 : akkuOkB a = true := (akkuOkB_iff).mpr h0
     have b1 : (List.finRange a.kernZahl).all
         (fun i => decide (D.gbraucht (a.zellen i) = [Sum.inl (a.sperren i)])) = true :=
-      (finRangeAll_iff).mpr fun i => by simp only [decide_eq_true_eq]; exact h1 i
+      (finRangeAll_iff).mpr fun i => by
+        simp only [decide_eq_true_eq]
+        exact h1 i
     have b2 : fs.all (fun f => decide (f = a.aktualisiere) || decide (f = a.falte) ||
         ((List.finRange a.kernZahl).all fun i =>
           decide (TraegerSchreibt f (.inr (a.zellen i)) = false) &&
@@ -258,7 +327,8 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
     have b3 : (decide (D.params a.kernAbfrage = []) &&
         decide (D.erg a.kernAbfrage = some (Ty.int 0 ((a.kernZahl : Int) - 1))) &&
         decide (D.gruende a.kernAbfrage = 0) &&
-        cs.all (fun c => decide (TraegerSchreibt a.kernAbfrage c = false))) = true := by
+        tabs.all (fun t => decide (TraegerSchreibt a.kernAbfrage (.inl t) = false)) &&
+        globs.all (fun g => decide (TraegerSchreibt a.kernAbfrage (.inr g) = false))) = true := by
       obtain ⟨h31, h32, h33, h34⟩ := h3
       have e1 : decide (D.params a.kernAbfrage = []) = true := by simpa using h31
       have e2 : decide (D.erg a.kernAbfrage =
@@ -266,11 +336,19 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
       have e3 : decide (D.gruende a.kernAbfrage = 0) = true := by simpa using h33
       rw [e1, e2, e3]
       simp only [Bool.true_and]
-      exact List.all_eq_true.mpr fun c _ => h34 c
+      refine ⟨?_, ?_⟩
+      · exact List.all_eq_true.mpr fun t _ => by
+          simp only [decide_eq_true_eq]
+          exact h34 (.inl t)
+      · exact List.all_eq_true.mpr fun g _ => by
+          simp only [decide_eq_true_eq]
+          exact h34 (.inr g)
     have b4 : (reachB P fs a.aktualisiere a.kernAbfrage &&
         fs.all (fun f => !(reachB P fs a.aktualisiere f) ||
-          (cs.all (fun c => !(TraegerSchreibt f c) ||
-            (List.finRange a.kernZahl).any fun i => decide (c = .inr (a.zellen i))) &&
+          (tabs.all (fun t => decide (TraegerSchreibt f (.inl t) = false)) &&
+          globs.all (fun g => !(TraegerSchreibt f (.inr g)) ||
+            (List.finRange a.kernZahl).any fun i =>
+              decide ((.inr g : D.Tab ⊕ D.Glob) = .inr (a.zellen i))) &&
           mE (bodenM f) (P.rumpf f))) &&
         decide (D.params a.aktualisiere = [Ty.int a.lo a.hi]) &&
         decide (D.erg a.aktualisiere = none)) = true := by
@@ -286,17 +364,25 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
       cases hf' : reachB P fs a.aktualisiere f with
       · exact Or.inl rfl
       · obtain ⟨hcc, hm⟩ := h42 f hf'
-        refine Or.inr ⟨?_, hm⟩
-        refine List.all_eq_true.mpr fun c _ => ?_
-        simp only [Bool.or_eq_true]
-        cases hT : TraegerSchreibt f c with
-        · exact Or.inl rfl
-        · obtain ⟨i, hi⟩ := hcc c hT
-          exact Or.inr (List.any_eq_true.mpr ⟨i, List.mem_finRange i, decide_eq_true hi⟩)
+        refine Or.inr ⟨⟨?_, ?_⟩, hm⟩
+        · refine List.all_eq_true.mpr fun t _ => ?_
+          simp only [decide_eq_true_eq]
+          cases hw : TraegerSchreibt f (.inl t) with
+          | true =>
+            obtain ⟨i, hi⟩ := hcc (.inl t) hw
+            cases hi
+          | false => rfl
+        · refine List.all_eq_true.mpr fun g _ => ?_
+          simp only [Bool.or_eq_true]
+          cases hT' : TraegerSchreibt f (.inr g) with
+          · exact Or.inl rfl
+          · obtain ⟨i, hi⟩ := hcc _ hT'
+            exact Or.inr (List.any_eq_true.mpr ⟨i, List.mem_finRange i, decide_eq_true hi⟩)
     have b5 : (decide (D.params a.falte = []) &&
         decide (D.erg a.falte = some (Ty.int a.lo a.hi)) &&
         fs.all (fun f => !(reachB P fs a.falte f) ||
-          (cs.all (fun c => decide (TraegerSchreibt f c = false)) &&
+          (tabs.all (fun t => decide (TraegerSchreibt f (.inl t) = false)) &&
+          globs.all (fun g => decide (TraegerSchreibt f (.inr g) = false)) &&
           mE (bodenM f) (P.rumpf f)))) = true := by
       obtain ⟨h51, h52, h53⟩ := h5
       have e1 : decide (D.params a.falte = []) = true := by simpa using h51
@@ -309,36 +395,50 @@ theorem akkuEinzelB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ 
       cases hf' : reachB P fs a.falte f with
       · exact Or.inl rfl
       · obtain ⟨hcc, hm⟩ := h53 f hf'
-        exact Or.inr ⟨List.all_eq_true.mpr fun c _ => hcc c, hm⟩
-    rw [b0, b1, b2, b3, b4, b5]
+        exact Or.inr ⟨⟨List.all_eq_true.mpr fun t _ => decide_eq_true (hcc _),
+          List.all_eq_true.mpr fun g _ => decide_eq_true (hcc _)⟩, hm⟩
+    have b6 : qs.any (fun q => kernAbfrageEinzelB P tabs globs a q) = true :=
+      List.any_eq_true.mpr ⟨q, hmem, (kernAbfrageEinzelB_iff hT hG).mpr hq⟩
+    have b7 : akkuRangOrdnungB a = true := (akkuRangOrdnungB_iff).mpr h7
+    rw [b0, b1, b2, b3, b4, b5, b6, b7]
 
-/-- **The accumulator admission, decided** (over the member lists). -/
-def accumulatorB (P : Programm D) (fs : List D.Fn) (cs : List (D.Tab ⊕ D.Glob))
-    (A : List (AccumulatorDecl D)) : Bool :=
-  A.all (fun a => akkuEinzelB P fs cs a) &&
+/-! ## 6. The admission Bool -/
+
+/-- **The accumulator admission, decided** (over the member lists and the
+    listed query axioms). -/
+def accumulatorB (P : Programm D) (fs : List D.Fn) (tabs : List D.Tab)
+    (globs : List D.Glob) (qs : List D.Ax) (A : List (AccumulatorDecl D)) : Bool :=
+  A.all (fun a => akkuEinzelB P fs tabs globs qs a) &&
   decide ((alleZellen A).Nodup) && decide ((alleSperren A).Nodup)
 
-/-- The Bool decides the admission. -/
-theorem accumulatorB_iff {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)}
-    (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+/-- The Bool decides the admission and the listed queries. -/
+theorem accumulatorB_iff {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
+    {globs : List D.Glob} {qs : List D.Ax} (hvoll : ∀ g : D.Fn, g ∈ fs)
+    (hT : ∀ t : D.Tab, t ∈ tabs) (hG : ∀ g : D.Glob, g ∈ globs)
     {A : List (AccumulatorDecl D)} :
-    accumulatorB P fs cs A = true ↔ AccumulatorAdmission P fs A := by
+    accumulatorB P fs tabs globs qs A = true ↔
+      (AccumulatorAdmission P fs A ∧
+        ∀ a ∈ A, ∃ q ∈ qs, KernAbfrageVerbunden P a q) := by
   unfold accumulatorB AccumulatorAdmission
   simp only [Bool.and_eq_true, decide_eq_true_eq]
   constructor
   · rintro ⟨h1, h2, h3⟩
-    exact ⟨fun a ha => (akkuEinzelB_iff hvoll hcs).mp ((List.all_eq_true.mp h1) a ha), h2, h3⟩
-  · rintro ⟨h1, h2, h3⟩
-    exact ⟨List.all_eq_true.mpr fun a ha => (akkuEinzelB_iff hvoll hcs).mpr (h1 a ha), h2, h3⟩
+    refine ⟨⟨fun a ha => ((akkuEinzelB_iff hvoll hT hG).mp
+      ((List.all_eq_true.mp h1) a ha)).1, h2, h3⟩, fun a ha => ?_⟩
+    exact ((akkuEinzelB_iff hvoll hT hG).mp ((List.all_eq_true.mp h1) a ha)).2
+  · rintro ⟨⟨h1, h2, h3⟩, hq⟩
+    exact ⟨List.all_eq_true.mpr fun a ha => (akkuEinzelB_iff hvoll hT hG).mpr
+      ⟨h1 a ha, hq a ha⟩, h2, h3⟩
 
 /-- Admission of the empty list is decided. -/
-theorem accumulatorB_leer {P : Programm D} {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} :
-    accumulatorB P fs cs [] = true := by
+theorem accumulatorB_leer {P : Programm D} {fs : List D.Fn} {tabs : List D.Tab}
+    {globs : List D.Glob} {qs : List D.Ax} :
+    accumulatorB P fs tabs globs qs [] = true := by
   unfold accumulatorB
   simp only [List.all_nil, Bool.true_and, decide_eq_true_eq]
   constructor <;> simp only [alleZellen, alleSperren, List.flatMap_nil, List.nodup_nil]
 
-/-! ## 5. Neutral initialization at the start memory -/
+/-! ## 7. Neutral initialization at the start memory -/
 
 /-- A cell value at the start memory, checked against the accumulator's
     type and neutral element (refused outside the declared type). -/

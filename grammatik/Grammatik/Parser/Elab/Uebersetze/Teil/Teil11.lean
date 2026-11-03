@@ -363,7 +363,7 @@ def akkuOperatorOk (m : String) : Bool :=
     `and`) are checked at expansion (`UebersetzeAkku`); updates, reads and the
     core query stay refused there (they need C08). -/
 def akkuFormZulaessig : SItemTief → Bool
-  | .accT _ _ m (some _) => akkuOperatorOk m
+  | .accT _ _ m (some _) _ => akkuOperatorOk m
   | _ => false
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
@@ -402,7 +402,7 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `accumulates` (C15 storage slice): admitted surface forms expand to guarded
   -- cells (`UebersetzeAkku`); anything else is refused by name (the core query
   -- and updates/reads need C08, task 4; `and` needs the stored width).
-  | ((.accT _ _ m p) as it) :: rest =>
+  | ((.accT _ _ m p _) as it) :: rest =>
     if akkuFormZulaessig it then uRestFehler rest
     else if !akkuOperatorOk m then .error "accumulator operator without G form"
     else .error "accumulator without per cpu count without G form"

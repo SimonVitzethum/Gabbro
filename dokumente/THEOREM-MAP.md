@@ -5985,3 +5985,82 @@ theorem with a ∀-over-syntax premise. Unbuilt code (no Lean run in this branch
 Finding (not a weakening): `OwnerFlow.escrowReady_map` has no witness here. It quantifies over an
 `Einbettung D D'`; no identity embedding exists in the tree, and building one is a separate fixture. Transport
 across embeddings is not a call/return edge.
+
+## 133. C15: core-query wiring over the C08 foreign-call path (2026-11-03)
+
+On `c15-uses` (`449dfc4da`, `45c111c1b`, `f3bc0e686`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The accumulator uses (per-core update export, quiescent observation export) and the run-level history existence remain open; the exporter still refuses uses (`uAkkuVerwendung`, `uAkkuFremdVerwendung`).
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrage.lean`:
+
+* **`KernAbfrageGestalt`**: For arbitrary `D : Deklaration`, `q : D.Ax`, `N : Nat`, the exact foreign shape of the core query: positive count, no parameters, answer `0 .. N - 1`, no reason channel, no table or global writes.
+* **`kernAbfrageGestaltB_iff`**: For arbitrary `tabs : List D.Tab`, `globs : List D.Glob`, assuming `hT : forall t, t in tabs` and `hG : forall g, g in globs`, the conclusion is `kernAbfrageGestaltB D q N tabs globs = true <-> KernAbfrageGestalt D q N`.
+* **`KernAbfrageHerkunft`**: For arbitrary `D : Deklaration`, `q : D.Ax`, hardware origin with a named witness: `D.axHerkunft q = some .hardware` and some `w` with `D.axBeleg q = some w`. The one hardware premise beside the named `AxVertragO` ensures.
+* **`kernAbfrageHerkunftB_iff`**: The conclusion is `kernAbfrageHerkunftB D q = true <-> KernAbfrageHerkunft D q`.
+* **`KernAbfrageTreue`**: For arbitrary `kern : Faden -> Nat`, `u : Faden`, `v : Int`, the core identity: the answer is the running core under the declared assignment.
+* **`treueImBereich`**: For arbitrary `kern : Faden -> Nat`, `u : Faden`, `v : Int`, `N : Nat`, assuming `h : KernAbfrageTreue kern u v` and `hk : kern u < N`, the conclusion is `0 <= v /\ v <= (N : Int) - 1`. The scheduler duty (`kern u < N`) is user logic.
+* **`treueEindeutig`**: For arbitrary `kern : Faden -> Nat`, `u : Faden`, `v1 v2 : Int`, assuming both answers satisfy the identity, the conclusion is `v1 = v2`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrageBindung.lean`:
+
+* **`bindetAxS`/`bindetAxB`/`bindetAxArms`/`bindetAxGArms`/`bindetAxE`**: For arbitrary `q : D.Ax`, existence of a `bindAxiom`/`bindAxiomOpt` (plain, `else`, or top-level) of exactly `q`, mirroring the generic feature check `mE` case by case. Foreign calls carry no `reachB` edge, so the update-to-query link is this direct syntactic fact.
+* **`KernAbfrageVerbunden`**: For arbitrary `P : Programm D`, `a : AccumulatorDecl D`, `q : D.Ax`, the connected query: shape, hardware provenance, and the wrapper bind.
+* **`kernAbfrageEinzelB_iff`**: For arbitrary `tabs : List D.Tab`, `globs : List D.Glob`, assuming `hT` and `hG` as above, the conclusion is `kernAbfrageEinzelB P tabs globs a q = true <-> KernAbfrageVerbunden P a q`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrageZeuge.lean`:
+
+* **`qA_ok`**: The two-core unsigned `add` descriptor over `0 .. 255` is valid (non-degenerate: distinct cells, neutral `0`).
+* **`qGestalt`**: The hardware axiom answers `0 .. 1` with no channel and no writes.
+* **`qHerkunft`**: The axiom is hardware-origin with a named witness.
+* **`kernAbfrage_zeuge`**: The connected core query: shape, provenance, and the wrapper's foreign bind.
+* **`treue_zeuge`**: On the constant two-core assignment, thread `0` queries `0`.
+* **`treueBereich_zeuge`**: The identity gives the query range `0 .. 1`.
+* **`ruhigAdd_zeuge`**: Quiescent reduction over the two `add` cells: the sampled fold `[3, 5]` equals the neutral-start RMW chain. Typing the contributions and establishing quiescence stay user duties.
+* **`qN0_abgelehnt`**: `N = 0` is refused (no `Fin 0` core).
+* **`qFalscherKern_abgelehnt`**: A wrong core identity is refused (thread `0` answering `1`).
+* **`qAusserhalb_abgelehnt`**: An out-of-range answer is refused (`5` outside `0 .. 1`).
+
+## 134. C15: required-narrow overflow and the generated use bodies (2026-11-03)
+
+On `c15-uses` (`0dfcd6009`, `7d036940a`, `a1e1ff839`, `bf18b55fa`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Lead decisions: an overflowing merge stops with `Logik.kapazitaet` (no silent drop, no neutral restart); shadowing an accumulator name stays refused (`uAkkuKeinSchatten`, `akkuSchatten_abgelehnt`); the checker/link Bools default the query list to `[]` (`Akzeptiert.aqs`, `Verbund.qs`: an unbound query is refused, never accepted).
+
+`SAnw.trimReq` (`grammatik/Grammatik/Parser/Stmt/Anweisung/Kopf.lean`, generated only, no source syntax; the printer emits a form the parser refuses) elaborates to `UStmt.narrowReqBeg` (`grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil10.lean`) and lowers to `Block/Endblock.narrowRequired` in the sequence, end-block and fueled lowerers (`grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/{Seq,Ende,Rest1}.lean`); the block reader and the 104 lowering refuse the marker like `narrowBeg`. Carried through equality, printing, kind words, name resolution, call/binder scans, const substitution, the census, the export gate and the accumulator mention scan/expansion.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Akku/Erzeuge.lean`:
+
+* **`uAkkuAktArm`/`uAkkuFaltSchritt`**: For arbitrary `p : AkkuPlan`, `lo hi : Int`, `op : String`, `i : Nat`, the generated `add`/`or`/`and` arm binds the merge into `s<i>` and narrows it required to `lo .. hi` before the store; `max`/`min` select one operand without a check, as before.
+* **`akkuAktArm_zeuge`**: The `add` update arm over `0 .. 255` is the locked merge into `s0`, `trimReq s0` to `0 .. 255`, then the store.
+* **`akkuFaltSchritt_zeuge`**: The `add` fold step over `0 .. 255` is the locked accumulation into `s0`, `trimReq s0` to `0 .. 255`, then the move to `m`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/Operator.lean`:
+
+* **`maxMergeImBereich`**, **`minMergeImBereich`**, **`addMergeSchritt`**, **`orMergeWeite`**, **`andMergeSchranke`**: The five merge range duties are kept; the checked ones are now required-narrowing (`trimReq`) duties of the update and the fold.
+* **`narrowRequiredAusserhalb`**: For arbitrary `O : Orakel D`, `passes : Nat`, `R`, `e : Expr D Γ Λ (.int lo hi)`, `rest`, `σ : World D`, `ρ : Env D Γ`, assuming `h : ¬ (lo' ≤ (eval …).n ∧ (eval …).n ≤ hi')`, the conclusion is `execBlock O passes R (Block.narrowRequired e lo' hi' rest) σ ρ = .logik .kapazitaet`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrageZeuge.lean`:
+
+* **`akkuUeberlaufStoppt_zeuge`**: On the two-core `add` fixture, merging `100` into a cell holding `200` leaves `0 .. 255`, so the required narrowing to the cell range is the capacity stop for every world, environment and continuation.
+
+Open: the hardware provenance of the generated core-query axiom through elaboration (`declOf` leaves `axHerkunft`/`axBeleg` at `none`, so no elaborated program can satisfy `KernAbfrageHerkunft`).
+
+## 135. C15: hardware provenance of the generated core query (2026-11-03)
+
+On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `assume` clause of `accumulates` names the hardware assumption witnessing the generated query; the query wrapper (`n#query`, an ordinary body binding the foreign query once) carries the update-to-query link the model admits (`bindetAxE`, `reachB`); without `assume` the unit elaborates but no query list admits it; an unknown name is a named elaboration error.
+
+`SItemTief.accT` carries the origin (`Option String`, constructor field at the end); `accumulates n : T merge op [per cpu e] [assume a] ;` (`grammatik/Grammatik/Parser/Item/ElementTief/Defs4a.lean`, `dokumente/SYNTAX.md` `accdecl`). `UFnKopf.annahme` carries the name to `UAx.beleg` (the resolved index into `UProg.annahmen`; dangling reads as `none`), and `declOf` sets `D.axHerkunft`/`D.axBeleg` from it (`grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Beleg.lean`: `herkunftAt`, `belegAt`). `instDecEqDeclOfAx` numbers the foreign bodies of `declOf u` for the query checker.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Akku/Erzeuge.lean`:
+
+* **`uAkkuHuelle`/`uAkkuHuelleKoerper`/`uAkkuHuelleFn`**: For arbitrary `p : AkkuPlan`, the wrapper `n#query`: no parameters, answer `0 .. k - 1`, binds the hardware query once and returns it.
+* **`uAkkuGenEintrag`**: For arbitrary `annahmen : List String`, a named `assume` must be declared, else `core query assumption unknown`.
+* **`akkuHuelleName_zeuge`**, **`akkuHuelleKoerper_zeuge`**, **`akkuAktRuftHuelle_zeuge`**: The wrapper name, its bind-and-return body, and the update sampling through the wrapper.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Akku/Herkunft.lean`:
+
+* **`herkunft_frage_herkunft`**: On the elaborated fixture (`assume` plus two-cell unsigned `add` plus update and read uses), the query is hardware-origin with the named witness.
+* **`herkunft_frage_gestaltB`**, **`herkunft_frage_feld`**, **`herkunft_beleg_vorhanden`**: The decided shape, the `hardware` field and the named witness on the declaration.
+* **`herkunft_akku_angenommen`**: The accumulator component admits the descriptor with the query list.
+* **`herkunft_akzeptiert`**: The fixture is accepted by the core checker `Akzeptiert` with the query list.
+* **`ohne_akku_abgelehnt`**, **`ohne_abgelehnt`**: Without `assume` the unit elaborates but the accumulator component and the core checker refuse it.
+* **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.

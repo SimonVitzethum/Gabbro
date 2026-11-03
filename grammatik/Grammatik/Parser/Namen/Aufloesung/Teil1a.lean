@@ -187,7 +187,7 @@ def itemName : SItemTief → Option String
   | .lockT n _ _ _ _ _ _ => some n
   | .rcuT n _ _ => some n
   | .groupT n _ _ => some n
-  | .accT n _ _ _ => some n
+  | .accT n _ _ _ _ => some n
   | .walkT w => some w.name
   | .entryT e => some e.name
   | .callT c => some c.name

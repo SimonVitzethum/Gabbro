@@ -174,6 +174,8 @@ public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben11
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
+public import Grammatik.Parser.Elab.Uebersetze.Akku.Proben
+public import Grammatik.Parser.Elab.Uebersetze.Akku.Herkunft
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben15
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben16
@@ -258,6 +260,9 @@ public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
 public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.Zeuge
 public import Grammatik.Bausteine.Kernzelle.KernzelleZeugen
+public import Grammatik.Bausteine.Kernzelle.KernAbfrage
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageZeuge
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert

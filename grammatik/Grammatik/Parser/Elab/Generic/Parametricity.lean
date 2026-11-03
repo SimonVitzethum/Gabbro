@@ -150,7 +150,7 @@ def checkParametricExpression (source : List SItemTief) (template : FnSig)
 
 def checkParametricStatement (source : List SItemTief) (template : FnSig)
     (locals : Spec.Locals) : SAnw → Except String Unit
-  | .cond value _ _ _ | .elsif value _ | .cases value _ | .trim value _ _ |
+  | .cond value _ _ _ | .elsif value _ | .cases value _ | .trim value _ _ | .trimReq value _ |
     .shift value _ _ | .free value =>
     if (symbolicType source template locals 128 value).any (mentionsParameter (typeParameters template))
     then .error "generic.parametricity.statement" else pure ()

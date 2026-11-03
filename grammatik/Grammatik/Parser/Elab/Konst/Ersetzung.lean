@@ -150,6 +150,14 @@ def ersetzeSAnw (fns : List UKonstFn) : SAnw → Except String SAnw
     match ersetzeSExpr fns v, ersetzeSAnw fns b with
     | .ok v', .ok b' => .ok (.bindElse n ty v' x b')
     | .error e, _ | _, .error e => .error e
+  | .bindQ m n ty v =>
+    (ersetzeSExpr fns v).map (fun v' => .bindQ m n ty v')
+  | .bindAxiomOpt n ty v =>
+    (ersetzeSExpr fns v).map (fun v' => .bindAxiomOpt n ty v')
+  | .bindAxiomOptElse n ty v x b =>
+    match ersetzeSExpr fns v, ersetzeSAnw fns b with
+    | .ok v', .ok b' => .ok (.bindAxiomOptElse n ty v' x b')
+    | .error e, _ | _, .error e => .error e
   | .bindLib m n ty c => .ok (.bindLib m n ty c)
   | .set z op x =>
     match ersetzeSExpr fns z, ersetzeSExpr fns x with
@@ -163,6 +171,10 @@ def ersetzeSAnw (fns : List UKonstFn) : SAnw → Except String SAnw
     match ersetzeSExprList fns args with
     | .error e => .error e
     | .ok args' => .ok (.call f args')
+  | .callQ f args =>
+    (ersetzeSExprList fns args).map (fun args' => .callQ f args')
+  | .genericCall f words args =>
+    (ersetzeSExprList fns args).map (fun args' => .genericCall f words args')
   | .lcall c => .ok (.lcall c)
   | .cond c t eis fb =>
     match ersetzeSExpr fns c, ersetzeSAnw fns t, ersetzeSAnwList fns eis with
@@ -224,6 +236,10 @@ def ersetzeSAnw (fns : List UKonstFn) : SAnw → Except String SAnw
     match ersetzeSExpr fns o, ersetzeSAnw fns s with
     | .ok o', .ok s' => .ok (.trim o' z s')
     | .error e, _ | _, .error e => .error e
+  | .trimReq o z =>
+    match ersetzeSExpr fns o with
+    | .error e => .error e
+    | .ok o' => .ok (.trimReq o' z)
   | .locks g o b =>
     match ersetzeSExpr fns o, ersetzeSAnw fns b with
     | .ok o', .ok b' => .ok (.locks g o' b')

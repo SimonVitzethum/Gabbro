@@ -220,6 +220,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .retry raw body => return .retry (← w.raw raw locals) (← st body)
     | .loop raw body => return .loop (← w.raw raw locals) (← st body)
     | .waive ns body => return .waive ns (← st body)
+    | .trimReq e n => return .trimReq (← ex e) n
     | .trim e n body => return .trim (← ex e) n (← st body)
     | .locks b e body => return .locks b (← ex e) (← st body)
     | .watch n body => return .watch n (← st body)

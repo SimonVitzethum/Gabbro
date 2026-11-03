@@ -162,7 +162,22 @@ theorem t36_lex :
   decide
 theorem t36 : beqTopTief (parseTopTief tt36)
     (.ok [.accT "fehlerzahl" (.atom "u32") "add"
-      (.some (.variable "NKERNE"))]) = true := by
+      (.some (.variable "NKERNE")) none]) = true := by
+  decide
+-- The named core-query origin rides the declaration: `assume q` names the
+-- hardware assumption witnessing the generated query.
+def tt36b : List Token :=
+  [.wort "accumulates", .ident "s", .zeichen ":",
+   .wort "u32", .wort "merge", .wort "add", .wort "per",
+   .wort "cpu", .num 2, .wort "assume", .ident "kern_antwort",
+   .zeichen ";", .ende]
+theorem t36b_lex :
+    lex "accumulates s : u32 merge add per cpu 2 assume kern_antwort;" =
+      .ok tt36b := by
+  decide
+theorem t36b : beqTopTief (parseTopTief tt36b)
+    (.ok [.accT "s" (.atom "u32") "add" (.some (.lit 2))
+      (some "kern_antwort")]) = true := by
   decide
 -- beispiele/0023-akkumulatoren.gab:45. Rust: `Accumulates` with a
 -- cell count -- same shape.

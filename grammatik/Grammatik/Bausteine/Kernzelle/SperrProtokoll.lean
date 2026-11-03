@@ -45,6 +45,25 @@ theorem akkuRennfreiAbgedeckt {P : Programm D} {fs : List D.Fn} {a : Accumulator
     ∃ L, Bewacht (.inr (a.zellen i)) L :=
   akkuZellenBewacht h i
 
+/-- **The admitted cells keep every goal leg**: each cell of every admitted
+    accumulator is guarded by its exclusive lock, so the unguarded separation
+    duty never fires on accumulator cells and the ordinary race leg orders
+    their accesses -- no per-core exemption is added, and no new leg is
+    claimed. -/
+theorem akkuBeineBleiben {P : Programm D} {fs : List D.Fn}
+    {A : List (AccumulatorDecl D)} (h : AccumulatorAdmission P fs A)
+    {a : AccumulatorDecl D} (ha : a ∈ A) (i : Fin a.kernZahl) :
+    ∃ L, Bewacht (.inr (a.zellen i)) L :=
+  akkuZellenBewacht (h.1 a ha) i
+
+/-- Completed stores to distinct cells do not interfere: a cell's fold
+    ignores every contribution recorded for another cell. Updates to
+    different indices hence fold independently. -/
+theorem akkuBeitraegeGetrennt (op : AccOperator) (neutral : Int)
+    (cs : List AccBeitrag) (c : AccBeitrag) (i : Nat) (h : c.zelle ≠ i) :
+    zellFalte op neutral (cs ++ [c]) i = zellFalte op neutral cs i :=
+  zellFalteFremd op neutral cs c i h
+
 /-! ## 2. Quiescence collapses the history -/
 
 /-- Under quiescence the in-flight list is empty, so the appended history is
@@ -133,6 +152,8 @@ theorem akkuStartB_vollst {E : Einheit D} {fs : List D.Fn} {A : List (Accumulato
 #print axioms Gabbro.Grammatik.Kernzelle.akkuZelleBewacht
 #print axioms Gabbro.Grammatik.Kernzelle.akkuZellenBewacht
 #print axioms Gabbro.Grammatik.Kernzelle.akkuRennfreiAbgedeckt
+#print axioms Gabbro.Grammatik.Kernzelle.akkuBeineBleiben
+#print axioms Gabbro.Grammatik.Kernzelle.akkuBeitraegeGetrennt
 #print axioms Gabbro.Grammatik.Kernzelle.zellFalteRuhig
 #print axioms Gabbro.Grammatik.Kernzelle.verlaufGleichRuhig
 #print axioms Gabbro.Grammatik.Kernzelle.akkuRuhigReduktion
