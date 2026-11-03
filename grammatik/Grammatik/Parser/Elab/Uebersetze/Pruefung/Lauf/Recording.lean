@@ -40,6 +40,35 @@ def checkSampleType (ctx : UCtx) (expr : SExpr) : Except String Ty :=
     let _ ← uBool ctx expr
     pure .bool
 
+/-- Replace measured places by their captured locals before evaluating floors.
+    Quantifier-bound names hide matching source places, as in `sErsetze`. -/
+def checkSampleSubstitute (bindings : List (SExpr × SExpr)) : Nat → SExpr → SExpr
+  | 0, expr => expr
+  | fuel + 1, expr =>
+    match bindings.find? (fun pair => beqSExpr pair.1 expr) with
+    | some pair => pair.2
+    | none =>
+      let recur := checkSampleSubstitute bindings fuel
+      match expr with
+      | .field subject field => .field (recur subject) field
+      | .index subject index => .index (recur subject) (recur index)
+      | .arrow subject field => .arrow (recur subject) field
+      | .un op subject => .un op (recur subject)
+      | .bin op left right => .bin op (recur left) (recur right)
+      | .call name args => .call name (args.map recur)
+      | .built name args => .built name (args.map recur)
+      | .old subject => .old (recur subject)
+      | .ext kind names args =>
+        if kind == XKind.all || kind == XKind.any || kind == XKind.count then
+          let inner := bindings.filter fun pair => match uMessOrt pair.1 with
+            | .ok (.variable n) | .ok (.feld n _) | .ok (.stelle n _ _) =>
+              !names.contains n
+            | .error _ => false
+          .ext kind names (args.dropLast.map recur ++
+            (args.getLast?.map (checkSampleSubstitute inner fuel)).toList)
+        else .ext kind names (args.map recur)
+      | other => other
+
 /-- A source-indexed private call that captures actual arguments. Floors are
     separate Bool arguments, evaluated even for a false written verdict; the
     reporter returns their conjunction with that verdict. Ghost replay reads
@@ -70,9 +99,16 @@ def recordCheckReturn (ctx : UCtx) (c : SCheck) (point : Nat) (value : SExpr) :
   let head : UFnKopf :=
     { name := reporter.name, names := params.map (·.1), types := params.map (·.2),
       kinds := reporter.kinds, res := none, resBool := true, held := [] }
+  let captures := present.zipIdx.map fun ((expr, _), i) =>
+    (expr, SExpr.variable ("#checkSample#" ++ toString i))
+  let sampleBindings := captures.map fun (expr, local) => match local with
+    | .variable name => SAnw.bind false name none expr
+    | _ => SAnw.other "invalid private sample binding"
+  let floors := c.boden.map (checkSampleSubstitute captures 100000)
   let body := SAnw.block
-    [.bind false "#checkReport" (some (.atom "bool"))
-      (.call reporter.name (present.map (·.1) ++ c.boden ++ [value]))]
+    ([.bind false "#checkVerdict" (some (.atom "bool")) value] ++ sampleBindings ++
+      [.bind false "#checkReport" (some (.atom "bool"))
+        (.call reporter.name (captures.map (·.2) ++ floors ++ [.variable "#checkVerdict"]))])
     (some (.ret (some (.variable "#checkReport"))))
   pure (body, reporter, head)
 
