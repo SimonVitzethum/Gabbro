@@ -45,7 +45,7 @@ theorem uKonstZeile_product (alias : List (String × (Int × Int))) (fns : List 
     (leaf : Ty → SExpr → Option USide) :
     uKonstZeile alias fns consts (.prod identity fields) (.one source) leaf =
       leaf (.prod identity fields) source := by
-  rw [uKonstZeile]
+  simp [uKonstZeile]
 
 theorem uKonstZeilen_cons (alias : List (String × (Int × Int))) (fns : List UKonstFn)
     (consts : List (String × Int)) (element : Ty) (row : SKonstWert) (rows : List SKonstWert)
@@ -56,6 +56,7 @@ theorem uKonstZeilen_cons (alias : List (String × (Int × Int))) (fns : List UK
        | some head, some tail => some (.arrCons head tail)
        | _, _ => none) := by
   rw [uKonstZeilen]
+  rfl
 
 /-- Empty rows keep the canonical nil literal regardless of the element adapter. -/
 theorem uKonstZeilen_nil (alias : List (String × (Int × Int))) (fns : List UKonstFn)
@@ -90,20 +91,33 @@ theorem uKonstArrays_origin (alias : List (String × (Int × Int))) (fns : List 
       uKonstZeile alias fns consts ty payload leaf = some raw := by
   unfold uKonstArrays at collected
   obtain ⟨item, member, produced⟩ := List.mem_filterMap.mp collected
-  cases item <;> try { simp only [reduceCtorEq] at produced }
+  cases item <;> try { cases produced; done }
   case constT sourceName sourceType payload =>
-    split at produced
-    · cases typed : uTypIn alias [] named [] [] sourceType with
-      | error error => simp only [typed, reduceCtorEq] at produced
+    change (if values || (match sourceType with | .array _ _ => true | _ => false) then
+      match uTypIn alias [] named [] [] sourceType with
+      | .ok actual => (uKonstZeile alias fns consts actual payload leaf).map
+          (fun value => (sourceName, USide.typed actual value))
+      | .error _ => none
+      else none) = some (name, USide.typed ty raw) at produced
+    by_cases selected : (values || (match sourceType with | .array _ _ => true | _ => false)) = true
+    · rw [if_pos selected] at produced
+      cases typed : uTypIn alias [] named [] [] sourceType with
+      | error error =>
+        have impossible : (none : Option (String × USide)) = some (name, USide.typed ty raw) := by
+          simpa only [typed] using produced
+        cases impossible
       | ok actual =>
-        cases evaluated : uKonstZeile alias fns consts actual payload leaf with
-        | none => simp only [typed, evaluated, Option.map_none, reduceCtorEq] at produced
-        | some value =>
-          simp only [typed, evaluated, Option.map_some, Option.some.injEq,
-            Prod.mk.injEq, USide.typed.injEq] at produced
-          obtain ⟨rfl, rfl, rfl⟩ := produced
-          exact ⟨sourceType, payload, member, typed, evaluated⟩
-    · simp only [reduceCtorEq] at produced
+        have actualProduced : (uKonstZeile alias fns consts actual payload leaf).map
+            (fun value => (sourceName, USide.typed actual value)) =
+              some (name, USide.typed ty raw) := by
+          simpa only [typed] using produced
+        obtain ⟨value, evaluated, equality⟩ := Option.map_eq_some_iff.mp actualProduced
+        have same : sourceName = name ∧ actual = ty ∧ value = raw := by
+          simpa only [Prod.mk.injEq, USide.typed.injEq] using equality
+        obtain ⟨rfl, rfl, rfl⟩ := same
+        exact ⟨sourceType, payload, member, typed, evaluated⟩
+    · rw [if_neg selected] at produced
+      cases produced
 
 /-- The production record adapter routes numeric fields back to the canonical evaluator. -/
 theorem uRecordConstant_int (records : List URecord) (alias : List (String × (Int × Int)))
@@ -128,7 +142,7 @@ theorem uRecordConstant_bool (records : List URecord) (alias : List (String × (
     (fns : List UKonstFn) (consts : List (String × Int)) (value : Bool) :
     uRecordConstant records alias fns consts .bool (if value then .tru else .fls) =
       some (.truth value) := by
-  cases value <;> rw [uRecordConstant]
+  cases value <;> simp [uRecordConstant]
 
 /-- Constructor argument recursion is over the real labelled source list. -/
 theorem uRecordConstantFields_cons (records : List URecord)
