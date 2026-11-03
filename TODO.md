@@ -396,6 +396,12 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   Open: the lead's Lean checks of these connected modules and witnesses; no build was run by the implementation worker.
 - Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
 - C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
+- C11 consuming traversal, noninterference (`ni-verbrauch`, 2026-11-03, unbuilt): the relational cases for
+  `GRest.verbrauch`/`verbrauchRest` in `kr` and for `kLeave`/`kNext` on `verbrauchRest` mirror the `trav`/
+  `travRest` low-equivalence arguments (measure/invariant/member/edge reads from the `nR` footprint, new
+  `KRel.opt` congruence for the deterministic `verbrauchWahl` choice); `kNext_rel` takes the residue-form
+  premise, discharged at its sole caller. Open: the lead single-module Lean checks of the three touched
+  modules; no build was run by the implementation worker.
 - C15: per-core accumulator uses elaborate to guarded update/fold bodies whose `add`/`or`/`and` overflow stops with `Logik.kapazitaet` (required narrowing, never a dropped contribution or a neutral restart); admission and link Bools carry the connected core query (`qs`/`aqs` default to `[]`, shadowing refused). The hardware provenance of the generated core-query axiom now elaborates (THEOREM-MAP §135): `accumulates … assume a` names the assumption, the `n#query` wrapper binds the foreign query, `declOf` sets `axHerkunft`/`axBeleg`, and the fixture (`assume` + `accumulates` + update + read) is accepted by `Akzeptiert` with the query list. Open: the lead build of the branch.
 - C09: escrow call/return witnesses now share a concrete machine fixture with one push and one return (THEOREM-MAP §132); the lead still needs to check the unbuilt witness modules.
 - C16/C02 round-3 work remains open. Compact implementation inventory (16 items, grouped from the designs in `IR-COMPILATION-LANES.md`):
