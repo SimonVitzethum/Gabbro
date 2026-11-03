@@ -316,7 +316,6 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.blockFloatOfLit_case
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_arithmetic_images_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_sub_model_zeuge
-#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_operations_refused_zeuge
 #print axioms Gabbro.Stage0.Senke.lowEns_ok
 #print axioms Gabbro.Stage0.Senke.EntrySnapshots.capture_world_ok
 #print axioms Gabbro.Stage0.Senke.OldProbe.lowEns_ok_zeuge
