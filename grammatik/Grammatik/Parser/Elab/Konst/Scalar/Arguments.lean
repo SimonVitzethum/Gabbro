@@ -9,7 +9,7 @@ open Uebersetze
     canonical evaluation and equality with that original source-derived G value. -/
 structure IntegerArgument (fns : List UKonstFn) (globals : List (String × Int))
     (lo hi : Int) (source : SExpr) (value : Int) where
-  normalization : Normalized (D := declaration [] (.int lo hi)) [] globals source
+  normalization : Normalized (D := declaration [] (.int lo hi)) (Γ := []) [] globals source
   lower : Int
   upper : Int
   code : Code (declaration [] (.int lo hi)) [] (.int lower upper)
@@ -37,7 +37,7 @@ def checkArguments (fns : List UKonstFn) (globals : List (String × Int)) :
       Except String (CheckedArguments fns globals params sources)
   | [], [] => .ok ⟨[], .nil⟩
   | (name, .int lo hi) :: rest, source :: sources => do
-    let normalized ← normalize (D := declaration [] (.int lo hi)) [] globals source
+    let normalized ← normalize (D := declaration [] (.int lo hi)) (Γ := []) [] globals source
     match ht : normalized.code with
     | ⟨.int lower upper, code⟩ =>
       match hc : uKonstWert lo hi fns [] 64 (normalizeNames ([] : Locals []) globals source) with
