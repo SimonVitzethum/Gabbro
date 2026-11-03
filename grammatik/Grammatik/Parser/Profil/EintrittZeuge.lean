@@ -76,27 +76,24 @@ theorem ez_arch : eintrittB ["worker"] { ezE with arch := "z80" } = false := by 
 theorem ez_wurzel : eintrittB ["worker"] { ezE with dispatch := ["ghost"] } = false := by decide
 theorem ez_kills : eintrittB ["worker"] { ezE with kills := ["rax"] } = false := by decide
 
-/-- The registry of the fixture: the assumption the boundary names. -/
-def ezReg : List AnnahmeKennung :=
-  [⟨"guest_stays_in_room", none, "The guest cannot leave its region.", .probe "probe_guest"⟩]
-
-/-- A boundary with a declared service WOULD be admitted: the admission is not vacuous. -/
-theorem ez_gast_mit_dienst :
-    gastB ["guest_image"] ["isolate_svc"] ezReg
-      ⟨"jit", "guest_image", "x86_64", some "isolate_svc", "guest_stays_in_room"⟩ = true := by decide
-
-/-- The boundary read off an `entrust` item has no service and is refused. -/
+/-- Source text still lacks an explicit isolation-service binding. A named
+    `assume` does not repair it, even when it names a declared falsifier. -/
 theorem ez_gast_quelle :
-    gastB ["guest_image"] ["isolate_svc"] ezReg
-      (gastVon "jit" "guest_image" "x86_64" "guest_stays_in_room") = false :=
-  gastVon_abgelehnt _ _ _ _ _ _ _
+    gastQuelleFehler "x86_64" [] = "entrust: missing isolation service binding" := by decide
 
-/-- A boundary whose service is no declared function, or whose assumption is unresolved, is refused. -/
-theorem ez_gast_unbekannt :
-    gastB ["guest_image"] ["isolate_svc"] ezReg
-      ⟨"jit", "guest_image", "x86_64", some "ghost", "guest_stays_in_room"⟩ = false ∧
-    gastB ["guest_image"] ["isolate_svc"] ezReg
-      ⟨"jit", "guest_image", "x86_64", some "isolate_svc", "nowhere"⟩ = false := by
-  constructor <;> decide
+/-- Unknown architecture has no ordinary userspace ABI adapter. -/
+theorem ez_gast_abi :
+    gastQuelleFehler "z80" [] = "entrust: unknown userspace ABI" := by decide
+
+/-- Register-state handover remains excluded, independently of the guest's
+    name, stack or historical assumption. -/
+theorem ez_gast_register :
+    gastQuelleFehler "x86_64" [.binds "argument" "rdi"] =
+      "entrust: register-state or privileged transfer is excluded" := by decide
+
+/-- Joint instance of the generic source refusal theorem. -/
+theorem gastQuelle_ohne_dienst_zeuge :
+    gastQuelleFehler "aarch64" [] = "entrust: missing isolation service binding" :=
+  gastQuelle_ohne_dienst "aarch64" (by decide)
 
 end Gabbro.Grammatik.Parser.ProfilBindung
