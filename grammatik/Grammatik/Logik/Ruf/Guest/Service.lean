@@ -84,4 +84,17 @@ theorem guest_isolation_at_prefix {E : Einheit D} {O : Orakel D}
       (GrantInventory (E.grants0 ++ H.take n.val)) (storage (H.get n)) = true :=
   (GuestBoundary.storageDisjointB_iff _ _).mpr (h.isolated n hs)
 
+/-- Failure also preserves the folded live inventory, with initial grants
+    and every preceding call retained. It cannot erase somebody else's grant
+    by pretending that the guest has a separate, initially empty inventory. -/
+theorem guest_failure_inventory {E : Einheit D} {O : Orakel D}
+    {H : List (BoundaryRecord D)} {g : GuestBoundary D}
+    {storage : BoundaryRecord D → List (Konzession D)}
+    (h : GuestServicePflicht E O H g storage) (n : Fin H.length)
+    (hs : g.service = some (H.get n).ax) (hf : (H.get n).erfolg = false) :
+    GrantInventory ((E.grants0 ++ H.take n.val) ++ [H.get n]) =
+      GrantInventory (E.grants0 ++ H.take n.val) := by
+  rw [grantInventory_anhang]
+  exact guest_failure_preserves_grants h n hs hf _
+
 end Gabbro.Grammatik
