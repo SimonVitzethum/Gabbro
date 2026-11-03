@@ -75,6 +75,8 @@ theorem stmtOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' :
       simp only [stmtOrteP, blockOrteP_mitRumpf body, blockOrteP_mitRumpf ueber]
   | _, _, _, _, .forever _ _ body => by simp only [stmtOrteP, blockOrteP_mitRumpf body]
   | _, _, _, _, .axiomCall _ _ _ _ _ _ _ => rfl
+  | _, _, _, _, .axiomCallElse (err := err) .. => by
+      simp only [stmtOrteP, endblockOrteP_mitRumpf err]
   | _, _, _, _, .regWrite _ _ _ => rfl
   | _, _, _, _, .transition _ _ _ _ _ _ _ => rfl
   | _, _, _, _, .publish _ _ _ _ _ _ => rfl
@@ -101,6 +103,10 @@ theorem blockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' 
   | _, _, _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf err, blockOrteP_mitRumpf rest]; rfl
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .bindAxiomOpt (rest := rest) .. => by
+      simp only [blockOrteP, blockOrteP_mitRumpf rest]
+  | _, _, _, _, .bindAxiomOptElse (err := err) (rest := rest) .. => by
+      simp only [blockOrteP, endblockOrteP_mitRumpf err, blockOrteP_mitRumpf rest]
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [blockOrteP, endblockOrteP_mitRumpf err, blockOrteP_mitRumpf rest]
   | _, _, _, _, .regRead _ _ rest => by simp only [blockOrteP, blockOrteP_mitRumpf rest]
@@ -136,6 +142,10 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
   | _, _, _, .bindCallElse _ _ _ _ _ err rest => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf err, endblockOrteP_mitRumpf rest]; rfl
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .bindAxiomOpt (rest := rest) .. => by
+      simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .bindAxiomOptElse (err := err) (rest := rest) .. => by
+      simp only [endblockOrteP, endblockOrteP_mitRumpf err, endblockOrteP_mitRumpf rest]
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [endblockOrteP, endblockOrteP_mitRumpf err, endblockOrteP_mitRumpf rest]
   | _, _, _, .regRead _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]

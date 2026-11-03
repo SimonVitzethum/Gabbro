@@ -156,7 +156,9 @@ def cB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .bindCallIndElse (p := p) (args := args) (err := err) (rest := rest) .. => "Block.bindCallIndElse" :: (eE p ++ eA args ++ cE err ++ cB rest)
   | .bindCallElse (args := args) (err := err) (rest := rest) .. => "Block.bindCallElse" :: (eA args ++ cE err ++ cB rest)
   | .bindAxiom (args := args) (rest := rest) .. => "Block.bindAxiom" :: (eA args ++ cB rest)
+  | .bindAxiomOpt (args := args) (rest := rest) .. => "Block.bindAxiomOpt" :: (eA args ++ cB rest)
   | .bindAxiomElse (args := args) (err := err) (rest := rest) .. => "Block.bindAxiomElse" :: (eA args ++ cE err ++ cB rest)
+  | .bindAxiomOptElse (args := args) (err := err) (rest := rest) .. => "Block.bindAxiomOptElse" :: (eA args ++ cE err ++ cB rest)
   | .regRead (rest := rest) .. => "Block.regRead" :: cB rest
   | .regReadElse (zusage := z) (sonst := sonst) (rest := rest) .. => "Block.regReadElse" :: (eE z ++ cE sonst ++ cB rest)
   | .awaits (rest := rest) .. => "Block.awaits" :: cB rest
@@ -194,7 +196,9 @@ def cE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V 
   | .bindCall (args := args) (rest := rest) .. => "Endblock.bindCall" :: (eA args ++ cE rest)
   | .bindCallElse (args := args) (err := err) (rest := rest) .. => "Endblock.bindCallElse" :: (eA args ++ cE err ++ cE rest)
   | .bindAxiom (args := args) (rest := rest) .. => "Endblock.bindAxiom" :: (eA args ++ cE rest)
+  | .bindAxiomOpt (args := args) (rest := rest) .. => "Endblock.bindAxiomOpt" :: (eA args ++ cE rest)
   | .bindAxiomElse (args := args) (err := err) (rest := rest) .. => "Endblock.bindAxiomElse" :: (eA args ++ cE err ++ cE rest)
+  | .bindAxiomOptElse (args := args) (err := err) (rest := rest) .. => "Endblock.bindAxiomOptElse" :: (eA args ++ cE err ++ cE rest)
   | .regRead (rest := rest) .. => "Endblock.regRead" :: cE rest
   | .regReadElse (zusage := z) (sonst := sonst) (rest := rest) .. => "Endblock.regReadElse" :: (eE z ++ cE sonst ++ cE rest)
   | .awaits (rest := rest) .. => "Endblock.awaits" :: cE rest

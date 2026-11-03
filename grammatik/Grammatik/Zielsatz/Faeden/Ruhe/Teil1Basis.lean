@@ -43,7 +43,8 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .onWhy _ arms => ruGArms_ants arms
   | _, _, _, _, .call .. => ants_nachΛ _ _
   | _, _, _, _, .callInd .. => ants_nachΛ _ _
-  | _, _, _, _, .callIndElse .. => ants_nachΛ _ _
+  | _, _, _, _, .callIndElse (err := err) .. =>
+      (ants_nachΛ _ _).trans ((ants_umΛ _ _).trans (ruEnd_ants err))
   | _, _, _, _, .locks _ _ body => ruB_ants body
   | _, _, _, _, .breaking _ body => ruB_ants body
   | _, _, _, _, .traverse _ _ body => ruB_ants body
@@ -51,6 +52,9 @@ theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | _, _, _, _, .retry _ _ body ueber => kongr₂ (· ++ ·) (ruB_ants body) (ruB_ants ueber)
   | _, _, _, _, .forever _ _ body => ruB_ants body
   | _, _, _, _, .axiomCall .. => rfl
+  | _, _, _, _, .axiomCallElse (a := a) (err := err) .. =>
+      (ants_nachΛ _ _).trans
+        (congrArg (Sum.inl a :: ·) ((ants_umΛ _ _).trans (ruEnd_ants err)))
   | _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, .transition .. => rfl
   | _, _, _, _, .publish .. => rfl
@@ -77,6 +81,14 @@ theorem ruB_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       kongr₂ (· ++ ·) ((ants_umΛ _ _).trans (ruEnd_ants err))
         ((ants_vorΛ _ _).trans (ruB_ants rest))
   | _, _, _, _, .bindAxiom a _ _ _ _ _ _ rest => congrArg (Sum.inl a :: ·) (ruB_ants rest)
+  | _, _, _, _, .bindAxiomOpt res a _ _ _ _ _ rest => by
+      have ih := ruB_ants rest
+      cases res <;> exact congrArg (Sum.inl a :: ·) ((ants_vorΛ _ _).trans ih)
+  | _, _, _, _, .bindAxiomOptElse res a _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_ants err
+      have ih1 := ruB_ants rest
+      cases res <;> exact congrArg (Sum.inl a :: ·)
+        (kongr₂ (· ++ ·) ((ants_umΛ _ _).trans ih0) ((ants_vorΛ _ _).trans ih1))
   | _, _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest =>
       congrArg (Sum.inl a :: ·) (kongr₂ (· ++ ·) (ruEnd_ants err) (ruB_ants rest))
   | _, _, _, _, .regRead r _ rest => congrArg (Sum.inr r :: ·) (ruB_ants rest)
@@ -108,6 +120,14 @@ theorem ruEnd_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       kongr₂ (· ++ ·) ((ants_umΛ _ _).trans (ruEnd_ants err))
         ((ants_umΛ _ _).trans (ruEnd_ants rest))
   | _, _, _, .bindAxiom a _ _ _ _ _ _ rest => congrArg (Sum.inl a :: ·) (ruEnd_ants rest)
+  | _, _, _, .bindAxiomOpt res a _ _ _ _ _ rest => by
+      have ih := ruEnd_ants rest
+      cases res <;> exact congrArg (Sum.inl a :: ·) ((ants_umΛ _ _).trans ih)
+  | _, _, _, .bindAxiomOptElse res a _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_ants err
+      have ih1 := ruEnd_ants rest
+      cases res <;> exact congrArg (Sum.inl a :: ·)
+        (kongr₂ (· ++ ·) ((ants_umΛ _ _).trans ih0) ((ants_umΛ _ _).trans ih1))
   | _, _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest =>
       congrArg (Sum.inl a :: ·) (kongr₂ (· ++ ·) (ruEnd_ants err) (ruEnd_ants rest))
   | _, _, _, .regRead r _ rest => congrArg (Sum.inr r :: ·) (ruEnd_ants rest)

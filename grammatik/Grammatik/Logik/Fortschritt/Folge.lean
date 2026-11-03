@@ -214,6 +214,7 @@ def GRest.fR (e : Bool) :
   | _, _, _, w, .wartetSonst _ err b k =>
       fE Φ e false err = true ∧ fB Φ e w b = true ∧ k.fR e false
   | _, _, _, _, .abbruch k => k.fR e false
+  | _, _, _, _, .rueckBereit .. => False
   | _, _, _, _, .leer => True
 
 end Pruef

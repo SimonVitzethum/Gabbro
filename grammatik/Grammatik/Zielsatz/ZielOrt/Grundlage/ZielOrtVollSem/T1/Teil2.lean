@@ -46,6 +46,7 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .shift .., _ => rfl
   | .call .., _ => rfl
   | .axiomCall .., _ => rfl
+  | .axiomCallElse .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .regWrite .., _ => rfl
   | .transition .., _ => rfl
   | .publish .., _ => rfl
@@ -75,6 +76,8 @@ theorem Block.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .bindCallElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindAxiom .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .bindAxiomElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .regRead .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .regReadElse .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
   | .awaits .., h => by simp only [Block.kOk, Bool.false_eq_true] at h
@@ -122,6 +125,8 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       exact Endblock.vOk_of_kOk rest h
   | .bindAxiom .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiomElse .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindAxiomOptElse .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .regRead .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .regReadElse .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .awaits .., h => by simp only [Endblock.kOk, Bool.false_eq_true] at h

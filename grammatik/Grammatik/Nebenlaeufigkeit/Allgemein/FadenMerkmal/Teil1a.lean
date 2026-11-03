@@ -225,10 +225,10 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       all_goals simp_all [GRest.mR_weiterOpt]
   | g5 hs =>
     cases hs with
-    | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead =>
+    | dannGleitNarrowElse _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead =>
       kopfM
       exact ⟨hok.1.1, abbruch_iff ‹Endblock _ _ _ _ _› ‹Block _ _ _ _ _ _›, hok.2⟩
-    | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead =>
+    | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead =>
       kopfM
       exact ⟨hok.1.1, abbruch_iff ‹Endblock _ _ _ _ _› ‹Block _ _ _ _ _ _›, hok.2⟩
     | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
@@ -245,7 +245,7 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       rw [hcaller]; dsimp only
       simp only [GRest.mR, mB_alsBlock]
       exact fun h => ⟨h.1, abbruch_iff err restb, h.2.2⟩
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax
         neu hneu hΛ =>
       kopfM
       exact ⟨hok.1.1, abbruch_iff ‹Endblock _ _ _ _ _› ‹Block _ _ _ _ _ _›, hok.2⟩

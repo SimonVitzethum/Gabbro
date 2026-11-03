@@ -231,49 +231,49 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.rueckGrund (passes := p + j) (M.plus j) f r hperm ρ (RufRahmenG.plus_rest hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ n err restb (k.plus j) ρc (RufRahmenG.plus_rest hcaller) hΛ g hfg rho hrho s0 hs0 rg hrg hn
   | g5 h =>
     cases h with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckConsGrund (passes := p + j) (M.plus j) f r hperm restk ρ (RufRahmenG.plus_rest hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ n err restb (k.plus j) ρc (RufRahmenG.plus_rest hcaller) hΛ g hfg rho hrho s0 hs0 rg hrg hn
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho s0 hs0 rg hrg hn =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannRetGrund (passes := p + j) (M.plus j) f r hperm restk (kk.plus j) ρ (RufRahmenG.plus_rest hhead) (caller.plus j) (rst.map (RufRahmenG.plus j)) (congrArg (List.map (RufRahmenG.plus j)) hpop) l Γ Λ Λ' τ n err restb (k.plus j) ρc (RufRahmenG.plus_rest hcaller) hΛ g hfg rho hrho s0 hs0 rg hrg hn
-    | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+    | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannRegLies (passes := p + j) (M.plus j) f l Γ Λ Λ' r hk rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) v hv hz hΛ
-    | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseWahr _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannRegLiesElseWahr (passes := p + j) (M.plus j) f l Γ Λ Λ' r hk zusage sonst rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) v hv σ₁ hs₁ hw neu hneu hΛ
-    | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannRegLiesElseFalsch (passes := p + j) (M.plus j) f l Γ Λ Λ' r hk zusage sonst rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) v hv σ₁ hs₁ hw neu hneu hΛ
-    | dannAwaits l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+    | dannAwaits _ _ l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannAwaits (passes := p + j) (M.plus j) f l Γ Λ Λ' g payload hp hL hat rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) hvis σ₁ hs₁ neu hneu hΛ
-    | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+    | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannExchange (passes := p + j) (M.plus j) f l Γ Λ Λ' g neuE hw hL rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ hs₂ neu hneu hΛ
-    | dannGleit l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleit _ _ l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannGleit (passes := p + j) (M.plus j) f l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ v hv neu hneu hΛ
-    | dannGleitLit l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
+    | dannGleitLit _ _ l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannGleitLit (passes := p + j) (M.plus j) f l Γ Λ Λ' q lo hi rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) v hv
-    | dannGleitVon l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleitVon _ _ l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannGleitVon (passes := p + j) (M.plus j) f l Γ Λ Λ' l₁ h₁ e lo hi rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ v hv neu hneu hΛ
-    | dannGleitNarrowOk l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleitNarrowOk _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannGleitNarrowOk (passes := p + j) (M.plus j) f l Γ Λ Λ' l₁ h₁ e lo hi sonst rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ v hv neu hneu hΛ
-    | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+    | dannGleitNarrowElse _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannGleitNarrowElse (passes := p + j) (M.plus j) f l Γ Λ Λ' l₁ h₁ e lo hi sonst rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ hn neu hneu hΛ
-    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiom (passes := p + j) (M.plus j) f l Γ Λ Λ' τ a args he hw hg hd hgd rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
-    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomElseOk (passes := p + j) (M.plus j) f l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
     | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>

@@ -394,7 +394,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
       exact akteurSA_dannBindAxiomElseGrund (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (Tg := Tg) (m := m) (zyk := zyk) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hM := hM) (hTV := hTV) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
     | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       exact akteurSA_dannBindAxiomElseOk (D := D) (P := P) (O := O) (passes := passes) (Q := Q) (S := S) (lok := lok) (Tg := Tg) (m := m) (zyk := zyk) (hO := hO) (hRL := hRL) (hQ := hQ) (hlok := hlok) (hS := hS) (sp := sp) (hsp := hsp) (hK := hK) (hM := hM) (hTV := hTV) (hFragS := hFragS) (hFS := hFS) (M := M) (u := u) (hF := hF) (hL := hL) (hRS := hRS) (hSG := hSG) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr := hr) (hw := hw) (hg := hg) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
         hfg rho hrho s0 hs0 rg hrg hn =>
       subst hfg hs0 hrg
       subst hrho
@@ -415,7 +415,7 @@ theorem akteurSA (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : 
           (rest_okS hcaller hokc).2.1 (rest_okS hcaller hokc).2.2.2.2)
         (fun R O' U A σa X h => h l Γ Λ Λ' τ n err restb k ρc hcaller hn) _ ⟨rfl, rfl⟩, hSt'⟩,
         logOk_grund hL⟩
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
         hfg rho hrho s0 hs0 rg hrg hn =>
       subst hfg hs0 hrg
       subst hrho

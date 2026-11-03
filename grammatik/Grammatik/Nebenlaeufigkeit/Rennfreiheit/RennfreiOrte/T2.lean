@@ -210,7 +210,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
     | _ => leseO
   | g5 hs =>
     cases hs with
-    | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+    | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         simp only [GRest.oR, blockOrteP, List.all_append, List.all_cons, Bool.and_eq_true] at hC
@@ -220,7 +220,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         · rw [← hW]; exact hw
         · simp only [List.all_cons, Bool.and_eq_true]
           exact ⟨hC.1.1.1, hC.1.1.2⟩
-    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         simp only [GRest.oR, blockOrteP, List.all_append, Bool.and_eq_true] at hC
@@ -240,7 +240,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
           evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
         rw [e2, hX, List.append_assoc]
         rfl
-    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         simp only [GRest.oR, blockOrteP, List.all_append, Bool.and_eq_true] at hC
@@ -260,7 +260,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
           evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1.1))⟩
         rw [e2, hX, List.append_assoc]
         rfl
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         simp only [GRest.oR, blockOrteP, List.all_append, Bool.and_eq_true] at hC
@@ -280,10 +280,10 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
           evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1.1))⟩
         rw [e2, hX, List.append_assoc]
         rfl
-    | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+    | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
         simp only [rufUpdateG_self]
         exact ⟨[.fremd (.inr (.inl r))], rfl, evOk_fremd _⟩
-    | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseWahr _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         dsimp only at hC ⊢
@@ -293,7 +293,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         subst hs₁
         exact ⟨leseEv ((M.weltVon f).fragt (.inr (.inl r))) Λ zusage.orte ++ [.fremd (.inr (.inl r))],
           by rw [List.append_assoc]; rfl, evOk_append (evOk_lese _ _ (by simp_all)) (evOk_fremd _)⟩
-    | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         dsimp only at hC ⊢
@@ -303,7 +303,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         subst hs₁
         exact ⟨leseEv ((M.weltVon f).fragt (.inr (.inl r))) Λ zusage.orte ++ [.fremd (.inr (.inl r))],
           by rw [List.append_assoc]; rfl, evOk_append (evOk_lese _ _ (by simp_all)) (evOk_fremd _)⟩
-    | dannAwaits l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+    | dannAwaits _ _ l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
         simp only [rufUpdateG_self]
         rw [hhead] at hC
         dsimp only at hC ⊢

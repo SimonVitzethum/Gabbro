@@ -162,6 +162,7 @@ theorem fR_mono (e : Bool) :
   | _, _, _, .wartet b k, w, w', hw, h => ⟨fB_mono Φ e b w w' hw h.1, h.2⟩
   | _, _, _, .wartetSonst _ err b k, w, w', hw, h => ⟨h.1, fB_mono Φ e b w w' hw h.2.1, h.2.2⟩
   | _, _, _, .abbruch _, _, _, _, h => h
+  | _, _, _, .rueckBereit .., _, _, _, h => h
   | _, _, _, .leer, _, _, _, h => h
 
 theorem fR_von_false (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

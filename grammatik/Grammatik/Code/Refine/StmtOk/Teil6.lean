@@ -97,6 +97,8 @@ theorem lowerS_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       lowerS_ok_forever (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (Λ := Λ) (a := a) (inv := inv) (body := body) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_body := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R body)
   | _, _, _, _, .axiomCall .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .axiomCallElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .regWrite .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .transition .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
@@ -140,7 +142,11 @@ theorem lowerB_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv : L
       lowerB_ok_GabbroGrammatikBlockbindCallElse (lay := lay) (hL := hL) (cenv := cenv) (lv := lv) (O := O) (passes := passes) (R := R) (f := f) (args := args) (he := he) (hp := hp) (hr := hr) (err := err) (rest := rest) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h) (M := M) (S := S) (fn := fn) (hM := hM) (hk := hk) (hlv := hlv) (hFn := hFn) (hCall := hCall) (σ := σ) (ρ := ρ) (m := m) (rs := rs) (ks := ks) (dst := dst) (hR := hR) (hE := hE) (hW := hW) (hc := hc) (ih_lowerB_ok_rest := fun lay hL cenv lv O passes R => lowerB_ok lay hL cenv lv O passes R rest) (ih_lowerEnd_ok_err := fun lay hL cenv lv O passes R => lowerEnd_ok lay hL cenv lv O passes R err)
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindAxiomOpt .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindAxiomOptElse .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .regRead .., lb, k, st, st', blks, h, M, S, fn, hM, hk, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerB, reduceCtorEq] at h
@@ -212,7 +218,11 @@ theorem lowerEnd_ok (lay : Layout D) (hL : LayoutOk lay) (cenv : List Reg) (lv :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindAxiomOpt .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindAxiomOptElse .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by
       simp only [lowerEnd, reduceCtorEq] at h
 
   | _, _, _, .regRead .., lb, st, st', blks, h, M, S, fn, hM, hlv, hFn, hCall, σ, ρ, m, rs, ks, dst, hR, hE, hW, hc => by

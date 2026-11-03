@@ -343,6 +343,7 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   | ewigRest a n inv body k => exact fort_schritt (w_ewigFort rfl a n inv body k ρ hx)
   | wartet rest k => simp only [GRest.wartend, Bool.true_eq_false] at hnw'
   | wartetSonst n err rest k => simp only [GRest.wartend, Bool.true_eq_false] at hnw'
+  | rueckBereit => simp only [GRest.fOk, Bool.false_eq_true] at hk
   | abbruch k => simp only [GRest.blockiert, Bool.true_eq_false] at hb
   | leer => simp only [GRest.blockiert, Bool.true_eq_false] at hb
 
