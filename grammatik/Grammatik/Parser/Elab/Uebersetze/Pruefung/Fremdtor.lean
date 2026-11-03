@@ -3,14 +3,15 @@
    A gate may name a C08 foreign body. The wrapper is still an ordinary nullary
    `UFn` threading the Duty; the gate call is the ordinary foreign call Stage 0
    already lowers. The infallible answer-less case rides `axCall`; the fallible
-   `int`-answered case rides `bindAxElse` whose error branch answers the range
-   bottom while threading the Duty -- the Duty is never forged and never
-   dropped on either path. An unclosed error branch is refused by the lowering:
+   `int`-answered case rides `bindAxElse` whose error branch rethrows the exact
+   reason while retaining the Duty. Only a normal gate return completes the
+   evidence fold. An unclosed error branch is refused by the lowering:
    dropping it would drop the Duty's discharge path. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Ableitung
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Falte
 public import Grammatik.Parser.Elab.UebersetzeAllg3
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Rest2a
 public import Grammatik.Parser.Cover.Differenz
@@ -37,7 +38,7 @@ def checkTextFremd : String :=
   "axiom f() effects { pure } unfalsifiable \"hw\"; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
 /-- The fallible foreign gate: the `extern fn` with a reason channel is called
-    with `bindAxElse`; the error branch answers the range bottom. -/
+    with `bindAxElse`; the error branch preserves the reason channel. -/
 def checkTextFremdFallible : String :=
   "reason R { A = 0 \"t\" exhaustive } extern fn f() -> u64 or R effects { pure }; impl fn g() { return; } check p { claim \"c\" measures x gates f can_fail { return true; } floor 2 >= 1 }"
 
@@ -79,7 +80,7 @@ example : (elabText checkTextFremd).map
 example : (elabText checkTextFremdFallible).map
     (fun u => (u.fns.find? fun f => strEq f.name "p#tor#f").map
       fun f => (f.nimmt, f.gibt, f.body.length)) =
-    .ok (some (["p#duty"], ["p#duty"], 3)) := rfl
+    .ok (some (["p#duty"], ["p#duty"], 5)) := rfl
 
 /-- The units have no tables and no statics. -/
 theorem uFremd_tabs_leer : uFremd.tabs = [] := rfl
@@ -278,9 +279,9 @@ theorem fremd_entladung (d : CheckDecl (declOf uFremd))
     have h2 := List.all_eq_true.mp h1 g hmem
     exact of_decide_eq_true h2
 
-/-- The fallible foreign wrapper discharges the completed report: the Duty
-    threads on both paths, so the discharge holds whatever the foreign call
-    answered. -/
+/-- Structural eligibility to consume the completed report. Execution evidence
+    additionally requires a normal gate return (`torAbschluss`); a reason
+    return preserves the pending Duty instead. -/
 theorem fremdFallible_entladung (d : CheckDecl (declOf uFremdFallible))
     (hd : d ∈ checkChecksFremdFallible) :
     ∃ g, CheckEntladung checkPFremdFallible d messBerichtWahr g := by
@@ -330,6 +331,47 @@ def uFremdOhneFehler : UProg :=
 /-- The lowering refuses the unclosed error branch: no silent Duty drop. -/
 theorem uFremdOhneFehler_verweigert :
     (lowerAllg uFremdOhneFehler).toOption.isNone = true := by
+  decide +kernel
+
+/-- The selected foreign gate wrapper retains the declared reason channel. -/
+def fremdTorIndex : Fin uFremdFallible.fns.length := ⟨2, by decide +kernel⟩
+
+example : (declOf uFremdFallible).gruende fremdTorIndex = 1 := rfl
+
+/-- The generated error handler rethrows the foreign case rather than inventing
+    a successful numeric answer. -/
+example : (uFremdFallible.fns.find? (fun f => strEq f.name "p#tor#f")).map
+    (fun f => (f.gruende, f.body)) =
+    some (1, [.bindAxElse "ans" "f" [] "e", .matchWhyBeg "e",
+      .ret (.why 0), .blkEnd, .ret (.why 0), .blkEnd]) := rfl
+
+/-- An error return cannot consume this gate's completed report, even when the
+    log later contains unrelated normal returns. -/
+theorem fremdTor_fehler_pending
+    (rho : Env (declOf uFremdFallible) ((declOf uFremdFallible).params fremdTorIndex))
+    (s0 s1 : World (declOf uFremdFallible))
+    (rest : List (RufEreignisF (declOf uFremdFallible))) :
+    torAbschluss fremdTorIndex 0
+      (.why fremdTorIndex rho ⟨0, by decide +kernel⟩ s0 s1 :: rest) = false := rfl
+
+/-- A normal return completes the same activation. -/
+theorem fremdTor_erfolg
+    (rho : Env (declOf uFremdFallible) ((declOf uFremdFallible).params fremdTorIndex))
+    (value : ErgVal (declOf uFremdFallible) ((declOf uFremdFallible).erg fremdTorIndex))
+    (s0 s1 : World (declOf uFremdFallible)) :
+    torPush fremdTorIndex [.eintritt fremdTorIndex rho s0,
+      .rueck fremdTorIndex rho value s0 s1] = true := by
+  simp [torPush, torAbschluss]
+
+/-- A gate's source declaration supplies no actual parameter arguments. -/
+example : (elabText
+    "impl fn g(x: u64) { return; } check p { claim \"c\" measures x gates g can_fail { return true; } }").toOption.isNone = true := by
+  decide +kernel
+
+/-- Ordinary fallible gate wrappers keep their named refusal until a written
+    reason policy is supplied; no error is converted into normal success. -/
+example : (elabText
+    "reason R { A = 0 \"t\" exhaustive } impl fn g() -> u64 or R { return 1; } check p { claim \"c\" measures x gates g can_fail { return true; } }").toOption.isNone = true := by
   decide +kernel
 
 end Gabbro.Grammatik.Parser.Uebersetze
