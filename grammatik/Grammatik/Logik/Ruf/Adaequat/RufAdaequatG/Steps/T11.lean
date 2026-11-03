@@ -138,6 +138,14 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | verbrauchFort => kopfwegH
     | dannLeaveVerbrauch => kopfwegH
     | dannNextVerbrauch => kopfwegH
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
+        subst r <;> kopfwegH
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
+        subst r <;> kopfwegH
 
 /-- `traverse konto invariant false { }` in the witness function. -/
 def adTrav : Stmt adD (vertragVon adD adFn) false [] [] [] :=
@@ -221,5 +229,13 @@ theorem trav_einig :
     in the sequential semantics. Bodies with calls are adequate in general
     (`RufAdaequatRufG.lean`). -/
 
+    | rueckFreigabe ρ a L remaining hhead =>
+      rw [hR] at hhead
+      cases hhead
+      cases hcov
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
+      rw [hR] at hhead
+      cases hhead
+      cases hcov
 
 end Gabbro.Grammatik

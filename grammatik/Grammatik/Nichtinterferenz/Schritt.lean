@@ -27,6 +27,8 @@ public import Grammatik.Nichtinterferenz.Grundlagen
 @[expose] public section
 
 
+noncomputable section
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
@@ -128,15 +130,13 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       else none
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
-      kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)
+      kPop st f rho σ₁ (evalErg σ₁ e σ₁ ρ)
   | _, _, Λ, ρ, .retScoped e R =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
-      let σ₂ := R.scopes.foldl World.gibt σ₁
-      kPop st f σ₂ (evalErg σ₁ e σ₁ ρ)
-  | _, _, _, _, .retWhy r _ => kPopGrund st f spur sp r
-  | _, _, _, _, .retWhyScoped r R =>
-      let σ₂ := R.scopes.foldl World.gibt (sp.welt spur)
-      kPopGrund st f σ₂.spur σ₂.speicher r
+      kScoped st f rho ρ (.inl (evalErg σ₁ e σ₁ ρ)) σ₁ R.scopes
+  | _, _, _, _, .retWhy r _ => kPopGrund st f rho spur sp r
+  | _, _, _, ρ, .retWhyScoped r R =>
+      kScoped st f rho ρ (.inr r) (sp.welt spur) R.scopes
   | _, _, _, _, _ => none
 
 /-- A `dann` residue. -/
@@ -305,6 +305,8 @@ def kr (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f
         kLokal st f rho ρ (.dann body (.ewigRest a n inv body k)) σ₁.spur sp
       else none
   | _, _, _, ρ, .ewigRest a n inv body k => kLokal st f rho ρ (.ewig a n inv body k) spur sp
+  | _, _, _, ρ, .aufraeumen a (L :: remaining) =>
+      kScoped st f rho ρ a.1 ((sp.welt spur).gibt L) remaining
   | _, _, _, _, _ => none
 
 /-- The consuming-loop head of `kr`, unfolded by definitional equality (the

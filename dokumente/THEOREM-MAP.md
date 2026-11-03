@@ -7005,3 +7005,108 @@ lists these open boundaries (older handoff entries are superseded where implemen
 packages, outside the assembly runner and Stage 0, with no `unsafe`. Boot behaviour is
 user logic; the x86-64 binding offers the bundled once-proved boot-stub ASM item.
 This audit adds no low-level implementation or new execution path.
+## 183. Scoped-return completion: design boundary (2026-11-03)
+
+Static inspection at `4286bc606`, on `scoped-returns`; no Lean or build was run, and no rule of
+`RufSchrittG` or definition used by `Spec` was changed. The requested extension would add scope
+release before the value/reason return, changing the transition relation of machine G.
+
+The requested classification of a pre-release scoped return as finished cannot preserve the current
+goal statement. `FertigG` (`Nebenlaeufigkeit/Allgemein/Verklemmung/T2.lean`) tests an empty stack and
+`GRest.anRueck`, without running cleanup. A schematic counterexample has two roots with no signature
+locks: root A acquires L and reaches a scoped return with `R.scopes = [L]`, while root B awaits L.
+`dannLocks` (machine G, group 2) exposes the scoped-return body before any release. If that head counts
+as finished, A is finished while still holding L, and B is unfinished and `WartetG`. Thus every
+unfinished thread waits, but not every thread is finished, contradicting `Ziel.keineVerklemmung`
+(`Zielsatz/Kern/Spec/Teil2.lean`). This is a semantic obstruction, not just a missing proof of
+`fertig_leer`. `World.gibt_foldl_speicher` preserves memory, but changes the actual holdings and cannot
+transfer this lock-freedom conclusion back to the unreleased machine.
+
+There is a second boundary: `kEnde` sends a scoped return through `kPop`, and `kPop [] = none`
+(`Nichtinterferenz/SchrittBasis.lean`). A new root cleanup transition therefore also needs a change to
+the K transition; a new arm of `schrittK_von_g*` alone cannot establish the existing correspondence.
+
+Recommendation pending the owner decision: distinguish pending cleanup from completion. Capture the
+result before releasing, perform cleanup for roots as well as callees, and classify only the released
+return state as finished. This needs an explicit terminal residue carrying the saved result, a matching
+K root transition, and agreement on the definitions of completion used by `Spec`; the existing
+`rueckBereit scopes k` is indexed by still-held scope resources. No weakened deadlock statement or
+finished-holder exception is proposed. Work stopped at this boundary as instructed; machine rules,
+replay/noninterference arms and finished-thread proofs remain open.
+
+## 184. Scoped-return release and completion checkpoint (2026-11-03)
+
+Owner-selected design after §182; source inspection only, no build or Lean check. This changes
+`RufSchrittG` through two new group-7 rules, `rueckScopedWert` and `rueckScopedGrund`.
+Each recognizes the same three heads (end return, end-block cons, block cons), evaluates the value
+at the read world before cleanup, applies `R.scopes.foldl World.gibt`, and answers through
+`rufAntwortG`. A nonroot resumes its caller (discard, bind, or reason handler); a root retains its
+entry/log and the new final residue `GRest.zurueckgekehrt`, appended to the inductive and indexed
+by exactly `V.ende`. The saved answer is a value or reason, never an expression to re-evaluate.
+
+`Stmt.istRueck` and `Endblock.istRueck` still exclude pending scoped returns. `GRest.anRueck`
+counts the final residue; `GRest.anRueck_perm` and `fertigG_zurueckgekehrt` use its end-resource
+index. Thus the pre-release finished-holder counterexample is not introduced.
+
+K now receives the root environment explicitly in `kPop`/`kPopGrund`; an empty stack yields the
+same final residue rather than `none`. Existing nonroot pop behavior is unchanged. Root cases in
+`kPop_rel`/`kPopGrund_rel` and `kPop_ok`/`kPopGrund_ok` carry equal saved answers and the terminal
+flow predicate. `SchrittTreu/Scoped.lean` connects `rufAntwortG` to K and computes both scoped
+head selectors; `schrittK_von_g7` consumes these facts.
+
+Dependency order for the lead: `RufMaschineG/T1Basis`, `T1`, `Schritt/G7`, `T2`; the remaining G
+and residue consumers; `Verklemmung/T2`; `Nichtinterferenz/LokalBasis`, `SchrittBasis`, `Schritt`,
+`SchrittTreu/Scoped`, `SchrittTreu/Teil2`, `LokalSchritt/Teil1Basis`, `Teil1`, `Teil2`,
+`Invariante/Teil1Basis`, `Teil1`, `Teil2`, then their importers. This is a source checkpoint,
+not a buildable/integratable claim: exhaustive GRest and group-7 consumers and the replay/actor
+return guarantees are the next implementation stage. `Spec.lean` and all Spec submodule statements
+are untouched. In particular, `RetKopf`/`StartEndeG` still mention source expressions only; they do
+not assert anything about the saved terminal residue. No language case is claimed complete.
+
+The second source checkpoint adds terminal arms to the residue semantics `semR`, `semK`,
+`semZ`, `weiterZ`, `weiterH`, `weiterHA`, their trace/outcome lemmas and residue checks
+(`okZ`/`okV`/`okG`/`okS`, `sauber`, `mR`, `oR`, `aR`, `fR`, `fOk`, `kette`, `freis`,
+budget lifting and cost potential). `fR` retains the existing return obligation `!e || armed`;
+completion does not waive a required call-order obligation. Pending scope selectors now have
+shared three-head decomposition lemmas. The G rules require the existing `scopesOkScopes`
+check, so signature locks and caller locks below the frame floor cannot become cleanup scopes.
+
+`SperreSem/T4/Scoped.lean` relates both scoped-return heads to the pre-release world, using
+`World.gibt_foldl_speicher` and the existing continuation-return lemmas. In dependency order,
+`ZielOrtStartBasis` and this semantics module precede `Core/ZielOrtStartScoped`, which is imported
+by `ZielOrtStart`. The new `kopfS_scopedRet` uses `popS_ens`/`popS_inv`: the exact cleanup
+permutation embeds end resources into the pending holdings; `stabilS_mono` therefore carries
+ensures and owed invariant footprints to the pre-release read. `ScopedRueckGutG` records that
+step-source property for every thread, without a stack-depth restriction;
+`ziel_ort_scoped_rueck_bei` obtains it from the reachable-machine replay. Its closure still depends
+on extending that replay through both new rules: it is not a completed proof of the enlarged model.
+`start_scopedGrund_unmoeglich` uses `StartOhneGrund` and the bottom-frame theorem to exclude
+reason answers at roots, including saved reason answers. All of these are unbuilt proof sources.
+
+**Exact Spec coverage:** `RetKopf` and `StartEndeG` remain textually unchanged. The new
+`zurueckgekehrt_nicht_retKopf` proves that a saved final answer is outside `RetKopf`, regardless
+of the expression supplied. Consequently `Ziel.startEnde` alone still observes only plain
+return heads; the additional release-step property is needed for scoped returns. No claim that
+`StartEndeG` itself now covers all finished states is made. The source comments in the start
+proof modules have been corrected; no Spec statement was edited.
+
+**Open semantic/proof boundary:** `freiH` (`SperreSem/T1a`, also used by the atomic H semantics) releases locks on
+`.zurueck`/`.why` without checking `S.inv`; scoped branches of `execStmtH`/`execEndH` and
+`execStmtHA`/`execEndHA` also fold `World.gibt` directly. Thus the existing no-logic replay does
+not yet justify each newly effective scoped release's lock invariant. An ensures/owed-function-
+invariant proof does not close that separate obligation. Strengthen the scoped H/HA cleanup
+checks and transfer their success through the replay before claiming `SperrInvG` for the new
+rules; do not weaken that conclusion or add a machine premise assuming the user proof's result.
+Also generalize the held-lock step classification (`offen_schrittG`, currently at most one
+release) to the canonical release list and update its clients. Root completion needs the
+progress/shape invariants to account for terminal residues (a final residue at a nonempty stack
+is not produced by `rufAntwortG`, but arbitrary invariant states must exclude or handle it).
+
+Remaining ports include the new group-7 cases of log fidelity/cleanliness, static holdings,
+rank/deadlock, read/site/feature preservation, source/atomic actor replay, logged ensures and
+invariants, ownership, adequacy/converse, progress/liveness, cost and budget-step lemmas.
+`Code`/`Parser`/`stage0/Stage0` have no `GRest` eliminator in the inspected source; their existing
+`Stmt`/`Endblock` scoped arms do not gain verified machine coverage from this checkpoint.
+Lead validation remains mandatory; there is no green build, guardian result or newly completed
+language case. `git diff --check` and the changed/new Lean files' sub-500-line/module headers
+are the static checks performed by this worker.

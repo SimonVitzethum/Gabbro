@@ -107,6 +107,19 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   [`lowRetStmt`/`lowRetEnd`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Returns.lean).
   Shared `locks` still fails `Uebersetze/Teil/Teil10` (“shared lock without G form”); RCU declarations fail `itemMetadata`.
   Open: return-capable physical lock cleanup/admission, mode-aware RW/RCU source-to-IR integration and reader-wait liveness.
+  **Scoped-return model boundary (2026-11-03, static):** counting a pre-release scoped return as `FertigG`
+  contradicts `Ziel.keineVerklemmung`: a finished root can still hold the lock an unfinished thread awaits.
+  The owner selected completion after cleanup. The `scoped-returns` branch adds
+  `rueckScopedWert`/`rueckScopedGrund`, the saved `zurueckgekehrt` residue at exactly `V.ende`,
+  and the K root cases, with correspondence and flow-preservation proof edits (not built).
+  The second source checkpoint adds saved-answer residue arms and `kopfS_scopedRet` /
+  `ScopedRueckGutG` / `ziel_ort_scoped_rueck_bei` for the pre-release ensures and owed-function-invariant
+  world (unbuilt; depends on completing the replay preservation). The unchanged expression-based
+  `StartEndeG` does not quantify over the saved residue.
+  Open: H/HA scoped cleanup currently releases without checking the released locks' `S.inv`;
+  strengthen those checks and transfer them, generalize the one-release held-lock classification,
+  then port the remaining group-7 invariant/progress/atomic/ownership consumers. See
+  [the scoped-return implementation checkpoint](dokumente/THEOREM-MAP.md#183-scoped-return-release-and-completion-checkpoint-2026-11-03).
 - **C11 consuming traversal: implemented, connected, with a source producer.**
   [`uLoopExport`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil9.lean), `ExportMetadata.consumingHeader`,
   [`lowStructStep`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Struct.lean) and

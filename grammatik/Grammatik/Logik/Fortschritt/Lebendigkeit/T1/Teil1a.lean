@@ -19,7 +19,8 @@ set_option maxHeartbeats 4000000 in
 theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     (hs : RufSchrittG P O passes M f M') :
     (∃ L, AnSperre M f L) ∨ offen (M'.faeden f).spur = offen (M.faeden f).spur ∨
-    (∃ L, offen (M'.faeden f).spur = (offen (M.faeden f).spur).erase L) := by
+    (∃ Ls : List D.Lock,
+      offen (M'.faeden f).spur = Ls.foldl (fun held L => held.erase L) (offen (M.faeden f).spur)) := by
   cases hs with
   | g1 hs =>
     cases hs with
@@ -47,7 +48,7 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         exact Or.inl ⟨L, l, Γ, Λ, Λ'', ρ, hr, body, rest, k, hhead⟩
     | freiGib l Γ Λ L k ρ hhead =>
         simp only [rufUpdateG_self]
-        exact Or.inr (Or.inr ⟨L, rfl⟩)
+        exact Or.inr (Or.inr ⟨[L], rfl⟩)
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
@@ -93,10 +94,10 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     cases hs with
     | peelFreiLeave l Γ Λ L rest k ρ hl hhead =>
         simp only [rufUpdateG_self]
-        exact Or.inr (Or.inr ⟨L, rfl⟩)
+        exact Or.inr (Or.inr ⟨[L], rfl⟩)
     | peelFreiNext l Γ Λ L rest k ρ hl hhead =>
         simp only [rufUpdateG_self]
-        exact Or.inr (Or.inr ⟨L, rfl⟩)
+        exact Or.inr (Or.inr ⟨[L], rfl⟩)
     | dannNextEwig l Γ Λ a n inv body k rest ρ hl _ σ' ρ' _ hstep =>
         simp only [rufUpdateG_self]
         refine Or.inr (Or.inl ?_)
@@ -152,6 +153,24 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         exact lese_offen _ _ _
   | g7 hs =>
     cases hs with
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      simp only [rufUpdateG_self]
+      subst σ₁
+      exact Or.inr (Or.inl (lese_offen _ _ _))
+    | rueckScopedGrund => exact Or.inr (Or.inl (by simp only [rufUpdateG_self]))
+    | rueckFreigabe ρ a L remaining hhead =>
+      simp only [rufUpdateG_self]
+      exact Or.inr (Or.inr ⟨[L], rfl⟩)
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
+      simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+      exact Or.inr (Or.inr ⟨[L], rfl⟩)
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      simp only [rufUpdateG_self, rufAntwortG_spur ha]
+      subst σ₁
+      exact Or.inr (Or.inl (lese_offen _ _ _))
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self, rufAntwortG_spur ha]
+      exact Or.inr (Or.inl rfl)
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]
@@ -172,7 +191,7 @@ theorem nimmt_an_sperre (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} {L : D
     · exact hA
     · exact absurd h1 h0
   · rw [e] at h1; exact absurd h1 h0
-  · rw [e] at h1; exact absurd (List.mem_of_mem_erase h1) h0
+  · rw [e] at h1; exact absurd (mem_of_mem_eraseScopes _ _ h1) h0
 
 /-- A `locks L` head read off the residue is a `locks L` head. -/
 theorem anSperre_of_kopf {M : RufMaschineG D} {t : Faden} {L : D.Lock}

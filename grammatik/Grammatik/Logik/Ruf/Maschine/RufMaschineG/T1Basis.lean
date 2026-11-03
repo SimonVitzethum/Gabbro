@@ -164,6 +164,94 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
       (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ) :
       GRest D V true (.index (D.count t) :: Γ) Λ
+  /-- A completed scoped return. The expression has already been evaluated and
+      every lexical scope released. Its snapshot is the expression's read world,
+      before any release. Only the contract's end resources remain;
+      a root keeps this residue, whereas a callee immediately resumes its caller. -/
+  | zurueckgekehrt {l : Bool} {Γ : Ctx}
+      (antwort : (ErgVal D V.erg ⊕ Fin V.gruende) × World D) : GRest D V l Γ V.ende
+  /-- A return already evaluated in `vor`, with lexical releases still pending.
+    Only the remaining locks and the contract's end resources are live. This
+    residue is never final. Reachable cleanup lists are nonempty: the last
+    release also delivers the answer, without evaluating the expression again. -/
+  | aufraeumen {l : Bool} {Γ : Ctx}
+      (antwort : (ErgVal D V.erg ⊕ Fin V.gruende) × World D)
+      (remaining : List D.Lock) : GRest D V l Γ (remaining.map Res.held ++ V.ende)
+
+/-- The three value-return heads consumed by scoped cleanup. Keeping this
+    selection next to the residue prevents separate root/callee shape lists. -/
+def GRest.scopedWert {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Option (ErgExpr D Γ Λ V.erg × RueckRessourcen D V Λ)
+  | .ende (.retScoped e R) => some (e, R)
+  | .ende (.cons (.retScoped e R) _) => some (e, R)
+  | .dann (.cons (.retScoped e R) _) _ => some (e, R)
+  | _ => none
+
+/-- The reason-return counterpart of `scopedWert`. -/
+def GRest.scopedGrund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Option (Fin V.gruende × RueckRessourcen D V Λ)
+  | .ende (.retWhyScoped r R) => some (r, R)
+  | .ende (.cons (.retWhyScoped r R) _) => some (r, R)
+  | .dann (.cons (.retWhyScoped r R) _) _ => some (r, R)
+  | _ => none
+
+/-- The value selector recognizes exactly the three source return heads. -/
+theorem GRest.scopedWert_faelle {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} {e : ErgExpr D Γ Λ V.erg} {R : RueckRessourcen D V Λ}
+    (h : r.scopedWert = some (e, R)) :
+    r = .ende (.retScoped e R) ∨
+      (∃ rest, r = .ende (.cons (.retScoped e R) rest)) ∨
+      ∃ (Λ' : List (Res D)) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ'),
+        r = .dann (.cons (.retScoped e R) rest) k := by
+  cases r with
+  | ende b =>
+      cases b with
+      | retScoped e' R' =>
+          simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Or.inl rfl
+      | cons s rest =>
+          cases s <;> simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Or.inr (Or.inl ⟨rest, rfl⟩)
+      | _ => cases h
+  | dann b k =>
+      cases b with
+      | cons s rest =>
+          cases s <;> simp only [scopedWert, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Or.inr (Or.inr ⟨_, rest, k, rfl⟩)
+      | _ => cases h
+  | _ => cases h
+
+/-- The reason selector has the same source-head boundary. -/
+theorem GRest.scopedGrund_faelle {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} {grund : Fin V.gruende} {R : RueckRessourcen D V Λ}
+    (h : r.scopedGrund = some (grund, R)) :
+    r = .ende (.retWhyScoped grund R) ∨
+      (∃ rest, r = .ende (.cons (.retWhyScoped grund R) rest)) ∨
+      ∃ (Λ' : List (Res D)) (rest : Block D V l Γ Λ Λ') (k : GRest D V l Γ Λ'),
+        r = .dann (.cons (.retWhyScoped grund R) rest) k := by
+  cases r with
+  | ende b =>
+      cases b with
+      | retWhyScoped r' R' =>
+          simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Or.inl rfl
+      | cons s rest =>
+          cases s <;> simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Or.inr (Or.inl ⟨rest, rfl⟩)
+      | _ => cases h
+  | dann b k =>
+      cases b with
+      | cons s rest =>
+          cases s <;> simp only [scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact Or.inr (Or.inr ⟨_, rest, k, rfl⟩)
+      | _ => cases h
+  | _ => cases h
 
 /-- **The continuation behind a generalized foreign binder** («C08»): void keeps the
     residue, a value pushes a shrink -- the residue half of `Ausgang.weiterOpt`. -/

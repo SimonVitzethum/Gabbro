@@ -1,6 +1,7 @@
 /- Part 2 of 3 of `RufHaeltG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufHaeltG.lean` imports all parts). -/
 module
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.AntwortHaelt
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil7
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil8
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil8b
@@ -373,4 +374,19 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.2 ?_
       simp only [hsm, offen_lese]
       rw [e]; exact heldIn_block restb hh
+    | rueckFreigabe ρ a L remaining hhead =>
+      simp only [rufUpdateG_self]
+      exact haeltInvG_scopedRelease ρ a L remaining hhead h
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      simp only [rufUpdateG_self]
+      apply haeltInvG_rufAntwort h ?_ ha
+      subst σ₁
+      exact lese_offen _ _ _
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self]
+      exact haeltInvG_rufAntwort h rfl ha
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
+      simp only [rufUpdateG_self]
+      have hrelease := haeltInvG_scopedRelease ρ a L [] hhead h
+      exact haeltInvG_rufAntwort hrelease rfl ha
 end Gabbro.Grammatik

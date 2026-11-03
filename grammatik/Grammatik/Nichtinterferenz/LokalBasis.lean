@@ -158,6 +158,8 @@ def GRest.nR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D
   | _, _, _, .abbruch k => k.nR S Ax
   | _, _, _, .leer => true
   | _, _, _, .rueckBereit _ k => k.nR S Ax
+  | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
 
 /-- The flow check on every frame of a ghost-free thread state. -/
 def KNR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) (k : KFaden D) : Prop :=

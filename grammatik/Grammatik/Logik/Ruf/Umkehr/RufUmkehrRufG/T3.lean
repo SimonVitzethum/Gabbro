@@ -239,6 +239,11 @@ macro "widerlegeK" h:ident : tactic => `(tactic| (
   | exact absurd hcov.ende_cons_kOk (by simp [Stmt.kOk])
   | exact absurd hcov.dann_kOk (by simp [Block.kOk])
   | exact absurd hcov.ende_kOk (by simp [Endblock.kOk])
+  | (obtain ⟨he, _⟩ := hcov.ende_inv; cases he; done)
+  | (obtain ⟨he, _⟩ := hcov.ende_inv
+     exact absurd he.cons_inv.1.art (by simp [Stmt.rArt, Stmt.blattArt]))
+  | (obtain ⟨⟨_, hb⟩, _, _⟩ := hcov.dann_inv
+     exact absurd hb.cons_inv.1.art (by simp [Stmt.rArt, Stmt.blattArt]))
   | cases hcov))
 
 

@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nichtinterferenz.Schritt
 public import Grammatik.Nichtinterferenz.SchrittTreu.Teil1
+public import Grammatik.Nichtinterferenz.SchrittTreu.Scoped
 
 @[expose] public section
 
@@ -19,7 +20,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kEnde, kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusEnde, execStmt, kPopGrund,
         List.map_cons]
-      simp only [RufRahmenG.kern, hcaller]
+      simp only [RufRahmenG.kern, GRest.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
   | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -29,7 +30,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kPopGrund,
         List.map_cons]
-      simp only [RufRahmenG.kern, hcaller]
+      simp only [RufRahmenG.kern, GRest.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
   | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
@@ -240,6 +241,40 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       split
       · rfl
       · rename_i hn; exact absurd hfall hn
+
+  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
+      subst σ₁
+      kstart
+      rw [kr_scopedWert P O passes _ _ _ _ _ ρ r.kern e R (GRest.kern_scopedWert hret)]
+      cases hsc : R.scopes with
+      | nil => exact (hnonempty hsc).elim
+      | cons L Ls => rfl
+  | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
+      kstart
+      rw [kr_scopedGrund P O passes _ _ _ _ _ ρ r.kern grund R (GRest.kern_scopedGrund hret)]
+      cases hsc : R.scopes with
+      | nil => exact (hnonempty hsc).elim
+      | cons L Ls => rfl
+  | rueckFreigabe ρ a L remaining hhead hnonempty =>
+      kstart
+      cases remaining with
+      | nil => exact (hnonempty rfl).elim
+      | cons K Ls => rfl
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort =>
+      subst σ₁
+      kstart
+      rw [kr_scopedWert P O passes _ _ _ _ _ ρ r.kern e R (GRest.kern_scopedWert hret)]
+      simp only [hempty, kScoped]
+      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort =>
+      kstart
+      rw [kr_scopedGrund P O passes _ _ _ _ _ ρ r.kern grund R (GRest.kern_scopedGrund hret)]
+      simp only [hempty, kScoped]
+      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+  | rueckFreigabeLetzte ρ a L hhead z hantwort =>
+      kstart
+      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+
 
 theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M') :

@@ -80,8 +80,8 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .., _, _ => rfl
   | .ret .., _, _ => rfl
   | .retWhy .., _, _ => rfl
-  | .retScoped .., _, _ => rfl
-  | .retWhyScoped .., _, _ => rfl
+  | .retScoped .., _, _ => by simp only [execStmtH, execStmt, execEndH, execEnd, scopesInvH_leer, if_true]
+  | .retWhyScoped .., _, _ => by simp only [execStmtH, execStmt, execEndH, execEnd, scopesInvH_leer, if_true]
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
 
@@ -137,8 +137,8 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       execEndH (SperrInv.leer D) O U passes R b σ ρ = execEnd O passes R b σ ρ
   | .ret .., _, _ => rfl
   | .retWhy .., _, _ => rfl
-  | .retScoped .., _, _ => rfl
-  | .retWhyScoped .., _, _ => rfl
+  | .retScoped .., _, _ => by simp only [execStmtH, execStmt, execEndH, execEnd, scopesInvH_leer, if_true]
+  | .retWhyScoped .., _, _ => by simp only [execStmtH, execStmt, execEndH, execEnd, scopesInvH_leer, if_true]
   | .leave .., _, _ => rfl
   | .next .., _, _ => rfl
   | .cons s rest, σ, ρ => by

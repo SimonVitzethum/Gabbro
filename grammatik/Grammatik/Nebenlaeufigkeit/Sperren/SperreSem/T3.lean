@@ -132,6 +132,29 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       match o with
       | .ok _ _ => .sonst
       | o => weiterH k o
+  | _, _, _, .zurueckgekehrt a, o =>
+      match o with
+      | .ok σ _ =>
+          match a.1 with
+          | .inl v => .zurueck σ v
+          | .inr r => .why σ r
+      | .zurueck σ v => .zurueck σ v
+      | .why σ r => .why σ r
+      | .logik e => .logik e
+      | _ => .sonst
+  | _, _, _, .aufraeumen a remaining, o =>
+      match o with
+      | .ok σ _ =>
+          if scopesInvH S remaining σ then
+            let σ := remaining.foldl World.gibt σ
+            match a.1 with
+            | .inl v => .zurueck σ v
+            | .inr r => .why σ r
+          else .logik .schleife
+      | .zurueck σ v => .zurueck σ v
+      | .why σ r => .why σ r
+      | .logik e => .logik e
+      | _ => .sonst
   | _, _, _, .leer, o =>
       match o with
       | .zurueck σ v => .zurueck σ v
@@ -184,6 +207,8 @@ theorem weiterH_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .wartetSonst _ _ _ k, e => weiterH_logik k e
   | _, _, _, .abbruch k, e => weiterH_logik k e
   | _, _, _, .rueckBereit _ k, e => weiterH_logik k e
+  | _, _, _, .zurueckgekehrt _, e => rfl
+  | _, _, _, .aufraeumen _ _, e => rfl
   | _, _, _, .leer, _ => rfl
 
 theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
@@ -206,6 +231,8 @@ theorem weiterH_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .wartetSonst _ _ _ k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .abbruch k, σ, v => weiterH_zurueck k σ v
   | _, _, _, .rueckBereit _ k, σ, v => weiterH_zurueck k σ v
+  | _, _, _, .zurueckgekehrt _, σ, v => ZErgG.gleich_refl _
+  | _, _, _, .aufraeumen _ _, σ, v => ZErgG.gleich_refl _
   | _, _, _, .leer, _, _ => ZErgG.gleich_refl _
 
 /-- A reason exit passes every residue unchanged up to the trace (the twin
@@ -230,6 +257,8 @@ theorem weiterH_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .wartetSonst _ _ _ k, σ, r => weiterH_grund k σ r
   | _, _, _, .abbruch k, σ, r => weiterH_grund k σ r
   | _, _, _, .rueckBereit _ k, σ, r => weiterH_grund k σ r
+  | _, _, _, .zurueckgekehrt _, σ, r => ZErgG.gleich_refl _
+  | _, _, _, .aufraeumen _ _, σ, r => ZErgG.gleich_refl _
   | _, _, _, .leer, _, _ => ZErgG.gleich_refl _
 
 /-- **An end block replacing a residue** (as `weiterZ_ende_folgt`). -/
@@ -255,8 +284,12 @@ theorem Endblock.execBlockH_alsBlock :
       execBlockH S O U passes R e.alsBlock.2 σ ρ = (execEndH S O U passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
   | _, _, .retWhy _ _, _, _ => rfl
-  | _, _, .retScoped _ _, _, _ => rfl
-  | _, _, .retWhyScoped _ _, _, _ => rfl
+  | _, _, .retScoped _ _, _, _ => by
+      simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH]
+      split <;> rfl
+  | _, _, .retWhyScoped _ _, _, _ => by
+      simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH]
+      split <;> rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by

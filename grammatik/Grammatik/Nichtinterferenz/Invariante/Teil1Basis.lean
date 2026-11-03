@@ -140,10 +140,10 @@ theorem KErgOk.dite {c : Prop} [Decidable c] {x : c → KErg D} {y : ¬c → KEr
   · rw [dif_pos hc]; exact h1 hc
   · rw [dif_neg hc]; exact h2 hc
 
-theorem kPop_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn) (σ : World D)
-    (v : ErgVal D (vertragVon D f).erg) : KErgOk P S Ax (kPop st f σ v) := by
+theorem kPop_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn) (rho : Env D (D.params f)) (σ : World D)
+    (v : ErgVal D (vertragVon D f).erg) : KErgOk P S Ax (kPop st f rho σ v) := by
   cases st with
-  | nil => exact KErgOk.none
+  | nil => exact KErgOk.lokal hst f rho rho True.intro _ _
   | cons c rst =>
       have hc := hst c List.mem_cons_self
       have hrst : StapelNR S Ax rst := fun F hF => hst F (List.mem_cons_of_mem _ hF)
@@ -180,11 +180,11 @@ theorem kPop_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn) (σ 
         · exact hc
         · exact hrst F hF
 
-theorem kPopGrund_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn)
+theorem kPopGrund_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn) (rho : Env D (D.params f))
     (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
-    KErgOk P S Ax (kPopGrund st f spur sp r) := by
+    KErgOk P S Ax (kPopGrund st f rho spur sp r) := by
   cases st with
-  | nil => exact KErgOk.none
+  | nil => exact KErgOk.lokal hst f rho rho True.intro _ _
   | cons c rst =>
       have hc := hst c List.mem_cons_self
       have hrst : StapelNR S Ax rst := fun F hF => hst F (List.mem_cons_of_mem _ hF)

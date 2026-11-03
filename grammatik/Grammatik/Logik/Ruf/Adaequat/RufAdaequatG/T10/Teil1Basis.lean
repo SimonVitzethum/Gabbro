@@ -1,6 +1,6 @@
 /- Part 10 of 12 of `RufAdaequatG` (split by instrumente/teile/lean-teilen.py; the umbrella `RufAdaequatG.lean` imports all parts). -/
 module
-public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.Steps.T9
+public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T10.Teil1G7
 @[expose] public section
 
 
@@ -465,20 +465,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | endeBindAxiomOptElseGrund =>
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-  | g7 hs =>
-    cases hs with
-    | dannVerbrauch =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | verbrauchWeiter =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | verbrauchLeer =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | verbrauchFort =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | dannLeaveVerbrauch =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-    | dannNextVerbrauch =>
-      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+  | g7 hs => exact schrittErhalt_g7 hs (M.faeden f) rfl ρ r hR hcov
 
 
 end Gabbro.Grammatik

@@ -149,9 +149,18 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
             exact Bool.noConfusion hr))
 
   | g7 hs =>
-    cases hs <;> rw [‹(M.faeden f).kopf.rest = _›] at hr <;>
-      simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck,
-        Bool.false_eq_true] at hr
+    cases hs with
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hr <;> simp only [GRest.anRueck, Endblock.istRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true, reduceCtorEq] at hr
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hr <;> simp only [GRest.anRueck, Endblock.istRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true, reduceCtorEq] at hr
+    | _ =>
+      rw [‹(M.faeden f).kopf.rest = _›] at hr
+      simp only [GRest.anRueck, Endblock.istRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true] at hr
 
 /-- A finished thread stays finished: other threads leave it alone, and it does not step. -/
 theorem fertig_bleibt {P : Programm D} {O : Orakel D} {passes : Nat}

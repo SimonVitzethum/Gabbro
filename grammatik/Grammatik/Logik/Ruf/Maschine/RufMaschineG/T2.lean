@@ -25,7 +25,8 @@ variable {D : Deklaration}
 
     Lock discipline (repaired 2026-09-13): a lock is taken ONLY by the
     `locks` unfold (`dannLocks`) and released ONLY by its release marker
-    (`freiGib`, and the `frei` peels of `leave`/`next`) -- the structured
+    (`freiGib`, the `frei` peels of `leave`/`next`, or one head scope
+    of `rueckFreigabe`/`rueckFreigabeLetzte`) -- the structured
     `locks L { … }` of the surface language. The bare `nimmt`/`gibt` steps
     of the old PC machine (take or release any lock at any time) are gone;
     a start thread holds its signature locks from the start machine on

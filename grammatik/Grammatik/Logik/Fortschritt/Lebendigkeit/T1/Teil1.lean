@@ -286,6 +286,14 @@ theorem sperre_schritt {M M' : RufMaschineG D} {t : Faden} {L : D.Lock}
         simp only [GRest.kopfSperre, reduceCtorEq, Block.sperreVon, Stmt.sperreVon] at hK
   | g7 hs =>
     cases hs with
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hK <;> simp only [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon, Bool.false_eq_true, reduceCtorEq] at hK
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hK <;> simp only [GRest.kopfSperre, Block.sperreVon, Stmt.sperreVon, Bool.false_eq_true, reduceCtorEq] at hK
     | _ =>
         exfalso
         rw [‹(M.faeden t).kopf.rest = _›] at hK

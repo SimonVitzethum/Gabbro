@@ -24,6 +24,8 @@ public import Grammatik.Nichtinterferenz.Grundlagen
 @[expose] public section
 
 
+noncomputable section
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
@@ -64,21 +66,22 @@ def kBinde (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) (σ : World D)
       else none
   | _ => none
 
-/-- A pop with a value (`rueck`, `rueckBind` and their `cons`/`dann`
-    forms): the caller resumes, bound if it waits. -/
-def kPop (st : List (KRahmen D)) (f : D.Fn) (σ : World D) (v : ErgVal D (vertragVon D f).erg) : KErg D :=
+/-- A pop with a saved value: a caller resumes, bound if it waits; a root
+    retains the completed answer. The root environment is explicit because
+    the completed residue has no expression or live local bindings. -/
+def kPop (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (σ : World D) (v : ErgVal D (vertragVon D f).erg) : KErg D :=
   match st with
-  | [] => none
+  | [] => kLokal [] f rho rho (.zurueckgekehrt (l := false) ⟨.inl v, σ.ohneSnapshot⟩) σ.spur σ.speicher
   | c :: rst =>
       if c.rest.2.2.2.2.wartend = true then kBinde f rst c σ v
       else some (⟨rst, c, σ.spur⟩, σ.speicher)
 
-/-- A pop with a reason (`rueckGrund` and its forms): the caller waiting in
-    `let … else` runs its else block. -/
-def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
+/-- A pop with a reason: a caller waiting in `let … else` runs its else
+    block; a root retains a completed reason (excluded for accepted starts). -/
+def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
     KErg D :=
   match st with
-  | [] => none
+  | [] => kLokal [] f rho rho (.zurueckgekehrt (l := false) ⟨.inr r, (sp.welt spur).ohneSnapshot⟩) spur sp
   | c :: rst =>
       match c.rest with
       | ⟨l, Γ, Λ, ρc, GRest.wartetSonst n err _ k⟩ =>
@@ -87,6 +90,18 @@ def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (spur : List (Ereignis D)) (sp 
               .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩, spur⟩, sp)
           else none
       | _ => none
+
+/-- The ghost-free return protocol shares the same empty/nonempty boundary
+    as G. A nonempty list keeps the answer until its last release. -/
+def kScoped (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f))
+    {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
+    (a : ErgVal D (vertragVon D f).erg ⊕ Fin (vertragVon D f).gruende)
+    (σ : World D) (remaining : List D.Lock) : KErg D :=
+  match remaining with
+  | [] => match a with
+      | .inl v => kPop st f rho σ v
+      | .inr r => kPopGrund st f rho σ.spur σ.speicher r
+  | _ :: _ => kLokal st f rho ρ (.aufraeumen ⟨a, σ.ohneSnapshot⟩ remaining) σ.spur σ.speicher
 
 /-- `leave` at the head of a `dann` residue, by the continuation behind it. -/
 def kLeave (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) :
@@ -157,8 +172,8 @@ def kAusDann (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : 
     (rest : Block D (vertragVon D f) l Γ Λ' Λ'') (k : GRest D (vertragVon D f) l Γ Λ'') :
     Ausgang (vertragVon D f) l Γ → KErg D
   | .ok σ' ρ' => kLokal st f rho ρ' (.dann rest k) σ'.spur σ'.speicher
-  | .zurueck σ v => kPop st f σ v
-  | .why σ r => kPopGrund st f σ.spur σ.speicher r
+  | .zurueck σ v => kPop st f rho σ v
+  | .why σ r => kPopGrund st f rho σ.spur σ.speicher r
   | .leave h σ' ρ' => kLeave st f rho k h σ' ρ'
   | .next h σ' ρ' => kNext st f rho k h σ' ρ'
   | _ => none
@@ -167,8 +182,8 @@ def kAusDann (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : 
 def kAusEnde (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : Bool} {Γ : Ctx} {Λ' : List (Res D)}
     (rest : Endblock D (vertragVon D f) l Γ Λ') : Ausgang (vertragVon D f) l Γ → KErg D
   | .ok σ' ρ' => kLokal st f rho ρ' (.ende rest) σ'.spur σ'.speicher
-  | .zurueck σ v => kPop st f σ v
-  | .why σ r => kPopGrund st f σ.spur σ.speicher r
+  | .zurueck σ v => kPop st f rho σ v
+  | .why σ r => kPopGrund st f rho σ.spur σ.speicher r
   | _ => none
 
 
@@ -182,6 +197,11 @@ def kRufEnde (P : Programm D) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D
       let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
       match eval s0 p s0 ρ with
       | ⟨g, hg⟩ => kPush P st f rho ρ (.ende rest) g (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
+  | _, _, Λ, _, ρ, .retScoped e R, _ =>
+      let σ := (sp.welt spur).lese Λ e.orte
+      kScoped st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes
+  | _, _, _, _, ρ, .retWhyScoped r R, _ =>
+      kScoped st f rho ρ (.inr r) (sp.welt spur) R.scopes
   | _, _, _, _, _, _, _ => none
 
 /-- Calls in `dann` position (`rufDann`, `dannCallInd`). -/
@@ -195,6 +215,11 @@ def kRufDann (P : Programm D) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D
       let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
       match eval s0 p s0 ρ with
       | ⟨g, hg⟩ => kPush P st f rho ρ (.dann rest k) g (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
+  | _, _, Λ, _, _, ρ, .retScoped e R, _, _ =>
+      let σ := (sp.welt spur).lese Λ e.orte
+      kScoped st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes
+  | _, _, _, _, _, ρ, .retWhyScoped r R, _, _ =>
+      kScoped st f rho ρ (.inr r) (sp.welt spur) R.scopes
   | _, _, _, _, _, _, _, _, _ => none
 
 /-- A compound step in `dann` position. The program and oracle keep the

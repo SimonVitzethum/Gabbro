@@ -88,7 +88,8 @@ theorem zielInvS_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       exact hI.2 t
   · refine sperrInvG_schritt hO hS hs hSG (fun L hL hL' => ?_)
     rcases freigabe_schrittG hO hs with hgr | ⟨l, Γ, Λ, L', k, ρ, hhead, hsp', hoff⟩ |
-        ⟨Γ, Λ, Λ1, L', rest, k, ρ, h, x, hhead, hsp', hoff⟩
+        ⟨Γ, Λ, Λ1, L', rest, k, ρ, h, x, hhead, hsp', hoff⟩ |
+        ⟨l, Γ, ρ, a, L', remaining, hhead, hsp', hoff⟩
     · exact absurd (hgr L hL) hL'
     · have hLL : L = L' := by
         refine Classical.byContradiction fun hne => hL' ?_
@@ -107,6 +108,16 @@ theorem zielInvS_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
       exact kopfS_frei_inv hO hRL hQ hS hsp hK (hI.1 u).1 L
         ((Block.held_iff rest L).mp List.mem_cons_self) hhead
         (fun O' U R σ hi => semH_peelFrei_falsch S O' U passes R L rest k σ ρ h x hi)
+    · have hLL : L = L' := by
+        refine Classical.byContradiction fun hne => hL' ?_
+        rw [hoff]
+        exact (List.mem_erase_of_ne hne).mpr hL
+      subst hLL
+      rw [hsp']
+      exact kopfS_frei_inv hO hRL hQ hS hsp hK (hI.1 u).1 L List.mem_cons_self hhead
+        (fun O' U R σ hi => by
+          rw [semH_aufraeumen_freigabe, hi]
+          rfl)
 
 /-- **The replay invariant and the machine lock invariant on every
     reachable machine**, generic in the local carriers `lok`. -/

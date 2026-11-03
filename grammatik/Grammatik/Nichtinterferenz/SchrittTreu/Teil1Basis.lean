@@ -21,7 +21,7 @@ theorem kSchrittK_kern (P : Programm D) (O : Orakel D) (passes : Nat) (z : RufFa
     (sp : Speicher D) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D z.kopf.f) l Γ Λ} (h : z.kopf.rest = ⟨l, Γ, Λ, ρ, r⟩) :
     kSchrittK P O passes z.kern sp =
-      kr P O passes (z.stapel.map RufRahmenG.kern) z.kopf.f z.kopf.rho z.spur sp ρ r := by
+      kr P O passes (z.stapel.map RufRahmenG.kern) z.kopf.f z.kopf.rho z.spur sp ρ r.kern := by
   unfold kSchrittK RufFadenG.kern RufRahmenG.kern
   dsimp only
   rw [h]
@@ -38,12 +38,14 @@ theorem kern_wartend {caller : RufRahmenG D} {l : Bool} {Γ : Ctx} {Λ : List (R
   unfold RufRahmenG.kern
   dsimp only
   rw [hc]
+  cases r <;> rfl
 
 set_option hygiene false in
 /-- The common start of every case of `schrittK_von`. -/
 macro "kstart" : tactic => `(tactic| (
   rw [kSchrittK_kern _ _ _ _ _ ‹(M.faeden f).kopf.rest = _›]
   dsimp only
+  simp only [GRest.kern]
   rw [rufUpdateG_self]))
 
 set_option maxHeartbeats 4000000 in
@@ -58,7 +60,7 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       kstart
       simp only [kr, kEnde, kEndeCons, GEntfaltbar_blatt s hleaf, hleaf]
       simp only [RufMaschineG.weltVon] at hstep
-      simp only [hstep, kAusEnde, kLokal, RufFadenG.kern, RufRahmenG.kern]
+      simp only [hstep, kAusEnde, kLokal, RufFadenG.kern, RufRahmenG.kern, GRest.kern]
       rfl
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
       kstart
@@ -69,7 +71,7 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       kstart
       rw [hpop]
       simp only [kr, kEnde, kPop, List.map_cons]
-      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern] using hnw)]
+      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern, GRest.kern] using hnw)]
       rfl
   | endeEntf l Γ Λ Λ' s rest ρ hent hhead =>
       kstart
@@ -83,7 +85,7 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       kstart
       simp only [kr, kDann, kDannCons, GEntfaltbar_blatt s hleaf, hleaf]
       simp only [RufMaschineG.weltVon] at hstep
-      simp only [hstep, kAusDann, kLokal, RufFadenG.kern, RufRahmenG.kern]
+      simp only [hstep, kAusDann, kLokal, RufFadenG.kern, RufRahmenG.kern, GRest.kern]
       rfl
   | dannLeer l Γ Λ k ρ hhead =>
       kstart

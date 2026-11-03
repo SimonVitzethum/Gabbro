@@ -31,6 +31,43 @@ private theorem weiterOpt_blockiert {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ
     (GRest.weiterOpt (Λ := Λ) e k).blockiert = k.blockiert := by
   cases e <;> rfl
 
+private theorem antwortRestG_fort {V : Vertrag D} (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    (c c' : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
+    (hc : c.2.2.2.2.fOk = true ∧ c.2.2.2.2.blockiert = false)
+    (ha : antwortRestG g a c = some c') :
+    c'.2.2.2.2.fOk = true ∧ c'.2.2.2.2.blockiert = false := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a <;> cases r <;>
+    simp_all [antwortRestG, GRest.fOk, GRest.blockiert, GRest.nimmtAb,
+      GRest.absorb, Endblock.alsBlock_terminal]
+  all_goals split at ha <;>
+    simp_all [GRest.fOk, GRest.blockiert, GRest.nimmtAb, GRest.absorb,
+      Endblock.alsBlock_terminal]
+
+/-- Answer delivery uses the caller's stored shape; a root is complete. -/
+theorem rufAntwortG_fort {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (hz : FortInvG z) (ha : rufAntwortG z vor σ a = some z') : FortInvG z' := by
+  cases hst : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hst, Option.some.injEq] at ha
+      subst z'
+      exact ⟨rfl, rfl, fun _ h => (List.not_mem_nil h).elim, trivial⟩
+  | cons c st =>
+      obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a c.rest = some r := by
+        cases hr : antwortRestG z.kopf.f a c.rest with
+        | none => simp [rufAntwortG, hst, hr] at ha
+        | some r => exact ⟨r, rfl⟩
+      have hc := antwortRestG_fort _ _ _ _ (hz.2.2.1 c (by simp [hst])) hr
+      have hkt := hz.2.2.2
+      rw [hst] at hkt
+      simp [rufAntwortG, hst, hr] at ha
+      subst z'
+      refine ⟨hc.1, hc.2, ?_, hkt.2⟩
+      intro F hF
+      exact hz.2.2.1 F (by simp only [hst, List.mem_cons]; exact Or.inr hF)
+
 set_option hygiene false in
 /-- A head-local rule: the stack and the function are kept; the new head
     residue is in shape by Boolean bookkeeping over the old one. -/
@@ -282,6 +319,11 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     | _ => kopfLokal
   | g7 hs =>
     cases hs with
+    | rueckFreigabeLetzte _ _ _ _ z hantwort
+    | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
+    | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
+        simp only [rufUpdateG_self]
+        exact rufAntwortG_fort h hantwort
     | _ => kopfLokal
 
 /-- Every rule keeps `FortInvG` at every thread. -/

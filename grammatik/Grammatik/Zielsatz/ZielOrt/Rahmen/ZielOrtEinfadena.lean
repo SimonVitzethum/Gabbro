@@ -33,7 +33,7 @@ variable {D : Deklaration}
 def Endblock.istRet {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret _ _ => true
-  | .retScoped _ _ => true
+  | .retScoped _ _ => false
   | _ => false
 
 /-- The residue is an end block that is a `return`. -/
@@ -365,6 +365,14 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
       have hhead := ‹(M.faeden u).kopf.rest = _›
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hRet <;> simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hRet <;> simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
 
 end Stumm
 end Gabbro.Grammatik

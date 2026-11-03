@@ -45,7 +45,7 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     (hs : RufSchrittG P O passes M f M') :
     offen (M'.faeden f).spur = offen (M.faeden f).spur ∨
     (∃ L, RufFreiG M f L ∧ offen (M'.faeden f).spur = L :: offen (M.faeden f).spur) ∨
-    (∃ L, Res.held L ∈ (M.faeden f).kopf.rest.2.2.1 ∧
+    (∃ L : D.Lock, Res.held L ∈ (M.faeden f).kopf.rest.2.2.1 ∧
       offen (M'.faeden f).spur = (offen (M.faeden f).spur).erase L) := by
   cases hs with
   | g1 hs =>
@@ -217,6 +217,28 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         simp only [lese_offen] <;> rfl
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+        simp only [rufUpdateG_self]
+        subst σ₁
+        exact Or.inl (lese_offen _ _ _)
+    | rueckScopedGrund => exact Or.inl (by simp only [rufUpdateG_self])
+    | rueckFreigabe ρ a L remaining hhead =>
+        simp only [rufUpdateG_self]
+        refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
+        rw [hhead]
+        exact List.mem_cons_self
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
+        simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
+        rw [hhead]
+        exact List.mem_cons_self
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
+        subst σ₁
+        exact Or.inl (lese_offen _ _ _)
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
+        exact Or.inl rfl
     | _ =>
         simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *
         subst_vars

@@ -41,10 +41,14 @@
   machines of every budget (probe D, `Durchgaenge.lean`, `ProbeD.lean`;
   the per-budget statements are the lemmas `*_bei` of §3), and start
   functions declare no reasons (§2a: `StartOhneGrund`, `KeinStartGrundG`),
-  so `StartEndeG` covers every completion of a start function.
+  `StartEndeG` covers both plain and completed scoped returns. Replay supplies
+  `ScopedRueckGutG` at the release source; `ZielOrtStartSaved.lean` carries
+  that guarantee with the saved pre-release world.
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStartBasis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStartScoped
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStartSaved
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
@@ -74,8 +78,12 @@ theorem ziel_ort_ende_bei (P : Programm D) (O : Orakel D) (passes : Nat) (Q : Ax
     hStart hSstart hex hI M hr, ?_⟩
   have hZ := (zielInvS_erreichbarL P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
     hLok hK hStart hSstart hex M hr).1
-  intro t _ l Γ Λ ρ r e hr' hk
-  exact kopfS_ret hO hRL hQ hS hSstart hK hI hFS (hZ.1 t).1 hr' e hk
+  constructor
+  · intro t _ l Γ Λ ρ r e hr' hk
+    exact kopfS_ret hO hRL hQ hS hSstart hK hI hFS (hZ.1 t).1 hr' e hk
+  · exact startScopedEndeG_erreichbar
+      (ziel_ort_scoped_rueck_bei P O passes Q S lok sp init hO hRL hQ hlok hS hFragS hFS
+        hLok hK hStart hSstart hex hI) hr
 
 /-- `ziel_ort_mehrfaden_ende` at ONE budget (a lemma; §4 has the goal
     statement). -/

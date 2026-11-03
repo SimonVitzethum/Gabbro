@@ -43,10 +43,13 @@
   run cannot -- a thread blocked on a lock -- is outside), declassification.
 -/
 module
+public import Grammatik.Nichtinterferenz.Snapshot
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 @[expose] public section
 
+
+noncomputable section
 
 namespace Gabbro.Grammatik
 
@@ -97,12 +100,14 @@ structure KFaden (D : Deklaration) where
   kopf : KRahmen D
   spur : List (Ereignis D)
 
-def RufRahmenG.kern (r : RufRahmenG D) : KRahmen D := ⟨r.f, r.rho, r.rest⟩
+noncomputable def RufRahmenG.kern (r : RufRahmenG D) : KRahmen D :=
+  ⟨r.f, r.rho, ⟨r.rest.1, r.rest.2.1, r.rest.2.2.1,
+    r.rest.2.2.2.1, r.rest.2.2.2.2.kern⟩⟩
 
 /-- **The ghost-free state of a thread**: its frames (function, parameters,
     residue) and its trace. -/
-def RufFadenG.kern (z : RufFadenG D) : KFaden D :=
-  ⟨z.stapel.map RufRahmenG.kern, z.kopf.kern, z.spur⟩
+noncomputable def RufFadenG.kern (z : RufFadenG D) : KFaden D :=
+  ⟨z.stapel.map RufRahmenG.kern, GRest.kern, z.kopf.kern, z.spur⟩
 
 /-! ## 3. Low-equivalence and the observation -/
 

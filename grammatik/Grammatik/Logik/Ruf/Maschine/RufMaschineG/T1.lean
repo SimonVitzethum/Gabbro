@@ -66,6 +66,100 @@ structure RufMaschineG (D : Deklaration) where
   lauf : Lauf D
   start : World D
 
+/-- Resume a caller with an already evaluated answer. Both the G and K
+    machines use this operation, including the signature equality checks. -/
+def antwortRestG {V : Vertrag D} (g : D.Fn)
+    (antwort : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    (c : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) :
+    Option (Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) :=
+  match antwort, c with
+  | .inl v, ⟨l, Γ, Λ, ρ, .wartet (τ := τ) rest k⟩ =>
+      if he : (vertragVon D g).erg = some τ then
+        some ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .dann rest (.schrumpf k)⟩
+      else none
+  | .inl v, ⟨l, Γ, Λ, ρ, .wartetSonst (τ := τ) _ _ rest k⟩ =>
+      if he : (vertragVon D g).erg = some τ then
+        some ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .dann rest (.schrumpf k)⟩
+      else none
+  | .inl _, c => some c
+  | .inr r, ⟨l, Γ, Λ, ρ, .wartetSonst n err _ k⟩ =>
+      if hn : (vertragVon D g).gruende = n then
+        some ⟨l, .why n :: Γ, Λ, .cons (Fin.cast hn r) ρ,
+          .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩
+      else none
+  | .inr _, _ => none
+
+/-- Resuming either answer channel keeps the caller's static resources. -/
+theorem antwortRestG_ressourcen {V : Vertrag D} (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    (c c' : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
+    (h : antwortRestG g a c = some c') : c'.2.2.1 = c.2.2.1 := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a <;> cases r <;> simp_all [antwortRestG]
+  all_goals split at h <;> simp_all
+
+/-- Return after cleanup. A root keeps its entry record and a completed
+    residue; a callee pops and records its answer at the released world.
+    The returned value is supplied, never re-evaluated after a release. -/
+def rufAntwortG (z : RufFadenG D) (vor σ : World D)
+    (antwort : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende) :
+    Option (RufFadenG D) :=
+  match z.stapel with
+  | [] => some ⟨[],
+      ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
+        ⟨false, D.params z.kopf.f, (vertragVon D z.kopf.f).ende,
+          z.kopf.rho, .zurueckgekehrt ⟨antwort, vor⟩⟩⟩, σ.spur, z.log⟩
+  | c :: st => do
+      let rest ← antwortRestG z.kopf.f antwort c.rest
+      let ev := match antwort with
+        | .inl v => RufEreignisF.rueck z.kopf.f z.kopf.rho v z.kopf.s0 σ
+        | .inr r => RufEreignisF.why z.kopf.f z.kopf.rho r z.kopf.s0 σ
+      pure ⟨st, ⟨c.f, c.rho, c.s0, rest⟩, σ.spur, ev :: z.log⟩
+
+/-- Both answer channels retain exactly the cleanup trace. -/
+theorem rufAntwortG_spur {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z vor σ a = some z') : z'.spur = σ.spur := by
+  cases hs : z.stapel with
+  | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; rfl
+  | cons c st =>
+      simp only [rufAntwortG, hs] at h
+      cases hr : antwortRestG z.kopf.f a c.rest <;>
+        simp_all [Option.bind]
+
+/-- Answering either keeps an empty root stack or removes its first frame. -/
+theorem rufAntwortG_stapel {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z vor σ a = some z') : z'.stapel = z.stapel.tail := by
+  cases hs : z.stapel with
+  | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; rfl
+  | cons c st =>
+      simp only [rufAntwortG, hs] at h
+      cases hr : antwortRestG z.kopf.f a c.rest <;>
+        simp_all [Option.bind]
+
+/-- Cleanup changes only the trace, including for an empty scope list. -/
+theorem World.gibt_foldl_mem (σ : World D) (Ls : List D.Lock) :
+    (Ls.foldl World.gibt σ).speicher = σ.speicher := by
+  obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher σ Ls
+  simp only [World.speicher, hs, hg]
+
+/-- Releasing several locks cannot introduce a held lock. -/
+theorem mem_of_mem_eraseScopes (Ls : List D.Lock) (held : List D.Lock) {K : D.Lock}
+    (h : K ∈ Ls.foldl (fun h L => h.erase L) held) : K ∈ held := by
+  induction Ls generalizing held with
+  | nil => exact h
+  | cons L Ls ih => exact List.mem_of_mem_erase (ih _ h)
+
+/-- A lock outside the cleanup list survives every release. -/
+theorem mem_eraseScopes_of_not_mem (Ls : List D.Lock) (held : List D.Lock) {K : D.Lock}
+    (hn : K ∉ Ls) (h : K ∈ held) : K ∈ Ls.foldl (fun h L => h.erase L) held := by
+  induction Ls generalizing held with
+  | nil => exact h
+  | cons L Ls ih =>
+      apply ih _ (fun hm => hn (List.mem_cons_of_mem _ hm))
+      exact (List.mem_erase_of_ne (fun he => hn (List.mem_cons.mpr (Or.inl he)))).mpr h
+
 /-- The current world of thread `f`: live shared memory plus its own trace. -/
 def RufMaschineG.weltVon (M : RufMaschineG D) (f : Faden) : World D :=
   M.speicher.welt (M.faeden f).spur

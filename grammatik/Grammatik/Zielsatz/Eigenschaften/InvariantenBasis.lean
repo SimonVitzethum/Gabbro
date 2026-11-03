@@ -68,12 +68,65 @@ theorem schritt_logArt {M M' : RufMaschineG D} {u : Faden}
     (∃ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       (M'.faeden u).log = RufEreignisF.why g rho r s0 s1 :: (M.faeden u).log ∧
         s1.speicher = M'.speicher) := by
-  (rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs) <;> (try simp only [rufUpdateG_self]) <;> first
-    | exact Or.inl trivial
-    | exact Or.inl rfl
-    | exact Or.inr (Or.inl ⟨_, _, _, rfl⟩)
-    | exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl, rfl⟩))
-    | exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl, speicher_welt_speicher _ _⟩))
+  cases hs with
+  | g7 hs =>
+      cases hs with
+      | rueckFreigabeLetzte ρ a L hhead z ha =>
+          simp only [rufUpdateG_self]
+          cases hst : (M.faeden u).stapel with
+          | nil =>
+              simp only [rufAntwortG, hst, Option.some.injEq] at ha
+              subst z
+              exact Or.inl rfl
+          | cons c st =>
+              obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden u).kopf.f a.1 c.rest = some r := by
+                cases hr : antwortRestG (M.faeden u).kopf.f a.1 c.rest with
+                | none => simp [rufAntwortG, hst, hr] at ha
+                | some r => exact ⟨r, rfl⟩
+              cases a.1 <;> simp [rufAntwortG, hst, hr] at ha <;> subst z
+              · exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+              · exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+      | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+          subst σ₁
+          simp only [rufUpdateG_self]
+          cases hst : (M.faeden u).stapel with
+          | nil =>
+              simp only [rufAntwortG, hst, Option.some.injEq] at ha
+              subst z
+              exact Or.inl rfl
+          | cons c st =>
+              obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden u).kopf.f (.inl (evalErg ((M.weltVon u).lese _ e.orte) e ((M.weltVon u).lese _ e.orte) ρ)) c.rest = some r := by
+                cases hr : antwortRestG (M.faeden u).kopf.f (.inl (evalErg ((M.weltVon u).lese _ e.orte) e ((M.weltVon u).lese _ e.orte) ρ)) c.rest with
+                | none => simp [rufAntwortG, hst, hr] at ha
+                | some r => exact ⟨r, rfl⟩
+              simp [rufAntwortG, hst, hr] at ha <;> subst z
+              · exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+      | rueckScopedGrundDirekt ρ r e R hhead hret hscope hΛ hempty z ha =>
+          simp only [rufUpdateG_self]
+          cases hst : (M.faeden u).stapel with
+          | nil =>
+              simp only [rufAntwortG, hst, Option.some.injEq] at ha
+              subst z
+              exact Or.inl rfl
+          | cons c st =>
+              obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden u).kopf.f (.inr e) c.rest = some r := by
+                cases hr : antwortRestG (M.faeden u).kopf.f (.inr e) c.rest with
+                | none => simp [rufAntwortG, hst, hr] at ha
+                | some r => exact ⟨r, rfl⟩
+              simp [rufAntwortG, hst, hr] at ha <;> subst z
+              · exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+      | _ => exact Or.inl (by simp only [rufUpdateG_self])
+  | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
+      cases hs <;> (try simp only [rufUpdateG_self]) <;> first
+        | exact Or.inl trivial
+        | exact Or.inl rfl
+        | exact Or.inr (Or.inl ⟨_, _, _, rfl⟩)
+        | exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl, rfl⟩))
+        | exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl, speicher_welt_speicher _ _⟩))
 
 end Log
 
@@ -259,7 +312,7 @@ theorem invRuhe_erreichbar (hO : GutO O) (sp : Speicher D)
               exact List.mem_singleton.mp hk
             obtain ⟨-, -, hSE, hKS⟩ := hIR M' hr'
             obtain ⟨l, Γ, Λ, ρ, r, e, hrest, hret⟩ := fertig_retKopf hFu hKS
-            have hI := (hSE u hst l Γ Λ ρ r e hrest hret).2
+            have hI := (hSE.1 u hst l Γ Λ ρ r e hrest hret).2
             refine hwelt _ ?_ (hI i hi ?_)
             · show (M'.weltVon u).speicher = M'.speicher
               exact speicher_welt_speicher _ _

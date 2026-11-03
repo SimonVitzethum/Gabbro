@@ -51,6 +51,11 @@ def semR : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .abbruch .., _, _ => .sonst
   | _, _, _, .leer, _, _ => .sonst
   | _, _, _, .rueckBereit .., _, _ => .sonst
+  | _, _, _, .zurueckgekehrt ⟨.inl v, _⟩, σ, _ => .zurueck σ v
+  | _, _, _, .zurueckgekehrt ⟨.inr _, _⟩, _, _ => .sonst
+  | _, _, _, .aufraeumen ⟨.inl v, _⟩ remaining, σ, _ =>
+      .zurueck (remaining.foldl World.gibt σ) v
+  | _, _, _, .aufraeumen ⟨.inr _, _⟩ _, _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)
@@ -215,6 +220,10 @@ theorem semR_SG (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Pr
   | _, _, _, .abbruch _, _ => fun _ _ _ _ => REnde.gleich_refl _
   | _, _, _, .leer, _ => fun _ _ _ _ => REnde.gleich_refl _
   | _, _, _, .rueckBereit .., _ => fun _ _ _ _ => REnde.gleich_refl _
+  | _, _, _, .zurueckgekehrt ⟨.inl _, _⟩, _ => fun _ _ _ h => ⟨h, rfl⟩
+  | _, _, _, .zurueckgekehrt ⟨.inr _, _⟩, _ => fun _ _ _ _ => REnde.gleich_refl _
+  | _, _, _, .aufraeumen ⟨.inl _, _⟩ remaining, _ => fun _ _ _ h => ⟨SG.gibt_foldl remaining _ _ h, rfl⟩
+  | _, _, _, .aufraeumen ⟨.inr _, _⟩ _, _ => fun _ _ _ _ => REnde.gleich_refl _
 
 theorem REnde.gleich_of_eq {V : Vertrag D} {r r' : REnde V} (h : r = r') : r.gleich r' := by
   rw [h]

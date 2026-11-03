@@ -173,6 +173,22 @@ theorem freiH_leer (L : D.Lock) {l : Bool} {Γ : Ctx} (o : Ausgang V l Γ) :
     freiH (SperrInv.leer D) L o = o.mapWelt (·.gibt L) := by
   cases o <;> rfl
 
+/-- Each crossed scope must re-establish its invariant before cleanup.
+    Releases preserve memory, so checking the common memory is equivalent
+    to checking immediately before every individual release. -/
+def scopesInvH (S : SperrInv D) (Ls : List D.Lock) (σ : World D) : Bool :=
+  Ls.all fun L => S.inv L σ.speicher
+
+@[simp] theorem scopesInvH_leer (Ls : List D.Lock) (σ : World D) :
+    scopesInvH (SperrInv.leer D) Ls σ = true := by
+  induction Ls <;> simp_all [scopesInvH, SperrInv.leer]
+
+/-- Every released lock is covered by the successful cleanup check. -/
+theorem scopesInvH_mem {S : SperrInv D} {Ls : List D.Lock} {σ : World D}
+    (h : scopesInvH S Ls σ = true) {L : D.Lock} (hL : L ∈ Ls) :
+    S.inv L σ.speicher = true :=
+  (List.all_eq_true.mp h) L hL
+
 end Frei
 
 end Gabbro.Grammatik

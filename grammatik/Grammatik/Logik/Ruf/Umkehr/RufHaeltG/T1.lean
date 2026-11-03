@@ -59,6 +59,10 @@ def GRest.kette {V : Vertrag D} (A : List D.Lock) :
   | _, _, Λ, .wartetSonst _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L ∈ A, Res.held L ∈ Λ) ∧ (∀ L, Res.held L ∈ Λk → Res.held L ∈ Λ) ∧ k.kette A
+  | _, _, Λ, .zurueckgekehrt _ => ∀ L ∈ A, Res.held L ∈ Λ
+  | _, _, _, .aufraeumen _ remaining =>
+      (∀ L ∈ A, Res.held L ∈ V.ende) ∧ remaining.Nodup ∧
+        ∀ L ∈ remaining, Res.held L ∉ V.ende
   | _, _, Λ, .leer => ∀ L ∈ A, Res.held L ∈ Λ
   | _, _, _, @GRest.rueckBereit _ _ _ _ Λk sc k =>
       (∀ L ∈ A, Res.held L ∈ sc.map Res.held ++ Λk) ∧ k.kette A
@@ -82,6 +86,8 @@ theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
   | _, _, _, .wartet _ _, h => h.1
   | _, _, _, .wartetSonst _ _ _ _, h => h.1
   | _, _, _, .abbruch _, h => h.1
+  | _, _, _, .zurueckgekehrt _, h => h
+  | _, _, _, .aufraeumen _ _, h => fun L hL => List.mem_append_right _ (h.1 L hL)
   | _, _, _, .leer, h => h
   | _, _, _, .rueckBereit _ _, h => h.1
 
@@ -156,6 +162,8 @@ def GRest.freis {V : Vertrag D} :
   | _, _, _, .wartet _ k => k.freis
   | _, _, _, .wartetSonst _ _ _ k => k.freis
   | _, _, _, .abbruch k => k.freis
+  | _, _, _, .zurueckgekehrt _ => []
+  | _, _, _, .aufraeumen _ remaining => remaining
   | _, _, _, .leer => []
   | _, _, _, .rueckBereit _ k => k.freis
 

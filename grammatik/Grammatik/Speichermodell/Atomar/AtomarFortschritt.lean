@@ -56,6 +56,20 @@ theorem ga_sauber (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.para
   gaInvF (J := fun fa => ∀ t, RufFadenSauberG (fa t)) (rufStartG_sauber P sp init)
     (fun _ _ _ h hs => rufSchrittG_sauber hs h) hr
 
+/-- The existing checker scope facts also survive shared-atomic memory replacement. -/
+theorem ga_scopes (hsc : ScopesOkProg P) (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
+    ∀ t, FadenScopesG (M.faeden t) :=
+  gaInvF (J := fun fa => ∀ t, FadenScopesG (fa t))
+    (fadenScopesG_erreichbar (O := O) (pa := passes) (sp := sp) (init := init) hsc .start)
+    (fun M M' u h hs t => by
+      by_cases htu : t = u
+      · subst t
+        exact fadenScopesG_schritt hsc hs (h u)
+      · rw [rufSchrittG_fremd hs t htu]
+        exact h t) hr
+
 theorem ga_haeltInv (hO : GutO O) (sp : Speicher D) (init : Faden → Σ f : D.Fn, Env D (D.params f))
     {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
     ∀ t, HaeltInvG (M.faeden t) :=
@@ -77,6 +91,19 @@ theorem ga_antInv {C : D.Ax ⊕ D.Reg → Bool} (hB : ∀ g, (P.rumpf g).ants.al
       by_cases htu : t = u
       · subst htu
         exact antInvG_schritt hB hs (h t)
+      · rw [rufSchrittG_fremd hs t htu]
+        exact h t) hr
+
+theorem ga_antwortPosition (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
+    ∀ t, AntwortPositionG (M.faeden t) :=
+  gaInvF (J := fun fa => ∀ t, AntwortPositionG (fa t))
+    (antwortPositionG_erreichbar (O := O) (pa := passes) .start)
+    (fun M M' u h hs t => by
+      by_cases htu : t = u
+      · subst t
+        exact antwortPositionG_schritt hs (h u)
       · rw [rufSchrittG_fremd hs t htu]
         exact h t) hr
 
@@ -156,6 +183,8 @@ theorem fortschrittG_GA (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (gaInv_rang hO hSt sp init hND hr t)
     (ga_antInv (fun g => List.all_eq_true.mpr fun x hx => stelleC_iff.mpr (hAnt g x hx)) sp init
       hr t _ List.mem_cons_self)
+    (ga_scopes (scopesOkProg_of_stufen P (stufenOk_of_stufenM hSt)) sp init hr t).1
+    (ga_antwortPosition sp init hr t)
 
 end Fort
 

@@ -16,6 +16,39 @@ theorem GRest.weiterOpt_sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : L
     (GRest.weiterOpt (Λ := Λ) e k).sauber = k.sauber := by
   cases e <;> simp only [GRest.weiterOpt, GRest.sauber] <;> rfl
 
+/-- Resuming a clean-or-waiting caller creates a clean head. -/
+theorem antwortRestG_sauber (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    {V : Vertrag D}
+    (c c' : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
+    (h : antwortRestG g a c = some c') (hc : c.2.2.2.2.stapelSauber = true) :
+    c'.2.2.2.2.sauber = true := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a <;> cases r <;>
+    simp_all [antwortRestG, GRest.stapelSauber, GRest.sauber]
+  all_goals split at h <;> simp_all [GRest.sauber]
+
+/-- Cleanup and either answer channel preserve the no-waiting-head invariant. -/
+theorem rufAntwortG_sauber {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z vor σ a = some z') (hz : RufFadenSauberG z) : RufFadenSauberG z' := by
+  cases hs : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hs, Option.some.injEq] at h
+      subst z'
+      exact ⟨rfl, fun _ hm => List.not_mem_nil hm |>.elim⟩
+  | cons c st =>
+      have hc := hz.2 c (by rw [hs]; exact List.mem_cons_self)
+      have ht : ∀ F ∈ st, F.rest.2.2.2.2.stapelSauber = true :=
+        fun F hF => hz.2 F (by rw [hs]; exact List.mem_cons_of_mem _ hF)
+      simp only [rufAntwortG, hs] at h
+      cases hr : antwortRestG z.kopf.f a c.rest with
+      | none => simp [hr] at h
+      | some rest =>
+          simp [hr] at h
+          subst z'
+          exact ⟨antwortRestG_sauber z.kopf.f a c.rest rest hr hc, ht⟩
+
 /-- Every rule keeps the invariant of the acting thread. The pops are the
     point: a verbatim pop resumes a caller that does not wait (`hnw`), so
     the resumed head is clean; a binding pop resumes the waiting caller's
@@ -186,6 +219,11 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
            · exact hst r hr)
   | g7 hs =>
     cases hs with
+    | rueckFreigabeLetzte _ _ _ _ z hantwort
+    | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
+    | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
+      simp only [rufUpdateG_self]
+      exact rufAntwortG_sauber hantwort ⟨hk, hst⟩
     | _ =>
       simp only [rufUpdateG_self]
       rw [‹(M.faeden f).kopf.rest = _›] at hk

@@ -148,7 +148,8 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
     have hSG'' : SperrInvG S M'' := by
       refine sperrInvG_schritt hO hS hs1 hSG1 (fun L hL hL' => ?_)
       rcases freigabe_schrittG hO hs1 with hgr | ⟨l, Γ, Λ, L', k, ρ, hhead, hsp', hoff⟩ |
-          ⟨Γ, Λ, Λ1, L', rest, k, ρ, h, x, hhead, hsp', hoff⟩
+          ⟨Γ, Λ, Λ1, L', rest, k, ρ, h, x, hhead, hsp', hoff⟩ |
+          ⟨l, Γ, ρ, a, L', remaining, hhead, hsp', hoff⟩
       · exact absurd (hgr L hL) hL'
       · have hLL : L = L' := by
           refine Classical.byContradiction fun hne => hL' ?_
@@ -167,6 +168,16 @@ theorem zielInvSA_schrittGX (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
         exact kopfSA_frei_inv hO hRL hQ hS hsp hK hFu1.1 L
           ((Block.held_iff rest L).mp List.mem_cons_self) hhead
           (fun O' U A R σ hi => semHA_peelFrei_falsch S O' U A passes R L rest k σ ρ h x hi)
+      · have hLL : L = L' := by
+          refine Classical.byContradiction fun hne => hL' ?_
+          rw [hoff]
+          exact (List.mem_erase_of_ne hne).mpr hL
+        subst hLL
+        rw [hsp']
+        exact kopfSA_frei_inv hO hRL hQ hS hsp hK (hFu1).1 L List.mem_cons_self hhead
+          (fun O' U A R σ hi => by
+            rw [semHA_aufraeumen_freigabe, hi]
+            rfl)
     intro L hL
     have hL'' : ∀ t, L ∉ offen (M''.faeden t).spur := fun t => by rw [← hfe]; exact hL t
     rw [← hSG'' L hL'']

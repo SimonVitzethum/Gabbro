@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Fortschritt.Fortschritt.T1
+public import Grammatik.Logik.Fortschritt.Fortschritt.T2.ScopedSteps
 
 @[expose] public section
 
@@ -146,7 +147,9 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
     (e : Endblock D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
     (hx : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende e⟩) (hl : l = false)
-    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) (hAnt : e.ants.all (stelleC D) = true) :
+    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) (hAnt : e.ants.all (stelleC D) = true)
+    (hScope : e.scopesOk (vertragVon D (M.faeden t).kopf.f).haelt
+      (vertragVon D (M.faeden t).kopf.f).boden = true) :
     FortFaden P O passes M t := by
   cases e with
   | ret e hp =>
@@ -161,6 +164,10 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       | cons caller rst =>
           obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
           exact fort_schritt (w_rueckGrundP rfl caller rst hst hart r hp ρ hx hΛ)
+  | retScoped e R =>
+      exact fort_schritt' (w_scopedWert ρ _ e R hx rfl hScope hΛ hkt)
+  | retWhyScoped grund R =>
+      exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl hScope hΛ hkt)
   | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | bind e rest => exact fort_schritt (w_endeBind rfl e rest ρ hx hΛ)
@@ -326,6 +333,12 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
             | cons caller rst =>
                 obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
                 exact fort_schritt (w_rueckConsGrundP rfl caller rst hst hart r hp rest ρ hx hΛ)
+        | retScoped e R =>
+            exact fort_schritt' (w_scopedWert ρ _ e R hx rfl
+              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
+        | retWhyScoped grund R =>
+            exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl
+              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
         | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
         | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
         | _ =>

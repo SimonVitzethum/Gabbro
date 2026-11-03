@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Logik.Fortschritt.KostenG.T1
+public import Grammatik.Logik.Fortschritt.KostenG.T1.Scoped
 
 @[expose] public section
 

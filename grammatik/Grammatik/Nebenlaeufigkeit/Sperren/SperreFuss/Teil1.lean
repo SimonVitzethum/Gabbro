@@ -288,6 +288,8 @@ def GRest.okS (P : Programm D) (S S' : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} 
   | _, _, Λ, @GRest.abbruch _ _ _ _ _ Λk k =>
       (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okS P S S'
   | _, _, _, .rueckBereit .. => False
+  | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
   | _, _, _, .leer => True
 
 section OkS

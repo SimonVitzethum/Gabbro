@@ -16,6 +16,38 @@ theorem GRest.mR_weiterOpt (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     (e : Option Ty) (k : GRest D V l Γ Λ') : (GRest.weiterOpt (Λ := Λ) e k).mR A ↔ k.mR A := by
   cases e <;> exact Iff.rfl
 
+/-- A resumed caller preserves every admitted feature predicate. -/
+theorem antwortRestG_mR (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    {V : Vertrag D}
+    (c c' : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
+    (h : antwortRestG g a c = some c') (A : Merkmal D) (hm : c.2.2.2.2.mR A) :
+    c'.2.2.2.2.mR A := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a with
+  | inl v =>
+      cases r with
+      | wartet b k =>
+          simp only [antwortRestG] at h
+          split at h
+          · simp only [Option.some.injEq] at h; subst c'; exact hm
+          · cases h
+      | wartetSonst n err b k =>
+          simp only [antwortRestG] at h
+          split at h
+          · simp only [Option.some.injEq] at h; subst c'; exact hm.2
+          · cases h
+      | _ => simp only [antwortRestG, Option.some.injEq] at h; subst c'; exact hm
+  | inr grund =>
+      cases r with
+      | wartetSonst n err b k =>
+          simp only [antwortRestG] at h
+          split at h
+          · simp only [Option.some.injEq] at h; subst c'
+            exact ⟨by rw [mB_alsBlock]; exact hm.1, abbruch_iff err b, hm.2.2⟩
+          · cases h
+      | _ => cases h
+
 set_option hygiene false in
 /-- Case (A) of `schrittMerk`: a head-local step. -/
 macro "kopfM" : tactic => `(tactic| (
@@ -263,6 +295,24 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
 
   | g7 hs =>
     cases hs with
+    | rueckFreigabeLetzte _ _ _ _ z hantwort
+    | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
+    | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
+      simp only [rufUpdateG_self]
+      cases hs : (M.faeden f).stapel with
+      | nil =>
+          simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
+          subst z
+          exact Or.inl ⟨hs.symm, rfl, fun _ _ => trivial⟩
+      | cons caller rst =>
+          simp only [rufAntwortG, hs] at hantwort
+          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
+          | none => simp [hr] at hantwort
+          | some rest =>
+              simp [hr] at hantwort
+              subst z
+              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl, rfl,
+                fun A hm => antwortRestG_mR _ _ _ _ hr A hm⟩)
     | _ =>
       kopfM
       all_goals simp_all [GRest.mR_weiterOpt]
