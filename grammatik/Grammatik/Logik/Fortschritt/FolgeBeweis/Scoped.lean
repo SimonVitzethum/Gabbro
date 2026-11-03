@@ -12,17 +12,21 @@ theorem fR_scopedWert {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {r : GRest D V l Γ Λ} {e : ErgExpr D Γ Λ V.erg} {R : RueckRessourcen D V Λ}
     {b w : Bool} (hr : r.scopedWert = some (e, R)) (hk : r.fR Φ b w) : (!b || w) = true := by
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle hr <;> subst r
-  · exact hk
-  · exact (Bool.and_eq_true.mp hk).1
-  · exact (Bool.and_eq_true.mp hk.1).1
+  · simpa only [GRest.fR, fE] using hk
+  · simp only [GRest.fR, fE, fS, Bool.and_eq_true] at hk
+    exact hk.1
+  · simp only [GRest.fR, fB, fS, Bool.and_eq_true] at hk
+    exact hk.1.1
 
 theorem fR_scopedGrund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {r : GRest D V l Γ Λ} {g : Fin V.gruende} {R : RueckRessourcen D V Λ}
     {b w : Bool} (hr : r.scopedGrund = some (g, R)) (hk : r.fR Φ b w) : (!b || w) = true := by
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle hr <;> subst r
-  · exact hk
-  · exact (Bool.and_eq_true.mp hk).1
-  · exact (Bool.and_eq_true.mp hk.1).1
+  · simpa only [GRest.fR, fE] using hk
+  · simp only [GRest.fR, fE, fS, Bool.and_eq_true] at hk
+    exact hk.1
+  · simp only [GRest.fR, fB, fS, Bool.and_eq_true] at hk
+    exact hk.1.1
 
 private theorem antwortRestG_fR {V : Vertrag D} (g : D.Fn)
     (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende) (b : Bool)
@@ -30,12 +34,44 @@ private theorem antwortRestG_fR {V : Vertrag D} (g : D.Fn)
     (hc : c.2.2.2.2.fR Φ b (Φ.vor g)) (ha : antwortRestG g a c = some c') :
     c'.2.2.2.2.fR Φ b (match a with | .inl _ => Φ.vor g | .inr _ => false) := by
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
-  cases a <;> cases r <;>
-    simp_all [antwortRestG, GRest.fR, fB_alsBlock]
-  all_goals first
-    | (subst ha; simp_all [GRest.fR, fB_alsBlock])
-    | (obtain ⟨_, ha⟩ := ha; subst ha; simp_all [GRest.fR, fB_alsBlock])
-    | (split at ha <;> simp_all [GRest.fR, fB_alsBlock])
+  cases a with
+  | inl value =>
+      cases r with
+      | wartet body k =>
+          unfold antwortRestG at ha
+          split at ha
+          · simp only [Option.some.injEq] at ha
+            subst c'
+            simpa only [GRest.fR] using hc
+          · cases ha
+      | wartetSonst n err body k =>
+          unfold antwortRestG at ha
+          split at ha
+          · simp only [Option.some.injEq] at ha
+            subst c'
+            simp only [GRest.fR] at hc ⊢
+            exact hc.2
+          · cases ha
+      | _ =>
+          unfold antwortRestG at ha
+          change some _ = some c' at ha
+          have equal := Option.some.inj ha
+          subst c'
+          exact hc
+  | inr reason =>
+      cases r with
+      | wartetSonst n err body k =>
+          unfold antwortRestG at ha
+          split at ha
+          · simp only [Option.some.injEq] at ha
+            subst c'
+            simp only [GRest.fR, fB_alsBlock] at hc ⊢
+            exact ⟨hc.1, hc.2.2⟩
+          · cases ha
+      | _ =>
+          unfold antwortRestG at ha
+          change none = some c' at ha
+          cases ha
 
 /-- Cleanup leaves the log silent for a root and appends exactly one answer
     event for a callee. Both channels demand the predecessor before cleanup. -/
@@ -48,7 +84,8 @@ theorem folgeInvG_rufAntwortG {z z' : RufFadenG D} {vor σ : World D}
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
-      exact ⟨hret, trivial, hz.2.2⟩
+      refine ⟨?_, trivial, hz.2.2⟩
+      simpa only [GRest.fR] using hret
   | cons c st =>
       have hc := hz.2.1
       simp only [hst, FolgeStapel] at hc
