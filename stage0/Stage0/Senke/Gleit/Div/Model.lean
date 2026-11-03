@@ -48,18 +48,25 @@ theorem softDiv_dispatch (a b : GFloat) :
       | none => match wertExakt f64 a, wertExakt f64 b with
         | some u, some v => rundeBruch f64 (divBruch u v)
         | _, _ => nanQ f64 := by
+  have nonzeroCase (finite : klasse f64 a = .normal ∨ klasse f64 a = .subnormal) :
+      (match wertExakt f64 a with
+       | some u => if u.zaehler == 0 then nanQ f64 else ⟨a.sign != b.sign, 2047, 0⟩
+       | none => nanQ f64) = (⟨a.sign != b.sign, 2047, 0⟩ : GFloat) := by
+    rw [softMul_operand a finite]
+    dsimp only
+    have positive := softMulSig_positive a finite
+    have nz : (if a.sign then -(softSig a.bexp a.frac : Int)
+        else softSig a.bexp a.frac) ≠ 0 := by
+      cases a.sign <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
+    rw [beq_eq_false_iff_ne.mpr nz]
+    rfl
   cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
-    simp only [softDivSpecial, div, ca, cb, wertExakt]
+    simp only [softDivSpecial, div, ca, cb]
   all_goals first
     | rfl
-    | (have positive := softMulSig_positive a (by first | exact Or.inl ca | exact Or.inr ca)
-       have decoded := softMul_operand a (by first | exact Or.inl ca | exact Or.inr ca)
-       rw [decoded]
-       dsimp only
-       have nz : (if a.sign then -(softSig a.bexp a.frac : Int)
-           else softSig a.bexp a.frac) ≠ 0 := by cases a.sign <;> simp_all
-       simp only [beq_eq_false_iff_ne.mpr nz, Bool.false_eq_true, ite_false]
-       rfl)
+    | exact nonzeroCase (Or.inl ca)
+    | exact nonzeroCase (Or.inr ca)
+    | simp [wertExakt, ca]
 
 /-- The rational continuation is exactly the existing kernel operation. -/
 theorem softDivCore_model (a b : GFloat) : softDivCore a b = div f64 a b := by
