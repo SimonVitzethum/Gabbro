@@ -81,7 +81,7 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
     (asm : Bool) (eigner : List String := []) : FnSig → Except String UFnKopf
-  | { art, name, params, res, fehler, klauseln } =>
+  | { art, name, params, res, fehler, klauseln, generics := _ } =>
     -- `extern`, `raw`, `prim` and `= asm { .. }`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
     -- answer is `never`
     if !(asm || strEq art "extern" || strEq art "raw" || strEq art "prim" || strEq art "divergent") then
