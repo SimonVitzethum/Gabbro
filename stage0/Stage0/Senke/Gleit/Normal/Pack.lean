@@ -20,8 +20,13 @@ def routineRoundMagnitudeL (d : Nat) (a : Nat → Option (List II × Nat)) :
 theorem routineRoundMagnitudeL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
     (ha : WordCode (L := L) (reserved := reserved) ρ W a av) :
-    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) :=
-  floatRoundShiftL_ok ha (WordCode.const 3 (by decide)) (by decide : 3 < 63)
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) := by
+  intro fp K d c top emitted bound m pc pre
+  exact floatRoundShiftL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W)
+    (a := a) (k := fun j => some ([ci 1 j 3 0], j + 1)) (av := av) (s := 3)
+    @ha (WordCode.const (L := L) (reserved := reserved) (ρ := ρ) (W := W) 3 (by decide))
+    (by decide : 3 < 63) (fp := fp) (K := K) (d := d) (c := c) (top := top)
+    emitted bound m pc pre
 
 /-- The rounded hidden-bit carry changes both significand and exponent.
     Exponent overflow is selected before packing a normal or subnormal. -/
@@ -70,15 +75,16 @@ theorem routineRoundPackL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Ru
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
   have zero : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
   have maxExp : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
-  have subnormal : WordCode (L := L) (reserved := reserved) ρ W _ _ := packL_ok hs zero sig
+  have subnormal := packL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W) @hs @zero @sig
   have fraction : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin sig hidden
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have normal : WordCode (L := L) (reserved := reserved) ρ W _ _ := packL_ok hs exponent fraction
+  have normal := packL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W) @hs @exponent @fraction
+  have overflow := packL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W) @hs @maxExp @zero
   have finite : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
     routineChooseL_ok (routineLessL_ok sig hidden) (fun _ => subnormal) (fun _ => normal)
   have result : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
     routineChooseL_ok (routineLessL_ok exponent maxExp) (fun _ => finite)
-      (fun _ => packL_ok hs maxExp zero)
+      (fun _ => overflow)
   intro fp K d c top h hK m pc hp
   exact result h hK m pc hp
 
