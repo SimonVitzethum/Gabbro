@@ -20,8 +20,13 @@ set_option maxRecDepth 100000
 
 /-- Consuming keeps the written mutation sub-contract. A consumes of slots grants the
     same write footprint as writes, but must name the selected domain explicitly. -/
-def lowConsumingEffects (u : UProg) (fn : UFn) (table : String) (effects : List SEffekt) :
+def lowConsumingEffects (u : UProg) (fn : UFn) (table touches : String) :
     Except String Unit := do
+  let tokens ← lex touches
+  let (effects, rest) ← parseEffektListe 10000 tokens
+  match rest with
+  | [.ende] => pure ()
+  | _ => throw "consuming traversal has an invalid touches clause"
   let head : UFnKopf := {name := fn.name, names := fn.params.map (·.1), kinds := fn.kinds,
     types := fn.params.map (·.2), res := none, held := fn.held}
   let consumed ← (effects.filterMap fun effect => match effect with
