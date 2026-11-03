@@ -11,11 +11,12 @@ variable {D : Deklaration}
     world and answers 0, meet it for every layout. -/
 theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0))
     (href : ∀ a n, D.aerg a = some (.ref n) → L.tor a ≠ none →
-      ValueValid L (.ref n) (Val.vonZelle 0)) :
+      ValueValid L (.ref n) (Val.vonZelle 0))
+    (harea : @AreaContract ⟨fun _ _ _ _ => True⟩ D L O) :
     @TorOK ⟨fun _ _ _ _ => True⟩ D L O := by
   letI : Kern := ⟨fun _ _ _ _ => True⟩
   refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
-    fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩, ?_⟩
+    fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩, ?_, harea⟩
   · rw [hO]; exact hW
   · rw [hO]; simp [rohW]
   · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2.1⟩
