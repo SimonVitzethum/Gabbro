@@ -370,8 +370,8 @@ theorem akteurSA_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Ora
             fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
           rcases hc with hc | ⟨_, _, hc⟩
           · cases hc
-            exact ZErgG.folgt_refl _
           · cases hc
+            exact ZErgG.folgt_refl _
       | why σa r =>
           intro _ _ _ _ _ _ _ _ _ _ hc hn
           cases hc
