@@ -285,7 +285,8 @@ theorem waitingStep {z : RufFadenG D} {c : RufRahmenG D} {st : List (RufRahmenG 
     {sp : List (Ereignis D)} {log : List (RufEreignisF D)}
     (he : z.stapel = c :: st) (hc : RufWartetHeadG c b k ρ) :
     Step z ⟨st, ⟨c.f, c.rho, c.s0, ⟨l, τ :: Γ, Λ, ρ', .dann b (.schrumpf k)⟩⟩,
-      sp, log⟩ := popStep he (fun h => waitingChain hc h)
+      sp, log⟩ :=
+  popStep he (fun h => show k.scopeChain from waitingChain hc h)
 
 theorem reasonStep {z : RufFadenG D} {c : RufRahmenG D} {st : List (RufRahmenG D)}
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty} {n : Nat}

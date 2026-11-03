@@ -148,15 +148,15 @@ private theorem stepReplay {P : Programm D} {O : Orakel D} {pa : Nat}
     | rueckConsGrund | dannRetGrund =>
       simp only [rufUpdateG_self]
       apply reasonStep <;> assumption
-    | dannRegLiesElseFalsch l Γ Λ Λ' r hr zusage sonst rest
-    | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest =>
+    | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hr zusage sonst rest
+    | dannGleitNarrowElse _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest =>
       simp only [rufUpdateG_self]
       apply headStep
       · assumption
       · intro hk
         exact branchChain sonst rest _ hk
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest
-    | dannBindAxiomOptElseGrund l Γ Λ Λ' e a args he hr hp hd hgd err rest =>
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest
+    | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest =>
       simp only [rufUpdateG_self]
       apply headStep
       · assumption
