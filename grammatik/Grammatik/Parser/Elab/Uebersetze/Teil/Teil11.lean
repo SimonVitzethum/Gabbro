@@ -35,6 +35,8 @@ public import Grammatik.Parser.Profil.Eintritt
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+public import Grammatik.Parser.Elab.Uebersetze.Tagged.Initializers
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
@@ -91,13 +93,13 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
       | .ok (body, ctxE) =>
         match expandFoldEnd ctxE ende with
         | .error e => .error e
-        | .ok (prefix, ctxE, ende) =>
+        | .ok (beforeEnd, ctxE, ende) =>
         match uEnde ctxE ende with
         | .error e =>
           if ende.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
             .ok (gives, needs, body, .keins)
           else .error e
-        | .ok r => .ok (gives, needs, body ++ prefix, r)
+        | .ok r => .ok (gives, needs, body ++ beforeEnd, r)
     | _ => .error "fn body without G form"
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
@@ -137,62 +139,6 @@ def uNutzItem : List SExpr → Except String (List String)
     | .error e => .error e
     | .ok gs => .ok (g :: gs)
   | _ :: _ => .error "payload of a table without G form"
-mutual
-/-- A tagged initializer checks payload presence, then uses the canonical typed
-    constant reader for the complete selected value. -/
-def uSumKonst (consts : List (String × Int)) (sums : List USum) (sm : USum) :
-    SKonstWert → Except String UKonst
-  | .one (.variable name) =>
-    match sm.cases.findIdx? (fun c => strEq c.1 name), sm.cases.find? (fun c => strEq c.1 name) with
-    | some i, some (_, none) => .ok (.fall i .null)
-    | some _, some (_, some _) => .error "missing tagged payload in static initializer"
-    | _, _ => .error ("case unknown: " ++ name)
-  | .one (.call name [value]) =>
-    match sm.cases.findIdx? (fun c => strEq c.1 name), (sm.cases.find? (fun c => strEq c.1 name)).bind (·.2) with
-    | some i, some τ => (uKonst consts sums (some τ) (.one value)).map (.fall i)
-    | _, _ => .error "missing or extra tagged payload in static initializer"
-  | _ => .error "static initialiser without G form"
-termination_by value => 2 * sizeOf value
-decreasing_by all_goals simp_wf; omega
-/-- Constants use their declared type throughout nested tagged and array values.
-    The later value decoder still checks exact shape, ranges and string bounds. -/
-def uKonst (consts : List (String × Int)) (sums : List USum) (expected : Option Ty) :
-    SKonstWert → Except String UKonst
-  | value =>
-    match expected, value with
-    | some (.sum cs), _ =>
-      match sums.find? (fun sm => sm.spec = cs) with
-      | some sm => uSumKonst consts sums sm value
-      | none => .error "unknown tagged type in static initializer"
-    | some (.int lo hi), .one e =>
-      match uKonstWert lo hi [] consts 64 e with
-      | some z => .ok (.zahl z)
-      | none => .error "static initialiser outside its declared range"
-    | _, .one (.lit 0) => .ok .null
-    | _, .one (.call "None" []) => .ok .null
-    | _, .one (.lit k) => .ok (.zahl (Int.ofNat k))
-    | _, .one (.un "-" (.lit k)) => .ok (.zahl (-(Int.ofNat k)))
-    | _, .one .tru => .ok (.wahr true)
-    | _, .one .fls => .ok (.wahr false)
-    | _, .one (.variable c) => (uSuch "const" consts c).map .zahl
-    | _, .one (.ext .text [text] []) =>
-      .ok (.text (text.toUTF8.toList.map (fun b => Int.ofNat b.toNat)))
-    | some (.arr element _), .rows ks => uKonstReihe consts sums (some element) ks
-    | _, .rows ks => uKonstReihe consts sums none ks
-    | _, .one _ => .error "static initialiser without G form"
-termination_by value => 2 * sizeOf value + 1
-decreasing_by all_goals simp_wf; omega
-/-- Read all array elements under their declared element type. -/
-def uKonstReihe (consts : List (String × Int)) (sums : List USum) (element : Option Ty) :
-    List SKonstWert → Except String UKonst
-  | [] => .ok .nil
-  | k :: ks =>
-    match uKonst consts sums element k, uKonstReihe consts sums element ks with
-    | .ok a, .ok r => .ok (.cons a r)
-    | .error e, _ | _, .error e => .error e
-termination_by values => 2 * sizeOf values
-decreasing_by all_goals simp_wf; omega
-end
 /-- The statics of a tagged type with their type, read once the `tagged type`s are known. -/
 def uSumGlobs (consts : List (String × Int)) (sums : List USum) (ms : List SItemTief) :
     List UGlob → Except String (List UGlob)
@@ -264,7 +210,8 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
   | .globT m n t v al sec sh :: rest =>
     let alignment := match al with
       | none => some 1
-      | some e => ProfilBindung.ausrichtungWert (consts.map (fun (n, z) => (n, z.toNat))) e
+      | some e => ProfilBindung.ausrichtungWert
+          (consts.map (fun (n, z) => (n, Int.toNat z))) e
     if !alignment.any ausrichtungB then .error ("global " ++ n ++ ": invalid alignment")
     else
       match (match t with
@@ -274,7 +221,7 @@ def uGlobs (consts : List (String × Int)) (alias : List (String × (Int × Int)
             | .one .fls => .ok (GTy.bool, (0 : Int))
             | _ => .error "static initialiser without G form"
           | .array _ _ | .str _ =>
-            match uTyp alias [] t with
+            match uTyp alias [] [] [] t with
             | .error e => .error e
             | .ok τ => .ok (GTy.wert τ, (0 : Int))
           -- the count of `T` is read with the tables (`uOptGlobs`)
@@ -403,7 +350,7 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `accumulates` (C15 storage slice): admitted surface forms expand to guarded
   -- cells (`UebersetzeAkku`); anything else is refused by name (the core query
   -- and updates/reads need C08, task 4; `and` needs the stored width).
-  | ((.accT _ _ m p _) as it) :: rest =>
+  | it@(.accT _ _ m _ _) :: rest =>
     if akkuFormZulaessig it then uRestFehler rest
     else if !akkuOperatorOk m then .error "accumulator operator without G form"
     else .error "accumulator without per cpu count without G form"
