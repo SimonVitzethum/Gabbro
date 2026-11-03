@@ -150,7 +150,7 @@ theorem akteurV_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
   have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hpa _ h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hpa (List.mem_append_left _ h)) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
   have hargs : args.orte ⊆ fussOrte P (M.faeden u).kopf.f := by
     intro x hx
@@ -177,11 +177,11 @@ theorem akteurV_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
         tauto)
     (fun O' R σ e hgσ h => by
       rw [semV_dann]
-      simp only [execBlock, hev σ hgσ, h]
+      simp only [execBlock, indSonst, hev σ hgσ, h]
       exact weiterZ_logik O' passes R _ e)
     (fun O' R σ hgσ => by
       rw [semV_dann]
-      simp only [execBlock, hev σ hgσ]
+      simp only [execBlock, indSonst, hev σ hgσ]
       cases R g (σ.lese Λ (p.orte ++ args.orte))
           (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
             (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
@@ -196,6 +196,7 @@ theorem akteurV_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
           intro _ _ _ _ _ _ _ _ _ _ hc hn
           cases hc
           rw [semV_alsBlock_schrumpf]
+          rw [grundSig_eq_cast hg hn r]
           exact ZErg.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
@@ -346,7 +347,7 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
   have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hpa _ h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hpa (List.mem_append_left _ h)) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
   have hargs : args.orte ⊆ fussOrte P (M.faeden u).kopf.f := by
     intro x hx
@@ -361,19 +362,17 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
     ρ (.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k))
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := hok
-      simp only [Block.vOk, Bool.and_eq_true] at hks'
+      simp only [Block.vOk, Stmt.vOk, Bool.and_eq_true] at hks'
       refine ⟨hks'.1.2, ?_, by simp only [Block.vOk], ?_, ⟨hks'.2, ?_, hk'⟩⟩
       · intro x hx
         apply hss'
-        simp only [blockOrteP, List.mem_append] at hx ⊢
+        simp only [blockOrteP, stmtOrteP, List.mem_append] at hx ⊢
         tauto
       · intro x hx
-        apply hss'
-        simp only [blockOrteP, List.mem_append] at hx ⊢
-        tauto
+        cases hx
       · intro x hx
         apply hss'
-        simp only [blockOrteP, List.mem_append] at hx ⊢
+        simp only [blockOrteP, stmtOrteP, List.mem_append] at hx ⊢
         tauto)
     (fun O' R σ e hgσ h => by
       rw [semV_dann]
@@ -390,14 +389,14 @@ theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
             fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
           rcases hc with hc | ⟨_, _, hc⟩
           · cases hc
-          · subst hc
+          · cases hc
             simp only [semV_dann, execBlock]
             exact ZErg.folgt_refl _
       | why σa r =>
           intro _ _ _ _ _ _ _ _ _ _ hc hn
-          subst hc
-          simp only [semV_dann, execBlock, execStmt, indSonst, hev σ hgσ]
+          cases hc
           rw [semV_alsBlock_schrumpf]
+          rw [grundSig_eq_cast hg hn r]
           exact ZErg.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
