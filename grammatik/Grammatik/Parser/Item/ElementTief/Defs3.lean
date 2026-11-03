@@ -165,33 +165,35 @@ def parseRcuTief (f : Nat) (toks : List Token) :
 
 /-- `entrust n at Code arch a via service;`; legacy state is retained for named refusal. -/
 def parseAnvertrautTief (f : Nat) (toks : List Token) :
-    Except String (SItemTief × List Token) := do
-  let r ← nimmWort "entrust" toks
-  let (name, r) ← nimmName r
-  let r ← nimmWort "at" r
-  let (code, r) ← nimmName r
-  let r ← nimmWort "arch" r
-  let (arch, r) ← nimmName r
-  let (service, r) ← match r with
-    | .wort "via" :: r => do
-      let (service, r) ← nimmName r
-      pure (some service, r)
-    | _ => pure (none, r)
-  match r with
-  | .zeichen ";" :: r => pure (.trustT name code arch [] "" "" service, r)
-  | _ =>
-    let r ← fordereZeichen "{" r
-    let r ← nimmWort "regs" r
-    let r ← nimmWort "in" r
-    let (registers, r) ← parseRegBindListe f r
-    let r ← nimmWort "stack" r
-    let (stack, r) ← nimmName r
-    let r ← nimmWort "assume" r
-    let (assumption, r) ← nimmName r
-    let r ← fordereZeichen ";" r
-    let r ← fordereZeichen "}" r
-    pure (.trustT name code arch registers stack assumption service, r)
-
+    Except String (SItemTief × List Token) :=
+  match f with
+  | 0 => .error "out of fuel"
+  | fuel + 1 => do
+    let r ← nimmWort "entrust" toks
+    let (name, r) ← nimmName r
+    let r ← nimmWort "at" r
+    let (code, r) ← nimmName r
+    let r ← nimmWort "arch" r
+    let (arch, r) ← nimmName r
+    let (service, r) ← match r with
+      | .wort "via" :: r => do
+        let (service, r) ← nimmName r
+        pure (some service, r)
+      | _ => pure (none, r)
+    match r with
+    | .zeichen ";" :: r => pure (.trustT name code arch [] "" "" service, r)
+    | _ =>
+      let r ← fordereZeichen "{" r
+      let r ← nimmWort "regs" r
+      let r ← nimmWort "in" r
+      let (registers, r) ← parseRegBindListe fuel r
+      let r ← nimmWort "stack" r
+      let (stack, r) ← nimmName r
+      let r ← nimmWort "assume" r
+      let (assumption, r) ← nimmName r
+      let r ← fordereZeichen ";" r
+      let r ← fordereZeichen "}" r
+      pure (.trustT name code arch registers stack assumption service, r)
 
 def parseBootSchritte (f : Nat) (toks : List Token) :
     Except String (List SBootSchritt × List Token) :=
