@@ -21,6 +21,7 @@ public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
+public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -324,12 +325,8 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         pure (exC ((frei Γ reserved)) (L.ga g) cn.1 ++ cr.1, max (max cn.2 ((frei Γ reserved) + 4)) cr.2)
       else none
     else none
-  -- IEEE arithmetic needs its software algorithms and proofs.
-  -- All four IEEE binary64 operations remain refused: Runner.IR.op has no float
-  -- arithmetic instruction; integer opcodes 3–6 do not implement gleitRechne.
-  -- floatLit materialises rounded bits, while floatOf uses software conversion;
-  -- neither supplies a verified binary-operation lowering for this arm.
-  | _, _, _, _, .float .., reserved => none
+  -- Binary64 add uses the proved integer routine; sub, mul and div stay refused.
+  | _, Γ, _, _, .float op a b low high rest, reserved => floatAddBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a) (lowE (reserved := reserved) L b) (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
   | _, _, _, _, _, reserved => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits
