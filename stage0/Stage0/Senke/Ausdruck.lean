@@ -48,6 +48,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinCode
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
 public import Stage0.Senke.Ausdruck.Quant.CountCode
+public import Stage0.Senke.Ausdruck.Wort.BytesCode
 @[expose] public section
 
 
@@ -215,7 +216,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       engL d lo hi lo' hi' (lowE (currentOld := currentOld) L (reserved := reserved) e d) (lowE (currentOld := currentOld) L (reserved := reserved) b d)
     else wideEngL lo hi lo' hi' d (lowE (currentOld := currentOld) L (reserved := reserved) e) (lowE (currentOld := currentOld) L (reserved := reserved) b)
   | _, _, .getBytes t f _ n i _ _ _, d =>
-    if n ≤ 8 then readBytesL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) 0 n d else none
+    if n ≤ 8 then readBytesL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) 0 n d else
+      readBytesWideL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) n d
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
   | Γ, _, .count n body, d => countL (frei Γ reserved) d n (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
