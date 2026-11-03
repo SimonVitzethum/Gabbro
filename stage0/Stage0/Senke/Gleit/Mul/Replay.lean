@@ -86,6 +86,16 @@ theorem softMulNormalize_round (s : Bool) (a b ca cb : Nat) (e : Int)
   have scale : e - (ca : Int) - (cb : Int) + ((ca + cb : Nat) : Int) = e := by omega
   rwa [scale] at result
 
+/-- The same compressed product is used for normal rounding and for a
+    result straddling the minimum-subnormal half-way point. -/
+theorem softMulRound_interval_zeuge :
+    rundeExakt f64 ⟨2 ^ 104 + 2 ^ 53 + 1, -104⟩ =
+      rundeExakt f64 ⟨2 ^ 55 + 17, -55⟩ ∧
+    rundeExakt f64 ⟨2 ^ 104 + 2 ^ 53 + 1, -1179⟩ =
+      rundeExakt f64 ⟨2 ^ 55 + 17, -1130⟩ := by
+  decide +kernel
+
+#print axioms softMulRound_interval_zeuge
 #print axioms softMulRound_interval
 #print axioms softMulCompress_round
 #print axioms softMulNormalize_round
