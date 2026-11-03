@@ -4,7 +4,7 @@ public import Grammatik.Parser.Elab.Proben.CallElse.Accepted
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.CallElseProben
-open Uebersetze
+open Uebersetze UebersetzeAllg2
 
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
