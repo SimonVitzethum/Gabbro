@@ -80,8 +80,9 @@ theorem candidate_test (k : Wert D (.index (D.count x.table))) (hk : k.n = j)
       (by omega) (by decide) (by decide) (by consume_arith x)).bind
     intro m2 result
     obtain ⟨ready2, frame2, flag, predecessorRead⟩ := result
-    have candidateRead := Image.read_agree frame2 state1.ready.frame (by omega) (by omega)
-      (by rw [hk, BitVec.ofInt_natCast]; exact state1.candidateRead)
+    have candidateRead : x.read m2 x.s (BitVec.ofInt 64 k.n) :=
+      Image.read_agree frame2 state1.ready.frame (by omega) (by omega)
+        (by rw [hk, BitVec.ofInt_natCast]; exact state1.candidateRead)
     have initial : q.PredState σ ρ k true 0 m2 :=
       ⟨⟨ready2, candidateRead, flag⟩, predecessorRead⟩
     have scan := q.predecessor_path σ ρ k true (D.count x.table).toNat 0
