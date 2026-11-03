@@ -17,9 +17,9 @@ def uBreaking
   let (body, bodyCtx) ← run ctx statements
   let exits ← uFoldEndeStmt bodyCtx ending
   let (tail, finalCtx) ← run ctx rest
-  let scoped := names.foldr (fun name inner => [.breakingBeg name] ++ inner ++ [.blkEnd])
+  let enclosed := names.foldr (fun name inner => [.breakingBeg name] ++ inner ++ [.blkEnd])
     (body ++ exits)
-  pure (scoped ++ tail, finalCtx)
+  pure (enclosed ++ tail, finalCtx)
 
 /-- Each source name keeps one opening and closing marker; body bindings do not
     escape the scope, and explicit exits remain inside all named scopes. -/
@@ -34,6 +34,7 @@ theorem uBreaking_exact
     uBreaking run ctx names (.block statements ending) rest =
       .ok (names.foldr (fun name inner => [.breakingBeg name] ++ inner ++ [.blkEnd])
         (body ++ exits) ++ tail, finalCtx) := by
-  simp [uBreaking, nonempty, inside, exit, outside]
+  simp [uBreaking, nonempty, inside, exit, outside, bind, Except.bind,
+    pure, Except.pure]
 
 end Gabbro.Grammatik.Parser.Uebersetze

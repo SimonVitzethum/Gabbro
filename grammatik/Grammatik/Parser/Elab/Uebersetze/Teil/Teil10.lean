@@ -18,9 +18,9 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
   | fuel + 1, ctx, statement :: rest => do
-    let (prefix, ctx, statement) ← expandFoldStmt ctx statement
+    let (beforeStmt, ctx, statement) ← expandFoldStmt ctx statement
     let (code, ctx) ← uAnwReiheCore tabs koepfe fuel ctx (statement :: rest)
-    pure (prefix ++ code, ctx)
+    pure (beforeStmt ++ code, ctx)
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; returns retain lexical cleanup scopes, while unsupported lock expressions are refused.
@@ -235,7 +235,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
           match uAnwReihe tabs koepfe f ctx' rest with
           | .error err => .error err
           | .ok (xs, cE) => .ok ([UStmt.narrowBeg x lo hi] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
-  /-- Required narrowing (C15, from `SAnw.trimReq`): the rest of the run reads
+  /- Required narrowing (C15, from `SAnw.trimReq`): the rest of the run reads
       `x` at the narrowed range; out of range is `Logik.kapazitaet`, so unlike
       `trim` there is no `else` and no `blkEnd`. -/
   | f + 1, ctx, .trimReq (.variable x) t :: rest =>
