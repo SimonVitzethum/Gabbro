@@ -10,6 +10,40 @@ variable {D : Deklaration} {V : Vertrag D}
 section Semantik
 variable (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
 
+private theorem ohneAus_verbrauch {l : Bool} {Γ : Ctx} {eb : Bool} (t : D.Tab)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ → World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int)
+    (hs : ∀ σ ρ, OhneAus false (schritt σ ρ)) :
+    ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
+      OhneAus eb (verbrauchLauf (l := l) t schritt inv sel massW bound n σ ρ)
+  | 0, _, _ => trivial
+  | n + 1, σ, ρ => by
+      simp only [verbrauchLauf]
+      split
+      · trivial
+      · split
+        · trivial
+        · trivial
+        · rename_i σr k _ hsel
+          have h := hs (massW σr ρ).1 (.cons k ρ)
+          split
+          · split
+            · exact ohneAus_verbrauch t schritt inv sel massW bound hs n _ _
+            · trivial
+          · split
+            · exact ohneAus_verbrauch t schritt inv sel massW bound hs n _ _
+            · trivial
+          · split
+            · split <;> trivial
+            · trivial
+          · rename_i he; rw [he] at h; exact h
+          · rename_i he; rw [he] at h; exact h
+          · trivial
+          · trivial
+
 mutual
 
 theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (eb dl : Bool),
@@ -54,10 +88,9 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
       · trivial
       · trivial
   | _, _, _, _, .callIndElse p args _ _ hr err, eb, _, h, σ, ρ => by
+      teile
       simp only [execStmt, indSonst]
-      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
-      obtain ⟨f, hf⟩ := pv
-      simp only
+      split
       split
       · trivial
       · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.2 _ _))
@@ -72,9 +105,9 @@ theorem ohneAus_execStmt : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s 
   | _, _, _, _, .traverse _ _ body, _, _, h, σ, ρ => by
       teile
       exact ohneAus_traverse _ _ (fun σ ρ => ohneAus_execBlock body false h σ ρ) _ _ _
-  | _, _, _, _, .consumeTraverse _ _ _ _ _ _ body, _, _, h, σ, ρ => by
+  | _, _, _, _, .consumeTraverse t _ _ _ _ _ body, _, _, h, σ, ρ => by
       teile
-      exact ohneAus_traverse _ _ (fun σ ρ => ohneAus_execBlock body false h σ ρ) _ _ _
+      exact ohneAus_verbrauch t _ _ _ _ _ (fun σ ρ => ohneAus_execBlock body false h σ ρ) _ _ _
   | _, _, _, _, .retry n _ body ueber, eb, _, h, σ, ρ => by
       teile
       exact ohneAus_retry _ _ _ (fun σ ρ => ohneAus_execBlock body false h.1 σ ρ)
@@ -135,9 +168,7 @@ theorem ohneAus_execBlock : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b
   | _, _, _, _, .bindCallIndElse p args _ _ hr err rest, eb, h, σ, ρ => by
       teile
       simp only [execBlock, indSonst]
-      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
-      obtain ⟨f, hf⟩ := pv
-      simp only
+      split
       split
       · exact ohneAus_schrumpf (ohneAus_execBlock rest eb h.2 _ _)
       · exact endOhneAus_zuAusgang (endOhneAus_schrumpf (ohneAus_execEnd err eb h.1.2 _ _))
@@ -367,9 +398,7 @@ theorem ohneAus_execEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : End
   | _, _, _, .bindCallIndElse p args _ _ hr err rest, eb, h, σ, ρ => by
       teile
       simp only [execEnd, indSonstE]
-      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv
-      obtain ⟨f, hf⟩ := pv
-      simp only
+      split
       split
       · exact endOhneAus_schrumpf (ohneAus_execEnd rest eb h.2 _ _)
       · exact endOhneAus_schrumpf (ohneAus_execEnd err eb h.1.2 _ _)
