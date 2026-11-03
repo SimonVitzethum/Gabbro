@@ -236,4 +236,107 @@ theorem call_ind_else_dispatch {l : Bool} (u : UProg) (caller : Fin u.fns.length
       lowCallIndElse u caller R Γ fn Λ top name args reason source := by
   simp only [lowStructStep, lowCallElse, resolved]
 
+/-- The continuing foreign binder retains every write/guard premise from its
+    checked head; only the success branch receives the answer binding. -/
+theorem foreign_else_seq_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ Λ' : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (y name reason : String) (args : List UArg)
+    (source tail remaining : List UStmt) (k : AxKopf u caller Γ Λ) (τ : Ty)
+    (hk : lowAxKopf u caller Γ fn Λ name args = .ok k)
+    (hr : 0 < (declOf u).agruende k.ax) (he : (declOf u).aerg k.ax = some τ)
+    (handler : Endblock (declOf u) (verOf u caller) l (.why ((declOf u).agruende k.ax) :: Γ) Λ)
+    (body : Block (declOf u) (verOf u caller) l (τ :: Γ) Λ Λ')
+    (herr : R.ende (l := l) (.why ((declOf u).agruende k.ax) :: Γ)
+      (fn.mitWhy reason 0 ((declOf u).agruende k.ax)) Λ top source = .ok (handler, .blkEnd :: tail))
+    (hbody : R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) Λ top tail = .ok (⟨Λ', body⟩, remaining)) :
+    lowSeqStep (l := l) u caller R Γ fn Λ top (.bindAxElse y name args reason :: source) =
+      .ok (⟨Λ', .bindAxiomElse k.ax k.args he hr k.hw k.hg k.hd k.hgd handler body⟩, remaining) := by
+  simp only [lowSeqStep, hk, bind, Except.bind, hr, ↓reduceIte, withAxErg]
+  split
+  · rename_i hn
+    rw [he] at hn
+    contradiction
+  · rename_i τ' ht
+    have same : τ' = τ := Option.some.inj (ht.symm.trans he)
+    subst τ'
+    simp only [herr, hbody, bind, Except.bind]
+
+/-- Explicit ending branches use the same typed foreign binder as function bodies. -/
+theorem foreign_bind_end_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (y name : String) (args : List UArg)
+    (source remaining : List UStmt) (k : AxKopf u caller Γ Λ) (τ : Ty)
+    (hk : lowAxKopf u caller Γ fn Λ name args = .ok k) (he : (declOf u).aerg k.ax = some τ)
+    (body : Endblock (declOf u) (verOf u caller) l (τ :: Γ) Λ)
+    (hbody : R.ende (l := l) (τ :: Γ) (fn.mitTy y τ) Λ top source = .ok (body, remaining)) :
+    lowEndStep (l := l) u caller R Γ fn Λ top (.bindAx y name args :: source) =
+      .ok (.bindAxiom k.ax k.args he k.hw k.hg k.hd k.hgd body, remaining) := by
+  simp only [lowEndStep, hk, bind, Except.bind, withAxErg]
+  split
+  · rename_i hn
+    rw [he] at hn
+    contradiction
+  · rename_i τ' ht
+    have same : τ' = τ := Option.some.inj (ht.symm.trans he)
+    subst τ'
+    simp only [hbody, bind, Except.bind]
+
+/-- Nested foreign `let else` consumes its actual handler, closer and success
+    tail; no source segment is replaced with an empty branch. -/
+theorem foreign_else_end_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (y name reason : String) (args : List UArg)
+    (source tail remaining : List UStmt) (k : AxKopf u caller Γ Λ) (τ : Ty)
+    (hk : lowAxKopf u caller Γ fn Λ name args = .ok k)
+    (hr : 0 < (declOf u).agruende k.ax) (he : (declOf u).aerg k.ax = some τ)
+    (handler : Endblock (declOf u) (verOf u caller) l (.why ((declOf u).agruende k.ax) :: Γ) Λ)
+    (body : Endblock (declOf u) (verOf u caller) l (τ :: Γ) Λ)
+    (herr : R.ende (l := l) (.why ((declOf u).agruende k.ax) :: Γ)
+      (fn.mitWhy reason 0 ((declOf u).agruende k.ax)) Λ top source = .ok (handler, .blkEnd :: tail))
+    (hbody : R.ende (l := l) (τ :: Γ) (fn.mitTy y τ) Λ top tail = .ok (body, remaining)) :
+    lowEndStep (l := l) u caller R Γ fn Λ top (.bindAxElse y name args reason :: source) =
+      .ok (.bindAxiomElse k.ax k.args he hr k.hw k.hg k.hd k.hgd handler body, remaining) := by
+  simp only [lowEndStep, hk, hr, ↓reduceIte, withAxErg]
+  split
+  · rename_i hn
+    rw [he] at hn
+    contradiction
+  · rename_i τ' ht
+    have same : τ' = τ := Option.some.inj (ht.symm.trans he)
+    subst τ'
+    simp only [herr, hbody, bind, Except.bind]
+
+/-- A discarded foreign value uses the same binder premises, with an inaccessible
+    synthetic name; the following source locals retain their positions. -/
+theorem foreign_discard_end_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (name : String) (args : List UArg)
+    (source remaining : List UStmt) (k : AxKopf u caller Γ Λ) (τ : Ty)
+    (hk : lowAxKopf u caller Γ fn Λ name args = .ok k) (he : (declOf u).aerg k.ax = some τ)
+    (body : Endblock (declOf u) (verOf u caller) l (τ :: Γ) Λ)
+    (hbody : R.ende (l := l) (τ :: Γ) (fn.mitTy "#ax" τ) Λ top source = .ok (body, remaining)) :
+    lowEndStep (l := l) u caller R Γ fn Λ top (.axCall name args :: source) =
+      .ok (.bindAxiom k.ax k.args he k.hw k.hg k.hd k.hgd body, remaining) := by
+  simp only [lowEndStep, hk, bind, Except.bind, withAxErg]
+  split
+  · rename_i hn
+    rw [he] at hn
+    contradiction
+  · rename_i τ' ht
+    have same : τ' = τ := Option.some.inj (ht.symm.trans he)
+    subst τ'
+    simp only [hbody, bind, Except.bind]
+
+/-- A void foreign call keeps the original context and all checked call premises. -/
+theorem foreign_void_end_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (top : AtTop u caller Λ) (name : String) (args : List UArg)
+    (source remaining : List UStmt) (k : AxKopf u caller Γ Λ)
+    (hk : lowAxKopf u caller Γ fn Λ name args = .ok k) (he : (declOf u).aerg k.ax = none)
+    (body : Endblock (declOf u) (verOf u caller) l Γ Λ)
+    (hbody : R.ende (l := l) Γ fn Λ top source = .ok (body, remaining)) :
+    lowEndStep (l := l) u caller R Γ fn Λ top (.axCall name args :: source) =
+      .ok (.cons (axiomStmt u caller Γ Λ k he) body, remaining) := by
+  simp only [lowEndStep, hk, bind, Except.bind, withAxErg, he, hbody]
+
 end Gabbro.Grammatik.Parser.ExportPreservation
