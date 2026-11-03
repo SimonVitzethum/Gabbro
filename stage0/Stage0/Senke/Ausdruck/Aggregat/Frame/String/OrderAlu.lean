@@ -7,6 +7,11 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
+/-- Moving a write bound downward retains the same instructions and operands. -/
+theorem AluIns.lower {K lo hi : Nat} {i : II} (h : AluIns K hi i) (below : lo ≤ hi) :
+    AluIns K lo i := by
+  cases h <;> constructor <;> first | assumption | omega
+
 theorem stringKey_admitted {K n a k out tmp : Nat}
     (hn : n < 2 ^ 31) (ha : a + n + 1 ≤ out) (ht : out < tmp) (hK : tmp + 1 < K) :
     ∀ i ∈ stringKeyC n a k out tmp, AluIns K out i := by
