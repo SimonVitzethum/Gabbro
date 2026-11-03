@@ -51,11 +51,30 @@ def uSondenFns (fns : List UFn) (foreignHeads : List UFnKopf) :
 /-- Recheck generated adapter resolution when deriving descriptors. A modified
     unit cannot retain a counterprobe label after dropping its executable call. -/
 def uSondenPruef (u : UProg) : Except String Unit := do
+  let names := u.checks.filterMap fun c => c.sonde.map Prod.fst
+  if (uEindeutig names).length != names.length then
+    throw "counterprobe bound to multiple checks"
   for c in u.checks do
     match c.sonde with
     | none => pure ()
     | some (externalName, _) =>
-      if !(u.fns.any fun f => strEq f.name (sondeFnName c.name externalName)) then
-        throw ("unbound counterprobe: " ++ externalName)
+      let some adapter := u.fns.find? fun f => strEq f.name (sondeFnName c.name externalName)
+        | throw ("unbound counterprobe: " ++ externalName)
+      let body ← match u.fns.find? (fun f => strEq f.name externalName) with
+        | some f =>
+          if !f.params.isEmpty || !f.resBool || f.gruende != 0 ||
+              !f.nimmt.isEmpty || !f.gibt.isEmpty then
+            .error ("counterprobe function changed: " ++ externalName)
+          else .ok [UStmt.bindCall "ans" externalName []]
+        | none => match u.axs.find? (fun a => strEq a.name externalName) with
+          | none => .error ("unbound counterprobe: " ++ externalName)
+          | some a =>
+            if !a.params.isEmpty || a.res != some Ty.bool || a.gruende != 0 then
+              .error ("counterprobe binding changed: " ++ externalName)
+            else .ok [UStmt.bindAx "ans" externalName []]
+      if !adapter.params.isEmpty || !adapter.resBool || adapter.gruende != 0 ||
+          !adapter.nimmt.isEmpty || !adapter.gibt.isEmpty ||
+          adapter.body != body || adapter.ret != URet.bool (.var "ans") then
+        throw ("counterprobe adapter changed: " ++ externalName)
 
 end Gabbro.Grammatik.Parser.Uebersetze
