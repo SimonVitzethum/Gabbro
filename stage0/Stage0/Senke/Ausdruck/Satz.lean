@@ -19,7 +19,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Builtin
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.StringOps
 public import Stage0.Senke.Ausdruck.Option
-public import Stage0.Senke.Ausdruck.Wort.Bytes
+public import Stage0.Senke.Anweisung.Bytes.Span.Read
 public import Stage0.Senke.Ausdruck.Quant.Satz
 public import Stage0.Senke.Ausdruck.Quant.Count
 public import Stage0.Senke.Ausdruck.Quant.Reach
@@ -416,24 +416,10 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
         (fe := lowE (currentOld := currentOld) L (reserved := reserved) e) (fb := lowE (currentOld := currentOld) L (reserved := reserved) b)
         (fun ce te he hte m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d ce te he hte m pc ρ hp)
         (fun cb tb hb htb m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay b d cb tb hb htb m pc ρ hp) h hK hp
-  | _, _, .getBytes t f hf n i hlo hhi _, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hn =>
-      have power : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
-        have natural := Nat.pow_le_pow_right (n := 256) (i := n) (by decide) hn
-        have cast : ((256 ^ n : Nat) : Int) ≤ ((256 ^ 8 : Nat) : Int) := Int.ofNat_le.mpr natural
-        simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using cast
-      have ceiling : (256 : Int) ^ 8 = 2 ^ 64 := by decide
-      rw [ceiling] at power
-      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
-      have hr := readBytesL_ok i hf hWL hlo
-        (fun d ci ti hi ht m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
-        n 0 d c top (by simpa using hhi) (by omega) h hK m pc hp
-      exact hr.mono (fun w hw => by
-        change w = BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n (eval σ₀ i σ ρ).n))
-        simpa only [Int.natCast_zero, Int.add_zero] using hw)
-    · cases h
+  | _, _, .getBytes t f hf n i hlo hhi access, d, c, top, h, hK, m, pc, ρ, hp =>
+    getBytes_ok i hf n hlo hhi access hWL
+      (fun d ci ti hi ht m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i d ci ti hi ht m pc ρ hp).word trivial)
+      h hK hp
   | _, _, .forallSlots t body _, d, c, top, h, hK, m, pc, ρ, hp =>
     (quantL_ok true (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3)) (fun k => wahr? (eval σ₀ body σ (.cons k ρ))) h hK
       (fun cb tb hb htb k m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay body (d + 3) cb tb hb htb m pc (.cons k ρ) hp).word trivial) hp).value rfl
