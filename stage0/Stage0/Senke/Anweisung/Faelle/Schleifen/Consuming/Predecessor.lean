@@ -33,7 +33,7 @@ structure PredDone (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candid
   liveRead : x.read m (x.s + 2) (Runner.IR.bool live)
 
 structure PredState (q : Selector x Γ Λ) (σ : World D) (ρ : Env D Γ) (candidate : Wert D (.index (D.count x.table))) (live : Bool)
-    (j : Nat) (m : Mem) : Prop extends q.PredDone σ ρ candidate live m where
+    (j : Nat) (m : Mem) extends q.PredDone σ ρ candidate live m : Prop where
   predecessorRead : x.read m (x.s + 1) (BitVec.ofNat 64 j)
 
 variable {q σ ρ} {candidate : Wert D (.index (D.count x.table))} {live : Bool}
