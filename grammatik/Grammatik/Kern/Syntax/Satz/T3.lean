@@ -51,17 +51,17 @@ theorem traverseLauf_gut (schritt : World D → Env D (τ :: Γ) → Ausgang V t
               reduceCtorEq] at h ⊢
           subst h; exact g1.trans (hi σ1 ρ1.tail (g1.heldB hh))
         | zurueck σ1 v =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         | why σ1 r =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
-        | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+        | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
 
 theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -97,22 +97,22 @@ theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         | leave _ σ1 ρ1 =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.trans (hstep _ rfl)
         | zurueck σ1 v =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         | why σ1 r =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
-        | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+        | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
 
 theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausgang V true Γ)
     (inv : World D → Env D Γ → World D × Bool)
@@ -141,22 +141,22 @@ theorem foreverLauf_gut (a : D.Annahme) (schritt : World D → Env D Γ → Ausg
           have g1 := hinv.trans (hstep σ1 rfl)
           exact (GutAusgang.vor g1 (ih σ1 ρ1 (g1.heldB hh))) σ' h
         | leave _ σ1 ρ1 =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.trans (hstep _ rfl)
         | zurueck σ1 v =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
         | why σ1 r =>
-          simp only [hs1, Ausgang.welt, Option.some.injEq] at h
+          simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, Option.some.injEq] at h
           subst h
           simp only [hs1] at hstep ⊢
           exact hinv.transRetV (hstep _ rfl)
-        | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
-        | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+        | logik e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
+        | hardware e => simp only [hs1, Bool.true_eq_false, Bool.false_eq_true, ite_false, ite_true, Ausgang.welt, reduceCtorEq] at h
 
 end Schleifen
 /-! ### The lock floor of a body (held-set relaxation, 2026-09-13)
