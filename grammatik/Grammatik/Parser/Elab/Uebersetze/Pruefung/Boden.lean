@@ -7,9 +7,9 @@
    the report carries the evaluated floor outcomes beside that verdict. Both
    verdicts complete the Duty: the passing floor (true report) and the failing
    floor (false report) each discharge through the gate wrapper, and the
-   discharged entry satisfies the goal leg. Per-site sampled
-   identity-sample functions and the floor-to-gate evaluation binding stay the
-   C16/C08 remainder the admission does not decide. -/
+   discharged entry satisfies the goal leg. The measured local and comparison
+   are executable code in the ordinary probe; `floorCode` checks every return
+   in its actual scope. -/
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
@@ -36,12 +36,12 @@ open Gabbro.Grammatik.Zielsatz
 
 /-- The passing floor: the probe answers `true`, the floor holds. -/
 def checkTextBodenWahr : String :=
-  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { return true; } floor 2 >= 1 }"
+  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return x >= 2; } floor x >= 2 }"
 
 /-- The failing floor: the probe answers `false`, the floor fails -- a completed
     measurement with a negative verdict, never a missing run. -/
 def checkTextBodenFalsch : String :=
-  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { return false; } floor 1 >= 2 }"
+  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return x >= 4; } floor x >= 4 }"
 
 /-- Both floored units elaborate. -/
 theorem checkTextBodenWahr_ok : (elabText checkTextBodenWahr).toOption.isSome = true := by
@@ -325,5 +325,27 @@ theorem bodenFalsch_treue (d : CheckDecl (declOf uBodenFalsch))
     (h : CheckEntladung checkPBodenFalsch d messBerichtFalsch g) :
     Zielsatz.CheckTreueG checkPBodenFalsch [d] [⟨d.probe, messBerichtFalsch, false, some g⟩] :=
   treue_aus_entladung h
+
+/-- The emitted probe retains the comparison on the sampled local. -/
+example : (uBodenWahr.fns.find? (fun f => strEq f.name "p#probe")).map
+    (fun f => f.ret) =
+    some (.bool (.and (.cmp ">=" (.param "x") (.lit 2))
+      (.cmp ">=" (.param "x") (.lit 2)))) := rfl
+
+example : (uBodenFalsch.fns.find? (fun f => strEq f.name "p#probe")).map
+    (fun f => f.ret) =
+    some (.bool (.and (.cmp ">=" (.param "x") (.lit 4))
+      (.cmp ">=" (.param "x") (.lit 4)))) := rfl
+
+/-- A local floor cannot read a value before the local is defined. -/
+example : (elabText
+    "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { return true; } floor x >= 2 }").toOption.isNone = true := by
+  decide +kernel
+
+/-- A failed floor cannot be bypassed with an unrelated true return. -/
+example : (elabText
+    "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return true; } floor x >= 4 }").map
+    (fun u => (u.fns.find? (fun f => strEq f.name "p#probe")).map (·.ret)) =
+    .ok (some (.bool (.and .tru (.cmp ">=" (.param "x") (.lit 4))))) := rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze
