@@ -123,7 +123,8 @@ def kTab : List (List Zeile) := [
     ⟨some 0, false, false, [(0, some 1, none)]⟩ /- count -/,
     ⟨none, false, false, [(2, none, none)]⟩ /- prod -/,
     ⟨none, false, false, [(0, none, none)]⟩ /- prodGet -/,
-    ⟨none, false, false, [(0, none, none), (0, none, none)]⟩ /- prodSet -/],
+    ⟨none, false, false, [(0, none, none), (0, none, none)]⟩ /- prodSet -/,
+    ⟨none, false, false, [(0, some 8, none), (0, some 0, none)]⟩ /- thruOwn -/],
   -- NutzlastExpr
   [⟨none, false, false, []⟩ /- empty -/,
     ⟨none, false, false, [(0, some 0, none)]⟩ /- val -/],
@@ -162,7 +163,8 @@ def kTab : List (List Zeile) := [
     ⟨none, true, false, []⟩ /- leave -/,
     ⟨none, true, false, []⟩ /- next -/,
     ⟨none, false, false, [(0, some 9, none), (0, none, none)]⟩ /- assignSlotRef -/,
-    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none)]⟩ /- callIndElse -/],
+    ⟨none, false, false, [(0, some 7, none), (2, none, none), (6, none, none)]⟩ /- callIndElse -/,
+    ⟨none, false, false, [(0, some 8, none), (0, some 0, none), (0, none, none)]⟩ /- assignThruOwn -/],
   -- Block
   [⟨none, false, false, []⟩ /- nil -/,
     ⟨none, false, false, [(4, none, none), (5, none, none)]⟩ /- cons -/,
