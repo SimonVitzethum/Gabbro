@@ -73,20 +73,9 @@ def uConsumingEdge (ctx : UCtx) (table : String) : Except String String := do
 /-- Read the existing decreases and touches clauses completely; neither is inferred or erased.
     The state-reading measure is elaborated in the outer scope, not under the selected index. -/
 def uConsumingClauses (ctx : UCtx) (raw : String) : Except String (USide × String) := do
-  let tokens ← lex raw
-  let rest ← match tokens with
-    | .wort "decreases" :: rest => pure rest
-    | _ => throw "consuming traversal requires decreases"
-  let (expression, rest) ← parseOr 10000 rest
+  let (expression, touches) ← ExportMetadata.consumingHeader raw
   let mass ← (uZSeite ctx expression).mapError ("consuming traversal decreases: " ++ ·)
-  let touchTokens ← match rest with
-    | .wort "touches" :: rest => pure rest
-    | _ => throw "consuming traversal requires touches consumes"
-  let (_, rest) ← parseEffektListe 10000 touchTokens
-  match rest with
-  | [.ende] => pure (mass, String.intercalate " " (touchTokens.filterMap fun token =>
-      match token with | .ende => none | _ => some (zeigeTok token)))
-  | _ => throw "consuming traversal has an unsupported or duplicate header clause"
+  pure (mass, touches)
 
 /-- Consuming keeps A14's domain predicate as a current-world member test. The declared
     edge is the canonical reach relation over its optional-self field, in predecessor/candidate
