@@ -93,13 +93,13 @@ theorem uKonstArrays_origin (alias : List (String × (Int × Int))) (fns : List 
   obtain ⟨item, member, produced⟩ := List.mem_filterMap.mp collected
   cases item <;> try { cases produced; done }
   case constT sourceName sourceType payload =>
-    change (if values || (match sourceType with | .array _ _ => true | _ => false) then
+    change (if values || (fun t : STyp => match t with | .array _ _ => true | _ => false) sourceType then
       match uTypIn alias [] named [] [] sourceType with
       | .ok actual => (uKonstZeile alias fns consts actual payload leaf).map
           (fun value => (sourceName, USide.typed actual value))
       | .error _ => none
       else none) = some (name, USide.typed ty raw) at produced
-    by_cases selected : (values || (match sourceType with | .array _ _ => true | _ => false)) = true
+    by_cases selected : (values || (fun t : STyp => match t with | .array _ _ => true | _ => false) sourceType) = true
     · rw [if_pos selected] at produced
       cases typed : uTypIn alias [] named [] [] sourceType with
       | error error =>
