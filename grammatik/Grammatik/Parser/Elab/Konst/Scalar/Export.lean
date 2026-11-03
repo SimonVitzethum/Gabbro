@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scalar.Call
+public import Grammatik.Parser.Elab.Konst.Scalar.Quotation
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst.Scalar
@@ -65,6 +66,8 @@ structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
   value : Int
   candidate : uKonstWert lo hi fns bindings 64 function.source = some value
   certificate : Function.Certificate function.model args value
+  quoted : Quoted args function.model.body.2.2.expr
+  syntaxValue : quoted.syntax.evalInt = some value
 
 /-- The sole call-site folding entry point. Every failure names the source callee. -/
 def checkCall (k : UKonstFn) (fns : List UKonstFn)
@@ -77,6 +80,9 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
     match ha : arguments (declaration (k.params.map Prod.snd) (.int lo hi)) k.params values with
     | .error error => throw error
     | .ok args =>
+      if fn.model.pre.denote args = false then
+        throw ("const contract violated at `" ++ k.name ++ "`: requires failed")
+      else
       match hn : uKonstBinde k.params values with
       | none => throw ("const argument binding failed at `" ++ k.name ++ "`")
       | some bindings =>
@@ -84,7 +90,10 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
         | none => throw ("const range failure at `" ++ k.name ++ "`: arithmetic overflow or no value")
         | some value =>
           let cert ← Function.certify k.name fn.model args value
-          return ⟨lo, hi, fn, values, hv, args, ha, bindings, hn, value, hc, cert⟩
+          let quoted ← quote fn.model.body.2.2.expr args
+          have syntaxValue : quoted.syntax.evalInt = some value := by
+            rw [quoted.equation (world _ _) (world _ _), fn.model.body.2.2.equation, cert.body]
+          return ⟨lo, hi, fn, values, hv, args, ha, bindings, hn, value, hc, cert, quoted, syntaxValue⟩
 
 /-- Every value the actual replacement entry point can obtain denotes the ordinary
     machine G call of its source-derived body, with both contracts retained. -/
