@@ -105,6 +105,9 @@ def declOf (u : UProg) : Deklaration where
   braucht := fun t => needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
   gbraucht := gneedsAt u
   eigner := eignerAt u
+  /-- The capability owner registry (C12): `DataRights.owner` numbers resolve
+      through the unit's owner namespace (`eignerMarke`) to declaration marks. -/
+  ownerNr := eignerMarke u
   Fn := Fin u.fns.length
   sig := fun f => f.val
   sigNr := sigAt u
