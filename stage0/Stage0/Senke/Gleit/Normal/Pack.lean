@@ -42,8 +42,8 @@ def routineRoundPackL (d : Nat) (sign index magnitude : Nat → Option (List II 
   let carry := fun j => wordL 14 j (q j) (some (konstWL 4 (2 ^ 53) (j + 1)))
   let exponent := fun j => wordL 3 j (index j) (carry (j + 1))
   let sig := fun j => wordL 12 j (q j) (carry (j + 1))
-  let zero := fun j => some ([ci 1 j 0 0], j + 1)
-  let maxExp := fun j => some ([ci 1 j 2047 0], j + 1)
+  let zero := fun (j : Nat) => some ([ci 1 j 0 0], j + 1)
+  let maxExp := fun (j : Nat) => some ([ci 1 j 2047 0], j + 1)
   let subnormal := fun j => packL j sign zero sig
   let normal := fun j => packL j sign exponent
     (fun k => wordL 4 k (sig k) (hidden (k + 1)))
@@ -60,7 +60,7 @@ theorem routineRoundPackL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     (hm : WordCode (L := L) ρ W magnitude mv) :
     WordCode (L := L) ρ W (fun d => routineRoundPackL d sign index magnitude)
       (routineRoundPackWord sv ev mv) := by
-  have q := routineRoundMagnitudeL_ok hm
+  have q : WordCode (L := L) ρ W _ _ := routineRoundMagnitudeL_ok hm
   have hidden : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 52) (by decide)
   have carry : WordCode (L := L) ρ W _ _ := WordCode.bin q (WordCode.konst (2 ^ 53) (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
@@ -70,13 +70,17 @@ theorem routineRoundPackL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
   have zero : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
   have maxExp : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
-  have subnormal := packL_ok hs zero sig
+  have subnormal : WordCode (L := L) ρ W _ _ := packL_ok hs zero sig
   have fraction : WordCode (L := L) ρ W _ _ := WordCode.bin sig hidden
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have normal := packL_ok hs exponent fraction
-  have finite := routineChooseL_ok (routineLessL_ok sig hidden) (fun _ => subnormal) (fun _ => normal)
-  exact routineChooseL_ok (routineLessL_ok exponent maxExp) (fun _ => finite)
-    (fun _ => packL_ok hs maxExp zero)
+  have normal : WordCode (L := L) ρ W _ _ := packL_ok hs exponent fraction
+  have finite : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineLessL_ok sig hidden) (fun _ => subnormal) (fun _ => normal)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineLessL_ok exponent maxExp) (fun _ => finite)
+      (fun _ => packL_ok hs maxExp zero)
+  intro fp K d c top h hK m pc hp
+  exact result h hK m pc hp
 
 theorem routineRoundPackWord_zeuge :
     routineRoundPackWord 0 1023 (BitVec.ofNat 64 (2 ^ 55)) = BitVec.ofNat 64 4607182418800017408 ∧

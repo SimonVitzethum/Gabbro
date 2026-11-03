@@ -26,13 +26,15 @@ theorem routineUnpack_canonical (a : GFloat) (ha : wf f64 a) :
     change zuBits f64 a / 2 ^ 63 = (Runner.IR.bool a.sign).toNat
     rw [float_bits]
     cases a.sign <;> simp only [Runner.IR.bool, Bool.false_eq_true, ↓reduceIte,
-      Nat.zero_add] <;> omega
+      Nat.zero_add, show (0 : Runner.W).toNat = 0 by decide,
+      show (1 : Runner.W).toNat = 1 by decide] <;> omega
   · have exp' : (unpackBexpWord (BitVec.ofNat 64 (zuBits f64 a))).toNat = a.bexp := by
       exact exp
     have result := congrArg (BitVec.ofNat 64) exp'
     simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using result
   · have frac' : (unpackFracWord (BitVec.ofNat 64 (zuBits f64 a))).toNat = a.frac := by
-      simpa only [floatFieldWord, BitVec.ushiftRight_zero] using frac
+      simpa only [floatFieldWord, BitVec.ushiftRight_zero, unpackFracWord,
+        show 2 ^ f64.fracBits - 1 = (4503599627370495 : Nat) by decide] using frac
     have result := congrArg (BitVec.ofNat 64) frac'
     simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using result
 
@@ -46,21 +48,23 @@ theorem routineClass_canonical (a : GFloat) (ha : wf f64 a) :
   obtain ⟨_, he, hf⟩ := routineUnpack_canonical a ha
   have be : a.bexp < 2 ^ 64 := by have := ha.1; change a.bexp ≤ 2047 at this; omega
   have bf : a.frac < 2 ^ 64 := by have := ha.2; change a.frac < 2 ^ 52 at this; omega
+  have maxWord : (BitVec.ofInt 64 2047).toNat = 2047 := by decide
+  have zeroWord : (BitVec.ofInt 64 0).toNat = 0 := by decide
   have eqMax : (BitVec.ofNat 64 a.bexp == BitVec.ofInt 64 2047) =
       decide (a.bexp = 2047) := by
     apply Bool.eq_iff_iff.mpr
     simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
-      BitVec.toNat_ofNat, Nat.mod_eq_of_lt be]
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt be, maxWord]
   have eqExpZero : (BitVec.ofNat 64 a.bexp == BitVec.ofInt 64 0) =
       decide (a.bexp = 0) := by
     apply Bool.eq_iff_iff.mpr
     simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
-      BitVec.toNat_ofNat, Nat.mod_eq_of_lt be]
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt be, zeroWord]
   have eqFracZero : (BitVec.ofNat 64 a.frac == BitVec.ofInt 64 0) =
       decide (a.frac = 0) := by
     apply Bool.eq_iff_iff.mpr
     simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
-      BitVec.toNat_ofNat, Nat.mod_eq_of_lt bf]
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt bf, zeroWord]
   dsimp only
   simp only [routineNanFlag, routineInfFlag, routineZeroFlag, he, hf,
     eqMax, eqExpZero, eqFracZero]
@@ -98,7 +102,8 @@ theorem routineSpecialWord_model (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
     · by_cases hia : klasse f64 a = .unendlich
       · by_cases hib : klasse f64 b = .unendlich
         · cases hs : (a.sign == b.sign) <;>
-            simp [floatAddSpecial, hna, hnb, hia, hib, hs, nanQ, zuBits]
+            simp [floatAddSpecial, hna, hnb, hia, hib, hs, nanQ, zuBits,
+              show f64.bexpMax = 2047 from rfl, show f64.fracBits = 52 from rfl]
         · simp [floatAddSpecial, hna, hnb, hia, hib]
       · by_cases hib : klasse f64 b = .unendlich
         · simp [floatAddSpecial, hna, hnb, hia, hib]
