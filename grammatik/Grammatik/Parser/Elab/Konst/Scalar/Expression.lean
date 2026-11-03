@@ -78,6 +78,15 @@ def binary {D : Deklaration} {Γ : Ctx} (op : String)
     else throw "const bit operand has a negative range"
   | _ => throw ("const expression without typed G operator: " ++ op)
 
+/-- Unary source operators share one checked typed interpretation. -/
+def unary {D : Deklaration} {Γ : Ctx} (op : String)
+    (code : SomeCode D Γ) : Except String (SomeCode D Γ) := do
+  if op == "!" then return ⟨_, Code.boolNot (← boolean code)⟩
+  else if op == "-" then
+    let ⟨_, _, value⟩ ← integer code
+    return ⟨_, Code.negate value⟩
+  else throw ("const unary operator without G form: " ++ op)
+
 /-- Elaborate the existing single-expression const fragment directly to typed G.
     Unsupported forms fail explicitly; no environment or call defaults to zero. -/
 def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ) :
@@ -94,12 +103,7 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ) :
     | some (_, ⟨τ, x⟩) => .ok ⟨τ, Code.variable x⟩
     | none => .error "const result outside ensures"
   | .un op source => do
-    let code ← expression names source
-    if op == "!" then return ⟨_, Code.boolNot (← boolean code)⟩
-    else if op == "-" then
-      let ⟨_, _, value⟩ ← integer code
-      return ⟨_, Code.negate value⟩
-    else throw ("const unary operator without G form: " ++ op)
+    unary op (← expression names source)
   | .bin op left right => do
     binary op (← expression names left) (← expression names right)
   | .field (.variable ty) member =>
