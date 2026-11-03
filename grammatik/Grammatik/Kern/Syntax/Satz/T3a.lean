@@ -88,78 +88,82 @@ theorem verbrauchLauf_gut (t : D.Tab)
   | succ n ih =>
       intro σ ρ hh σ' h
       simp only [verbrauchLauf] at h ⊢
-      split at h ⊢
+      by_cases hc : (inv σ ρ).snd = false <;>
+        simp only [hc, ite_true, ite_false] at h ⊢
       · simp only [Ausgang.welt, reduceCtorEq] at h
       · have hinv := hi σ ρ hh
         have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
-        split at h ⊢
-        · rename_i σr hsel_eq
-          simp only [Ausgang.welt, Option.some.injEq] at h
-          subst h
-          have hselr : Gut W G (inv σ ρ).1 σr := by
-            rw [hsel_eq] at hselg
-            exact hselg
-          exact hinv.trans hselr
-        · simp only [Ausgang.welt, reduceCtorEq] at h
-        · rename_i σr k hsel_eq
-          have hselr : Gut W G (inv σ ρ).1 σr := by
-            rw [hsel_eq] at hselg
-            exact hselg
-          have gsel : Gut W G σ σr := hinv.trans hselr
+        generalize hsel_eq : sel (inv σ ρ).1 ρ = selected at h ⊢
+        rcases selected with ⟨σr, w, b⟩
+        simp only [hsel_eq] at hselg
+        have gsel : Gut W G σ σr := hinv.trans hselg
+        cases b <;> cases w with
+        | none =>
+          simp only [Ausgang.welt, Option.some.injEq, reduceCtorEq] at h ⊢ <;>
+            (subst h; exact gsel)
+        | some k =>
+          simp only at h ⊢
           have hmassg := hmass σr ρ (gsel.heldB hh)
           have hstep := hs (massW σr ρ).1 (.cons k ρ)
             ((gsel.trans hmassg).heldB hh)
-          split at h ⊢
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
+          cases hs1 : schritt (massW σr ρ).1 (.cons k ρ) with
+          | ok σ1 ρ1 =>
+            simp only [hs1] at hstep h ⊢
             have g1 : Gut W G σ σ1 :=
               (gsel.trans hmassg).trans (hstep σ1 rfl)
             have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
-            split at h ⊢
+            by_cases hfall : 0 ≤ (massW σ1 ρ1.tail).2 ∧
+                (massW σ1 ρ1.tail).2 ≤ bound ∧
+                (massW σ1 ρ1.tail).2 < (massW σr ρ).2 <;>
+              simp only [hfall, ite_true, ite_false] at h ⊢
             · have g2 : Gut W G σ (massW σ1 ρ1.tail).1 :=
                 g1.trans hmassg2
               exact (GutAusgang.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail
                 (g2.heldB hh))) σ' h
             · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
+          | next _ σ1 ρ1 =>
+            simp only [hs1] at hstep h ⊢
             have g1 : Gut W G σ σ1 :=
               (gsel.trans hmassg).trans (hstep σ1 rfl)
             have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
-            split at h ⊢
+            by_cases hfall : 0 ≤ (massW σ1 ρ1.tail).2 ∧
+                (massW σ1 ρ1.tail).2 ≤ bound ∧
+                (massW σ1 ρ1.tail).2 < (massW σr ρ).2 <;>
+              simp only [hfall, ite_true, ite_false] at h ⊢
             · have g2 : Gut W G σ (massW σ1 ρ1.tail).1 :=
                 g1.trans hmassg2
               exact (GutAusgang.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail
                 (g2.heldB hh))) σ' h
             · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 ρ1 hstep_eq
-            simp only [hstep_eq] at hstep
+          | leave _ σ1 ρ1 =>
+            simp only [hs1] at hstep h ⊢
             have g1 : Gut W G σ σ1 :=
               (gsel.trans hmassg).trans (hstep σ1 rfl)
             have hmassg2 := hmass σ1 ρ1.tail (g1.heldB hh)
-            split at h ⊢
-            · split at h ⊢
-              · simp only [Ausgang.welt, Option.some.injEq] at h
-                subst h
-                have h3 := hi (massW σ1 ρ1.tail).1 ρ1.tail
+            by_cases hfall : 0 ≤ (massW σ1 ρ1.tail).2 ∧
+                (massW σ1 ρ1.tail).2 ≤ bound ∧
+                (massW σ1 ρ1.tail).2 < (massW σr ρ).2 <;>
+              simp only [hfall, ite_true, ite_false] at h ⊢
+            · by_cases hc1 : (inv (massW σ1 ρ1.tail).1 ρ1.tail).snd = true <;>
+                simp only [hc1, ite_true, ite_false, Ausgang.welt,
+                  Option.some.injEq, reduceCtorEq] at h ⊢
+              subst h
+              have h3 := hi (massW σ1 ρ1.tail).1 ρ1.tail
                   ((g1.trans hmassg2).heldB hh)
-                exact g1.trans (hmassg2.trans h3)
-              · simp only [Ausgang.welt, reduceCtorEq] at h
+              exact g1.trans (hmassg2.trans h3)
             · simp only [Ausgang.welt, reduceCtorEq] at h
-          · rename_i σ1 v hstep_eq
-            simp only [hstep_eq] at hstep
-            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
+          | zurueck σ1 v =>
+            simp only [hs1, Ausgang.welt, Option.some.injEq] at h
             subst h
-            exact (gsel.trans hmassg).transRetV
-              (hstep _ rfl)
-          · rename_i σ1 r hstep_eq
-            simp only [hstep_eq] at hstep
-            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
+            simp only [hs1] at hstep ⊢
+            exact (gsel.trans hmassg).transRetV (hstep _ rfl)
+          | why σ1 r =>
+            simp only [hs1, Ausgang.welt, Option.some.injEq] at h
             subst h
-            exact (gsel.trans hmassg).transRetV
-              (hstep _ rfl)
-          · simp only [Ausgang.welt, reduceCtorEq] at h
-          · simp only [Ausgang.welt, reduceCtorEq] at h
+            simp only [hs1] at hstep ⊢
+            exact (gsel.trans hmassg).transRetV (hstep _ rfl)
+          | logik e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
+          | hardware e => simp only [hs1, Ausgang.welt, reduceCtorEq] at h
 
 theorem retryLauf_gut (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
