@@ -21,7 +21,7 @@ theorem UKonstFn.returnExpr?_eq_some (fn : UKonstFn) (expression : SExpr) :
 /-- Compile-time function types denote the same canonical integer types as runtime signatures. -/
 theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi : Int)
     (h : uFeldTyp env ty = .ok (lo, hi)) :
-    uTyp env [] [] ty = .ok (.int lo hi) := by
+    uTyp env [] [] [] ty = .ok (.int lo hi) := by
   unfold uFeldTyp at h
   cases ht : uTyp env [] [] [] ty with
   | error e => simp only [ht, reduceCtorEq] at h
@@ -34,7 +34,7 @@ theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi
 /-- The scalar reader is exactly the integer projection of canonical source typing. This
     transports a final validation fact back to the scalar classifier without a caller premise. -/
 theorem fieldType_iff (env : List (String × (Int × Int))) (ty : STyp) (lo hi : Int) :
-    uFeldTyp env ty = .ok (lo, hi) ↔ uTyp env [] [] ty = .ok (.int lo hi) := by
+    uFeldTyp env ty = .ok (lo, hi) ↔ uTyp env [] [] [] ty = .ok (.int lo hi) := by
   constructor
   · exact fieldType_sound env ty lo hi
   · intro typed
@@ -52,7 +52,7 @@ theorem fieldType_builtin_shadow_refused_zeuge :
 
 /-- Ordinary integer aliases retain their exact original bounds. -/
 theorem fieldType_sound_zeuge :
-    uTyp [("Small", (-10, 100))] [] [] (.atom "Small") = .ok (.int (-10) 100) :=
+    uTyp [("Small", (-10, 100))] [] [] [] (.atom "Small") = .ok (.int (-10) 100) :=
   fieldType_sound _ _ _ _ rfl
 
 /-- Predicate clauses are evaluated by the canonical evaluator and certified against

@@ -50,7 +50,7 @@ def AliasMeaning (types : List (String × (Int × Int))) (item : SItemTief) : Pr
   match integerAlias item with
   | none => True
   | some (name, ty) => ∃ lo hi,
-    uTypName types name = .ok (lo, hi) ∧ uTyp types [] [] ty = .ok (.int lo hi)
+    uTypName types name = .ok (lo, hi) ∧ uTyp types [] [] [] ty = .ok (.int lo hi)
 
 /-- Independently recheck the named range against canonical elaboration of the original body. -/
 def checkAliasMeaning (types : List (String × (Int × Int))) (item : SItemTief) : Bool :=

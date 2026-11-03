@@ -250,7 +250,7 @@ theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonst
     (scalar : (uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty).toOption.isSome = true)
     (h : typedItem env fns values (.constT name ty (.one expr)) = some result) :
     ∃ lo hi value,
-      uTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) [] [] ty = .ok (.int lo hi) ∧
+      uTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) [] [] [] ty = .ok (.int lo hi) ∧
       uKonstWert lo hi fns values 64 expr = some value ∧ result = values ++ [(name, value)] := by
   cases ht : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
   | error e => simp [ht, Except.toOption] at scalar

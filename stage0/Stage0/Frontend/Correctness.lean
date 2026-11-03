@@ -30,10 +30,10 @@ def AliasEquivalent (env : List (String × (Int × Int))) (source target : SItem
   source = target ∨ ∃ flags name order original body,
     source = .typeT flags name [] order (some (.atom original)) ∧
     target = .typeT flags name [] order (some body) ∧
-    uTyp env [] [] (.atom original) = uTyp env [] [] body
+    uTyp env [] [] [] (.atom original) = uTyp env [] [] [] body
 
 theorem aliasBody_sound {env : List (String × (Int × Int))} {name : String} {body : STyp}
-    (h : aliasBody env name = .ok body) : uTyp env [] [] (.atom name) = uTyp env [] [] body := by
+    (h : aliasBody env name = .ok body) : uTyp env [] [] [] (.atom name) = uTyp env [] [] [] body := by
   cases ht : uTypName env name with
   | error e =>
     simp only [aliasBody, ht] at h

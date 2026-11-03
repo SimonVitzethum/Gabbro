@@ -47,7 +47,7 @@ def ConstantMeaning (types : List (String × (Int × Int))) (fns : List UKonstFn
     | .error _ => True
     | .ok (lo, hi) => ∃ binding,
     values.find? (fun entry => strEq entry.1 name) = some binding ∧
-    uTyp types [] [] ty = .ok (.int lo hi) ∧
+    uTyp types [] [] [] ty = .ok (.int lo hi) ∧
     uKonstWert lo hi fns values 64 expr = some binding.2
   | _ => True
 
@@ -90,7 +90,7 @@ def ScalarStep {items : List SItemTief} (scope : Scopes items) (item : SItemTief
   | .constT name ty (.one expr) => match uFeldTyp scope.types ty with
     | .error _ => True
     | .ok _ => ∃ lo hi value,
-      uTyp scope.types [] [] ty = .ok (.int lo hi) ∧
+      uTyp scope.types [] [] [] ty = .ok (.int lo hi) ∧
       uKonstWert lo hi scope.functions scope.values 64 expr = some value ∧
       typedItem scope.declared scope.functions scope.values item =
         some (scope.values ++ [(name, value)])
