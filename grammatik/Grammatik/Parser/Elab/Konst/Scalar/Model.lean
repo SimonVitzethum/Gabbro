@@ -1,6 +1,5 @@
 module
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
-public import Grammatik.Kern.Syntax.Konst.Zertifikat
+public import Grammatik.Kern.Semantik.Semantik
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst.Scalar
@@ -97,47 +96,47 @@ def truth (b : Bool) : Code D Γ .bool :=
 
 def negate (a : Code D Γ (.int lo hi)) : Code D Γ (.int (-hi) (-lo)) :=
   ⟨.neg a.expr, fun env => Zahl.neg (a.denote env), by
-    intros; simp only [eval, a.equation]⟩
+    intros; simp only [eval, a.equation, wahr?]⟩
 
 def add (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) :
     Code D Γ (.int (l + l') (h + h')) :=
   ⟨.add a.expr b.expr, fun env => Zahl.add (a.denote env) (b.denote env), by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 def sub (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) :
     Code D Γ (.int (l - h') (h - l')) :=
   ⟨.sub a.expr b.expr, fun env => Zahl.sub (a.denote env) (b.denote env), by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 def mul (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) :
     Code D Γ (.int (imin (imin (l*l') (l*h')) (imin (h*l') (h*h')))
       (imax (imax (l*l') (l*h')) (imax (h*l') (h*h')))) :=
   ⟨.mul a.expr b.expr, fun env => Zahl.mul (a.denote env) (b.denote env), by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 def boolNot (a : Code D Γ .bool) : Code D Γ .bool :=
-  ⟨.not a.expr, fun env => !(a.denote env), by intros; simp only [eval, a.equation]⟩
+  ⟨.not a.expr, fun env => !(a.denote env), by intros; simp only [eval, a.equation, wahr?]⟩
 
 def boolAnd (a b : Code D Γ .bool) : Code D Γ .bool :=
   ⟨.and a.expr b.expr, fun env => a.denote env && b.denote env, by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 def boolOr (a b : Code D Γ .bool) : Code D Γ .bool :=
   ⟨.or a.expr b.expr, fun env => a.denote env || b.denote env, by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 /-- Comparisons preserve operands of different exact integer intervals. -/
 def less (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) : Code D Γ .bool :=
   ⟨.lt a.expr b.expr, fun env => decide ((a.denote env).n < (b.denote env).n), by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 def lessEqual (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) : Code D Γ .bool :=
   ⟨.le a.expr b.expr, fun env => decide ((a.denote env).n ≤ (b.denote env).n), by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 def equal (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) : Code D Γ .bool :=
   ⟨.eq a.expr b.expr, fun env => decide ((a.denote env).n = (b.denote env).n), by
-    intros; simp only [eval, a.equation, b.equation]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
 
 end Code
 end Gabbro.Grammatik.Parser.Konst.Scalar
