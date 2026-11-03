@@ -43,11 +43,14 @@ set_option hygiene false in
 macro "rangAxiomOpt" ho:term "," hs:term "," hh:term : tactic => `(tactic| (
   refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
   · simp only [rufUpdateG_self]
-    rw [$ho, $hs]
+    have hoE := $ho
+    have hsE := $hs
+    rw [hoE, hsE]
     exact lese_offen _ _ _
   · intro K hK
     dsimp only; rw [rufUpdateG_self]
-    rw [$hh] at hK
+    have hhE := $hh
+    rw [hhE] at hK
     exact (held_nachSig_iff _ _ K).mpr hK))
 
 set_option hygiene false in
@@ -373,6 +376,14 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
     | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax =>
       rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
+    | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+      refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+      · simp only [rufUpdateG_self]
+        rfl
+      · intro K hK
+        dsimp only; rw [rufUpdateG_self]
+        rw [hhead] at hK
+        exact hK
     | _ => rangA1
   | g6 hs =>
     cases hs with
