@@ -41,6 +41,18 @@ def foreignDecode (O : Orakel D) (a : D.Ax) (raw : Int) :
   if D.agruende a = 0 then (einpassenErg O.zeiger (D.aerg a) raw).map Sum.inl
   else sonstPasst O.zeiger (D.aerg a) (D.agruende a) raw
 
+/-- An infallible source call has no extra tag in its oracle answer. -/
+theorem foreignDecode_zero {O : Orakel D} {a : D.Ax} {raw : Int}
+    (noReasons : D.agruende a = 0) :
+    foreignDecode O a raw = (einpassenErg O.zeiger (D.aerg a) raw).map Sum.inl := by
+  simp only [foreignDecode, noReasons, ↓reduceIte]
+
+/-- A fallible source call keeps its exact canonical payload/reason decoder. -/
+theorem foreignDecode_positive {O : Orakel D} {a : D.Ax} {raw : Int}
+    (reasons : 0 < D.agruende a) :
+    foreignDecode O a raw = sonstPasst O.zeiger (D.aerg a) (D.agruende a) raw := by
+  rw [foreignDecode, if_neg (by omega)]
+
 /-- A successful tag is zero and every result word is initialized with the
     canonical encoding. Listed errors carry their exact nominal reason; an
     invalid answer has an unknown nonzero tag and no usable payload. This is a
