@@ -1,6 +1,7 @@
 /- Subject: Capture both operands, then write the byte span against machine G. -/
 module
 public import Stage0.Senke.Anweisung.Bytes.Write
+public import Stage0.Senke.Anweisung.Bytes.Span.Put
 public import Stage0.Senke.Anweisung.Simulation
 @[expose] public section
 
@@ -94,6 +95,6 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     · simpa only [List.length_append, pc_add] using s3
     · simpa only [dropBytes, Int.natCast_zero, Int.add_zero] using hw3
 
-  · cases h
+  · exact putBytesWide_ok hf n (by omega) i hlo hhi e hw hl h hK hW hp hlow hWa hpr
 
 end Gabbro.Stage0.Senke

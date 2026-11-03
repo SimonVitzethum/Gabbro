@@ -132,6 +132,10 @@ theorem constStmtB_soundGen (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ 
       try subst hΛ
       try subst hΛout
       rw [constStmtB_absage_assignThru] at hacc; exact absurd hacc Bool.false_ne_true
+  | _, _, .assignThruOwn .., hΛ, hΛout, hacc => by
+      try subst hΛ
+      try subst hΛout
+      rw [constStmtB_absage_assignThruOwn] at hacc; exact absurd hacc Bool.false_ne_true
   | _, _, .assignGlob .., hΛ, hΛout, hacc => by
       try subst hΛ
       try subst hΛout

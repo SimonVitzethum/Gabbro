@@ -180,6 +180,11 @@ def exE : {Γ : Ctx} → {Λ : List (Res D)} → {τ : Ty} → Expr D Γ Λ τ �
       Expr.umTy (E.typ t f)
         (Expr.thru (D := D') (exE p) (E.tab t) (E.capTabE ht) (E.feld t f)
           (Expr.umTy (E.countE t) (exE i)) (E.darfE hL))
+  | _, _, _, .thruOwn p t ht f i m s ho he hg hL =>
+      Expr.umTy (E.typ t f)
+        (Expr.thruOwn (D := D') (exE p) (E.tab t) (E.capTabE ht) (E.feld t f)
+          (Expr.umTy (E.countE t) (exE i)) (E.marke m) s (E.ownerNr _ m ho)
+          (E.eignerE he) (E.brauchtE hg) (E.darfE hL))
   | _, _, _, .ptrOf t n ht rw => Expr.ptrOf (D := D') (E.tab t) (E.tnum n) (E.capTabE ht) rw
   | _, _, _, .fnref f n h => .fnref (D := D') (E.fn f) (E.num n) ((E.passt f n).trans h)
   | _, _, _, .refEq a b => .refEq (exE a) (exE b)
@@ -280,6 +285,10 @@ def exS (hS : E.SigTreu) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ'
   | _, _, _, _, .assignThru p t ht f i e hw hL =>
       .assignThru (exE E p) (E.tab t) (E.capTabE ht) (E.feld t f) (Expr.umTy (E.countE t) (exE E i))
         (Expr.umTy (E.typ t f).symm (exE E e)) (E.schreibtE hw) (E.darfE hL)
+  | _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hw hL =>
+      .assignThruOwn (exE E p) (E.tab t) (E.capTabE ht) (E.feld t f) (Expr.umTy (E.countE t) (exE E i))
+        (Expr.umTy (E.typ t f).symm (exE E e)) (E.marke m) s (E.ownerNr _ m ho)
+        (E.eignerE he) (E.brauchtE hg) (E.schreibtE hw) (E.darfE hL)
   | _, _, _, _, .assignSlotRef r t ht ho f e hw hL =>
       .assignSlotRef (exE E r) (E.tab t) (E.tabNrE ht) (by rw [E.offen]; exact ho) (E.feld t f)
         (Expr.umTy (E.typ t f).symm (exE E e)) (E.schreibtE hw) (E.darfE hL)

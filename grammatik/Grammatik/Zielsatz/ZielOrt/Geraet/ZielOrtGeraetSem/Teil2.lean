@@ -56,7 +56,7 @@ theorem Stmt.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
       simp only [Stmt.gOk, Stmt.regs, Bool.and_eq_true] at h hr ⊢
       exact ⟨hKK _ h.1, Endblock.gOk_mono err h.2 hr⟩
   | .assignSlot .., _, _ => rfl
-  | .assignThru .., _, _ | .assignSlotRef .., _, _ => rfl
+  | .assignThru .., _, _ | .assignThruOwn .., _, _ | .assignSlotRef .., _, _ => rfl
   | .assignGlob .., _, _ => rfl
   | .putBytes .., _, _ => rfl
   | .assignVar .., _, _ => rfl

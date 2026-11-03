@@ -32,7 +32,7 @@ mutual
 theorem ruS_ants {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ'), (ruS s).ants = s.ants
   | _, _, _, _, .assignSlot .. => rfl
-  | _, _, _, _, .assignThru .. | _, _, _, _, .assignSlotRef .. => rfl
+  | _, _, _, _, .assignThru .. | _, _, _, _, .assignThruOwn .. | _, _, _, _, .assignSlotRef .. => rfl
   | _, _, _, _, .assignGlob .. => rfl
   | _, _, _, _, .putBytes .. => rfl
   | _, _, _, _, .assignVar .. => rfl

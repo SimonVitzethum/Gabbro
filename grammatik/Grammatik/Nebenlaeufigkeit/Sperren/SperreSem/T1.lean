@@ -22,6 +22,9 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignThru p t _ f i e _ _, σ, ρ =>
       let σ := σ.lese Λ (p.orte ++ i.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
+  | .assignThruOwn p t _ _ i e _ _ _ _ _ _ _, σ, ρ =>
+      let σ := σ.lese Λ (p.orte ++ i.orte ++ e.orte)
+      .ok (σ.schreibSlot t Λ (eval σ i σ ρ).n f (eval σ e σ ρ)) ρ
   | .assignSlotRef r t _ _ f e _ _, σ, ρ =>
       let σ := σ.lese Λ (r.orte ++ e.orte)
       .ok (σ.schreibSlot t Λ ((eval σ r σ ρ).zelle : Int) f (eval σ e σ ρ)) ρ

@@ -19,7 +19,9 @@ theorem strCat_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.st
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
     (iht : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) t d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str q) (eval σ₀ t σ ρ))
-    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.strCat s t) d = some (c, top)) (hK : top ≤ K)
+    (h : (if n + q ≤ 1 then
+      (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d
+      else lowE (currentOld := currentOld) L (reserved := reserved) s d) else none) = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.str (n + q)) (eval σ₀ (.strCat s t) σ ρ) := by
   simp only [lowE_eqs] at h

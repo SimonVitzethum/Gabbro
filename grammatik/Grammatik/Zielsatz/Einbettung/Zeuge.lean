@@ -153,6 +153,7 @@ def einE : Einbettung D (erweitert D g₀) where
     funext w
     rcases w with L | ⟨m, s⟩ <;> rfl
   eigner := fun _ => by simp only [erweitert, List.map_id_fun', id_eq]
+  ownerNr := fun _ _ h => h
   fn := Sum.inl
   fnZ := fun f => match f with | .inl f => some f | .inr _ => none
   fnZ_fn := fun _ => rfl

@@ -231,6 +231,7 @@ def ErhaltK (P : Programm D) (O : Orakel D) (passes : Nat)
 set_option hygiene false in
 /-- Refute a step whose head shape the covered residue cannot have. -/
 macro "widerlegeK" h:ident : tactic => `(tactic| (
+  try dsimp only [RufDannHeadG, RufEndHeadG] at $h:ident
   rw [hR] at $h:ident
   cases $h:ident
   first

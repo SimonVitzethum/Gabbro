@@ -1,6 +1,7 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil12
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.ZeigerTexte
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
@@ -54,51 +55,20 @@ def uZeigerSig (raw : String) : Except String FnSig :=
           else .ok { art := "impl", name := "", params := ps, res := erg, fehler := fehler, klauseln := ks }
   | .ok _ => .error "pointer type without G form"
 
-/-- The texts of the pointer types a surface type list names (`fn (` raw types). -/
-def uZeigerTexte : List STyp → List String
-  | [] => []
-  | .raw r :: rest => if r.startsWith "fn (" then r :: uZeigerTexte rest else uZeigerTexte rest
-  | _ :: rest => uZeigerTexte rest
-
-/-- The pointer types written at a `let` of a body. -/
-def uZeigerAnw : Nat → SAnw → List String
-  | 0, _ => []
-  | f + 1, a => match a with
-    | .bind _ _ (some t) _ => uZeigerTexte [t]
-    | .bindElse _ (some t) _ _ b => uZeigerTexte [t] ++ uZeigerAnw f b
-    | .callIndElse _ _ _ b | .callElse _ _ _ b => uZeigerAnw f b
-    | .bindElse _ none _ _ b => uZeigerAnw f b
-    | .cond _ t es e => uZeigerAnw f t ++ (es.flatMap (uZeigerAnw f)) ++ (match e with | some b => uZeigerAnw f b | none => [])
-    | .elsif _ b => uZeigerAnw f b
-    | .cases _ as => as.flatMap (uZeigerAnw f)
-    | .arm _ _ b => uZeigerAnw f b
-    | .each _ _ _ _ _ _ _ b => uZeigerAnw f b
-    | .retry _ b => uZeigerAnw f b
-    | .loop _ b => uZeigerAnw f b
-    | .waive _ b => uZeigerAnw f b
-    | .trim _ _ b => uZeigerAnw f b
-    | .locks _ _ b => uZeigerAnw f b
-    | .watch _ b => uZeigerAnw f b
-    | .alloc _ _ _ _ _ (some b) => uZeigerAnw f b
-    | .grow _ _ b => uZeigerAnw f b
-    | .child b => uZeigerAnw f b
-    | .block as _ => as.flatMap (uZeigerAnw f)
-    | _ => []
-
 /-- A pointer type of the unit as a head (named `fn#j`) and an elaborated signature with an empty body. -/
 def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum) (zeiger : List String)
-    (zb j : Nat) (raw : String) (spaces : List String := []) (named : List (String × Ty) := []) : Except String (UFnKopf × UFn) :=
+    (zb j : Nat) (raw : String) (spaces : List String := []) (named : List (String × Ty) := []) (eigner : List String := []) : Except String (UFnKopf × UFn) :=
   match uZeigerSig raw with
   | .error e => .error e
   | .ok sig =>
-    match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb spaces named with
+    match elabKopf consts alias tabs locks globs whys sums sig [] zeiger zb spaces named eigner with
     | .error e => .error e
     | .ok (kopf0, schreibt) =>
       let name := "fn#" ++ toString j
       let kopf := { kopf0 with name := name }
       if !kopf.held.isEmpty then .error "locks at a function-pointer type do not cross an indirect call" else
-      let ctx := { uCtxVon alias consts tabs locks globs kopf name [] whys sums [] [] [] [] with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, namedTypes := named }
+      let ctx := { uCtxVon alias consts tabs locks globs kopf name [] whys sums [] [] [] [] with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, namedTypes := named, eigner := eigner }
       match uZeigerVertrag ctx sig.klauseln with
       | .error e => .error e
       | .ok (gives, needs) =>
@@ -107,6 +77,6 @@ def elabZeigerTyp (consts : List (String × Int)) (alias : List (String × (Int 
         -- No lock crosses an indirect call: the floor is one above the highest rank of the unit, so a
         -- conforming function takes no lock (`SigPasst.boden`), and a caller may hold any.
         let boden : Option Int := if locks.isEmpty then none else some ((locks.map (·.rank)).foldl max 0 + 1)
-        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives, needs, body := [], ret := .empty, boden := boden })
+        .ok (kopf, { name := name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, gives, needs, body := [], ret := .empty, boden := boden, nimmt := kopf.nimmt, gibt := kopf.gibt, leiht := kopf.leiht, bewegt := kopf.bewegt, praegt := kopf.praegt })
 
 end Gabbro.Grammatik.Parser.Uebersetze

@@ -3,7 +3,7 @@
    supplies the low limb. The runner needs no new instruction or float opcode. -/
 module
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Multiply.MulWord
-public import Stage0.Senke.Gleit.RoutineBranch
+public import Stage0.Senke.Gleit.Routine.RoutineBranch
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

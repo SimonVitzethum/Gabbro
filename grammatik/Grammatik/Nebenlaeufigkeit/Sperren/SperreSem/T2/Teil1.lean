@@ -61,7 +61,7 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         (fun σ ρ => execBlock O passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execH_leer body σ ρ]
   | .assignSlot .., _, _ => rfl
-  | .assignThru .., _, _ | .assignSlotRef .., _, _ => rfl
+  | .assignThru .., _, _ | .assignThruOwn .., _, _ | .assignSlotRef .., _, _ => rfl
   | .assignGlob .., _, _ => rfl
   | .putBytes .., _, _ => rfl
   | .assignVar .., _, _ => rfl

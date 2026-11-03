@@ -218,6 +218,46 @@ theorem assignDurch_andere_fest (O : Orakel D) (passes : Nat)
   rw [storeSlot_andere _ _ _ _ _ _ hne]
   rfl
 
+/-- `assignDurchOwn t₂` with `t₂ ≠ t` keeps every slot of `t`: the same
+    underlying table access as `assignDurch`. -/
+theorem assignDurchOwn_andere_fest (O : Orakel D) (passes : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {n : Nat} {read : Bool} {space o : Nat}
+    {p : Expr D Γ Λ (.ptr ⟨space, ⟨read, true, some o⟩, .table n⟩)}
+    {t₂ : D.Tab} {ht₂ : D.capTab space n = some t₂}
+    {f₂ : D.Feld t₂}
+    {i : Expr D Γ Λ (.index (D.count t₂))} {e : Expr D Γ Λ (D.typ t₂ f₂)}
+    {m : D.Marke} {s : Nat} {ho : D.ownerNr o = some m} {he : m ∈ D.eigner t₂}
+    {hg : Sum.inr (m, s) ∈ D.braucht t₂} {hm : Res.marke m s ∈ Λ}
+    {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
+    (σ : World D) (ρ : Env D Γ) (σ' : World D)
+    (hstep : (execStmt O passes keinRuf
+      (Stmt.assignThruOwn (V := V) (l := l) p t₂ ht₂ f₂ i e m s ho he hg hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+    (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
+    σ'.slots t k f = σ.slots t k f := by
+  have hEq : (execStmt O passes keinRuf
+      (Stmt.assignThruOwn (V := V) (l := l) p t₂ ht₂ f₂ i e m s ho he hg hw hL :
+        Stmt D V l Γ Λ Λ) σ ρ).welt =
+      some ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t₂ Λ
+        (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
+          (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n f₂
+        (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) e
+          (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)) := rfl
+  rw [hEq] at hstep
+  have hσ' : σ' = ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t₂ Λ
+      (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
+        (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n f₂
+      (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) e
+        (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)) :=
+    Option.some_inj.mp hstep.symm
+  rw [hσ']
+  have hne : t ≠ t₂ := fun h => ht h.symm
+  show ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).storeSlot t₂ _ f₂ _).slots t k f =
+    σ.slots t k f
+  rw [storeSlot_andere _ _ _ _ _ _ hne]
+  rfl
+
 /-- `assignSlotRef t₂` with `t₂ ≠ t` keeps every slot of `t`. -/
 theorem assignSlotRef_andere_fest (O : Orakel D) (passes : Nat)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

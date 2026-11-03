@@ -287,4 +287,142 @@ theorem escrow_call_outputs_present_zeuge :
     Res.marke true 1 ∈ nachSig D handoffSignature [Res.marke true 0] :=
   escrow_call_outputs_present handoffSignature [Res.marke true 0] (by decide)
 
+/-! ## Mint and handback move: the checked C09 signatures -/
+
+/-- The minter holds its fresh owner from the start frame and returns it. -/
+def mintSignature : Signatur D.Tab D.Glob D.Lock D.Marke :=
+  { D.signatur 0 with owner := { mints := [(true, 0)] } }
+
+def handbackSignature : Signatur D.Tab D.Glob D.Lock D.Marke :=
+  { D.signatur 0 with owner := { moves := [⟨true, 0, some 0⟩] } }
+
+def consumeSignatureT : Signatur D.Tab D.Glob D.Lock D.Marke :=
+  { D.signatur 0 with owner := { moves := [⟨true, 0, none⟩] } }
+
+theorem mint_valid_zeuge' :
+    mintSignature.owner.Valid (fun m => decide (m ∈ mintSignature.owner.inputs.map Prod.fst)) D.stufen := by
+  have e : (fun m => decide (m ∈ mintSignature.owner.inputs.map Prod.fst)) = id := by
+    funext m
+    cases m <;> rfl
+  rw [e]
+  exact (OwnerFlow.validB_iff _ _ _).mp (by decide)
+
+theorem escrow_mint_ready_zeuge :
+    mintSignature.owner.EscrowReady
+      (fun m => decide (m ∈ mintSignature.owner.inputs.map Prod.fst))
+      D.stufen (fun m => ∃ t, m ∈ D.eigner t) mintSignature.konsumiert := by
+  have e : (fun m => decide (m ∈ mintSignature.owner.inputs.map Prod.fst)) = id := by
+    funext m
+    cases m <;> rfl
+  rw [e]
+  refine ⟨mint_valid_zeuge', ?_, ?_⟩
+  · intro p hp
+    have hk : mintSignature.konsumiert = [] := rfl
+    rw [hk] at hp
+    exact (List.not_mem_nil p hp).elim
+  · intro m hm
+    have hm' : m = true := by
+      simpa [mintSignature, OwnerFlow.inputs] using hm
+    subst hm'
+    exact ⟨(), by decide⟩
+
+theorem escrow_mint_admitted_zeuge :
+    RufPasst D contract mintSignature [Res.marke true 0] where
+  hw := fun _ h => h
+  hg := fun g => nomatch g
+  hk := by
+    have hi : mintSignature.inputMarks = [(true, 0)] := rfl
+    rw [hi]
+    exact ⟨[Res.marke true 0], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun L => nomatch L
+  hx := fun L => nomatch L
+  hb := by intro c h; cases h
+  ownerReady := escrow_mint_ready_zeuge
+
+theorem mint_call_present_zeuge :
+    Res.marke true 0 ∈ nachSig D mintSignature [Res.marke true 0] :=
+  OwnerFlow.mint_present_nachSig mintSignature [Res.marke true 0] (by decide)
+
+theorem mint_anfang_zeuge :
+    Res.marke true 0 ∈ Signatur.anfang D mintSignature :=
+  OwnerFlow.mint_anfang_mem mintSignature (by decide)
+
+theorem mint_ende_zeuge :
+    Res.marke true 0 ∈ (Vertrag.vonSig D mintSignature).ende :=
+  OwnerFlow.mint_ende_mem (Vertrag.vonSig D mintSignature) mintSignature rfl (by decide)
+
+theorem mint_token_zeuge : token.mark = true ∧ token.stage = 0 :=
+  OwnerState.mint_token_identity mint_step
+
+theorem handback_valid_zeuge :
+    handbackSignature.owner.Valid (fun m => decide (m ∈ handbackSignature.owner.inputs.map Prod.fst)) D.stufen := by
+  have e : (fun m => decide (m ∈ handbackSignature.owner.inputs.map Prod.fst)) = id := by
+    funext m
+    cases m <;> rfl
+  rw [e]
+  exact (OwnerFlow.validB_iff _ _ _).mp (by decide)
+
+theorem escrow_handback_ready_zeuge :
+    handbackSignature.owner.EscrowReady
+      (fun m => decide (m ∈ handbackSignature.owner.inputs.map Prod.fst))
+      D.stufen (fun m => ∃ t, m ∈ D.eigner t) handbackSignature.konsumiert := by
+  have e : (fun m => decide (m ∈ handbackSignature.owner.inputs.map Prod.fst)) = id := by
+    funext m
+    cases m <;> rfl
+  rw [e]
+  refine ⟨handback_valid_zeuge, ?_, ?_⟩
+  · intro p hp
+    have hk : handbackSignature.konsumiert = [] := rfl
+    rw [hk] at hp
+    exact (List.not_mem_nil p hp).elim
+  · intro m hm
+    have hm' : m = true := by
+      simpa [handbackSignature, OwnerFlow.inputs] using hm
+    subst hm'
+    exact ⟨(), by decide⟩
+
+theorem escrow_handback_admitted_zeuge :
+    RufPasst D contract handbackSignature [Res.marke true 0] where
+  hw := fun _ h => h
+  hg := fun g => nomatch g
+  hk := by
+    have hi : handbackSignature.inputMarks = [(true, 0)] := rfl
+    rw [hi]
+    exact ⟨[Res.marke true 0], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun L => nomatch L
+  hx := fun L => nomatch L
+  hb := by intro c h; cases h
+  ownerReady := escrow_handback_ready_zeuge
+
+theorem handback_output_zeuge :
+    (true, 0) ∈ handbackSignature.owner.outputs := by
+  have hx : (⟨true, 0, some 0⟩ : OwnerMove D.Marke) ∈ handbackSignature.owner.moves := by decide
+  have hs : (⟨true, 0, some 0⟩ : OwnerMove D.Marke).after = some 0 := rfl
+  exact OwnerMove.output_of_some handbackSignature.owner _ hx hs
+
+theorem consume_outputs_empty_zeuge :
+    consumeSignatureT.owner.outputs = [] := by
+  rfl
+
+theorem consume_ready_zeuge :
+    consumeSignatureT.owner.EscrowReady
+      (fun m => decide (m ∈ consumeSignatureT.owner.inputs.map Prod.fst))
+      D.stufen (fun m => ∃ t, m ∈ D.eigner t) consumeSignatureT.konsumiert := by
+  have e : (fun m => decide (m ∈ consumeSignatureT.owner.inputs.map Prod.fst)) = id := by
+    funext m
+    cases m <;> rfl
+  rw [e]
+  have hv : consumeSignatureT.owner.Valid id D.stufen :=
+    (OwnerFlow.validB_iff _ _ _).mp (by decide)
+  refine ⟨hv, ?_, ?_⟩
+  · intro p hp
+    have hk : consumeSignatureT.konsumiert = [] := rfl
+    rw [hk] at hp
+    exact (List.not_mem_nil p hp).elim
+  · intro m hm
+    have hm' : m = true := by
+      simpa [consumeSignatureT, OwnerFlow.inputs] using hm
+    subst hm'
+    exact ⟨(), by decide⟩
+
 end Gabbro.Grammatik.OwnerWitness

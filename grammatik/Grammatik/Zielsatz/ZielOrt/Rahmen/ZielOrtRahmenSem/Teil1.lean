@@ -258,6 +258,11 @@ theorem rahmenStapel_akteur (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | _ =>
       simp only [rufUpdateG_self]
       exact rahmenStapel_speicher h hmem
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self]
+      exact rahmenStapel_speicher h hmem
 
 /-- **Another thread's step keeps the frame invariant**: every footprint
     carrier of a suspended frame is guarded by a signature lock of its

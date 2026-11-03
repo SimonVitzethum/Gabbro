@@ -2,7 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
-public import Grammatik.Parser.Elab.UebersetzeAllg.Teil3
+public import Grammatik.Parser.Elab.UebersetzeAllg.Teil3Values
 public import Grammatik.Parser.Elab.UebersetzeAllg.Eingebaut
 
 @[expose] public section

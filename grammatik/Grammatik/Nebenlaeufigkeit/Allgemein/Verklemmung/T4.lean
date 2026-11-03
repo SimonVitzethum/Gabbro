@@ -77,7 +77,7 @@ theorem mS_boden_inv {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [Stmt.ueberBoden]
       exact mB_boden_inv body h c hc
   | .assignSlot .., _ => fun _ _ => rfl
-  | .assignThru .., _ | .assignSlotRef .., _ => fun _ _ => rfl
+  | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => fun _ _ => rfl
   | .assignGlob .., _ => fun _ _ => rfl
   | .putBytes .., _ => fun _ _ => rfl
   | .assignVar .., _ => fun _ _ => rfl

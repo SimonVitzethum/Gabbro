@@ -104,3 +104,72 @@ on the first matching slot. It introduces no source interpreter or new G form.
 Fold costs use the existing traversal and statement cost computation: capacity
 times the per-slot work, including filter and update, plus loop and binding
 overhead. These syntax extensions do not change the model's guarantees.
+
+### Call-scoped owner loans and owned access
+
+```ebnf
+effect     += "borrows" name ;
+effect     += "moves" name ;
+effect     += "mints" name ;
+```
+
+A function that touches an `owner`-guarded table through an `own@m` capability
+borrows the owner mark for the call: `effects { …, borrows Marke }`. The loan is
+the C09 `OwnerFlow.loans` entry: the callee holds the mark during the call, the
+caller gets the same mark back on normal return. A `borrows` that names no
+table owner is refused (`loan without owner`); a mark both `consumes`d
+(`takes`) and borrowed is refused (`mark both consumed and borrowed`); ordinary
+`allocs` of an owner stays refused (`owner produced without mint`).
+
+```gabbro
+impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool
+  effects { reads r.slots, writes r.slots, borrows Marke }
+  { r.slots[i].b = true; return r.slots[i].b; }
+```
+
+Reads and writes through the owned capability elaborate to the canonical owned
+accesses `Expr.thruOwn` / `Stmt.assignThruOwn`: the same guarded carrier as
+`thru` / `assignThru`, plus the resolved owner mark, the table's owner entry
+and the guard at the held stage. Machine G evaluates and executes them exactly
+like the plain forms. Access without the held mark is refused
+(`access without held guard`); an unresolvable owner is refused
+(`owned read/write without a declared owner mark`).
+
+### Checked owner mint and linear handoff
+
+A function that creates an `owner`-guarded table's mark declares it:
+`effects { …, mints Marke }`. The mint is the checked `OwnerFlow.mints`
+output: the minter holds the fresh owner from its start frame and returns it
+on every exit. It is never ordinary production (`eigner_nie_erzeugt` still
+forbids owner `produziert`). A `mints` that names no table owner is refused
+(`mint without owner`); a second mint of the same instance is refused
+(`duplicate mint`).
+
+```gabbro
+impl fn minter(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool
+  effects { reads r.slots, writes r.slots, mints Marke }
+  { r.slots[i].b = true; return r.slots[i].b; }
+```
+
+A function that takes an owner's mark for the call declares
+`effects { …, moves Marke }`. The handoff is the `OwnerMove` handback: the
+callee holds the same nominal identity during the call and hands it back at
+the same stage on the normal and the reason return alike. A `moves` that
+names no table owner is refused (`move without owner`); a mark both borrowed
+and moved, or consumed and moved, is refused (`mark both borrowed and moved`,
+`mark both consumed and moved`); moving a mark the caller does not hold is
+refused at the call (`call without held mark`).
+
+```gabbro
+impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool
+  effects { reads p.slots, writes p.slots, moves Marke }
+  { p.slots[i].b = true; return p.slots[i].b; }
+impl fn caller() -> bool
+  effects { writes T.slots, moves Marke }
+  { mover(&T, 0); return true; }
+```
+
+Resource-only handoffs emit no bytes: the call transformer erases the inputs
+and appends the outputs (`nachSig`), and the ghost ledger replays the loan,
+transfer and restore. Terminal consumption stays model-complete with fixture
+witnesses; its body-level retire lowering is open, as for ordinary marks.

@@ -37,9 +37,11 @@ def bodyMetadata : Nat → SAnw → Bool
   /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
       the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
-      failure-continuation duty can disappear. Mutable and type-annotated binders
-      elaborate to no G form, and the else branch keeps its own refusal below. -/
+      failure-continuation duty can disappear. An explicit failure continuation
+      uses the existing arena lowering and is recursively checked here. Mutable
+      and type-annotated binders still elaborate to no G form. -/
   | _ + 1, .alloc false _ none _ _ none => false
+  | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
@@ -207,7 +209,8 @@ theorem nested_duties_refused_zeuge :
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
-    bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0) (some body)) = true ∧
+    bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0)
+      (some (.bind false "value" (some (.wrap (.atom "bool"))) .tru))) = true ∧
     bodyMetadata 10000 (.grow "A" (.lit 1) body) = true ∧
     bodyMetadata 10000 (.bind false "value" (some (.wrap (.atom "bool"))) .tru) = true := by
   exact ⟨rfl, rfl, rfl, rfl⟩
@@ -299,9 +302,16 @@ theorem capability_unbound_zeuge :
 theorem allocRequired_bound (x an : String) (v : SExpr) (n : Nat) :
     bodyMetadata (n + 1) (.alloc false x none an v none) = false := by rfl
 
+/-- Explicit failure branches retain their complete metadata check. The canonical
+    exporter still checks the arena, element value, effects and ending branch;
+    this gate only admits the immutable, unannotated binder it can lower. -/
+theorem allocElse_bound (x an : String) (v : SExpr) (body : SAnw) (n : Nat) :
+    bodyMetadata (n + 1) (.alloc false x none an v (some body)) =
+      bodyMetadata n body := by rfl
+
 theorem allocRequired_zeuge :
     bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = false ∧
-    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = true ∧
+    bodyMetadata 2 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = false ∧
     bodyMetadata 1 (.alloc true "i" none "A" (.lit 0) none) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
@@ -318,9 +328,11 @@ theorem arenaT_zeuge :
   exact ⟨rfl, rfl, rfl⟩
 
 /-- Owner production stays refused: the model admits escrow-ready flows
-    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), but the elaborator
-    still exports `Marke := Empty` with no owner bindings, so no source form
-    can supply them. -/
+    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), and the elaborator
+    exports the nontrivial mark namespace (`Marke := Fin u.marken.length`) with
+    declared owner guards (`eigner`/`braucht`), but every exported signature
+    still carries the empty flow with no produced marks, so no source form
+    can mint an owner. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 

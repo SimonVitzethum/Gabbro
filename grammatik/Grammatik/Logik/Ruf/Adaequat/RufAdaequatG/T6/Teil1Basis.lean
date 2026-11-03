@@ -74,6 +74,8 @@ theorem stmtG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .assignSlot t f' i e hw hL, _ => blattG_ohneRuf (.assignSlot t f' i e hw hL)
   | _, _, _, _, _, .assignThru p t ht f' i e hw hL, _ =>
       blattG_ohneRuf (.assignThru _ p t ht f' i e hw hL)
+  | _, _, _, _, _, .assignThruOwn p t ht f' i e m s ho he hg hw hL, _ =>
+      blattG_ohneRuf (.assignThruOwn _ _ p t ht f' i e m s ho he hg hw hL)
   | _, _, _, _, _, .assignSlotRef r t ht ho f' e hw hL, _ =>
       blattG_ohneRuf (.assignSlotRef _ r t ht ho f' e hw hL)
   | _, _, _, _, _, .assignGlob g e hw hL, _ => blattG_ohneRuf (.assignGlob g e hw hL)
