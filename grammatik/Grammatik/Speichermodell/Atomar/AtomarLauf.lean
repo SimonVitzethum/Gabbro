@@ -260,7 +260,8 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     fun l Γ Λ Λ' ρ s Kr hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
-    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_,
+    fun l Γ Λ Λ' ρ lo hi lo' hi' e rest k hr => ?_⟩
   · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
       kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
     obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ inv.orte (M.weltVon t).speicher
@@ -384,6 +385,27 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     rw [eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₁ ρ,
       eval_gleichAuf inv (fun _ h => List.mem_append_right _ h) g₂ ρ] at hp
     exact hp
+  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+      kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ e.orte (M.weltVon t).speicher
+    have hPX := umweltAusA_passt Tg hfx'
+    have hHA := umweltAusA_ok Tg HX'
+    apply Classical.byContradiction
+    intro failed
+    apply hno _ (passtX_teil hsub hPX) hHA .kapazitaet
+    rw [semHA_dann]
+    simp only [execBlockHA]
+    split
+    · rename_i passed
+      apply False.elim
+      apply failed
+      rw [hrec _ hPX hHA, eval_gleichAuf e (fun _ member => List.mem_append_right _ member)
+        (mischT_gleichAuf hg
+          (expr_stabilX (hFS _) e (fun _ member => hok.2.1 (List.mem_append_left _ member))) Λ Λ) ρ]
+        at passed
+      exact passed
+    · exact weiterHA_logik S (orakelAus O HA) (umweltAus S sp HU) (umweltAusA Tg HX')
+        passes (rufAusL H) k .kapazitaet
 
 /-- **THE CONTRACT LEGS OVER GX** (as `ziel_ort_sperre` over G): on every machine GX reaches --
     G with the shared atomics answered by the weak memory -- the contracts hold at every logged

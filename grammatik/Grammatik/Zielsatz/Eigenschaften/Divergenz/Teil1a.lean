@@ -207,7 +207,8 @@ theorem spin_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
       fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
       fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
       fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
-      fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
+      fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_,
+      fun l Γ Λ Λ' ρ lo hi lo' hi' e rest k hr => ?_⟩
     all_goals (rw [h] at hr; first | (cases hr; done) | skip)
   · cases hr
     simp only [wahr?, eval]
@@ -223,7 +224,8 @@ theorem ret_prueft {D : Deklaration} {O : Orakel D} {passes : Nat}
     fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
-    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩ <;>
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_,
+    fun l Γ Λ Λ' ρ lo hi lo' hi' e rest k hr => ?_⟩ <;>
   (rw [h] at hr; cases hr)
 
 /-- **One step, `forever`**: a thread standing at a true-invariant `forever`

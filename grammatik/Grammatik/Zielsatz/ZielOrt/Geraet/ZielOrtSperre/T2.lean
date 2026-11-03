@@ -167,7 +167,8 @@ theorem fadenS_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
-    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_,
+    fun l Γ Λ Λ' ρ lo hi lo' hi' e rest k hr => ?_⟩
   · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
     refine wahr_of_nicht_falsch fun hw => hno .schleife ?_
     apply semH_trav_falsch
@@ -238,6 +239,21 @@ theorem fadenS_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     dsimp only [verbrauchAbbruchPrueft, verbrauchAbstiegPrueft] at hp ⊢
     rw [hm, hi] at hp
     exact hp
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    apply Classical.byContradiction
+    intro failed
+    apply hno .kapazitaet
+    rw [semH_dann]
+    simp only [execBlockH]
+    split
+    · rename_i passed
+      apply False.elim
+      apply failed
+      rw [eval_gleichAuf e
+        (expr_stabil (hFS _) e (fun _ member => hok.2.1 (List.mem_append_left _ member)))
+        (hg.lese Λ Λ e.orte e.orte) ρ] at passed
+      exact passed
+    · exact weiterH_logik S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) k .kapazitaet
 
 end Ziel
 /-! ## 3. The goal theorem -/
