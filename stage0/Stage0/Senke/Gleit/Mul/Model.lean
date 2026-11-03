@@ -7,6 +7,7 @@ public import Stage0.Senke.Gleit.Compose
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma
+variable [Runner.IR.Kern]
 
 /-- Multiplication's special cases in kernel priority order. -/
 def softMulSpecial (a b : GFloat) : Option GFloat :=
@@ -45,8 +46,8 @@ theorem softMul_operand (a : GFloat)
         ((max a.bexp 1 : Nat) : Int) - 1075⟩ := by
   have notMax : a.bexp ≠ 2047 := by
     intro e
-    rcases finite with finite | finite <;>
-      simp [klasse, show f64.bexpMax = 2047 from rfl, e] at finite
+    rcases finite with finite | finite <;> by_cases z : a.frac = 0 <;>
+      simp [klasse, show f64.bexpMax = 2047 from rfl, e, z] at finite
   by_cases ez : a.bexp = 0
   · have nonzero : a.frac ≠ 0 := by
       intro z
@@ -76,7 +77,7 @@ theorem softMul_dispatch (a b : GFloat) :
         | some u, some v => rundeExakt f64 (exaktMul u v)
         | _, _ => nanQ f64 := by
   cases ca : klasse f64 a <;> cases cb : klasse f64 b <;>
-    simp only [softMulSpecial, mul, ca, cb]
+    simp only [softMulSpecial, mul, ca, cb, show f64.bexpMax = 2047 from rfl] <;> rfl
 
 /-- The explicit Nat computation equals kernel multiplication on all triples. -/
 theorem softMulCore_model (a b : GFloat) : softMulCore a b = mul f64 a b := by
@@ -86,15 +87,15 @@ theorem softMulCore_model (a b : GFloat) : softMulCore a b = mul f64 a b := by
   | none =>
     obtain ⟨fa, fb⟩ := softMulSpecial_none a b h
     rw [softMulCore, h, softMul_operand a fa, softMul_operand b fb]
-    congr 1
+    apply congrArg (rundeExakt f64)
     unfold exaktMul
-    congr 1
-    · cases a.sign <;> cases b.sign <;>
-        simp [softMulProduct, Int.natCast_mul]
-    · change softMulExponent a b =
+    have exponent : softMulExponent a b =
         (((max a.bexp 1 : Nat) : Int) - 1075) + (((max b.bexp 1 : Nat) : Int) - 1075)
+        := by
       unfold softMulExponent
       omega
+    rw [exponent]
+    cases a.sign <;> cases b.sign <;> simp [softMulProduct, Int.natCast_mul]
 
 /-- Word-level multiplication reuses canonical decoding and encoding. -/
 def softMul (a b : UInt64) : UInt64 :=
@@ -133,7 +134,10 @@ theorem softMulProduct_lt (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b) :
     change g.frac < 2 ^ 52 at frac
     unfold softSig
     split <;> omega
-  exact Nat.mul_lt_mul'' (sig a ha) (sig b hb)
+  calc
+    softMulProduct a b < (2 : Nat) ^ 53 * 2 ^ 53 :=
+      Nat.mul_lt_mul'' (sig a ha) (sig b hb)
+    _ = 2 ^ 106 := by decide
 
 /-- Normal, rounded, subnormal and invalid products plus signed special cases. -/
 theorem softMul_model_zeuge :
