@@ -168,6 +168,7 @@ def checkLiteralBody (globals locals : List String) : SAnw → Except String Uni
     match ending with
     | some (.ret value) => checkLiteralExpressions globals final value.toList
     | _ => pure ()
+  | .retires m => checkLiteralName globals locals m
   | .other raw => checkLiteralRaw globals locals raw
   | _ => pure ()
 
