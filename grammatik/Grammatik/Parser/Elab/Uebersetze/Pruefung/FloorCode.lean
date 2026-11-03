@@ -62,7 +62,12 @@ theorem uSichert_floor_step (ctx : UCtx) (verdict floor : SExpr)
     (hf : uSichert ctx floor = .ok outcome) :
     uSichert ctx (floorUrteil [floor] verdict) = .ok (.and value outcome) := by
   change uSichert ctx (.bin "&&" verdict floor) = _
-  simp [uSichert, hv, hf]
+  change (match uSichert ctx verdict with
+    | .error error => .error error
+    | .ok left => match uSichert ctx floor with
+      | .error error => .error error
+      | .ok right => .ok (.and left right)) = _
+  rw [hv, hf]
 
 /-- Non-degenerate instance of the generic expansion: a failing comparison is
     preserved as code, rather than replaced by a claimed true outcome. -/
