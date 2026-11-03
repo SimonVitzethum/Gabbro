@@ -37,6 +37,7 @@ theorem sumOff_lt {cs : List (Option Ty)} (h : sumFits cs = true)
     | ref _ => exact absurd hc (by decide)
     | arr _ _ => exact absurd hc (by decide)
     | str _ => exact absurd hc (by decide)
+    | prod _ _ => exact absurd hc (by decide)
 
 theorem sumN_lt {cs : List (Option Ty)} (h : sumFits cs = true)
     (v : Wert D (.sum cs)) : sumN v < 2 ^ 64 := by
@@ -91,7 +92,7 @@ theorem sumOff_injFall {cs : List (Option Ty)} (h : sumFits cs = true) :
       simp only [decide_eq_true_eq] at hs
       have := (hs : hi - lo < 2 ^ 56)
       exact absurd hs (by decide)
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ =>
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ =>
       simp only [sumFits, List.all_cons, Bool.and_false, Bool.false_and] at hs
       exact Bool.noConfusion hs
   | _ :: cs, ⟨i + 1, hi⟩, a, b, hs =>
@@ -120,6 +121,7 @@ theorem sumFits_case : ∀ (cs : List (Option Ty)) (i : Fin cs.length),
     | ref _ => simp only [sumFits, List.all_cons, Bool.and_false, Bool.false_and] at h; exact Bool.noConfusion h
     | arr _ _ => simp only [sumFits, List.all_cons, Bool.and_false, Bool.false_and] at h; exact Bool.noConfusion h
     | str _ => simp only [sumFits, List.all_cons, Bool.and_false, Bool.false_and] at h; exact Bool.noConfusion h
+    | prod _ _ => simp only [sumFits, List.all_cons, Bool.and_false, Bool.false_and] at h; exact Bool.noConfusion h
   | _ :: cs, ⟨i + 1, hi⟩, h =>
     have hs : sumFits cs = true := by
       simp only [sumFits, List.all_cons, List.length_cons, Bool.and_eq_true, decide_eq_true_eq] at h ⊢
