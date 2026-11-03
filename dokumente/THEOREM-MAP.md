@@ -5413,8 +5413,6 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`isEmpty_eq`**: For arbitrary `α : Type`, `l : List α`, assuming `h : l.isEmpty = true`, the conclusion is `l = []`.
 * **`eintrittB_sound`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `(∃ a, wertVon .arch e.arch = some a) ∧ e.vektor = none ∧ e.via = none ∧ e.regIn = [] ∧ e.regOut = [] ∧ e.erhaelt = [] ∧ e.kills = [] ∧ e.stapel = "" ∧ e.perCpu = false ∧ e.ist = none ∧ e.nest = none ∧ ∀ w ∈ e.dispatch, ∃ f ∈ fns, strEq f w = true`.
 * **`eintritt_ohne_registerzustand`**: For arbitrary `fns : List String`, `e : SEingang`, assuming `h : eintrittB fns e = true`, the conclusion is `e.regIn = [] ∧ e.regOut = [] ∧ e.stapel = ""`.
-* **`gast_ohne_dienst_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `g : GuestBoundary`, assuming `h : g.dienst = none`, the conclusion is `gastB regionen fns reg g = false`.
-* **`gastVon_abgelehnt`**: For arbitrary `regionen fns : List String`, `reg : List AnnahmeKennung`, `name region arch annahme : String`, the conclusion is `gastB regionen fns reg (gastVon name region arch annahme) = false`.
 `grammatik/Grammatik/Parser/Profil/EintrittZeuge.lean`:
 
 * **`ez_zulaessig`**: the conclusion is `eintrittB ["worker"] ezE = true`.
@@ -5428,7 +5426,6 @@ Integration evidence: `13a27e855` (`feat(grammatik): C14 stage 4, userspace entr
 * **`ez_arch`**: the conclusion is `eintrittB ["worker"] { ezE with arch`.
 * **`ez_wurzel`**: the conclusion is `eintrittB ["worker"] { ezE with dispatch`.
 * **`ez_kills`**: the conclusion is `eintrittB ["worker"] { ezE with kills`.
-* **`ez_gast_mit_dienst`**: the conclusion is `gastB ["guest_image"] ["isolate_svc"] ezReg ⟨"jit", "guest_image", "x86_64", some "isolate_svc", "guest_stays_in_room"⟩ = true`.
 `grammatik/Grammatik/Zielsatz/Projekte/Profil.lean`:
 
 * **`hardware_iff_komponenten`**: For arbitrary `O : Orakel D`, `Q : AxEns D`, the conclusion is `HardwareAnnahmen O Q ↔ ∀ k ∈ hwAlle, k.gilt O Q`.
@@ -6124,3 +6121,57 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 * **`ohneBibliothekAnw_kein_lcall`**, **`ohneBibliothekAnw_kein_bindLib`**, **`libraryExpansion_trifft_kein_bibliothekruf`**: Every certified expansion is definitionally no library call, so the generic lowering treats it exactly like an ordinary call.
 
 Open: the lead build of this branch (single-module checks of the four new modules and their importers, then the guardians); the Stage-0/IR payload spans (IR-03/06) and the C01 schema export stay with their owners; no language case is claimed complete by these modules.
+
+## 150. C14: bounded guest-service model and remaining source cut (2026-11-03)
+
+Implementation, not build evidence: the implementation agent ran no Lean/lake
+checks; the lead must compile these modules and recheck the goal's standard
+axioms. `Spec.lean` and its meaning are unchanged. No connected source-to-IR
+`entrust` case is claimed complete.
+
+`Logik/Ruf/Guest/Boundary.lean` is the canonical `GuestBoundary` (the former
+name-only candidate in `Parser/Profil/Eintritt.lean` is removed). It binds an
+immutable code-input capability, an ordinary fallible software service, the
+exact pointer-input list, real owner resources for each transferred region,
+a closed userspace ABI and return-or-noreturn behavior. Owner identity must
+resolve and belong to the actual target table. It refuses missing service,
+missing/forged ownership, duplicate owners, argument mismatch, unknown ABI,
+register/privileged state and mismatched return behavior by name.
+
+- `transfer_owned`: admission of an owned transfer establishes membership of
+  the actual owner mark in the call-site resource context.
+- `storageDisjointB_iff`: the finite byte-overlap check decides disjointness
+  of all protected live grants and all guest-owned extents.
+- `Invocation.lower_eq`: typed guest invocation is exactly the existing
+  `Block.bindAxiomOptElse`, with ordinary argument, write, resource and
+  failure-continuation premises. There is no guest instruction interpreter
+  or new G/GX step rule.
+
+`Guest/Service.lean` places isolation in `GuestServicePflicht`, alongside C08
+`ForeignPflicht`, never in the hardware premise. `guest_service_contract`
+reuses C08's actual-record contract transport under its caller-pre and
+implementation-link duties. `guest_storage_disjoint` includes the initial
+live grants and all preceding calls. `guest_failure_inventory` preserves the
+same shared grant inventory on failure.
+
+`Zielsatz/Kern/Akzeptiert/Guest.lean` exposes the final guest component appended
+to `Akzeptiert` and `AkzeptiertX`; the empty default preserves prior verdicts.
+`Pruefer.withGuests` and `PrueferX.withGuests` retain descriptor admission
+without changing the goal interface. The adapter's descriptor extractor still
+needs to be connected to the actual source-derived unit; accepting `[]` is
+not a source provenance certificate.
+
+`Guest/Witness.lean` provides a two-region fixture with a real owner and two
+software services: accepted code-only and owned-region boundaries, named
+negative twins, protected/guest overlap refusal, whole-program Bool admission
+and a typed invocation with an actual code capability. These are model
+witnesses, not a source-to-IR acceptance witness.
+
+Open in the actual source path: `SItemTief.trustT` retains no service binding;
+`uAxKlauseln` still refuses requires/ensures, `herkunftAt` only exports hardware
+provenance, and `progOfFn` does not populate `axVertrag`. Canonical elaboration
+and Stage 0 therefore retain the shared named missing-service refusal. The
+historical `EntrustDecl.annahme` cannot prove OS isolation. Finish these source
+connections under C08, preserve every descriptor in the actual checker call,
+and add accepted source-to-unit-to-IR and negative source witnesses before
+claiming C14 complete.
