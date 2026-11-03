@@ -44,8 +44,8 @@ def floorCode : Nat → List SExpr → SAnw → Except String SAnw
     | .trim value ty branch => pure (.trim value ty (← recur branch))
     | .locks acquire target branch => pure (.locks acquire target (← recur branch))
     | .watch name branch => pure (.watch name (← recur branch))
-    | .alloc mut name ty arena count branch =>
-      pure (.alloc mut name ty arena count (← branch.mapM recur))
+    | .alloc isMutable name ty arena count branch =>
+      pure (.alloc isMutable name ty arena count (← branch.mapM recur))
     | .grow arena count branch => pure (.grow arena count (← recur branch))
     | .child branch => pure (.child (← recur branch))
     | other => pure other
