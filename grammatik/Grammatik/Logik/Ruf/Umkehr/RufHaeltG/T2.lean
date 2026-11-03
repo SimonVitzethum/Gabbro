@@ -381,12 +381,13 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
       simp only [rufUpdateG_self]
       apply haeltInvG_rufAntwort h ?_ ha
       subst σ₁
-      exact lese_offen _ _ _
+      exact offen_lese _ _ _
     | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
       simp only [rufUpdateG_self]
       exact haeltInvG_rufAntwort h rfl ha
     | rueckFreigabeLetzte ρ a L hhead z ha =>
       simp only [rufUpdateG_self]
       have hrelease := haeltInvG_scopedRelease ρ a L [] hhead h
-      exact haeltInvG_rufAntwort hrelease rfl ha
+      exact haeltInvG_rufAntwort (vor := a.2) (σ := (M.weltVon f).gibt L)
+        (a := a.1) hrelease rfl ha
 end Gabbro.Grammatik
