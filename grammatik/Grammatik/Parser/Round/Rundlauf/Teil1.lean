@@ -157,7 +157,8 @@ theorem druckExtToks_ne_nil (k : XKind) (ns : List String) (ts : List (List Toke
   · split <;> simp only [ne_eq, List.cons_ne_self, List.cons_ne_nil, not_false_eq_true]
   · split <;> simp only [List.cons_append, List.nil_append, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
 
-  · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq, reduceCtorEq, not_false_eq_true, List.cons_ne_self]
+  · split <;> simp only [List.cons_append, List.nil_append, List.append_assoc, ne_eq,
+      List.append_eq_nil_iff, reduceCtorEq, and_false, not_false_eq_true, List.cons_ne_self]
   · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _
   · exact druckFold_ne_nil _ _ _
