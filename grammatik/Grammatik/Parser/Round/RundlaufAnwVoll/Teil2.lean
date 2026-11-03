@@ -103,8 +103,8 @@ theorem anw_set (z : SExpr) (o : String) (w : SExpr) (hz : gutPlatz z = true)
   · simp only [gutPlatz, Bool.false_eq_true] at hz
   · simp only [gutPlatz, Bool.false_eq_true] at hz
   · simp only [gutPlatz, Bool.false_eq_true] at hz
-  · simp only [hmiss, imp_self, List.tail_cons, ← istZuweis, ho, ↓reduceIte, hO,
-      fordereZeichen, strEq_self]
+  · rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> split <;>
+      simp_all [hO, fordereZeichen, strEq_self]
 
 theorem anw_shift (z : SExpr) (a b : String) (hz : gutPlatz z = true) : AnwBein (.shift z a b) := by
   intro rest F _ hF

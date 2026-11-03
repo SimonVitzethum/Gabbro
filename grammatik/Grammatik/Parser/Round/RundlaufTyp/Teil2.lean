@@ -160,7 +160,7 @@ theorem kopfP (p : SExpr) (hp : gutPlatz p = true) (rest : List Token) (F : Nat)
     exact suffToks_nopar suff rest R hr hcon
   have hgeneric := suffToks_nogeneric suff rest hr
   rw [rufKopf_ohne _ _ _ _ hgeneric hmiss]
-  dsimp only
+  try dsimp only
   exact suffM suff (.variable a) rest F' (suffLegs_gut suff hgs) hr (by omega)
 
 /-- A place prints with an identifier head. -/
