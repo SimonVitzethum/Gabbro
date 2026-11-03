@@ -414,7 +414,7 @@ theorem gateT_bound (m : Auswahl.BauModus) (items selected : List SItemTief)
 
 theorem gateT_zeuge :
     check [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))] =
-      .error "source export: type/provider/proof duties lack a checked source binding" ∧
+      .error "source export: SItemTief.gateT: type/provider/proof duties lack a checked source binding" ∧
     check (Auswahl.waehleL .auslieferung
       [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
     check (Auswahl.waehleL .pruefbau

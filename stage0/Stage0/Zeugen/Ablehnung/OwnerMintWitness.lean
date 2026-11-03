@@ -44,6 +44,6 @@ def text : String :=
 def candidate : Except String (Emitted text 64) := emit text 64
 
 theorem candidate_refused :
-    emit text 64 = .error "source export: type/provider/proof duties lack a checked source binding" := by decide +kernel
+    emit text 64 = .error "source export: SItemTief.protoT: type/provider/proof duties lack a checked source binding" := by decide +kernel
 
 end Gabbro.Stage0.OwnerMintWitness
