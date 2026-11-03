@@ -302,6 +302,13 @@ theorem capability_unbound_zeuge :
 theorem allocRequired_bound (x an : String) (v : SExpr) (n : Nat) :
     bodyMetadata (n + 1) (.alloc false x none an v none) = false := by rfl
 
+/-- Explicit failure branches retain their complete metadata check. The canonical
+    exporter still checks the arena, element value, effects and ending branch;
+    this gate only admits the immutable, unannotated binder it can lower. -/
+theorem allocElse_bound (x an : String) (v : SExpr) (body : SAnw) (n : Nat) :
+    bodyMetadata (n + 1) (.alloc false x none an v (some body)) =
+      bodyMetadata n body := by rfl
+
 theorem allocRequired_zeuge :
     bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = false ∧
     bodyMetadata 2 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = false ∧
