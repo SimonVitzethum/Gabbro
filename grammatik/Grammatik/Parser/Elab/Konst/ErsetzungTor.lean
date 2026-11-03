@@ -61,6 +61,7 @@ def closeConstantNames (items : List SItemTief) : Except String (List SItemTief)
       aliases := types, deferApplications := true }
   items.mapM fun
     | .fnT sig body => do
+      if strEq sig.art "const" then return .fnT sig body
       let ((sig', body'), _) ← (do
         let sig' ← Generic.rewriteSignature env bindings sig
         let body' ← Generic.rewriteBody env (bindings.without (sig.params.map Prod.fst)) body
@@ -74,7 +75,7 @@ def closeConstantNames (items : List SItemTief) : Except String (List SItemTief)
 def konstErsetzePipeline (ms : List SItemTief) : Except String (List SItemTief) := do
   let closed ← closeConstantNames ms
   let values := uConstsRech (uKonstFns closed) closed []
-  ersetzeItems (uKonstFnsWith (uAliase values closed) closed) closed
+  ersetzeItems (uKonstFnsWith (uAliase values closed ++ values.map (fun (name, value) => (name, (value, value)))) closed) closed
 
 mutual
 /-- A surface call still names a dropped const function. -/
