@@ -21,28 +21,24 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
   now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
-  - **Stage-0 refusals with their missing step:**
-    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
-    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
-    - C11 `by consuming`: refused by design.
-    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
-    - C10 RW locks: reader-wait liveness remains open.
-    - C09 owner flows: escrow simulation in progress.
-    - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
-    - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
-      carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
-      bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
-    - C14 `aligned`/`section`: relative grid (`wordAlign`, `globStarts`) plus the conditional absolute placement
-      lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
-      witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
-      loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
-    - C14 `entrust`: refused by the model (no isolation/call service).
-    - C07 fallible indirect calls: Stage-0 arms being added.
-  - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,
-    already expand into the connected `lowB_ok`/`lowEnd_ok` narrowing and store arms. Source-image witnesses now
-    cover both levels and the last fitting slot; semantic witnesses cover success, ceiling preservation and required
-    capacity failure (stop 107). Duplicate counter-depth arms and two witness import paths are corrected.
-    Open: the lead's Lean checks of these witnesses and the connected pipeline; the implementation worker ran no builds.
+  - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
+    refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
+    No builds were run for that audit. Remaining refusals include:
+    - Scoped value/reason returns; returns inside lock bodies; source `by consuming` (the G constructor currently
+      compiles only the fixed-sweep placeholder, ignoring selection and measure).
+    - Float division, computed wide-integer-to-float conversion, long string concatenation/order, wide option
+      tests, non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
+      wide statement narrowing, and unsupported entry-snapshot subtrees.
+    - Fallible statement-else source syntax (foreign and indirect); unbound foreign gates; wide/reference/region
+      foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
+    - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, residual generic calls/module headers, counterprobes,
+      annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
+    - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
+      incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
+  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
+    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
+    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
