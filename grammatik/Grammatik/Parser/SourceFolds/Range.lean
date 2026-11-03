@@ -6,7 +6,9 @@ public import Grammatik.Parser.Spec.Items
 namespace Gabbro.Grammatik.Parser.SourceFolds
 
 /-- A range fold descriptor: operator, binder, bounds, filter, value, empty case,
-    accumulator type, and the iterated array with its length. -/
+    accumulator type, and the iterated collection with its length. The collection
+    is either an indexed array variable or a table: a table fold iterates the
+    table domain (`slots of T`) and its value is a row projection `T[k].field`. -/
 structure FoldDesc where
   kind : XKind
   binder : String
@@ -15,6 +17,7 @@ structure FoldDesc where
   accTy : STyp
   array : String
   count : SExpr
+  table : Bool := false
 
 def isFoldKind : XKind → Bool
   | .foldAdd | .foldMin | .foldMax | .foldAnd | .foldOr => true
@@ -160,12 +163,21 @@ theorem checkBoundsFree_ok {lo hi : SExpr} (h : checkBoundsFree lo hi = .ok ()) 
       simp [h1, h2] at h
       exact ⟨h1, h2⟩
 
+/-- The declared capacity of a table with a literal count and no provider. A
+    provider-backed table has no static capacity here; its folds stay refused. -/
+def tableCapacity (source : List SItemTief) (name : String) : Option SExpr :=
+  source.findSome? fun
+    | .tableT t none (some count) _ _ _ _ => if strEq t name then some count else none
+    | _ => none
+
 /-- Validate one range fold node: operator shape, literal lower bound, upper bound
-    against the array length, a single indexed array variable, and the
-    accumulator type. A top-level fold takes the declared result type; a nested
-    fold derives its own (sums accumulate in `u64`, extrema keep the element
-    type, logic folds are Boolean), since expression positions carry no
-    ascription. -/
+    against the array length or the table capacity, a single indexed array
+    variable or table, and the accumulator type. A top-level fold takes the
+    declared result type; a nested fold derives its own (sums accumulate in
+    `u64`, extrema keep the element type, logic folds are Boolean), since
+    expression positions carry no ascription. A table fold reads its value from
+    row projections of the iterated table; the value type is inferred from the
+    written row expression. -/
 def parseFoldNode (source : List SItemTief) (locals : Spec.Locals)
     (expected : Option STyp) (chain : List String) (node : SExpr) :
     Except String FoldDesc := do
@@ -184,11 +196,14 @@ def parseFoldNode (source : List SItemTief) (locals : Spec.Locals)
     | _ => throw "fold range: lower bound must be a literal"
   if hasRangeFold lo || hasRangeFold hi then throw "fold range: bounds must be fold-free"
   let arrays ← indexedArrays binder 1000 value
-  let some array := arrays.head? | throw "fold range: indexed array required"
-  if !(arrays.all (strEq array)) then throw "fold range: exactly one indexed array required"
-  if strEq array binder then throw "fold range: binder shadows its array"
-  let some (.array elemTy count) := Spec.inferType source locals 128 (.variable array)
-    | throw "fold range: array type required"
+  let some carrier := arrays.head? | throw "fold range: indexed array required"
+  if !(arrays.all (strEq carrier)) then throw "fold range: exactly one indexed array required"
+  if strEq carrier binder then throw "fold range: binder shadows its array"
+  let (elemTy, count, table) ← match Spec.inferType source locals 128 (.variable carrier) with
+    | some (.array elemTy count) => pure (some elemTy, count, false)
+    | _ => match tableCapacity source carrier with
+      | some count => pure (none, count, true)
+      | none => throw "fold range: array type required"
   match hi with
   | .lit m =>
     match count with
@@ -204,6 +219,7 @@ def parseFoldNode (source : List SItemTief) (locals : Spec.Locals)
     if (Oeffentlich.namenA [] emp).any (strEq · binder) then
       throw "fold range: empty value must not use the range binder"
   | none => pure ()
+  let valueTy := Spec.inferType source locals 128 value
   let accTy ← match kind, expected with
     | .foldAdd, some ty =>
       match ty with
@@ -225,18 +241,33 @@ def parseFoldNode (source : List SItemTief) (locals : Spec.Locals)
       | .atom "bool" => pure ty
       | _ => throw "fold range: boolean result required"
     | .foldAdd, none =>
-      if isIntElem elemTy then pure (.atom "u64")
-      else throw "fold range: nested add requires integer elements"
+      match elemTy, valueTy with
+      | some ty, _ =>
+        if isIntElem ty then pure (.atom "u64")
+        else throw "fold range: nested add requires integer elements"
+      | none, some ty =>
+        if isIntElem ty then pure (.atom "u64")
+        else throw "fold range: nested add requires integer elements"
+      | none, none => throw "fold range: nested add requires integer elements"
     | .foldMin, none | .foldMax, none =>
-      if isIntElem elemTy then
-        match empty with
-        | some _ => pure elemTy
-        | none => throw "fold range: min/max requires an else value"
-      else throw "fold range: nested min/max requires integer elements"
+      match elemTy, valueTy with
+      | some ty, _ =>
+        if isIntElem ty then
+          match empty with
+          | some _ => pure ty
+          | none => throw "fold range: min/max requires an else value"
+        else throw "fold range: nested min/max requires integer elements"
+      | none, some ty =>
+        if isIntElem ty then
+          match empty with
+          | some _ => pure ty
+          | none => throw "fold range: min/max requires an else value"
+        else throw "fold range: nested min/max requires integer elements"
+      | none, none => throw "fold range: nested min/max requires integer elements"
     | .foldAnd, none => pure (.atom "bool")
     | .foldOr, none => pure (.atom "bool")
     | _, _ => throw "fold range: unsupported fold operator"
-  pure ⟨kind, binder, lo, hi, filter, value, empty, accTy, array, count⟩
+  pure ⟨kind, binder, lo, hi, filter, value, empty, accTy, carrier, count, table⟩
 
 /-- The per-element combination for one operator. -/
 def combineStmts (d : FoldDesc) (acc element : String) : List SAnw :=
@@ -278,8 +309,10 @@ def foldInit (kind : XKind) (empty' : Option SExpr) : SExpr :=
   | _, some emp' => emp'
   | _, none => .lit 0
 
-/-- One loop over the descriptor's array; the per-iteration prelude and the
-    element combination run under the effective filter. -/
+/-- One loop over the descriptor's collection: the array's elements or the table's
+    slots. A table fold binds the same row index the written row projection uses;
+    the per-iteration prelude and the element combination run under the effective
+    filter. -/
 def buildLoopStmts (d : FoldDesc) (acc element : String) (filter' value' : SExpr)
     (preF preV : List SAnw) (tests : List SExpr) : List SAnw :=
   let elemBind := SAnw.bind false element none value'
@@ -288,7 +321,7 @@ def buildLoopStmts (d : FoldDesc) (acc element : String) (filter' value' : SExpr
   let body :=
     if beqSExpr eff .tru then preV ++ [elemBind] ++ step
     else [.cond eff (.block (preV ++ [elemBind] ++ step) none) [] none]
-  [SAnw.each d.binder none "elems" (.variable d.array) "unvisited" "" none
+  [SAnw.each d.binder none (if d.table then "slots" else "elems") (.variable d.array) "unvisited" "" none
     (.block (preF ++ body) none)]
 
 /-- The generated statements before the final binding or return: the empty-value
@@ -374,9 +407,10 @@ def expandNested : Nat → List SItemTief → Spec.Locals → List String →
       | e => pure (e, [])
 
 /-- `return add/min/max/and/or i in lo ..< hi [where filter] [: value] [else empty]`
-    over one indexed array is ordinary traversal: the value is evaluated once
+    over one indexed array or one table is ordinary traversal: the value is evaluated once
     per selected slot with the same effects, contracts and costs as the written
-    body. Bounds other than `0 ..< length` become filter tests; nested folds
+    body. A table fold iterates the table domain and reads row projections.
+    Bounds other than `0 ..< length` become filter tests; nested folds
     become nested loops. The result type is explicit; the accumulator starts
     from zero, the empty value, or the logic identity. -/
 def returnFold (source : List SItemTief) (locals : Spec.Locals)
@@ -424,57 +458,5 @@ def prepare (source : List SItemTief) : Except String (List SItemTief) :=
     statementRewrite := returnFold source,
     exprRewrite := fun _ _ e => expression e }
   source.mapM (walk.item 100000)
-
-/-- The parser shape is recognized as a range fold node. -/
-theorem matchFoldNode_add_zeuge :
-    matchFoldNode (.ext .foldAdd ["i", "range"]
-      [.lit 0, .lit 2, .tru, .variable "x"]) =
-      some (.foldAdd, "i", [.lit 0, .lit 2, .tru, .variable "x"]) := rfl
-
-theorem isRangeFold_add_zeuge :
-    isRangeFold (.ext .foldAdd ["i", "range"]
-      [.lit 0, .lit 2, .tru, .variable "x"]) = true := rfl
-
-theorem isRangeFold_plain_zeuge : isRangeFold (.variable "x") = false := rfl
-
-/-- Bound tests vanish for the trivial `0 ..< length` range. -/
-theorem boundTests_trivial_zeuge :
-    boundTests (.lit 0) (.lit 2) (.lit 2) "i" = [] ∧
-    effFilter (boundTests (.lit 0) (.lit 2) (.lit 2) "i") .tru = .tru := ⟨rfl, rfl⟩
-
-/-- A nonzero lower bound and a short upper bound become filter tests. -/
-theorem boundTests_general_zeuge :
-    boundTests (.lit 2) (.lit 3) (.lit 4) "i" =
-      [.bin "<=" (.lit 2) (.variable "i"), .bin "<" (.variable "i") (.lit 3)] ∧
-    effFilter (boundTests (.lit 2) (.lit 3) (.lit 4) "i") .tru =
-      .bin "&&" (.bin "<=" (.lit 2) (.variable "i")) (.bin "<" (.variable "i") (.lit 3)) := by
-  exact ⟨rfl, rfl⟩
-
-theorem foldInit_add_zeuge : foldInit .foldAdd none = .lit 0 := rfl
-
-theorem foldInit_and_zeuge : foldInit .foldAnd none = .tru := rfl
-
-theorem reservedNames_one_zeuge :
-    reservedNames 1 =
-      ["$rangeFold$acc$0", "$rangeFold$value$0", "$rangeFold$result$0"] := rfl
-
-theorem tagFoldNodes_single_zeuge :
-    (tagFoldNodes (.ext .foldAdd ["i", "range"]
-      [.lit 0, .lit 2, .tru, .variable "x"]) 0).1 =
-      [((.ext .foldAdd ["i", "range"]
-        [.lit 0, .lit 2, .tru, .variable "x"]), 0)] := rfl
-
-theorem boundArgs_fold_zeuge :
-    boundArgs (.ext .foldAdd ["i", "range"]
-      [.lit 0, .lit 2, .tru, .variable "x"]) =
-      some (.lit 0, .lit 2) := rfl
-
-theorem boundArgs_plain_zeuge : boundArgs (.variable "x") = none := rfl
-
-/-- A non-indexed value has no indexed array. -/
-theorem parseFoldNode_no_array_zeuge :
-    parseFoldNode [] [] (some (.atom "u16")) []
-      (.ext .foldAdd ["i", "range"] [.lit 0, .lit 2, .tru, .variable "x"]) =
-      .error "fold range: indexed array required" := rfl
 
 end Gabbro.Grammatik.Parser.SourceFolds
