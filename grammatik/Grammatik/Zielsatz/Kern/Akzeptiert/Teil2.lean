@@ -211,12 +211,20 @@ end Komponenten
 
 end Akzeptiert
 
+section Pruefer
+
 /-- **The concrete checker is a `Pruefer`**: its Bool is `Akzeptiert`, and
     its soundness obligation against `AkzeptiertSpec` is `akzeptiertSpec_of`.
     The Bool runs on the unit's declared checks (`E.pruefungen`). -/
-def akzeptiert_pruefer : Pruefer where
-  akzeptiert := fun E fs ls cs => Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen
-  korrekt := fun _ fs ls cs h => akzeptiertSpec_of fs.2 ls.2 cs.2 _ h
+noncomputable def akzeptiert_pruefer : Pruefer where
+  akzeptiert := fun {D} _ E fs ls cs =>
+    haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+    Akzeptiert E.P E.S fs ls cs E.ws E.akku E.pruefungen
+  korrekt := fun {D} _ E fs ls cs h =>
+    haveI : DecidableEq D.Ax := fun x y => Classical.propDecidable (x = y)
+    akzeptiertSpec_of fs.2 ls.2 cs.2 _ h
+
+end Pruefer
 
 section Start
 
