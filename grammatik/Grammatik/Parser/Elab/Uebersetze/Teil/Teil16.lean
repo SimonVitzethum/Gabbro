@@ -204,7 +204,7 @@ def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabs b.tabs &&
     beqULockList a.locks b.locks && beqUFnList a.fns b.fns &&
     beqStrList a.roots b.roots && beqStrList a.hands b.hands && beqUGlobList a.globs b.globs &&
-    decide (a.regs = b.regs) && decide (a.records = b.records)
+    decide (a.regs = b.regs) && decide (a.records = b.records) && decide (a.markOrders = b.markOrders)
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool
