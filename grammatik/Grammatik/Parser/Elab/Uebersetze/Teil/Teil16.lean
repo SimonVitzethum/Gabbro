@@ -79,6 +79,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .storeAtom a s, .storeAtom b t => strEq a b && beqUSide s t
   | .storeAtomB a s, .storeAtomB b t => strEq a b && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
+  | .retireMark a, .retireMark b => strEq a b
   | .lockBeg a, .lockBeg b => strEq a b
   | .blkEnd, .blkEnd => true
   | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && beqUSide s t
