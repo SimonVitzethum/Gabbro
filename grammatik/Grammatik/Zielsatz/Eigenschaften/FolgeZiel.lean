@@ -69,6 +69,7 @@ theorem ruS_fNach (Φ : Folge D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' :
   | .retry .. => rfl
   | .forever .. => rfl
   | .axiomCall .. => rfl
+  | .axiomCallElse .. => fNach_nachΛ _ _ _ _
   | .regWrite .. => rfl
   | .transition .. => rfl
   | .publish .. => rfl
@@ -109,6 +110,8 @@ theorem ruS_fS (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
       kongr₂ (· && ·) (ruB_fB Φ e false body) (ruB_fB Φ e false ueber)
   | _, _, _, _, e, _, .forever _ _ body => ruB_fB Φ e false body
   | _, _, _, _, _, _, .axiomCall .. => rfl
+  | _, _, _, _, e, w, .axiomCallElse (err := err) .. =>
+      (fS_nachΛ _ _ _ _ _).trans ((fE_umΛ _ _ _ _ _).trans (ruEnd_fE Φ e false err))
   | _, _, _, _, _, _, .regWrite .. => rfl
   | _, _, _, _, _, _, .transition .. => rfl
   | _, _, _, _, _, _, .publish .. => rfl
@@ -144,6 +147,14 @@ theorem ruB_fB (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
         fB Φ.mitRuhe e (Φ.vor g) (Block.vorΛ _ (ruB rest))) = _
       rw [fE_umΛ, fB_vorΛ, ruEnd_fE Φ e _ err, ruB_fB Φ e _ rest]; rfl
   | _, _, _, _, e, w, .bindAxiom _ _ _ _ _ _ _ rest => ruB_fB Φ e w rest
+  | _, _, _, _, e, w, .bindAxiomOpt res _ _ _ _ _ _ rest => by
+      have ih := ruB_fB Φ e w rest
+      cases res <;> exact (fB_vorΛ _ _ _ _ _).trans ih
+  | _, _, _, _, e, w, .bindAxiomOptElse res _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_fE Φ e false err
+      have ih1 := ruB_fB Φ e w rest
+      cases res <;> exact kongr₂ (· && ·) ((fE_umΛ _ _ _ _ _).trans ih0)
+        ((fB_vorΛ _ _ _ _ _).trans ih1)
   | _, _, _, _, e, w, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       show (fE Φ.mitRuhe e false (ruEnd err) && fB Φ.mitRuhe e w (ruB rest)) = _
       rw [ruEnd_fE Φ e _ err, ruB_fB Φ e _ rest]; rfl
@@ -184,6 +195,14 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
         fE Φ.mitRuhe e (Φ.vor g) (Endblock.umΛ _ (ruEnd rest))) = _
       rw [fE_umΛ, fE_umΛ, ruEnd_fE Φ e _ err, ruEnd_fE Φ e _ rest]; rfl
   | _, _, _, e, w, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .bindAxiomOpt res _ _ _ _ _ _ rest => by
+      have ih := ruEnd_fE Φ e w rest
+      cases res <;> exact (fE_umΛ _ _ _ _ _).trans ih
+  | _, _, _, e, w, .bindAxiomOptElse res _ _ _ _ _ _ _ err rest => by
+      have ih0 := ruEnd_fE Φ e false err
+      have ih1 := ruEnd_fE Φ e w rest
+      cases res <;> exact kongr₂ (· && ·) ((fE_umΛ _ _ _ _ _).trans ih0)
+        ((fE_umΛ _ _ _ _ _).trans ih1)
   | _, _, _, e, w, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       show (fE Φ.mitRuhe e false (ruEnd err) && fE Φ.mitRuhe e w (ruEnd rest)) = _
       rw [ruEnd_fE Φ e _ err, ruEnd_fE Φ e _ rest]; rfl

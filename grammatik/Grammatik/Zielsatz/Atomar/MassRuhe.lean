@@ -245,6 +245,8 @@ theorem ewig_ruS : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D
   | _, _, _, _, .retry _ _ body ueber, eb, ie, _, _ => kongr₂ (· || ·) (ewig_ruB body false ie) (ewig_ruB ueber eb ie)
   | _, _, _, _, .forever _ _ body, _, _, _, _ => by simp only [ruS, befS, befund_und_ewig, Bool.true_or]
   | _, _, _, _, .axiomCall .., _, _, _, _ => rfl
+  | _, _, _, _, .axiomCallElse (err := err) .., eb, ie, dl, _ =>
+      (ewig_nachΛ _ _ eb ie dl).trans ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie))
   | _, _, _, _, .regWrite .., _, _, _, _ => rfl
   | _, _, _, _, .transition .., _, _, _, _ => rfl
   | _, _, _, _, .publish .., _, _, _, _ => rfl
@@ -277,6 +279,14 @@ theorem ewig_ruB : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block 
       exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
         ((ewig_vorΛ _ _ eb ie).trans (ewig_ruB rest eb ie))
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, eb, ie => ewig_ruB rest eb ie
+  | _, _, _, _, .bindAxiomOpt res _ _ _ _ _ _ rest, eb, ie => by
+      have ih := ewig_ruB rest eb ie
+      cases res <;> exact (ewig_vorΛ _ _ eb ie).trans ih
+  | _, _, _, _, .bindAxiomOptElse res _ _ _ _ _ _ _ err rest, eb, ie => by
+      have ih0 := ewig_ruEnd err eb ie
+      have ih1 := ewig_ruB rest eb ie
+      cases res <;> exact kongr₂ (· || ·) ((ewig_umΛE _ _ eb ie).trans ih0)
+        ((ewig_vorΛ _ _ eb ie).trans ih1)
   | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd err eb ie) (ewig_ruB rest eb ie)
   | _, _, _, _, .regRead _ _ rest, eb, ie => ewig_ruB rest eb ie
   | _, _, _, _, .regReadElse _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruB rest eb ie)
@@ -308,6 +318,14 @@ theorem ewig_ruEnd : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock
       exact kongr₂ (· || ·) (kongr₂ (· || ·) rfl ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd err eb ie)))
         ((ewig_umΛE _ _ eb ie).trans (ewig_ruEnd rest eb ie))
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, eb, ie => ewig_ruEnd rest eb ie
+  | _, _, _, .bindAxiomOpt res _ _ _ _ _ _ rest, eb, ie => by
+      have ih := ewig_ruEnd rest eb ie
+      cases res <;> exact (ewig_umΛE _ _ eb ie).trans ih
+  | _, _, _, .bindAxiomOptElse res _ _ _ _ _ _ _ err rest, eb, ie => by
+      have ih0 := ewig_ruEnd err eb ie
+      have ih1 := ewig_ruEnd rest eb ie
+      cases res <;> exact kongr₂ (· || ·) ((ewig_umΛE _ _ eb ie).trans ih0)
+        ((ewig_umΛE _ _ eb ie).trans ih1)
   | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd err eb ie) (ewig_ruEnd rest eb ie)
   | _, _, _, .regRead _ _ rest, eb, ie => ewig_ruEnd rest eb ie
   | _, _, _, .regReadElse _ _ _ sonst rest, eb, ie => kongr₂ (· || ·) (ewig_ruEnd sonst eb ie) (ewig_ruEnd rest eb ie)
