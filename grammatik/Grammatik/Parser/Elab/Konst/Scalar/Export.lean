@@ -1,5 +1,5 @@
 module
-public import Grammatik.Parser.Elab.Konst.Scalar.Names
+public import Grammatik.Parser.Elab.Konst.Scalar.Arguments
 public import Grammatik.Parser.Elab.Konst.Scalar.KExpr
 
 @[expose] public section
@@ -123,19 +123,6 @@ def elaborate (k : UKonstFn) :
     | _ => throw ("const type failure at `" ++ k.name ++ "`: integer result expected")
   | _, _ => .error ("const body without a certified scalar G derivation at `" ++ k.name ++ "`")
 
-/-- Evaluate each argument at its own declared type, rather than at the callee's
-    result type. A result narrower than a parameter must not truncate its argument. -/
-def argumentValues (fns : List UKonstFn) (env : List (String × Int)) :
-    List (String × Ty) → List SExpr → Except String (List Int)
-  | [], [] => .ok []
-  | (_, .int lo hi) :: rest, source :: sources => do
-    let normalized ← normalize (D := declaration [] (.int lo hi)) [] env source
-    let _ ← integer normalized.code
-    match uKonstWert lo hi fns [] 64 (normalizeNames ([] : Locals []) env source) with
-    | none => throw "const argument is not a compile-time value in its declared range"
-    | some value => return value :: (← argumentValues fns env rest sources)
-  | _, _ => .error "const argument type or arity mismatch"
-
 /-- Every delivered value carries its exact source elaboration and a generic G call
     certificate. `uKonstWert` is an untrusted candidate, checked for agreement here. -/
 structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
@@ -145,6 +132,7 @@ structure CheckedCall (k : UKonstFn) (fns : List UKonstFn)
   function : SourceFunction k lo hi
   values : List Int
   evaluated : argumentValues fns env k.params sources = .ok values
+  argumentsMeaning : ArgumentMeaning fns env k.params sources values
   args : Env (declaration (k.params.map Prod.snd) (.int lo hi)) (k.params.map Prod.snd)
   bound : arguments (declaration (k.params.map Prod.snd) (.int lo hi)) k.params values = .ok args
   bindings : List (String × Int)
@@ -161,9 +149,12 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
     (env : List (String × Int)) (sources : List SExpr) :
     Except String (CheckedCall k fns env sources) := do
   let ⟨lo, hi, fn⟩ ← elaborate k
-  match hv : argumentValues fns env k.params sources with
+  match hv : checkArguments fns env k.params sources with
   | .error error => throw ("const argument failure at `" ++ k.name ++ "`: " ++ error)
-  | .ok values =>
+  | .ok checkedArguments =>
+    let values := checkedArguments.values
+    have evaluated : argumentValues fns env k.params sources = .ok values := by
+      simp only [argumentValues, hv, Except.map]
     match ha : arguments (declaration (k.params.map Prod.snd) (.int lo hi)) k.params values with
     | .error error => throw error
     | .ok args =>
@@ -181,7 +172,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
           let quoted ← quote fn.model.body.2.2.expr args
           have syntaxValue : quoted.syntax.evalInt = some value := by
             rw [quoted.equation (world _ _) (world _ _), fn.model.body.2.2.equation, cert.body]
-          return ⟨lo, hi, fn, values, hv, args, ha, bindings, hn, value, hc, cert, quoted, syntaxValue⟩
+          return ⟨lo, hi, fn, values, evaluated, checkedArguments.meaning, args, ha, bindings, hn, value, hc, cert, quoted, syntaxValue⟩
 
 /-- Every value the actual replacement entry point can obtain denotes the ordinary
     machine G call of its source-derived body, with both contracts retained. -/
