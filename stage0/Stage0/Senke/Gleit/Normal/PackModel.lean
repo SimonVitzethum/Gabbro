@@ -23,6 +23,7 @@ theorem packWord_canonical (a : GFloat) (ha : wf f64 a) :
   rw [← hs, ← he, ← hf]
   exact packUnpack _
 
+set_option maxRecDepth 4096 in
 /-- Identify all output fields of the actual word continuation. Its input
     has three guard bits and is below the next hidden-bit position. The
     rounded carry, subnormal boundary and exponent overflow are explicit. -/
@@ -69,6 +70,7 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
     by_cases hc : q = 2 ^ 53
     · simp only [softCarryExp, hc, decide_true, Runner.IR.bool, ite_true]
       rw [BitVec.ofNat_add]
+      rfl
     · simp only [softCarryExp, hc, decide_false, Runner.IR.bool,
         Bool.false_eq_true, ite_false]
       simp
