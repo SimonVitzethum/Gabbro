@@ -118,9 +118,9 @@ def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
   | .some _ =>
     match UFnKopf.axErg k with
     | .some (.int lo hi) =>
-      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := some (lo, hi), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e", .ret (.val (.lit lo))], ret := .val (.param "ans"), boden := none }
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := some (lo, hi), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e", .ret (.val (.lit lo)), .blkEnd], ret := .val (.param "ans"), boden := none }
     | .some .bool =>
-      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e", .ret (.bool .fls)], ret := .bool (.var "ans"), boden := none }
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e", .ret (.bool .fls), .blkEnd], ret := .bool (.var "ans"), boden := none }
     | _ => .error ("foreign gate answer without wrapper form: " ++ gate)
 
 /-- One gate wrapper: a nullary function that threads the check's Duty and invokes

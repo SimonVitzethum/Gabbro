@@ -114,7 +114,7 @@ example : uTorHuelle "p#duty" [] [fremdKopf] "p" "f" =
     range-bottom error branch; the Duty threads on both paths. -/
 example : uTorHuelle "p#duty" []
     [{ name := "f", names := [], kinds := [], types := [], res := some (0, 10), held := [], kanal := some (0, 1) }] "p" "f" =
-    .ok { name := "p#tor#f", params := [], kinds := [], res := some (0, 10), held := [], puts := [], gputs := [], nimmt := ["p#duty"], gibt := ["p#duty"], gives := [], needs := [], body := [.bindAxElse "ans" "f" [] "e", .ret (.val (.lit 0))], ret := .val (.param "ans") } := rfl
+    .ok { name := "p#tor#f", params := [], kinds := [], res := some (0, 10), held := [], puts := [], gputs := [], nimmt := ["p#duty"], gibt := ["p#duty"], gives := [], needs := [], body := [.bindAxElse "ans" "f" [] "e", .ret (.val (.lit 0)), .blkEnd], ret := .val (.param "ans") } := rfl
 
 /-- A foreign gate with parameters keeps its named refusal. -/
 example : uTorHuelle "p#duty" [] [{ fremdKopf with names := ["x"] }] "p" "f" =
