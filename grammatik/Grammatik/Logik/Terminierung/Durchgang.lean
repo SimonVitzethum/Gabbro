@@ -116,12 +116,12 @@ theorem dinv_schritt
           | eins _ hokj hbj =>
             obtain ⟨hokc, hpotc⟩ := hC (T i0) (S i0) (fun _ => false) true
             refine ⟨[], unten, _, hst', hul, SegU.eins _ (hokc hokj)
-              ((rufSchrittG_scopeMove hs).pop caller rst (by rw [hst]; rfl) hst' hbj), ?_⟩
+              ((rufSchrittG_scopeMove hs).pop o unten (by rw [hst]; rfl) hst' hbj), ?_⟩
             omega
           | cons _ j _ q hokj hbj hrest' =>
             obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false) true
             refine ⟨oben', unten, _, hst', hul, SegU.cons _ j oben' q (hokc hokj)
-              ((rufSchrittG_scopeMove hs).pop caller rst (by rw [hst]; rfl) hst' hbj) hrest', ?_⟩
+              ((rufSchrittG_scopeMove hs).pop o (oben' ++ unten) (by rw [hst]; rfl) hst' hbj) hrest', ?_⟩
             omega
   · simp only [hgf, ite_false, Nat.add_zero]
     have hEq : M'.faeden f = M.faeden f := rufSchrittG_fremd hs f (Ne.symm hgf)
