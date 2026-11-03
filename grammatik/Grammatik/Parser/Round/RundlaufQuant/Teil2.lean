@@ -150,7 +150,32 @@ theorem pred_voll (e : SExpr) (h : PredGut e) (R : List Token) (hR : PredFolge R
     (hF : bP e + 4 ≤ F) : parsePred F (druckToks e ++ R) = .ok (e, R) :=
   bein_top e (pred_bein e h) R F hR hF
 
+/-- Existentials with any printable predicate body also read back as expressions. -/
+theorem exists_expr_voll (x dk : String) (ns : List String) (ops : List SExpr)
+    (hd : DomGut dk ns ops) (body : SExpr) (hb : PredGut body) (R : List Token) (G : Nat)
+    (hG : bE (.ext .any (x :: dk :: ns) (ops ++ [body])) ≤ G) :
+    parseUnary G (druckToks (.ext .any (x :: dk :: ns) (ops ++ [body])) ++ R) =
+      .ok (.ext .any (x :: dk :: ns) (ops ++ [body]), R) :=
+  exists_unary_rund x dk ns ops hd body (pred_bein body hb) R G hG
+
 /-! ### Witness -/
+
+/-- An expression-level existential may contain a predicate-only universal. -/
+def zeugeExistsExpr : SExpr :=
+  .ext .any ["x", "threads"] [.ext .all ["y", "threads"] [.tru]]
+
+theorem zeugeExistsExpr_body : PredGut (.ext .all ["y", "threads"] [.tru]) :=
+  .quant .all "y" "threads" [] [] .tru (Or.inl rfl) .threads (.expr .tru (by decide))
+
+theorem zeugeExistsExpr_unary :
+    parseUnary 300 (druckToks zeugeExistsExpr ++ [.ende]) = .ok (zeugeExistsExpr, [.ende]) :=
+  exists_expr_voll "x" "threads" [] [] .threads _ zeugeExistsExpr_body [.ende] 300 (by decide)
+
+theorem zeugeExistsExpr_pred :
+    parsePred 300 (druckToks zeugeExistsExpr ++ [.ende]) = .ok (zeugeExistsExpr, [.ende]) :=
+  pred_voll zeugeExistsExpr
+    (.quant .any "x" "threads" [] [] _ (Or.inr rfl) .threads zeugeExistsExpr_body)
+    [.ende] ⟨rfl, rfl, rfl, by simp, by simp, by simp⟩ 300 (by decide)
 
 /-- `(!(exists k in queue Q : true) => ((forall s in descendants of b.kinder : s >= 0) || x))`:
     an implication over a negated `exists`, a `||` over a `forall`, a `queue` and a place domain. -/
@@ -175,6 +200,9 @@ theorem zeugePred_text : lex (renderText (druckToks zeugePred)) = .ok (druckToks
 
 end Gabbro.Grammatik.Parser
 
+#print axioms Gabbro.Grammatik.Parser.exists_expr_voll
+#print axioms Gabbro.Grammatik.Parser.zeugeExistsExpr_unary
+#print axioms Gabbro.Grammatik.Parser.zeugeExistsExpr_pred
 #print axioms Gabbro.Grammatik.Parser.pred_voll
 #print axioms Gabbro.Grammatik.Parser.zeugePred_rund
 #print axioms Gabbro.Grammatik.Parser.zeugePred_text
