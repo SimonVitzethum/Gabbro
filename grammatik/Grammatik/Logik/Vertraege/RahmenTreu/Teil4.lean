@@ -32,9 +32,10 @@ theorem TreuRet.transRet {W G} {haelt : List D.Lock} {boden : Option Int}
 
 /-- Every handler outcome keeps the frame (both `Treu` and `TreuRet` carry `Rahmen`). -/
 theorem TreuR.rahmen (hR : TreuR R) {f : D.Fn} {σ : World D} {ρ : Env D (D.params f)}
+    (hh : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt)
     {σ' : World D} (h : (R f σ ρ).welt = some σ') :
     Rahmen (D.schreibt f) (D.gschreibt f) σ σ' := by
-  have h2 := hR f σ ρ σ' h
+  have h2 := hR f σ ρ hh σ' h
   cases he : R f σ ρ with
   | ok _ _ => rw [he] at h2; exact h2.1
   | why _ _ => rw [he] at h2; exact h2.1
@@ -80,13 +81,13 @@ theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
   generalize hR1 : R f s0 (umsig hf (evalArgs s0 args s0 ρ)) = rv at h ⊢
   cases rv with
   | ok σ1 v =>
-      have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
+      have h2 := hR f s0 _ hentry σ1 (by rw [hR1]; rfl)
       rw [hR1] at h2
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
       exact (TreuAusgang.vorCall g1 (runOk σ1 (ergWert (ergSig hf he) v)
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
   | why σ1 r =>
-      have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
+      have h2 := hR f s0 _ hentry σ1 (by rw [hR1]; rfl)
       rw [hR1] at h2
       have gcall : Treu V.schreibt V.gschreibt s0 σ1 :=
         (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry
@@ -127,13 +128,13 @@ theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
   generalize hR1 : R f s0 (umsig hf (evalArgs s0 args s0 ρ)) = rv at h ⊢
   cases rv with
   | ok σ1 v =>
-      have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
+      have h2 := hR f s0 _ hentry σ1 (by rw [hR1]; rfl)
       rw [hR1] at h2
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
       exact (TreuEnd.vorCall g1 (runOk σ1 (ergWert (ergSig hf he) v)
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
   | why σ1 r =>
-      have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
+      have h2 := hR f s0 _ hentry σ1 (by rw [hR1]; rfl)
       rw [hR1] at h2
       have gcall : Treu V.schreibt V.gschreibt s0 σ1 :=
         (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry

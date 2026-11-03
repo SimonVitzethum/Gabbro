@@ -40,7 +40,7 @@ set_option hygiene false in
 macro "frame_call_ok" s0:term : tactic => `(tactic| (
   have hentry : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) ($s0).haelt :=
     heldB_ruf hp hbV (hl.heldB hh)
-  have h2 := (hR f $s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
+  have h2 := hR f $s0 _ hentry σ1 (by rw [hR1]; rfl)
   rw [hR1] at h2
   have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)))
 
@@ -49,7 +49,7 @@ set_option hygiene false in
 macro "frame_call_why" s0:term : tactic => `(tactic| (
   have hentry : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) ($s0).haelt :=
     heldB_ruf hp hbV (hl.heldB hh)
-  have h2 := (hR f $s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
+  have h2 := hR f $s0 _ hentry σ1 (by rw [hR1]; rfl)
   rw [hR1] at h2
   have gcall : Treu V.schreibt V.gschreibt $s0 σ1 :=
     (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry
