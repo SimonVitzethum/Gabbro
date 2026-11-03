@@ -26,9 +26,9 @@ theorem constStmtB_absage_assignThruOwn {l : Bool} {read : Bool} {Λ : List (Res
     (t : c.D.Tab) (ht : c.D.capTab space n = some t)
     (f : c.D.Feld t) (i : Expr c.D Γ Λ (.index (c.D.count t))) (e : Expr c.D Γ Λ (c.D.typ t f))
     (m : c.D.Marke) (s : Nat) (ho : c.D.ownerNr o = some m) (he : m ∈ c.D.eigner t)
-    (hg : Sum.inr (m, s) ∈ c.D.braucht t) (hm : Res.marke m s ∈ Λ)
+    (hg : Sum.inr (m, s) ∈ c.D.braucht t)
     (hw : V.schreibt t = true) (hL : darf c.D t Λ) :
-    constStmtB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.assignThruOwn p t ht f i e m s ho he hg hm hw hL) = false := by simp only [constStmtB]
+    constStmtB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.assignThruOwn p t ht f i e m s ho he hg hw hL) = false := by simp only [constStmtB]
 
 theorem constStmtB_absage_assignGlob {l : Bool} {Λ : List (Res c.D)} (g : c.D.Glob) (e : Expr c.D Γ Λ (c.D.gtyp g))
     (hw : V.gschreibt g = true) (hL : gdarf c.D g Λ) : constStmtB c (V := V) (l := l) (Γ := Γ) (Λ := Λ) (.assignGlob g e hw hL) = false := by simp only [constStmtB]
