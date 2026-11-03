@@ -184,19 +184,18 @@ def ptrPaarGate (u : UProg) : Bool :=
 def ptrLowerOk (u : UProg) : Bool :=
   (List.range (sigFns u).length).all fun n => (lowerPtrAt u n).isOk
 
-/-- The lowering gate: per-pair inclusion plus successful contract lowering. -/
-def ptrGate (u : UProg) : Bool :=
+/-- The shared contract gate: pointer conformance and exact lowering of all pointer and foreign contracts. -/
+def contractGate (u : UProg) : Bool :=
   ptrPaarGate u && ptrLowerOk u && axContractsB u
 
 /-- The lowered pointer contract, or `trivial` where lowering failed (the
-    gate `ptrGate` refuses such units, so the fallback never silences a bad
+    gate `contractGate` refuses such units, so the fallback never silences a bad
     contract). -/
 def ptrVertragOf (u : UProg) (n : Nat) :
     CallContract (declOf u) ((declOf u).sigNr n) :=
   (lowerPtrAt u n).toOption.getD (CallContract.trivial (declOf u) ((declOf u).sigNr n))
 
-/-- Assemble lowered functions to a program (no contract
-    content in `requires`, per-function `ensures` and bodies). -/
+/-- Assemble functions with their lowered pre/postconditions and both interface contract families. -/
 def progOfFn (u : UProg) (E : ∀ f : Fin u.fns.length, EnsTy u f)
     (B : ∀ f : Fin u.fns.length, RumpTy u f) (R : ∀ f : Fin u.fns.length, ReqTy u f)
     (I : ∀ i : Fin u.invs.length, InvTy u i)
@@ -289,7 +288,7 @@ def lowerInvGut (u : UProg) (i : Fin u.invs.length) (h : ∃ v, lowerInvAt u i =
     bound (candidate table, structural `SigPasst`, interface caller duty and
     `PtrVerfeinert` in `LogikPflicht`). SUPERSEDED (C06, O43): `lowerAllg`
     now lowers every pointer contract (`lowerPtrAt`) under the per-pair gate
-    `ptrGate`; this whole-unit emptiness check is kept only for reference and
+    `contractGate`; this whole-unit emptiness check is kept only for reference and
     is no longer consulted. -/
 def ptrVertragGebunden (u : UProg) : Bool :=
   u.ptrs.all fun p => p.needs.isEmpty && p.gives.isEmpty
@@ -297,7 +296,7 @@ def ptrVertragGebunden (u : UProg) : Bool :=
 /-- The generically lowered program: every function of the
     elaborated program over the declaration built from it, with every
     pointer-interface contract lowered (`lowerPtrAt`) under the per-pair gate
-    `ptrGate` (a non-conforming pair is refused at its value site). -/
+    `contractGate` (a non-conforming pair is refused at its value site). -/
 def lowerAllg (u : UProg) :
     Except String (Programm (declOf u) × List (declOf u).Fn) :=
   match hI : lowerInvs u (List.finRange u.invs.length) with
@@ -308,7 +307,7 @@ def lowerAllg (u : UProg) :
   match h : lowerEach u (List.finRange u.fns.length) with
   | .error e => .error e
   | .ok _ =>
-    if ptrGate u then
+    if contractGate u then
     have w : ∀ f : Fin u.fns.length,
         ∃ v, lowerFnAt u f = .ok v := fun f =>
       lowerEach_all_ok u (List.finRange u.fns.length) f
