@@ -124,5 +124,6 @@ public import Stage0.Senke.Gleit.BitLength
 public import Stage0.Senke.Gleit.Runde
 public import Stage0.Senke.Gleit.Normal.Replay
 public import Stage0.Senke.Gleit.Normal.Finite
+public import Stage0.Senke.Gleit.Normal.Model
 
 @[expose] public section
