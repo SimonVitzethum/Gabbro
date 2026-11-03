@@ -185,11 +185,6 @@ theorem transCast_heq {α β : Sort _} (h : α = β) (x : α) : HEq (transCast h
           else .error "value outside range"
   | _, _, _ => .error "constant transition edge expected"
 
-/-- The held resources at the start are the contract end. -/
-theorem transitionResPerm (u : UProg) (c : Fin u.fns.length) :
-    (resOf u c).Perm (vertragVon (declOf u) c).ende := by
-  rw [endeRes_eq u c]
-
 /-- The lowered types are the declaration's, in the lowering's own context. -/
 theorem transitionReqEq (u : UProg) (c : Fin u.fns.length) :
     ReqTy u c = Expr (declOf u) (ctxOf u c) (resOf u c) .bool := by
@@ -201,14 +196,9 @@ theorem transitionRumpEq (u : UProg) (c : Fin u.fns.length) :
   unfold RumpTy
   rw [ctxParams_eq u c, anfangRes_eq u c]
 
-theorem transitionEnsEq (u : UProg) (c : Fin u.fns.length) (hn : (declOf u).erg c = none) :
-    EnsTy u c = Expr (declOf u) (ctxOf u c) (resOf u c) .bool := by
-  unfold EnsTy
-  rw [hn]
-  simp only [ErgCtx]
-  rw [← endeRes_eq u c, ctxParams_eq u c]
-
-/-- A transition of stores: requires, ensures and body are the typed expansion. -/
+/-- A transition of stores: requires, ensures and body are the typed expansion. The
+    generated function holds no marks, so its end is its held list up to order
+    (C16): both are decided, and anything else is refused. -/
 @[expose] def lowerStoresAt (u : UProg) (c : Fin u.fns.length) (tr : UTransition) :
     Except String (EnsTy u c × RumpTy u c × ReqTy u c) :=
   match lowTransitionWrites u c 0 tr.writes with
@@ -218,14 +208,25 @@ theorem transitionEnsEq (u : UProg) (c : Fin u.fns.length) (hn : (declOf u).erg 
     | .error e => .error e
     | .ok clause =>
       if hn : (declOf u).erg c = none then
-        .ok (transCast (transitionEnsEq u c hn).symm (transitionEnsures ws.1),
-          transCast (transitionRumpEq u c).symm
-            (transitionEnd (vertragVon (declOf u) c) ws.1 ws.2.2
-              (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))),
-          transCast (transitionReqEq u c).symm (transitionRequires ws.1 clause))
+        if hE : decide ((vertragVon (declOf u) c).ende = resOf u c) = true then
+          if hPerm : decide ((resOf u c).Perm (vertragVon (declOf u) c).ende) = true then
+            have hcast : Expr (declOf u) (ctxOf u c) (resOf u c) .bool = EnsTy u c := by
+              have hE' := of_decide_eq_true hE
+              unfold EnsTy
+              rw [hn]
+              simp only [ErgCtx]
+              rw [hE', ctxParams_eq u c]
+            .ok (transCast hcast (transitionEnsures ws.1),
+              transCast (transitionRumpEq u c).symm
+                (transitionEnd (vertragVon (declOf u) c) ws.1 ws.2.2
+                  (transitionReturn (vertragVon (declOf u) c) hn (of_decide_eq_true hPerm))),
+              transCast (transitionReqEq u c).symm (transitionRequires ws.1 clause))
+          else .error "transition function changes held marks"
+        else .error "transition function changes held marks"
       else .error "transition function has a result"
 
-/-- A constant edge: the body is the primitive shift under the generated requires. -/
+/-- A constant edge: the body is the primitive shift under the generated requires
+    (end and held list coincide up to order, decided as for stores). -/
 @[expose] def lowerShiftAt (u : UProg) (c : Fin u.fns.length) (tr : UTransition) :
     Except String (EnsTy u c × RumpTy u c × ReqTy u c) :=
   match tr.writes with
@@ -237,11 +238,21 @@ theorem transitionEnsEq (u : UProg) (c : Fin u.fns.length) (hn : (declOf u).erg 
       | .error e => .error e
       | .ok clause =>
         if hn : (declOf u).erg c = none then
-          .ok (transCast (transitionEnsEq u c hn).symm (transitionEnsures [edge.write]),
-            transCast (transitionRumpEq u c).symm
-              (Endblock.cons edge.statement
-                (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))),
-            transCast (transitionReqEq u c).symm (transitionRequires [edge.write] clause))
+          if hE : decide ((vertragVon (declOf u) c).ende = resOf u c) = true then
+            if hPerm : decide ((resOf u c).Perm (vertragVon (declOf u) c).ende) = true then
+              have hcast : Expr (declOf u) (ctxOf u c) (resOf u c) .bool = EnsTy u c := by
+                have hE' := of_decide_eq_true hE
+                unfold EnsTy
+                rw [hn]
+                simp only [ErgCtx]
+                rw [hE', ctxParams_eq u c]
+              .ok (transCast hcast (transitionEnsures [edge.write]),
+                transCast (transitionRumpEq u c).symm
+                  (Endblock.cons edge.statement
+                    (transitionReturn (vertragVon (declOf u) c) hn (of_decide_eq_true hPerm))),
+                transCast (transitionReqEq u c).symm (transitionRequires [edge.write] clause))
+            else .error "transition function changes held marks"
+          else .error "transition function changes held marks"
         else .error "transition function has a result"
   | _ => .error "constant transition edge expected"
 

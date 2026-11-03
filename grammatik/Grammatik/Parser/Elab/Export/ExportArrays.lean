@@ -96,10 +96,10 @@ theorem array_traversal_lower {loop : Bool} (u : UProg) (caller : Fin u.fns.leng
     (outer : lowEns u Γ Λ fn none invariant = .ok condition)
     (inside : lowSeqL (l := true) u caller (.index ((declOf u).count carrier.table) :: Γ)
       (fn.mitTy binder (.index ((declOf u).count carrier.table))) fuel Λ top rest =
-        .ok (body, .blkEnd :: remaining)) :
+        .ok (⟨Λ, body⟩, .blkEnd :: remaining)) :
     lowStructL (l := loop) u caller Γ fn (fuel + 1) Λ top (.arrayLoopBeg binder source invariant) rest =
-      .ok (.traverse carrier.table condition body, remaining) := by
-  simp only [lowStructL_succ, lowStructStep, lowStufe_seq, gate, value, iterator, outer, inside, bind, Except.bind, pure, Except.pure]
+      .ok (⟨Λ, .traverse carrier.table condition body⟩, remaining) := by
+  simp only [lowStructL_succ, lowStructStep, lowStufe_seq, gate, value, iterator, outer, inside, bind, Except.bind, pure, Except.pure, dif_pos]
 
 /-- Traversal is the existing G finite-index loop. Invariant checks, leave/next/return,
     call logs and resource effects are carried by the existing traverseLauf semantics. -/
