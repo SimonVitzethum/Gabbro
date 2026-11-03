@@ -72,14 +72,30 @@ def storeOnly : String :=
 
 theorem write_only_store_ok : stufe storeOnly = "OK" := by decide +kernel
 
-/-- C12: `own@Marke` resolves against the declared `linear` mark past export.
-    The source gates admit the owned capability; the lowering still refuses the
-    dereference by name: the model has no owned-access rule yet, and the body
-    holds no owner mark (`darf` over the `.inr` guard fails) -- the C09 owner
-    flow and its machine rule come later. -/
+/-- C12: a function borrowing an owner-guarded table reads and writes through
+    its `own@Marke` capability and returns the mark: the `borrows Marke` loan
+    holds the mark for the call (`OwnerFlow.loans`), `thruOwn`/`assignThruOwn`
+    lower on the underlying table exactly like `thru`/`assignThru`, and the
+    loan comes back at return (`Vertrag.ende`). -/
 def ownAtMarke : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, borrows Marke } { r.slots[i].b = true; return r.slots[i].b; } }"
+theorem ownAtMarke_borrow_ok : stufe ownAtMarke = "OK" := by
+  decide +kernel
+
+/-- C12: the same access without the loan is refused: the owner guard is not
+    held, so the lowering finds no guard (`darf` over the `.inr` entry). -/
+def ownAtMarkeOhneLeiht : String :=
   "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
-theorem ownAtMarke_refused : stufe ownAtMarke = "lower: place without G form" := by
+theorem ownAtMarke_ohneLeiht_refused :
+    stufe ownAtMarkeOhneLeiht = "lower: access without held guard" := by
+  decide +kernel
+
+/-- C12: borrowing a mark no table owns is refused by name: a call-scoped
+    loan is only an owner handback, never a mint. -/
+def ownAtMarkeFremdLeiht : String :=
+  "module m { linear type Marke; linear type Fremd; table T count 2 owner Marke { slot { b : bool, } } impl fn u(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, borrows Fremd } { r.slots[i].b = true; return r.slots[i].b; } }"
+theorem ownAtMarke_fremdLeiht_refused :
+    stufe ownAtMarkeFremdLeiht = "elab: loan without owner: Fremd" := by
   decide +kernel
 
 /-- C12: a table `owner M` where `M` is no declared linear mark is refused by name.
