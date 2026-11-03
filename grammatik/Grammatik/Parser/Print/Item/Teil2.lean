@@ -228,8 +228,9 @@ def druckItem : SItemTief → List Token
   | .trustT n m a [] "" "" (some service) =>
     [.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a,
       .wort "via", nameTok service, .zeichen ";"]
-  | .trustT n m a ri st g _ =>
-    ([.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a, .zeichen "{",
+  | .trustT n m a ri st g service =>
+    ([.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a] ++
+      (match service with | some s => [.wort "via", nameTok s] | none => []) ++ [.zeichen "{",
       .wort "regs", .wort "in", .zeichen "{"] ++ druckRegBinds ri ++
       [.zeichen "}", .wort "stack", nameTok st, .wort "assume", nameTok g, .zeichen ";", .zeichen "}"])
   | .profT bedarf es =>
