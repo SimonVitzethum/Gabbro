@@ -322,7 +322,7 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - Stage 0 still refuses C01 `prod` and `prodSet`; `prodGet` lowering is in progress.
 - Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
 - C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
-- C15: core query wired at model level (Kernzelle/KernAbfrage Gestalt/Herkunft/Treue, Verbunden, two-core add fixture with identity/refusal witnesses); open next: accumulator-use export (per-core update, quiescent observation), concurrency proofs, admission link (exporter still refuses uses).
+- C15: per-core accumulator uses elaborate to guarded update/fold bodies whose `add`/`or`/`and` overflow stops with `Logik.kapazitaet` (required narrowing, never a dropped contribution or a neutral restart); admission and link Bools carry the connected core query (`qs`/`aqs` default to `[]`, shadowing refused). Open: the hardware provenance of the generated core-query axiom through elaboration (`declOf` leaves `axHerkunft`/`axBeleg` at `none`, so no elaborated program satisfies `KernAbfrageHerkunft`).
 - C09: escrow call/return theorem witnesses still need a concrete machine fixture with a push and a return.
 - C16/C02 round-3 work remains open. Compact implementation inventory (16 items, grouped from the designs in `IR-COMPILATION-LANES.md`):
   1. C02 lossless library-call arguments and region tokens.

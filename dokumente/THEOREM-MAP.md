@@ -5975,3 +5975,26 @@ On `c15-uses` (`449dfc4da`, `45c111c1b`, `f3bc0e686`); model extension, `Spec.le
 * **`qN0_abgelehnt`**: `N = 0` is refused (no `Fin 0` core).
 * **`qFalscherKern_abgelehnt`**: A wrong core identity is refused (thread `0` answering `1`).
 * **`qAusserhalb_abgelehnt`**: An out-of-range answer is refused (`5` outside `0 .. 1`).
+
+## 133. C15: required-narrow overflow and the generated use bodies (2026-11-03)
+
+On `c15-uses` (`0dfcd6009`, `7d036940a`, `a1e1ff839`, `bf18b55fa`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Lead decisions: an overflowing merge stops with `Logik.kapazitaet` (no silent drop, no neutral restart); shadowing an accumulator name stays refused (`uAkkuKeinSchatten`, `akkuSchatten_abgelehnt`); the checker/link Bools default the query list to `[]` (`Akzeptiert.aqs`, `Verbund.qs`: an unbound query is refused, never accepted).
+
+`SAnw.trimReq` (`grammatik/Grammatik/Parser/Stmt/Anweisung/Kopf.lean`, generated only, no source syntax; the printer emits a form the parser refuses) elaborates to `UStmt.narrowReqBeg` (`grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil10.lean`) and lowers to `Block/Endblock.narrowRequired` in the sequence, end-block and fueled lowerers (`grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/{Seq,Ende,Rest1}.lean`); the block reader and the 104 lowering refuse the marker like `narrowBeg`. Carried through equality, printing, kind words, name resolution, call/binder scans, const substitution, the census, the export gate and the accumulator mention scan/expansion.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Akku/Erzeuge.lean`:
+
+* **`uAkkuAktArm`/`uAkkuFaltSchritt`**: For arbitrary `p : AkkuPlan`, `lo hi : Int`, `op : String`, `i : Nat`, the generated `add`/`or`/`and` arm binds the merge into `s<i>` and narrows it required to `lo .. hi` before the store; `max`/`min` select one operand without a check, as before.
+* **`akkuAktArm_zeuge`**: The `add` update arm over `0 .. 255` is the locked merge into `s0`, `trimReq s0` to `0 .. 255`, then the store.
+* **`akkuFaltSchritt_zeuge`**: The `add` fold step over `0 .. 255` is the locked accumulation into `s0`, `trimReq s0` to `0 .. 255`, then the move to `m`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/Operator.lean`:
+
+* **`maxMergeImBereich`**, **`minMergeImBereich`**, **`addMergeSchritt`**, **`orMergeWeite`**, **`andMergeSchranke`**: The five merge range duties are kept; the checked ones are now required-narrowing (`trimReq`) duties of the update and the fold.
+* **`narrowRequiredAusserhalb`**: For arbitrary `O : Orakel D`, `passes : Nat`, `R`, `e : Expr D Γ Λ (.int lo hi)`, `rest`, `σ : World D`, `ρ : Env D Γ`, assuming `h : ¬ (lo' ≤ (eval …).n ∧ (eval …).n ≤ hi')`, the conclusion is `execBlock O passes R (Block.narrowRequired e lo' hi' rest) σ ρ = .logik .kapazitaet`.
+
+`grammatik/Grammatik/Bausteine/Kernzelle/KernAbfrageZeuge.lean`:
+
+* **`akkuUeberlaufStoppt_zeuge`**: On the two-core `add` fixture, merging `100` into a cell holding `200` leaves `0 .. 255`, so the required narrowing to the cell range is the capacity stop for every world, environment and continuation.
+
+Open: the hardware provenance of the generated core-query axiom through elaboration (`declOf` leaves `axHerkunft`/`axBeleg` at `none`, so no elaborated program can satisfy `KernAbfrageHerkunft`).
