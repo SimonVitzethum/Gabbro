@@ -6,6 +6,7 @@ public import Stage0.Senke.Gleit.RoutineBounds
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
+variable [Runner.IR.Kern]
 
 /-- Saturating alignment repeats producers but uses a bounded scratch suffix.
     This counts the existing quotient and sticky fragments without expansion
@@ -73,8 +74,12 @@ theorem routineAlignL_emission
     FloatEmission (fun d => routineAlignL d a b)
       (67 * na + 67 * nb + 1613) (2 * wa + 2 * wb + 40) := by
   let order := routineLessL_emission (routineMagnitudeL_emission ha) (routineMagnitudeL_emission hb)
-  have left := routineDirectionalL_emission hb ha (by omega)
-  have right := routineDirectionalL_emission ha hb (by omega)
+  have left : FloatEmission (fun d => routineDirectionalL d b a)
+      (27 * nb + 39 * na + 787) (wb + 2 * wa + 40) :=
+    routineDirectionalL_emission hb ha (by omega)
+  have right : FloatEmission (fun d => routineDirectionalL d a b)
+      (27 * na + 39 * nb + 787) (wa + 2 * wb + 40) :=
+    routineDirectionalL_emission ha hb (by omega)
   exact FloatEmission.bounds (routineChooseL_emission order left right (by omega))
     (by omega) (by omega)
 
