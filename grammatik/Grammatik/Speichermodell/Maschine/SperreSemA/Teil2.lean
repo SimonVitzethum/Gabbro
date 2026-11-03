@@ -150,9 +150,12 @@ theorem semHA_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
   rw [semHA_dann_cons]
   show weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
       (.leave h σ (.cons i ρ)) = _
-  simp only [weiterHA, hsm, hm', hfall, if_true]
-  have hl : (leseBA A inv σm ρ).2 = true := hw
-  simp only [hl, if_true]
+  dsimp only [weiterHA, laufA, Env.tail]
+  subst hsm
+  simp only [hm', hfall, and_self, ite_true]
+  have hl : (leseBA A inv (leseA A σ Λ mass.orte) ρ).2 = true := hw
+  simp only [hl, ite_true]
+  rfl
 
 theorem semHA_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -172,7 +175,10 @@ theorem semHA_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
   rw [semHA_dann_cons]
   show weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
       (.next h σ (.cons i ρ)) = _
-  simp only [weiterHA, hsm, hm', hfall, if_true, laufA]
+  dsimp only [weiterHA, laufA, Env.tail]
+  subst hsm
+  simp only [hm', hfall, and_self, ite_true]
+  rfl
 
 theorem semHA_leaveWieder {Λ Λx : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)
