@@ -375,7 +375,7 @@ def callNames (f : UFn) : List String :=
     | .bindElse _ c _ _ => some c
     | .callInd _ c _ => some c
     | .bindCallInd _ _ c _ => some c
-    | .bindCallIndElse _ _ c _ _ => some c
+    | .bindCallIndElse _ _ c _ _ | .callIndElseBeg _ c _ _ => some c
     | _ => none
 
 /-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/
