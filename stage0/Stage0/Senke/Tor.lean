@@ -52,7 +52,7 @@ def zeroC (d : Nat) : Nat → List II
 def regsIn (n : Nat) : List (Option Nat) := (List.range 6).map fun i => if i < n then some i else none
 
 /-- A binding the lowering takes, for a gate of `n` parameters. -/
-def torGut (b : TorB) (n : Nat) : Bool := decide (n ≤ 6) && b.regs == regsIn n && lit32 b.nr
+def torGut (b : TorB) (n : Nat) : Bool := decide (n ≤ 6) && b.regs == regsIn n && (lit32 b.nr && b.resultArea.isNone)
 
 /-- The call of a gate of `n` parameters, its request block at slot `s`, the arguments' code `ca`. -/
 def torCode (nr s n : Nat) (ca : List II) : List II :=
