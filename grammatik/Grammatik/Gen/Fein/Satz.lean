@@ -292,6 +292,10 @@ theorem fzS_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ 
   | .leave (h := h) .. => by subst h; simp only [fzS]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .next (h := h) .. => by subst h; simp only [fzS]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
   | .assignSlotRef (r := i) (e := e) .. => by simp only [fzS]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc rfl (kc (kopf_frei e) rfl))) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ i rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e (kopfOk_none _) _)) all_nil))) (fzE_ok hax i)) (fzE_ok hax e))
+  | .consumeTraverse (member := member) (edge := edge) (inv := inv) (mass := mass) (body := body) .. => by simp only [fzS]; exact (all_app (all_app (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc rfl (kc rfl (kc rfl (kc rfl rfl))))) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ member rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ edge rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ inv rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ mass rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax body)) all_nil)))))) (fzE_ok hax member)) (fzE_ok hax edge)) (fzE_ok hax inv)) (fzE_ok hax mass)) (fzB_ok hax body))
+  | .retScoped (e := e) .. => by simp only [fzS]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kR_kind e _)) all_nil)) (fzR_ok hax e))
+  | .retWhyScoped  .. => by simp only [fzS]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
+  | .axiomCallElse (a := a) .. => (hax a).elim
 
 theorem fzB_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : (e : Block D V l Γ Λ Λ') → (fzB e).all moeglich = true
   | .nil .. => by simp only [fzB]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
@@ -313,6 +317,9 @@ theorem fzB_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ 
   | .floatLit (rest := rest) .. => by simp only [fzB]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax rest)) all_nil)) (fzB_ok hax rest))
   | .floatOf (e := e) (rest := rest) .. => by simp only [fzB]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax rest)) all_nil))) (fzE_ok hax e)) (fzB_ok hax rest))
   | .floatNarrow (e := e) (sonst := sonst) (rest := rest) .. => by simp only [fzB]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax sonst)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax rest)) all_nil)))) (fzE_ok hax e)) (fzEnd_ok hax sonst)) (fzB_ok hax rest))
+  | .narrowRequired (e := e) (rest := rest) .. => by simp only [fzB]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc rfl rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kB_kind hax rest)) all_nil))) (fzE_ok hax e)) (fzB_ok hax rest))
+  | .bindAxiomOpt (a := a) .. => (hax a).elim
+  | .bindAxiomOptElse (a := a) .. => (hax a).elim
 
 theorem fzEnd_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : (e : Endblock D V l Γ Λ) → (fzEnd e).all moeglich = true
   | .ret (e := e) .. => by simp only [fzEnd]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kR_kind e _)) all_nil)) (fzR_ok hax e))
@@ -333,6 +340,11 @@ theorem fzEnd_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {�
   | .narrow (e := e) (sonst := sonst) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax sonst)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil)))) (fzE_ok hax e)) (fzEnd_ok hax sonst)) (fzEnd_ok hax rest))
   | .exchange (neu := neu) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc (kopf_frei neu) rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ neu (kopfOk_none _) _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil))) (fzE_ok hax neu)) (fzEnd_ok hax rest))
   | .ite (c := c) (t := t) (e := e) .. => by simp only [fzEnd]; exact (all_app (all_app (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ c rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax t)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax e)) all_nil)))) (fzE_ok hax c)) (fzEnd_ok hax t)) (fzEnd_ok hax e))
+  | .narrowRequired (e := e) (rest := rest) .. => by simp only [fzEnd]; exact (all_app (all_app (all_cons (eig_ok rfl rfl rfl (kc rfl rfl)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kE_kind _ e rfl _)) (all_cons (paar_ok rfl rfl rfl rfl rfl (kEnd_kind hax rest)) all_nil))) (fzE_ok hax e)) (fzEnd_ok hax rest))
+  | .retScoped (e := e) .. => by simp only [fzEnd]; exact (all_app (all_cons (eig_ok rfl rfl rfl rfl) (all_cons (paar_ok rfl rfl rfl rfl rfl (kR_kind e _)) all_nil)) (fzR_ok hax e))
+  | .retWhyScoped  .. => by simp only [fzEnd]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)
+  | .bindAxiomOpt (a := a) .. => (hax a).elim
+  | .bindAxiomOptElse (a := a) .. => (hax a).elim
 
 theorem fzArms_ok (hax : D.Ax → False) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : (e : Arms D V l Γ Λ Λ' cs) → (fzArms e).all moeglich = true
   | .nil .. => by simp only [fzArms]; exact (all_cons (eig_ok rfl rfl rfl rfl) all_nil)

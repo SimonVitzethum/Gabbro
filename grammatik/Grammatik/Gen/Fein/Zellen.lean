@@ -164,6 +164,10 @@ def kS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .assignSlotRef .. => 27
   | .callIndElse .. => 28
   | .assignThruOwn .. => 29
+  | .consumeTraverse .. => 30
+  | .retScoped .. => 31
+  | .retWhyScoped .. => 32
+  | .axiomCallElse .. => 33
 
 def kB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
   | .nil .. => 0
@@ -185,6 +189,9 @@ def kB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V
   | .floatOf .. => 16
   | .floatNarrow .. => 17
   | .bindCallIndElse .. => 18
+  | .narrowRequired .. => 19
+  | .bindAxiomOpt .. => 20
+  | .bindAxiomOptElse .. => 21
 
 def kEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret .. => 0
@@ -205,6 +212,11 @@ def kEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D 
   | .exchange .. => 15
   | .ite .. => 16
   | .bindCallIndElse .. => 17
+  | .narrowRequired .. => 18
+  | .retScoped .. => 19
+  | .retWhyScoped .. => 20
+  | .bindAxiomOpt .. => 21
+  | .bindAxiomOptElse .. => 22
 
 def kArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → Nat
   | .nil .. => 0
@@ -324,6 +336,10 @@ def fzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V
   | .retWhy .. => [⟨0, 4, 24, l, []⟩]
   | .leave .. => [⟨0, 4, 25, l, []⟩]
   | .next .. => [⟨0, 4, 26, l, []⟩]
+  | .consumeTraverse (member := member) (edge := edge) (inv := inv) (mass := mass) (body := body) .. => [⟨0, 4, 30, l, [tk member, tk edge, tk inv, tk mass]⟩, ⟨1, 4, 30, l, [0, 0, kE member]⟩, ⟨1, 4, 30, l, [1, 0, kE edge]⟩, ⟨1, 4, 30, l, [2, 0, kE inv]⟩, ⟨1, 4, 30, l, [3, 0, kE mass]⟩, ⟨1, 4, 30, l, [4, 5, kB body]⟩] ++ fzE member ++ fzE edge ++ fzE inv ++ fzE mass ++ fzB body
+  | .retScoped (e := e) .. => [⟨0, 4, 31, l, []⟩, ⟨1, 4, 31, l, [0, 3, kR e]⟩] ++ fzR e
+  | .retWhyScoped  .. => [⟨0, 4, 32, l, []⟩]
+  | .axiomCallElse (args := args) (err := err) .. => [⟨0, 4, 33, l, []⟩, ⟨1, 4, 33, l, [0, 2, kA args]⟩, ⟨1, 4, 33, l, [1, 6, kEnd err]⟩] ++ fzA args ++ fzEnd err
 
 def fzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → List FZelle
   | .nil .. => [⟨0, 5, 0, l, []⟩]
@@ -345,6 +361,9 @@ def fzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D 
   | .floatOf (e := e) (rest := rest) .. => [⟨0, 5, 16, l, [tk e]⟩, ⟨1, 5, 16, l, [0, 0, kE e]⟩, ⟨1, 5, 16, l, [1, 5, kB rest]⟩] ++ fzE e ++ fzB rest
   | .floatNarrow (e := e) (sonst := sonst) (rest := rest) .. => [⟨0, 5, 17, l, [tk e]⟩, ⟨1, 5, 17, l, [0, 0, kE e]⟩, ⟨1, 5, 17, l, [1, 6, kEnd sonst]⟩, ⟨1, 5, 17, l, [2, 5, kB rest]⟩] ++ fzE e ++ fzEnd sonst ++ fzB rest
   | .bindCallIndElse (p := p) (args := args) (err := err) (rest := rest) .. => [⟨0, 5, 18, l, [tk p]⟩, ⟨1, 5, 18, l, [0, 0, kE p]⟩, ⟨1, 5, 18, l, [1, 2, kA args]⟩, ⟨1, 5, 18, l, [2, 6, kEnd err]⟩, ⟨1, 5, 18, l, [3, 5, kB rest]⟩] ++ fzE p ++ fzA args ++ fzEnd err ++ fzB rest
+  | .narrowRequired (e := e) (rest := rest) .. => [⟨0, 5, 19, l, [tk e]⟩, ⟨1, 5, 19, l, [0, 0, kE e]⟩, ⟨1, 5, 19, l, [1, 5, kB rest]⟩] ++ fzE e ++ fzB rest
+  | .bindAxiomOpt (args := args) (rest := rest) .. => [⟨0, 5, 20, l, []⟩, ⟨1, 5, 20, l, [0, 2, kA args]⟩, ⟨1, 5, 20, l, [1, 5, kB rest]⟩] ++ fzA args ++ fzB rest
+  | .bindAxiomOptElse (args := args) (err := err) (rest := rest) .. => [⟨0, 5, 21, l, []⟩, ⟨1, 5, 21, l, [0, 2, kA args]⟩, ⟨1, 5, 21, l, [1, 6, kEnd err]⟩, ⟨1, 5, 21, l, [2, 5, kB rest]⟩] ++ fzA args ++ fzEnd err ++ fzB rest
 
 def fzEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → List FZelle
   | .ret (e := e) .. => [⟨0, 6, 0, l, []⟩, ⟨1, 6, 0, l, [0, 3, kR e]⟩] ++ fzR e
@@ -365,6 +384,11 @@ def fzEnd {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D
   | .exchange (neu := neu) (rest := rest) .. => [⟨0, 6, 15, l, [tk neu]⟩, ⟨1, 6, 15, l, [0, 0, kE neu]⟩, ⟨1, 6, 15, l, [1, 6, kEnd rest]⟩] ++ fzE neu ++ fzEnd rest
   | .ite (c := c) (t := t) (e := e) .. => [⟨0, 6, 16, l, [tk c]⟩, ⟨1, 6, 16, l, [0, 0, kE c]⟩, ⟨1, 6, 16, l, [1, 6, kEnd t]⟩, ⟨1, 6, 16, l, [2, 6, kEnd e]⟩] ++ fzE c ++ fzEnd t ++ fzEnd e
   | .bindCallIndElse (p := p) (args := args) (err := err) (rest := rest) .. => [⟨0, 6, 17, l, [tk p]⟩, ⟨1, 6, 17, l, [0, 0, kE p]⟩, ⟨1, 6, 17, l, [1, 2, kA args]⟩, ⟨1, 6, 17, l, [2, 6, kEnd err]⟩, ⟨1, 6, 17, l, [3, 6, kEnd rest]⟩] ++ fzE p ++ fzA args ++ fzEnd err ++ fzEnd rest
+  | .narrowRequired (e := e) (rest := rest) .. => [⟨0, 6, 18, l, [tk e]⟩, ⟨1, 6, 18, l, [0, 0, kE e]⟩, ⟨1, 6, 18, l, [1, 6, kEnd rest]⟩] ++ fzE e ++ fzEnd rest
+  | .retScoped (e := e) .. => [⟨0, 6, 19, l, []⟩, ⟨1, 6, 19, l, [0, 3, kR e]⟩] ++ fzR e
+  | .retWhyScoped  .. => [⟨0, 6, 20, l, []⟩]
+  | .bindAxiomOpt (args := args) (rest := rest) .. => [⟨0, 6, 21, l, []⟩, ⟨1, 6, 21, l, [0, 2, kA args]⟩, ⟨1, 6, 21, l, [1, 6, kEnd rest]⟩] ++ fzA args ++ fzEnd rest
+  | .bindAxiomOptElse (args := args) (err := err) (rest := rest) .. => [⟨0, 6, 22, l, []⟩, ⟨1, 6, 22, l, [0, 2, kA args]⟩, ⟨1, 6, 22, l, [1, 6, kEnd err]⟩, ⟨1, 6, 22, l, [2, 6, kEnd rest]⟩] ++ fzA args ++ fzEnd err ++ fzEnd rest
 
 def fzArms {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option Ty)} : Arms D V l Γ Λ Λ' cs → List FZelle
   | .nil .. => [⟨0, 7, 0, l, []⟩]

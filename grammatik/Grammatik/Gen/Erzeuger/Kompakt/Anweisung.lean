@@ -225,6 +225,7 @@ theorem stmtS_rep (O : Orakel V) (E : Sz (SE D Γ Λ)) (Bs : Sz (SB D V l Γ Λ)
       stm (sForever O E), Sz.mem_cast (Sz.mem_knoten <| Sz.mem_bind (Sz.mem_wahl (Aufz.annahme_mem a)) <|
         Sz.mem_bindR (mem_tyS hi) (mem_ofTy hb) <| Sz.mem_pure _) (by omega)
     · glfertig
+  | axiomCallElse => simp only [groesseStmt] at hu; omega
   | axiomCall a args hae hw hg hd hgd =>
     simp only [groesseStmt] at hu hE hB hO
     obtain ⟨args', hargs, ⟨_, _⟩⟩ := argsS_rep hE _ args (by omega)

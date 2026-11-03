@@ -128,7 +128,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
         obtain ⟨neu, hneu, -⟩ := herw
         exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOpt M t l Γ Λ _ _ e a args he hp hd hgd rest
           k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
-  | bindAxiomOptElse e a args he hr hp hd hgd err rest =>
+  | bindAxiomOptElse e a args he hp hd hgd hr err rest =>
       rcases hax : axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v | r⟩
@@ -265,6 +265,9 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
               exact Classical.byContradiction fun hno => hfrei fun g hg hLg => hno ⟨g, hg, hLg⟩
         | breaking i body => exact fort_schritt (w_breaking rfl i body rest k ρ hx)
         | traverse tb inv body => exact fort_schritt (w_dannTrav rfl tb inv body rest k ρ hx)
+        | consumeTraverse tb member edge inv bound mass body =>
+            exact fort_schritt' ⟨_, RufSchrittG.dannVerbrauch M t l Γ Λ _ tb member edge inv
+              bound mass body rest k ρ hx⟩
         | retry n bis body ueber => exact fort_schritt (w_dannRetry rfl n bis body ueber rest k ρ hx)
         | forever a inv body => exact fort_schritt (w_dannForever rfl a inv body rest k ρ hx)
         | ret e hp =>

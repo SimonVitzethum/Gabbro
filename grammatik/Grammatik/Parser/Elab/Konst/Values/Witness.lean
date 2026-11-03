@@ -1,6 +1,37 @@
 module
 public import Grammatik.Parser.Elab.Konst.ErsetzungTor
 
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
+
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst.Values.Witness
 open Uebersetze Scalar
@@ -118,7 +149,7 @@ theorem portable_call_sound_zeuge :
       ∀ σ O passes depth,
         rufAt call.function.model.program O passes (depth + 1) () σ call.args = .ok σ call.value ∧
         eval σ call.quoted.expr σ call.args = call.value := by
-  let call := (Values.checkCall optional [optional] [] [.lit 3]).toOption.get (by decide)
+  let call := (Values.checkCall optional [optional] [] [.lit 3]).toOption.get (by decide +kernel)
   refine ⟨call, by rfl, by rfl, ?_⟩
   intro σ O passes depth
   exact ⟨(call.sound σ O passes depth).1, (call.sound σ O passes depth).2.1⟩
@@ -198,7 +229,7 @@ theorem normalization_denotation_zeuge :
           (normalizeNames (locals captured.params) captured.constants call.function.source) =
           some (eval before call.function.model.body.2.2.expr after call.args).n := by
   let call := (Scalar.checkCall captured [captured] captured.constants
-    [.bin "+" (.variable "math::K") (.lit 1)]).toOption.get (by decide)
+    [.bin "+" (.variable "math::K") (.lit 1)]).toOption.get (by decide +kernel)
   exact ⟨call, by rfl, by rfl, call.normalized_denotation⟩
 
 /-- Runtime binders cannot be closed using a same-named global. -/
@@ -230,7 +261,7 @@ theorem source_meaning_normalized_zeuge :
         .ok normalized.code ∧ normalized.code.1 = .int 6 6 := by
   dsimp only
   let normalized := (normalize (D := declaration [] (.int 0 10)) (Γ := []) [] [("module::K", 5)]
-    (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide)
+    (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide +kernel)
   exact ⟨normalized, by rfl, normalized.meaning.normalized, by rfl⟩
 
 theorem integer_argument_normalized_denotation_zeuge :
@@ -242,7 +273,7 @@ theorem integer_argument_normalized_denotation_zeuge :
             (.bin "+" (.variable "module::K") (.lit 1))) =
           some (eval before argument.code.expr after .nil).n := by
   let normalized := (normalize (D := declaration [] (.int 0 10)) (Γ := []) [] [("module::K", 5)]
-    (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide)
+    (.bin "+" (.variable "module::K") (.lit 1))).toOption.get (by decide +kernel)
   let argument : IntegerArgument [] [("module::K", 5)] 0 10
       (.bin "+" (.variable "module::K") (.lit 1)) 6 :=
     ⟨normalized, 6, 6, Code.add (Code.literal 5) (Code.literal 1), by rfl, by rfl, by rfl⟩
@@ -253,7 +284,7 @@ theorem replacement_sound_zeuge :
     ∃ replacement : Replacement optional [optional] [] [.lit 3],
       checkReplacement optional [optional] [] [.lit 3] = .ok replacement ∧
       replacement.syntax = .call "Some" [.lit 3] ∧ replacement.evidence.Sound := by
-  let replacement := (checkReplacement optional [optional] [] [.lit 3]).toOption.get (by decide)
+  let replacement := (checkReplacement optional [optional] [] [.lit 3]).toOption.get (by decide +kernel)
   exact ⟨replacement, by rfl, by rfl, replacement.sound⟩
 
 /-- The production theorem derives the certificate from actual substitution success. -/
@@ -271,7 +302,7 @@ theorem reify_denotes_zeuge :
       reify [] [] 64 .bool true = .ok literal ∧ literal.syntax = .tru ∧
       ∀ before after, eval before literal.expr after .nil = true := by
   dsimp only
-  let literal := (reify (D := declaration [] .bool) (Γ := []) [] [] 64 .bool true).toOption.get (by decide)
+  let literal := (reify (D := declaration [] .bool) (Γ := []) [] [] 64 .bool true).toOption.get (by decide +kernel)
   exact ⟨literal, by rfl, by rfl, fun before after => reify_denotes literal before after .nil⟩
 
 theorem source_function_normalized_zeuge :
@@ -281,7 +312,7 @@ theorem source_function_normalized_zeuge :
         (normalizeNames (locals captured.params) captured.constants fn.source) =
           .ok ⟨_, fn.model.body.2.2⟩ := by
   let fn : Scalar.SourceFunction captured 0 20 :=
-    ((Scalar.elaborate captured).toOption.get (by decide)).2.2
+    ((Scalar.elaborate captured).toOption.get (by decide +kernel)).2.2
   exact ⟨fn, by rfl, fn.normalized⟩
 
 end Gabbro.Grammatik.Parser.Konst.Values.Witness
