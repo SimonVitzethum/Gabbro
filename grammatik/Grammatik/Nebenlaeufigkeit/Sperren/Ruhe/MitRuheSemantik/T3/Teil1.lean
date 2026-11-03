@@ -76,12 +76,11 @@ theorem execStmt_ru_assignThruOwn {V : Vertrag D}
     (ho)
     (he)
     (hg)
-    (hm)
     (hw)
     (hL)
     (σ : World D)
     (ρ : Env D Γ)
-    : execStmt O.mitRuhe passes R' (ruS (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ _) σ ρ) :=
+    : execStmt O.mitRuhe passes R' (ruS (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmt]
   rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
