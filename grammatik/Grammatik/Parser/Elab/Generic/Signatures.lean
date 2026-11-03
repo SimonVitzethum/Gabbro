@@ -10,7 +10,9 @@ open Gabbro.Grammatik.Parser.Uebersetze
 
 /-- The signature of an elaborated function (C16): the consumed/produced ordinary
     marks are the `nimmt`/`gibt` names resolved against the unit's mark table
-    (`nimmtAt`/`gibtAt`); owner flows stay empty until the C09 handoff wires them. -/
+    (`nimmtAt`/`gibtAt`); the call-scoped owner loans are the `leiht` names
+    (`leihtAt`, C12) -- the callee holds them during the call, the caller gets
+    them back on normal return. -/
 def mkSig (u : UProg) (f : UFn) :
     Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) where
   params := f.params.map (·.2)
@@ -22,6 +24,7 @@ def mkSig (u : UProg) (f : UFn) :
   konsumiert := nimmtAt u f
   produziert := gibtAt u f
   boden := f.boden
+  owner := { loans := leihtAt u f }
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
