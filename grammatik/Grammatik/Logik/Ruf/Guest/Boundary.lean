@@ -118,7 +118,7 @@ theorem admissionB_each {guests : List (GuestBoundary D)}
 /-- Admission can never silently choose an invocation service. -/
 theorem missing_service (g : GuestBoundary D) (h : g.service = none) :
     g.check = .error "entrust: missing isolation service binding" := by
-  simp [check, h]
+  simp [check, h]; rfl
 
 /-- A transfer accepted by the checker carries the actual owner resource. -/
 theorem transfer_owned {available : List (Res D)} {t : GuestTransfer D}
@@ -129,16 +129,16 @@ theorem transfer_owned {available : List (Res D)} {t : GuestTransfer D}
 /-- Guest storage must stay outside every protected live grant. The service
     proves this at each call, using the C08 live inventory, on success and
     failure. A source assumption cannot supply this proposition. -/
-def StorageDisjoint (protected guestOwned : List (Konzession D)) : Prop :=
-  ∀ p ∈ protected, ∀ g ∈ guestOwned, ¬ p.ueberschneidet g
+def StorageDisjoint (prot guestOwned : List (Konzession D)) : Prop :=
+  ∀ p ∈ prot, ∀ g ∈ guestOwned, ¬ p.ueberschneidet g
 
-def storageDisjointB (protected guestOwned : List (Konzession D)) : Bool :=
-  protected.all fun p => guestOwned.all fun g =>
+def storageDisjointB (prot guestOwned : List (Konzession D)) : Bool :=
+  prot.all fun p => guestOwned.all fun g =>
     !(decide (p.tab = g.tab) && decide (p.basis < g.basis + (g.laenge : Int)) &&
       decide (g.basis < p.basis + (p.laenge : Int)))
 
-theorem storageDisjointB_iff (protected guestOwned : List (Konzession D)) :
-    storageDisjointB protected guestOwned = true ↔ StorageDisjoint protected guestOwned := by
+theorem storageDisjointB_iff (prot guestOwned : List (Konzession D)) :
+    storageDisjointB prot guestOwned = true ↔ StorageDisjoint prot guestOwned := by
   simp [storageDisjointB, StorageDisjoint, Konzession.ueberschneidet,
     List.all_eq_true, Bool.and_eq_true]
 
