@@ -14,7 +14,8 @@ def foldFloatType (ctx : UCtx) (side : USide) : Option Ty :=
       | .slot base _ _ =>
         (ctx.names.findIdx? (strEq · base)).bind fun j =>
           match ctx.kinds[j]? with
-          | some (.ptr (.table number _ _)) => (ctx.tabs[number]?).map (·.name)
+          | some (.ptr ⟨_, ⟨_, _, none⟩, .table number⟩) =>
+            (ctx.tabs[number]?).map (fun (entry : UTab) => entry.name)
           | _ => none
       | _ => some table
     let table ← table
@@ -27,27 +28,27 @@ def foldFloatType (ctx : UCtx) (side : USide) : Option Ty :=
 def foldFloatValue : Nat → UCtx → String → Nat → SExpr →
     Except String (List UStmt × Nat × USide)
   | 0, _, _, _, _ => .error "fold: float expression nesting limit"
-  | _ + 1, _, prefix, serial, .lit number =>
-    let name := prefix ++ toString serial
+  | _ + 1, _, stem, serial, .lit number =>
+    let name := stem ++ toString serial
     .ok ([.floatLit name (number, 1) (-uFloatLimit, 1) (uFloatLimit, 1)], serial + 1, .param name)
-  | _ + 1, _, prefix, serial, .float text => do
+  | _ + 1, _, stem, serial, .float text => do
     let rational ← uFloatRational text
-    let name := prefix ++ toString serial
+    let name := stem ++ toString serial
     pure ([.floatLit name rational (-uFloatLimit, 1) (uFloatLimit, 1)], serial + 1, .param name)
-  | fuel + 1, ctx, prefix, serial, .bin operator left right => do
+  | fuel + 1, ctx, stem, serial, .bin operator left right => do
     let op ← match operator with
       | "+" => pure GleitOp.add | "-" => pure GleitOp.sub
       | "*" => pure GleitOp.mul | "/" => pure GleitOp.div
       | _ => throw "fold: unsupported float operator"
-    let (before, serial, left) ← foldFloatValue fuel ctx prefix serial left
-    let (after, serial, right) ← foldFloatValue fuel ctx prefix serial right
-    let name := prefix ++ toString serial
+    let (before, serial, left) ← foldFloatValue fuel ctx stem serial left
+    let (after, serial, right) ← foldFloatValue fuel ctx stem serial right
+    let name := stem ++ toString serial
     pure (before ++ after ++ [.float name op left right (-uFloatLimit, 1) (uFloatLimit, 1)],
       serial + 1, .param name)
-  | fuel + 1, ctx, prefix, serial, .un "-" value => do
-    let (code, serial, value) ← foldFloatValue fuel ctx prefix serial value
-    let factor := prefix ++ toString serial
-    let name := prefix ++ toString (serial + 1)
+  | fuel + 1, ctx, stem, serial, .un "-" value => do
+    let (code, serial, value) ← foldFloatValue fuel ctx stem serial value
+    let factor := stem ++ toString serial
+    let name := stem ++ toString (serial + 1)
     pure (code ++ [.floatLit factor (-1, 1) (-uFloatLimit, 1) (uFloatLimit, 1),
       .float name .mul value (.param factor) (-uFloatLimit, 1) (uFloatLimit, 1)],
       serial + 2, .param name)
