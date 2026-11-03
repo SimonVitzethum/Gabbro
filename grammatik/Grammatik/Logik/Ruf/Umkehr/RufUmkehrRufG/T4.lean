@@ -389,7 +389,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hb.gleit_inv ho (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_gleit O passes R op a b lo hi rest k _ _ v hv)
-    | dannGleitLit l2 Γ2 Λ2 Λ2' q lo hi rest k ρ2 hhead v hv =>
+    | dannGleitLit _ _ l2 Γ2 Λ2 Λ2' q lo hi rest k ρ2 hhead v hv =>
       umkehr_head
       obtain ⟨⟨_, hb⟩, ho, hk⟩ := hcov.dann_inv
       simp only [Block.kOk, Stmt.kOk, Endblock.kOk, Bool.and_eq_true] at ho

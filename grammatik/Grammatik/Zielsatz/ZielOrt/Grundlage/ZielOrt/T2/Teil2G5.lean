@@ -14,8 +14,9 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
     registers, `exchange`, floats and the foreign calls `dannBindAxiom*`).
     Same statement as `schritt_traeger`, specialised to group 5 so that
     `ZielOrt/T2/Teil2.lean` stays below the file-size limit. Every `cases`
-    pattern below names the constructor's explicit fields in source order;
-    the machine and thread indices (`M`, `f`) are not pattern binders. The C08 generalized foreign calls (`dannBindAxiomOpt`,
+    pattern below starts with `_ _`: the first two pattern names bind the
+    machine and thread fields (`M`, `f`); the rest name the fields in source
+    order. The C08 generalized foreign calls (`dannBindAxiomOpt`,
     `dannBindAxiomOptElseOk`, `dannBindAxiomOptElseGrund`) are proved exactly
     like their twins (`dannBindAxiom`, `dannBindAxiomElseOk`,
     `dannBindAxiomElseGrund`): the write footprint from `hd`/`hgd`, the frame
@@ -28,7 +29,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       TraegerSchreibt (M.faeden u).kopf.f c = false) :
     TraegerGleich M'.speicher M.speicher c := by
   cases hs with
-  | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+  | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
       rw [hs₂, hs₁]
       cases c with
       | inl t => rfl
@@ -47,7 +48,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
               exact Bool.false_ne_true this
           · simp only [World.storeGlob, dif_neg hgx]
             rfl
-  | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+  | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
@@ -90,7 +91,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                   exact Bool.false_ne_true this
           rw [hfr.2 x ha, hs₁]
           rfl
-  | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+  | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
@@ -133,7 +134,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                   exact Bool.false_ne_true this
           rw [hfr.2 x ha, hs₁]
           rfl
-  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+  | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
@@ -176,7 +177,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                   exact Bool.false_ne_true this
           rw [hfr.2 x ha, hs₁]
           rfl
-  | dannBindAxiomOpt l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+  | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
@@ -219,7 +220,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                   exact Bool.false_ne_true this
           rw [hfr.2 x ha, hs₁]
           rfl
-  | dannBindAxiomOptElseOk l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+  | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this
@@ -262,7 +263,7 @@ theorem schritt_traeger_g5 (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
                   exact Bool.false_ne_true this
           rw [hfr.2 x ha, hs₁]
           rfl
-  | dannBindAxiomOptElseGrund l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+  | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a (σ₁.fragt (.inl a)) (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this

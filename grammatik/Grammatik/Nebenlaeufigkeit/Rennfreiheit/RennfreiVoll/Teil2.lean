@@ -288,11 +288,11 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         delta_axiom axiomAntwortSonst
   | g7 hs =>
     cases hs with
-    | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+    | dannVerbrauch _ _ l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
         simp only [rufUpdateG_self]
         left
         exact zugriffsDelta_refl _
-    | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+    | verbrauchWeiter _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
         simp only [rufUpdateG_self]
         subst hs₁; subst hs₂; subst hs₃
         left
@@ -318,7 +318,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           · rcases List.mem_append.mp hm with hm | hm
             · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
             · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
-    | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+    | verbrauchLeer _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
         simp only [rufUpdateG_self]
         subst hs₁; subst hs₂
         left
@@ -337,12 +337,12 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           rcases List.mem_append.mp hm with hm | hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
-    | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+    | verbrauchFort _ _ l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
         simp only [rufUpdateG_self]
         subst hs₁
         left
         exact zugriffsDelta_lese _ _ _ mass.orte_darf (heldIn_weltVon hΛ)
-    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
+    | dannLeaveVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
         simp only [rufUpdateG_self]
         subst hsm; subst hs₁
         left
@@ -360,7 +360,7 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
           rcases List.mem_append.mp hm with hm | hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
           · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
-    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
+    | dannNextVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
         simp only [rufUpdateG_self]
         subst hsm
         left
