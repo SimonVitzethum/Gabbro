@@ -34,6 +34,9 @@ public import Grammatik.Logik.Ruf.Adaequat.RufAdaequatG.T2
 
 namespace Gabbro.Grammatik.Zielsatz.KernMaskeFix
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz
+
+instance (m : Bool) : DecidableEq (wD m).Ax := inferInstanceAs (DecidableEq Empty)
+
 /-- A step of thread 1 (not a handler) is a guarded step, and the handler stays unbegun. -/
 theorem w_schritt1 (m : Bool) {Z : KernZ (wD m)} {M' : RufMaschineG (wD m)}
     (hnb : ¬ Z.begonnen 0) (hs : RufSchrittG (wP m) (wO m) 0 Z.m 1 M') :

@@ -37,7 +37,7 @@ open Zielsatz
 
 section Flaggschiffe
 
-variable {D : Deklaration} [DecidableEq D.Fn]
+variable {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax]
 
 /-- **`ziel_ort_mehrfaden_ende` from `Akzeptiert`**: the checker's Bool and
     an admitted start replace every decidable premise; the call graphs are
@@ -82,6 +82,7 @@ theorem akzeptiert_rennfrei {P : Programm D} {O : Orakel D} {passes : Nat} {S : 
     (M : RufMaschineG D) : RennfreiBis P O passes (RufStartG P sp init) M :=
   rennfreiBis_of hvoll (akzeptiertSpec_of hvoll hls hcs [] hA) hZ hO passes M
 
+omit [DecidableEq D.Ax] in
 /-- **`frame_schritte_beschraenkt`** for a function admitted at call depth
     `n + 1`. The time premise is no longer a component of `Akzeptiert`
     (it refused every recursive or indirect program); Spec's `ZeitAb` is
@@ -96,6 +97,8 @@ theorem akzeptiert_zeit {P : Programm D} (n : Nat) (O : Orakel D) (passes : Nat)
 end Flaggschiffe
 
 /-! ## 2. The two-thread fixture `mP` -/
+
+instance : DecidableEq mD.Ax := inferInstanceAs (DecidableEq Empty)
 
 theorem mLocks_voll : ∀ L : mD.Lock, L ∈ ([()] : List mD.Lock) := fun L => by
   cases L; exact List.mem_singleton_self _
@@ -305,6 +308,7 @@ def akD : Deklaration where
   ggeteilt_bewacht := fun e => (nomatch e)
 
 instance : DecidableEq akD.Fn := inferInstanceAs (DecidableEq AkFn)
+instance : DecidableEq akD.Ax := inferInstanceAs (DecidableEq Empty)
 
 def akA : akD.Fn := AkFn.a
 def akB : akD.Fn := AkFn.b
