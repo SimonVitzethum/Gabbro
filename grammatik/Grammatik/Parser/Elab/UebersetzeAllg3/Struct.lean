@@ -44,7 +44,8 @@ def lowConsumingEffects (u : UProg) (fn : UFn) (table : String) (effects : List 
 def lowConsumingMass (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (fn : UFn) (source : USide) :
     Except String (Σ bound : Int, Expr (declOf u) Γ Λ (.int 0 bound)) := do
-  let mass ← (lowSideVal u Γ Λ fn source).mapError ("consuming traversal decreases: " ++ ·)
+  if seiteAltErg source then throw "consuming traversal decreases cannot read old or result"
+  let mass ← (lowSeiteZ u Γ Λ fn none source).mapError ("consuming traversal decreases: " ++ ·)
   if lower : 0 ≤ mass.range.1 then
     pure ⟨mass.range.2, Expr.widen lower (Int.le_refl _) mass.term⟩
   else throw "consuming traversal decreases must have a nonnegative range"
