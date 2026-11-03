@@ -34,11 +34,12 @@ theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi
       cases hp
       simp [uTyp, uTypIn, hl, hu]
 
-/-- The current canonical const evaluator has no contract/effect interpreter. Only pure effects
-    and declared costs may accompany a newly extracted body; logical contracts need a proved call rule. -/
+/-- Predicate clauses are evaluated by the canonical evaluator and certified against
+    machine G at source call substitution. Effects must remain pure. -/
 def evaluationClauses (clauses : List SKlausel) : Bool :=
   clauses.all fun
     | .effs effects => effects.all fun | .pure => true | _ => false
+    | .needs _ | .gives _ => true
     | .cost _ => true
     | _ => false
 
