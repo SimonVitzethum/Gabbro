@@ -154,7 +154,8 @@ def uOldRecord : USide → Except String USide
   | .field base name => (uOldRecord base).map (.field · name)
   | _ => .error "source export: old record requires a containing carrier"
 
-private theorem recordField_sizeOf_lt (fields : List (Ty × USide)) (field : Ty × USide)
+/-- A declared field's source value is smaller than the actual containing field list. -/
+theorem recordField_sizeOf_lt (fields : List (Ty × USide)) (field : Ty × USide)
     (member : field ∈ fields) : sizeOf field.2 < sizeOf fields := by
   rcases field with ⟨ty, side⟩
   have component : sizeOf side < sizeOf (ty, side) := by simp +arith

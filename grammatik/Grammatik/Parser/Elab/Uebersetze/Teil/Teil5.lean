@@ -196,12 +196,19 @@ def seiteAltErg : USide → Bool
   | .zaehleFeld a _ b => seiteAltErg a || ensAltErg b
   | .taggedValue _ _ a | .typed _ a | .len a | .present _ a => seiteAltErg a
   | .arrCons a b | .idx a b => seiteAltErg a || seiteAltErg b
-  | .product _ _ fields => fields.any (fun (_, side) => seiteAltErg side)
+  | .product _ _ fields => fields.any (fun field => seiteAltErg field.2)
   | .field a _ => seiteAltErg a
   | .replace a _ b => seiteAltErg a || seiteAltErg b
   | .upd a i v => seiteAltErg a || seiteAltErg i || seiteAltErg v
   | .predicate p => ensAltErg p
   | _ => false
+termination_by side => sizeOf side
+decreasing_by
+  all_goals simp_wf at *
+  all_goals first
+    | omega
+    | have smaller := recordField_sizeOf_lt _ _ ‹_ ∈ _›
+      omega
 
 /-- `old(..)` or `result` inside a predicate. -/
 def ensAltErg : UEns → Bool
@@ -212,4 +219,8 @@ def ensAltErg : UEns → Bool
   | .arrayElements _ source _ b => seiteAltErg source || ensAltErg b
   | .ergB => true
   | _ => false
+termination_by predicate => sizeOf predicate
+decreasing_by
+  all_goals simp_wf at *
+  all_goals omega
 end
