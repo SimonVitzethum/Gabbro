@@ -155,7 +155,7 @@ def elabKopf (_consts : List (String × Int))
               -- it inside the body, and an access whose guard is not held is refused by the LOWERING
               -- (`access without held guard`), so nothing is claimed here.
               let puts := uEindeutig eff.puts
-              let kopf := { kopf with gputs := uEindeutig eff.gputs, nimmt := uEindeutig eff.nimmt, gibt := uEindeutig eff.gibt }
+              let kopf := { kopf with gputs := uEindeutig eff.gputs, nimmt := uEindeutig eff.nimmt, gibt := uEindeutig eff.gibt, leiht := uEindeutig eff.leiht }
               match res with
               | .none => .ok (kopf, puts)
               | .some (.atom "bool") =>
