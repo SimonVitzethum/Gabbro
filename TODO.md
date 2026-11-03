@@ -620,7 +620,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Block.check` | skipped: no standalone surface statement in `SAnw` or `parseStmt` (`Parser/Stmt/Anweisung/Kopf.lean:95`, `Defs2a.lean:92`); C16 `check` is an item | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | no standalone source check syntax; format-field checks are not a statement producer |
 | `Block.float` | yes J/Seq:78 | yes A:330, software IEEE add/sub/mul/div | `lowB_ok`, P:221 | recursive values/range/code guards; stale TODO claim that this constructor is wholly refused is superseded |
 | `Block.floatLit` | yes J/Seq:73 | yes A:211, `floatLiteralL` | `lowB_ok`, P:225 | kernel-rounded binary64 value and range |
-| `Block.floatOf` | skipped: no integer-to-float surface conversion in the Lean parser (`Parser/Expr/Ausdruck/Teil2a.lean:110`–`:280`); `as f64` is absent from SYNTAX.md | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | no parser conversion to export; computed conversion helper's supported integer representation |
+| `Block.floatOf` | added, UNCHECKED: documented `f32(n)` / `f64(n)` parse as calls; U8 `uBindWert` retains the operand and declared float range; `J/Seq` emits `Block.floatOf` | yes A:213, literal or computed conversion | `lowB_ok`, P:227; exporter `lowSeqStep_floatOf` | integer operand required; closed rational target ranges supported, exclusive float upper bounds refused by name; canonical `Endblock.floatOf` absent; both source widths retain the existing binary64 model; computed source-text witnesses await lead checking |
 | `Block.floatNarrow` | added, UNCHECKED: `narrow x to finite else { ... }` in continuing blocks; `U8` `uNarrowKopf`, `J/Seq` float arm | yes A:202, range/fallback | `lowB_ok`, P:229; exporter `lowSeqStep_floatNarrow` | fractional ranges and end-block narrowing remain refused; no canonical Endblock float-narrow constructor; NaN endpoints lower the fallback |
 | `Block.narrowRequired` | yes J/Seq:200; arena expansion too | partial A:240 | `lowB_ok`, P:217 | A:245: `else none` unless signed-word input/bounds; failed runtime capacity stops 107 |
 | `Block.bindAxiomOpt` | yes J/Seq:154 | yes A:251/:256, some/VOID result | `lowB_ok`, P:197 | non-VOID answers still pass `chkC`; gate restrictions |
@@ -655,7 +655,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Ty.sum cs` | yes named tagged schemas, G5:51/:60 | L:40; packed scalar or tag/payload word spans V:30 | `encodeWords_length`, `lowE_ok` arms `var`/`case`, `lowS_ok` arm `onTag` | L:20: `\| some _ => false`; `sumFits`: ≤256 cases and integer payload span <2^56; general introduction/match absent |
 | `Ty.why n` | yes U5R:128, H2:167 | arbitrary-width reason value, V:27 | `encodeWords_length`, `lowE_ok` arm `why`, generic return arms | reason match still requires `n < 2^31`; gate reason maps require one-word channel |
 | `Ty.never` | yes U5R:133, U6:164 | no inhabited value (V:40: `nomatch v`); foreign result checker emits stop T:165 | `encodeWords_length` empty case; generic axiom/return proof | not a materializable value; no extra syntax case counted |
-| `Ty.fl lo hi` | yes U3:98 (`f32`/`f64` map to `uFloatTy`) | binary64 bits V:38; software arithmetic A:330 | `lowE_ok` arms `fllt`/`flle`, `lowB_ok` arm `float`, `blockFloatArithmetic_case` | this inventory does not establish a separate binary32 execution path; top-level source float model gap below |
+| `Ty.fl lo hi` | yes U3:98 (`f32`/`f64` map to `uFloatTy`); closed rational `in` ranges added, UNCHECKED | binary64 bits V:38; software arithmetic A:330 | `lowE_ok` arms `fllt`/`flle`, `lowB_ok` arm `float`, `blockFloatArithmetic_case` | this inventory does not establish a separate binary32 execution path; top-level source float model gap below |
 | `Ty.fnptr sig` | yes U5R:151, J/Seq:205 | address V:29; ordinary/indirect call ABI | `lowE_ok` arm `fnref`, `lowS_ok`/`lowB_ok`/`lowEnd_ok` indirect arms | E:195: `else none` for non-`lit32` function address |
 | `Ty.ptr cap` | yes U3:120–127; table capabilities only, resolved owner/space | ghost zero V:39; accesses name resolved table | `lowE_ok` arms `ptrOf`/`thru`; ordinary copied-value proofs | owned access arms missing; live byte capability refused U3:121/:127; `DataTarget` has only `table` (`Typen/DataCap.lean:11`) |
 | `Ty.ref t` | yes U3:118; provider result U5R:132 | cell number V:28; `slotRef`/`assignSlotRef`/`refEq` | corresponding `lowE_ok`/`lowS_ok` arms, with `ValueValid` | provider answer cannot enter through `bindAxiom`: T:166 `\| _, _ => none` in `chkC`; type encoding alone is not a connected allocator |
@@ -704,9 +704,9 @@ listed above, not counted as extra constructors):
   forms still lack a canonical form: live byte capabilities (`DataTarget` has no byte target; U3:121/:127),
   and top-level/end-block float introduction/arithmetic (dangling references above). Device ASM/boot/raw
   addresses and register access/transition are outside this userspace inventory's unfinished-work count.
-- **Front end (15 otherwise lowered/proof-connected constructors):** `Expr.getBytes`;
+- **Front end (originally 15 otherwise lowered/proof-connected constructors; `floatOf` source export added, UNCHECKED):** `Expr.getBytes`;
   `Stmt.putBytes`, `breaking`, `advances`, `retires`, `consumeTraverse`, `retScoped`, `retWhyScoped`,
-  `callIndElse`; `Block.bindAxiomElse`, `check`, `floatOf`, `floatNarrow`;
+  `callIndElse`; `Block.bindAxiomElse`, `check`, `floatNarrow`;
   `Endblock.retScoped`, `retWhyScoped`. `oldG` has the Stage-0 numeric bridge, not a general canonical
   parser export. Provider-reference initialization and top-level float source compilation remain separate
   connected-path gaps even though their component constructors appear in the positive structural count.
