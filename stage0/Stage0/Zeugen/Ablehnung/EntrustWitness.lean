@@ -106,10 +106,12 @@ theorem sourceGuests_complete_zeuge :
       ∀ guest ∈ guests, guest.admittedB = true :=
   ⟨by decide +kernel, output.compiled.guest_descriptors⟩
 
+def contracts_checked : axContractsB output.compiled.unit = true := by decide +kernel
+
 theorem axVertragOf_exact_zeuge :
     lowerAxContract output.compiled.unit ⟨0, by decide +kernel⟩ =
-      .ok (axVertragOf output.compiled.unit ⟨0, by decide +kernel⟩) :=
-  axVertragOf_exact _ _ (by decide +kernel)
+      .ok (axVertragOf output.compiled.unit ⟨0, by decide +kernel⟩ contracts_checked) :=
+  axVertragOf_exact _ _ contracts_checked
 
 theorem canonical_source :
  CanonicalSourceProgram output.compiled :=
