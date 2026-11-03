@@ -282,6 +282,8 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     exact schritt_traeger_g5 hO hs c hc
   | g6 hs =>
     exact schritt_traeger_g6 hO hs c hc
+  | g7 hs =>
+    cases hs <;> exact traegerGleich_refl _ c
 
 /-- **The rely on reachable machines.** If thread `t` holds a lock `L`
     guarding `c`, a step of any other thread leaves `c` alone. -/
