@@ -1,5 +1,5 @@
 /- Arithmetic foundations: executable rounding and literal-conversion images.
-   Computed binary64 conversion is connected to the block hook; float arithmetic remains refused. -/
+   Computed binary64 conversion and addition are connected to their Block hooks. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Ausdruck.Gleit.RundCode
@@ -34,6 +34,21 @@ def hookConversion (n : Int) (expected lo hi : Int × Int) : Body :=
           (.flle (.var .here) (.var (.there .here))))
         (returnBlock 7 (by decide) (by decide))
         (returnBlock 41 (by decide) (by decide))) .nil)))
+
+/-- Compare the actual Block.add result in both directions before returning. -/
+def addition : Body :=
+  .floatLit (1, 1) (0, 1) (10, 1)
+    (.float .add (.var .here) (.var .here) (0, 1) (10, 1)
+      (.floatLit (2, 1) (0, 1) (10, 1)
+        (.cons (.ite
+          (.and (.flle (.var (.there .here)) (.var .here))
+            (.flle (.var .here) (.var (.there .here))))
+          (returnBlock 7 (by decide) (by decide))
+          (returnBlock 41 (by decide) (by decide))) .nil)))
+
+/-- The generic add candidate is accepted through the public Block hook. -/
+theorem float_add_accepted_zeuge : (blockImageOf addition).isOk = true := by
+  decide +kernel
 
 def hookImages : List (String × Except String (List Runner.B) × Nat) :=
   [("hook-float-positive", blockImageOf (hookConversion 37 (37, 1) (0, 1) (100, 1)), 7),
@@ -166,7 +181,8 @@ theorem computed_range_decisions_zeuge :
   decide +kernel
 
 def images : List (String × Except String (List Runner.B) × Nat) :=
-  [("scale-zero", scaleImage 0 0 0, 7),
+  [("float-add", blockImageOf addition, 7),
+   ("scale-zero", scaleImage 0 0 0, 7),
    ("scale-full-word", scaleImage (2^64 - 1) 0 (2^64 - 1), 7),
    ("scale-tie-odd", scaleImage 15 1 8, 7),
    ("scale-tie-even", scaleImage 13 1 6, 7),
@@ -245,9 +261,9 @@ theorem float_add_sub_model_zeuge :
     Gleitkomma.add Gleitkomma.f64 ⟨false, 2046, 2^52 - 1⟩ ⟨false, 2046, 2^52 - 1⟩ =
       ⟨false, 2047, 0⟩ := by decide +kernel
 
-/-- No operation is silently accepted while only its rounding fragment is proved. -/
+/-- Operations without a complete routine remain explicit refusals. -/
 theorem float_operations_refused_zeuge :
-    [GleitOp.add, .sub, .mul, .div].all (fun op =>
+    [GleitOp.sub, .mul, .div].all (fun op =>
       !(blockImageOf (show Body from .floatLit (1, 1) (0, 1) (10, 1)
         (.float op (.var .here) (.var .here) (0, 1) (10, 1) .nil))).isOk) = true := by
   decide +kernel
