@@ -134,37 +134,37 @@ def viaBindungFor (arch : String) (target : Option String) (items : List SItemTi
   pure binding
 
 /-- Construct the executable gate from the complete selected source binding. -/
-def torAusBindung (arch : String) (items : List SItemTief) (sc : SSyscall)
-    (b : SBind) : Except String Tor := do
+def torAusBindung (arch : String) (items : List SItemTief) (name : String)
+    (params : List (String × STyp)) (fail : Option String) (b : SBind) : Except String Tor := do
   let nummer ← match zahlAus b.id with
-    | some n => if 0 ≤ n then pure n.toNat else throw s!"gate {sc.name}: negative number"
-    | none => throw s!"gate {sc.name}: the number is not a literal"
+    | some n => if 0 ≤ n then pure n.toNat else throw s!"gate {name}: negative number"
+    | none => throw s!"gate {name}: the number is not a literal"
   let regs := (argRegs arch).map fun r =>
     b.ins.findSome? fun rb => match rb with
-      | .binds r' p => if r' == r then sc.params.findIdx? (fun q => q.1 == p) else none
+      | .binds r' p => if r' == r then params.findIdx? (fun q => q.1 == p) else none
       | .reg _ => none
-  if b.ins.length != (regs.filterMap id).length then throw s!"gate {sc.name}: a parameter in a register of no argument"
+  if b.ins.length != (regs.filterMap id).length then throw s!"gate {name}: a parameter in a register of no argument"
   if !(b.outs.all fun o => match o with | .reg r => r == antwortReg arch | _ => false) then
-    throw s!"gate {sc.name}: the answer is not in {antwortReg arch}"
-  let fehler ← match sc.fail with
-    | none => if b.codes.isEmpty then pure [] else throw s!"gate {sc.name}: errors without a reason"
+    throw s!"gate {name}: the answer is not in {antwortReg arch}"
+  let fehler ← match fail with
+    | none => if b.codes.isEmpty then pure [] else throw s!"gate {name}: errors without a reason"
     | some r =>
       match gruendeVon items r with
-      | none => throw s!"gate {sc.name}: reason {r} unknown"
+      | none => throw s!"gate {name}: reason {r} unknown"
       | some cs =>
         b.codes.mapM fun (_, n, fall) => do
           let i ← match cs.findIdx? (fun c => c.1 == fall) with
             | some i => pure i
-            | none => throw s!"gate {sc.name}: case {fall} unknown"
+            | none => throw s!"gate {name}: case {fall} unknown"
           let e ← match n with
             | some expr => match zahlAus expr with
               | some e => pure e
-              | none => throw s!"gate {sc.name}: explicit errno of {fall} is not a literal"
+              | none => throw s!"gate {name}: explicit errno of {fall} is not a literal"
             | none => match cs[i]?.bind (·.2) with
               | some e => pure e
-              | none => throw s!"gate {sc.name}: case {fall} has no errno"
+              | none => throw s!"gate {name}: case {fall} has no errno"
           pure (-e, i)
-  pure ⟨sc.name, nummer, regs, fehler⟩
+  pure ⟨name, nummer, regs, fehler⟩
 
 /-- **The gate `sc` on this machine.** -/
 def torVonFor (arch : String) (target : Option String) (items : List SItemTief) (sc : SSyscall) : Except String Tor := do
@@ -174,7 +174,7 @@ def torVonFor (arch : String) (target : Option String) (items : List SItemTief) 
       if abi != "linux" then throw s!"gate {sc.name}: ABI {abi} is not supported by the Linux runner"
       else if a == arch then pure b else throw s!"gate {sc.name} has no binding for {arch}"
     | .via v => viaBindungFor arch target items v
-  torAusBindung arch items sc b
+  torAusBindung arch items sc.name sc.params sc.fail b
 
 /-- Profile selection feeds the complete binding to gate construction; no error, register,
     number or result field is reconstructed from a name match. -/
@@ -182,15 +182,44 @@ theorem torVonFor_via (arch : String) (target : Option String) (items : List SIt
     (sc : SSyscall) (v : String) (b : SBind)
     (supported : (argRegs arch).length = 6) (way : sc.way = .via v)
     (selected : viaBindungFor arch target items v = .ok b) :
-    torVonFor arch target items sc = torAusBindung arch items sc b := by
+    torVonFor arch target items sc = torAusBindung arch items sc.name sc.params sc.fail b := by
   simp [torVonFor, supported, way, selected]
   rfl
 
-/-- The gates of a program by name. -/
-def toreVonFor (arch : String) (target : Option String) (items : List SItemTief) : Except String (List Tor) :=
-  (items.filterMap fun it => match it with
+/-- Foreign heads use the same C14 binding selection as `syscall … via name`.
+    Only transport metadata is read here; the canonical compiler has already
+    elaborated the original effects, contracts and provenance of the head. -/
+def foreignHead : SItemTief → Option (String × List (String × STyp) × Option String)
+  | .protoT signature =>
+    if signature.art == "extern" then some (signature.name, signature.params, signature.fehler) else none
+  | .axiomT name params _ _ _ _ => some (name, params, none)
+  | .pubT (.protoT signature) =>
+    if signature.art == "extern" then some (signature.name, signature.params, signature.fehler) else none
+  | .pubT (.axiomT name params _ _ _ _) => some (name, params, none)
+  | _ => none
+
+/-- Every foreign head needs an explicit selected binding. A missing binding is
+    refused with its source name, before the generic function-lowering refusal. -/
+def toreVonFor (arch : String) (target : Option String) (items : List SItemTief) : Except String (List Tor) := do
+  let syscalls ← (items.filterMap fun it => match it with
     | .callT sc => some sc
     | .pubT (.callT sc) => some sc
     | _ => none).mapM (torVonFor arch target items)
+  let foreign ← (items.filterMap foreignHead).mapM fun (name, params, fail) => do
+    if (argRegs arch).length != 6 then throw s!"unsupported gate architecture {arch}"
+    let binding ← viaBindungFor arch target items name
+    torAusBindung arch items name params fail binding
+  pure (syscalls ++ foreign)
+
+/-- The selected complete profile is the sole source of foreign transport data. -/
+theorem foreign_binding_selected (arch : String) (target : Option String)
+    (items : List SItemTief) (name : String) (params : List (String × STyp))
+    (fail : Option String) (binding : SBind)
+    (selected : viaBindungFor arch target items name = .ok binding) :
+    (do let chosen ← viaBindungFor arch target items name
+        torAusBindung arch items name params fail chosen) =
+      torAusBindung arch items name params fail binding := by
+  rw [selected]
+  rfl
 
 end Gabbro.Stage0
