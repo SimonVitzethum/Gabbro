@@ -185,6 +185,7 @@ def invocation : GuestBoundary.Invocation guest (vertragVon D ()) false [] [] []
   fallible := by decide
   failure := .ret .empty (List.Perm.refl _)
   continuation := .nil
+  caller_eq := rfl
 
 theorem invocation_lower_eq_zeuge :
     invocation.lower = .bindAxiomOptElse none false invocation.args rfl
