@@ -110,9 +110,9 @@ theorem routineLeftCountL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     {a index : Nat → Option (List II × Nat)} {av ev : Runner.W}
     (ha : WordCode (L := L) ρ W a av) (he : WordCode (L := L) ρ W index ev) :
     WordCode (L := L) ρ W (fun d => routineLeftCountL d a index) (routineLeftCountWord av ev) := by
-  have count := WordCode.bin (routineLeadingZerosL_word ha) (WordCode.const 8 (by decide))
+  have count : WordCode (L := L) ρ W _ _ := WordCode.bin (routineLeadingZerosL_word ha) (WordCode.const 8 (by decide))
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have budget := WordCode.bin he (WordCode.const 1 (by decide))
+  have budget : WordCode (L := L) ρ W _ _ := WordCode.bin he (WordCode.const 1 (by decide))
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   exact routineChooseL_ok (routineLessL_ok count budget) (fun _ => count) (fun _ => budget)
 
@@ -165,7 +165,7 @@ theorem routineLeftShiftL_exact {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
     n * 2 ^ routineLeftCount n e < 2 ^ 56 := by
   have count := routineLeftCountL_ok ha he low high ep eb
   have bounds := routineLeftCount_bounds n e low high ep
-  have shift := WordCode.bin ha count
+  have shift : WordCode (L := L) ρ W _ _ := WordCode.bin ha count
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   have exactShift : (BitVec.ofNat 64 n) <<< ((BitVec.ofNat 64 (routineLeftCount n e)).toNat % 64) =
       BitVec.ofNat 64 (n * 2 ^ routineLeftCount n e) := by

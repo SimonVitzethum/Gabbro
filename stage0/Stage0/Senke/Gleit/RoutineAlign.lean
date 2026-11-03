@@ -86,7 +86,7 @@ theorem routineSigL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     WordCode (L := L) ρ W (fun d => routineSigL d a) (routineSigWord av) := by
   have e := unpackBexpL_ok ha
   have f := unpackFracL_ok ha
-  have normal := WordCode.bin f (WordCode.konst 4503599627370496 (by decide))
+  have normal : WordCode (L := L) ρ W _ _ := WordCode.bin f (WordCode.konst 4503599627370496 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   exact routineChooseL_ok (isExpZeroL_ok e) (fun _ => f) (fun _ => normal)
 
@@ -105,14 +105,14 @@ theorem routineDirectionalL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     (hl : WordCode (L := L) ρ W large lv) (hs : WordCode (L := L) ρ W small sv) :
     WordCode (L := L) ρ W (fun d => routineDirectionalL d large small)
       (routineDirectionalWord lv sv) := by
-  have lm := WordCode.bin (routineSigL_ok hl) (WordCode.const 3 (by decide))
+  have lm : WordCode (L := L) ρ W _ _ := WordCode.bin (routineSigL_ok hl) (WordCode.const 3 (by decide))
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have ss := WordCode.bin (routineSigL_ok hs) (WordCode.const 3 (by decide))
+  have ss : WordCode (L := L) ρ W _ _ := WordCode.bin (routineSigL_ok hs) (WordCode.const 3 (by decide))
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   have gap := alignGapL_ok (routineIndexL_ok hs) (routineIndexL_ok hl)
   have sm := alignShiftL_ok ss gap
   have xor := xorSignL_ok (unpackSignL_ok hl) (unpackSignL_ok hs)
-  have same := WordCode.bin xor (WordCode.const 0 (by decide))
+  have same : WordCode (L := L) ρ W _ _ := WordCode.bin xor (WordCode.const 0 (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
   exact routineChooseL_ok same (fun _ => addMagL_ok lm sm) (fun _ => subMagL_ok lm sm)
 

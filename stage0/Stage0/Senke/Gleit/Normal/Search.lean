@@ -115,12 +115,12 @@ theorem routineTopAuxL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     have count : (BitVec.ofInt 64 (Int.ofNat (2 ^ fuel))).toNat % 64 = 2 ^ fuel := by
       change ((2 ^ fuel) % 2 ^ 64) % 64 = 2 ^ fuel
       rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
-    have shifted := WordCode.bin ha (WordCode.const _ literal)
+    have shifted : WordCode (L := L) ρ W _ _ := WordCode.bin ha (WordCode.const _ literal)
       (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
     rw [count] at shifted
-    have zero := WordCode.bin shifted (WordCode.const 0 (by decide))
+    have zero : WordCode (L := L) ρ W _ _ := WordCode.bin shifted (WordCode.const 0 (by decide))
       (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-    have high := WordCode.bin (WordCode.const _ literal) (ih shifted (by omega))
+    have high : WordCode (L := L) ρ W _ _ := WordCode.bin (WordCode.const _ literal) (ih shifted (by omega))
       (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
     exact routineChooseL_ok zero (fun _ => ih ha (by omega)) (fun _ => high)
 

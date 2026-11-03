@@ -115,17 +115,17 @@ theorem routineSpecialL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
       (routineSpecialWord av bv fv) := by
   have sa := unpackSignL_ok ha
   have sb := unpackSignL_ok hb
-  have sameSign := WordCode.bin sa sb
+  have sameSign : WordCode (L := L) ρ W _ _ := WordCode.bin sa sb
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have bothZero := WordCode.bin (routineZeroL_ok ha) (routineZeroL_ok hb)
+  have bothZero : WordCode (L := L) ρ W _ _ := WordCode.bin (routineZeroL_ok ha) (routineZeroL_ok hb)
     (g := fun x y => some (x &&& y)) rfl rfl (by decide : 8 < 256)
   rw [flagAnd] at bothZero
-  have zeroSign := WordCode.bin sa sb (g := fun x y => some (x &&& y))
+  have zeroSign : WordCode (L := L) ρ W _ _ := WordCode.bin sa sb (g := fun x y => some (x &&& y))
     rfl rfl (by decide : 8 < 256)
   have zero : WordCode (L := L) ρ W
       (fun j => some ([ci 1 j 0 0], j + 1)) 0 := WordCode.const 0 (by decide)
   have signedZero := packL_ok zeroSign zero zero
-  have nan := WordCode.konst (L := L) (ρ := ρ) (W := W)
+  have nan : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W)
     9218868437227405313 (by decide)
   have infPair := routineChooseL_ok sameSign (fun _ => ha) (fun _ => nan)
   have infLeft := routineChooseL_ok (routineInfL_ok hb) (fun _ => infPair) (fun _ => ha)
