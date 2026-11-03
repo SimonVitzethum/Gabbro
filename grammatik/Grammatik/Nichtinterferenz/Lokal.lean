@@ -91,7 +91,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only [execStmt, AusRel]
       rw [h1.eval i (alle_von hST hn.1.2) ρ, h1.eval e (alle_von hST hn.2) ρ]
       exact ⟨h1.schreibSlot _ _ _ _ _, trivial⟩
-  | assignThruOwn p t ht f i e m s ho he hg hm hw hL =>
+  | assignThruOwn p t ht f i e m s ho he hg hw hL =>
       simp only [nS, Bool.and_eq_true] at hn
       have h1 := h.lese Λ (p.orte ++ i.orte ++ e.orte)
       simp only [execStmt, AusRel]
