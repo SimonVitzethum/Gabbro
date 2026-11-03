@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Konst.Scalar.Model
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Konst.Scalar
