@@ -1,5 +1,4 @@
 /-
-public import Grammatik.Speichermodell.Atomar.AtomarLaufBasis
   File:      Grammatik/Speichermodell/AtomarLauf.lean
   Subject:   THE REPLAY WITH THE ATOMIC RELY, part 4: the replay invariant on every run of the
              machine whose SHARED atomics the weak memory answers (machine GX), and the contract
@@ -21,6 +20,7 @@ public import Grammatik.Speichermodell.Atomar.AtomarLaufBasis
   (3) the successor's memory -- again a change at shared atomics only.
 -/
 module
+public import Grammatik.Speichermodell.Atomar.AtomarLaufBasis
 public import Grammatik.Speichermodell.Atomar.AtomarAkteur
 public import Grammatik.Speichermodell.Atomar.Atomar
 @[expose] public section

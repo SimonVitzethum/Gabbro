@@ -232,8 +232,8 @@ theorem verbrauchLauf_ru (t : D.Tab)
         | none =>
             simp only [Option.map_none]
             cases b with
-            | false => simp only [ausR]
-            | true => simp only [ausR, logikR]
+            | false => simp [ausR]
+            | true => simp [ausR, logikR]
         | some v =>
             simp only [Option.map_some]
             have hmc := hm σr ρ
@@ -248,45 +248,59 @@ theorem verbrauchLauf_ru (t : D.Tab)
             | ok σ' ρ' =>
                 simp only [ausR, envR_tail]
                 have hmc' := hm σ' ρ'.tail
-                generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                have hmc'' : massW' (worldR σ') (envR ρ').tail =
+                    (worldR (massW σ' ρ'.tail).1, (massW σ' ρ'.tail).2) := by
+                  rw [envR_tail]; exact hmc'
+                erw [hmc'']
+                generalize hgm' : massW σ' ρ'.tail = mw'
                 obtain ⟨σm', m'⟩ := mw'
-                erw [hmc']
-                simp only []
+                try simp only [Bool.true_eq_false, ite_false, if_false]
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · simp only [hfall, if_true]
-                  exact verbrauchLauf_ru t schritt schritt' inv inv' sel sel'
+                · erw [if_pos hfall, if_pos hfall]
+                  have hrec := verbrauchLauf_ru t schritt schritt' inv inv' sel sel'
                     massW massW' bound hs hi hsel hm n σm' ρ'.tail
-                · simp only [hfall, if_false, ausR, logikR]
+                  first | exact hrec | (rw [← envR_tail] at hrec; exact hrec)
+                · erw [if_neg hfall, if_neg hfall]
+                  simp only [ausR, logikR]
             | next h σ' ρ' =>
                 simp only [ausR, envR_tail]
                 have hmc' := hm σ' ρ'.tail
-                generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                have hmc'' : massW' (worldR σ') (envR ρ').tail =
+                    (worldR (massW σ' ρ'.tail).1, (massW σ' ρ'.tail).2) := by
+                  rw [envR_tail]; exact hmc'
+                erw [hmc'']
+                generalize hgm' : massW σ' ρ'.tail = mw'
                 obtain ⟨σm', m'⟩ := mw'
-                erw [hmc']
-                simp only []
+                try simp only [Bool.true_eq_false, ite_false, if_false]
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · simp only [hfall, if_true]
-                  exact verbrauchLauf_ru t schritt schritt' inv inv' sel sel'
+                · erw [if_pos hfall, if_pos hfall]
+                  have hrec := verbrauchLauf_ru t schritt schritt' inv inv' sel sel'
                     massW massW' bound hs hi hsel hm n σm' ρ'.tail
-                · simp only [hfall, if_false, ausR, logikR]
+                  first | exact hrec | (rw [← envR_tail] at hrec; exact hrec)
+                · erw [if_neg hfall, if_neg hfall]
+                  simp only [ausR, logikR]
             | leave h σ' ρ' =>
                 simp only [ausR, envR_tail]
                 have hmc' := hm σ' ρ'.tail
-                generalize hgm' : massW σ' ρ'.tail = mw' at hmc' ⊢
+                have hmc'' : massW' (worldR σ') (envR ρ').tail =
+                    (worldR (massW σ' ρ'.tail).1, (massW σ' ρ'.tail).2) := by
+                  rw [envR_tail]; exact hmc'
+                erw [hmc'']
+                generalize hgm' : massW σ' ρ'.tail = mw'
                 obtain ⟨σm', m'⟩ := mw'
-                erw [hmc']
-                simp only [hi]
+                try simp only [Bool.true_eq_false, ite_false, if_false]
+                have hi'' : inv' (worldR σm') (envR ρ').tail =
+                    (worldR (inv σm' ρ'.tail).1, (inv σm' ρ'.tail).2) := by
+                  rw [envR_tail]; exact hi σm' ρ'.tail
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · simp only [hfall, if_true]
+                · erw [if_pos hfall, if_pos hfall, hi'']
                   by_cases hc' : (inv σm' ρ'.tail).2 = true
-                  · simp only [hc', if_true]
-                    rfl
-                  · have hcf : (inv σm' ρ'.tail).2 = false := by
-                      cases h' : (inv σm' ρ'.tail).2 with
-                      | false => rfl
-                      | true => exact absurd h' hc'
-                    simp only [hcf, if_false, ausR, logikR]
-                · simp only [hfall, if_false, ausR, logikR]
+                  · erw [if_pos hc', if_pos hc']
+                    first | rfl | exact congrArg (Ausgang.ok _) (envR_tail ρ') | exact congrArg (Ausgang.ok _) (envR_tail ρ').symm
+                  · erw [if_neg hc', if_neg hc']
+                    simp only [ausR, logikR]
+                · erw [if_neg hfall, if_neg hfall]
+                  simp only [ausR, logikR]
             | zurueck => rfl
             | why => rfl
             | logik => rfl
