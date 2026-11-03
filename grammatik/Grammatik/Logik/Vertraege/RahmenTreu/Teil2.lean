@@ -198,25 +198,12 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_s : s.ScopesOk := by scopes_treu
       have hscope_rest : rest.ScopesOk := by scopes_treu
       generalize hs : execStmt O passes R s σ ρ = sv at h ⊢
-      cases sv with
-      | ok σ1 ρ1 =>
-          have g1 := stmt_treu bo hbV s σ ρ hscope_s hh σ1 (by rw [hs]; rfl); rw [hs] at g1
-          exact (TreuAusgang.vorCall g1 (block_treu bo hbV rest σ1 ρ1 hscope_rest
-            (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
-      | zurueck σ1 v =>
-          simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs] using stmt_treu bo hbV s σ ρ hscope_s hh _ (by rw [hs]; rfl)
-      | why σ1 r =>
-          simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs] using stmt_treu bo hbV s σ ρ hscope_s hh _ (by rw [hs]; rfl)
-      | leave h σ1 ρ1 =>
-          simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs] using stmt_treu bo hbV s σ ρ hscope_s hh _ (by rw [hs]; rfl)
-      | next h σ1 ρ1 =>
-          simp only [Ausgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs] using stmt_treu bo hbV s σ ρ hscope_s hh _ (by rw [hs]; rfl)
-      | logik e => simp only [Ausgang.welt, reduceCtorEq] at h
-      | hardware e => simp only [Ausgang.welt, reduceCtorEq] at h
+      cases sv
+      · rename_i σ1 ρ1
+        have g1 := stmt_treu bo hbV s σ ρ hscope_s hh σ1 (by rw [hs]; rfl); rw [hs] at g1
+        exact (TreuAusgang.vorCall g1 (block_treu bo hbV rest σ1 ρ1 hscope_rest
+          (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
+      all_goals simpa only [hs] using stmt_treu bo hbV s σ ρ hscope_s hh σ' (by simpa only [hs] using h)
   | .bind e rest, σ, ρ, hscope, hh, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       have hscope_rest : rest.ScopesOk := by scopes_treu
@@ -470,25 +457,15 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hs := stmt_treu bo hbV s σ ρ hscope_s hh
       generalize hs1 : execStmt O passes R s σ ρ = sv at h ⊢
-      cases sv with
-      | ok σ1 ρ1 =>
-          have g1 := hs σ1 (by rw [hs1]; rfl); rw [hs1] at g1
-          exact (TreuEnd.vorCall g1 (end_treu bo hbV rest σ1 ρ1 hscope_rest
-            (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
-      | zurueck σ1 v =>
-          simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs1] using hs _ (by rw [hs1]; rfl)
-      | why σ1 r =>
-          simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs1] using hs _ (by rw [hs1]; rfl)
-      | leave h σ1 ρ1 =>
-          simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs1] using hs _ (by rw [hs1]; rfl)
-      | next h σ1 ρ1 =>
-          simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs1] using hs _ (by rw [hs1]; rfl)
-      | logik e => simp only [EndAusgang.welt, reduceCtorEq] at h
-      | hardware e => simp only [EndAusgang.welt, reduceCtorEq] at h
+      cases sv
+      · rename_i σ1 ρ1
+        have g1 := hs σ1 (by rw [hs1]; rfl); rw [hs1] at g1
+        exact (TreuEnd.vorCall g1 (end_treu bo hbV rest σ1 ρ1 hscope_rest
+          (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
+      all_goals first
+        | (simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
+          simpa only [hs1] using hs _ (by rw [hs1]; rfl))
+        | (simp only [EndAusgang.welt, reduceCtorEq] at h)
   | .bind e rest, σ, ρ, hscope, hh, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       have hscope_rest : rest.ScopesOk := by scopes_treu
