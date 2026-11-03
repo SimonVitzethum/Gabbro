@@ -33,7 +33,9 @@ def checkSampleType (ctx : UCtx) (expr : SExpr) : Except String Ty :=
   match uWertBody ctx expr with
   | .ok value => match foldRange ctx value with
     | some (lo, hi) => .ok (.int lo hi)
-    | none => .error "check sample has no resolved numeric interval"
+    | none => do
+      let _ ← uBool ctx expr
+      pure .bool
   | .error _ => do
     let _ ← uBool ctx expr
     pure .bool
