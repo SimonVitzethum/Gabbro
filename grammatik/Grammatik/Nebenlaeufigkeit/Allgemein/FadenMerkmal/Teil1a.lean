@@ -48,6 +48,29 @@ theorem antwortRestG_mR (g : D.Fn)
           · cases h
       | _ => cases h
 
+/-- Answering classifies as a head-local completion or a pop of the caller (feature predicate). -/
+private theorem rufAntwortG_mRcls {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z vor σ a = some z') :
+    (z'.stapel = z.stapel ∧ z'.kopf.f = z.kopf.f ∧
+      ∀ A : Merkmal D, z.kopf.rest.2.2.2.2.mR A → z'.kopf.rest.2.2.2.2.mR A) ∨
+    (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
+      z.stapel = caller :: rst ∧ z'.stapel = rst ∧ z'.kopf.f = caller.f ∧
+      ∀ A : Merkmal D, caller.rest.2.2.2.2.mR A → z'.kopf.rest.2.2.2.2.mR A) := by
+  cases hst : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hst, Option.some.injEq] at h
+      subst z'
+      exact Or.inl ⟨rfl, rfl, fun _ _ => trivial⟩
+  | cons c st =>
+      obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a c.rest = some r := by
+        cases hr : antwortRestG z.kopf.f a c.rest with
+        | none => simp [rufAntwortG, hst, hr] at h
+        | some r => exact ⟨r, rfl⟩
+      simp [rufAntwortG, hst, hr] at h
+      subst z'
+      exact Or.inr ⟨c, st, rfl, rfl, rfl, fun A hm => antwortRestG_mR _ _ _ _ hr A hm⟩
+
 set_option hygiene false in
 /-- Case (A) of `schrittMerk`: a head-local step. -/
 macro "kopfM" : tactic => `(tactic| (
@@ -299,20 +322,9 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
     | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
     | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
       simp only [rufUpdateG_self]
-      cases hs : (M.faeden f).stapel with
-      | nil =>
-          simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
-          subst z
-          exact Or.inl ⟨hs.symm, rfl, fun _ _ => trivial⟩
-      | cons caller rst =>
-          simp only [rufAntwortG, hs] at hantwort
-          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
-          | none => simp [hr] at hantwort
-          | some rest =>
-              simp [hr] at hantwort
-              subst z
-              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl, rfl,
-                fun A hm => antwortRestG_mR _ _ _ _ hr A hm⟩)
+      rcases rufAntwortG_mRcls hantwort with ⟨h1, h2, h3⟩ | ⟨c, rst, h1, h2, h3, h4⟩
+      · exact Or.inl ⟨h1, h2, fun A hm => by rw [rufUpdateG_self]; exact h3 A hm⟩
+      · exact Or.inr (Or.inr ⟨c, rst, h1, h2, h3, fun A hm => by rw [rufUpdateG_self]; exact h4 A hm⟩)
     | _ =>
       kopfM
       all_goals simp_all [GRest.mR_weiterOpt]

@@ -63,7 +63,7 @@ theorem rufAntwortG_kosten {z z' : RufFadenG D} {vor σ : World D}
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
-      exact Or.inl ⟨hst.symm, fun _ _ _ _ => ⟨rfl, rfl⟩⟩
+      exact Or.inl ⟨rfl, fun _ _ _ _ => ⟨rfl, rfl⟩⟩
   | cons caller rst =>
       obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a caller.rest = some r := by
         cases hr : antwortRestG z.kopf.f a caller.rest with
@@ -71,7 +71,7 @@ theorem rufAntwortG_kosten {z z' : RufFadenG D} {vor σ : World D}
         | some r => exact ⟨r, rfl⟩
       simp [rufAntwortG, hst, hr] at ha
       subst z'
-      exact Or.inr ⟨caller, rst, hst, rfl,
+      exact Or.inr ⟨caller, rst, rfl, rfl,
         fun c Z ZS EW => antwortRestG_kosten _ _ _ _ hr pa c Z ZS EW⟩
 
 end Gabbro.Grammatik
