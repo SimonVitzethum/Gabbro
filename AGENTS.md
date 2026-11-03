@@ -48,7 +48,11 @@ logic with explicit proof obligations, never silently a hardware assumption). Th
 own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
 the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
 (question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is
-merged. Existing safe region/reference userspace memory stays in scope as before.
+merged. Hard rules of that work (owner, 2026-11-03): there is NO `unsafe` anywhere (all low-level access is checked
+authority); boot code is user code, written in Gabbro and verified by the user under the generic theorems; the one
+exception is the x86-64 target binding, which offers a bundled, once-proved boot-stub ASM item (16→32→64-bit mode
+switch, Gabbro cannot express it) that the user includes by name; it is a checked target binding with a generic
+contract, not per-program compiler logic. Existing safe region/reference userspace memory stays in scope as before.
 Work is prioritized by completed, connected source-to-IR cases, not by the number of helper lemmas, commits or added
 lines. Cover the whole language rather than repeatedly expanding infrastructure for a small subset.
 
