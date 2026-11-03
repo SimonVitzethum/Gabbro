@@ -6064,3 +6064,54 @@ On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. 
 * **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
 
 Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.
+
+## 145. C12: owned access and call-scoped owner loans (2026-11-03)
+
+On `c12-own`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Owned access is a new pair of
+constructors at the end of each inductive (`Expr.thruOwn`, `Stmt.assignThruOwn`): the same guarded carrier as
+`thru`/`assignThru`, plus the resolved owner identity (`D.ownerNr o = some m`), the table's owner entry
+(`m ∈ D.eigner t`) and the guard at the held stage (`Sum.inr (m, s) ∈ D.braucht t`). Machine G evaluates and
+executes them exactly like the plain forms on the underlying table. The borrow/return is the C09
+`OwnerFlow.loans` shape, not `konsumiert`/`produziert`: `eigner_nie_erzeugt` is untouched (ordinary production
+still never mints an owner). A signature that `borrows m` holds `Res.marke m 0` for the call; the caller gets it
+back on normal return (`nachSig` erases and re-appends the loan identity).
+
+`grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean`, `Teil2.lean`: the two constructors with the owner
+premises. `grammatik/Grammatik/Kern/Semantik/Semantik/T1/Teil1.lean`, `T2/Teil2.lean`: `orte`/`eval`/`execStmt`
+arms identical to the plain forms. `grammatik/Grammatik/Kern/Semantik/Maschine/T1/Teil1.lean`,
+`T1/Teil3.lean`, `T9/Teil2.lean`: the machine preservation and memory-fixedness arms. `grammatik/Grammatik/Kern/Syntax/Satz/T1.lean`:
+`zeigerOwn_hat_waechter`, `zeigerOwn_schreibt_mit_recht` (same guards as the plain twins).
+
+`grammatik/Grammatik/Parser/Lex/Lexer/Teil1.lean`, `WortStellung.lean`: the `borrows` effect word (vocabulary
+249 to 250 words). `SEffekt.borrows` (constructor at the end) with parser, printer, instantiation-surface,
+name-resolution and reference arms. `UEffekte.leiht`/`UFnKopf.leiht`/`UFn.leiht` thread it to `mkSig.owner.loans`
+(`leihtAt`, owners only, `leihtAt_eigner`/`leihtAt_stufe`); `uMarkenPruef` covers `leiht`, `uLeihtPruef` refuses a
+`borrows` of a non-owner and of a consumed mark (`loan without owner`, `mark both consumed and borrowed`).
+`declOf.ownerNr` is the unit owner namespace (`ownerNr_eq`); the owned place lowerings (`durchOwnTerm`,
+`durchOwnTermB`, `assignDurchOwnStmt`, `assignDurchOwnStmtB` in `UebersetzeAllg/Teil3.lean`,
+`UebersetzeAllg2/Teil1.lean`, with `ownGuard_holds`) build `thruOwn`/`assignThruOwn` from the resolved mark,
+requiring the guard in hand (`access without held guard`, `owned read/write without owner guard` otherwise).
+
+Calls: `ownerReadyB` decides callee escrow readiness (valid over own inputs, disjoint from ordinary consumption,
+every input a table owner) and `ownerReadyB_ok` supplies `RufPasst.ownerReady` at direct calls (`lowRufKopf`)
+and the general check (`rufPasstB`); `signaturOwner`/`sigAt_owner` name the resolved loans, `ende_eq` returns
+them. `Einbettung.ownerNr` transports the registry across embeddings (`einE`, `Einbettung.id`); `exE`/`exS`
+carry `thruOwn`/`assignThruOwn` with renamed marks (`eignerE`, `brauchtE`).
+
+Stage 0 (`Code/Lower`, `Code/Refine`): owned reads/stores lower with the identical bodies as the plain forms;
+`lowerE_ok_thruOwn`/`lowerS_ok_assignThruOwn` (plus label/shape/mono dispatches) prove the same fragments by
+reduction to those arms.
+
+Coverage: `groesseExpr`/`groesseStmt` give owned access `unendlich`-based sizes (not generated yet; the
+`Vollst`/`Kompakt` cases discharge by `omega`, with compact representatives where the induction needs them);
+fine cells number them at the end (`kE` 63, `kS` 29, `kTab` rows, `fzE`/`fzS` cells with `fzE_ok`/`fzS_ok` arms).
+
+Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `ownAtMarke_borrow_ok` (borrow, owned read and
+write, returned mark: `stufe = "OK"`); `ownAtMarke_ohneLeiht_refused` (access without the loan:
+`lower: access without held guard`); `ownAtMarke_fremdLeiht_refused` (borrow of a non-owner:
+`elab: loan without owner: Fremd`).
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the
+guardians); the generator never draws owned access (no owned-pointer generation yet); byte/raw/entry targets stay
+refused (no live grant/generation interface); callers of borrowing functions lower only when escrow-ready, the
+dynamic escrow replay is C09's.
