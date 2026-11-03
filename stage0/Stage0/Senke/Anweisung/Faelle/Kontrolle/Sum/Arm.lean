@@ -1,7 +1,7 @@
 /- Full-word tag tests and complete payload binding for aggregate sums. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Tag
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Model
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Model
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 @[expose] public section
 
