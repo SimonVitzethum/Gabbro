@@ -10,7 +10,7 @@ public import Stage0.Senke.Ausdruck.Gleit.Slots.SlotContext
 public import Stage0.Senke.Ausdruck.Gleit.Bereich
 public import Stage0.Senke.Stopp
 public import Stage0.Senke.Tor
-public import Stage0.Senke.Tore.ForeignCode
+public import Stage0.Senke.Tore.Code
 public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
