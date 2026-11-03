@@ -21,6 +21,10 @@ inductive LiteralMeaning (D : Deklaration) (schemas : List USum) :
       (decoded : bytesZahl (text.toUTF8.toList.map (fun byte => Int.ofNat byte.toNat)) = some bytes)
       (bound : bytes.length ≤ n) :
       LiteralMeaning D schemas (.str n) (.ext .text [text] []) ⟨bytes, bound⟩
+  | reason (schema : USum) (member : schema ∈ schemas) (value : Fin n) (name : String)
+      (shape : schema.cases.length = n)
+      (named : (schema.cases[value.val]?).map Prod.fst = some name) :
+      LiteralMeaning D schemas (.why n) (.why schema.name name) value
   | tag (schema : USum) (member : schema ∈ schemas) (shape : schema.spec = cases)
       (i : Fin cases.length) (name : String)
       (named : (schema.cases[i.val]?).map Prod.fst = some name)
@@ -97,6 +101,18 @@ def reify {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : List Strin
     let spelling ← findText value.val texts
     return ⟨.ext .text [spelling.text] [], .strLit value.val value.property,
       .text spelling.text value.val spelling.decoded value.property, by intros; rfl⟩
+  | _ + 1, .why n, value => do
+    match hf : schemas.find? (fun schema =>
+        schema.cases.length == n && schema.cases.all (fun entry => entry.2.isNone)) with
+    | none => throw "const reason quotation has no resolved owner"
+    | some schema =>
+      if hs : schema.cases.length = n then
+        match hn : (schema.cases[value.val]?).map Prod.fst with
+        | none => throw "const reason quotation has no declared case"
+        | some name =>
+          return ⟨.why schema.name name, .why n value,
+            .reason schema (List.mem_of_find?_eq_some hf) value name hs hn, by intros; rfl⟩
+      else throw "const reason quotation owner differs from its declared type"
   | fuel + 1, .sum cases, ⟨i, value⟩ => do
     match hf : schemas.find? (fun schema => schema.spec = cases) with
     | none => throw "const tagged quotation has no resolved schema"
