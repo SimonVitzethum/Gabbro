@@ -111,12 +111,27 @@ def consumeCheckEntry {D : Deklaration} (gate : D.Fn) :
     if entry.lebt then some ({ entry with lebt := false, tor := some gate } :: rest)
     else (consumeCheckEntry gate rest).map (entry :: ·)
 
+/-- Equal values from different completed invocations remain different
+    observation points. Pairing is ghost provenance, not a runtime clock. -/
+def stampCheckReport (activation : Nat) (report : CheckReport) : CheckReport :=
+  { report with proben := report.proben.map fun sample =>
+      { sample with punkt := Nat.pair activation sample.punkt } }
+
+theorem stampCheckReport_values (activation : Nat) (report : CheckReport) :
+    (stampCheckReport activation report).proben.map (fun p => (p.ort, p.wert, p.gelesen)) =
+      report.proben.map (fun p => (p.ort, p.wert, p.gelesen)) ∧
+    (stampCheckReport activation report).boeden = report.boeden ∧
+    (stampCheckReport activation report).urteil = report.urteil := by
+  simp [stampCheckReport, List.map_map]
+
 structure CheckGhostState (D : Deklaration) where
   frames : List D.Fn := []
   pending : Option CheckReport := none
   /-- Newest entry first, like the underlying G/GX call log. -/
   history : List (CheckEvidenz D) := []
   refused : Bool := false
+  nextActivation : Nat := 0
+  activation : Nat := 0
 
 /-- The ghost update at the actual return. A reporter belongs to the current
     probe activation; only that probe's normal pop appends completed evidence.
@@ -127,7 +142,9 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
     RufEreignisF (declOf u) → CheckGhostState (declOf u)
   | .eintritt f _ _ =>
     { state with frames := f :: state.frames,
-      pending := if f = c.probe then none else state.pending }
+      pending := if f = c.probe then none else state.pending,
+      activation := if f = c.probe then state.nextActivation else state.activation,
+      nextActivation := if f = c.probe then state.nextActivation + 1 else state.nextActivation }
   | .rueck f env value s0 s1 => Id.run do
     let mut result := { state with frames := state.frames.drop 1 }
     if state.frames.head? != some f then
@@ -147,7 +164,8 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
     else if (state.frames.drop 1).head? == some c.probe then
       match actualCheckReturn u f env value with
       | some (name, report) =>
-        if name == c.name then result := { result with pending := some report }
+        if name == c.name then result :=
+          { result with pending := some (stampCheckReport state.activation report) }
       | none => pure ()
     return result
   | .why f _ _ _ _ =>
@@ -200,8 +218,8 @@ theorem checkGhostStep_probe_return (u : UProg) (c : CheckDecl (declOf u))
         { frames := [reporter, c.probe], history := history }
         (.rueck reporter args value before after))
       (.rueck c.probe probeArgs probeValue before after)).history =
-        ⟨c.probe, report, true, none⟩ :: history := by
-  simp [checkGhostStep, notProbe, notConsumer, actual, verdict]
+        ⟨c.probe, stampCheckReport 0 report, true, none⟩ :: history := by
+  simp [checkGhostStep, stampCheckReport, notProbe, notConsumer, actual, verdict]
 
 /-- A real report's samples and floor outcomes survive consumption verbatim.
     This strengthens replay with its actual parameter provenance. -/
