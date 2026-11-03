@@ -127,14 +127,17 @@ def eingebauteInt : List (String × (Int × Int)) :=
   ("i64", (-9223372036854775808, 9223372036854775807))
   ]
 
-/-- A type name as a range: the unit's own aliases, then the built-in widths. -/
-def uTypName (alias : List (String × (Int × Int))) (a : String) : Except String (Int × Int) :=
-  match uSuch "type" alias a with
-  | .ok r => .ok r
-  | .error e =>
-    match eingebauteInt.find? (fun x => strEq x.1 a) with
-    | .some (_, r) => .ok r
-    | .none => .error e
+/-- Integer names use the unit's aliases, then builtin widths. Canonical Bool/IEEE names
+    cannot become integers through a conflicting scalar alias entry. -/
+def uTypName (alias : List (String × (Int × Int))) : String → Except String (Int × Int)
+  | "bool" | "f32" | "f64" => .error "type is not an integer"
+  | a =>
+    match uSuch "type" alias a with
+    | .ok r => .ok r
+    | .error e =>
+      match eingebauteInt.find? (fun x => strEq x.1 a) with
+      | .some (_, r) => .ok r
+      | .none => .error e
 
 /-- The type-alias scope: `type A = u32 in lo .. hi;` travels
     as (`A`, (`lo`, `hi`)); any other `type` body has no G form

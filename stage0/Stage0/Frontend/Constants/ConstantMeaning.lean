@@ -115,11 +115,8 @@ theorem constantMeaning_scalarStep {items : List SItemTief} (scope : Scopes item
           simp only [ht, Except.toOption, Option.isSome_some]
         have step : typedItem scope.declared scope.functions scope.values
             (.constT name ty (.one expr)) = some (scope.values ++ [(name, binding.2)]) := by
-          change (match uFeldTyp scope.types ty with
-            | .error _ => some scope.values
-            | .ok range => (uKonstWert range.1 range.2 scope.functions scope.values 64 expr).map
-              (fun value => scope.values ++ [(name, value)])) = _
-          simp only [ht, value, Option.map_some]
+          simpa only [value, Option.map_some] using
+            typedItem_scalar_eq scope.declared scope.functions scope.values name ty expr lo hi ht
         obtain ⟨a, b, result, typed, evaluated, collected⟩ :=
           typedItem_sound scope.declared scope.functions scope.values
             (scope.values ++ [(name, binding.2)]) name ty expr scalar step

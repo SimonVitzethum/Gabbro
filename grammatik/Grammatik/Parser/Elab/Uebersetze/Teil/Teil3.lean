@@ -167,13 +167,11 @@ def uKonstFns (items : List SItemTief) : List UKonstFn := uKonstFnsWith [] items
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit
     errors). -/
-def uFeldTyp (alias : List (String × (Int × Int))) : STyp → Except String (Int × Int)
-  | .atom a => uTypName alias a
-  | .range _ lo hi o =>
-    match uSchranke alias lo, uSchranke alias hi with
-    | some a, some b => .ok (a, if o then b - 1 else b)
-    | _, _ => .error "field type without G form"
-  | t => .error ("field type without G form: " ++ sTypText t)
+def uFeldTyp (alias : List (String × (Int × Int))) (ty : STyp) : Except String (Int × Int) :=
+  match uTyp alias [] [] [] ty with
+  | .ok (.int lo hi) => .ok (lo, hi)
+  | .ok _ => .error ("field type without G form: " ++ sTypText ty)
+  | .error e => .error e
 
 /-- C13: the declared STORAGE width in bits of a type as written: a builtin unsigned word (with or without a range),
     a `wrapping` field of one, or an alias of one (`uAliasBreiten`); `0` for everything else. It is the width the

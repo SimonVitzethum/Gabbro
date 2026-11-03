@@ -4,6 +4,25 @@ public import Grammatik.Parser.Elab.Uebersetze.Records.Constants
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
+/-- Integer-name resolution agrees with the complete canonical reader, even in an arbitrary
+    alias environment. Reserved Bool/IEEE spellings cannot be shadowed by integer entries. -/
+theorem uTypName_sound (alias : List (String × (Int × Int))) (tabs : List UTab)
+    (name : String) (lo hi : Int) (resolved : uTypName alias name = .ok (lo, hi)) :
+    uTyp alias tabs [] [] (.atom name) = .ok (.int lo hi) := by
+  by_cases hb : name = "bool"
+  · subst name; simp only [uTypName, reduceCtorEq] at resolved
+  by_cases hs : name = "f32"
+  · subst name; simp only [uTypName, reduceCtorEq] at resolved
+  by_cases hd : name = "f64"
+  · subst name; simp only [uTypName, reduceCtorEq] at resolved
+  simp [uTyp, uTypIn, hb, hs, hd, resolved]
+
+/-- Reserved noninteger spellings keep their canonical meaning under every alias scope. -/
+theorem uTypName_builtin_refused (alias : List (String × (Int × Int))) :
+    uTypName alias "bool" = .error "type is not an integer" ∧
+    uTypName alias "f32" = .error "type is not an integer" ∧
+    uTypName alias "f64" = .error "type is not an integer" := ⟨rfl, rfl, rfl⟩
+
 /-- Numeric evaluation is independent of the optional leaf adapter and keeps the exact range. -/
 theorem uKonstZeile_int (alias : List (String × (Int × Int))) (fns : List UKonstFn)
     (consts : List (String × Int)) (lo hi : Int) (source : SExpr)

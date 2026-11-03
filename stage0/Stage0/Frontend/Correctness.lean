@@ -46,7 +46,8 @@ theorem aliasBody_sound {env : List (String × (Int × Int))} {name : String} {b
       change Except.ok (.range (.atom name) (bound lo) (bound hi) false) = Except.ok body at h
       exact (Except.ok.inj h).symm
     rw [hb]
-    simp [uTyp, ht, bound_correct]
+    exact (uTypName_sound env [] name lo hi ht).trans
+      (aliasBody_correct env [] name lo hi ht).2.symm
 
 theorem aliasItem_sound (env : List (String × (Int × Int))) (item : SItemTief) :
     AliasEquivalent env item (aliasItem env item) := by

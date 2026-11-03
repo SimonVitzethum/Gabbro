@@ -210,6 +210,15 @@ def typedItem (env : List (String × (Int × Int))) (fns : List UKonstFn)
       pure (values ++ [(name, value)])
   | _ => some values
 
+/-- The scalar specialization keeps the canonical evaluator and appends to the complete
+    ordered scope. Optional aggregate leaf adapters cannot alter this numeric step. -/
+theorem typedItem_scalar_eq (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values : List (String × Int)) (name : String) (ty : STyp) (expr : SExpr) (lo hi : Int)
+    (typed : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty = .ok (lo, hi)) :
+    typedItem env fns values (.constT name ty (.one expr)) =
+      (uKonstWert lo hi fns values 64 expr).map (fun value => values ++ [(name, value)]) := by
+  cases evaluated : uKonstWert lo hi fns values 64 expr <;> simp [typedItem, typed, evaluated]
+
 /-- Every successful scalar step checks the original type through canonical elaboration and
     every expression intermediate through the existing exact-range evaluator. -/
 theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonstFn)
@@ -219,15 +228,15 @@ theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonst
     ∃ lo hi value,
       uTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) [] [] ty = .ok (.int lo hi) ∧
       uKonstWert lo hi fns values 64 expr = some value ∧ result = values ++ [(name, value)] := by
-  unfold typedItem at h
   cases ht : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
   | error e => simp [ht, Except.toOption] at scalar
   | ok range =>
     rcases range with ⟨lo, hi⟩
+    rw [typedItem_scalar_eq env fns values name ty expr lo hi ht] at h
     cases hv : uKonstWert lo hi fns values 64 expr with
-    | none => simp [ht, Except.toOption, hv] at h
+    | none => simp only [hv, Option.map_none, reduceCtorEq] at h
     | some value =>
-      simp [ht, Except.toOption, hv] at h
+      simp only [hv, Option.map_some, Option.some.injEq] at h
       exact ⟨lo, hi, value, fieldType_sound _ _ _ _ ht, hv, h.symm⟩
 
 

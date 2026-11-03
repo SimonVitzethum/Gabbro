@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.UebersetzePipeline
+public import Grammatik.Parser.Elab.Uebersetze.Records.ConstantLaws
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -47,8 +48,8 @@ theorem bound_correct (env : List (String × (Int × Int))) (v : Int) :
   unfold bound
   split <;> simp [uSchranke, *] <;> omega
 
-/-- Resolve an alias body using already declared aliases, retaining its exact range. The base
-    remains the declared name; canonical range semantics depends on its explicit bounds. -/
+/-- Resolve an integer alias body using already declared aliases, retaining its exact range.
+    The base remains the declared name and must resolve to a canonical integer type. -/
 def aliasBody (env : List (String × (Int × Int))) (name : String) : Except String STyp := do
   let (lo, hi) ← uTypName env name
   pure (.range (.atom name) (bound lo) (bound hi) false)
@@ -60,9 +61,12 @@ theorem aliasBody_correct (env : List (String × (Int × Int))) (tabs : List UTa
     aliasBody env name = .ok (.range (.atom name) (bound lo) (bound hi) false) ∧
     uTyp env tabs [] (.range (.atom name) (bound lo) (bound hi) false) = .ok (.int lo hi) := by
   constructor
-  · simp only [aliasBody, h]
-    rfl
-  · simp [uTyp, bound_correct]
+  · simp [aliasBody, h]
+  · have base := uTypName_sound env tabs name lo hi h
+    change uTypIn env tabs [] [] [] (.atom name) = .ok (.int lo hi) at base
+    change uTypIn env tabs [] [] [] (.range (.atom name) (bound lo) (bound hi) false) = _
+    rw [uTypIn]
+    simp only [base, bound_correct, Bool.false_eq_true, ↓reduceIte]
 
 /-- One alias declaration, expanded using the canonical type denotation of its target. -/
 def aliasItem (env : List (String × (Int × Int))) (item : SItemTief) : SItemTief :=

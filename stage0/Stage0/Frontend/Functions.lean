@@ -22,17 +22,29 @@ theorem UKonstFn.returnExpr?_eq_some (fn : UKonstFn) (expression : SExpr) :
 theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi : Int)
     (h : uFeldTyp env ty = .ok (lo, hi)) :
     uTyp env [] [] ty = .ok (.int lo hi) := by
-  cases ty <;> simp only [uFeldTyp] at h
-  all_goals try contradiction
-  case atom name => simp [uTyp, uTypIn, h]
-  case range base lower upper exclusive =>
-    cases hl : uSchranke env lower <;> cases hu : uSchranke env upper <;>
-      simp only [hl, hu] at h
-    all_goals try contradiction
-    all_goals
-      have hp := Except.ok.inj h
-      cases hp
-      simp [uTyp, uTypIn, hl, hu]
+  unfold uFeldTyp at h
+  cases ht : uTyp env [] [] [] ty with
+  | error e => simp only [ht, reduceCtorEq] at h
+  | ok canonical =>
+    cases canonical <;> simp only [ht, Except.ok.injEq, reduceCtorEq] at h
+    case int lower upper =>
+      cases h
+      exact ht
+
+/-- The old base-ignoring reader admitted this nonnumeric range. The canonical reader refuses. -/
+theorem fieldType_noninteger_range_refused_zeuge :
+    uFeldTyp [] (.range (.atom "bool") (.lit 0) (.lit 1) false) =
+      .error "range requires a numeric type and known bounds" := rfl
+
+/-- Shadowing a reserved spelling in scalar candidates cannot turn Bool into an integer. -/
+theorem fieldType_builtin_shadow_refused_zeuge :
+    uFeldTyp [("bool", (0, 1))] (.atom "bool") =
+      .error "field type without G form: bool" := rfl
+
+/-- Ordinary integer aliases retain their exact original bounds. -/
+theorem fieldType_sound_zeuge :
+    uTyp [("Small", (-10, 100))] [] [] (.atom "Small") = .ok (.int (-10) 100) :=
+  fieldType_sound _ _ _ _ rfl
 
 /-- Predicate clauses are evaluated by the canonical evaluator and certified against
     machine G at source call substitution. Effects must remain pure. -/

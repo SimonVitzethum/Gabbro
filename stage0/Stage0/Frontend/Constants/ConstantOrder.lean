@@ -70,11 +70,11 @@ def valueReferenceList : List SExpr → List DependencyName
   | a :: rest => valueReferences a ++ valueReferenceList rest
 end
 
-/-- Bounds and counts use the same original expression operands as canonical type elaboration.
-    Range bases do not contribute: uFeldTyp/uTyp determine ranges from their bounds alone. -/
+/-- Bounds and counts use the same original operands as canonical type elaboration. Range
+    bases contribute too: uTypIn resolves the base before admitting its numeric bounds. -/
 def typeReferences : STyp → List DependencyName
   | .atom name => [.type name]
-  | .range _ lo hi _ => valueReferences lo ++ valueReferences hi
+  | .range base lo hi _ => typeReferences base ++ valueReferences lo ++ valueReferences hi
   | .array element count => typeReferences element ++ valueReferences count
   | .wrap ty | .embed ty _ _ => typeReferences ty
   | .str count => valueReferences count
