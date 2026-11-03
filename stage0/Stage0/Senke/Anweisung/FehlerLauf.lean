@@ -68,7 +68,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
   have hpF : PreS L m1 (pc + BitVec.ofNat 64 (16 * ct.length)) fp Ks (frei Γ reserved + 1)
       (fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)) ρ reserved :=
     mkPreS (by omega) (by omega) (frameOK_sub hn1.frame hks) hn1.left.code (codeFar_sub2 hn1.left.far hks) hn1.env
-  have hfc := fehlC_ok b.fehler ((16 * (ck.length + cr.length) : Nat) : Int) m1 _ hpF hf (by omega) (by push_cast; omega)
+  have hfc := fehlC_ok b.fehler ((16 * (ck.length + cr.length) : Nat) : Int) m1 _ hpF hf (by omega) (by simp only [Int.natCast_add, Int.natCast_mul]; omega)
     (by omega) hw1
   rw [axiomAntwortSonst_eq, hroh]
   cases found : b.fehler.find? (fun x => x.1 == w.toInt) with
@@ -80,7 +80,7 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
       a1.trans (agreeW_of (Agree.widen a2 hks)), hw2, weltAt_stab hW.lay hlo2 m1 m2 hW1 (a2.mono (Nat.zero_le _))⟩)
     rw [adr_int, show ((16 * ct.length : Nat) : Int) + (16 * (6 * (b.fehler.length : Int)) +
       ((16 * (ck.length + cr.length) : Nat) : Int)) =
-      ((16 * (ct.length + 6 * b.fehler.length + ck.length + cr.length) : Nat) : Int) by push_cast; omega,
+      ((16 * (ct.length + 6 * b.fehler.length + ck.length + cr.length) : Nat) : Int) by simp only [Int.natCast_add, Int.natCast_mul]; omega,
       BitVec.ofInt_natCast]
   | none =>
     rw [found] at hfc
