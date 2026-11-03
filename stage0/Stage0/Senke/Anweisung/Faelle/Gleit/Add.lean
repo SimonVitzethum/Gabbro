@@ -17,21 +17,28 @@ private theorem finiteArithmeticWf (kind : SoftFloatKernel) (a b : GFloat)
     cases ka : Gleitkomma.klasse Gleitkomma.f64 a <;>
     cases kb : Gleitkomma.klasse Gleitkomma.f64 b
   all_goals simp only [gleitEndlich, ka, kb, Bool.false_eq_true] at af bf
-  all_goals simp only [SoftFloatKernel.apply, Gleitkomma.add, Gleitkomma.mul, Gleitkomma.wertExakt, ka, kb]
+  all_goals simp only [SoftFloatKernel.apply, Gleitkomma.add, Gleitkomma.mul,
+    Gleitkomma.div, Gleitkomma.wertExakt, ka, kb]
   all_goals first
     | exact Gleitkomma.wf_null _ _
+    | exact Gleitkomma.wf_unendlich _ _
+    | exact Gleitkomma.nanQ_wf _ Gleitkomma.f64_p
     | exact Gleitkomma.rundeExakt_wf _ Gleitkomma.f64_p _
+    | exact Gleitkomma.rundeBruch_wf _ Gleitkomma.f64_p _
+    | (split <;> first
+        | exact Gleitkomma.nanQ_wf _ Gleitkomma.f64_p
+        | exact Gleitkomma.wf_unendlich _ _)
 
-private theorem gleitRechneArithmetic (op : GleitOp) (supported : op ≠ .div) (a b : GFloat) :
+private theorem gleitRechneArithmetic (op : GleitOp) (a b : GFloat) :
     gleitRechne op a b = (softFloatKernel op).apply a
       (floatAddOperand (decide (op = .sub)) Gleitkomma.f64 b) := by
   cases op with
   | add => rfl
   | sub => rfl
   | mul => rfl
-  | div => exact (supported rfl).elim
+  | div => rfl
 
-theorem blockFloatArithmetic_case (op : GleitOp) (supported : op ≠ .div) {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
+theorem blockFloatArithmetic_case (op : GleitOp) {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
@@ -48,7 +55,7 @@ theorem blockFloatArithmetic_case (op : GleitOp) (supported : op ≠ .div) {O : 
     BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex
       (.float op a b low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB, floatArithmeticBlockL_supported op supported, ← hlo0] at h
+  simp only [lowB, floatArithmeticBlockL_eq op, ← hlo0] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
   cases hc
@@ -75,7 +82,7 @@ theorem blockFloatArithmetic_case (op : GleitOp) (supported : op ≠ .div) {O : 
         (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay b j c t hc ht m pc ρ pre).word trivial))
       hc ht pre
   simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
-  simp only [execBlock, gleitRechneArithmetic op supported]
+  simp only [execBlock, gleitRechneArithmetic op]
   have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
     (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
     (b := softFloatReject low high x)
