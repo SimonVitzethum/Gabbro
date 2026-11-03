@@ -54,4 +54,3 @@ def sumSpanPayloadC (s : Nat) (c : Option Ty) : List II :=
   copyWords (payloadWords c) s (s + 1)
 
 end Gabbro.Stage0.Senke
-
