@@ -6181,4 +6181,45 @@ On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inv
 * **`stage0_pruef_leer`**: For arbitrary `P`, `S`, `fs`, `ls`, `cs`, `ws`, `AkzeptiertX` runs with the default `checks = []` and the empty admission holds.
 * **`emitted_check_correct`**: For arbitrary `Emitted` output, the inherited IR execution certificate -- check-carrying units travel the same pipeline.
 
-Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change); full closure needs the lead's Marke-carrying declaration with the derived `CheckDecl` admission in `checkB`/`accepts`, and the machine-indexed evidence fold on GX.
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change). Full closure (the lead's Marke-carrying declaration with the derived `CheckDecl` admission in `checkB`/`accepts`, and the machine-indexed evidence fold on GX) is proved in §139, pending that build.
+
+## 139. C16 close-out: derived Duty admission and the GX evidence fold (2026-11-03)
+
+On `c16-close` (`c12-own` at `ee9844da3` merged with `c16-a` at `5517b5333`); model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Closes inventory item 16 of the C16/C02 round-3 list on top of the C12 linear marks: `declOf` now carries `Marke = Fin u.marken.length`, so the Duty gap `uCheckDecl_unbewohnt`/`stage0_pruef_leer` is deleted and replaced by the derivation, the admission and the fold. No change to the C12 owner rules (`eigner_nie_erzeugt` untouched; nothing near `thruOwn`/`assignThruOwn` or the OwnerFlow files). Recommended owner answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Ableitung.lean`:
+
+* **`uDutyIdx`**: For arbitrary `u : UProg`, `c : UCheck`, the Duty as a declared mark index, refused by name when undeclared.
+* **`uDutyIdx_trifft`**, **`uDutyIdx_deklariert`**: For arbitrary `u`, `c`, `i : Fin u.marken.length`, assuming the resolution, the mark-table entry and the membership of the Duty name.
+* **`messOrtName`**: The measured place rendered without inventing tables.
+* **`uCheckDecl`/`uCheckDecls`**: For arbitrary `u`, `c`, the kernel `CheckDecl (declOf u)` -- probe and Duty-consuming gate wrappers resolved by name, Duty at stage 0, one floor entry per elaborated floor (floor-to-gate binding stays the C16/C08 remainder the admission does not decide).
+* **`uCheckDecl_ok`**, **`uCheckDecl_duty`**: The derivation from resolved parts; the derived Duty is the resolved mark at stage 0.
+* **`nimmtAt_singleton`**, **`gibtAt_singleton`**: The Duty through the signatures -- a singleton `nimmt`/`gibt` resolves to exactly that mark at stage 0, owners excluded.
+* **`checkOkB_abgeleitet`**: For arbitrary `u`, `P`, carriers, functions, check and resolved parts, assuming the elaborated shape (probe `bool`, reason-free, Duty threaded, read-only, wrappers consuming, membership, freshness, distinctness, call-graph frame), the derived check is admitted.
+* **`checkB_einzeln`**: For arbitrary `u`, `P`, carriers, functions, `d`, assuming `checkOkB`, the unit admission over its singleton.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Falte.lean`:
+
+* **`torPush`/`zyklusPop`/`checkZyklus`**: For arbitrary `c`, `r`, `g`, the completed cycle in a call log -- probe push, normal pop with the report's verdict, gate push -- skipping unrelated events.
+* **`falteEvidenz`**: For arbitrary `c`, `r`, `g`, `log`, the consumed evidence entry where the cycle is complete, nothing elsewhere.
+* **`falteGX`**, **`falteGX_log`**: For arbitrary `M : RufMaschineG D`, `t : Faden`, `c`, `r`, `g`, the fold over a GX machine's thread -- the same log, the same entry, never the presented memory.
+* **`falte_leer`**, **`falte_zyklus`**: The empty log folds to nothing; the completed cycle folds to `replayEintrag`.
+* **`falte_treu`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g` and the cycle in the log, the folded entry satisfies the goal leg `CheckTreueG`.
+* **`falte_fixture_vollstaendig`**, **`falte_ohne_tor`**, **`falte_falsches_urteil`**, **`falte_fremd_pop`**, **`falte_eintrag_fixture`**: The completed negative cycle folds to the consumed entry; the missing gate, the mismatched verdict and the foreign pop fold to nothing; the folded entry is the consumed one of the goal leg.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Zulassung.lean`:
+
+* **`checkU`**, **`checkP`**, **`checkChecks`**: The elaborated, lowered and derived values behind the end-to-end witness, with their success certificates (`checkText_ok`, `checkU_lowered`, `checkU_checks_ok`).
+* **`checkU_checks_namen`**, **`checkU_duty_marke`**, **`checkU_duty_deklariert`**: The derived check is non-vacuously the one check with the declared mark `p#duty` at stage 0.
+* **`checkU_probe_threadet`**, **`checkU_tor_threadet`**: The probe consumes and produces exactly the Duty in its lowered signature; every gate wrapper discharges it -- nothing dropped at lowering.
+* **`checkU_checkB`**, **`checkU_akzeptiert`**: The lowered unit with its derived checks is admitted by `checkB`; `AkzeptiertX` holds with the real checks, not the empty leg.
+* **`checkU_admission`**: The admission Prop through `checkB_iff`.
+* **`checkUOhneHuellen`**, **`checkU_ohne_huelle`**: Without its wrapper the check does not derive, refused by name.
+* **`checkUOhneGibt`**, **`checkPOhneGibt`**, **`checkU_gibt_abgelehnt`**: With the probe's `gibt` emptied the checks still derive but `checkB` refuses them -- the probe produces no Duty.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Export.lean`, `stage0/Stage0/Frontend/CheckExport.lean`:
+
+* `uCheckDecl_unbewohnt` and `stage0_pruef_leer` deleted; `checkB_leer` kept (the empty admission still holds vacuously).
+* **`stage0_anspruch_erfuellt`**: The derived `CheckDecl`s resolve to the probe and its gate wrapper, and `checkB` admits them.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change).
