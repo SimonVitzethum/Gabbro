@@ -5,7 +5,7 @@ public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Welt.AnordnungLayout
 public import Stage0.Senke.Welt.StartLayout
 public import Stage0.Senke.Welt.InitialBytes
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Model
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Model
 @[expose] public section
 
 
