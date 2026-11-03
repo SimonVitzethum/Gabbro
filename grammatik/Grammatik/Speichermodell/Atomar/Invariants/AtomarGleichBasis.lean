@@ -82,8 +82,11 @@ theorem Stmt.execHA_gleich {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp only [stmtOrteP, List.mem_append, h, true_or])
       simp only [execStmtHA, hG _ h1] <;> (try rfl)
   | .callInd p args _ hr, hT, σ, ρ => by
-      simp only [stmtOrteP] at hT
-      simp only [execStmtHA, hG _ hT] <;> (try rfl)
+      have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h => hT x (by
+        simp only [List.mem_append] at h
+        simp only [stmtOrteP, List.mem_append]
+        exact Or.inl (Or.inl h))
+      simp only [execStmtHA, hG _ h1] <;> (try rfl)
   | .callIndElse p args he _ hr err, hT, σ, ρ => by
       have h1 : ∀ x ∈ p.orte ++ args.orte, ¬ T x := fun x h => hT x (by
         simp only [List.mem_append] at h; rcases h with h | h <;> simp only [stmtOrteP, List.append_assoc, List.mem_append, h, true_or, or_true])
@@ -112,7 +115,9 @@ theorem Stmt.execHA_gleich {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         simp only [stmtOrteP, List.mem_append, h, true_or, or_true])
       have h2 : ∀ x ∈ blockOrteP P body, ¬ T x := fun x h => hT x (by
         simp only [stmtOrteP, List.mem_append, h, or_true])
-      simp only [execStmtHA, hG _ h1, hG _ hsel, hG _ hmass, verbrauchSelA]
+      have hsel' : verbrauchSelA A t member edge = verbrauchSelA A' t member edge :=
+        funext fun σ => funext fun ρ => by simp only [verbrauchSelA, hG _ hsel]
+      simp only [execStmtHA, hG _ h1, hG _ hmass, hsel']
       rw [show (fun σ ρ => execBlockHA S O U A passes R body σ ρ) =
         (fun σ ρ => execBlockHA S O U A' passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execHA_gleich body h2 σ ρ]

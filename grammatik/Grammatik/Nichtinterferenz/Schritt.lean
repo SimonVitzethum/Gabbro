@@ -77,6 +77,18 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       | (σ₂, some (Sum.inr r)) =>
           kLokal st f rho (Env.cons (τ := .why (D.agruende a)) r ρ) (.ende err) σ₂.spur σ₂.speicher
       | (_, none) => none
+  | _, _, Λ, ρ, .bindAxiomOpt e a args he _ _ _ rest =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwort O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some v) => kLokal st f rho (ergEnv e (he ▸ v) ρ) (.ende rest) σ₂.spur σ₂.speicher
+      | (_, none) => none
+  | _, _, Λ, ρ, .bindAxiomOptElse e a args he _ _ _ _ err rest =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some (Sum.inl v)) => kLokal st f rho (ergEnv e (he ▸ v) ρ) (.ende rest) σ₂.spur σ₂.speicher
+      | (σ₂, some (Sum.inr r)) =>
+          kLokal st f rho (Env.cons (τ := reasonTy (D.agruende a)) r ρ) (.ende err) σ₂.spur σ₂.speicher
+      | (_, none) => none
   | l, _, Λ, ρ, .regRead r hk rest =>
       if l = false then
         kLokal st f rho ρ (.dann (Endblock.regRead r hk rest).alsBlock.2 (.abbruch (Λk := Λ) .leer)) spur sp
@@ -165,6 +177,21 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
           kLokal st f rho (Env.cons (τ := .why (D.agruende a)) r ρ)
             (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur σ₂.speicher
       | (_, none) => none
+  | _, _, Λ, _, ρ, .bindAxiomOpt e a args he _ _ _ rest, k =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwort O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some v) => kLokal st f rho (ergEnv e (he ▸ v) ρ) (.dann rest (GRest.weiterOpt (Λ := Λ) e k)) σ₂.spur
+          σ₂.speicher
+      | (_, none) => none
+  | _, _, Λ, _, ρ, .bindAxiomOptElse e a args he _ _ _ _ err rest, k =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some (Sum.inl v)) =>
+          kLokal st f rho (ergEnv e (he ▸ v) ρ) (.dann rest (GRest.weiterOpt (Λ := Λ) e k)) σ₂.spur σ₂.speicher
+      | (σ₂, some (Sum.inr r)) =>
+          kLokal st f rho (Env.cons (τ := reasonTy (D.agruende a)) r ρ)
+            (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur σ₂.speicher
+      | (_, none) => none
   | _, _, _, _, ρ, .regRead r _ rest, k =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r ((sp.welt spur).fragt (.inr (.inl r)))) with
       | some v =>
@@ -250,7 +277,7 @@ def kr (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f
         | some v =>
             let σ₃ := σ₂.lese Λ mass.orte
             let m := (eval σ₃ mass σ₃ ρ).n
-            kLokal st f rho (.cons v ρ)
+            kLokal st f rho (Env.cons (τ := .index (D.count t)) v ρ)
               (.dann body (.verbrauchRest t member edge inv bound mass body rest m k)) σ₃.spur sp
         | none =>
             if ((alleIndizes (D.count t)).all fun i =>

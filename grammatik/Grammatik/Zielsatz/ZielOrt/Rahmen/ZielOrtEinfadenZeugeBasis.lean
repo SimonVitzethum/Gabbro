@@ -157,6 +157,8 @@ theorem eHp (caller callee : eD.Fn) (hw : ∀ t, (eD.signatur callee).schreibt t
     intro L
     rw [hh]
     exact ⟨(fun h => nomatch h), (fun h => nomatch h)⟩)
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (eD.signatur callee).owner)
 
 theorem eHpSetze : RufPasst eD (vertragVon eD eHaupt) (eD.signatur eSetze) [] :=
   eHp eHaupt eSetze (fun _ _ => rfl) rfl rfl

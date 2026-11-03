@@ -193,9 +193,13 @@ theorem Stmt.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .shift .., _, _, _ => rfl
   | .call .., _, _, _ => rfl
   | .callInd .., _, _, _ => rfl
-  | .callIndElse .., _, _, _ => rfl
+  | .callIndElse _ _ _ _ _ err, h, σ, ρ => by
+      simp only [Stmt.ohneEwig] at h
+      simp only [execStmtH, Endblock.execH_passes err h]
   | .axiomCall .., _, _, _ => rfl
-  | .axiomCallElse .., _, _, _ => rfl
+  | .axiomCallElse _ _ _ _ _ _ _ _ err, h, σ, ρ => by
+      simp only [Stmt.ohneEwig] at h
+      simp only [execStmtH, Endblock.execH_passes err h]
   | .regWrite .., _, _, _ => rfl
   | .transition .., _, _, _ => rfl
   | .publish .., _, _, _ => rfl
