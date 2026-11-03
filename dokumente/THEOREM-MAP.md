@@ -6041,3 +6041,26 @@ On `c15-uses` (`0dfcd6009`, `7d036940a`, `a1e1ff839`, `bf18b55fa`); model extens
 * **`akkuUeberlaufStoppt_zeuge`**: On the two-core `add` fixture, merging `100` into a cell holding `200` leaves `0 .. 255`, so the required narrowing to the cell range is the capacity stop for every world, environment and continuation.
 
 Open: the hardware provenance of the generated core-query axiom through elaboration (`declOf` leaves `axHerkunft`/`axBeleg` at `none`, so no elaborated program can satisfy `KernAbfrageHerkunft`).
+
+## 135. C15: hardware provenance of the generated core query (2026-11-03)
+
+On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `assume` clause of `accumulates` names the hardware assumption witnessing the generated query; the query wrapper (`n#query`, an ordinary body binding the foreign query once) carries the update-to-query link the model admits (`bindetAxE`, `reachB`); without `assume` the unit elaborates but no query list admits it; an unknown name is a named elaboration error.
+
+`SItemTief.accT` carries the origin (`Option String`, constructor field at the end); `accumulates n : T merge op [per cpu e] [assume a] ;` (`grammatik/Grammatik/Parser/Item/ElementTief/Defs4a.lean`, `dokumente/SYNTAX.md` `accdecl`). `UFnKopf.annahme` carries the name to `UAx.beleg` (the resolved index into `UProg.annahmen`; dangling reads as `none`), and `declOf` sets `D.axHerkunft`/`D.axBeleg` from it (`grammatik/Grammatik/Parser/Elab/UebersetzeAllg/Beleg.lean`: `herkunftAt`, `belegAt`). `instDecEqDeclOfAx` numbers the foreign bodies of `declOf u` for the query checker.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Akku/Erzeuge.lean`:
+
+* **`uAkkuHuelle`/`uAkkuHuelleKoerper`/`uAkkuHuelleFn`**: For arbitrary `p : AkkuPlan`, the wrapper `n#query`: no parameters, answer `0 .. k - 1`, binds the hardware query once and returns it.
+* **`uAkkuGenEintrag`**: For arbitrary `annahmen : List String`, a named `assume` must be declared, else `core query assumption unknown`.
+* **`akkuHuelleName_zeuge`**, **`akkuHuelleKoerper_zeuge`**, **`akkuAktRuftHuelle_zeuge`**: The wrapper name, its bind-and-return body, and the update sampling through the wrapper.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Akku/Herkunft.lean`:
+
+* **`herkunft_frage_herkunft`**: On the elaborated fixture (`assume` plus two-cell unsigned `add` plus update and read uses), the query is hardware-origin with the named witness.
+* **`herkunft_frage_gestaltB`**, **`herkunft_frage_feld`**, **`herkunft_beleg_vorhanden`**: The decided shape, the `hardware` field and the named witness on the declaration.
+* **`herkunft_akku_angenommen`**: The accumulator component admits the descriptor with the query list.
+* **`herkunft_akzeptiert`**: The fixture is accepted by the core checker `Akzeptiert` with the query list.
+* **`ohne_akku_abgelehnt`**, **`ohne_abgelehnt`**: Without `assume` the unit elaborates but the accumulator component and the core checker refuse it.
+* **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.

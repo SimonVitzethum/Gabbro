@@ -314,9 +314,11 @@ errmap     = ident [ "=" constexpr ] "=>" ident ;
    binding sends; without it, the reason case's declared value (the form before O31). *)
 accdecl    = "accumulates" ident ":" typeexpr
              "merge" ( "max" | "min" | "add" | "or" | "and" )
-             [ "per" "cpu" constexpr ] ";" ;
+             [ "per" "cpu" constexpr ] [ "assume" ident ] ";" ;
 (* `per cpu N` is the CELL COUNT, optional in the grammar and compulsory for lowering. The
-   current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
+   current core is a machine question, a foreign body (`gabbro_kern()`), not an expression.
+   `assume a` names the hardware assumption witnessing the generated query (THEOREM-MAP
+   section 135): without it the unit elaborates but no query list admits it. *)
 moduledecl = [ "pub" ] "module" path [ "[" gparams "]" ] "{" { item } "}" ;
 usedecl    = [ "pub" ] "use" ( path | ident "=" path "::" "[" garglist "]" ) ";" ;
 (* CHANGED 2026-10-25 (name spaces of linked projects, Lean `Parser/Namen/Namensraum.lean`, no new form):
