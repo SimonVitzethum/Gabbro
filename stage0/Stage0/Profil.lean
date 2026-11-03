@@ -60,11 +60,7 @@ def checkItems : Nat → List SItemTief → Except String Unit
     | .entryT e => checkEntry e
     | .bootT .. => throw "ir: boot is outside userspace compilation"
     | .trustT _ _ arch regs stack assumption service =>
-      if (ProfilBindung.wertVon .arch arch).isNone then throw "entrust: unknown userspace ABI"
-      if !regs.isEmpty then throw "entrust: register-state or privileged transfer is excluded"
-      if service.isNone then throw "entrust: missing isolation service binding"
-      if !stack.isEmpty || !assumption.isEmpty then
-        throw "entrust: register-state or privileged transfer is excluded"
+      ProfilBindung.gastQuellePruefung arch regs stack assumption service
     | .profT .. => throw "ir: profile: canonical source-to-goal profile binding missing"
     | .gateT .. => throw "ir: when TESTBUILD: canonical conditional selection proof missing"
     | _ => pure ()
