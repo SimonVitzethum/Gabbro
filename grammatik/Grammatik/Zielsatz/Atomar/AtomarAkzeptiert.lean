@@ -287,16 +287,16 @@ def fussWXB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
 def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
-    (aqs : List D.Ax := []) : Bool :=
+    (aqs : List D.Ax := []) (guests : List (GuestBoundary D) := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWXB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs
+    antwortenB P fs && maskenB P fs && schnittstellenB P fs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && resetB cs && scopesOkProgB P fs && GuestBoundary.admissionB guests
 
 theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
   rw [← getrenntW_eq_lokW hvoll]
   have h1 := (List.all_eq_true.mp h) f (hvoll f)
-  simp only [Bool.and_eq_true] at h1
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h1
   refine ⟨fun c hc => ?_, fun c hc => (List.all_eq_true.mp h1.2) c hc⟩
   have h2 := (List.all_eq_true.mp h1.1) c hc
   simp only [Bool.or_eq_true] at h2
@@ -327,7 +327,7 @@ theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Loc
     {checks : List (CheckDecl D)} (h : AkzeptiertX P S fs ls cs ws aks checks = true) :
     AkzeptiertSpecX P S fs ws [] aks := by
   unfold AkzeptiertX at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, _h16⟩ := h
   have hAbg := (abgAlleB_iff hvoll).mp h2
   exact ⟨h1, hAbg, fussWXB_ok hvoll hAbg h3, (stufenB_iff hvoll).mp h4,
@@ -344,7 +344,7 @@ theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : AkzeptiertX P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
   unfold AkzeptiertX at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
 
@@ -352,7 +352,7 @@ theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by
   refine List.all_eq_true.mpr fun f hf => ?_
   have h1 := (List.all_eq_true.mp h) f hf
-  simp only [Bool.and_eq_true] at h1 ⊢
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h1 ⊢
   refine ⟨List.all_eq_true.mpr fun c hc => ?_, h1.2⟩
   have h2 := (List.all_eq_true.mp h1.1) c hc
   simp only [Bool.or_eq_true] at h2 ⊢
@@ -364,7 +364,7 @@ theorem akzeptiertX_of_akzeptiert {aks : List (Kernzelle.AccumulatorDecl D)}
     AkzeptiertX P S fs ls cs ws aks checks = true := by
   unfold Akzeptiert at h
   unfold AkzeptiertX
-  simp only [Bool.and_eq_true] at h ⊢
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h ⊢
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, hSchnitt⟩, hReset⟩, h11⟩, h12⟩, h13⟩, hS⟩ := h
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, fussWXB_of_fussWB h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, hSchnitt⟩, h11⟩, h12⟩, h13⟩, hReset⟩, hS⟩
 
@@ -388,7 +388,7 @@ theorem vertragsFreiB_vollstaendig {c : D.Tab ⊕ D.Glob}
     cases he : istIn (invOrteP P g) c with
     | true => exact absurd (istIn_iff.mp he) h3
     | false => rfl
-  simp only [Bool.and_eq_true]
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨e1, e2⟩, e3⟩
 
 /-- **The footprint component with the admitted shared atomics is complete**: from
@@ -413,7 +413,7 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
         List.eq_nil_iff_forall_not_mem.mpr (fun L hL => hG L (waechterVon_mem.mp hL))
       have hg : geteiltVB P fs c = true := by
         unfold geteiltVB
-        simp only [Bool.and_eq_true]
+        simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
         refine ⟨⟨atomarB_iff.mpr ha, ?_⟩, vertragsFreiB_vollstaendig hV⟩
         rw [hempty]
         rfl
@@ -434,7 +434,7 @@ theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lo
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
     AkzeptiertX P S fs ls cs ws aks h.checks qs = true := by
   unfold AkzeptiertX
-  simp only [Bool.and_eq_true]
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, fussWXB_vollstaendig hvoll h.fuss⟩,
     (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
     wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
