@@ -33,6 +33,8 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
 variable {D : Deklaration} {L : Lay D}
+
+/-- Compare previously evaluated scalar operands, guarding the signed operand
     before its raw word is compared with an unsigned operand. -/
 def mixedCmpC (leftSigned equal : Bool) (d : Nat) : List II :=
   [ci 1 (d + 2) 0 0,
