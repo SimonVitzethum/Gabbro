@@ -5,6 +5,16 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3
 namespace Gabbro.Grammatik.Parser.ExportPreservation
 open Uebersetze UebersetzeAllg UebersetzeAllg2
 
+/-- The production source reader delegates labelled scopes to the exporter with
+    the same recursive reader; its original outer context is retained. -/
+theorem breaking_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat)
+    (ctx finalCtx : UCtx) (names : List String) (body : SAnw) (rest : List SAnw)
+    (code : List UStmt)
+    (exported : uBreaking (uAnwReihe tabs heads fuel) ctx names body rest = .ok (code, finalCtx)) :
+    uAnwReiheCore tabs heads (fuel + 1) ctx (.waive names body :: rest) =
+      .ok (code, finalCtx) := by
+  exact exported
+
 /-- Both operands retain their original predicate context; neither old/result nor a binder is
     invented by implication expansion. Failed operand exports stay failures. -/
 theorem implication_export (ctx : UCtx) (p q : SExpr) (a b : UEns)

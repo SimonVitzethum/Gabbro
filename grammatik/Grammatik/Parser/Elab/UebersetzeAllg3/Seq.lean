@@ -28,6 +28,9 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | _, _, _, _, [] => .ok (⟨_, Block.nil, []⟩)
   | _, _, _, _, .blkEnd :: rest => .ok (⟨_, Block.nil, .blkEnd :: rest⟩)
   | _, _, _, _, .ifElse :: rest => .ok (⟨_, Block.nil, .ifElse :: rest⟩)
+  | Γ, fn, Λ, pe, .breakingBeg name :: rest =>
+    (R.struct Γ fn Λ pe (.breakingBeg name) rest).bind fun (⟨Λ₁, st⟩, rest') =>
+      (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
   | Γ, fn, Λ, pe, .lockBeg g :: rest =>
     (R.struct Γ fn Λ pe (.lockBeg g) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)

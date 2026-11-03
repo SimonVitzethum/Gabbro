@@ -6,7 +6,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.CallElse
-public import Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
+public import Grammatik.Parser.Elab.Uebersetze.Breaking
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -425,8 +425,8 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx' rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok ([UStmt.narrowReqBeg x lo hi] ++ xs, cE)
-  | _ + 1, _, .waive .. :: _ =>
-    .error "source export: invariant cost/runs/by duties lack a checked source binding"
+  | f + 1, ctx, .waive names body :: rest =>
+    uBreaking (uAnwReihe tabs koepfe f) ctx names body rest
   | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
     if g then .error "shared lock without G form"
     else

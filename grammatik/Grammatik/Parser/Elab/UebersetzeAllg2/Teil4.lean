@@ -321,6 +321,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .retires m => lowRetiresL u caller Γ Λ m
+  | .breakingBeg _ => .error "lower: a breaking block opens here"
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => (lowRegWriteL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
   | .regWriteB d r v => (lowRegWriteBL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩

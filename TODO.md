@@ -577,7 +577,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.call` | yes H3:75 | yes A:72, `lowA`/`callC` | `lowS_ok`, P:73 | recursive arguments, image/frame bounds; fallible calls need else form |
 | `Stmt.callInd` | yes H4:29 | yes A:59, `lowInd` | `lowS_ok`, P:129 | signature/address/argument guards |
 | `Stmt.locks` | yes J/Struct:35 | partial A:176, `locksCode` | `lowS_ok`, P:131 | A:180: `else none` unless `retFreiB body` and jump offsets fit; source J/Kopf:214: `.error "lower: return under locks has no G form"` |
-| `Stmt.breaking` | no producer; unsupported surface statement U7:216 | yes A:139, recurse into body | `lowS_ok`, P:113 | U7:216: `.error ("stmt without G form: " ++ anwArt s)` |
+| `Stmt.breaking` | added, UNCHECKED: `Uebersetze/Breaking.lean` transports `breaking I { ... }`; `J/Struct` resolves the invariant and emits G | yes A:139, recurse into body | `lowS_ok`, P:113; exporter `uBreaking_exact`/`lowStructStep_breaking` | full source units STILL REFUSED by unchanged invariant cost/runs/by metadata gate; unknown/ambiguous invariant and unclosed scope also refused |
 | `Stmt.traverse` | yes J/Struct:59/:69 | partial A:118, `travC` | `lowS_ok`, P:111 | A:123: `else none` if count not signed-word representable |
 | `Stmt.retry` | yes J/Struct:80 | yes A:127, `retryC` | `lowS_ok`, P:133 | counter/branch/recursive-body guards |
 | `Stmt.forever` | yes J/Struct:138 | partial A:131, `foreverC` | `lowS_ok`, P:135 | A:138: `else none` if reserved/protected counter pair unavailable; bounded compiled passes |
