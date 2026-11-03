@@ -146,7 +146,7 @@ def Walk.raw (w : Walk) (s : String) (locals : Locals := []) : Except String Str
     spec inference and tagged dispatch alike, without a separate statement walker. -/
 def matchBindings (items : List SItemTief) (locals : Locals) (value : SExpr) : SAnw → Locals
   | .arm caseName (some binder) _ =>
-    let payload := do
+    let payload : Option STyp := do
       let .atom sumName ← inferType (materialize items) locals 128 value | none
       let schemas ← (Uebersetze.uSumSchemas (items.map fun
         | .taggedByT decl _ => decl | it => it)).toOption
@@ -246,7 +246,7 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
       | some (.ret e) =>
         match ← w.statement env f (.ret e) with
         | .ret e => return .block ss (some (.ret e))
-        | .block prefix ending => return .block (ss ++ prefix) ending
+        | .block beforeReturn ending => return .block (ss ++ beforeReturn) ending
         | tail => return .block (ss ++ [tail]) none
       | ending => return .block ss ending
     | .other raw => return .other (← w.raw raw locals)
