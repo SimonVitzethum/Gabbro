@@ -53,14 +53,14 @@ theorem initialize {P : Programm D} {f : D.Fn} {Γ : Ctx}
     (travCountC counter (fuel : Int))
     (pieces (frei Γ reserved) counter saved fuel failure count bound
       invariant member edge measure body).tail assembled
-  have empty : prefix = [] := List.length_eq_zero.mp len
+  have empty : prefix = [] := List.eq_nil_of_length_eq_zero len
   subst prefix
   simp only [List.nil_append, initial] at eq
   have pre' : PreS L m pc fp K (frei Γ reserved)
       ([ci 1 counter fuel 0] ++ suffix) ρ reserved := by rw [← eq]; exact pre
   obtain ⟨m', run, frame, tailPre, surround', head', world', keeps, read⟩ :=
     reserved_literal_entry layout pre' surround head world abi low allocated room literal protected
-  refine ⟨m', run.star, frame, ?_, surround', head', world', keeps, ?_⟩
+  refine ⟨m', run.forget, frame, ?_, surround', head', world', keeps, ?_⟩
   · exact ⟨pre.ctx, pre.small, frameOK_agreeW pre.frame frame,
       codeAt_agreeWIn layout frame pre.code pre.far, pre.far,
       tailPre.env, trivial, wstab_true _ _⟩
