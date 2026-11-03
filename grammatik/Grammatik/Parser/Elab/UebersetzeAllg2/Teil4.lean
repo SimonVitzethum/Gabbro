@@ -13,6 +13,13 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
+/-- The current source declaration cannot supply the successor-stage premise
+    of `Stmt.advances`; this is a representation gap, not an erasable marker. -/
+theorem exportedMark_no_successor (u : UProg) (m : Fin u.marken.length) (stage : Nat) :
+    ¬ stage + 1 < (declOf u).stufen m := by
+  change ¬ stage + 1 < 1
+  omega
+
 /-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type,
     stepping to its call transformer (C16). -/
 def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)

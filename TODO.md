@@ -585,7 +585,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.regWrite` | yes H3:349/:366 | refused by wildcard | refusal-only P:146, not an execution arm | A:183: `\| _, _, _, _, _, reserved => none`; device access out of scope |
 | `Stmt.transition` | no source producer; device declarations refused U12:322 | refused by wildcard | refusal-only P:147 | A:183: `\| _, _, _, _, _, reserved => none`; U12:322: `.error "device transition without G form"`; out of scope |
 | `Stmt.publish` | yes H3:178/:209, payload-free atomics | partial A:83, release store | `lowS_ok`, P:81 | A:87: `else none` unless address and `aggregateFits`; source payload export restricted |
-| `Stmt.advances` | no producer in `Parser/Elab/**` | yes A:140, ghost/no instructions | `lowS_ok`, P:115 | source clause is not an explicit statement exporter; no constructor-producing path |
+| `Stmt.advances` | deliberately refused, UNCHECKED named source refusal in `U7/uAnw1`; parser `.step` exists | yes A:140, ghost/no instructions | `lowS_ok`, P:115; `exportedMark_no_successor` proves the missing exporter premise | `declOf.stufen := 1` (`G1:104`) makes `stage + 1 < D.stufen m` impossible; no stage fabricated or marker dropped |
 | `Stmt.retires` | no producer in `Parser/Elab/**` | yes A:141, ghost/no instructions | `lowS_ok`, P:116 | source retirement export missing |
 | `Stmt.ret` | yes J/Kopf:228 | yes A:77, shared ensures epilogue | `lowS_ok`, P:76 | source rejects return under locks J/Kopf:214 |
 | `Stmt.retWhy` | yes J/Kopf:220 | yes A:75 | `lowS_ok`, P:148 | separate reason channel, same source lock restriction |

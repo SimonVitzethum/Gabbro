@@ -46,6 +46,13 @@ open Gabbro.Grammatik.Parser.UebersetzeProben (stufe)
 
 set_option maxRecDepth 100000
 
+/-- The parser accepts the stage marker, but one-stage exported declarations
+    cannot satisfy the canonical advance constructor's successor premise. -/
+theorem advances_refused_zeuge :
+    stufe "module m { impl fn f() { advances setup -> live; } }" =
+      "elab: advances without G form: exported marks have only stage 0" := by
+  decide +kernel
+
 /-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
 
 /-- One table program with the source rights supplied at its capability parameter. -/

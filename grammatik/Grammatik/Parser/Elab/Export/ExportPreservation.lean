@@ -5,6 +5,13 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3
 namespace Gabbro.Grammatik.Parser.ExportPreservation
 open Uebersetze UebersetzeAllg UebersetzeAllg2
 
+/-- No exported mark has a successor stage. Refuse the surface marker by name
+    instead of erasing it or fabricating the premise of `Stmt.advances`. -/
+theorem advances_export_refused (ctx : UCtx) (tabs : List UTab) (heads : List UFnKopf)
+    (before after : String) :
+    uAnw1 ctx tabs heads (.step before after) =
+      .error "advances without G form: exported marks have only stage 0" := rfl
+
 /-- The production source reader delegates labelled scopes to the exporter with
     the same recursive reader; its original outer context is retained. -/
 theorem breaking_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat)
