@@ -64,6 +64,7 @@ public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Proben
 public import Stage0.Senke.Ausdruck.Referenz.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
+public import Stage0.Senke.Anweisung.Faelle.Gleit.MulProben
 
 public import Stage0.Senke.Ausdruck.Old.Proben
 public import Stage0.Senke.Ausdruck.Old.FunctionProbe

@@ -1,15 +1,18 @@
 /-
-Design note: software IEEE-754 binary64 add/sub for `Block.float`.
+Design note: software IEEE-754 binary64 arithmetic for `Block.float`.
 
-Status. `lowB` routes addition and subtraction through `floatAddSubBlockL`.
+Status. `lowB` routes addition, subtraction and multiplication through
+`floatArithmeticBlockL`, with one retained-operand pipeline.
 The existing integer-only adder has `softAddRoutine_ok`; subtraction
 flips bit 63 of the right operand with one xor before reusing that adder.
 `Normal/Sub.lean` supplies `softSub_model` from `softAddComposed_model`
 and the kernel's definitional `sub = add (neg right)` identity, including
-NaN payloads/signs and signed zeros. `blockFloatAddSub_case` connects both
-operations to `lowB_ok` with the shared rounded-result range guard and
-stop 107. The subtraction extension and witnesses await the lead's Lean
-checks and runner measurement. Multiplication and division remain refused.
+NaN payloads/signs and signed zeros. `blockFloatArithmetic_case` connects
+the supported operations to `lowB_ok` with the shared rounded-result range
+guard and stop 107. `Mul/Correct.lean` connects the integer-only product to
+the kernel operation through `softMulRoutine_ok`. The new multiplication
+proofs and witnesses await the lead's Lean checks and runner measurement.
+Division remains refused.
 No float opcode, runner extension or hardware assumption is introduced.
 
 1. Kernel specification (grammatik).
@@ -70,12 +73,34 @@ No float opcode, runner extension or hardware assumption is introduced.
    (b) The IR routine is proved to compute `softAdd` by `WordCode`
    composition (`WordCode.bin`/`const`, the `Eng` lemmas), reusing the
    `floatOfInt` emitter pattern and `FloatEmission` ceilings.
-   (c) `lowB` selects the shared `Block.float` add/sub template,
+   (c) `lowB` selects the shared `Block.float` arithmetic template,
    reusing `floatNarrowC` with `stop 107` on a nonfinite result or a
    range miss. Subtraction adapts only the right producer before operand
    retention; the finite arithmetic and Block proof are shared. Each layer
-   carries its `_zeuge` witness and `#print axioms` check. Multiplication
-   and division remain refused.
+   carries its `_zeuge` witness and `#print axioms` check. Division remains
+   refused until its generic routine and connected proof exist.
+
+5. Multiplication (the `Mul/` modules).
+   `Model` reproduces kernel special-case priority and identifies the exact
+   106-bit Nat significand product. `Special` emits the shared field flags,
+   preserving NaN words and selecting invalid infinity/zero before signed
+   infinity or zero. `Product` reuses the wide-integer high multiply from
+   four 32-bit partial products, together with the ordinary low multiply.
+   `Normalize` shifts each nonzero finite significand to exactly 53 bits;
+   the count is at most 52, and the effective exponent has offset 64.
+   The normalized product therefore has either 105 or 106 significant bits.
+   `Compress` shifts both limbs by 49 or 50, retaining 56 guard/sticky bits.
+   `Replay` proves the sticky interval sufficient at every binary scale,
+   including subnormal output. The exact source numerator remains separate
+   from the jammed word throughout the proof.
+   `Round` uses total = leftIndex + rightIndex + compressionCount. Subtract
+   1200 for the binary64 biased exponent; totals below 1201 select gradual
+   underflow, and totals at least 3247 select infinity. `Underflow` permits
+   the shifted word to contain only a sticky bit and preserves zero's sign.
+   `FiniteModel` connects these fragments to the exact source product;
+   `Correct` composes the finite theorem with special dispatch on all words.
+   `SoftFloatKernel` shares operand retention, frame preservation, packing
+   guards and Block continuation logic with addition and subtraction.
 -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits

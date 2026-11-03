@@ -15,7 +15,8 @@
     through the routine's (quotient, remainder, denominator) triple.
     `softAddComposed_bits` is the word identity the routine correctness
     reuses. Subtraction composes this entry point with a sign-bit xor in
-    `Normal/Sub.lean`; multiplication and division remain refused. -/
+    `Normal/Sub.lean`; multiplication has its own exact-product continuation
+    in `Mul/`, sharing operand retention and packing. Division remains refused. -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Stage0.Senke.Gleit.Add

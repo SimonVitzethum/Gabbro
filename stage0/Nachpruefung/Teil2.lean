@@ -69,11 +69,11 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.softAddRoutine_ok
 #print axioms Gabbro.Stage0.Senke.softAddRoutineL_ok
 #print axioms Gabbro.Stage0.Senke.softAddRoutine_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.softAddContinuationL_ok
-#print axioms Gabbro.Stage0.Senke.softAddWordsL_ok
+#print axioms Gabbro.Stage0.Senke.softFloatContinuationL_ok
+#print axioms Gabbro.Stage0.Senke.softFloatWordsL_ok
 #print axioms Gabbro.Stage0.Senke.softFloatReject_none
 #print axioms Gabbro.Stage0.Senke.softFloatRangeL_ok
-#print axioms Gabbro.Stage0.Senke.blockFloatAddSub_case
+#print axioms Gabbro.Stage0.Senke.blockFloatArithmetic_case
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_accepted_zeuge
 
 -- Binary64 subtraction reuses the total adder after exactly one sign-bit xor.
@@ -85,7 +85,20 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.softAddOperandL_ok
 #print axioms Gabbro.Stage0.Senke.softSub_model_zeuge
 #print axioms Gabbro.Stage0.Senke.softSubRoutine_ok_zeuge
-#print axioms Gabbro.Stage0.Senke.floatAddSubBlockL_addSub
+#print axioms Gabbro.Stage0.Senke.floatArithmeticBlockL_supported
+#print axioms Gabbro.Stage0.Senke.softMul_model
+#print axioms Gabbro.Stage0.Senke.softMul_product
+#print axioms Gabbro.Stage0.Senke.softMulHighL_word
+#print axioms Gabbro.Stage0.Senke.softMulCompressWord_model
+#print axioms Gabbro.Stage0.Senke.softMulNormalizeWord_model
+#print axioms Gabbro.Stage0.Senke.softMulUnderflow_model
+#print axioms Gabbro.Stage0.Senke.softMulFiniteWord_model
+#print axioms Gabbro.Stage0.Senke.softMulRoutine_ok
+#print axioms Gabbro.Stage0.Senke.softMulRoutineL_ok
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_accepted_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_rounding_accepted_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_subnormal_accepted_zeuge
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_mul_invalid_accepted_zeuge
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge
 
 -- C14 Stage-0 image placement and profile certificate transport.

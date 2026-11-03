@@ -1,5 +1,5 @@
 /- Arithmetic foundations: executable rounding and literal-conversion images.
-   Computed binary64 conversion, addition and subtraction use their Block hooks. -/
+   Computed binary64 conversion and arithmetic use their Block hooks. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Ausdruck.Gleit.RundCode
@@ -86,7 +86,7 @@ def roundingImage (q r den expected : Nat) : Except String (List Runner.B) :=
 /-- Run exactly the right-operand adapter and retained-input adder selected
     by the Block hook, checking the resulting bits rather than float equality. -/
 def subtractionImage (a b expected : Nat) : Except String (List Runner.B) :=
-  wordImage (softAddWordsL 8 (fun d => some (konstWL 4 a d))
+  wordImage (softFloatWordsL .add 8 (fun d => some (konstWL 4 a d))
     (fun d => softAddOperandL true d (fun j => some (konstWL 4 b j)))) expected
 
 def magnitudeImage (n : Int) : Except String (List Runner.B) :=
@@ -282,7 +282,7 @@ theorem float_add_sub_model_zeuge :
 
 /-- Operations without a complete routine remain explicit refusals. -/
 theorem float_operations_refused_zeuge :
-    [GleitOp.mul, .div].all (fun op =>
+    [GleitOp.div].all (fun op =>
       !(blockImageOf (show Body from .floatLit (1, 1) (0, 1) (10, 1)
         (.float op (.var .here) (.var .here) (0, 1) (10, 1) .nil))).isOk) = true := by
   decide +kernel

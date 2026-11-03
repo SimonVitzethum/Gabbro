@@ -9,7 +9,8 @@
     (`floatAddSpecial_model`), so the later IR routine replays the same
     decomposition (unpack, special cases, align, add, round, normalize,
     pack) lemma by lemma. `Normal/Sub.lean` derives subtraction from
-    the composed adder; multiplication and division remain refused. -/
+    the composed adder; multiplication is connected through `Mul/Correct.lean`,
+    and division remains refused. -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Stage0.Senke.Ausdruck.Arithmetik.AddSub
