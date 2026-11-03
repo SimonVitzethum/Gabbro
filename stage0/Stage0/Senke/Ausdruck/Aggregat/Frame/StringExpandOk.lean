@@ -22,16 +22,16 @@ theorem expand_words (L : Lay D) {n q : Nat} (hn1 : n ≤ 1) (hq2 : 2 ≤ q) (vs
       [Runner.IR.bool ((BitVec.ofInt 64 0).ult (BitVec.ofNat 64 (strN vs.1))),
        (BitVec.ofNat 64 (strN vs.1) - BitVec.ofInt 64 256) *
          Runner.IR.bool ((BitVec.ofInt 64 0).ult (BitVec.ofNat 64 (strN vs.1)))] ++ List.replicate (q - 1) 0 := by
+  erw [encodeWords.eq_def]
   have hlen : vs.1.length ≤ 1 := by have := vs.2; omega
   obtain ⟨r, hr⟩ : ∃ r, q = r + 1 := ⟨q - 1, by omega⟩
   subst hr
   rcases hbs : vs.1 with _ | ⟨b, rest⟩
-  · simp only [encodeWords, strWeitW, hbs, if_neg (show ¬ r + 1 ≤ 1 by omega), List.take_nil, List.length_nil,
+  · simp only [strWeitW, hbs, if_neg (show ¬ r + 1 ≤ 1 by omega), List.take_nil, List.length_nil,
       List.map_nil, List.nil_append, strN, Nat.sub_zero, Nat.add_sub_cancel]
     have fl : (BitVec.ofInt 64 0).ult (BitVec.ofNat 64 0) = false := by decide
     simp only [fl, Runner.IR.bool, Bool.false_eq_true, ite_false, List.replicate_succ, List.cons_append,
-      List.nil_append]
-    simp
+      List.nil_append] <;> simp
   · have hrest : rest = [] := by
       have := hlen; rw [hbs] at this
       exact List.eq_nil_of_length_eq_zero (by simpa using this)
@@ -44,10 +44,9 @@ theorem expand_words (L : Lay D) {n q : Nat} (hn1 : n ≤ 1) (hq2 : 2 ≤ q) (vs
     have byte : BitVec.ofNat 64 (256 + b.n.toNat) - BitVec.ofInt 64 256 = BitVec.ofInt 64 b.n := by
       rw [← pack_word]; bv_omega
     have one : ∀ a : Runner.W, a * 1 = a := by intro a; bv_omega
-    simp only [encodeWords, strWeitW, hbs, if_neg (show ¬ r + 1 ≤ 1 by omega), strN, fl, byte,
+    simp only [strWeitW, hbs, if_neg (show ¬ r + 1 ≤ 1 by omega), strN, fl, byte,
       Runner.IR.bool, ite_true, one, List.take_succ_cons, List.take_zero, List.length_cons, List.length_nil,
-      List.map_cons, List.map_nil, List.cons_append, List.nil_append]
-    simp [List.replicate_succ]
+      List.map_cons, List.map_nil, List.cons_append, List.nil_append] <;> simp [List.replicate_succ]
 
 /-- Widening a packed string to a long span: head, two-word copy, zero tail. -/
 theorem strExpand_ok {n q : Nat} (hn1 : n ≤ 1) (hq2 : 2 ≤ q)
@@ -185,11 +184,13 @@ theorem strWeit_ok {n : Nat} (q : Nat) (s : Expr D Γ Λ (.str n))
       have hlen : (eval σ₀ s σ ρ).1.length ≤ n := (eval σ₀ s σ ρ).2
       have encoded : encodeWords L (.str q) (eval σ₀ (.strWeit q s) σ ρ) =
           encodeWords L (.str n) (eval σ₀ s σ ρ) ++ List.replicate (q - n) 0 := by
-        simp only [encodeWords, eval, strWeitW, if_neg (show ¬ q ≤ 1 by omega),
+        erw [encodeWords.eq_def L (.str q) (eval σ₀ (.strWeit q s) σ ρ),
+          encodeWords.eq_def L (.str n) (eval σ₀ s σ ρ)]
+        simp only [eval, strWeitW, if_neg (show ¬ q ≤ 1 by omega),
           if_neg (show ¬ n ≤ 1 by omega), List.take_of_length_le (show (eval σ₀ s σ ρ).1.length ≤ q by omega)]
-        simp only [List.append_assoc, List.replicate_append_replicate, List.cons.injEq, true_and, List.append_cancel_left_eq]
-        congr 2
-        omega
+        have padding : q - (eval σ₀ s σ ρ).1.length =
+            (n - (eval σ₀ s σ ρ).1.length) + (q - n) := by omega
+        simp only [List.append_assoc, List.replicate_append_replicate, padding]
       refine ⟨m2, ?_, changed1.trans (changed2.mono (by omega)), trivial, ?_⟩
       · simpa only [List.length_append, pc_add] using run1.trans run2
       · have kept := value1.agree changed2 (hp.frame.agree changed1) (by simp only [valueWords, if_neg (show ¬ n ≤ 1 by omega)]; omega) (by omega)

@@ -17,7 +17,9 @@ theorem strGetW_n {n : Nat} (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) 
 theorem encodeWords_strLong (L : Lay D) {n : Nat} (hn : 2 ≤ n) (w : { bs : List (Zahl 0 255) // bs.length ≤ n }) :
     encodeWords L (.str n) w = BitVec.ofNat 64 w.1.length :: w.1.map (fun b => BitVec.ofInt 64 b.n) ++
       List.replicate (n - w.1.length) (0 : BitVec 64) := by
-  simp only [encodeWords, if_neg (show ¬ n ≤ 1 by omega)]
+  erw [encodeWords.eq_def]
+  dsimp only
+  rw [if_neg (show ¬ n ≤ 1 by omega)]
 
 theorem strLong_byte (L : Lay D) {n : Nat} (hn : 2 ≤ n) (w : { bs : List (Zahl 0 255) // bs.length ≤ n })
     (j : Nat) (hj : j < n) :

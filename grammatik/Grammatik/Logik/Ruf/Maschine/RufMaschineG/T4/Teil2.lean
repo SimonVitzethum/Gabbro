@@ -72,7 +72,7 @@ theorem rufSchrittG_passt_anders (P : Programm D) (O : Orakel D) (passes : Nat)
     (M M' : RufMaschineG D) (f f' : Faden) (hne : f' ≠ f)
     (hs : RufSchrittG P O passes M f M') :
     M'.faeden f' = M.faeden f' := by
-  (rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs) <;> (simp_all [rufUpdateG_noteq])
+  (rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs) <;> (simp_all [rufUpdateG_noteq])
 
 /-- One step preserves the invariant for EVERY thread. Both `hact`
     (acting side) and the untouched side feed the conclusion; `hne`

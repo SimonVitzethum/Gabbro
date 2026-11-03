@@ -115,6 +115,32 @@ theorem blatt_erhaelt_slots
           rw [hslot]
           exact lese_slots_gleich _ _ _ _ _ _
         exact hgoal
+  | assignThruOwn p u ht fld i e m s ho he hg hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      by_cases htu : u = t
+      · subst htu
+        have hmem : Res.held L ∈ Λ := by
+          have hdarf := hL _ hGuard
+          simpa [Res.von] using hdarf
+        exact False.elim (hfrei (hheld hmem))
+      · intro k fld'
+        have hslot : (((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot u Λ
+            (eval ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) i
+              ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n fld
+            (eval ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) e
+              ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)).slots t k fld' =
+            ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)).slots t k fld' :=
+          storeSlot_fremd_traeger _ (Ne.symm htu) _ _ _ _ _
+        have hgoal : (((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot u Λ
+            (eval ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) i
+              ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n fld
+            (eval ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) e
+              ((M.weltVon f).lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)).slots t k fld' =
+            (M.weltVon f).slots t k fld' := by
+          rw [hslot]
+          exact lese_slots_gleich _ _ _ _ _ _
+        exact hgoal
   | assignSlotRef r u ht ho fld e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
@@ -295,12 +321,13 @@ theorem blatt_erhaelt_slots
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'
+      rw [(World.gibt_foldl_speicher _ _).1]
       exact lese_slots_gleich _ _ _ _ _ _
   | retWhyScoped =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       intro k fld'
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).1]
   | ret e hΛe =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep

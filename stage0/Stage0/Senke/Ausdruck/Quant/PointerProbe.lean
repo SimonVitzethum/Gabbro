@@ -37,7 +37,10 @@ theorem code_at : CodeAt memory 0 code := by
 theorem source_at {D : Deklaration} (L : Lay D) : ValueAt L memory 4128 0 shape (value (D := D)) := by
   constructor
   · intro i; trivial
-  · change WordsAt memory 4128 0 [1, 2, 3]
+  · have henc : encodeWords L shape (value (D := D)) = [1, 2, 3] := by
+      simp only [encodeWords.eq_def, shape, elementEncoding]
+      rfl
+    rw [henc]
     intro i hi
     have cases : i = 0 ∨ i = 1 ∨ i = 2 := by change i < 3 at hi; omega
     rcases cases with rfl | rfl | rfl <;>

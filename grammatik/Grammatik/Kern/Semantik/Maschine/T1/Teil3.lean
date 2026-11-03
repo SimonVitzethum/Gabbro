@@ -10,7 +10,7 @@ public import Grammatik.Kern.Semantik.Maschine.T1.Teil1
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
-variable {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /-- **Frame and trace of a LEAF, plain release-aware (`GutRet`).**
 
@@ -35,6 +35,11 @@ theorem Stmt.gutRet_blatt (O : Orakel D) (passes : Nat)
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
       exact (hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))).toRet
   | .assignThru p t _ f i e hw hL, _, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
+        (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
+      exact (hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))).toRet
+  | .assignThruOwn p t _ f i e _ _ _ _ _ hw hL, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh

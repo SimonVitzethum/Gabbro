@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Gleit.Normal.Pack
 public import Stage0.Senke.Gleit.Normal.GuardModel
-public import Stage0.Senke.Gleit.RoutineOrderModel
+public import Stage0.Senke.Gleit.Routine.RoutineOrderModel
 public import Stage0.Senke.Gleit.Compose
 @[expose] public section
 
@@ -48,19 +48,19 @@ theorem routineFiniteDirectionalL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Me
   have e := routineIndexL_ok hl
   have s := unpackSignL_ok hl
   have count := routineLeftCountL_word m e
-  have leftE := WordCode.bin e count
+  have leftE : WordCode (L := L) ρ W _ _ := WordCode.bin e count
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have leftM := WordCode.bin m count
+  have leftM : WordCode (L := L) ρ W _ _ := WordCode.bin m count
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   have left := routineRoundPackL_ok s leftE leftM
-  have rightE := WordCode.bin e (WordCode.const 1 (by decide))
+  have rightE : WordCode (L := L) ρ W _ _ := WordCode.bin e (WordCode.const 1 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   have rightM := floatShiftJamL_ok m (WordCode.const 1 (by decide))
   have right := routineRoundPackL_ok s rightE rightM
   have normalized := routineChooseL_ok
     (routineLessL_ok m (WordCode.konst (2 ^ 56) (by decide)))
     (fun _ => left) (fun _ => right)
-  have zero := WordCode.bin m (WordCode.const 0 (by decide))
+  have zero : WordCode (L := L) ρ W _ _ := WordCode.bin m (WordCode.const 0 (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
   exact routineChooseL_ok zero (fun _ => WordCode.const 0 (by decide)) (fun _ => normalized)
 

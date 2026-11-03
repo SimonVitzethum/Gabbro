@@ -52,6 +52,25 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
+  | _, _, _, _, .assignThruOwn p t _ _ i e _ _ _ _ _ _ _, lb, k, s =>
+      if supp (D.typ t f) then
+        match lowerE lay cenv p s.r with
+        | some (cp, op, r1) =>
+            match lowerE lay cenv i r1 with
+            | some (ci, oi, r2) =>
+                match lowerE lay cenv e r2 with
+                | some (ce, oe, r3) =>
+                    match slotAddr lay t f op (.int 0 (D.count t - 1)) oi r3 with
+                    | some (ca, oa, r4) =>
+                        match storeTo (D.typ t f) oe r4 oa with
+                        | some (cs, r5) =>
+                            some ([⟨lb, [], cp ++ ci ++ ce ++ ca ++ cs, .jmp k⟩], { s with r := r5 })
+                        | none => none
+                    | none => none
+                | none => none
+            | none => none
+        | none => none
+      else none
   | _, _, _, _, .assignGlob g e _ _, lb, k, s =>
       if supp (D.gtyp g) then
         match lowerE lay cenv e s.r with
@@ -187,29 +206,8 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
-  -- the C11 consuming traversal lowers like `traverse` (a counter register, four fixed
-  -- blocks, the lowered body): the current-state re-selection, minimal selection, strict measure
-  -- fall and removal duty are OPEN in G (the placeholder runs the same fixed sweep), and admission
-  -- still refuses the form; `member`/`edge`/`bound`/`mass` are ignored here as in `execStmt`
-  | _, _, _, _, .consumeTraverse t _ _ _ _ _ body, lb, k, s =>
-      if 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128 then
-        match cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg s.r) (s.r + 1) with
-        | some (cv, ov, r1) =>
-            match bindCode (.int 0 (D.count t - 1)) ov r1 with
-            | some (cb, a, r2) =>
-                match lowerB lay (a :: cenv) (k, s.l + 2) body (s.l + 3) (s.l + 2) ⟨r2, s.l + 4⟩ with
-                | some (bb, s1) =>
-                    some (⟨lb, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.int (Ar.wid 0 (D.count t)) 0)
-                            (.int (Ar.wid 0 (D.count t)) 0)], .jmp s.l⟩ ::
-                          ⟨s.l, [], [], .brc .ult (Ar.wid 0 (D.count t)) (.reg s.r)
-                            (.int (Ar.wid 0 (D.count t)) (D.count t)) (s.l + 1) k⟩ ::
-                          ⟨s.l + 1, [], cv ++ cb, .jmp (s.l + 3)⟩ ::
-                          ⟨s.l + 2, [], [.bin s.r .add (Ar.wid 0 (D.count t)) (.reg s.r)
-                            (.int (Ar.wid 0 (D.count t)) 1)], .jmp s.l⟩ :: bb, s1)
-                | none => none
-            | none => none
-        | none => none
-      else none
+  -- the C11 consuming traversal (`verbrauchLauf`: re-selection of a minimal candidate, strict
+  -- measure fall) has no Code lowering yet and falls to the refusing arm below
   -- the C11 scoped returns lower like `ret`/`retWhy` (the immediate value/reason pop): scopes are
   -- ghost at IR level (as are `locks`: no runtime release to emit); `execStmt` releases them via
   -- foldl `gibt` and the refinement keeps `Rep` through the fold (`Rep.gibt_foldl`). Unwinding each

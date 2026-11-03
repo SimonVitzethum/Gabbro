@@ -108,6 +108,12 @@ structure UFnKopf where
   puts : List String := []
   nimmt : List String := []
   gibt : List String := []
+  /-- Call-scoped owner loans (`borrows m`, C12). -/
+  leiht : List String := []
+  /-- Linear owner handoffs (`moves m`, C09). -/
+  bewegt : List String := []
+  /-- Checked owner mints (`mints m`, C09). -/
+  praegt : List String := []
   /-- The named `assume` witnessing a hardware origin (the generated core
       query's `assume` clause; `none` for software items and while unresolved). -/
   annahme : Option String := none
@@ -265,6 +271,12 @@ structure UEffekte where
   gputs : List String := []
   nimmt : List String := []
   gibt : List String := []
+  /-- Call-scoped owner loans (`borrows m`, C12). -/
+  leiht : List String := []
+  /-- Linear owner handoffs (`moves m`, C09). -/
+  bewegt : List String := []
+  /-- Checked owner mints (`mints m`, C09). -/
+  praegt : List String := []
 
 /-- A written name is a static when it is no parameter and no table. -/
 def uIstGlobName (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) (g : String) : Bool :=
@@ -322,6 +334,18 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
     match uEffekteAux kopf tabs locks globs rest with
     | .error e => .error e
     | .ok r => .ok { r with nimmt := m :: r.nimmt }
+  | .borrows m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with leiht := m :: r.leiht }
+  | .moves m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with bewegt := m :: r.bewegt }
+  | .mints m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with praegt := m :: r.praegt }
   | _ :: _ => .error "effect without G form"
 
 end Gabbro.Grammatik.Parser.Uebersetze

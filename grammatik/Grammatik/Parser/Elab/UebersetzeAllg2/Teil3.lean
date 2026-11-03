@@ -376,8 +376,8 @@ theorem nachSigAt_eq (u : UProg) (n : Nat) (L : List (Res (declOf u))) :
   unfold nachSig
 
 /-- `RufPasst` against any signature of the unit, decided over the finite carriers. The
-    admitted boundary holds the callee's input marks (C16) and no owner flow yet
-    (foreign signatures never consume marks; the C09 handoff arrives with real flows). -/
+    admitted boundary holds the callee's input marks (C16) and an escrow-ready
+    owner flow (C12: `ownerReadyB` -- empty flows and resolved borrowing callees). -/
 def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
     (Fin u.locks.length) (Fin u.marken.length)) (Λ : List (Res (declOf u))) : Bool :=
   (List.finRange u.tabs.length).all (fun t => !S.schreibt t || V.schreibt t) &&
@@ -389,7 +389,7 @@ def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.len
     | none => true
     | some c => match S.boden with | some c' => decide (c ≤ c') | none => false) &&
   decide (Untermulti (S.inputMarks.map (Res.vonMarke (declOf u))) Λ) &&
-  decide (S.owner = {})
+  ownerReadyB u S
 
 theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
     (Fin u.locks.length) (Fin u.marken.length)} {Λ : List (Res (declOf u))} (h : rufPasstB u V S Λ = true) :
@@ -397,7 +397,7 @@ theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.t
   unfold rufPasstB at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
   obtain ⟨⟨⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩, hk⟩, ho⟩ := h
-  refine ⟨fun t ht => ?_, fun g ht => ?_, hk, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, OwnerFlow.escrowReady_of_empty _ _ _ _ ho⟩
+  refine ⟨fun t ht => ?_, fun g ht => ?_, hk, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, ownerReadyB_ok u S ho⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1

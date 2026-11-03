@@ -339,8 +339,7 @@ inductive UStmt
   | arrayLoopBeg : String → USide → UEns → UStmt
   /-- `reset A at i count n;` at a zero-initialized static array (C18): the static as
       written and the two evaluated operands. The lowering refuses it until the checked
-      range-store expansion and the page-return bridge are proved; the whole-arena
-      `reset A;` keeps its counter store below. Appended at the end, so earlier
+      range-store expansion and page-return bridge are proved; `reset A;` keeps its counter store.
       constructor positions keep their names. -/
   | resetRange : String → USide → USide → UStmt
   /-- Optional-result axiom binding; the continuation retains its scope for a void answer. -/
@@ -357,6 +356,7 @@ inductive UStmt
       continuation and no `blkEnd`. Appended at the end, so earlier
       constructor positions keep their names. -/
   | narrowReqBeg : String → Int → Int → UStmt
+  | axCallElseBeg : String → List UArg → String → UStmt
   /-- Explicit linear retirement in generated check consumers. No payload or runtime effect. -/
   | retireMark : String → UStmt
   deriving DecidableEq, Repr

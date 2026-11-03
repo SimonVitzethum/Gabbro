@@ -1,9 +1,23 @@
 # Zero-cost abstractions without objects — syntax plan
 
-**Status: planned, not started.** Owner decisions of 2026-11-02: adapters, embedding, specs, generics,
-parametric modules, closed and open (`dyn`) dispatch, effect parameters in specs, the optional explicit
-argument form `::[ ]`, check model A (instantiate before G). Nothing here starts before the three C-package
-rounds of `AGENTS.md` ("Current work") are merged: these are new language forms, not lowerings of existing ones.
+**Status (source audit 2026-11-03): Lean front ends are present for steps 1a–3c, within the
+checked domains below.** This replaces the stale “planned, not started” claim; it does not claim
+that every planned form reaches a Stage-0 image or that the Rust/Lean pipeline was rebuilt.
+Paths are relative to `grammatik/Grammatik/Parser/`; no build was run for this audit.
+
+| Step | Code-derived status | Missing or restricted part |
+|---|---|---|
+| 1a | Lean front end present: `Stmt/Anweisung/Defs1,Defs2a`, `Elab/Uebersetze/Teil/Teil18` parse/expand `from` and `?`; `Elab/Proben/Spaet/UebersetzeProben42` has expansion witnesses. | No general expression `?`: it is checked call propagation with a matching reason channel; adapter modifier/self/prelude restrictions remain. |
+| 1b | Lean front end present: `Elab/Uebersetze/Records/Embedding`, `Elab/Uebersetze/Folds/{Expansion,FloatExpansion,ExistsWitness}`, `SourceFolds/Range`. | Range sugar is only a direct integer add-fold return over one indexed array, lower bound zero and upper bound its length; nested/min/max range folds refuse. General range-fold coverage is missing. |
+| 2a | Lean front end present: `Spec/{Parse,Items,Contract,Check,Resolve,Walk,Expand,Zeugen}` implements spec/impl, effects and checked conformance. | Conformance is the implemented syntactic contract/effect inclusion check; arbitrary semantic implication is not supplied. Ordinary elaboration/checking of expanded bodies remains required. |
+| 2b | Lean front end present: `Elab/Generic/` has arguments, substitution, literals, expansion, static conformance, parametricity and pipeline witnesses; type/const/function arguments and explicit `::[ ]` are represented. | Unsupported abstract operations and unbound generic library translators refuse; this is instantiate-before-G, not a universal parametric-body theorem. Original Stage-0 metadata can still refuse headers. |
+| 2c | Lean front end present: `Elab/Modules/{Shape,Substitution,Expansion,Frontend}` plus witnesses expands generative module uses, with freshness/closure/output checks. | No complete container library is established by these frontend files; Stage-0 original module-template/use metadata still refuses. |
+| 3a | Lean front end present: `TaggedDispatch/{Signature,Resolve,Expressions,Expansion,Frontend}` and source witnesses expand `tagged … by S`. | Only checked dispatch signatures/payloads and ordinary output forms are admitted; Stage-0 sum payload/metadata limits still apply. |
+| 3b | Lean front end present: `Dyn/{Collect,Closed,Rewrite,Frontend}` and source witnesses close linked implementations into tagged dispatch. | This code uses closed sums, not the proposed `Ty.dyn` extension; payloads must be scalar and at most eight bytes. Downcast/equality/implementation tests and unsupported bound conversions refuse; unrestricted dynamic payloads/linking are missing. |
+| 3c | Lean front end present: `Elab/Generic/PointerTypes`, `Signatures.vertragPasstB/vertragPasstAt/passtAt` share C06/O43 contract inclusion with static function arguments. | Conjunct inclusion compares written predicates (including names); arbitrary implication and positional normalization are not supplied here. This header does not establish the planned generic call/goal proof by frontend presence alone. |
+
+The owner decisions of 2026-11-02 and the intended scope below remain the design reference;
+the table records code already present, independently of the historical implementation order.
 
 Every form below follows §3 of `AGENTS.md`: the Lean model first (front end, exporter, the generic theorem of
 the desugaring, or the G extension with `gabbro_ziel` on the standard axioms), then the Rust checker and

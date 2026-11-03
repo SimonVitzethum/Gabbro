@@ -105,7 +105,7 @@ def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D
   | _, _, _, _, .floatLit _ _ _ r | _, _, _, _, .floatOf _ _ _ r => retFreiB r
   | _, _, _, _, .bindCall _ _ _ _ _ r | _, _, _, _, .bindCallInd _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ r => retFreiB r
-  | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ r => retFreiB r
+  | _, _, _, _, .bindAxiomOpt (e := some τ) _ _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .awaits _ _ _ _ _ r => retFreiB r
   | _, _, _, _, .exchange _ _ _ _ r => retFreiB r
   | _, _, _, _, .bindAxiomOpt (e := none) .. | _, _, _, _, .bindAxiomOptElse .. => false

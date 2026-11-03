@@ -196,20 +196,25 @@ theorem getrennt_lesesicht_bleibt (R : ∀ f : D.Fn, World D → Env D (D.params
     (hR : TreuR R) {f : D.Fn} (hG : ParamGetrennt D f) (hW : RahmenUeberParams D f)
     (j : Fin (D.params f).length) (hj : zaehltFuerTrennung ((D.params f).get j) = false)
     {t : D.Tab} (ht : traegerVon D ((D.params f).get j) = some t)
-    (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (h : (R f σ ρ).welt = some σ') :
+    (σ : World D) (ρ : Env D (D.params f)) (σ' : World D)
+    (hh : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt)
+    (h : (R f σ ρ).welt = some σ') :
     ∀ k (fld : D.Feld t), σ'.slots t k fld = σ.slots t k fld :=
-  (TreuR.rahmen hR h).1 t (getrennt_nicht_geschrieben hG hW j hj ht)
+  (TreuR.rahmen hR hh h).1 t (getrennt_nicht_geschrieben hG hW j hj ht)
 
-/-- **The same at the model's call, `rufAt`, at every depth and every world** (no lock
-    premise: `rufAt_treu`). -/
+/-- **The same at the model's call, `rufAt`, at every depth and every disciplined
+    world** (entry discipline for the lock half, `ScopesOkProg` for the release
+    discipline: `rufAt_treu`). -/
 theorem getrennt_ruf_rahmen (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : TreuO O)
+    (hS : ScopesOkProg P)
     {f : D.Fn} (hG : ParamGetrennt D f) (hW : RahmenUeberParams D f)
     (j : Fin (D.params f).length) (hj : zaehltFuerTrennung ((D.params f).get j) = false)
     {t : D.Tab} (ht : traegerVon D ((D.params f).get j) = some t)
     (σ : World D) (ρ : Env D (D.params f)) (σ' : World D)
+    (hh : HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt)
     (h : (rufAt P O passes fuel f σ ρ).welt = some σ') :
     ∀ k (fld : D.Feld t), σ'.slots t k fld = σ.slots t k fld :=
-  getrennt_lesesicht_bleibt _ (rufAt_treu P O passes hO fuel) hG hW j hj ht σ ρ σ' h
+  getrennt_lesesicht_bleibt _ (rufAt_treu P O passes hO hS fuel) hG hW j hj ht σ ρ σ' hh h
 
 /-! ## 5. The borrow rule -/
 

@@ -191,6 +191,9 @@ def effekt (k : Kontext) : SEffekt → SEffekt
   | .writes e => .writes (aus k e)
   | .locks s e => .locks s (aus k e)
   | .allocs n => .allocs (k.ref n)
+  | .borrows n => .borrows (k.ref n)
+  | .moves n => .moves (k.ref n)
+  | .mints n => .mints (k.ref n)
   | .takes e => .takes (aus k e)
   | .posts e => .posts (aus k e)
   | .instanceEffects n ts => .instanceEffects (k.ref n) (ts.map (typ k))
@@ -233,6 +236,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
   | .call f xs => .call (k.ruf f) (xs.map (aus k))
+  | .callElse f xs reason body => .callElse (k.ruf f) (xs.map (aus k)) reason (anw (k.mit [reason]) body)
   | .callQ f xs => .callQ (k.ruf f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))

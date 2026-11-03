@@ -188,6 +188,8 @@ structure UKonstFn where
   erg : Ty
   rumpf : SAnw
   signature : FnSig
+  constants : List (String × Int) := []
+  sums : List USum := []
 
 /-- Bind integer arguments only when their checked parameter types admit them. -/
 def uKonstBinde : List (String × Ty) → List Int → Option (List (String × Int))

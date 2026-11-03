@@ -31,6 +31,7 @@ def eE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List Strin
   | .glob .. => ["Expr.glob"]
   | .slot (i := i) .. => "Expr.slot" :: eE i
   | .thru (p := p) (i := i) .. => "Expr.thru" :: (eE p ++ eE i)
+  | .thruOwn (p := p) (i := i) .. => "Expr.thruOwn" :: (eE p ++ eE i)
   | .ptrOf .. => ["Expr.ptrOf"]
   | .fnref .. => ["Expr.fnref"]
   | .refEq a b => "Expr.refEq" :: (eE a ++ eE b)
@@ -111,6 +112,7 @@ mutual
 def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → List String
   | .assignSlot (i := i) (e := e) .. => "Stmt.assignSlot" :: (eE i ++ eE e)
   | .assignThru (p := p) (i := i) (e := e) .. => "Stmt.assignThru" :: (eE p ++ eE i ++ eE e)
+  | .assignThruOwn (p := p) (i := i) (e := e) .. => "Stmt.assignThruOwn" :: (eE p ++ eE i ++ eE e)
   | .assignSlotRef (r := r) (e := e) .. => "Stmt.assignSlotRef" :: (eE r ++ eE e)
   | .assignGlob (e := e) .. => "Stmt.assignGlob" :: eE e
   | .putBytes (i := i) (e := e) .. => "Stmt.putBytes" :: (eE i ++ eE e)
@@ -130,6 +132,7 @@ def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
       "Stmt.consumeTraverse" :: (eE member ++ eE edge ++ eE inv ++ eE mass ++ cB body)
   | .retry _ bis body ueber => "Stmt.retry" :: (eE bis ++ cB body ++ cB ueber)
   | .forever _ inv body => "Stmt.forever" :: (eE inv ++ cB body)
+  | .axiomCallElse (args := args) (err := handler) .. => "Stmt.axiomCallElse" :: (eA args ++ cE handler)
   | .axiomCall (args := args) .. => "Stmt.axiomCall" :: eA args
   | .regWrite (e := e) .. => "Stmt.regWrite" :: eE e
   | .transition .. => ["Stmt.transition"]

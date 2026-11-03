@@ -89,6 +89,9 @@ def chkS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
   | _, _, _, _, .assignThru p t _ f i e _ _, _, c =>
     if decide (NotLink A t f) && checkExpression A c p && checkExpression A c i && checkExpression A c e &&
       storeCheck A c t i then some (some c) else none
+  | _, _, _, _, .assignThruOwn p t _ f i e _ _ _ _ _ _ _, _, c =>
+    if decide (NotLink A t f) && checkExpression A c p && checkExpression A c i && checkExpression A c e &&
+      storeCheck A c t i then some (some c) else none
   | _, _, _, _, .assignGlob g e _ _, _, c =>
     if decide (NotMetaGlob A g) && checkExpression A c e then some (some c) else none
   | _, _, _, _, .putBytes t _ _ _ i _ _ e _ _, _, c =>

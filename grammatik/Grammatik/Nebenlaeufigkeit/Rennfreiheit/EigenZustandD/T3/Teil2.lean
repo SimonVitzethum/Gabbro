@@ -42,6 +42,12 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
         exact Or.inl ⟨_, assignDurch_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
       · exact Or.inr (Or.inl fun k f =>
           assignDurch_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
+  | assignThruOwn p t2 ht2 f2 i e m s ho he hg hw hL =>
+      by_cases ht : t2 = t
+      · subst ht
+        exact Or.inl ⟨_, assignDurchOwn_neu (Λ' := Λ) O passes σ ρ σ' neu hstep hneu, rfl⟩
+      · exact Or.inr (Or.inl fun k f =>
+          assignDurchOwn_andere_fest (Λ' := Λ) O passes σ ρ σ' hstep t ht k f)
   | assignSlotRef r t2 ht2 ho f2 e hw hL =>
       by_cases ht : t2 = t
       · subst ht
@@ -133,12 +139,14 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
       refine Or.inr (Or.inl fun k f => ?_)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).1]
+      try rfl
   | retWhyScoped r R =>
       refine Or.inr (Or.inl fun k f => ?_)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).1]
+      try rfl
 
 /-! ## 10. The step theorem: a foreign step keeps the slots of `t`.
 

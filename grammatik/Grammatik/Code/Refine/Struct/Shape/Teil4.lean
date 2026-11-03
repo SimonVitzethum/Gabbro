@@ -86,39 +86,7 @@ theorem lowerS_shape_consumeTraverse (lay : Layout D) (cenv : List Reg) (lv : Lb
     (h : lowerS lay cenv lv (.consumeTraverse (Λ := Λ) t member edge inv bound mass body : Gabbro.Grammatik.Stmt D V l Γ Λ Λ) lb k st = some (blks, st'))
     (ih_lowerB_shape_body : ∀ (a : Reg) (st1 st1' : St) (bb : List Block), lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) st1 = some (bb, st1') → Shape (st.l + 3) st1 st1' bb)
     : Shape lb st st' blks := by
-  simp only [lowerS] at h
-  by_cases hc : 0 ≤ D.count t ∧ Ar.Fits 0 (D.count t) 128
-  · simp only [hc, and_self, if_true] at h
-    rcases hv : cvtG (.int 0 (D.count t)) (.int 0 (D.count t - 1)) (.reg st.r) (st.r + 1) with
-      _ | ⟨cv, ov, r1⟩
-    · simp only [hv, reduceCtorEq] at h
-    have m1 := cvtG_mono hv
-    simp only [hv] at h
-    rcases hb : bindCode (.int 0 (D.count t - 1)) ov r1 with _ | ⟨cb, a, r2⟩
-    · simp only [hb, reduceCtorEq] at h
-    have m2 := bindCode_mono hb
-    simp only [hb] at h
-    rcases hb2 : lowerB lay (a :: cenv) (k, st.l + 2) body (st.l + 3) (st.l + 2) ⟨r2, st.l + 4⟩ with
-      _ | ⟨bb, s1⟩
-    · simp only [hb2, reduceCtorEq] at h
-    have S2 := ih_lowerB_shape_body a ⟨r2, st.l + 4⟩ s1 bb hb2
-    simp only [hb2] at h
-    have := Option.some.inj h
-    simp only [Prod.mk.injEq] at this
-    obtain ⟨rfl, rfl⟩ := this
-    refine ⟨⟨_, _, rfl, rfl⟩, ?_, ?_⟩
-    · intro b hb
-      simp only [List.mem_cons] at hb
-      rcases hb with rfl | rfl | rfl | rfl | hb
-      · rfl
-      · rfl
-      · rfl
-      · rfl
-      · exact S2.2.1 b hb
-    · have a2 := S2.2.2
-      simp only at m1 m2 a2 ⊢
-      omega
-  · simp only [hc, ↓reduceIte, reduceCtorEq] at h
+  simp only [lowerS, reduceCtorEq] at h
 
 set_option linter.unusedSectionVars false in
 /-- The shape of a C11 required narrowing in a block: the `narrow` test and bind blocks, an

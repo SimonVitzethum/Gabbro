@@ -1,12 +1,11 @@
 module
 public import Grammatik.Kern.Syntax.Satz.T2
-
-public import Grammatik.Kern.Syntax.Satz.T3.Schleifen
-
+public import Grammatik.Kern.Syntax.Satz.T3a
 @[expose] public section
 
 namespace Gabbro.Grammatik
-variable {D : Deklaration} {V : Vertrag D}
+variable {D : Deklaration} {V : vertrag D}
+
 /-! ### The lock floor of a body (held-set relaxation, 2026-09-13)
 
     `ueberBoden c`: every `locks L` in the syntax takes a lock of rank at

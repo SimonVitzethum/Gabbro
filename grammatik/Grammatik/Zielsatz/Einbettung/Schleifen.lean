@@ -1,12 +1,15 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Lauf
-public import Grammatik.Zielsatz.Einbettung.Schleifen.Grundlagen
+public import Grammatik.Zielsatz.Einbettung.Schleifena
 @[expose] public section
 namespace Gabbro.Grammatik.Einbettung
 open Gabbro.Grammatik
 variable {D D' : Deklaration}
 namespace Einbettung
 variable (E : Einbettung D D')
+
+/-! ## Consuming runs beside their images -/
+
 section Verbrauch
 
 variable {hZ}

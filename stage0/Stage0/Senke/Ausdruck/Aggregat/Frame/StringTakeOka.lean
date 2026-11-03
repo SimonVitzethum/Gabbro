@@ -43,7 +43,14 @@ theorem strTake_encode (L : Lay D) {n m : Nat} (hn2 : 2 ≤ n) (hm2 : 2 ≤ m) (
     encodeWords L (.str m) (strWeitW (n := n) m w) =
       BitVec.ofNat 64 (min w.1.length m) :: ((encodeWords L (.str n) w).drop 1).take m := by
   have hlen : w.1.length ≤ n := w.2
-  simp only [encodeWords, strWeitW, if_neg (show ¬ m ≤ 1 by omega), if_neg (show ¬ n ≤ 1 by omega),
+  have encodeLong {k : Nat} (hk : 2 ≤ k) (s : Wert D (.str k)) :
+      encodeWords L (.str k) s = BitVec.ofNat 64 s.1.length ::
+        s.1.map (fun b => BitVec.ofInt 64 b.n) ++ List.replicate (k - s.1.length) 0 := by
+    rw [encodeWords.eq_def]
+    dsimp only
+    rw [if_neg (show ¬ k ≤ 1 by omega)]
+  erw [encodeLong hm2, encodeLong hn2]
+  simp only [strWeitW,
     List.length_take, List.cons_append, List.drop_succ_cons, List.drop_zero]
   rw [Nat.min_comm w.1.length m]
   congr 1

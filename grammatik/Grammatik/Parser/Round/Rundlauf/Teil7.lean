@@ -101,7 +101,7 @@ theorem prim_platz : ∀ (n : Nat) (Rn : R n)
       suffToks suff ++ rest ≠ .zeichen "(" :: R := by
     intro R hcon
     exact suffToks_nopar suff rest R hr hcon
-  simp only [rufKopf_ohne, suffToks_nogeneric suff rest hr, hmiss] at ⊢
+  rw [rufKopf_ohne _ _ _ _ (suffToks_nogeneric suff rest hr) hmiss]
   have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
     simp only [groesse] at ⊢
     omega
@@ -197,8 +197,8 @@ theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
     ruhigSuff_nopar rest hr
   have hgeneric : ∀ R, rest ≠ .zeichen "::" :: .zeichen "[" :: R := by
     simpa only [suffToks, List.nil_append] using suffToks_nogeneric [] rest hr
-  simp only [rufKopf_ohne, hgeneric, hmiss, hint, hzukf, hselff,
-    Bool.false_or, Bool.false_eq_true, ↓reduceIte] at ⊢
+  rw [rufKopf_ohne _ _ _ _ hgeneric hmiss]
+  simp only [hint, hzukf, hselff, Bool.false_or, Bool.false_eq_true, ↓reduceIte]
 
 -- `old` through `parsePrimary`: head word, place, close paren.
 theorem prim_alt : ∀ (n : Nat) (Rn : R n)

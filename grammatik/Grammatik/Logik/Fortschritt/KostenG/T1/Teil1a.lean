@@ -32,6 +32,7 @@ def kostenExpr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Na
   | .glob _ _ => 1
   | .slot _ _ i _ => 1 + kostenExpr i
   | .thru p _ _ _ i _ => 1 + kostenExpr p + kostenExpr i
+  | .thruOwn p _ _ _ i _ _ _ _ _ _ => 1 + kostenExpr p + kostenExpr i
   | .ptrOf _ _ _ _ => 0
   | .fnref _ _ _ => 0
   | .refEq a b => 1 + kostenExpr a + kostenExpr b
@@ -136,6 +137,7 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i e _ _ => 1 + kostenExpr i + kostenExpr e
   | .assignThru p _ _ _ i e _ _ => 1 + kostenExpr p + kostenExpr i + kostenExpr e
+  | .assignThruOwn p _ _ _ i e _ _ _ _ _ _ _ => 1 + kostenExpr p + kostenExpr i + kostenExpr e
   | .assignSlotRef r _ _ _ _ e _ _ => 1 + kostenExpr r + kostenExpr e
   | .assignGlob _ e _ _ => 1 + kostenExpr e
   | .putBytes _ _ _ _ i _ _ e _ _ => 1 + kostenExpr i + kostenExpr e

@@ -125,6 +125,13 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
       first
         | exact absurd hlog.symm (List.cons_ne_self _ _)
         | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      simp only [rufUpdateG_self] at hlog
+      first
+        | exact absurd hlog.symm (List.cons_ne_self _ _)
+        | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
 
 
 end Gabbro.Grammatik

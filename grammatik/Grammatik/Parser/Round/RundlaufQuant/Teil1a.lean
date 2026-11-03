@@ -10,9 +10,10 @@
   and every `&&`/`||` in parentheses (`druckToks`).
 
   The reader takes a parenthesis at the atom level: it first tries the expression reader
-  (`parseCmp`) and falls back to `( pred )` when that fails. So the proof carries two legs per
-  predicate (`PredBein`): the atom leg (what `parsePredAtom` returns) and, for a predicate that is
-  no expression, the error leg (the expression reader fails on its print, `parseUnary` and up).
+  (`parseCmp`) and falls back to `( pred )` when that fails. The proof carries an atom leg
+  (`parsePredAtom` returns the intended tree) and an expression-attempt leg: `parseUnary`
+  either returns that same tree and tail or fails. In particular, `exists` now succeeds
+  through `parsePrimary` and `parseQuant .any`; only `forall` is predicate-only.
 
   Excluded (recorded in the CUTS at the end): `count x in D : p` (it reads as an expression at the
   primary level), `e in D`, `a reaches b via f`, the domains `fields of` and `chain (x, y) in`.
@@ -144,10 +145,10 @@ theorem fehlt_prim_klammer {b : Nat} {T : List Token} (h : Fehlt parseOr b T) :
   obtain ⟨m, hm⟩ := h f' (by omega)
   exact ⟨m, by simp only [parsePrimary, hm]⟩
 
-/-- A quantifier word heads no expression: every reader fails on it, whatever the fuel. -/
-theorem fehlt_quant (w : String) (hw : w = "forall" ∨ w = "exists") (X : List Token) :
-    Fehlt parseOr 0 (.wort w :: X) := by
-  have hU : Fehlt parseUnary 0 (.wort w :: X) := by
+/-- `forall` remains predicate-only: every expression reader fails on this head. -/
+theorem fehlt_quant (X : List Token) :
+    Fehlt parseOr 0 (.wort "forall" :: X) := by
+  have hU : Fehlt parseUnary 0 (.wort "forall" :: X) := by
     intro f _
     cases f with
     | zero => exact ⟨_, rfl⟩
@@ -155,26 +156,24 @@ theorem fehlt_quant (w : String) (hw : w = "forall" ∨ w = "exists") (X : List 
       cases f with
       | zero => exact ⟨"out of fuel", by simp only [parseUnary, parsePrimary]⟩
       | succ f =>
-        rcases hw with rfl | rfl
-        · exact ⟨"reserved head forall", by simp [parseUnary, parsePrimary, nameText, istKeinPlatz, keinPlatzTafel]⟩
-        · exact ⟨"reserved head exists", by simp [parseUnary, parsePrimary, nameText, istKeinPlatz, keinPlatzTafel]⟩
-  have hM : Fehlt parseMul 0 (.wort w :: X) := by
+        exact ⟨"reserved head forall", by simp [parseUnary, parsePrimary, nameText, istKeinPlatz, keinPlatzTafel]⟩
+  have hM : Fehlt parseMul 0 (.wort "forall" :: X) := by
     intro f _; cases f with
     | zero => exact ⟨_, rfl⟩
     | succ f => obtain ⟨m, hm⟩ := hU f (by omega); exact ⟨m, by simp only [parseMul, hm]⟩
-  have hA : Fehlt parseAdd 0 (.wort w :: X) := by
+  have hA : Fehlt parseAdd 0 (.wort "forall" :: X) := by
     intro f _; cases f with
     | zero => exact ⟨_, rfl⟩
     | succ f => obtain ⟨m, hm⟩ := hM f (by omega); exact ⟨m, by simp only [parseAdd, hm]⟩
-  have hB : Fehlt parseBit 0 (.wort w :: X) := by
+  have hB : Fehlt parseBit 0 (.wort "forall" :: X) := by
     intro f _; cases f with
     | zero => exact ⟨_, rfl⟩
     | succ f => obtain ⟨m, hm⟩ := hA f (by omega); exact ⟨m, by simp only [parseBit, hm]⟩
-  have hC : Fehlt parseCmp 0 (.wort w :: X) := by
+  have hC : Fehlt parseCmp 0 (.wort "forall" :: X) := by
     intro f _; cases f with
     | zero => exact ⟨_, rfl⟩
     | succ f => obtain ⟨m, hm⟩ := hB f (by omega); exact ⟨m, by simp only [parseCmp, hm]⟩
-  have hN : Fehlt parseAnd 0 (.wort w :: X) := by
+  have hN : Fehlt parseAnd 0 (.wort "forall" :: X) := by
     intro f _; cases f with
     | zero => exact ⟨_, rfl⟩
     | succ f => obtain ⟨m, hm⟩ := hC f (by omega); exact ⟨m, by simp only [parseAnd, hm]⟩

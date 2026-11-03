@@ -29,25 +29,22 @@ def konjunkte {Γ : Ctx} {Λ : List (Res D)} : Expr D Γ Λ .bool → List (Expr
 theorem konjunkte_holds {Γ : Ctx} {Λ : List (Res D)} (e : Expr D Γ Λ .bool)
     (s0 s : World D) (ρ : Env D Γ) :
     wahr? (eval s0 e s ρ) = true ↔
-      ∀ c ∈ konjunkte e, wahr? (eval s0 c s ρ) = true :=
-  match e with
-  | .and a b => by
+      ∀ c ∈ konjunkte e, wahr? (eval s0 c s ρ) = true := by
+  rw [konjunkte.eq_def]
+  split
+  · rename_i a b
     have iha := konjunkte_holds a s0 s ρ
     have ihb := konjunkte_holds b s0 s ρ
     have hand : wahr? (eval s0 (Expr.and a b) s ρ) =
         (wahr? (eval s0 a s ρ) && wahr? (eval s0 b s ρ)) := rfl
-    simp only [konjunkte, List.mem_append, hand, Bool.and_eq_true]
+    simp only [List.mem_append, hand, Bool.and_eq_true]
     refine ⟨fun ⟨ha, hb⟩ c hc => ?_, fun h => ⟨?_, ?_⟩⟩
     · rcases hc with hc | hc
       · exact (iha.mp ha) c hc
       · exact (ihb.mp hb) c hc
     · exact iha.mpr (fun c hc => h c (.inl hc))
     · exact ihb.mpr (fun c hc => h c (.inr hc))
-  | .tru | .fls | .var .. | .glob .. | .slot .. | .thru .. | .oldG .. | .oldS ..
-  | .lt .. | .le .. | .eq .. | .fllt .. | .flle .. | .or .. | .not .. | .istSome ..
-  | .forallSlots .. | .existsSlots .. | .reaches .. | .refEq .. | .slotRef ..
-  | .arrGet .. | .strEq .. | .strLt .. | .wenn .. | .intBuiltin1 .. | .intBuiltin2 ..
-  | .prodGet .. => by simp [konjunkte]
+  · simp [konjunkte]
 
 /-- Syntactic inclusion of normalised conjunct lists in one context:
     every goal conjunct occurs among the assumptions. -/

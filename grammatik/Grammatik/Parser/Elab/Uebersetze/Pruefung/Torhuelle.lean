@@ -54,15 +54,15 @@ set_option maxRecDepth 100000
 def uMarken (ms : List SItemTief) (checks : List UCheck) : List String :=
   uEindeutig ((ms.filterMap fun | .typeT flags n _ _ _ => if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++ checks.map fun c => c.duty)
 
-/-- Every consumed or produced mark of every function names a member of the mark table. -/
+/-- Every consumed, produced, borrowed, moved or minted mark of every function names a member of the mark table. -/
 def uMarkenPruefAux (marken : List String) : List UFn → Except String Unit
   | [] => .ok ()
   | f :: rest =>
-    match (f.nimmt ++ f.gibt).find? (fun m => !(marken.any (fun n => strEq n m))) with
+    match (f.nimmt ++ f.gibt ++ f.leiht ++ f.bewegt ++ f.praegt).find? (fun m => !(marken.any (fun n => strEq n m))) with
     | some m => .error ("mark unknown: " ++ m)
     | none => uMarkenPruefAux marken rest
 
-/-- The mark check of the unit: every `nimmt`/`gibt` names a declared mark. -/
+/-- The mark check of the unit: every `nimmt`/`gibt`/`leiht`/`moves`/`mints` names a declared mark. -/
 def uMarkenPruef (marken : List String) (fns : List UFn) : Except String Unit :=
   uMarkenPruefAux marken fns
 
@@ -79,6 +79,76 @@ def uGibtPruefAux (owners : List String) : List UFn → Except String Unit
 /-- The owner-production check of the unit: no `gibt` names a table owner. -/
 def uGibtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
   uGibtPruefAux owners fns
+
+/-- A borrowed mark is a table owner, borrowed alone (C12): every `leiht` names a
+    table's `owner` mark, and no `leiht` names a `nimmt` of the same function
+    (a call-scoped loan is disjoint from ordinary consumption: `OwnerFlow.Valid`
+    keeps one occurrence per owner identity across stages, `RufPasst.ownerReady`
+    the disjointness). Both violations are refused by name. -/
+def uLeihtPruefAux (owners : List String) : List UFn → Except String Unit
+  | [] => .ok ()
+  | f :: rest =>
+    match f.leiht.find? (fun m => !(owners.any (fun o => strEq o m))) with
+    | some m => .error ("loan without owner: " ++ m)
+    | none =>
+      match f.leiht.find? (fun m => f.nimmt.any (fun n => strEq n m)) with
+      | some m => .error ("mark both consumed and borrowed: " ++ m)
+      | none => uLeihtPruefAux owners rest
+
+/-- The owner-loan check of the unit: every `leiht` names a table owner no
+    `nimmt` of the same function takes. -/
+def uLeihtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+  uLeihtPruefAux owners fns
+
+/-- A handed-over mark is a table owner, handed over alone (C09): every `moves`
+    names a table's `owner` mark, and no `moves` names a `nimmt` or a `leiht` of
+    the same function (a linear handoff is disjoint from ordinary consumption
+    and from call-scoped loans: `OwnerFlow.Valid` keeps one occurrence per
+    owner identity across stages, `RufPasst.ownerReady` the disjointness).
+    All three violations are refused by name. -/
+def uBewegtPruefAux (owners : List String) : List UFn → Except String Unit
+  | [] => .ok ()
+  | f :: rest =>
+    match f.bewegt.find? (fun m => !(owners.any (fun o => strEq o m))) with
+    | some m => .error ("move without owner: " ++ m)
+    | none =>
+      match f.bewegt.find? (fun m => f.nimmt.any (fun n => strEq n m)) with
+      | some m => .error ("mark both consumed and moved: " ++ m)
+      | none =>
+        match f.bewegt.find? (fun m => f.leiht.any (fun n => strEq n m)) with
+        | some m => .error ("mark both borrowed and moved: " ++ m)
+        | none => uBewegtPruefAux owners rest
+
+/-- The owner-handoff check of the unit: every `moves` names a table owner
+    neither consumed nor borrowed by the same function. -/
+def uBewegtPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+  uBewegtPruefAux owners fns
+
+/-- No owner is minted twice in one unit: the second mint of the same instance
+    is refused by name. The seen list carries the minters so far. -/
+def uMintEindeutig : List String → List String → Except String Unit
+  | [], _ => .ok ()
+  | m :: rest, gesehen =>
+    if gesehen.any (strEq · m) then .error ("duplicate mint: " ++ m)
+    else uMintEindeutig rest (m :: gesehen)
+
+/-- A minted mark is a table owner, minted exactly once (C09): every `mints`
+    names a table's `owner` mark, and no two functions mint the same mark
+    (one-shot mint authority per region instance: the ledger's spent set
+    refuses a second `recordMint`). Both violations are refused by name. -/
+def uMintPruefAux (owners : List String) : List UFn → Except String Unit
+  | [] => .ok ()
+  | f :: rest =>
+    match f.praegt.find? (fun m => !(owners.any (fun o => strEq o m))) with
+    | some m => .error ("mint without owner: " ++ m)
+    | none => uMintPruefAux owners rest
+
+/-- The owner-mint check of the unit: every `mints` names a table owner, and
+    every owner is minted at most once. -/
+def uMintPruef (owners : List String) (fns : List UFn) : Except String Unit :=
+  match uMintPruefAux owners fns with
+  | .error e => .error e
+  | .ok _ => uMintEindeutig (fns.flatMap (·.praegt)) []
 
 /-- The wrapper of gate `gate` of check `cname`: it cannot collide with a written
     function, since `#` never stands in a source identifier. -/

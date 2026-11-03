@@ -192,6 +192,7 @@ theorem print_elab_all {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty
   | .tru => by simp only [printInt]
   | .fls => by simp only [printInt]
   | .thru _ _ _ _ _ _ => by simp only [printInt]
+  | .thruOwn _ _ _ _ _ _ _ _ _ _ _ => by simp only [printInt]
   | .ptrOf _ _ _ _ => by simp only [printInt]
   | .refEq _ _ => by simp only [printInt]
   | .slotRef _ _ _ _ _ _ => by simp only [printInt]

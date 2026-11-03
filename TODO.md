@@ -19,17 +19,24 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 - **C-package status (2026-11-02).** Integrated into `c-runde1`: all C packages except C01 and C10, including C07
   and C08. Stage 0 admits C12 tables in named spaces and pointers into them (rights decoded by `DataRights.decode`),
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
-  code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value.
-  - **Stage-0 refusals with their missing step:**
+  code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
+  now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
+  - **Stage-0 refusals with their missing step (C09/C12 line):**
     - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
-    - C09 owner flows: escrow simulation in progress.
+    - C09 owner flows: mint (`mints`) and handback moves (`moves`) elaborate with
+      witnesses and refusals (c09-mint, lead to build); terminal moves are signature-complete with
+      fixture witnesses, their body-level retire lowering still open (as for C16 takes). The dynamic
+      escrow replay and the C08 software-call transition remain open.
     - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
-    - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
+    - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
+      as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
+      borrow/return witness and the no-mark/forged-loan refusals (c12-own, lead to build). Open: byte/raw/entry
+      targets (still refused: no live grant/history interface yet).
     - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
       carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
       bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
@@ -39,6 +46,24 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
     - C14 `entrust`: refused by the model (no isolation/call service).
     - C07 fallible indirect calls: Stage-0 arms being added.
+  - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
+    refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
+    No builds were run for that audit. Remaining refusals include:
+    - Scoped returns inside lock bodies; source `by consuming`. `consumeTraverse` follows `verbrauchLauf` in Stage 0
+      (`consumeTraverse_case`); lead elaboration pending.
+    - Computed wide-integer-to-float conversion, long string concatenation/order, wide option
+      tests, non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
+      wide statement narrowing, and unsupported entry-snapshot subtrees.
+    - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
+      foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
+    - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual generic calls/module headers, counterprobes,
+      annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
+    - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
+      incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
+  - **C18 static-arena allocation:** canonical required/else lowering and source-image witness declarations exist.
+    The 2026-11-03 source audit finds the original metadata gate still rejects allocation-with-else; required
+    immutable unannotated allocation is admitted. The witnesses were not rebuilt in that audit.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
@@ -324,7 +349,10 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 
 ## Round 2 / round 3 compilation follow-up (2026-11-02)
 
-- Stage 0 still refuses C01 `prod` and `prodSet`; `prodGet` lowering is in progress.
+- C01 `prod`, `prodGet` and `prodSet` have actual Stage-0 emitters and generic `lowE_ok` arms;
+  ordinary block bindings/assignments reuse them. Product source-image, local build/read/update/read,
+  and multiword-field preservation witnesses are included in the package and axiom audit.
+  Open: the lead's Lean checks of these connected modules and witnesses; no build was run by the implementation worker.
 - Stage 0 still refuses `Block.float`: the runner lacks float instructions; the planned route is software IEEE lowering proved against the kernel float model.
 - C11: the Gut side and the `rufAt_gut`/`rufAt_treu` migration remain in progress.
 - C15: per-core accumulator uses elaborate to guarded update/fold bodies whose `add`/`or`/`and` overflow stops with `Logik.kapazitaet` (required narrowing, never a dropped contribution or a neutral restart); admission and link Bools carry the connected core query (`qs`/`aqs` default to `[]`, shadowing refused). The hardware provenance of the generated core-query axiom now elaborates (THEOREM-MAP §135): `accumulates … assume a` names the assumption, the `n#query` wrapper binds the foreign query, `declOf` sets `axHerkunft`/`axBeleg`, and the fixture (`assume` + `accumulates` + update + read) is accepted by `Akzeptiert` with the query list. Open: the lead build of the branch.
@@ -338,14 +366,25 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   6. C02 pure execution, termination and effect/cost obligations.
   7. C02 immutable payload initialization and ordinary call expansion.
   8. C02 connected source/image correctness and refusal witnesses.
-  9. C16 declared-check identity and checked expansion (done on `c16-a`, THEOREM-MAP §137: `CheckIdentitaet`, `identitaet_aus_zulassung`, elaborated identity record).
-  10. C16 generated producer/probe/gate functions (done on `c16-a`, THEOREM-MAP §137: Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, `bool` wrapper forwarding).
-  11. C16 actual measurement samples and floor results (done on `c16-a`, THEOREM-MAP §137: `messWert`, `bodenHalten`, `berichtDeckt` with witnesses).
-  12. C16 completed reports for both verdicts and linear Duty discharge (done on `c16-a`, THEOREM-MAP §137: `CheckAbschluss`, `CheckEntladung`, `CheckEntladungErfolg` with both-verdict witnesses).
-  13. C16 report/token provenance through call push and normal return (done on `c16-a`, THEOREM-MAP §138: `BerichtHerkunft`, `HerkunftSchritt`, `rueckUrteil` over `RufEreignisF` with fixture witnesses and error-channel refusals).
-  14. C16 G/GX replay and ownership conservation (done on `c16-a`, THEOREM-MAP §138: `CheckErhaltung`, `erhaltung_kreislauf`, `replayEintrag` with witnesses).
-  15. C16 counterprobe binding, artifact identity and measured status (done on `c16-a`, THEOREM-MAP §138: `SondenEindeutig` with exact decider, `SondenBindung`, `Gemessen` with measured/unrun/stale witnesses).
-  16. C16 connected export/Stage-0 correctness with emitted sample work (implementation attempts on `c16-a`/`c16-close`, THEOREM-MAP §§138–139; not yet measured green): derived `uCheckDecls` with a real declared Duty, source-to-`lowerAllg`-to-`checkB`/`AkzeptiertX` witnesses for the minimal check, passing/failing local floors, a bound ordinary counterprobe and infallible/fallible C08 foreign gates. `Pruefung/Lauf/Recording` now emits private typed return reporters whose actual arguments are the captured samples, separately evaluated floors over those snapshots and written verdict. `Lauf/History` decodes G/GX's saved `Env` values, appends evidence at the probe return and retains it after consumption; replay proves the recorded sample/floor origin, with distinct ghost activation points. The previous supplied-report fold is deleted. C14's explicit `--check CHECK GATE` selection generates a driver and physical consumer before the actual Stage-0 lowering: the producer threads its invocation permit, the selected consumer invokes the wrapper then retires its returning Duty with empty outputs on both channels. Foreign errors are explicitly retired and rethrown with their exact reason identity. New source/acceptance and history witnesses cover the complete cycle, unconsumed Duty, double consumption and fabricated samples. Counterprobe adapters and exact-image `SondenNachweis`/`sondenNachweisB` remain required; unrun never means passed. `Lauf/Treue` adds generic event/whole-log conservation and the completed-history `CheckTreueG`/GX attachment; the Stage-0 emitted-program theorem retains the same generic IR execution certificate. Open: lead compilation of all changed modules/importers, validation of these generic attachment attempts, axiom checks and guardians. Static base finding: `Zielsatz/Kern/Spec/Teil4.lean:33` spells the evidence field `berich`, while its declaration is `bericht`; no `Spec` or owner-flow file was changed. Parameterized gates and ordinary reason-channel gates retain their existing named refusals because no argument/failure policy is declared. No final IR execution or external measurement is claimed.
+  9. C16 declared-check identity and checked expansion (done on `c16-a`, THEOREM-MAP §177: `CheckIdentitaet`, `identitaet_aus_zulassung`, elaborated identity record).
+  10. C16 generated producer/probe/gate functions (done on `c16-a`, THEOREM-MAP §177: Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, `bool` wrapper forwarding).
+  11. C16 actual measurement samples and floor results (done on `c16-a`, THEOREM-MAP §177: `messWert`, `bodenHalten`, `berichtDeckt` with witnesses).
+  12. C16 completed reports for both verdicts and linear Duty discharge (done on `c16-a`, THEOREM-MAP §177: `CheckAbschluss`, `CheckEntladung`, `CheckEntladungErfolg` with both-verdict witnesses).
+  13. C16 report/token provenance through call push and normal return (done on `c16-a`, THEOREM-MAP §178: `BerichtHerkunft`, `HerkunftSchritt`, `rueckUrteil` over `RufEreignisF` with fixture witnesses and error-channel refusals).
+  14. C16 G/GX replay and ownership conservation (done on `c16-a`, THEOREM-MAP §178: `CheckErhaltung`, `erhaltung_kreislauf`, `replayEintrag` with witnesses).
+  15. C16 counterprobe binding, artifact identity and measured status (done on `c16-a`, THEOREM-MAP §178: `SondenEindeutig` with exact decider, `SondenBindung`, `Gemessen` with measured/unrun/stale witnesses).
+  16. C16 connected export/Stage-0 correctness with emitted sample work (implementation attempts on `c16-a`/`c16-close`, THEOREM-MAP §§178–179; not yet measured green): derived `uCheckDecls` with a real declared Duty, source-to-`lowerAllg`-to-`checkB`/`AkzeptiertX` witnesses for the minimal check, passing/failing local floors, a bound ordinary counterprobe and infallible/fallible C08 foreign gates. `Pruefung/Lauf/Recording` now emits private typed return reporters whose actual arguments are the captured samples, separately evaluated floors over those snapshots and written verdict. `Lauf/History` decodes G/GX's saved `Env` values, appends evidence at the probe return and retains it after consumption; replay proves the recorded sample/floor origin, with distinct ghost activation points. The previous supplied-report fold is deleted. C14's explicit `--check CHECK GATE` selection generates a driver and physical consumer before the actual Stage-0 lowering: the producer threads its invocation permit, the selected consumer invokes the wrapper then retires its returning Duty with empty outputs on both channels. Foreign errors are explicitly retired and rethrown with their exact reason identity. New source/acceptance and history witnesses cover the complete cycle, unconsumed Duty, double consumption and fabricated samples. Counterprobe adapters and exact-image `SondenNachweis`/`sondenNachweisB` remain required; unrun never means passed. `Lauf/Treue` adds generic event/whole-log conservation and the completed-history `CheckTreueG`/GX attachment; the Stage-0 emitted-program theorem retains the same generic IR execution certificate. Open: lead compilation of all changed modules/importers, validation of these generic attachment attempts, axiom checks and guardians. Static base finding: `Zielsatz/Kern/Spec/Teil4.lean:33` spells the evidence field `berich`, while its declaration is `bericht`; no `Spec` or owner-flow file was changed. Parameterized gates and ordinary reason-channel gates retain their existing named refusals because no argument/failure policy is declared. No final IR execution or external measurement is claimed.
 - Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
   `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
   TODO (Muse): prove generic expansion soundness for the connected implementation.
+- C02 items 1-4 on branch `c02-a` (2026-11-03, needs the lead build): `Logik/Vertraege/UebersetzungDecoder.lean`
+  (decoder soundness, immutable payload typing, expansion shape, token-grammar refusals) and
+  `Parser/Stmt/LibraryIdentity.lean` (payload position, key correspondence, head normalization,
+  translator-free expansion, qualifier selection, nested-region round-trip), wired into `Alle/Teil1`
+  (THEOREM-MAP §136). Items 5-16 stay open.
+- C02 items 5-8 on branch `c02-a` (2026-11-03, needs the lead build): `Logik/Vertraege/UebersetzungReinheit.lean`
+  (pure execution, termination, effect obligations), `Parser/Stmt/LibraryZertifikat.lean` (recomputed
+  certificate identity, Rust-output cross-check), `Parser/Stmt/LibraryErweiterung.lean` (actual-path
+  expansion identity, purity and resolution refusals) and `Parser/Stmt/LibraryAnnahme.lean` (end-to-end
+  acceptance of the unqualified call, expansion ordinariness through the generic lowering), wired into
+  `Alle/Teil1` (THEOREM-MAP §137). Items 9-16 stay open.

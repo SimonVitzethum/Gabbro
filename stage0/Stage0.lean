@@ -6,9 +6,9 @@ public import Stage0.ArrayWitness
 public import Stage0.ResetWitness
 public import Stage0.Zeugen.Annahme.BuiltinWitness
 public import Stage0.Zeugen.Annahme.StateWitness
-public import Stage0.Zeugen.Annahme.ReturnCleanupWitness
+public import Stage0.Zeugen.Annahme.Contracts.ReturnCleanupWitness
 public import Stage0.Zeugen.Annahme.ResetWholeWitness
-public import Stage0.Zeugen.Annahme.CapacityRequiredWitness
+public import Stage0.Zeugen.Annahme.Contracts.CapacityRequiredWitness
 public import Stage0.Zeugen.Annahme.EndAllocWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomValueWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomVoidWitness
@@ -52,7 +52,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ConsumeRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Run
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 public import Stage0.Senke.Tore.Proben
 
@@ -66,6 +66,7 @@ public import Stage0.Senke.Ausdruck.Referenz.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.ArithmetikProben
 public import Stage0.Senke.Anweisung.Faelle.Gleit.MulProben
+public import Stage0.Senke.Anweisung.Faelle.Gleit.DivProben
 
 public import Stage0.Senke.Ausdruck.Old.Proben
 public import Stage0.Senke.Ausdruck.Old.FunctionProbe
@@ -104,18 +105,23 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.ExtendProbe
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareProbe
 
 public import Stage0.Frontend.ExportCorrectness
+public import Stage0.Zeugen.Pipeline.ProductRecordWitness
+public import Stage0.Zeugen.Pipeline.ProductValueWitness
 public import Stage0.Frontend.CheckExport
 public import Stage0.Frontend.MeasureWitness
+public import Stage0.Frontend.ConstWitness
+public import Stage0.Frontend.ConstValuesWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
+public import Stage0.Senke.Rueckkehr.ScopedZeuge
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 public import Stage0.Zeugen.Annahme.TypedSumWitness
-public import Stage0.Zeugen.Annahme.PointerContractWitness
+public import Stage0.Zeugen.Annahme.Contracts.PointerContractWitness
 public import Stage0.Zeugen.Annahme.MeasureWitness
 public import Stage0.Zeugen.Ablehnung.ConstControlWitness
-public import Stage0.Zeugen.Annahme.TransitionContractWitness
-public import Stage0.Zeugen.Annahme.WriteOnlyCapabilityWitness
-public import Stage0.Zeugen.Annahme.RightsUnionWitness
+public import Stage0.Zeugen.Annahme.Contracts.TransitionContractWitness
+public import Stage0.Zeugen.Annahme.Contracts.WriteOnlyCapabilityWitness
+public import Stage0.Zeugen.Annahme.Contracts.RightsUnionWitness
 public import Stage0.Zeugen.Annahme.LibraryBindWitness
 public import Stage0.Zeugen.Annahme.ProfileWitness
 public import Stage0.Zeugen.Ablehnung.ProfileMismatchWitness

@@ -41,6 +41,15 @@ def parseEffekt (f : Nat) (toks : List Token) :
       else if strEq s "consumes" then match parseOr f rest with
         | .ok (p, r) => .ok (.takes p, r)
         | .error e => .error e
+      else if strEq s "borrows" then match nimmName rest with
+        | .ok (n, r) => .ok (.borrows n, r)
+        | .error e => .error e
+      else if strEq s "moves" then match nimmName rest with
+        | .ok (n, r) => .ok (.moves n, r)
+        | .error e => .error e
+      else if strEq s "mints" then match nimmName rest with
+        | .ok (n, r) => .ok (.mints n, r)
+        | .error e => .error e
       else if strEq s "publishes" then match parseOr f rest with
         | .ok (p, r) => .ok (.posts p, r)
         | .error e => .error e

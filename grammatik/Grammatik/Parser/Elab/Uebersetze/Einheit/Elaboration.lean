@@ -19,7 +19,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uRestFehler msE with
   | .error e => .error e
   | .ok _ =>
-  match ExportMetadata.checkConstants msE with
+  match Gabbro.Grammatik.Parser.Konst.checkSourceConstants msE with
   | .error error => .error error
   | .ok () =>
   let ms := uOhneSenken msE
@@ -155,6 +155,15 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok _ =>
   match uGibtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uLeihtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uBewegtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uMintPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
   match uWurzeln tabs fns ms with

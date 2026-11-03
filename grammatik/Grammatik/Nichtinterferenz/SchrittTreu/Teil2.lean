@@ -142,6 +142,59 @@ theorem schrittK_von_g6 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hax]
       rfl
 
+theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
+    {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG7 P O passes M f M') :
+    kSchrittK P O passes (M.faeden f).kern M.speicher = some ((M'.faeden f).kern, M'.speicher) := by
+  cases hs with
+  | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+      kstart
+      rfl
+  | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead
+      σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+      kstart
+      subst hm hs₃ hs₂ hs₁
+      simp only [kr]
+      simp only [RufMaschineG.weltVon] at hw hv
+      rw [if_pos hw, hv]
+      rfl
+  | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead
+      σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+      kstart
+      subst hs₂ hs₁
+      simp only [kr]
+      simp only [RufMaschineG.weltVon] at hw hleer hkein
+      rw [if_pos hw, hleer, if_pos hkein]
+      rfl
+  | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead
+      σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+      kstart
+      subst hm' hs₁
+      simp only [kr]
+      simp only [RufMaschineG.weltVon] at hfall
+      rw [if_pos hfall]
+      rfl
+  | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
+      hleave hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall σ₁ hs₁ hw
+      neu₁ hneu₁ hΛ =>
+      kstart
+      simp only [execStmt, RufMaschineG.weltVon] at hstep
+      cases hstep
+      subst hm' hs₁ hsm
+      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt,
+        Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kLeave, Env.tail]
+      rw [if_pos hfall, if_pos hw]
+      rfl
+  | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
+      hnext hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall neum hneum hΛ =>
+      kstart
+      simp only [execStmt, RufMaschineG.weltVon] at hstep
+      cases hstep
+      subst hm' hsm
+      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt,
+        Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kNext, Env.tail]
+      rw [if_pos hfall]
+      rfl
+
 theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M') :
     kSchrittK P O passes (M.faeden f).kern M.speicher = some ((M'.faeden f).kern, M'.speicher) := by
@@ -152,5 +205,6 @@ theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
   | g4 hs => exact schrittK_von_g4 (P := P) (O := O) (passes := passes) (hs := hs)
   | g5 hs => exact schrittK_von_g5 (P := P) (O := O) (passes := passes) (hs := hs)
   | g6 hs => exact schrittK_von_g6 (P := P) (O := O) (passes := passes) (hs := hs)
+  | g7 hs => exact schrittK_von_g7 (P := P) (O := O) (passes := passes) (hs := hs)
 
 end Gabbro.Grammatik

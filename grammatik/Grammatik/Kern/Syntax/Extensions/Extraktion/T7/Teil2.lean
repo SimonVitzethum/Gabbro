@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Extensions.Extraktion.T6
-public import Grammatik.Kern.Syntax.Extensions.Extraktion.T7.Teil1
+public import Grammatik.Kern.Syntax.Extensions.Extraktion.T7.Teil1Footprint
 
 @[expose] public section
 

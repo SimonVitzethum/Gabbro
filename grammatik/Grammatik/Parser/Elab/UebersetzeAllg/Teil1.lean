@@ -105,6 +105,9 @@ def declOf (u : UProg) : Deklaration where
   braucht := fun t => needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
   gbraucht := gneedsAt u
   eigner := eignerAt u
+  /-- The capability owner registry (C12): `DataRights.owner` numbers resolve
+      through the unit's owner namespace (`eignerMarke`) to declaration marks. -/
+  ownerNr := eignerMarke u
   Fn := Fin u.fns.length
   sig := fun f => f.val
   sigNr := sigAt u
@@ -188,6 +191,9 @@ def declOf (u : UProg) : Deklaration where
     · exact Or.inr h2
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
+
+/-- The capability owner registry is the unit's owner namespace (C12). -/
+theorem ownerNr_eq (u : UProg) (o : Nat) : (declOf u).ownerNr o = eignerMarke u o := rfl
 
 /-- `sigAt` at a live index is the elaborated signature. -/
 theorem sigAt_get (u : UProg) (i : Fin u.fns.length) :

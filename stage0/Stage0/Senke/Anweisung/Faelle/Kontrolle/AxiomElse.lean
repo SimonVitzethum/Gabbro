@@ -133,8 +133,8 @@ theorem stmtAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
         have hg := torElseNone_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) hτ hb hf hn ht
           (cr := [ci 18 (16 * (ce.length + 1)) 0 0]) hJ (by omega) (by omega) hW hp hWa
         apply discardGate_result hlo0 hwhy hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
-        rcases hg with ⟨m2, ha, st, ag, hw⟩ | ⟨r, m2, ha, st, ag, wr, hw⟩
-        · exact .inl ⟨(), m2, ha, by simpa only [List.length_append, fehlC_len] using st, ag, hw⟩
+        rcases hg with ⟨v, m2, ha, st, ag, hw⟩ | ⟨r, m2, ha, st, ag, wr, hw⟩
+        · exact .inl ⟨v, m2, ha, by simpa only [List.length_append, fehlC_len] using st, ag, hw⟩
         · exact .inr (.inl ⟨r, m2, ha, by simpa only [List.length_append, List.length_singleton, fehlC_len] using st, ag, wr, hw⟩)
       · cases hc
     · cases h

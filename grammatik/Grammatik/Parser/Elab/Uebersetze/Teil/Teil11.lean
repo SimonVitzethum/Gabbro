@@ -125,7 +125,7 @@ def elabUFunktion (consts : List (String × Int))
       match uMeasureClause alias sig.klauseln with
       | .error e => .error e
       | .ok decreases =>
-        .ok { name := sig.name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, nimmt := kopf.nimmt, gibt := kopf.gibt, gives, needs, body, ret := r, decreases, measureConstants := if decreases.isSome then consts else [], measureTypes := if decreases.isSome then alias else [] }
+        .ok { name := sig.name, params := kopf.names.zip kopf.types, kinds := kopf.kinds, res := kopf.res, resBool := kopf.resBool, resOpt := kopf.resOpt, resSum := kopf.resSum, resWhy := kopf.resWhy, resTy := kopf.resTy, gruende := (kopf.kanal.map (·.2)).getD 0, held := kopf.held, puts := schreibt, gputs := kopf.gputs, nimmt := kopf.nimmt, gibt := kopf.gibt, leiht := kopf.leiht, bewegt := kopf.bewegt, praegt := kopf.praegt, gives, needs, body, ret := r, decreases, measureConstants := if decreases.isSome then consts else [], measureTypes := if decreases.isSome then alias else [] }
 
 /-- The payload of an `atomic` item: statics named bare (a table payload, `T.slots`, has no form: `D.nutzlast`
     lists statics). -/

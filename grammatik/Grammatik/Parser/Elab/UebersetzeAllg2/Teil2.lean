@@ -82,6 +82,44 @@ def lowAssignDurchBL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ct
                   else .error "write without right"
                 else .error "access without held guard"
       else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) =>
+      if h : num < u.tabs.length then
+        match fieldHitB u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok bh =>
+          match heig : eignerMarke u owner with
+          | .none => .error "owned write without a declared owner mark"
+          | .some m =>
+            match lowVar Γ j (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) with
+            | .error e => .error e
+            | .ok pv =>
+              match lowIdx u Γ Λ
+                  fn 0 ⟨num, h⟩ ix with
+              | .error e => .error e
+              | .ok i =>
+                match lowEns u Γ Λ
+                    fn none v with
+                | .error e => .error e
+                | .ok e =>
+                  if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                      Res.von (declOf u) wdd ∈ Λ then
+                    if he : m ∈ eignerAt u ⟨num, h⟩ then
+                      if hw : writesAt u (fnAt u caller)
+                          ⟨num, h⟩ = true then
+                        have hwV : (verOf u caller).schreibt
+                            ⟨num, h⟩ = true := by
+                          show (vertragVon (declOf u) caller).schreibt
+                            ⟨num, h⟩ = true
+                          rw [vSchreibt_eq u caller ⟨num, h⟩]
+                          exact hw
+                        .ok (assignDurchOwnStmtB u Γ
+                          Λ (verOf u caller) ⟨num, h⟩
+                          bh owner m (Expr.var pv) i e
+                          heig he hwV hL)
+                      else .error "write without right"
+                    else .error "owned write without owner guard"
+                  else .error "access without held guard"
+      else .error "pointer table unknown"
     | _ => .error "place without G form"
 
 /-- A truth value written at a table into a bool field. -/
@@ -400,34 +438,36 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
               L ∈ ((declOf u).signatur callee).haelt ∨ floorUeberB u callee L = true then
            if hK : decide (Untermulti (((declOf u).signatur callee).inputMarks.map
                (Res.vonMarke (declOf u))) Λ) = true then
-            have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
-                true → (vertragVon (declOf u) caller).schreibt t =
-                true := fun t ht => by
-              rw [sigSchreibt_eq u callee t] at ht
-              rw [vSchreibt_eq u caller t]
-              exact hW t ht
-            have hx : ∀ L, Res.held (D := declOf u) L ∈
-                Λ →
-                L ∉ ((declOf u).signatur callee).haelt →
-                ∃ c, ((declOf u).signatur callee).boden = some c ∧
-                  (declOf u).rang L < c :=
-              fun L hL hn => by
-                rcases hX L (heldLocksD_mem u _ L hL) with h | h
-                · exact absurd h hn
-                · rw [sigBoden_eq u callee]
-                  unfold floorUeberB at h
-                  cases hf : (fnAt u callee).boden with
-                  | none => rw [hf] at h; simp only [Bool.false_eq_true] at h
-                  | some c =>
-                    rw [hf] at h
-                    exact ⟨c, rfl, of_decide_eq_true h⟩
-            have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
-                true → (vertragVon (declOf u) caller).gschreibt g =
-                true := fun g hg0 => by
-              rw [sigGSchreibt_eq u callee g] at hg0
-              rw [vGSchreibt_eq u caller g]
-              exact hG g hg0
-            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ hK, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (signaturOwner_nil u callee) } }
+            if hO : ownerReadyB u ((declOf u).signatur callee) = true then
+              have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
+                  true → (vertragVon (declOf u) caller).schreibt t =
+                  true := fun t ht => by
+                rw [sigSchreibt_eq u callee t] at ht
+                rw [vSchreibt_eq u caller t]
+                exact hW t ht
+              have hx : ∀ L, Res.held (D := declOf u) L ∈
+                  Λ →
+                  L ∉ ((declOf u).signatur callee).haelt →
+                  ∃ c, ((declOf u).signatur callee).boden = some c ∧
+                    (declOf u).rang L < c :=
+                fun L hL hn => by
+                  rcases hX L (heldLocksD_mem u _ L hL) with h | h
+                  · exact absurd h hn
+                  · rw [sigBoden_eq u callee]
+                    unfold floorUeberB at h
+                    cases hf : (fnAt u callee).boden with
+                    | none => rw [hf] at h; simp only [Bool.false_eq_true] at h
+                    | some c =>
+                      rw [hf] at h
+                      exact ⟨c, rfl, of_decide_eq_true h⟩
+              have hg : ∀ g, ((declOf u).signatur callee).gschreibt g =
+                  true → (vertragVon (declOf u) caller).gschreibt g =
+                  true := fun g hg0 => by
+                rw [sigGSchreibt_eq u callee g] at hg0
+                rw [vGSchreibt_eq u caller g]
+                exact hG g hg0
+              .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ hK, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := ownerReadyB_ok u _ hO } }
+            else .error "call: callee owner flow not escrow-ready"
            else .error "call without held mark"
           else .error "call: a held lock does not rank below the callee's floor"
          else .error "call: the caller's lock floor is above the callee's"

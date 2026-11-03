@@ -177,7 +177,7 @@ theorem softAlignAdd_exact (u v : Exakt) (h : u.zweierExp ≤ v.zweierExp) :
         u.zweierExp⟩ := by
   rw [floatAdd_align]
   unfold softGap
-  rw [if_pos h]
+  simp only [if_pos h]
 
 /-- A decoded word's numerator is its aligned numerator, on every finite
     input (the dispatcher has already removed NaN and infinity). -/

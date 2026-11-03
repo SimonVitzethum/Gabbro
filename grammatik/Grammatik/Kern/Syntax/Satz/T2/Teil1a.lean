@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T1Frame
 
 @[expose] public section
 
@@ -66,6 +66,12 @@ theorem Expr.orte_darf : (e : Expr D Γ Λ τ) → ∀ o ∈ e.orte, OrtDarf Λ 
       · exact hL
       · exact i.orte_darf o h
   | .thru p t _ _ i hL, o, h => by
+      simp only [Expr.orte, List.mem_append, List.mem_cons] at h
+      rcases h with h | rfl | h
+      · exact p.orte_darf o h
+      · exact hL
+      · exact i.orte_darf o h
+  | .thruOwn p t _ _ i _ _ _ _ _ _, o, h => by
       simp only [Expr.orte, List.mem_append, List.mem_cons] at h
       rcases h with h | rfl | h
       · exact p.orte_darf o h

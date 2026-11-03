@@ -181,6 +181,27 @@ def assignDurchStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (
     exact e
   exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) fh.idx i e2 hw hL
 
+/-- An owned `durch` write at its recorded range: the same guarded store as
+    `assignDurchStmt` through the `own@m` capability, holding the owner mark. -/
+def assignDurchOwnStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (fh : FieldHit u t) (o : Nat) (m : Fin u.marken.length)
+    (p : Expr (declOf u) Γ Λ (.ptr ⟨0, ⟨read, true, some o⟩, .table t.val⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t fh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t fh.idx)
+    rw [fh.hint]
+    exact e
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ t o m hm he hL
+  exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) fh.idx i e2 m 0
+    ho he' hg hw hL
+
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
@@ -213,6 +234,27 @@ def assignDurchStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List 
     rw [bh.hbool]
     exact e
   exact Stmt.assignThru (D := declOf u) p t (Deklaration.capTab_of ht rfl (by decide)) bh.idx i e2 hw hL
+
+/-- An owned `durch` write into a BOOL field: the same guarded store as
+    `assignDurchStmtB` through the `own@m` capability, holding the owner mark. -/
+def assignDurchOwnStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
+    (bh : BoolHit u t) (o : Nat) (m : Fin u.marken.length)
+    (p : Expr (declOf u) Γ Λ (.ptr ⟨0, ⟨read, true, some o⟩, .table t.val⟩))
+    (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
+    (e : Expr (declOf u) Γ Λ .bool)
+    (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
+    (hw : V.schreibt t = true)
+    (hL : ∀ wdd ∈ (declOf u).braucht t,
+      Res.von (declOf u) wdd ∈ Λ) :
+    Stmt (declOf u) V l Γ Λ Λ := by
+  have e2 : Expr (declOf u) Γ Λ ((declOf u).typ t bh.idx) := by
+    show Expr (declOf u) Γ Λ (typAt u t bh.idx)
+    rw [bh.hbool]
+    exact e
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ t o m hm he hL
+  exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) bh.idx i e2 m 0
+    ho he' hg hw hL
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -272,6 +314,44 @@ def lowAssignDurchL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
                       hwV hL)
                   else .error "write without right"
                 else .error "access without held guard"
+      else .error "pointer table unknown"
+    | some (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) =>
+      if h : num < u.tabs.length then
+        match fieldHit u ⟨num, h⟩ fname with
+        | .error e => .error e
+        | .ok fh =>
+          match heig : eignerMarke u owner with
+          | .none => .error "owned write without a declared owner mark"
+          | .some m =>
+            match lowVar Γ j (.ptr ⟨0, ⟨read, true, some owner⟩, .table num⟩) with
+            | .error e => .error e
+            | .ok pv =>
+              match lowIdx u Γ Λ
+                  fn 0 ⟨num, h⟩ ix with
+              | .error e => .error e
+              | .ok i =>
+                match lowWertAt u Γ Λ
+                    fn fh.range.1 fh.range.2 v with
+                | .error e => .error e
+                | .ok e =>
+                  if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
+                      Res.von (declOf u) wdd ∈ Λ then
+                    if he : m ∈ eignerAt u ⟨num, h⟩ then
+                      if hw : writesAt u (fnAt u caller)
+                          ⟨num, h⟩ = true then
+                        have hwV : (verOf u caller).schreibt
+                            ⟨num, h⟩ = true := by
+                          show (vertragVon (declOf u) caller).schreibt
+                            ⟨num, h⟩ = true
+                          rw [vSchreibt_eq u caller ⟨num, h⟩]
+                          exact hw
+                        .ok (assignDurchOwnStmt u Γ
+                          Λ (verOf u caller) ⟨num, h⟩
+                          fh owner m (Expr.var pv) i e
+                          heig he hwV hL)
+                      else .error "write without right"
+                    else .error "owned write without owner guard"
+                  else .error "access without held guard"
       else .error "pointer table unknown"
     | _ => .error "place without G form"
 

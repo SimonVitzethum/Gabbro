@@ -1,6 +1,7 @@
 /- Compute simultaneous counter demand from the complete source syntax. Sequential and
-   alternative branches reuse slots; only a nested forever increases the live depth.
-   Each level reserves a counter and an immutable decrement word below lexical locals. -/
+   alternative branches reuse slots; only a nested fuelled loop increases the live depth.
+   Each level reserves two words below lexical locals: fuel and either the
+   immutable decrement word (forever) or the saved measure (consumeTraverse). -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Code
 @[expose] public section
@@ -15,6 +16,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ _ _ _ _ => 0
   | .assignThru _ _ _ _ _ _ _ _ => 0
+  | .assignThruOwn .. => 0
   | .assignSlotRef _ _ _ _ _ _ _ _ => 0
   | .assignGlob _ _ _ _ => 0
   | .putBytes _ _ _ _ _ _ _ _ _ _ => 0
@@ -44,7 +46,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .leave _ => 0
   | .next _ => 0
 
-  | .consumeTraverse _ _ _ _ _ _ body => counterDepthB body
+  | .consumeTraverse _ _ _ _ _ _ body => 1 + counterDepthB body
   | .retScoped .. => 0
   | .retWhyScoped .. => 0
 
@@ -58,8 +60,8 @@ def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthB rest)
   | .bindCallIndElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthB rest)
   | .bindAxiom _ _ _ _ _ _ _ rest => counterDepthB rest
-  | .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ rest => counterDepthB rest
-  | .bindAxiomOpt (e := none) _ _ _ _ _ _ _ rest => counterDepthB rest
+  | .bindAxiomOpt (e := some τ) _ _ _ _ _ _ rest => counterDepthB rest
+  | .bindAxiomOpt (e := none) _ _ _ _ _ _ rest => counterDepthB rest
   | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthB rest)
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthB rest)
   | .regRead _ _ rest => counterDepthB rest
@@ -74,8 +76,6 @@ def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .floatOf _ _ _ rest => counterDepthB rest
   | .floatNarrow _ _ _ sonst rest => max (counterDepthE sonst) (counterDepthB rest)
 
-  | .narrowRequired _ _ _ rest => counterDepthB rest
-
 def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret _ _ => 0
@@ -88,8 +88,8 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
   | .bindCallIndElse _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
   | .bindAxiom _ _ _ _ _ _ _ rest => counterDepthE rest
-  | .bindAxiomOpt (e := some τ) _ _ _ _ _ _ _ rest => counterDepthE rest
-  | .bindAxiomOpt (e := none) _ _ _ _ _ _ _ rest => counterDepthE rest
+  | .bindAxiomOpt (e := some τ) _ _ _ _ _ _ rest => counterDepthE rest
+  | .bindAxiomOpt (e := none) _ _ _ _ _ _ rest => counterDepthE rest
   | .bindAxiomOptElse _ _ _ _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => max (counterDepthE err) (counterDepthE rest)
   | .regRead _ _ rest => counterDepthE rest
@@ -101,7 +101,6 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .exchange _ _ _ _ rest => counterDepthE rest
   | .ite _ t e => max (counterDepthE e) (counterDepthE t)
 
-  | .narrowRequired _ _ _ rest => counterDepthE rest
   | .retScoped .. => 0
   | .retWhyScoped .. => 0
 

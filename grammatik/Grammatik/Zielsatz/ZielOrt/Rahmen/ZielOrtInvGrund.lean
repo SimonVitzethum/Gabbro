@@ -154,6 +154,9 @@ theorem invGrundLog_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q 
   | g6 hs =>
     cases hs with
     | _ => ohneGrund
+  | g7 hs =>
+    cases hs with
+    | _ => ohneGrund
 
 end Schritte
 

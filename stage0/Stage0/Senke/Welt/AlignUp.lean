@@ -1,6 +1,6 @@
-/-! Byte alignment arithmetic for canonical layouts. -/
 module
 public import Stage0.Senke.Welt.WeltAt
+/-! Byte alignment arithmetic for canonical layouts. -/
 
 @[expose] public section
 namespace Gabbro.Stage0.Senke
@@ -13,7 +13,7 @@ def alignUp (a n : Nat) : Nat :=
   simp [alignUp]
 
 @[simp] theorem alignUp_one (a : Nat) : alignUp a 1 = a := by
-  simp [alignUp]
+  simp [alignUp, Nat.mod_one]
 
 theorem le_alignUp (a n : Nat) : a ≤ alignUp a n := by
   unfold alignUp

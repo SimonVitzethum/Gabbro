@@ -93,6 +93,20 @@ def lowErg (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} : {e : Option Ty} → ErgE
   | some τ, .val e, d, reserved =>
     (lowE (reserved := reserved) L e d).map fun p => (p.1, max p.2 (d + valueWords τ))
 
+/-- A scoped normal return emits the ordinary return code; the release of the
+    scopes is ghost (`RueckgabeScoped`). -/
+def lowRetScoped {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)} (L : Lay D)
+    (layout : FrameLayout) (ens : List II × Nat) (d : Nat)
+    (e : ErgExpr D Γ Λ V.erg) (reserved : Nat := 0) : Option (List II × Nat) := do
+  let ce ← lowErg (reserved := reserved) L e d
+  pure (ce.1 ++ retC layout d ens.1, max ce.2 (max ens.2 (retTop layout)))
+
+/-- A scoped reason return emits the ordinary reason code; the release of the
+    scopes is ghost (`RueckgabeScoped`). -/
+def lowRetWhyScoped (layout : FrameLayout) {V : Vertrag D} (r : Fin V.gruende)
+    (d : Nat) : Option (List II × Nat) :=
+  some (retWhyC layout r.val, max d (retTop layout))
+
 /-- Receive the entire shared return area. Its unused padding is copied as raw
     frame words; only a complete normal value or reason is interpreted by the
     selected continuation. The following status word is outside this footprint. -/

@@ -176,18 +176,18 @@ theorem pflicht_0 : ∃ body, zuBody u (fnAt u ⟨0, by decide⟩) = some body �
     meetsU u (wfU u) (fnAt u ⟨0, by decide⟩) body :=
   ⟨kombiniert_body, rfl, by rw [wfU_eq]; exact kombiniert_meets⟩
 
-theorem pflichten : Pflichten quelle :=
-  ⟨u, verankert, null, stimmig, rang, fun c => match c with
+theorem pflichten (hPtr : SchnittstellenPflicht u) : Pflichten quelle :=
+  ⟨u, verankert, null, stimmig, rang, by decide, hPtr, fun c => match c with
   | ⟨0, _⟩ => pflicht_0
   | ⟨_ + 1, h⟩ => absurd h
       (by have hl : u.fns.length = 1 := by decide
           omega)⟩
 
 /-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/
-theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
+theorem nutzer (hPtr : SchnittstellenPflicht u) {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
-  nutzer_aus_quelle pflichten h
+  nutzer_aus_quelle (pflichten hPtr) h
 
 /-! BRIDGE-GENERIC beispiele/0069-integer-conversion.gab acceptance
 
@@ -199,7 +199,7 @@ def P69 : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.decl
 
 theorem ht : u.tabs = [] := rfl
 
-theorem akz69 : akzeptiert_pruefer.akzeptiert (einheitAllg u P69 (pflichten_null pflichten uebersetzt))
+theorem akz69 : akzeptiert_pruefer.akzeptiert (einheitAllg u P69 null)
     (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht rfl).1 = true := by decide
 
 #print axioms pflichten

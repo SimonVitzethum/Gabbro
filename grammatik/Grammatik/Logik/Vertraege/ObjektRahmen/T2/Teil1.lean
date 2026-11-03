@@ -92,7 +92,7 @@ theorem verbrauchLauf_obj {Γ : Ctx} (t : D.Tab) (hlen : LenOk ps Γ)
             exact hselg
           exact ⟨(hi σ ρ).trans hselr, hρ⟩
         · trivial
-        · rename_i σr k hsel_eq
+        · rename_i σr k _ hsel_eq
           have hselr : SlotRahmen W (inv σ ρ).1 σr := by
             rw [hsel_eq] at hselg
             exact hselg

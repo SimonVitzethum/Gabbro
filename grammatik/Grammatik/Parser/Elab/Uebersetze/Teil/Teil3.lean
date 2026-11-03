@@ -8,68 +8,13 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Folds.ConstEvaluation
 public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatLiterals
 
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
-/-- The constant value of an expression, or `none`: every value stays in `lo .. hi`. Structural in the
-    FUEL (so that the kernel can run it: a well-founded definition here made every probe run away). -/
-def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) :
-    Nat → SExpr → Option Int
-  | 0, _ => none
-  | f + 1, e =>
-    let ok : Int → Option Int := fun v => if lo ≤ v ∧ v ≤ hi then some v else none
-    match e with
-    | .lit n => ok (Int.ofNat n)
-    | .variable x =>
-      match env.find? (fun q => strEq q.1 x) with
-      | some q => ok q.2
-      | none => none
-    | .field (.variable ty) m =>
-      match uTypName [] ty with
-      | .ok (l, h) =>
-        if strEq m "max" then ok h else if strEq m "min" then ok l else none
-      | .error _ => none
-    | .bin op a b =>
-      match uKonstWert lo hi fns env f a, uKonstWert lo hi fns env f b with
-      | some x, some y =>
-        if strEq op "+" then ok (x + y)
-        else if strEq op "-" then ok (x - y)
-        else if strEq op "*" then ok (x * y)
-        else if strEq op "/" then (if 0 < y then ok (x / y) else none)
-        else if strEq op "%" then (if 0 < y then ok (x % y) else none)
-        else if strEq op "&" then
-          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat &&& y.toNat)) else none)
-        else if strEq op "|" then
-          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat ||| y.toNat)) else none)
-        else if strEq op "^" then
-          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat ^^^ y.toNat)) else none)
-        else if strEq op "<<" then
-          (if 0 ≤ x ∧ 0 ≤ y ∧ y < 64 then ok (x * 2 ^ y.toNat) else none)
-        else if strEq op ">>" then
-          (if 0 ≤ x ∧ 0 ≤ y ∧ y < 64 then ok (x / 2 ^ y.toNat) else none)
-        else none
-      | _, _ => none
-    | .call g args =>
-      match fns.find? (fun k => strEq k.name g) with
-      | none => none
-      | some k =>
-        match args.mapM (fun a => uKonstWert lo hi fns env f a) with
-        | none => none
-        | some vals =>
-          match uKonstBinde k.params vals with
-          | none => none
-          | some binds =>
-            match k.erg, k.rumpf with
-            | .int kl kh, .block [] (some (.ret (some expression))) =>
-              match uKonstWert kl kh fns binds f expression with
-              | some v => ok v
-              | none => none
-            | _, _ => none
-    | _ => none
 
 /-- The constant scope of a unit: in source order, each constant may use the ones before it. A literal
     keeps the old rule (any declared type); any other expression needs a builtin-word type and the
@@ -163,6 +108,10 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
     | .error e, _, _ => .error e
     | _, _, _ => .error "range requires an integer type and known bounds"
+  | .index true t =>
+    match uTabNr tabs t with
+    | .ok (_, count) => .ok (.opt count)
+    | .error error => .error error
   | .index false t =>
     match uTabNr tabs t with
     | .ok (num, c) =>
@@ -193,19 +142,22 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : Li
   uTypIn alias tabs [] spaces (eigner := eigner)
 
 /-- Collect constant functions independently of their statement body shape. -/
-def uKonstFns : List SItemTief → List UKonstFn
+def uKonstFnsWith (alias : List (String × (Int × Int))) : List SItemTief → List UKonstFn
   | [] => []
   | .fnT sig body :: rest =>
     if strEq sig.art "const" then
       match sig.res with
       | some result =>
-        match uTyp [] [] result, sig.params.mapM (fun (n, ty) => (uTyp [] [] ty).map (fun t => (n, t))) with
+        match uTyp alias [] result, sig.params.mapM (fun (n, ty) => (uTyp alias [] ty).map (fun t => (n, t))) with
         | .ok resultType, .ok parameters =>
-          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFns rest
-        | _, _ => uKonstFns rest
-      | none => uKonstFns rest
-    else uKonstFns rest
-  | _ :: rest => uKonstFns rest
+          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFnsWith alias rest
+        | _, _ => uKonstFnsWith alias rest
+      | none => uKonstFnsWith alias rest
+    else uKonstFnsWith alias rest
+  | _ :: rest => uKonstFnsWith alias rest
+
+/-- Builtin-only collector retained as the canonical initial discovery pass. -/
+def uKonstFns (items : List SItemTief) : List UKonstFn := uKonstFnsWith [] items
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit
