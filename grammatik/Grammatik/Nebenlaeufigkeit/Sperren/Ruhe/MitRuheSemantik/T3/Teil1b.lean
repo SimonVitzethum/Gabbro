@@ -70,7 +70,8 @@ theorem execStmt_ru_axiomCallElse {V : Vertrag D}
       rcases w with _ | v | r
       · rfl
       · rfl
-      · erw [execEnd_umΛ]
+      · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+        erw [execEnd_umΛ]
         exact (congrArg (fun a => (EndAusgang.schrumpf a).zuAusgang) (ih_execEnd_ru_err σ' _)).trans
           ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
 

@@ -351,7 +351,8 @@ theorem startPflicht : StartPflicht gE :=
 
 /-- **Premise (b) of the goal theorem, proved**: the user's whole logic for this program. -/
 theorem nutzerPflicht_bewiesen : NutzerPflichtA gE :=
-  nutzerPflichtA_aus gE (fun passes f => pflicht passes f) sperrInvLokal (fun a => nomatch a) startPflicht
+  nutzerPflichtA_aus gE (fun passes f => pflicht passes f) sperrInvLokal (fun a => nomatch a)
+    (ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)) startPflicht
 
 /-- **THE GOAL THEOREM FOR THIS PROGRAM, WITHOUT AN OPEN LOGIC PREMISE**: `ZielFX` on every reachable thread machine
     over GX, under the named hardware and runtime assumptions only. -/

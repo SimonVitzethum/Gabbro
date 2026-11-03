@@ -325,7 +325,8 @@ theorem startPflicht : StartPflicht gE :=
 
 /-- **Premise (b) of the goal theorem, proved.** -/
 theorem nutzerPflicht_bewiesen : NutzerPflichtA gE :=
-  nutzerPflichtA_aus gE (fun passes f => pflicht passes f) sperrInvLokal axEnsLokal startPflicht
+  nutzerPflichtA_aus gE (fun passes f => pflicht passes f) sperrInvLokal axEnsLokal
+    (ptrVerfeinert_trivial (fun f _ _ => by cases f <;> rfl) (fun _ => rfl)) startPflicht
 
 /-- **THE GOAL THEOREM FOR THIS PROGRAM, WITHOUT AN OPEN LOGIC PREMISE.** -/
 theorem gP_gabbro_bewiesen (O : Orakel gD) (hH : HardwareAnnahmen O gE.Q) (passes : Nat)

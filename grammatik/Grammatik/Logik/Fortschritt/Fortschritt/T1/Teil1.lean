@@ -16,6 +16,21 @@ section Inv
 
 variable {P : Programm D} {O : Orakel D} {passes : Nat}
 
+private theorem weiterOpt_fOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') :
+    (GRest.weiterOpt (Λ := Λ) e k).fOk = k.fOk := by
+  cases e <;> rfl
+
+private theorem weiterOpt_absorb {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') :
+    (GRest.weiterOpt (Λ := Λ) e k).absorb = k.absorb := by
+  cases e <;> rfl
+
+private theorem weiterOpt_blockiert {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') :
+    (GRest.weiterOpt (Λ := Λ) e k).blockiert = k.blockiert := by
+  cases e <;> rfl
+
 set_option hygiene false in
 /-- A head-local rule: the stack and the function are kept; the new head
     residue is in shape by Boolean bookkeeping over the old one. -/
@@ -25,7 +40,8 @@ macro "kopfLokal" : tactic => `(tactic| (
   rw [‹(M.faeden f).kopf.rest = _›] at hk hb
   refine ⟨?_, ?_, hst, hkt⟩ <;> clear hst hkt hpopS <;>
   (revert hk hb
-   simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Block.terminal,
+   simp only [weiterOpt_fOk, weiterOpt_absorb, weiterOpt_blockiert,
+     GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert, Block.terminal,
      Stmt.istAbschluss, Endblock.alsBlock_terminal, Bool.and_eq_true, Bool.or_eq_true,
      Bool.not_eq_true', Bool.not_true, Bool.not_false, Bool.true_or, Bool.or_true,
      Bool.false_or, Bool.or_false]
@@ -173,7 +189,14 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
           (D.passt_sig hg).gruende⟩), hkt⟩⟩
       intro c hc
       rcases List.mem_cons.mp hc with rfl | hc
-      · exact ⟨hk, rfl⟩
+      · refine ⟨?_, rfl⟩
+        revert hk
+        simp only [GRest.fOk, GRest.nimmtAb, GRest.absorb, GRest.blockiert,
+          Block.terminal, Stmt.istAbschluss, Bool.false_or, Bool.not_false,
+          Bool.true_or, Bool.and_true, Bool.and_eq_true, Bool.or_eq_true,
+          Bool.not_eq_true']
+        intro hk
+        simp_all
       · exact hst c hc
     -- a leaf in a block: it ended normally, so it was no return
     | _ => kopfLokal
