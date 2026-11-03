@@ -146,6 +146,8 @@ def artAnw : SAnw → String
   | .allocVon .. => "alloc-from"
   | .bindQ .. => "let-query"
   | .callQ .. => "call-query"
+  | .genericCall .. => "generic-call"
+  | .callElse .. => "call-else"
 
 /-- Ender tag (all 3 arms of `SEnde`). -/
 def artEnde : SEnde → String
