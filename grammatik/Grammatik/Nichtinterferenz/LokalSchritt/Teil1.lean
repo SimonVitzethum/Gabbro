@@ -199,7 +199,7 @@ theorem kEntf_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [kEntf]
       rw [(hW.lese Λ v.orte).eval v (alle_von hST hs.1) ρ]
       generalize armWahlG arms _ = x
-      rcases x with ⟨_ | ⟨lo, hi⟩, b, nutz⟩
+      rcases x with ⟨_ | _, b, nutz⟩
       · exact KRel.lokal _ _ _ _ _ rfl hsp
       · exact KRel.lokal _ _ _ _ _ rfl hsp
   | onWhy r arms =>
@@ -435,8 +435,8 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       exact kPop_rel st f ((hW.lese Λ e.orte).gibt_foldl R.scopes) _
   | retWhy r _ => exact kPopGrund_rel st f spur hsp r
   | retWhyScoped r R =>
-      simp only [kEnde, World.gibt_foldl_spur, World.gibt_foldl_speicher]
-      exact kPopGrund_rel st f _ hsp r
+      simp only [kEnde, World.gibt_foldl_spur]
+      exact kPopGrund_rel st f _ (hW.gibt_foldl R.scopes).2 r
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 

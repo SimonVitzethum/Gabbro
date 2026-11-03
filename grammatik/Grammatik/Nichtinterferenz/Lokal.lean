@@ -186,7 +186,7 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       exact ⟨h, trivial⟩
   | retWhyScoped r R =>
       simp only [execStmt, AusRel]
-      exact ⟨h.gibt_foldl R.scopes, rfl⟩
+      exact ⟨h.gibt_foldl R.scopes, trivial⟩
   | leave h' =>
       simp only [execStmt, AusRel]
       exact ⟨h, trivial⟩

@@ -391,24 +391,44 @@ theorem kr_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGleic
                   (member.orte ++ edge.orte)) (.cons i ρ)) :=
               fun i => congrArg wahr?
                 (h2.eval member (alle_von hST hmemS) (.cons i ρ))
-            simp only [hmem]
+            have hc : ((alleIndizes (D.count t)).all fun i =>
+                    !(wahr? (eval (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) member
+                      (((sp₁.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) (.cons i ρ)))) =
+                  ((alleIndizes (D.count t)).all fun i =>
+                    !(wahr? (eval (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) member
+                      (((sp₂.welt spur).lese Λ inv.orte).lese Λ
+                      (member.orte ++ edge.orte)) (.cons i ρ)))) :=
+              congrArg _ (funext fun i => congrArg (fun b => !b) (hmem i))
+            rw [hc]
             exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ h2.1 hsp)
               (fun _ => KRel.none_l _)
-          simp only [kr]
+          rw [kr_verbrauch_succ, kr_verbrauch_succ]; dsimp only
           rw [(hW.lese Λ inv.orte).eval inv (alle_von hST hinvS) ρ]
           refine KRel.ite (fun _ => ?_) (fun _ => KRel.none_l _)
-          exact KRel.opt hscr hsome hnone
+          split
+          · rename_i v hv
+            have hv2 := hscr.symm.trans hv
+            erw [hv2]
+            exact hsome v
+          · rename_i hn
+            have hn2 := hscr.symm.trans hn
+            erw [hn2]
+            exact hnone
   | verbrauchRest t member edge inv bound mass body rest vor k =>
       cases ρ with
       | cons _ ρ =>
           simp only [GRest.nR] at hr
           obtain ⟨-, -, -, hmassS, -, -⟩ := hr
-          simp only [kr]
+          rw [kr_verbrauchRest, kr_verbrauchRest]; dsimp only
           rw [(hW.lese Λ mass.orte).eval mass (alle_von hST hmassS) ρ]
           exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ (hW.lese _ _).1 hsp)
             (fun _ => KRel.none_l _)
   | wartet b k => exact KRel.none_l _
   | wartetSonst n err b k => exact KRel.none_l _
+  | rueckBereit scopes k => exact KRel.none_l _
   | abbruch k => exact KRel.none_l _
   | leer => exact KRel.none_l _
 

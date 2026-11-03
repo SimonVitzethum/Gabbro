@@ -157,6 +157,7 @@ def GRest.nR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D
   | _, _, _, .wartetSonst _ err b k => nE S Ax err = true ∧ nB S Ax b = true ∧ k.nR S Ax
   | _, _, _, .abbruch k => k.nR S Ax
   | _, _, _, .leer => true
+  | _, _, _, .rueckBereit _ k => k.nR S Ax
 
 /-- The flow check on every frame of a ghost-free thread state. -/
 def KNR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) (k : KFaden D) : Prop :=
@@ -205,7 +206,7 @@ theorem WRel.gibt_foldl {σ τ : World D} (h : WRel T σ τ) (Ls : List D.Lock) 
   | nil => exact h
   | cons L Ls ih =>
       simp only [List.foldl_cons]
-      exact ih _ _ (h.gibt L)
+      exact ih (h.gibt L)
 
 theorem gleichAuf_von_sg {σ τ : World D} (h : SpeicherGleich T σ.speicher τ.speicher)
     {os : List (D.Tab ⊕ D.Glob)} (hos : ∀ o ∈ os, T o = true) : GleichAuf os σ τ :=

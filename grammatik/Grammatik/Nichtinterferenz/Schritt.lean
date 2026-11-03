@@ -307,6 +307,52 @@ def kr (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f
   | _, _, _, ρ, .ewigRest a n inv body k => kLokal st f rho ρ (.ewig a n inv body k) spur sp
   | _, _, _, _, _ => none
 
+/-- The consuming-loop head of `kr`, unfolded by definitional equality (the
+    generated equation for these two dependent arms is not available). -/
+theorem kr_verbrauch_succ (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
+    (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ) (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int) (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D (vertragVon D f) true (.index (D.count t) :: Γ) Λ Λ) (rest : Nat)
+    (k : GRest D (vertragVon D f) l Γ Λ) :
+    kr P O passes st f rho spur sp ρ (.verbrauch t member edge inv bound mass body (rest + 1) k) =
+      (let σ₁ := (sp.welt spur).lese Λ inv.orte
+       if wahr? (eval σ₁ inv σ₁ ρ) = true then
+        let σ₂ := σ₁.lese Λ (member.orte ++ edge.orte)
+        match verbrauchWahl (alleIndizes (D.count t))
+            (fun i => wahr? (eval σ₂ member σ₂ (.cons i ρ)))
+            (fun i j => wahr? (eval σ₂ edge σ₂ (.cons i (.cons j ρ))))
+            (fun i j => decide (i.n = j.n)) with
+        | some v =>
+            let σ₃ := σ₂.lese Λ mass.orte
+            let m := (eval σ₃ mass σ₃ ρ).n
+            kLokal st f rho (Env.cons (τ := .index (D.count t)) v ρ)
+              (.dann body (.verbrauchRest t member edge inv bound mass body rest m k)) σ₃.spur sp
+        | none =>
+            if ((alleIndizes (D.count t)).all fun i =>
+                !(wahr? (eval σ₂ member σ₂ (.cons i ρ)))) = true then
+              kLokal st f rho ρ k σ₂.spur sp
+            else none
+       else none) := rfl
+
+theorem kr_verbrauchRest (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
+    (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (i : Wert D (.index (D.count t)))
+    (ρ : Env D Γ) (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int) (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D (vertragVon D f) true (.index (D.count t) :: Γ) Λ Λ) (rest : Nat) (vor : Int)
+    (k : GRest D (vertragVon D f) l Γ Λ) :
+    kr P O passes st f rho spur sp (Env.cons i ρ)
+        (.verbrauchRest t member edge inv bound mass body rest vor k) =
+      (let σ₁ := (sp.welt spur).lese Λ mass.orte
+       let m' := (eval σ₁ mass σ₁ ρ).n
+       if 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor then
+        kLokal st f rho ρ (.verbrauch t member edge inv bound mass body rest k) σ₁.spur sp
+       else none) := rfl
+
 end Fn
 
 /-- **The step of a thread as a function of its ghost-free state** `k` and

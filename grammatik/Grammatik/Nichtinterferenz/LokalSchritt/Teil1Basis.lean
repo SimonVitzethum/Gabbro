@@ -56,10 +56,9 @@ theorem KRel.ite {c : Prop} [Decidable c] {x₁ x₂ y₁ y₂ : KErg D} (h1 : c
 theorem KRel.opt {α : Type} {x₁ x₂ : Option α} (hx : x₁ = x₂)
     {A₁ A₂ : α → KErg D} {B₁ B₂ : KErg D}
     (hs : ∀ v, KRel T (A₁ v) (A₂ v)) (hn : KRel T B₁ B₂) :
-    KRel T (match x₁ with | some v => A₁ v | none => B₁)
-      (match x₂ with | some v => A₂ v | none => B₂) := by
+    KRel T (x₁.elim B₁ A₁) (x₂.elim B₂ A₂) := by
   subst hx
-  cases x₂ with
+  cases x₁ with
   | some v => exact hs v
   | none => exact hn
 
