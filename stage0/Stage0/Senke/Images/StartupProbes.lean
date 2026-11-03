@@ -21,7 +21,7 @@ def output : Emitted text 64 := candidate.toOption.get candidate_present
     frames. Neither a names-only set nor one environment per function can satisfy this fixture. -/
 theorem source_frames_zeuge :
     output.starts.length = 2 ∧ output.image.roots.map Fin.val = [0, 0] ∧
-    output.image.rootArgs = [[7, 1], [2, 0]] ∧
+    output.image.rootArgs = [[1, 7], [0, 2]] ∧
     output.startPlan.concurrent.map (fun source => source.sourceArgs) =
       [[.lit 7, .tru], [.lit 2, .fls]] := by
   refine ⟨by decide +kernel, by decide +kernel, by decide +kernel, ?_⟩

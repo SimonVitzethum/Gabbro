@@ -98,7 +98,9 @@ theorem expression_pure (u : UProg) (ty : Ty) (arg : SExpr)
     (before world before' world' : World (declOf u)) :
     eval before (expression u ty arg accepted) world .nil =
       eval before' (expression u ty arg accepted) world' .nil := by
-  cases ty <;> cases arg <;> simp only [uStartArg] at accepted
+  cases ty
+  case ptr cap => exact Subsingleton.elim _ _
+  all_goals cases arg <;> simp only [uStartArg] at accepted
   all_goals try contradiction
   all_goals try rfl
   case int.un lo hi op a =>

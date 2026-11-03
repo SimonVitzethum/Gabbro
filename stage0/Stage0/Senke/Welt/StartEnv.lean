@@ -19,6 +19,8 @@ theorem startExpression_valid (u : Gabbro.Grammatik.Parser.Uebersetze.UProg) (ty
     (world : World (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u)) :
     ValueValid L ty (eval world (StartArgument.expression u ty arg accepted) world .nil) := by
   cases ty <;> try trivial
+  all_goals
+    simp only [Gabbro.Grammatik.Parser.Uebersetze.uStartArg, Bool.false_eq_true] at accepted
 
 /-- The complete recovered source environment satisfies every shared value validity
     obligation; there is no unchecked per-parameter validity premise at serialization. -/
