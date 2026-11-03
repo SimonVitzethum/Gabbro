@@ -52,6 +52,31 @@ theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
   exact record_lower output.compiled.unit Γ Λ fn er identity reordered sides args
     gate lowered schema declared
 
+/-- Original constants in the actual compiled unit retain a typed literal, independently of
+    whether a function uses them. The mandatory final gate also supplies their scalar step. -/
+theorem Compiled.constant_literal {text : String} {options : Profil.Options}
+    (result : Compiled text options) (name : String) (ty : STyp) (payload : SKonstWert)
+    (original : SItemTief.constT name ty payload ∈ uMembers (pre108 result.source.prepared.elaborierbar)) :
+    Frontend.ArrayCollected result.unit result.source.scopes name ∧
+      Frontend.ScalarStep result.source.scopes (.constT name ty payload) := by
+  have meaning := result.arrayConstants _ original
+  exact ⟨Frontend.constantMeaning_collected result.unit result.source.scopes name ty payload original meaning,
+    Frontend.arrayMeaning_scalarStep result.unit result.source.scopes _ meaning⟩
+
+/-- The whole-image certificate and original constant retention come from the same production
+    result. No evaluator, fabricated declaration or caller-supplied constant certificate intervenes. -/
+theorem exported_constants_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
+    (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
+    (h : irBild text K options = .ok bytes) :
+    ∃ output : Emitted text K options,
+      emit text K options = .ok output ∧ output.bytes = bytes ∧ output.Correct ∧
+      ∀ (name : String) (ty : STyp) (payload : SKonstWert),
+        SItemTief.constT name ty payload ∈ uMembers (pre108 output.compiled.source.prepared.elaborierbar) →
+        Frontend.ArrayCollected output.compiled.unit output.compiled.source.scopes name ∧
+          Frontend.ScalarStep output.compiled.source.scopes (.constT name ty payload) := by
+  obtain ⟨output, emitted, image, correct, _⟩ := irBild_correct text K bytes h
+  exact ⟨output, emitted, image, correct, output.compiled.constant_literal⟩
+
 /-- The selected original or expanded source retains the successful certified const
     substitution and all remaining runtime metadata checks before G lowering. -/
 theorem Compiled.const_substitution {text : String} {options : Profil.Options} (result : Compiled text options)

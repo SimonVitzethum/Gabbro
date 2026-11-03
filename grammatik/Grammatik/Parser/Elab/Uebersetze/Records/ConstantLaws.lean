@@ -57,6 +57,12 @@ theorem uKonstZeilen_cons (alias : List (String × (Int × Int))) (fns : List UK
        | _, _ => none) := by
   rw [uKonstZeilen]
 
+/-- Empty rows keep the canonical nil literal regardless of the element adapter. -/
+theorem uKonstZeilen_nil (alias : List (String × (Int × Int))) (fns : List UKonstFn)
+    (consts : List (String × Int)) (element : Ty) (leaf : Ty → SExpr → Option USide) :
+    uKonstZeilen alias fns consts element [] leaf = some .arrNil := by
+  rw [uKonstZeilen]
+
 /-- Retention is proved for arbitrary named schemas and arbitrary leaf adapters. It neither
     assumes nor asserts that an arbitrary adapter is sound: the mandatory literal gate supplies
     typing separately. A successful source declaration cannot disappear through filterMap. -/
@@ -67,9 +73,37 @@ theorem uKonstArrays_retains (alias : List (String × (Int × Int))) (fns : List
     (typed : uTypIn alias [] named [] [] sourceType = .ok ty)
     (evaluated : uKonstZeile alias fns consts ty payload leaf = some raw) :
     (name, USide.typed ty raw) ∈ uKonstArrays alias fns consts items named leaf true := by
+  unfold uKonstArrays
   apply List.mem_filterMap.mpr
   refine ⟨SItemTief.constT name sourceType payload, member, ?_⟩
-  cases sourceType <;> simp only [typed, evaluated, Option.map_some, ↓reduceIte]
+  simp only [Bool.true_or, ↓reduceIte, typed, evaluated, Option.map_some]
+
+/-- Every collected typed literal comes from a real declaration and the actual canonical
+    lookup/evaluation, with the same schemas and adapter. Collection cannot invent a binding. -/
+theorem uKonstArrays_origin (alias : List (String × (Int × Int))) (fns : List UKonstFn)
+    (consts : List (String × Int)) (items : List SItemTief) (named : List (String × Ty))
+    (leaf : Ty → SExpr → Option USide) (values : Bool) (name : String) (ty : Ty) (raw : USide)
+    (collected : (name, USide.typed ty raw) ∈ uKonstArrays alias fns consts items named leaf values) :
+    ∃ sourceType payload,
+      SItemTief.constT name sourceType payload ∈ items ∧
+      uTypIn alias [] named [] [] sourceType = .ok ty ∧
+      uKonstZeile alias fns consts ty payload leaf = some raw := by
+  unfold uKonstArrays at collected
+  obtain ⟨item, member, produced⟩ := List.mem_filterMap.mp collected
+  cases item <;> try { simp only [reduceCtorEq] at produced }
+  case constT sourceName sourceType payload =>
+    split at produced
+    · cases typed : uTypIn alias [] named [] [] sourceType with
+      | error error => simp only [typed, reduceCtorEq] at produced
+      | ok actual =>
+        cases evaluated : uKonstZeile alias fns consts actual payload leaf with
+        | none => simp only [typed, evaluated, Option.map_none, reduceCtorEq] at produced
+        | some value =>
+          simp only [typed, evaluated, Option.map_some, Option.some.injEq,
+            Prod.mk.injEq, USide.typed.injEq] at produced
+          obtain ⟨rfl, rfl, rfl⟩ := produced
+          exact ⟨sourceType, payload, member, typed, evaluated⟩
+    · simp only [reduceCtorEq] at produced
 
 /-- The production record adapter routes numeric fields back to the canonical evaluator. -/
 theorem uRecordConstant_int (records : List URecord) (alias : List (String × (Int × Int)))
@@ -88,5 +122,23 @@ theorem uRecordConstant_product (records : List URecord) (alias : List (String �
       let values ← uRecordConstantFields records alias fns consts schema.val.fields args
       (uRecordValues schema.val values).toOption) := by
   rw [uRecordConstant]
+
+/-- Boolean fields use exactly the canonical truth literals. -/
+theorem uRecordConstant_bool (records : List URecord) (alias : List (String × (Int × Int)))
+    (fns : List UKonstFn) (consts : List (String × Int)) (value : Bool) :
+    uRecordConstant records alias fns consts .bool (if value then .tru else .fls) =
+      some (.truth value) := by
+  cases value <;> rw [uRecordConstant]
+
+/-- Constructor argument recursion is over the real labelled source list. -/
+theorem uRecordConstantFields_cons (records : List URecord)
+    (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
+    (fields : List (String × Ty)) (label : String) (source : SExpr) (rest : List SExpr) :
+    uRecordConstantFields records alias fns consts fields (.ext .label [label] [source] :: rest) = (do
+      let field ← fields.find? (fun field => strEq field.1 label)
+      let side ← uRecordConstant records alias fns consts field.2 source
+      let tail ← uRecordConstantFields records alias fns consts fields rest
+      pure ((label, side) :: tail)) := by
+  rw [uRecordConstantFields]
 
 end Gabbro.Grammatik.Parser.Uebersetze

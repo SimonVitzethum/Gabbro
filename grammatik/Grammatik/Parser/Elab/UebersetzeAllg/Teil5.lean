@@ -429,6 +429,8 @@ def lowSeiteZ (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .sub a b => lowZwei (fun x y => .ok (LowSide.minus x y)) (lowSeiteZ u Γ Λ fn er a) (lowSeiteZ u Γ Λ fn er b)
   | .mul a b => lowZwei (fun x y => .ok (LowSide.times x y)) (lowSeiteZ u Γ Λ fn er a) (lowSeiteZ u Γ Λ fn er b)
   | s => zahlVon (lowWertE u Γ Λ fn er s)
+termination_by source => 3 * sizeOf source + 1
+decreasing_by all_goals simp_wf; omega
 end
 
 /-- A comparison side in `ensures`: literals, numeric parameters,

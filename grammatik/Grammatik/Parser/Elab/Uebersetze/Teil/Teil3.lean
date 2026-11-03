@@ -216,17 +216,15 @@ termination_by sizeOf values
 decreasing_by all_goals simp_wf; omega
 end
 
-/-- The constant arrays of a unit (`const T : [u32; N] = [..]`): each as its folded literal at its type. -/
+/-- Collect canonical literals at their declared type. The default selects arrays; production
+    enables all values and supplies its nominal schemas and leaf adapter. Both modes use the
+    same type lookup and evaluator, so no initializer has a second collection path. -/
 def uKonstArrays (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
     (ms : List SItemTief) (named : List (String × Ty) := [])
     (leaf : Ty → SExpr → Option USide := fun _ _ => none)
     (values : Bool := false) : List (String × USide) :=
   ms.filterMap fun
-    | .constT n t@(.array _ _) v =>
-      match uTypIn alias [] named [] [] t with
-      | .ok τ => (uKonstZeile alias fns consts τ v leaf).map fun l => (n, .typed τ l)
-      | .error _ => none
-    | .constT n t v => if values then
+    | .constT n t v => if values || (match t with | .array _ _ => true | _ => false) then
       match uTypIn alias [] named [] [] t with
       | .ok τ => (uKonstZeile alias fns consts τ v leaf).map fun l => (n, .typed τ l)
       | .error _ => none

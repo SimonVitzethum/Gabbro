@@ -18,7 +18,12 @@ theorem record_lower (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : U
     (hschema : uRecordOf u.records (.prod identity (sides.map (·.1))) = .ok schema) :
     lowWertE u Γ Λ fn er (.product identity reordered sides) =
       .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩ := by
-  simp only [lowWertE, gate, hschema, lowered]
+  simp only [lowWertE, gate, hschema, lowered, bind, Except.bind]
+
+/-- Empty products use the canonical empty argument list in the same lexical/result scope. -/
+theorem lowProductArgs_nil (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
+    (er : Option Ty) : lowProductArgs u Γ Λ fn er [] = .ok .nil := by
+  rw [lowProductArgs]
 
 /-- Product fields use the actual checking-mode lowerer, with no separate callback instance. -/
 theorem lowProductArgs_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn)
@@ -59,6 +64,19 @@ theorem lowLitFields_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       let tail ← lowLitFields fields values
       pure (.cons head tail)) := by
   rw [lowLitFields]
+
+theorem lowLitFields_nil (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) :
+    lowLitFields (u := u) (Γ := Γ) (Λ := Λ) [] [] = .ok .nil := by
+  rw [lowLitFields]
+
+/-- Nested literal arrays recurse through the same product-aware literal producer. -/
+theorem lowLit_array_cons (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
+    (ty : Ty) (count : Nat) (head tail : USide) :
+    lowLit (u := u) (Γ := Γ) (Λ := Λ) (.arr ty (count + 1)) (.arrCons head tail) =
+      (match lowLit ty head, lowLit (.arr ty count) tail with
+       | .ok first, .ok rest => .ok (Expr.arrCons first rest)
+       | .error error, _ | _, .error error => .error error) := by
+  rw [lowLit]
 
 /-- Product projection and replacement use the canonical semantics, with the whole base footprint. -/
 theorem record_replace_meaning {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {identity : Nat}
