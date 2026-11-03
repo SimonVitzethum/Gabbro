@@ -43,6 +43,11 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact hS t (hsub _ (by simp only [Expr.orte, List.mem_append, List.mem_cons, true_or, or_true])) _ _
+  | .thruOwn _ t _ _ i _ _ _ _ _ _ =>
+      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ ho))))
+        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+      simp only [eval, hi]
+      exact hS t (hsub _ (by simp only [Expr.orte, List.mem_append, List.mem_cons, true_or, or_true])) _ _
   | .refEq a b =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho))) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
