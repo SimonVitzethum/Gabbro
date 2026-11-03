@@ -88,7 +88,7 @@ def swQ : AxEns foreignSoftwareD
     current slot value. -/
 def foreignSoftwareO : Orakel foreignSoftwareD where
   wirkt
-    | (), σ, _ => (σ.merke (axiomSpur [()] [] false [] σ.haelt), (σ.slots () 0 ()).n)
+    | (), σ, _ => (σ.merke (axiomSpur [()] [] () [] σ.haelt), (σ.slots () 0 ()).n)
   regLies := fun r _ => nomatch r
   regSchreib := fun r _ => nomatch r
   sichtbar := fun g _ => nomatch g
@@ -113,7 +113,7 @@ theorem swO_rahmen (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (for
 /-- The software call keeps the held locks: recording only. -/
 theorem swO_haelt (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (foreignSoftwareD.aparams ())) :
     (foreignSoftwareO.wirkt () σ ρ).1.haelt = σ.haelt := by
-  show offen (axiomSpur [()] [] false [] σ.haelt ++ σ.spur) = offen σ.spur
+  show offen (axiomSpur [()] [] () [] σ.haelt ++ σ.spur) = offen σ.spur
   exact offen_append_zugriffe σ.haelt _ _ (axiomSpur_zugriffMit _ _ _ _ _)
 
 /-- Recording of the software call over the complete domains. -/
@@ -127,7 +127,7 @@ theorem swO_spur (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (forei
       (∀ g, foreignSoftwareD.agschreibt () g = true → gdarf foreignSoftwareD g Λe) ∧
       (∀ m st, Res.marke m st ∉ Λe) ∧
       HeldIn Λe σ.haelt ∧
-      (foreignSoftwareO.wirkt () σ ρ).1.spur = axiomSpur tabs globs false Λe σ.haelt ++ σ.spur := by
+      (foreignSoftwareO.wirkt () σ ρ).1.spur = axiomSpur tabs globs () Λe σ.haelt ++ σ.spur := by
   refine ⟨[()], [], [], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro t _
     exact List.Mem.head _
@@ -146,7 +146,7 @@ theorem swO_spur (σ : World foreignSoftwareD) (ρ : Env foreignSoftwareD (forei
 theorem swO_gut : GutO foreignSoftwareO := by
   intro a σ ρ
   cases a with
-  | () =>
+  | unit =>
     refine ⟨swO_rahmen σ ρ, swO_haelt σ ρ, fun hgt hgg => ?_⟩
     exact swO_spur σ ρ hgt hgg
 
@@ -156,7 +156,7 @@ theorem swO_gut : GutO foreignSoftwareO := by
 theorem swQ_vertrag : AxVertragO swQ foreignSoftwareO := by
   intro a σ ρ v h
   cases a with
-  | () =>
+  | unit =>
     have hred : einpassenErg foreignSoftwareO.zeiger (foreignSoftwareD.aerg ()) (foreignSoftwareO.wirkt () σ ρ).2
         = einpassen (D := foreignSoftwareD) foreignSoftwareO.zeiger (.int 0 100) (σ.slots () 0 ()).n := rfl
     rw [hred] at h
