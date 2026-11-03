@@ -204,9 +204,9 @@ structure AkzeptiertSpec (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn)
   bibliothek : LibraryAdmission P := trivial
   -- the accumulator admission (C15, 2026-11-02)
   akku : Kernzelle.AccumulatorAdmission P fs A
-  -- the declared checks (C16, 2026-11-02): the admitted checks of this value
-  checks : List (CheckDecl D) := []
-  pruef : CheckAdmission P fs checks
+  -- C16: a Prop stores the admitted list existentially, never as a data projection.
+  -- The concrete checker still checks E.pruefungen; this interface forgets its identity.
+  pruef : ∃ checks : List (CheckDecl D), CheckAdmission P fs checks
 /-- **The accumulator admission added to the checker's facts**: the facts of `AkzeptiertSpec`
     that do not read the accumulators hold for every accumulator list. -/
 theorem AkzeptiertSpec.mitAkku {P : Programm D} {S : SperrInv D} {fs ws : List D.Fn}

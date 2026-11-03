@@ -5193,7 +5193,7 @@ Integration evidence: `733f1b65b` (`feat(grammar): bind C02 library admission in
 * **`tabsOf_voll`**: For arbitrary `cs : List (D.Tab ⊕ D.Glob)`, `t : D.Tab`, assuming `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `t ∈ tabsOf cs`.
 * **`globsOf_voll`**: For arbitrary `cs : List (D.Tab ⊕ D.Glob)`, `g : D.Glob`, assuming `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `g ∈ globsOf cs`.
 * **`akzeptiertSpec_of`**: For arbitrary `aks : List (Kernzelle.AccumulatorDecl D)`, `checks : List (CheckDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `h : Akzeptiert P S fs ls cs ws aks checks = true`, the conclusion is `AkzeptiertSpec P S fs ws aks`.
-* **`spec_akzeptiert`**: For arbitrary `aks : List (Kernzelle.AccumulatorDecl D)`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hls : ∀ L : D.Lock, L ∈ ls` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs` and `h : AkzeptiertSpec P S fs ws aks`, the conclusion is `Akzeptiert P S fs ls cs ws aks h.checks = true`.
+* **`spec_akzeptiert`**: For arbitrary `aks`, `checks`, `qs`, given complete member lists, `h : AkzeptiertSpec P S fs ws aks`, the connected-query premise `∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q`, and `hChecks : CheckAdmission P fs checks`, the conclusion is `Akzeptiert P S fs ls cs ws aks checks qs = true`. The reverse requires the admission of this explicit list; existential evidence alone does not select it.
 * **`ruheB_iff`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `cs : List (D.Tab ⊕ D.Glob)`, `w : D.Fn`, assuming `hvoll : ∀ g : D.Fn, g ∈ fs` and `hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs`, the conclusion is `ruheB P fs cs w = true ↔ Ruhig P fs w`.
 * **`getrenntK_of`**: For arbitrary `c : D.Tab ⊕ D.Glob`, assuming `hZ : StartZulaessig P S fs ws sp init` and `hc : Getrennt P fs ws c`, the conclusion is `GetrenntK P (kVon P fs init) c`.
 * **`schreibGetrenntK_of`**: For arbitrary `c : D.Tab ⊕ D.Glob`, assuming `hZ : StartZulaessig P S fs ws sp init` and `hP : EinzelnPool P fs ws` and `hB : ∀ L, ¬ Bewacht c L` and `hAt : ¬ AtomarAusgenommen c` and `hc : SchreibGetrennt P fs ws c`, the conclusion is `SchreibGetrenntK P (kVon P fs init) c`.
@@ -5546,6 +5546,30 @@ Stage-0 boundary: Only the five bound operators with an explicit per-cpu count p
 ## 116. C16: integrated definitions, certificates and export boundary (2026-11-02)
 
 Integration evidence: `161338497` (`feat(grammatik): C16 witnesses for admission, fidelity and transport`).
+
+Static B42 repair (2026-11-03, pending lead compilation): `Spec/Teil1.lean` and
+`Spec/Teil2.lean` replace the invalid data field in the Prop-valued `AkzeptiertSpec`/
+`AkzeptiertSpecX` with `pruef : ∃ checks, CheckAdmission P fs checks`. This packages
+the admitted list with its proof; it provides no data projection and no equality to
+`Einheit.pruefungen`. The existential is vacuous as a predicate because
+`CheckAdmission.nil` always supplies a witness; the former unindexed pair also
+allowed the empty list independently of the unit. No nonempty list is replaced by
+an empty witness in the Bool, idle-root or link paths. `Spec.lean` itself and all
+goal theorem statements/conclusions are unchanged, as are `CheckAdmission`,
+`checkB` and `checkB_iff`.
+
+The concrete checkers still run on `E.pruefungen`; forward proofs package exactly
+that list. The reverse lemmas `spec_akzeptiert`/`akzeptiertX_of_spec` require explicit
+admission for the requested list. Idle-root transport maps the actual witness;
+the Bool-to-Bool idle-root lemma extracts admission at the Bool's concrete list.
+The composed admission is already a premise of `SchnittstelleSpec.pruef` and
+`BindeSpec.pruef`, including `Nodup` of check names: both-unit lists are preserved.
+No additional composition lemma or cross-unit name assumption is needed.
+`SondenEindeutig` concerns external counterprobe names, not these check names.
+`verbund_zeuge` now takes admission at `E.pruefungen` explicitly instead of an
+equality to the removed data projection. Constructor components for existing
+interface/library/reset fields are aligned with their actual declaration order.
+No Lean build or kernel/axiom check was run by the implementation worker.
 
 `grammatik/Grammatik/Zielsatz/Faeden/Ruhe/Teil3.lean`:
 

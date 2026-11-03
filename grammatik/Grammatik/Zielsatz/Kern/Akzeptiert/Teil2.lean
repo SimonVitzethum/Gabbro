@@ -149,8 +149,8 @@ theorem globsOf_voll {cs : List (D.Tab ⊕ D.Glob)} (hcs : ∀ c : D.Tab ⊕ D.G
     (g : D.Glob) : g ∈ globsOf cs :=
   List.mem_filterMap.mpr ⟨.inr g, hcs _, rfl⟩
 
-/-- **`Akzeptiert` gives exactly `AkzeptiertSpec`** (given complete member
-    lists): the forward direction. The value carries the Bool's checks. -/
+/-- **`Akzeptiert` gives `AkzeptiertSpec`** (given complete member
+    lists): the forward direction. The Bool's checks witness the existential field. -/
 theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) (aks : List (Kernzelle.AccumulatorDecl D)) {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) :
@@ -163,7 +163,7 @@ theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock
     (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
     (schnittstellenB_iff hvoll).mp h11, (resetB_iff hcs).mp h12, (libraryB_iff _ _).mp h13,
     ((Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14).1,
-    checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h15⟩
+    ⟨checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h15⟩⟩
 
 /-- **The checker establishes the scope discipline** (C11): from the Bool,
     outside `Spec` (which has no scope field). -/
@@ -188,13 +188,14 @@ theorem scopesOkProg_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List D.F
     ScopesOkProg P :=
   scopesOkProg_of_stufenM h.stufen
 
-/-- **An `AkzeptiertSpec` value is accepted by `Akzeptiert` at its own checks**:
+/-- **An `AkzeptiertSpec` value is accepted at an explicitly admitted check list**:
     the reverse direction. At the listed query axioms, the scope conjunct is derived from the floor field
     (`scopesOkProg_of_spec`), not taken as a premise. -/
 theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
-    (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
-    Akzeptiert P S fs ls cs ws aks h.checks qs = true := by
+    (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
+    {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks) :
+    Akzeptiert P S fs ls cs ws aks checks qs = true := by
   unfold Akzeptiert
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
@@ -203,7 +204,7 @@ theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, 
     (rennB_iff hvoll hcs).mpr h.renn⟩,
     (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
     (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨h.akku, hq⟩⟩,
-    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr hChecks⟩,
     (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_spec h)⟩
 
 end Komponenten

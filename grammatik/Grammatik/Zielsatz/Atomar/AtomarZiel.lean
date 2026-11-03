@@ -217,8 +217,9 @@ theorem akzeptiertSpecX_mitRuhe {B : List (ArenaOwnership.Body.ArenaIface D)}
       simp only [tyR] at hT
       exact Ty.noConfusion hT
 
-  checks := hA.checks.map CheckDecl.mitRuhe
-  pruef := CheckAdmission.mitRuhe P hvoll hA.abg hA.pruef
+  pruef := by
+    obtain ⟨checks, hChecks⟩ := hA.pruef
+    exact ⟨checks.map CheckDecl.mitRuhe, CheckAdmission.mitRuhe P hvoll hA.abg hChecks⟩
 
 end Transfer
 

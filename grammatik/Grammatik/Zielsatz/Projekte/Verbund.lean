@@ -167,8 +167,9 @@ theorem akzeptiertSpecX_komponiere [DecidableEq D.Fn] {fs : List D.Fn} (hvoll : 
     AkzeptiertSpecX (komponiere B ps).P (komponiere B ps).S fs (komponiere B ps).ws
       (komponiere B ps).arenen (komponiere B ps).akku := by
   obtain ⟨p0, hp0⟩ := List.exists_mem_of_ne_nil ps hne
-  refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken, ?_, ?_,
-    hL.akku, (komponiere B ps).pruefungen, hL.pruef, (hA p0 hp0).reset⟩
+  refine ⟨?_, hL.abg, hL.fuss, ?_, ?_, ?_, hL.einzeln, hL.renn, ?_, hL.masken,
+    schnittstellen_standard _ _, ?_, ?_, trivial, hL.akku,
+    ⟨(komponiere B ps).pruefungen, hL.pruef⟩, (hA p0 hp0).reset⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     obtain ⟨p, hb⟩ := besitzer_da hD f
     have hp := (besitzer_mem (B := B) hb).1
@@ -310,7 +311,8 @@ theorem ohne_wurzeln_akzeptiert [DecidableEq D.Fn] {E : Einheit D} {fs : List D.
   refine @decide_eq_true _ (Classical.propDecidable _) ⟨⟨hA.frag, hA.abg, (fun f => ?_), hA.stufen,
     hA.sperrOrte, (fun w h => by rw [hws] at h; cases h), (fun _ h => ?_),
     (fun _ _ _ w h => by rw [hws] at h; cases h), hA.antworten,
-    hA.masken, (fun _ h => by cases h), (fun _ h => by cases h), hA.akku, hA.checks, hA.pruef, hA.reset⟩,
+    hA.masken, hA.schnittstellen, (fun _ h => by cases h), (fun _ h => by cases h),
+    hA.bibliothek, hA.akku, hA.pruef, hA.reset⟩,
     ⟨(fun _ h => by cases h), (fun _ h => by cases h)⟩, ?_⟩
   · show FussSX E.P E.S (lokW E.P fs []) _ f
     refine ⟨fun c _ => Or.inl (by rw [lokW_ohne_wurzeln, Bool.or_true]), fun c _ => by
@@ -328,7 +330,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob))
     (hA : AkzeptiertSpecX E.P E.S fs.1 E.ws E.arenen E.akku) (hBS : BesitzStart E)
     (hAS : Kernzelle.AkkuStart E E.akku)
-    (hChecks : hA.checks = E.pruefungen)
+    (hChecks : CheckAdmission E.P fs.1 E.pruefungen)
     (hN : NutzerTeilO ⟨fun _ => true, fun _ => true, E⟩)
     (O : Orakel D) (hH : HardwareAnnahmen O E.Q) (passes : Nat) (sp : Speicher D.mitRuhe)
     (init : Faden → Σ f : D.mitRuhe.Fn, Env D.mitRuhe (D.mitRuhe.params f)) (hL : Laufzeit E sp init)
@@ -359,7 +361,7 @@ theorem verbund_zeuge [DecidableEq D.Fn] (E : Einheit D) (eigen : D.Fn → Bool)
     · exact hBS
     · exact hA.akku
     · exact hAS
-    · rw [← hChecks]; exact hA.pruef
+    · exact hChecks
   exact gabbro_ziel_verbund_n specPruefer D E (schnitt E eigen) fs ls cs hC (schnitt_passend E eigen)
     (by simp only [schnitt, ne_eq, reduceCtorEq, not_false_eq_true]) (schnitt_deckend E eigen) (schnitt_deckendS E eigen) hL' (schnitt_nutzer hN) O
     (by rw [hkomp]; exact hH) passes sp init (by rw [hkomp]; exact hL) lebt0 K hK

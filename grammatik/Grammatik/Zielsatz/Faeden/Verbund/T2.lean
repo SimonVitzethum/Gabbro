@@ -169,7 +169,8 @@ theorem akzeptiertSpec_verbinde {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ fs
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, hS.akku, E₁.pruefungen ++ E₂.pruefungen, hS.pruef⟩
+    ?_, ?_, ?_, ?_, ?_, schnittstellen_standard _ _, hA₁.reset, trivial,
+    hS.akku, ⟨E₁.pruefungen ++ E₂.pruefungen, hS.pruef⟩⟩
   · -- frag
     refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
@@ -280,7 +281,7 @@ theorem gabbro_ziel_verbund_sc : GabbroZielVerbundSC := by
   have hA := akzeptiertSpec_verbinde fs.2 (C.korrekt E₁ fs ls cs h₁) (C.korrekt E₂ fs ls cs h₂)
     hV hS
   have hB : akzeptiert_pruefer.akzeptiert (verbinde e E₁ E₂) fs.1 ls.1 cs.1 = true :=
-    spec_akzeptiert fs.2 ls.2 cs.2 (h := hA)
+    spec_akzeptiert fs.2 ls.2 cs.2 (h := hA) (hChecks := hS.pruef)
   exact gabbro_ziel_sc akzeptiert_pruefer D (verbinde e E₁ E₂) fs ls cs hB
     (nutzerPflicht_verbinde hV hQ hN₁ hN₂) O hH passes sp init hL lebt0 K hK
 

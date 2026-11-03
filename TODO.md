@@ -554,6 +554,15 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   full-`Gut` ones (`exec_gut`, goal-trace legs).
 - C15: per-core accumulator uses elaborate to guarded update/fold bodies whose `add`/`or`/`and` overflow stops with `Logik.kapazitaet` (required narrowing, never a dropped contribution or a neutral restart); admission and link Bools carry the connected core query (`qs`/`aqs` default to `[]`, shadowing refused). The hardware provenance of the generated core-query axiom now elaborates (THEOREM-MAP §135): `accumulates … assume a` names the assumption, the `n#query` wrapper binds the foreign query, `declOf` sets `axHerkunft`/`axBeleg`, and the fixture (`assume` + `accumulates` + update + read) is accepted by `Akzeptiert` with the query list. Open: the lead build of the branch.
 - C09: escrow call/return witnesses now share a concrete machine fixture with one push and one return (THEOREM-MAP §132); the lead still needs to check the unbuilt witness modules.
+- C16 B42 static repair (`fix-b42-chk`, needs the lead build): both Prop-valued checker
+  specifications package check admission existentially (THEOREM-MAP §116). The existential
+  alone is vacuous and does not identify a unit's declarations; concrete/link Bools still
+  check the actual lists, and reverse lemmas require their explicit admission. No nonempty
+  Bool or link list is replaced by an empty witness. `Spec.lean` and goal theorem statements
+  are untouched. Separate pre-existing C15 blockers remain in `gabbro_ziel_verbund_sc` and
+  `gabbro_ziel_verbund`: their calls to `spec_akzeptiert` omit the required query list and
+  connected-query proof. The B42 change passes the composed check admission at both sites;
+  it does not invent query evidence or change the linked goal's premises.
 - C16/C02 round-3 work remains open. Compact implementation inventory (16 items, grouped from the designs in `IR-COMPILATION-LANES.md`):
   1. C02 lossless library-call arguments and region tokens.
   2. C02 resolved translator/library identity and export metadata.

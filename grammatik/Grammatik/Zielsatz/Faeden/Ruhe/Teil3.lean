@@ -134,8 +134,9 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernz
 
   akku := Kernzelle.accumulatorAdmission_mitRuhe P hvoll hA.abg hA.akku
 
-  checks := hA.checks.map CheckDecl.mitRuhe
-  pruef := CheckAdmission.mitRuhe P hvoll hA.abg hA.pruef
+  pruef := by
+    obtain ⟨checks, hChecks⟩ := hA.pruef
+    exact ⟨checks.map CheckDecl.mitRuhe, CheckAdmission.mitRuhe P hvoll hA.abg hChecks⟩
 
 /-- The fixture expansion survives the idle root. -/
 theorem pruef_expansion_mitRuhe_zeuge :

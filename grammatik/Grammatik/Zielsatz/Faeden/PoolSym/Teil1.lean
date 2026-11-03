@@ -235,7 +235,8 @@ theorem akzeptiertSpecVor_neu {P : Programm D} {S : SperrInv D} {fs ws : List D.
     unfold lokWVor lokW
     exact @decide_eq_decide _ _ (Classical.propDecidable _) (Classical.propDecidable _) |>.mpr e
   exact ⟨h.frag, h.abg, hlok ▸ h.fuss, h.stufen, h.sperrOrte, h.wurzeln,
-    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM, hR, Kernzelle.accumulatorAdmission_leer _ _, [], CheckAdmission.nil _ _⟩
+    einzelnPool_of_nodup h.einzeln, h.renn, h.antworten, hM, schnittstellen_standard _ _, hR,
+    trivial, Kernzelle.accumulatorAdmission_leer _ _, ⟨[], CheckAdmission.nil _ _⟩⟩
 
 end PoolBool
 

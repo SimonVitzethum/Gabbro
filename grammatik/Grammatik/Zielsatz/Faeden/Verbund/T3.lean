@@ -206,7 +206,7 @@ theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : Li
     (hq : ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
       Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q) :
     Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs = true :=
-  spec_akzeptiert hvoll hls hcs qs hq
+  spec_akzeptiert hvoll hls hcs qs hq (((schnittstelleB_iff hvoll hcs qs).mp hS).1.pruef)
     (h := akzeptiertSpec_verbinde hvoll
       (akzeptiertSpec_of hvoll hls hcs [] h₁) (akzeptiertSpec_of hvoll hls hcs [] h₂) hV
       (((schnittstelleB_iff hvoll hcs qs).mp hS).1))

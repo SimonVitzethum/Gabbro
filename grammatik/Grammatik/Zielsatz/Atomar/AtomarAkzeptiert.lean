@@ -85,7 +85,7 @@ theorem akzeptiertSpecX_of_spec {P : Programm D} {S : SperrInv D} {fs ws : List 
     AkzeptiertSpecX P S fs ws [] A :=
   ⟨h.frag, h.abg, fun f => fussSX_of_fussS (h.fuss f), h.stufen, h.sperrOrte, h.wurzeln,
     h.einzeln, h.renn, h.antworten, h.masken, h.schnittstellen, (fun _ h => nomatch h),
-    (fun _ h => nomatch h), h.bibliothek, h.akku, h.checks, h.pruef, h.reset⟩
+    (fun _ h => nomatch h), h.bibliothek, h.akku, h.pruef, h.reset⟩
 
 /-- **The ownership judgment added to the checker's facts**: the facts of `AkzeptiertSpecX` that
     do not read the arenas hold for every arena list. -/
@@ -336,7 +336,7 @@ theorem akzeptiertSpecX_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Loc
     (schnittstellenB_iff hvoll).mp h11,
     (fun _ h => nomatch h), (fun _ h => nomatch h), (libraryB_iff _ _).mp h12,
     ((Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h13).1,
-    checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14, (resetB_iff hcs).mp h15⟩
+    ⟨checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14⟩, (resetB_iff hcs).mp h15⟩
 
 /-- **The atomic checker establishes the scope discipline** (C11): from the
     Bool, outside `Spec` (which has no scope field). -/
@@ -423,16 +423,17 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
     rw [(e c).symm] at h
     exact h
 
-/-- **The reverse direction**: `AkzeptiertSpecX` gives `AkzeptiertX`, at the value's own
-    checks and the listed query axioms. The footprint needs exactly the completeness above; every other component
+/-- **The reverse direction**: `AkzeptiertSpecX` gives `AkzeptiertX`, at an explicitly
+    admitted check list and the listed query axioms. The footprint needs exactly the completeness above; every other component
     already decides both ways. The arena fields are dropped: the Bool has none. The
     scope conjunct is derived from the floor field (`scopesOkProg_of_stufenM`),
     not taken as a premise. -/
 theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {B : List (ArenaOwnership.Body.ArenaIface D)}
     {aks : List (Kernzelle.AccumulatorDecl D)} (h : AkzeptiertSpecX P S fs ws B aks)
-    (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
-    AkzeptiertX P S fs ls cs ws aks h.checks qs = true := by
+    (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q)
+    {checks : List (CheckDecl D)} (hChecks : CheckAdmission P fs checks) :
+    AkzeptiertX P S fs ls cs ws aks checks qs = true := by
   unfold AkzeptiertX
   simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, fussWXB_vollstaendig hvoll h.fuss⟩,
@@ -440,7 +441,7 @@ theorem akzeptiertX_of_spec (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lo
     wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
     (rennB_iff hvoll hcs).mpr h.renn⟩, (antwortenB_iff hvoll).mpr h.antworten⟩,
     (maskenB_iff hvoll).mpr h.masken⟩, (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨h.akku, hq⟩⟩,
-    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩, (resetB_iff hcs).mpr h.reset⟩,
+    (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr hChecks⟩, (resetB_iff hcs).mpr h.reset⟩,
     (scopesOkProgB_iff hvoll).mpr (scopesOkProg_of_stufenM h.stufen)⟩
 
 end Bool

@@ -105,11 +105,11 @@ def pruefer_aus_vor (C : PrueferVor) : Pruefer where
     rw [Bool.and_eq_true] at h
     obtain ⟨hC, hg, hP⟩ := h
     have hg' : E.gestartet = [] := List.isEmpty_iff.mp hg
-    -- the old checker never judged checks: the lifted verdict admits none, and
-    -- units that declare any are refused by the Bool above (`hP` is that refusal)
+    -- The lifted Bool refuses declared checks (`hP`); retain the old checker's
+    -- existential admission while transporting only the root list.
     have hA := C.korrekt E fs ls cs hC
     rw [ws_ohne_gestartet E hg'] at hA ⊢
-    exact { hA with checks := [], pruef := CheckAdmission.nil _ _ }
+    exact hA
 
 /-- **The same verdict on every unit of before** (no run-time root, no declared check). -/
 theorem pruefer_aus_vor_gleich (C : PrueferVor) {D : Deklaration} [DecidableEq D.Fn]

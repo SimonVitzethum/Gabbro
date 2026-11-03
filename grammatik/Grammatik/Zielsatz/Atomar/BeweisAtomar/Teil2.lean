@@ -207,7 +207,8 @@ theorem akzeptiertSpec_verbindeX {fs : List D.Fn} (hvoll : ∀ g : D.Fn, g ∈ f
     rw [← fussOrteG_teil hV]
     exact hcf
   refine ⟨?_, abg_verbinde hvoll hA₁.abg hA₂.abg hS.blatt₁ hS.blatt₂, ?_, ?_, hA₁.sperrOrte,
-    ?_, ?_, ?_, ?_, ?_, hS.akku, E₁.pruefungen ++ E₂.pruefungen, hS.pruef, hA₁.reset⟩
+    ?_, ?_, ?_, ?_, ?_, schnittstellen_standard _ _, hA₁.reset, trivial,
+    hS.akku, ⟨E₁.pruefungen ++ E₂.pruefungen, hS.pruef⟩⟩
   · refine List.all_eq_true.mpr fun f _ => ?_
     show ((verbindeP e E₁ E₂).rumpf f).gOk
       (kandB (verbindeP e E₁ E₂) fs (fussOrteG (verbindeP e E₁ E₂) f)) (fun _ => true) = true
@@ -307,7 +308,8 @@ theorem gabbro_ziel_verbund : GabbroZielVerbund := by
   have hB : akzeptiertX_pruefer.akzeptiert E fs.1 ls.1 cs.1 = true :=
     (Bool.and_eq_true _ _).mpr
       ⟨(Bool.and_eq_true _ _).mpr
-        ⟨akzeptiertX_of_akzeptiert (spec_akzeptiert fs.2 ls.2 cs.2 (h := hA)), besitzB_leer rfl⟩,
+        ⟨akzeptiertX_of_akzeptiert
+          (spec_akzeptiert fs.2 ls.2 cs.2 (h := hA) (hChecks := hS.pruef)), besitzB_leer rfl⟩,
       hBStart⟩
   have hN : NutzerPflichtA (verbinde e E₁ E₂) := nutzerPflichtA_of_akzeptiert fs.2 hA
     (nutzerPflicht_verbinde hV hQ (nutzerTeil_of_A hN₁) (nutzerTeil_of_A hN₂))
