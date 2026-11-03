@@ -252,6 +252,8 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
           simp only [Gabbro.Body.eval, e1, Gabbro.Body.unop]
           rfl
       · cases hb
+  -- Unrepresented predicates contradict the existing `ensExpr` premise.
+  | _, _, _, _, _, hb, _, _ => by simp [ensExpr] at hb
 
 /-- What a lowered side adds to the accumulator: `old` reads that evaluate in the entry state,
     and `result` only where the function has one. -/
@@ -410,5 +412,7 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i gx hgx
           exact ensExpr_zuwachs hA hT σ₀ σ ρ s₀ hW₀ hL₀ x hx hgx
       · cases hb
+  -- Unrepresented predicates contradict the existing `ensExpr` premise.
+  | _, _, _, _, _, hb, _ => by simp [ensExpr] at hb
 
 end Gabbro.Bruecke
