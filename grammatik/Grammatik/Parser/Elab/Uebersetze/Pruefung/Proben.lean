@@ -34,11 +34,11 @@ example : uMessOrt (.variable "x") = .ok (.variable "x") := rfl
 example : uMessOrt (.lit 3) = .error "measure without G form" := rfl
 
 /-- A well-formed check elaborates to its exact record, naming its probe and its Duty. -/
-example : uCheck [] [] ["g"] ["p"] probenCheck =
+example : uCheck [] [] ["g"] ["p"] [] probenCheck =
     .ok { name := "p", claim := "c", misst := [.variable "x"], tore := ["g"], boeden := [.tru], sonde := none, probe := "p#probe", duty := "p#duty" } := rfl
 
-/-- A gate that names neither a function nor a sibling check is refused. -/
-example : uCheck [] [] [] ["p"] { probenCheck with gates := ["h"] } =
+/-- A gate that names neither a function, a foreign body nor a sibling check is refused. -/
+example : uCheck [] [] [] ["p"] [] { probenCheck with gates := ["h"] } =
     .error "unknown gate: h" := rfl
 
 /-- A duplicate check name is refused, never merged. -/
@@ -89,23 +89,51 @@ example : uMarkenPruef ["p#duty"] [torGate] = .ok () := rfl
 /-- An undeclared mark is refused. -/
 example : uMarkenPruef [] [{ torGate with nimmt := ["m"] }] = .error "mark unknown: m" := rfl
 
-/-- One gate derives its Duty-consuming wrapper, forwarding the empty result. -/
-example : uTorHuelle "p#duty" [torGate] "p" "g" =
-    .ok { name := "p#tor#g", params := [], kinds := [], res := none, held := [], puts := [], gputs := [], nimmt := ["p#duty"], gives := [], needs := [], body := [.call "g" []], ret := .empty } := rfl
+/-- One gate derives its Duty-threading wrapper, forwarding the empty result. -/
+example : uTorHuelle "p#duty" [torGate] [] "p" "g" =
+    .ok { name := "p#tor#g", params := [], kinds := [], res := none, held := [], puts := [], gputs := [], nimmt := ["p#duty"], gibt := ["p#duty"], gives := [], needs := [], body := [.call "g" []], ret := .empty } := rfl
 
 /-- A gate with parameters keeps its named refusal. -/
 def torGateParam : UFn := { name := "h", params := [("x", .int 0 10)], kinds := [.int], res := none, held := [], puts := [], gives := [], needs := [], body := [], ret := .empty }
 
 /-- A gate with parameters derives no wrapper. -/
-example : uTorHuelle "p#duty" [torGateParam] "p" "h" =
+example : uTorHuelle "p#duty" [torGateParam] [] "p" "h" =
     .error "gate with parameters without wrapper form: h" := rfl
 
+/-! ## Foreign gates (`uFremdHuelle`), decided -/
+
+/-- An answer-less foreign body: no parameters, no channel, no answer. -/
+def fremdKopf : UFnKopf :=
+  { name := "f", names := [], kinds := [], types := [], res := none, held := [] }
+
+/-- An answer-less foreign body derives its Duty-threading wrapper over `axCall`. -/
+example : uTorHuelle "p#duty" [] [fremdKopf] "p" "f" =
+    .ok { name := "p#tor#f", params := [], kinds := [], res := none, held := [], puts := [], gputs := [], nimmt := ["p#duty"], gibt := ["p#duty"], gives := [], needs := [], body := [.axCall "f" []], ret := .empty } := rfl
+
+/-- A fallible foreign body with an `int` answer derives its wrapper with the
+    range-bottom error branch; the Duty threads on both paths. -/
+example : uTorHuelle "p#duty" []
+    [{ name := "f", names := [], kinds := [], types := [], res := some (0, 10), held := [], kanal := some (0, 1) }] "p" "f" =
+    .ok { name := "p#tor#f", params := [], kinds := [], res := some (0, 10), held := [], puts := [], gputs := [], nimmt := ["p#duty"], gibt := ["p#duty"], gives := [], needs := [], body := [.bindAxElse "ans" "f" [] "e", .ret (.val (.lit 0))], ret := .val (.param "ans") } := rfl
+
+/-- A foreign gate with parameters keeps its named refusal. -/
+example : uTorHuelle "p#duty" [] [{ fremdKopf with names := ["x"] }] "p" "f" =
+    .error "gate with parameters without wrapper form: f" := rfl
+
+/-- A foreign gate without a return keeps its named refusal. -/
+example : uTorHuelle "p#duty" [] [{ fremdKopf with resNever := true }] "p" "f" =
+    .error "gate without a return without wrapper form: f" := rfl
+
+/-- A gate naming neither a function nor a foreign body is refused. -/
+example : uTorHuelle "p#duty" [] [] "p" "f" =
+    .error "gate without wrapper form: f" := rfl
+
 /-- A gate that names a sibling check waits for the test driver (C14). -/
-example : uTorHuellen [torGate] [{ name := "p", claim := "c", misst := [], tore := ["q"], boeden := [], sonde := none, duty := "p#duty" }, { name := "q", claim := "c", misst := [], tore := [], boeden := [], sonde := none, duty := "q#duty" }] =
+example : uTorHuellen [torGate] [] [{ name := "p", claim := "c", misst := [], tore := ["q"], boeden := [], sonde := none, duty := "p#duty" }, { name := "q", claim := "c", misst := [], tore := [], boeden := [], sonde := none, duty := "q#duty" }] =
     .error "gate naming a check without driver form: q" := rfl
 
 /-- A duplicated gate is refused, never merged. -/
-example : uTorHuellen [torGate] [{ name := "p", claim := "c", misst := [], tore := ["g", "g"], boeden := [], sonde := none, duty := "p#duty" }] =
+example : uTorHuellen [torGate] [] [{ name := "p", claim := "c", misst := [], tore := ["g", "g"], boeden := [], sonde := none, duty := "p#duty" }] =
     .error "duplicate gate: g" := rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze
