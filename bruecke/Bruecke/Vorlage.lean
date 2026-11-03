@@ -102,7 +102,7 @@ def vorlage (name src : String) : String :=
       "/-! Written by `gabbro prove --template --source`. The statements below are COMPUTED from the\n" ++
       "    pinned source by the Lean front end; nothing in them was printed by Rust. The stage\n" ++
       "    outputs `toks`, `items` and `u` are hints the kernel checks against the text. Replace\n" ++
-      "    every `sorry` by a proof. -/\n\n" ++
+      "    every remaining duty with a proof. -/\n\n" ++
       "namespace Gabbro.Bruecke.Vorlage." ++ name ++ "\n\n" ++
       "open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze\n" ++
       "open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2\n\n" ++
@@ -128,13 +128,16 @@ def vorlage (name src : String) : String :=
     let bools :=
       (if nullB u then "theorem null : nullB u = true := by decide\n"
        else "-- REFUSED: a field range excludes 0, so there is no zero memory (`nullB u = false`).\n" ++
-            "theorem null : nullB u = true := sorry\n") ++
+            "theorem null : nullB u = true := by exact?\n") ++
       (if stimmigB u then "theorem stimmig : stimmigB u = true := by decide\n"
        else "-- REFUSED: a name condition fails (`stimmigB u = false`).\n" ++
-            "theorem stimmig : stimmigB u = true := sorry\n") ++
+            "theorem stimmig : stimmigB u = true := by exact?\n") ++
       (if rangB u (rangAuto u) then "theorem rang : rangB u (rangAuto u) = true := by decide\n"
        else "-- REFUSED: the call graph has a cycle or no rank (`rangB u (rangAuto u) = false`).\n" ++
-            "theorem rang : rangB u (rangAuto u) = true := sorry\n") ++ "\n"
+            "theorem rang : rangB u (rangAuto u) = true := by exact?\n") ++
+      (if ohneTransitionB u then "theorem ordinary : ohneTransitionB u = true := by decide\n"
+       else "-- REFUSED: generated transition bodies have no Body simulation.\n" ++
+            "theorem ordinary : ohneTransitionB u = true := by exact?\n") ++ "\n"
     let pflicht := (List.range n).foldl (fun acc i =>
       let name_i := match u.fns[i]? with | some f => f.name | none => "?"
       let hinweis :=
@@ -145,19 +148,21 @@ def vorlage (name src : String) : String :=
         | none => ""
       acc ++ "/-- The duty of `" ++ name_i ++ "`: the computed statement. -/\n" ++ hinweis ++
         "theorem pflicht_" ++ toString i ++ " : ∃ body, zuBody u (fnAt u ⟨" ++ toString i ++ ", by decide⟩) = some body ∧\n" ++
-        "    meetsU u (wfU u) (fnAt u ⟨" ++ toString i ++ ", by decide⟩) body := by\n  sorry\n\n") ""
+        "    meetsU u (wfU u) (fnAt u ⟨" ++ toString i ++ ", by decide⟩) body := by\n  exact?\n\n") ""
     let fall := (List.range n).foldl (fun acc i =>
       acc ++ "  | ⟨" ++ toString i ++ ", _⟩ => pflicht_" ++ toString i ++ "\n") ""
     let schluss :=
-      "theorem pflichten : Pflichten quelle :=\n" ++
-      "  ⟨u, verankert, null, stimmig, rang, fun c => match c with\n" ++ fall ++
+      "/-- O43: supply refinement of the actual lowered pointer contracts separately. -/\n" ++
+      "theorem pflichten (schnittstellen : SchnittstellenPflicht u) : Pflichten quelle :=\n" ++
+      "  ⟨u, verankert, null, stimmig, rang, ordinary, schnittstellen, fun c => match c with\n" ++ fall ++
       "  | ⟨_ + " ++ toString n ++ ", h⟩ => absurd h\n" ++
       "      (by have hl : u.fns.length = " ++ toString n ++ " := by decide\n          omega)⟩\n\n" ++
       "/-- PREMISE (b) OF THE GOAL THEOREM for the unit the front end builds from `quelle`. -/\n" ++
-      "theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
+      "theorem nutzer (schnittstellen : SchnittstellenPflicht u)\n" ++
+      "    {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}\n" ++
       "    {fs : List (declOf u').Fn} (h : Gabbro.Grammatik.uebersetzeAllg quelle = .ok ⟨u', P, fs⟩) :\n" ++
       "    ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=\n" ++
-      "  nutzer_aus_quelle pflichten h\n\n" ++
+      "  nutzer_aus_quelle (pflichten schnittstellen) h\n\n" ++
       "end Gabbro.Bruecke.Vorlage." ++ name ++ "\n"
     kopf ++ bools ++ pflicht ++ schluss
 
