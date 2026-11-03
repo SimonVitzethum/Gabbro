@@ -75,7 +75,7 @@ theorem exch_head {reserved : Nat} {g : D.Glob} (hfit : aggregateFits (D.gtyp g)
      wstab_true _ _⟩
   have hpw := PreS.welt hp1.left hks (weltAt_stab hl (by have := hW.top; omega) m m1 hσ (a1.mono (Nat.zero_le _)))
     hl (by have := hW.lo; omega)
-  obtain ⟨m2, s2, a2s, wn, rn, hen⟩ := (lowE_ok (σ.lese Λ (.inr g :: neu.orte)) (σ.lese Λ (.inr g :: neu.orte))
+  obtain ⟨m2, s2, a2s, wn, rn, hen⟩ := (lowE_ok (same := by intro _; rfl) (σ.lese Λ (.inr g :: neu.orte)) (σ.lese Λ (.inr g :: neu.orte))
     (fun _ h => h) hW.lay neu (s + 1) cn tn hn htn m1 _ _ hpw).word (aggregateFits_compat hfit)
   have a2 := Agree.widen a2s hks
   have hq2 := hq.next (a2.mono (Nat.le_succ s)) (Nat.le_refl _) (by omega)

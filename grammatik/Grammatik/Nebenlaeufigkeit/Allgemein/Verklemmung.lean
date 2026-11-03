@@ -38,5 +38,6 @@ module
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T2
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T3
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T4
 @[expose] public section
 

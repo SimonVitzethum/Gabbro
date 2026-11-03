@@ -1,5 +1,6 @@
 module
 public import Stage0.IRBild
+public import Grammatik.Parser.Elab.UebersetzeAllg.RecordLaws
 public import Stage0.ArrayWitness
 public import Grammatik.Parser.Elab.Export.ExportWitnesses
 public import Grammatik.Parser.Elab.Export.ExportWitnesses2
@@ -28,6 +29,29 @@ theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
   obtain ⟨output, emitted, image, correct⟩ := irBild_correct text K bytes h
   exact ⟨output, emitted, image, compile_source_program text output.compiled, correct,
     fun Γ Λ name value held => held_lower output.compiled.unit Γ Λ name value held⟩
+
+/-- C01's constructor export law applies to the exact unit checked and emitted by the
+    source pipeline, together with the inherited whole-image simulation certificate. -/
+theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
+    (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
+    (h : irBild text K options = .ok bytes) :
+    ∃ output : Emitted text K options,
+      emit text K options = .ok output ∧ output.image.bytes = bytes ∧ output.Correct ∧
+      ∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
+        (identity : Nat) (reordered : Bool) (sides : List (Ty × USide))
+        (args : Args (declOf output.compiled.unit) Γ Λ (sides.map (·.1)))
+        (schema : { s : URecord // s.ty = .prod identity (sides.map (·.1)) }),
+        output.compiled.unit.exportGate = .ok () →
+        lowProductArgs output.compiled.unit Γ Λ fn er
+          (lowWertAtE output.compiled.unit Γ Λ fn er) (sides.map (·.1)) (sides.map (·.2)) = .ok args →
+        uRecordOf output.compiled.unit.records (.prod identity (sides.map (·.1))) = .ok schema →
+        lowWertE output.compiled.unit Γ Λ fn er (.product identity reordered sides) =
+          .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩ := by
+  obtain ⟨output, emitted, image, correct⟩ := irBild_correct text K bytes h
+  refine ⟨output, emitted, image, correct, ?_⟩
+  intro Γ Λ fn er identity reordered sides args schema gate lowered declared
+  exact record_lower output.compiled.unit Γ Λ fn er identity reordered sides args
+    gate lowered schema declared
 
 /-- Every admitted new export is in the metadata domain checked on its original source,
     before old/global normalization or G lowering can discard an annotation. -/

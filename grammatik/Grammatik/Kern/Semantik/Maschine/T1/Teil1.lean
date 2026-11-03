@@ -15,23 +15,25 @@ variable {D : Deklaration}
 
 /-- A STARTED thread: its full trace is what a body yields from the empty trace.
     The `start` witness is closed per body by `exec_spur`
-    (see `MaschinenFaden.spawn` below). -/
+    (see `MaschinenFaden.spawn` below). Since C11 a body may unwind scopes on
+    its way out, so the provenance is release-aware (`BravRet`). -/
 structure MaschinenFaden (D : Deklaration) where
   faden : Faden
   voll : List (Ereignis D)
-  start : ∃ a b : World D, a.spur = [] ∧ Brav a b ∧ b.spur = voll
+  start : ∃ a b : World D, a.spur = [] ∧ BravRet a b ∧ b.spur = voll
 
 variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /-- **Thread start.** Running a body from an empty-trace world starts a thread:
-    the outcome world carries the full trace with `Brav` provenance from empty
-    (`exec_spur` read as `Brav`, the same step `Ziel.lean` closes per body). -/
+    the outcome world carries the full trace with `BravRet` provenance from empty
+    (`exec_spur` read as `BravRet`, the same step `Ziel.lean` closes per body). -/
 def MaschinenFaden.spawn (P : Programm D) (O : Orakel D) (passes fuel : Nat)
-    (hO : GutO O) (hP : StufenOk P) (f : Faden) (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
+    (hO : GutO O) (hP : StufenOk P) (hS : ScopesOkProg P) (f : Faden) (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ)
     (hh : HeldGenau Λ σ.haelt) (hempty : σ.spur = [])
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ)
     (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
     MaschinenFaden D :=
-  ⟨f, σ'.spur, σ, σ', hempty, exec_spur P O passes fuel hO hP b σ ρ hh σ' h, rfl⟩
+  ⟨f, σ'.spur, σ, σ', hempty, exec_spur P O passes fuel hO hP hS b σ ρ hh hscope hresid σ' h, rfl⟩
 
 /-! ## 2. The machine run -- interleaving over the grammar, reachable by construction -/
 
@@ -326,46 +328,63 @@ def Stmt.istBlatt : Stmt D V l Γ Λ Λ' → Bool
   | .locks .. | .breaking .. | .traverse .. | .consumeTraverse .. | .retry .. | .forever .. | .axiomCallElse .. => false
   | _ => true
 
+/-- **A leaf that fires `.ok` meets the static scope check.** Scoped returns
+    answer `.zurueck`/`.why`, never `.ok` (so the firing equation contradicts
+    them); compounds are not leaves (so `hleaf` contradicts them); every
+    other leaf has no scopes to check (`scopesOk` is `true` by `rfl`). -/
+theorem Stmt.scopesOk_of_ok (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') (hleaf : s.istBlatt = true)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (ρ' : Env D Γ)
+    (hok : execStmt O passes R s σ ρ = Ausgang.ok σ' ρ') : s.ScopesOk := by
+  cases s <;> solve
+    | simp only [execStmt, reduceCtorEq] at hok
+    | simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
+    | rfl
+
 /-- **Frame and trace of a LEAF, under held static holdings only.** A leaf
     takes no lock and calls nothing, so `HeldIn` (every lock the static
     holdings name is held -- the side condition of machine G since the
-    held-set relaxation) suffices; no floor, no handler premise. -/
+    held-set relaxation) suffices; no floor, no handler premise. Since C11 a
+    scoped return releases its scopes, so the leaf carries its own static
+    scope check (`hscope`); the release is spare-and-rank (`GutRetV`). -/
 theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (hO : GutO O) :
-    ∀ (s : Stmt D V l Γ Λ Λ'), s.istBlatt = true → ∀ (σ : World D) (ρ : Env D Γ),
+    ∀ (s : Stmt D V l Γ Λ Λ'), s.istBlatt = true → s.ScopesOk → ∀ (σ : World D) (ρ : Env D Γ),
       HeldIn Λ σ.haelt → GutAusgang V.schreibt V.gschreibt σ (execStmt O passes R s σ ρ)
-  | .assignSlot t f i e hw hL, _, σ, ρ, hh, σ', h => by
+  | .assignSlot t f i e hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
-  | .assignThru p t _ f i e hw hL, _, σ, ρ, hh, σ', h => by
+  | .assignThru p t _ f i e hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _
         (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
-  | .assignSlotRef r t _ _ f e hw hL, _, σ, ρ, hh, σ', h => by
+  | .assignSlotRef r t _ _ f e hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append r.orte_darf e.orte_darf) hh
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
-  | .assignGlob g e hw hL, _, σ, ρ, hh, σ', h => by
+  | .assignGlob g e hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh
       exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hh))
-  | .putBytes t f hf n i _ _ e hw hL, _, σ, ρ, hh, σ', h => by
+  | .putBytes t f hf n i _ _ e hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append i.orte_darf e.orte_darf) hh
       exact hl.trans (gut_schreibBytes _ t f hf Λ hw hL _ _ (hl.heldIn hh))
-  | .assignVar x e, _, σ, ρ, hh, σ', h => by
+  | .assignVar x e, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
-  | .shift t f hτ i von nach hn he hw hL, _, σ, ρ, hh, σ', h => by
+  | .shift t f hτ i von nach hn he hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt] at h
       split at h
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_cons (orte_tab hL) i.orte_darf) hh
         exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldIn hh))
       · simp only [Ausgang.welt, reduceCtorEq] at h
-  | .axiomCall a args _ hw hg hd hgd, _, σ, ρ, hh, σ', h => by
+  | .axiomCall a args _ hw hg hd hgd, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt] at h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh
       split at h
@@ -375,47 +394,60 @@ theorem Stmt.gut_blatt (O : Orakel D) (passes : Nat)
         rw [ha] at this
         exact hl.trans (Gut.weiter hw hg this)
       · simp only [Ausgang.welt, reduceCtorEq] at h
-  | .regWrite r _ e, _, σ, ρ, hh, σ', h => by
+  | .regWrite r _ e, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
-  | .transition .., _, σ, ρ, hh, σ', h => by
+  | .transition .., _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact gut_fragt _ _
-  | .publish g e _ _ hw hL, _, σ, ρ, hh, σ', h => by
+  | .publish g e _ _ hw hL, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh
       exact hl.trans (gut_schreibGlob _ g Λ _ hw hL (hl.heldIn hh))
-  | .advances .., _, σ, ρ, hh, σ', h => by
+  | .advances .., _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .retires .., _, σ, ρ, hh, σ', h => by
+  | .retires .., _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .ret e _, _, σ, ρ, hh, σ', h => by
+  | .ret e _, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact gut_lese σ Λ _ e.orte_darf hh
-  | .retWhy .., _, σ, ρ, hh, σ', h => by
+  | .retWhy .., _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .retScoped e _, _, σ, ρ, hh, σ', h => by
+  | .retScoped e R, _, hscope, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact gut_lese σ Λ _ e.orte_darf hh
-  | .retWhyScoped .., _, σ, ρ, hh, σ', h => by
+      have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by
+        have hsc := hscope
+        simp only [Stmt.scopesOk, Bool.and_eq_true] at hsc
+        exact hsc
+      exact gutRetV_retScoped R.scopes (gut_lese σ Λ _ e.orte_darf hh)
+        (fun L hL => (scopesOkScopes_mem hsc hL).1)
+        (fun L hL c hc => (scopesOkScopes_mem hsc hL).2 c hc)
+  | .retWhyScoped _ R, _, hscope, σ, ρ, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
+      have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by
+        have hsc := hscope
+        simp only [Stmt.scopesOk, Bool.and_eq_true] at hsc
+        exact hsc
+      exact gutRetV_retWhyScoped σ R.scopes
+        (fun L hL => (scopesOkScopes_mem hsc hL).1)
+        (fun L hL c hc => (scopesOkScopes_mem hsc hL).2 c hc)
+  | .leave _, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .leave _, _, σ, ρ, hh, σ', h => by
+  | .next _, _, _, σ, ρ, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .next _, _, σ, ρ, hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Gut.refl _ _ _
-  | .ite .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .onOption .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .onTag .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .onWhy .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .call .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .callInd .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .axiomCallElse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .callIndElse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .locks .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .breaking .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .traverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .consumeTraverse .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .retry .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
-  | .forever .., hleaf, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .ite .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .onOption .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .onTag .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .onWhy .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .call .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .callInd .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .axiomCallElse .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .callIndElse .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .locks .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .breaking .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .traverse .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .consumeTraverse .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .retry .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
+  | .forever .., hleaf, _, _, _, _, _, _ => by simp only [istBlatt, Bool.false_eq_true] at hleaf
 
 
 /-- The generated machine: shared memory, one trace per thread, the run so far,

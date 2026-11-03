@@ -331,5 +331,10 @@ theorem schrittOrte {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
     | _ =>
       kopfO
       all_goals simp_all
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      kopfO
+      all_goals simp_all
 
 end Gabbro.Grammatik

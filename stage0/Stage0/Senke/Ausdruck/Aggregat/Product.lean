@@ -9,21 +9,22 @@ open Gabbro.Grammatik
 variable {D : Deklaration}
 
 @[simp] theorem encodeProductFields_nil (L : Lay D) (v : ProdVal D.Fn D.passt []) :
-    encodeProductFields L [] v = [] := rfl
+    encodeProductFields L [] v = [] := by
+  rw [encodeProductFields.eq_def]
 
 @[simp] theorem encodeProductFields_cons (L : Lay D) {τ : Ty} {fs : List Ty}
     (v : ProdVal D.Fn D.passt (τ :: fs)) :
     encodeProductFields L (τ :: fs) v = encodeWords L τ (ProdVal.hd v) ++
-      encodeProductFields L fs (ProdVal.tl v) := rfl
+      encodeProductFields L fs (ProdVal.tl v) := by
+  rw [encodeProductFields.eq_def]
 
 theorem encodeProductFields_length (L : Lay D) (fs : List Ty)
     (v : ProdVal D.Fn D.passt fs) :
     (encodeProductFields L fs v).length = productWords fs := by
   induction fs with
-  | nil => rfl
+  | nil => simp only [encodeProductFields_nil, List.length_nil, productWords]
   | cons τ fs ih =>
-    simp only [encodeProductFields, List.length_append, encodeWords_length, productWords]
-    rw [ih]
+    simp only [encodeProductFields_cons, List.length_append, encodeWords_length, ih, productWords]
 
 /-- Every present field occupies at least one word. -/
 theorem productWords_pos_of_ne_nil {fs : List Ty} (h : fs ≠ []) :
@@ -38,9 +39,9 @@ theorem productWords_pos_of_ne_nil {fs : List Ty} (h : fs ≠ []) :
 theorem encodeProduct_length (L : Lay D) (fs : List Ty)
     (v : ProdVal D.Fn D.passt fs) :
     (encodeProduct L fs v).length = max 1 (productWords fs) := by
-  unfold encodeProduct
+  rw [encodeProduct.eq_def]
   split
-  · next h => subst fs; rfl
+  · next h => subst fs; simp [productWords]
   · next h =>
     rw [encodeProductFields_length]
     have := productWords_pos_of_ne_nil h

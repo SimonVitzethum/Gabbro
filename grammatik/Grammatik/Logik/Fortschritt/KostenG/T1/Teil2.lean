@@ -48,8 +48,6 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
-  | _, _, .bindCallIndElse p args he hp hr err rest => by
-      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .narrowRequired _ _ _ rest => by
@@ -95,8 +93,6 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .bindCallIndElse p args he hp hr err rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
-  | _, _, .bindCallIndElse p args he hp hr err rest => by
-      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .narrow _ _ _ _ rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z ZS EW rest]
   | _, _, .narrowRequired _ _ _ rest => by
@@ -117,7 +113,7 @@ theorem kostenBlock_armWahlG (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : 
   | _, .cons b rest, ⟨⟨0, _⟩, _⟩ => by
       simp only [armWahlG, kostenArms]; omega
   | _, .cons b rest, ⟨⟨n + 1, h⟩, nutz⟩ => by
-      have ih := kostenBlock_armWahlG c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, by simpa using nutz⟩
+      have ih := kostenBlock_armWahlG c pa rest ⟨⟨n, Nat.lt_of_succ_lt_succ h⟩, nutz⟩
       simp only [armWahlG, kostenArms]; omega
 
 theorem rufeB_armWahlG (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
@@ -164,7 +160,6 @@ theorem alleIndizes_length_toNat (n : Int) : (alleIndizes n).length ≤ n.toNat 
   rw [List.length_range] at h
   exact h
 
-set_option hygiene false in
 /-! ## 5. One own step of the head
 
     Every step of thread `f` is one of three kinds (`schrittArt`):
@@ -180,6 +175,7 @@ set_option hygiene false in
     `ZS = fun _ => false` an indirect-call push falls in (B) only
     vacuously: its residue fails `rufeR`. -/
 
+set_option hygiene false in
 /-- Case (A) of `schrittArt`: rewrite the new head and the old head into
     their residues and unfold the costs. -/
 macro "kopfA" : tactic => `(tactic| (
@@ -187,6 +183,6 @@ macro "kopfA" : tactic => `(tactic| (
   rw [rufUpdateG_self] <;>
   rw [‹(M.faeden f).kopf.rest = _›] at hok <;> (try rw [‹(M.faeden f).kopf.rest = _›]) <;>
   dsimp only at hok ⊢ <;>
-  simp only [potRest, kostenEnd, kostenBlock, kostenStmt, rufeR, rufeE, rufeB, rufeS,
+  simp only [GRest.weiterOpt, potRest, kostenEnd, kostenBlock, kostenStmt, rufeR, rufeE, rufeB, rufeS,
     kostenBlock_alsBlock, rufeB_alsBlock,
     Bool.and_eq_true, List.length_cons, Nat.add_mul, Nat.one_mul] at hok ⊢))

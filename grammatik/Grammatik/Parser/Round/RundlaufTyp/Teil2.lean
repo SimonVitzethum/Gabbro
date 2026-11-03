@@ -20,11 +20,11 @@ theorem parseTyp_wurzel (r : STyp) (hr : WurzelGut r) (rest : List Token) (F : N
   cases hr with
   | atom a hk =>
     simp only [typKopf, Bool.or_eq_false_iff] at hk
-    obtain ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := hk
+    obtain ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩ := hk
     have hseg := sammleSeg_stop2 [a] rest hs
     simp only [druckTyp, nameTok, List.singleton_append]
     split
-    · simp only [parseTyp, h1, Bool.false_eq_true, ↓reduceIte, h2, h3, h4, h5, nimmPfad, nameText_wort, hseg]
+    · simp only [parseTyp, h7, h1, Bool.false_eq_true, ↓reduceIte, h2, h3, h4, h5, nimmPfad, nameText_wort, hseg]
     · have hne : a ≠ "string" := fun e => by rw [e] at h6; exact absurd h6 (by decide)
       rw [parseTyp_ident F a rest (Or.inl hne)]
       simp only [nimmPfad, nameText_ident, hseg]
@@ -32,12 +32,12 @@ theorem parseTyp_wurzel (r : STyp) (hr : WurzelGut r) (rest : List Token) (F : N
     match segs, h2, hk with
     | a :: b :: cs, _, hk =>
       simp only [List.headD, typKopf, Bool.or_eq_false_iff] at hk
-      obtain ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩ := hk
+      obtain ⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩ := hk
       have hseg := sammleSeg_pfad (b :: cs) [a] rest (by simp only [ne_eq, reduceCtorEq, not_false_eq_true]) hs
       show parseTyp (F + 1) (nameTok a :: .zeichen "::" :: (pfadToks (b :: cs) ++ rest)) = _
       unfold nameTok
       split
-      · simp only [parseTyp, h1, Bool.false_eq_true, ↓reduceIte, h2, h3, h4, h5, nimmPfad, nameText_wort, hseg,
+      · simp only [parseTyp, h7, h1, Bool.false_eq_true, ↓reduceIte, h2, h3, h4, h5, nimmPfad, nameText_wort, hseg,
   List.cons_append, List.nil_append]
       · rw [parseTyp_ident F a _ (Or.inr (by intro r' e; cases e))]
         simp only [nimmPfad, nameText_ident, hseg]
@@ -86,8 +86,9 @@ theorem parse_druckTyp : ∀ (t : STyp), TypGut t → ∀ (rest : List Token) (F
     obtain ⟨F'', rfl⟩ : ∃ F'', F' = F'' + 1 := ⟨F' - 1, by omega⟩
     have hR := parseRechte_name F'' w (druckTyp t ++ rest)
     have hp : strEq "ptr" "ptr" = true := by decide
+    have hdyn : strEq "ptr" "dyn" = false := by decide
     rw [parseTyp.eq_def]
-    simp only [hp, ite_true, fordereZeichen, strEq_self, nimmName, nameText_nameTok, hR, hT]
+    simp only [hdyn, Bool.false_eq_true, ite_false, hp, ite_true, fordereZeichen, strEq_self, nimmName, nameText_nameTok, hR, hT]
 
   | index o t =>
     intro rest F hr hF
@@ -95,10 +96,10 @@ theorem parse_druckTyp : ∀ (t : STyp), TypGut t → ∀ (rest : List Token) (F
     cases o
     · have e1 : strEq "index" "ptr" = false := by decide
       have e2 : strEq "index" "option" = false := by decide
-      simp only [parseTyp, druckTyp, Bool.false_eq_true, ↓reduceIte, List.nil_append, List.cons_append, e1, e2,
+      simp only [parseTyp, druckTyp, (by decide : strEq "index" "dyn" = false), Bool.false_eq_true, ↓reduceIte, List.nil_append, List.cons_append, e1, e2,
   strEq_self, nimmWort, nimmName, nameText_nameTok]
     · have e1 : strEq "option" "ptr" = false := by decide
-      simp only [parseTyp, druckTyp, ↓reduceIte, List.cons_append, List.nil_append, e1, Bool.false_eq_true,
+      simp only [parseTyp, druckTyp, (by decide : strEq "option" "dyn" = false), ↓reduceIte, List.cons_append, List.nil_append, e1, Bool.false_eq_true,
   strEq_self, nimmWort, nimmName, nameText_nameTok]
   | array t n ht hn ih =>
     intro rest F hr hF
@@ -157,7 +158,7 @@ theorem kopfP (p : SExpr) (hp : gutPlatz p = true) (rest : List Token) (F : Nat)
   have hmiss : ∀ (R : List Token), suffToks suff ++ rest ≠ .zeichen "(" :: R := by
     intro R hcon
     exact suffToks_nopar suff rest R hr hcon
-  simp only [hmiss]
+  simp only [rufKopf_ohne, suffToks_nogeneric suff rest hr, hmiss]
   exact suffM suff (.variable a) rest F' (suffLegs_gut suff hgs) hr (by omega)
 
 /-- A place prints with an identifier head. -/

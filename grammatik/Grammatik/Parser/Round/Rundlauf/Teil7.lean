@@ -36,6 +36,23 @@ theorem druckToks_applySuff : ∀ (base : SExpr) (suff : List SuffFrag),
       simp only [druckToks, List.append_assoc, List.cons_append,
         List.nil_append]
 
+-- The generic-call head precedes ordinary calls in `parseKopf`.
+-- Neither a printed suffix nor its benign follow can start it.
+theorem suffToks_nogeneric (suff : List SuffFrag) (rest : List Token)
+    (hr : ruhigSuff rest = true) :
+    ∀ R, suffToks suff ++ rest ≠ .zeichen "::" :: .zeichen "[" :: R := by
+  intro R hcon
+  cases suff with
+  | nil =>
+    simp only [suffToks, List.nil_append] at hcon
+    rw [hcon] at hr
+    change false = true at hr
+    cases hr
+  | cons frag suff =>
+    cases frag <;>
+      simp only [suffToks, List.cons_append, List.cons.injEq,
+        Token.zeichen.injEq, String.reduceEq, false_and] at hcon
+
 -- Places through `parseOrt`: decompose, read the head, run the
 -- chain. The head gate uses `!istKeinPlatz`; the chain is
 -- `suff_rund`.
@@ -84,7 +101,7 @@ theorem prim_platz : ∀ (n : Nat) (Rn : R n)
       suffToks suff ++ rest ≠ .zeichen "(" :: R := by
     intro R hcon
     exact suffToks_nopar suff rest R hr hcon
-  simp only [hmiss] at ⊢
+  simp only [rufKopf_ohne, suffToks_nogeneric suff rest hr, hmiss] at ⊢
   have hs2 : suffGroesse suff + groesse (.variable a) ≤ n + 1 := by
     simp only [groesse] at ⊢
     omega
@@ -178,8 +195,10 @@ theorem prim_grund : ∀ (g f : String) (rest : List Token) (F : Nat),
   rw [sammleSeg_stop [g, f] rest hr] at ⊢
   have hmiss : ∀ (R : List Token), rest ≠ .zeichen "(" :: R :=
     ruhigSuff_nopar rest hr
-  simp only [hmiss, hint, hzukf, hselff] at ⊢
-  rfl
+  have hgeneric : ∀ R, rest ≠ .zeichen "::" :: .zeichen "[" :: R := by
+    simpa only [suffToks, List.nil_append] using suffToks_nogeneric [] rest hr
+  simp only [rufKopf_ohne, hgeneric, hmiss, hint, hzukf, hselff,
+    Bool.false_or, Bool.false_eq_true, ↓reduceIte] at ⊢
 
 -- `old` through `parsePrimary`: head word, place, close paren.
 theorem prim_alt : ∀ (n : Nat) (Rn : R n)

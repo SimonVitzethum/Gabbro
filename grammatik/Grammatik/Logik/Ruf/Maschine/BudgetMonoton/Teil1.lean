@@ -301,22 +301,22 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.endeBindAxiomOptElseGrund (passes := p + j) (M.plus j) f l Γ Λ e a args he hr hp hd hgd err rest ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
   | g7 h =>
     cases h with
-    | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+    | dannVerbrauch _ _ l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannVerbrauch (passes := p + j) (M.plus j) f l Γ Λ Λ'' t member edge inv bound mass body rest (k.plus j) ρ (RufRahmenG.plus_rest hhead)
-    | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+    | verbrauchWeiter _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.verbrauchWeiter (passes := p + j) (M.plus j) f l Γ Λ t member edge inv bound mass body rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ
-    | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+    | verbrauchLeer _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.verbrauchLeer (passes := p + j) (M.plus j) f l Γ Λ t member edge inv bound mass body rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ
-    | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+    | verbrauchFort _ _ l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.verbrauchFort (passes := p + j) (M.plus j) f l Γ Λ t member edge inv bound mass body rest vor (k.plus j) i ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ m' hm' hfall neu hneu hΛ
-    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
+    | dannLeaveVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannLeaveVerbrauch (passes := p + j) (M.plus j) f l Γ Λ t member edge inv bound mass body rest vor (k.plus j) restb i ρ hleave (RufRahmenG.plus_rest hhead) σ' ρ' neu ((execStmt_blatt_passes O p (p + j) keinRuf _ rfl _ _).symm.trans hstep) hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ
-    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
+    | dannNextVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannNextVerbrauch (passes := p + j) (M.plus j) f l Γ Λ t member edge inv bound mass body rest vor (k.plus j) restb i ρ hnext (RufRahmenG.plus_rest hhead) σ' ρ' neu ((execStmt_blatt_passes O p (p + j) keinRuf _ rfl _ _).symm.trans hstep) hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ
 

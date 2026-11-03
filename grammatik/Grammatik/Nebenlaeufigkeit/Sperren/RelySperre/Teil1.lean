@@ -61,28 +61,35 @@ theorem sperre_exklusiv (P : Programm D) (O : Orakel D) (passes : Nat) (hO : Gut
       intro f g hfg L hLf
       cases hs with
       | blatt V l Γ Λ Λ' s ρ hleaf hΛ σ' neu hstep hneu hkn =>
-          have hbrav := blatt_brav O passes hO M f0 V l Γ Λ Λ' s ρ hΛ σ' hstep
-          have hopen : offen σ'.spur = offen (M.spuren f0) := by
+          have hbrav := blatt_brav O passes hO M f0 V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
+          -- Membership pushes back through the step: a release only erases,
+          -- so a lock held after was held before (`BravRet.mem`). There is
+          -- no equality: a scoped return may unwind scopes (C11).
+          have hback : L ∈ offen σ'.spur → L ∈ offen (M.spuren f0) := by
+            intro hm
             have e1 : σ'.haelt = offen σ'.spur := rfl
             have e2 : (M.weltVon f0).haelt = offen (M.spuren f0) := rfl
-            rw [← e1, ← e2]
-            exact hbrav.1
+            rw [← e1] at hm
+            rw [← e2]
+            exact hbrav.mem hm
           by_cases hf0 : f = f0
           · subst hf0
-            have hLf' : L ∈ offen (genUpdate M.spuren f σ'.spur f) := hLf
-            rw [genUpdate_self, hopen] at hLf'
+            have hLf' : L ∈ offen (M.spuren f) := by
+              have h1 : L ∈ offen σ'.spur := by
+                have h2 := hLf; rw [genUpdate_self] at h2; exact h2
+              exact hback h1
             have hgoal : L ∉ offen (genUpdate M.spuren f σ'.spur g) := by
               rw [genUpdate_noteq _ _ _ (Ne.symm hfg)]
               exact ih f g hfg L hLf'
             exact hgoal
-          · have hLf' : L ∈ offen (genUpdate M.spuren f0 σ'.spur f) := hLf
-            rw [genUpdate_noteq _ _ _ hf0] at hLf'
+          · have hLf' : L ∈ offen (M.spuren f) := by
+              have h2 := hLf; rw [genUpdate_noteq _ _ _ hf0] at h2; exact h2
             by_cases hg0 : g = f0
             · subst hg0
               have hgoal : L ∉ offen (genUpdate M.spuren g σ'.spur g) := by
-                rw [genUpdate_self, hopen]
+                rw [genUpdate_self]
                 intro hcon
-                exact (ih g f (Ne.symm hf0) L hcon) hLf'
+                exact (ih g f (Ne.symm hf0) L (hback hcon)) hLf'
               exact hgoal
             · have hgoal : L ∉ offen (genUpdate M.spuren f0 σ'.spur g) := by
                 rw [genUpdate_noteq _ _ _ hg0]

@@ -50,7 +50,7 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
   have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ ((engTest 13 (frei Γ reserved) low' high').1 ++
       [ci 19 (frei Γ reserved + 1) (16 * (cx.length + 2)) 0] ++ cx ++ [ci 18 (16 * (cr.length + 1)) 0 0] ++ cr)) ρ reserved := hp
   have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, r1, hen⟩ := (lowE_ok (reserved := reserved) σ σ (fun _ h => h) hW.lay e _ ce te he hte m pc ρ hpw).word trivial
+  obtain ⟨m1, s1, a1s, w, r1, hen⟩ := (lowE_ok (same := by intro _; rfl) (reserved := reserved) σ σ (fun _ h => h) hW.lay e _ ce te he hte m pc ρ hpw).word trivial
   have a1 := Agree.widen a1s hks
   have hn := hq.next a1 (Nat.le_refl _) (by omega)
   have hw1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))

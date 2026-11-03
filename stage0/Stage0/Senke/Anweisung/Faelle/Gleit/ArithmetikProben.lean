@@ -1,5 +1,5 @@
 /- Arithmetic foundations: executable rounding and literal-conversion images.
-   Computed binary64 conversion is connected to the block hook; float arithmetic remains refused. -/
+   Computed binary64 conversion, addition and subtraction use their Block hooks. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Gleit.Proben
 public import Stage0.Senke.Ausdruck.Gleit.RundCode
@@ -35,6 +35,28 @@ def hookConversion (n : Int) (expected lo hi : Int × Int) : Body :=
         (returnBlock 7 (by decide) (by decide))
         (returnBlock 41 (by decide) (by decide))) .nil)))
 
+/-- Compare the actual arithmetic Block result in both directions before returning. -/
+def arithmetic (op : GleitOp) (expected : Int × Int) : Body :=
+  .floatLit (1, 1) (0, 1) (10, 1)
+    (.float op (.var .here) (.var .here) (0, 1) (10, 1)
+      (.floatLit expected (0, 1) (10, 1)
+        (.cons (.ite
+          (.and (.flle (.var (.there .here)) (.var .here))
+            (.flle (.var .here) (.var (.there .here))))
+          (returnBlock 7 (by decide) (by decide))
+          (returnBlock 41 (by decide) (by decide))) .nil)))
+
+/-- The generic add candidate is accepted through the public Block hook. -/
+theorem float_add_accepted_zeuge : (blockImageOf (arithmetic .add (2, 1))).isOk = true := by
+  decide +kernel
+
+/-- The public subtraction hook accepts 1.0 - 1.0. The exact word witness
+    distinguishes positive zero from negative zero, unlike float comparisons. -/
+theorem float_sub_accepted_zeuge :
+    (blockImageOf (arithmetic .sub (0, 1))).isOk = true ∧
+    softSub 4607182418800017408 4607182418800017408 = 0 := by
+  decide +kernel
+
 def hookImages : List (String × Except String (List Runner.B) × Nat) :=
   [("hook-float-positive", blockImageOf (hookConversion 37 (37, 1) (0, 1) (100, 1)), 7),
    ("hook-float-negative", blockImageOf (hookConversion (-37) (-37, 1) (-100, 1) (0, 1)), 7),
@@ -60,6 +82,12 @@ def wordImage (fragment : Option (List II × Nat)) (expected : Nat) :
 def roundingImage (q r den expected : Nat) : Except String (List Runner.B) :=
   wordImage (floatRoundL 8 (fun d => some (konstWL 4 q d))
     (fun d => some (konstWL 4 r d)) (fun d => some (konstWL 4 den d))) expected
+
+/-- Run exactly the right-operand adapter and retained-input adder selected
+    by the Block hook, checking the resulting bits rather than float equality. -/
+def subtractionImage (a b expected : Nat) : Except String (List Runner.B) :=
+  wordImage (softAddWordsL 8 (fun d => some (konstWL 4 a d))
+    (fun d => softAddOperandL true d (fun j => some (konstWL 4 b j)))) expected
 
 def magnitudeImage (n : Int) : Except String (List Runner.B) :=
   wordImage (floatMagnitudeL 8
@@ -166,7 +194,15 @@ theorem computed_range_decisions_zeuge :
   decide +kernel
 
 def images : List (String × Except String (List Runner.B) × Nat) :=
-  [("scale-zero", scaleImage 0 0 0, 7),
+  [("float-add", blockImageOf (arithmetic .add (2, 1)), 7),
+   ("float-sub", blockImageOf (arithmetic .sub (0, 1)), 7),
+   ("float-sub-positive-zero", subtractionImage 4607182418800017408 4607182418800017408 0, 7),
+   ("float-sub-negative", subtractionImage 4607182418800017408 4611686018427387904 13830554455654793216, 7),
+   ("float-sub-negative-zero", subtractionImage 9223372036854775808 0 9223372036854775808, 7),
+   ("float-sub-subnormal", subtractionImage 4503599627370496 4503599627370495 1, 7),
+   ("float-sub-nan-left", subtractionImage 18442240474082181127 9218868437227405321 18442240474082181127, 7),
+   ("float-sub-nan-right", subtractionImage 0 18442240474082181129 9218868437227405321, 7),
+   ("scale-zero", scaleImage 0 0 0, 7),
    ("scale-full-word", scaleImage (2^64 - 1) 0 (2^64 - 1), 7),
    ("scale-tie-odd", scaleImage 15 1 8, 7),
    ("scale-tie-even", scaleImage 13 1 6, 7),
@@ -226,8 +262,7 @@ def images : List (String × Except String (List Runner.B) × Nat) :=
 theorem float_arithmetic_images_zeuge : images.all (fun x => x.2.1.isOk) = true := by
   decide +kernel
 
-/-- The exact add/sub edge semantics still required of a complete software routine.
-    These model checks do not claim that add/sub images have been lowered. -/
+/-- Canonical add/sub edge semantics complement the emitted image fixtures. -/
 theorem float_add_sub_model_zeuge :
     Gleitkomma.add Gleitkomma.f64 ⟨true, 0, 0⟩ ⟨true, 0, 0⟩ = ⟨true, 0, 0⟩ ∧
     Gleitkomma.add Gleitkomma.f64 ⟨false, 0, 0⟩ ⟨true, 0, 0⟩ = ⟨false, 0, 0⟩ ∧
@@ -245,9 +280,9 @@ theorem float_add_sub_model_zeuge :
     Gleitkomma.add Gleitkomma.f64 ⟨false, 2046, 2^52 - 1⟩ ⟨false, 2046, 2^52 - 1⟩ =
       ⟨false, 2047, 0⟩ := by decide +kernel
 
-/-- No operation is silently accepted while only its rounding fragment is proved. -/
+/-- Operations without a complete routine remain explicit refusals. -/
 theorem float_operations_refused_zeuge :
-    [GleitOp.add, .sub, .mul, .div].all (fun op =>
+    [GleitOp.mul, .div].all (fun op =>
       !(blockImageOf (show Body from .floatLit (1, 1) (0, 1) (10, 1)
         (.float op (.var .here) (.var .here) (0, 1) (10, 1) .nil))).isOk) = true := by
   decide +kernel

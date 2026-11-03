@@ -5,6 +5,8 @@ public import Stage0.Senke.Ausdruck.Aggregat.Materialize
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
 
+variable {currentOld : Bool}
+
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
@@ -13,11 +15,11 @@ variable {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem �
 variable {ρ : Env D Γ} {c : List II} {m : Runner.Mem} {pc : Runner.W}
 
 theorem strCat_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str q))
-    (ihs : ∀ ca ta, lowE L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ihs : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) s d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str n) (eval σ₀ s σ ρ))
-    (iht : ∀ ca ta, lowE L (reserved := reserved) t d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (iht : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) t d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved → ValueOk L m pc fp K d ca (.str q) (eval σ₀ t σ ρ))
-    (h : lowE L (reserved := reserved) (.strCat s t) d = some (c, top)) (hK : top ≤ K)
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.strCat s t) d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.str (n + q)) (eval σ₀ (.strCat s t) σ ρ) := by
   simp only [lowE_eqs] at h

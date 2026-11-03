@@ -1,15 +1,16 @@
 module
 
-import Grammatik.Parser.TaggedDispatch.Signature
+public import Grammatik.Parser.TaggedDispatch.Signature
+public import Grammatik.Parser.Spec.Check
 
 namespace Gabbro.Grammatik.Parser
 
 private def dispatchSignature : FnSig :=
   ⟨"spec", "area", [("before", .atom "bool"), ("self", .atom "Self"),
-    ("after", .atom "bool")], some (.atom "bool"), none, []⟩
+    ("after", .atom "bool")], some (.atom "bool"), none, [], []⟩
 
 private def dispatchActual (name : String) (variant : STyp) : FnSig :=
-  { dispatchSignature with art := "impl", name,
+  { dispatchSignature with art := "impl", name := name,
     params := [("a", .atom "bool"), ("value", variant), ("b", .atom "bool")] }
 
 private def dispatchImplementations : List TaggedImplementation :=
@@ -19,7 +20,7 @@ private def dispatchImplementations : List TaggedImplementation :=
 /-- An otherwise dispatchable member returning Self does not block either case. -/
 public theorem tagged_group_static_ignored_zeuge :
     (checkTaggedGroup [dispatchSignature,
-      ⟨"spec", "copy", [("self", .atom "Self")], some (.atom "Self"), none, []⟩]
+      ⟨"spec", "copy", [("self", .atom "Self")], some (.atom "Self"), none, [], []⟩]
       [("Circle", some (.atom "u8")), ("Rect", some (.atom "bool"))]
       dispatchImplementations).map (fun fs => fs.map (fun f => f.2.map (·.implementation))) =
     .ok [[some "circleArea", some "rectArea"]] := rfl
@@ -60,5 +61,36 @@ public theorem tagged_nested_receiver_not_dispatched_zeuge :
 public theorem tagged_held_refused_zeuge :
     (checkTaggedGroup [{ dispatchSignature with klauseln := [.needs (.call "Held" [.variable "L"])] }]
       [("Circle", some (.atom "u8"))] dispatchImplementations).toOption.isSome = false := by decide
+
+private def dispatchConformanceSignature : FnSig :=
+  { dispatchSignature with klauseln := [.effs [], .cost (.lit 1)] }
+
+private def dispatchConformanceActual (variant : STyp) : FnSig :=
+  { dispatchActual "area" variant with klauseln := dispatchConformanceSignature.klauseln }
+
+private def dispatchConformanceItems (second : FnSig) : List SItemTief :=
+  [.specGroupT "Shape" ["Self"] [] [dispatchConformanceSignature],
+   .implGroupT "Shape" [.atom "u8"] []
+     [.fnT (dispatchConformanceActual (.atom "u8")) (.block [] none)],
+   .implGroupT "Shape" [.atom "bool"] [] [.fnT second (.block [] none)]]
+
+set_option maxRecDepth 100000 in
+/-- The unified spec gate accepts both variant signatures, with a receiver between arguments. -/
+public theorem tagged_unified_signature_accepted_zeuge :
+    Spec.check (dispatchConformanceItems (dispatchConformanceActual (.atom "bool"))) =
+      .ok () := rfl
+
+set_option maxRecDepth 100000 in
+/-- The unified gate names signature failures in the second variant, covering the receiver,
+    result and reason channel before any dispatcher is admitted. -/
+public theorem tagged_unified_signature_refused_zeuge :
+    Spec.check (dispatchConformanceItems (dispatchConformanceActual (.atom "u8"))) =
+      .error "spec.signature" ∧
+    Spec.check (dispatchConformanceItems
+      { dispatchConformanceActual (.atom "bool") with res := some (.atom "u8") }) =
+      .error "spec.signature" ∧
+    Spec.check (dispatchConformanceItems
+      { dispatchConformanceActual (.atom "bool") with fehler := some "Failure" }) =
+      .error "spec.signature" := ⟨rfl, rfl, rfl⟩
 
 end Gabbro.Grammatik.Parser

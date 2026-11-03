@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Item.ElementTief.Defs1a
+public import Grammatik.Parser.Item.ElementTief.GenericParams
 
 public import Grammatik.Parser.Stmt.Anweisung
 public import Grammatik.Parser.Item.ElementTief.Kopf
@@ -77,22 +78,19 @@ def parseErgebnis (f : Nat) (toks : List Token) :
 /-- A function head: `fn name(params) [-> T] [or R] clauses`
     (`art` rode in front). -/
 def parseFnSig (f : Nat) (art : String) (toks : List Token) :
-    Except String (FnSig × List Token) :=
+    Except String (FnSig × List Token) := do
   match f with
-  | 0 => .error "out of fuel"
-  | f + 1 => match nimmWort "fn" toks with
-    | .error e => .error e
-    | .ok r1 => match nimmName r1 with
-      | .error e => .error e
-      | .ok (name, r2) => match parseParams f r2 with
-        | .error e => .error e
-        | .ok (ps, r3) => match parseErgebnis f r3 with
-          | .error e => .error e
-          | .ok (erg, fehler, r4) => match parseKlauseln f r4 with
-            | .error e => .error e
-            | .ok (ks, r) =>
-              .ok ({ art, name, params := ps, res := erg,
-                     fehler, klauseln := ks }, r)
+  | 0 => throw "out of fuel"
+  | f + 1 =>
+    let r1 ← nimmWort "fn" toks
+    let (name, r2) ← nimmName r1
+    let (generics, r2) ← parseGenericParams f r2
+    let (ps, r3) ← parseParams f r2
+    if generics.any (fun g => ps.any (fun p => strEq p.1 g.name)) then
+      throw "generic parameter shadows a value parameter"
+    let (erg, fehler, r4) ← parseErgebnis f r3
+    let (ks, r) ← parseKlauseln f r4
+    pure ({ art, name, params := ps, res := erg, fehler, klauseln := ks, generics }, r)
 
 /-- Behind the head: a block body (`fnT`), `;`
     (`protoT`), `= pred ;` (`specT`) or `= asm {…} ;` (`asmT`). -/

@@ -180,6 +180,27 @@ theorem WRel.lese {σ τ : World D} (h : WRel T σ τ) (Λ : List (Res D))
   refine ⟨?_, h.2⟩
   simp only [World.lese, World.merke, World.haelt, h.1]
 
+/-- Releases keep low-equivalence with the same scopes: same `gibt` events, same memory. -/
+theorem WRel.gibt {σ τ : World D} (h : WRel T σ τ) (L : D.Lock) :
+    WRel T (σ.gibt L) (τ.gibt L) := by
+  refine ⟨?_, ?_⟩
+  · simp only [World.gibt, h.1]
+  · have ⟨hs, hg⟩ := World.gibt_speicher σ L
+    have ⟨hs', hg'⟩ := World.gibt_speicher τ L
+    intro c hc
+    have := h.2 c hc
+    cases c with
+    | inl t => simp only [World.speicher, hs, hs'] at this ⊢; exact this
+    | inr g => simp only [World.speicher, hg, hg'] at this ⊢; exact this
+
+theorem WRel.gibt_foldl {σ τ : World D} (h : WRel T σ τ) (Ls : List D.Lock) :
+    WRel T (Ls.foldl World.gibt σ) (Ls.foldl World.gibt τ) := by
+  induction Ls generalizing σ τ with
+  | nil => exact h
+  | cons L Ls ih =>
+      simp only [List.foldl_cons]
+      exact ih _ _ (h.gibt L)
+
 theorem gleichAuf_von_sg {σ τ : World D} (h : SpeicherGleich T σ.speicher τ.speicher)
     {os : List (D.Tab ⊕ D.Glob)} (hos : ∀ o ∈ os, T o = true) : GleichAuf os σ τ :=
   ⟨fun t ht => h (.inl t) (hos _ ht), fun g hg => h (.inr g) (hos _ hg)⟩

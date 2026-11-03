@@ -31,10 +31,14 @@ inductive SEffekt
   | posts : SExpr → SEffekt
   | loops : SEffekt
   | pure : SEffekt
+  | param : String → SEffekt
+  | instanceEffects : String → List STyp → SEffekt
   deriving Repr
 
 mutual
 def beqSEffekt : SEffekt → SEffekt → Bool
+  | .param a, .param b => strEq a b
+  | .instanceEffects a ts, .instanceEffects b us => strEq a b && beqSTypList ts us
   | .reads a, .reads b => beqSExpr a b
   | .writes a, .writes b => beqSExpr a b
   | .locks x a, .locks y b => (x == y) && beqSExpr a b
@@ -101,6 +105,68 @@ def beqSKlauselList : List SKlausel → List SKlausel → Bool
   | _, _ => false
 end
 
+/-- Translation-time parameters; ordinary parameter types remain unchanged. -/
+inductive SGenericParam
+  | type : String → List String → SGenericParam
+  | constant : String → STyp → SGenericParam
+  | function : String → STyp → SGenericParam
+  deriving Repr
+
+def SGenericParam.name : SGenericParam → String
+  | .type n _ | .constant n _ | .function n _ => n
+
+def beqSGenericParam : SGenericParam → SGenericParam → Bool
+  | .type n bs, .type m cs => strEq n m && beqWorte bs cs
+  | .constant n t, .constant m u | .function n t, .function m u =>
+    strEq n m && beqSTyp t u
+  | _, _ => false
+
+def beqSGenericParams : List SGenericParam → List SGenericParam → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqSGenericParam x y && beqSGenericParams xs ys
+  | _, _ => false
+
+/- One adapter parameter (`ABSTRACTION-SYNTAX-PLAN.md` §4.1 `adaptparam`): `..` takes over every
+    parameter of the source in its order, `-x` drops the source parameter `x`, `x : T` adds a
+    new parameter. The expansion happens in the desugarer (`Uebersetze/Teil18`); the parser
+    keeps the raw list. -/
+inductive SAdaptParam
+  | alle : SAdaptParam
+  | ohne : String → SAdaptParam
+  | neu : String → STyp → SAdaptParam
+  deriving Repr
+
+def beqSAdaptParam : SAdaptParam → SAdaptParam → Bool
+  | .alle, .alle => true
+  | .ohne a, .ohne b => strEq a b
+  | .neu a t, .neu b u => strEq a b && beqSTyp t u
+  | _, _ => false
+
+def beqSAdaptParamList : List SAdaptParam → List SAdaptParam → Bool
+  | [], [] => true
+  | x :: xs, y :: ys => beqSAdaptParam x y && beqSAdaptParamList xs ys
+  | _, _ => false
+
+/- The adapter head behind the parameter list (§4.1): the source function `quelle`, the name the
+    call answer is bound to (`gebunden`, `none` for the short `;` body), the explicit `else`
+    handler for a differing reason channel (`sonst`, required then), and the prelude statements
+    that run before the call (`vorspiel`, binding every dropped parameter). -/
+structure SAdapt where
+  quelle : String
+  gebunden : Option String
+  sonst : Option (String × SAnw)
+  vorspiel : List SAnw
+  deriving Repr
+
+def beqOptSonst : Option (String × SAnw) → Option (String × SAnw) → Bool
+  | none, none => true
+  | some (e, b), some (f, d) => strEq e f && beqSAnw b d
+  | _, _ => false
+
+def beqSAdapt : SAdapt → SAdapt → Bool
+  | a, b => strEq a.quelle b.quelle && beqOptWort a.gebunden b.gebunden &&
+    beqOptSonst a.sonst b.sonst && beqSAnwList a.vorspiel b.vorspiel
+
 /- A function head: SYNTAX.md section 6 `fndecl` up to the body.
     `art` is the modifier word (`impl`, `spec`, `library`,
     `const`, `raw`, `divergent`, `prim`, `extern`, else `""` for a
@@ -114,6 +180,7 @@ structure FnSig where
   res : Option STyp
   fehler : Option String
   klauseln : List SKlausel
+  generics : List SGenericParam := []
   deriving Repr
 
 def beqParam : (String × STyp) → (String × STyp) → Bool
@@ -127,7 +194,8 @@ def beqParamList : List (String × STyp) → List (String × STyp) → Bool
 def beqFnSig : FnSig → FnSig → Bool
   | s, t => strEq s.art t.art && strEq s.name t.name &&
     beqParamList s.params t.params && beqSTypOpt s.res t.res &&
-    beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln
+    beqOptWort s.fehler t.fehler && beqSKlauselList s.klauseln t.klauseln &&
+    beqSGenericParams s.generics t.generics
 
 /- One slot/format field: SYNTAX.md sections 9-10 `slotfeld`
     and `field`. `pos` is the raw `@bitpos`, `bezug` the raw

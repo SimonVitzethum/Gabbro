@@ -56,13 +56,13 @@ theorem putBytes_ok {L : Lay D} {P : Programm D} {f : D.Fn} {σ0 : World D}
     let k := eval σE i σE ρ
     have hq : PreS L m pc fp K (frei Γ reserved) (ce ++ (ci' ++ cb)) ρ reserved := by simpa only [List.append_assoc] using hp
     have hpe := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-    obtain ⟨m1, s1, a1s, valueE⟩ := lowE_ok σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hpe
+    obtain ⟨m1, s1, a1s, valueE⟩ := lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay e _ ce te he (by omega) m pc ρ hpe
     obtain ⟨we, re, ene⟩ := ValueAt.word (.int 0 (256 ^ n - 1)) z trivial valueE
     have a1 := Agree.widen a1s hks
     have hw1 : WeltAt m1 L σE := hpe.wstab m m1 hWa (a1s.mono (Nat.zero_le _))
     have hp1 := hq.next a1 (Nat.le_refl _) (by omega)
     have hpi := PreS.welt (hp1.left.up (d' := frei Γ reserved + 1) (by omega)) hks hw1 hW.lay (by have := hW.lo; omega)
-    obtain ⟨m2, s2, a2s, valueI⟩ := lowE_ok σE σE (fun _ h => h) hW.lay i _ ci' ti hi (by omega) m1 _ ρ hpi
+    obtain ⟨m2, s2, a2s, valueI⟩ := lowE_ok (same := by intro _; rfl) σE σE (fun _ h => h) hW.lay i _ ci' ti hi (by omega) m1 _ ρ hpi
     obtain ⟨wi, ri, eni⟩ := ValueAt.word (.int a b) k trivial valueI
     have a2 := Agree.widen a2s hks
     have hw2 : WeltAt m2 L σE := hpi.wstab m1 m2 hw1 (a2s.mono (Nat.zero_le _))

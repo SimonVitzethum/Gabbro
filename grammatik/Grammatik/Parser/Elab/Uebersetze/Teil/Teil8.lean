@@ -120,7 +120,7 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     match uWertBody ctx e with
     | .ok sd =>
       match uValueType ctx sd with
-      | some ty@(.prod ..) | some ty@(.arr ..) | some ty@(.str ..) =>
+      | some ty@(.fl ..) | some ty@(.prod ..) | some ty@(.arr ..) | some ty@(.str ..) =>
         .ok (.bindW x (some ty) sd, uMitLokal ctx x .wert ty muts)
       | _ =>
         if mu then .error "let mut without a type"
@@ -147,15 +147,15 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
   | .some ty@(.prod ..) | .some ty@(.array _ _) | .some ty@(.str _) =>
     if mu then .error "let mut of an aggregate without G form"
     else
-      match uTyp ctx.alias ctx.tabs ctx.spaces ty with
+      match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ty with
       | .error err => .error err
       | .ok τ =>
         match uWertBody ctx e with
         | .error err => .error err
         | .ok sd => .ok (.bindW x (some τ) sd, uMitLokal ctx x UParamArt.wert τ muts)
   | .some ty =>
-    match uTyp ctx.alias ctx.tabs ty with
-    | .ok ty@(.prod ..) => do
+    match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ty with
+    | .ok ty@(.fl ..) | .ok ty@(.prod ..) => do
       let side ← uWertBody ctx e
       pure (.bindW x (some ty) side, uMitLokal ctx x .wert ty muts)
     | _ =>
@@ -268,7 +268,7 @@ def uBindWert (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (mu : Bool
           else if let some ty := callee.resTy then do
             match t with
             | some annotation =>
-              let declared ← uTyp ctx.alias ctx.tabs annotation
+              let declared ← uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces annotation
               if decide (declared = ty) then pure () else throw "source export: call result disagrees with annotation"
             | none => pure ()
             pure (.bindCall x c xs, uMitLokal ctx x (uArtVon ty) ty muts)

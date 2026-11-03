@@ -392,7 +392,7 @@ theorem execStmt_ru_traverse {V : Vertrag D}
   simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?]
 
 set_option linter.unusedSectionVars false in
-theorem execStmt_ru_consumeTraverse {V : vertrag D}
+theorem execStmt_ru_consumeTraverse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}

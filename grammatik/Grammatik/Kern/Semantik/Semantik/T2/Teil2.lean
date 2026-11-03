@@ -135,12 +135,11 @@ def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ
   | .retWhy r _, σ, _ => .why σ r
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
-  /- C11 scoped return, sequential placeholder: immediate value/reason pop
-      like `ret`; scope unwinding with invariant restoration is OPEN. -/
-  | .retScoped e _, σ, ρ =>
+  /- Release crossed scopes innermost first, after evaluating the result. -/
+  | .retScoped e cleanup, σ, ρ =>
       let σ := σ.lese Λ e.orte
-      .zurueck σ (evalErg σ e σ ρ)
-  | .retWhyScoped r _, σ, _ => .why σ r
+      .zurueck (cleanup.scopes.foldl World.gibt σ) (evalErg σ e σ ρ)
+  | .retWhyScoped r cleanup, σ, _ => .why (cleanup.scopes.foldl World.gibt σ) r
 
 def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → World D → Env D Γ → Ausgang V l Γ
   | .nil, σ, ρ => .ok σ ρ
@@ -361,11 +360,11 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
   | .ite c t e, σ, ρ =>
       let σ := σ.lese Λ c.orte
       if wahr? (eval σ c σ ρ) then execEnd t σ ρ else execEnd e σ ρ
-  /- C11 scoped return at the top level of a body: same placeholder. -/
-  | .retScoped e _, σ, ρ =>
+  /- Checked return releases crossed scopes in their recorded order. -/
+  | .retScoped e cleanup, σ, ρ =>
       let σ := σ.lese Λ e.orte
-      .zurueck σ (evalErg σ e σ ρ)
-  | .retWhyScoped r _, σ, _ => .why σ r
+      .zurueck (cleanup.scopes.foldl World.gibt σ) (evalErg σ e σ ρ)
+  | .retWhyScoped r cleanup, σ, _ => .why (cleanup.scopes.foldl World.gibt σ) r
   /- C11 required narrowing at the top level of a body: in range runs the
       rest; out of range is `Logik.kapazitaet`. -/
   | .narrowRequired e lo' hi' rest, σ, ρ =>

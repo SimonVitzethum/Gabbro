@@ -1,7 +1,9 @@
 module
 
-
 public import Grammatik.Parser.Namen.Aufloesung.Teil1a
+public import Grammatik.Parser.Item.ElementTief.FunctionArguments
+public import Grammatik.Parser.Namen.References
+public import Grammatik.Parser.Namen.Gebunden
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -36,21 +38,22 @@ import all Init.Data.String.ToSlice
 
 @[expose] public section
 
-
-
-
 namespace Gabbro.Grammatik.Parser.Aufloesung
-
 open Gabbro.Grammatik.Parser
 open Gabbro.Grammatik.Parser.Namensraum (Pfad Quelle Platz aufloeseK)
-
 set_option maxRecDepth 100000
 
-/-- What resolution sees at a position: the unit's source, the module and the locals in scope. -/
 structure Kontext where
   q : Quelle
   von : Pfad
   lok : List String
+  /-- Checked module instances override keys without changing lexical lookup or local binders. -/
+  keys : List (Pfad × String) := []
+
+def Kontext.key (k : Kontext) (path : Pfad) : String :=
+  match k.keys.find? (fun entry => entry.1 == path) with
+  | some entry => entry.2
+  | none => schluessel k.q.namen path
 
 /-- The context with more locals in scope. -/
 def Kontext.mit (k : Kontext) (xs : List String) : Kontext := { k with lok := xs ++ k.lok }
@@ -64,11 +67,11 @@ def gift (s : String) : String := "?" ++ s
 def Kontext.ref (k : Kontext) (s : String) : String :=
   if k.lok.any (strEq · s) then s else
   match aufloeseK k.q ⟨none, []⟩ k.von (segmente s) with
-  | some c => schluessel k.q.namen c
+  | some c => k.key c
   | none => if k.q.namen.any (fun q => strEq (letzter q) (letzter (segmente s))) then gift s else s
 
 /-- The key of an item declared here. -/
-def Kontext.eigen (k : Kontext) (n : String) : String := schluessel k.q.namen (k.von ++ [n])
+def Kontext.eigen (k : Kontext) (n : String) : String := k.key (k.von ++ [n])
 
 /-- A written path (`concurrent`, `dispatch`): one segment, its item's key. -/
 def Kontext.pfad (k : Kontext) : Pfad → Pfad
@@ -79,6 +82,44 @@ def Kontext.pfad (k : Kontext) : Pfad → Pfad
 def Kontext.nenntItem (k : Kontext) (p : Pfad) : Bool :=
   (aufloeseK k.q ⟨none, []⟩ k.von p).isSome
 
+
+/-- A spec call resolves its group prefix; ordinary qualified function paths resolve as before. -/
+def Kontext.ruf (k : Kontext) (s : String) : String :=
+  let p := segmente s
+  if k.nenntItem p then k.ref s
+  else if p.length > 1 && k.nenntItem p.dropLast then
+    k.ref ("::".intercalate p.dropLast) ++ "::" ++ letzter p
+  else k.ref s
+
+/-- Explicit argument groups are resolved in the caller's scope before generic expansion. Paths
+    are kept whole; field names following `.`/`->` remain members rather than global references. -/
+def genericArgumentTokens (k : Kontext) : Nat → List Token → List Token
+  | 0, tokens => tokens
+  | _ + 1, [] => []
+  | fuel + 1, .zeichen dot :: field :: rest =>
+    if dot == "." || dot == "->" then
+      .zeichen dot :: field :: genericArgumentTokens k fuel rest
+    else .zeichen dot :: genericArgumentTokens k fuel (field :: rest)
+  | fuel + 1, token :: rest => match nameText token with
+    | some name =>
+      let (path, tail) := sammleSegmente rest [name]
+      let text := String.intercalate "::" path
+      let resolved := k.ref text
+      let head := if path.length == 1 && strEq resolved text then token else .ident resolved
+      head :: genericArgumentTokens k fuel tail
+    | none => token :: genericArgumentTokens k fuel rest
+
+def genericArgument (k : Kontext) (word : String) : String :=
+  match lex word with
+  | .error _ => word
+  | .ok tokens =>
+    let k := match parseFunctionArgument (tokens.length * 4 + 32) tokens with
+      | .ok (.literal sig body) =>
+        { k with lok := sig.params.map Prod.fst ++ literalLocals body }
+      | _ => k
+    let tokens := tokens.filter (fun | .ende => false | _ => true)
+    String.intercalate " " ((genericArgumentTokens k (tokens.length + 1) tokens).map zeigeTok)
+
 mutual
 /-- **An expression, resolved.** -/
 def aus (k : Kontext) : SExpr → SExpr
@@ -88,7 +129,7 @@ def aus (k : Kontext) : SExpr → SExpr
   | .arrow x f => .arrow (aus k x) f
   | .un o x => .un o (aus k x)
   | .bin o x y => .bin o (aus k x) (aus k y)
-  | .call f xs => .call (k.ref f) (ausL k xs)
+  | .call f xs => .call (k.ruf f) (ausL k xs)
   | .fnref p => .fnref (k.ref p)
   | .built f xs => .built f (ausL k xs)
   | .old x => .old (aus k x)
@@ -96,12 +137,22 @@ def aus (k : Kontext) : SExpr → SExpr
     -- `R::F` with `R` an item (a reason) is a ground; `m::x` with `m` a module is a place path.
     if k.lok.any (strEq · g) || k.nenntItem [g] then .why (k.ref g) f
     else match aufloeseK k.q ⟨none, []⟩ k.von [g, f] with
-      | some c => .variable (schluessel k.q.namen c)
+      | some c => .variable (k.key c)
       | none => .why g f
+  | .ext .instantiate (name :: words) xs =>
+    .ext .instantiate (k.ruf name :: words.map (genericArgument k)) (ausL k xs)
   | .ext .all (x :: d :: ns) xs => .ext .all (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .any (x :: d :: ns) xs => .ext .any (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
   | .ext .count (x :: d :: ns) xs => .ext .count (x :: d :: ns.map k.ref) (ausL (k.mit [x]) xs)
+  | .ext .dyn [n] xs => .ext .dyn [k.ref n] (ausL k xs)
   | .ext .mem (d :: ns) xs => .ext .mem (d :: ns.map k.ref) (ausL k xs)
+  | .ext kind (binder :: domain :: names) args =>
+    if kind == .foldAdd || kind == .foldMin || kind == .foldMax then
+      let count := if domain == "range" then 2 else 1
+      .ext kind (binder :: domain :: names.map k.ref)
+        (ausL k (args.take count) ++ ausL (k.mit [binder]) ((args.drop count).take 2) ++
+          ausL k ((args.drop count).drop 2))
+    else .ext kind (binder :: domain :: names) (ausL k args)
   | .ext w ns xs => .ext w ns (ausL k xs)
   | e => e
 def ausL (k : Kontext) : List SExpr → List SExpr
@@ -116,6 +167,7 @@ def ausO (k : Kontext) : Option SExpr → Option SExpr
 
 /-- **A type, resolved.** -/
 def typ (k : Kontext) : STyp → STyp
+  | .dyn n raw => .dyn (k.ref n) (raw.map (genericArgument k))
   | .atom s => .atom (k.ref s)
   | .path ps => if k.nenntItem ps then .atom (k.ref ("::".intercalate ps)) else .path ps
   | .ptr r w t => .ptr r w (typ k t)
@@ -141,6 +193,7 @@ def effekt (k : Kontext) : SEffekt → SEffekt
   | .allocs n => .allocs (k.ref n)
   | .takes e => .takes (aus k e)
   | .posts e => .posts (aus k e)
+  | .instanceEffects n ts => .instanceEffects (k.ref n) (ts.map (typ k))
   | e => e
 
 /-- **A contract clause, resolved.** -/
@@ -153,17 +206,6 @@ def klausel (k : Kontext) : SKlausel → SKlausel
   | .load p => .load (k.pfad p)
   | .effs es => .effs (es.map (effekt k))
   | c => c
-
-/-- The names a statement binds for the statements after it. -/
-def gebunden : SAnw → List String
-  | .bind _ x _ _ | .bindAxiomOpt x _ _ => [x]
-  | .bindElse x _ _ _ _ | .bindAxiomOptElse x _ _ _ _ => [x]
-  | .bindLib _ x _ _ => [x]
-  | .alloc _ x _ _ _ _ => [x]
-  | .allocVon _ x _ _ => [x]
-  | .await x _ _ _ => [x]
-  | .swap x _ _ _ => [x]
-  | _ => []
 
 /-- An ender, resolved. -/
 def ende (k : Kontext) : Option SEnde → Option SEnde
@@ -183,13 +225,15 @@ mutual
 def anw (k : Kontext) : SAnw → SAnw
   | .bind m x t e => .bind m x (typO k t) (aus k e)
   | .bindElse x t e g s => .bindElse x (typO k t) (aus k e) g (anw k s)
+  | .bindQ m x t e => .bindQ m x (typO k t) (aus k e)
   | .bindAxiomOpt x t e => .bindAxiomOpt x (typO k t) (aus k e)
   | .bindAxiomOptElse x t e g s => .bindAxiomOptElse x (typO k t) (aus k e) g (anw k s)
   | .bindLib m x t c => .bindLib m x (typO k t) (libraryCall k c)
   | .lcall c => .lcall (libraryCall k c)
   | .set l o r => .set (aus k l) o (aus k r)
   | .shift p a b => .shift (aus k p) a b
-  | .call f xs => .call (k.ref f) (xs.map (aus k))
+  | .call f xs => .call (k.ruf f) (xs.map (aus k))
+  | .callQ f xs => .callQ (k.ruf f) (xs.map (aus k))
   | .cond c t es none => .cond (aus k c) (anw k t) (anwL k es) none
   | .cond c t es (some e) => .cond (aus k c) (anw k t) (anwL k es) (some (anw k e))
   | .elsif c s => .elsif (aus k c) (anw k s)
@@ -216,6 +260,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .child s => .child (anw k s)
   | .start fs => .start (fs.map k.ref)
   | .block ss e => .block (anwL k ss) (ende (k.mit (ss.flatMap gebunden)) e)
+  | .genericCall name words args => .genericCall (k.ruf name) (words.map (genericArgument k)) (args.map (aus k))
   | .allocVon m x t a => .allocVon m x (typO k t) (k.ref a)
   | s => s
 def anwL (k : Kontext) : List SAnw → List SAnw
@@ -225,13 +270,18 @@ end
 
 /-- **A function head, resolved**: its own key; parameters are locals of its clauses. -/
 def sig (k : Kontext) (s : FnSig) : FnSig :=
-  let k' := k.mit (s.params.map Prod.fst)
+  let k' := k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)
   { s with
     name := k.eigen s.name
-    params := s.params.map fun (n, t) => (n, typ k t)
-    res := typO k s.res
+    params := s.params.map fun (n, t) => (n, typ k' t)
+    res := typO k' s.res
     fehler := s.fehler.map k.ref
-    klauseln := s.klauseln.map (klausel k') }
+    klauseln := s.klauseln.map (klausel k')
+    generics := s.generics.map fun
+      | .type n bounds => .type n (bounds.map k.ref)
+      | .constant n ty => .constant n (typ k' ty)
+      | .function n (.raw raw) => .function n (.raw (genericArgument k' raw))
+      | .function n ty => .function n (typ k' ty) }
 
 mutual
 /-- A constant value, resolved. -/

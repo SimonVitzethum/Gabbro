@@ -34,7 +34,7 @@ theorem endCall_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : 
   have hFB3 : FB = 4 := rfl
   have hFramePrefix := functionFrame_prefix P f
   have hct : frei Γ reserved + FB + (contextWords (D.params g)) + 1 ≤ callTop g (frei Γ reserved) ta := by simp only [callTop]; omega
-  have hc := callC_ok hS (hA g) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
+  have hc := callC_ok (same := rfl) hS (hA g) args (σ.lese Λ args.orte) (σ.lese Λ args.orte) hca (by omega) hp.left.left hu hW hWa
   simp only [execEnd]
   generalize R g (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = o at hc ⊢
   cases o with

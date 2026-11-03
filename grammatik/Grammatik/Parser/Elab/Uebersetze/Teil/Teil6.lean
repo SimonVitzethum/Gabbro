@@ -110,7 +110,7 @@ def uOhneGriffe (devs : List String) (ps : List (String × STyp)) : List (String
 def elabKopf (_consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := [])
-    (sig : FnSig) (devs : List String := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) :
+    (sig : FnSig) (devs : List String := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (named : List (String × Ty) := []) :
     Except String (UFnKopf × List String) :=
   match sig with
   | { art, name, params := params0, res, fehler, klauseln } =>
@@ -126,7 +126,7 @@ def elabKopf (_consts : List (String × Int))
       | .error e, _ => .error e
       | _, .error e => .error e
       | .ok _, .ok _ =>
-        match uSeq (params.map (uParam alias tabs sums whys zeiger zb spaces)) with
+        match uSeq (params.map (uParam alias tabs sums whys zeiger zb spaces named)) with
         | .error e => .error e
         | .ok ps =>
           let names := ps.map (·.1)
@@ -179,13 +179,14 @@ def elabKopf (_consts : List (String × Int))
                     | .some w => .ok ({ kopf with resWhy := some (k, w.cases.length) }, puts)
                     | .none => .error ("reason unknown: " ++ a)
                   | .none =>
-                  match uErgBereich alias (.atom a) with
+                  match uTypIn alias tabs named spaces (.atom a) with
                   | .error e => .error e
-                  | .ok r => .ok ({ kopf with res := .some r }, puts)
+                  | .ok (.int lo hi) => .ok ({ kopf with res := some (lo, hi) }, puts)
+                  | .ok ty => .ok ({ kopf with resTy := some ty }, puts)
               | .some t =>
                 match t with
                 | .array _ _ | .str _ =>
-                  match uTyp alias tabs (spaces := spaces) t with
+                  match uTypIn alias tabs named spaces t with
                   | .error e => .error e
                   | .ok τ => .ok ({ kopf with resTy := .some τ }, puts)
                 | _ =>
@@ -270,6 +271,7 @@ def uArg (ctx : UCtx) (tabs : List UTab) : UParamArt → SExpr →
       | .error e => .error e
       | .ok (.lit v) => .ok (.val (.lit v))
       | .ok (.param p) => .ok (.val (.param p))
+  | .wert, a => (uWertBody ctx a).map UArg.val
   | .int, a =>
     match uWertBody ctx a with
     | .error e => .error e

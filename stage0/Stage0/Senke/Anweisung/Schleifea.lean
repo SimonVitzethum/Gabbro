@@ -223,7 +223,7 @@ theorem trav_loop (hn : inW (D.count t) (D.count t) = true) (hci : lowE (reserve
             ρ1.tail reserved :=
           mkPreS (by simp only [frei]; omega) hp.small hF4 (trav_inv2 hc4) (codeFar_at hp.far (by omega)) (envAt_tail e4)
         have hpw := PreS.welt hq hks w4 hW.lay (by have := hW.lo; omega)
-        obtain ⟨m6, s6, a6s, w', hw', hen'⟩ := lowE_ok (σ1.lese Λ inv.orte) (σ1.lese Λ inv.orte) (fun _ h => h) hW.lay inv
+        obtain ⟨m6, s6, a6s, w', hw', hen'⟩ := lowE_ok (same := by intro _; rfl) (σ1.lese Λ inv.orte) (σ1.lese Λ inv.orte) (fun _ h => h) hW.lay inv
           _ ci'.1 ci'.2 hci (by omega) m4 _ ρ1.tail hpw |>.word trivial
         have hWa6 : WeltAt m6 L σ1 := hpw.wstab m4 m6 w4 (a6s.mono (Nat.zero_le _))
         have a6 := Agree.widen a6s hks

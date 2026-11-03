@@ -6,6 +6,7 @@ public import Grammatik.Parser.Item.ElementTief.Defs1
 public import Grammatik.Parser.Lex.Lexer
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil3
 public import Grammatik.Parser.Elab.Uebersetze.Records.Schema
+public import Grammatik.Parser.Elab.Uebersetze.Records.Embedding
 
 @[expose] public section
 
@@ -29,12 +30,7 @@ def uRecordFieldMetadata (field : SFeld) : Bool :=
 /-- One field type: a nominal record reference resolves through the collected schemas, every other
     shape through the canonical type reader (records never weaken a range reading). -/
 def uRecordFeldTyp (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab) :
-    STyp → Except String Ty
-  | .atom name =>
-    match scope.types.find? (fun entry => strEq entry.1 name) with
-    | some (_, ty) => .ok ty
-    | none => uTyp alias tabs (.atom name)
-  | other => uTyp alias tabs other
+    STyp → Except String Ty := uTypIn alias tabs scope.types []
 
 /-- One schema field: no metadata duties, then the resolved type. -/
 def uRecordField (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
@@ -47,7 +43,7 @@ def uRecordField (scope : UTypeScope) (alias : List (String × (Int × Int))) (t
 /-- One dependency pass. Identity is the original declaration position, independent of resolution
     order. A deferred declaration is retried only after another declaration has resolved. -/
 def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs : List UTab)
-    (pending : List (Nat × SItemTief)) :
+    (items : List SItemTief) (pending : List (Nat × SItemTief)) :
     Except String (UTypeScope × List (Nat × SItemTief)) :=
   pending.foldlM (fun (scope, deferred) (identity, item) => do
     match item with
@@ -57,8 +53,8 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
       if scope.types.any (fun entry => strEq entry.1 name) then
         throw ("source export: duplicate type declaration: " ++ name)
       match body with
-      | .raw text =>
-        let fields ← uRecordFields text
+      | .raw _ =>
+        let fields ← expandRecord (items.length + 1) items [] name
         if (fields.map (·.fname)).eraseDups.length != fields.length then
           throw ("source export: duplicate record field: " ++ name)
         if fields.any uRecordFieldMetadata then
@@ -69,19 +65,19 @@ def uTypePass (scope : UTypeScope) (alias : List (String × (Int × Int))) (tabs
           let schema : URecord := { name, identity, fields := resolved, modifiers := flags }
           pure ({ types := scope.types ++ [(name, schema.ty)], records := scope.records ++ [schema] }, deferred)
       | _ =>
-        match uTyp alias tabs body with
+        match uTypIn alias tabs scope.types [] body with
         | .error _ => pure (scope, deferred ++ [(identity, item)])
         | .ok ty => pure ({ scope with types := scope.types ++ [(name, ty)] }, deferred)
     | _ => throw "source export: type declaration has no value schema") (scope, [])
 
 /-- There are at most as many productive passes as declarations. Cycles and missing names fail closed. -/
-def uResolveTypes : Nat → UTypeScope → List (String × (Int × Int)) → List UTab →
+def uResolveTypes (items : List SItemTief) : Nat → UTypeScope → List (String × (Int × Int)) → List UTab →
     List (Nat × SItemTief) → Except String UTypeScope
   | _, scope, _, _, [] => .ok scope
   | 0, _, _, _, _ => .error "source export: cyclic or unresolved by-value record schema"
   | fuel + 1, scope, alias, tabs, pending => do
-    let (next, deferred) ← uTypePass scope alias tabs pending
-    if deferred.length < pending.length then uResolveTypes fuel next alias tabs deferred
+    let (next, deferred) ← uTypePass scope alias tabs items pending
+    if deferred.length < pending.length then uResolveTypes items fuel next alias tabs deferred
     else throw "source export: cyclic, unsupported or unresolved by-value record schema"
 
 /-- Tagged declarations retain their separate canonical collector. Every other type resolves here. -/
@@ -91,7 +87,7 @@ def uTypes (constants : List (String × Int)) (alias : List (String × (Int × I
     match item with
     | .typeT flags .. => !flags.any (strEq · "tagged")
     | _ => false
-  uResolveTypes pending.length { types := constants.map (fun (name, value) => (name, .int value value)) } alias tabs pending
+  uResolveTypes items pending.length { types := constants.map (fun (name, value) => (name, .int value value)) } alias tabs pending
 
 /-- The nominal schema of a product value, with the proof that the identity matches. Unknown nominal
     identities stay refused; they never default to a structural guess. -/
@@ -174,23 +170,26 @@ def uConstantValue : USide → Except String UKonst
     | _ => throw "source export: record initializer conversion requires a number"
   | _ => .error "source export: record initializer requires explicit constant fields"
 
-/-- Elaborate labelled record constructor arguments with the given value elaborator: `P(a: v, …)`
-    arrives as `.ext .label` applications, one per field, in source order. -/
+/-- One record component, shared by construction and replacement. The dependent lowerer
+    checks the component at the field's declared type. -/
+def uRecordSide (ctx : UCtx) (rechne : SExpr → Except String USide) : SExpr → Except String USide
+  | .tru => pure (.truth true)
+  | .fls => pure (.truth false)
+  | .variable name =>
+    match uParamNr ctx name with
+    | .ok position =>
+      match ctx.kinds[position]? with
+      | some .bool => pure (.param name)
+      | _ => rechne (.variable name)
+    | .error _ => rechne (.variable name)
+  | value => rechne value
+
+/-- Labelled constructors arrive as `.ext .label` applications in source order. -/
 def uRecordSides (ctx : UCtx) (rechne : SExpr → Except String USide) :
     List SExpr → Except String (List (String × USide))
   | [] => .ok []
   | .ext .label [label] [value] :: rest => do
-    let side ← match value with
-      | .tru => pure (.truth true)
-      | .fls => pure (.truth false)
-      | .variable name =>
-        match uParamNr ctx name with
-        | .ok position =>
-          match ctx.kinds[position]? with
-          | some .bool => pure (.param name)
-          | _ => rechne value
-        | .error _ => rechne value
-      | _ => rechne value
+    let side ← uRecordSide ctx rechne value
     let tail ← uRecordSides ctx rechne rest
     pure ((label, side) :: tail)
   | _ => .error "source export: record construction requires labelled fields"

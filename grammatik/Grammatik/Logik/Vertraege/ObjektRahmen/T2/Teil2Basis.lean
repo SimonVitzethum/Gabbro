@@ -138,12 +138,12 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retWhy .., _, σ, ρ, _, _ => by
       simp only [execStmt]
       exact SlotRahmen.refl _ _
-  | .retScoped e _, _, σ, ρ, _, _ => by
+  | .retScoped e Rr, _, σ, ρ, _, _ => by
       simp only [execStmt]
-      exact slotRahmen_gleich rfl
-  | .retWhyScoped .., _, σ, ρ, _, _ => by
+      exact slotRahmen_gleich (World.gibt_foldl_speicher _ _).1
+  | .retWhyScoped _ Rr, _, σ, ρ, _, _ => by
       simp only [execStmt]
-      exact SlotRahmen.refl _ _
+      exact slotRahmen_gleich (World.gibt_foldl_speicher _ _).1
   | .leave _, _, σ, ρ, _, hinv => by
       simp only [execStmt]
       exact ⟨SlotRahmen.refl _ _, hinv⟩
@@ -321,12 +321,12 @@ theorem end_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .retWhy .., _, σ, ρ, _, _ => by
       simp only [execEnd]
       exact SlotRahmen.refl _ _
-  | .retScoped e _, _, σ, ρ, _, _ => by
+  | .retScoped e Rr, _, σ, ρ, _, _ => by
       simp only [execEnd]
-      exact slotRahmen_gleich rfl
-  | .retWhyScoped .., _, σ, ρ, _, _ => by
+      exact slotRahmen_gleich (World.gibt_foldl_speicher _ _).1
+  | .retWhyScoped _ Rr, _, σ, ρ, _, _ => by
       simp only [execEnd]
-      exact SlotRahmen.refl _ _
+      exact slotRahmen_gleich (World.gibt_foldl_speicher _ _).1
   | .leave _, _, σ, ρ, _, hinv => by
       simp only [execEnd]
       exact ⟨SlotRahmen.refl _ _, hinv⟩

@@ -41,7 +41,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **190** (the 189 measured by the retired `pruefe-syntax` EBNF branch, 2026-10-17, plus `startstmt`, which `parse.rs` read since lane 253 and this file never wrote down; 189 defined, 0 open, 0 unreachable from `program` before it; 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **193** (the 190 above plus `adaptfn`, `adaptparams`, `adaptparam` (§6, phase 1); the `?` alternatives reuse `letstmt`/`exprstmt` (§7) — 192 defined, 0 open, 0 unreachable from `program`; 190 before the phase-1 desugaring, 189 before `startstmt`, 188 before the slot release `freestmt`, 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `freestmt` (TODO §1-B, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); `adaptfn`, `adaptparams`, `adaptparam` (phase 1, §6); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
 | vocabulary words | 221 | **245 table words + 4 Sonderformen** measured (by the retired `pruefe-wortschatz`, historical: 245 EBNF terminals against 245 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5; lowered by both backends since the stub landed), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `pb` + `blw` (unbounded heap, §9.1), `free` (slot release, TODO §1-B, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
@@ -317,8 +317,8 @@ accdecl    = "accumulates" ident ":" typeexpr
              [ "per" "cpu" constexpr ] ";" ;
 (* `per cpu N` is the CELL COUNT, optional in the grammar and compulsory for lowering. The
    current core is a machine question, a foreign body (`gabbro_kern()`), not an expression. *)
-moduledecl = [ "pub" ] "module" path "{" { item } "}" ;
-usedecl    = [ "pub" ] "use" path ";" ;
+moduledecl = [ "pub" ] "module" path [ "[" gparams "]" ] "{" { item } "}" ;
+usedecl    = [ "pub" ] "use" ( path | ident "=" path "::" "[" garglist "]" ) ";" ;
 (* CHANGED 2026-10-25 (name spaces of linked projects, Lean `Parser/Namen/Namensraum.lean`, no new form):
    a project writes paths from its OWN root. A path whose first segment is the local name of a
    declared dependency (`use store::stock::Shelf;`) goes into the copy of that dependency the
@@ -351,6 +351,39 @@ staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
 
 **Attributes and Lean.** Everything in this section is **declaration-level**: it fixes the
 world before the first body and has no run-time meaning of its own.
+
+**Parametric modules (Lean frontend, check model A).** Module parameters and application arguments
+use the same `gparams` and `garglist` readers as generic functions (§6):
+
+```gabbro
+module stack[T, N: const u32 in 1 .. 65536] {
+    table Items count N { slot { v: T, } }
+    static mut top: u32 in 0 .. N = 0;
+    // Ordinary push/pop function definitions belong here; their bodies and contracts use T and N.
+}
+use Jobs = stack::[index into Tasks, 64];
+use Other = stack::[index into Tasks, 64];
+```
+
+Each written `use` creates its own tables, statics and functions. Equal arguments do not share an
+instance: `Jobs::Items` and `Other::Items` are disjoint carriers. `Alias::item` resolves to the item's
+deterministic instance name. Generated names are checked against all ordinary declarations and
+other generated names. Internal references bind in the template's definition scope before parameter
+substitution; function parameters, local binders and inner generic parameters retain their scopes.
+A private `use` keeps the instance local to the unit; `pub use` exposes its public members subject to
+the existing export-hull check.
+
+The actual `elabU` preparation order is parametric modules, generic functions, specification contracts,
+then function literals as named ordinary functions. Static callback requirements from module arguments
+reach the same `SigPasst` gate as function arguments. The resulting bodies, storage and contracts pass
+the existing G exporter and checker; module instantiation changes no G rule or goal premise.
+Recursive module application is refused as `parametric-module-recursion`, even with identical
+arguments. Expansion-budget exhaustion is `parametric-module-limit`; duplicate aliases and generated
+name collisions are `parametric-module-alias-collision` and `parametric-module-name-collision`.
+An item without a module substitution rule is refused as `parametric-module-item` (raw assembly has
+the separate `parametric-module-assembly` refusal). The Rust frontend still requires the corresponding
+migration. Parser, stack, disjoint-storage and actual-exporter witnesses live in
+`Parser/Elab/Modules/Witness.lean` and `PipelineWitness.lean`; they require Lean checking.
 
 | production | reading | Lean |
 |---|---|---|
@@ -497,19 +530,21 @@ linear ghost type MayWrite(ThreadId, Pa);
 linear ghost type Duty(farbtest);   // the parameter is the NAME of a `check` declaration
 ```
 
-**Closed dispatch: `tagged … by S`.** The Lean frontend reads single-type spec groups and
-their implementations before declaration expansion:
+**Closed dispatch: `tagged … by S`.** The Lean frontend uses the canonical spec/impl groups
+of §6.1, including their effect arguments and full conformance check:
 
 ```gabbro
 spec Shape[T] {
-    fn area(s: T) -> bool effects {};
-    fn copy(s: T) -> T effects {};
+    fn area(s: T) -> bool effects {} costs <= 50 ops;
+    fn copy(s: T) -> T effects {} costs <= 50 ops;
 }
 impl Shape[u8] {
-    fn area(s: u8) -> bool effects {} { return true; }
+    fn area(s: u8) -> bool effects {} costs <= 20 ops { return true; }
+    fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; }
 }
 impl Shape[bool] {
-    fn area(s: bool) -> bool effects {} { return s; }
+    fn area(s: bool) -> bool effects {} costs <= 20 ops { return s; }
+    fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; }
 }
 tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape;
 impl fn area_of(s: AnyShape) -> bool effects {} {
@@ -520,9 +555,9 @@ impl fn area_of(s: AnyShape) -> bool effects {} {
 
 The group's type parameter (`T`, internally `Self`) occurs as exactly one whole parameter
 of a dispatchable function, nowhere in its other parameter types or result. A member returning
-`Self`, such as `copy`, is static: it generates no dispatcher and its absence from the case
-implementations does not block the tagged declaration. Calls to such members through the tagged
-group are refused as `tagged-dispatch-non-dispatchable-call`. `Held` in a group contract is refused.
+`Self`, such as `copy`, is static: it generates no dispatcher. Every implementation still
+provides it, as required by §6.1. Static calls resolve through the canonical spec resolver;
+there is no implementation for the sum itself unless explicitly declared. `Held` in a group contract is refused.
 
 For every dispatchable member, every variant must have exactly one implementation with the
 Self-substituted parameter types, result type and reason channel. Parameter names may differ.
@@ -536,9 +571,59 @@ table, heap allocation or new machine construct is introduced.
 The actual `elabU` declaration pass runs this check and expansion before library expansion.
 Overload selection uses the receiver type from function parameters, globals, explicit local
 annotations, inferred constructor/call results and match payloads. An unresolved or ambiguous
-receiver is refused. This frontend slice does not accept multi-type or effect-parameter group
-headers; ordinary typing, metadata, contract, cost and lowering refusals continue to apply to
-the expanded functions.
+receiver is refused. A `by` declaration requires a spec with one type parameter; effect
+parameters use the canonical §6.1 representation. Ordinary typing, metadata, contract, cost
+and lowering refusals continue to apply to the expanded functions.
+
+**Link-time dispatch: `dyn S`.** A dynamic value uses the same checked tagged-sum
+expansion after all linked implementations of the canonical spec group are known:
+
+```ebnf
+typeexpr += "dyn" ident [ "effects" "{" efflist "}" ] ;
+primary  += "dyn" ident "(" expr ")" ;
+```
+
+```gabbro
+table Scene count 256 {
+    slot { s: dyn Shape effects { reads Circles, reads Rects }, }
+}
+Scene[i].s = dyn Shape(c);       // c: index into Circles
+let a = Shape::area(Scene[j].s);
+```
+
+`dyn Shape effects B` closes over exactly the linked implementations whose concrete
+effects are a subset of B, with one case carrying that implementation's type. Each
+selected payload must be a scalar value of at most eight bytes: an index, integer,
+opaque scalar, reason, bool, float or option index. Larger payloads are refused as
+`dyn.payload-too-large`; unsupported payload shapes as `dyn.payload-type`. Effect
+filtering precedes the payload check. No implementation, unknown specs and unresolved
+types are named refusals rather than an empty or guessed representation.
+
+An effect bound is mandatory in a written `dyn S` type when S has effect parameters
+(`dyn.effects.required`). Equal effect sets share one generated type regardless of list
+order. A producer uses its assignment, parameter, result or let annotation to select
+the bound; an unannotated producer uses the unique matching bound in the program.
+With no written bound for that spec, its inferred bound is the union of the linked
+implementation effects. Multiple matching bounds need contextual type information
+(`dyn.producer-bound-required`); there is no implicit conversion between distinct bounds.
+
+Calls use the same match expansion as `tagged … by S`, with the bound B as their effects
+and the spec's costs plus one branch. Only dispatchable members can receive a dyn value
+(`dyn.non-dispatchable-call`). Dyn values may be stored in tables and passed or returned
+as ordinary values. A written match on a dyn value is refused as
+`dyn.implementation-test`; narrowing to a concrete type as `dyn.downcast`; equality and
+inequality as `dyn.equality`, including equality through arrays of dyn values.
+There is no downcast or reflection operation. Dyn occurrences in uninterpreted raw type
+or loop headers are refused by name until those headers have structured expansion.
+
+The implementation is `Parser/Dyn/`. The declaration pipeline checks spec conformance and resolves known static calls,
+closes dyn types, expands producers and tagged dispatch, resolves remaining spec calls,
+checks the ordinary output forms, then expands libraries. `Dyn.checkedOutput_ordinary`
+is the generic output-form gate; `Dyn/Witnesses.lean` and `Dyn/SourceWitnesses.lean`
+cover Scene/Shape, the exact two-case dispatch, effect filtering, costs and refusals.
+This is a front-end expansion into existing sums and matches: no `Ty.dyn`, machine G
+change, address table or allocation is introduced. Rust mirroring and executable
+source-to-IR coverage remain separate integration work.
 
 **Attributes and Lean.**
 
@@ -814,6 +899,13 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 |---|---|---|
 | `forall k in slots of T : p`, `elems of` | the binder has type `index into T`; the body runs over `0 ..< count`; **the guards of `T` are in Λ** — a quantifier reads the table | `Expr.forallSlots t body hL` |
 | `exists k in slots of T : p` | | `Expr.existsSlots t body hL` |
+
+`exists` and `forall` are boolean expressions in bodies as well as predicates in contracts:
+they can initialize an inferred or explicit `bool` binding, be returned, passed to a boolean
+parameter, stored in a boolean destination, or combined with boolean operators and guards.
+For example, `let b = exists k in slots of T : T.slots[k].v > 10;` uses the same
+quantifier elaboration and `Expr.existsSlots` lowering as a contract predicate. Table lookup,
+index binding and held-guard requirements remain identical. Unsupported domains are refused.
 | `a reaches b via f` | `f` is an `option index into Self` field of `T` (`T001`–`T003`); the chain is followed for at most `count` steps — more steps than slots repeat one | `Expr.reaches t f hf a b hL` |
 | `descendants of s`, `ancestors of s`, `chain(a, b) in T` | SUGAR: `forall k in slots of T : (s reaches k via child) => …` and the mirror with `parent`; `chain` names its field at the site | `forallSlots` + `reaches` |
 | `queue T`, `fields of T` | SUGAR over `slots of` and over the record's fields | `forallSlots` |
@@ -835,7 +927,7 @@ and `expr` is a line of the **surface** (what may stand in a contract), not of t
 
 ```ebnf
 fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "divergent" | "prim" | "extern" ]
-           "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+           "fn" ident [ "[" gparams "]" ] "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
            (* «C3a»: `or <reason>` -- the error channel, and it stands in the SIGNATURE. *)
            [ "payload" path ]
            (* «E2» (§7.1): only on a `library fn` (`P043` without it) -- the payload
@@ -872,6 +964,15 @@ fndecl   = [ "pub" ] [ "library" ] [ "spec" | "const" | "impl" | "raw" | "diverg
               or falls to the closing `}` which is SUGAR for `return;`. `"=" pred` only for
               `spec fn`. «E2» (§7.1): a `library fn` takes the `endblock` and nothing else
               (`P044`) -- it IS safe Gabbro, not a foreign promise. *)
+gparams  = gparam { "," gparam } ;
+gparam   = ident [ ":" ident { "+" ident } ]
+         | ident ":" "const" typeexpr
+         | ident ":" intword                         (* shorthand, e.g. `N: u64` *)
+         | ident ":" fnptr ;
+gcall    = path "::" "[" garglist "]" "(" [ arglist ] ")" ;
+garglist = garg { "," garg } ;
+garg     = typeexpr | constexpr | path | fnlit ;
+fnlit    = "fn" "(" [ params ] ")" [ "->" typeexpr ] fncontract endblock ;
 asmrumpf = "asm" "{" { string }
              [ "in"  "{" asmops "}" ]
              [ "out" "{" asmops "}" ]
@@ -889,6 +990,102 @@ eff      = "reads" place | "writes" place | "locks" [ "shared" ] place | "masks"
    body, `allocs m` demands `m` in Λ at every `return`, and `return` demands multiset EQUALITY
    between Λ and the `allocs` list: linear, not affine. *)
 ```
+
+**Generic functions (Lean frontend, check model A).** For example:
+
+```gabbro
+fn identity[T](x: T) -> T { let copy: T = x; return copy; }
+fn byte_use(x: u8) -> u8 {
+    let value = identity::[u8](x);
+    return value;
+}
+fn limit[N: u64]() -> u64 { return N; }
+fn apply_all[g: fn(u32 in 0 .. 1000) -> u32 effects {} costs <= 8 ops]() {
+    let doubled = g(7);
+}
+fn use_callback() {
+    apply_all::[fn(x: u32 in 0 .. 1000) -> u32 effects {} costs <= 3 ops {
+        return x * 2;
+    }]();
+}
+```
+
+Calls supply all translation-time arguments explicitly; generic functions do not infer them from
+ordinary call arguments. Constants also accept `N: const u64` and declared integer ranges. Each constant
+argument passes the existing bounded C17 evaluator. Parameter types, result types, local annotations,
+contracts, effects and complete bodies are substituted before the library expansion in `elabU`.
+The resulting functions and direct calls use only the ordinary G export and lowering rules. Every
+instance retains its own declared contracts; no contract is derived or bypassed.
+
+Instances are collected transitively, repeated keys are shared, templates are removed, and generated
+names are deterministic with a declaration-collision check. A structural source budget refuses an
+expanding instance set rather than truncating it. Changing arguments along a recursive cycle is refused;
+recursion at the same instance does not create another copy.
+
+Static function arguments are ordinary global function paths or function literals. A literal has its
+own parameter and local scopes and captures nothing from the enclosing function. A free name that is
+not a global item is refused as `function-literal-capture: <name>`. State must be passed explicitly.
+Identical literal syntax shares a deterministic, collision-checked top-level function. After parametric
+module instantiation and name resolution, generic functions are instantiated and their calls rewritten.
+The shared declaration pass expands spec calls in ordinary functions and pending literal bodies;
+literals become ordinary named functions only after that pass.
+Generic calls inside literal bodies participate in the same finite instance closure.
+
+Inside an instance, `g(...)` becomes a direct call to its concrete argument. The generated function
+takes no runtime callback parameter. Before export succeeds, each argument passes the canonical
+`SigPasst` decision against the declared `fnptr` type, including parameter/result types, reason channels,
+write permissions and locks. A mismatch is refused as `static-function-signature-mismatch: <name>`.
+The actual function's contracts still govern every direct call. The Lean frontend also checks
+nontrivial interface contracts with C06's shared conjunct-inclusion gate: the interface precondition
+includes the actual function's precondition, and the actual postcondition includes the interface
+postcondition. A failed inclusion uses the same mismatch refusal; specialization cannot bypass it.
+
+Generic prototypes, generic predicate/assembly bodies and generic translators are still
+refused. The Rust frontend has not yet been migrated to these forms. The Lean source/export/lowering
+witnesses are in `Parser/Elab/Generic/PipelineWitness.lean` and `FunctionWitness.lean`. Successful
+expansion still requires the ordinary export and lowering checks; witnesses require Lean checking.
+
+**Spec bounds (Lean frontend, check model A).** `fn use[T: Shape + Other](x: T)` requires
+one implementation of each named unary spec for the concrete type argument. Bounds use the linked
+spec registry and its alias normalization. An unknown group is refused as
+`generic.bound.unknown: <spec>`, a non-unary group as `generic.bound.arity: <spec>`, and an absent
+implementation as `generic.bound.implementation.missing: <spec>`. Unused bounds are checked too;
+conformance remains the unified spec rule in §6.1.
+
+Before instantiation, type-parameter values may be passed, bound, returned and supplied to their
+written bounds' functions. Inferred lets, array elements and spec/generic call results retain their
+abstract type. Arithmetic, comparison, field access, concrete coercion and reflection are refused
+by name (`generic.parametricity.arithmetic`, `.comparison`, `.field`, `.binding`, etc.). A call
+through an unwritten bound, including a bound required by a forwarded generic call, is refused as
+`generic.parametricity.bound: <spec>`. This check also covers unreachable templates; choosing a
+numeric type argument does not enable arithmetic on `T`.
+
+```gabbro
+fn area_of[T: Shape](x: T) -> u64
+    effects { Shape[T] } costs <= 60 ops
+{ let copy = x; return Shape::area(copy); }
+
+let a = area_of::[index into Circles](c);
+```
+
+After substitution, `Shape::area(copy)` resolves to the ordinary direct call of the selected impl;
+`effects { Shape[T] }` resolves through the same instance-effect expansion as other spec uses.
+The concrete implementation's actual signature and contracts still govern ordinary G admission.
+Explicit `Shape::area::[T](copy)` uses the same application representation and resolution path.
+`Parser/Elab/Generic/BoundsWitness.lean` contains source and AST witnesses for the plan's
+`total[T: Shape, N: const u32 in 1 .. 4096]` header instantiated for Circles, direct area calls,
+instance effects, missing implementations and parametricity refusals. The exact source form is
+`return add i in 0 ..< N : Shape::area(xs[i]);`. Before generic instantiation, the front end
+expands this return into a mutable integer accumulator and an existing
+`traverse i over elems of xs by unvisited` whose body binds the `area` call result and adds it.
+The range must start at zero, its upper bound must equal the indexed array's declared length,
+and the function must declare an integer result. Symbolic constant parameters are supported:
+`[T; N]` and `0 ..< N` agree before substitution. Other range folds are refused by name;
+table-domain folds retain their existing rules. The ordinary overflow, call-contract, effect
+and cost obligations still apply to the generated statements. The Circles witness checks the
+complete generated traverse and its direct implementation call after instantiation at `N = 2`.
+These witnesses have been added for integration checking; no new Lean build result is claimed.
+
 
 **`effects` is NOT fail-open.** A function **without** `effects` over a body
 derives it (lane 191: the derived hull is checked exactly like a written
@@ -947,6 +1144,49 @@ impl fn delete_leaf(c: ptr<normal, rw> CapSpace, s: SlotIdx) -> Result
 { … }
 ```
 
+**Adapters `fn … from f` — static reuse without objects** («phase 1», `ABSTRACTION-SYNTAX-PLAN.md` §4.1).
+No new word (`from` is contextual), no new model form: an adapter desugars to an ordinary
+function whose body calls `f` with the mapped arguments, before elaboration.
+
+```ebnf
+adaptfn    = [ "pub" ] "fn" ident "(" [ adaptparams ] ")" [ "->" typeexpr ] [ "or" ident ]
+             "from" path
+             [ "=>" ident [ "else" "(" ident ")" endblock ] ]
+             [ "requires" predlist ] [ "ensures" predlist ]
+             [ "effects" "{" efflist "}" ] [ "costs" "<=" expr "ops" ]
+             [ "[" { stmt } "]" ]                                    (* prelude, runs before the call *)
+             ( endblock | ";" ) ;
+adaptparams = adaptparam { "," adaptparam } ;
+adaptparam  = ".." | "-" ident | ident ":" typeexpr ;
+```
+
+```gabbro
+fn scaled_area(.., -scale, factor: u8 in 1 .. 16) -> u64
+    from area => a
+    ensures result >= 1 effects { reads Circles } costs <= 60 ops
+    [ let scale = factor * 2; ]
+{ return a + 1; }
+
+fn area_x4(.., -scale) -> u64 from area [ let scale = 4; ];      (* `;`: returns `f`'s result as it is *)
+```
+
+- `..` (at most once) splices every parameter of `f` in `f`'s order; `-x` drops the
+  parameter `f` has; `x: T` adds a new one. No name stands twice after expansion.
+- The prelude binds every dropped parameter with `let`, exactly once on every path; it may
+  `return` early (the return type and channel are `g`'s).
+- `f` is a black box: `g` sees `f`'s signature and contract, never its body.
+- Same `or R` on both sides: the error propagates (`?` shape); otherwise `else (e) endblock`
+  is required, and different reasons keep the written `else` (no implicit mapping).
+- The short body `;` only when `g`'s result type equals `f`'s.
+- `requires`/`ensures` are written, never derived. `effects`/`costs` may be omitted: they are
+  the computed sum of prelude, `f` and body.
+- Refused: `f` is `divergent`, a `spec`, the adapter itself, or called in its own prelude;
+  `-x` for a parameter `f` has not; `..` twice; a doubled name; a prelude that leaves a
+  dropped parameter unbound; a short body over a different result type; a changed channel
+  without `else`.
+- *Lean:* `SItemTief.adaptT`, expanded by `Uebersetze.entfalteAdapt` to `fnT` in `elabU`
+  (`Uebersetze/Teil18`); machine G never sees the form.
+
 **`breaking`** names the region in which an invariant rests:
 
 ```ebnf
@@ -959,6 +1199,76 @@ restoration is demanded at `return` like without `breaking` (`schuldet`): a `bre
 lose an obligation, it can only say where one rests.
 
 ---
+
+### 6.1 Spec groups and implementations (check model A)
+
+A spec group names an interface over a nonempty tuple of types and optional effect parameters.
+It is distinct from the predicate helper `spec fn`: the token after `spec` or `impl` selects
+between a group name and the existing `fn` modifier form.
+
+```ebnf
+item       += specdecl | impldecl ;
+specdecl    = [ "pub" ] "spec" ident "[" ident { "," ident } [ ";" effparams ] "]"
+              "{" { specfn } "}" ;
+effparams   = "effects" ident { "," ident } ;
+specfn      = "fn" ident "(" [ params ] ")" [ "->" typeexpr ] [ "or" ident ]
+              [ "requires" predlist ] [ "ensures" predlist ]
+              "effects" "{" efflist "}" "costs" "<=" expr "ops" ";" ;
+impldecl    = "impl" ident "[" typelist [ ";" effargs ] "]" "{" { fndecl } "}" ;
+effargs     = "effects" "{" efflist "}" { "," "{" efflist "}" } ;
+efflist    += ident | ident "[" typelist "]" ;
+call       += path "::" ident [ "::[" typelist "]" ] "(" [ arglist ] ")" ;
+```
+
+Here `typelist` is nonempty. An effect list may be empty. An identifier in the effect list
+of a spec function denotes its declared effect parameter; `Shape[T]` denotes the effects
+of the corresponding instance. Type and effect arguments are substituted before checking.
+
+```gabbro
+spec Shape[T; effects E] {
+    fn area(s: T) -> u64 ensures result >= 1 effects { E } costs <= 50 ops;
+}
+impl Shape[index into Circles; effects { reads Circles }] {
+    fn area(s: index into Circles) -> u64
+        ensures result >= 1 effects { reads Circles } costs <= 20 ops
+    { return 3 * Circles[s].r * Circles[s].r + 1; }
+}
+// c: index into Circles
+let a = Shape::area(c);
+let b = Shape::area::[index into Circles](c);
+```
+
+Conformance is decidable (`Parser.Spec.conforms`). After instance substitution, each
+implementation precondition conjunct must occur in the spec preconditions, and each spec
+postcondition conjunct in the implementation postconditions. Predicate helpers are expanded
+as at `refines`; conjunctions are flattened, parentheses are absent from the syntax tree,
+and inclusion ignores order and duplicate conjuncts. Implementation parameter names are
+renamed to the corresponding spec parameters for comparison. Parameter types, result type
+and reason channel must agree. Implementation effects are a subset of the substituted
+spec effects, and its explicit constant-evaluable cost bound is no greater than the spec's.
+
+A spec function may contain no `Held(L)`. Every declared function must have one implementation
+body, with no additional functions or other items. There is at most one implementation for
+each spec and type tuple, independently of its effect arguments; aliases are transparent.
+Missing implementations, stronger preconditions, weaker postconditions, greater effects or
+costs, duplicate implementations and every other conformance failure are named refusals
+(`spec.function.missing`, `spec.requires`, `spec.ensures`, `spec.effects`, `spec.cost`,
+`spec.implementation.duplicate`, respectively). There are no default bodies or overlapping
+implementations.
+
+The front end infers the type tuple from typed arguments or uses the explicit tuple, then
+rewrites the call to the unique implementation's ordinary direct function. If an argument
+does not determine a type parameter, an explicit tuple is required (`spec.call.type.required`).
+The implementation's own signature and contracts are retained and checked by the ordinary
+elaborator. No dynamic dispatch or new G constructor is introduced; `Akzeptiert` is unchanged.
+The instantiation order is parametric modules, generic functions, spec calls, then function
+literals (§5.4 of `ABSTRACTION-SYNTAX-PLAN.md`).
+
+The Lean implementation is `Parser/Spec/`, wired into `elabU`; its output-form theorem is
+`Spec.expand_ordinary`, and `Spec/Zeugen.lean` contains acceptance, resolution and refusal
+witnesses. This entry describes the Lean front-end rule; Rust mirroring and the lead's
+integration checks are separate acceptance work. Calls hidden in uninterpreted loop headers
+are refused as `spec.call.raw.header` until their ordinary header elaborator supports expansion.
 
 ## 7. Statements
 
@@ -996,7 +1306,17 @@ xform      = "update" "(" ident ")"
    bound and the exit. *)
 letstmt    = "let" [ "mut" ] ident [ ":" typeexpr ] "=" expr ";"
            | "let" ident [ ":" typeexpr ] "=" ( call | place ) "else" "(" ident ")" endblock ;   (* «B14b»; CHANGED «SG-5»: endblock *)
+           | "let" ident [ ":" typeexpr ] "=" call "?" ";" ;   (* reason propagation, below *)
            | "let" [ "mut" ] ident [ ":" typeexpr ] "=" libcall ";" ;   (* lane E1: binding position *)
+(* Reason propagation `?` («phase 1», `ABSTRACTION-SYNTAX-PLAN.md` §4.3): `let x = f(args) ?;`
+   (resp. `f(args) ?;`, value discarded) is the explicit `else` form with the re-raise
+   spelled out — `let x = f(…) else (e) { match e { F1 => { return R::F1; } … } };` with one
+   arm per ground of `R`. Allowed only when the enclosing function carries the SAME `or R`
+   as the callee (a type ascription is refused, like at the explicit form); a different
+   channel, a missing channel, or a non-call under `?` is refused — the writer then keeps
+   the written `else`. No new word, no new model form.
+   *Lean:* `SAnw.bindQ`/`callQ`, expanded by `Uebersetze.entfalteFrage` in `elabU`
+   (`Uebersetze/Teil18`); machine G never sees the form. *)
 assign     = place ( "=" | "+=" | "-=" | "&=" | "|=" ) expr ";" ;
 stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-19» *)
 (* The transition of a `state` field: `transition T.slots[i].s : Idle -> Busy;` names the
@@ -1006,7 +1326,17 @@ stateassign = "transition" shiftplace ":" ident "->" ident ";" ;   (* NEW «SG-1
    is the shape. The second version wrote `state` transitions through `assign` and left the
    pre-state to a pass. `shiftplace` has no `->` suffix, and the two stage names are
    identifiers, not expressions -- so the arrow is never a pointer suffix. No new word. *)
-exprstmt   = call ";" ;
+exprstmt   = call ";" | call "?" ";" ;   (* reason propagation, above *)
+(* There is no `call else (reason) endblock` production without a `let` binding,
+   for either foreign or indirect calls. The parser requires `;` (or `?;`) here.
+   Use `let ignored = foreign(args) else (e) endblock` or the corresponding
+   `let ignored = pointer(args) else (e) endblock` when the call returns a value:
+   these export to Block/Endblock.bindAxiomElse and bindCallIndElse. Discarding
+   an ordinary direct call's result with `call ?;` creates an internal binding
+   through the reason desugaring; it does not emit a G statement-else node.
+   Stmt.axiomCallElse and Stmt.callIndElse currently have no source exporter
+   producer. They remain model forms accepted by the Stage-0 G-to-IR lowerer,
+   rather than additional source spellings. *)
 ifstmt     = "if" expr block { "else" "if" expr block } [ "else" block ] ;
 matchstmt  = "match" expr "{" { matcharm } "}" ;
 matcharm   = ident [ "(" ident ")" ] "=>" block ;                 (* CHANGED «SG-5a» *)

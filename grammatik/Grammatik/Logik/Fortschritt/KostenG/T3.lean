@@ -64,7 +64,6 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCall g args _ _ _ rest => 1 + kostenArgs args + c g + kostenKB c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKB c rest
   | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
-  | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
   -- `LetSonst` over a call: `1 + ruf + block(sonst)`, summed
   | .bindCallElse g args _ _ _ err rest =>
       1 + kostenArgs args + c g + kostenKE c err + kostenKB c rest
@@ -124,7 +123,6 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .awaits _ _ _ _ _ rest => 1 + kostenKE c rest
   | .bindCallInd _ _ _ _ _ rest => kostenKE c rest
   | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
-  | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
   | .retScoped e _ => kostenErg e
@@ -182,7 +180,6 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCall _ _ _ _ _ rest => 1 + zusatzB rest
   | .bindCallInd .. => 0
   | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzB rest
-  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzB rest
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzB rest
   | .bindAxiom .. => 0
   | .bindAxiomElse .. => 0
@@ -230,7 +227,6 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .regReadElse _ _ z sonst rest => 5 + kostenExpr z + zusatzSonst sonst + zusatzSonst rest
   | .awaits _ _ _ _ _ rest => 4 + zusatzSonst rest
   | .bindCallInd .. => 0
-  | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
   | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
   | .narrow .. => 0
   | .narrowRequired .. => 0

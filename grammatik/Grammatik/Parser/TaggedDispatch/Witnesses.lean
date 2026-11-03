@@ -1,6 +1,6 @@
 module
 
-import Grammatik.Parser.TaggedDispatch.Expansion
+public import Grammatik.Parser.TaggedDispatch.Expansion
 
 namespace Gabbro.Grammatik.Parser
 

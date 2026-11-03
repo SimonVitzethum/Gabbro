@@ -20,7 +20,7 @@
     followed by digits (`GleitKanon`). Excluded: `_` separators, leading zeros, uppercase `E`,
     and any text that is not a float literal at all (`"1.0 rounded"`, see the CUTS).
   - `text s`: no `"` and no newline in `s` (the lexer has no escapes).
-  - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 47 spellings of
+  - `zeichen s`: one of the marks the lexer cuts (`markTafel`, the 48 spellings of
     `nimmZeichen`).
   - `doku`, `ende`: excluded (`lex` drops doc comments and emits `ende` itself).
 
@@ -271,6 +271,6 @@ theorem nimmZeichen_mark (l rest : List Char) (h : l ∈ markTafel) :
   simp only [markTafel, List.mem_cons, List.not_mem_nil, or_false] at h
   rcases h with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
     h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
-    h | h | h | h <;> subst h <;> simp only [nimmZeichen, ↓Char.isValue, List.cons_append, List.nil_append, String.ofList_cons, String.reduceSingleton, String.ofList_nil, String.append_empty, String.reduceAppend, List.cons.injEq, Char.reduceEq, false_and, imp_self, implies_true, istEinfach, ↓reduceIte] <;> rfl
+    h | h | h | h | h <;> subst h <;> simp only [nimmZeichen, ↓Char.isValue, List.cons_append, List.nil_append, String.ofList_cons, String.reduceSingleton, String.ofList_nil, String.append_empty, String.reduceAppend, List.cons.injEq, Char.reduceEq, false_and, imp_self, implies_true, istEinfach, ↓reduceIte] <;> rfl
 
 end Gabbro.Grammatik.Parser

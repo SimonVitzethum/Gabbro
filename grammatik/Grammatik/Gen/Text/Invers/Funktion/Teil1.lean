@@ -58,7 +58,7 @@ theorem typS_art {otab : Int → Option Nat} {t : Ty} {st : STyp} {a : UParamArt
   | int lo hi =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     simp only [typS, Except.ok.injEq] at ht; subst ht
-    simp only [uParam, uTyp, schranke_zahlE, Bool.false_eq_true, ↓reduceIte, uArtVon]
+    simp only [uParam, uTypIn, schranke_zahlE, Bool.false_eq_true, ↓reduceIte, uArtVon]
   | bool =>
     simp only [artErg, Option.some.injEq] at ha; subst ha
     simp only [typS, Except.ok.injEq] at ht; subst ht

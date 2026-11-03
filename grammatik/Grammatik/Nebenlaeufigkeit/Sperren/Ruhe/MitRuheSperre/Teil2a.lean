@@ -374,7 +374,23 @@ theorem execStmtH_ru_retScoped {V : Vertrag D}
   refine Or.inl ?_
   simp only [ruS, execStmtH]
   erw [ruErg_orte, lese_worldR, evalErg_ru]
+  rw [gibt_foldl_worldR]
   rfl
+
+set_option linter.unusedSectionVars false in
+theorem execStmtH_ru_retWhyScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (r)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.retWhyScoped r R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.retWhyScoped r R : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  refine Or.inl ?_
+  simp only [ruS, execStmtH]
+  rw [gibt_foldl_worldR]
 
 set_option linter.unusedSectionVars false in
 theorem execBlockH_ru_cons {V : Vertrag D}

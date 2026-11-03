@@ -6,14 +6,29 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
+
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
+
+mutual
+/-- Expand expression folds before processing the ordinary statement forms. -/
+def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
+    Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
+  | 0, _, _ => .error "nesting without G form"
+  | _ + 1, ctx, [] => .ok ([], ctx)
+  | fuel + 1, ctx, statement :: rest => do
+    let (prefix, ctx, statement) ← expandFoldStmt ctx statement
+    let (code, ctx) ← uAnwReiheCore tabs koepfe fuel ctx (statement :: rest)
+    pure (prefix ++ code, ctx)
+
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
     end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
     Structural in a fuel (one unit per statement and per block). -/
-def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
+def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
   | 0, _, _ => .error "nesting without G form"
   | _ + 1, ctx, [] => .ok ([], ctx)
@@ -23,6 +38,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     match uBindWert ctx tabs koepfe mu x t e with
     | .error err => .error err
     | .ok (st, ctx') =>
+      let ctx' := foldBindingContext ctx ctx' st
       match uAnwReihe tabs koepfe f ctx' rest with
       | .error err => .error err
       | .ok (xs, cE) => .ok (st :: xs, cE)
@@ -70,7 +86,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 match uAnwReihe tabs koepfe f cx ss with
                 | .error err => .error err
                 | .ok (bd, ctxB) =>
-                  match uEndeStmt ctxB en with
+                  match uFoldEndeStmt ctxB en with
                   | .error err => .error err
                   | .ok endS => .ok (k, bd ++ endS)
             | _ => .error "match arms without G form") with
@@ -93,7 +109,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 match uAnwReihe tabs koepfe f ctx ss with
                 | .error err => .error err
                 | .ok (bd, ctxB) =>
-                  match uEndeStmt ctxB en with
+                  match uFoldEndeStmt ctxB en with
                   | .error err => .error err
                   | .ok endS => .ok (bd ++ endS)
               | _ => .error "match arm without a block") with
@@ -115,13 +131,13 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             (ctx.muts.filter (fun m => !strEq m k))) sss with
         | .error err => .error err
         | .ok (sbody, ctxS) =>
-          match uEndeStmt ctxS se with
+          match uFoldEndeStmt ctxS se with
           | .error err => .error err
           | .ok sEnd =>
             match uAnwReihe tabs koepfe f ctx nss with
             | .error err => .error err
             | .ok (nbody, ctxN) =>
-              match uEndeStmt ctxN ne with
+              match uFoldEndeStmt ctxN ne with
               | .error err => .error err
               | .ok nEnd =>
                 match uAnwReihe tabs koepfe f ctx rest with
@@ -207,7 +223,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
         match uAnwReihe tabs koepfe f ctx ss with
         | .error err => .error err
         | .ok (ebody, ctxEB) =>
-          match uEndeStmt ctxEB en with
+          match uFoldEndeStmt ctxEB en with
           | .error err => .error err
           | .ok endS =>
             match uAnwReihe tabs koepfe f (uMitLokal ctx y rg.art rg.ty
@@ -235,7 +251,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                     (ctx.muts.filter (fun m => !strEq m e))) ss with
                 | .error err => .error err
                 | .ok (ebody, ctxEB) =>
-                  match uEndeStmt ctxEB en with
+                  match uFoldEndeStmt ctxEB en with
                   | .error err => .error err
                   | .ok endS =>
                     match uAnwReihe tabs koepfe f (uMitLokal ctx y k ty (ctx.muts.filter (fun m => !strEq m y))) rest with
@@ -256,7 +272,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                   (ctx.muts.filter (fun m => !strEq m e))) ss with
               | .error err => .error err
               | .ok (ebody, ctxEB) =>
-                match uEndeStmt ctxEB en with
+                match uFoldEndeStmt ctxEB en with
                 | .error err => .error err
                 | .ok endS =>
                   match uAnwReihe tabs koepfe f (uMitLokal ctx y UParamArt.int (Ty.int r.1 r.2)
@@ -271,7 +287,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                   (ctx.muts.filter (fun m => !strEq m e))) ss with
               | .error err => .error err
               | .ok (ebody, ctxEB) =>
-                match uEndeStmt ctxEB en with
+                match uFoldEndeStmt ctxEB en with
                 | .error err => .error err
                 | .ok endS =>
                   match uAnwReihe tabs koepfe f (uMitLokal ctx y k ty (ctx.muts.filter (fun m => !strEq m y))) rest with
@@ -326,7 +342,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
             | .ok (body, ctxB) =>
               match (match e with
                   | .none => .error "alloc else falls through"
-                  | .some _ => uEndeStmt ctxB e : Except String (List UStmt)) with
+                  | .some _ => uFoldEndeStmt ctxB e : Except String (List UStmt)) with
               | .error err => .error err
               | .ok endS =>
                 match uAnwReihe tabs koepfe f (uMitLokal ctx x (UParamArt.index num) (Ty.index tb.count)
@@ -361,7 +377,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f { ctx with loops := lab :: ctx.loops } ss with
       | .error err => .error err
       | .ok (body, ctxB) =>
-        match uEndeStmt ctxB e with
+        match uFoldEndeStmt ctxB e with
         | .error err => .error err
         | .ok endS =>
           match uRuf ctx tabs koepfe ueb [] with
@@ -380,7 +396,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f { ctx with loops := lab :: ctx.loops } ss with
       | .error err => .error err
       | .ok (body, ctxB) =>
-        match uEndeStmt ctxB e with
+        match uFoldEndeStmt ctxB e with
         | .error err => .error err
         | .ok endS =>
           match uAnwReihe tabs koepfe f ctx rest with
@@ -395,7 +411,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       | .ok (body, ctxB) =>
         match (match e with
             | .none => .error "narrow else falls through"
-            | .some _ => uEndeStmt ctxB e : Except String (List UStmt)) with
+            | .some _ => uFoldEndeStmt ctxB e : Except String (List UStmt)) with
         | .error err => .error err
         | .ok endS =>
           match uAnwReihe tabs koepfe f ctx' rest with
@@ -425,7 +441,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx ss with
       | .error err => .error err
       | .ok (body, ctxB) =>
-        match uEndeStmt ctxB e with
+        match uFoldEndeStmt ctxB e with
         | .error err => .error err
         | .ok endS =>
           let ifElse : Option SAnw :=
@@ -438,7 +454,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
                 match uAnwReihe tabs koepfe f ctx ss2 with
                 | .error err => .error err
                 | .ok (b2, ctx2) =>
-                  match uEndeStmt ctx2 e2 with
+                  match uFoldEndeStmt ctx2 e2 with
                   | .error err => .error err
                   | .ok end2 => .ok (b2 ++ end2)
               | .some _ => .error "else without block" : Except String (List UStmt)) with
@@ -457,7 +473,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctxS ss with
       | .error err => .error err
       | .ok (body, ctxB) =>
-        match uEndeStmt ctxB e with
+        match uFoldEndeStmt ctxB e with
         | .error err => .error err
         | .ok endS =>
           match uAnwReihe tabs koepfe f ctx rest with
@@ -471,4 +487,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
       match uAnwReihe tabs koepfe f ctx rest with
       | .error e => .error e
       | .ok (xs, cE) => .ok (st :: xs, cE)
+
+end
+
 end Gabbro.Grammatik.Parser.Uebersetze

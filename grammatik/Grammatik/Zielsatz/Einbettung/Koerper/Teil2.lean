@@ -151,7 +151,7 @@ theorem castW_index_n {n n' : Int} (h : Ty.index n = Ty.index n')
   cases h; rfl
 
 set_option linter.unusedSectionVars false in
-theorem sim_stmt_consumeTraverse {V : vertrag D}
+theorem sim_stmt_consumeTraverse {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}

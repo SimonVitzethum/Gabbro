@@ -43,6 +43,7 @@ mutual
     a module keeps its wrapper around its selected members; `pub` stays on what stays. -/
 def waehleI (m : BauModus) : SItemTief → List SItemTief
   | .modT n b => [.modT n (waehleL m b)]
+  | .moduleTemplateT n params b => [.moduleTemplateT n params (waehleL m b)]
   | .pubT it => (waehleI m it).map SItemTief.pubT
   | .gateT it =>
     match m with
@@ -59,6 +60,7 @@ mutual
 /-- No gate stands anywhere in the item: not under a module, not under `pub`. -/
 def gatefreiI : SItemTief → Bool
   | .modT _ b => gatefreiL b
+  | .moduleTemplateT _ _ b => gatefreiL b
   | .pubT it => gatefreiI it
   | .gateT _ => false
   | _ => true
@@ -108,6 +110,9 @@ theorem waehleI_id (m : BauModus) (it : SItemTief) (h : gatefreiI it = true) :
   | modT n b =>
       have ih := waehleL_id m b (by simpa only [gatefreiI] using h)
       simp only [waehleI, ih]
+  | moduleTemplateT n params b =>
+      have ih := waehleL_id m b (by simpa only [gatefreiI] using h)
+      simp only [waehleI, ih]
   | pubT x =>
       have ih := waehleI_id m x (by simpa only [gatefreiI] using h)
       simp only [waehleI, ih, List.map_cons, List.map_nil]
@@ -128,6 +133,9 @@ mutual
 theorem waehleI_gatefrei (m : BauModus) (it : SItemTief) : gatefreiL (waehleI m it) = true := by
   cases it with
   | modT n b =>
+      have ih := waehleL_gatefrei m b
+      simp only [waehleI, gatefreiL, gatefreiI, ih, Bool.and_true]
+  | moduleTemplateT n params b =>
       have ih := waehleL_gatefrei m b
       simp only [waehleI, gatefreiL, gatefreiI, ih, Bool.and_true]
   | pubT x =>
@@ -170,12 +178,16 @@ def deklName : SItemTief → Option String
   | .assumT n _ _ _ => some n
   | .atomT n _ _ _ _ => some n
   | .lockT n _ _ _ _ _ _ => some n
+  | .adaptT s _ _ _ => some s.name
   | _ => none
 
 mutual
 /-- `TESTBUILD` is declared as a name somewhere in the item (`G003`): it is the reserved gate word. -/
 def reserviertI : SItemTief → Bool
   | .modT _ b => reserviertL b
+  | .moduleTemplateT name params b => strEq name "TESTBUILD" ||
+      params.any (fun param => strEq param.name "TESTBUILD") || reserviertL b
+  | .moduleUseT alias _ _ => strEq alias "TESTBUILD"
   | .pubT it => reserviertI it
   | .gateT it => reserviertI it
   | it =>

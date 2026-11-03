@@ -135,8 +135,18 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
               (R.ende (l := l) ((regAt u g).ty :: Γ) (fn.mitTy x (regAt u g).ty) Λ pe rest').bind fun (b, r') => .ok (Endblock.regReadElse (D := declOf u) g hk zu sonst b, r')
             | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: register read against its class"
-  | _, _, _, _, .allocBeg .. :: _ =>
-    .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, Λ, pe, .allocBeg x an v :: rest =>
+    (tabIdx u.tabs an).bind fun t =>
+      (globIdx u.globs (an ++ "#used")).bind fun g =>
+        (fieldHit u t "wert").bind fun fh =>
+          (lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v).bind fun ev0 =>
+            match R.ende (l := l) Γ fn Λ pe rest with
+            | .error e => .error e
+            | .ok (voll, .blkEnd :: rest') =>
+              match R.ende (l := l) (Ty.index ((declOf u).count t) :: Γ) (fn.mitIndex x t.val ((declOf u).count t)) Λ pe rest' with
+              | .error e => .error e
+              | .ok (b, r) => (mkAllocEndBlock u caller Γ Λ t g fh ev0 voll b).bind fun blk => .ok (blk, r)
+            | .ok (_, _) => .error "lower: an alloc is not closed"
   | Γ, fn, Λ, pe, .bindOptBeg x c args :: rest =>
     (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
       if hp : rufPasstB u (verOf u caller) ((declOf u).asignatur k.ax) Λ = true then
@@ -167,8 +177,14 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           | .ok (_, _) => .error "lower: a let else is not closed"
         else .error "lower: let else of a foreign call without a reason channel"
       else .error "foreign call does not conform to caller contract"
-  | _, _, _, _, .allocReqBeg .. :: _ =>
-    .error "lower: an alloc without else in an else branch has no G form (Endblock lacks arenaAllocRequired)"
+  | Γ, fn, Λ, pe, .allocReqBeg x an v :: rest =>
+    (tabIdx u.tabs an).bind fun t =>
+      (globIdx u.globs (an ++ "#used")).bind fun g =>
+        (fieldHit u t "wert").bind fun fh =>
+          (lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v).bind fun ev0 =>
+            match R.ende (l := l) (Ty.index ((declOf u).count t) :: Γ) (fn.mitIndex x t.val ((declOf u).count t)) Λ pe rest with
+            | .error e => .error e
+            | .ok (b, r) => (mkAllocRequiredEndBlock u caller Γ Λ t g fh ev0 b).bind fun blk => .ok (blk, r)
   | Γ, fn, Λ, pe, .bindAxElse y c args e :: rest => match lowAxKopf u caller Γ fn Λ c args with
     | .error err => .error err
     | .ok k =>

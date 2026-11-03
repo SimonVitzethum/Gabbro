@@ -1,8 +1,10 @@
 module
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil10
+
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Expansion
+
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
-set_option maxRecDepth 100000
+
 /-- The substitution of the parameters of a `spec fn` by the arguments of a use. A quantifier binder hides the
     parameter of its name in its body (the last operand). Structural in a fuel (an expression is far shallower). -/
 def sErsetze (σ : List (String × SExpr)) : Nat → SExpr → SExpr
@@ -21,11 +23,19 @@ def sErsetze (σ : List (String × SExpr)) : Nat → SExpr → SExpr
     | .built f as => .built f (as.map (sErsetze σ n))
     | .old a => .old (sErsetze σ n a)
     | .ext k ns xs =>
-      if k == XKind.all || k == XKind.any || k == XKind.count then
+      if isFold k then
+        match ns, xs with
+        | binder :: _, subject :: filter :: value :: fallback =>
+          let inner := σ.filter (fun pair => !strEq pair.1 binder)
+          .ext k ns (sErsetze σ n subject :: sErsetze inner n filter ::
+            sErsetze inner n value :: fallback.map (sErsetze σ n))
+        | _, _ => .ext k ns (xs.map (sErsetze σ n))
+      else if k == XKind.all || k == XKind.any || k == XKind.count then
         let σ' := σ.filter (fun p => !(ns.head?.any (strEq p.1 ·)))
         .ext k ns ((xs.dropLast.map (sErsetze σ n)) ++ (xs.getLast?.map (sErsetze σ' n)).toList)
       else .ext k ns (xs.map (sErsetze σ n))
     | e => e
+
 /-- Every use `g(a…)` of a `spec fn` `g` replaced by its predicate over the arguments (SUGAR, `M130`), also inside
     the predicates it brings. Structural in a fuel. -/
 def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr → SExpr
@@ -47,4 +57,6 @@ def uSpecEin (specs : List (String × List String × SExpr)) : Nat → SExpr →
     | .old a => .old (uSpecEin specs n a)
     | .ext k ns xs => .ext k ns (xs.map (uSpecEin specs n))
     | e => e
+
+
 end Gabbro.Grammatik.Parser.Uebersetze

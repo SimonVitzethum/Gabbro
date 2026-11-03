@@ -6,9 +6,14 @@ public import Grammatik.Logik.Vertraege.Locations.AntwortOrteBasis
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
-set_option hygiene false in
 /-! ## 3. Every rule keeps the site bound -/
 
+/-- The residue behind an optional foreign binder reaches the sites of its continuation. -/
+theorem GRest.aR_weiterOpt (C : D.Ax ⊕ D.Reg → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') : (GRest.weiterOpt (Λ := Λ) e k).aR C ↔ k.aR C := by
+  cases e <;> exact Iff.rfl
+
+set_option hygiene false in
 /-- A head-local step. -/
 macro "kopfAnt" : tactic => `(tactic| (
   refine Or.inl ⟨by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩
@@ -72,7 +77,7 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       exact id
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
   | g2 hs =>
     cases hs with
     | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho =>
@@ -87,7 +92,7 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       exact hok
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
   | g3 hs =>
     cases hs with
     | dannBindCall l Γ Λ Λ' Λ'' τ g args he hp hr rest k ρ hhead hΛ s0 hs0 rho =>
@@ -137,6 +142,25 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       dsimp only at hok ⊢
       simp only [GRest.aR, Block.ants] at hok ⊢
       exact hok
+    | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k)⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants, Stmt.ants, Endblock.ants, List.all_append, List.all_nil,
+        Bool.true_and, Bool.and_eq_true] at hok ⊢
+      first | exact hok | simp_all
+    | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
+      refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err rest k⟩⟩, rho, s0,
+        by dsimp only; rw [rufUpdateG_self],
+        by dsimp only; rw [rufUpdateG_self], fun hok => ?_⟩)
+      rw [hhead] at hok
+      dsimp only at hok ⊢
+      simp only [GRest.aR, Block.ants, List.all_append, Bool.and_eq_true] at hok ⊢
+      exact ⟨hok.1.1, hok.1.2, hok.2⟩
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only
@@ -144,7 +168,7 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
         simp only [GRest.aR] <;> exact fun h => by simp_all
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
   | g4 hs =>
     cases hs with
     | rueckCons caller rst hpop =>
@@ -174,16 +198,16 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       exact fun h => ⟨h.1, h.2.2⟩
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only
       rw [hcaller]; dsimp only
       simp only [GRest.aR, ants_alsBlock]
       exact fun h => ⟨h.1, h.2.2⟩
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only
       rw [hcaller]; dsimp only
@@ -191,17 +215,18 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       exact fun h => ⟨h.1, h.2.2⟩
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
   | g6 hs =>
     cases hs with
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
+
   | g7 hs =>
     cases hs with
     | _ =>
       kopfAnt
-      all_goals simp_all
+      all_goals simp_all [GRest.aR_weiterOpt]
 
 /-! ## 4. The frame invariant -/
 

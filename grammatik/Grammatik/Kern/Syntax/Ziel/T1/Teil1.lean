@@ -97,20 +97,20 @@ theorem ziel_deterministisch (P : Programm D) (O : Orakel D) (passes fuel : Nat)
 
 /-- Der Rahmen: ein Rumpf schreibt nur, was sein Vertrag nennt. -/
 theorem ziel_rahmen (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
-    (hP : StufenOk P)
-    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
+    (hP : StufenOk P) (hS : ScopesOkProg P)
+    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
     ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' →
       Rahmen V.schreibt V.gschreibt σ σ' :=
-  exec_rahmen P O passes fuel hO hP b σ ρ hh
+  exec_rahmen P O passes fuel hO hP hS b σ ρ hh hscope hresid
 
 /-- Die Spur: jeder Zugriff traegt die Waechter seines Traegers. -/
 theorem ziel_spur (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
-    (hP : StufenOk P)
-    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt) :
-    ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' →
-      σ'.haelt = σ.haelt ∧ (∀ e ∈ σ'.spur, e ∈ σ.spur ∨ e.gut) ∧
-      (Konsistent σ.spur → Konsistent σ'.spur) :=
-  exec_spur P O passes fuel hO hP b σ ρ hh
+    (hP : StufenOk P) (hS : ScopesOkProg P)
+    (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ) :
+    ∀ σ', (exec P O passes fuel V b σ ρ).welt = some σ' → BravRet σ σ' :=
+  exec_spur P O passes fuel hO hP hS b σ ρ hh hscope hresid
 
 /-- Kein Datenwettlauf auf einem Traeger -- ueber jeder Verschraenkung. -/
 theorem ziel_wettlauf (l : Lauf D) (hg : Gesittet l) (i j : Nat) (hij : i < j)
@@ -147,7 +147,7 @@ theorem ziel_ordnung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Faden)
     narrows the trace class explicitly for the rest -- no `sorry`.
 
     What one body reaches: `ziel_brav_aus_exec` reads a single `exec` outcome
-    as `Brav` (it IS `exec_spur`, whose conclusion is `Brav` unfolded). What no
+    as `BravRet` (it IS `exec_spur`, whose conclusion is `BravRet` unfolded). What no
     single-body sentence can reach: W3 (exclusion speaks about foreign lock
     primitives), W4 (one mark in one thread, across threads), W5 (an unshared
     carrier belongs to one thread -- the declaration). So the narrowed class
@@ -158,15 +158,16 @@ theorem ziel_ordnung (l : Lauf D) (hg : Gesittet l) (i j : Nat) (f g : Faden)
     `ziel_brav_aus_exec`; the Owicki-Gries step (sequential contracts surviving
     interleaving) is NOT here -- it stands nowhere yet and stays open. -/
 
-/-- A single `exec` outcome is `Brav`: the open locks are unchanged, every new
-    event is good, and a consistent trace stays consistent. This is `exec_spur`
-    read as `Brav` -- one provenance witness per body. -/
+/-- A single `exec` outcome is `BravRet`: the open locks shrink by at most the crossed
+    scopes, every new event is good, and a consistent trace stays consistent. This is
+    `exec_spur` read as `BravRet` -- one provenance witness per body. -/
 theorem ziel_brav_aus_exec (P : Programm D) (O : Orakel D) (passes fuel : Nat) (hO : GutO O)
-    (hP : StufenOk P)
+    (hP : StufenOk P) (hS : ScopesOkProg P)
     (b : Block D V l Γ Λ Λ') (σ : World D) (ρ : Env D Γ) (hh : HeldGenau Λ σ.haelt)
+    (hscope : b.ScopesOk) (hresid : ResidHeld V Λ)
     (σ' : World D) (h : (exec P O passes fuel V b σ ρ).welt = some σ') :
-    Brav σ σ' :=
-  exec_spur P O passes fuel hO hP b σ ρ hh σ' h
+    BravRet σ σ' :=
+  exec_spur P O passes fuel hO hP hS b σ ρ hh hscope hresid σ' h
 
 /-- The narrowed trace class: per-thread `exec` provenance (`Brav` from empty
     traces, closed per body by `ziel_brav_aus_exec`), the interleaving shape,

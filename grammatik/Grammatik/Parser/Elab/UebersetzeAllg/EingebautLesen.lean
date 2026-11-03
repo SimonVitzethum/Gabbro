@@ -248,6 +248,25 @@ theorem aligned_abgelehnt_lesen_zeuge :
       .error "source export: alignment must be a positive constant" ∧
     uSichert ct (.built "aligned" [.variable "p", .lit 8]) = .error "pointer in a compare without G form" := ⟨rfl, rfl⟩
 
+/-- Ordinary boolean expressions reuse the contract quantifier elaborator. -/
+def existsExpression : SExpr :=
+  .ext .any ["x", "slots"] [.variable "T", .bin ">" feldLesen (.lit 10)]
+
+theorem exists_expression_lesen_zeuge :
+    uBool ct existsExpression =
+      .ok (.einige "T" "x" (.cmp ">" (.tab "T" "v" (.param "x")) (.lit 10))) := rfl
+
+/-- The unannotated `let b = exists x in slots of T : T.slots[x].v > 10;`
+    selects the same boolean binding as an explicitly annotated binding. -/
+theorem exists_let_lesen_zeuge :
+    (uBindWertAllg ct false "b" none existsExpression).map Prod.fst =
+      .ok (.bindB "b" (.einige "T" "x"
+        (.cmp ">" (.tab "T" "v" (.param "x")) (.lit 10)))) := rfl
+
+theorem forall_expression_lesen_zeuge :
+    uBool ct (.ext .all ["x", "slots"] [.variable "T", .tru]) =
+      .ok (.alle "T" "x" .tru) := rfl
+
 end EingebautLesen
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg

@@ -131,10 +131,18 @@ inductive SAnw
   | block : List SAnw → Option SEnde → SAnw
   /-- `let [mut] x [: T] = alloc T;` -- the call of the provider of the open table `T` (`table T from p`). -/
   | allocVon : Bool → String → Option STyp → String → SAnw
+  /-- `let [mut] x [: T] = f(args) ?;` -- the reason propagation of §4.3: the call must carry a
+      reason channel, and the enclosing function the SAME one; the desugarer (`Uebersetze/Teil18`)
+      replaces it by the explicit `else` form before elaboration. -/
+  | bindQ : Bool → String → Option STyp → SExpr → SAnw
+  /-- `f(args) ?;` -- `?` in statement position: the call's value is discarded, its reason re-raised. -/
+  | callQ : String → List SExpr → SAnw
   /-- Optional axiom result binding; `none` introduces no local. -/
   | bindAxiomOpt : String → Option STyp → SExpr → SAnw
   /-- Optional axiom result binding with a reason handler. -/
   | bindAxiomOptElse : String → Option STyp → SExpr → String → SAnw → SAnw
+  /-- Explicit generic call statement, consumed before ordinary export. -/
+  | genericCall : String → List String → List SExpr → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -205,7 +213,12 @@ def beqSAnw : SAnw → SAnw → Bool
   | .ret x, .ret y => beqOptExpr x y
   | .alloc m n y t w s, .alloc k o z u v r =>
     m == k && strEq n o && beqSTypOpt y z && strEq t u && beqSExpr w v && beqOptAnw s r
+  | .genericCall n words args, .genericCall m other values =>
+    strEq n m && beqWorte words other && beqSExprList args values
   | .allocVon m n y t, .allocVon k o z u => m == k && strEq n o && beqSTypOpt y z && strEq t u
+  | .bindQ m a t x, .bindQ n b u y =>
+    m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
+  | .callQ f a, .callQ g b => strEq f g && beqSExprList a b
   | .reset a x, .reset b y => strEq a b && beqOptPaar x y
   | .grow a e b, .grow c f d => strEq a c && beqSExpr e f && beqSAnw b d
   | .free a, .free b => beqSExpr a b

@@ -32,7 +32,7 @@ theorem anw_swap (n : String) (hx : n ≠ "mut") (ty : Option STyp) (o : SExpr) 
   have hN := nimmBisZeichen_roh ";" ts rest
     (fun t ht => ⟨(hts t ht).1, fun e => (hts t ht).2 (Or.inl e),
       fun e => (hts t ht).2 (Or.inr (Or.inl e)), fun e => (hts t ht).2 (Or.inr (Or.inr e))⟩)
-  simp only [parseLetExpr, bind, Except.bind, hO, hN, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
+  simp only [parseLetExpr, strEq_semi_frage, Bool.false_eq_true, bind, Except.bind, hO, hN, fordereZeichen, strEq_self, ↓reduceIte, pure, Except.pure]
 
 /-- The payload of a publication: `nothing`, or a raw text in braces. -/
 def PubGut (p : String) : Prop := p = "nothing" ∨ (RohZu p ∧ p ≠ "nothing")
