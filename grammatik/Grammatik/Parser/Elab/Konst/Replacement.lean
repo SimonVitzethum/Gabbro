@@ -33,4 +33,29 @@ def checkReplacement (k : UKonstFn) (fns : List UKonstFn)
       return ⟨checked.quoted.syntax, .portable checked⟩
     else throw ("const result type without a certified replacement at `" ++ k.name ++ "`")
 
+/-- A shared semantic interface: each replacement retains the generic ordinary
+    G-call theorem, and either the normalized scalar candidate or the complete
+    typed literal denotation. No semantic obligation is a caller premise. -/
+def ReplacementEvidence.Sound : {syntax : SExpr} → ReplacementEvidence k fns env sources syntax → Prop
+  | _, .integer call =>
+    (∀ before after,
+      uKonstWert call.lo call.hi fns call.bindings 64
+        (Scalar.normalizeNames (Scalar.locals k.params) k.constants call.function.source) =
+        some (eval before call.function.model.body.2.2.expr after call.args).n) ∧
+    (∀ σ O passes depth,
+      rufAt call.function.model.program O passes (depth + 1) () σ call.args =
+        .ok σ (⟨call.value, call.certificate.range.1, call.certificate.range.2⟩ : Zahl call.lo call.hi))
+  | _, .portable call =>
+    ∀ σ O passes depth,
+      rufAt call.function.model.program O passes (depth + 1) () σ call.args = .ok σ call.value ∧
+      eval σ call.quoted.expr σ call.args = call.value ∧
+      Values.LiteralMeaning (Scalar.declaration (k.params.map Prod.snd) k.erg)
+        (Values.resultSchemas k) k.erg call.quoted.syntax call.value
+
+theorem Replacement.sound (replacement : Replacement k fns env sources) : replacement.evidence.Sound := by
+  rcases replacement with ⟨syntax, evidence⟩
+  cases evidence with
+  | integer call => exact ⟨call.normalized_denotation, call.sound⟩
+  | portable call => exact call.sound
+
 end Gabbro.Grammatik.Parser.Konst
