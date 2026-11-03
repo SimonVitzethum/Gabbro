@@ -1,6 +1,6 @@
 /- Generic construction proof: header, selected payload and deterministic padding. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Code
 public import Stage0.Senke.Ausdruck.Aggregat.Materialize
 public import Stage0.Senke.Welt.Spans.Cell
 @[expose] public section
