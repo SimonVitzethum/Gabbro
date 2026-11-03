@@ -71,6 +71,7 @@ def expandFloatFold (ctx inner : UCtx) (serial : Nat) (kind : XKind)
     Except String (List UStmt × UCtx × SExpr) := do
   match kind, fallback with
   | .foldAdd, [] | .foldMin, [_] | .foldMax, [_] => pure ()
+  | .foldAnd, _ | .foldOr, _ => throw "fold and/or: slots domain not supported, use a range"
   | .foldAdd, _ => throw "fold add: else is not allowed"
   | _, _ => throw "fold min/max: else is required"
   let acc := foldName serial "acc"

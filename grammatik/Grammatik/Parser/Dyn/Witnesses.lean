@@ -88,10 +88,27 @@ public theorem scene_producer_and_call_zeuge :
          [.field (.index (.field (.variable "Scene") "slots") (.variable "j")) "s"])]
       (some (.ret (some (.variable "a"))))) := rfl
 
-public theorem scene_payload_too_large_zeuge :
+/-- A wider-than-8-byte payload is carried as a case, not refused: the closed sum
+    travels through the existing tagged sum layout. Lowering the multi-word
+    payload is the Stage-0 s0-gaps1 premise (`sumPayloadWords`/`sumOff`,
+    `encodeWords` sum branch). -/
+public theorem scene_wide_payload_closed_zeuge :
+    ((close (fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []]) 1 dynamic).map
+      (fun c => c.cases.map (·.payload))) =
+    .ok [.index false "Circles", .index false "Rects", .array (.atom "u64") (.lit 2)] := rfl
+
+/-- A non-scalar payload behind a type alias is carried as written. -/
+public theorem scene_alias_payload_closed_zeuge :
+    ((close (fixture ++ [.typeT [] "Handle" [] [] (some (.index false "Circles")),
+      implementation (.atom "Handle") []]) 1 dynamic).map
+      (fun c => c.cases.map (·.payload))) =
+    .ok [.index false "Circles", .index false "Rects", .atom "Handle"] := rfl
+
+/-- The wide payload reaches the ordinary declaration expansion unchanged. -/
+public theorem scene_wide_payload_accepted_zeuge :
     (exportDeclarationUnit
       (fixture ++ [implementation (.array (.atom "u64") (.lit 2)) []])).map (fun _ => ()) =
-    .error "dyn.payload-too-large: Shape" := rfl
+    .ok () := rfl
 
 public theorem scene_equality_refused_zeuge :
     (exportDeclarationUnit (fixture ++
