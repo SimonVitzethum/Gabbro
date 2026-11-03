@@ -210,35 +210,35 @@ theorem semH_verbrauchWeiter {Λ : List (Res D)} (t : D.Tab)
         (.verbrauchRest t member edge inv bound mass body rest m k))
         (σ₂.lese Λ mass.orte) (.cons v ρ) := by
   have hl : (leseB inv σ ρ).2 = true := hw
-  show weiterH S O U passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+  show weiterH S O U passes R k (verbrauchLauf t (fun σ ρ => execBlockH S O U passes R body σ ρ)
+      (leseB inv) (verbrauchSel t member edge)
+      (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+      bound (rest + 1) σ ρ) =
     weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest m k)
       (execBlockH S O U passes R body (σ₂.lese Λ mass.orte) (.cons v ρ))
-  simp only [verbrauchLauf, hl, Bool.true_eq_false, if_false, hsel]
+  simp only [verbrauchLauf, hl, Bool.true_eq_false, ite_false, hsel, hm]
   cases execBlockH S O U passes R body (σ₂.lese Λ mass.orte) (.cons v ρ) with
   | ok σ' ρ' =>
+      dsimp only [weiterH]
       by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
-      · simp only [hfall, if_true]
-      · simp only [hfall, if_false]
+      · simp only [hfall, and_self, ite_true]
+      · simp only [hfall, ite_false]
   | next _ σ' ρ' =>
+      dsimp only [weiterH]
       by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
-      · simp only [hfall, if_true]
-      · simp only [hfall, if_false]
+      · simp only [hfall, and_self, ite_true]
+      · simp only [hfall, ite_false]
   | leave _ σ' ρ' =>
+      dsimp only [weiterH]
       by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
           (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
-      · simp only [hfall, if_true]
-        by_cases hc' : (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 = true
-        · simp only [hc', if_true]
-        · simp only [show (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 = false from by
-            cases h' : (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 with
-            | false => rfl
-            | true => exact absurd h' hc', if_false]
-      · simp only [hfall, if_false]
+      · simp only [hfall, and_self, ite_true]
+      · simp only [hfall, ite_false]
   | zurueck σ' v => rfl
   | why σ' r => rfl
   | logik e => rfl
@@ -257,9 +257,12 @@ theorem semH_verbrauchLeer {Λ : List (Res D)} (t : D.Tab)
     semH S O U passes R (.verbrauch t member edge inv bound mass body (rest + 1) k) σ ρ =
       semH S O U passes R k σ₂ ρ := by
   have hl : (leseB inv σ ρ).2 = true := hw
-  show weiterH S O U passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+  show weiterH S O U passes R k (verbrauchLauf t (fun σ ρ => execBlockH S O U passes R body σ ρ)
+      (leseB inv) (verbrauchSel t member edge)
+      (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+      bound (rest + 1) σ ρ) =
     weiterH S O U passes R k (.ok σ₂ ρ)
-  simp only [verbrauchLauf, hl, hsel, Bool.true_eq_false, if_false]
+  simp only [verbrauchLauf, hl, hsel, Bool.true_eq_false, ite_false]
 
 theorem semH_verbrauchFort {Λ : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -278,7 +281,9 @@ theorem semH_verbrauchFort {Λ : List (Res D)} (t : D.Tab)
   show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
       (.ok σ (.cons i ρ)) =
     weiterH S O U passes R (.verbrauch t member edge inv bound mass body rest k) (.ok σ₁ ρ)
-  simp only [weiterH, hs₁, hm', hfall, if_true, laufA]
+  dsimp only [weiterH, laufA, Env.tail]
+  subst hs₁
+  simp only [hm', hfall, and_self, ite_true]
 
 theorem semH_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -299,9 +304,11 @@ theorem semH_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
   rw [semH_dann_cons]
   show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
       (.leave h σ (.cons i ρ)) = _
-  simp only [weiterH, hsm, hm', hfall, if_true]
-  have hl : (leseB inv σm ρ).2 = true := hw
-  simp only [hl, if_true]
+  dsimp only [weiterH, Env.tail]
+  subst hsm
+  simp only [hm', hfall, and_self, ite_true]
+  have hl : (leseB inv (σ.lese Λ mass.orte) ρ).2 = true := hw
+  rw [if_pos hl] <;> rfl
 
 theorem semH_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
     (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
@@ -320,8 +327,12 @@ theorem semH_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
       semH S O U passes R (.verbrauch t member edge inv bound mass body rest k) σm ρ := by
   rw [semH_dann_cons]
   show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
-      (.next h σ (.cons i ρ)) = _
-  simp only [weiterH, hsm, hm', hfall, if_true, laufA]
+      (.next h σ (.cons i ρ)) =
+    weiterH S O U passes R (.verbrauch t member edge inv bound mass body rest k) (.ok σm ρ)
+  dsimp only [weiterH, laufA, Env.tail]
+  subst hsm
+  simp only [hm', hfall, and_self, ite_true]
+
 
 theorem semH_leaveWieder {Λ Λx : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)
