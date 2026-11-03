@@ -352,9 +352,8 @@ inductive UStmt
   /-- Required narrowing `narrow x to lo .. hi` with no `else` (C15, from
       `SAnw.trimReq`): `narrowReqBeg x lo hi`; the rest of the block reads `x`
       at `lo .. hi`. Out of range is `Logik.kapazitaet` under the caller's
-      capacity duty (`Block/Endblock.narrowRequired`); there is no failure
-      continuation and no `blkEnd`. Appended at the end, so earlier
-      constructor positions keep their names. -/
+      capacity duty (`Block/Endblock.narrowRequired`); no failure continuation or `blkEnd`.
+      Appended at the end, so earlier constructor positions keep their names. -/
   | narrowReqBeg : String → Int → Int → UStmt
   | axCallElseBeg : String → List UArg → String → UStmt
   | callIndElseBeg : String → String → List UArg → String → UStmt
