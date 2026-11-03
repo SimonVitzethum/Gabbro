@@ -3866,3 +3866,727 @@ statement parser refusal; they do not substitute for the generic proof.
 | C16 | Declared probe/gate/wrapper expansion can reach ordinary Boolean calls and checks after Duty admission; counterprobes (`sonde`), unbound measurement/floor/proof metadata and unsupported gate signatures refuse in canonical export. |
 | C17 | Source `decreases` uses checked measure export, ordinary generics can instantiate into supported forms in Lean; original `const` declarations still fail the Stage-0 metadata gate despite `Konst/ErsetzungTor` substitution code. Residual generic calls and module-template/use headers fail the original metadata check; helper existence is not source-image closure. |
 | C18 | Static reset expansion reaches ordinary range stores; immutable unannotated static-arena allocation with or without else passes original `bodyMetadata`, with recursive metadata checking of the explicit failure branch. `EndAllocWitness` pins original-gate acceptance, canonical source and source-image correctness alongside the existing success/ceiling witnesses (lead check pending). Grow/free/provider/page-return and live-region paths refuse. |
+
+### Low-level lane design (2026-11-03)
+
+**Authority and scope.** This is a document-only design against integration commit
+`a4783537dd56d44193eaf5e6e3f2e908e2628926` on `c-runde1`, inspected in `low-plan`.
+It records no build, theorem recheck, source compilation or execution measurement.
+The owner orders of 2026-11-03 supersede the older exclusion of device registers
+in LOW-LEVEL-SYNTAX-PLAN.md and the earlier implementation scope: implement all
+its language/model concepts, including device operations, in the **Lean model,
+canonical parser/exporter, checker and Rust front end only**. No implementation
+starts until **all C01–C18, C10/C02/C16 explicitly included, scoped value/reason
+returns, and their connected userspace integration are finished and green**.
+The present effort is design only and does not compete with that integration.
+
+The two initial checked target bindings are AArch64 EL1 normal RAM with a proved
+EL0 handoff, and x86-64 real-mode entry through the explicitly included
+`boot16to64` ASM item. Additional modes/instructions require canonical semantics
+and proofs before admission. Architecture details stay in bindings. There are
+**no unchecked-access blocks, escape markers or acceptance keywords**, in source,
+model or documentation: every low-level access requires checked authority.
+Boot is user-written Gabbro code, with contracted ASM bodies where needed, and
+its verification is the user's duty under generic theorems. The compiler neither
+trusts nor silently inserts boot logic. The named x86 binding item is the sole
+bundled boot exception; inclusion is explicit and its implementation is proved.
+No seL4 changes, executable source interpreter or adjacent hardware project.
+
+`stage0/` and `runner/` are read-only inventory subjects, excluded from every
+package below, including estimates. Neither their code nor their profile gates
+are changed. Runner-based validation is **deferred, not in scope**. Front-end
+admission here does not claim a new source-to-IR or executable-image case. Byte
+certificates are checked mathematical evidence about a supplied body/image;
+adding an emitter, execution backend or image startup is outside this lane.
+The proposed goal diff below must be shown to the owner before its merge; this
+document does not apply it or record that approval as received.
+
+**Baseline inventory (plan step 1).** Paths beginning with `Kern/`, `Parser/`,
+`Logik/`, `Code/`, `Hardware/`, `Speichermodell/` or `Zielsatz/` below are relative
+to `grammatik/Grammatik/`. The plan's older `Syntax.lean` and `Profil.lean` paths
+have been split: implementation must use the current modules named here.
+
+| Concept | What exists, with definitions | Missing connection / present refusal |
+|---|---|---|
+| Finite addresses and layout | `Speichermodell/Adressen/Layout.lean`: `Adresse = Nat × Nat`, `AdressLayout`, `LayoutOk`, `adresse`, `inZelle/inTabelle/inGlobal`, `zellen_getrennt`, `geaendert_im_bereich`. `NamedSpaces.lean` witnesses nominal spaces and independent backing identities. `Platzierung.lean`: `Zugriff`, `Platzierung`, `PlatzOk`, alignment and W/X checks. | These are abstract byte layouts, not finite physical addresses, CPU translation or physical alias coherence. `LayoutOk` is a premise, not a mapping established by boot. Distinct nominal spaces do not prove physical separation. |
+| Bounds and raw writes | `Speichermodell/Adressen/Bereich.lean`: `ImBereich`, `AussenGleich`, `ImBereichO`, `rufSchrittGX_aussen`, `rufErreichbarGX_aussen`. OPEN tables permit nonnegative indices without a declared ceiling. | Foreign outside-write exclusion is assumed through `ImBereichO`; no address-selected span, finite physical capacity, lifetime epoch or raw-access trace is connected. |
+| Existing safe regions/references | `Kern/Syntax/Typen/Shape.lean`: `Ty.ptr`, `Ty.ref`, by-value arrays/products. `DataCap.lean`: `DataTarget.table`, `DataCapTy` with space/rights/target and `attenuates`; `DataRights.lean`: independent read/write and optional owner. `Typen/Teil1.lean`: `Val`, `Val.zelle/vonZelle`. `Syntax/Syntax/Teil1.lean`: `Deklaration.offen`, `anbieter/anbieter_passt`. | No `address`, architectural `context` or scoped `ram_view` constructor. A numeric cell index in `Val` is not a source integer-to-reference producer. Do not substitute a new heap for C12's region work. |
+| Linear ownership | `Kern/Syntax/Marken/Owner/*`: `OwnerState`, nominal owners, activation flow, escrow and loans; `Signatur.owner`, `inputMarks/outputMarks` and `RufPasst.ownerReady` feed calls. | `Owner/Ledger.lean` explicitly folds call events without owner payload as the identity (`ownerFoldStep`, `ownerLedger_eq_base`); this alone does not establish dynamic mint, remap or physical authority. C09/C08 reachable-step integration must be reused after completion. Phase marks alone confer neither RAM nor privilege. |
+| Providers | `Hardware/Anbieter/Region.lean`: `Strecke`, `Zust`, `Gut`, `PStep.hole/fuell/zurueck/gib`, `Lauf`, `gut_nach`, `lauf_gut`, `lebend_getrennt`, `hole_neu_null`, `ram_gefuellt`, and overlap/outside-commit defect witnesses. | `Nat` spans and a resident-bit map, with freshness/alignment as step premises; no finite physical/virtual alias or epoch model. Its header classifies software-provider promises inconsistently as hardware and user logic. Derive software realization from the actual implementation, retaining the useful transition relation. |
+| C08 software boundary | `Syntax/Syntax/Teil1.lean`: `AxOrigin`, `Deklaration.axHerkunft/axBeleg/asignatur`. `Logik/Ruf/FremdRuf/T4–T6.lean`: `Konzession`, `BoundaryRecord`, `GrantInventory`, `ProviderOk/ProviderRealisiert`, `ForeignPflicht`, `ProviderTreueG`, `GrantsStart`, `ProviderBindung`. | Existing histories and contract predicates are foundations, not an ASM instruction proof. Unresolved origin still reads as hardware in the provisional split. The new certified domain must refuse unresolved provenance and discharge software frame, trace, extent and initialization facts. |
+| Present goal boundary | `Zielsatz/Kern/Spec.lean` is the ONE ASSUMPTION LIST; definitions are in `Spec/Teil1.lean` (`NutzerPflicht`, `HardwareAnnahmen`, `Laufzeit`) and `Spec/Teil2.lean` (`NutzerPflichtA`). `Logik/Ruf/FremdRuf/T8.lean` and `Zielsatz/Atomar/GabbroZielFremd.lean` split `AxVertragOSw` from `AxVertragOHw`; `gabbro_ziel_fremd` recombines the old premise. | The split still assumes whole `GutO`; it does not certify instructions, loader, physical ownership or software extents. Do not label that preparatory theorem complete low-level support. |
+| Canonical ASM syntax | `Parser/Item/ElementTief.lean` imports `Kopf/Teil2.lean`: `SItemTief.asmT : FnSig → String → SItemTief`; `Defs1.lean` captures text. `Uebersetze/Einheit/Signatures.lean` treats ASM signatures as foreign; `Pruefung/Elaborate.lean` gathers their names. | Text is opaque. No decoded body, operand-instance identity or correctness certificate reaches G. `Modules/Substitution.lean` refuses raw-body substitution. Existing signature export is not body refinement. |
+| Entry / boot syntax | `ElementTief/Kopf/Teil1.lean`: `SEingang` carries vector/via, arch, `regIn/regOut`, `erhaelt/kills`, stack, per-core/IST/nesting and dispatch. `Kopf/Teil2.lean`: `entryT`, `bootT` with steps and dispatch; parsing in `Defs4.lean` and `Defs4a.lean`. `Uebersetze/Teil/Teil11.lean` extracts entry metadata. | No generic pre-stack entry proof or instruction-by-instruction boot establishment of mappings, initialization, root arguments and privilege. Existing interrupt declarations/masks are software scheduling resources, not a proof of CPU state. |
+| Entrust | `SItemTief.trustT` stores named code, arch, registers, stack, assumption and optional service; parser `Defs3.lean`. `Uebersetze/Guest/Source.lean` binds a named software service. `Logik/Ruf/Guest/Boundary.lean`: `GuestBoundary`, `GuestTransfer`, `GuestAbi.userspace`, explicit owner/service checks. `Guest/Service.lean`: `GuestServicePflicht`, storage/isolation lemmas. | Current source adapter is bounded and refuses additional region-transfer descriptors it cannot export. `GuestBoundary.check` refuses register-state/privileged transfers. No guest algorithm correctness is supplied by isolation; extend this boundary rather than introduce an independent guest runtime. |
+| Rust ASM / front end | `crates/gabbro-syntax/src/ast.rs`: `FnRumpf::Asm`, `AsmRumpf.zeilen/ein/aus/zerstoert`; `parse.rs::asmrumpf`. `crates/gabbro-check/src/namen.rs::asm_versiegelt` checks arch/effects/costs and operand names. `zeugnis.rs` inventories text. | Instruction strings are deliberately unread and treated as assumptions today. `llvm/assembler.rs::sammle` emits constrained inline assembly; constraint substitution and target matching do not prove effects or costs. This lane replaces assumption-only certification admission, without changing that backend. |
+| Checked profiles / ABI data | `Kern/Syntax/Profil/Teil1.lean`: `ProfilSchluessel`, `AnnahmeEintrag`, `Profil.gut/gilt`, `erfuellt` (`frei` maps to `True`), mode consistency. `Hardware/Tor/Abi.lean`: `RegName`, `Falle`, `TorAbi`, `ZielDaten`, `gut/deckt/passtZu`, target-data witnesses including AArch64. C14 adds source profile binding and selection. | Free prose and an ABI register assignment do not establish instruction behavior or a boot invariant. No AArch64 EL1 instruction domain or mixed-mode x86 boot domain is supplied by these records. |
+| Device register declarations | `Syntax/Syntax/Teil1.lean`: `Regklasse.r/w/rw/w1c/rc`, `lesbar/schreibbar`; `Deklaration.Reg/rtyp/rklasse/spiegel/rzusage/rtraeger`. `Parser/Item/ElementTief` device syntax and `Uebersetze/Teil/Teil12.lean::uReg/uGeraet/uRegs` export scalar/Bool class, carriers, promises, else checks and mirrors. | Address/offset, access width and actual device transactions are not a proved physical binding in `UReg`. Register fields, per-stage classes, banks and device transition declarations are explicitly refused there; complete these declared register concepts in L05/L12. |
+| Register operations in G | `Syntax/Syntax/Teil2.lean`: `Stmt.regWrite`, `Stmt.transition` (one mirror read, masked write), `Block.regRead/regReadElse`, and both `Endblock` variants. `Semantik/Semantik/T2/Teil2.lean::execStmt/execBlock/execEnd`: reads ask `O.regLies`, decode and check promises; fallible reads evaluate the explicit else predicate. Writes call `O.regSchreib` and leave G memory unchanged; transition uses a fixed 64-bit mask expression. | Write/device state is not represented by these calls; no architectural access event with value/width/order binds it to hardware. `RegLokal` makes carrier-free registers constant across worlds. Transition is not a CPU atomic RMW and may not gain that meaning. Width-specific classes/side effects and typed mirror failures need canonical rules. |
+| Register source-to-G export | `UStmt.regRead/regReadElse/regWrite/regWriteB` in `Uebersetze/Teil/Teil1.lean`; producers in `Teil7/8/10`; typed `lowRegWriteL/lowRegWriteBL` in `UebersetzeAllg2/Teil3.lean`; register binders in `UebersetzeAllg3/Seq.lean`, `Ende.lean`, `Body.lean`. | Basic reads/writes/fallible reads have producers. Device transition invocation has no such producer (`uGeraet` refuses it); table-state `Stmt.shift` and C04's generated functions are different operations. |
+| Existing architecture / body fragments | `Code/Model/Syntax.lean` defines ISA-neutral operands/instructions, atomics, fences and `imsk`, with abstract frames; `Code/Refine/*`, `Code/Conc/*`, `Code/Gate/*` provide refinement pieces. `Kern/Semantik/Adressraum/Teil1–2.lean` has `UserRegion`, `GepruefteKopie`, `GepruefterUebergang`, and checked-copy shapes. | These do not decode source ASM or connect physical authority to every G/GX interleaving. The address-boundary files explicitly record their missing integration into actual transitions. Reuse applicable definitions/lemmas, not their unconnected conclusions as a new premise. |
+| Stage-0 inventory only | `stage0/Stage0/Compiler.lean::compile/Compiled` preserves source/elaboration/checker facts; `IRBild.lean::emit/Emitted.correct` binds its actual emitted IR image conditionally. `Profil.lean::runnerCompatible` requires x86-64, `checkEntry` refuses hardware entry obligations, `checkItems` refuses boot and applies bounded guest checks. `Senke/Anweisung.lean::lowS/lowB/lowEnd` explicitly return `none` for register operations; their correctness cases are impossible-success proofs. | No new low-level coverage follows from those proofs. This lane leaves every gate and refusal there untouched. A generic certificate checked in the front end does not make this compiler emit the corresponding operation. |
+| Assembly IR runner inventory only | `runner/Runner/IR/Step.lean::step`, `Prog/IRAsm.lean::irImage`, `X86/Ins/Dec/Enc/Step.lean`, `Beweis/Satz.lean::runner_tso/runner_sc`; `runner/runner.s` is the existing implementation. | The instruction subset implements the host runner; it is not a mixed-mode boot semantics or AArch64 EL1 model. It is unchanged. No privileged target execution or new validation result is claimed. |
+
+This freezes a source-inspection baseline, not the moving integration's final
+interfaces. The lead must rebase the design's coordinates and reuse completed C
+interfaces at the start gate. In particular C08/C09/C12/C14 are visibly staged at
+this commit; their planned completion must not be reimplemented by this lane.
+
+**Chosen representations (three lines of rationale each).** All names prefixed
+`Low` below are proposed interfaces, not declarations found in this baseline.
+
+- **Address:** `LowAddress S w` wraps `Fin (2^w)`; `S` is a nominal physical or
+  virtual space descriptor, with virtual addresses additionally tied to a regime.
+  Arithmetic uses natural magnitudes and proves the result fits before constructing
+  the finite value; a span end is a `Nat ≤ 2^w`, allowing the exclusive endpoint.
+  Thus zero length and one-past endpoints are explicit, arithmetic never wraps
+  silently, and neither equality nor a serialized address carries authority.
+- **Context:** `LowContext P` is an opaque handle to one finite authority ledger,
+  realized by existing C09 owner/grant resources, with a separate linear resource
+  for consumption; ordinary handle bits cannot mint or duplicate that resource.
+  The ledger records physical backing ID, finite spans, permissions/class, owner,
+  epoch, mappings/regime and CPU privilege/mask state, with explicit loan entries.
+  Checked partition/merge and call escrow reuse one ownership discipline; context
+  literals, reconstruction from numbers and consumption with outstanding loans refuse.
+- **View:** `LowView C R` is a C12 bounded byte-region descriptor plus a scoped
+  C09 loan: backing ID, offset, length, rights, epoch and originating context ID.
+  It denotes the existing carrier storage, never a copy or a new alias identity;
+  typed interpretation adds representation/alignment/initialization evidence.
+  `ram_view` borrows normal RAM through this descriptor; derived references share
+  its lifetime, while remap/release/privilege handoff require the loan tree empty.
+
+There are three public concepts and one producer, `ram_view`. Context transitions
+are ordinary contracted calls, privileged instructions are confined to certified
+ASM bodies, and device access uses existing register syntax with a separate device
+binding. Do not add a source statement per opcode, integer-to-code conversion or a
+second region API. CPU privilege permits executing an instruction; it does not
+prove ownership of the memory that instruction names. Physical aliases always
+resolve to the same backing/carrier, even through different virtual space labels.
+
+Architectural state extends the canonical G/GX transition relations with one
+shared authority/device state and per-core CPU state; it is not an executable
+source evaluator. Device transitions use a device-qualified ordinary call
+(`d.transition_name()`), expanded to the existing register operations with its
+proved mask/mirror contract. Banks expand to checked indexed register families;
+fields and stage classes constrain those same operations. No second transition
+language or per-opcode source interface is introduced.
+
+Keep finite address/profile identifiers independent of `Deklaration`; place
+contracts after typed expressions, and certificate/refinement predicates after
+the canonical semantics. Syntax stores typed body/binding identifiers, never
+imports `Code` proofs into `Ty` or `Deklaration`. This preserves an acyclic
+module dependency graph while keeping one shared certificate interface.
+
+**Implementation packages.** Estimates are engineering effort in **Sol-days**,
+not elapsed days or measured throughput. LOC are gross new/changed lines,
+including generic proofs and witnesses; Lean excludes generated artifacts and
+Rust excludes generated certificates. They are ranges, not quotas. Existing C
+work and backend work are not charged again. Every package requires the global
+C-completion gate, plus its listed dependencies. Proposed module paths are
+placement seeds to be split according to the layout rules: every Lean file is a
+module, below 500 lines (aim 200–300), folders at most 20 entries. No constructor
+is inserted before an existing one in **any** inductive, including proof judgments.
+Changing an old constructor's arguments requires one complete client migration,
+without compatibility aliases. No new logical axiom or weakened acceptance rule.
+
+Use a shared, explicitly inhabited fixture family rather than empty declarations:
+two cores (the second parked until its declared start), a protected four-byte
+carrier initialized to 3 and written to 7, a disjoint writable span, a declared
+root and a real saved interrupt frame. For x86, one candidate placement reserves
+GDT `[0x1000,0x2000)`, four page-table pages `[0x2000,0x6000)`, stack
+`[0x6000,0x8000)`, stub/user code `[0x8000,0xa000)`, data
+`[0xa000,0x10000)` and IDT `[0x10000,0x11000)`. The fixture proves all spans,
+required alignments, normal-RAM classification, decoded bytes and initial-state
+conditions together; the named identity-mapped span is `[0x1000,0x11000)`.
+These are proof-test inputs, not an implicit platform layout or boot protocol.
+Device fixtures include a nonempty carrier and successive responses 3 and 7;
+their new replay theorem must handle that history without assuming them equal.
+
+1. **L01 — finite address types and arithmetic.** Goal: inert, space-indexed
+   addresses with checked arithmetic. Append `Ty.address` and the necessary
+   `Expr` literal/comparison/checked-arithmetic forms; extend `Val`, equality,
+   transport, footprint and decoding without creating a pointer conversion.
+   Semantics distinguish physical and virtual domains, reject narrowing/overflow,
+   and allow an exclusive endpoint exactly at the address-space size. Prove
+   fit/nonwrap preservation, space preservation, serialization loses authority
+   and absence of a dereference/call rule for a bare address. Joint witnesses:
+   nonzero finite span, exact upper endpoint, rejected wrap and wrong-space use.
+   Parser/Rust/export consequences: one canonical address type and literal
+   elaboration contract for L12/L13, with explicit dynamic failure where declared.
+   Depends on C12/C13/C17 and the global gate; no L prerequisite. Files:
+   `Kern/Syntax/Typen/{Shape,Teil1,Teil2}.lean`, new `Typen/Address/*`,
+   `Kern/Syntax/Syntax/Teil*.lean` and corresponding semantic/transport modules.
+   **4–7 days; Lean 600–1,000 LOC, Rust 0.**
+
+2. **L02 — linear contexts and physical authority.** Goal: establish authority
+   provenance, not a privileged numeric handle. Append context type/resource and
+   acquisition/split/merge/loan judgments; use C09's ledger and C08 grants rather
+   than an independent allocator. A finite list of disjoint physical intervals
+   carries backing ID, owner, epoch, class and rights; mapping records may alias
+   intervals but must preserve their ownership identity. Context acquisition
+   derives from an explicit starting-state ownership specification or a proved
+   provider call; ordinary expressions cannot construct it. Prove conservation,
+   unique write authority, rights attenuation, fresh epochs and loan restoration
+   on normal/reason/scoped exits. Witness two nonempty disjoint splits, a real
+   transfer and return, rejection of duplicate ownership and stale epoch reuse.
+   Front-end consequence: source origin/move/borrow obligations, never copied
+   capability authority. Depends on L01, C08/C09/C10/C11/C12/C18 (including scoped
+   returns). Files: new `Kern/Syntax/Low/Authority/*`, existing
+   `Kern/Syntax/Marken/Owner/*`, C08 boundary/grant modules and resource judgments.
+   **9–15 days; Lean 1,600–2,600 LOC, Rust 0.**
+
+3. **L03 — scoped normal-RAM views.** Goal: one checked producer feeding existing
+   region/reference operations. Append a view type/target only where C12 has no
+   equivalent and append a `Block`/`Endblock` scoped-view rule; reuse ordinary
+   byte/typed loads and stores after elaboration. `ram_view` demands authority
+   for the entire half-open span, normal class, mapping, alignment, rights and
+   live epoch; loans prevent context-consuming calls and escaping references.
+   Initialization is tracked bytewise; writable uninitialized storage grants no
+   typed read until initialized, and typed views require valid representation and
+   endianness/layout. Prove extent, no amplification/escape, alias identity,
+   initialization and cleanup preservation on every exit. Joint witness writes
+   then reads a nonempty subspan, observes the same storage through a permitted
+   alias, and returns its loan; negative fixtures cover zero-length dereference,
+   one-past access, device memory, stale reference and remap with a live loan.
+   Consequence: canonical `ram_view` export and borrow checks for L12/L13.
+   Depends on L01/L02, C01/C03/C08/C09/C11/C12/C18. Files: C12 region/view modules,
+   new `Kern/Syntax/Low/View/*`, relevant `Syntax`, `Semantik` and scope-return
+   judgments. **8–13 days; Lean 1,400–2,300 LOC, Rust 0.**
+
+4. **L04 — canonical architectural bodies, entry and boot relations.** Goal: a
+   checked body alternative with explicit pre-stack state, faults and privilege.
+   Define one `LowMachineState` relation over architectural state, canonical
+   memory, contexts and events; instruction semantics will instantiate it.
+   Append contracted ASM-body/entry/boot proof judgments and the necessary
+   resumable G/GX control constructors, preserving existing callable contracts.
+   Entry ABI state includes PC, registers/flags, stack availability, privilege,
+   translation and interrupt state; boot composes user calls and a named dispatch;
+   entrust uses the same transition/call boundary. All intermediate steps remain
+   observable; a nonreturning handoff consumes its context without a return value.
+   Prove typed entry/exit, frame composition, dispatch uniqueness, fault accounting
+   and resource preservation. Witness a nontrivial register clobber, a stackless
+   prefix acquiring a stack, and a context-consuming handoff; reject missing
+   stack/return mode and hidden writes. Consequence: a structural body/certificate
+   descriptor for later source admission, never text-as-contract acceptance.
+   Depends on L01–L03, C06/C08/C09/C11/C12/C14/C17. Files: new
+   `Kern/Syntax/Low/{Body,Entry,Boot}/*`, canonical G/GX call/control judgments,
+   `Code/Model/*` interfaces and `Logik/Ruf/Guest/*` where shared.
+   **10–17 days; Lean 1,800–3,000 LOC, Rust 0.**
+
+5. **L05 — device transactions and all existing register forms.** Goal: give
+   reads, writes, fallible reads and transitions a checked observable meaning.
+   Retain `Regklasse`, `D.Reg` and their existing constructors; append access-event
+   and device-step constructors, extend binding descriptors with width, offset,
+   address space, class, masks, fields/banks and mode/phase restrictions. A
+   `DeviceBinding` ties a register to a named hardware transition relation and
+   the declared carrier footprint. Normal RAM authority never authorizes it.
+   Replace the discarded-write treatment with traceable device-state steps;
+   model `rc` read side effects and `w1c` writes, width-specific reserved bits and
+   typed mirror decoding. A transition is a mirror read followed by a masked
+   write, with an interleaving point; no implicit atomicity or universal 64-bit
+   mask. Success checks `rzusage`; fallible predicates route to existing reason/
+   else continuations, while malformed values remain precisely named failures.
+   Preserve the old carrier-local fragment as a restriction; volatile devices
+   need recorded-answer replay, not an assumed equality across different reads.
+   Prove class/width legality, exact access count/order, continuation/resource
+   preservation and locality/replay for every modeled device response. Joint
+   fixtures exercise every class, two different consecutive answers, both else
+   branches and an intervening device step in a transition; reject wrong class,
+   mirror, mask, phase, reserved bits and RAM/device confusion. Consequence:
+   canonical producers for fields/banks/transition calls and register duty export.
+   Depends on L01/L02/L04, C03/C04/C05/C08/C09/C12/C14. Files:
+   `Syntax/Syntax/Teil1–2.lean`, `Semantik/Semantik/T2/Teil2.lean`,
+   `Kern/Semantik/Geraet/*`, new `Kern/Syntax/Low/Device/*`, register locality,
+   footprint and replay modules. **9–15 days; Lean 1,500–2,600 LOC, Rust 0.**
+
+6. **L06 — AArch64 EL1 normal-RAM instruction domain and binding.** Goal: the
+   first Arm architectural instance, not an assumed ABI description. Define
+   instruction decode/step relations for the actual admitted body vocabulary:
+   ordinary integer/control/stack/load/store instructions, relevant system
+   register transfers, barriers/TLB maintenance, exception entry and return,
+   masks and EL1-to-EL0 handoff. Append constructors only. The checked profile
+   fixes translation parameters, memory attributes, supported features and entry
+   state; all architecturally permitted outcomes remain in the step relation.
+   Prove instruction laws, decoder/encoding correspondence, privilege checks,
+   translation/permission/fault behavior and required maintenance sequencing.
+   Witness a real RAM write, distinct privilege states, a valid root installation
+   with synchronization and an exception-return path; reject wrong EL, missing
+   maintenance and unsupported feature/opcode. Profile flags cannot invent an
+   instruction lemma. Consequence: L08 body proofs can instantiate this binding;
+   front-end acceptance is limited to its explicit decoded domain. Depends on
+   L01–L04, C12/C13/C14. Files: new `Hardware/AArch64/{State,Decode,Step,Memory}/*`,
+   `Hardware/Bindings/AArch64/*`, existing `Hardware/Tor/Abi.lean` data interface
+   and `Kern/Syntax/Profil/*` checked-profile linkage.
+   **20–35 days; Lean 3,500–6,500 LOC, Rust 0.**
+
+7. **L07 — x86 16/32/64-bit instruction domain and proved `boot16to64`.** Goal:
+   the explicitly named bundled ASM exception, not a new source construct.
+   Build a mode-indexed instruction/byte semantics covering the approximately
+   25 instruction families the fixed stub actually uses, including prefixes,
+   operand/address sizes, descriptor-table reads, `lgdt/lidt`, general and
+   segment-register moves, CR0/CR3/CR4 reads/writes, `rdmsr/wrmsr` for EFER,
+   far jump/return, paging and long-mode activation, stack setup and final jump.
+   The instruction count is a design estimate; the admitted stub's exact byte
+   manifest determines the final closed domain, including all setup instructions.
+   No reuse of a host-only instruction proof as evidence for another mode.
+   Define exact GDT/IDT/page-table byte layouts with bounds/alignment and selector
+   rules. State the initial boundary as a **specified real-mode entry**, interrupts
+   off, A20 state stated, owned/disjoint descriptor/page-table/stack/code spans,
+   CPU features and other-core quiescence; reset-to-that-entry is a separate
+   explicit software obligation, never a presumed loader theorem. Either prove
+   A20 already enabled at that boundary or refuse; do not hide a firmware call.
+   Prove, for every parameter satisfying the contract, that the exact stub bytes
+   establish the stated GDT, identity-map the named finite RAM span, initialize
+   required tables/stack, enter 64-bit long mode and jump to the user's named
+   Gabbro entry with the specified arguments and remaining authority. Entry must
+   be in the proved code span and compatible with the exit mode. Include all
+   descriptor fetches, hidden CPU state, faults, writes and clobbers; no admitted
+   bad state may escape through a vacuous hardware stop. Witness concrete disjoint
+   code/GDT/tables/stack spans, a nonempty mapped RAM span and actual 16→32→64
+   state changes; defect fixtures alter a selector, prefix, A20 condition, table
+   bit, target, overlap or CR/EFER ordering. Consequence: one parameterized body
+   and contract, proved once, later included by name through L14; no per-program
+   proof rule or implicitly injected startup. Depends on L01–L04, C12/C13/C14.
+   Files: new `Hardware/X86Boot/{State,Decode,Step,Tables}/*` and
+   `Hardware/Bindings/X86Boot/*`; source packaging belongs to L14.
+   **35–60 days; Lean 6,000–11,000 LOC, Rust 0.**
+
+8. **L08 — generic instruction-block, ABI and body certificate soundness.**
+   Goal: bind contracts to actual machine executions and exact bytes. Define
+   one `LowBodyCertificate` indexed by typed body, profile, resolved operands,
+   ABI, relocation map and final byte ranges. The checker verifies exact decode,
+   all reachable blocks/entries and closure of named destinations; a hash alone
+   is not identity evidence. Append only missing certificate derivation cases.
+   Generic simulation covers every allowed instruction step, faults, loops and
+   exits, preserving registers, implicit clobbers, stack and memory frames.
+   Infinite/nonreturning behavior is related as such; finite own-step costs need
+   bounds, not just a terminating-run postcondition. Bind linking/relocation and
+   substituted operands to a finite-byte layout proof; no assembler/compiler is
+   trusted. Prove soundness, sequential composition, ABI frame and byte-identity
+   transport once for both bindings, then connect L07's stub contract. Joint
+   witness: two real blocks, a loop with invariant/bound, stack writes and relocated
+   target; mutate bytes, operand substitution, implicit flags or relocation to
+   get refusal. Consequence: the kernel-checked artifact consumed by L12–L14;
+   no new emitter and no execution path. Depends on L04/L06/L07 and C01/C03/C06/
+   C07/C08/C12/C13/C14/C17. Files: new `Code/Refine/Low/{Certificate,ABI,Blocks}/*`,
+   `Hardware/Bindings/*`, C08 call-contract and source/body correspondence modules.
+   **16–27 days; Lean 2,800–4,800 LOC, Rust 0.**
+
+9. **L09 — ownership, aliases, interleavings and physical address bridge.**
+   Goal: connect body certificates to the existing G/GX safety argument at every
+   observable prefix, not only function boundaries. Reuse C08 boundary events,
+   C09 ownership replay, C10 grace/quiescence and C12 region realization. Append
+   raw read/write/map/revoke and device answer events with backing ID, physical
+   byte span, value, rights, epoch, core and access order. Define physical
+   realization of `AdressLayout` separately from its abstract `Nat × Nat`
+   addresses. Prove access trace completeness, physical-alias coherence,
+   authority/lifetime/privilege preservation, unchanged framed bytes, non-atomic
+   lock ordering and atomic rely correspondence. Remap/release requires all
+   affected loans/cores quiescent, epoch advancement and proved TLB maintenance.
+   No finite machine's OPEN extent denotes infinite available RAM. Generalize
+   register replay using recorded answers while proving the old `RegLokal`
+   restriction exactly; retain every existing race/contract/invariant guarantee.
+   Joint fixture: two cores, one protected carrier, two virtual aliases to the
+   same physical bytes, a real write, interrupt and quiescent revoke/reuse;
+   counterexamples include hidden shared write, alias-based duplicate owner and
+   stale remote translation. Consequence: exported trace/ownership obligations
+   feed GabbroV and the goal, not an assumed global simulation predicate.
+   Depends on L02–L06/L08, C05/C08/C09/C10/C11/C12/C15/C18. Files:
+   `Speichermodell/Adressen/*`, C09 owner and C12 realization modules,
+   `Nebenlaeufigkeit/*`, `Code/Conc/*`, new `Code/Refine/Low/Interleaving/*`.
+   **20–34 days; Lean 3,500–6,000 LOC, Rust 0.**
+
+10. **L10 — generic boot, interrupt and isolation discharge.** Goal: let users
+    prove their own boot composition and pre-stack entry under the same body
+    theorem. Boot steps are user Gabbro calls, each owing its real pre/post and
+    state transition; the theorem does not supply an allocator, root loader or
+    hidden prologue. Prove composition establishes initialized/zero storage,
+    reserved image/GDT/page-table/stack spans, lock/global invariants, region
+    ledger and declared root arguments. Derive software `Laufzeit.lader/start/
+    einmal`, `StartGut` and spawn duties from the checked handoff, with explicit
+    finite resources; lack of a spawn-supply proof refuses the claimed operation.
+    Prove EL1→EL0 handoff and instantiate real→long-mode handoff with L07.
+    Interrupt entry/return prove register/stack/frame/mask invariants, permitted
+    nesting and core locality; software handlers prove their logic and finite
+    bounds when claimed. Entrust proves isolation for every allowed guest action
+    and re-entry, earning no guest ensures/termination/cost claim by default.
+    Witness two distinct boot steps with real initialization, a root receiving a
+    bounded region, an interrupt with a nonempty saved frame, and a guest trying
+    to overwrite retained RAM. Reject wrong dispatch, uninitialized root data,
+    stack overlap, incorrect nesting and forged initial state. Consequence:
+    user duty files describe these proofs explicitly and exports cannot erase
+    an entry/boot clause. Depends on L04/L07–L09, C04/C05/C06/C08/C09/C10/C11/
+    C12/C14/C17/C18. Files: new `Logik/Low/{Boot,Entry,Handoff}/*`,
+    `Logik/Ruf/Guest/*`, start/runtime and core-mask proof modules.
+    **12–20 days; Lean 2,100–3,600 LOC, Rust 0.**
+
+11. **L11 — reviewed goal and software/hardware premise separation.** Goal:
+    implement the precise proposal below, after the owner has seen its diff.
+    Derive software frame/trace/ensures/extents and runtime facts from L08–L10
+    under caller duties; do not retain whole-oracle `GutO` as a hardware shortcut.
+    Extend the generalized user obligation and goal with authority/lifetime/
+    privilege, raw/device traces and finite physical realization. Keep the old
+    theorem names/statements as mathematical corollaries on their old abstract
+    domain, using identity simulation; no second execution implementation.
+    Append new goal/certificate derivations only where needed. Prove the extended
+    theorem and SC/atomic/link restrictions with exactly the standard axioms;
+    show no new unlisted hardware premise through profiles or libraries.
+    Joint witness must satisfy checker, user, hardware and starting-state
+    premises together and reach a real low-level write/handoff; retain a
+    non-degenerate old-domain witness and refute a false software postcondition.
+    Consequence: certification exposes unproved software duties rather than
+    classifying them as assumptions. Depends on L05/L08–L10 and C05–C12/C14–C18;
+    all C packages remain mandatory through the global gate. Files:
+    `Zielsatz/Kern/Spec.lean`, `Spec/Teil1–2.lean`, new `Zielsatz/Low/*`,
+    `Zielsatz/Atomar/*`, `Logik/Ruf/FremdRuf/*`, profile/link proof modules.
+    **10–17 days; Lean 1,800–3,000 LOC, Rust 0.**
+
+12. **L12 — canonical parser and source-to-model exporter.** Goal: only after
+    the model/proofs, admit address/context/view types, `ram_view` and existing
+    ASM/entry/boot/entrust/register forms with checked certificate tails. Append
+    source-node variants at the end where needed, and retain exact source body,
+    operand, profile, proof identity and dispatch through module expansion,
+    substitution and original-metadata checks. Replace the opaque ASM export;
+    complete `SEingang` contract/stack binding and device fields/banks/transition
+    producers rather than reusing table `shift`. A named `proof` resolves to
+    evidence indexed by the exact elaborated body; unresolved, duplicate or
+    mismatched names refuse. Prove generic elaboration/correspondence and complete
+    duty extraction (including unused declarations); no metadata-erasing route.
+    Joint witness elaborates both bindings, a scoped RAM write and each register
+    form; negative trees put unsupported clauses under modules/conditionals to
+    ensure they cannot disappear. Consequence: Rust syntax mirrors the canonical
+    nodes after these rules exist; model lowering is source-to-G, not backend work.
+    Depends on L01–L11, C01–C18 final source/export interfaces. Files:
+    `Parser/Item/ElementTief/*`, `Parser/Elab/Uebersetze/*`,
+    `UebersetzeAllg*/*`, `Parser/Elab/Export/*`, module substitution,
+    `crates/gabbro-syntax/src/{ast,parse}.rs` (representation synchronization).
+    **10–17 days; Lean 1,200–2,000 LOC, Rust 150–300 LOC.**
+
+13. **L13 — Rust front-end checks and user-proof bridge.** Goal: mirror canonical
+    admission without Rust-first language rules or proof-by-success flags.
+    Update ASM sealing, context move/borrow flow, original metadata/profile checks,
+    entry/boot/device duties, diagnostics and obligations/Lean export. The body
+    itself, including the named stub, is software; costs and ensures require
+    proof. Generate untrusted candidates and bind kernel-checked certificates;
+    unresolved software obligations may be displayed but cannot certify acceptance.
+    Extend GabbroV's `Body` representation and `bruecke_nutzer/bruecke_nutzerA`
+    through the same source-derived proof obligations; no separate interpreter.
+    Append required `Body`/duty constructors at their ends. Prove generic bridge
+    soundness for all admitted forms and prove no missing-body/certificate route.
+    Joint fixture has nonempty effects, false/true obligation variants and both
+    success/reason cleanup; new refusals get measured free diagnostic numbers,
+    sentences and poison probes in the same commit. Consequence: ordinary users
+    see one contract/authority interface, without architecture internals leaking
+    into normal calls. Depends on L11/L12, C03/C06/C08/C09/C11/C12/C14/C16/C17.
+    Files: `crates/gabbro-check/src/{namen,pflichten,lean_g,zeugnis,saetze}.rs`,
+    relevant checker passes/tests, `programmlogik/Gabbro/Body/*`,
+    `bruecke/Bruecke/{Pflichten,Anweisung,Simulation}*`, and shared Rust syntax.
+    **12–20 days; Lean 1,400–2,400 LOC, Rust 1,200–2,000 LOC.**
+
+14. **L14 — named target-binding inclusion and certificate admission.** Goal:
+    package the two checked bindings in the existing front-end module/binding
+    mechanism; do not introduce a boot keyword or silently add code. Ship the
+    visible `boot16to64` Gabbro ASM item, its typed body/byte template and generic
+    L07/L08 contract proof as one binding artifact. Include it explicitly by the
+    existing module/use name mechanism; parameters carry placements, RAM span,
+    stack and named user entry, with caller proofs for each instance. Bind proof
+    specialization to actual substituted bytes and relocations. AArch64 gets
+    the same profile/certificate entry mechanism, without bundled hidden boot.
+    Add only missing canonical binding/include evidence constructors, at the end;
+    existing module composition is reused. Prove artifact identity, inclusion
+    does not widen authority/hardware assumptions, and parameter instantiation
+    preserves contract and byte identity. Witness two distinct valid placements
+    using the same generic stub proof and a real user entry; reject name/profile,
+    byte/relocation/selector mismatches, absent inclusion and unresolved entry
+    placement. Consequence: front-end certification accepts a binding only with
+    its complete evidence; a backend unable to produce the required final artifact
+    remains refused by its existing gate. Depends on L07/L08/L10–L13,
+    C02/C06/C08/C12/C14/C17. Files: `Hardware/Bindings/{X86Boot,AArch64}/*`,
+    `Parser/Elab/Modules/*`, profile/binding export modules, Rust front-end
+    binding/certificate resolution; place the visible `.gab` item with the
+    repository's established binding library, not an automatically loaded runtime.
+    **7–12 days; Lean 800–1,400 LOC, Rust 400–700 LOC; visible Gabbro item
+    approximately 80–160 lines, with exact size determined by the proved body.**
+
+15. **L15 — positive/negative front-end validation and claim closure.** Goal:
+    close the admitted language/model domain through actual parser, exporter,
+    checker and obligation paths. No new production semantics or proof shortcut.
+    Every generic syntax-quantified theorem gets a jointly inhabited `_zeuge`;
+    positive source fixtures exercise actual RAM writes/reads, context consumption,
+    boot/root handoff, interrupt entry/return, named stub inclusion and all register
+    forms/classes/else exits. Negative fixtures cover forged authority, wrap,
+    physical aliases, stale epochs, live-loan revocation, uninitialized read,
+    wrong privilege/stack/selector/mode, hidden shared write/clobber, missing
+    synchronization, MMIO view, unknown instruction and body/byte/certificate/
+    relocation/profile mismatch. Exercise all source expansion routes and
+    verify a false software proof cannot produce certified acceptance. Lead
+    runs the scoped module/axiom/layout checks and affected existing front-end,
+    checker and bridge guardian checks, recording unmeasured portions explicitly;
+    agents do not build. Report accepted/refused syntax separately from supplied
+    body/image evidence and runtime coverage. Update language/memory rules and
+    the assumption inventory consistently; no new Markdown file. Depends on
+    L01–L14 and the completed C-package regression baseline. Files: existing
+    canonical parser/model witness modules, Rust checker integration tests,
+    `beispiele/` and `beispiele/gift/`, `dokumente/{SYNTAX,LANGUAGE,THEOREM-MAP}.md`,
+    `AGENTS.md` and `TODO.md` within the Markdown cap.
+    **8–14 days; Lean 900–1,600 LOC, Rust 600–1,000 LOC.**
+
+**Proposed `Spec.lean` review diff — text only, NOT applied.** This is the
+precise proposed change of meaning for decision 2 together with decision 4.
+It builds on completed C08; it must not restore that package's provisional
+unresolved-origin-as-hardware rule in the certified domain. The unified diff is
+against the frozen baseline header; the following definition-layer contract
+states the associated premise/conclusion change separately from implementation.
+The code and proof modules themselves are not edited here.
+
+```diff
+--- a/grammatik/Grammatik/Zielsatz/Kern/Spec.lean
++++ b/grammatik/Grammatik/Zielsatz/Kern/Spec.lean
+@@ -51,0 +52,6 @@
++  * `GabbroZielLow` -- the checked architectural-boundary extension of the same
++    G/GX safety theorem, with user-proved software bodies and boot, finite RAM
++    authority, and explicit device transactions. Its generic refinement covers
++    every observable prefix, not only returns. Proof `gabbro_ziel_low`.
++    The original goal statements remain its old-domain mathematical corollaries;
++    their abstract premises alone certify no software body or executable image.
+@@ -76,2 +82,19 @@
+-  (c) `HardwareAnnahmen O E.Q` -- the hardware and foreign code (THE ONE LIST, below).
+-  (d) `Laufzeit E sp init` -- the loader and the runtime's thread creation (THE ONE LIST).
++  In `GabbroZielLow`, (a) additionally checks exact body/binding/certificate
++  identity, source provenance, context/loan flow, entry/profile compatibility
++  and all declared device accesses. Structural admission proves no user logic.
++  (b-low) `NutzerPflichtLowA E B` -- `NutzerPflichtA E` plus `LowPflicht E B`:
++    caller preconditions; universal instruction/ABI/body and software-provider
++    certificates; boot/entry/root and interrupt/isolation duties; and actual
++    authority, mapping, initialization, lifetime and raw/device trace refinement.
++    The sequential specialization is `NutzerPflichtLow E B`.
++  (c-low) `LowHardware B` -- only named CPU/MMU/interrupt/memory and device
++    behavior for the selected checked binding and its precise feature domain.
++    No software loader, allocator, handler, monitor or ASM algorithm is assumed.
++  (d-low) `LowInitial B A0` -- the explicitly specified architectural starting
++    boundary, including initial RAM ownership, mappings, privilege and cores.
++    Software establishing this state is a user obligation if claimed in scope.
++    The certified boot/handoff derives the applicable `Laufzeit` and `StartGut`
++    facts; no independent software runtime premise is retained for this domain.
++  For the original abstract G/GX statements, (c) and (d) retain their exact
++  types as the old-domain corollary premises listed below. They grant no new
++  source admission, physical authority or architectural execution claim.
+@@ -140,0 +164,11 @@
++  * `autoritaet`, `lebenszeit`, `privileg` -- every reachable architectural
++    prefix preserves the live owner/loan/epoch ledger and its permitted CPU
++    mode; address bits alone grant neither data nor code authority. (a), (b-low).
++  * `rohSpur` -- every raw RAM and device transaction, including hidden stack
++    and descriptor/page-table accesses, is represented with its actual physical
++    byte span, value, core and ordering; no hidden shared atomic. (b-low), (c-low).
++  * `speicherAdressenLow` -- the original extent/outside-write/layout guarantee
++    plus finite mapped physical realization: each RAM access is within a live
++    authorized span and realizes the same carrier bytes through all aliases.
++    Device transactions are separately classified, never normal-RAM views.
++    Revocation/reuse preserves this relation on all affected cores. (b-low), (c-low).
+@@ -143,22 +177,33 @@
+-  * (c) `GutO O` -- an axiom (a FOREIGN body: `extern fn`, `prim fn`, `asm`, `entry`, `entrust`) writes only its
+-    declared carriers, keeps the held locks and leaves its accesses in the trace. Nothing in the language can check
+-    foreign code. (Carriers, not indices: that it writes inside the declared extents is `ImBereichO`, below.)
+-  * (c) `RegLokal O` -- a register read answers from the carriers declared for its device; `awaits g` depends only
+-    on `g`. NAMED RESTRICTION: a register WITHOUT declared carriers answers the same value in every world, so
+-    `RegLokal` is stronger than a volatile device; such a register is read through an axiom or given carriers.
+-  * (c) `AxVertragO E.Q O` -- every axiom answer that fits its declared result type meets the declared `ensures`.
+-    A false `E.Q` is a false NAMED assumption, visible in the declaration. `Q := false` empties (c) for an axiom
+-    without a result; for one with a result (c) stays inhabited by oracles whose answers never fit, and every call
+-    then stops at `hardware`. Every type has a real decoding (`einpassen_voll`), so for an `E.Q` satisfiable at a
+-    decodable value, oracles with fitting answers exist and (b) must cover them.
+-  * (d) `Laufzeit.lader` -- the loader establishes the declared initial memory `E.sp0` (initialized data and zeroed
+-    storage of the image). That `E.sp0` meets the lock invariants and the start `requires` is the user's (b).
+-  * (d) `Laufzeit.start`/`.einmal` -- the runtime runs exactly the declared starts with their declared arguments,
+-    one thread per occurrence, and the idle root on every other thread; a routine runs on several threads only if
+-    declared at least twice (a worker pool). Run-time roots (`E.gestartet`) have slots that stay dormant until a
+-    `start`/`child` step spawns them. Assumed about the runtime and the lowering: (1) a spawned root's arguments are
+-    the unit's and its ghost entry world is the start world; (2) spawns happen only where the checked conditions
+-    hold (no lock held at a `start`, `N461`; the starter waits for every root; a `child` is entered with nothing
+-    held, `N456`); (3) every spawn succeeds (`Faden` is unbounded; thread creation failing is not modelled).
+-  * INSIDE A LEG, not in (c): `KernPlan` (`keinKernHalt`: masking works and a handler runs to completion on the
+-    core it preempted) and `ImBereichO` (`speicherAdressen`: foreign code writes inside the declared extents).
++  * (c-low) `LowHardware B` lists instruction, translation, interrupt, memory
++    and device behavior by name and exact domain. Every physical hardware
++    action, including a device promise, must be covered by that list.
++  * Software frame/lock/trace facts formerly consumed as `GutO` are derived
++    from the actual body certificates and caller duties in (b-low). The hardware
++    part of an oracle boundary remains named hardware behavior; software cannot
++    become hardware through an omitted or unresolved origin annotation.
++    Original abstract `GutO O` remains a premise only of the old-domain corollary.
++  * Hardware register outcomes and ordering are specified by `DeviceBinding`
++    under (c-low); recorded-answer replay is proved in (b-low). The old
++    `RegLokal O` restriction, including constant carrier-free answers and the
++    existing `awaits` clause, is preserved exactly on the old domain. It is not
++    silently assumed for a volatile or read-side-effecting device.
++  * Software `AxVertragO` instances are consequences of body/provider proofs
++    at call sites whose `requires` the caller proves. Only true hardware
++    `axiom`-ensures remain named assumptions. A false software postcondition
++    cannot be discharged by an out-of-type answer or a fabricated hardware stop.
++    The old abstract `AxVertragO` and its decoding qualifications remain exact
++    premises of the old-domain corollary, not certified-software admission rules.
++  * (d-low) `LowInitial B A0` states the chosen initial architectural boundary;
++    it assumes no algorithm before or after that boundary correct. Boot is user
++    Gabbro code and owes its own proof. An external prior loader remains an
++    explicit unproved software obligation until its implementation is verified.
++    Initialization, root arguments, start multiplicity, dormant slots, spawn
++    conditions and finite resource supply are derived from (b-low). Original
++    `Laufzeit.lader/start/einmal` retain their complete original meaning solely
++    as old-domain corollary premises; they do not verify a loader or binding.
++  * In the low-level domain, the software part of `KernPlan` (handler/entry
++    protocol, permitted nesting and preservation) and software `ImBereichO`
++    are derived from (b-low). Architectural masking/routing and true device
++    footprints remain named hardware behavior in (c-low). The original
++    `KernPlan` and `ImBereichO` inside-leg implications are unchanged in the
++    old-domain corollary. No fairness or handler termination is inferred.
+@@ -208,0 +254,7 @@
++  For `GabbroZielLow`, software implementation facts in reading assumptions
++  (2) atomic lowering, (3) lock acquire/release and (5) foreign/register replay
++  become certificate/bridge obligations in (b-low); hardware ordering remains
++  named in (c-low). Assumption (1)'s W-model adequacy is not claimed proved;
++  (4)'s carrier locations acquire the physical alias realization proof.
++  Intermediate ASM actions are not collapsed into an atomic G step without a
++  proved refinement. No stronger C11, fairness or hardware-latency claim follows.
+@@ -281 +333,6 @@
+-  * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
++  The low-level extension claims neither general termination, scheduler fairness,
++  arbitrary guest correctness, unbounded physical memory, arbitrary stack depth,
++  hardware time nor an implicit loader/reset protocol. Its finite ABI stack
++  obligations apply only to its certified entries/bodies. Other NOT CLAIMED
++  items remain, except the specifically certified architectural-boundary cases
++  now stated by `GabbroZielLow`; old-domain claims are unchanged.  * source-accepted pointer interface contracts: `CallContract` states the interface and `PtrVerfeinert` (O43)
+```
+
+Definition-layer contract for that exact header change:
+
+- `B : LowBoundary E` describes the selected profile, exact source/byte/body
+  bindings, entry-state specification, device relations and physical realization.
+  It contains **data and structural checks**, not a premise asserting the desired
+  safety theorem. Its certificate obligations are source-derived propositions.
+- `LowPflicht E B` is one shared software-duty record. Its fields are universal
+  body/ABI refinement under declared preconditions; caller-prefix duty;
+  provider/owner/loan realization; boot/entry/root/spawn establishment;
+  interrupt/guest preservation; and exact access/atomic-order/byte/relocation
+  correspondence. Each field is discharged through L08–L10's generic theorems,
+  not by assuming correctness on reachable machines or checking one fixture.
+- Precisely, `NutzerPflichtLow E B` is `NutzerPflicht E ∧ LowPflicht E B`, and
+  `NutzerPflichtLowA E B` is `NutzerPflichtA E ∧ LowPflicht E B`. This is what
+  **the user obligation gains**; the old logic/start structures remain the core
+  projections for existing theorem users. It avoids duplicating their logic and
+  makes the extra duties explicit rather than defaulting a missing proof to true.
+- `LowHardware B` includes only explicitly hardware-classified instances.
+  Unknown provenance is refused in (a-low). Software instruction correctness is
+  a theorem about the selected instruction model; adequacy of that model to the
+  CPU remains a precisely named hardware premise, not a new Lean `axiom`.
+- `GabbroZielLow` universally quantifies unit, checked boundary, all allowed
+  starting states, hardware behaviors, budgets and architectural interleavings.
+  From (a-low), (b-low), (c-low), (d-low), every reachable prefix satisfies the
+  existing goal's legs at its related G/GX prefix plus the four new legs above.
+  Stuttering is allowed only when the physical trace/refinement accounts for it;
+  nonreturning/faulting/infinite runs need their corresponding simulation cases.
+  This is not restricted to a hand-picked boot program or one oracle answer.
+- For conditional software contracts derive frame/ensures/extents **at admissible
+  call prefixes**. Do not manufacture the old all-world `GutO`/`AxVertragO` from
+  a preconditioned certificate. If an all-world lemma is consumed internally,
+  use a proved totalized relation with the declared precondition outside its
+  admissible domain and prove observational equivalence at all actual calls.
+  No executable fallback or invented hardware stop may discharge the difference.
+- **Old-domain corollary:** specialize the same generic safety proof to the
+  existing abstract G/GX boundary with identity simulation, unchanged
+  `HardwareAnnahmen`, `Laufzeit`, and the old inside-leg `ImBereichO/KernPlan`
+  hypotheses. Its conclusion is exactly the existing `ZielFX` (and existing SC/
+  link specializations), with no finite physical/privilege claim. Keep
+  `GabbroZiel`, `gabbro_ziel`, `NutzerPflicht(A)` and existing consumers' exact
+  signatures; their proofs become these restrictions. This does **not** derive
+  arbitrary ASM certificates from old oracle assumptions or keep assumption-only
+  source certification. Old unproved software inputs refuse at the new front end.
+
+`Fair`, waiting premises, the separate termination measure duties, linked-unit
+hardware agreement and the rest of the NOT CLAIMED list remain. No `ensures`
+is inferred and no refusal becomes a warning. The owner review must cover this
+whole premise/conclusion change and the C08-dependent definition realization,
+not merely the comment wording. Implementation must present the actual final
+`Spec.lean`/definition diff again if completed C interfaces change these types.
+
+**Dependency graph and merge order.** `U0` is an external gate, not a package:
+all C01–C18 and scoped returns complete, connected userspace integration green.
+All edges are prerequisites; L08 joins both architecture branches. This is a
+planning graph, not permission to start low-level implementation during C work.
+
+```mermaid
+flowchart TD
+  U0["U0: C01–C18 + scoped returns + userspace integration green"] --> L01
+  L01 --> L02
+  L02 --> L03
+  L03 --> L04
+  L04 --> L05
+  L04 --> L06["L06: AArch64 EL1 domain"]
+  L04 --> L07["L07: x86 16/32/64 domain + stub proof"]
+  L06 --> L08
+  L07 --> L08
+  L05 --> L09
+  L08 --> L09
+  L09 --> L10
+  L07 --> L10
+  L10 --> L11["L11: reviewed Spec + goal"]
+  Owner["Owner sees actual proposed Spec diff before merge"] --> L11
+  L11 --> L12
+  L12 --> L13
+  L13 --> L14
+  L07 --> L14
+  L14 --> L15
+```
+
+After L04, **L05, L06 and L07 may run in parallel**, in separate worktrees and
+new modules with agreed interfaces. L08's architecture-neutral composition
+proofs may be drafted against the frozen interface while L06/L07 progress;
+its final binding instances and merge wait for both. L09 can prepare footprint/
+alias lemmas after L03/L05 but cannot claim completion before L08. L10 then L11
+are the main proof integration chain. L12–L14 are deliberately downstream of
+canonical model/proof admission; independent Rust diagnostic/test preparation
+must not enable acceptance early. L15 owns final combined validation, with
+package witnesses prepared throughout. The lead alone builds the single
+integration branch, honors global build locks/memory scopes, merges shared
+inductive changes serially and resolves current C-interface drift before work.
+
+Specific C dependencies explain the global gate: C01/C03 provide complete values
+and reason exits; C02/C17 module/library expansion and substitution; C04/C05
+transition/invariant contracts; C06/C07 named/indirect call contracts; C08 actual
+software bindings/providers; C09 owner provenance/escrow/loans; C10 multicore
+quiescence; C11 scoped cleanup and reference lifetimes; C12 region capabilities,
+spaces/rights and realization; C13 arithmetic/layout; C14 checked profiles,
+entry/guest metadata; C15 core identity/accumulator preservation; C16 proof-duty
+producer/consumer accounting; C18 allocation/reset/release provenance. None is
+waived because an isolated low-level lemma could be written first.
+
+| Package | Sol-days | Lean LOC | Rust LOC |
+|---|---:|---:|---:|
+| L01 finite addresses | 4–7 | 600–1,000 | 0 |
+| L02 contexts/authority | 9–15 | 1,600–2,600 | 0 |
+| L03 scoped RAM views | 8–13 | 1,400–2,300 | 0 |
+| L04 canonical architectural bodies | 10–17 | 1,800–3,000 | 0 |
+| L05 device transactions | 9–15 | 1,500–2,600 | 0 |
+| L06 AArch64 domain/binding | 20–35 | 3,500–6,500 | 0 |
+| L07 x86 mixed-mode domain/stub | 35–60 | 6,000–11,000 | 0 |
+| L08 body/ABI/byte refinement | 16–27 | 2,800–4,800 | 0 |
+| L09 alias/ownership/interleaving bridge | 20–34 | 3,500–6,000 | 0 |
+| L10 user boot/entry/handoff | 12–20 | 2,100–3,600 | 0 |
+| L11 reviewed goal | 10–17 | 1,800–3,000 | 0 |
+| L12 canonical parser/exporter | 10–17 | 1,200–2,000 | 150–300 |
+| L13 Rust checks/proof bridge | 12–20 | 1,400–2,400 | 1,200–2,000 |
+| L14 named binding inclusion | 7–12 | 800–1,400 | 400–700 |
+| L15 validation/claim closure | 8–14 | 900–1,600 | 600–1,000 |
+| **Total effort / gross lines** | **190–323** | **30,900–53,800** | **2,350–4,000** |
+
+Ranges include proof/fixture/integration effort within this front-end/model
+scope. The largest uncertainty and critical path are the mixed-mode x86 domain,
+physical alias/interleaving replay, and software-boundary/goal integration;
+parallel instruction-domain work shortens elapsed time but not those proof
+joins. The serial dependency-chain estimate is 161–273 Sol-days after U0 if
+L05/L06/L07 each have their own lane; total engineering effort remains 190–323
+Sol-days. These are planning estimates, not a calendar promise or model benchmark.
+No estimate includes backend implementation or runner execution. Completion
+means the named checked source/model cases and all required generic proofs are
+connected in this scope, with refused and unmeasured cases reported. New
+source-to-IR, full-image execution, or CPU differential validation remains
+**deferred, not in scope**; this design changes no measured compiler coverage.
