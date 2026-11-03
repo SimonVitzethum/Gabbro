@@ -77,24 +77,24 @@ theorem ez_arch : eintrittB ["worker"] { ezE with arch := "z80" } = false := by 
 theorem ez_wurzel : eintrittB ["worker"] { ezE with dispatch := ["ghost"] } = false := by decide
 theorem ez_kills : eintrittB ["worker"] { ezE with kills := ["rax"] } = false := by decide
 
-/-- Source text still lacks an explicit isolation-service binding. A named
+/-- A source declaration without an explicit isolation service is refused. A named
     `assume` does not repair it, even when it names a declared falsifier. -/
 theorem ez_gast_quelle :
-    gastQuelleFehler "x86_64" [] = "entrust: missing isolation service binding" := by decide
+    gastQuellePruefung "x86_64" [] "" "" none = .error "entrust: missing isolation service binding" := by decide
 
 /-- Unknown architecture has no ordinary userspace ABI adapter. -/
 theorem ez_gast_abi :
-    gastQuelleFehler "z80" [] = "entrust: unknown userspace ABI" := by decide
+    gastQuellePruefung "z80" [] "" "" none = .error "entrust: unknown userspace ABI" := by decide
 
 /-- Register-state handover remains excluded, independently of the guest's
     name, stack or historical assumption. -/
 theorem ez_gast_register :
-    gastQuelleFehler "x86_64" [.binds "argument" "rdi"] =
-      "entrust: register-state or privileged transfer is excluded" := by decide
+    gastQuellePruefung "x86_64" [.binds "argument" "rdi"] "" "" none =
+      .error "entrust: register-state or privileged transfer is excluded" := by decide
 
 /-- Joint instance of the generic source refusal theorem. -/
 theorem gastQuelle_ohne_dienst_zeuge :
-    gastQuelleFehler "aarch64" [] = "entrust: missing isolation service binding" :=
+    gastQuellePruefung "aarch64" [] "" "" none = .error "entrust: missing isolation service binding" :=
   gastQuelle_ohne_dienst "aarch64" (by decide)
 
 end Gabbro.Grammatik.Parser.ProfilBindung
