@@ -2,6 +2,7 @@
    claims that the unadmitted IR candidate has a connected simulation. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Probe
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Emission
 public section
 
 namespace Gabbro.Stage0.Senke.ConsumeProbe
@@ -83,6 +84,13 @@ theorem next_measure_zeuge :
     proved. Neither the positive source witness nor its logical failure twin
     is reported as a compiling language case. -/
 theorem lowering_refused_zeuge : lowered true = none ∧ lowered false = none := ⟨rfl, rfl⟩
+
+/-- The replacement produces concrete instruction candidates with the real
+    table loads, stores and nested scans. This does not assert admission by
+    lowS or execution correctness of those candidates. -/
+theorem candidate_emission_zeuge :
+    (candidate true).isSome = true ∧ (candidate false).isSome = true := by
+  decide +kernel
 
 /-- Unsupported scoped return retains its precise refusal, independently of
     the consuming loop's missing simulation. -/
