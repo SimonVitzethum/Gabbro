@@ -114,7 +114,7 @@ def druckItem : SItemTief → List Token
         | none => []) ++
       [.wort "from"] ++ rohToks a.quelle ++
       (match a.gebunden with
-        | some g => [.wort "=>", nameTok g] ++ (match a.sonst with
+        | some g => [.zeichen "=>", nameTok g] ++ (match a.sonst with
           | some (e, blk) => [.wort "else", .zeichen "(", nameTok e, .zeichen ")"] ++ druckAnw blk
           | none => [])
         | none => []) ++
