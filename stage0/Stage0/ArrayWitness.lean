@@ -28,7 +28,7 @@ theorem carriers : output.compiled.unit.globs.length = 0 ∧ output.compiled.uni
 
 theorem params_empty : (declOf output.compiled.unit).params output.compiled.main = [] := by decide +kernel
 
-theorem image_bound : Runner.Prog.IMG + output.image.bytes.length < 2 ^ 64 := by decide +kernel
+theorem image_bound : Runner.Prog.IMG + output.bytes.length < 2 ^ 64 := by decide +kernel
 
 attribute [irreducible] output
 
@@ -79,10 +79,28 @@ attribute [irreducible] initial
 /-- The actual accepted array source/image has jointly inhabited initial contracts. -/
 theorem source_image_joint_zeuge : emit text 64 = .ok output ∧ exactShape = true ∧
     Frontend.ArrayMeaning output.compiled.unit output.compiled.source.scopes item ∧
-    Nonempty (SourceWitness.InitialState output) :=
-  ⟨accepted_image, array_shape, array_constant_typed_zeuge, ⟨initial⟩⟩
+    Nonempty (SourceWitness.InitialState output) ∧
+    initial.world = Senke.initialWorld output.compiled.unit output.initialValid ∧
+    output.image.args = Senke.encodeEnv output.image.Y output.args ∧
+    output.image.roots = output.starts.map (·.1) ∧
+    output.image.rootArgs = output.starts.map (fun start => Senke.encodeEnv output.image.Y start.2) ∧
+    output.startPlan.concurrent.map (fun start => (start.path, start.sourceArgs)) =
+      StartArgument.sourceIdentities (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) :=
+  ⟨accepted_image, array_shape, array_constant_typed_zeuge, ⟨initial⟩, rfl,
+    initial.start_environments.1, initial.start_environments.2.1,
+    initial.start_environments.2.2, output.starts_source⟩
 
 theorem entry_ir_simulation_zeuge :
     output.Simulates initial.oracle initial.memory initial.world := initial.simulates
+
+theorem roots_ir_simulation_zeuge :
+    ∀ j (hj : j < output.starts.length), output.RootSimulates initial.oracle initial.memory initial.world j hj :=
+  initial.roots_simulate
+
+theorem initialized_start_environments_zeuge :
+    output.image.args = Senke.encodeEnv output.image.Y output.args ∧
+    output.image.roots = output.starts.map (·.1) ∧
+    output.image.rootArgs = output.starts.map (fun start => Senke.encodeEnv output.image.Y start.2) :=
+  initial.start_environments
 
 end Gabbro.Stage0.ArrayWitness

@@ -18,7 +18,7 @@ theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,
-      emit text K options = .ok output ∧ output.image.bytes = bytes ∧
+      emit text K options = .ok output ∧ output.bytes = bytes ∧
       CanonicalSourceProgram output.compiled ∧ output.Correct ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (name : String)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
@@ -36,14 +36,13 @@ theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,
-      emit text K options = .ok output ∧ output.image.bytes = bytes ∧ output.Correct ∧
+      emit text K options = .ok output ∧ output.bytes = bytes ∧ output.Correct ∧
       ∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (identity : Nat) (reordered : Bool) (sides : List (Ty × USide))
         (args : Args (declOf output.compiled.unit) Γ Λ (sides.map (·.1)))
         (schema : { s : URecord // s.ty = .prod identity (sides.map (·.1)) }),
         output.compiled.unit.exportGate = .ok () →
-        lowProductArgs output.compiled.unit Γ Λ fn er
-          (lowWertAtE output.compiled.unit Γ Λ fn er) (sides.map (·.1)) (sides.map (·.2)) = .ok args →
+        lowProductArgs output.compiled.unit Γ Λ fn er sides = .ok args →
         uRecordOf output.compiled.unit.records (.prod identity (sides.map (·.1))) = .ok schema →
         lowWertE output.compiled.unit Γ Λ fn er (.product identity reordered sides) =
           .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩ := by
@@ -112,7 +111,7 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     (text : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild text K options = .ok bytes) :
     ∃ output : Emitted text K options,
-      emit text K options = .ok output ∧ output.image.bytes = bytes ∧
+      emit text K options = .ok output ∧ output.bytes = bytes ∧
       CanonicalSourceProgram output.compiled ∧ output.Correct ∧
       Konst.checkSourceConstants (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) = .ok () ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
@@ -173,12 +172,12 @@ theorem exported_batch2_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
       emit ArrayWitness.text 64 = .ok output ∧ output.Correct ∧
       CanonicalSourceProgram output.compiled ∧
       Frontend.uninitializedExport (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) output.compiled.unit = false := by
-  have image : irBild ArrayWitness.text 64 = .ok ArrayWitness.output.image.bytes := by
-    change (emit ArrayWitness.text 64).map (fun output => output.image.bytes) = _
+  have image : irBild ArrayWitness.text 64 = .ok ArrayWitness.output.bytes := by
+    change (emit ArrayWitness.text 64).map (fun output => output.bytes) = _
     rw [ArrayWitness.accepted_image]
     rfl
   obtain ⟨output, emitted, _, canonical, correct, _⟩ :=
-    exported_batch2_ir_correct ArrayWitness.text 64 ArrayWitness.output.image.bytes image
+    exported_batch2_ir_correct ArrayWitness.text 64 ArrayWitness.output.bytes image
   exact ⟨output, emitted, correct, canonical, output.compiled.initializer_exports⟩
 
 end Gabbro.Stage0

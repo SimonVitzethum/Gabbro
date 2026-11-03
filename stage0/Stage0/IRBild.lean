@@ -9,6 +9,7 @@ public import Stage0.Compiler
 public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Images.Bild
+public import Stage0.Senke.Images.InitialExecution
 public import Stage0.Senke.Welt.Anordnung
 public import Stage0.Senke.Welt.GlobalAlignment
 public import Stage0.Senke.Welt.MainEnv
@@ -85,13 +86,18 @@ def Emitted.starts {src : String} {K : Nat} {options : Profil.Options} (output :
     List (Σ f : (declOf output.compiled.unit).Fn, Env (declOf output.compiled.unit) ((declOf output.compiled.unit).params f)) :=
   output.startPlan.starts (Senke.initialWorld output.compiled.unit output.initialValid)
 
+/-- The sole emitted payload, including the canonical world and all typed start frames. -/
+def Emitted.bytes {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) : List Runner.B :=
+  output.image.initializedBytes output.compiled.unit output.initialValid
+
 def irBild (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) : Except String (List Runner.B) :=
-  (emit src K options).map (fun output => output.image.bytes)
+  (emit src K options).map (fun output => output.bytes)
 
 /-- Every actual returned byte list comes from this same certified source/program/image path. -/
 theorem irBild_emitted (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
-    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.image.bytes = bytes := by
+    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.bytes = bytes := by
   unfold irBild at h
   cases he : emit src K options with
   | error e => simp only [he] at h; contradiction
@@ -138,7 +144,7 @@ def Emitted.Correct [Runner.IR.Kern] {src : String} {K : Nat} {options : Profil.
   CanonicalSourceProgram output.compiled ∧
   ∀ (O : Orakel (declOf output.compiled.unit)) (m : Runner.Mem)
     (σ : World (declOf output.compiled.unit)),
-    Senke.BytesAt m Runner.Prog.IMG output.image.bytes →
+    Senke.BytesAt m Runner.Prog.IMG output.bytes →
     Senke.WeltAt m output.image.Y σ → Senke.TorOK output.image.Y O → Senke.SichtOK O →
     output.Simulates O m σ ∧ ∀ j (hj : j < output.starts.length), output.RootSimulates O m σ j hj
 
@@ -153,13 +159,13 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
     congr 1
   constructor
   · unfold Emitted.Simulates
-    have hr := Senke.bild_ok_u output.emission hfs hm σ
+    have hr := Senke.bild_initialized_ok_u output.initialValid output.emission hfs hm σ
       (fun τ x => Senke.mainEnv_valid output.image.Y _ output.args output.pointers τ x) hWa hT hV
     generalize rufAt output.compiled.program O output.image.passes output.image.depth
       output.compiled.main σ output.args = outcome at hr ⊢
     cases outcome <;> exact hr
   · intro j hj
-    exact Senke.bild_wurzel_ok_u output.emission hfs hm j hj σ
+    exact Senke.bild_initialized_wurzel_ok_u output.initialValid output.emission hfs hm j hj σ
       (output.startPlan.starts_valid _ output.image.Y output.starts[j] (List.getElem_mem hj)) hWa hT hV
 
 /-- The emitted root prefix preserves every original concurrent member, including duplicate names. -/
@@ -227,7 +233,7 @@ theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
 
 theorem irBild_correct [Runner.IR.Kern] [Senke.CloneOK] (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
-    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.image.bytes = bytes ∧ output.Correct ∧ output.Placed := by
+    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.bytes = bytes ∧ output.Correct ∧ output.Placed := by
   obtain ⟨output, he, hb⟩ := irBild_emitted src K bytes h
   exact ⟨output, he, hb, output.correct, output.placed⟩
 
