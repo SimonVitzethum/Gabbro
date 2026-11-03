@@ -44,7 +44,7 @@ theorem kernAbfrageGestaltB_iff {D : Deklaration} {q : D.Ax} {N : Nat}
     (hT : ∀ t : D.Tab, t ∈ tabs) (hG : ∀ g : D.Glob, g ∈ globs) :
     kernAbfrageGestaltB D q N tabs globs = true ↔ KernAbfrageGestalt D q N := by
   unfold kernAbfrageGestaltB KernAbfrageGestalt
-  simp only [Bool.and_eq_true, decide_eq_true_eq]
+  simp only [Bool.and_eq_true, decide_eq_true_eq, and_assoc]
   constructor
   · rintro ⟨hN, hP, hE, hR, hW, hGs⟩
     refine ⟨hN, hP, hE, hR, fun t => ?_, fun g => ?_⟩
@@ -90,12 +90,10 @@ theorem kernAbfrageHerkunftB_iff {D : Deklaration} {q : D.Ax} :
   constructor
   · rintro ⟨h1, h2⟩
     refine ⟨h1, ?_⟩
-    match hq : D.axBeleg q with
-    | none => rw [hq] at h2; exact absurd h2 (by decide)
-    | some w => exact ⟨w, hq⟩
+    exact Option.isSome_iff_exists.mp h2
   · rintro ⟨h1, w, hw⟩
     refine ⟨h1, ?_⟩
-    rw [hw]
+    rw [hw]; rfl
 
 /-! ## 3. The identity
 
