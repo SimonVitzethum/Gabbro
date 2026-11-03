@@ -229,7 +229,7 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung.Einbettun
       have hqmem : E.marke q.1 ∈ ((S.owner.map E.marke).inputs.map Prod.fst) := by
         have hqin : q ∈ S.owner.inputs := by
           simp only [OwnerFlow.inputs]
-          exact List.mem_append.mpr (Or.inr (Or.inl hqm))
+          exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inl hqm)))
         have hmem : (E.marke q.1, q.2) ∈ (S.owner.map E.marke).inputs := by
           rw [OwnerFlow.inputs_map]
           exact List.mem_map.mpr ⟨q, hqin, rfl⟩
@@ -245,7 +245,7 @@ theorem OwnerFlow.escrowReady_map {D D' : Deklaration} (E : Einbettung.Einbettun
       have hqmem : E.marke q.1 ∈ ((S.owner.map E.marke).inputs.map Prod.fst) := by
         have hqin : q ∈ S.owner.inputs := by
           simp only [OwnerFlow.inputs]
-          exact List.mem_append.mpr (Or.inr (Or.inr hqm))
+          exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inr hqm)))
         have hmem : (E.marke q.1, q.2) ∈ (S.owner.map E.marke).inputs := by
           rw [OwnerFlow.inputs_map]
           exact List.mem_map.mpr ⟨q, hqin, rfl⟩
