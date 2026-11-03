@@ -371,8 +371,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
             (evOk_append (evOk_lese _ _ (by
               simp only [List.all_append, Bool.and_eq_true]; exact ⟨hC.1, hC.2.1⟩))
               (evOk_lese _ _ hC.2.2.1))⟩
-        simp only [hs₃, hs₂, hs₁, lese_spur, List.append_assoc]
-        rfl
+        simp only [hs₃, hs₂, hs₁, lese_spur, List.append_assoc] <;> rfl
     | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead
         σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
         simp only [rufUpdateG_self]
@@ -382,8 +381,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
           evOk_append (evOk_lese _ _ (by
             simp only [List.all_append, Bool.and_eq_true]; exact ⟨hC.1, hC.2.1⟩))
             (evOk_lese _ _ hC.2.2.1)⟩
-        simp only [hs₂, hs₁, lese_spur, List.append_assoc]
-        rfl
+        simp only [hs₂, hs₁, lese_spur, List.append_assoc] <;> rfl
     | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead
         σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
         simp only [rufUpdateG_self]
@@ -400,8 +398,7 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         refine ⟨leseEv σm Λ inv.orte ++ leseEv σ' Λ mass.orte, ?_,
           evOk_append (evOk_lese _ _ hC.2.2.2.1) (evOk_lese _ _ hC.2.2.2.2.1)⟩
         simp only [hs₁, hsm, lese_spur, List.append_assoc,
-          leave_welt' _ _ _ _ _ _ _ _ hstep]
-        rfl
+          leave_welt' _ _ _ _ _ _ _ _ hstep] <;> rfl
     | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
         hnext hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall neum hneum hΛ =>
         simp only [rufUpdateG_self]
