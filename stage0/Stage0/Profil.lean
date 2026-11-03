@@ -2,6 +2,7 @@
    not semantics for boot, entrust or hardware profiles. -/
 module
 public import Grammatik.Parser.Profil.Auswahl
+public import Grammatik.Parser.Profil.Pipeline
 public import Grammatik.Parser.Profil.Register
 @[expose] public section
 
@@ -45,7 +46,9 @@ def checkEntry (e : SEingang) : Except String Unit := do
     throw s!"ir: entry {e.name}: architecture differs from the Stage0 runner image"
 
 /-- Check recursively before flattening can hide an unsupported declaration. No declarations
-    are removed; frozen canonical model prerequisites remain explicit refusals. -/
+    are removed; frozen canonical model prerequisites remain explicit refusals. Admitted profile
+    blocks never reach this check: `prepareItems` strips them after admission (their content lives
+    in the checked binding), so the `profT` arm below only fires for direct callers. -/
 def checkItems : Nat → List SItemTief → Except String Unit
   | 0, _ => .error "ir: profile validation nesting limit"
   | _ + 1, [] => .ok ()
@@ -87,7 +90,8 @@ def abschnittFehler : List SItemTief → Option String := abschnittFehlerL []
 
 /-- An accepted input carries exact canonical build selection, the checked profile
     binding of the selected tree (`ProfileBinding`, admitted by `bindungB`) with no
-    named sections, and the runner ABI check. -/
+    named sections, and the runner ABI check. The elaborator sees `elaborierbar`:
+    the selected tree without its admitted profile blocks. -/
 structure Prepared (options : Options) (items : List SItemTief) where
   selected : List SItemTief
   selection : selected = Auswahl.waehleL options.mode items
@@ -96,6 +100,20 @@ structure Prepared (options : Options) (items : List SItemTief) where
   bindung : ProfilBindung.ProfileBinding
   bindungOk : ProfilBindung.bindungB bindung = true
   abschnittFrei : abschnittFehler selected = none
+
+/-- The tree the elaborator sees: the selected tree without its admitted profile blocks.
+    Their content lives in the checked binding (`bindung`), not in the elaborated unit
+    (`ProfilBindung.ohneProfilL`: profiles are metadata, as in `uebersetzeWahlItems`). -/
+def Prepared.elaborierbar {options : Options} {items : List SItemTief}
+    (result : Prepared options items) : List SItemTief :=
+  ProfilBindung.ohneProfilL result.selected
+
+/-- The elaborated tree is the stripped canonical selection. -/
+theorem Prepared.elaborierbar_eq {options : Options} {items : List SItemTief}
+    (result : Prepared options items) :
+    result.elaborierbar = ProfilBindung.ohneProfilL (Auswahl.waehleL options.mode items) := by
+  unfold Prepared.elaborierbar
+  rw [result.selection]
 
 def prepareItems (options : Options) (items : List SItemTief) :
     Except String (Prepared options items) := do
@@ -106,7 +124,7 @@ def prepareItems (options : Options) (items : List SItemTief) :
         match he : abschnittFehler selected with
         | some e => throw e
         | none =>
-          checkItems 100000 selected
+          checkItems 100000 (ProfilBindung.ohneProfilL selected)
           pure ⟨selected, rfl, reserved, h, ProfilBindung.ProfileBinding.aus selected, hb, he⟩
       else throw "ir: profile binding refused: modes, assumptions or library requirements are not consistent"
     else throw "build selection: TESTBUILD is reserved (G003)"
