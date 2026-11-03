@@ -116,9 +116,27 @@ theorem execEnd_ru_narrow {V : Vertrag D}
     : execEnd O.mitRuhe passes R' (ruEnd (.narrow (lo := zi_lo) (hi := zi_hi) e lo' hi' sonst rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.narrow (lo := zi_lo) (hi := zi_hi) e lo' hi' sonst rest : Endblock D V l Γ Λ) σ ρ) :=
   by
   simp only [ruEnd, execEnd]
-  simp only [ruE_orte, lese_worldR]
-  erw [eval_ru]
-  simp only [valR_int]
+  have hread : (worldR σ).lese (Λ.map resR) (ruE e).orte =
+      worldR (σ.lese Λ e.orte) :=
+    (lese_worldR σ Λ _).trans
+      (congrArg (fun os => worldR (σ.lese Λ os)) (ruE_orte e))
+  have hv : @Eq (Zahl zi_lo zi_hi)
+      (eval ((worldR σ).lese (Λ.map resR) (ruE e).orte) (ruE e)
+        ((worldR σ).lese (Λ.map resR) (ruE e).orte) (envR ρ))
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) :=
+    (congrArg (fun W => eval W (ruE e) W (envR ρ)) hread).trans
+      (eval_ru (σ.lese Λ e.orte) (σ.lese Λ e.orte) e ρ)
+  let branch (W : World D.mitRuhe) (z : Zahl zi_lo zi_hi) :
+      EndAusgang (vertragR V) l (Γ.map tyR) :=
+    if h : lo' ≤ z.n ∧ z.n ≤ hi' then
+      (execEnd O.mitRuhe passes R' (ruEnd rest) W
+        (Env.cons (τ := .int lo' hi') ⟨z.n, h.1, h.2⟩ (envR ρ))).schrumpf
+    else execEnd O.mitRuhe passes R' (ruEnd sonst) W (envR ρ)
+  change branch ((worldR σ).lese (Λ.map resR) (ruE e).orte)
+    (eval ((worldR σ).lese (Λ.map resR) (ruE e).orte) (ruE e)
+      ((worldR σ).lese (Λ.map resR) (ruE e).orte) (envR ρ)) = _
+  erw [hv, hread]
+  dsimp only [branch]
   by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
   · erw [dif_pos hc, dif_pos hc]
@@ -145,9 +163,27 @@ theorem execEnd_ru_narrowRequired {V : Vertrag D}
     : execEnd O.mitRuhe passes R' (ruEnd (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.narrowRequired (lo := zi_lo) (hi := zi_hi) e lo' hi' rest : Endblock D V l Γ Λ) σ ρ) :=
   by
   simp only [ruEnd, execEnd]
-  simp only [ruE_orte, lese_worldR]
-  erw [eval_ru]
-  simp only [valR_int]
+  have hread : (worldR σ).lese (Λ.map resR) (ruE e).orte =
+      worldR (σ.lese Λ e.orte) :=
+    (lese_worldR σ Λ _).trans
+      (congrArg (fun os => worldR (σ.lese Λ os)) (ruE_orte e))
+  have hv : @Eq (Zahl zi_lo zi_hi)
+      (eval ((worldR σ).lese (Λ.map resR) (ruE e).orte) (ruE e)
+        ((worldR σ).lese (Λ.map resR) (ruE e).orte) (envR ρ))
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ) :=
+    (congrArg (fun W => eval W (ruE e) W (envR ρ)) hread).trans
+      (eval_ru (σ.lese Λ e.orte) (σ.lese Λ e.orte) e ρ)
+  let branch (W : World D.mitRuhe) (z : Zahl zi_lo zi_hi) :
+      EndAusgang (vertragR V) l (Γ.map tyR) :=
+    if h : lo' ≤ z.n ∧ z.n ≤ hi' then
+      (execEnd O.mitRuhe passes R' (ruEnd rest) W
+        (Env.cons (τ := .int lo' hi') ⟨z.n, h.1, h.2⟩ (envR ρ))).schrumpf
+    else .logik .kapazitaet
+  change branch ((worldR σ).lese (Λ.map resR) (ruE e).orte)
+    (eval ((worldR σ).lese (Λ.map resR) (ruE e).orte) (ruE e)
+      ((worldR σ).lese (Λ.map resR) (ruE e).orte) (envR ρ)) = _
+  erw [hv, hread]
+  dsimp only [branch]
   by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
       (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
   · erw [dif_pos hc, dif_pos hc]
