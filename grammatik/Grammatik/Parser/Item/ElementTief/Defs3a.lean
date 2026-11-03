@@ -196,6 +196,16 @@ def parseStackClauses (f : Nat) (toks : List Token) :
       pure (n :: ns, r)
     | _ => pure ([], toks)
 
+/-- `result area REGISTER`: an explicit hidden argument, never a raw source
+    pointer conversion or an implicit choice of provider ABI. -/
+def parseResultArea (toks : List Token) : Except String (Option String × List Token) :=
+  match toks with
+  | .wort "result" :: rest => do
+    let rest ← nimmWort "area" rest
+    let (register, rest) ← nimmName rest
+    pure (some register, rest)
+  | _ => pure (none, toks)
+
 /-- `sysbind` (SYNTAX.md 12.1): `number e regs in {…} regs out {…} {stack r} clobbers {…} errors {…}`. -/
 def parseBind (f : Nat) (toks : List Token) :
     Except String (SBind × List Token) :=
@@ -210,12 +220,13 @@ def parseBind (f : Nat) (toks : List Token) :
     let r6 ← nimmWort "regs" r5
     let r7 ← nimmWort "out" r6
     let (ro, r8) ← parseRegBindListe f r7
+    let (area, r8) ← parseResultArea r8
     let (sk, r9) ← parseStackClauses f r8
     let r10 ← nimmWort "clobbers" r9
     let (cb, r11) ← parseNamenEingeklammert f r10
     let r12 ← nimmWort "errors" r11
     let (em, r) ← parseErrs f r12
-    pure ({ id := num, ins := ri, outs := ro, stack := sk, dirty := cb, codes := em }, r)
+    pure ({ id := num, ins := ri, outs := ro, stack := sk, dirty := cb, codes := em, resultArea := area }, r)
 
 
 end Gabbro.Grammatik.Parser
