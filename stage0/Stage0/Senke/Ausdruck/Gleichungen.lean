@@ -120,7 +120,9 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_strCat (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (.strCat s t) d =
-    (if n + m ≤ 1 then (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d else lowE (currentOld := currentOld) L (reserved := reserved) s d) else none) := by rfl
+    (if n + m ≤ 1 then (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d else lowE (currentOld := currentOld) L (reserved := reserved) s d) else
+      strCatSpanL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s (d + (n + m + 1)))
+        (lowE (currentOld := currentOld) L (reserved := reserved) t (d + (n + m + 1) + (stringCapacity n + 1)))) := by rfl
 
 @[lowE_eqs] theorem lowE_strGet (s : Expr D Γ Λ (.str n)) (i : Expr D Γ Λ (.int lo hi)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (.strGet s i) d =
@@ -138,7 +140,9 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
 
 @[lowE_eqs] theorem lowE_strLt (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.str m)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (.strLt s t) d =
-    (if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1)) else none) := by rfl
+    (if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1)) else
+      strLtSpanL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s (d + 1))
+        (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1 + (stringCapacity n + 1)))) := by rfl
 
 @[lowE_eqs] theorem lowE_strWeit (m : Nat) (s : Expr D Γ Λ (.str n)) :
     lowE (currentOld := currentOld) L (reserved := reserved) (.strWeit m s) d =
