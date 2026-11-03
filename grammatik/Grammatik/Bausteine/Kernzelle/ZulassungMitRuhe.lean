@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Bausteine.Kernzelle.Zulassung
 public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T3
 
 @[expose] public section
 
@@ -9,7 +10,7 @@ public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
 
 namespace Gabbro.Grammatik.Kernzelle
 
-open Gabbro.Grammatik Gabbro.Grammatik.Isabelle.AccumulatesMonoid Gabbro.Grammatik.Zielsatz
+open Gabbro.Grammatik Gabbro.Grammatik.Isabelle.AccumulatesMonoid
 
 variable {D : Deklaration}
 
@@ -33,7 +34,7 @@ theorem gtyp_mitRuhe (g : D.Glob) : D.mitRuhe.gtyp g = tyR (D.gtyp g) := rfl
 
 /-- The idle root writes nothing. -/
 theorem traegerSchreibt_mitRuhe_ruhe (P : Programm D) (c : D.mitRuhe.Tab ⊕ D.mitRuhe.Glob) :
-    TraegerSchreibt P.mitRuhe none c = false := by
+    TraegerSchreibt (D := D.mitRuhe) none c = false := by
   cases c <;> rfl
 
 /-- Transfer of one declaration's admission to the idle-root program. -/
@@ -43,11 +44,11 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
     akkuZulaessig P.mitRuhe (fsRuhe fs) (AccumulatorDecl.mitRuhe a) := by
   obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
   refine ⟨?_, fun i => ?_, fun f' hf1 hf2 i => ?_, ?_, ?_, ?_, ?_, h7⟩
-  · refine ⟨h0.1, h0.2.1, h0.2.2.1, h0.2.2.2.1, fun i => ?_,
-      fun i j hij => h0.2.2.2.2.2.1 hij, fun i j hij => h0.2.2.2.2.2.2.1 hij,
-      fun hcon => h0.2.2.2.2.2.2.2 (Option.some_injective hcon)⟩
+  · obtain ⟨hN, hB, hG, hW, hT, hZ, hS, hUF⟩ := h0
+    refine ⟨hN, hB, hG, hW, fun i => ?_, hZ, hS,
+      fun hcon => hUF (Option.some.inj hcon)⟩
     show D.mitRuhe.gtyp (a.zellen i) = Ty.int a.lo a.hi
-    rw [gtyp_mitRuhe, h0.2.2.2.2.1 i]
+    exact congrArg tyR (hT i)
   · show D.mitRuhe.gbraucht (a.zellen i) = [Sum.inl (a.sperren i)]
     exact h1 i
   · cases f' with
@@ -60,22 +61,22 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
         have hf2' : f ≠ a.falte := fun hcon => hf2 (congrArg some hcon)
         obtain ⟨hw, hf⟩ := h2 f hf1' hf2' i
         refine ⟨?_, ?_⟩
-        · show TraegerSchreibt P.mitRuhe (some f) _ = false
-          simpa only [traegerSchreibt_mitRuhe] using hw
+        · show TraegerSchreibt (D := D.mitRuhe) (some f) _ = false
+          exact hw
         · show _ ∉ fussOrteG P.mitRuhe (some f)
           rw [fussOrteG_mitRuhe]
           exact hf
   · obtain ⟨h31, h32, h33, h34⟩ := h3
     refine ⟨?_, ?_, ?_, fun c => ?_⟩
     · show D.mitRuhe.params (some a.kernAbfrage) = []
-      rw [params_mitRuhe_some, h31]
+      exact congrArg (List.map tyR) h31
     · show D.mitRuhe.erg (some a.kernAbfrage) = some (Ty.int 0 _)
-      rw [erg_mitRuhe_some, h32]
+      exact congrArg (Option.map tyR) h32
     · show D.mitRuhe.gruende (some a.kernAbfrage) = 0
       rw [gruende_mitRuhe_some, h33]
-    · show TraegerSchreibt P.mitRuhe (some a.kernAbfrage) c = false
-      rw [traegerSchreibt_mitRuhe]
-      exact h34 c
+    · show TraegerSchreibt (D := D.mitRuhe) (some a.kernAbfrage) c = false
+      have hw := h34 c
+      cases c <;> exact hw
   · obtain ⟨h41, h42, h43, h44⟩ := h4
     refine ⟨?_, fun f' hf' => ?_, ?_, ?_⟩
     · show reachB P.mitRuhe (fsRuhe fs) (some a.aktualisiere) (some a.kernAbfrage) = true
@@ -86,38 +87,37 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
           rw [reachB_mitRuhe_nicht_ruhe P hAbg] at hf'
           cases hf'
       | some f =>
-          obtain ⟨g, rfl, hg⟩ := reach_mitRuhe_cases P hvoll hAbg hf'
-          obtain ⟨hcc, hm⟩ := h42 g hg
+          rw [reachB_mitRuhe P hvoll hAbg] at hf'
+          obtain ⟨hcc, hm⟩ := h42 f hf'
           refine ⟨fun c hc => ?_, ?_⟩
-          · have hc' : TraegerSchreibt P g c = true := by
-              simpa only [traegerSchreibt_mitRuhe] using hc
+          · have hc' : TraegerSchreibt f c = true := by
+              cases c <;> exact hc
             obtain ⟨i, hi⟩ := hcc c hc'
             exact ⟨i, hi⟩
-          · show mE (bodenM (some g)) (P.mitRuhe.rumpf (some g)) = true
+          · show mE (bodenM (some f)) (P.mitRuhe.rumpf (some f)) = true
             rw [rumpf_mitRuhe_mE]
             exact hm
     · show D.mitRuhe.params (some a.aktualisiere) = _
-      rw [params_mitRuhe_some, h43]
+      exact congrArg (List.map tyR) h43
     · show D.mitRuhe.erg (some a.aktualisiere) = _
-      rw [erg_mitRuhe_some, h44]
+      exact congrArg (Option.map tyR) h44
   · obtain ⟨h51, h52, h53⟩ := h5
     refine ⟨?_, ?_, fun f' hf' => ?_⟩
     · show D.mitRuhe.params (some a.falte) = []
-      rw [params_mitRuhe_some, h51]
+      exact congrArg (List.map tyR) h51
     · show D.mitRuhe.erg (some a.falte) = _
-      rw [erg_mitRuhe_some, h52]
+      exact congrArg (Option.map tyR) h52
     · cases f' with
       | none =>
           rw [reachB_mitRuhe_nicht_ruhe P hAbg] at hf'
           cases hf'
       | some f =>
-          obtain ⟨g, rfl, hg⟩ := reach_mitRuhe_cases P hvoll hAbg hf'
-          obtain ⟨hcc, hm⟩ := h53 g hg
+          rw [reachB_mitRuhe P hvoll hAbg] at hf'
+          obtain ⟨hcc, hm⟩ := h53 f hf'
           refine ⟨fun c => ?_, ?_⟩
-          · have hc' : TraegerSchreibt P g c = false := by
-              simpa only [traegerSchreibt_mitRuhe] using hcc c
-            exact hc'
-          · show mE (bodenM (some g)) (P.mitRuhe.rumpf (some g)) = true
+          · have hw := hcc c
+            cases c <;> exact hw
+          · show mE (bodenM (some f)) (P.mitRuhe.rumpf (some f)) = true
             rw [rumpf_mitRuhe_mE]
             exact hm
   · obtain ⟨q, hq⟩ := h6
@@ -135,12 +135,12 @@ theorem accumulatorAdmission_mitRuhe (P : Programm D) {fs : List D.Fn}
     exact akkuZulaessig_mitRuhe P hvoll hAbg (h1 a ha)
   · -- cells ride the identity map
     have e : alleZellen (A.map AccumulatorDecl.mitRuhe) = alleZellen A := by
-      simp only [alleZellen, List.flatMap_map, Function.comp_apply, mitRuhe_kernZahl,
+      simp only [alleZellen, List.flatMap_map, mitRuhe_kernZahl,
         mitRuhe_zellen]
     rw [e]
     exact h2
   · have e : alleSperren (A.map AccumulatorDecl.mitRuhe) = alleSperren A := by
-      simp only [alleSperren, List.flatMap_map, Function.comp_apply, mitRuhe_kernZahl,
+      simp only [alleSperren, List.flatMap_map, mitRuhe_kernZahl,
         mitRuhe_sperren]
     rw [e]
     exact h3

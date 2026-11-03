@@ -164,7 +164,7 @@ def qARumpfF : Endblock qD (vertragVon qD qF) false [] [] :=
 /-- The update body: call the wrapper, then return (no value). The call edge
     is what `reachB` needs; the wrapper binds the axiom. -/
 def qARumpfU : Endblock qD (vertragVon qD qU) false [Ty.int 0 255] [] :=
-  .bindCall qQ Args.nil (by rfl)
+  .bindCall (τ := Ty.int 0 1) qQ Args.nil (by rfl)
     { hw := fun t _ => nomatch t
       hg := fun _ h => by cases h
       hk := ⟨[], List.Perm.refl _, List.nil_sublist _⟩
@@ -203,7 +203,7 @@ def qAGlobs : List qD.Glob := [⟨0, by decide⟩, ⟨1, by decide⟩]
 theorem qAGlobs_voll : ∀ g : qD.Glob, g ∈ qAGlobs := by
   intro ⟨n, hn⟩
   have h : n = 0 ∨ n = 1 := by omega
-  rcases h with rfl | rfl <;> decide
+  rcases h with rfl | rfl <;> simp [qAGlobs]
 
 /-! ## 2. The descriptor and the connected query, decided -/
 
@@ -212,7 +212,7 @@ theorem qA_okB : akkuOkB qA = true := by decide +kernel
 
 /-- The fixture descriptor is valid (non-degenerate: two cells, `add` with
     neutral `0`). -/
-theorem qA_ok : akkuOk qD qA := (akkuOkB_iff).mpr qA_okB
+theorem qA_ok : akkuOk qD qA := (akkuOkB_iff).mp qA_okB
 
 /-- The two cells are distinct and the neutral is `0`: non-degenerate. -/
 theorem qA_nichtEntartet : qA.zellen ⟨0, by decide⟩ ≠ qA.zellen ⟨1, by decide⟩ ∧

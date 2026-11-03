@@ -108,15 +108,15 @@ def zOr : AccumulatorDecl zD where
   falte := ⟨5, by omega⟩
 
 /-- The signed `max` descriptor is valid, decided. -/
-theorem zMax_okB : akkuOkB zMax = true := by decide
+theorem zMax_okB : akkuOkB zMax = true := by decide +kernel
 
 /-- The unsigned `or` descriptor is valid, decided. -/
-theorem zOr_okB : akkuOkB zOr = true := by decide
+theorem zOr_okB : akkuOkB zOr = true := by decide +kernel
 
 /-- The descriptors are valid. -/
-theorem zMax_ok : akkuOk zD zMax := (akkuOkB_iff).mpr zMax_okB
+theorem zMax_ok : akkuOk zD zMax := (akkuOkB_iff).mp zMax_okB
 
-theorem zOr_ok : akkuOk zD zOr := (akkuOkB_iff).mpr zOr_okB
+theorem zOr_ok : akkuOk zD zOr := (akkuOkB_iff).mp zOr_okB
 
 /-- The neutral elements: signed `max` starts at the floor, unsigned `or` at zero. -/
 theorem zMax_neutral : neutralInt zMax.op zMax.lo zMax.hi zMax.breite = -100 := rfl
@@ -127,7 +127,7 @@ theorem zOr_neutral : neutralInt zOr.op zOr.lo zOr.hi zOr.breite = 0 := rfl
 
 /-- Folding two signed `max` cells. -/
 theorem maxFalte_zeuge :
-    (faltet (maxZahlMonoid (-100) 50 (by omega))
+    (faltet (maxZahlMonoid (-100) 100 (by omega))
       [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩]).n = 70 := rfl
 
 /-- Folding two signed `min` cells, from the ceiling. -/
@@ -158,8 +158,9 @@ theorem ruhigMin_zeuge :
       rmwKette (minZahlMonoid (-100) 100 (by omega))
         (minZahlMonoid (-100) 100 (by omega)).neutral
         [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩, ⟨-10, by omega, by omega⟩] := by
-  have hM := minZahlMonoid (-100) 100 (by omega)
-  exact ruhigFalte hM _ _ rfl
+  exact ruhigFalte (minZahlMonoid (-100) 100 (by omega))
+    [[⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩],
+      [⟨-10, by omega, by omega⟩]] _ rfl
 
 /-- Under quiescence the sampled `or` fold is the contribution fold and the RMW chain. -/
 theorem ruhigOr_zeuge :
@@ -167,7 +168,7 @@ theorem ruhigOr_zeuge :
       faltet orNatMonoid [5, 3, 6] ∧
     faltet orNatMonoid [faltet orNatMonoid [5, 3], faltet orNatMonoid [6]] =
       rmwKette orNatMonoid orNatMonoid.neutral [5, 3, 6] := by
-  exact ruhigFalte orNatMonoid _ _ rfl
+  exact ruhigFalte orNatMonoid [[5, 3], [6]] _ rfl
 
 /-- Under quiescence the sampled `and` fold is the contribution fold and the RMW chain. -/
 theorem ruhigAnd_zeuge :
@@ -182,8 +183,8 @@ theorem ruhigAnd_zeuge :
       rmwKette (andMaskMonoid 8 (by omega))
         (andMaskMonoid 8 (by omega)).neutral
         [⟨12, by omega⟩, ⟨10, by omega⟩, ⟨14, by omega⟩] := by
-  have hM := andMaskMonoid 8 (by omega)
-  exact ruhigFalte hM _ _ rfl
+  exact ruhigFalte (andMaskMonoid 8 (by omega))
+    [[⟨12, by omega⟩, ⟨10, by omega⟩], [⟨14, by omega⟩]] _ rfl
 
 /-- Under quiescence the sampled `max` fold is the contribution fold and the RMW chain. -/
 theorem ruhigMax_zeuge :
@@ -198,14 +199,16 @@ theorem ruhigMax_zeuge :
       rmwKette (maxZahlMonoid (-100) 100 (by omega))
         (maxZahlMonoid (-100) 100 (by omega)).neutral
         [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩, ⟨-10, by omega, by omega⟩] := by
-  have hM := maxZahlMonoid (-100) 100 (by omega)
-  exact ruhigFalte hM _ _ rfl
+  exact ruhigFalte (maxZahlMonoid (-100) 100 (by omega))
+    [[⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩],
+      [⟨-10, by omega, by omega⟩]] _ rfl
 
 /-- Permuting `[1, 2, 3]` preserves the checked-addition outcome under the prefix duty. -/
 theorem addVertauschung_zeuge :
     rmwKette addIntMonoid 0 [1, 2, 3] = rmwKette addIntMonoid 0 [3, 2, 1] := by
-  have hp : IsPerm [1, 2, 3] [3, 2, 1] :=
-    (.swap 1 2 [3]).trans ((.cons 2 (.swap 1 3 [])).trans (.swap 2 3 [1]))
+  have hp : IsPerm ([1, 2, 3] : List Int) [3, 2, 1] :=
+    (IsPerm.swap (1 : Int) 2 [3]).trans
+      ((IsPerm.cons (2 : Int) (IsPerm.swap 1 3 [])).trans (IsPerm.swap 2 3 [1]))
   have hx : addKetteOk (-100) 100 0 [1, 2, 3] :=
     ⟨by omega, by omega, by omega, by omega,
      ⟨by omega, by omega, by omega, by omega,
@@ -267,6 +270,7 @@ def zASig (ps : List Ty) (e : Option Ty) : Signatur Empty (Fin 2) (Fin 2) Empty 
   konsumiert := []
   produziert := []
   boden := none
+  owner := {}
 
 def zASigNr : Nat → Signatur Empty (Fin 2) (Fin 2) Empty
   | 0 => zASig [] (some (Ty.int 0 1))
@@ -313,11 +317,12 @@ def zAD : Deklaration where
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
-  Ax := Empty
-  aparams := fun e => nomatch e
-  aerg := fun e => nomatch e
-  aschreibt := fun e => nomatch e
-  agschreibt := fun e => nomatch e
+  Ax := Fin 1
+  aparams := fun _ => []
+  aerg := fun _ => some (Ty.int 0 1)
+  aschreibt := fun _ t => nomatch t
+  agschreibt := fun _ _ => false
+  agruende := fun _ => 0
   Reg := Empty
   rtyp := fun e => nomatch e
   rklasse := fun e => nomatch e
@@ -327,9 +332,12 @@ def zAD : Deklaration where
   a10 := ()
   geteilt_bewacht := fun t => nomatch t
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  ggeteilt_bewacht := fun _ h => by cases h
+  axHerkunft := fun _ => some .hardware
+  axBeleg := fun _ => some ()
 
 instance : DecidableEq zAD.Fn := inferInstanceAs (DecidableEq ZAFn)
+instance : DecidableEq zAD.Ax := inferInstanceAs (DecidableEq (Fin 1))
 
 def zAQ : zAD.Fn := .q
 def zAU : zAD.Fn := .u
@@ -344,9 +352,9 @@ def zALitN {Γ : Ctx} {Λ : List (Res zAD)} : Expr zAD Γ Λ (Ty.int 0 255) :=
 
 /-- The query body: bind the hardware axiom, return its answer. -/
 def zARumpfQ : Endblock zAD (vertragVon zAD zAQ) false [] [] :=
-  .bindAxiom zAX Args.nil rfl
-    (fun t _ => nomatch t) (fun g h => by simp at h)
-    (fun t _ => nomatch t) (fun g h => by simp at h)
+  .bindAxiom (τ := Ty.int 0 1) zAX Args.nil (by rfl)
+    (fun t _ => nomatch t) (fun _ h => by cases h)
+    (fun t _ => nomatch t) (fun _ h => by cases h)
     (.ret (.val (.var .here)) (List.Perm.refl _))
 
 /-- The reduction body: return the neutral `0` (read-only, hence admitted;
@@ -357,8 +365,12 @@ def zARumpfF : Endblock zAD (vertragVon zAD zAF) false [] [] :=
 /-- The update body: call the query, then return (no value). The call edge is
     what `reachB` needs; the callee writes nothing and takes no lock. -/
 def zARumpfU : Endblock zAD (vertragVon zAD zAU) false [Ty.int 0 255] [] :=
-  .bindCall zAQ Args.nil rfl
-    { hw := fun t _ => nomatch t, hg := fun g h => by simp at h, hk := ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩, hh := fun L h => absurd h (List.not_mem_nil _) } rfl
+  .bindCall (τ := Ty.int 0 1) zAQ Args.nil (by rfl)
+    { hw := fun t _ => nomatch t
+      hg := fun _ h => by cases h
+      hk := ⟨[], List.Perm.refl _, List.nil_sublist _⟩
+      hh := fun _ h => by cases h
+      ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ rfl } (by rfl)
     (.ret .empty (List.Perm.refl _))
 
 /-- The fixture program: trivial bodies, no contracts. -/
@@ -394,19 +406,22 @@ def zAGlobs : List zAD.Glob := [⟨0, by decide⟩, ⟨1, by decide⟩]
 
 def zAQs : List zAD.Ax := [zAX]
 
-theorem zAFs_voll : ∀ g : zAD.Fn, g ∈ zAFs := fun g => by cases g <;> simp only [zAFs, List.mem_cons,
-  List.not_mem_nil, List.mem_singleton]
+theorem zAFs_voll : ∀ g : zAD.Fn, g ∈ zAFs := by
+  intro g
+  cases g <;> simp [zAFs, zAQ, zAU, zAF]
 
 theorem zATabs_voll : ∀ t : zAD.Tab, t ∈ zATabs := fun t => nomatch t
 
-theorem zAGlobs_voll : ∀ g : zAD.Glob, g ∈ zAGlobs := fun g => by
-  fin_cases g <;> simp only [zAGlobs, List.mem_cons, List.not_mem_nil, List.mem_singleton]
+theorem zAGlobs_voll : ∀ g : zAD.Glob, g ∈ zAGlobs := by
+  intro ⟨n, hn⟩
+  have h : n = 0 ∨ n = 1 := by omega
+  rcases h with rfl | rfl <;> simp [zAGlobs]
 
 /-- The fixture descriptor is valid, decided. -/
-theorem zA_okB : akkuOkB zA = true := by decide
+theorem zA_okB : akkuOkB zA = true := by decide +kernel
 
 /-- The fixture descriptor is valid. -/
-theorem zA_ok : akkuOk zAD zA := (akkuOkB_iff).mpr zA_okB
+theorem zA_ok : akkuOk zAD zA := (akkuOkB_iff).mp zA_okB
 
 /-- The two cells are distinct and the neutral is `0`: non-degenerate. -/
 theorem zA_nichtEntartet : zA.zellen ⟨0, by decide⟩ ≠ zA.zellen ⟨1, by decide⟩ ∧
@@ -416,7 +431,7 @@ theorem zA_nichtEntartet : zA.zellen ⟨0, by decide⟩ ≠ zA.zellen ⟨1, by d
 /-- **The full-program admission, decided**: every clause of `akkuZulaessig`
     plus global cell/lock distinctness holds on the fixture, with the
     connected hardware query listed. -/
-theorem zA_akkuB : accumulatorB zAP zAFs zATabs zAGlobs zAQs [zA] = true := by decide
+theorem zA_akkuB : accumulatorB zAP zAFs zATabs zAGlobs zAQs [zA] = true := by decide +kernel
 
 /-- **The full-program admission `_zeuge`**: the fixture's accumulator is
     admitted (non-degenerate: two distinct cells, `or` with neutral `0`). -/
