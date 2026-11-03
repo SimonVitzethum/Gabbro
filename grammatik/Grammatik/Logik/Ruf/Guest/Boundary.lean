@@ -63,7 +63,11 @@ def transferB (available : List (Res D)) (t : GuestTransfer D) : Bool :=
     (match t.capability.rights.owner with
     | none => false
     | some n => decide (D.ownerNr n = some t.owner)) &&
-    decide (Res.marke t.owner t.stage ∈ available) && decide (t.stage < D.stufen t.owner)
+    decide (Res.marke t.owner t.stage ∈ available) && decide (t.stage < D.stufen t.owner) &&
+    (match t.capability.target with
+    | .table n => match D.tabNr n with
+      | none => false
+      | some table => decide (t.owner ∈ D.eigner table))
 
 /-- Named refusals are shared by source admission and the Bool checker. No
     missing origin, owner, ABI or service is repaired by a default. -/
@@ -82,7 +86,7 @@ def check (g : GuestBoundary D) : Except String Unit := do
     throw "entrust: code needs an immutable region capability"
   if !g.transfers.all (transferB g.available) then
     throw "entrust: caller does not own a transferred region"
-  if !decide (g.transfers.map (fun t => t.owner)).Nodup then
+  if !decide ((g.transfers.map (fun t => t.owner)).Nodup) then
     throw "entrust: a region owner is transferred more than once"
   if pointerInputs (D.aparams a) != g.code :: g.transfers.map (·.capability) then
     throw "entrust: transferred regions differ from the service arguments"
@@ -111,7 +115,7 @@ theorem missing_service (g : GuestBoundary D) (h : g.service = none) :
 theorem transfer_owned {available : List (Res D)} {t : GuestTransfer D}
     (h : transferB available t = true) : Res.marke t.owner t.stage ∈ available := by
   simp only [transferB, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact h.1.2
+  exact h.1.1.2
 
 /-- Guest storage must stay outside every protected live grant. The service
     proves this at each call, using the C08 live inventory, on success and
@@ -148,6 +152,7 @@ structure Invocation (g : GuestBoundary D) (V : Vertrag D) (l : Bool)
     (nachSig D (D.asignatur service) Λ)
   continuation : Block D V l (ErgCtx Γ result)
     (nachSig D (D.asignatur service) Λ) Λ'
+  caller_eq : V = vertragVon D g.caller
 
 def Invocation.lower {g : GuestBoundary D} {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} (i : Invocation g V l Γ Λ Λ') :
