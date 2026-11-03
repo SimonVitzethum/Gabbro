@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.Round.RundlaufQuant.Teil2
+public import Grammatik.Parser.Round.RundlaufAnwVoll.CallElse
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil3
 
 import all Init.Data.Repr
@@ -239,6 +240,10 @@ inductive AnwGut : Rolle → SAnw → Prop
       (∀ s ∈ ss, AnwGut .anw s) → EndeOk e → EndeGut ss e → AnwGut .block (.block ss e)
   | allocVon (m : Bool) (n : String) (ty : Option STyp) (t : String) :
       n ≠ "mut" → TypOptGut ty → AnwGut .anw (.allocVon m n ty t)
+
+  | callElse (name : String) (args : List SExpr) (reason : String) (body : SAnw) :
+      NameGut name → istAnwWort name = false → gutListe args = true → AnwGut .block body →
+      AnwGut .anw (.callElse name args reason body)
 
 
 end Gabbro.Grammatik.Parser
