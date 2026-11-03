@@ -103,6 +103,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Literal.ExtendProbe
 public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareProbe
 
 public import Stage0.Frontend.ExportCorrectness
+public import Stage0.Frontend.CheckExport
 public import Stage0.Frontend.MeasureWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
