@@ -19,13 +19,12 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-- Rewrite the source residue before reducing its dependent projections. -/
-private theorem kern_caller_of_rest {caller : RufRahmenG D} {l : Bool} {Γ : Ctx}
+theorem kern_caller_of_rest {caller : RufRahmenG D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} {ρ : Env D Γ}
     {r : GRest D (vertragVon D caller.f) l Γ Λ}
     (hc : caller.rest = ⟨l, Γ, Λ, ρ, r⟩) :
     caller.kern = ⟨caller.f, caller.rho, ⟨l, Γ, Λ, ρ, r.kern⟩⟩ := by
   unfold RufRahmenG.kern
-  dsimp only
   rw [hc]
 
 theorem schrittK_von_g3 (P : Programm D) (O : Orakel D) (passes : Nat)

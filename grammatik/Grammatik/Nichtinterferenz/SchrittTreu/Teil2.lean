@@ -18,9 +18,10 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       subst hfg hrho hrg
       kstart
       rw [hpop]
-      simp only [kr, kEnde, kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusEnde, execStmt, kPopGrund,
+      simp only [kr, kEnde, kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusEnde, execStmt,
         List.map_cons]
-      simp only [RufRahmenG.kern, GRest.kern, hcaller]
+      rw [kern_caller_of_rest hcaller]
+      simp only [kPopGrund, GRest.kern]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
   | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -28,9 +29,10 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       subst hfg hrho hrg
       kstart
       rw [hpop]
-      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kPopGrund,
+      simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt,
         List.map_cons]
-      simp only [RufRahmenG.kern, GRest.kern, hcaller]
+      rw [kern_caller_of_rest hcaller]
+      simp only [kPopGrund, GRest.kern]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
   | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
@@ -129,14 +131,14 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
-      rfl
+      cases e <;> rfl
   | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
-      rfl
+      cases e <;> rfl
   | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       kstart
       subst hs₁
@@ -273,7 +275,11 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       exact kPop_rufAntwortG _ _ _ _ _ hantwort
   | rueckFreigabeLetzte ρ a L hhead z hantwort =>
       kstart
-      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+      simp only [kr, kScoped]
+      rcases a with ⟨answer, before⟩
+      cases answer <;>
+        simpa only [RufMaschineG.weltVon, World.gibt, World.speicher, Speicher.welt]
+          using (kPop_rufAntwortG _ _ _ _ _ hantwort)
 
 
 theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)

@@ -45,7 +45,7 @@ set_option hygiene false in
 macro "kstart" : tactic => `(tactic| (
   rw [kSchrittK_kern _ _ _ _ _ ‹(M.faeden f).kopf.rest = _›]
   dsimp only
-  simp only [GRest.kern]
+  simp (config := { failIfUnchanged := false }) only [GRest.kern]
   rw [rufUpdateG_self]))
 
 set_option maxHeartbeats 4000000 in
