@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Elab.Export.ItemKind
 public import Grammatik.Kern.Syntax.Typen.DataRights
 public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
 public import Grammatik.Parser.Profil.Auswahl
@@ -157,7 +158,10 @@ def itemMetadata : SItemTief → Bool
   | .stateT .. => false
   | .checkT c => c.sonde.isSome || bodyMetadata 10000 c.canFail
   | .accT _ _ m p _ => p.isNone || !accOperatorBound m
-  | _ => true
+  | .modT .. | .useT .. | .asmT .. | .formatT .. | .devT .. | .assumT ..
+  | .axiomT .. | .atomT .. | .rcuT .. | .concT .. | .walkT .. | .entryT ..
+  | .bootT .. | .varT .. | .goalT .. | .profT .. | .gateT .. | .pubT ..
+  | .arenaT .. => true
 
 def metadataReason : SItemTief → String
   | .tableT _ provider _ _ _ _ parts =>
@@ -184,7 +188,7 @@ def metadataReason : SItemTief → String
       "declared costs lack a checked source-to-kostenPasst binding: " ++ sig.name
     else "function type/proof/header duties lack a checked source binding: " ++ sig.name
   | .adaptT s _ _ _ => "adapter without expanded form: " ++ s.name
-  | _ => "type/provider/proof duties lack a checked source binding"
+  | item => itemKind item ++ ": type/provider/proof duties lack a checked source binding"
 
 def check (items : List SItemTief) : Except String Unit :=
   if items.any itemMetadata then
@@ -410,7 +414,7 @@ theorem gateT_bound (m : Auswahl.BauModus) (items selected : List SItemTief)
 
 theorem gateT_zeuge :
     check [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))] =
-      .error "source export: type/provider/proof duties lack a checked source binding" ∧
+      .error "source export: SItemTief.gateT: type/provider/proof duties lack a checked source binding" ∧
     check (Auswahl.waehleL .auslieferung
       [.gateT (.constT "sample" (.atom "u8") (.one (.lit 1)))]) = .ok () ∧
     check (Auswahl.waehleL .pruefbau

@@ -882,3 +882,297 @@ listed above, not counted as extra constructors):
 - **Proof:** no emitted constructor was found with only a detached witness and no connected generic arm.
   Owned read/write and the integrated foreign-answer profiles have generic proof arms; their lead checks
   remain open. Proof presence is not build evidence.
+
+## Stage-0 constructor and item audit on c-runde1 (2026-11-03)
+
+This section supersedes the older constructor totals and stale refusal descriptions above.
+Baseline: `c-runde1` at `2d5dd13f8` (the worktree fork), with the `stage0-inv` changes described here.
+The integration branch can move independently; this is not an audit of subsequent merges.
+**Static inspection only: no Lean, Lake, runner, guardian or executable coverage run.**
+An `a` records an implemented generic proof connection, not successful kernel checking or total
+coverage of every parameterization. No source-image witness is counted as a generic proof.
+
+Classification: **a** = lowering with connected generic proof; **b** = emitter without that proof;
+**c** = deliberately refused, named constructor; **d** = missing constructor case/wildcard or broken reference.
+For declaration items, `a` means checked preparation/expansion into the same canonical program;
+items have no separate runtime instruction or standalone `lowFun_spec` theorem. Their executable
+expansions must use the constructor proofs below. Item rows are not added to the constructor totals.
+
+| Family | Constructors | a | b | c | d |
+|---|---:|---:|---:|---:|---:|
+| Expr | 64 | 64 | 0 | 0 | 0 |
+| NutzlastExpr | 2 | 2 | 0 | 0 | 0 |
+| Args | 2 | 2 | 0 | 0 | 0 |
+| Stmt | 34 | 32 | 0 | 2 | 0 |
+| Block | 22 | 20 | 0 | 2 | 0 |
+| Endblock | 23 | 21 | 0 | 2 | 0 |
+| Total | 147 | 141 | 0 | 6 | 0 |
+
+At the baseline the six device constructors fell through unnamed lowering wildcards (`d`).
+`stage0-inv` makes those six `none` equations explicit (`c`), removes the constructor wildcard
+in `lowN`, makes both lock return-freedom matches exhaustive, and reports nested unsupported
+device constructors through `lowFunE`. The source item metadata gate also names its previously
+unnamed refused item kinds. These changes preserve admission, semantics and emitted instructions.
+
+Proof path: `Ausdruck/Satz.lowE_ok` (mutually with payload/product arguments), `Rueckkehr/Call.lowA_ok`,
+then `Anweisung/Satz/Teil5.{lowS_ok,lowB_ok,lowEnd_ok}` → `Rekursion.lowFun_spec` → `Start.start_ok` →
+`Images/BildSatz.bild_ok` → `Welt/Anordnung.bild_ok_u` → `IRBild.Emitted.correct` → `irBild_correct`.
+The executable path is `Compiler.compile` → canonical `lowerAllg`/`OldSource.restore` and
+`OldSource.accepts` → `IRBild.emit` → `Senke.bild` → `lowFun` → `lowEnd`/`lowS`/`lowB`/`lowE`.
+The conclusion retains runner `Kern`/`CloneOK`, `TorOK`/`SichtOK`, initial-memory/world,
+frame, address, code-size and depth conditions. It is not an unconditional source safety theorem.
+
+In the tables, **E**, **S**, **B**, **Z** mean `lowE_ok`, `lowS_ok`, `lowB_ok`, `lowEnd_ok`;
+all four connect through that path. A dash means no *additional constructor-specific* guard;
+recursive lowering and the common bounds still apply. `G` denotes the existing checked foreign
+profile: argument ABI/buffer layout, binding and answer representation, result area where required,
+and provider/view obligations. `GE` additionally requires the checked errno map, nonempty one-word
+reason channel and branch bounds. Neither profile discharges software-provider duties.
+
+| Expr constructor | Class/proof | Additional boundary |
+|---|---|---|
+| `lit` | a / E | Arbitrary-width integer words. |
+| `tru` | a / E | — |
+| `fls` | a / E | — |
+| `var` | a / E | Complete canonical span. |
+| `glob` | a / E | Checked world layout. |
+| `slot` | a / E | Checked table layout/index. |
+| `thru` | a / E | Resolved readable table capability. |
+| `ptrOf` | a / E | Table capability; ghost zero, not a numeric address. |
+| `fnref` | a / E | Function address must fit `lit32`. |
+| `oldG` | a / E, `lowEnsAt_ok` | Body entry=current; ensures uses captured entry values. |
+| `oldS` | a / E, `lowEnsAt_ok` | Ensures needs supported entry index/snapshot subtree. |
+| `widen` | a / E | Canonical integer resizing. |
+| `add` | a / E | Arbitrary-width arithmetic. |
+| `sub` | a / E | Arbitrary-width arithmetic. |
+| `neg` | a / E | Arbitrary-width arithmetic. |
+| `mul` | a / E | Arbitrary-width arithmetic. |
+| `div` | a / E | Positive divisor/nonnegative dividend from typing. |
+| `rem` | a / E | Positive divisor/nonnegative dividend from typing. |
+| `sdiv` | a / E | Nonzero divisor from typing. |
+| `srem` | a / E | Nonzero divisor from typing. |
+| `getBytes` | a / E | Checked byte span/layout; no standalone surface producer. |
+| `band` | a / E | Typed nonnegative operands. |
+| `bor` | a / E | Typed width. |
+| `bxor` | a / E | Typed width. |
+| `shl` | a / E | Typed shift bound. |
+| `shr` | a / E | Typed shift bound. |
+| `lt` | a / E | Arbitrary-width comparison. |
+| `le` | a / E | Arbitrary-width comparison. |
+| `eq` | a / E | Arbitrary-width comparison. |
+| `fllt` | a / E | Existing finite binary64 model. |
+| `flle` | a / E | Existing finite binary64 model. |
+| `and` | a / E | — |
+| `or` | a / E | — |
+| `not` | a / E | — |
+| `none` | a / E | Scalar or separated option span. |
+| `some` | a / E | Scalar or separated option span. |
+| `istSome` | a / E | Large options read their separate tag; no blanket width refusal. |
+| `case` | a / E | Packed or separated tag and complete payload. |
+| `why` | a / E | Complete reason span. |
+| `forallSlots` | a / E | Quantifier/code bounds. |
+| `existsSlots` | a / E | Quantifier/code bounds. |
+| `reaches` | a / E | Supported optional-edge layout and bounded scan. |
+| `refEq` | a / E | Canonical valid references. |
+| `slotRef` | a / E | Open table, valid provider reference/layout. |
+| `arrNil` | a / E | Empty canonical array marker. |
+| `arrCons` | a / E | Complete recursive element spans. |
+| `arrGet` | a / E | Checked element displacement/frame. |
+| `arrSet` | a / E | Checked element displacement/frame. |
+| `strLit` | a / E | Packed or length/byte span. |
+| `strLen` | a / E | Packed or length word. |
+| `strCat` | a / E | Complete byte spans; no blanket long-string refusal. |
+| `strGet` | a / E | Supported scalar index interval; zero outside actual length. |
+| `strEq` | a / E | Packed, long and mixed spans. |
+| `strLt` | a / E | Packed or long scan; no blanket long-string refusal. |
+| `strWeit` | a / E | Widening/truncation shape and generated-code bounds. |
+| `wenn` | a / E | Branch-size bounds. |
+| `eng` | a / E | Typed narrowing/fallback, complete integer span. |
+| `intBuiltin1` | a / E | Closed builtin and its typed width. |
+| `intBuiltin2` | a / E | Closed builtin and its typed width. |
+| `count` | a / E | Bounded count/code size. |
+| `prod` | a / E, `prod_ok` | Complete field arguments in declaration order. |
+| `prodGet` | a / E, `prodGet_ok` | Complete projected field span. |
+| `prodSet` | a / E, `prodSet_ok` | Copy base and replace complete field span. |
+| `thruOwn` | a / E | Canonical held-owner/table guards; original-source gate still restricts owner types. |
+
+| Payload/argument constructor | Class/proof | Additional boundary |
+|---|---|---|
+| `NutzlastExpr.empty` | a / `lowN_ok`, E | Packed tag or separated empty payload. |
+| `NutzlastExpr.val` | a / `lowN_ok`, E | `lowN` packs integers only; `lowE.case` uses complete separated payloads otherwise. |
+| `Args.nil` | a / `lowA_ok`, `lowE_ok_args` | Empty argument spine. |
+| `Args.cons` | a / `lowA_ok`, `prodArgs_ok`, `lowE_ok_args` | Complete ordinary-call/product spans; foreign ABI G remains narrower. |
+
+| Stmt constructor | Class/proof | Additional boundary |
+|---|---|---|
+| `assignSlot` | a / S | Checked world/table layout. |
+| `assignThru` | a / S | Resolved writable table capability. |
+| `assignGlob` | a / S | Complete checked global span. |
+| `putBytes` | a / S | Checked byte span; no standalone surface producer. |
+| `assignVar` | a / S | No overwrite of result/protected slots. |
+| `shift` | a / S | Scalar range/from-state guards; failure stops 106. |
+| `ite` | a / S | Recursive branches. |
+| `onOption` | a / S | Still requires `n ≤ 2^63`, unlike `istSome`. |
+| `onTag` | a / S | Packed tags or separated spans; tag/code bounds. |
+| `onWhy` | a / S | Reason count below `2^31`. |
+| `call` | a / S | Ordinary call/frame/depth bounds. |
+| `callInd` | a / S | Checked signature/dispatch target. |
+| `locks` | a / S | `retFreiB` and exit displacement guards; see scoped-return restriction below. |
+| `breaking` | a / S | Body lowers; original-source invariant metadata still refuses. |
+| `traverse` | a / S | Representable count and generated-loop bounds. |
+| `retry` | a / S | Loop/code bounds; original-source metadata still restricts it. |
+| `forever` | a / S | Protected counter pair/environment fuel; original-source metadata still restricts it. |
+| `axiomCall` | a / S | Nonfallible VOID gate G. |
+| `regWrite` | c | Explicit `none`; `lowFunE` names `Stmt.regWrite`; outside userspace scope. |
+| `transition` | c | Explicit `none`; `lowFunE` names `Stmt.transition`; outside userspace scope. |
+| `publish` | a / S | Single-word atomic/address guards; source metadata restrictions remain. |
+| `advances` | a / S | Ghost; exporter checks adjacent declared stages. |
+| `retires` | a / S | Ghost; exporter checks held declared stage. |
+| `ret` | a / S | Shared normal epilogue, exact end resources. |
+| `retWhy` | a / S | Separate reason channel and exact end resources. |
+| `leave` | a / S | `lit32` exit displacement and source loop scope. |
+| `next` | a / S | `lit32` exit displacement and source loop scope. |
+| `assignSlotRef` | a / S | Valid open-table reference/layout. |
+| `consumeTraverse` | a / S, `consumeTraverse_case` | `Consuming.lower`, protected fuel/measure words and bounded scan. |
+| `retScoped` | a / S, `retScoped_case` | Canonical scope-release fold is ghost; nested-lock restriction below. |
+| `retWhyScoped` | a / S, `retWhyScoped_case` | Same scope restriction, separate reason channel. |
+| `axiomCallElse` | a / S, `stmtAxiomElse_case` | VOID/value discard via GE; recursively compiled ending handler. |
+| `callIndElse` | a / S, `stmtIndElse_case` | Value result only in this baseline; void-indirect model change is not merged here. |
+| `assignThruOwn` | a / S | Held-owner/table write guards; original-source owner gate remains. |
+
+| Block constructor | Class/proof | Additional boundary |
+|---|---|---|
+| `nil` | a / B | — |
+| `cons` | a / B | Recursive statement/rest. |
+| `bind` | a / B | Complete value span. |
+| `bindCall` | a / B | Ordinary call/frame/depth bounds. |
+| `bindCallInd` | a / B | Signature/dispatch bounds. |
+| `bindCallElse` | a / B | Recursive ending handler/rest. |
+| `bindAxiom` | a / B | `plainForeignC_ok`, G. |
+| `bindAxiomElse` | a / B | `fallibleForeignC_ok`, GE. |
+| `regRead` | c | Explicit `none`; named `Block.regRead`; device access. |
+| `regReadElse` | c | Explicit `none`; named `Block.regReadElse`; device access. |
+| `awaits` | a / B | Single-word atomic/address guards; no wait-liveness claim. |
+| `exchange` | a / B | Single-word atomic, address and CAS-loop code bounds. |
+| `narrow` | a / B | Complete integer span and compiled ending fallback. |
+| `check` | a / B | Compiled predicate/ending fallback; no standalone surface statement. |
+| `float` | a / B | Software binary64 add/sub/mul/div and checked result range. |
+| `floatLit` | a / B | Kernel-rounded binary64 value/range. |
+| `floatOf` | a / B | Literal or computed integer conversion/range. |
+| `floatNarrow` | a / B | Checked float range and compiled fallback. |
+| `narrowRequired` | a / B | Complete integer span; capacity failure stops 107. |
+| `bindAxiomOpt` | a / B, `lowB_ok_bindAxiomOpt_some/none` | G; VOID preserves the context, value adds its complete span. |
+| `bindAxiomOptElse` | a / B, `lowB_ok_bindAxiomOptElse_some/none` | GE; distinct success/reason contexts. |
+| `bindCallIndElse` | a / B | Value result, recursive ending handler/rest. |
+
+| Endblock constructor | Class/proof | Additional boundary |
+|---|---|---|
+| `ret` | a / Z | Shared normal epilogue. |
+| `retWhy` | a / Z | Separate reason channel. |
+| `leave` | a / Z | `lit32` exit displacement/source loop scope. |
+| `next` | a / Z | `lit32` exit displacement/source loop scope. |
+| `cons` | a / Z | Recursive statement/rest. |
+| `bind` | a / Z | Complete value span. |
+| `bindCall` | a / Z | Ordinary call/frame/depth bounds. |
+| `bindCallElse` | a / Z | Recursive ending handler/rest. |
+| `bindAxiom` | a / Z | `plainForeignC_ok`, G. |
+| `bindAxiomElse` | a / Z | `fallibleForeignC_ok`, GE. |
+| `regRead` | c | Explicit `none`; named `Endblock.regRead`; device access. |
+| `regReadElse` | c | Explicit `none`; named `Endblock.regReadElse`; device access. |
+| `awaits` | a / Z | Single-word atomic/address guards. |
+| `bindCallInd` | a / Z | Signature/dispatch bounds. |
+| `narrow` | a / Z | Complete integer span and ending fallback. |
+| `exchange` | a / Z | Single-word atomic, address and CAS-loop code bounds. |
+| `ite` | a / Z | Recursive ending branches. |
+| `narrowRequired` | a / Z | Complete integer span; capacity failure stops 107. |
+| `retScoped` | a / Z, `endRetScoped_case` | Ghost scope-release fold; nested-lock restriction below. |
+| `retWhyScoped` | a / Z, `endRetWhyScoped_case` | Same scope restriction, separate reason channel. |
+| `bindAxiomOpt` | a / Z, `lowEnd_ok_bindAxiomOpt_some/none` | G; optional result context. |
+| `bindAxiomOptElse` | a / Z, `lowEnd_ok_bindAxiomOptElse_some/none` | GE; distinct success/reason contexts. |
+| `bindCallIndElse` | a / Z | Value result, recursive ending handler/rest. |
+
+The following table covers all **41 `SItemTief` constructors**, in declaration order.
+Metadata refusals are read from the *original* source check (`Konst.checkSourceMetadata` →
+`ExportMetadata.check`), before a later expansion could erase a duty. A model/runner capability
+or an unbuilt positive witness does not bypass that check. `itemKind` now preserves a constructor
+name in the generic refusal text. Wrapper/preparation rows explicitly distinguish consumed source
+syntax from a residual item reaching that gate.
+
+| Item kind | Class | Actual source-to-IR boundary |
+|---|---|---|
+| `modT` | a | Name resolution/`uMembers` flattens checked modules; residual wrapper refuses. |
+| `useT` | a/c | Resolved imports are consumed by `Aufloesung`; a residual `useT` refuses. |
+| `typeT` | a | Checked aliases, records, tagged schemas and nominal marks; unsupported duties refuse. |
+| `constT` | a | Canonical typed evaluation/meaning check; substituted value uses E. |
+| `globT` | a | Checked initialization/layout; unsupported provider/proof/bound metadata refuses. |
+| `fnT` | a | `lowerFnPlain`/`lowerFnAt` → `lowFun_spec`; const/library functions require certified expansion. |
+| `protoT` | a/c | Checked prototype/signature input; unresolved body or unsupported header duties refuse. |
+| `specT` | c | Named spec signature/proof admission refusal. |
+| `asmT` | c | Named metadata refusal; source assembly is outside scope. |
+| `formatT` | c | Named original-item metadata refusal; no complete format-duty/image path. |
+| `tableT` | a | Checked fixed/open carrier forms/layout; provider/placement/invariant/field duties can refuse. |
+| `arenaT` | a/c | Static literal arena expands to existing accesses/narrowing; dynamic/provider profiles refuse. |
+| `whyT` | a | Checked finite reason schema; reason values/dispatch use E/S. |
+| `stateT` | a | Checked transition expansion; state checks/store use S. |
+| `devT` | c | Named metadata refusal; device access is outside scope. |
+| `assumT` | c | Original metadata gate refuses this item in the inspected pipeline. |
+| `axiomT` | c | Original metadata gate refuses this item; syscall `callT` and canonical Ax lowerings are separate. |
+| `checkT` | a/c | Checked driver/Duty expansion; counterprobes and unsupported body duties refuse. |
+| `atomT` | c | Original metadata gate refuses this item despite canonical atomic lowering arms. |
+| `lockT` | a/c | Rank/guard declaration and locks lowering; held-time/reservation/mask/invariant duties refuse. |
+| `rcuT` | c | Named original-item metadata refusal. |
+| `groupT` | c | Invariant cost/runs/by duties lack a checked source binding. |
+| `concT` | c | Original metadata gate refuses this item despite the image's existing thread-root machinery. |
+| `accT` | a/c | Checked per-CPU storage/operator expansion; unsupported operators/count/core-service uses refuse. |
+| `walkT` | c | Safe child/scale/traversal correspondence absent from admitted source path. |
+| `entryT` | c | Hardware ABI/routing/stack obligations refuse in Profil; otherwise original metadata still refuses. |
+| `trustT` | c | Checked guest/service prerequisites alone supply no complete ordinary-body/image path. |
+| `bootT` | c | Profil names boot as outside userspace compilation. |
+| `callT` | a/c | Checked syscall binding/G or GE; cost/type/provider obligations can refuse. |
+| `varT` | c | Named original-item metadata refusal. |
+| `goalT` | c | Profil can validate a target declaration; residual original-item metadata still refuses it. |
+| `transT` | a/c | Certified library expansion consumes translator input; unsupported certificate/metadata refuses. |
+| `profT` | a | `Profil.prepareItems` checks binding and strips metadata; residual direct check refuses. |
+| `gateT` | a | Checked TESTBUILD selection before elaboration; residual direct check refuses. |
+| `pubT` | a | Public hull check and checked flattening; residual wrapper refuses. |
+| `adaptT` | a/c | Checked adapter expansion into ordinary functions; unbound header/type/body duties refuse. |
+| `taggedByT` | a/c | Recursively checked tagged declaration/dispatch expansion. |
+| `specGroupT` | a/c | Checked signature-group dispatch expansion; unsupported types/effects/header duties refuse. |
+| `implGroupT` | a/c | Checked implementation expansion; unsupported receivers/implementation items refuse. |
+| `moduleTemplateT` | c | Original metadata gate refuses it even though later module instantiation machinery exists. |
+| `moduleUseT` | c | Original metadata gate refuses it even though later module instantiation machinery exists. |
+
+Remaining connected-source limitations and dependency findings:
+
+- **No new userspace constructor emitter was necessary for the requested priority list.** At the pinned
+  baseline, products, consuming traversal, `axiomCallElse`, all optional binders and scoped returns
+  already have the actual lowering equations and the generic arms named above. Their build status
+  remains for the lead. `ProductRecordWitness`, `OptionalForeignWitness` and other source-image
+  declarations are corroborating witnesses only; the original-item gate can still block such a fixture.
+- **Scoped returns are not general early returns through runtime locks.** `lowS.locks` requires
+  `retFreiB`; `retFreiS.retScoped/retWhyScoped` are false. Their explicit generic cases release the
+  canonical trace/world scopes, but do not emit per-scope runtime unlocks. This remains a parameter/
+  context refusal, not a missing constructor arm. Never remove this guard to admit a source case.
+- **GRest is not a Stage-0 lowering input.** No Stage-0 module matches it. `rueckBereit`, `verbrauch`,
+  `verbrauchRest` and `wartetSonst` live in canonical machine-G semantics/proofs. The image theorem
+  here targets `rufAt`/`execStmt`/`execEnd`; it does not automatically supply a new G/GX continuation
+  simulation. `rueckBereit` is still documented as an inert placeholder at this baseline. Consuming
+  IR uses canonical `verbrauchLauf`, and indirect-else IR uses the ordinary result/reason ABI.
+- **Source dependency d: ending float references.** `UebersetzeAllg3/Ende` and `Body` refer to
+  `Endblock.floatLit`/`Endblock.float`, absent from the pinned `Teil2` constructor list. Thus source
+  inspection cannot certify a buildable source-to-image dependency graph. The existing `float-ende`
+  branch already adds the model/Stage-0 cases (`f2c383ef0`, `c809524f6`); this worker did not duplicate,
+  merge or credit that separately owned work. It changes the constructor count when integrated.
+- **Void indirect calls are separate model work.** Read `git log c-runde1..void-ind` and the
+  `7a28ecd0d` Stage-0 change: it generalizes result reception to `ErgCtx`/`ergEnv`, then reuses the
+  same indirect-else proof chain. The pinned `Stmt.callIndElse` still requires `erg = some τ`.
+  No merge, incompatible partial transplant or invented VOID binder was performed.
+- **C12 context is table-only in this snapshot.** `Ty.ptr DataCapTy` retains nominal space,
+  independent rights and owner identity; ordinary/owned table accesses have the canonical guards.
+  `DataTarget` has no live-byte constructor, and there are no `capRead`/`capWrite` syntax cases in
+  this count. Entry handles, live grant generations/extents, byte capability transport and provider
+  admission are not established by zero-encoded table capabilities or `ValueValid` for a reference.
+  Separately owned C12 branches are not credited until integrated and checked.
+- **Measured here:** constructor-name cross-check of all six syntax families against the actual
+  lowering and generic proof dispatchers; explicit source-item case inspection; whitespace/diff,
+  changed-file size, module-header and forbidden-proof-token checks. No Lean/build/execution claim.
