@@ -12,8 +12,8 @@ theorem ptrPost_prefix_zeuge :
     (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ :=
   ptrPost_prefix (n := 0) prog entry later entry later arguments ⟨3, by decide, by decide⟩
     (by rfl)
-    ⟨fun _ h => nomatch h, fun _ h => nomatch h⟩
-    ⟨fun _ h => nomatch h, fun _ h => nomatch h⟩
+    ⟨(fun _ h => nomatch h), (fun _ h => nomatch h)⟩
+    ⟨(fun _ h => nomatch h), (fun _ h => nomatch h)⟩
 
 theorem ptrReq_prefix_stmt_zeuge :
     ReqAmEintritt prog true entry (umsig pointer.property arguments) := by
@@ -56,10 +56,17 @@ namespace Gabbro.Grammatik.C06.Locked
 -- have the same writing signature, including the admitted pointer target.
 @[expose] def decl : Deklaration :=
   { mD with
-    sigNr := fun _ => mSig [.int 0 100] [()] [.konto]
+    sigNr := fun _ => by
+      exact (show Signatur mD.Tab mD.Glob mD.Lock mD.Marke from
+        mSig [.int 0 100] [()] [.konto])
     passt := fun _ _ => true
     passt_ok := fun _ _ _ => SigPasst.refl _ _
-    eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h }
+    rzusage := fun r => nomatch r
+    eigner_nie_erzeugt := fun _ _ _ _ h => by simp only [List.not_mem_nil] at h
+    invarianten_gehalten := fun _ _ _ c hc _ hL => by
+      have hc' : c = Sum.inl MTab.privA := List.mem_singleton.mp hc
+      subst c
+      cases hL }
 
 @[expose] def predicate {Γ : Ctx} : Expr decl Γ [.held ()] .bool :=
   .eq (.slot .konto () (.widen (by decide) (by decide) (.lit 0))
