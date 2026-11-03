@@ -23,6 +23,7 @@ public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Kern.Syntax.Satz.PruefungMessung
 public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
 public import Grammatik.Kern.Syntax.Satz.PruefungGegenprobe
+public import Grammatik.Kern.Syntax.Satz.PruefungArtefakt
 
 @[expose] public section
 
@@ -38,7 +39,7 @@ open Gabbro.Grammatik.Zielsatz
 /-- The counterprobe unit: the probe answers `false`, the external probe `ext`
     with its text is bound to the check. -/
 def checkTextSonde : String :=
-  "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"ext text\" expects ext }"
+  "impl fn g() { return; } impl fn ext() -> bool { return false; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return x < 0; } counterprobe \"ext text\" expects ext }"
 
 /-- The counterprobe unit elaborates. -/
 theorem checkTextSonde_ok : (elabText checkTextSonde).toOption.isSome = true := by
@@ -54,7 +55,7 @@ theorem uSonde_globs_leer : uSonde.globs = [] := rfl
 
 /-- The sonde identity travels from source text to the elaborated record. -/
 example : (elabText checkTextSonde).map (fun u => u.checks.map (·.sonde)) =
-    .ok [some ("ext text", "ext")] := rfl
+    .ok [some ("ext", "ext text")] := rfl
 
 /-- The unit lowers. -/
 set_option maxRecDepth 100000 in
@@ -102,11 +103,11 @@ theorem sonde_tor_threadet :
 
 /-- The derived check carries the sonde identity with its exact text. -/
 theorem sonde_behalten :
-    (checkChecksSonde.map CheckDecl.sonde) = [some ("ext text", "ext")] := rfl
+    (checkChecksSonde.map CheckDecl.sonde) = [some ("ext", "ext text")] := rfl
 
 /-- One derived check: the sonde of every member is the bound one. -/
 theorem sonde_behalten_single (d : CheckDecl (declOf uSonde))
-    (hd : d ∈ checkChecksSonde) : d.sonde = some ("ext text", "ext") := by
+    (hd : d ∈ checkChecksSonde) : d.sonde = some ("ext", "ext text") := by
   have hm : d.sonde ∈ checkChecksSonde.map CheckDecl.sonde :=
     List.mem_map.mpr ⟨d, hd, rfl⟩
   rw [sonde_behalten] at hm
@@ -266,7 +267,7 @@ theorem artefakt_fremd_sonde (d : CheckDecl (declOf uSonde))
   obtain ⟨_, _, t, ht⟩ := h
   have hs := sonde_behalten_single d hd
   rw [hs] at ht
-  have h2 : ("ext text", "ext") = ("alt", t) := by simpa using ht
+  have h2 : ("ext", "ext text") = ("alt", t) := by simpa using ht
   exact absurd (congrArg Prod.fst h2) (by decide)
 
 /-- A stale artifact never yields a measurement. -/
@@ -292,5 +293,48 @@ theorem ungebunden_verweigert (d : CheckDecl (declOf checkU))
     rw [checkU_sonde_leer] at hm
     exact List.mem_singleton.mp hm
   exact (by decide : ¬ (none : Option (String × String)).isSome) (hs ▸ his)
+
+/-- The counterprobe adapter is executable ordinary code and forwards the
+    resolved external function's actual Boolean answer. -/
+example : (uSonde.fns.find? (fun f => strEq f.name "p#sonde#ext")).map
+    (fun f => (f.body, f.ret, f.nimmt, f.gibt)) =
+    some ([.bindCall "ans" "ext" []], .bool (.var "ans"), [], []) := rfl
+
+/-- The matching image and binding yield measured acceptance, beyond the
+    structural `checkB`/`AkzeptiertX` admission above. -/
+theorem sonde_nachweis (d : CheckDecl (declOf uSonde))
+    (hd : d ∈ checkChecksSonde) :
+    SondenNachweis checkChecksSonde d "ship" artefaktSonde
+      .durchgefallen berichtSondeFalsch :=
+  ⟨⟨"ext text", sonde_bindung d hd⟩, rfl, gemessen_sonde d hd⟩
+
+/-- Same name and mode, wrong image: the external result is stale. -/
+theorem sonde_falsches_bild (d : CheckDecl (declOf uSonde)) :
+    ¬ SondenNachweis checkChecksSonde d "ship"
+      ⟨"ext", false, "old-image"⟩ .durchgefallen berichtSondeFalsch :=
+  sondenNachweis_stale _ _ _ _ _ _ (by decide)
+
+/-- Refuse the same stale image in the executable data check. -/
+example : checkChecksSonde.all (fun d =>
+    !(sondenArtefaktB d "ship" ⟨"ext", false, "old-image"⟩
+      .durchgefallen berichtSondeFalsch)) = true := by
+  decide +kernel
+
+/-- Dropping the ordinary adapter invalidates descriptor derivation too. -/
+def uSondeOhneBindung : UProg :=
+  { uSonde with fns := uSonde.fns.filter fun f => !strEq f.name "p#sonde#ext" }
+
+example : (uCheckDecls uSondeOhneBindung).toOption.isNone = true := by
+  decide +kernel
+
+/-- A bare external label has no executable binding. -/
+example : (elabText
+    "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"ext text\" expects ext }").toOption.isNone = true := by
+  decide +kernel
+
+/-- An external counterprobe belongs to exactly one check. -/
+example : (elabText
+    "impl fn g() { return; } impl fn ext() -> bool { return false; } check p { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"one\" expects ext } check q { claim \"c\" measures x gates g can_fail { return false; } counterprobe \"two\" expects ext }").toOption.isNone = true := by
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.Uebersetze
