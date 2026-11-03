@@ -112,4 +112,55 @@ theorem nested_canonical : CanonicalSourceProgram nestedOutput.compiled :=
 theorem nested_correct [Runner.IR.Kern] [Senke.CloneOK] : nestedOutput.Correct :=
   nestedOutput.correct
 
+/-- A fold outside a direct return: the loop hoists before the binding. -/
+def letText : String :=
+  "module range_let_probe { const XS : [u8; 2] = [3, 5]; " ++
+  "fn sum_let(xs: [u8; 2]) -> u64 effects { pure } " ++
+  "{ let t = add i in 0 ..< 2 : xs[i]; return t; } " ++
+  "impl fn main() -> u8 effects { pure } { " ++
+  "let s = sum_let(XS); if s == 8 { return 7; } return 0; } }"
+
+/-- A nested fold over table rows inside an array fold. -/
+def rowNestedText : String :=
+  "module range_row_probe { table T count 2 { slot { v: u8, } } " ++
+  "const XS : [u8; 2] = [3, 5]; " ++
+  "fn nested_sum(xs: [u8; 2]) -> u64 effects { reads T } { " ++
+  "return add i in 0 ..< 2 : xs[i] + add k in 0 ..< 2 : T[k].v; } " ++
+  "impl fn main() -> u8 effects { reads T, writes T } { " ++
+  "traverse k over slots of T by unvisited { T.slots[k].v = 4; } " ++
+  "let s = nested_sum(XS); if s == 24 { return 1; } return 0; } }"
+
+def letCandidate : Except String (Emitted letText 256) := emit letText 256
+
+theorem let_present : letCandidate.toOption.isSome = true := by
+  decide +kernel
+
+def letOutput : Emitted letText 256 := letCandidate.toOption.get let_present
+
+theorem let_accepted : emit letText 256 = .ok letOutput :=
+  Gabbro.Grammatik.except_ok_get let_present
+
+theorem let_canonical : CanonicalSourceProgram letOutput.compiled :=
+  compile_source_program letText letOutput.compiled
+
+theorem let_correct [Runner.IR.Kern] [Senke.CloneOK] : letOutput.Correct :=
+  letOutput.correct
+
+def rowNestedCandidate : Except String (Emitted rowNestedText 256) := emit rowNestedText 256
+
+theorem rowNested_present : rowNestedCandidate.toOption.isSome = true := by
+  decide +kernel
+
+def rowNestedOutput : Emitted rowNestedText 256 :=
+  rowNestedCandidate.toOption.get rowNested_present
+
+theorem rowNested_accepted : emit rowNestedText 256 = .ok rowNestedOutput :=
+  Gabbro.Grammatik.except_ok_get rowNested_present
+
+theorem rowNested_canonical : CanonicalSourceProgram rowNestedOutput.compiled :=
+  compile_source_program rowNestedText rowNestedOutput.compiled
+
+theorem rowNested_correct [Runner.IR.Kern] [Senke.CloneOK] : rowNestedOutput.Correct :=
+  rowNestedOutput.correct
+
 end Gabbro.Stage0.Pipeline.RangeFoldsWitness
