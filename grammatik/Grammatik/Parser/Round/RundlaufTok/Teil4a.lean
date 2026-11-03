@@ -44,7 +44,8 @@ theorem prim_methM (a : String) (suff : List SuffFrag) (xs : List SExpr) (rest :
   rw [sammleSeg_kette suff hne]
   have hmiss : ∀ (R2 : List Token), suffToks suff ++ (.zeichen "(" :: (druckToksListe xs ++
       (.zeichen ")" :: rest))) ≠ .zeichen "(" :: R2 := kette_nopar suff hne _
-  rw [rufKopf_ohne _ _ _ _ (kette_nogeneric suff hne) hmiss]
+  rw [rufKopf_ohne _ _ _ _ (fun R => kette_nogeneric suff hne _ R) hmiss]
+  dsimp only
   rw [suffWeiterM suff (.variable a) _ F'' hs (by omega)]
   obtain ⟨G, hG⟩ : ∃ G, F'' - suff.length = G + 1 := ⟨F'' - suff.length - 1, by omega⟩
   rw [hG, suff_ruf G _ _ (istVar_kette a suff hne)]

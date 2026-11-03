@@ -68,7 +68,7 @@ theorem erase_nimmt_gibt' (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) :
       · subst heq
         simp only [List.erase_cons_head]
         rw [erase_fold_comm]
-      · simp only [List.erase_cons_tail _ (Ne.symm heq)]
+      · rw [List.erase_cons_tail (by simpa [beq_iff_eq] using Ne.symm heq)]
         exact ih _
 
 theorem Treu.refl (W G) (σ : World D) : Treu W G σ σ := ⟨Rahmen.refl _ _ _, rfl⟩
