@@ -143,6 +143,75 @@ theorem traversal_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat) 
       .ok ([loopHeader] ++ uFilteredBody filter (body ++ exits) ++ [.blkEnd] ++ tail, endCtx) := by
   simp only [uAnwReihe, header, inside, exit, outside] <;> try rfl
 
+/-- The consuming header retains the domain filter, canonical declared relation and
+    state-reading measure. There is no source predicate invention or initial snapshot. -/
+theorem consuming_header_export (ctx context : UCtx) (binder table predecessor field : String)
+    (origin : Option SExpr) (kind : String) (subject : SExpr) (raw : String)
+    (invariant : Option SExpr) (inv : UEns) (filter : Option UEns) (mass : USide)
+    (effects : List SEffekt)
+    (clauses : uConsumingClauses ctx raw = .ok (mass, effects))
+    (domain : uUnvisitedLoopExport ctx binder origin kind subject "unvisited" "" invariant =
+      .ok (.loopBeg binder table inv, context, filter))
+    (declared : uConsumingEdge ctx table = .ok field)
+    (privateName : predecessor = "#consume:predecessor") :
+    uLoopExport ctx binder origin kind subject "consuming" raw invariant =
+      .ok (.consumeLoopBeg binder table predecessor (filter.getD .tru)
+        (.reach table field (.param predecessor) (.param binder)) inv mass effects,
+        {context with loops := ("#consume:" ++ binder) :: ctx.loops}, none) := by
+  subst predecessor
+  simp only [uLoopExport, BEq.rfl, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
+    clauses, domain, declared, bind, Except.bind, pure, Except.pure]
+
+/-- The production structured lowerer constructs exactly the canonical current-state
+    consuming term. All expression checks and the resource-preserving body are premises. -/
+theorem consuming_traversal_lower {loop : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (fuel : Nat) (Λ : List (Res (declOf u))) (top : AtTop u caller Λ)
+    (binder table predecessor : String) (member edge inv : UEns) (mass : USide)
+    (effects : List SEffekt) (rest remaining : List UStmt) (t : Fin u.tabs.length)
+    (membership : Expr (declOf u) (.index ((declOf u).count t) :: Γ) Λ .bool)
+    (relation : Expr (declOf u) (.index ((declOf u).count t) :: .index ((declOf u).count t) :: Γ) Λ .bool)
+    (invariant : Expr (declOf u) Γ Λ .bool) (bound : Int)
+    (measure : Expr (declOf u) Γ Λ (.int 0 bound))
+    (body : Block (declOf u) (verOf u caller) true (.index ((declOf u).count t) :: Γ) Λ Λ)
+    (found : tabIdx u.tabs table = .ok t)
+    (touches : lowConsumingEffects u fn table effects = .ok ())
+    (outer : lowEns u Γ Λ fn none inv = .ok invariant)
+    (measured : lowConsumingMass u Γ Λ fn mass = .ok ⟨bound, measure⟩)
+    (members : lowEns u (.index ((declOf u).count t) :: Γ) Λ
+      (fn.mitIndex binder t.val ((declOf u).count t)) none member = .ok membership)
+    (edges : lowEns u (.index ((declOf u).count t) :: .index ((declOf u).count t) :: Γ) Λ
+      ((fn.mitIndex binder t.val ((declOf u).count t)).mitIndex predecessor t.val ((declOf u).count t))
+      none edge = .ok relation)
+    (inside : lowSeqL (l := true) u caller (.index ((declOf u).count t) :: Γ)
+      (fn.mitIndex binder t.val ((declOf u).count t)) fuel Λ top rest =
+        .ok (⟨Λ, body⟩, .blkEnd :: remaining)) :
+    lowStructL (l := loop) u caller Γ fn (fuel + 1) Λ top
+      (.consumeLoopBeg binder table predecessor member edge inv mass effects) rest =
+      .ok (⟨Λ, .consumeTraverse t membership relation invariant bound measure body⟩, remaining) := by
+  simp only [lowStructL_succ, lowStructStep, lowStufe_seq, found, touches, outer,
+    measured, members, edges, inside, bind, Except.bind, pure, Except.pure, dif_pos]
+
+/-- The exported consuming term uses the existing dynamic selector and decrease checks,
+    including logical failure and every body outcome; it has no finite-sweep shortcut. -/
+theorem consuming_traversal_meaning {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} (table : D.Tab)
+    (member : Expr D (.index (D.count table) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count table) :: .index (D.count table) :: Γ) Λ .bool)
+    (invariant : Expr D Γ Λ .bool) (bound : Int) (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count table) :: Γ) Λ Λ)
+    (oracle : Orakel D) (passes : Nat)
+    (calls : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (state : World D) (env : Env D Γ) :
+    execStmt oracle passes calls (l := l)
+      (.consumeTraverse table member edge invariant bound mass body) state env =
+      verbrauchLauf table (fun state env => execBlock oracle passes calls body state env)
+        (fun state env => let observed := state.lese Λ invariant.orte
+          (observed, wahr? (eval observed invariant observed env)))
+        (verbrauchSel table member edge)
+        (fun state env => let observed := state.lese Λ mass.orte
+          (observed, (eval observed mass observed env).n))
+        bound ((D.count table).toNat + bound.toNat + 1) state env := by rfl
+
 /-- A skipped node still records the filter's reads. Every body outcome, including early
     exits and failures, is returned unchanged when the node is selected. -/
 theorem filtered_step_meaning {D : Deklaration} {V : Vertrag D} {Γ : Ctx} {Λ : List (Res D)}
@@ -190,7 +259,7 @@ theorem traversal_header_refused_zeuge :
     uLoopExport ctx "node" none "descendants" (.variable "root") "unvisited" "decreases node " none =
       .error "source export: traversal decreases/touches duties lack a checked source binding" ∧
     uLoopExport ctx "node" none "descendants" (.variable "root") "consuming" "" none =
-      .error "traverse by consuming without G form" := by
+      .error "consuming traversal requires decreases" := by
   exact ⟨rfl, rfl⟩
 
 theorem tree_quantifier_export_zeuge :
