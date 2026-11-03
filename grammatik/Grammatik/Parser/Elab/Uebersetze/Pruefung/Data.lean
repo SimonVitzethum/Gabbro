@@ -26,6 +26,22 @@ inductive UMessOrt where
   | stelle (basis : String) (feld : String) (index : Int)
   deriving DecidableEq, Repr
 
+/-- One canonical observation label, shared by descriptors and actual samples. -/
+def messOrtName : UMessOrt → String
+  | .variable n => n
+  | .feld b f => b ++ "." ++ f
+  | .stelle b f i => b ++ "." ++ f ++ "[" ++ toString i ++ "]"
+
+/-- Source-indexed return capture. Parameter indices refer to the private
+    ordinary reporter function; absent observations have no parameter. -/
+structure UCheckReturn where
+  check : String
+  point : Nat
+  samples : List (String × Option Nat)
+  floorStart : Nat
+  floorCount : Nat
+  deriving DecidableEq, Repr
+
 /-- One declared check in elaborated form. -/
 structure UCheck where
   name : String

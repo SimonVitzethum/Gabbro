@@ -68,6 +68,7 @@ def beqUStmt : UStmt → UStmt → Bool
   | .bindOptBeg x c a, .bindOptBeg y d b => strEq x y && strEq c d && beqUArgList a b
   | .bindOptElseBeg x c a e, .bindOptElseBeg y d b f =>
     strEq x y && strEq c d && beqUArgList a b && strEq e f
+  | .callIndElseBeg p c a e, .callIndElseBeg q d b f => strEq p q && strEq c d && beqUArgList a b && strEq e f
   | .axCallElseBeg c a e, .axCallElseBeg d b f => strEq c d && beqUArgList a b && strEq e f
   | .retires a, .retires b => strEq a b
   | .breakingBeg a, .breakingBeg b => strEq a b
@@ -82,12 +83,16 @@ def beqUStmt : UStmt → UStmt → Bool
   | .storeAtom a s, .storeAtom b t => strEq a b && beqUSide s t
   | .storeAtomB a s, .storeAtomB b t => strEq a b && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
+  | .retireMark a, .retireMark b => strEq a b
   | .lockBeg a, .lockBeg b => strEq a b
   | .blkEnd, .blkEnd => true
   | .bind a d s, .bind b e t => strEq a b && beqOptIntPair d e && beqUSide s t
   | .ifBeg a, .ifBeg b => beqUEns a b
   | .ifElse, .ifElse => true
   | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
+  | .consumeLoopBeg a t p m e i mass effects, .consumeLoopBeg b u q n f j measure other =>
+    strEq a b && strEq t u && strEq p q && beqUEns m n && beqUEns e f &&
+      beqUEns i j && beqUSide mass measure && strEq effects other
   | .arrayLoopBeg a source inv, .arrayLoopBeg b target other =>
       strEq a b && beqUSide source target && beqUEns inv other
   | .resetRange a x n, .resetRange b y m =>

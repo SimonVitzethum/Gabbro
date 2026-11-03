@@ -21,8 +21,9 @@ open Gabbro.Grammatik.Parser.Uebersetze
     names a declared `assume`. -/
 def herkunftAt (u : UProg) (a : Fin u.axs.length) : Option AxOrigin :=
   match (u.axs.get a).beleg with
-  | none => none
-  | some i => if i < u.annahmen.length then some .hardware else none
+  | none => if (u.axs.get a).software then some .software else none
+  | some i => if (u.axs.get a).software then none
+      else if i < u.annahmen.length then some .hardware else none
 
 /-- The named assumption witnessing a hardware origin, if any. -/
 def belegAt (u : UProg) (a : Fin u.axs.length) :
@@ -33,9 +34,10 @@ def belegAt (u : UProg) (a : Fin u.axs.length) :
 
 /-- A foreign body without an origin has no provenance. -/
 theorem herkunftAt_ohne {u : UProg} {a : Fin u.axs.length}
-    (h : (u.axs.get a).beleg = none) : herkunftAt u a = none := by
+    (h : (u.axs.get a).beleg = none)
+    (hs : (u.axs.get a).software = false) : herkunftAt u a = none := by
   unfold herkunftAt
-  rw [h]
+  simp [h, hs]
 
 /-- A foreign body without an origin has no witness. -/
 theorem belegAt_ohne {u : UProg} {a : Fin u.axs.length}

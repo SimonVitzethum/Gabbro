@@ -72,7 +72,7 @@ theorem torPuf_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : 
   obtain ⟨hjn, hjt⟩ := ptrParam_spec hpp
   have hg' := hg
   simp only [torGut, Bool.and_eq_true, decide_eq_true_eq] at hg'
-  obtain ⟨⟨hn6, _⟩, hnr⟩ := hg'
+  obtain ⟨⟨hn6, _⟩, hnr, _⟩ := hg'
   have hB7 : s + 7 ≤ B := by omega
   have hBta : ta ≤ B := by omega
   have hfar := codeFar_sub2 hp.far hks

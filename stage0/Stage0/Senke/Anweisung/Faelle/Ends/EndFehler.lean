@@ -1,7 +1,7 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontext
-public import Stage0.Senke.Anweisung.FehlerLauf
+public import Stage0.Senke.Tore.FallibleRun
 @[expose] public section
 
 
@@ -27,70 +27,53 @@ theorem endAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
     (∀ {pr ex}, EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest reserved) →
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindAxiomElse a args he proof0 proof1 proof2 proof3 proof4 err rest) reserved := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
-  simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
-  split at h
-  · next b lo' hi' hb hτ =>
-    split at h
-    · next hc =>
-      obtain ⟨hf, hlo', hn, hwhy⟩ := hc
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h
-      have hwτ : valueWords τ = 1 := by
-        have e : τ = .int lo' hi' := Option.some.inj (he.symm.trans hτ)
-        rw [e]; exact chkC_width hck
-      split at hc
-      · next hJ =>
-        simp only [Option.some.injEq, Prod.mk.injEq] at hc
-        obtain ⟨rfl, rfl⟩ := hc
-        simp only [List.length_append, fehlC_len] at hs
-        have hFB3 : FB = 4 := rfl
-        have hFramePrefix := functionFrame_prefix P f
-        have hks := hW.ks
-        have h7 := torC_top1 ht
-        simp only [execEnd]
-        rcases torElse_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hτ hb hf hlo' hn ht hck hJ (by omega)
-          (by omega) hW hp hWa with ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩ |
-          ⟨hAA, hst⟩
-        · rw [hAA]
-          have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)
-              ++ ck) ++ (cr ++ ce)) ρ reserved := by simpa only [List.append_assoc] using hp
-          have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-          simp only [List.length_append, fehlC_len] at hq
-          have hp3 : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) reserved :=
-            ⟨by simp only [frei, contextWords_cons, hwτ, hwhy]; omega, hq.small, hq.frame, hq.left.code, hq.left.far,
-             envAt_cons hq.env (ValueAt.of_enc hwτ hw2 hen), trivial, wstab_true _ _⟩
-          have ih := ihRest (ex := exPlus ex ce.length) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3
-            (by simp only [frei, contextWords_cons, hwτ, hwhy] at hlo ⊢; omega)
-            (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
-            (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwτ, hwhy] at this ⊢; omega)
-          refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
-            (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
-          · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
-            exact tgt_eq (by omega)
-          · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
-            exact tgt_eq (by omega)
-        · rw [hAA]
-          have hp2 : PreS L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + cr.length) : Nat) : Int)
-              ++ ck ++ cr) ++ ce) ρ reserved := by simpa only [List.append_assoc] using hp
-          have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-          simp only [List.length_append, fehlC_len] at hq
-          have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
-            ⟨by simp only [frei, contextWords_cons, hwτ, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
-             envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
-          have ih := ihErr (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
-            (by simp only [frei, contextWords_cons, hwτ, hwhy] at hlo ⊢; omega)
-            (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
-            (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwτ, hwhy] at this ⊢; omega)
-          refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
-            (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
-          · simp only [List.length_append, fehlC_len, addr_norm]
-            exact tgt_eq0 (by omega)
-          · simp only [List.length_append, fehlC_len, addr_norm]
-            exact tgt_eq0 (by omega)
-        · rw [hAA]
-          exact hst
-      · cases hc
-    · cases h
-  · cases h
+  simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, ⟨cg, tg⟩, hg, hc⟩ := h
+  simp only [Prod.mk.injEq] at hc
+  obtain ⟨rfl, rfl⟩ := hc
+  have metadata := fallibleForeignC_top hg
+  have hwhy := metadata.2.2
+  have hks := hW.ks
+  simp only [List.length_append, List.length_singleton] at hs
+  simp only [execEnd]
+  rcases fallibleForeignC_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hg
+    (by omega) hW (by simpa only [List.append_assoc] using hp) hWa with
+    ⟨v, m2, hAA, s12, a12, value, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩ | ⟨hAA, hst⟩
+  · rw [hAA]
+    have hp2 : PreS L m pc fp K (frei Γ reserved) ((cg) ++ (cr ++ ce)) ρ reserved := by simpa only [List.append_assoc] using hp
+    have hq := hp2.nextW hW a12 (d' := frei Γ reserved + valueWords τ) (by have := hp.ctx; omega) (by omega) (by omega)
+    simp only [List.length_append, fehlC_len] at hq
+    have hp3 : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) reserved :=
+      ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.left.code, hq.left.far,
+       envAt_cons hq.env value, trivial, wstab_true _ _⟩
+    have ih := ihRest (ex := exPlus ex ce.length) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3
+      (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
+      (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
+    refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
+      (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+    · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
+      exact tgt_eq (by omega)
+    · simp only [exPlus, List.length_append, fehlC_len, addr_norm]
+      exact tgt_eq (by omega)
+  · rw [hAA]
+    have hp2 : PreS L m pc fp K (frei Γ reserved) ((cg ++ cr) ++ ce) ρ reserved := by simpa only [List.append_assoc] using hp
+    have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+    simp only [List.length_append, fehlC_len] at hq
+    have hp3 : PreS L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) reserved :=
+      ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
+       envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
+    have ih := ihErr (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
+      (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
+      (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
+    refine Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
+      (Ret.cast (Ret.schrumpf ih) rfl ?_ ?_)
+    · simp only [List.length_append, fehlC_len, addr_norm]
+      exact tgt_eq0 (by omega)
+    · simp only [List.length_append, fehlC_len, addr_norm]
+      exact tgt_eq0 (by omega)
+  · rw [hAA]
+    exact hst
 
 end Gabbro.Stage0.Senke

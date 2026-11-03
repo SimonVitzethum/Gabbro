@@ -166,6 +166,7 @@ theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.F
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
     Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs) := by
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true]
   rw [Kernzelle.accumulatorB_leer]
   simp only [Bool.true_and]
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)

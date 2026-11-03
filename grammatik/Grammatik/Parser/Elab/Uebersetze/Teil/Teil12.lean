@@ -90,16 +90,15 @@ def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys 
     else
       match uAxKopf alias tabs whys name params (if strEq art "divergent" then some (.atom "never") else res) fehler (eigner := eigner) with
       | .error e => .error e
-      | .ok kopf => uAxKlauseln kopf tabs globs klauseln
+      | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs klauseln
 
 /-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
     a precondition, a postcondition or a write has no form. -/
 def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
     (sc : SSyscall) (eigner : List String := []) : Except String UFnKopf :=
-  if !(sc.gate.pre.isEmpty && sc.gate.post.isEmpty) then .error "foreign fn clause without G form"
-  else match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) with
+  match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) with
     | .error e => .error e
-    | .ok kopf => uAxKlauseln kopf tabs globs [.effs sc.gate.uses]
+    | .ok kopf => uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [.effs sc.gate.uses]
 
 /-- The roots of the `start { .. };` statements of a body, in order (`fuel` bounds the nesting). -/
 def uStartNamen : Nat → SAnw → List String
@@ -375,7 +374,7 @@ def callNames (f : UFn) : List String :=
     | .bindElse _ c _ _ => some c
     | .callInd _ c _ => some c
     | .bindCallInd _ _ c _ => some c
-    | .bindCallIndElse _ _ c _ _ => some c
+    | .bindCallIndElse _ _ c _ _ | .callIndElseBeg _ c _ _ => some c
     | _ => none
 
 /-- One round of the floor relation: the direct floor and the floors of the callees found so far. -/

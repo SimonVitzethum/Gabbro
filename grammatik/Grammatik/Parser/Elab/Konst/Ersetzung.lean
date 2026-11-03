@@ -181,6 +181,11 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
     match ersetzeSExprListIn shadowed fns args with
     | .error e => .error e
     | .ok args' => .ok (.call f args')
+  | .callIndElse pointer args reason body => do
+    let pointer ← ersetzeSExprIn shadowed fns pointer
+    let args ← ersetzeSExprListIn shadowed fns args
+    let body ← ersetzeSAnwIn (reason :: shadowed) fns body
+    pure (.callIndElse pointer args reason body)
   | .callElse name args reason body => do
     let args ← ersetzeSExprListIn shadowed fns args
     let body ← ersetzeSAnwIn (reason :: shadowed) fns body

@@ -238,7 +238,7 @@ theorem t39_lex :
 theorem t39 : beqTopTief (parseTopTief tt39)
     (.ok [.trustT "jitpuffer" "Gastbild" "x86_64"
       [.binds "eintritt" "rdi", .binds "kappe" "rsi"]
-      "gaststapel" "gast_bleibt_in_seinem_raum"]) = true := by
+      "gaststapel" "gast_bleibt_in_seinem_raum" none]) = true := by
   decide
 -- beispiele/0025-entrust.gab:32-36. Rust: `Entrust` -- same shape.
 def tt40 : List Token :=

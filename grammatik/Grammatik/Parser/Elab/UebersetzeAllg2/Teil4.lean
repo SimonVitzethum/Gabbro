@@ -327,6 +327,15 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .storeAtomB n v => (lowStoreAtomBL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
   | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
+  | .retireMark name =>
+    if !u.checks.any (fun c => strEq c.duty name) then
+      .error ("retirement is not a declared check Duty: " ++ name)
+    else match markFin u.marken name with
+    | none => .error ("duty unknown: " ++ name)
+    | some m =>
+      if hm : Res.marke m 0 ∈ Λ then
+        .ok ⟨Λ.erase (.marke m 0), .retires m 0 hm (declOf u).a10⟩
+      else .error ("check Duty already consumed or unavailable: " ++ name)
   | .retires m => lowRetiresL u caller Γ Λ m
   | .breakingBeg _ => .error "lower: a breaking block opens here"
   | .call c args => lowCallL u caller Γ fn Λ c args
@@ -336,13 +345,14 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .shiftTab b fname ix _ von nach => (lowShiftL u caller Γ fn Λ b fname ix von nach).map fun st => ⟨Λ, st⟩
   | .assignRef r f v => (lowAssignRefL u caller Γ fn Λ r f v).map fun st => ⟨Λ, st⟩
   | .lockBeg _ => .error "lower: a locks block opens here"
+  | .consumeLoopBeg .. => .error "lower: a consuming traverse is read by the block reader"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu
   | .floatOf .. =>
     .error "floatOf: canonical Endblock has no integer-to-float introduction"
   | .floatLit .. | .float .. =>
     .error "float: IEEE introduction requires a continuing G block; no canonical Endblock form"
-  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>
+  | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .callIndElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>
     .error "lower: a let, if or traverse is read by the block reader"
   | .ret _ => .error "lower: return in the middle of a body has no G form"
   | .leave _ => .error "lower: leave outside a traverse"

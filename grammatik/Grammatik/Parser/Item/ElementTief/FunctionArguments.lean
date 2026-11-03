@@ -43,6 +43,7 @@ def parseFunctionArgument (fuel : Nat) (tokens : List Token) :
 def literalLocals : SAnw → List String
   | .bind _ n _ _ | .bindLib _ n _ _ | .allocVon _ n _ _ | .await n _ _ _ |
     .swap n _ _ _ => [n]
+  | .callElse _ _ reason body | .callIndElse _ _ reason body => reason :: literalLocals body
   | .bindElse n _ _ _ body => n :: literalLocals body
   | .alloc _ n _ _ _ body => n :: (match body with
       | some body => literalLocals body

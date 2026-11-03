@@ -1,7 +1,7 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontext
-public import Stage0.Senke.Anweisung.FehlerLauf
+public import Stage0.Senke.Tore.FallibleRun
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
 @[expose] public section
 
@@ -28,84 +28,67 @@ theorem blockAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat
     (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
     BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Block D (vertragVon D f) l Γ Λ Λ' from .bindAxiomElse a args he proof0 proof1 proof2 proof3 proof4 err rest) := by
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo0b hlo hu hk hWa hpr
-  simp only [lowB, ← hlo0] at h
-  split at h
-  · next b lo' hi' hb hτ =>
-    split at h
-    · next hc =>
-      obtain ⟨hf, hlo', hn, hwhy⟩ := hc
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h
-      have hwτ : valueWords τ = 1 := by
-        have e : τ = .int lo' hi' := Option.some.inj (he.symm.trans hτ)
-        rw [e]; exact chkC_width hck
-      split at hc
-      · next hJ =>
-        simp only [Option.some.injEq, Prod.mk.injEq] at hc
-        obtain ⟨rfl, rfl⟩ := hc
-        simp only [List.length_append, List.length_singleton, fehlC_len] at hs
-        have hFB3 : FB = 4 := rfl
-        have hFramePrefix := functionFrame_prefix P f
-        have hks := hW.ks
-        have h7 := torC_top1 ht
-        simp only [execBlock]
-        rcases torElse_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hτ hb hf hlo' hn ht hck hJ (by omega)
-          (by omega) hW hp hWa with ⟨v, m2, w, hAA, s12, a12, hw2, hen, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩ |
-          ⟨hAA, hst⟩
-        · rw [hAA]
-          have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + (cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]).length) : Nat) : Int)
-              ++ ck) ++ ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]) ++ ce)) ρ := by simpa only [List.append_assoc] using hp
-          have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-          simp only [List.length_append, fehlC_len] at hq
-          have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) :=
-            ⟨by simp only [frei, contextWords_cons, hwτ, hwhy]; omega, hq.small, hq.frame, hq.left.left.code, hq.left.left.far,
-             envAt_cons hq.env (ValueAt.of_enc hwτ hw2 hen), trivial, wstab_true _ _⟩
-          have ih := ihRest (ex := exPlus ex (ce.length + 1)) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo0b
-            (by simp only [frei, contextWords_cons, hwτ, hwhy] at hlo ⊢; omega)
-            (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
-            (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwτ, hwhy] at this ⊢; omega)
-          have ihS := Sim.schrumpf ih
-          refine Sim.prefix hlo0b s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
-            (Sim.cont ihS ?_ ?_ ?_)
-          · intro m3 a3
-            have hc3 := codeAt_agreeWIn hW a3 (codeAt_right hq.left.code)
-              (codeFar_right (n := cr.length) (k := 1) (by simpa using hq.left.far))
-            have hj := hc3 0 (by simp)
-            simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
-            have sj := Star.one (run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp (t := ⟨_, fp⟩) hj))
-            have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
-              have := sx_nat (d := 16 * (ce.length + 1)) (by omega); simpa using this
-            rw [hl] at sj
-            refine star_cast sj rfl ?_
-            simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, fehlC_len, addr_norm]
-            congr 2 <;> omega
-          · simp only [exPlus, List.length_append, List.length_singleton, fehlC_len, addr_norm]
-            exact tgt_eq (by omega)
-          · simp only [exPlus, List.length_append, List.length_singleton, fehlC_len, addr_norm]
-            exact tgt_eq (by omega)
-        · rw [hAA]
-          have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((ct ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + (cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]).length) : Nat) : Int)
-              ++ ck ++ (cr ++ [ci 18 (16 * (ce.length + 1)) 0 0])) ++ ce) ρ := by simpa only [List.append_assoc] using hp
-          have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
-          simp only [List.length_append, fehlC_len] at hq
-          have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) :=
-            ⟨by simp only [frei, contextWords_cons, hwτ, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
-             envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
-          have ih := ihErr (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
-            (by simp only [frei, contextWords_cons, hwτ, hwhy] at hlo ⊢; omega)
-            (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
-            (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwτ, hwhy] at this ⊢; omega)
-          refine Sim.prefix hlo0b s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
-            (Ret.toSim (Ret.cast (Ret.schrumpf ih) ?_ ?_ ?_))
-          · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, fehlC_len, addr_norm]
-          · simp only [List.length_append, List.length_singleton, fehlC_len, addr_norm]
-            exact tgt_eq0 (by omega)
-          · simp only [List.length_append, List.length_singleton, fehlC_len, addr_norm]
-            exact tgt_eq0 (by omega)
-        · rw [hAA]
-          exact hst
-      · cases hc
-    · cases h
-  · cases h
+  simp only [lowB, ← hlo0, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, ⟨cg, tg⟩, hg, hc⟩ := h
+  simp only [Prod.mk.injEq] at hc
+  obtain ⟨rfl, rfl⟩ := hc
+  have metadata := fallibleForeignC_top hg
+  have hwhy := metadata.2.2
+  have hks := hW.ks
+  simp only [List.length_append, List.length_singleton] at hs
+  simp only [execBlock]
+  rcases fallibleForeignC_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hg
+    (by omega) hW (by simpa only [List.append_assoc] using hp) hWa with
+    ⟨v, m2, hAA, s12, a12, value, hW2⟩ | ⟨r, m2, hAA, s12, a12, hw2, hW2⟩ | ⟨hAA, hst⟩
+  · rw [hAA]
+    have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((cg) ++ ((cr ++ [ci 18 (16 * (ce.length + 1)) 0 0]) ++ ce)) ρ := by simpa only [List.append_assoc] using hp
+    have hq := hp2.nextW hW a12 (d' := frei Γ reserved + valueWords τ) (by have := hp.ctx; omega) (by omega) (by omega)
+    simp only [List.length_append, fehlC_len] at hq
+    have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) :=
+      ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.left.left.code, hq.left.left.far,
+       envAt_cons hq.env value, trivial, wstab_true _ _⟩
+    have ih := ihRest (ex := exPlus ex (ce.length + 1)) cr tr hr (by omega) (by omega) hW m2 _ _ _ hp3 hlo0b
+      (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
+      (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
+    have ihS := Sim.schrumpf ih
+    refine Sim.prefix hlo0b s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
+      (Sim.cont ihS ?_ ?_ ?_)
+    · intro m3 a3
+      have hc3 := codeAt_agreeWIn hW a3 (codeAt_right hq.left.code)
+        (codeFar_right (n := cr.length) (k := 1) (by simpa using hq.left.far))
+      have hj := hc3 0 (by simp)
+      simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hj
+      have sj := Star.one (run_step (t := ⟨_, fp⟩) hj (by decide) (run_jmp (t := ⟨_, fp⟩) hj))
+      have hl : sx (II.f (16 * ((ce.length : Int) + 1))) = BitVec.ofNat 64 (16 * (ce.length + 1)) := by
+        have := sx_nat (d := 16 * (ce.length + 1)) (by omega); simpa using this
+      rw [hl] at sj
+      refine star_cast sj rfl ?_
+      simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, fehlC_len, addr_norm]
+      congr 2 <;> omega
+    · simp only [exPlus, List.length_append, List.length_singleton, fehlC_len, addr_norm]
+      exact tgt_eq (by omega)
+    · simp only [exPlus, List.length_append, List.length_singleton, fehlC_len, addr_norm]
+      exact tgt_eq (by omega)
+  · rw [hAA]
+    have hp2 : PreS (reserved := reserved) L m pc fp K (frei Γ reserved) ((cg ++ (cr ++ [ci 18 (16 * (ce.length + 1)) 0 0])) ++ ce) ρ := by simpa only [List.append_assoc] using hp
+    have hq := hp2.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+    simp only [List.length_append, fehlC_len] at hq
+    have hp3 : PreS (reserved := reserved) L m2 _ fp K (frei (.why (D.agruende a) :: Γ) reserved) ce (Env.cons (τ := .why (D.agruende a)) r ρ) :=
+      ⟨by simp only [frei, contextWords_cons, hwhy]; omega, hq.small, hq.frame, hq.code, hq.far,
+       envAt_cons hq.env (ValueAt.of_enc hwhy hw2 rfl), trivial, wstab_true _ _⟩
+    have ih := ihErr (ex := ex) ce te hce (by omega) (by omega) hW m2 _ _ _ hp3
+      (by simp only [frei, contextWords_cons, hwhy] at hlo ⊢; omega)
+      (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, hwhy] at this ⊢; omega)
+    refine Sim.prefix hlo0b s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
+      (Ret.toSim (Ret.cast (Ret.schrumpf ih) ?_ ?_ ?_))
+    · simp only [T.mk.injEq, and_true, List.length_append, List.length_singleton, fehlC_len, addr_norm]
+    · simp only [List.length_append, List.length_singleton, fehlC_len, addr_norm]
+      exact tgt_eq0 (by omega)
+    · simp only [List.length_append, List.length_singleton, fehlC_len, addr_norm]
+      exact tgt_eq0 (by omega)
+  · rw [hAA]
+    exact hst
 
 end Gabbro.Stage0.Senke

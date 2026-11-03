@@ -36,6 +36,9 @@ def druckFehlerKarte : List (String × Option SExpr × String) → List Token
 def druckBind (b : SBind) : List Token :=
   [.wort "number"] ++ druckToks b.id ++ [.wort "regs", .wort "in", .zeichen "{"] ++ druckRegBinds b.ins ++
     [.zeichen "}", .wort "regs", .wort "out", .zeichen "{"] ++ druckRegBinds b.outs ++ [.zeichen "}"] ++
+    (match b.resultArea with
+      | none => []
+      | some register => [.wort "result", .wort "area", nameTok register]) ++
     (b.stack.flatMap fun s => [.wort "stack", nameTok s]) ++
     [.wort "clobbers"] ++ druckNamenKlammer b.dirty ++
     [.wort "errors", .zeichen "{"] ++ druckFehlerKarte b.codes ++ [.zeichen "}"]

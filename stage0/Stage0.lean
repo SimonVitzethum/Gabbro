@@ -17,6 +17,7 @@ public import Stage0.Zeugen.Ablehnung.OwnerMintWitness
 public import Stage0.Zeugen.Pipeline.RetireWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness
 public import Stage0.Zeugen.Annahme.CheckWitness
+public import Stage0.Zeugen.Pruefung.CheckConsumerWitness
 public import Stage0.Zeugen.Annahme.AccWitness
 public import Stage0.Zeugen.Annahme.AlignedStaticWitness
 public import Stage0.Zeugen.Annahme.ResetRangeWitness
@@ -58,6 +59,8 @@ public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Run
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 public import Stage0.Senke.Tore.Proben
+public import Stage0.Senke.Tore.Answers
+public import Stage0.Senke.Tore.AreaProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
@@ -112,6 +115,7 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Signed.CompareProbe
 public import Stage0.Frontend.ExportCorrectness
 public import Stage0.Zeugen.Pipeline.ProductRecordWitness
 public import Stage0.Zeugen.Pipeline.ProductValueWitness
+public import Stage0.Frontend.CheckExport
 public import Stage0.Frontend.MeasureWitness
 public import Stage0.Frontend.ConstWitness
 public import Stage0.Frontend.ConstValuesWitness

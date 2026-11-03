@@ -4,8 +4,9 @@
    parameterless Boolean function under the generated name
    (`probeFnName`): the head is synthesized (`bool`, no reason channel,
    no held locks, no written tables), the contracts are empty and the
-   body runs through the ordinary `elabFn` pipeline, so a probe accepts
-   exactly what a written `fn` body accepts. Only parser-shaped bodies
+   body runs through the ordinary `elabFn` pipeline after source-indexed
+   recording inserts typed sample/floor calls at its actual returning sites.
+   The bundle includes those private ordinary reporter functions. Only parser-shaped bodies
    (`SAnw.block`, what `parseBlock` produces) elaborate; anything else
    keeps the named refusal. In particular a probe never calls another
    probe: probes elaborate against the written heads only, so naming a
@@ -19,6 +20,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Recording
 
 public section
 
@@ -36,7 +38,7 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
-    (zeiger : List String) (zb : Nat) (c : SCheck) : Except String UFn :=
+    (zeiger : List String) (zb : Nat) (c : SCheck) : Except String (UFn × List UFn) := do
   match c.canFail with
   | .block ss ende =>
     let pname := probeFnName c.cname
@@ -44,9 +46,11 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
     | .error e => .error e
     | .ok (kopf, schreibt) =>
       let ctx := uCtxVon alias consts tabs locks globs kopf pname [] whys sums regs zustaende specs arrKonst
-      match elabFn ctx koepfe [] (.block ss ende) with
+      let (recorded, reporters, sampleHeads, _) ←
+        recordCheckCode koepfe c 100000 ctx 0 (.block ss ende)
+      match elabFn ctx (koepfe ++ sampleHeads) [] recorded with
       | .error e => .error e
-      | .ok (gives, needs, body, r) => .ok { name := pname, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := schreibt, gputs := [], nimmt := [dutyName c.cname], gibt := [dutyName c.cname], gives := gives, needs := needs, body := body, ret := r, boden := none }
+      | .ok (gives, needs, body, r) => .ok ({ name := pname, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := schreibt, gputs := [], nimmt := [dutyName c.cname], gibt := [dutyName c.cname], gives := gives, needs := needs, body := body, ret := r, boden := none }, reporters)
   | _ => .error "check body without G form"
 
 /-- A generated name that meets a written function or foreign body is refused. -/
@@ -65,10 +69,10 @@ def uProbeFnsAux (consts : List (String × Int)) (alias : List (String × (Int �
     | .ok _ =>
       match uProbeFn consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb c with
       | .error e => .error e
-      | .ok f =>
+      | .ok (f, reporters) =>
         match uProbeFnsAux consts alias tabs locks globs koepfe whys sums devs regs zustaende specs arrKonst zeiger zb belegt (probeFnName c.cname :: bekannt) rest with
         | .error e => .error e
-        | .ok fs => .ok (f :: fs)
+        | .ok fs => .ok (f :: (reporters ++ fs))
 
 /-- Elaborate every `can_fail` body of the unit into its generated producer. -/
 def uProbeFns (consts : List (String × Int)) (alias : List (String × (Int × Int))) (tabs : List UTab)

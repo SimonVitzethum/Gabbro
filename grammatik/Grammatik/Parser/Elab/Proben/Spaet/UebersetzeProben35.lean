@@ -86,6 +86,14 @@ def trav_ok : String :=
   "module m { table T count 2 { slot { v : bool, } } impl fn f() { traverse k over slots of T by unvisited invariant forall j in slots of T : T.slots[j].v { } } }"
 theorem trav_ok_stufe : stufe trav_ok = "OK" := by decide +kernel
 
+/-- Source-to-G witness for consuming: the current tree domain supplies membership,
+    its declared self edge supplies ordering, and the state-reading count is the measure.
+    This witnesses elaboration, not discharge of the writer's removal/decrease duty. -/
+def consuming_ok : String :=
+  "module m { table T count 2 { tree { child next } slot { next : option index into Self, live : bool, } } impl fn f(root : index into T) effects { writes T.slots } { traverse k over descendants of T.slots[root] by consuming decreases count j in slots of T : T.slots[j].live touches consumes T.slots invariant true { T.slots[k].live = false; T.slots[k].next = None; } } }"
+
+theorem consuming_traversal_source_zeuge : stufe consuming_ok = "OK" := by decide +kernel
+
 /-- Negative twin: the quantified table is guarded and its lock is not held. -/
 def trav_guard_refused : String :=
   "module m { table T count 2 { slot { v : bool, } } lock L protects { T } rank 0; impl fn f() { traverse k over slots of T by unvisited invariant forall j in slots of T : T.slots[j].v { } } }"

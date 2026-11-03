@@ -14,7 +14,7 @@ def libraryChildren : SAnw → List SAnw
   | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body |
     .each _ _ _ _ _ _ _ body | .retry _ body | .loop _ body |
     .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body |
-    .grow _ _ body | .child body => [body]
+    .grow _ _ body | .child body | .callIndElse _ _ _ body | .callElse _ _ _ body => [body]
   | .alloc _ _ _ _ _ no => no.toList
   | _ => []
 
@@ -98,7 +98,7 @@ def ohneBibliothekAnw : SAnw → Bool
   | .bindLib .. | .lcall .. => false
   | .bindElse _ _ _ _ body | .elsif _ body | .arm _ _ body | .retry _ body | .loop _ body |
     .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body | .grow _ _ body |
-    .child body | .each _ _ _ _ _ _ _ body => ohneBibliothekAnw body
+    .child body | .each _ _ _ _ _ _ _ body | .callIndElse _ _ _ body | .callElse _ _ _ body => ohneBibliothekAnw body
   | .cond _ yes branches no =>
     ohneBibliothekAnw yes && ohneBibliothekAnwListe branches && ohneBibliothekAnwOpt no
   | .cases _ arms => ohneBibliothekAnwListe arms
@@ -163,7 +163,7 @@ end
     there instead of a misleading gate name. -/
 mutual
 def callFreeStmt : SAnw → Bool
-  | .call _ _ | .lcall _ | .bindLib _ _ _ _ => false
+  | .call _ _ | .callElse .. | .callIndElse .. | .lcall _ | .bindLib _ _ _ _ => false
   | .each _ _ _ _ _ _ _ _ | .loop _ _ | .retry _ _ => false
   | .emit _ _ _ | .await _ _ _ _ | .swap _ _ _ _ => false
   | .alloc _ _ _ _ _ _ | .allocVon _ _ _ _ | .reset _ _ | .grow _ _ _ | .free _ | .genericCall _ _ _ => false
@@ -238,6 +238,10 @@ def exportLibraryStmt (members : List SItemTief) : SAnw → Except String SAnw
       match torZurErweiterung true (callFreeStmt lib.translatorBody) with
       | .error e => .error e
       | .ok _ => .ok (exportLibraryBind m x ty lib c)
+  | .callElse name args reason body =>
+    (exportLibraryStmt members body).map (.callElse name args reason)
+  | .callIndElse pointer args reason body =>
+    (exportLibraryStmt members body).map (.callIndElse pointer args reason)
   | .bindElse y t e g b =>
     match exportLibraryStmt members b with
     | .error e => .error e

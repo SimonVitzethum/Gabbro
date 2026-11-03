@@ -51,8 +51,16 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
   let members := uMembers (pre108 items)
   validateTargetFor options.arch options.target members
   let tore ← toreVonFor options.arch options.target members
+  for foreign in u.axs do
+    match foreign.res with
+    | some type =>
+      if 1 < Senke.valueWords type then
+        let area := (tore.find? (·.name == foreign.name)).bind (·.resultArea)
+        if area.isNone then
+          throw s!"gate {foreign.name}: multiword result requires result area REGISTER in the selected profile"
+    | none => pure ()
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
-    (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩
+    (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler, t.resultArea⟩
   let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
   let roots := rs.filter (· != main)
   match hp : Senke.mainEnv ((declOf u).params main) with

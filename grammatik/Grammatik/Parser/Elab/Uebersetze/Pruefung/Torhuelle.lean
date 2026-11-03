@@ -1,22 +1,46 @@
 /- C16: the UCheck-to-CheckDecl derivation -- gate wrappers and the mark table.
 
    A declared check's Duty is a linear mark (`dutyName`): the probe consumes and produces
-   it on every normal return (`Erzeuge.uProbeFn`), each gate wrapper consumes it once.
+   it on every normal return (`Erzeuge.uProbeFn`), each gate wrapper threads it
+   (`nimmt` and `gibt` both name the Duty): the wrapper consumes the Duty at its
+   call and produces it back at its return, so the lowered body typechecks (the
+   return needs the held marks to match the contract end up to order). The
+   C14-selected ordinary consumer in `Lauf/Consumer` invokes this wrapper and
+   explicitly retires its returning Duty on each channel. The wrapper keeps
+   its common returning signature; neither channel invents a resource.
+
    `uMarken` is the declaration's mark table (the `linear`-flagged type items, then every
    check's Duty); `uMarkenPruef` refuses a `nimmt`/`gibt` that names no member.
 
    `uTorHuellen` derives one wrapper `UFn` per gate (`torHuellenName`): a nullary function
-   that consumes the check's Duty and invokes the gate, forwarding its parameters (none --
+   that threads the check's Duty and invokes the gate, forwarding its parameters (none --
    a gate with parameters keeps its named refusal) and its result (empty, `bool`, range,
    option, tagged, reason value or aggregate, bound and returned; a reason channel or a
    `never` answer keeps its named refusal). The wrapper, not the written gate, is what the
    kernel `CheckDecl.gates` names: the written gate need not mention the Duty. A gate that
    names a sibling check keeps its named refusal: selecting among consumers is the
-   test-driver policy (C14), not an auto-run of every gate. -/
+   test-driver policy (C14), not an auto-run of every gate.
+
+   A gate may also name a C08 foreign body (`extern`/`raw`/`prim`/`divergent`
+   declarations, `asm` bodies, `axiom` items without `requires`, `syscall`
+   gates): the wrapper is still an ordinary nullary `UFn` threading the Duty,
+   and the gate call is the ordinary foreign call Stage 0 already lowers.
+   Infallible answer-less foreign bodies ride `axCall`; infallible `int`/`bool`
+   answers ride `bindAx` with the forwarded result; fallible (reason-channel)
+   `int`/`bool` answers ride `bindAxElse` whose error branch rethrows the exact
+   declared reason while retaining the Duty -- a foreign failure never becomes
+   a normal answer or successful discharge. Anything else keeps
+   its named refusal: parameters, device handles, `never` answers, and answers
+   without a wrapper form (references, options, tagged values, reason values,
+   aggregates). An unclosed error branch is refused by the lowering, never
+   silently admitted. -/
+
 module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 public section
@@ -141,45 +165,89 @@ def torErgebnis (gate : String) (f : UFn) : List UStmt × URet :=
   else if f.resTy.isSome then ([.bindCall "ans" gate []], .wert (.param "ans"))
   else ([.call gate []], .empty)
 
-/-- One gate wrapper: a nullary function that consumes the check's Duty and invokes
-    the gate, forwarding its result shape. -/
-def uTorHuelle (duty : String) (fns : List UFn) (cname gate : String) : Except String UFn :=
+/-- Preserve every case of a closed foreign reason channel. Each arm returns
+    that exact case; the final return only closes the syntactic continuation
+    after the exhaustive match. All returns still owe the same Duty. -/
+def torFehler (count : Nat) : List UStmt :=
+  [.matchWhyBeg "e"] ++
+    uMitTrenner ((List.range count).map fun i => [.ret (.why i)]) ++
+    [.blkEnd, .ret (.why 0)]
+
+/-- One gate wrapper over a C08 foreign body: a nullary function that threads the
+    check's Duty and invokes the foreign body with the ordinary foreign call.
+    The Duty threads on every path -- success and error alike -- so no path
+    forges or drops it; foreign failures retain their exact reason channel and
+    cannot complete the gate normally. -/
+def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
+  if !k.names.isEmpty then .error ("gate with parameters without wrapper form: " ++ gate)
+  else if !k.griffe.isEmpty then .error ("gate with device handles without wrapper form: " ++ gate)
+  else if k.resNever then .error ("gate without a return without wrapper form: " ++ gate)
+  else match k.kanal with
+  | .none =>
+    match UFnKopf.axErg k with
+    | .none =>
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.axCall gate []], ret := .empty, boden := none }
+    | .some (.int lo hi) =>
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := some (lo, hi), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAx "ans" gate []], ret := .val (.param "ans"), boden := none }
+    | .some .bool =>
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAx "ans" gate []], ret := .bool (.var "ans"), boden := none }
+    | .some _ => .error ("foreign gate answer without wrapper form: " ++ gate)
+  | .some (_, count) =>
+    if count == 0 then .error ("foreign gate has an empty reason channel: " ++ gate) else
+    match UFnKopf.axErg k with
+    | .some (.int lo hi) =>
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := some (lo, hi), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := count, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e"] ++ torFehler count ++ [.blkEnd], ret := .val (.param "ans"), boden := none }
+    | .some .bool =>
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := count, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e"] ++ torFehler count ++ [.blkEnd], ret := .bool (.var "ans"), boden := none }
+    | _ => .error ("foreign gate answer without wrapper form: " ++ gate)
+
+/-- One gate wrapper: a nullary function that threads the check's Duty and invokes
+    the gate, forwarding its result shape. A gate naming no function of the unit
+    falls through to the foreign bodies (`uFremdHuelle`). -/
+def uTorHuelle (duty : String) (fns : List UFn) (fremd : List UFnKopf)
+    (cname gate : String) : Except String UFn :=
   match fns.find? (fun f => strEq f.name gate) with
-  | none => .error ("gate without wrapper form: " ++ gate)
   | some f =>
     if !f.params.isEmpty then .error ("gate with parameters without wrapper form: " ++ gate)
     else if f.gruende != 0 then .error ("gate with a reason channel without wrapper form: " ++ gate)
     else if f.resTy == some Ty.never then .error ("gate without a return without wrapper form: " ++ gate)
     else
       let (body, ret) := torErgebnis gate f
-      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := f.res, resBool := f.resBool, resOpt := f.resOpt, resSum := f.resSum, resWhy := f.resWhy, resTy := f.resTy, gruende := 0, held := [], puts := [], gputs := [], nimmt := [duty], gibt := [], gives := [], needs := [], body := body, ret := ret, boden := none }
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := f.res, resBool := f.resBool, resOpt := f.resOpt, resSum := f.resSum, resWhy := f.resWhy, resTy := f.resTy, gruende := 0, held := [], puts := [], gputs := [], nimmt := [duty], gibt := [duty], gives := [], needs := [], body := body, ret := ret, boden := none }
+  | none =>
+    match fremd.find? (fun k => strEq k.name gate) with
+    | none => .error ("gate without wrapper form: " ++ gate)
+    | some k => uFremdHuelle duty cname gate k
 
-def uTorTore (fns : List UFn) (cname duty : String) : List String → List String → Except String (List UFn)
+def uTorTore (fns : List UFn) (fremd : List UFnKopf) (cname duty : String) :
+    List String → List String → Except String (List UFn)
   | [], _ => .ok []
   | g :: rest, gesehen =>
     if gesehen.any (fun m => strEq m g) then .error ("duplicate gate: " ++ g)
-    else match uTorHuelle duty fns cname g with
+    else match uTorHuelle duty fns fremd cname g with
     | .error e => .error e
     | .ok w =>
-      match uTorTore fns cname duty rest (g :: gesehen) with
+      match uTorTore fns fremd cname duty rest (g :: gesehen) with
       | .error e => .error e
       | .ok ws => .ok (w :: ws)
 
-def uTorHuellenAux (fns : List UFn) (checks : List UCheck) : List UCheck → Except String (List UFn)
+def uTorHuellenAux (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck) :
+    List UCheck → Except String (List UFn)
   | [] => .ok []
   | c :: rest =>
     match c.tore.find? (fun g => checks.any (fun d => strEq d.name g)) with
     | some g => .error ("gate naming a check without driver form: " ++ g)
     | none =>
-      match uTorTore fns c.name c.duty c.tore [] with
+      match uTorTore fns fremd c.name c.duty c.tore [] with
       | .error e => .error e
       | .ok ws =>
-        match uTorHuellenAux fns checks rest with
+        match uTorHuellenAux fns fremd checks rest with
         | .error e => .error e
         | .ok mehr => .ok (ws ++ mehr)
 
-/-- Every gate of every check derives its Duty-consuming wrapper. -/
-def uTorHuellen (fns : List UFn) (checks : List UCheck) : Except String (List UFn) :=
-  uTorHuellenAux fns checks checks
+/-- Every gate of every check derives its Duty-threading wrapper. -/
+def uTorHuellen (fns : List UFn) (fremd : List UFnKopf) (checks : List UCheck) :
+    Except String (List UFn) :=
+  uTorHuellenAux fns fremd checks checks
 
 end Gabbro.Grammatik.Parser.Uebersetze

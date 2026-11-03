@@ -148,6 +148,7 @@ def artAnw : SAnw → String
   | .bindQ .. => "let-query"
   | .callQ .. => "call-query"
   | .genericCall .. => "generic-call"
+  | .callIndElse .. => "indirect-call-else"
   | .callElse .. => "call-else"
 
 /-- Ender tag (all 3 arms of `SEnde`). -/

@@ -10,7 +10,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Breaking
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
-set_option maxRecDepth 100000
 mutual
 /-- Expand expression folds before processing the ordinary statement forms. -/
 def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
@@ -23,7 +22,7 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
     pure (prefix ++ code, ctx)
 /-- A run of body statements as a flat list. A `let` extends the context for the rest of the run;
     `locks L { ... }` elaborates its body with `L` HELD (guards, calls) and the bindings made inside it
-    end with it; a shared hold, a `return` inside the block and every other lock expression are refused.
+    end with it; returns retain lexical cleanup scopes, while unsupported lock expressions are refused.
     Structural in a fuel (one unit per statement and per block). -/
 def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
     Nat → UCtx → List SAnw → Except String (List UStmt × UCtx)
@@ -31,6 +30,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
   | _ + 1, ctx, [] => .ok ([], ctx)
   | _ + 1, _, .lcall .. :: _ | _ + 1, _, .bindLib .. :: _ =>
       .error "C02: library call needs certified immutable payload initialization and ordinary call expansion"
+  | f + 1, ctx, .callIndElse p args e body :: rest => uCallIndElse tabs koepfe (uAnwReihe tabs koepfe f) ctx p args e body rest
   | f + 1, ctx, .callElse c args e body :: rest => uCallElse tabs koepfe (uAnwReihe tabs koepfe f) ctx c args e body rest
   | f + 1, ctx, .bind mu x t e :: rest =>
     match uBindWert ctx tabs koepfe mu x t e with

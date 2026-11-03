@@ -20,7 +20,7 @@ def sourceName : SItemTief → Option String
     .tableT n _ _ _ _ _ _ | .arenaT n _ _ _ _ _ | .whyT n _ _ | .stateT n _ |
     .devT n _ _ _ | .assumT n _ _ _ | .axiomT n _ _ _ _ _ | .atomT n _ _ _ _ |
     .lockT n _ _ _ _ _ _ | .rcuT n _ _ | .groupT n _ _ | .accT n _ _ _ _ |
-    .trustT n _ _ _ _ _ | .bootT n _ _ _ | .varT n | .goalT n _ => some n
+    .trustT n _ _ _ _ _ _ | .bootT n _ _ _ | .varT n | .goalT n _ => some n
   | .checkT check => some check.cname
   | .walkT walk => some walk.name
   | .entryT entry => some entry.name

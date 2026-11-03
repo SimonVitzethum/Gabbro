@@ -159,7 +159,7 @@ theorem start_image_zeuge : startRoots.toOption = some [0] := by decide +kernel
 
 /-- Other result types still require their own checked representation and decoder. -/
 theorem unsupported_answers_zeuge :
-    chkC (some (.ref 0)) 3 = none ∧ chkC (some (.opt 4)) 3 = none ∧
+    (chkC (some (.ref 0)) 3).isSome = true ∧ chkC (some (.opt 4)) 3 = none ∧
     chkC (some (.fnptr 0)) 3 = none := by decide +kernel
 
 end Gabbro.Stage0.Senke.GateProbe

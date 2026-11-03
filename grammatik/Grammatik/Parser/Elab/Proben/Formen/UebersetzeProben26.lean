@@ -65,4 +65,28 @@ def fallible_bare_refused : String :=
   "module m { reason G { Weg = 1 \"weg\" exhaustive } syscall rd() -> u32 in 0 .. 9 or G via sys_rd effects { pure } costs <= 8 ops; syscall sys_rd; impl fn f() -> u32 in 0 .. 9 { let y = rd(); return y; } }"
 theorem fallible_bare_refused_stufe : stufe fallible_bare_refused = "elab: call of a function with a reason channel needs `let .. else`" := by decide +kernel
 
+/-- A foreign fallible binder in a continuing block uses `Block.bindAxiomElse`. -/
+def foreign_else_block_src : String :=
+  "module m { reason G { Weg = 1 \"weg\" exhaustive } extern fn rd() -> u32 in 0 .. 9 or G effects { pure } costs <= 1 ops; impl fn f(c : bool) -> u32 in 0 .. 9 { if c { let y = rd() else (e) { return 0; } return y; } return 1; } }"
+
+theorem bindAxiomElse_block_zeuge : stufe foreign_else_block_src = "OK" := by decide +kernel
+
+/-- A named foreign answer inside an explicit ending branch. -/
+def foreign_bind_end_src : String :=
+  "module m { extern fn rd() -> u32 in 0 .. 9 effects { pure } costs <= 1 ops; impl fn f(x : u32 in 0 .. 9) -> u32 in 0 .. 9 { narrow x to 0 .. 1 else { let y = rd(); return y; } return x; } }"
+
+theorem bindAxiom_end_zeuge : stufe foreign_bind_end_src = "OK" := by decide +kernel
+
+/-- The discarded value and void-call siblings use the same end-block dispatcher. -/
+def foreign_discard_end_src : String :=
+  "module m { extern fn rd() -> u32 in 0 .. 9 effects { pure } costs <= 1 ops; extern fn tick() effects { pure } costs <= 1 ops; impl fn f(x : u32 in 0 .. 9) -> u32 in 0 .. 9 { narrow x to 0 .. 1 else { rd(); tick(); return 2; } return x; } }"
+
+theorem axCall_end_zeuge : stufe foreign_discard_end_src = "OK" := by decide +kernel
+
+/-- A foreign binder's own error branch can stand inside another ending branch. -/
+def foreign_else_end_src : String :=
+  "module m { reason G { Weg = 1 \"weg\" exhaustive } extern fn rd() -> u32 in 0 .. 9 or G effects { pure } costs <= 1 ops; impl fn f(x : u32 in 0 .. 9) -> u32 in 0 .. 9 { narrow x to 0 .. 1 else { let y = rd() else (e) { return 0; } return y; } return x; } }"
+
+theorem bindAxiomElse_end_zeuge : stufe foreign_else_end_src = "OK" := by decide +kernel
+
 end Gabbro.Grammatik.Parser.UebersetzeProben26

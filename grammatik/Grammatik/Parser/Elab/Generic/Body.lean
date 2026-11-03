@@ -10,6 +10,9 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
       (← rewriteExpression env bindings value)
   | .bindQ mu n ty value => return .bindQ mu n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value)
+  | .callIndElse pointer args reason body => return .callIndElse
+      (← rewriteExpression env bindings pointer) (← args.mapM (rewriteExpression env bindings)) reason
+      (← rewriteBody env (bindings.without [reason]) body)
   | .callElse name args reason body => do
     let .call target values ← rewriteExpression env bindings (.call name args) |
       liftResult (.error "foreign statement did not produce a direct call")

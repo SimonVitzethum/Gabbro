@@ -1,7 +1,7 @@
 /- Extracted lowering cases; recursive subterms are supplied as induction hypotheses. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Kontext
-public import Stage0.Senke.Anweisung.Bindung.TorLauf
+public import Stage0.Senke.Tore.PlainRun
 @[expose] public section
 
 
@@ -83,7 +83,7 @@ theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
     EndCase L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex (show Endblock D (vertragVon D f) l Γ Λ from .bindAxiom a args he proof0 proof1 proof2 proof3 rest) reserved := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨cr, tr⟩, hr, hc⟩ := h
+  obtain ⟨⟨cg, tg⟩, hg, ⟨cr, tr⟩, hr, hc⟩ := h
   simp only [Prod.mk.injEq] at hc
   obtain ⟨rfl, rfl⟩ := hc
   simp only [List.length_append] at hs
@@ -91,21 +91,20 @@ theorem endAxiom_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R :
   have hFB3 : FB = 4 := rfl
   have hFramePrefix := functionFrame_prefix P f
   simp only [execEnd]
-  rcases torBind_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he ht hck (by omega) (by omega) hW hp hWa with
+  rcases plainForeignC_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) he hg (by omega) hW hp hWa with
     ⟨v, m2, hAA, s12, a12, value, hW2⟩ | ⟨hAA, hst⟩
   · rw [hAA]
-    have width : valueWords τ = 1 := by
-      exact chkC_width (τ := τ) (by simpa only [he] using hck)
-    have hq := hp.nextW hW a12 (d' := frei Γ reserved + 1) (by have := hp.ctx; omega) (by omega) (by omega)
+    have span := plainForeignC_top he hg
+    have hq := hp.nextW hW a12 (d' := frei Γ reserved + valueWords τ) (by have := hp.ctx; omega) (by omega) (by omega)
     have hp2 : PreS L m2 _ fp K (frei (τ :: Γ) reserved) cr (Env.cons (ergWert he v) ρ) reserved :=
-      ⟨by simp only [frei, contextWords_cons, width]; omega, hq.small, hq.frame, hq.code, hq.far,
+      ⟨by simp only [frei, contextWords_cons]; omega, hq.small, hq.frame, hq.code, hq.far,
        envAt_cons hq.env value, trivial, wstab_true _ _⟩
     have ih := ihRest (ex := ex) cr tr hr (by omega)
       (by omega) hW m2 _ _ _ hp2
-      (by simp only [frei, contextWords_cons, width] at hlo ⊢; omega)
+      (by simp only [frei, contextWords_cons] at hlo ⊢; omega)
       (hu.agreeW hW a12 (by omega)) (hk.agreeW hW a12 (by omega)) hW2
-      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons, width] at this ⊢; omega)
-    rw [pc_add1 pc (ct ++ ck) cr]
+      (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
+    rw [pc_add1 pc cg cr]
     exact Ret.prefix (by omega) s12 (a12.mono (by omega)) (keeps_of_agreeW hW a12 hpr (by omega))
       (Ret.schrumpf ih)
   · rw [hAA]

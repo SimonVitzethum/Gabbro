@@ -155,6 +155,8 @@ inductive SAnw
   | callElse : String → List SExpr → String → SAnw → SAnw
   /-- `retires m;`: consume the held linear mark, without a runtime value. -/
   | retires : String → SAnw
+  /-- Fallible statement call through a parenthesized function-pointer expression. -/
+  | callIndElse : SExpr → List SExpr → String → SAnw → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -235,6 +237,8 @@ def beqSAnw : SAnw → SAnw → Bool
     m == n && strEq a b && beqSTypOpt t u && beqSExpr x y
   | .callElse f a x s, .callElse g b y t =>
     strEq f g && beqSExprList a b && strEq x y && beqSAnw s t
+  | .callIndElse f a x s, .callIndElse g b y t =>
+    beqSExpr f g && beqSExprList a b && strEq x y && beqSAnw s t
   | .callQ f a, .callQ g b => strEq f g && beqSExprList a b
   | .reset a x, .reset b y => strEq a b && beqOptPaar x y
   | .grow a e b, .grow c f d => strEq a c && beqSExpr e f && beqSAnw b d

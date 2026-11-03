@@ -124,6 +124,8 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .accT n t m p q => .accT n t m p (q.map k.ref)
   | .whyT n cs ex => .whyT (k.eigen n) (cs.map fun (a, e, b) => (a, aus k e, b)) ex
   | .callT c => .callT (syscall k c)
+  | .trustT name code arch regs stack assumption service =>
+    .trustT (k.eigen name) (k.ref code) arch regs stack assumption (service.map k.ref)
   | .varT n => .varT (k.eigen n)
   | .goalT n o => .goalT n (o.map fun (abi, arch, bs) => (abi, arch, bs.map fun (v, b, h) =>
       (k.ref v, bindung k b, herkunft k h)))

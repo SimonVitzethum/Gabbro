@@ -97,6 +97,7 @@ mutual
 def entfalteFrage (k : FrageKontext) : SAnw → Except String SAnw
   | s@(.bindQ _ _ _ _) => entfalteFrageSchritt k s
   | s@(.callQ _ _) => entfalteFrageSchritt k s
+  | .callIndElse pointer args reason body => (entfalteFrage k body).map (.callIndElse pointer args reason)
   | .callElse name args reason body => (entfalteFrage k body).map (.callElse name args reason)
   | .cond c t eis s => match entfalteFrage k t with
     | .error e => .error e
@@ -259,6 +260,8 @@ end
 mutual
 /-- The call names of a statement, recursing into every block. -/
 def rufNamenS : SAnw → List String
+  | .callIndElse pointer args _ body => rufNamenE pointer ++ rufNamenEL args ++ rufNamenS body
+  | .callElse name args _ body => name :: (rufNamenEL args ++ rufNamenS body)
   | .bind _ _ _ e => rufNamenE e
   | .bindElse _ _ e _ b => rufNamenE e ++ rufNamenS b
   | .bindQ _ _ _ e => rufNamenE e
@@ -316,6 +319,7 @@ def bindNamenS : SAnw → List String
   | .child b => bindNamenS b
   | .grow _ _ b => bindNamenS b
   | .alloc _ x _ _ _ s => x :: (match s with | none => [] | some b => bindNamenS b)
+  | .callIndElse _ _ reason body | .callElse _ _ reason body => reason :: bindNamenS body
   | .bindElse x _ _ g b => x :: g :: bindNamenS b
   | s => Gabbro.Grammatik.Parser.Aufloesung.gebunden s
 /-- The names a prelude binds, list form. -/

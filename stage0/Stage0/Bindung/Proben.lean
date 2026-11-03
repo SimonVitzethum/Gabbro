@@ -72,12 +72,69 @@ def errorItems : List SItemTief :=
 /-- The generic construction theorem applies jointly to a selected fallible source binding. -/
 theorem torVonFor_via_zeuge :
     torVonFor "x86_64" (some "selected") errorItems errorCall =
-      torAusBindung "x86_64" errorItems errorCall errorBinding :=
+      torAusBindung "x86_64" errorItems errorCall.name errorCall.params errorCall.fail errorBinding :=
   torVonFor_via _ _ _ _ _ _ rfl rfl rfl
 
 /-- Duplicate numeric entries retain source order, as the canonical first-entry decoder requires. -/
 example : (torVonFor "x86_64" (some "selected") errorItems errorCall).toOption.map Tor.fehler =
     some [(-9, 0), (-9, 1)] := by rfl
+
+def foreignSignature : FnSig :=
+  ⟨"extern", "probe", [], some (.atom "bool"), some "Error", []⟩
+
+def foreignItems : List SItemTief :=
+  [.protoT foreignSignature,
+   .goalT "selected" (some ("linux", "x86_64", [("probe", errorBinding, .core [])])),
+   .whyT "Error" [("BadFd", .lit 9, "bad descriptor"), ("Other", .lit 4, "other")] true]
+
+/-- The actual head list resolves the foreign symbol, with its complete errno map. -/
+theorem foreign_binding_selected_zeuge :
+    (toreVonFor "x86_64" (some "selected") foreignItems).toOption.map
+      (fun gates => gates.map (fun gate => (gate.name, gate.nummer, gate.fehler))) =
+      some [("probe", 1, [(-9, 0), (-9, 1)])] := by rfl
+
+/-- Absence stays a named refusal, with no invented executable gate. -/
+theorem unbound_foreign_named_zeuge :
+    toreVonFor "x86_64" none [.protoT foreignSignature] =
+      .error "gate variable probe: no binding for x86_64 in the selected target" := by rfl
+
+/-- An axiom head follows the identical explicit profile mechanism. -/
+theorem axiom_binding_selected_zeuge :
+    (toreVonFor "x86_64" (some "selected")
+      [.axiomT "probe" [] (some (.atom "bool")) none [] (.probe "falsifier"),
+       .goalT "selected" (some ("linux", "x86_64", [("probe", { binding with ins := [], codes := [] }, .core [])]))]).toOption.map
+      (fun gates => gates.map Tor.name) = some ["probe"] := by rfl
+
+def areaBinding : SBind := { errorBinding with resultArea := some "rdi" }
+def areaItems : List SItemTief :=
+  [.goalT "selected" (some ("linux", "x86_64", [("sys_gate", areaBinding, .core [])])),
+   .whyT "Error" [("BadFd", .lit 9, "bad descriptor"), ("Other", .lit 4, "other")] true]
+
+/-- The selected hidden register reaches the executable gate without being
+    inserted into the source parameter list. -/
+theorem selected_area_register_zeuge :
+    (torVonFor "x86_64" (some "selected") areaItems errorCall).toOption.map
+      (fun gate => (gate.regs, gate.resultArea)) =
+      some ([none, none, none, none, none, none], some 0) := by rfl
+
+/-- A hidden result pointer cannot overwrite an ordinary source argument. -/
+theorem overlapping_area_register_refused_zeuge :
+    torAusBindung "x86_64" [] "probe" [("fd", .atom "u64")] none
+      { binding with resultArea := some "rdi", codes := [] } =
+      .error "gate probe: result area register rdi overlaps a source argument" := by rfl
+
+def areaSource : String :=
+  "target host abi linux arch x86_64 { sys_gate = number 39 regs in { } regs out { rax } result area rdi clobbers { } errors { } assume contract falsifier probe; }"
+
+def parsedArea : Except String (Option String) := do
+  let tokens ← (lex areaSource).mapError fun _ => "lex"
+  let items ← parseTopTief tokens
+  let selected ← viaBindungFor "x86_64" (some "host") items "sys_gate"
+  pure selected.resultArea
+
+#eval do
+  unless parsedArea.toOption == some (some "rdi") do
+    throw (IO.userError "result area clause was not preserved by parsing and profile selection")
 
 #print axioms uniqueBinding_ok
 #print axioms torVonFor_via
