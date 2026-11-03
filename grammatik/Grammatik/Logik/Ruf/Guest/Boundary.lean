@@ -59,7 +59,7 @@ def regionB (cap : DataCapTy) : Bool :=
 
 /-- Ownership is a linear resource, independently of read/write permissions. -/
 def transferB (available : List (Res D)) (t : GuestTransfer D) : Bool :=
-  regionB t.capability &&
+  regionB (D := D) t.capability &&
     (match t.capability.rights.owner with
     | none => false
     | some n => decide (D.ownerNr n = some t.owner)) &&
@@ -81,7 +81,7 @@ def check (g : GuestBoundary D) : Except String Unit := do
   if D.axHerkunft a != some .software || (D.axBeleg a).isSome then
     throw "entrust: isolation service must be a software binding"
   if D.agruende a = 0 then throw "entrust: isolation service needs a failure channel"
-  if !regionB g.code || !g.code.rights.read || g.code.rights.write ||
+  if !regionB (D := D) g.code || !g.code.rights.read || g.code.rights.write ||
       g.code.rights.owner.isSome then
     throw "entrust: code needs an immutable region capability"
   if !g.transfers.all (transferB g.available) then
