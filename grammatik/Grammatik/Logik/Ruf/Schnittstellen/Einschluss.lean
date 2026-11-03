@@ -43,7 +43,7 @@ theorem konjunkte_holds {Γ : Ctx} {Λ : List (Res D)} (e : Expr D Γ Λ .bool)
       · exact (ihb.mp hb) c hc
     · exact iha.mpr (fun c hc => h c (.inl hc))
     · exact ihb.mpr (fun c hc => h c (.inr hc))
-  | .tru | .fls | .var .. | .glob .. | .slot .. | .thru .. | .oldG .. | .oldS ..
+  | .tru | .fls | .var .. | .glob .. | .slot .. | .thru .. | .thruOwn .. | .oldG .. | .oldS ..
   | .lt .. | .le .. | .eq .. | .fllt .. | .flle .. | .or .. | .not .. | .istSome ..
   | .forallSlots .. | .existsSlots .. | .reaches .. | .refEq .. | .slotRef ..
   | .arrGet .. | .strEq .. | .strLt .. | .wenn .. | .intBuiltin1 .. | .intBuiltin2 ..
