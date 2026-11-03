@@ -57,10 +57,10 @@ def assemble (pieces : List Piece) : Option (List II) := do
 
 /-- Compare the new measure, preserving it until all three obligations have
     been checked. Typed measure bounds are checked at run time as well. -/
-def decrease (scratch saved : Nat) (bound : Int) (measure : List II) : List II :=
-  narrowC scratch 0 bound measure (stopC 104 scratch)
+def decrease (scratch saved failure : Nat) (bound : Int) (measure : List II) : List II :=
+  narrowC scratch 0 bound measure (stopC failure scratch)
     ([ci 2 (scratch + 1) saved 0, ci 13 scratch scratch (scratch + 1)] ++
-      guardC scratch 104 scratch)
+      guardC scratch failure scratch)
 
 /-- `s` is the selected-index binder. `s+1` is the predecessor binder,
     `s+2` records that at least one live member was seen; expression scratch
@@ -68,10 +68,10 @@ def decrease (scratch saved : Nat) (bound : Int) (measure : List II) : List II :
     `member` reads candidate::Γ; `preMember` and `edge` read predecessor::candidate::Γ.
     A predecessor edge immediately rejects the current candidate. Self edges
     are ignored, exactly as in `keinVorgaenger`. -/
-def pieces (s counter saved fuel : Nat) (count bound : Int)
+def pieces (s counter saved fuel failure : Nat) (count bound : Int)
     (invariant member preMember edge measure body : List II) : List Piece :=
   let d := s + 3
-  let post := decrease d saved bound measure
+  let post := decrease d saved failure bound measure
   [ .code (travCountC counter fuel), .label .header,
     .zero counter .stop,
     .code [ci 1 d 1 0, ci 4 counter counter d],
@@ -102,7 +102,7 @@ def pieces (s counter saved fuel : Nat) (count bound : Int)
     .label .afterBody, .code post, .jump .header,
     .label .leaveBody, .code post, .code invariant,
     .zero d .stop, .jump .done,
-    .label .stop, .code (stopC 104 d), .label .done ]
+    .label .stop, .code (stopC failure d), .label .done ]
 
 /-- Recover body-relative targets from the same symbolic fragment that is
     assembled. No separately maintained instruction-count formulas are used. -/
@@ -114,17 +114,17 @@ def targets (fragment : List Piece) : Option (Int × Int) := do
 /-- The probe body is used only to locate labels. The actual body is lowered
     with those exact targets, and emission refuses if relocation changes its
     length. `next` and fallthrough both enter the post-measure check. -/
-def emit (s counter saved fuel : Nat) (count bound : Int)
+def emit (s counter saved fuel failure : Nat) (count bound : Int)
     (invariant member preMember edge measure : List II × Nat)
     (body : Int × Int → Option (List II × Nat)) : Option (List II × Nat) := do
-  if fuel < 2 ^ 31 ∧ inW count count = true ∧ inW 0 bound = true then
+  if fuel < 2 ^ 31 ∧ failure < 2 ^ 31 ∧ inW count count = true ∧ inW 0 bound = true then
     let probe ← body (0, 0)
-    let fragment := pieces s counter saved fuel count bound
+    let fragment := pieces s counter saved fuel failure count bound
       invariant.1 member.1 preMember.1 edge.1 measure.1 probe.1
     let exits ← targets fragment
     let actual ← body exits
     if actual.1.length = probe.1.length then
-      let instructions ← assemble (pieces s counter saved fuel count bound
+      let instructions ← assemble (pieces s counter saved fuel failure count bound
         invariant.1 member.1 preMember.1 edge.1 measure.1 actual.1)
       pure (instructions,
         max invariant.2 (max member.2 (max preMember.2 (max edge.2
