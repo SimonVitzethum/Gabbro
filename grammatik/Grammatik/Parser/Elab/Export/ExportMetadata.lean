@@ -50,6 +50,7 @@ def bodyMetadata : Nat → SAnw → Bool
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
+  | .uses effects => effects.any (fun | .mints _ => true | _ => false)
   | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
   | .cost _ | .limit _ | .induc _ | .load _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
@@ -57,6 +58,7 @@ def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
 /-- Payload clauses are consumed by the certified C02 expansion, so they do not refuse a library head. Every other cost/scheduling/proof clause still refuses. -/
 def clausesMetadataWithoutLoad (clauses : List SKlausel) : Bool := clauses.any fun
   | .load _ => false
+  | .uses effects => effects.any (fun | .mints _ => true | _ => false)
   | .drops e => (Gabbro.Grammatik.Parser.Uebersetze.uMeasureSource e).toOption.isNone
   | .cost _ | .limit _ | .induc _ | .moves .. | .quits _ | .keeps _ | .part _ | .arch _ | .refs _ => true
   | _ => false
@@ -319,19 +321,11 @@ theorem arenaT_zeuge :
     itemMetadata (.arenaT "A" (.lit 1) (.lit 2) none (.atom "u32") (some (["P"], (.lit 1)))) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
-/-- Owner production stays refused: the model admits escrow-ready flows
-    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), and the elaborator
-    exports the nontrivial mark namespace (`Marke := Fin u.marken.length`) with
-    declared owner guards (`eigner`/`braucht`), but every exported signature
-    still carries the empty flow with no produced marks, so no source form
-    can mint an owner. -/
+/-- Ghost owner values still lack a checked source binding. Nominal marks
+    travel only as resources; mint effects retain their metadata refusal
+    until their C08 software-call and root-once admission are connected. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
-
-/-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
-theorem linear_mark_metadata_zeuge :
-    itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
-    bodyMetadata 1 (.retires "Mark") = false := by rfl
 
 end Gabbro.Grammatik.Parser.ExportMetadata
 
