@@ -13,6 +13,8 @@
   set empty (equality, not agreement-or-error) and the discipline carried
   along: the body equality comes from the caller, the next iteration's
   discipline from the `Treu` fact about the first handler's body run.
+  Shared branch tests are simplified on both sides before comparing the
+  body outcomes; a single rewrite would leave the other handler's test.
 -/
 module
 
@@ -65,8 +67,8 @@ theorem traverseLauf_gleich (bo : Option Int)
   | k :: ks, σ, ρ, hh => by
       simp only [traverseLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc]
-      · rw [if_neg hc]
+      · simp only [ite_eq_left hc]
+      · simp only [ite_eq_right hc]
         have hinv := hi σ ρ hh
         have heq := ih (inv σ ρ).1 (.cons k ρ) hscope_body (hinv.heldB hh)
         rw [heq]
@@ -122,8 +124,8 @@ theorem verbrauchLauf_gleich (bo : Option Int)
   | n + 1, σ, ρ, hh => by
       simp only [verbrauchLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc]
-      · rw [if_neg hc]
+      · simp only [ite_eq_left hc]
+      · simp only [ite_eq_right hc]
         have hinv := hi σ ρ hh
         have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
         generalize heq_sel : sel (inv σ ρ).1 ρ = selected at hselg ⊢
@@ -151,11 +153,11 @@ theorem verbrauchLauf_gleich (bo : Option Int)
                 rcases p2 with ⟨σm', m'⟩
                 dsimp only
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · rw [if_pos hfall]
+                · simp only [ite_eq_left hfall]
                   have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
                   exact verbrauchLauf_gleich bo t body inv sel massW bound
                     ih hT hi hsel hmass hscope_body n σm' ρ'.tail (g2.heldB hh)
-                · rw [if_neg hfall] <;> rfl
+                · simp only [ite_eq_right hfall]
             | next hl σ' ρ' =>
                 dsimp only
                 have hT' := treuAus_next (hT _ _ hscope_body (gm.heldB hh))
@@ -166,16 +168,16 @@ theorem verbrauchLauf_gleich (bo : Option Int)
                 rcases p2 with ⟨σm', m'⟩
                 dsimp only
                 by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                · rw [if_pos hfall]
+                · simp only [ite_eq_left hfall]
                   have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
                   exact verbrauchLauf_gleich bo t body inv sel massW bound
                     ih hT hi hsel hmass hscope_body n σm' ρ'.tail (g2.heldB hh)
-                · rw [if_neg hfall] <;> rfl
-            | leave hl σ' ρ' => simp only
-            | zurueck σ' v => simp only
-            | why σ' r => simp only
-            | logik e => simp only
-            | hardware e => simp only
+                · simp only [ite_eq_right hfall]
+            | leave hl σ' ρ' => rfl
+            | zurueck σ' v => rfl
+            | why σ' r => rfl
+            | logik e => rfl
+            | hardware e => rfl
 
 end SchleifenGleich
 
@@ -208,14 +210,14 @@ theorem retryLauf_gleich (bo : Option Int)
   | 0, σ, ρ, hh => by
       simp only [retryLauf]
       by_cases hc : (bis σ ρ).2 = true
-      · rw [if_pos hc]
-      · rw [if_neg hc]
+      · simp only [ite_eq_left hc]
+      · simp only [ite_eq_right hc]
         exact ihu (bis σ ρ).1 ρ hscope_ueber ((hb σ ρ hh).heldB hh)
   | n + 1, σ, ρ, hh => by
       simp only [retryLauf]
       by_cases hc : (bis σ ρ).2 = true
-      · rw [if_pos hc]
-      · rw [if_neg hc]
+      · simp only [ite_eq_left hc]
+      · simp only [ite_eq_right hc]
         have hinv := hb σ ρ hh
         have heq := ih (bis σ ρ).1 ρ hscope_body (hinv.heldB hh)
         rw [heq]
@@ -258,8 +260,8 @@ theorem foreverLauf_gleich (bo : Option Int)
   | n + 1, σ, ρ, hh => by
       simp only [foreverLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc]
-      · rw [if_neg hc]
+      · simp only [ite_eq_left hc]
+      · simp only [ite_eq_right hc]
         have hinv := hi σ ρ hh
         have heq := ih (inv σ ρ).1 ρ hscope_body (hinv.heldB hh)
         rw [heq]
