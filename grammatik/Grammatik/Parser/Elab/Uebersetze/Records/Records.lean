@@ -101,13 +101,13 @@ def uRecordOf : List URecord → (ty : Ty) → Except String { schema : URecord 
 theorem uRecordOf_mem (records : List URecord) (ty : Ty)
     (schema : { schema : URecord // schema.ty = ty })
     (h : uRecordOf records ty = .ok schema) : schema.val ∈ records := by
-  induction records with
-  | nil => simp only [uRecordOf] at h
+  induction records generalizing schema with
+  | nil => cases h
   | cons head rest ih =>
     simp only [uRecordOf] at h
     split at h
-    · next heq => cases heq; exact List.mem_cons_self
-    · exact List.mem_cons_of_mem _ (ih _ h)
+    · cases h; exact List.mem_cons_self
+    · exact List.mem_cons_of_mem _ (ih schema h)
 
 /-- Arrange already elaborated values in schema order. Source expressions are elaborated before this step. -/
 def uRecordValues (schema : URecord) (values : List (String × USide)) : Except String USide := do
@@ -154,12 +154,18 @@ def uOldRecord : USide → Except String USide
   | .field base name => (uOldRecord base).map (.field · name)
   | _ => .error "source export: old record requires a containing carrier"
 
+private theorem recordField_sizeOf_lt (fields : List (Ty × USide)) (field : Ty × USide)
+    (member : field ∈ fields) : sizeOf field.2 < sizeOf fields := by
+  rcases field with ⟨ty, side⟩
+  have component : sizeOf side < sizeOf (ty, side) := by simp +arith
+  exact Nat.lt_trans component (List.sizeOf_lt_of_mem member)
+
 /-- Explicit product initializers retain every field. Zero is an integer field, never a missing field. -/
 def uConstantValue : USide → Except String UKonst
   | .lit value => pure (.zahl value)
   | .truth value => pure (.wahr value)
   | .text bytes => pure (.text bytes)
-  | .product name _ fields => do pure (.product name (← fields.mapM (fun (_, side) => uConstantValue side)))
+  | .product name _ fields => do pure (.product name (← fields.mapM (fun field => uConstantValue field.2)))
   | .arrNil => pure .nil
   | .arrCons value rest => do pure (.cons (← uConstantValue value) (← uConstantValue rest))
   | .typed _ value => uConstantValue value
@@ -170,6 +176,13 @@ def uConstantValue : USide → Except String UKonst
       else throw "source export: record initializer outside field range"
     | _ => throw "source export: record initializer conversion requires a number"
   | _ => .error "source export: record initializer requires explicit constant fields"
+termination_by source => sizeOf source
+decreasing_by
+  all_goals simp_wf
+  all_goals first
+    | omega
+    | have smaller := recordField_sizeOf_lt _ _ ‹_ ∈ _›
+      omega
 
 /-- One record component, shared by construction and replacement. The dependent lowerer
     checks the component at the field's declared type. -/
