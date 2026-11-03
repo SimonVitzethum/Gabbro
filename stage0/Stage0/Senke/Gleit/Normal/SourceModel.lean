@@ -19,7 +19,7 @@ theorem routineSource_finite (a : GFloat) (u : Exakt)
 private theorem decodedNonzero (a : GFloat) (u : Exakt)
     (hu : wertExakt f64 a = some u) (nonzero : a.bexp ≠ 0 ∨ a.frac ≠ 0) :
     u = ⟨if a.sign then -(softSig a.bexp a.frac : Int) else (softSig a.bexp a.frac : Int),
-      (max a.bexp 1 : Int) - 1075⟩ := by
+      ((max a.bexp 1 : Nat) : Int) - 1075⟩ := by
   have finite := routineSource_finite a u hu
   by_cases zero : a.bexp = 0
   · have fraction : a.frac ≠ 0 := by rcases nonzero with h | h <;> omega
@@ -65,7 +65,7 @@ theorem routineSource_sum (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
             (BitVec.ofNat 64 (zuBits f64 b))).toNat : Int)
           else ((routineDirectionalWord (BitVec.ofNat 64 (zuBits f64 a))
             (BitVec.ofNat 64 (zuBits f64 b))).toNat : Int),
-          (max a.bexp 1 : Int) - 1078⟩ := by
+          ((max a.bexp 1 : Nat) : Int) - 1078⟩ := by
   let l := softSig a.bexp a.frac
   let r := softSig b.bexp b.frac
   let e := max a.bexp 1
