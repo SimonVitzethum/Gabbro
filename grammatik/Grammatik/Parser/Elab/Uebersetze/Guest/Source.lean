@@ -46,12 +46,7 @@ def guestWrapper (name reason : String) (cases : List String) (fallback : String
     no transfer is dropped or repaired with a fabricated owner. -/
 def guestSource (items : List SItemTief) : SItemTief → Except String (UGuest × SItemTief)
   | .trustT name code arch regs stack assumption service => do
-    if (ProfilBindung.wertVon .arch arch).isNone then
-      throw "entrust: unknown userspace ABI"
-    if !regs.isEmpty || !stack.isEmpty || !assumption.isEmpty then
-      if service.isNone && regs.isEmpty then
-        throw "entrust: missing isolation service binding"
-      throw "entrust: register-state or privileged transfer is excluded"
+    ProfilBindung.gastQuellePruefung arch regs stack assumption service
     let service ← match service with
       | some name => pure name
       | none => throw "entrust: missing isolation service binding"
