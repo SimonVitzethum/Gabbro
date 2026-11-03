@@ -117,6 +117,58 @@ theorem gibtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
       obtain ⟨_, hs⟩ := hmi
       exact hs.symm
 
+/-! ## C12 loan flow: `leiht` through the mark table -/
+
+/-- The call-scoped owner loans of a function (C12): its `leiht` names resolved
+    against the unit's mark table at stage 0, keeping ONLY table owners: a loan
+    is an `OwnerFlow.loans` entry, so a non-owner resolves to nothing here (the
+    front end refuses it loudly via `uLeihtPruef`). -/
+def leihtAt (u : UProg) (f : UFn) : List (Fin u.marken.length × Nat) :=
+  f.leiht.filterMap fun m =>
+    match markFin u.marken m with
+    | none => none
+    | some i => if u.tabs.any (fun t => decide (t.owner = some m)) then some (i, 0) else none
+
+/-- A resolved loan names a table owner: the named table's `owner` is the same name. -/
+theorem leihtAt_eigner (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
+    (h : (i, s) ∈ leihtAt u f) :
+    ∃ t : Fin u.tabs.length, (tabAt u t).owner = some (u.marken.get i) := by
+  unfold leihtAt at h
+  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
+  cases hm : markFin u.marken m with
+  | none =>
+    simp only [hm, reduceCtorEq] at hmi
+  | some j =>
+    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
+    | false =>
+      simp only [hm, hall, reduceCtorEq] at hmi
+    | true =>
+      simp only [hm, hall, Option.some_injEq] at hmi
+      obtain ⟨rfl, rfl⟩ := hmi
+      obtain ⟨x, hxu, hx⟩ := List.any_eq_true.mp hall
+      have hxown : x.owner = some m := of_decide_eq_true hx
+      obtain ⟨n, hn, hxn⟩ := List.mem_iff_get.mp hxu
+      refine ⟨⟨n, hn⟩, ?_⟩
+      have htab : tabAt u ⟨n, hn⟩ = x := by unfold tabAt; rw [hxn]
+      rw [htab, hxown, markFin_get u.marken m i hm]
+
+/-- Every resolved loan is a stage-0 mark. -/
+theorem leihtAt_stufe (u : UProg) (f : UFn) (i : Fin u.marken.length) (s : Nat)
+    (h : (i, s) ∈ leihtAt u f) : s = 0 := by
+  unfold leihtAt at h
+  obtain ⟨m, _, hmi⟩ := List.mem_filterMap.mp h
+  cases hm : markFin u.marken m with
+  | none =>
+    simp only [hm, reduceCtorEq] at hmi
+  | some j =>
+    cases hall : (u.tabs.any (fun t => decide (t.owner = some m))) with
+    | false =>
+      simp only [hm, hall, reduceCtorEq] at hmi
+    | true =>
+      simp only [hm, hall, Option.some_injEq] at hmi
+      obtain ⟨_, hs⟩ := hmi
+      exact hs.symm
+
 /-- The table at an index. -/
 def tabAt (u : UProg) (t : Fin u.tabs.length) : UTab :=
   u.tabs.get t
