@@ -39,6 +39,11 @@ namespace Gabbro.Stage0.CapacityRequiredWitness
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
+/- Allocation has no separate Stage-0 constructor: the exporter produces
+   `narrowRequired`, followed by `assignSlot` and `assignGlob`. `lowB_ok` and
+   `lowEnd_ok` dispatch to `blockNarrowRequired_case` and `endNarrowRequired_case`;
+   the normal statement proofs cover the two stores. -/
+
 /-- A required end-block allocation, with `stopC 107` on capacity exhaustion
     (the Stage-0 shape of `narrowRequired`, which `Endblock.arenaAllocRequired`
     unfolds to). A full arena is `Logik.kapazitaet`,
