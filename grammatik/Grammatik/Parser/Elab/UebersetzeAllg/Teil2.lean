@@ -71,10 +71,11 @@ theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
     declOf, sigAt_haelt, sigAt_produziert, hO, hOut, Signatur.outputMarks,
     List.map_append]
 
-/-- **Decided call-boundary escrow (C12).** The callee's owner flow is valid over
+/-- **Decided call-boundary escrow (C09/C12).** The callee's owner flow is valid over
     its own inputs at stage 0, disjoint from ordinary consumption, and every
-    input resolves to a table owner. Empty flows pass; a borrowing callee passes
-    exactly when its loans name declared table owners nothing else consumes. -/
+    input resolves to a table owner. Empty flows pass; a borrowing, moving or
+    minting callee passes exactly when its loans, handbacks and mints name
+    declared table owners nothing else consumes. -/
 def ownerReadyB (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
     (Fin u.locks.length) (Fin u.marken.length)) : Bool :=
   S.owner.validB (fun m => decide (m ∈ S.owner.inputs.map Prod.fst)) (fun _ => 1) &&
