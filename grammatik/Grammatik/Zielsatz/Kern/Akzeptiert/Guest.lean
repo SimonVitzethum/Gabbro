@@ -84,4 +84,19 @@ theorem Zielsatz.PrueferX.withGuests_admitted (C : PrueferX)
     (g : GuestBoundary D) (hg : g ∈ guests E) : g.admittedB = true :=
   GuestBoundary.admissionB_each (Bool.and_eq_true.mp h).2 g hg
 
+/-- A unit with no guest keeps exactly its previous checker verdict. The
+    adapter cannot introduce or discharge a hardware or user-logic duty. -/
+theorem Zielsatz.Pruefer.withGuests_empty (C : Pruefer)
+    [DecidableEq D.Fn] (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock)
+    (cs : List (D.Tab ⊕ D.Glob)) :
+    (C.withGuests (fun _ => [])).akzeptiert E fs ls cs = C.akzeptiert E fs ls cs := by
+  simp only [Pruefer.withGuests, GuestBoundary.admissionB_nil, Bool.and_true]
+
+/-- The same exact verdict preservation includes all atomic and start checks. -/
+theorem Zielsatz.PrueferX.withGuests_empty (C : PrueferX)
+    [DecidableEq D.Fn] (E : Einheit D) (fs : List D.Fn) (ls : List D.Lock)
+    (cs : List (D.Tab ⊕ D.Glob)) :
+    (C.withGuests (fun _ => [])).akzeptiert E fs ls cs = C.akzeptiert E fs ls cs := by
+  simp only [PrueferX.withGuests, GuestBoundary.admissionB_nil, Bool.and_true]
+
 end Gabbro.Grammatik
