@@ -2,7 +2,7 @@
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Hilfena
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
