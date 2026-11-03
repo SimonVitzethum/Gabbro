@@ -58,10 +58,14 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
   cases hs with
   | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hk =>
       kstart
-      simp only [kr, kEnde, kEndeCons, GEntfaltbar_blatt s hleaf, hleaf]
       simp only [RufMaschineG.weltVon] at hstep
-      simp only [hstep, kAusEnde, kLokal, RufFadenG.kern, RufRahmenG.kern, GRest.kern]
-      rfl
+      cases s with
+      | retScoped e R => simp only [execStmt, reduceCtorEq] at hstep
+      | retWhyScoped r R => simp only [execStmt, reduceCtorEq] at hstep
+      | _ =>
+          simp only [kr, kEnde, kEndeCons, GEntfaltbar_blatt _ hleaf, hleaf]
+          simp only [hstep, kAusEnde, kLokal, RufFadenG.kern, RufRahmenG.kern, GRest.kern]
+          rfl
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
       kstart
       subst hs0 hrho
@@ -87,10 +91,14 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       all_goals (simp only [kr, kEnde, hl, if_true]; rfl)
   | dannBlatt l Γ Λ Λ' Λ'' s rest k ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hk =>
       kstart
-      simp only [kr, kDann, kDannCons, GEntfaltbar_blatt s hleaf, hleaf]
       simp only [RufMaschineG.weltVon] at hstep
-      simp only [hstep, kAusDann, kLokal, RufFadenG.kern, RufRahmenG.kern, GRest.kern]
-      rfl
+      cases s with
+      | retScoped e R => simp only [execStmt, reduceCtorEq] at hstep
+      | retWhyScoped r R => simp only [execStmt, reduceCtorEq] at hstep
+      | _ =>
+          simp only [kr, kDann, kDannCons, GEntfaltbar_blatt _ hleaf, hleaf]
+          simp only [hstep, kAusDann, kLokal, RufFadenG.kern, RufRahmenG.kern, GRest.kern]
+          rfl
   | dannLeer l Γ Λ k ρ hhead =>
       kstart
       rfl

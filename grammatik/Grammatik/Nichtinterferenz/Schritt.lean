@@ -39,17 +39,25 @@ def kDannCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Block D (vertragVon D f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D f) l Γ Λ'') : KErg D :=
   if GEntfaltbar s = true then kEntf P O passes st f rho spur sp ρ s rest k
-  else if s.istBlatt = true then
-    kAusDann st f rho rest k (execStmt O passes keinRuf s (sp.welt spur) ρ)
-  else kRufDann P st f rho spur sp ρ s rest k
+  else match s with
+    | .retScoped e R => kRufDann P st f rho spur sp ρ (.retScoped e R) rest k
+    | .retWhyScoped r R => kRufDann P st f rho spur sp ρ (.retWhyScoped r R) rest k
+    | _ =>
+        if s.istBlatt = true then
+          kAusDann st f rho rest k (execStmt O passes keinRuf s (sp.welt spur) ρ)
+        else kRufDann P st f rho spur sp ρ s rest k
 
 /-- A statement at the head of an `ende` residue. -/
 def kEndeCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Endblock D (vertragVon D f) l Γ Λ') : KErg D :=
   if GEntfaltbar s = true then kLokal st f rho ρ (.dann (.cons s .nil) (.ende rest)) spur sp
-  else if s.istBlatt = true then
-    kAusEnde st f rho rest (execStmt O passes keinRuf s (sp.welt spur) ρ)
-  else kRufEnde P st f rho spur sp ρ s rest
+  else match s with
+    | .retScoped e R => kRufEnde P st f rho spur sp ρ (.retScoped e R) rest
+    | .retWhyScoped r R => kRufEnde P st f rho spur sp ρ (.retWhyScoped r R) rest
+    | _ =>
+        if s.istBlatt = true then
+          kAusEnde st f rho rest (execStmt O passes keinRuf s (sp.welt spur) ρ)
+        else kRufEnde P st f rho spur sp ρ s rest
 
 /-- An `ende` residue. -/
 def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → Env D Γ →
