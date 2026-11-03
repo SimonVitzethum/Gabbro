@@ -6124,3 +6124,164 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 * **`ohneBibliothekAnw_kein_lcall`**, **`ohneBibliothekAnw_kein_bindLib`**, **`libraryExpansion_trifft_kein_bibliothekruf`**: Every certified expansion is definitionally no library call, so the generic lowering treats it exactly like an ordinary call.
 
 Open: the lead build of this branch (single-module checks of the four new modules and their importers, then the guardians); the Stage-0/IR payload spans (IR-03/06) and the C01 schema export stay with their owners; no language case is claimed complete by these modules.
+
+## 138. Stage-0 expansion-aware frontend gate (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The original source
+metadata gate refused generic headers, module-template/use items and expanded dispatch metadata even
+though their canonical expansions are ordinary checked G forms. The gate now checks the expanded unit.
+No build was run; the lead builds and reports errors back.
+
+`stage0/Stage0/Frontend/ExpansionGate.lean` (new):
+
+* **`expansionHeader`**: the source headers consumed by canonical expansion (module templates and uses,
+  spec and implementation groups, tagged declarations, generic headers).
+* **`expansionHeader_template`**, **`expansionHeader_use`**, **`expansionHeader_specGroup`**,
+  **`expansionHeader_implGroup`**, **`expansionHeader_tagged`**: each header class is consumed, never
+  lowered directly.
+* **`checkExpansionGate`**: run the very same canonical expansion the elaborator consumes
+  (`Modules.prepare`) and check the expanded unit for unbound metadata.
+* **`checkExpansionGate_expansion`**, **`checkExpansionGate_expands`**: gate acceptance runs the
+  canonical expansion on the source declarations, through the exact `expandU` the elaborator consumes.
+* **`checkExpansionGate_checked`**: gate acceptance leaves no unbound metadata in the expanded unit.
+* **`checkExpansionGate_existingForms`**, **`checkExpansionGate_ordinary`**, **`checkExpansionGate_output`**:
+  the accepted expansion carries the complete structural postcondition (existing forms, no residual
+  generic syntax, no open module reference, closed).
+
+`stage0/Stage0/Compiler.lean`:
+
+* **`Compiled.expanded`**, **`Compiled.requirements`**, **`Compiled.gateExpansion`**,
+  **`Compiled.gateChecked`**: the stored canonical expansion, its requirements, the prepare certificate
+  on the source declarations and the original-or-expanded metadata disjunct.
+* **`Compiled.expansion_gate`**: gate acceptance ties the source to the expanded unit lowering compiles:
+  either the expansion gate accepts the declarations with exactly the stored expanded unit and
+  requirements, or the original members were already clean.
+
+`stage0/Stage0/Frontend/ExportCorrectness.lean`:
+
+* **`Compiled.exports_metadata`**: the gate certificate as the checked original-or-expanded disjunct;
+  the batch-2 lowering connections discharge to the same disjunct.
+
+Open: the lead build of the branch (single-module checks of the three touched modules and their
+importers, then the guardians); every new-syntax form still needs its source-text-to-image witness
+(§§139-142); check model B stays future work.
+
+## 139. New-syntax witnesses: generics and parametric modules (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Standalone pipeline
+witness files (same standing as the existing unwired `TaggedDispatchWitness`): each carries source-text
+emission, the canonical source program and the image correctness, plus the stored gate certificate
+(`gate_checked`, `gate_ties`). No build was run; the lead builds and reports errors back.
+
+`stage0/Stage0/Zeugen/Pipeline/GenericWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: one generic
+  function used at two instantiations (`identity::[u8]`, `identity::[u16]`) reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+`stage0/Stage0/Zeugen/Pipeline/ParametricModuleWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: one parametric
+  module instantiated twice (`consts::[u8, 400]`, `consts::[u16, 300]`) reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+Open: the lead build of the branch (single-module checks of both witness files); unsupported abstract
+operations and unbound generic library translators still refuse.
+
+## 140. New-syntax witnesses: tagged and dyn dispatch (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Same standing and
+proof shape as §139. No build was run; the lead builds and reports errors back.
+
+`stage0/Stage0/Zeugen/Pipeline/TaggedGateWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: a
+  `tagged … by S` dispatch over two cases reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+`stage0/Stage0/Zeugen/Pipeline/DynWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: a `dyn S`
+  call with two linked implementations (indices gathered by traversals, dispatched calls on both
+  scene slots) reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+Open: the lead build of the branch (single-module checks of both witness files); `Ty.dyn` stays a
+closed-sum implementation, payloads stay scalar and at most eight bytes, downcast/equality tests
+stay refused.
+
+## 141. Range `and`/`or` fold operators (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Surface `and`/`or`
+range folds (`and i in lo ..< hi : pred`, `or i in lo ..< hi : pred`, no `else`, like `add`); table-domain
+`and`/`or` folds refuse with range guidance. No build was run; the lead builds and reports errors back.
+
+* `grammatik/Grammatik/Parser/Expr/Ausdruck/Teil1.lean`: `XKind` gains `foldAnd | foldOr` at the END.
+* `grammatik/Grammatik/Parser/Expr/Ausdruck/Teil2a.lean`: `and`/`or` heads parse to range folds with
+  add-like else rules (`fold add/and/or: else is not allowed`, `fold min/max: else is required`).
+* `grammatik/Grammatik/Parser/Round/Rundlauf/Teil1.lean`: `druckFold "and"`/`"or"` printer arms.
+* `grammatik/Grammatik/Parser/Namen/Aufloesung/Teil1.lean`, `grammatik/Grammatik/Parser/Namen/References.lean`:
+  `and`/`or` binders resolve like the other folds.
+* `grammatik/Grammatik/Parser/Elab/Uebersetze/Folds/Expansion.lean`: `isFold` covers the new kinds;
+  `expandFold` refuses table-domain `and`/`or` with range guidance.
+* `grammatik/Grammatik/Parser/Elab/Uebersetze/Folds/FloatExpansion.lean`: same refusal for float folds.
+
+Open: the lead build of the branch; domain (table) `and`/`or` folds stay future work; the range
+elaboration lives in §142.
+
+## 142. Generalized range-fold sugar (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. `SourceFolds/Range.lean`
+generalizes the range sugar beyond the direct integer add-fold return over one indexed array with lower
+bound zero: arbitrary literal integer bounds (upper bound at or below the array length, enforced by
+generated filter tests), `min`/`max` with required else, `and`/`or` folds and nested folds over array
+variables, by expansion to the existing traverse forms. No build was run; the lead builds and reports
+errors back.
+
+`grammatik/Grammatik/Parser/SourceFolds/Range.lean`:
+
+* **`FoldDesc`**, **`matchFoldNode`**, **`isRangeFold`**: the five range operators with binder, bounds,
+  filter, value, empty case, accumulator type and array.
+* **`parseFoldNode`**: validates operator shape, literal lower bound, upper bound against the array
+  length, a single indexed array variable, empty-value binder hygiene and shadowing; top-level folds
+  take the declared result type, nested folds derive theirs (sums in `u64`, extrema keep the element
+  type, logic folds are Boolean).
+* **`boundTests`**, **`effFilter`**, **`combineStmts`**, **`buildLoopStmts`**, **`foldInit`**,
+  **`accName`**, **`valueName`**, **`resultName`**, **`tagFoldNodes`**, **`lookupTag`**,
+  **`hasDuplicateTags`**, **`reservedNames`**, **`checkBoundsFree`**, **`expandNested`**: nested loops
+  with per-operator combinations, bound tests for nontrivial bounds, tag-indexed generated bindings,
+  duplicate and collision refusals.
+* **`matchFoldNode_add_zeuge`**, **`isRangeFold_add_zeuge`**, **`isRangeFold_plain_zeuge`**,
+  **`boundTests_trivial_zeuge`**, **`boundTests_general_zeuge`**, **`foldInit_add_zeuge`**,
+  **`foldInit_and_zeuge`**, **`reservedNames_one_zeuge`**, **`tagFoldNodes_single_zeuge`**,
+  **`parseFoldNode_no_array_zeuge`**: shape and refusal witnesses.
+
+`grammatik/Grammatik/Parser/SourceFolds/RangeProofs.lean` (new, checked with the tagged frontend):
+
+* **`matchFoldNode_some`**, **`except_ok_inj`**, **`hasRangeFoldAnwList_append`**,
+  **`combineStmts_free`**, **`foldInit_free`**, **`boundTests_free`**, **`effFilter_free`**,
+  **`buildLoopStmts_free`**, **`buildFoldPrefix_free`**, **`parseAndCheck_tests_free`**: the elimination
+  building blocks.
+* **`expandNested_ok`**: expansion eliminates every range fold node from an expression (fuel induction;
+  the bound tests are fold-free by construction and check).
+* No `sorry`/`admit`/`native_decide`/`axiom`; Stage 0 has no Mathlib.
+
+`grammatik/Grammatik/Parser/Elab/Generic/BoundsWitness.lean`:
+
+* **`total_range_length_refused_zeuge`**: exceeding the array length (literal 5 over length 3) still
+  refuses, with the new message.
+* **`total_range_truncated_zeuge`**: a short upper bound (literal 2 over length 3) expands to the exact
+  traverse with the upper-bound filter test; the symbolic-`N` fixture still expands byte-identically.
+
+`stage0/Stage0/Zeugen/Pipeline/RangeFoldsWitness.lean` (standalone, same standing as §139):
+
+* **`bounds_present`**, **`bounds_accepted`**, **`bounds_canonical`**, **`bounds_correct`**: nonzero
+  lower bound with a filter reaches an image.
+* **`min_present`**, **`min_accepted`**, **`min_canonical`**, **`min_correct`**: `min` with else reaches
+  an image.
+* **`nested_present`**, **`nested_accepted`**, **`nested_canonical`**, **`nested_correct`**: nested adds
+  over the same array reach an image.
+
+Open: the lead build of the branch (single-module checks of the new and touched modules and their
+importers, then the guardians); nested folds over row projections, symbolic short upper bounds,
+nested float elements and folds outside a direct return still refuse with named errors.
