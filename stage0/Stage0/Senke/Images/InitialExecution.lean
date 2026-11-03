@@ -55,6 +55,83 @@ theorem bild_initialized_loaded_u {u : UProg} {P : Programm (declOf u)} {passes 
     exact h.sync locks (by simpa only [roots] using hj)
   · simpa only [roots] using length
 
+/-- Every admitted start has its entire frame readable and writable in the same
+    loaded initialized image. The builder supplies capacity and address bounds;
+    the exact stack constructor supplies the frame bytes, including every root. -/
+theorem bild_initialized_frames_u {u : UProg} {P : Programm (declOf u)} {passes : Nat}
+    {fs : List (declOf u).Fn} {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String}
+    {main : (declOf u).Fn} {ρ : Env (declOf u) ((declOf u).params main)}
+    {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
+    {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
+    (valid : GabbroV.sp0OkB u = true)
+    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hfs : ∀ g, fs[pos g]? = some g) {m : Runner.Mem}
+    (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) :
+    ∀ j, j ≤ b.roots.length →
+      FrameOK m (BitVec.ofNat 64 (b.fp0 + 8 * (b.Ks * j))) b.Ks := by
+  obtain ⟨_, _, _, stacks, made, _, _, _, stackMemory⟩ :=
+    bild_initialized_loaded_u valid hb hfs loaded
+  obtain ⟨cs, body, sp, h, _, roots, _, rootArgs⟩ := bild_lage hb hfs
+    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+  have rootCount : b.rootArgs.length = b.roots.length := by
+    simp only [rootArgs, roots, List.length_map]
+  have separate : b.fp0 + 8 * (b.Ks * (b.roots.length + 1)) ≤ b.Y.lo := by
+    simpa only [roots] using h.hylo
+  have capacity : b.Ks * (b.roots.length + 1) ≤ b.K := by
+    have := h.hyord
+    have := h.hyhi
+    omega
+  intro j bound
+  have index : j < (b.args :: b.rootArgs).length := by
+    simp only [List.length_cons, rootCount]
+    omega
+  obtain ⟨frame, frameMade, frameMemory⟩ :=
+    startStackBytes_frame made b.fp0 stackMemory j index
+  have band := Nat.mul_le_mul_left b.Ks (Nat.succ_le_succ bound)
+  have room : b.fp0 + 8 * b.Ks * j + 8 * b.Ks < 2 ^ 64 := by
+    have bytesBound := Nat.mul_le_mul_left 8 (Nat.le_trans band capacity)
+    have := h.hfit
+    have endpoint : b.fp0 + 8 * b.Ks * j + 8 * b.Ks =
+        b.fp0 + 8 * (b.Ks * (j + 1)) := by
+      simp only [Nat.mul_succ, Nat.mul_add, Nat.mul_assoc, Nat.add_assoc]
+    rw [endpoint]
+    omega
+  have result := startFrameBytes_frame frameMade frameMemory room
+  simpa only [Nat.mul_assoc] using result
+
+/-- Initialized payload length follows from the successful image, without a separate
+    InitialLayout or world-end capacity premise at the source emitter. -/
+theorem bild_initialized_length_u {u : UProg} {P : Programm (declOf u)} {passes : Nat}
+    {fs : List (declOf u).Fn} {pos : (declOf u).Fn → Nat} {name : (declOf u).Fn → String}
+    {main : (declOf u).Fn} {ρ : Env (declOf u) ((declOf u).params main)}
+    {starts : List (Σ f : (declOf u).Fn, Env (declOf u) ((declOf u).params f))}
+    {Ks req : Nat} {tor : (declOf u).Ax → Option TorB} {b : Bild (declOf u)}
+    (valid : GabbroV.sp0OkB u = true)
+    (hb : bild passes P (layU u tor) fs pos name main ρ starts Ks req = .ok b)
+    (hfs : ∀ g, fs[pos g]? = some g) :
+    (b.initializedBytes u valid).length = 16 + 16 * b.code.length + 8 * b.K := by
+  obtain ⟨cs, body, sp, h, code, _, _, _⟩ := bild_lage hb hfs
+    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+  have imageLength := bild_length hb hfs
+    (fun base bound => layU_in u tor base bound) (fun base => layU_dis u tor base)
+    (fun base => by simp only [layU]; omega) (fun base => layU_sync u tor base)
+  have codeLength : b.code.length = headLen (starts.map (·.1)).length + body.length := by
+    rw [code, List.length_append, h.head]
+  have codeEnd : b.fp0 = codeBase + 16 * b.code.length := by
+    rw [codeLength]
+    exact h.hfp
+  have lower : Runner.Prog.IMG ≤ b.Y.lo := by
+    have := h.hylo
+    simp only [codeBase] at codeEnd
+    omega
+  have upper : b.Y.hi ≤ Runner.Prog.IMG + b.bytes.length := by
+    have := h.hyhi
+    simp only [codeBase] at codeEnd
+    omega
+  rw [b.initializedBytes_length valid (initialLayout_bild hb) lower upper, imageLength]
+
 /-- Main execution from the initialized payload keeps the existing generic world
     relation: a caller may simulate any source world represented by those same bytes.
     Canonical source startup uses the world fact from bild_initialized_loaded_u. -/

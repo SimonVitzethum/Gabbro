@@ -80,8 +80,10 @@ theorem Bild.initializedBytes_drop {u : UProg} (valid : GabbroV.sp0OkB u = true)
       initialWorldBytes u valid b.Y).length = b.Y.hi - Runner.Prog.IMG := by
     simp only [List.length_append, List.length_take, Nat.min_eq_left takeBound]
     omega
-  unfold Bild.initializedBytes
-  rw [← List.append_assoc, ← prefixLength, List.drop_append_length]
+  have kept := @List.drop_append_length Runner.B
+    (b.bytes.take (b.Y.lo - Runner.Prog.IMG) ++ initialWorldBytes u valid b.Y)
+    (b.bytes.drop (b.Y.hi - Runner.Prog.IMG))
+  simpa only [Bild.initializedBytes, prefixLength, List.append_assoc] using kept
 
 /-- The one loaded payload decomposes at the same final layout used to encode values. -/
 theorem Bild.initializedBytes_parts {u : UProg} (valid : GabbroV.sp0OkB u = true)
