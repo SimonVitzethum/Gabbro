@@ -16,6 +16,7 @@ public import Stage0.Zeugen.Ablehnung.ConsumingTraversalWitness
 public import Stage0.Zeugen.Ablehnung.OwnerMintWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness
 public import Stage0.Zeugen.Annahme.CheckWitness
+public import Stage0.Zeugen.Annahme.CheckConsumerWitness
 public import Stage0.Zeugen.Annahme.AccWitness
 public import Stage0.Zeugen.Annahme.AlignedStaticWitness
 public import Stage0.Zeugen.Annahme.ResetRangeWitness
