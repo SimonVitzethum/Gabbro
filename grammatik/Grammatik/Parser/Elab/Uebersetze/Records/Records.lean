@@ -184,28 +184,41 @@ decreasing_by
     | have smaller := recordField_sizeOf_lt _ _ ‹_ ∈ _›
       omega
 
-/-- One record component, shared by construction and replacement. The dependent lowerer
-    checks the component at the field's declared type. -/
-def uRecordSide (ctx : UCtx) (rechne : SExpr → Except String USide) : SExpr → Except String USide
-  | .tru => pure (.truth true)
-  | .fls => pure (.truth false)
-  | .variable name =>
+/-- One record component, shared by construction and replacement. The callback receives the
+    original component with a non-increasing size bound, connecting nested source recursion.
+    The dependent lowerer checks the component at the field's declared type. -/
+def uRecordSide (ctx : UCtx) : (value : SExpr) →
+    ((source : SExpr) → sizeOf source ≤ sizeOf value → Except String USide) → Except String USide
+  | .tru, _ => pure (.truth true)
+  | .fls, _ => pure (.truth false)
+  | .variable name, rechne =>
     match uParamNr ctx name with
     | .ok position =>
       match ctx.kinds[position]? with
       | some .bool => pure (.param name)
-      | _ => rechne (.variable name)
-    | .error _ => rechne (.variable name)
-  | value => rechne value
+      | _ => rechne (.variable name) (Nat.le_refl _)
+    | .error _ => rechne (.variable name) (Nat.le_refl _)
+  | value, rechne => rechne value (Nat.le_refl _)
 
-/-- Labelled constructors arrive as `.ext .label` applications in source order. -/
-def uRecordSides (ctx : UCtx) (rechne : SExpr → Except String USide) :
-    List SExpr → Except String (List (String × USide))
-  | [] => .ok []
-  | .ext .label [label] [value] :: rest => do
-    let side ← uRecordSide ctx rechne value
-    let tail ← uRecordSides ctx rechne rest
+/-- Labelled constructors arrive as `.ext .label` applications in source order. Every callback
+    argument is smaller than this actual source list, including across recursive tails. -/
+def uRecordSides (ctx : UCtx) : (args : List SExpr) →
+    ((source : SExpr) → sizeOf source < sizeOf args → Except String USide) →
+    Except String (List (String × USide))
+  | [], _ => .ok []
+  | .ext .label [label] [value] :: rest, rechne => do
+    let side ← uRecordSide ctx value fun source smaller =>
+      rechne source (by
+        have nested : sizeOf value < sizeOf (SExpr.ext .label [label] [value] :: rest) := by
+          simp +arith
+        exact Nat.lt_of_le_of_lt smaller nested)
+    let tail ← uRecordSides ctx rest fun source smaller =>
+      rechne source (by
+        have tail : sizeOf rest < sizeOf (SExpr.ext .label [label] [value] :: rest) := by
+          simp +arith
+        exact Nat.lt_trans smaller tail)
     pure ((label, side) :: tail)
-  | _ => .error "source export: record construction requires labelled fields"
+  | _, _ => .error "source export: record construction requires labelled fields"
+termination_by structural args _ => args
 
 end Gabbro.Grammatik.Parser.Uebersetze

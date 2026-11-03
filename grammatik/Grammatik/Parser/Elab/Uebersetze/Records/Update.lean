@@ -27,7 +27,7 @@ def uRecordReplacement (ctx : UCtx) : SExpr → USide → Except String USide
 /-- Mutation preserves the complete local record; immutable roots are refused explicitly. -/
 def uSetzeRecord (ctx : UCtx) (name : String) (target value : SExpr) : Except String UStmt := do
   if !ctx.muts.any (strEq · name) then throw "source export: record update requires a mutable local"
-  let side ← uRecordSide ctx (uWertBody ctx) value
+  let side ← uRecordSide ctx value (fun source _ => uWertBody ctx source)
   pure (.setVar name (← uRecordReplacement ctx target side))
 
 end Gabbro.Grammatik.Parser.Uebersetze

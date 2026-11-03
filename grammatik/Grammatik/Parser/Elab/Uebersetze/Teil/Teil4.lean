@@ -180,7 +180,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
   | .call f [a] =>
     match ctx.records.find? (fun schema => strEq schema.name f) with
     | some schema => do
-      let values ← uRecordSides ctx (uRechne ctx blatt) [a]
+      let values ← uRecordSides ctx [a] (fun source smaller => uRechne ctx blatt source)
       uRecordValues schema values
     | none =>
       match uTypName ctx.alias f with
@@ -201,7 +201,7 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
   | .call f [a, b] =>
     match ctx.records.find? (fun schema => strEq schema.name f) with
     | some schema => do
-      let values ← uRecordSides ctx (uRechne ctx blatt) [a, b]
+      let values ← uRecordSides ctx [a, b] (fun source smaller => uRechne ctx blatt source)
       uRecordValues schema values
     | none =>
       match uRotEin f with
@@ -255,10 +255,12 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
   | .call name args =>
     match ctx.records.find? (fun schema => strEq schema.name name) with
     | some schema => do
-      let values ← uRecordSides ctx (uRechne ctx blatt) args
+      let values ← uRecordSides ctx args (fun source smaller => uRechne ctx blatt source)
       uRecordValues schema values
     | none => blatt (.call name args)
   | e => blatt e
+termination_by expression => sizeOf expression
+decreasing_by all_goals simp_wf; omega
 
 /-- A name that is no parameter and no constant: a number static (`Expr.glob`), or an unknown name. -/
 def uGlobLies (ctx : UCtx) (p : String) : Except String USide :=
