@@ -29,6 +29,7 @@ def statementProducers : SAnw → List STyp
     expressionUses e ++ statementProducers s
   | .bindLib _ _ _ c | .lcall c => expressionsUses c.args
   | .set a _ b | .emit a b _ => expressionUses a ++ expressionUses b
+  | .callElse _ es _ body => expressionsUses es ++ statementProducers body
   | .call _ es => expressionsUses es
   | .cond e s arms other =>
     expressionUses e ++ statementProducers s ++ statementsProducers arms ++
@@ -78,6 +79,7 @@ def statementUses : SAnw → List STyp
   | .elsif _ s | .arm _ _ s | .each _ _ _ _ _ _ _ s | .retry _ s | .loop _ s
   | .waive _ s | .trim _ _ s | .locks _ _ s | .watch _ s | .grow _ _ s | .child s =>
     statementUses s
+  | .callElse _ _ _ body => statementUses body
   | .block ss _ => statementsUses ss
   | _ => []
 def statementsUses : List SAnw → List STyp
