@@ -52,19 +52,25 @@ theorem softRound_congr (q₁ r₁ d₁ q₂ r₂ d₂ : Nat)
     rw [← h1, ← h2]; exact h
   have b₁ : r₁ * d₂ < d₁ * d₂ := Nat.mul_lt_mul_of_pos_right h₁ hd₂
   have h₂d : r₂ * d₁ < d₂ * d₁ := Nat.mul_lt_mul_of_pos_right h₂ hd₁
-  have b₂ : r₂ * d₁ < d₁ * d₂ := by rw [Nat.mul_comm d₂ d₁]; exact h₂d
+  have b₂ : r₂ * d₁ < d₁ * d₂ := by
+    rw [Nat.mul_comm d₂ d₁] at h₂d
+    exact h₂d
   have hq : q₁ = q₂ := by
     by_contra hne
     rcases lt_or_gt_of_ne hne with hlt | hgt
     · have hle : (q₁ + 1) * (d₁ * d₂) ≤ q₂ * (d₁ * d₂) :=
         Nat.mul_le_mul (Nat.succ_le_of_lt hlt) (Nat.le_refl _)
       have had : (q₁ + 1) * (d₁ * d₂) = q₁ * (d₁ * d₂) + d₁ * d₂ := by ring
+      rw [had] at hle
       omega
     · have hle : (q₂ + 1) * (d₁ * d₂) ≤ q₁ * (d₁ * d₂) :=
         Nat.mul_le_mul (Nat.succ_le_of_lt hgt) (Nat.le_refl _)
       have had : (q₂ + 1) * (d₁ * d₂) = q₂ * (d₁ * d₂) + d₁ * d₂ := by ring
+      rw [had] at hle
       omega
-  have hr : r₁ * d₂ = r₂ * d₁ := by omega
+  have hr : r₁ * d₂ = r₂ * d₁ := by
+    rw [hq] at e
+    exact Nat.add_left_cancel e
   have m1 : (2 * r₁) * d₂ = 2 * (r₁ * d₂) := by ring
   have m2 : (2 * r₂) * d₁ = 2 * (r₂ * d₁) := by ring
   have m3 : d₁ * d₂ = d₂ * d₁ := Nat.mul_comm _ _
@@ -106,6 +112,7 @@ theorem softRound_congr (q₁ r₁ d₁ q₂ r₂ d₂ : Nat)
     omega
   rcases lt_trichotomy (2 * r₁) d₁ with hlt | heq | hgt
   · rw [rundeInt_fall _ _ _ hlt, rundeInt_fall _ _ _ (lt₁ hlt)]
+    exact hq
   · have heq₂ : 2 * r₂ = d₂ := by
       rcases lt_trichotomy (2 * r₂) d₂ with h | h | h
       · have := lt₂ h; omega
@@ -115,6 +122,7 @@ theorem softRound_congr (q₁ r₁ d₁ q₂ r₂ d₂ : Nat)
     rw [if_neg (by omega : ¬ d₁ < 2 * r₁), if_neg (by omega : ¬ 2 * r₁ < d₁),
       if_neg (by omega : ¬ d₂ < 2 * r₂), if_neg (by omega : ¬ 2 * r₂ < d₂), hq]
   · rw [rundeInt_steig _ _ _ hgt, rundeInt_steig _ _ _ (gt₁ hgt)]
+    rw [hq]
 
 /-- The routine shift is the bit length minus the significand width, on the
     one-bit-normalization path. -/
@@ -186,11 +194,10 @@ theorem softRound_normQD (S N Dd : Nat)
     softRoundMag (softNormQ S) (softNormR S) (softNormDen S)
       = rundeInt (N / Dd) (N % Dd) Dd := by
   unfold softRoundMag
-  apply softRound_congr _ _ _ _ _ _ (softFormR_lt S) hRd
-  have hdiv := Nat.div_add_mod N Dd
-  have hform := softForm_rat S
-  have hcomm : (N / Dd) * Dd = Dd * (N / Dd) := Nat.mul_comm _ _
-  omega
+  have hR : softNormR S < softNormDen S := Nat.mod_lt _ (Nat.two_pow_pos _)
+  apply softRound_congr _ _ _ _ _ _ hR hRd
+  rw [softForm_rat S, Nat.div_add_mod']
+  exact hagree
 
 /-- The kernel `rundeBruchKern` normal branch, with the positioned exponent
     and the routine triple as the `normQ` decision. -/
@@ -210,12 +217,14 @@ theorem softRound_kern (S n d : Nat) (E : Int) (s : Bool)
   unfold rundeBruchKern
   rw [hp53, hfp]
   have c1 : ¬ (f64.emax : Int) < E := by omega
-  have c2 : ¬ E < (f64.emin : Int) - (f64.p : Int) := by omega
+  have c2 : ¬ E < (f64.emin : Int) - (53 : Int) := by omega
   rw [if_neg c1, if_neg c2, if_pos hlo, hQr]
   by_cases hcar : softRoundMag (softNormQ S) (softNormR S) (softNormDen S) = 2 ^ 53
   · have hlt : ¬ softRoundMag (softNormQ S) (softNormR S) (softNormDen S) < 2 ^ 53 := by omega
     rw [if_neg hlt, if_pos hhi, if_pos hcar]
-    refine ⟨rfl, by omega, (Nat.sub_self _).symm⟩
+    have exponent : (E - f64.emin + 2).toNat = (E - f64.emin + 1).toNat + 1 := by
+      omega
+    rw [exponent, Nat.sub_self]
   · have hlt : softRoundMag (softNormQ S) (softNormR S) (softNormDen S) < 2 ^ 53 := by omega
     rw [if_pos hlt, if_neg hcar, Nat.add_zero]
 
@@ -239,12 +248,21 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
   dsimp only at hS ⊢
   have hk := softNormK_bitlen S hSlow hSbound
   have hQr53 : softRoundMag (softNormQ S) (softNormR S) (softNormDen S) ≤ 2 ^ 53 := by
-    have hb := softNormQ_bound S hSbound
+    have hb : softNormQ S < 2 ^ 53 := by
+      unfold softNormQ softNormK
+      split
+      · simpa only [Nat.pow_zero, Nat.div_one] using ‹S < 2 ^ 53›
+      · change S / 2 < 2 ^ 53
+        omega
     have hle1 : softRoundMag (softNormQ S) (softNormR S) (softNormDen S)
         ≤ softNormQ S + 1 := by
       unfold softRoundMag rundeInt
-      split <;> omega
-    omega
+      split
+      · omega
+      · split
+        · omega
+        · split <;> omega
+    exact hle1.trans (Nat.succ_le_of_lt hb)
   unfold rundeExakt rundeBruch exaktBruch
   dsimp only
   by_cases he0 : 0 ≤ u.zweierExp
@@ -266,7 +284,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
     have hsb : decide ((u.zaehler + v.zaehler * (2 ^ softGap u.zweierExp v.zweierExp : Nat))
           * ((2 ^ u.zweierExp.toNat : Nat) : Int) < 0)
         = decide (u.zaehler + v.zaehler * (2 ^ softGap u.zweierExp v.zweierExp : Nat) < 0) := by
-      rw [hsign]
+      simp only [hsign]
     have hn0 : S * 2 ^ u.zweierExp.toNat ≠ 0 :=
       ne_of_gt (Nat.mul_pos hSpos (Nat.two_pow_pos _))
     rw [hsb, Int.natAbs_mul, Int.natAbs_natCast, ← hS,
@@ -314,10 +332,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
           have e3 : (S * 2 ^ u.zweierExp.toNat) * softNormDen S
               = S * 2 ^ (u.zweierExp.toNat + softNormK S) := by
             unfold softNormDen; rw [Nat.pow_add]; ring
-          rw [e3, ← hexp]
-          unfold softNormDen
-          rw [Nat.pow_add]
-          ring
+          rw [e3, ← hexp, Nat.one_mul]
         exact (softRound_normQD S _ _ hRd hagree).symm
     exact softRound_kern S _ _ E _ hlo hhi hQr hQr53
   · rw [if_neg he0]
