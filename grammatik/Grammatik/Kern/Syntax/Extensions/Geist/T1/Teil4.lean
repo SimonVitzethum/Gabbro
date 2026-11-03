@@ -4,6 +4,7 @@ public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Maschine
 public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil3
+public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil3b
 
 @[expose] public section
 
