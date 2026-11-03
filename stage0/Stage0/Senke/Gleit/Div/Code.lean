@@ -18,7 +18,7 @@ theorem softDivQuotientC_aluIns {K d : Nat} (room : d + 26 ≤ K) :
     ∀ i ∈ softDivQuotientC d, AluIns K d i := by
   intro i member
   simp only [softDivQuotientC, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with (rfl | member) | rfl | rfl | rfl
+  rcases member with rfl | member | rfl | rfl | rfl
   · exact AluIns.const _ _ (by omega) (by omega) (by decide)
   · exact wideDivC_aluIns 2 d (by decide) (by omega) i member
   · exact AluIns.const _ _ (by omega) (by omega) (by decide)
