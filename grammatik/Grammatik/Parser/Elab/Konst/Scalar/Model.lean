@@ -87,7 +87,7 @@ variable {D : Deklaration} {Γ : Ctx}
 def literal (n : Int) : Code D Γ (.int n n) :=
   ⟨.lit n, fun _ => ⟨n, Int.le_refl _, Int.le_refl _⟩, by intros; rfl⟩
 
-def variable (x : Var Γ τ) : Code D Γ τ :=
+def «variable» (x : Var Γ τ) : Code D Γ τ :=
   ⟨.var x, fun env => env.get x, by intros; rfl⟩
 
 def truth (b : Bool) : Code D Γ .bool :=
@@ -96,47 +96,47 @@ def truth (b : Bool) : Code D Γ .bool :=
 
 def negate (a : Code D Γ (.int lo hi)) : Code D Γ (.int (-hi) (-lo)) :=
   ⟨.neg a.expr, fun env => Zahl.neg (a.denote env), by
-    intros; simp only [eval, a.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, wahr?] <;> rfl⟩
 
 def add (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) :
     Code D Γ (.int (l + l') (h + h')) :=
   ⟨.add a.expr b.expr, fun env => Zahl.add (a.denote env) (b.denote env), by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 def sub (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) :
     Code D Γ (.int (l - h') (h - l')) :=
   ⟨.sub a.expr b.expr, fun env => Zahl.sub (a.denote env) (b.denote env), by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 def mul (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) :
     Code D Γ (.int (imin (imin (l*l') (l*h')) (imin (h*l') (h*h')))
       (imax (imax (l*l') (l*h')) (imax (h*l') (h*h')))) :=
   ⟨.mul a.expr b.expr, fun env => Zahl.mul (a.denote env) (b.denote env), by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 def boolNot (a : Code D Γ .bool) : Code D Γ .bool :=
-  ⟨.not a.expr, fun env => !(a.denote env), by intros; simp only [eval, a.equation, wahr?]⟩
+  ⟨.not a.expr, fun env => !(a.denote env), by intros; simp only [eval, a.equation, wahr?] <;> rfl⟩
 
 def boolAnd (a b : Code D Γ .bool) : Code D Γ .bool :=
   ⟨.and a.expr b.expr, fun env => a.denote env && b.denote env, by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 def boolOr (a b : Code D Γ .bool) : Code D Γ .bool :=
   ⟨.or a.expr b.expr, fun env => a.denote env || b.denote env, by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 /-- Comparisons preserve operands of different exact integer intervals. -/
 def less (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) : Code D Γ .bool :=
   ⟨.lt a.expr b.expr, fun env => decide ((a.denote env).n < (b.denote env).n), by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 def lessEqual (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) : Code D Γ .bool :=
   ⟨.le a.expr b.expr, fun env => decide ((a.denote env).n ≤ (b.denote env).n), by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 def equal (a : Code D Γ (.int l h)) (b : Code D Γ (.int l' h')) : Code D Γ .bool :=
   ⟨.eq a.expr b.expr, fun env => decide ((a.denote env).n = (b.denote env).n), by
-    intros; simp only [eval, a.equation, b.equation, wahr?]⟩
+    intros; simp only [eval, a.equation, b.equation, wahr?] <;> rfl⟩
 
 end Code
 end Gabbro.Grammatik.Parser.Konst.Scalar
