@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.Uebersetze.Guest.Source
@@ -29,6 +30,11 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok globs0 =>
   let spaces := ["normal"] ++ uOhneDoppelte ((ms.filterMap (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))
+  let eigner := uOhneDoppelte (uEignerMs ms)
+  let linear := uLinearNamen ms
+  match uSeq ((ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)).map (uPruefEigner linear)) with
+  | .error e => .error e
+  | .ok _ =>
   let tnames := ms.filterMap (fun | .tableT n _ _ _ _ _ _ => some n | _ => none)
   match uSeq ((ms.filter (fun
       | .tableT _ _ _ _ _ _ _ => true | _ => false)).map (tableLowering tnames)) with
@@ -41,7 +47,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uOptGlobs tabs (globs0 ++ arGlobs) with
   | .error e => .error e
   | .ok globs =>
-  match uTypes consts alias tabs msE with
+  match uTypes consts alias tabs msE eigner with
   | .error e => .error e
   | .ok valueScope =>
   -- C16: every `check` item elaborates now, with its generated probe below.
@@ -82,7 +88,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uWhys ms alias with
   | .error e => .error e
   | .ok whys =>
-  match uSums alias ms tabs spaces with
+  match uSums alias ms tabs spaces eigner with
   | .error e => .error e
   | .ok sums =>
   match uSumGlobs consts sums ms globs with
@@ -97,7 +103,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uInvs consts alias tabs locks globs ms with
   | .error e => .error e
   | .ok invs =>
-  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs, records := valueScope.records, namedTypes := valueScope.types }
+  let transitionCtx : UCtx := { names := [], kinds := [], types := [], tabs, locks, held := [], res := none, fname := "transition", alias, lits := consts, globs, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner }
   match uSeq (ms.filterMap (fun | .stateT n ts => some (uZustand n ts transitionCtx) | _ => none)) with
   | .error e => .error e
   | .ok zustaende =>
@@ -112,17 +118,17 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   let zeiger := uOhneDoppelte (fnItems.flatMap (fun (s, b) => uZeigerTexte (s.params.map (·.2)) ++ uZeigerAnw 100000 b))
   let zb := fnItems.length + transitionFns.length
   match uSeq ((List.range zeiger.length).zip zeiger |>.map (fun (j, r) =>
-      elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r spaces valueScope.types)) with
+      elabZeigerTyp consts alias tabs locks globs whys sums zeiger zb j r spaces valueScope.types eigner)) with
   | .error e => .error e
   | .ok zeigerPaare =>
-  match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces valueScope.types)) with
+  match uSeq (fnItems.map (fun (s, _) => elabKopf consts alias tabs locks globs whys sums s devs zeiger zb spaces valueScope.types eigner)) with
   | .error e => .error e
   | .ok [] => .error "unit without a fn"
   | .ok kopfPaare =>
-  match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
+  match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm (eigner := eigner) sig)) with
   | .error e => .error e
   | .ok axKoepfe0 =>
-  match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys globs)) with
+  match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (fun sc => elabGateKopf alias tabs whys globs sc (eigner := eigner))) with
   | .error e => .error e
   | .ok gateKoepfe =>
   let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
@@ -135,7 +141,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
-      elabUFunktion (spaces := spaces) (valueScope := valueScope) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
+      elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
         (uKonstArrays alias functions consts ms))) with
   | .error e => .error e
@@ -145,7 +151,19 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok torFns =>
   let marken := uMarken ms checks
-  match uMarkenPruef marken (fns ++ torFns) with
+  match uMarkenPruef marken (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uGibtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uLeihtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uBewegtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
+  match uMintPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
   match uWurzeln tabs fns ms with
@@ -160,7 +178,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     | .error e => .error e
     | .ok regiert =>
     let u : UProg :=
-      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, guests := guests, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records }
+      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axs, guests := guests, annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records, eigner := eigner }
     let u := uMitBoden u
     match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types with
     | .error error => .error error

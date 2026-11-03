@@ -106,6 +106,18 @@ theorem istSome_ok {L : Lay D} {Λ : List (Res D)} {Γ : Ctx} {n : Int}
       · simp only [hs, wahr?, Bool.true_eq_false, ↓reduceIte]; decide
       · simp only [Bool.not_eq_true] at hs
         simp only [hs, wahr?, Bool.false_eq_true, ↓reduceIte]; decide
-    · cases h
+    · next hn =>
+      simp only [decide_eq_true_eq] at hn
+      obtain ⟨m', run, changed, value⟩ := ih c top h hK m pc hp
+      have read : m'.rd64 (slot fp (BitVec.ofNat 64 d)) =
+          some (Runner.IR.bool (eval σ₀ e σ ρ).isSome) := by
+        cases hv : eval σ₀ e σ ρ with
+        | none =>
+          have first := value.2 0 (by simp [encodeWords, hn, hv])
+          simpa [encodeWords, hn, hv, Runner.IR.bool] using first
+        | some k =>
+          have first := value.2 0 (by simp [encodeWords, hn, hv])
+          simpa [encodeWords, hn, hv, Runner.IR.bool] using first
+      exact ⟨m', run, changed, _, read, by simp only [Enc, eval, wahr?, Runner.IR.bool]⟩
 
 end Gabbro.Stage0.Senke

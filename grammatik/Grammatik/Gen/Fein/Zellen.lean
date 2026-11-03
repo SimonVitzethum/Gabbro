@@ -119,6 +119,7 @@ def kE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → Nat
   | .prod .. => 60
   | .prodGet .. => 61
   | .prodSet .. => 62
+  | .thruOwn .. => 63
 
 def kN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → Nat
   | .empty .. => 0
@@ -162,6 +163,7 @@ def kS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
   | .next .. => 26
   | .assignSlotRef .. => 27
   | .callIndElse .. => 28
+  | .assignThruOwn .. => 29
 
 def kB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ Λ' → Nat
   | .nil .. => 0
@@ -277,6 +279,7 @@ def fzE {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → List FZel
   | .prod _ args => [⟨0, 0, 60, false, []⟩, ⟨1, 0, 60, false, [0, 2, kA args]⟩] ++ fzA args
   | .prodGet v _ => [⟨0, 0, 61, false, [tk v]⟩, ⟨1, 0, 61, false, [0, 0, kE v]⟩] ++ fzE v
   | .prodSet v _ e => [⟨0, 0, 62, false, [tk v, tk e]⟩, ⟨1, 0, 62, false, [0, 0, kE v]⟩, ⟨1, 0, 62, false, [1, 0, kE e]⟩] ++ fzE v ++ fzE e
+  | .thruOwn (p := p) (i := i) .. => [⟨0, 0, 63, false, [tk p, tk i]⟩, ⟨1, 0, 63, false, [0, 0, kE p]⟩, ⟨1, 0, 63, false, [1, 0, kE i]⟩] ++ fzE p ++ fzE i
 
 def fzN {Γ : Ctx} {Λ : List (Res D)} {o : Option Ty} : NutzlastExpr D Γ Λ o → List FZelle
   | .empty .. => [⟨0, 1, 0, false, []⟩]
@@ -295,6 +298,7 @@ def fzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V
   | .assignThru (p := p) (i := i) (e := e) .. => [⟨0, 4, 1, l, [tk p, tk i, tk e]⟩, ⟨1, 4, 1, l, [0, 0, kE p]⟩, ⟨1, 4, 1, l, [1, 0, kE i]⟩, ⟨1, 4, 1, l, [2, 0, kE e]⟩] ++ fzE p ++ fzE i ++ fzE e
   | .assignSlotRef (r := r) (e := e) .. => [⟨0, 4, 27, l, [tk r, tk e]⟩, ⟨1, 4, 27, l, [0, 0, kE r]⟩, ⟨1, 4, 27, l, [1, 0, kE e]⟩] ++ fzE r ++ fzE e
   | .callIndElse (p := p) (args := args) (err := err) .. => [⟨0, 4, 28, l, [tk p]⟩, ⟨1, 4, 28, l, [0, 0, kE p]⟩, ⟨1, 4, 28, l, [1, 2, kA args]⟩, ⟨1, 4, 28, l, [2, 6, kEnd err]⟩] ++ fzE p ++ fzA args ++ fzEnd err
+  | .assignThruOwn (p := p) (i := i) (e := e) .. => [⟨0, 4, 29, l, [tk p, tk i, tk e]⟩, ⟨1, 4, 29, l, [0, 0, kE p]⟩, ⟨1, 4, 29, l, [1, 0, kE i]⟩, ⟨1, 4, 29, l, [2, 0, kE e]⟩] ++ fzE p ++ fzE i ++ fzE e
   | .assignGlob (e := e) .. => [⟨0, 4, 2, l, [tk e]⟩, ⟨1, 4, 2, l, [0, 0, kE e]⟩] ++ fzE e
   | .putBytes (i := i) (e := e) .. => [⟨0, 4, 3, l, [tk i, tk e]⟩, ⟨1, 4, 3, l, [0, 0, kE i]⟩, ⟨1, 4, 3, l, [1, 0, kE e]⟩] ++ fzE i ++ fzE e
   | .assignVar (e := e) .. => [⟨0, 4, 4, l, [tk e]⟩, ⟨1, 4, 4, l, [0, 0, kE e]⟩] ++ fzE e

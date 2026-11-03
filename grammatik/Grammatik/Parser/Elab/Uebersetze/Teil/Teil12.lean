@@ -46,9 +46,9 @@ set_option maxRecDepth 100000
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy)
-    (name : String) (params : List (String × STyp)) (res : Option STyp) (fehler : Option String) :
+    (name : String) (params : List (String × STyp)) (res : Option STyp) (fehler : Option String) (eigner : List String := []) :
     Except String UFnKopf :=
-  match uSeq (params.map (uParam alias tabs [] whys)) with
+  match uSeq (params.map (uParam alias tabs [] whys (eigner := eigner))) with
   | .error e => .error e
   | .ok ps =>
     match (match fehler with
@@ -80,23 +80,23 @@ def uAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : L
 
 /-- The head of an `extern fn`: a foreign body, `D.Ax` -- its parameters and its answer. -/
 def elabAxKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
-    (asm : Bool) : FnSig → Except String UFnKopf
+    (asm : Bool) (eigner : List String := []) : FnSig → Except String UFnKopf
   | { art, name, params, res, fehler, klauseln } =>
-    -- `extern`, `raw`, `prim` and `= asm`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
+    -- `extern`, `raw`, `prim` and `= asm { .. }`: a foreign body (SYNTAX.md); a body-less `divergent fn` is one whose
     -- answer is `never`
     if !(asm || strEq art "extern" || strEq art "raw" || strEq art "prim" || strEq art "divergent") then
       .error "foreign fn without G form"
     else if strEq art "divergent" && res.isSome then .error "divergent fn with a result without G form"
     else
-      match uAxKopf alias tabs whys name params (if strEq art "divergent" then some (.atom "never") else res) fehler with
+      match uAxKopf alias tabs whys name params (if strEq art "divergent" then some (.atom "never") else res) fehler (eigner := eigner) with
       | .error e => .error e
       | .ok kopf => uAxKlauseln { kopf with clauses := klauseln } tabs globs klauseln
 
 /-- The head of a `syscall` gate (a foreign body too): the ABI half (`abi`, `number`, the registers) is the stub's,
     a precondition, a postcondition or a write has no form. -/
 def elabGateKopf (alias : List (String × (Int × Int))) (tabs : List UTab) (whys : List UWhy) (globs : List UGlob)
-    (sc : SSyscall) : Except String UFnKopf :=
-  match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail with
+    (sc : SSyscall) (eigner : List String := []) : Except String UFnKopf :=
+  match uAxKopf alias tabs whys sc.name sc.params sc.res sc.fail (eigner := eigner) with
     | .error e => .error e
     | .ok kopf => uAxKlauseln { kopf with clauses := sc.gate.pre.map SKlausel.needs ++ sc.gate.post.map SKlausel.gives } tabs globs [.effs sc.gate.uses]
 

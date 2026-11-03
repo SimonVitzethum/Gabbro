@@ -1,6 +1,6 @@
 /- Six-step binary search for the leading bit of a binary64 magnitude. -/
 module
-public import Stage0.Senke.Gleit.RoutineBranch
+public import Stage0.Senke.Gleit.Routine.RoutineBranch
 public import Stage0.Senke.Gleit.BitLength
 @[expose] public section
 

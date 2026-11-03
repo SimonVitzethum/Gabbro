@@ -39,7 +39,7 @@ theorem mS_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       exact ⟨mB_und body h.1 h'.1, mB_und ueber h.2 h'.2⟩
   | _, _, _, _, .forever _ _ body, h, h' => mB_und body h h'
   | _, _, _, _, .assignSlot .., _, _ => rfl
-  | _, _, _, _, .assignThru .., _, _ | _, _, _, _, .assignSlotRef .., _, _ => rfl
+  | _, _, _, _, .assignThru .., _, _ | _, _, _, _, .assignThruOwn .., _, _ | _, _, _, _, .assignSlotRef .., _, _ => rfl
   | _, _, _, _, .assignGlob .., _, _ => rfl
   | _, _, _, _, .putBytes .., _, _ => rfl
   | _, _, _, _, .assignVar .., _, _ => rfl

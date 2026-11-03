@@ -148,6 +148,16 @@ inductive Expr : Ctx → List (Res D) → Ty → Type where
   | prodGet (v : Expr Γ Λ (.prod r fs)) (i : FieldAt fs σ) : Expr Γ Λ σ
   /-- The product with the field at a position replaced (a value; `p.f = e` on a local binds it). -/
   | prodSet (v : Expr Γ Λ (.prod r fs)) (i : FieldAt fs σ) (e : Expr Γ Λ σ) : Expr Γ Λ (.prod r fs)
+  /-- `p->f`, `p[i].f` through an OWNED capability (`own@m`): the same guarded
+      access to the underlying table as `thru`, with the same guards -- plus
+      the held owner mark itself. The pointer carries the resolved owner
+      identity `o` (`D.ownerNr o = some m`), the table declares `m` as its
+      owner (`he`) and the guard at the held stage (`hg`); `hL` is the table's
+      remaining right. Machine G evaluates it exactly like `thru` on `t`. -/
+  | thruOwn (p : Expr Γ Λ (.ptr ⟨space, ⟨true, rw, some o⟩, .table n⟩)) (t : D.Tab)
+      (ht : D.capTab space n = some t) (f : D.Feld t) (i : Expr Γ Λ (.index (D.count t)))
+      (m : D.Marke) (s : Nat) (ho : D.ownerNr o = some m) (he : m ∈ D.eigner t)
+      (hg : Sum.inr (m, s) ∈ D.braucht t) (hL : darf D t Λ) : Expr Γ Λ (D.typ t f)
 
 inductive NutzlastExpr : Ctx → List (Res D) → Option Ty → Type where
   | empty : NutzlastExpr Γ Λ none

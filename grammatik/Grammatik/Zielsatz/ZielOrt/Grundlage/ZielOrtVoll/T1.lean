@@ -10,7 +10,7 @@
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Teil20
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Tail.Teil20
 @[expose] public section
 
 namespace Gabbro.Grammatik

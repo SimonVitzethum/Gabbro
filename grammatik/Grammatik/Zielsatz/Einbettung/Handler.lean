@@ -53,6 +53,9 @@ theorem orte_exE : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .thru p t _ f i _ => by
       simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE i, orte_exE p, List.map_cons,
         List.map_append]; rfl
+  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _ => by
+      simp only [exE, Expr.orte_umTy, Expr.orte, orte_exE i, orte_exE p, List.map_cons,
+        List.map_append]; rfl
   | _, _, _, .ptrOf _ _ _ _ => rfl
   | _, _, _, .fnref _ _ _ => rfl
   | _, _, _, .refEq a b => by simp only [exE, Expr.orte, orte_exE a, orte_exE b, List.map_append]

@@ -108,6 +108,12 @@ structure UFnKopf where
   puts : List String := []
   nimmt : List String := []
   gibt : List String := []
+  /-- Call-scoped owner loans (`borrows m`, C12). -/
+  leiht : List String := []
+  /-- Linear owner handoffs (`moves m`, C09). -/
+  bewegt : List String := []
+  /-- Checked owner mints (`mints m`, C09). -/
+  praegt : List String := []
   /-- The named `assume` witnessing a hardware origin (the generated core
       query's `assume` clause; `none` for software items and while unresolved). -/
   annahme : Option String := none
@@ -140,20 +146,20 @@ def uParamBreite : STyp → Nat
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
 def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : List USum := [])
-    (whys : List UWhy := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (named : List (String × Ty) := []) :
+    (whys : List UWhy := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (named : List (String × Ty) := []) (eigner : List String := []) :
     String × STyp → Except String (String × Ty × UParamArt)
   | (n, .raw r) =>
     match zeiger.findIdx? (strEq · r) with
     | .some j => .ok (n, Ty.fnptr (zb + j), .fnptr (zb + j))
     | .none =>
-      match uTypIn alias tabs named spaces (.raw r) with
+      match uTypIn alias tabs named spaces eigner (.raw r) with
       | .error e => .error e
       | .ok ty => .ok (n, ty, uArtVon ty)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "space without G form"
     else if strEq t "u8" then .error "live byte capability requires C01 value flow, C08 grant generations and C09 loans"
     else do
-      let access ← uTableRight rechte
+      let access ← uTableRight eigner rechte
       let (num, _) ← uTabNr tabs t
       pure (n, .ptr (.table num access), .ptr (.table num access))
   | (n, .index false t) =>
@@ -178,11 +184,11 @@ def uParam (alias : List (String × (Int × Int))) (tabs : List UTab) (sums : Li
         | .some w => .ok (n, Ty.why w.cases.length, UParamArt.why k)
         | .none => .error ("reason unknown: " ++ a)
       | .none =>
-      match uTypIn alias tabs named spaces (.atom a) with
+      match uTypIn alias tabs named spaces eigner (.atom a) with
       | .error e => .error e
       | .ok ty => .ok (n, ty, uArtVon ty)
   | (n, t) =>
-    match uTypIn alias tabs named spaces t with
+    match uTypIn alias tabs named spaces eigner t with
     | .error e => .error e
     | .ok ty => .ok (n, ty, uArtVon ty)
 
@@ -267,6 +273,12 @@ structure UEffekte where
   gputs : List String := []
   nimmt : List String := []
   gibt : List String := []
+  /-- Call-scoped owner loans (`borrows m`, C12). -/
+  leiht : List String := []
+  /-- Linear owner handoffs (`moves m`, C09). -/
+  bewegt : List String := []
+  /-- Checked owner mints (`mints m`, C09). -/
+  praegt : List String := []
 
 /-- A written name is a static when it is no parameter and no table. -/
 def uIstGlobName (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) (g : String) : Bool :=
@@ -324,6 +336,18 @@ def uEffekteAux (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) (globs 
     match uEffekteAux kopf tabs locks globs rest with
     | .error e => .error e
     | .ok r => .ok { r with nimmt := m :: r.nimmt }
+  | .borrows m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with leiht := m :: r.leiht }
+  | .moves m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with bewegt := m :: r.bewegt }
+  | .mints m :: rest =>
+    match uEffekteAux kopf tabs locks globs rest with
+    | .error e => .error e
+    | .ok r => .ok { r with praegt := m :: r.praegt }
   | _ :: _ => .error "effect without G form"
 
 end Gabbro.Grammatik.Parser.Uebersetze

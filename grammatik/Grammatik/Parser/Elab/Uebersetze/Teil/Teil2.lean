@@ -1,9 +1,22 @@
 module
-public import Grammatik.Parser.Elab.Uebersetze.Guest.Data
+public import Grammatik.Korpus.Programme.Export104
+public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Elab.Export.ExportMetadata
+import all Init.Data.Repr
+import all Init.Data.String.Defs
+import all Init.Data.String.Basic
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil1
+public import Grammatik.Parser.Elab.Uebersetze.Records.Schema
+public import Grammatik.Parser.Elab.Uebersetze.MeasureSource
+public import Grammatik.Parser.Elab.Uebersetze.Transition.Data
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
+
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Scopes
+
 @[expose] public section
+
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
-
 /-- The members: a single module wrapper is unwrapped, a bare
     list passes through (104 wraps everything in
     `module beispiel::referenz`); a `pub` mark is dropped (visibility is
@@ -178,7 +191,7 @@ structure UKonstFn where
   constants : List (String × Int) := []
   sums : List USum := []
 
-/-- Bind integer arguments only when their checked parameter types accept them. -/
+/-- Bind integer arguments only when their checked parameter types admit them. -/
 def uKonstBinde : List (String × Ty) → List Int → Option (List (String × Int))
   | [], [] => some []
   | (n, .int pl ph) :: ps, v :: vs =>

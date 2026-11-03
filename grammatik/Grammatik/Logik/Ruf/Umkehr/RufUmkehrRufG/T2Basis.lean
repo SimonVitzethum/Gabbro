@@ -40,6 +40,12 @@ theorem stmtSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt]
       rw [h1.eval i, h1.eval e]
       exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
+  | _, _, _, Λ₀, _, .assignThruOwn p t ht f' i e m s ho he hg hw hL, _, _ => by
+      intro σ σ' ρ h
+      have h1 := h.lese Λ₀ (p.orte ++ i.orte ++ e.orte)
+      simp only [execStmt]
+      rw [h1.eval i, h1.eval e]
+      exact ⟨h1.schreibSlot _ _ _ _ _, rfl⟩
   | _, _, _, Λ₀, _, .assignSlotRef r t ht ho f' e hw hL, _, _ => by
       intro σ σ' ρ h
       have h1 := h.lese Λ₀ (r.orte ++ e.orte)

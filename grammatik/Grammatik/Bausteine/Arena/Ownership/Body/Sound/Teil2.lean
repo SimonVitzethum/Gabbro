@@ -20,6 +20,8 @@ theorem os_sound (hR : Respects A I.contracts R) (hO : GutO O) :
     simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
   | _, _, _, _, _, _, _, _, .assignThru p t ht f i e hw hL hn _ _ _ _, σ, ρ, _, h => by
     simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
+  | _, _, _, _, _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hw hL hn _ _ _ _, σ, ρ, _, h => by
+    simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeSlot A _ t _ _ f _ hn)
   | _, _, _, _, _, _, _, _, .assignGlob g e hw hL hg _, σ, ρ, _, h => by
     simp only [execStmt]; exact (h.reads _ _).meta (MetaSame.writeGlob A _ g _ _ hg)
   | _, _, _, _, _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL ht _ _, σ, ρ, _, h => by

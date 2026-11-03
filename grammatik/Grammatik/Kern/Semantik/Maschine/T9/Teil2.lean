@@ -24,6 +24,8 @@ theorem speicherfest_speicher
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignThru p t ht f i e hw hL =>
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
+  | assignThruOwn p t ht f i e m s ho he hg hw hL =>
+      simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignSlotRef r t ht ho f e hw hL =>
       simp only [Stmt.speicherfest, Bool.false_eq_true] at hFest
   | assignGlob g e hw hL =>

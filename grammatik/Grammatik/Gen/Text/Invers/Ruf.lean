@@ -374,12 +374,14 @@ theorem nach_ohne_marken (hM : ∀ m : z.deklaration.Marke, False) (S : Signatur
     | nil => rfl
     | cons x _ => exact (hM x.1).elim
   have h3 : S.owner = {} := by
-    rcases S.owner with ⟨moves, loans⟩
+    rcases S.owner with ⟨moves, loans, mints⟩
     cases moves with
     | cons x _ => exact (hM x.mark).elim
     | nil => cases loans with
       | cons x _ => exact (hM x.1).elim
-      | nil => rfl
+      | nil => cases mints with
+        | cons x _ => exact (hM x.1).elim
+        | nil => rfl
   simp only [nachSig, Signatur.inputMarks, Signatur.outputMarks, h1, h2, h3,
     OwnerFlow.inputs, OwnerFlow.outputs, List.map_nil, List.filterMap_nil,
     List.append_nil, List.foldl_nil]

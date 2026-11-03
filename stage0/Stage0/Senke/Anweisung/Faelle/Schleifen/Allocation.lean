@@ -16,6 +16,7 @@ def counterDepthS {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ _ _ _ _ => 0
   | .assignThru _ _ _ _ _ _ _ _ => 0
+  | .assignThruOwn .. => 0
   | .assignSlotRef _ _ _ _ _ _ _ _ => 0
   | .assignGlob _ _ _ _ => 0
   | .putBytes _ _ _ _ _ _ _ _ _ _ => 0

@@ -5361,7 +5361,7 @@ Integration evidence: `8abb7bd47` (`feat(grammatik): lower C11 traversal forms w
 * **`lowerS_shape_consumeTraverse`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `t`, `member`, `edge`, `inv`, `bound`, `mass`, `body`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerS lay cenv lv (.consumeTraverse (Λ`, the conclusion is ``.
 * **`lowerB_shape_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `Λ' : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `k : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerB lay cenv lv (Gabbro.Grammatik.Block.narrowRequired (lo`, the conclusion is ``.
 * **`lowerEnd_shape_narrowRequired`**: For arbitrary `lay : Layout D`, `cenv : List Reg`, `lv : Lbl × Lbl`, `l : Bool`, `Γ : Ctx`, `Λ : List (Res D)`, `lo`, `hi`, `Λ`, `e`, `lo'`, `hi'`, `rest`, `lb : Lbl`, `st : St`, `st' : St`, `blks : List Block`, assuming `h : lowerEnd lay cenv lv (Gabbro.Grammatik.Endblock.narrowRequired (lo`, the conclusion is ``.
-`grammatik/Grammatik/Code/Refine/WitnessC11.lean`:
+`grammatik/Grammatik/Code/Refine/Witnesses/WitnessC11.lean`:
 
 * **`zeuge_c11_consume_lower`**: the conclusion is `∃ blks st', lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st')`.
 * **`zeuge_c11_consume_ok`**: For arbitrary `M : Modl`, `S : Sees`, `fn : Nat`, `blks : List Block`, `st' : St`, `σ : World Wit.wD`, `ρ : Env Wit.wD []`, `m : Mem`, `rs : Regs`, `ks : List Frame`, `dst : Option Reg`, `ih : ∀ (lay : Layout Wit.wD) (hL : LayoutOk lay) (cenv : List Reg) (lv : Lbl × Lbl) (O : Orakel Wit.wD) (passes : Nat) (R : (f : Wit.wD.Fn) → World Wit.wD → Env Wit.wD (Wit.wD.params f) → RufAusgang f), ∀ (lb : Lbl), ∀ (k : Lbl), ∀ (st : St), ∀ (st' : St), ∀ (blks : List Block), lowerB lay cenv lv c11consumeBody lb k st = some (blks, st') → ∀ (M : Modl), ∀ (S : Sees), ∀ (fn : Nat), InM M fn blks → KOk M fn k → LvOk M fn lv → FnOk lay M → CallRef lay M S R → ∀ (σ : World Wit.wD), ∀ (ρ : Env Wit.wD _), ∀ (m : Mem), ∀ (rs : Regs), ∀ (ks : List Frame), ∀ (dst : Option Reg), Rep lay σ m → EnvRep lay rs m cenv ρ → WfL lay m → (∀ x ∈ cenv, x < st.r) → OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execBlock O passes R c11consumeBody σ ρ)`, assuming `h : lowerS Wit.wLay [] (0, 0) c11consume 7 8 ⟨10, 30⟩ = some (blks, st')` and `hM : InM M fn blks` and `hk : KOk M fn 8` and `hlv : LvOk M fn (0, 0)` and `hFn : FnOk Wit.wLay M` and `hCall : CallRef Wit.wLay M S (rufAt Wit.wP Wit.wO 0 1)` and `hR : Rep Wit.wLay σ m` and `hE : EnvRep Wit.wLay rs m [] ρ` and `hW : WfL Wit.wLay m` and `hc : ∀ x ∈ ([] : List Reg), x < 10`, the conclusion is `OutOk Wit.wLay [] (0, 0) M S fn 7 8 10 st'.r m rs ks dst (execStmt Wit.wO 0 (rufAt Wit.wP Wit.wO 0 1) c11consume σ ρ)`.
@@ -6121,7 +6121,178 @@ On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Tak
 * **`ohneBibliothekAnw_kein_lcall`**, **`ohneBibliothekAnw_kein_bindLib`**, **`libraryExpansion_trifft_kein_bibliothekruf`**: Every certified expansion is definitionally no library call, so the generic lowering treats it exactly like an ordinary call.
 
 Open: the lead build of this branch (single-module checks of the four new modules and their importers, then the guardians); the Stage-0/IR payload spans (IR-03/06) and the C01 schema export stay with their owners; no language case is claimed complete by these modules.
-## 140. C17: original-source normalization and typed const replacements (2026-11-03)
+
+## 138. Stage-0 expansion-aware frontend gate (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The original source
+metadata gate refused generic headers, module-template/use items and expanded dispatch metadata even
+though their canonical expansions are ordinary checked G forms. After the C17 merge, the gate uses
+`Konst.checkSourceMetadata` on either the original or expanded members. It prefers expanded members
+when the original contains an `expansionHeader`, otherwise original members; a failed preferred
+check may fall back only to the complete C17 check on the other side. `gateMembers` retains the
+selected list, `metadata` equates `unit.exportGate` with that list's C17 check, and `gateChecked`
+retains both the selected side's identity and its successful check.
+`Konst.checkSourceConstants` on the original members remains mandatory before expansion.
+No build was run; the lead builds and reports errors back.
+
+`stage0/Stage0/Frontend/ExpansionGate.lean` (new):
+
+* **`expansionHeader`**: the source headers consumed by canonical expansion (module templates and uses,
+  spec and implementation groups, tagged declarations, generic headers).
+* **`expansionHeader_template`**, **`expansionHeader_use`**, **`expansionHeader_specGroup`**,
+  **`expansionHeader_implGroup`**, **`expansionHeader_tagged`**: each header class is consumed, never
+  lowered directly.
+* **`checkExpansionGate`**: run the very same canonical expansion the elaborator consumes
+  (`Modules.prepare`) and apply the complete C17 metadata check to the expanded unit.
+* **`checkExpansionGate_expansion`**, **`checkExpansionGate_expands`**: gate acceptance runs the
+  canonical expansion on the source declarations, through the exact `expandU` the elaborator consumes.
+* **`checkExpansionGate_checked`**: gate acceptance leaves no unbound metadata in the expanded runtime unit, excluding const declarations.
+* **`checkExpansionGate_existingForms`**, **`checkExpansionGate_ordinary`**, **`checkExpansionGate_output`**:
+  the accepted expansion carries the complete structural postcondition (existing forms, no residual
+  generic syntax, no open module reference, closed).
+
+`stage0/Stage0/Compiler.lean`:
+
+* **`Compiled.expanded`**, **`Compiled.requirements`**, **`Compiled.gateMembers`**, **`Compiled.gateExpansion`**,
+  **`Compiled.gateChecked`**: the stored canonical expansion, its requirements, the prepare certificate
+  on the source declarations and the original-or-expanded metadata disjunct.
+* **`Compiled.expansion_gate`**: gate acceptance ties the source to the expanded unit lowering compiles:
+  either the expansion gate accepts the declarations with exactly the stored expanded unit and
+  requirements, or the original members passed the complete C17 check.
+
+`stage0/Stage0/Frontend/ExportCorrectness.lean`:
+
+* **`Compiled.const_substitution`**: `Konst.checkSourceMetadata_sound` retains certified substitution
+  on the selected source side.
+* **`Compiled.exports_metadata`**: `Konst.checkSourceMetadata_runtime_sound` retains the original-or-expanded
+  runtime metadata disjunct, excluding only const declarations;
+  the batch-2 lowering connections discharge to the same disjunct.
+
+Open: the lead build of the branch (single-module checks of the three touched modules and their
+importers, then the guardians); every new-syntax form still needs its source-text-to-image witness
+(§§139-142); check model B stays future work.
+
+## 139. New-syntax witnesses: generics and parametric modules (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Standalone pipeline
+witness files (same standing as the existing unwired `TaggedDispatchWitness`): each carries source-text
+emission, the canonical source program and the image correctness, plus the stored gate certificate
+(`gate_checked`, `gate_ties`). No build was run; the lead builds and reports errors back.
+
+`stage0/Stage0/Zeugen/Pipeline/GenericWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: one generic
+  function used at two instantiations (`identity::[u8]`, `identity::[u16]`) reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+`stage0/Stage0/Zeugen/Pipeline/ParametricModuleWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: one parametric
+  module instantiated twice (`consts::[u8, 400]`, `consts::[u16, 300]`) reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+Open: the lead build of the branch (single-module checks of both witness files); unsupported abstract
+operations and unbound generic library translators still refuse.
+
+## 140. New-syntax witnesses: tagged and dyn dispatch (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Same standing and
+proof shape as §139. No build was run; the lead builds and reports errors back.
+
+`stage0/Stage0/Zeugen/Pipeline/TaggedGateWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: a
+  `tagged … by S` dispatch over two cases reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+`stage0/Stage0/Zeugen/Pipeline/DynWitness.lean`:
+
+* **`candidate_present`**, **`accepted_image`**, **`canonical_source`**, **`image_correct`**: a `dyn S`
+  call with two linked implementations (indices gathered by traversals, dispatched calls on both
+  scene slots) reaches a Stage-0 image.
+* **`gate_checked`**, **`gate_ties`**: the stored gate certificate for this unit.
+
+Open: the lead build of the branch (single-module checks of both witness files); `Ty.dyn` stays a
+closed-sum implementation, payloads stay scalar and at most eight bytes, downcast/equality tests
+stay refused.
+
+## 141. Range `and`/`or` fold operators (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Surface `and`/`or`
+range folds (`and i in lo ..< hi : pred`, `or i in lo ..< hi : pred`, no `else`, like `add`); table-domain
+`and`/`or` folds refuse with range guidance. No build was run; the lead builds and reports errors back.
+
+* `grammatik/Grammatik/Parser/Expr/Ausdruck/Teil1.lean`: `XKind` gains `foldAnd | foldOr` at the END.
+* `grammatik/Grammatik/Parser/Expr/Ausdruck/Teil2a.lean`: `and`/`or` heads parse to range folds with
+  add-like else rules (`fold add/and/or: else is not allowed`, `fold min/max: else is required`).
+* `grammatik/Grammatik/Parser/Round/Rundlauf/Teil1.lean`: `druckFold "and"`/`"or"` printer arms.
+* `grammatik/Grammatik/Parser/Namen/Aufloesung/Teil1.lean`, `grammatik/Grammatik/Parser/Namen/References.lean`:
+  `and`/`or` binders resolve like the other folds.
+* `grammatik/Grammatik/Parser/Elab/Uebersetze/Folds/Expansion.lean`: `isFold` covers the new kinds;
+  `expandFold` refuses table-domain `and`/`or` with range guidance.
+* `grammatik/Grammatik/Parser/Elab/Uebersetze/Folds/FloatExpansion.lean`: same refusal for float folds.
+
+Open: the lead build of the branch; domain (table) `and`/`or` folds stay future work; the range
+elaboration lives in §142.
+
+## 142. Generalized range-fold sugar (2026-11-04)
+
+On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. `SourceFolds/Range.lean`
+generalizes the range sugar beyond the direct integer add-fold return over one indexed array with lower
+bound zero: arbitrary literal integer bounds (upper bound at or below the array length, enforced by
+generated filter tests), `min`/`max` with required else, `and`/`or` folds and nested folds over array
+variables, by expansion to the existing traverse forms. No build was run; the lead builds and reports
+errors back.
+
+`grammatik/Grammatik/Parser/SourceFolds/Range.lean`:
+
+* **`FoldDesc`**, **`matchFoldNode`**, **`isRangeFold`**: the five range operators with binder, bounds,
+  filter, value, empty case, accumulator type and array.
+* **`parseFoldNode`**: validates operator shape, literal lower bound, upper bound against the array
+  length, a single indexed array variable, empty-value binder hygiene and shadowing; top-level folds
+  take the declared result type, nested folds derive theirs (sums in `u64`, extrema keep the element
+  type, logic folds are Boolean).
+* **`boundTests`**, **`effFilter`**, **`combineStmts`**, **`buildLoopStmts`**, **`foldInit`**,
+  **`accName`**, **`valueName`**, **`resultName`**, **`tagFoldNodes`**, **`lookupTag`**,
+  **`hasDuplicateTags`**, **`reservedNames`**, **`checkBoundsFree`**, **`expandNested`**: nested loops
+  with per-operator combinations, bound tests for nontrivial bounds, tag-indexed generated bindings,
+  duplicate and collision refusals.
+* **`matchFoldNode_add_zeuge`**, **`isRangeFold_add_zeuge`**, **`isRangeFold_plain_zeuge`**,
+  **`boundTests_trivial_zeuge`**, **`boundTests_general_zeuge`**, **`foldInit_add_zeuge`**,
+  **`foldInit_and_zeuge`**, **`reservedNames_one_zeuge`**, **`tagFoldNodes_single_zeuge`**,
+  **`parseFoldNode_no_array_zeuge`**: shape and refusal witnesses.
+
+`grammatik/Grammatik/Parser/SourceFolds/RangeProofs.lean` (new, checked with the tagged frontend):
+
+* **`matchFoldNode_some`**, **`except_ok_inj`**, **`hasRangeFoldAnwList_append`**,
+  **`combineStmts_free`**, **`foldInit_free`**, **`boundTests_free`**, **`effFilter_free`**,
+  **`buildLoopStmts_free`**, **`buildFoldPrefix_free`**, **`parseAndCheck_tests_free`**: the elimination
+  building blocks.
+* **`expandNested_ok`**: expansion eliminates every range fold node from an expression (fuel induction;
+  the bound tests are fold-free by construction and check).
+* No `sorry`/`admit`/`native_decide`/`axiom`; Stage 0 has no Mathlib.
+
+`grammatik/Grammatik/Parser/Elab/Generic/BoundsWitness.lean`:
+
+* **`total_range_length_refused_zeuge`**: exceeding the array length (literal 5 over length 3) still
+  refuses, with the new message.
+* **`total_range_truncated_zeuge`**: a short upper bound (literal 2 over length 3) expands to the exact
+  traverse with the upper-bound filter test; the symbolic-`N` fixture still expands byte-identically.
+
+`stage0/Stage0/Zeugen/Pipeline/RangeFoldsWitness.lean` (standalone, same standing as §139):
+
+* **`bounds_present`**, **`bounds_accepted`**, **`bounds_canonical`**, **`bounds_correct`**: nonzero
+  lower bound with a filter reaches an image.
+* **`min_present`**, **`min_accepted`**, **`min_canonical`**, **`min_correct`**: `min` with else reaches
+  an image.
+* **`nested_present`**, **`nested_accepted`**, **`nested_canonical`**, **`nested_correct`**: nested adds
+  over the same array reach an image.
+
+Open: the lead build of the branch (single-module checks of the new and touched modules and their
+importers, then the guardians); nested folds over row projections, symbolic short upper bounds,
+nested float elements and folds outside a direct return still refuse with named errors.
+
+## 143. C17: original-source normalization and typed const replacements (2026-11-03)
 
 Implementation branch `c17-const2`, continued from `cb63c4f9a`.
 **Implementation attempts only: no Lean/lake/build or runner execution by this worker.**
@@ -6245,6 +6416,138 @@ Measured locally: static diff/whitespace checks, module headers and <500-line li
 22 changed Lean modules, no forbidden proof tokens added, directory caps, and no cycles among
 2897 reachable local imports. The lead still owes changed-module/dependent checks, final witness
 integration, standard-axiom inspection and the guardians. **Zero new compiled/executed cases.**
+
+## 144. C12: owned access and call-scoped owner loans (2026-11-03)
+
+On `c12-own`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Owned access is a new pair of
+constructors at the end of each inductive (`Expr.thruOwn`, `Stmt.assignThruOwn`): the same guarded carrier as
+`thru`/`assignThru`, plus the resolved owner identity (`D.ownerNr o = some m`), the table's owner entry
+(`m ∈ D.eigner t`) and the guard at the held stage (`Sum.inr (m, s) ∈ D.braucht t`). Machine G evaluates and
+executes them exactly like the plain forms on the underlying table. The borrow/return is the C09
+`OwnerFlow.loans` shape, not `konsumiert`/`produziert`: `eigner_nie_erzeugt` is untouched (ordinary production
+still never mints an owner). A signature that `borrows m` holds `Res.marke m 0` for the call; the caller gets it
+back on normal return (`nachSig` erases and re-appends the loan identity).
+
+`grammatik/Grammatik/Kern/Syntax/Syntax/Teil2Expr.lean`, `Teil2.lean`: the two constructors with the owner
+premises. `grammatik/Grammatik/Kern/Semantik/Semantik/T1/Teil1.lean`, `T2/Teil2.lean`: `orte`/`eval`/`execStmt`
+arms identical to the plain forms. `grammatik/Grammatik/Kern/Semantik/Maschine/T1/Teil1.lean`,
+`T1/Teil3.lean`, `T9/Teil2.lean`: the machine preservation and memory-fixedness arms. `grammatik/Grammatik/Kern/Syntax/Satz/T1.lean`:
+`zeigerOwn_hat_waechter`, `zeigerOwn_schreibt_mit_recht` (same guards as the plain twins).
+
+`grammatik/Grammatik/Parser/Lex/Lexer/Teil1.lean`, `WortStellung.lean`: the `borrows` effect word (vocabulary
+249 to 250 words). `SEffekt.borrows` (constructor at the end) with parser, printer, instantiation-surface,
+name-resolution and reference arms. `UEffekte.leiht`/`UFnKopf.leiht`/`UFn.leiht` thread it to `mkSig.owner.loans`
+(`leihtAt`, owners only, `leihtAt_eigner`/`leihtAt_stufe`); `uMarkenPruef` covers `leiht`, `uLeihtPruef` refuses a
+`borrows` of a non-owner and of a consumed mark (`loan without owner`, `mark both consumed and borrowed`).
+`declOf.ownerNr` is the unit owner namespace (`ownerNr_eq`); the owned place lowerings (`durchOwnTerm`,
+`durchOwnTermB`, `assignDurchOwnStmt`, `assignDurchOwnStmtB` in `UebersetzeAllg/Teil3.lean`,
+`UebersetzeAllg2/Teil1.lean`, with `ownGuard_holds`) build `thruOwn`/`assignThruOwn` from the resolved mark,
+requiring the guard in hand (`access without held guard`, `owned read/write without owner guard` otherwise).
+
+Calls: `ownerReadyB` decides callee escrow readiness (valid over own inputs, disjoint from ordinary consumption,
+every input a table owner) and `ownerReadyB_ok` supplies `RufPasst.ownerReady` at direct calls (`lowRufKopf`)
+and the general check (`rufPasstB`); `signaturOwner`/`sigAt_owner` name the resolved loans, `ende_eq` returns
+them. `Einbettung.ownerNr` transports the registry across embeddings (`einE`, `Einbettung.id`); `exE`/`exS`
+carry `thruOwn`/`assignThruOwn` with renamed marks (`eignerE`, `brauchtE`).
+
+Stage 0 (`Code/Lower`, `Code/Refine`): owned reads/stores lower with the identical bodies as the plain forms;
+`lowerE_ok_thruOwn`/`lowerS_ok_assignThruOwn` (plus label/shape/mono dispatches) prove the same fragments by
+reduction to those arms.
+
+Coverage: `groesseExpr`/`groesseStmt` give owned access `unendlich`-based sizes (not generated yet; the
+`Vollst`/`Kompakt` cases discharge by `omega`, with compact representatives where the induction needs them);
+fine cells number them at the end (`kE` 63, `kS` 29, `kTab` rows, `fzE`/`fzS` cells with `fzE_ok`/`fzS_ok` arms).
+
+Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `ownAtMarke_borrow_ok` (borrow, owned read and
+write, returned mark: `stufe = "OK"`); `ownAtMarke_ohneLeiht_refused` (access without the loan:
+`lower: access without held guard`); `ownAtMarke_fremdLeiht_refused` (borrow of a non-owner:
+`elab: loan without owner: Fremd`).
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the
+guardians); the generator never draws owned access (no owned-pointer generation yet); byte/raw/entry targets stay
+refused (no live grant/generation interface); callers of borrowing functions lower only when escrow-ready, the
+dynamic escrow replay is C09's.
+
+## 145. C09: checked owner mint end to end (2026-11-03)
+
+On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The mint is a separate,
+checked `OwnerFlow` output with provenance and uniqueness, never ordinary production:
+`eigner_nie_erzeugt` still ranges over `produziert` alone. Unbuilt code (no Lean run in this branch);
+the lead builds and reports back.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Interface.lean`:
+
+* **`OwnerFlow.mints`**: the checked mint list (last field). Mints are start-frame inputs (`inputs`)
+  and both-channel outputs (`outputs`): the admitted minter holds its fresh owner from the start
+  (`anfang`) and returns it (`ende`). `Valid` checks mints owner-only and bounded; conservation
+  (`outputs_nodup`, `output_from_input`, `output_bounded`) and the embedding transport
+  (`escrowReady_map`, with the mapped mint case) cover them; `empty_of_empty` and `map`/`inputs_map`/
+  `outputs_map` carry the third list.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/MintMove.lean` (new):
+
+* **`mint_mem_inputs` / `mint_mem_outputs`**: mints are held from the start frame and returned.
+* **`mint_present_nachSig` / `mint_anfang_mem` / `mint_ende_mem`**: the call transformer appends
+  every mint output; the start frame holds it; the return carries it on either channel (`Stmt.ret`
+  and `Stmt.retWhy` balance against the one `ende`).
+* **`mint_resolved` / `mint_disjoint`**: every minted owner is a declared eigner; no consumed mark
+  is also minted in one signature (both from `EscrowReady`).
+* **`OwnerState.mint_token_identity`**: a successful `recordMint` issues exactly the declared
+  identity and stage. Uniqueness within a signature is `Valid.1` (one input per nominal identity);
+  across a unit it is elaboration (`uMintPruef`); across runs it is the spent set
+  (`mint_spent_refused`, `mint_spent_monotone`, `retire_cannot_remint`) with the root-once
+  admission (`OwnerAdmission.owner_root_once`).
+
+`grammatik/Grammatik/Parser/Elab/Proben/Fruehe/UebersetzeProben11.lean` (decided in the kernel):
+
+* **`mintAtMarke_ok`**: mint then owned read and write: `stufe = "OK"`.
+* **`mintTwice_refused`**: the second mint of the same instance: `elab: duplicate mint: Marke`.
+* **`mintFremd_refused`**: mint of a non-owner: `elab: mint without owner: Fremd`.
+
+Open: the lead build of this branch; the dynamic escrow replay of the mint edge and the C08
+software-call transition (`recordMint` is bookkeeping after the authorized foreign return); wiring
+the root-once admission into `Akzeptiert` (`ownerB`/`OwnerAdmission` exist unwired, as for the
+borrow side, and `Spec.lean` stays unchanged).
+
+## 146. C09: linear handoff end to end (2026-11-03)
+
+On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The handoff is the
+`OwnerMove` handback (`after := some` of the input stage): ownership transfers to the callee frame
+for the call and comes back at the same stage on the normal and the reason return alike. Unbuilt
+code (no Lean run in this branch); the lead builds and reports back.
+
+Model (`Owner/MintMove.lean`, `Owner/Witness.lean`):
+
+* **`OwnerMove.before_mem_inputs` / `output_of_some`**: the handoff names its before-stage input
+  and hands back the same identity at the indicated stage, on either channel (`ende` is
+  channel-independent).
+* **`single_none_outputs`**, `escrow_return_transfer`/`escrow_return_advance`/`escrow_return_retire`
+  (existing, `Escrow.lean`): the terminal shape contributes no output; transfer back, advance and
+  retire at the return.
+* **`mintSignature`/`handbackSignature`/`consumeSignatureT`** with escrow-ready, admitted-call,
+  start-frame, return and call-transformer witnesses (`mint_call_present_zeuge`,
+  `mint_anfang_zeuge`, `mint_ende_zeuge`, `handback_output_zeuge`, `consume_outputs_empty_zeuge`,
+  `escrow_mint/handback_admitted_zeuge`).
+* No duplication or loss on any exit: `outputs_nodup` (one input per identity), `output_from_input`
+  (every output has an input), `nachSig` erases exactly the inputs and appends exactly the outputs;
+  `leave`/`next` preserve the resource list structurally (`Stmt … l Γ Λ Λ`).
+
+Elaboration and Stage 0 (`moves` effect, ghost lowering):
+
+* `SEffekt.moves` (last-but-one constructor) with reader, printer, name resolution, surface and
+  `UFnKopf`/`UEffekte`/`UFn` threading; `bewegtAt`/`bewegtMovesAt` resolve handoffs to table owners
+  at stage 0 (`bewegtMovesAt_inputs/outputs`); `mkSig` carries them; `uBewegtPruef` refuses moves of
+  non-owners and marks both consumed or borrowed and moved; `ende_eq`/`signaturOwner` cover the
+  extended flow; calls check `ownerReadyB` generically and lower with no new IR (ghost handoff).
+* Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `moveAtMarke_ok` (handoff through a
+  call: `stufe = "OK"`); `moveReasonAtMarke_ok` (the moved mark comes back on the reason channel:
+  `stufe = "OK"`); `moveFremd_refused` (move of a non-owner: `elab: move without owner: Fremd`);
+  `moveBorrowed_refused` (borrowed and moved: `elab: mark both borrowed and moved: Marke`);
+  `moveDropped_refused` (move without holding: `lower: call without held mark`).
+
+Open: the lead build of this branch; body-level retire lowering for terminal handoffs (as for C16
+`takes`: terminal moves are signature- and ledger-complete with fixture witnesses, their bodies
+cannot yet eliminate the mark from source); the dynamic transfer replay stays C09's.
 
 ## 150. C14: bounded guest service from source to Stage 0 (2026-11-03)
 

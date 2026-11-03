@@ -70,10 +70,12 @@ theorem lowerStoresAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
       (clause : Expr (declOf u) (ctxOf u c) (resOf u c) .bool)
       (frozen : ∀ w ∈ ws, w.Frozen)
       (rights : ∀ w ∈ ws, w.Permitted (vertragVon (declOf u) c))
-      (hn : (declOf u).erg c = none),
+      (hn : (declOf u).erg c = none)
+      (hE : resOf u c = (vertragVon (declOf u) c).ende)
+      (perm : (resOf u c).Perm (vertragVon (declOf u) c).ende),
       HEq v.2.2 (transitionRequires ws clause) ∧ HEq v.1 (transitionEnsures ws) ∧
       HEq v.2.1 (transitionEnd (vertragVon (declOf u) c) ws rights
-        (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))) := by
+        (transitionReturn (vertragVon (declOf u) c) hn perm)) := by
   unfold lowerStoresAt at h
   split at h
   · cases h
@@ -83,9 +85,15 @@ theorem lowerStoresAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
     · rename_i clause _
       split at h
       · rename_i hn
-        cases h
-        exact ⟨ws.1, clause, ws.2.1, ws.2.2, hn, transCast_heq _ _, transCast_heq _ _,
-          transCast_heq _ _⟩
+        split at h
+        · cases h
+        · rename_i hE
+          split at h
+          · cases h
+          · rename_i hPerm
+            cases h
+            exact ⟨ws.1, clause, ws.2.1, ws.2.2, hn, (of_decide_eq_true hE).symm,
+              of_decide_eq_true hPerm, transCast_heq _ _, transCast_heq _ _, transCast_heq _ _⟩
       · cases h
 
 /-- The pieces of a lowered constant-edge transition. -/
@@ -93,11 +101,13 @@ theorem lowerShiftAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
     {v : EnsTy u c × RumpTy u c × ReqTy u c} (h : lowerShiftAt u c tr = .ok v) :
     ∃ (edge : ConstEdge (declOf u) (vertragVon (declOf u) c) (ctxOf u c) (resOf u c))
       (clause : Expr (declOf u) (ctxOf u c) (resOf u c) .bool)
-      (hn : (declOf u).erg c = none),
+      (hn : (declOf u).erg c = none)
+      (hE : resOf u c = (vertragVon (declOf u) c).ende)
+      (perm : (resOf u c).Perm (vertragVon (declOf u) c).ende),
       HEq v.2.2 (transitionRequires [edge.write] clause) ∧
       HEq v.1 (transitionEnsures [edge.write]) ∧
       HEq v.2.1 (Endblock.cons edge.statement
-        (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))) := by
+        (transitionReturn (vertragVon (declOf u) c) hn perm)) := by
   unfold lowerShiftAt at h
   split at h
   · rename_i w
@@ -109,8 +119,15 @@ theorem lowerShiftAt_spec (u : UProg) (c : Fin u.fns.length) (tr : UTransition)
       · rename_i clause _
         split at h
         · rename_i hn
-          cases h
-          exact ⟨edge, clause, hn, transCast_heq _ _, transCast_heq _ _, transCast_heq _ _⟩
+          split at h
+          · cases h
+          · rename_i hE
+            split at h
+            · cases h
+            · rename_i hPerm
+              cases h
+              exact ⟨edge, clause, hn, (of_decide_eq_true hE).symm,
+                of_decide_eq_true hPerm, transCast_heq _ _, transCast_heq _ _, transCast_heq _ _⟩
         · cases h
   · cases h
 
@@ -123,10 +140,12 @@ theorem lowerTransitionAt_stores_spec (u : UProg) (c : Fin u.fns.length) (state 
       (clause : Expr (declOf u) (ctxOf u c) (resOf u c) .bool)
       (frozen : ∀ w ∈ ws, w.Frozen)
       (rights : ∀ w ∈ ws, w.Permitted (vertragVon (declOf u) c))
-      (hn : (declOf u).erg c = none),
+      (hn : (declOf u).erg c = none)
+      (hE : resOf u c = (vertragVon (declOf u) c).ende)
+      (perm : (resOf u c).Perm (vertragVon (declOf u) c).ende),
       HEq v.2.2 (transitionRequires ws clause) ∧ HEq v.1 (transitionEnsures ws) ∧
       HEq v.2.1 (transitionEnd (vertragVon (declOf u) c) ws rights
-        (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))) := by
+        (transitionReturn (vertragVon (declOf u) c) hn perm)) := by
   unfold lowerTransitionAt at h
   split at h
   · cases h
@@ -147,11 +166,13 @@ theorem lowerTransitionAt_shift_spec (u : UProg) (c : Fin u.fns.length) (state :
     (fnAt u c).needs ≠ [] ∧
     ∃ (edge : ConstEdge (declOf u) (vertragVon (declOf u) c) (ctxOf u c) (resOf u c))
       (clause : Expr (declOf u) (ctxOf u c) (resOf u c) .bool)
-      (hn : (declOf u).erg c = none),
+      (hn : (declOf u).erg c = none)
+      (hE : resOf u c = (vertragVon (declOf u) c).ende)
+      (perm : (resOf u c).Perm (vertragVon (declOf u) c).ende),
       HEq v.2.2 (transitionRequires [edge.write] clause) ∧
       HEq v.1 (transitionEnsures [edge.write]) ∧
       HEq v.2.1 (Endblock.cons edge.statement
-        (transitionReturn (vertragVon (declOf u) c) hn (transitionResPerm u c))) := by
+        (transitionReturn (vertragVon (declOf u) c) hn perm)) := by
   unfold lowerTransitionAt at h
   simp only [hs, ↓reduceIte] at h
   split at h
@@ -175,11 +196,11 @@ theorem lowerAllg_transition_stores (u : UProg) (P : Programm (declOf u))
   have hlow : lowerFnAt u c = lowerTransitionAt u c state tr := by
     simp only [lowerFnAt, hc]
   rw [hlow] at hv
-  obtain ⟨hne, ws, clause, frozen, rights, hn, hR, hE, hB⟩ :=
+  obtain ⟨hne, ws, clause, frozen, rights, hn, hE, _, hR, hE', hB⟩ :=
     lowerTransitionAt_stores_spec u c state tr hs hv
   exact ⟨TransitionExpansion.ofHEq (ctxParams_eq u c) (anfangRes_eq u c) ws clause frozen
-    rights hn (endeRes_eq u c)
-    (HEq.trans (heq_of_eq (hreq hne)) hR) (HEq.trans (heq_of_eq hens) hE)
+    rights hn hE
+    (HEq.trans (heq_of_eq (hreq hne)) hR) (HEq.trans (heq_of_eq hens) hE')
     (HEq.trans (heq_of_eq hrump) hB)⟩
 
 /-- **Expansion certificate (constant edge).** The generated function ends in the
@@ -193,9 +214,9 @@ theorem lowerAllg_transition_shift (u : UProg) (P : Programm (declOf u))
   have hlow : lowerFnAt u c = lowerTransitionAt u c state tr := by
     simp only [lowerFnAt, hc]
   rw [hlow] at hv
-  obtain ⟨hne, edge, clause, hn, hR, hE, hB⟩ := lowerTransitionAt_shift_spec u c state tr hs hv
+  obtain ⟨hne, edge, clause, hn, hE, _, hR, hE', hB⟩ := lowerTransitionAt_shift_spec u c state tr hs hv
   exact ⟨TransitionShiftExpansion.ofHEq (ctxParams_eq u c) (anfangRes_eq u c) edge clause hn
-    (endeRes_eq u c)
+    hE
     (HEq.trans (heq_of_eq (hreq hne)) hR) (HEq.trans (heq_of_eq hens) hE)
     (HEq.trans (heq_of_eq hrump) hB)⟩
 

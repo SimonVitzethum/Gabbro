@@ -20,13 +20,6 @@ def sumFits (cs : List (Option Ty)) : Bool :=
     | some (.int lo hi) => decide (hi - lo < 2 ^ 56)
     | some _ => false
 
-/-- Largest payload offset, independently of the tag's width. -/
-def sumPayloadWords (cs : List (Option Ty)) : Nat :=
-  cs.foldl (fun width c => max width (match c with
-    | none => 0
-    | some (.int lo hi) => integerWords 0 (hi - lo)
-    | some _ => 0)) 0
-
 mutual
 /-- Canonical width in runner words, including the empty value's zero marker.
     Long strings contain length followed by one word per byte, padded with zero.
@@ -46,6 +39,13 @@ def valueWords : Ty → Nat
 def productWords : List Ty → Nat
   | [] => 0
   | τ :: rest => valueWords τ + productWords rest
+
+/-- A separated sum reserves the largest complete payload, including nested values.
+    Packed sums retain their eight-bit tag and offset representation. -/
+def sumPayloadWords : List (Option Ty) → Nat
+  | [] => 0
+  | none :: rest => sumPayloadWords rest
+  | some τ :: rest => max (valueWords τ) (sumPayloadWords rest)
 end
 
 /-- The values whose complete encoding is the single word of the established scalar operations. -/

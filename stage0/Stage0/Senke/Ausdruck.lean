@@ -2,22 +2,20 @@
   File:      stage0/Stage0/Senke/Ausdruck.lean
   Subject:   The lowering of stage 0 (`PLAN-SELF-HOSTING.md` §2.1.4), part 1: expressions of machine G into `S0IR`.
 
-  A variable of the context `Γ` lives in a frame slot, counted from the bottom of `Γ` after the frame's first
-  slots (`vslot`, `FB`), so a `bind` adds the slot `frei Γ` and keeps the others. An integer is its 64-bit two's complement, a Boolean 0 or 1
-  (`Enc`). `lowE (currentOld := currentOld) L e d` computes `e` into slot `d`, using the slots above `d` as scratch; it answers the code and the
-  first slot it does not touch. A form outside the fragment, an integer type outside 64 bits where the lowering
-  compares, or a literal outside signed/unsigned 64 bits is refused (`none`); wide integers and the other forms follow.
+  Lexical values occupy complete canonical frame spans, shared with parameters,
+  returns and world cells. lowE computes the whole value at d and reports a scratch
+  ceiling; every accepted path is connected to lowE_ok. Scalars use the first
+  canonical word through Enc only where WordCompatible permits that view.
 
-  A float occupies its IEEE-754 binary64 bit pattern. Its encoding also requires well-formed exponent and
-  fraction fields; finiteness and the declared range are already properties of G's value type.
+  Packed sums retain their eight-bit tag and 56-bit integer offset. Other sums
+  materialize a separate tag, the selected payload's complete encoding and zero
+  padding up to the largest payload span. Float/reference validity follows the
+  selected payload recursively. Strings, products, arrays and wide integers use
+  the same encoding and transport as all other aggregate values.
 
-  A function pointer is the code address `L.fa f`. The layout is explicit in every value and storage encoding;
-  `FunSpec.addr` ties those words to the callee code addresses. This reuses the IR's slot-based call target
-  without a second dispatch mechanism. Function references outside the literal range are refused.
-
-  Empty arrays use zero; singleton arrays reuse their element word recursively. Strings with maximum zero
-  or one use zero for empty and 256 + byte otherwise. Larger aggregates are refused at constructors and reads,
-  including variables, globals and table cells. No allocation, layout or call-ABI change is needed.
+  Byte reads beyond one word emit the <=8-byte kernel once per canonical limb.
+  Float values retain their binary64 representation; function pointers contain
+  the checked layout's code address, never a numerical source pointer conversion.
 
   C13 arithmetic shares complete-value wide kernels and masks wrapping results to the declared width.
   Count borrows and restores the ordinary quantifier binder slot. Scans, popcount, rotations and byte swaps
@@ -31,6 +29,7 @@ public import Stage0.Senke.Welt.Lay
 public import Stage0.Senke.Welt.Spans.CellCode
 public import Stage0.Senke.Ausdruck.Aggregat.Wert
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Code
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
@@ -41,11 +40,13 @@ public import Stage0.Senke.Ausdruck.Aggregat.Layout
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
 public import Stage0.Senke.Welt.Rahmen
 public import Stage0.Senke.Ausdruck.Aggregat.Hilfen
-public import Stage0.Senke.Ausdruck.Aggregat.ProdArgs
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgs
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Code
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Place
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BuiltinCode
 public import Stage0.Senke.Ausdruck.Quant.TransportCode
 public import Stage0.Senke.Ausdruck.Quant.CountCode
+public import Stage0.Senke.Ausdruck.Wort.BytesCode
 @[expose] public section
 
 
@@ -158,7 +159,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     if n ≤ 1 then wordK 12 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) 8 else
       (lowE (currentOld := currentOld) L (reserved := reserved) s d).map fun p => (p.1, max p.2 (d + valueWords (.str n)))
   | _, _, @Expr.strCat _ _ _ n m s t, d =>
-    if n + m ≤ 1 then (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d else lowE (currentOld := currentOld) L (reserved := reserved) s d) else none
+    if n + m ≤ 1 then (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d else lowE (currentOld := currentOld) L (reserved := reserved) s d) else
+      strCatSpanL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s (d + (n + m + 1)))
+        (lowE (currentOld := currentOld) L (reserved := reserved) t (d + (n + m + 1) + (stringCapacity n + 1)))
   | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
     if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) i d)
     else if scalarFits lo hi = true then
@@ -170,7 +173,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       strEqMixedL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + valueWords (.str n)))
     else strEqLongL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + (n + 1)))
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
-    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1)) else none
+    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1)) else
+      strLtSpanL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s (d + 1))
+        (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1 + (stringCapacity n + 1)))
   | _, _, @Expr.strWeit _ _ _ n m s, d =>
     if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE (currentOld := currentOld) L (reserved := reserved) s d)
     else if 2 ≤ n ∧ n ≤ m then
@@ -189,8 +194,13 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     if decide (n ≤ 2 ^ 63) then do
       let ce ← lowE (currentOld := currentOld) L (reserved := reserved) e d
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
-    else none
-  | _, _, .case cs i nutz, d => if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else none
+    else lowE (currentOld := currentOld) L (reserved := reserved) e d
+  | _, _, .case cs i nutz, d =>
+    if sumFits cs then lowN (currentOld := currentOld) L (reserved := reserved) i.val nutz d else
+      sumSpanL cs i d (match nutz with
+        | .empty => some ([], d + integerWords 0 (cs.length - 1))
+        | .val e => lowE (currentOld := currentOld) L (reserved := reserved) e
+            (d + integerWords 0 (cs.length - 1)))
   | _, _, .why n r, d => some (constWords (encodeWords L (.why n) r) d)
   | _, _, .fnref f _ _, d => if lit32 (L.fa f) then some ([ci 1 d (L.fa f) 0], d + 1) else none
   | _, _, .ptrOf .., d => some ([ci 1 d 0 0], d + 1)
@@ -204,7 +214,8 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       engL d lo hi lo' hi' (lowE (currentOld := currentOld) L (reserved := reserved) e d) (lowE (currentOld := currentOld) L (reserved := reserved) b d)
     else wideEngL lo hi lo' hi' d (lowE (currentOld := currentOld) L (reserved := reserved) e) (lowE (currentOld := currentOld) L (reserved := reserved) b)
   | _, _, .getBytes t f _ n i _ _ _, d =>
-    if n ≤ 8 then readBytesL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) 0 n d else none
+    if n ≤ 8 then readBytesL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) 0 n d else
+      readBytesWideL L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) n d
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
   | Γ, _, .count n body, d => countL (frei Γ reserved) d n (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))

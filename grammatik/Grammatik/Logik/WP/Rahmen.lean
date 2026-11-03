@@ -56,8 +56,11 @@ theorem rahmen_slot {Λ Λ' : List (Res D)} (bo : Option Int) (hbV : BodenUnter 
     (b : Block D V l Γ Λ Λ') (σ σ' : World D) (ρ ρ' : Env D Γ) (hscope : b.ScopesOk)
     (hh : HeldB bo Λ σ.haelt)
     (hrun : execBlock O passes R b σ ρ = .ok σ' ρ') (t : D.Tab) (ht : V.schreibt t = false) (k : Int)
-    (f : D.Feld t) : σ'.slots t k f = σ.slots t k f :=
-  ((wpB_rahmen_allein O passes R hR hO bo hbV b σ ρ hscope hh) σ' (by rw [hrun]; rfl)).1.1 t ht k f
+    (f : D.Feld t) : σ'.slots t k f = σ.slots t k f := by
+  have h : TreuAusgang V.schreibt V.gschreibt σ (execBlock O passes R b σ ρ) :=
+    wpB_rahmen_allein O passes R hR hO bo hbV b σ ρ hscope hh
+  rw [hrun] at h
+  exact (h σ' rfl).1.1 t ht k f
 
 end Rahmen
 

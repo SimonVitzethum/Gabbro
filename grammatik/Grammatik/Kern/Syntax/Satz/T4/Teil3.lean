@@ -215,6 +215,7 @@ theorem stmt_scopesOkH :
         (HCountScope.of_countEq hcount (fun L => count_held_nachSig (D.asignatur a) Λ L))
   | .assignSlot .., _, _, _ => by simp only [Stmt.scopesOk]
   | .assignThru .., _, _, _ => by simp only [Stmt.scopesOk]
+  | .assignThruOwn .., _, _, _ => by simp only [Stmt.scopesOk]
   | .assignSlotRef .., _, _, _ => by simp only [Stmt.scopesOk]
   | .assignGlob .., _, _, _ => by simp only [Stmt.scopesOk]
   | .putBytes .., _, _, _ => by simp only [Stmt.scopesOk]

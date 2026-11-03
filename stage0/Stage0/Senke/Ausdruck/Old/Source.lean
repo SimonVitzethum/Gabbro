@@ -106,11 +106,11 @@ def atFunction (items : List SItemTief) (u : UProg) (P : Programm (declOf u))
     (f : Fin u.fns.length) : Except String (EnsTy u f) := do
   let src := clauses items (fnAt u f).name
   if !src.any hasEntry then return P.ensures f
-  let e ← predicates u (ErgCtx (ctxOf u f) ((verOf u f).erg)) (resOf u f)
+  let e ← predicates u (ErgCtx (ctxOf u f) ((verOf u f).erg)) (verOf u f).ende
     (fnAt u f) (fnAt u f).ergTy src (fnAt u f).gives
   pure (by
     unfold EnsTy
-    rw [← ensCtx_eq u f, ← endeRes_eq u f]
+    rw [← ensCtx_eq u f]
     exact e)
 
 /-- Evaluate a dependent family once, retaining each result at its own index. -/

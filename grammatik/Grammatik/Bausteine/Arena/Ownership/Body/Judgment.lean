@@ -43,6 +43,15 @@ inductive OS (A : FreiForm D) (I : Interfaces A) {V : Vertrag D} (out : Flow.Out
       (hp : checkExpression A c p = true) (hi : checkExpression A c i = true)
       (he : checkExpression A c e = true) (hs : storeCheck A c t i = true) :
       OS A I out (l := l) k c (.assignThru p t ht f i e hw hL) c
+  | assignThruOwn {l Γ Λ k c n read space o} (p : Expr D Γ Λ (.ptr ⟨space, ⟨read, true, some o⟩, .table n⟩))
+      (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
+      (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
+      (m : D.Marke) (s : Nat) (ho : D.ownerNr o = some m) (he : m ∈ D.eigner t)
+      (hg : Sum.inr (m, s) ∈ D.braucht t)
+      (hw : V.schreibt t = true) (hL : darf D t Λ) (hn : NotLink A t f)
+      (hp : checkExpression A c p = true) (hi : checkExpression A c i = true)
+      (he' : checkExpression A c e = true) (hs : storeCheck A c t i = true) :
+      OS A I out (l := l) k c (.assignThruOwn p t ht f i e m s ho he hg hw hL) c
   | assignGlob {l Γ Λ k c} (g : D.Glob) (e : Expr D Γ Λ (D.gtyp g)) (hw : V.gschreibt g = true)
       (hL : gdarf D g Λ) (hg : NotMetaGlob A g) (he : checkExpression A c e = true) :
       OS A I out (l := l) k c (.assignGlob g e hw hL) c

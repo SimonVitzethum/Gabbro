@@ -211,7 +211,7 @@ theorem kopf0 : ((r1M1 sp0).faeden 0).kopf.rest =
     function of the thread's world. -/
 theorem g_schritt_0 {M' : RufMaschineG nD} (h : RufSchrittG nP nO 0 (r1M1 sp0) 0 M') :
     (M'.speicher.slots NTab.tabA 0 ()).n = 3 := by
-  rcases h with h | h | h | h | h | h <;> cases h
+  rcases h with h | h | h | h | h | h | h <;> cases h
   all_goals (kopf_gleich kopf0)
   all_goals (try (cases hk; done))
   case ruf => exact Bool.noConfusion (congrArg kopfBlatt hk)

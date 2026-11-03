@@ -17,10 +17,10 @@ def routineRoundMagnitudeL (d : Nat) (a : Nat → Option (List II × Nat)) :
     Option (List II × Nat) :=
   floatRoundShiftL d a (fun j => some ([ci 1 j 3 0], j + 1))
 
-theorem routineRoundMagnitudeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem routineRoundMagnitudeL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
-    (ha : WordCode (L := L) ρ W a av) :
-    WordCode (L := L) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) :=
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a av) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundMagnitudeL d a) (routineRoundMagnitudeWord av) :=
   floatRoundShiftL_ok ha (WordCode.const 3 (by decide)) (by decide : 3 < 63)
 
 /-- The rounded hidden-bit carry changes both significand and exponent.
@@ -53,30 +53,30 @@ def routineRoundPackL (d : Nat) (sign index magnitude : Nat → Option (List II 
 
 /-- Every branch is an existing checked word fragment. This theorem covers
     the emitted integer routine; canonical IEEE identification is separate. -/
-theorem routineRoundPackL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+theorem routineRoundPackL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {sign index magnitude : Nat → Option (List II × Nat)} {sv ev mv : Runner.W}
-    (hs : WordCode (L := L) ρ W sign sv)
-    (he : WordCode (L := L) ρ W index ev)
-    (hm : WordCode (L := L) ρ W magnitude mv) :
-    WordCode (L := L) ρ W (fun d => routineRoundPackL d sign index magnitude)
+    (hs : WordCode (L := L) (reserved := reserved) ρ W sign sv)
+    (he : WordCode (L := L) (reserved := reserved) ρ W index ev)
+    (hm : WordCode (L := L) (reserved := reserved) ρ W magnitude mv) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => routineRoundPackL d sign index magnitude)
       (routineRoundPackWord sv ev mv) := by
-  have q : WordCode (L := L) ρ W _ _ := routineRoundMagnitudeL_ok hm
-  have hidden : WordCode (L := L) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 52) (by decide)
-  have carry : WordCode (L := L) ρ W _ _ := WordCode.bin q (WordCode.konst (2 ^ 53) (by decide))
+  have q : WordCode (L := L) (reserved := reserved) ρ W _ _ := routineRoundMagnitudeL_ok hm
+  have hidden : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.konst (L := L) (ρ := ρ) (W := W) (2 ^ 52) (by decide)
+  have carry : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin q (WordCode.konst (2 ^ 53) (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  have exponent : WordCode (L := L) ρ W _ _ := WordCode.bin he carry
+  have exponent : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin he carry
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  have sig : WordCode (L := L) ρ W _ _ := WordCode.bin q carry
+  have sig : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin q carry
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
-  have zero : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
-  have maxExp : WordCode (L := L) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
-  have subnormal : WordCode (L := L) ρ W _ _ := packL_ok hs zero sig
-  have fraction : WordCode (L := L) ρ W _ _ := WordCode.bin sig hidden
+  have zero : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
+  have maxExp : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
+  have subnormal : WordCode (L := L) (reserved := reserved) ρ W _ _ := packL_ok hs zero sig
+  have fraction : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin sig hidden
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have normal : WordCode (L := L) ρ W _ _ := packL_ok hs exponent fraction
-  have finite : WordCode (L := L) ρ W _ _ :=
+  have normal : WordCode (L := L) (reserved := reserved) ρ W _ _ := packL_ok hs exponent fraction
+  have finite : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
     routineChooseL_ok (routineLessL_ok sig hidden) (fun _ => subnormal) (fun _ => normal)
-  have result : WordCode (L := L) ρ W _ _ :=
+  have result : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
     routineChooseL_ok (routineLessL_ok exponent maxExp) (fun _ => finite)
       (fun _ => packL_ok hs maxExp zero)
   intro fp K d c top h hK m pc hp

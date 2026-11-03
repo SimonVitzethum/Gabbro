@@ -47,6 +47,7 @@ def bindetAxS (q : D.Ax) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .forever _ _ body => bindetAxB q body
   | .assignSlot _ _ _ _ _ _ => false
   | .assignThru _ _ _ _ _ _ _ _ => false
+  | .assignThruOwn _ _ _ _ _ _ _ _ _ _ _ _ _ => false
   | .assignGlob _ _ _ _ => false
   | .putBytes _ _ _ _ _ _ _ _ _ _ => false
   | .assignVar _ _ => false
@@ -236,6 +237,7 @@ theorem ruS_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     bindetAxS (D := D.mitRuhe) q (ruS s) = bindetAxS q s
   | _, _, _, _, .assignSlot .., _ => rfl
   | _, _, _, _, .assignThru .., _ => rfl
+  | _, _, _, _, .assignThruOwn .., _ => rfl
   | _, _, _, _, .assignSlotRef .., _ => rfl
   | _, _, _, _, .assignGlob .., _ => rfl
   | _, _, _, _, .putBytes .., _ => rfl

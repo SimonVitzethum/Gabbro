@@ -112,7 +112,7 @@ theorem darf4 : darf D4 t4 L4 := by unfold darf; decide
 theorem hp4 : RufPasst D4 (vertragVon D4 ein4) (D4.signatur lies4) L4 where
   hw := fun t _ => by rw [tab_eins t]; rfl
   hg := fun g => nomatch g
-  hk := rufHk_ok uExp104 lies4 L4
+  hk := rufHk_ok uExp104 lies4 L4 (by decide)
   hh := fun L hL => by
     have e : L = m4 := Fin.ext (by have h : L.val < 1 := L.isLt; show L.val = 0; omega)
     subst e

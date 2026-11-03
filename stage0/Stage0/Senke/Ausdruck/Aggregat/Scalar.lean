@@ -1,6 +1,7 @@
 /- The single-word fast path is a specialization of the complete value encoding. -/
 module
 public import Stage0.Senke.Ausdruck.Sim
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Model
 @[expose] public section
 
 
@@ -164,7 +165,7 @@ theorem Enc.single : (τ : Ty) → (v : Wert D τ) → (w : Runner.W) →
   | .sum cs => by
     intro v w width encoded
     obtain ⟨fits, word⟩ := encoded
-    exact ⟨trivial, by simp [encodeWords, fits, word]⟩
+    exact ⟨packedSum_valid L cs fits v.1 v.2, by simp [encodeWords, fits, word]⟩
   | .why n => by
     intro v w width encoded
     constructor

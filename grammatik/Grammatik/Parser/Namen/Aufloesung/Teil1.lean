@@ -147,7 +147,7 @@ def aus (k : Kontext) : SExpr → SExpr
   | .ext .dyn [n] xs => .ext .dyn [k.ref n] (ausL k xs)
   | .ext .mem (d :: ns) xs => .ext .mem (d :: ns.map k.ref) (ausL k xs)
   | .ext kind (binder :: domain :: names) args =>
-    if kind == .foldAdd || kind == .foldMin || kind == .foldMax then
+    if kind == .foldAdd || kind == .foldMin || kind == .foldMax || kind == .foldAnd || kind == .foldOr then
       let count := if domain == "range" then 2 else 1
       .ext kind (binder :: domain :: names.map k.ref)
         (ausL k (args.take count) ++ ausL (k.mit [binder]) ((args.drop count).take 2) ++
@@ -191,6 +191,9 @@ def effekt (k : Kontext) : SEffekt → SEffekt
   | .writes e => .writes (aus k e)
   | .locks s e => .locks s (aus k e)
   | .allocs n => .allocs (k.ref n)
+  | .borrows n => .borrows (k.ref n)
+  | .moves n => .moves (k.ref n)
+  | .mints n => .mints (k.ref n)
   | .takes e => .takes (aus k e)
   | .posts e => .posts (aus k e)
   | .instanceEffects n ts => .instanceEffects (k.ref n) (ts.map (typ k))

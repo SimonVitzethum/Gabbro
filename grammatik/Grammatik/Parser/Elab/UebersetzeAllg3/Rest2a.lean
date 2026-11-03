@@ -120,34 +120,6 @@ theorem ptrErg_eq (u : UProg) (n : Nat) :
   · rw [dif_neg h]
     rfl
 
-/-- Beginning and end agree on every pointer signature: no marks travel
-    (`konsumiert`/`produziert` are `[]`, the owner is empty), so the
-    lowered pre and post share one resource list. -/
-theorem ptrAnfangEnde (u : UProg) (n : Nat) :
-    Signatur.anfang (declOf u) ((declOf u).sigNr n) =
-      (Vertrag.vonSig (declOf u) ((declOf u).sigNr n)).ende := by
-  show Signatur.anfang (declOf u) (sigAt u n) =
-    (Vertrag.vonSig (declOf u) (sigAt u n)).ende
-  have hk : (sigAt u n).konsumiert = [] := by
-    unfold sigAt
-    by_cases h : n < (sigFns u).length
-    · rw [dif_pos h]
-      rfl
-    · rw [dif_neg h]
-      rfl
-  have hpr : (sigAt u n).produziert = [] := by
-    unfold sigAt
-    by_cases h : n < (sigFns u).length
-    · rw [dif_pos h]
-      rfl
-    · rw [dif_neg h]
-      rfl
-  unfold Signatur.anfang Vertrag.ende Vertrag.vonSig Signatur.inputMarks
-    Signatur.outputMarks
-  rw [OwnerFlow.empty_of_empty (sigAt u n).owner]
-  rw [hk, hpr]
-  rfl
-
 /-- One pointer interface, lowered: its `needs` as the pre, its `gives` as
     the post, mirroring `lowerFnPlain`'s contract part. -/
 def lowerPtrAt (u : UProg) (n : Nat) :
@@ -156,7 +128,7 @@ def lowerPtrAt (u : UProg) (n : Nat) :
       (sigFnAt u n).needs with
   | .error e => .error e
   | .ok r0 =>
-  match lowEnsList u (ErgCtx (ptrCtxOf u n) ((sigAt u n).erg)) (ptrResOf u n)
+  match lowEnsList u (ErgCtx (ptrCtxOf u n) ((sigAt u n).erg)) (Vertrag.vonSig (declOf u) ((declOf u).sigNr n)).ende
       (sigFnAt u n) ((sigFnAt u n).ergTy) (sigFnAt u n).gives with
   | .error e => .error e
   | .ok e0 =>
@@ -164,9 +136,7 @@ def lowerPtrAt (u : UProg) (n : Nat) :
         (Signatur.anfang (declOf u) ((declOf u).sigNr n)) .bool := r0
     have e1 : Expr (declOf u)
         (ErgCtx ((declOf u).sigNr n).params ((declOf u).sigNr n).erg)
-        (Vertrag.vonSig (declOf u) ((declOf u).sigNr n)).ende .bool := by
-      rw [← ptrAnfangEnde u n]
-      exact e0
+        (Vertrag.vonSig (declOf u) ((declOf u).sigNr n)).ende .bool := e0
     .ok { pre := r1, post := e1 }
 
 /-- Per-pair conformance gate (C06, O43): every admitted function-to-signature
