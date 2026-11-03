@@ -84,11 +84,7 @@ theorem fadenScopesG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
             Block.scopesOk, Stmt.scopesOk, scopesOk_alsBlock, rufUpdateG_self]
   | g7 hs =>
       cases hs with
-      | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z ha =>
-          dsimp only
-          rw [rufUpdateG_self]
-          exact rufAntwortG_scopesGut ⟨hk, hst⟩ ha
-      | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z ha =>
+      | rueckAntwort ρ a hhead z ha =>
           dsimp only
           rw [rufUpdateG_self]
           exact rufAntwortG_scopesGut ⟨hk, hst⟩ ha

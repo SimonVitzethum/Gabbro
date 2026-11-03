@@ -458,6 +458,8 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     | rueckScopedGrund ρ r2 grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
         widerlegeK hhead
+    | rueckFreigabe ρ a L remaining hhead => widerlegeK hhead
+    | rueckAntwort ρ a hhead z hantwort => widerlegeK hhead
 
 
 /-! ## 5. The pending call chain

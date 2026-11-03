@@ -89,6 +89,15 @@ def antwortRestG {V : Vertrag D} (g : D.Fn)
       else none
   | .inr _, _ => none
 
+/-- Resuming either answer channel keeps the caller's static resources. -/
+theorem antwortRestG_ressourcen {V : Vertrag D} (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    (c c' : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
+    (h : antwortRestG g a c = some c') : c'.2.2.1 = c.2.2.1 := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a <;> cases r <;> simp_all [antwortRestG]
+  all_goals split at h <;> simp_all
+
 /-- Return after cleanup. A root keeps its entry record and a completed
     residue; a callee pops and records its answer at the released world.
     The returned value is supplied, never re-evaluated after a release. -/
@@ -108,9 +117,9 @@ def rufAntwortG (z : RufFadenG D) (vor σ : World D)
       pure ⟨st, ⟨c.f, c.rho, c.s0, rest⟩, σ.spur, ev :: z.log⟩
 
 /-- Both answer channels retain exactly the cleanup trace. -/
-theorem rufAntwortG_spur {z z' : RufFadenG D} {σ : World D}
+theorem rufAntwortG_spur {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
-    (h : rufAntwortG z σ a = some z') : z'.spur = σ.spur := by
+    (h : rufAntwortG z vor σ a = some z') : z'.spur = σ.spur := by
   cases hs : z.stapel with
   | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; rfl
   | cons c st =>
@@ -119,9 +128,9 @@ theorem rufAntwortG_spur {z z' : RufFadenG D} {σ : World D}
         simp_all [Option.bind]
 
 /-- Answering either keeps an empty root stack or removes its first frame. -/
-theorem rufAntwortG_stapel {z z' : RufFadenG D} {σ : World D}
+theorem rufAntwortG_stapel {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
-    (h : rufAntwortG z σ a = some z') : z'.stapel = z.stapel.tail := by
+    (h : rufAntwortG z vor σ a = some z') : z'.stapel = z.stapel.tail := by
   cases hs : z.stapel with
   | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; rfl
   | cons c st =>

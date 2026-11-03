@@ -227,5 +227,13 @@ theorem trav_einig :
     in the sequential semantics. Bodies with calls are adequate in general
     (`RufAdaequatRufG.lean`). -/
 
+    | rueckFreigabe ρ a L remaining hhead =>
+      rw [hR] at hhead
+      cases hhead
+      cases hcov
+    | rueckAntwort ρ a hhead z hantwort =>
+      rw [hR] at hhead
+      cases hhead
+      cases hcov
 
 end Gabbro.Grammatik

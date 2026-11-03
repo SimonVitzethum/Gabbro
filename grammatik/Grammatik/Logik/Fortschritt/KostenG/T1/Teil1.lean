@@ -139,6 +139,7 @@ def rufeR (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .wartetSonst _ err rest k => rufeE Z ZS EW err && rufeB Z ZS EW rest && rufeR Z ZS EW k
   | .abbruch k => rufeR Z ZS EW k
   | .zurueckgekehrt _ => true
+  | .aufraeumen _ _ => true
   | .leer => true
   | .rueckBereit _ k => rufeR Z ZS EW k
 
@@ -180,6 +181,7 @@ def potRest (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       max (kostenSonst c pa err + 2 + potRest c pa k) (kostenBlock c pa rest + 1 + potRest c pa k)
   | .abbruch k => 1 + potRest c pa k
   | .zurueckgekehrt _ => 1
+  | .aufraeumen _ remaining => remaining.length + 2
   | .leer => 1
   | .rueckBereit _ k => 1 + potRest c pa k
 

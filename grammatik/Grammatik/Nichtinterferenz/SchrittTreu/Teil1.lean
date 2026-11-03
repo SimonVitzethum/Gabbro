@@ -91,12 +91,12 @@ theorem schrittK_von_g3 (P : Programm D) (O : Orakel D) (passes : Nat)
       rcases hcaller with hc | ⟨n, err, hc⟩
       · rw [if_pos (by rw [kern_wartend hc]; rfl)]
         unfold kBinde
-        simp only [RufRahmenG.kern, hc]
+        simp only [RufRahmenG.kern, GRest.kern, hc]
         rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).erg = some τ from he)]
         rfl
       · rw [if_pos (by rw [kern_wartend hc]; rfl)]
         unfold kBinde
-        simp only [RufRahmenG.kern, hc]
+        simp only [RufRahmenG.kern, GRest.kern, hc]
         rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).erg = some τ from he)]
         rfl
   | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hleave hhead σ' ρ' neu hstep hneu hk σ₁ hs₁ hw
@@ -165,7 +165,7 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kPop,
         List.map_cons]
-      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern] using hnw)]
+      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern, GRest.kern] using hnw)]
       rfl
   | rueckCons caller rst hpop Γ Λ e hperm rest ρ hh g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu
       hnw =>
@@ -174,7 +174,7 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kEnde, kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusEnde, execStmt, kPop,
         List.map_cons]
-      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern] using hnw)]
+      rw [if_neg (by simpa [RufRahmenG.wartend, RufRahmenG.kern, GRest.kern] using hnw)]
       rfl
   | dannRetBind lk Γk Λk Λk'' e hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc
       hcaller hΛ s1 hs1 g hfg rho hrho s0 hs0 v hv he neu hneu =>
@@ -186,12 +186,12 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       rcases hcaller with hc | ⟨n, err, hc⟩
       · rw [if_pos (by rw [kern_wartend hc]; rfl)]
         unfold kBinde
-        simp only [RufRahmenG.kern, hc]
+        simp only [RufRahmenG.kern, GRest.kern, hc]
         rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).erg = some τ from he)]
         rfl
       · rw [if_pos (by rw [kern_wartend hc]; rfl)]
         unfold kBinde
-        simp only [RufRahmenG.kern, hc]
+        simp only [RufRahmenG.kern, GRest.kern, hc]
         rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).erg = some τ from he)]
         rfl
   | rueckConsBind lk Γk Λk e hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller hΛ
@@ -204,12 +204,12 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       rcases hcaller with hc | ⟨n, err, hc⟩
       · rw [if_pos (by rw [kern_wartend hc]; rfl)]
         unfold kBinde
-        simp only [RufRahmenG.kern, hc]
+        simp only [RufRahmenG.kern, GRest.kern, hc]
         rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).erg = some τ from he)]
         rfl
       · rw [if_pos (by rw [kern_wartend hc]; rfl)]
         unfold kBinde
-        simp only [RufRahmenG.kern, hc]
+        simp only [RufRahmenG.kern, GRest.kern, hc]
         rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).erg = some τ from he)]
         rfl
   | rueckGrund r hperm ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho
@@ -218,7 +218,7 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
       kstart
       rw [hpop]
       simp only [kr, kEnde, kPopGrund, List.map_cons]
-      simp only [RufRahmenG.kern, hcaller]
+      simp only [RufRahmenG.kern, GRest.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
 

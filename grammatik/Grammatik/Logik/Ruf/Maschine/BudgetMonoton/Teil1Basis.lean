@@ -35,6 +35,7 @@ def GRest.plus (j : Nat) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : L
   | _, _, _, .abbruch k => .abbruch (k.plus j)
   | _, _, _, .rueckBereit sc k => .rueckBereit sc (k.plus j)
   | _, _, _, .zurueckgekehrt a => .zurueckgekehrt a
+  | _, _, _, .aufraeumen a remaining => .aufraeumen a remaining
   | _, _, _, .leer => .leer
 
 /-- A frame with its residue shifted. -/
@@ -110,6 +111,7 @@ theorem GRest.plus_zero {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (
   | _, _, _, .abbruch k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .rueckBereit _ k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .zurueckgekehrt _ => rfl
+  | _, _, _, .aufraeumen _ _ => rfl
   | _, _, _, .leer => rfl
 
 theorem GRest.plus_plus (i j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -131,6 +133,7 @@ theorem GRest.plus_plus (i j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} 
   | _, _, _, .abbruch k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .rueckBereit _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .zurueckgekehrt _ => rfl
+  | _, _, _, .aufraeumen _ _ => rfl
   | _, _, _, .leer => rfl
 
 theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -139,6 +142,7 @@ theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _ | _, _, _, .rueckBereit ..
   | _, _, _, .zurueckgekehrt _ => rfl
+  | _, _, _, .aufraeumen _ _ => rfl
   | _, _, _, .leer => rfl
 
 /-- Shifting loop counters does not change the source return selected. -/
@@ -151,9 +155,9 @@ theorem GRest.plus_scopedGrund (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   cases r <;> rfl
 
 /-- Returning a saved answer commutes with shifting the suspended counters. -/
-theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {σ : World D}
+theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
-    (h : rufAntwortG z σ a = some z') : rufAntwortG (z.plus j) σ a = some (z'.plus j) := by
+    (h : rufAntwortG z vor σ a = some z') : rufAntwortG (z.plus j) vor σ a = some (z'.plus j) := by
   obtain ⟨st, kopf, spur, log⟩ := z
   cases st with
   | nil =>
@@ -191,6 +195,7 @@ theorem GRest.plus_anRueck (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _ | _, _, _, .rueckBereit ..
   | _, _, _, .zurueckgekehrt _ => rfl
+  | _, _, _, .aufraeumen _ _ => rfl
   | _, _, _, .leer => rfl
 
 theorem fertigG_plus (j : Nat) (M : RufMaschineG D) (t : Faden) : FertigG (M.plus j) t ↔ FertigG M t := by

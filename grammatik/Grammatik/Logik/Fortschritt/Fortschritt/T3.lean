@@ -111,6 +111,7 @@ theorem fortschrittG_aus {P : Programm D} {O : Orakel D} {passes : Nat} (hO : Gu
     (fun L hL' => rufG_haelt_statisch hO sp init hr t _ List.mem_cons_self L hL') (hL t) (hB t)
     (rangInvG_erreichbar hO hSt sp init hND hr t) (kopf_ants hAnt sp init hr t)
     (fadenScopesG_erreichbar (scopesOkProg_of_stufen P (stufenOk_of_stufenM hSt)) hr t).1
+    (antwortPositionG_erreichbar hr t)
 
 /-- **Progress up to named stops under the premises of the flagship**
     (`ziel_ort_sperre`, whose conclusion supplies `KeinLogikHaltG`), the

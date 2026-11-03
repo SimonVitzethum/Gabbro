@@ -8,6 +8,30 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
 
+/-- A pending cleanup checks exactly the next release invariant. Its
+    saved answer and read-world snapshot pass to the next state unchanged. -/
+theorem semHA_aufraeumen_freigabe (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (A : AUmwelt D)
+    (passes : Nat) (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (a : (ErgVal D V.erg ⊕ Fin V.gruende) × World D)
+    (L : D.Lock) (remaining : List D.Lock) (σ : World D) (ρ : Env D Γ) :
+    semHA S O U A passes calls (.aufraeumen (l := l) a (L :: remaining)) σ ρ =
+      if S.inv L σ.speicher then
+        semHA S O U A passes calls (.aufraeumen (l := l) a remaining) (σ.gibt L) ρ
+      else .logik .schleife := by
+  cases hL : S.inv L σ.speicher <;>
+    simp only [semHA, weiterHA, scopesInvH, List.all_cons, hL, Bool.false_and,
+      Bool.true_and, Bool.false_eq_true, if_false, if_true, List.foldl_cons]
+
+/-- A failed pending cleanup remains a logic failure, rather than a named
+    external stop. Reachable replay must establish its release checks. -/
+theorem semHA_aufraeumen_falsch (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (A : AUmwelt D)
+    (passes : Nat) (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (a : (ErgVal D V.erg ⊕ Fin V.gruende) × World D)
+    (remaining : List D.Lock) (σ : World D) (ρ : Env D Γ)
+    (hcheck : scopesInvH S remaining σ = false) :
+    semHA S O U A passes calls (.aufraeumen (l := l) a remaining) σ ρ = .logik .schleife := by
+  simp only [semHA, weiterHA, hcheck, Bool.false_eq_true, if_false]
+
 /-- A failed cleanup invariant is a logic failure in every source-head shape. -/
 theorem semHA_scopedWert_falsch (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (A : AUmwelt D) (passes : Nat)
     (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)

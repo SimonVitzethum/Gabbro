@@ -153,21 +153,17 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         exact lese_offen _ _ _
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      simp only [rufUpdateG_self]
+      subst σ₁
+      exact Or.inr (Or.inl (lese_offen _ _ _))
+    | rueckScopedGrund => exact Or.inr (Or.inl (by simp only [rufUpdateG_self]))
+    | rueckFreigabe ρ a L remaining hhead =>
+      simp only [rufUpdateG_self]
+      exact Or.inr (Or.inr ⟨[L], rfl⟩)
+    | rueckAntwort ρ a hhead z hantwort =>
       simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
-      refine Or.inr (Or.inr ⟨R.scopes, ?_⟩)
-      rw [hs₂]
-      change (R.scopes.foldl World.gibt σ₁).haelt = _
-      rw [haelt_gibt_foldl]
-      rw [hs₁, lese_haelt]
-      rfl
-    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
-      simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
-      refine Or.inr (Or.inr ⟨R.scopes, ?_⟩)
-      rw [hs₂]
-      change (R.scopes.foldl World.gibt (M.weltVon f)).haelt = _
-      rw [haelt_gibt_foldl]
-      rfl
+      exact Or.inr (Or.inl rfl)
     | _ =>
         subst_vars
         simp only [rufUpdateG_self]

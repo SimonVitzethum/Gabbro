@@ -312,6 +312,7 @@ def GRest.okZ (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
   | _, _, _, .wartetSonst .. => False
   | _, _, _, .rueckBereit .. => False
   | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
   | _, _, _, .abbruch k => k.okZ P S
   | _, _, _, .leer => True
 

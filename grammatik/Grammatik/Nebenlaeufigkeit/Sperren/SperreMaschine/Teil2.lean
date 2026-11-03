@@ -31,6 +31,13 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       (M.faeden u).kopf.rest =
         ⟨true, Γ, Λ, ρ, .dann (.cons (if x then .leave h else .next h) rest) (.frei L k)⟩ ∧
       M'.speicher = M.speicher ∧
+      offen (M'.faeden u).spur = (offen (M.faeden u).spur).erase L) ∨
+    (∃ (l : Bool) (Γ : Ctx) (ρ : Env D Γ)
+      (a : (ErgVal D (vertragVon D (M.faeden u).kopf.f).erg ⊕
+        Fin (vertragVon D (M.faeden u).kopf.f).gruende) × World D)
+      (L : D.Lock) (remaining : List D.Lock),
+      (M.faeden u).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a (L :: remaining)⟩ ∧
+      M'.speicher = M.speicher ∧
       offen (M'.faeden u).spur = (offen (M.faeden u).spur).erase L) := by
   have hgross : ∀ {a b : List D.Lock}, a = b → ∀ L, L ∈ b → L ∈ a := fun e L h => e ▸ h
   cases hs with
@@ -125,11 +132,11 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
   | g4 hs =>
     cases hs with
     | peelFreiLeave l Γ Λ L rest k ρ hl hhead =>
-        refine Or.inr (Or.inr ⟨Γ, Λ, _, L, rest, k, ρ, hl, true, hhead, rfl, ?_⟩)
+        refine Or.inr (Or.inr (Or.inl ⟨Γ, Λ, _, L, rest, k, ρ, hl, true, hhead, rfl, ?_⟩))
         simp only [rufUpdateG_self]
         rfl
     | peelFreiNext l Γ Λ L rest k ρ hl hhead =>
-        refine Or.inr (Or.inr ⟨Γ, Λ, _, L, rest, k, ρ, hl, false, hhead, rfl, ?_⟩)
+        refine Or.inr (Or.inr (Or.inl ⟨Γ, Λ, _, L, rest, k, ρ, hl, false, hhead, rfl, ?_⟩))
         simp only [rufUpdateG_self]
         rfl
     | dannNextEwig l Γ Λ a n inv body k rest ρ hl _ σ' ρ' _ hstep =>
@@ -228,6 +235,17 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
         refine Or.inl (hgross ?_)
         rw [hsm, lese_offen, next_welt' _ _ _ _ _ _ _ _ hstep]
         rfl
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+        simp only [rufUpdateG_self]
+        subst σ₁
+        exact Or.inl (hgross (lese_offen _ _ _))
+    | rueckScopedGrund => exact Or.inl (hgross (by simp only [rufUpdateG_self]))
+    | rueckFreigabe ρ a L remaining hhead =>
+        exact Or.inr (Or.inr (Or.inr ⟨_, _, ρ, a, L, remaining, hhead, rfl,
+          by simp only [rufUpdateG_self]; rfl⟩))
+    | rueckAntwort ρ a hhead z hantwort =>
+        simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        exact Or.inl (hgross rfl)
     | _ =>
         simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *
         subst_vars

@@ -325,24 +325,25 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
       all_goals (simp_all [fB_von_false, fR_von_false]; done)
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z ha =>
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      dsimp only
+      rw [rufUpdateG_self]
+      refine ⟨?_, hst, hlog⟩
+      rw [hhead] at hk
+      exact fR_scopedWert Φ hret hk
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
+      dsimp only
+      rw [rufUpdateG_self]
+      refine ⟨?_, hst, hlog⟩
+      rw [hhead] at hk
+      exact fR_scopedGrund Φ hret hk
+    | rueckAntwort ρ a hhead z ha =>
       dsimp only
       rw [rufUpdateG_self]
       apply folgeInvG_rufAntwortG Φ ⟨?_, hst, hlog⟩ ?_ ha
-      · rw [hw]
-        exact hk
+      · rw [hw]; exact hk
       · rw [hhead] at hk
-        rw [hw]
-        exact fR_scopedWert Φ hret hk
-    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z ha =>
-      dsimp only
-      rw [rufUpdateG_self]
-      apply folgeInvG_rufAntwortG Φ ⟨?_, hst, hlog⟩ ?_ ha
-      · rw [hw]
-        exact hk
-      · rw [hhead] at hk
-        rw [hw]
-        exact fR_scopedGrund Φ hret hk
+        rw [hw]; exact hk
     | _ =>
       kopfF
       all_goals (simp_all [fB_von_false, fR_von_false]; done)

@@ -20,7 +20,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kEnde, kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusEnde, execStmt, kPopGrund,
         List.map_cons]
-      simp only [RufRahmenG.kern, hcaller]
+      simp only [RufRahmenG.kern, GRest.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
   | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
@@ -30,7 +30,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       rw [hpop]
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kPopGrund,
         List.map_cons]
-      simp only [RufRahmenG.kern, hcaller]
+      simp only [RufRahmenG.kern, GRest.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
   | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
@@ -242,16 +242,20 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       · rfl
       · rename_i hn; exact absurd hfall hn
 
-  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
-      subst hs₂ hs₁
+  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      subst σ₁
       kstart
-      rw [kr_scopedWert _ _ _ _ _ _ _ _ _ _ _ _ hret]
-      exact kPop_rufAntwortG _ _ _ _ hantwort
-  | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
-      subst hs₂
+      obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle hret <;>
+        subst r <;> rfl
+  | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
       kstart
-      rw [kr_scopedGrund _ _ _ _ _ _ _ _ _ _ _ _ hret]
-      exact kPop_rufAntwortG _ _ _ _ hantwort
+      obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle hret <;>
+        subst r <;> rfl
+  | rueckFreigabe ρ a L remaining hhead => kstart; rfl
+  | rueckAntwort ρ a hhead z hantwort =>
+      kstart
+      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+
 
 theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M') :

@@ -143,6 +143,7 @@ def GRest.fOk : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V 
   | _, _, _, .abbruch k => k.fOk
   | _, _, _, .rueckBereit .. => false
   | _, _, _, .zurueckgekehrt _ => true
+  | _, _, _, .aufraeumen _ _ => true
   | _, _, _, .leer => true
 
 end Formen

@@ -295,23 +295,7 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
 
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
-      simp only [rufUpdateG_self]
-      cases hs : (M.faeden f).stapel with
-      | nil =>
-          simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
-          subst z
-          exact Or.inl ⟨hs.symm, rfl, fun _ _ => trivial⟩
-      | cons caller rst =>
-          simp only [rufAntwortG, hs] at hantwort
-          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
-          | none => simp [hr] at hantwort
-          | some rest =>
-              simp [hr] at hantwort
-              subst z
-              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl, rfl,
-                fun A hm => antwortRestG_mR _ _ _ _ hr A hm⟩)
-    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
+    | rueckAntwort ρ a hhead z hantwort =>
       simp only [rufUpdateG_self]
       cases hs : (M.faeden f).stapel with
       | nil =>

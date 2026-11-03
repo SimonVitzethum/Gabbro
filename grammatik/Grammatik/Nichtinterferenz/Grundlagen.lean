@@ -50,6 +50,8 @@ public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 @[expose] public section
 
 
+noncomputable section
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

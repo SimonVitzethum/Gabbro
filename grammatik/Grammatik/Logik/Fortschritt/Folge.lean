@@ -220,6 +220,7 @@ def GRest.fR (e : Bool) :
   | _, _, _, _, .abbruch k => k.fR e false
   | _, _, _, _, .rueckBereit .. => False
   | _, _, _, w, .zurueckgekehrt _ => (!e || w) = true
+  | _, _, _, w, .aufraeumen _ _ => (!e || w) = true
   | _, _, _, _, .leer => True
 
 end Pruef

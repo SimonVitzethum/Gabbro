@@ -94,6 +94,19 @@ theorem ga_antInv {C : D.Ax ⊕ D.Reg → Bool} (hB : ∀ g, (P.rumpf g).ants.al
       · rw [rufSchrittG_fremd hs t htu]
         exact h t) hr
 
+theorem ga_antwortPosition (sp : Speicher D)
+    (init : Faden → Σ f : D.Fn, Env D (D.params f))
+    {M : RufMaschineG D} (hr : RufErreichbarGA P O passes (RufStartG P sp init) M) :
+    ∀ t, AntwortPositionG (M.faeden t) :=
+  gaInvF (J := fun fa => ∀ t, AntwortPositionG (fa t))
+    (antwortPositionG_erreichbar (O := O) (pa := passes) .start)
+    (fun M M' u h hs t => by
+      by_cases htu : t = u
+      · subst t
+        exact antwortPositionG_schritt hs (h u)
+      · rw [rufSchrittG_fremd hs t htu]
+        exact h t) hr
+
 end Faeden
 
 section Bereich
@@ -171,6 +184,7 @@ theorem fortschrittG_GA (hO : GutO O) (hSt : StufenM P) (sp : Speicher D)
     (ga_antInv (fun g => List.all_eq_true.mpr fun x hx => stelleC_iff.mpr (hAnt g x hx)) sp init
       hr t _ List.mem_cons_self)
     (ga_scopes (scopesOkProg_of_stufen P (stufenOk_of_stufenM hSt)) sp init hr t).1
+    (ga_antwortPosition sp init hr t)
 
 end Fort
 

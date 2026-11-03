@@ -30,6 +30,7 @@ def GRest.antwortGut {V : Vertrag D}
   | _, _, _, .abbruch k => k.antwortGut good
   | _, _, _, .rueckBereit _ k => k.antwortGut good
   | _, _, _, .zurueckgekehrt a => good a
+  | _, _, _, .aufraeumen a _ => good a
   | _, _, _, .leer => True
 
 private def antwortGut (P : Programm D) (F : RufRahmenG D)
@@ -91,16 +92,27 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
   cases hs with
   | g7 hs =>
       cases hs with
-      | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z ha =>
+      | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+          dsimp only
+          rw [rufUpdateG_self]
+          refine ⟨?_, h.2⟩
+          subst σ₁
+          exact hsc t _ _ _ ρ r e R hhead hret
+      | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
+          exact ⟨trivial, h.2⟩
+      | rueckFreigabe ρ a L remaining hhead =>
+          have hk := h.1
+          change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
+          rw [hhead] at hk
+          exact ⟨hk, h.2⟩
+      | rueckAntwort ρ a hhead z ha =>
           dsimp only
           rw [rufUpdateG_self]
           apply rufAntwortG_gut h ?_ ha
-          subst σ₁
-          exact hsc t _ _ _ ρ r e R hhead hret
-      | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z ha =>
-          dsimp only
-          rw [rufUpdateG_self]
-          exact rufAntwortG_gut h trivial ha
+          have hk := h.1
+          change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
+          rw [hhead] at hk
+          exact hk
       | _ =>
           simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut,
             GRest.antwortGut, rufUpdateG_self]

@@ -136,6 +136,8 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     | rueckScopedGrund ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
         subst r <;> kopfwegH
+    | rueckFreigabe => kopfwegH
+    | rueckAntwort => kopfwegH
 
 theorem ruf_fortsetzung :
     (M7G.faeden 0).kopf = callerFrameG ∧

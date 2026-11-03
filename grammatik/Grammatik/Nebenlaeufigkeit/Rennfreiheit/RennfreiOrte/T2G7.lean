@@ -64,18 +64,20 @@ theorem schritt_ev_g7 {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO 
       simp only [GRest.oR] at hC
       rw [hsm, next_welt' _ _ _ _ _ _ _ _ hstep]
       exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ hC.2.2.2.2.1⟩
-  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
-      simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
-      subst hs₂ hs₁
+  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      simp only [rufUpdateG_self]
+      subst hs₁
       rw [hhead] at hC
-      obtain ⟨X, hX, hok⟩ := blatt_ev P O passes keinRuf hO C (.retScoped e R) rfl
-        (GRest.scopedWert_oR hC hret) (M.weltVon f) ρ hΛ _ rfl
-      exact ⟨X, hX, fun ev he c w hz => by rw [← hW]; exact hok ev he c w hz⟩
-  | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
+      exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ (GRest.scopedWert_oR hC hret)⟩
+  | rueckScopedGrund => leseO
+  | rueckFreigabe ρ a L remaining hhead =>
+      simp only [rufUpdateG_self]
+      exact ⟨[.gibt L], rfl, fun e he c w hz => by
+        simp only [List.mem_singleton] at he
+        subst e
+        cases hz⟩
+  | rueckAntwort ρ a hhead z hantwort =>
       simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
-      subst hs₂
-      obtain ⟨X, hX, hok⟩ := blatt_ev P O passes keinRuf hO C (.retWhyScoped grund R) rfl
-        rfl (M.weltVon f) ρ hΛ _ rfl
-      exact ⟨X, hX, fun ev he c w hz => by rw [← hW]; exact hok ev he c w hz⟩
+      exact ⟨[], rfl, fun e he => (List.not_mem_nil he).elim⟩
 
 end Gabbro.Grammatik

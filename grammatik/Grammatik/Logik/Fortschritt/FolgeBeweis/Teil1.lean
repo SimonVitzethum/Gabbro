@@ -165,6 +165,8 @@ theorem fR_mono (e : Bool) :
   | _, _, _, .rueckBereit .., _, _, _, h => h
   | _, _, _, .zurueckgekehrt _, w, w', hw, h => by
       cases e <;> cases w <;> cases w' <;> simp_all [GRest.fR]
+  | _, _, _, .aufraeumen _ _, w, w', hw, h => by
+      cases e <;> cases w <;> cases w' <;> simp_all [GRest.fR]
   | _, _, _, .leer, _, _, _, h => h
 
 theorem fR_von_false (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

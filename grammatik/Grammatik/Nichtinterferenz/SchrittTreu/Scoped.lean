@@ -10,9 +10,9 @@ variable {D : Deklaration}
 
 /-- The shared answer operation agrees with the ghost-free pop, including
     the previously missing root cleanup case. -/
-theorem kPop_rufAntwortG (z z' : RufFadenG D) (σ : World D)
+theorem kPop_rufAntwortG (z z' : RufFadenG D) (vor σ : World D)
     (a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende)
-    (h : rufAntwortG z σ a = some z') :
+    (h : rufAntwortG z vor σ a = some z') :
     (match a with
       | .inl v => kPop (z.stapel.map RufRahmenG.kern) z.kopf.f z.kopf.rho σ v
       | .inr r => kPopGrund (z.stapel.map RufRahmenG.kern) z.kopf.f z.kopf.rho
@@ -27,9 +27,9 @@ theorem kPop_rufAntwortG (z z' : RufFadenG D) (σ : World D)
       obtain ⟨cf, crho, cs0, ⟨l, Γ, Λ, ρ, rest⟩⟩ := c
       cases a <;> cases rest <;>
         simp_all [rufAntwortG, antwortRestG, kPop, kPopGrund, kBinde,
-          RufFadenG.kern, RufRahmenG.kern, GRest.wartend]
+          RufFadenG.kern, RufRahmenG.kern, GRest.kern, GRest.wartend]
       all_goals split at h <;>
-        simp_all [RufFadenG.kern, RufRahmenG.kern, GRest.wartend]
+        simp_all [RufFadenG.kern, RufRahmenG.kern, GRest.kern, GRest.wartend]
 
 /-- The value head computes exactly the source read followed by the
     canonical release fold. No expression is evaluated in the released world. -/
@@ -41,7 +41,8 @@ theorem kr_scopedWert (P : Programm D) (O : Orakel D) (passes : Nat)
     (R : RueckRessourcen D (vertragVon D f) Λ) (h : r.scopedWert = some (e, R)) :
     kr P O passes st f rho spur sp ρ r =
       let σ := (sp.welt spur).lese Λ e.orte
-      kPop st f rho (R.scopes.foldl World.gibt σ) (evalErg σ e σ ρ) := by
+      kLokal st f rho ρ (.aufraeumen ⟨.inl (evalErg σ e σ ρ), σ.ohneSnapshot⟩
+        R.scopes) σ.spur sp := by
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle h <;> subst r <;> rfl
 
 /-- The reason channel has the same release fold and no source read. -/
@@ -52,8 +53,8 @@ theorem kr_scopedGrund (P : Programm D) (O : Orakel D) (passes : Nat)
     (grund : Fin (vertragVon D f).gruende)
     (R : RueckRessourcen D (vertragVon D f) Λ) (h : r.scopedGrund = some (grund, R)) :
     kr P O passes st f rho spur sp ρ r =
-      let σ := R.scopes.foldl World.gibt (sp.welt spur)
-      kPopGrund st f rho σ.spur σ.speicher grund := by
+      kLokal st f rho ρ (.aufraeumen ⟨.inr grund, (sp.welt spur).ohneSnapshot⟩
+        R.scopes) spur sp := by
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle h <;> subst r <;> rfl
 
 end Gabbro.Grammatik

@@ -173,6 +173,7 @@ def GRest.mR (A : Merkmal D) {V : Vertrag D} :
   | _, _, _, .leer => True
   | _, _, _, .rueckBereit _ k => k.mR A
   | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
 
 /-- The callee `g` is admitted: directly, or through its signature. -/
 def RufZiel (A : Merkmal D) (g : D.Fn) : Prop :=

@@ -1,75 +1,12 @@
 module
 
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStart
-public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung.T1.RankTools
 
 @[expose] public section
-
-
 
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
-
-/-! ## 1. Every rule, classified by what it does to holdings and held locks -/
-
-set_option hygiene false in
-/-- A head-local step that keeps the held locks and the held holdings. -/
-macro "rangA1" : tactic => `(tactic| (
-  refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
-  · first
-      | (simp only [rufUpdateG_self]; done)
-      | (simp only [rufUpdateG_self]; subst_vars; simp only [lese_offen]; rfl)
-  · intro K hK
-    dsimp only; rw [rufUpdateG_self]
-    rw [‹(M.faeden f).kopf.rest = _›] at hK
-    exact hK))
-
-set_option hygiene false in
-/-- A head-local step that keeps the held locks; the held holdings pass a
-    block or statement. -/
-macro "rangA1h" t:term : tactic => `(tactic| (
-  refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
-  · first
-      | (simp only [rufUpdateG_self]; done)
-      | (simp only [rufUpdateG_self]; subst_vars; simp only [lese_offen]; rfl)
-  · intro K hK
-    dsimp only; rw [rufUpdateG_self]
-    rw [‹(M.faeden f).kopf.rest = _›] at hK
-    exact $t K hK))
-
-set_option hygiene false in
-/-- A foreign call keeps the held locks while its signature updates holdings. -/
-macro "rangAxiomOpt" ho:term "," hs:term "," hh:term : tactic => `(tactic| (
-  refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
-  · simp only [rufUpdateG_self]
-    have hoE := $ho
-    have hsE := $hs
-    rw [hoE, hsE]
-    exact lese_offen _ _ _
-  · intro K hK
-    dsimp only; rw [rufUpdateG_self]
-    have hhE := $hh
-    rw [hhE] at hK
-    exact (held_nachSig_iff _ _ K).mpr hK))
-
-set_option hygiene false in
-/-- A push. -/
-macro "rangB" g:term "," c:term : tactic => `(tactic| (
-  refine Or.inr (Or.inl ⟨$g, $c, ?_, rfl, ?_, ?_, ?_, ?_, ?_⟩)
-  · dsimp only; rw [rufUpdateG_self]
-  · dsimp only; rw [rufUpdateG_self]
-  · dsimp only; rw [rufUpdateG_self]
-  · intro K hK
-    rw [‹(M.faeden f).kopf.rest = _›] at hK
-    exact (held_nachSig_iff _ _ K).mpr hK
-  · simp only [rufUpdateG_self]
-    rw [hs0]
-    exact lese_offen _ _ _
-  · rw [‹(M.faeden f).kopf.rest = _›]
-    first
-      | exact ‹RufPasst _ _ _ _›
-      | (subst_vars; exact ‹RufPasst _ _ _ _›)))
 
 set_option maxHeartbeats 4000000 in
 /-- **Every rule of G, classified by what it does to the head's holdings
@@ -431,6 +368,53 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact (Block.held_iff restb K).mpr hK
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+      · simp only [rufUpdateG_self]
+        subst σ₁
+        exact lese_offen _ _ _
+      · intro K hK
+        simp only [rufUpdateG_self]
+        rw [hhead] at hK
+        exact (R.genau.trans List.perm_append_comm).mem_iff.mp hK
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
+      refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+      · simp only [rufUpdateG_self]
+      · intro K hK
+        simp only [rufUpdateG_self]
+        rw [hhead] at hK
+        exact (R.genau.trans List.perm_append_comm).mem_iff.mp hK
+    | rueckFreigabe ρ a L remaining hhead =>
+      refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self],
+        Or.inr (Or.inr ⟨L, by simp only [rufUpdateG_self]; rfl, ?_⟩)⟩
+      intro K hKL hK
+      simp only [rufUpdateG_self]
+      rw [hhead] at hK
+      exact (List.mem_cons.mp hK).resolve_left (fun he => hKL (Res.held.inj he))
+    | rueckAntwort ρ a hhead z ha =>
+      cases hst : (M.faeden f).stapel with
+      | nil =>
+          simp only [rufAntwortG, hst, Option.some.injEq] at ha
+          subst z
+          refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+          · simp only [rufUpdateG_self]; rfl
+          · intro K hK
+            simp only [rufUpdateG_self]
+            rw [hhead] at hK
+            exact hK
+      | cons caller rst =>
+          obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden f).kopf.f a.1 caller.rest = some r := by
+            cases hr : antwortRestG (M.faeden f).kopf.f a.1 caller.rest with
+            | none => simp [rufAntwortG, hst, hr] at ha
+            | some r => exact ⟨r, rfl⟩
+          simp [rufAntwortG, hst, hr] at ha
+          subst z
+          refine Or.inr (Or.inr ⟨caller, rst, hst, by simp only [rufUpdateG_self],
+            by simp only [rufUpdateG_self], ?_, by simp only [rufUpdateG_self]; rfl, ?_⟩)
+          · simp only [rufUpdateG_self]
+            exact antwortRestG_ressourcen _ _ _ _ hr
+          · rw [hhead]
+            exact List.Perm.refl _
     | _ => rangA1
 
 #print axioms Gabbro.Grammatik.schrittRang

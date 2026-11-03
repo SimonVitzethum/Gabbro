@@ -133,6 +133,16 @@ def weiterZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       | .zurueck σ v => .zurueck σ v
       | .logik e => .logik e
       | _ => .sonst
+  | _, _, _, .aufraeumen a remaining, o =>
+      match o with
+      | .ok σ _ =>
+          let σ := remaining.foldl World.gibt σ
+          match a.1 with
+          | .inl v => .zurueck σ v
+          | .inr r => .sonst
+      | .zurueck σ v => .zurueck σ v
+      | .logik e => .logik e
+      | _ => .sonst
   | _, _, _, .leer, o =>
       match o with
       | .zurueck σ v => .zurueck σ v
@@ -189,6 +199,7 @@ theorem weiterZ_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .abbruch k, e => weiterZ_logik k e
   | _, _, _, .rueckBereit _ k, e => weiterZ_logik k e
   | _, _, _, .zurueckgekehrt _, e => rfl
+  | _, _, _, .aufraeumen _ _, e => rfl
   | _, _, _, .leer, _ => rfl
 
 theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
@@ -210,6 +221,7 @@ theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .abbruch k, σ, r => weiterZ_grund k σ r
   | _, _, _, .rueckBereit _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .zurueckgekehrt _, σ, r => rfl
+  | _, _, _, .aufraeumen _ _, σ, r => rfl
   | _, _, _, .leer, _, _ => rfl
 
 theorem weiterZ_hardware : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D V l Γ Λ)
@@ -231,6 +243,7 @@ theorem weiterZ_hardware : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GR
   | _, _, _, .abbruch k, e => weiterZ_hardware k e
   | _, _, _, .rueckBereit _ k, e => weiterZ_hardware k e
   | _, _, _, .zurueckgekehrt _, e => rfl
+  | _, _, _, .aufraeumen _ _, e => rfl
   | _, _, _, .leer, _ => rfl
 
 theorem sg_gibt (σ : World D) (L : D.Lock) : SG (σ.gibt L) σ := ⟨rfl, rfl⟩
@@ -256,6 +269,7 @@ theorem weiterZ_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
   | _, _, _, .abbruch k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .rueckBereit _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .zurueckgekehrt _, σ, v => ZErg.gleich_refl _
+  | _, _, _, .aufraeumen _ _, σ, v => ZErg.gleich_refl _
   | _, _, _, .leer, _, _ => ZErg.gleich_refl _
 
 /-- **An end block replacing a residue.** Where G replaces the whole residue
@@ -338,6 +352,7 @@ def GRest.okV (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
       (∀ L, Res.held L ∈ Λk ↔ Res.held L ∈ Λ) ∧ k.okV P S
   | _, _, _, .rueckBereit .. => False
   | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
   | _, _, _, .leer => True
 
 section OkV

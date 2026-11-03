@@ -270,5 +270,13 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     | rueckScopedGrund ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
         subst r <;> (have hhead := hhead; kopfweg)
+    | rueckFreigabe ρ a L remaining hhead =>
+      rw [hR] at hhead
+      cases hhead
+      cases hcov
+    | rueckAntwort ρ a hhead z hantwort =>
+      rw [hR] at hhead
+      cases hhead
+      cases hcov
 
 end Gabbro.Grammatik

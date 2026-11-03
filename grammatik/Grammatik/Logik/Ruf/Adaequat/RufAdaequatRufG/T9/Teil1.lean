@@ -204,6 +204,8 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | rueckScopedGrund ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
         subst r <;> kopfwegH
+    | rueckFreigabe => kopfwegH
+    | rueckAntwort => kopfwegH
 
 /-- A thread whose head waits stays so, and logs nothing, along any run. -/
 theorem wartet_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}

@@ -241,8 +241,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
             σm.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f (neu ++ neum), M.start⟩
 
-  /-- Evaluate once, release lexical scopes in their declared order, then
-      resume the caller or leave a completed root residue. -/
+  /-- Evaluate the source return once and keep every held lock. The saved
+      world is the read world, before any lexical scope release. -/
   | rueckScopedWert (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       (r : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
@@ -253,14 +253,16 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
-      (σ₁ σ₂ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
-      (hs₂ : σ₂ = R.scopes.foldl World.gibt σ₁)
-      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
-      (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₂ (.inl (evalErg σ₁ e σ₁ ρ)) = some z) :
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
+      (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur) :
       RufSchrittG7 P O passes M f
-        ⟨σ₂.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
-  /-- The reason channel performs the same cleanup without an expression read. -/
+        ⟨M.speicher, rufUpdateG M.faeden f
+          ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+              ⟨l, Γ, _, ρ, .aufraeumen ⟨.inl (evalErg σ₁ e σ₁ ρ), σ₁⟩ R.scopes⟩⟩,
+            σ₁.spur, (M.faeden f).log⟩,
+          M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- Save the reason and its pre-release world without reading or releasing. -/
   | rueckScopedGrund (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       (r : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
@@ -270,12 +272,38 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hret : r.scopedGrund = some (grund, R))
       (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
-      (hΛ : HeldIn Λ (offen (M.faeden f).spur))
-      (σ₂ : World D) (hs₂ : σ₂ = R.scopes.foldl World.gibt (M.weltVon f))
-      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
-      (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) σ₂ (.inr grund) = some z) :
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
       RufSchrittG7 P O passes M f
-        ⟨σ₂.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
+        ⟨M.speicher, rufUpdateG M.faeden f
+          ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+              ⟨l, Γ, _, ρ, .aufraeumen ⟨.inr grund, M.weltVon f⟩ R.scopes⟩⟩,
+            (M.faeden f).spur, (M.faeden f).log⟩,
+          M.lauf, M.start⟩
+  /-- Release exactly the next lexical lock. This step has no accesses. -/
+  | rueckFreigabe (M : RufMaschineG D) (f : Faden)
+      {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
+      (a : (ErgVal D (vertragVon D (M.faeden f).kopf.f).erg ⊕
+        Fin (vertragVon D (M.faeden f).kopf.f).gruende) × World D)
+      (L : D.Lock) (remaining : List D.Lock)
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a (L :: remaining)⟩) :
+      RufSchrittG7 P O passes M f
+        ⟨M.speicher, rufUpdateG M.faeden f
+          ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+              ⟨l, Γ, _, ρ, .aufraeumen a remaining⟩⟩,
+            .gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
+          M.lauf ++ [⟨f, .gibt L⟩], M.start⟩
+  /-- Deliver the saved answer only after every lexical release. The snapshot
+      is retained for a root; a callee resumes its caller in the current world. -/
+  | rueckAntwort (M : RufMaschineG D) (f : Faden)
+      {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
+      (a : (ErgVal D (vertragVon D (M.faeden f).kopf.f).erg ⊕
+        Fin (vertragVon D (M.faeden f).kopf.f).gruende) × World D)
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a []⟩)
+      (z : RufFadenG D)
+      (hantwort : rufAntwortG (M.faeden f) a.2 (M.weltVon f) a.1 = some z) :
+      RufSchrittG7 P O passes M f
+        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf, M.start⟩
 
 end Gabbro.Grammatik

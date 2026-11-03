@@ -29,9 +29,9 @@ theorem antwortRestG_sauber (g : D.Fn)
   all_goals split at h <;> simp_all [GRest.sauber]
 
 /-- Cleanup and either answer channel preserve the no-waiting-head invariant. -/
-theorem rufAntwortG_sauber {z z' : RufFadenG D} {σ : World D}
+theorem rufAntwortG_sauber {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
-    (h : rufAntwortG z σ a = some z') (hz : RufFadenSauberG z) : RufFadenSauberG z' := by
+    (h : rufAntwortG z vor σ a = some z') (hz : RufFadenSauberG z) : RufFadenSauberG z' := by
   cases hs : z.stapel with
   | nil =>
       simp only [rufAntwortG, hs, Option.some.injEq] at h
@@ -219,10 +219,7 @@ theorem rufSchrittG_sauber_acting {P : Programm D} {O : Orakel D} {passes : Nat}
            · exact hst r hr)
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
-      simp only [rufUpdateG_self]
-      exact rufAntwortG_sauber hantwort ⟨hk, hst⟩
-    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
+    | rueckAntwort ρ a hhead z hantwort =>
       simp only [rufUpdateG_self]
       exact rufAntwortG_sauber hantwort ⟨hk, hst⟩
     | _ =>

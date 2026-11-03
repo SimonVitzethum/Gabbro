@@ -75,6 +75,7 @@ def GRest.scopesGut : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRes
   | _, _, _, .abbruch k => k.scopesGut
   | _, _, _, .rueckBereit _ k => k.scopesGut
   | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
   | _, _, _, .leer => True
 
 theorem scopesGut_weiterOpt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}

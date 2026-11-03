@@ -57,16 +57,9 @@ theorem w_scopedWert {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
     (hΛ : HeldIn Λ (offen (M.faeden t).spur))
     (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) :
     ∃ M', RufSchrittG P O passes M t M' := by
-  let vor := (M.weltVon t).lese Λ e.orte
-  let nach := R.scopes.foldl World.gibt vor
-  obtain ⟨nr, hr, _⟩ := Erw.lese (M.weltVon t) Λ e.orte
-  have hneu : nach.spur =
-      (R.scopes.reverse.map (fun L => Ereignis.gibt L) ++ nr) ++ (M.faeden t).spur := by
-    rw [World.gibt_foldl_spur, hr, List.append_assoc]
-  obtain ⟨z, ha⟩ := rufAntwortG_moeglich (M.faeden t) vor nach
-    (.inl (evalErg vor e vor ρ)) hkt
+  obtain ⟨neu, hneu, _⟩ := Erw.lese (M.weltVon t) Λ e.orte
   exact ⟨_, RufSchrittG.rueckScopedWert M t ρ r e R hx hret hscope hΛ
-    vor nach rfl rfl _ hneu z ha⟩
+    _ rfl neu hneu⟩
 
 /-- The reason channel has the same cleanup step, without reading a value. -/
 theorem w_scopedGrund {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
@@ -81,10 +74,23 @@ theorem w_scopedGrund {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
     (hΛ : HeldIn Λ (offen (M.faeden t).spur))
     (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) :
     ∃ M', RufSchrittG P O passes M t M' := by
-  let nach := R.scopes.foldl World.gibt (M.weltVon t)
-  obtain ⟨z, ha⟩ := rufAntwortG_moeglich (M.faeden t) (M.weltVon t) nach (.inr grund) hkt
-  exact ⟨_, RufSchrittG.rueckScopedGrund M t ρ r grund R hx hret hscope hΛ
-    nach rfl _ (World.gibt_foldl_spur _ R.scopes) z ha⟩
+  exact ⟨_, RufSchrittG.rueckScopedGrund M t ρ r grund R hx hret hscope hΛ⟩
+
+/-- Every cleanup head can step. Releases need no external answer; after
+    the final release the existing stack invariant supplies answer delivery. -/
+theorem w_aufraeumen {M : RufMaschineG D} {t : Faden} {l : Bool} {Γ : Ctx}
+    (ρ : Env D Γ)
+    (a : (ErgVal D (vertragVon D (M.faeden t).kopf.f).erg ⊕
+      Fin (vertragVon D (M.faeden t).kopf.f).gruende) × World D)
+    (remaining : List D.Lock)
+    (hx : (M.faeden t).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a remaining⟩)
+    (hkt : FormKette (M.faeden t).kopf.f (M.faeden t).stapel) :
+    ∃ M', RufSchrittG P O passes M t M' := by
+  cases remaining with
+  | nil =>
+      obtain ⟨z, hz⟩ := rufAntwortG_moeglich (M.faeden t) a.2 (M.weltVon t) a.1 hkt
+      exact ⟨_, RufSchrittG.rueckAntwort M t ρ a hx z hz⟩
+  | cons L remaining => exact ⟨_, RufSchrittG.rueckFreigabe M t ρ a L remaining hx⟩
 
 end Schritt
 end Gabbro.Grammatik

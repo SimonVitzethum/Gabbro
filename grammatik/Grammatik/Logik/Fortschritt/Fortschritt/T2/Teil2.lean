@@ -3,6 +3,7 @@ module
 public import Grammatik.Logik.Fortschritt.Fortschritt.T1
 public import Grammatik.Logik.Fortschritt.Fortschritt.T2.Teil1
 public import Grammatik.Logik.Fortschritt.Fortschritt.T2.ScopeReplay
+public import Grammatik.Logik.Ruf.Maschine.RufMaschineG.T5.AntwortPosition
 
 @[expose] public section
 
@@ -308,11 +309,14 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
     (hH : HeldIn (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
     (hP : PrueftG O passes M t) (hB : BereichG M t) (hR : RangInvG w0 (M.faeden t))
     (hA : (M.faeden t).kopf.rest.2.2.2.2.aR (stelleC D))
-    (hScope : (M.faeden t).kopf.rest.2.2.2.2.scopesGut) :
+    (hScope : (M.faeden t).kopf.rest.2.2.2.2.scopesGut)
+    (hPosition : AntwortPositionG (M.faeden t)) :
     FortFaden P O passes M t := by
   obtain ⟨hk, hb, _, hkt⟩ := hI
   have hnw' : (M.faeden t).kopf.rest.2.2.2.2.wartend = false := hnw
-  generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw' hA hScope
+  have hPosition' := hPosition.1
+  change (M.faeden t).kopf.rest.2.2.2.2.antwortPosition ((M.faeden t).stapel = []) at hPosition'
+  generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw' hA hScope hPosition'
   obtain ⟨l, Γ, Λ, ρ, r⟩ := x
   have hΛ : HeldIn Λ (offen (M.faeden t).spur) := hH
   cases r with
@@ -386,6 +390,10 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   | ewigRest a n inv body k => exact fort_schritt (w_ewigFort rfl a n inv body k ρ hx)
   | wartet rest k => simp only [GRest.wartend, Bool.true_eq_false] at hnw'
   | wartetSonst n err rest k => simp only [GRest.wartend, Bool.true_eq_false] at hnw'
+  | aufraeumen a remaining => exact fort_schritt' (w_aufraeumen ρ a remaining hx hkt)
+  | zurueckgekehrt a =>
+      have hroot : (M.faeden t).stapel = [] := hPosition'
+      exact Or.inl ⟨hroot, by rw [hx]; rfl⟩
   | rueckBereit => simp only [GRest.fOk, Bool.false_eq_true] at hk
   | abbruch k => simp only [GRest.blockiert, Bool.true_eq_false] at hb
   | leer => simp only [GRest.blockiert, Bool.true_eq_false] at hb

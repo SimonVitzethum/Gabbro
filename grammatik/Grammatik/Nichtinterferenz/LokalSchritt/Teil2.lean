@@ -430,6 +430,13 @@ theorem kr_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGleic
   | wartetSonst n err b k => exact KRel.none_l _
   | rueckBereit scopes k => exact KRel.none_l _
   | zurueckgekehrt _ => exact KRel.none_l _
+  | aufraeumen a remaining =>
+      cases remaining with
+      | nil =>
+          cases a.1 with
+          | inl v => exact kPop_rel st f rho hW v
+          | inr r => exact kPopGrund_rel st f rho spur hsp r
+      | cons L remaining => exact KRel.lokal _ _ _ _ _ rfl hsp
   | abbruch k => exact KRel.none_l _
   | leer => exact KRel.none_l _
 

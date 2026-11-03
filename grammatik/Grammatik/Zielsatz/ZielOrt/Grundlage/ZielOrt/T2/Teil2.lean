@@ -284,12 +284,6 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     exact schritt_traeger_g6 hO hs c hc
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ =>
-        rw [hs₂, World.gibt_foldl_mem, hs₁]
-        exact traegerGleich_refl _ c
-    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ =>
-        rw [hs₂, World.gibt_foldl_mem]
-        exact traegerGleich_refl _ c
     | _ => exact traegerGleich_refl _ c
 
 /-- **The rely on reachable machines.** If thread `t` holds a lock `L`

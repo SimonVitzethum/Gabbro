@@ -208,6 +208,7 @@ def GRest.aR (C : D.Ax ⊕ D.Reg → Bool) {V : Vertrag D} :
   | _, _, _, .leer => True
   | _, _, _, .rueckBereit _ k => k.aR C
   | _, _, _, .zurueckgekehrt _ => True
+  | _, _, _, .aufraeumen _ _ => True
 
 section Wahl
 

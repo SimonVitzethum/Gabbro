@@ -68,12 +68,34 @@ theorem schritt_logArt {M M' : RufMaschineG D} {u : Faden}
     (∃ (g : D.Fn) (rho : Env D (D.params g)) (r : Fin (D.gruende g)) (s0 s1 : World D),
       (M'.faeden u).log = RufEreignisF.why g rho r s0 s1 :: (M.faeden u).log ∧
         s1.speicher = M'.speicher) := by
-  (rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs) <;> (try simp only [rufUpdateG_self]) <;> first
-    | exact Or.inl trivial
-    | exact Or.inl rfl
-    | exact Or.inr (Or.inl ⟨_, _, _, rfl⟩)
-    | exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl, rfl⟩))
-    | exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl, speicher_welt_speicher _ _⟩))
+  cases hs with
+  | g7 hs =>
+      cases hs with
+      | rueckAntwort ρ a hhead z ha =>
+          simp only [rufUpdateG_self]
+          cases hst : (M.faeden u).stapel with
+          | nil =>
+              simp only [rufAntwortG, hst, Option.some.injEq] at ha
+              subst z
+              exact Or.inl rfl
+          | cons c st =>
+              obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden u).kopf.f a.1 c.rest = some r := by
+                cases hr : antwortRestG (M.faeden u).kopf.f a.1 c.rest with
+                | none => simp [rufAntwortG, hst, hr] at ha
+                | some r => exact ⟨r, rfl⟩
+              cases a.1 <;> simp [rufAntwortG, hst, hr] at ha <;> subst z
+              · exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+              · exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+      | _ => exact Or.inl (by simp only [rufUpdateG_self])
+  | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
+      cases hs <;> (try simp only [rufUpdateG_self]) <;> first
+        | exact Or.inl trivial
+        | exact Or.inl rfl
+        | exact Or.inr (Or.inl ⟨_, _, _, rfl⟩)
+        | exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl, rfl⟩))
+        | exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl, speicher_welt_speicher _ _⟩))
 
 end Log
 
