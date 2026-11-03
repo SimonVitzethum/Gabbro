@@ -43,11 +43,24 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 /-- Reification of exactly the existing `uStartArg` cases into the language's own typed syntax.
     In particular a pointer is a declared carrier capability, never an integer address. -/
 def expression (u : UProg) (ty : Ty) (arg : SExpr)
-    (accepted : uStartArg u.tabs ty arg = true) : Expr (declOf u) [] [] ty := by
+    (accepted : uStartArg u.spaces u.tabs ty arg = true) : Expr (declOf u) [] [] ty := by
   cases ty
   case ptr cap =>
-    rcases cap with ⟨space, ⟨read, write, owner⟩, target⟩
-    cases space <;> cases owner <;> cases target
+    rcases cap with ⟨space, ⟨read, write, owner⟩, ⟨n⟩⟩
+    cases owner with
+    | some owner => cases arg <;> simp only [uStartArg, Bool.false_eq_true] at accepted
+    | none =>
+      cases arg <;> simp only [uStartArg] at accepted
+      all_goals try contradiction
+      rename_i name
+      by_cases hn : n < u.tabs.length
+      · simp only [List.getElem?_eq_getElem hn] at accepted
+        have nominal : (u.tabs[n]).space = space ∧ space < u.spaces.length :=
+          of_decide_eq_true (Bool.and_eq_true_iff.mp accepted).2
+        exact Expr.ptrOf (D := declOf u) (⟨n, hn⟩ : Fin u.tabs.length) n
+          (Deklaration.capTab_of (tabNr_some u n hn) nominal.1.symm nominal.2) (read, write)
+      · have missing : u.tabs[n]? = none := List.getElem?_eq_none (by omega)
+        simp only [missing, Bool.false_eq_true] at accepted
   all_goals cases arg <;> simp only [uStartArg] at accepted
   all_goals try contradiction
   case int.lit lo hi n =>
@@ -62,22 +75,16 @@ def expression (u : UProg) (ty : Ty) (arg : SExpr)
   case bool.tru => exact .tru
   case bool.fls => exact .fls
   case opt.call n name args => exact .none n
-  case ptr.fnref read write n name =>
-    by_cases hn : n < u.tabs.length
-    · exact Expr.ptrOf (D := declOf u) (⟨n, hn⟩ : Fin u.tabs.length) n
-        (by simp only [declOf, dite_eq_left hn]) (read, write)
-    · have hh : u.tabs[n]? = none := List.getElem?_eq_none (by omega)
-      simp only [hh, Bool.false_eq_true] at accepted
 
 /-- Reified numeric arguments retain the exact source numeral, not a default initial value. -/
 theorem expression_literal (u : UProg) (lo hi : Int) (n : Nat)
-    (accepted : uStartArg u.tabs (.int lo hi) (.lit n) = true)
+    (accepted : uStartArg u.spaces u.tabs (.int lo hi) (.lit n) = true)
     (before world : World (declOf u)) :
     (eval before (expression u (.int lo hi) (.lit n) accepted) world .nil).n = (n : Int) := by
   rfl
 
 theorem expression_negative (u : UProg) (lo hi : Int) (n : Nat)
-    (accepted : uStartArg u.tabs (.int lo hi) (.un "-" (.lit n)) = true)
+    (accepted : uStartArg u.spaces u.tabs (.int lo hi) (.un "-" (.lit n)) = true)
     (before world : World (declOf u)) :
     (eval before (expression u (.int lo hi) (.un "-" (.lit n)) accepted) world .nil).n = -(n : Int) := by
   rfl
@@ -94,7 +101,7 @@ theorem expression_literal_zeuge (u : UProg) (world : World (declOf u)) :
 /-- Canonical accepted start arguments are closed values: choosing a world cannot
     change the environment eventually encoded into a relocated root frame. -/
 theorem expression_pure (u : UProg) (ty : Ty) (arg : SExpr)
-    (accepted : uStartArg u.tabs ty arg = true)
+    (accepted : uStartArg u.spaces u.tabs ty arg = true)
     (before world before' world' : World (declOf u)) :
     eval before (expression u ty arg accepted) world .nil =
       eval before' (expression u ty arg accepted) world' .nil := by
@@ -111,7 +118,7 @@ theorem expression_pure (u : UProg) (ty : Ty) (arg : SExpr)
 /-- Argument environments are evaluated by the existing canonical `evalArgs`, including
     its order, and can be supplied directly to `Einheit.starts` and `RufStartG`. -/
 def arguments (u : UProg) : (types : List Ty) → (args : List SExpr) →
-    (checked : types.length = args.length ∧ (types.zip args).all (fun p => uStartArg u.tabs p.1 p.2) = true) →
+    (checked : types.length = args.length ∧ (types.zip args).all (fun p => uStartArg u.spaces u.tabs p.1 p.2) = true) →
     Args (declOf u) [] [] types
   | [], [], _ => .nil
   | ty :: types, arg :: args, checked =>
@@ -123,7 +130,7 @@ def arguments (u : UProg) : (types : List Ty) → (args : List SExpr) →
 /-- Every complete start environment has the same canonical value in every world. -/
 theorem arguments_pure (u : UProg) (types : List Ty) (args : List SExpr)
     (checked : types.length = args.length ∧
-      (types.zip args).all (fun p => uStartArg u.tabs p.1 p.2) = true)
+      (types.zip args).all (fun p => uStartArg u.spaces u.tabs p.1 p.2) = true)
     (before world before' world' : World (declOf u)) :
     evalArgs before (arguments u types args checked) world .nil =
       evalArgs before' (arguments u types args checked) world' .nil := by

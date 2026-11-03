@@ -45,9 +45,9 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 structure Resolved (u : UProg) (name : String) (sourceArgs : List SExpr) where
   function : (declOf u).Fn
   named : fnIdx u.fns name = .ok function
-  canonical : uStartMit u.tabs u.fns name sourceArgs = .ok name
+  canonical : uStartMit u.spaces u.tabs u.fns name sourceArgs = .ok name
   checked : ((declOf u).params function).length = sourceArgs.length ∧
-    (((declOf u).params function).zip sourceArgs).all (fun p => uStartArg u.tabs p.1 p.2) = true
+    (((declOf u).params function).zip sourceArgs).all (fun p => uStartArg u.spaces u.tabs p.1 p.2) = true
 
 /-- Resolve original source arguments before any names-only root list could discard them. -/
 def resolve (u : UProg) (name : String) (sourceArgs : List SExpr) :
@@ -55,12 +55,12 @@ def resolve (u : UProg) (name : String) (sourceArgs : List SExpr) :
   match hn : fnIdx u.fns name with
   | .error e => throw e
   | .ok f =>
-    match hc : uStartMit u.tabs u.fns name sourceArgs with
+    match hc : uStartMit u.spaces u.tabs u.fns name sourceArgs with
     | .error e => throw e
     | .ok actual =>
       if hr : actual = name then
         if ha : ((declOf u).params f).length = sourceArgs.length ∧
-            (((declOf u).params f).zip sourceArgs).all (fun p => uStartArg u.tabs p.1 p.2) = true then
+            (((declOf u).params f).zip sourceArgs).all (fun p => uStartArg u.spaces u.tabs p.1 p.2) = true then
           pure ⟨f, hn, hc.trans (congrArg Except.ok hr), ha⟩
         else throw "ir: source start arguments differ from the canonical function signature"
       else throw "ir: canonical start name differs from its source name"
@@ -222,7 +222,7 @@ theorem fromItems_identity {u : UProg} {items : List SItemTief}
 
 private def canonicalName (u : UProg) (member : List String × List SExpr) : Except String String :=
   match member.1.getLast? with
-  | some name => uStartMit u.tabs u.fns name member.2
+  | some name => uStartMit u.spaces u.tabs u.fns name member.2
   | none => .error "empty path in concurrent"
 
 private theorem uSeq_append (xs ys : List (Except String α)) :
@@ -242,7 +242,7 @@ private theorem uSeq_append (xs ys : List (Except String α)) :
 /-- Flattening the source concurrent groups retains the exact canonical root-name extraction,
     including failure order; source reconstruction does not introduce a new start acceptance rule. -/
 private theorem canonicalNames_flat (u : UProg) (items : List SItemTief) :
-    uSeq ((sourceIdentities items).map (canonicalName u)) = uNebenWurzeln u.tabs u.fns items := by
+    uSeq ((sourceIdentities items).map (canonicalName u)) = uNebenWurzeln u.spaces u.tabs u.fns items := by
   induction items with
   | nil => rfl
   | cons item rest ih =>
@@ -265,7 +265,7 @@ private theorem recoveredNames (u : UProg) {items : List SItemTief} (starts : Li
     with the same order and multiplicity. Names-only deduplication is not justified by this bridge. -/
 theorem fromItems_names {u : UProg} {items : List SItemTief} {starts : List (SourceStart u items)}
     (run : fromItems u items = .ok starts) :
-    uNebenWurzeln u.tabs u.fns items = .ok (starts.map (·.name)) := by
+    uNebenWurzeln u.spaces u.tabs u.fns items = .ok (starts.map (·.name)) := by
   rw [← canonicalNames_flat u items, ← fromItems_identity run]
   exact recoveredNames u starts
 

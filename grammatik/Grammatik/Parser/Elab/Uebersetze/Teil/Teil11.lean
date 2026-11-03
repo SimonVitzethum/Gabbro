@@ -416,39 +416,39 @@ def uStart (fns : List UFn) (quelle d : String) : Except String String :=
     if f.params.isEmpty then .ok d
     else .error (quelle ++ " names a function with parameters: no start-argument form: " ++ d)
   | .none => .error (quelle ++ " names an unknown function: " ++ d)
-/-- A start argument is a value of its parameter's type: a literal in the range, `true`/`false`, `None`. -/
-def uStartArg (tabs : List UTab) : Ty → SExpr → Bool
+/-- Closed start values: bounded literals, booleans, `None`, or a table capability in its registered space. -/
+def uStartArg (spaces : List String) (tabs : List UTab) : Ty → SExpr → Bool
   | .int lo hi, .lit n => decide (lo ≤ (n : Int) ∧ (n : Int) ≤ hi)
   | .int lo hi, .un "-" (.lit n) => decide (lo ≤ -(n : Int) ∧ -(n : Int) ≤ hi)
   | .bool, .tru => true
   | .bool, .fls => true
   | .opt _, .call "None" [] => true
   -- `&T` for a `ptr<…> T` parameter (`Expr.ptrOf`): the one pointer to the carrier the type names
-  | .ptr ⟨0, ⟨_, _, none⟩, .table n⟩, .fnref t => match tabs[n]? with
-    | .some tb => strEq tb.name t
+  | .ptr ⟨space, ⟨_, _, none⟩, .table n⟩, .fnref t => match tabs[n]? with
+    | .some tb => strEq tb.name t && decide (tb.space = space ∧ space < spaces.length)
     | .none => false
   | _, _ => false
 /-- A `concurrent` member: a function of the unit, started with one value per parameter
     (`concurrent { m::f(a, b) }`, the model's start with its arguments). -/
-def uStartMit (tabs : List UTab) (fns : List UFn) (d : String) (args : List SExpr) : Except String String :=
+def uStartMit (spaces : List String) (tabs : List UTab) (fns : List UFn) (d : String) (args : List SExpr) : Except String String :=
   match fns.find? (fun f => strEq f.name d) with
   | .some f =>
     if f.params.length != args.length then
       .error ("concurrent member with " ++ toString args.length ++ " arguments for " ++
         toString f.params.length ++ " parameters: " ++ d)
-    else if (f.params.zip args).all (fun (p, a) => uStartArg tabs p.2 a) then .ok d
+    else if (f.params.zip args).all (fun (p, a) => uStartArg spaces tabs p.2 a) then .ok d
     else .error ("concurrent member with an argument outside its parameter's type: " ++ d)
   | .none => .error ("concurrent member names an unknown function: " ++ d)
 /-- The roots of the `concurrent` items, in order (their members come first, as in `check_starts`). -/
-def uNebenWurzeln (tabs : List UTab) (fns : List UFn) : List SItemTief → Except String (List String)
+def uNebenWurzeln (spaces : List String) (tabs : List UTab) (fns : List UFn) : List SItemTief → Except String (List String)
   | [] => .ok []
   | .concT ps :: rest => do
     let here ← uSeq (ps.map fun (p, args) => match p.getLast? with
-      | .some d => uStartMit tabs fns d args
+      | .some d => uStartMit spaces tabs fns d args
       | .none => .error "empty path in concurrent")
-    let more ← uNebenWurzeln tabs fns rest
+    let more ← uNebenWurzeln spaces tabs fns rest
     pure (here ++ more)
-  | _ :: rest => uNebenWurzeln tabs fns rest
+  | _ :: rest => uNebenWurzeln spaces tabs fns rest
 /-- The dispatch roots of the `entry` items: ONE dispatch target that names a parameterless function of
     the unit. Everything else about the entry (vector, registers, stack) is the
     hardware side and stays with the checker. -/
@@ -471,8 +471,8 @@ def uHandler : List SItemTief → List String
     | _, _ => uHandler rest
   | _ :: rest => uHandler rest
 /-- The thread roots: `concurrent` members, then entry dispatch roots. -/
-def uWurzeln (tabs : List UTab) (fns : List UFn) (ms : List SItemTief) : Except String (List String) := do
-  let a ← uNebenWurzeln tabs fns ms
+def uWurzeln (spaces : List String) (tabs : List UTab) (fns : List UFn) (ms : List SItemTief) : Except String (List String) := do
+  let a ← uNebenWurzeln spaces tabs fns ms
   let b ← uEingangsWurzeln fns ms
   pure (a ++ b)
 /-- Foreign effects are checked here; retained pre/postconditions lower through the shared contract gate. -/

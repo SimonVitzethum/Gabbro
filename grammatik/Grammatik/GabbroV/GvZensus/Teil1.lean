@@ -373,7 +373,9 @@ def befundeElab (ms : List SItemTief) : List Befund :=
   let wurzF := (ms.filter fun it => match it with
     | .entryT _ => true
     | _ => false).filterMap fun it =>
-    match uWurzeln tabOk fnsOk [it] with
+    -- Only entryT reaches this call; its parameterless dispatch check does not inspect spaces.
+    match uWurzeln (["normal"] ++ uOhneDoppelte ((ms.filterMap
+        (fun | .tableT _ _ _ _ space _ _ => space | _ => none)).filter (fun n => !strEq n "normal"))) tabOk fnsOk [it] with
     | .error e => some ({ stufe := "eintritt", art := "entry", name := "", meldung := e } : Befund)
     | .ok _ => none
   globF ++ tabF ++ eigF ++ lockF ++ fnF.flatten ++ wurzF

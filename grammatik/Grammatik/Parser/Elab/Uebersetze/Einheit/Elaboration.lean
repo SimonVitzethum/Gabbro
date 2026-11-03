@@ -179,7 +179,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uMintPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
-  match uWurzeln tabs fns ms with
+  match uWurzeln spaces tabs fns ms with
   | .error e => .error e
   | .ok roots =>
   match uSeq ((uOhneDoppelte (fnItems.flatMap (fun (_, b) => uStartNamen 100000 b))).map

@@ -70,13 +70,29 @@ theorem fromGroup_identity_zeuge :
 
 theorem fromItems_names_zeuge :
     ∃ starts, fromItems witnessUnit [.concT witnessGroup] = .ok starts ∧
-      uNebenWurzeln witnessUnit.tabs witnessUnit.fns [.concT witnessGroup] = .ok (starts.map (·.name)) ∧
+      uNebenWurzeln witnessUnit.spaces witnessUnit.tabs witnessUnit.fns [.concT witnessGroup] = .ok (starts.map (·.name)) ∧
       starts.map (·.name) = ["worker", "worker"] := by
   obtain ⟨starts, run, _⟩ := fromItems_identity_zeuge
   have names := fromItems_names run
   refine ⟨starts, run, names, ?_⟩
   change Except.ok ["worker", "worker"] = Except.ok (starts.map (·.name)) at names
   exact (Except.ok.inj names).symm
+
+/-- A table capability in the second registered space is a closed start value.
+    Neither an absent/mismatched space nor ownership can be invented by reification. -/
+def pointerUnit : UProg := { witnessUnit with
+  spaces := ["normal", "sharedData"]
+  tabs := [{ name := "T", count := 2, cols := [], space := 1 }] }
+
+theorem registered_pointer_zeuge :
+    uStartArg pointerUnit.spaces pointerUnit.tabs (.ptr (.table 0 (true, false) 1)) (.fnref "T") = true ∧
+    uStartArg [] pointerUnit.tabs (.ptr (.table 0 (true, false) 1)) (.fnref "T") = false ∧
+    uStartArg pointerUnit.spaces pointerUnit.tabs (.ptr (.table 0 (true, false) 0)) (.fnref "T") = false ∧
+    uStartArg pointerUnit.spaces pointerUnit.tabs (.ptr (.table 0 (true, false) 1)) (.fnref "Other") = false ∧
+    uStartArg pointerUnit.spaces pointerUnit.tabs
+      (.ptr ⟨1, ⟨true, true, some 0⟩, .table 0⟩) (.fnref "T") = false ∧
+    uStartArg pointerUnit.spaces pointerUnit.tabs (.ptr (.table 1 (true, false) 1)) (.fnref "T") = false :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 #print axioms fromItems_names
 #print axioms fromItems_names_zeuge

@@ -51,6 +51,30 @@ theorem complete_words_zeuge :
 
 theorem wide_image_start_zeuge [Runner.IR.Kern] [CloneOK] : wideOutput.Correct := wideOutput.correct
 
+def namedSpaceText : String :=
+  "module startup { table T count 2 owner sharedData { slot { v : u32 in 0 .. 9, } } impl fn worker(p : ptr<sharedData, r> T, i : u32 in 0 .. 9) effects { pure } { } impl fn main() effects { pure } { } concurrent { worker(&T, 7), worker(&T, 2) }; }"
+
+def namedSpaceCandidate : Except String (Emitted namedSpaceText 64) := emit namedSpaceText 64
+
+theorem named_space_candidate_present : namedSpaceCandidate.toOption.isSome = true := by decide +kernel
+
+def namedSpaceOutput : Emitted namedSpaceText 64 :=
+  namedSpaceCandidate.toOption.get named_space_candidate_present
+
+/-- Nonzero nominal spaces retain the zero-marker ABI; the distinct source arguments
+    still initialize two separate occurrences of the same typed function. -/
+theorem named_space_frames_zeuge :
+    namedSpaceOutput.compiled.unit.spaces = ["normal", "sharedData"] ∧
+    namedSpaceOutput.image.roots.map Fin.val = [0, 0] ∧
+    namedSpaceOutput.image.rootArgs = [[7, 0], [2, 0]] ∧
+    namedSpaceOutput.startPlan.concurrent.map (fun source => source.sourceArgs) =
+      [[.fnref "T", .lit 7], [.fnref "T", .lit 2]] := by
+  refine ⟨by decide +kernel, by decide +kernel, by decide +kernel, ?_⟩
+  rfl
+
+theorem named_space_image_start_zeuge [Runner.IR.Kern] [CloneOK] :
+    namedSpaceOutput.Correct := namedSpaceOutput.correct
+
 /-- Stack positions are occurrence identities, even when the function identity repeats. -/
 theorem separate_frames_zeuge :
     output.image.fp0 + 8 * output.image.Ks + 8 * output.image.Ks ≤

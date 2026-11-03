@@ -14,7 +14,7 @@ open Gabbro.Grammatik Runner.IR
     Reference/IEEE/aggregate obligations are not bypassed: those forms have no uStartArg rule. -/
 theorem startExpression_valid (u : Gabbro.Grammatik.Parser.Uebersetze.UProg) (ty : Ty)
     (arg : Gabbro.Grammatik.Parser.SExpr)
-    (accepted : Gabbro.Grammatik.Parser.Uebersetze.uStartArg u.tabs ty arg = true)
+    (accepted : Gabbro.Grammatik.Parser.Uebersetze.uStartArg u.spaces u.tabs ty arg = true)
     (L : Lay (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u))
     (world : World (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u)) :
     ValueValid L ty (eval world (StartArgument.expression u ty arg accepted) world .nil) := by
@@ -27,7 +27,7 @@ theorem startExpression_valid (u : Gabbro.Grammatik.Parser.Uebersetze.UProg) (ty
 theorem startArguments_valid (u : Gabbro.Grammatik.Parser.Uebersetze.UProg)
     (types : List Ty) (args : List Gabbro.Grammatik.Parser.SExpr)
     (checked : types.length = args.length ∧ (types.zip args).all
-      (fun p => Gabbro.Grammatik.Parser.Uebersetze.uStartArg u.tabs p.1 p.2) = true)
+      (fun p => Gabbro.Grammatik.Parser.Uebersetze.uStartArg u.spaces u.tabs p.1 p.2) = true)
     (L : Lay (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u))
     (world : World (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u)) :
     ∀ ty (x : Var types ty), ValueValid L ty
