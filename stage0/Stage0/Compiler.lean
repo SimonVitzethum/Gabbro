@@ -22,9 +22,9 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   elaborated : (Frontend.elabWithScopes
     (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
-    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) |>.map
       (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))}) = .ok unit
-  entry : fnIdx unit.fns "main" = .ok main
+  entry : fnIdx unit.fns (Profil.entryName options) = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
@@ -52,15 +52,15 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
   match hc : ExportMetadata.checkConstants members with
   | .error error => throw error
   | .ok () => do
-    match he : Frontend.elabWithScopes declarations
+    match he : (Frontend.elabWithScopes declarations
         source.scopes.values source.scopes.types source.scopes.functions
-        (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
+        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) with
     | .error e => throw e
     | .ok candidate => do
       let unit := {candidate with exportGate := ExportMetadata.check members}
       have elaborated : (Frontend.elabWithScopes declarations
           source.scopes.values source.scopes.types source.scopes.functions
-          (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+          (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) |>.map
             (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
         rw [he]
         rfl
@@ -68,7 +68,7 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
       | .error error => throw error
       | .ok () => do
         let arrays ← Frontend.checkArrays unit source.scopes members
-        match hm : fnIdx unit.fns "main" with
+        match hm : fnIdx unit.fns (Profil.entryName options) with
         | .error e => throw e
         | .ok main =>
           match hl : lowerAllg unit with
@@ -130,7 +130,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     ExportMetadata.checkConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
     (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
-      (Frontend.tableWithEmpty scope.values scope.types)).map
+      (Frontend.tableWithEmpty scope.values scope.types)).bind (Profil.selectUnit options) |>.map
         (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
