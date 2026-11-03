@@ -93,7 +93,7 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
       (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
     | dannBind =>
       (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
-    | dannNarrowOk =>
+    | dannNarrowOk | dannNarrowRequired =>
       (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg
     | endeBindAxiom =>
       (try have hhead := ‹(M.faeden f).kopf.rest = _›); (try have hpop := ‹(M.faeden f).stapel = _›); (try have hleaf := ‹Stmt.istBlatt _ = true›); (try have hstep := ‹execStmt _ _ _ _ _ _ = _›); kopfweg

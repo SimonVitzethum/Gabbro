@@ -45,6 +45,26 @@ theorem w_narrowOk {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
   exact ⟨_, RufSchrittG.dannNarrowOk M f l Γ Λ Λ' Λ' lo hi lo' hi' e sonst rest k ρ hhead
     _ rfl h _ rfl hΛ, zustandG_neu rfl rfl⟩
 
+theorem w_narrowRequired {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
+    (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {lo hi : Int}
+    (lo' hi' : Int) (e : Expr D Γ Λ (.int lo hi))
+    (rest : Block D (vertragVon D z.kopf.f) l (.int lo' hi' :: Γ) Λ Λ')
+    (k : GRest D (vertragVon D z.kopf.f) l Γ Λ') (ρ : Env D Γ)
+    (hhead : z.kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.narrowRequired e lo' hi' rest) k⟩)
+    {σ : World D} (hW : M.weltVon f = σ)
+    (h : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')
+    (hΛ : HeldIn Λ (offen z.spur) := by held_tac) :
+    ∃ M', RufSchrittG P O passes M f M' ∧
+      ZustandG M' f z.stapel z.kopf.f z.kopf.rho z.kopf.s0 z.log
+        (Env.cons (τ := .int lo' hi')
+          ⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, h.1, h.2⟩ ρ)
+        (.dann rest (.schrumpf k)) (σ.lese Λ e.orte) := by
+  subst hz
+  subst hW
+  exact ⟨_, RufSchrittG.dannNarrowRequired M f l Γ Λ Λ' lo hi lo' hi' e rest k ρ hhead
+    _ rfl h _ rfl hΛ, zustandG_neu rfl rfl⟩
+
 theorem w_narrowElse {M : RufMaschineG D} {f : Faden} {z : RufFadenG D}
     (hz : M.faeden f = z) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {lo hi : Int}
     (lo' hi' : Int) (e : Expr D Γ Λ (.int lo hi))

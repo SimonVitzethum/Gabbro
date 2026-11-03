@@ -47,7 +47,7 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | dannOnGrund => kopfwegH
     | endeBind => kopfwegH
     | dannBind => kopfwegH
-    | dannNarrowOk => kopfwegH
+    | dannNarrowOk | dannNarrowRequired => kopfwegH
     | endeBindAxiom => kopfwegH
   | g2 hs =>
     cases hs with

@@ -80,6 +80,10 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
     | dannNarrowOk l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannNarrowOk (passes := p + j) (M.plus j) f l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ h neu hneu hΛ
+    | dannNarrowRequired l Γ Λ Λ' lo hi lo' hi' e rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.dannNarrowRequired (passes := p + j) (M.plus j) f l Γ Λ Λ' lo hi lo' hi'
+          e rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ h neu hneu hΛ
   | g2 h =>
     cases h with
     | dannNarrowElse l Γ Λ Λ' Λ'' lo hi lo' hi' e sonst rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
