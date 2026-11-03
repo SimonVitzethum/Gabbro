@@ -6129,7 +6129,13 @@ Open: the lead build of this branch (single-module checks of the four new module
 
 On `syntax-s0`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The original source
 metadata gate refused generic headers, module-template/use items and expanded dispatch metadata even
-though their canonical expansions are ordinary checked G forms. The gate now checks the expanded unit.
+though their canonical expansions are ordinary checked G forms. After the C17 merge, the gate uses
+`Konst.checkSourceMetadata` on either the original or expanded members. It prefers expanded members
+when the original contains an `expansionHeader`, otherwise original members; a failed preferred
+check may fall back only to the complete C17 check on the other side. `gateMembers` retains the
+selected list, `metadata` equates `unit.exportGate` with that list's C17 check, and `gateChecked`
+retains both the selected side's identity and its successful check.
+`Konst.checkSourceConstants` on the original members remains mandatory before expansion.
 No build was run; the lead builds and reports errors back.
 
 `stage0/Stage0/Frontend/ExpansionGate.lean` (new):
@@ -6140,26 +6146,29 @@ No build was run; the lead builds and reports errors back.
   **`expansionHeader_implGroup`**, **`expansionHeader_tagged`**: each header class is consumed, never
   lowered directly.
 * **`checkExpansionGate`**: run the very same canonical expansion the elaborator consumes
-  (`Modules.prepare`) and check the expanded unit for unbound metadata.
+  (`Modules.prepare`) and apply the complete C17 metadata check to the expanded unit.
 * **`checkExpansionGate_expansion`**, **`checkExpansionGate_expands`**: gate acceptance runs the
   canonical expansion on the source declarations, through the exact `expandU` the elaborator consumes.
-* **`checkExpansionGate_checked`**: gate acceptance leaves no unbound metadata in the expanded unit.
+* **`checkExpansionGate_checked`**: gate acceptance leaves no unbound metadata in the expanded runtime unit, excluding const declarations.
 * **`checkExpansionGate_existingForms`**, **`checkExpansionGate_ordinary`**, **`checkExpansionGate_output`**:
   the accepted expansion carries the complete structural postcondition (existing forms, no residual
   generic syntax, no open module reference, closed).
 
 `stage0/Stage0/Compiler.lean`:
 
-* **`Compiled.expanded`**, **`Compiled.requirements`**, **`Compiled.gateExpansion`**,
+* **`Compiled.expanded`**, **`Compiled.requirements`**, **`Compiled.gateMembers`**, **`Compiled.gateExpansion`**,
   **`Compiled.gateChecked`**: the stored canonical expansion, its requirements, the prepare certificate
   on the source declarations and the original-or-expanded metadata disjunct.
 * **`Compiled.expansion_gate`**: gate acceptance ties the source to the expanded unit lowering compiles:
   either the expansion gate accepts the declarations with exactly the stored expanded unit and
-  requirements, or the original members were already clean.
+  requirements, or the original members passed the complete C17 check.
 
 `stage0/Stage0/Frontend/ExportCorrectness.lean`:
 
-* **`Compiled.exports_metadata`**: the gate certificate as the checked original-or-expanded disjunct;
+* **`Compiled.const_substitution`**: `Konst.checkSourceMetadata_sound` retains certified substitution
+  on the selected source side.
+* **`Compiled.exports_metadata`**: `Konst.checkSourceMetadata_runtime_sound` retains the original-or-expanded
+  runtime metadata disjunct, excluding only const declarations;
   the batch-2 lowering connections discharge to the same disjunct.
 
 Open: the lead build of the branch (single-module checks of the three touched modules and their

@@ -39,8 +39,9 @@ theorem expansionHeader_tagged (declaration : SItemTief) (spec : String) :
     expansionHeader (.taggedByT declaration spec) = true := rfl
 
 /-- The expansion-aware gate: run the very same canonical expansion the
-    elaborator consumes, then check the expanded unit with certified const substitution and runtime metadata checks.
-    Acceptance never refuses an original header the expansion consumes. -/
+    elaborator consumes, then check the expanded unit with certified const substitution
+    and runtime metadata checks.
+    Consumed headers are checked through their expanded runtime declarations. -/
 def checkExpansionGate (declarations : List SItemTief) :
     Except String (List SItemTief × List (STyp × String)) := do
   let (expanded, requirements) ← Modules.prepare declarations
