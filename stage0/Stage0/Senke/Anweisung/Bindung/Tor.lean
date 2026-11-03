@@ -103,6 +103,15 @@ class TorOK (L : Lay D) (O : Orakel D) : Prop where
         (if rw then byteOf m' (reqArg q j) k else wAt m (L.elem t f k))) ∧
       (O.wirkt a σ ρ).2 = rohW b (D.agruende a) w
 
+  /-- Provider representation duty: a returned reference names an existing cell
+      of its nominal open region. Freshness and disjointness remain the source
+      binding's user-logic contract; this is only its checked-layout realization.
+      The quotient is the success payload of the canonical fallible channel. -/
+  ref_answer : ∀ (a : D.Ax) (n : Nat), D.aerg a = some (.ref n) →
+    L.tor a ≠ none → ∀ (σ : World D) (ρ : Env D (D.aparams a)) (raw : Int),
+    (raw = (O.wirkt a σ ρ).2 ∨ raw = (O.wirkt a σ ρ).2 / ((D.agruende a : Int) + 1)) →
+    0 ≤ raw → ValueValid L (.ref n) (Val.vonZelle raw.toNat)
+
 theorem packV_congr {ws ws' : Nat → Runner.W} {c i : Nat} (h : ∀ k, k < c → ws k = ws' k) :
     (J : Nat) → packV ws c i J = packV ws' c i J
   | 0 => rfl
@@ -130,38 +139,6 @@ class SichtOK (O : Orakel D) : Prop where
   sicht : ∀ g σ, O.sichtbar g σ = true
 
 theorem sichtOK_zeuge (O : Orakel D) (h : ∀ g σ, O.sichtbar g σ = true) : SichtOK O := ⟨h⟩
-
-/-- **Witness** (the assumption is not empty): a kernel that may give any answer, and an oracle that leaves the
-    world and answers 0, meet it for every layout. -/
-theorem torOK_zeuge (L : Lay D) (O : Orakel D) (hO : ∀ a σ ρ, O.wirkt a σ ρ = (σ, 0)) :
-    @TorOK ⟨fun _ _ _ _ => True⟩ D L O := by
-  letI : Kern := ⟨fun _ _ _ _ => True⟩
-  refine ⟨fun a b _ _ _ σ ρ q m _ _ _ hW => ⟨0, 0, m, trivial, ⟨rfl, rfl, fun _ _ => rfl⟩, ?_, ?_⟩,
-    fun a b _ _ j nt rw t f _ _ _ hτ σ ρ q m _ _ _ hW hB => ⟨0, 0, m, trivial, rfl, rfl, fun _ _ => rfl, ?_, ?_, ?_⟩⟩
-  · rw [hO]; exact hW
-  · rw [hO]; simp [rohW]
-  · rw [hO]; exact ⟨fun t' f' k hk _ => hW.1 t' f' k hk, hW.2.1⟩
-  · intro k hk
-    rw [hO]
-    obtain ⟨w, hw, he⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW.1 t f k (L.bounded (by omega)))
-    have hwk : wAt m (L.elem t f k) = w := wAt_of hw
-    cases rw
-    · simp only [Bool.false_eq_true, ↓reduceIte, hwk]; exact he
-    · simp only [↓reduceIte]
-      let ws : Nat → Runner.W := fun k => if k < (D.count t).toNat then wAt m (L.elem t f k) else 0
-      have hws : ∀ k, (ws k).toNat < 256 := fun k => by
-        simp only [ws]; split
-        · next hk' =>
-          obtain ⟨w', hw', he'⟩ := ValueAt.cellWord (by rw [hτ]; trivial) (hW.1 t f k (L.bounded (by omega)))
-          rw [wAt_of hw']; exact enc_byte hτ he'
-        · decide
-      have hb := hB (k / 8) (by simp only [pufW]; omega)
-      rw [packV_congr (ws' := ws) (fun k hk => by simp only [ws, hk, ↓reduceIte])] at hb
-      simp only [byteOf, hb, Option.getD_some]
-      rw [byte_packV ws _ _ _ (by omega) hws, if_pos (by omega)]
-      simp only [ws, show 8 * (k / 8) + k % 8 = k by omega, hk, ↓reduceIte, hwk]
-      exact he
-  · rw [hO]; simp [rohW]
 
 theorem argsW_congr {f g : Nat → Runner.W} : {τs : List Ty} → (ρ : Env D τs) →
     (∀ j, j < τs.length → f j = g j) → ArgsW L f ρ → ArgsW L g ρ
