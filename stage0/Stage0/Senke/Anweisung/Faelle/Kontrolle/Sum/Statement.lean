@@ -1,6 +1,6 @@
 /- Connect the aggregate sum dispatcher to the actual statement simulation. -/
 module
-public import Stage0.Senke.Anweisung.Faelle.Sum.Dispatch
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Dispatch
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
