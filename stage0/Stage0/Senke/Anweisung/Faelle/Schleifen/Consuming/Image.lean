@@ -181,8 +181,11 @@ theorem Ready.eval {Λ : List (Res D)} {τ : Ty} (h : x.Ready m σ ρ)
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 4) x.K m m' ∧ ∃ v, x.read m' (x.s + 4) v ∧ Enc L τ (eval σ e σ ρ) v) := by
   have pre := h.pre i (x.s + 4) block ctx found
   have preWorld := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
-  have ok := lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
+  obtain ⟨mem, path, frame, value, read, encoded⟩ :=
+    lowE_ok (same := by intro _; rfl) σ σ (fun _ h => h) x.layout.lay
     e (x.s + 4) block top lowered topBound m (x.addr i) ρ preWorld |>.word compatible
+  have ok : Ok m (x.addr i) x.fp x.K (x.s + 4) block (Enc L τ (eval σ e σ ρ)) :=
+    ⟨mem, path, Agree.widen frame x.layout.ks, value, read, encoded⟩
   apply h.ok ok
   · have inside : i < x.fragment.length := by
       apply Classical.byContradiction
