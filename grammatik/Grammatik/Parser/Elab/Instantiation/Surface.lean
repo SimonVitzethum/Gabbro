@@ -60,7 +60,7 @@ def expression (scope : Scope) : SExpr → SurfaceFacts
   | .call name args => merge (reference scope name) (expressions scope args)
   | .fnref name => if scope.carriers.contains name then {} else globalReference name
   | .built _ args => expressions scope args
-  | .ext .instantiate _ args => merge ⟨false, []⟩ (expressions scope args)
+  | .ext .instantiate _ args | .ext .dyn _ args => merge ⟨false, []⟩ (expressions scope args)
   | .ext .all (binder :: _ :: _) args | .ext .any (binder :: _ :: _) args |
     .ext .count (binder :: _ :: _) args => quantified scope binder args
   | .ext _ _ args => expressions scope args

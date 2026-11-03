@@ -8,6 +8,12 @@ mutual
 def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SAnw
   | .bind mu n ty value => return .bind mu n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value)
+  | .bindQ mu n ty value => return .bindQ mu n (← ty.mapM (rewriteType env bindings))
+      (← rewriteExpression env bindings value)
+  | .callQ name args => do
+    match ← rewriteExpression env bindings (.call name args) with
+    | .call target values => pure (.callQ target values)
+    | _ => liftResult (.error "reason statement did not produce a direct call")
   | .bindElse n ty value reason body => return .bindElse n (← ty.mapM (rewriteType env bindings))
       (← rewriteExpression env bindings value) reason (← rewriteBody env bindings body)
   | .bindAxiomOpt n ty value => return .bindAxiomOpt n (← ty.mapM (rewriteType env bindings))
@@ -89,7 +95,7 @@ def rewriteStatements (env : Environment) (bindings : Bindings) :
   | statement :: rest => do
     let rewritten ← rewriteBody env bindings statement
     let names := match statement with
-      | .bind _ n _ _ | .bindElse n _ _ _ _ | .bindAxiomOpt n _ _ | .bindAxiomOptElse n _ _ _ _ |
+      | .bind _ n _ _ | .bindQ _ n _ _ | .bindElse n _ _ _ _ | .bindAxiomOpt n _ _ | .bindAxiomOptElse n _ _ _ _ |
         .bindLib _ n _ _ | .alloc _ n _ _ _ _ |
         .allocVon _ n _ _ | .await n _ _ _ | .swap n _ _ _ => [n]
       | _ => []

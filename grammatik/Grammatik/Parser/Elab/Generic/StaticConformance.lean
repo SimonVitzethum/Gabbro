@@ -15,13 +15,13 @@ def staticSignatureFits (unit : UProg) (actual expected : UFn) : Except String U
     These signatures are compile-time obligations; no pointer value or indirect call is emitted. -/
 def checkStaticConformance (consts : List (String × Int))
     (aliases : List (String × (Int × Int))) (unit : UProg)
-    (requirements : List (STyp × String)) : Except String Unit := do
+    (requirements : List (STyp × String)) (named : List (String × Ty) := []) : Except String Unit := do
   for (expected, target) in requirements do
     let raw ← match expected with
       | .raw raw => pure raw
       | _ => throw "static function parameter requires a function-pointer type"
     let (_, pointer) ← elabZeigerTyp consts aliases unit.tabs unit.locks unit.globs
-      unit.whys unit.sums unit.ptrKeys (unit.fns.length) 0 raw
+      unit.whys unit.sums unit.ptrKeys (unit.fns.length) 0 raw unit.spaces named
     let actual ← fnIdx unit.fns target
     staticSignatureFits unit (fnAt unit actual) pointer
 

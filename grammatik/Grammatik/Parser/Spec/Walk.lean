@@ -126,7 +126,7 @@ def Walk.signature (w : Walk) (s : FnSig) : Except String FnSig := do
 /-- New bindings affect the remainder of their block, including inferred let types. -/
 def bindings (items : List SItemTief) (locals : Locals)
     (infer : Locals → SExpr → Option STyp) : SAnw → Locals
-  | .bind _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
+  | .bind _ n t e | .bindQ _ n t e | .bindElse n t e _ _ | .bindAxiomOpt n t e | .bindAxiomOptElse n t e _ _ =>
     match t.orElse (fun _ => (infer locals e).orElse (fun _ => inferType items locals 128 e)) with
     | some ty => [(n, ty)]
     | none => []
@@ -169,6 +169,12 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .bind b n t e =>
       let t ← t.mapM ty
       return .bind b n t (← { w with expected := t }.expr locals f e)
+    | .bindQ b n t e =>
+      let t ← t.mapM ty
+      return .bindQ b n t (← { w with expected := t }.expr locals f e)
+    | .callQ name args =>
+      let .call name args ← ex (.call name args) | throw "spec.statement.call"
+      return .callQ name args
     | .bindElse n t e why body =>
       let t ← t.mapM ty
       return .bindElse n t (← { w with expected := t }.expr locals f e) why (← st body)

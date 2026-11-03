@@ -73,7 +73,7 @@ theorem canonical_source : CanonicalSourceProgram output.compiled :=
 
 theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
 
-/-- Isolate `?` from the earlier adapter refusal, retaining a live reason return and handler. -/
+/-- Exercise `?` independently of adapter expansion, retaining a live reason return and handler. -/
 def propagationText : String :=
   "module reason_propagation_probe { reason R { Empty = 1 \"empty\" exhaustive } impl fn original(x : u8) -> u8 or R { if x == 0 { return R::Empty; } return x; } impl fn propagate(x : u8) -> u8 or R { let y = original(x) ?; return y; } impl fn main() -> u8 { let answer = propagate(0) else (e) { match e { Empty => { return 23; } } return 0; } return answer; } }"
 

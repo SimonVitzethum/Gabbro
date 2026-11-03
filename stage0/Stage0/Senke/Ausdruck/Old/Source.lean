@@ -124,8 +124,8 @@ def collect : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except Str
 
 def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
     Except String (Programm (declOf u)) := do
-  let (expanded, _) ← expandU items
-  let es ← collect u.fns.length (EnsTy u) (atFunction expanded u P)
+  let expanded ← expandU items
+  let es ← collect u.fns.length (EnsTy u) (atFunction expanded.1 u P)
   pure {P with ensures := es}
 
 /-- Entry-postcondition restoration preserves the exact invariant family. -/

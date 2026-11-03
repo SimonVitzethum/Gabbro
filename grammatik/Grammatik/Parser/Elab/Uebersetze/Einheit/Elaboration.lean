@@ -156,7 +156,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     let u : UProg :=
       { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records }
     let u := uMitBoden u
-    match Generic.checkStaticConformance consts alias u staticRequirements with
+    match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types with
     | .error error => .error error
     | .ok () => .ok u
 

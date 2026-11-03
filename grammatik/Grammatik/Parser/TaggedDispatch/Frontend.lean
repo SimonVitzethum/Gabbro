@@ -45,8 +45,8 @@ def exportDeclarationUnitDetailed (items : List SItemTief) :
   let items ← SourceFolds.prepare items
   let (closed, items) ← Dyn.prepare items
   let (items, dispatchNames) ← exportTaggedUnitDetailed items
-  let implementationNames := (Spec.instances items).zipIdx.flatMap fun (instance, index) =>
-    instance.functions.filterMap fun
+  let implementationNames := (Spec.instances items).zipIdx.flatMap fun (implementation, index) =>
+    implementation.functions.filterMap fun
       | .fnT sig _ => some (Spec.implementationName index sig.name)
       | _ => none
   let output ← Spec.prepare (Dyn.finish closed items)

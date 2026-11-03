@@ -124,9 +124,9 @@ def completeOrderSource : String :=
 theorem complete_expansion_order_zeuge :
     (preparedSource completeOrderSource).map (fun items => items.filterMap fun
       | .fnT sig _ => some sig.name
-      | _ => none) = .ok ["$spec$0$copy", memberName ["A", "run"],
+      | _ => none) = .ok [memberName ["A", "run"],
         Generic.instanceName ⟨"copy_value", ["u8"]⟩,
-        Generic.literalName "fn ( x : u8 ) -> u8 effects { } costs <= 3 ops { return x ; }"] :=
+        Generic.literalName "fn ( x : u8 ) -> u8 effects { } costs <= 3 ops { return x ; }", "$spec$0$copy"] :=
       by decide +kernel
 
 theorem complete_order_spec_call_zeuge :
@@ -135,5 +135,21 @@ theorem complete_order_spec_call_zeuge :
           beqSAnw body (.block [.bind false "value" none (.call "$spec$0$copy" [.variable "x"])]
             (some (.ret (some (.variable "value")))))
       | _ => false) = .ok true := by decide +kernel
+
+/-- Generic applications and concrete spec calls must resolve before reason desugaring.
+    Both success values still pass through the generated fallible direct calls. -/
+def reasonOrderSource : String :=
+  "reason R { Empty = 1 \"empty\" exhaustive } " ++
+  "spec Copy[T] { fn copy(x: T) -> T or R effects {} costs <= 8 ops; } " ++
+  "impl Copy[u8] { fn copy(x: u8) -> u8 or R effects {} costs <= 3 ops { return x; } } " ++
+  "fn forward[T: Copy](x: T) -> T or R { let value = Copy::copy(x) ?; return value; } " ++
+  "fn entry(x: u8) -> u8 or R { let value = forward::[u8](x) ?; return value; }"
+
+theorem generic_spec_before_reason_zeuge :
+    (exportedSource reasonOrderSource).map (fun unit =>
+      (unit.fns.map (·.name), (unit.fns.flatMap (·.body)).countP
+        (fun | .bindElse .. => true | _ => false))) =
+      .ok (["entry", Generic.instanceName ⟨"forward", ["u8"]⟩, "$spec$0$copy"], 2) := by
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.Modules

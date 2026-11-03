@@ -80,7 +80,7 @@ theorem nested_generic_form_refused_zeuge :
       (.block [.cond .tru (.block [] (some (.ret (some
         (.ext .instantiate ["f", "fn() effects {} costs <= 1 ops { return; }"] []))))) [] none]
         none)] =
-      .error "generic-output: residual syntax, name collision or unresolved direct global reference" := rfl
+      .error "dyn.output" := rfl
 
 /-- Unchanged direct calls are checked too, recursively inside argument expressions. -/
 theorem nested_dangling_refused_zeuge :

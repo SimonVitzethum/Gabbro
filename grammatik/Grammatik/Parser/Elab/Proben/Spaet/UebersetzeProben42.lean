@@ -1,5 +1,5 @@
 /-
-  File:      Grammatik/Parser/Elab/Proben/Formen/UebersetzeProben42.lean
+  File:      Grammatik/Parser/Elab/Proben/Spaet/UebersetzeProben42.lean
   Subject:   Track P: Phase-1 desugaring (`ABSTRACTION-SYNTAX-PLAN.md` §4, steps 1a/1b).
 
   * `?` elaborates exactly like the explicit `else` form: `entzuckere` maps the
@@ -113,14 +113,14 @@ theorem frage_falsch_kanal_stufe :
 
 /-- The adapter source: `g` takes over `c`, binds `s` in the prelude, adds `k`. -/
 def adaptQuelle : String :=
-  "module m { impl fn f(c : u32) -> u32 { return c; } impl fn g(.., -s, k : u32) -> u32 from f => a [ let s = 2; ] { return a; } }"
+  "module m { impl fn f(c : u32, s : u32) -> u32 { return c; } impl fn g(.., -s, k : u32) -> u32 from f => a [ let s = 2; ] { return a; } }"
 
 theorem adapt_ok_stufe : stufe adaptQuelle = "OK" := by
   decide +kernel
 
 /-- The short body returns the source answer as it is. -/
 def adaptKurz : String :=
-  "module m { impl fn f(c : u32) -> u32 { return c; } impl fn g(.., -s) -> u32 from f [ let s = 2; ]; }"
+  "module m { impl fn f(c : u32, s : u32) -> u32 { return c; } impl fn g(.., -s) -> u32 from f [ let s = 2; ]; }"
 
 theorem adapt_kurz_stufe : stufe adaptKurz = "OK" := by
   decide +kernel

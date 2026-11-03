@@ -43,7 +43,7 @@ set_option maxHeartbeats 2000000
 /-- Both closed cases have distinct payload types and implementations. Main dispatches
     both values and makes its numeric answer depend on both Boolean results. -/
 def text : String :=
-  "module tagged_dispatch_probe { spec Select[T] { fn choose(value : T) -> bool effects {}; } impl Select[u8] { fn choose(value : u8) -> bool effects {} { return value == 7; } } impl Select[bool] { fn choose(value : bool) -> bool effects {} { return value; } } tagged type Choice = { Number(u8), Truth(bool) } by Select; impl fn main() -> u8 { let left : Choice = Number(7); let a = Select::choose(left); let right : Choice = Truth(false); let b = Select::choose(right); if a && !b { return 23; } return 0; } }"
+  "module tagged_dispatch_probe { spec Select[T] { fn choose(value : T) -> bool effects {} costs <= 8 ops; } impl Select[u8] { fn choose(value : u8) -> bool effects {} costs <= 3 ops { return value == 7; } } impl Select[bool] { fn choose(value : bool) -> bool effects {} costs <= 3 ops { return value; } } tagged type Choice = { Number(u8), Truth(bool) } by Select; impl fn main() -> u8 { let left : Choice = Number(7); let a = Select::choose(left); let right : Choice = Truth(false); let b = Select::choose(right); if a && !b { return 23; } return 0; } }"
 
 /-- The actual source frontend retains the parsed closed-dispatch declarations. -/
 theorem source_present : (Frontend.source text).toOption.isSome = true := by
