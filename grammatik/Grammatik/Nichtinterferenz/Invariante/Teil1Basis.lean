@@ -143,7 +143,9 @@ theorem KErgOk.dite {c : Prop} [Decidable c] {x : c → KErg D} {y : ¬c → KEr
 theorem kPop_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn) (rho : Env D (D.params f)) (σ : World D)
     (v : ErgVal D (vertragVon D f).erg) : KErgOk P S Ax (kPop st f rho σ v) := by
   cases st with
-  | nil => exact KErgOk.lokal hst f rho rho True.intro _ _
+  | nil =>
+      exact KErgOk.lokal (r := .zurueckgekehrt (l := false) ⟨.inl v, σ.ohneSnapshot⟩)
+        hst f rho rho True.intro _ _
   | cons c rst =>
       have hc := hst c List.mem_cons_self
       have hrst : StapelNR S Ax rst := fun F hF => hst F (List.mem_cons_of_mem _ hF)
@@ -184,7 +186,9 @@ theorem kPopGrund_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st) (f : D.Fn)
     (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
     KErgOk P S Ax (kPopGrund st f rho spur sp r) := by
   cases st with
-  | nil => exact KErgOk.lokal hst f rho rho True.intro _ _
+  | nil =>
+      exact KErgOk.lokal (r := .zurueckgekehrt (l := false) ⟨.inr r, (sp.welt spur).ohneSnapshot⟩)
+        hst f rho rho True.intro _ _
   | cons c rst =>
       have hc := hst c List.mem_cons_self
       have hrst : StapelNR S Ax rst := fun F hF => hst F (List.mem_cons_of_mem _ hF)
@@ -214,7 +218,9 @@ theorem kScoped_ok {st : List (KRahmen D)} (hst : StapelNR S Ax st)
       cases a with
       | inl v => exact kPop_ok hst f rho σ v
       | inr r => exact kPopGrund_ok hst f rho σ.spur σ.speicher r
-  | cons L remaining => exact KErgOk.lokal hst f rho ρ trivial _ _
+  | cons L remaining =>
+      exact KErgOk.lokal (r := .aufraeumen (l := l) ⟨a, σ.ohneSnapshot⟩ (L :: remaining))
+        hst f rho ρ trivial _ _
 
 
 end Ok
