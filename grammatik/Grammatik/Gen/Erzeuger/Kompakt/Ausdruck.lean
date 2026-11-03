@@ -255,12 +255,12 @@ theorem ersetzeE (P : SE D Γ Λ → Prop) (PQ : (Σ Γ' : Ctx, SE D Γ' Λ) →
       by have := gp.groesse; have := gi.groesse; simp only [groesseExpr]; omega⟩,
       by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, hp, forall_eq, hi,
   and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
-  | thruOwn p t ht f i m s ho he hg hm hL =>
+  | thruOwn p t ht f i m s ho he hg hL =>
     obtain ⟨p', hp, gp⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y p := h ⟨_, p⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, reduceCtorEq, false_and, List.not_mem_nil, or_self,
   or_false])
     obtain ⟨i', hi, gi⟩ : ∃ y, P ⟨_, y⟩ ∧ GlE y i := h ⟨_, i⟩ (by simp only [Expr.teile, List.mem_cons, Sigma.mk.injEq, reduceCtorEq, false_and, List.not_mem_nil, or_false,
   or_true])
-    exact ⟨.thruOwn p' t ht f i' m s ho he hg hm hL, ⟨fun c => by simp only [Expr.orte, List.mem_append, gp.orte c, List.mem_cons, gi.orte c],
+    exact ⟨.thruOwn p' t ht f i' m s ho he hg hL, ⟨fun c => by simp only [Expr.orte, List.mem_append, gp.orte c, List.mem_cons, gi.orte c],
       by have := gp.groesse; have := gi.groesse; simp only [groesseExpr]; omega⟩,
       by simp only [Expr.teile, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, hp, forall_eq, hi,
   and_self], by simp only [Expr.qteil, Option.mem_def, reduceCtorEq, false_implies, implies_true]⟩
