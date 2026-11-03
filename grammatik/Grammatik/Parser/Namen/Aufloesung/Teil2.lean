@@ -121,6 +121,7 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .arenaT n lo hi mx t pb =>
     .arenaT (k.eigen n) (aus k lo) (aus k hi) (ausO k mx) (typ k t) (pb.map fun (ps, e) => (ps, aus k e))
   | .assumT n a s c => .assumT (k.eigen n) a s c
+  | .accT n t m p q => .accT n t m p (q.map k.ref)
   | .whyT n cs ex => .whyT (k.eigen n) (cs.map fun (a, e, b) => (a, aus k e, b)) ex
   | .callT c => .callT (syscall k c)
   | .varT n => .varT (k.eigen n)

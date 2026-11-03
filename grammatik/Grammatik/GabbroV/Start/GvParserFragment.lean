@@ -154,7 +154,7 @@ theorem uRestFehler_kopf (hd : SItemTief) (tl : List SItemTief)
   | rcuT _ _ _ => rfl
   | groupT _ _ _ => simp only [istGegenstand, Bool.false_eq_true] at he
   | concT _ => simp only [istGegenstand, Bool.false_eq_true] at he
-  | accT _ _ _ _ => rfl
+  | accT _ _ _ _ _ => rfl
   | walkT _ => rfl
   | trustT _ _ _ _ _ _ => rfl
   | bootT _ _ _ _ => rfl
@@ -232,7 +232,7 @@ theorem uRestFehler_kopf_gut (hd : SItemTief) (tl : List SItemTief)
   | rcuT _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | groupT _ _ _ => rfl
   | concT _ => rfl
-  | accT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
+  | accT _ _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | walkT _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | trustT _ _ _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
   | bootT _ _ _ _ => simp only [istAngenommen, Bool.false_eq_true] at he
@@ -282,7 +282,7 @@ theorem uRestFehler_schritt (hd : SItemTief) (tl : List SItemTief)
   | rcuT _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | groupT _ _ _ => simp only [istAngenommen, Bool.true_eq_false] at ha
   | concT _ => simp only [istAngenommen, Bool.true_eq_false] at ha
-  | accT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
+  | accT _ _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | walkT _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | trustT _ _ _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he
   | bootT _ _ _ _ => simp only [istGegenstand, Bool.true_eq_false] at he

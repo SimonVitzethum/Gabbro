@@ -102,7 +102,7 @@ def Walk.item (w : Walk) : Nat → SItemTief → Except String SItemTief
         let n ← w.call [] ("::".intercalate p) none args
         return ([n], args)
       return .concT ps
-    | .accT n t c e => return .accT n (← ty t) c (← e.mapM ex)
+    | .accT n t c e q => return .accT n (← ty t) c (← e.mapM ex) q
     | .walkT v => return .walkT { v with stufen := ← ex v.stufen, node := ← ty v.node,
         dwhen := ← ex v.dwhen, blatt := ← ex v.blatt, invarianten := ← v.invarianten.mapM w.invariant }
     | .entryT e => return .entryT { e with vektor := ← e.vektor.mapM ex, ist := ← e.ist.mapM ex }

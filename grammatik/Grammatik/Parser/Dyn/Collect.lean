@@ -96,7 +96,7 @@ def itemUses : SItemTief → List STyp
   | .protoT s | .specT s _ | .asmT s _ => signatureUses s
   | .typeT _ _ ts _ t => (ts ++ t.toList).flatMap typeUses
   | .constT _ t v | .globT _ _ t v _ _ _ => typeUses t ++ constantUses v
-  | .atomT _ t _ _ _ | .accT _ t _ _
+  | .atomT _ t _ _ _ | .accT _ t _ _ _
   | .arenaT _ _ _ _ t _ => typeUses t
   | .formatT _ _ _ fs => fs.flatMap fun f => typeUses f.ftyp
   | .tableT _ _ _ _ _ _ ps => ps.flatMap tableUses

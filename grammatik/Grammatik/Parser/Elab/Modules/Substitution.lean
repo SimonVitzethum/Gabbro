@@ -106,8 +106,8 @@ def substituteItem (env : Environment) (bindings : Bindings) : SItemTief → Rew
   | .rcuT n places reclaim => return .rcuT n (← places.mapM (rewriteExpression env bindings))
       (← reclaim.mapM (rewriteExpression env bindings))
   | .groupT n members ivs => return .groupT n members (← ivs.mapM (invariant env bindings))
-  | .accT n ty mode cpu => return .accT n (← rewriteType env bindings ty) mode
-      (← cpu.mapM (rewriteExpression env bindings))
+  | .accT n ty mode cpu q => return .accT n (← rewriteType env bindings ty) mode
+      (← cpu.mapM (rewriteExpression env bindings)) q
   | .concT starts => do
     let starts ← starts.mapM fun (path, args) => do
       pure (path, ← args.mapM (rewriteExpression env bindings))

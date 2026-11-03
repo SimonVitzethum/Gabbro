@@ -64,7 +64,7 @@ def uAkkuZellen (n : String) (k : Nat) : List String :=
     acquisition respects the rank order). -/
 def uAkkuItem (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (boden : Int) : SItemTief → Except String (List UGlob × List ULock)
-  | .accT n t m p =>
+  | .accT n t m p _ =>
     match uAkkuAnzahl consts p with
     | .error e => .error e
     | .ok k =>
@@ -89,7 +89,7 @@ def uAkkuDecl {D : Deklaration}
     (cells : (k : Nat) → Fin k → D.Glob)
     (locks : (k : Nat) → Fin k → D.Lock)
     (query update fold : D.Fn) : Except String (Kernzelle.AccumulatorDecl D) := do
-  let .accT name ty merge count := item
+  let .accT name ty merge count _ := item
     | .error "expected accumulator declaration"
   let k ← uAkkuAnzahl consts count
   let (lo, hi) ← uAkkuBereich alias ty

@@ -148,27 +148,32 @@ def parseTranslatorTief (f : Nat) (toks : List Token) :
                     ({ art := "", name := n, params := ps,
                        res := erg, fehler, klauseln := ks } : FnSig) b, r)
 
+/-- Behind the merge operator: `[per cpu e] [assume n] ;`. -/
 def parseAkkumRest (f : Nat) (toks : List Token) :
-    Except String (Option SExpr × List Token) :=
+    Except String (Option SExpr × Option String × List Token) :=
   match f with
   | 0 => .error "out of fuel"
-  | f + 1 => match toks with
-    | .wort s :: rest =>
-      if strEq s "per" then match nimmWort "cpu" rest with
-        | .error e => .error e
-        | .ok r1 => match parseOr f r1 with
+  | f + 1 => do
+    let (c, r1) ← (match toks with
+      | .wort s :: rest =>
+        if strEq s "per" then match nimmWort "cpu" rest with
           | .error e => .error e
-          | .ok (e, r2) => match fordereZeichen ";" r2 with
+          | .ok r1 => match parseOr f r1 with
             | .error e => .error e
-            | .ok r => .ok (some e, r)
-      else match fordereZeichen ";" toks with
-        | .error e => .error e
-        | .ok r => .ok (none, r)
-    | _ => match fordereZeichen ";" toks with
-      | .error e => .error e
-      | .ok r => .ok (none, r)
+            | .ok (e, r2) => .ok (some e, r2)
+        else .ok (none, toks)
+      | _ => .ok (none, toks))
+    let (q, r2) ← (match r1 with
+      | .wort s :: rest =>
+        if strEq s "assume" then match nimmName rest with
+          | .error e => .error e
+          | .ok (n, r) => .ok (some n, r)
+        else .ok (none, r1)
+      | _ => .ok (none, r1))
+    let r ← fordereZeichen ";" r2
+    pure (c, q, r)
 
-/-- `accumulates n : T merge op [per cpu e] ;`. -/
+/-- `accumulates n : T merge op [per cpu e] [assume q] ;`. -/
 def parseAkkumTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
@@ -189,7 +194,7 @@ def parseAkkumTief (f : Nat) (toks : List Token) :
                     strEq m "or" || strEq m "and" then
                   match parseAkkumRest f r6 with
                   | .error e => .error e
-                  | .ok (p, r) => .ok (.accT n t m p, r)
+                  | .ok (p, q, r) => .ok (.accT n t m p q, r)
                 else .error "merge expected"
               | _ => .error "merge expected"
 
