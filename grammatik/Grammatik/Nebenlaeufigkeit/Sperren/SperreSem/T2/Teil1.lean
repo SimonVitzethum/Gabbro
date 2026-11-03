@@ -68,6 +68,10 @@ theorem Stmt.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .shift .., _, _ => rfl
   | .call .., _, _ => rfl
   | .callInd .., _, _ => rfl
+  | .callIndElse p args he hp hr err, σ, ρ => by
+      simp only [execStmtH, execStmt, indSonst, Endblock.execH_leer err] <;> rfl
+  | .axiomCallElse _ a args _ _ _ _ _ err, σ, ρ => by
+      simp only [execStmtH, execStmt, Endblock.execH_leer err] <;> rfl
   | .axiomCall .., _, _ => rfl
   | .regWrite .., _, _ => rfl
   | .transition .., _, _ => rfl
