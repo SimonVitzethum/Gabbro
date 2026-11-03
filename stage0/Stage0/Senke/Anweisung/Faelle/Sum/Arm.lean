@@ -39,9 +39,9 @@ theorem PayloadAt.agree_low {m m' : Runner.Mem} {fp : Runner.W} {s lo K : Nat}
     {c : Option Ty} {v : Nutzlast D.Fn D.passt c}
     (value : PayloadAt L m fp s c v) (changed : Agree fp lo K m m')
     (room : fp.toNat + 8 * K ≤ 2 ^ 64) (below : s + payloadWords c ≤ lo)
-    (inside : s + payloadWords c ≤ K) : PayloadAt L m' fp s c v :=
+    (inside : lo ≤ K) : PayloadAt L m' fp s c v :=
   ⟨value.1, value.2.agree_low changed room (by simpa only [payloadEncoding_length] using below)
-    (by simpa only [payloadEncoding_length] using inside)⟩
+    inside⟩
 
 section
 variable {O : Orakel D} {passes : Nat}
