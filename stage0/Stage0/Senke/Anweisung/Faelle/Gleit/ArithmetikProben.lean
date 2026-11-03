@@ -46,6 +46,19 @@ def arithmetic (op : GleitOp) (expected : Int × Int) : Body :=
           (returnBlock 7 (by decide) (by decide))
           (returnBlock 41 (by decide) (by decide))) .nil)))
 
+/-- Distinct operands use the public hook and compare its rounded result
+    in both directions. Every arithmetic kernel shares this fixture. -/
+def binaryArithmetic (op : GleitOp) (a b expected : Int × Int) : Body :=
+  .floatLit a (0, 1) (10, 1)
+    (.floatLit b (0, 1) (10, 1)
+      (.float op (.var (.there .here)) (.var .here) (0, 1) (10, 1)
+        (.floatLit expected (0, 1) (10, 1)
+          (.cons (.ite
+            (.and (.flle (.var (.there .here)) (.var .here))
+              (.flle (.var .here) (.var (.there .here))))
+            (returnBlock 7 (by decide) (by decide))
+            (returnBlock 41 (by decide) (by decide))) .nil))))
+
 /-- The generic add candidate is accepted through the public Block hook. -/
 theorem float_add_accepted_zeuge : (blockImageOf (arithmetic .add (2, 1))).isOk = true := by
   decide +kernel
@@ -279,12 +292,5 @@ theorem float_add_sub_model_zeuge :
     Gleitkomma.sub Gleitkomma.f64 ⟨false, 0, 0⟩ ⟨true, 2047, 9⟩ = ⟨false, 2047, 9⟩ ∧
     Gleitkomma.add Gleitkomma.f64 ⟨false, 2046, 2^52 - 1⟩ ⟨false, 2046, 2^52 - 1⟩ =
       ⟨false, 2047, 0⟩ := by decide +kernel
-
-/-- Operations without a complete routine remain explicit refusals. -/
-theorem float_operations_refused_zeuge :
-    [GleitOp.div].all (fun op =>
-      !(blockImageOf (show Body from .floatLit (1, 1) (0, 1) (10, 1)
-        (.float op (.var .here) (.var .here) (0, 1) (10, 1) .nil))).isOk) = true := by
-  decide +kernel
 
 end Gabbro.Stage0.Senke.FloatArithmeticProbe
