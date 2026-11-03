@@ -51,6 +51,10 @@ theorem fadenScopesG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
     (hsc : ScopesOkProg P) {M M' : RufMaschineG D} {t : Faden}
     (hs : RufSchrittG P O pa M t M') (h : FadenScopesG (M.faeden t)) :
     FadenScopesG (M'.faeden t) := by
+  unfold ScopesOkProg at hsc
+  have hbody (f : D.Fn) :
+      (P.rumpf f).scopesOk (vertragVon D f).haelt (vertragVon D f).boden = true :=
+    hsc f
   obtain ⟨hk, hst⟩ := h
   cases hs with
   | g1 hs =>
