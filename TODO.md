@@ -36,7 +36,9 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
     - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
       as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
-      borrow/return witness and the no-mark/forged-loan refusals (c12-own, lead to build). Open: byte/raw/entry
+      borrow/return witness and the no-mark/forged-loan refusals (c12-own, lead to build). The Stage-0 Senke
+      side (`lowE`/`lowS` arms reusing the plain slot paths, generic `lowE_ok`/`lowS_ok` arms, `OwnProben`
+      read-then-write image witness) is added on `s0-c12own`, unbuilt; lead to check. Open: byte/raw/entry
       targets (still refused: no live grant/history interface yet).
     - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
       carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent

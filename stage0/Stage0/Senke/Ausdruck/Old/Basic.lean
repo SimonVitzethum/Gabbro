@@ -52,6 +52,7 @@ theorem entryIndex_ok {Γ : Ctx} {Λ : List (Res D)} (σ0 σ : World D) (ρ : En
   | _, e@(.glob ..), _, h
   | _, e@(.slot ..), _, h
   | _, e@(.thru ..), _, h
+  | _, e@(.thruOwn ..), _, h
   | _, e@(.ptrOf ..), _, h
   | _, e@(.fnref ..), _, h
   | _, e@(.oldG ..), _, h
@@ -166,6 +167,7 @@ theorem lowEnsAt_top (layout : FrameLayout) (start : Nat) {Γ : Ctx} {Λ : List 
   | _, e@(.glob ..), d, c, top, h
   | _, e@(.slot ..), d, c, top, h
   | _, e@(.thru ..), d, c, top, h
+  | _, e@(.thruOwn ..), d, c, top, h
   | _, e@(.ptrOf ..), d, c, top, h
   | _, e@(.fnref ..), d, c, top, h
   | _, e@(.div ..), d, c, top, h

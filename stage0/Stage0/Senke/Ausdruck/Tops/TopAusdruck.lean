@@ -265,7 +265,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       simp only [Option.some.injEq, Prod.mk.injEq] at h; omega
     · cases h
   | _, _, .slotRef i _ _ _ _ _, d, c, top, h
-  | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h => by
+  | _, _, .slot _ _ i _, d, c, top, h | _, _, .thru _ _ _ _ i _, d, c, top, h | _, _, .thruOwn _ _ _ _ i _ _ _ _ _ _, d, c, top, h => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨ci', _, hs⟩ := h
     simp only [slotValueC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hs

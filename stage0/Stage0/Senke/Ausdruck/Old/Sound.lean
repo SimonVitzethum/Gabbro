@@ -246,6 +246,7 @@ theorem lowEnsAt_ok (layout : FrameLayout) (start : Nat)
   | _, e@(.glob ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.slot ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.thru ..), d, code, top, lower, fits, saved, before, m, pc, pre
+  | _, e@(.thruOwn ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.ptrOf ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.fnref ..), d, code, top, lower, fits, saved, before, m, pc, pre
   | _, e@(.div ..), d, code, top, lower, fits, saved, before, m, pc, pre

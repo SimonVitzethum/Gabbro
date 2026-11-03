@@ -76,6 +76,10 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
     let ci' ← lowE (reserved := reserved) L i (frei Γ reserved + valueWords (D.typ t f))
     slotStoreC L t f (frei Γ reserved) ce ci'
+  | _, Γ, _, _, .assignThruOwn _ t _ f i e _ _ _ _ _ _ _, reserved => do
+    let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
+    let ci' ← lowE (reserved := reserved) L i (frei Γ reserved + valueWords (D.typ t f))
+    slotStoreC L t f (frei Γ reserved) ce ci'
   | _, Γ, Λ, _, .putBytes (lo := lo) (hi := hi) t f _ n i hlo hhi e _ _, reserved =>
     if n ≤ 8 then do
       let ce ← lowE (reserved := reserved) L e ((frei Γ reserved))
