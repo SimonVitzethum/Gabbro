@@ -2,7 +2,7 @@
    (`GutAusgang`/`GutEnd`), their pull-through, and the held-entry facts. -/
 module
 
-public import Grammatik.Kern.Syntax.Satz.T1
+public import Grammatik.Kern.Syntax.Satz.T1Frame
 public import Grammatik.Kern.Syntax.Satz.T2.Teil1c
 
 @[expose] public section
