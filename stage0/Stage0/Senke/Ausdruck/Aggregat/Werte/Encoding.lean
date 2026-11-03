@@ -14,9 +14,9 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
 
+mutual
 /-- The unique canonical word sequence of a model value. Reference validity, floating
     well-formedness and world permissions remain separate proof obligations. -/
-mutual
 def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .int lo hi, v => integerEncoding (integerWords lo hi) v.n
   | .bool, v => [if wahr? (D := D) v then 1 else 0]

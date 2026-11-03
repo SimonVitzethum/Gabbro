@@ -20,7 +20,7 @@ theorem bitlen_unique (n b : Nat) (hlo : 2 ^ (b - 1) ≤ n) (hhi : n < 2 ^ b)
     (hn : 0 < n) : bitlen n = b := by
   have hob := bitlen_obere n
   have hun := bitlen_untere n (by omega : n ≠ 0)
-  by_contra hne
+  refine Classical.byContradiction fun hne => ?_
   rcases lt_or_gt_of_ne hne with hlt | hgt
   · have h1 := Nat.pow_le_pow_right (show 0 < 2 by decide) (show bitlen n ≤ b - 1 by omega)
     omega
@@ -95,7 +95,7 @@ theorem findeExp_scaled (A t j : Nat) (hA : 0 < A) :
   by_cases hE : 0 ≤ (bitlen A : Int) + (t : Int) - 1 - (j : Int)
   · rw [if_pos hE]
     have hbj : j + 1 ≤ bitlen A + t := by
-      by_contra hcon
+      refine Classical.byContradiction fun hcon => ?_
       push_neg at hcon
       have : (bitlen A : Int) + (t : Int) - 1 - (j : Int) < 0 := by omega
       omega
@@ -112,7 +112,7 @@ theorem findeExp_scaled (A t j : Nat) (hA : 0 < A) :
     rw [if_pos hcheck]
   · rw [if_neg hE]
     have hbj : bitlen A + t ≤ j := by
-      by_contra hcon
+      refine Classical.byContradiction fun hcon => ?_
       push_neg at hcon
       have : 0 ≤ (bitlen A : Int) + (t : Int) - 1 - (j : Int) := by omega
       omega

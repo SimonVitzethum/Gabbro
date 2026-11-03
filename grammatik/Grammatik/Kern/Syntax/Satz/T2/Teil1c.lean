@@ -177,6 +177,12 @@ theorem gutRetV_retWhyScoped {W G} {haelt : List D.Lock} {boden : Option Int}
   have hR := gutRet_retWhyScoped (W := W) (G := G) (σ := σ) Ls
   exact ⟨hR.1, Ls, haelt_gibt_foldl σ Ls, hsp, hrk, hR.2.2.1, hR.2.2.2⟩
 
+/-- Erasing never brings a lock back. -/
+theorem nicht_mem_foldl_erase (L : D.Lock) :
+    ∀ (Ms h : List D.Lock), L ∉ h → L ∉ Ms.foldl (fun h M => h.erase M) h
+  | [], _, hn => hn
+  | _ :: Ns, _, hn => nicht_mem_foldl_erase L Ns _ (fun hm => hn (List.mem_of_mem_erase hm))
+
 /-- Erasing through a taken lock then releasing it is erasing without it,
     when the lock was free before (`locks` premise). -/
 theorem erase_nimmt_gibt (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) (hn : L ∉ h) :
@@ -191,14 +197,7 @@ theorem erase_nimmt_gibt (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) (hn :
         simp only [List.erase_cons_head]
         have h_erase : h.erase L = h := List.erase_of_not_mem hn
         rw [h_erase]
-        have h_mem : ∀ (h : List D.Lock), L ∉ h →
-            L ∉ Ms.foldl (fun h M => h.erase M) h := by
-          intro h hn
-          induction Ms generalizing h with
-          | nil => exact hn
-          | cons N Ns ih2 =>
-              simp only [List.foldl_cons]
-              exact ih2 _ (fun hm => hn (List.mem_of_mem_erase hm))
+        have h_mem := nicht_mem_foldl_erase L Ms
         exact List.erase_of_not_mem (h_mem h hn)
       · simp only [List.erase_cons_tail (show ¬(L == M) by
           simpa only [beq_iff_eq] using Ne.symm heq)]
