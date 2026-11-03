@@ -88,6 +88,17 @@ def grundSig {f : D.Fn} {n : Nat} (hf : D.passt f n = true) (r : Fin (D.gruende 
     Fin (D.sigNr n).gruende := by
   unfold Deklaration.gruende at r; rw [(D.passt_sig hf).gruende] at r; exact r
 
+/-- The source dispatch and the call machine's pop rule transport the same reason. -/
+theorem grundSig_eq_cast {f : D.Fn} {n : Nat} (hf : D.passt f n = true)
+    (hn : D.gruende f = (D.sigNr n).gruende) (r : Fin (D.gruende f)) :
+    grundSig hf r = Fin.cast hn r := by
+  have hcast : ∀ {a b : Nat} (h : a = b) (v : Fin a),
+      cast (congrArg Fin h) v = Fin.cast h v := by
+    intro a b h v
+    cases h
+    rfl
+  exact hcast hn r
+
 /-- **One indirect call through a pointer, both outcomes** («C07»): evaluate the pointer once,
     call the actual conforming function with transported arguments, and continue with the
     transported value (`ok`) or the channel reason (`why`). The sequential, lock-havoc and

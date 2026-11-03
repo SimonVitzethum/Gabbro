@@ -143,7 +143,7 @@ theorem akteurS_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
   obtain ⟨hks, hss, _⟩ := kopfS_okS hF.1 hhead
   simp only [Block.gOk, Bool.and_eq_true] at hks
   have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks.1.1
-  have hpa : ∀ o ∈ p.orte ++ args.orte, o ∈ stabilS P S lok (M.faeden u).kopf.f Λ := by
+  have hpa : p.orte ++ args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
     intro o ho
     apply hss
     simp only [blockOrteP, List.mem_append] at ho ⊢
@@ -151,10 +151,11 @@ theorem akteurS_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
   have hev : ∀ σ : World D, GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hpa _ h') h)
+    rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p
+      (fun _ h' => hpa (List.mem_append_left _ h')) h)
       (hgσ.lese Λ Λ _ _) ρ]
     exact hv
-  have hargs : ∀ o ∈ args.orte, o ∈ stabilS P S lok (M.faeden u).kopf.f Λ := by
+  have hargs : args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
     intro o ho
     apply hss
     simp only [blockOrteP, List.mem_append] at ho ⊢
@@ -165,7 +166,7 @@ theorem akteurS_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
       rw [evalArgs_gleichAuf args
-        (fun _ h => args_stabil (hFS _) args (fun _ h' => hargs _ h') h) (hgσ.lese Λ Λ _ _) ρ])
+        (fun _ h => args_stabil (hFS _) args (fun _ h' => hargs h') h) (hgσ.lese Λ Λ _ _) ρ])
     ρ (.wartetSonst (D.sigNr n).gruende err rest k) (fun L => held_nachSig_iff _ _ L)
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := hok
@@ -181,11 +182,11 @@ theorem akteurS_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
         tauto)
     (fun O' U R σ e hgσ h => by
       rw [semH_dann]
-      simp only [execBlockH, hev σ hgσ, h]
+      simp only [execBlockH, indSonst, hev σ hgσ, h]
       exact weiterH_logik S O' U passes R _ e)
     (fun O' U R σ hgσ => by
       rw [semH_dann]
-      simp only [execBlockH, hev σ hgσ]
+      simp only [execBlockH, indSonst, hev σ hgσ]
       cases R g (σ.lese Λ (p.orte ++ args.orte))
           (umsig hg (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args
             (σ.lese Λ (p.orte ++ args.orte)) ρ)) with
@@ -200,6 +201,7 @@ theorem akteurS_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
           intro _ _ _ _ _ _ _ _ _ _ hc hn
           cases hc
           rw [semH_alsBlock_schrumpf]
+          rw [grundSig_eq_cast hg hn r]
           exact ZErgG.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
@@ -245,7 +247,7 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                               (Γ : Ctx) ×
@@ -279,7 +281,7 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                               (Γ : Ctx) ×
@@ -314,7 +316,7 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
                         (⟨l,
                             (⟨Γ,
                                 (⟨nachSig D (D.sigNr n) Λ,
-                                  (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil
+                                  (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
                                     (GRest.dann rest k))⟩ :
                                   (Λ : List (Res D)) ×
                                     Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
@@ -343,7 +345,7 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
   obtain ⟨hks, hss, _⟩ := kopfS_okS hF.1 hhead
   simp only [Block.gOk, Stmt.gOk, Bool.and_eq_true] at hks
   have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks.1.1
-  have hpa : ∀ o ∈ p.orte ++ args.orte, o ∈ stabilS P S lok (M.faeden u).kopf.f Λ := by
+  have hpa : p.orte ++ args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
     intro o ho
     apply hss
     simp only [blockOrteP, stmtOrteP, List.mem_append] at ho ⊢
@@ -351,10 +353,11 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
   have hev : ∀ σ : World D, GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p (fun _ h' => hpa _ h') h)
+    rw [eval_gleichAuf p (fun _ h => expr_stabil (hFS _) p
+      (fun _ h' => hpa (List.mem_append_left _ h')) h)
       (hgσ.lese Λ Λ _ _) ρ]
     exact hv
-  have hargs : ∀ o ∈ args.orte, o ∈ stabilS P S lok (M.faeden u).kopf.f Λ := by
+  have hargs : args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
     intro o ho
     apply hss
     simp only [blockOrteP, stmtOrteP, List.mem_append] at ho ⊢
@@ -365,23 +368,21 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
       rw [evalArgs_gleichAuf args
-        (fun _ h => args_stabil (hFS _) args (fun _ h' => hargs _ h') h) (hgσ.lese Λ Λ _ _) ρ])
-    ρ (.wartetSonst (D.sigNr n).gruende err .nil (.dann rest k)) (fun L => held_nachSig_iff _ _ L)
+        (fun _ h => args_stabil (hFS _) args (fun _ h' => hargs h') h) (hgσ.lese Λ Λ _ _) ρ])
+    ρ (.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k)) (fun L => held_nachSig_iff _ _ L)
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := hok
-      simp only [Block.gOk, Bool.and_eq_true] at hks'
+      simp only [Block.gOk, Stmt.gOk, Bool.and_eq_true] at hks'
       refine ⟨hks'.1.2, ?_, by simp only [Block.gOk], ?_, ⟨hks'.2, ?_, hk'⟩⟩
       · intro x hx
         apply hss'
-        simp only [blockOrteP, List.mem_append] at hx ⊢
+        simp only [blockOrteP, stmtOrteP, List.mem_append] at hx ⊢
         tauto
       · intro x hx
-        apply hss'
-        simp only [blockOrteP, List.mem_append] at hx ⊢
-        tauto
+        cases hx
       · intro x hx
         apply hss'
-        simp only [blockOrteP, List.mem_append] at hx ⊢
+        simp only [blockOrteP, stmtOrteP, List.mem_append] at hx ⊢
         tauto)
     (fun O' U R σ e hgσ h => by
       rw [semH_dann]
@@ -398,14 +399,14 @@ theorem akteurS_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
             fun _ _ _ _ _ _ _ _ hc he' => ?_⟩
           rcases hc with hc | ⟨_, _, hc⟩
           · cases hc
-          · subst hc
+          · cases hc
             simp only [semH_dann, execBlockH]
             exact ZErgG.folgt_refl _
       | why σa r =>
           intro _ _ _ _ _ _ _ _ _ _ hc hn
-          subst hc
-          simp only [semH_dann, execBlockH, execStmtH, indSonst, hev σ hgσ]
+          cases hc
           rw [semH_alsBlock_schrumpf]
+          rw [grundSig_eq_cast hg hn r]
           exact ZErgG.folgt_refl _
       | logik e => trivial
       | hardware e => trivial)
