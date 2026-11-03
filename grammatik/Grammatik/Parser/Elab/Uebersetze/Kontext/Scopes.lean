@@ -328,7 +328,16 @@ structure UProg where
       (`ownerNr`/`eigner` over a nontrivial `Marke`) waits for the C09 signature
       flow. -/
   eigner : List String := []
+  /-- Declared linear mark orders; an absent or empty order has one stage. -/
+  markOrders : List (String × List String) := []
   deriving DecidableEq, Repr
 
+/-- The declared labels of one nominal mark, in source order. -/
+def markStages (u : UProg) (m : Fin u.marken.length) : List String :=
+  ((u.markOrders.find? (fun p => strEq p.1 (u.marken.get m))).map Prod.snd).getD []
+
+/-- Unstaged marks (including generated Duties) have one stage. -/
+def markStageCount (u : UProg) (m : Fin u.marken.length) : Nat :=
+  max 1 (markStages u m).length
 
 end Gabbro.Grammatik.Parser.Uebersetze
