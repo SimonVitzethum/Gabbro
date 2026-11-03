@@ -1,7 +1,6 @@
 /- Typed integer expressions provide the soft-float normalization inputs. -/
 module
-public import Stage0.Senke.Ausdruck.Gleit.Wide.Model
-public import Stage0.Senke.Ausdruck.Satz
+public import Stage0.Senke.Ausdruck.Gleit.Wide.Search
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke.WideFloat
@@ -33,9 +32,8 @@ def magnitude {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
     (.eng e 0 (upper w) (zero _ (by have := upper_one w; omega)))
 
 def logarithm {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
-    Expr D Γ Λ (.int 0 (w : Int)) :=
-  .intBuiltin1 (.log2Floor w)
-    (.eng (magnitude w e) 1 (upper w) (.widen (by omega) (upper_one w) (.lit 1)))
+    Expr D Γ Λ (.int 0 (w : Int)) := by
+  simpa only [Nat.zero_add] using position (magnitude w e) 0 w
 
 def shift {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
     Expr D Γ Λ (.int 0 (w : Int)) :=
@@ -80,7 +78,8 @@ theorem magnitude_bound {lo hi : Int} (x : Zahl lo hi) :
   have power := Nat.pow_le_pow_right (by decide : 0 < 2)
     (show b.log2 + 1 ≤ width lo hi + 1 by unfold width; omega)
   have result : x.n.natAbs < 2 ^ (width lo hi + 1) := by omega
-  have cast : (x.n.natAbs : Int) < (2 : Int) ^ (width lo hi + 1) := by exact_mod_cast result
+  have cast : (x.n.natAbs : Int) < (2 : Int) ^ (width lo hi + 1) := by
+    simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using Int.ofNat_lt.mpr result
   unfold upper
   omega
 
@@ -100,10 +99,13 @@ theorem magnitude_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper
 theorem logarithm_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (positive : 0 < (eval σ₀ e σ ρ).n.natAbs) :
     (eval σ₀ (logarithm w e) σ ρ).n = ((eval σ₀ e σ ρ).n.natAbs.log2 : Int) := by
-  have magnitude := magnitude_value bound
-  have inside : 1 ≤ (eval σ₀ (magnitude w e) σ ρ).n ∧
-      (eval σ₀ (magnitude w e) σ ρ).n ≤ upper w := by rw [magnitude]; omega
-  simp [logarithm, eval, inside, evalIntBuiltin1, Zahl.log2_floor, zahlNat, magnitude]
+  have high : (eval σ₀ e σ ρ).n.natAbs < 2 ^ (w + 1) := by
+    have cast : ((eval σ₀ e σ ρ).n.natAbs : Int) < (2 : Int) ^ (w + 1) := by
+      unfold upper at bound
+      omega
+    apply Int.ofNat_lt.mp
+    simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using cast
+  exact position_root (magnitude w e) σ₀ σ ρ _ w (magnitude_value bound) positive high
 
 theorem shift_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (positive : 0 < (eval σ₀ e σ ρ).n.natAbs) :
