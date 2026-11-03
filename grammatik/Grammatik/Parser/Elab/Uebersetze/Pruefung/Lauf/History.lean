@@ -1,5 +1,6 @@
 module
 
+public import Mathlib.Data.Nat.Pairing
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Herkunft
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Recording
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil1
@@ -123,6 +124,13 @@ theorem stampCheckReport_values (activation : Nat) (report : CheckReport) :
     (stampCheckReport activation report).boeden = report.boeden ∧
     (stampCheckReport activation report).urteil = report.urteil := by
   simp [stampCheckReport, List.map_map]
+
+/-- A repeated sample at the same source site cannot impersonate an earlier
+    producer activation, even when its measured value happens to be equal. -/
+theorem checkObservationPoint_distinct (first second point : Nat) (different : first ≠ second) :
+    Nat.pair first point ≠ Nat.pair second point := by
+  intro same
+  exact different (Nat.pair_eq_pair.mp same).1
 
 structure CheckGhostState (D : Deklaration) where
   frames : List D.Fn := []
