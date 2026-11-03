@@ -71,7 +71,7 @@ theorem sondenNamen_mem {rest : List (CheckDecl D)} {n : String}
       rw [e] at hm
       cases hm with
       | inl he =>
-        exact ⟨d, List.mem_cons.mpr (Or.inl rfl), t, by rw [← he]; exact hd⟩
+        exact ⟨d, List.mem_cons.mpr (Or.inl rfl), t, by rw [he]; exact hd⟩
       | inr hm' =>
         obtain ⟨d', hmem, t', ht⟩ := ih hm'
         exact ⟨d', List.mem_cons.mpr (Or.inr hmem), t', ht⟩
@@ -151,7 +151,7 @@ theorem sondenEindeutigB_ok {checks : List (CheckDecl D)} :
         rw [List.any_eq_false]
         intro d hd
         cases hd' : d.sonde with
-        | none => rfl
+        | none => by decide
         | some q =>
           obtain ⟨m, t'⟩ := q
           have hne : m ≠ n := by
