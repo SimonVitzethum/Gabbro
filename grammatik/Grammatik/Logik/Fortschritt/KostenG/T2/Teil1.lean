@@ -84,7 +84,7 @@ theorem eintritt_push {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMasc
       | _ => simp_all [rufUpdateG_self]
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
       cases hs <;> simp_all [Eintritt, rufUpdateG_self]
-      all_goals exact ⟨_, _, _, rfl, rfl⟩
+      all_goals first | exact ⟨_, _, _, rfl, rfl⟩ | (exfalso; omega)
 
 
 /-! ## 8. The invariant and the engine -/
@@ -181,7 +181,7 @@ theorem kinv_schritt
           | cons _ j _ p' hokj hbj hrest' =>
             obtain ⟨hokc, hpotc⟩ := hC (T j) (S j) (fun _ => false) true
             refine ⟨oben', unten, _, hst', hul, Seg.cons _ j oben' p' (hokc hokj)
-              ((rufSchrittG_scopeMove hs).pop caller rst (by rw [hst]; rfl) hst' hbj) hrest', ?_⟩
+              ((rufSchrittG_scopeMove hs).pop o (oben' ++ unten) (by rw [hst]; rfl) hst' hbj) hrest', ?_⟩
             omega
   · simp only [hgf, if_false, Nat.add_zero]
     have hEq : M'.faeden f = M.faeden f := rufSchrittG_fremd hs f (Ne.symm hgf)
