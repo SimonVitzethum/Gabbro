@@ -221,6 +221,12 @@ def beqEffectArgs : List (List SEffekt) → List (List SEffekt) → Bool
   | e :: es, f :: fs => beqSEffektList e f && beqEffectArgs es fs
   | _, _ => false
 
+/-- Shape equality of signature lists. -/
+def beqFnSigs : List FnSig → List FnSig → Bool
+  | [], [] => true
+  | a :: as, b :: bs => beqFnSig a b && beqFnSigs as bs
+  | _, _ => false
+
 mutual
 def beqSItemTief : SItemTief → SItemTief → Bool
   | .modT a b, .modT c d => strEq a c && beqSItemTiefList b d

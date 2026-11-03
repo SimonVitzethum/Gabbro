@@ -309,7 +309,9 @@ def parseFold (f : Nat) (kind : XKind) (binder : String) (tokens : List Token) :
       | .ok domain => pure domain
       | .error _ => do
         let (lo, rest) ← parseOr f tokens
-        let rest ← fordereZeichen "..<" rest
+        let rest ← match rest with
+          | .zeichen z :: r => if strEq z "..<" then pure r else .error "wanted ..<"
+          | _ => .error "wanted ..<"
         let (hi, rest) ← parseOr f rest
         pure (("range", [], [lo, hi]), rest)
     let (filter, rest) ← match rest with
