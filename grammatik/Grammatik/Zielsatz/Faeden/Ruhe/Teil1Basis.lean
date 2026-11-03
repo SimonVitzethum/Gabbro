@@ -211,6 +211,7 @@ theorem tyR_never : ∀ τ : Ty, tyR τ = .never ↔ τ = .never
   | .ref _ => by simp only [reduceCtorEq]
   | .arr _ _ => by simp only [reduceCtorEq]
   | .str _ => by simp only [reduceCtorEq]
+  | .prod _ _ => by simp only [reduceCtorEq]
 
 theorem stelleAx_mitRuhe (e : Option Ty) :
     (e.map tyR = some .never ∨ ¬ AntwortLeer D.mitRuhe (e.map tyR)) ↔
