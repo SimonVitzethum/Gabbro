@@ -192,7 +192,7 @@ def eval (σ₀ : World D) : Expr D Γ Λ τ → World D → Env D Γ → Wert D
   | .glob g _, σ, _ => σ.globs g
   | .slot t f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .thru _ t _ f i _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
-  | .thruOwn _ t _ _ i _ _ _ _ _ _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
+  | .thruOwn _ t _ f i _ _ _ _ _ _, σ, ρ => σ.slots t (eval σ₀ i σ ρ).n f
   | .ptrOf _ _ _ _, _, _ => ()
   | .fnref f _ h, _, _ => ⟨f, h⟩
   | .refEq a b, σ, ρ => decide ((eval σ₀ a σ ρ).zelle = (eval σ₀ b σ ρ).zelle)

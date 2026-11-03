@@ -95,7 +95,7 @@ def exprM : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}, Expr D Γ Λ τ → Li
       (if (D.gbraucht g).isEmpty then [] else ["Deklaration.gbraucht"]) ++ (if D.atomar g then ["Deklaration.atomar"] else [])
   | _, _, _, .slot t f i _ => "Expr.slot" :: tyM (D.typ t f) ++ ["Deklaration.count", "Deklaration.typ"] ++ exprM i
   | _, _, _, .thru p t _ f i _ => "Expr.thru" :: tyM (D.typ t f) ++ ["Deklaration.tabNr"] ++ exprM p ++ exprM i
-  | _, _, _, .thruOwn p t _ _ i _ _ _ _ _ _ => "Expr.thruOwn" :: tyM (D.typ t f) ++ ["Deklaration.tabNr", "Deklaration.ownerNr", "Deklaration.eigner"] ++ exprM p ++ exprM i
+  | _, _, _, .thruOwn p t _ f i _ _ _ _ _ _ => "Expr.thruOwn" :: tyM (D.typ t f) ++ ["Deklaration.tabNr", "Deklaration.ownerNr", "Deklaration.eigner"] ++ exprM p ++ exprM i
   | _, _, _, .ptrOf .. => ["Expr.ptrOf", "Ty.ptr", "Deklaration.tabNr"]
   | _, _, _, .refEq a b => "Expr.refEq" :: "Ty.bool" :: exprM a ++ exprM b
   | _, _, _, .slotRef r t _ _ f _ => "Expr.slotRef" :: tyM (D.typ t f) ++ ["Deklaration.tabNr", "Deklaration.offen", "Deklaration.typ"] ++ exprM r
