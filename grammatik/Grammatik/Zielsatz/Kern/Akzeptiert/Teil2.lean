@@ -156,7 +156,7 @@ theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock
     (h : Akzeptiert P S fs ls cs ws aks checks = true) :
     AkzeptiertSpec P S fs ws aks := by
   unfold Akzeptiert at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, _h16⟩ := h
   exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
@@ -171,7 +171,7 @@ theorem scopesOkProg_of_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs)
     {aks : List (Kernzelle.AccumulatorDecl D)} {checks : List (CheckDecl D)}
     (h : Akzeptiert P S fs ls cs ws aks checks = true) : ScopesOkProg P := by
   unfold Akzeptiert at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩, h10⟩, h11⟩, h12⟩, h13⟩, h14⟩, h15⟩, h16⟩ := h
   exact (scopesOkProgB_iff hvoll).mp h16
 
@@ -196,7 +196,7 @@ theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, 
     (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
     Akzeptiert P S fs ls cs ws aks h.checks qs = true := by
   unfold Akzeptiert
-  simp only [Bool.and_eq_true]
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
     (stufenB_iff hvoll).mpr h.stufen⟩, (sperrOrteB_iff hls).mpr h.sperrOrte⟩,
     wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
@@ -410,7 +410,7 @@ theorem startB_ok {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List 
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (h : startB P S fs ls cs ws st sp = true) : StartZulaessig P S fs ws sp st.init := by
   unfold startB at h
-  simp only [Bool.and_eq_true] at h
+  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h
   obtain ⟨⟨⟨h1, h2⟩, h3⟩, h4⟩ := h
   have hR : ∀ w, ruheB P fs cs w = true → Ruhig P fs w := fun w hw => (ruheB_iff hvoll hcs).mp hw
   have hi : ∀ i, i < st.aktiv.length →
