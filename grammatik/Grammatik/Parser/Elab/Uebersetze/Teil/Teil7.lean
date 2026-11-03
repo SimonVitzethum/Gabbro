@@ -138,6 +138,7 @@ def anwArt : SAnw → String
   | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
   | .callQ .. => "call query"
   | .genericCall .. => "unexpanded generic call"
+  | .retires .. => "retires"
 
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/
@@ -157,6 +158,7 @@ def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         | .error e => .error e
         | .ok s => .ok (.regWrite rg.dev rg.name s)
     | none => uSetze ctx ziel op wert
+  | .retires m => .ok (.retires m)
   | .emit ziel wert p => uAtomSchreib ctx ziel wert p
   | .shift z von nach =>
     match uZugriff ctx z with
