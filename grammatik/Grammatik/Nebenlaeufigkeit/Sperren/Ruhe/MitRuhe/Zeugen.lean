@@ -67,7 +67,11 @@ def guardedD : Deklaration where
 
 
 /-- The guarded global is accessible with its lock in the holdings. -/
-theorem guardedAccess : gdarf guardedD () [.held ()] := by decide
+theorem guardedAccess : gdarf guardedD () [.held ()] := by
+  intro w hw
+  have h : w ∈ [(Sum.inl () : Unit ⊕ (Empty × Nat))] := hw
+  rcases List.mem_singleton.mp h with rfl
+  exact List.mem_singleton_self _
 
 /-- The idle-root transport preserves access to a real guarded global. -/
 theorem gdarfR_zeuge :
@@ -78,12 +82,12 @@ theorem gdarfR_zeuge :
 def guardedContract : Vertrag guardedD := vertragVon guardedD ()
 
 theorem guardedCall : RufPasst guardedD guardedContract guardedSig [.held ()] where
-  hw := by decide
-  hg := by decide
-  hk := ⟨[], List.Perm.refl [], by decide⟩
-  hh := by decide
-  hx := by decide
-  hb := by decide
+  hw := fun _ h => h
+  hg := fun _ h => h
+  hk := ⟨[], List.Perm.refl [], List.nil_sublist _⟩
+  hh := fun L _ => by cases L; exact List.mem_singleton_self _
+  hx := fun L _ hn => absurd (by cases L; exact List.mem_singleton_self _) hn
+  hb := fun c hc => ⟨c, hc, Int.le_refl c⟩
   ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ rfl
 
 /-- The compatible call survives the idle-root transport. -/
