@@ -391,7 +391,7 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       simp only [rufUpdateG_self]
       rw [hhead] at hK
       exact (List.mem_cons.mp hK).resolve_left (fun he => hKL (Res.held.inj he))
-    | rueckAntwort ρ a hhead z ha =>
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
       cases hst : (M.faeden f).stapel with
       | nil =>
           simp only [rufAntwortG, hst, Option.some.injEq] at ha

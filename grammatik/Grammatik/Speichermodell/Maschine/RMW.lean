@@ -160,10 +160,12 @@ theorem exchange_liest_schreibt {M M' : RufMaschineG D} {u : Faden} {g : D.Glob}
     all_goals (exact Bool.noConfusion (congrArg exchangeRest hk))
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret =>
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
       rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         kopf_vergleich hK <;> exact Bool.noConfusion (congrArg exchangeRest hk)
-    | rueckScopedGrund ρ r grund R hhead hret =>
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         kopf_vergleich hK <;> exact Bool.noConfusion (congrArg exchangeRest hk)
     | _ =>

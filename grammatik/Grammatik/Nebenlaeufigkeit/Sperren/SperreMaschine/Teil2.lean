@@ -243,8 +243,15 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     | rueckFreigabe ρ a L remaining hhead =>
         exact Or.inr (Or.inr (Or.inr ⟨_, _, ρ, a, L, remaining, hhead, rfl,
           by simp only [rufUpdateG_self]; rfl⟩))
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
         simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        exact Or.inr (Or.inr (Or.inr ⟨_, _, ρ, a, L, [], hhead, rfl, rfl⟩))
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
+        subst σ₁
+        exact Or.inl (hgross (lese_offen _ _ _))
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
         exact Or.inl (hgross rfl)
     | _ =>
         simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *

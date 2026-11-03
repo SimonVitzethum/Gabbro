@@ -105,7 +105,7 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
           rw [hhead] at hk
           exact ⟨hk, h.2⟩
-      | rueckAntwort ρ a hhead z ha =>
+      | rueckFreigabeLetzte ρ a L hhead z ha =>
           dsimp only
           rw [rufUpdateG_self]
           apply rufAntwortG_gut h ?_ ha
@@ -113,6 +113,16 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
           rw [hhead] at hk
           exact hk
+      | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+          dsimp only
+          rw [rufUpdateG_self]
+          apply rufAntwortG_gut h ?_ ha
+          subst σ₁
+          exact hsc t _ _ _ ρ r e R hhead hret
+      | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+          dsimp only
+          rw [rufUpdateG_self]
+          exact rufAntwortG_gut h trivial ha
       | _ =>
           simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut,
             GRest.antwortGut, rufUpdateG_self]

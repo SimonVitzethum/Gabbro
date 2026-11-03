@@ -150,10 +150,12 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
 
   | g7 hs =>
     cases hs with
-    | rueckScopedWert ρ r e R hhead hret =>
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
       rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         rw [hhead] at hr <;> simp only [GRest.anRueck, Endblock.istRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true, reduceCtorEq] at hr
-    | rueckScopedGrund ρ r grund R hhead hret =>
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         rw [hhead] at hr <;> simp only [GRest.anRueck, Endblock.istRueck, Block.istRueck, Stmt.istRueck, Bool.false_eq_true, reduceCtorEq] at hr
     | _ =>

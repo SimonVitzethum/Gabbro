@@ -394,8 +394,15 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     | rueckFreigabe ρ a L remaining hhead =>
         simp only [rufUpdateG_self]
         exact Or.inr ⟨sperrDelta_gibt _ L, rfl⟩
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
         simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        exact Or.inr ⟨sperrDelta_gibt _ L, rfl⟩
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
+        subst σ₁
+        exact Or.inl (zugriffsDelta_lese _ _ _ e.orte_darf (heldIn_weltVon hΛ))
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
         exact Or.inl (zugriffsDelta_refl _)
 
 end Delta

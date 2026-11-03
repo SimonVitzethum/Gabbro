@@ -41,8 +41,7 @@ theorem kr_scopedWert (P : Programm D) (O : Orakel D) (passes : Nat)
     (R : RueckRessourcen D (vertragVon D f) Λ) (h : r.scopedWert = some (e, R)) :
     kr P O passes st f rho spur sp ρ r =
       let σ := (sp.welt spur).lese Λ e.orte
-      kLokal st f rho ρ (.aufraeumen ⟨.inl (evalErg σ e σ ρ), σ.ohneSnapshot⟩
-        R.scopes) σ.spur sp := by
+      kScoped st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes := by
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle h <;> subst r <;> rfl
 
 /-- The reason channel has the same release fold and no source read. -/
@@ -53,8 +52,7 @@ theorem kr_scopedGrund (P : Programm D) (O : Orakel D) (passes : Nat)
     (grund : Fin (vertragVon D f).gruende)
     (R : RueckRessourcen D (vertragVon D f) Λ) (h : r.scopedGrund = some (grund, R)) :
     kr P O passes st f rho spur sp ρ r =
-      kLokal st f rho ρ (.aufraeumen ⟨.inr grund, (sp.welt spur).ohneSnapshot⟩
-        R.scopes) spur sp := by
+      kScoped st f rho ρ (.inr grund) (sp.welt spur) R.scopes := by
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle h <;> subst r <;> rfl
 
 end Gabbro.Grammatik

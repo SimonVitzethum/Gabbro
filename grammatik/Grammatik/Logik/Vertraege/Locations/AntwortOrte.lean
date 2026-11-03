@@ -256,7 +256,9 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
 
   | g7 hs =>
     cases hs with
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte _ _ _ _ z hantwort
+    | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
+    | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
       simp only [rufUpdateG_self]
       cases hs : (M.faeden f).stapel with
       | nil =>

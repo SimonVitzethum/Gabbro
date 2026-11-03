@@ -254,7 +254,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
-      (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur) :
+      (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
+      (hnonempty : R.scopes ≠ []) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
@@ -272,7 +273,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hret : r.scopedGrund = some (grund, R))
       (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
         (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
-      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur))
+      (hnonempty : R.scopes ≠ []) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
@@ -286,7 +288,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (a : (ErgVal D (vertragVon D (M.faeden f).kopf.f).erg ⊕
         Fin (vertragVon D (M.faeden f).kopf.f).gruende) × World D)
       (L : D.Lock) (remaining : List D.Lock)
-      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a (L :: remaining)⟩) :
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a (L :: remaining)⟩)
+      (hnonempty : remaining ≠ []) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f
           ⟨(M.faeden f).stapel,
@@ -294,15 +297,48 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
               ⟨l, Γ, _, ρ, .aufraeumen a remaining⟩⟩,
             .gibt L :: (M.faeden f).spur, (M.faeden f).log⟩,
           M.lauf ++ [⟨f, .gibt L⟩], M.start⟩
-  /-- Deliver the saved answer only after every lexical release. The snapshot
-      is retained for a root; a callee resumes its caller in the current world. -/
-  | rueckAntwort (M : RufMaschineG D) (f : Faden)
+  /-- The last release also delivers the saved answer. It has no reads. -/
+  | rueckFreigabeLetzte (M : RufMaschineG D) (f : Faden)
       {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
       (a : (ErgVal D (vertragVon D (M.faeden f).kopf.f).erg ⊕
         Fin (vertragVon D (M.faeden f).kopf.f).gruende) × World D)
-      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a []⟩)
+      (L : D.Lock)
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, _, ρ, .aufraeumen a [L]⟩)
       (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) a.2 (M.weltVon f) a.1 = some z) :
+      (hantwort : rufAntwortG (M.faeden f) a.2 ((M.weltVon f).gibt L) a.1 = some z) :
+      RufSchrittG7 P O passes M f
+        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ [⟨f, .gibt L⟩], M.start⟩
+
+  /-- Without lexical scopes, evaluation and delivery are a single step. -/
+  | rueckScopedWertDirekt (M : RufMaschineG D) (f : Faden)
+      {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
+      (r : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
+      (e : ErgExpr D Γ Λ (vertragVon D (M.faeden f).kopf.f).erg)
+      (R : RueckRessourcen D (vertragVon D (M.faeden f).kopf.f) Λ)
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
+      (hret : r.scopedWert = some (e, R))
+      (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
+        (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur))
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
+      (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
+      (hempty : R.scopes = []) (z : RufFadenG D)
+      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₁ (.inl (evalErg σ₁ e σ₁ ρ)) = some z) :
+      RufSchrittG7 P O passes M f
+        ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- Direct reason return, with no cleanup residue. -/
+  | rueckScopedGrundDirekt (M : RufMaschineG D) (f : Faden)
+      {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
+      (r : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ)
+      (grund : Fin (vertragVon D (M.faeden f).kopf.f).gruende)
+      (R : RueckRessourcen D (vertragVon D (M.faeden f).kopf.f) Λ)
+      (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
+      (hret : r.scopedGrund = some (grund, R))
+      (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
+        (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur))
+      (hempty : R.scopes = []) (z : RufFadenG D)
+      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) (M.weltVon f) (.inr grund) = some z) :
       RufSchrittG7 P O passes M f
         ⟨M.speicher, rufUpdateG M.faeden f z, M.lauf, M.start⟩
 

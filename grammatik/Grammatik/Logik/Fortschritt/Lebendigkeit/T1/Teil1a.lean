@@ -161,8 +161,15 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     | rueckFreigabe ρ a L remaining hhead =>
       simp only [rufUpdateG_self]
       exact Or.inr (Or.inr ⟨[L], rfl⟩)
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
       simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+      exact Or.inr (Or.inr ⟨[L], rfl⟩)
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      simp only [rufUpdateG_self, rufAntwortG_spur ha]
+      subst σ₁
+      exact Or.inr (Or.inl (lese_offen _ _ _))
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self, rufAntwortG_spur ha]
       exact Or.inr (Or.inl rfl)
     | _ =>
         subst_vars

@@ -319,7 +319,9 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
     | _ => kopfLokal
   | g7 hs =>
     cases hs with
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte _ _ _ _ z hantwort
+    | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
+    | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
         simp only [rufUpdateG_self]
         exact rufAntwortG_fort h hantwort
     | _ => kopfLokal

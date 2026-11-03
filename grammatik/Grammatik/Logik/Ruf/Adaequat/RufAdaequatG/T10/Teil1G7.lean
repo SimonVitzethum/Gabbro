@@ -30,13 +30,15 @@ theorem schrittErhalt_g7 {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.L
     have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
   | dannNextVerbrauch =>
     have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
-  | rueckScopedWert ρ r2 e R hhead hret =>
+  | rueckScopedWert ρ r2 e R hhead hret
+  | rueckScopedWertDirekt ρ r2 e R hhead hret =>
     rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
       widerlege hhead
-  | rueckScopedGrund ρ r2 grund R hhead hret =>
+  | rueckScopedGrund ρ r2 grund R hhead hret
+  | rueckScopedGrundDirekt ρ r2 grund R hhead hret =>
     rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
       widerlege hhead
   | rueckFreigabe ρ a L remaining hhead => widerlege hhead
-  | rueckAntwort ρ a hhead z hantwort => widerlege hhead
+  | rueckFreigabeLetzte ρ a L hhead z hantwort => widerlege hhead
 
 end Gabbro.Grammatik

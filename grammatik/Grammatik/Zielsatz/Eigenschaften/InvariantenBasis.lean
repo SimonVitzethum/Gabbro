@@ -71,7 +71,7 @@ theorem schritt_logArt {M M' : RufMaschineG D} {u : Faden}
   cases hs with
   | g7 hs =>
       cases hs with
-      | rueckAntwort ρ a hhead z ha =>
+      | rueckFreigabeLetzte ρ a L hhead z ha =>
           simp only [rufUpdateG_self]
           cases hst : (M.faeden u).stapel with
           | nil =>
@@ -86,6 +86,37 @@ theorem schritt_logArt {M M' : RufMaschineG D} {u : Faden}
               cases a.1 <;> simp [rufAntwortG, hst, hr] at ha <;> subst z
               · exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl,
                   speicher_welt_speicher _ _⟩))
+              · exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+      | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+          subst σ₁
+          simp only [rufUpdateG_self]
+          cases hst : (M.faeden u).stapel with
+          | nil =>
+              simp only [rufAntwortG, hst, Option.some.injEq] at ha
+              subst z
+              exact Or.inl rfl
+          | cons c st =>
+              obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden u).kopf.f (.inl (evalErg ((M.weltVon u).lese _ e.orte) e ((M.weltVon u).lese _ e.orte) ρ)) c.rest = some r := by
+                cases hr : antwortRestG (M.faeden u).kopf.f (.inl (evalErg ((M.weltVon u).lese _ e.orte) e ((M.weltVon u).lese _ e.orte) ρ)) c.rest with
+                | none => simp [rufAntwortG, hst, hr] at ha
+                | some r => exact ⟨r, rfl⟩
+              simp [rufAntwortG, hst, hr] at ha <;> subst z
+              · exact Or.inr (Or.inr (Or.inl ⟨_, _, _, _, _, rfl,
+                  speicher_welt_speicher _ _⟩))
+      | rueckScopedGrundDirekt ρ r e R hhead hret hscope hΛ hempty z ha =>
+          simp only [rufUpdateG_self]
+          cases hst : (M.faeden u).stapel with
+          | nil =>
+              simp only [rufAntwortG, hst, Option.some.injEq] at ha
+              subst z
+              exact Or.inl rfl
+          | cons c st =>
+              obtain ⟨r, hr⟩ : ∃ r, antwortRestG (M.faeden u).kopf.f (.inr e) c.rest = some r := by
+                cases hr : antwortRestG (M.faeden u).kopf.f (.inr e) c.rest with
+                | none => simp [rufAntwortG, hst, hr] at ha
+                | some r => exact ⟨r, rfl⟩
+              simp [rufAntwortG, hst, hr] at ha <;> subst z
               · exact Or.inr (Or.inr (Or.inr ⟨_, _, _, _, _, rfl,
                   speicher_welt_speicher _ _⟩))
       | _ => exact Or.inl (by simp only [rufUpdateG_self])

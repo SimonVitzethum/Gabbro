@@ -337,13 +337,29 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
       refine ⟨?_, hst, hlog⟩
       rw [hhead] at hk
       exact fR_scopedGrund Φ hret hk
-    | rueckAntwort ρ a hhead z ha =>
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
       dsimp only
       rw [rufUpdateG_self]
       apply folgeInvG_rufAntwortG Φ ⟨?_, hst, hlog⟩ ?_ ha
       · rw [hw]; exact hk
       · rw [hhead] at hk
         rw [hw]; exact hk
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      dsimp only
+      rw [rufUpdateG_self]
+      apply folgeInvG_rufAntwortG Φ ⟨?_, hst, hlog⟩ ?_ ha
+      · rw [hw]; exact hk
+      · rw [hhead] at hk
+        rw [hw]
+        exact fR_scopedWert Φ hret hk
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      dsimp only
+      rw [rufUpdateG_self]
+      apply folgeInvG_rufAntwortG Φ ⟨?_, hst, hlog⟩ ?_ ha
+      · rw [hw]; exact hk
+      · rw [hhead] at hk
+        rw [hw]
+        exact fR_scopedGrund Φ hret hk
     | _ =>
       kopfF
       all_goals (simp_all [fB_von_false, fR_von_false]; done)

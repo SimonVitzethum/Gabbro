@@ -242,17 +242,36 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       · rfl
       · rename_i hn; exact absurd hfall hn
 
-  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+  | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
       subst σ₁
       kstart
-      obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle hret <;>
-        subst r <;> rfl
-  | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
+      rw [kr_scopedWert P O passes _ _ _ _ _ ρ r.kern e R (GRest.kern_scopedWert hret)]
+      cases hsc : R.scopes with
+      | nil => exact (hnonempty hsc).elim
+      | cons L Ls => rfl
+  | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
       kstart
-      obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle hret <;>
-        subst r <;> rfl
-  | rueckFreigabe ρ a L remaining hhead => kstart; rfl
-  | rueckAntwort ρ a hhead z hantwort =>
+      rw [kr_scopedGrund P O passes _ _ _ _ _ ρ r.kern grund R (GRest.kern_scopedGrund hret)]
+      cases hsc : R.scopes with
+      | nil => exact (hnonempty hsc).elim
+      | cons L Ls => rfl
+  | rueckFreigabe ρ a L remaining hhead hnonempty =>
+      kstart
+      cases remaining with
+      | nil => exact (hnonempty rfl).elim
+      | cons K Ls => rfl
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort =>
+      subst σ₁
+      kstart
+      rw [kr_scopedWert P O passes _ _ _ _ _ ρ r.kern e R (GRest.kern_scopedWert hret)]
+      simp only [hempty, kScoped]
+      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort =>
+      kstart
+      rw [kr_scopedGrund P O passes _ _ _ _ _ ρ r.kern grund R (GRest.kern_scopedGrund hret)]
+      simp only [hempty, kScoped]
+      exact kPop_rufAntwortG _ _ _ _ _ hantwort
+  | rueckFreigabeLetzte ρ a L hhead z hantwort =>
       kstart
       exact kPop_rufAntwortG _ _ _ _ _ hantwort
 

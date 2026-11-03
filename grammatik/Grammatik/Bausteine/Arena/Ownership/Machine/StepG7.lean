@@ -31,13 +31,15 @@ theorem ownInv_step_g7 {P : Programm D} {A : FreiForm D} {I : Interfaces A}
   | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
     exact ownInv_step_dannNextVerbrauch (P := P) (O := O) (passes := passes) (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hnext := hnext) (hhead := hhead) (σm := σm) (ρr := ρ'.tail)
 
-  | rueckScopedWert ρ r e R hhead hret =>
+  | rueckScopedWert ρ r e R hhead hret
+  | rueckScopedWertDirekt ρ r e R hhead hret =>
     rcases GRest.scopedWert_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;> subst r <;>
       rw [hhead] at hH <;> obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
     · cases hor with | ende _ he => cases he
     · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; cases hs
     · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; cases hs
-  | rueckScopedGrund ρ r grund R hhead hret =>
+  | rueckScopedGrund ρ r grund R hhead hret
+  | rueckScopedGrundDirekt ρ r grund R hhead hret =>
     rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;> subst r <;>
       rw [hhead] at hH <;> obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
     · cases hor with | ende _ he => cases he
@@ -47,7 +49,7 @@ theorem ownInv_step_g7 {P : Programm D} {A : FreiForm D} {I : Interfaces A}
     rw [hhead] at hH
     obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
     cases hor
-  | rueckAntwort ρ a hhead z hantwort =>
+  | rueckFreigabeLetzte ρ a L hhead z hantwort =>
     rw [hhead] at hH
     obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
     cases hor

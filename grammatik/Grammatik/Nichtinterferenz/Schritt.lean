@@ -133,11 +133,10 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       kPop st f rho σ₁ (evalErg σ₁ e σ₁ ρ)
   | _, _, Λ, ρ, .retScoped e R =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
-      kLokal st f rho ρ (.aufraeumen ⟨.inl (evalErg σ₁ e σ₁ ρ), σ₁.ohneSnapshot⟩
-        R.scopes) σ₁.spur sp
+      kScoped st f rho ρ (.inl (evalErg σ₁ e σ₁ ρ)) σ₁ R.scopes
   | _, _, _, _, .retWhy r _ => kPopGrund st f rho spur sp r
   | _, _, _, ρ, .retWhyScoped r R =>
-      kLokal st f rho ρ (.aufraeumen ⟨.inr r, (sp.welt spur).ohneSnapshot⟩ R.scopes) spur sp
+      kScoped st f rho ρ (.inr r) (sp.welt spur) R.scopes
   | _, _, _, _, _ => none
 
 /-- A `dann` residue. -/
@@ -307,11 +306,7 @@ def kr (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f
       else none
   | _, _, _, ρ, .ewigRest a n inv body k => kLokal st f rho ρ (.ewig a n inv body k) spur sp
   | _, _, _, ρ, .aufraeumen a (L :: remaining) =>
-      kLokal st f rho ρ (.aufraeumen a remaining) (.gibt L :: spur) sp
-  | _, _, _, _, .aufraeumen a [] =>
-      match a.1 with
-      | .inl v => kPop st f rho (sp.welt spur) v
-      | .inr r => kPopGrund st f rho spur sp r
+      kScoped st f rho ρ a.1 ((sp.welt spur).gibt L) remaining
   | _, _, _, _, _ => none
 
 /-- The consuming-loop head of `kr`, unfolded by definitional equality (the

@@ -227,8 +227,17 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
         rw [hhead]
         exact List.mem_cons_self
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte ρ a L hhead z hantwort =>
         simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
+        rw [hhead]
+        exact List.mem_cons_self
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
+        subst σ₁
+        exact Or.inl (lese_offen _ _ _)
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+        simp only [rufUpdateG_self, rufAntwortG_spur ha]
         exact Or.inl rfl
     | _ =>
         simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *

@@ -462,7 +462,9 @@ theorem rufSchrittG_passt_acting (P : Programm D) (O : Orakel D) (passes : Nat)
         exact rufFadenPasstG_behalte _ _ _ _ _ _ _ h
   | g7 hs =>
     cases hs with
-    | rueckAntwort ρ a hhead z hantwort =>
+    | rueckFreigabeLetzte _ _ _ _ z hantwort
+    | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
+    | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
         simp only [rufUpdateG_self]
         exact rufAntwortG_passt h hantwort
     | _ =>

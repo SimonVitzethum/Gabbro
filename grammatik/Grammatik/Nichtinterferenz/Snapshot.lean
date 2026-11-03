@@ -41,6 +41,18 @@ noncomputable def GRest.kern {V : Vertrag D} :
   | _, _, _, .zurueckgekehrt a => .zurueckgekehrt ⟨a.1, a.2.ohneSnapshot⟩
   | _, _, _, .aufraeumen a remaining => .aufraeumen ⟨a.1, a.2.ohneSnapshot⟩ remaining
 
+/-- Projection preserves the source-return selector; only the continuation's
+    saved proof worlds are erased. -/
+theorem GRest.kern_scopedWert {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} {e : ErgExpr D Γ Λ V.erg} {R : RueckRessourcen D V Λ}
+    (h : r.scopedWert = some (e, R)) : r.kern.scopedWert = some (e, R) := by
+  obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle h <;> subst r <;> rfl
+
+theorem GRest.kern_scopedGrund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} {grund : Fin V.gruende} {R : RueckRessourcen D V Λ}
+    (h : r.scopedGrund = some (grund, R)) : r.kern.scopedGrund = some (grund, R) := by
+  obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle h <;> subst r <;> rfl
+
 /-- The projection is stable under repeated observation. -/
 theorem GRest.kern_kern {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r : GRest D V l Γ Λ) : r.kern.kern = r.kern := by

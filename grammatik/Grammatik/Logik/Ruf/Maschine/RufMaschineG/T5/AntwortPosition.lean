@@ -30,7 +30,7 @@ def GRest.antwortPosition {V : Vertrag D} (root : Prop) :
   | _, _, _, .leer => True
   | _, _, _, .rueckBereit _ k => k.antwortPosition False
   | _, _, _, .zurueckgekehrt _ => root
-  | _, _, _, .aufraeumen _ _ => True
+  | _, _, _, .aufraeumen _ remaining => remaining ≠ []
 
 private theorem antwortPosition_mono {V : Vertrag D} {p q : Prop} (hpq : p → q)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l Γ Λ)
@@ -79,7 +79,9 @@ theorem antwortPositionG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
   cases hs with
   | g7 hs =>
       cases hs with
-      | rueckAntwort ρ a hhead z ha =>
+      | rueckFreigabeLetzte _ _ _ _ z ha
+      | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z ha
+      | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z ha =>
           simp only [rufUpdateG_self]
           exact rufAntwortG_position h ha
       | _ =>

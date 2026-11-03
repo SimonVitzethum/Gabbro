@@ -76,8 +76,19 @@ theorem schritt_ev_g7 {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO 
         simp only [List.mem_singleton] at he
         subst e
         cases hz⟩
-  | rueckAntwort ρ a hhead z hantwort =>
+  | rueckFreigabeLetzte ρ a L hhead z hantwort =>
       simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+      exact ⟨[.gibt L], rfl, fun e he c w hz => by
+        simp only [List.mem_singleton] at he
+        subst e
+        cases hz⟩
+  | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      simp only [rufUpdateG_self, rufAntwortG_spur ha]
+      subst σ₁
+      rw [hhead] at hC
+      exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ (GRest.scopedWert_oR hC hret)⟩
+  | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      simp only [rufUpdateG_self, rufAntwortG_spur ha]
       exact ⟨[], rfl, fun e he => (List.not_mem_nil he).elim⟩
 
 end Gabbro.Grammatik

@@ -365,10 +365,12 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
       have hhead := ‹(M.faeden u).kopf.rest = _›
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
-    | rueckScopedWert ρ r e R hhead hret =>
+    | rueckScopedWert ρ r e R hhead hret
+    | rueckScopedWertDirekt ρ r e R hhead hret =>
       rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         rw [hhead] at hRet <;> simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
-    | rueckScopedGrund ρ r grund R hhead hret =>
+    | rueckScopedGrund ρ r grund R hhead hret
+    | rueckScopedGrundDirekt ρ r grund R hhead hret =>
       rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
         rw [hhead] at hRet <;> simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
 

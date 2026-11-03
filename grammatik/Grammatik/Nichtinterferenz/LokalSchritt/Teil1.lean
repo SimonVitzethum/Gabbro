@@ -149,6 +149,13 @@ theorem kRufEnde_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx} 
       generalize eval _ p _ ρ = x
       obtain ⟨g, hg⟩ := x
       exact KRel.push _ _ _ _ _ _ _ _ rfl hsp
+  | retScoped e R =>
+      simp only [nS] at hs
+      simp only [kRufEnde]
+      rw [(hW.lese Λ e.orte).evalErg e (alle_von hST hs) ρ]
+      exact kScoped_rel st f rho ρ _ (hW.lese Λ e.orte) R.scopes
+  | retWhyScoped r R =>
+      exact kScoped_rel st f rho ρ (.inr r) hW R.scopes
   | _ => exact KRel.none_l _
 
 theorem kRufDann_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
@@ -171,6 +178,13 @@ theorem kRufDann_rel (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool} {Γ : Ctx}
       generalize eval _ p _ ρ = x
       obtain ⟨g, hg⟩ := x
       exact KRel.push _ _ _ _ _ _ _ _ rfl hsp
+  | retScoped e R =>
+      simp only [nS] at hs
+      simp only [kRufDann]
+      rw [(hW.lese Λ e.orte).evalErg e (alle_von hST hs) ρ]
+      exact kScoped_rel st f rho ρ _ (hW.lese Λ e.orte) R.scopes
+  | retWhyScoped r R =>
+      exact kScoped_rel st f rho ρ (.inr r) hW R.scopes
   | _ => exact KRel.none_l _
 
 include hAx in
@@ -432,10 +446,10 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [nE] at he
       simp only [kEnde]
       rw [(hW.lese Λ e.orte).evalErg e (alle_von hST he) ρ]
-      exact KRel.lokal _ _ _ _ _ (hW.lese Λ e.orte).1 hsp
+      exact kScoped_rel st f rho ρ _ (hW.lese Λ e.orte) R.scopes
   | retWhy r _ => exact kPopGrund_rel st f rho spur hsp r
   | retWhyScoped r R =>
-      exact KRel.lokal _ _ _ _ _ rfl hsp
+      exact kScoped_rel st f rho ρ (.inr r) hW R.scopes
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 

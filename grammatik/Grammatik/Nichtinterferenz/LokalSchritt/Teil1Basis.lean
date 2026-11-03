@@ -115,6 +115,26 @@ theorem kPopGrund_rel (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params 
           · exact KRel.none_l _
       | _ => exact KRel.none_l _
 
+/-- Scoped evaluation and the last release use the ordinary relational pop;
+    intermediate releases retain a canonical proof snapshot. -/
+theorem kScoped_rel (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f))
+    {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
+    (a : ErgVal D (vertragVon D f).erg ⊕ Fin (vertragVon D f).gruende)
+    {σ τ : World D} (h : WRel T σ τ) (remaining : List D.Lock) :
+    KRel T (kScoped (l := l) st f rho ρ a σ remaining)
+      (kScoped (l := l) st f rho ρ a τ remaining) := by
+  cases remaining with
+  | nil =>
+      cases a with
+      | inl v => exact kPop_rel st f rho h v
+      | inr r =>
+          simp only [kScoped]
+          rw [h.1]
+          exact kPopGrund_rel st f rho τ.spur h.2 r
+  | cons L remaining =>
+      simp only [kScoped]
+      exact KRel.lokal _ _ _ _ _ h.1 h.2
+
 end Rel
 
 end Gabbro.Grammatik

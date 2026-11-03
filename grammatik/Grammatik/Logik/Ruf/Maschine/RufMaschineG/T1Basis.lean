@@ -172,8 +172,8 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       (antwort : (ErgVal D V.erg ⊕ Fin V.gruende) × World D) : GRest D V l Γ V.ende
   /-- A return already evaluated in `vor`, with lexical releases still pending.
     Only the remaining locks and the contract's end resources are live. This
-    residue is never final, even with an empty release list: answer delivery
-    is a separate step, so the expression is never evaluated again. -/
+    residue is never final. Reachable cleanup lists are nonempty: the last
+    release also delivers the answer, without evaluating the expression again. -/
   | aufraeumen {l : Bool} {Γ : Ctx}
       (antwort : (ErgVal D V.erg ⊕ Fin V.gruende) × World D)
       (remaining : List D.Lock) : GRest D V l Γ (remaining.map Res.held ++ V.ende)
