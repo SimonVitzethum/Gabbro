@@ -160,6 +160,8 @@ theorem zHp (caller callee : zD.Fn) (hw : ∀ t, (zD.signatur callee).schreibt t
     RufPasst zD (vertragVon zD caller) (zD.signatur callee) zL where
   hw := hw
   hg := fun g => nomatch g
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (zD.signatur callee).owner)
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
   hk := by
     unfold Signatur.inputMarks

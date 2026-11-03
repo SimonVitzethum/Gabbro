@@ -16,13 +16,13 @@ theorem ptrPost_prefix_zeuge :
 theorem ptrReq_prefix_stmt_zeuge :
     ReqAmEintritt prog true entry (umsig pointer.property arguments) := by
   have h := ptrReq_prefix_stmt refinement operand operands entry entry arguments
-    rfl (GleichAuf.refl _ _)
+    rfl (GleichAuf.refl _ _) rfl
   simpa using h
 
 theorem ptrEns_prefix_stmt_zeuge :
     (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ := by
   have h := ptrEns_prefix_stmt refinement operand operands entry entry arguments
-    rfl (GleichAuf.refl _ _) later later ⟨3, by decide, by decide⟩ rfl
+    rfl (GleichAuf.refl _ _) rfl later later ⟨3, by decide, by decide⟩ rfl
     (GleichAuf.refl _ _)
   simpa using h
 

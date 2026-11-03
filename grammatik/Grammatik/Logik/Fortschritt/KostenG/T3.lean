@@ -126,8 +126,6 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallIndElse _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
-  | .retScoped e _ => kostenErg e
-  | .retWhyScoped .. => 0
   | .exchange .. => 0
   | .ite .. => 0
 end
@@ -139,7 +137,7 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i _ _ _ => kostenExpr i
   | .assignThru p _ _ _ i _ _ _ => kostenExpr p + kostenExpr i
-  | .assignThruOwn p _ _ _ i _ _ _ _ _ _ _ => kostenExpr p + kostenExpr i
+  | .assignThruOwn p _ _ _ i _ _ _ _ _ _ _ _ => kostenExpr p + kostenExpr i
   | .assignSlotRef r _ _ _ _ _ _ _ => kostenExpr r
   | .assignGlob .. => 0
   | .putBytes _ _ _ _ i _ _ _ _ _ => kostenExpr i
@@ -232,8 +230,6 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
-  | .retScoped .. => 1
-  | .retWhyScoped .. => 1
   | .exchange .. => 0
   | .ite .. => 0
 
@@ -261,8 +257,6 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindCallIndElse _ _ _ _ _ err rest => zusatzSonst err + zusatzSonst rest
   | .narrow .. => 0
   | .narrowRequired .. => 0
-  | .retScoped .. => 2
-  | .retWhyScoped .. => 2
   | .exchange .. => 0
   | .ite .. => 0
 end

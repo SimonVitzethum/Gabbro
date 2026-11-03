@@ -38,8 +38,7 @@ theorem hoare_callInd (P : Programm D) (O : Orakel D) (passes : Nat)
   subst ρ
   simp only [execStmt] at hrun
   rw [hworld] at hrun
-  generalize hT : (show { f : D.Fn // D.passt f n = true } from
-    eval s0 p s0 r0) = target at hrun ⊢
+  generalize hT : eval s0 p s0 r0 = target at hrun ⊢
   obtain ⟨tf, thf⟩ := target
   have hreq := PtrVerfeinert.req hRef ⟨tf, thf⟩ s0 ρa hpre
   have hrun' : (match R tf s0 (umsig thf ρa) with
@@ -52,7 +51,7 @@ theorem hoare_callInd (P : Programm D) (O : Orakel D) (passes : Nat)
     simp only [hout] at hrun'
     cases hrun'
     have hv := hR tf s0 (umsig thf ρa) hreq _ v hout
-    exact ⟨rfl, v, hout, hv, PtrVerfeinert.ens hRef ⟨tf, thf⟩ s0 _ ρa v hpre hv⟩
+    exact ⟨rfl, v, rfl, hv, PtrVerfeinert.ens hRef ⟨tf, thf⟩ s0 _ ρa v hpre hv⟩
   | why σ' r => exact keinGrundSig thf hr r
   | logik e =>
     simp only [hout] at hrun'

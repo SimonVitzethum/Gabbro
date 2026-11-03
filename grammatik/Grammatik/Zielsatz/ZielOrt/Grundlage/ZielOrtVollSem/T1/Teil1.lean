@@ -35,6 +35,7 @@ def Stmt.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K : 
   | .forever _ _ body => body.vOk K
   | .callInd (n := n) .. => K n
   | .callIndElse (n := n) _ _ _ _ _ err => K n && err.vOk K
+  | .axiomCallElse (err := err) .. => err.vOk K
   | _ => true
 
 /-- The block is in the covered fragment: no register read, no `awaits`. -/
@@ -49,6 +50,8 @@ def Block.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bindCallElse _ _ _ _ _ err rest => err.vOk K && rest.vOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk K
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.vOk K && rest.vOk K
+  | .bindAxiomOpt (rest := rest) .. => rest.vOk K
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => err.vOk K && rest.vOk K
   | .regRead .. => false
   | .regReadElse .. => false
   | .awaits .. => false
@@ -67,6 +70,10 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .retWhy .. => true
   | .leave .. => true
   | .next .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
+  | .bindAxiomOpt (rest := rest) .. => rest.vOk K
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => err.vOk K && rest.vOk K
   | .cons s rest => s.vOk K && rest.vOk K
   | .bind _ rest => rest.vOk K
   | .bindCall _ _ _ _ _ rest => rest.vOk K
@@ -100,6 +107,14 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
   | _, _, .retWhy _ _ => rfl
   | _, _, .leave _ => rfl
   | _, _, .next _ => rfl
+  | _, _, .retScoped _ _ => rfl
+  | _, _, .retWhyScoped _ _ => rfl
+  | _, _, .narrowRequired _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bindAxiomOpt (rest := rest) .. => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
+  | _, _, .bindAxiomOptElse (rest := rest) .. => by
+      simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .cons s rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bind _ rest => by
@@ -250,6 +265,9 @@ theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .callIndElse _ _ _ _ _ err, h => by
       simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨hKK _ h.1, Endblock.vOk_mono err h.2⟩
+  | .axiomCallElse (err := err) .., h => by
+      simp only [Stmt.vOk] at h ⊢
+      exact Endblock.vOk_mono err h
   | .assignSlot .., _ => rfl
   | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
@@ -287,7 +305,7 @@ theorem Block.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       exact ⟨hKK _ h.1, Block.vOk_mono rest h.2⟩
   | .bindCallIndElse _ _ _ _ _ err rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
-      exact ⟨hKK _ h.1.1, Endblock.vOk_mono err h.1.2, Block.vOk_mono rest h.2⟩
+      exact ⟨⟨hKK _ h.1.1, Endblock.vOk_mono err h.1.2⟩, Block.vOk_mono rest h.2⟩
   | .bindCallElse _ _ _ _ _ err rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono err h.1, Block.vOk_mono rest h.2⟩
@@ -324,12 +342,24 @@ theorem Block.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
   | .floatNarrow _ _ _ sonst rest, h => by
       simp only [Block.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono sonst h.1, Block.vOk_mono rest h.2⟩
+  | .bindAxiomOpt (rest := rest) .., h => by
+      simp only [Block.vOk] at h ⊢
+      exact Block.vOk_mono rest h
+  | .bindAxiomOptElse (err := err) (rest := rest) .., h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono err h.1, Block.vOk_mono rest h.2⟩
 
 theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     (e : Endblock D V l Γ Λ) → e.vOk K = true → e.vOk K' = true
   | .ret .., _ => rfl
   | .retWhy .., _ => rfl
   | .retScoped .., _ => rfl
+  | .bindAxiomOpt (rest := rest) .., h => by
+      simp only [Endblock.vOk] at h ⊢
+      exact Endblock.vOk_mono rest h
+  | .bindAxiomOptElse (err := err) (rest := rest) .., h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
+      exact ⟨Endblock.vOk_mono err h.1, Endblock.vOk_mono rest h.2⟩
   | .retWhyScoped .., _ => rfl
   | .leave .., _ => rfl
   | .next .., _ => rfl
@@ -359,7 +389,7 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       exact ⟨hKK _ h.1, Endblock.vOk_mono rest h.2⟩
   | .bindCallIndElse _ _ _ _ _ err rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
-      exact ⟨hKK _ h.1.1, Endblock.vOk_mono err h.1.2, Endblock.vOk_mono rest h.2⟩
+      exact ⟨⟨hKK _ h.1.1, Endblock.vOk_mono err h.1.2⟩, Endblock.vOk_mono rest h.2⟩
   | .narrow _ _ _ sonst rest, h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨Endblock.vOk_mono sonst h.1, Endblock.vOk_mono rest h.2⟩

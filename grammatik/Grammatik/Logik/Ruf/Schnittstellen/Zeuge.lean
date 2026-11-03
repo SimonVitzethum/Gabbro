@@ -309,7 +309,7 @@ theorem ptrPflicht_prefix_zeuge :
       ReqAmEintritt prog true entry (umsig pointer.property arguments) := by
   have h : PtrRufPflicht prog operand operands entry arguments := rfl
   have hrep := Gabbro.Grammatik.ptrPflicht_prefix prog operand operands entry entry
-    arguments h (GleichAuf.refl _ _)
+    arguments h (GleichAuf.refl _ _) rfl
   exact ⟨h, hrep, Gabbro.Grammatik.PtrRufPflicht.req refinement hrep⟩
 
 /-- The replayed duty opens the concrete gate at the same world. -/
@@ -317,7 +317,7 @@ theorem ptrTor_prefix_zeuge :
     torRuf prog handler true entry (umsig pointer.property arguments) =
       handler true entry (umsig pointer.property arguments) := by
   have h := Gabbro.Grammatik.ptrTor_prefix_stmt refinement handler operand operands
-    entry entry arguments rfl (GleichAuf.refl _ _)
+    entry entry arguments rfl (GleichAuf.refl _ _) rfl
   simpa using h
 
 /-- Indirect closure is already decided: every admitted target of an

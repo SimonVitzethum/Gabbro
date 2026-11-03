@@ -401,7 +401,7 @@ theorem assignDurchOwn_neu (O : Orakel D) (passes : Nat)
     {f : D.Feld t}
     {i : Expr D Γ Λ (.index (D.count t))} {e : Expr D Γ Λ (D.typ t f)}
     {m : D.Marke} {s : Nat} {ho : D.ownerNr o = some m} {he : m ∈ D.eigner t}
-    {hg : Sum.inr (m, s) ∈ D.braucht t} {hm : Res.marke m s ∈ Λ}
+    {hg : Sum.inr (m, s) ∈ D.braucht t}
     {hw : V.schreibt t = true} {hL : darf D t Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf

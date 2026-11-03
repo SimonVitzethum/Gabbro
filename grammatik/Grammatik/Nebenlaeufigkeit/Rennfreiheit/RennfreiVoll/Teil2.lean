@@ -25,7 +25,7 @@ local macro "delta_axiom" antwort:ident : tactic => `(tactic| (
   have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
       (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
     have := congrArg Prod.fst hax
-    simp only [$antwort] at this
+    simp only [$antwort:ident] at this
     exact this.symm
   have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
       L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
@@ -64,6 +64,8 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
   cases hs with
   | g1 hs =>
     cases hs with
+    | endeBindAxiomOpt l Γ Λ e a args he hp hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+        delta_axiom axiomAntwort
     | blatt l Γ Λ Λ' s rest ρ hleaf hhead hΛ σ' ρ' neu hstep hneu hkein =>
         simp only [rufUpdateG_self]
         left
@@ -136,6 +138,10 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
               (heldIn_weltVon (by assumption))
   | g3 hs =>
     cases hs with
+    | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+        delta_axiom axiomAntwortSonst
+    | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+        delta_axiom axiomAntwortSonst
     | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hl hhead σ' ρ' neu hstep hneu hkein σ₁ hs₁ hw
         neu₁ hneu₁ hΛ =>
         simp only [rufUpdateG_self]
@@ -216,7 +222,13 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
               (heldIn_weltVon (by assumption))
   | g5 hs =>
     cases hs with
-    | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+        delta_axiom axiomAntwort
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+        delta_axiom axiomAntwortSonst
+    | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+        delta_axiom axiomAntwortSonst
+    | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
         simp only [rufUpdateG_self]
         left
         subst hs₂ hs₁
@@ -239,24 +251,24 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         rcases List.mem_cons.mp hm with hm | hm
         · cases hm
         · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
-    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         delta_axiom axiomAntwort
-    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         delta_axiom axiomAntwortSonst
-    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         delta_axiom axiomAntwortSonst
-    | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+    | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
         simp only [rufUpdateG_self]
         exact Or.inl (zugriffsDelta_fragt (M.weltVon f) _)
-    | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseWahr _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
         simp only [rufUpdateG_self]
         subst hs₁
         exact Or.inl (zugriffsDelta_fragt_lese (M.weltVon f) _ Λ _ (Expr.orte_darf _) (heldIn_weltVon hΛ))
-    | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
         simp only [rufUpdateG_self]
         subst hs₁
         exact Or.inl (zugriffsDelta_fragt_lese (M.weltVon f) _ Λ _ (Expr.orte_darf _) (heldIn_weltVon hΛ))
-    | dannAwaits l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+    | dannAwaits _ _ l Γ Λ Λ' g payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
         simp only [rufUpdateG_self]
         subst hs₁
         exact Or.inl (zugriffsDelta_fragt_lese (M.weltVon f) _ Λ [.inr g]
@@ -285,6 +297,10 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         delta_axiom axiomAntwortSonst
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+        delta_axiom axiomAntwortSonst
+    | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+        delta_axiom axiomAntwortSonst
+    | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         delta_axiom axiomAntwortSonst
   | g7 hs =>
     cases hs with

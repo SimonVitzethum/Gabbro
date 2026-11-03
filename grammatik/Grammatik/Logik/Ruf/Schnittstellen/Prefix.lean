@@ -45,9 +45,13 @@ theorem ptrPflicht_prefix (P : Programm D)
     (σ σ' : World D) (ρ : Env D Γ)
     (h : PtrRufPflicht P p args σ ρ)
     (hag : GleichAuf (P.ptrVertrag n).pre.orte
-      (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte))) :
+      (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte)))
+    (hargs : evalArgs (σ'.lese Λ (p.orte ++ args.orte)) args (σ'.lese Λ (p.orte ++ args.orte)) ρ =
+      evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ) :
     PtrRufPflicht P p args σ' ρ := by
   unfold PtrRufPflicht at h ⊢
+  dsimp only at h ⊢
+  rw [hargs]
   exact ptrPre_prefix P _ _ _ h hag
 
 /-- Full prefix transfer for a statement indirect call: the replayed
@@ -58,11 +62,13 @@ theorem ptrReq_prefix_stmt (hR : PtrVerfeinert P)
     (σ σ' : World D) (ρ : Env D Γ)
     (h : PtrRufPflicht P p args σ ρ)
     (hag : GleichAuf (P.ptrVertrag n).pre.orte
-      (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte))) :
+      (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte)))
+    (hargs : evalArgs (σ'.lese Λ (p.orte ++ args.orte)) args (σ'.lese Λ (p.orte ++ args.orte)) ρ =
+      evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ) :
     let s0 := σ'.lese Λ (p.orte ++ args.orte)
     let target := eval s0 p s0 ρ
     ReqAmEintritt P target.val s0 (umsig target.property (evalArgs s0 args s0 ρ)) :=
-  PtrRufPflicht.req hR (ptrPflicht_prefix P p args σ σ' ρ h hag)
+  PtrRufPflicht.req hR (ptrPflicht_prefix P p args σ σ' ρ h hag hargs)
 
 /-- The concrete caller gate opens at the replayed site world. The selected
     handler, body and result remain unchanged; only the entry world moves
@@ -73,12 +79,14 @@ theorem ptrTor_prefix_stmt (hR : PtrVerfeinert P)
     (σ σ' : World D) (ρ : Env D Γ)
     (h : PtrRufPflicht P p args σ ρ)
     (hag : GleichAuf (P.ptrVertrag n).pre.orte
-      (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte))) :
+      (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte)))
+    (hargs : evalArgs (σ'.lese Λ (p.orte ++ args.orte)) args (σ'.lese Λ (p.orte ++ args.orte)) ρ =
+      evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ) :
     let s0 := σ'.lese Λ (p.orte ++ args.orte)
     let target := eval s0 p s0 ρ
     torRuf P R target.val s0 (umsig target.property (evalArgs s0 args s0 ρ)) =
       R target.val s0 (umsig target.property (evalArgs s0 args s0 ρ)) :=
-  PtrRufPflicht.torRuf hR R (ptrPflicht_prefix P p args σ σ' ρ h hag)
+  PtrRufPflicht.torRuf hR R (ptrPflicht_prefix P p args σ σ' ρ h hag hargs)
 
 /-- The interface post at a normal return replays across entry/current
     agreements and projects from the concrete ensures. Reason exits supply
@@ -89,6 +97,8 @@ theorem ptrEns_prefix_stmt (hR : PtrVerfeinert P)
     (h : PtrRufPflicht P p args σ ρ)
     (hag : GleichAuf (P.ptrVertrag n).pre.orte
       (σ.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte)))
+    (hargs : evalArgs (σ'.lese Λ (p.orte ++ args.orte)) args (σ'.lese Λ (p.orte ++ args.orte)) ρ =
+      evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)
     (s1 s1' : World D)
     (v : ErgVal D (D.erg (eval (σ'.lese Λ (p.orte ++ args.orte)) p
       (σ'.lese Λ (p.orte ++ args.orte)) ρ).val))
@@ -99,7 +109,7 @@ theorem ptrEns_prefix_stmt (hR : PtrVerfeinert P)
     let s0 := σ'.lese Λ (p.orte ++ args.orte)
     let target := eval s0 p s0 ρ
     (P.ptrVertrag n).postHolds s0 s1' (evalArgs s0 args s0 ρ) (ptrResult target.property v) := by
-  have hpost := PtrRufPflicht.ens hR (ptrPflicht_prefix P p args σ σ' ρ h hag) s1 v hv
+  have hpost := PtrRufPflicht.ens hR (ptrPflicht_prefix P p args σ σ' ρ h hag hargs) s1 v hv
   have hag0 : GleichAuf (P.ptrVertrag n).post.orte
       (σ'.lese Λ (p.orte ++ args.orte)) (σ'.lese Λ (p.orte ++ args.orte)) :=
     GleichAuf.refl _ _

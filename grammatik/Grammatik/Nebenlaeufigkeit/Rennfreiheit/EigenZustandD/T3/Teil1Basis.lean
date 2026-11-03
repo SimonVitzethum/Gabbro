@@ -228,7 +228,7 @@ theorem assignDurchOwn_andere_fest (O : Orakel D) (passes : Nat)
     {f₂ : D.Feld t₂}
     {i : Expr D Γ Λ (.index (D.count t₂))} {e : Expr D Γ Λ (D.typ t₂ f₂)}
     {m : D.Marke} {s : Nat} {ho : D.ownerNr o = some m} {he : m ∈ D.eigner t₂}
-    {hg : Sum.inr (m, s) ∈ D.braucht t₂} {hm : Res.marke m s ∈ Λ}
+    {hg : Sum.inr (m, s) ∈ D.braucht t₂}
     {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf
