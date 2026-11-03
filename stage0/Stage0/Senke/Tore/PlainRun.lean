@@ -9,6 +9,10 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 variable [Kern] {D : Deklaration} {L : Lay D}
 
+/-- The source result is the original canonical oracle answer. An explicit
+    infallible area provider supplies a valid typed value under its contract;
+    its unused machine return register imposes no additional ABI convention.
+    The scalar profile retains its range checks and hardware-stop outcome. -/
 theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
     {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {τ : Ty} (he : D.aerg a = some τ)
     {reserved top : Nat} {code rest : List II}
@@ -39,6 +43,9 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
         areaC_ok he requestMade capacity layout pre0.left world
       have next := pre0.nextW layout change1 (by have := pre.ctx; omega) (Nat.le_refl _) (by omega)
       have span := Nat.le_trans (areaC_top requestMade) capacity
+      have destination : frei Γ reserved + valueWords τ ≤ Ks := by
+        unfold foreignResultBase at span
+        omega
       rcases reply with ⟨value, decoded, success, payload⟩ | ⟨reason, errno, decoded, found⟩ |
           ⟨decoded, nonzero, missing, canFail⟩
       · have source : einpassenErg O.zeiger (D.aerg a)
