@@ -8,20 +8,33 @@ public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
-/-! ## C15 use export: the core query, the update and the reduction
+/-! ## C15 use export: the core query, its wrapper, the update and the reduction
 
-    Per admitted `accumulates n : T merge op per cpu k` item the elaborator
-    generates three functions besides the guarded storage (`uAkkuItem`):
+    Per admitted `accumulates n : T merge op per cpu k [assume a]` item the
+    elaborator generates four functions besides the guarded storage
+    (`uAkkuItem`):
 
     * the core query `n#kern`: a FOREIGN body (`UFnKopf` with `ext`), no
       parameters, answer `0 .. k - 1`, no reason channel, no writes -- the
       exact shape `Kernzelle.KernAbfrageGestalt` decides;
+    * the query wrapper `n#query`: an ordinary body binding the query once
+      and returning its answer, so the update calls a unit function and the
+      wrapper's foreign bind is the direct syntactic fact
+      `Kernzelle.bindetAxE` decides;
     * the update `n#aktualisiere`: one value parameter, no answer; it binds
-      the query once (sample-once at entry: migration afterwards does not
+      the wrapper once (sample-once at entry: migration afterwards does not
       reselect the destination), dispatches over the answer, and runs, under
       the selected cell's exclusive lock, load/merge/store;
     * the reduction `n#falte`: no parameters, answer `T`; it folds the cells
       in index order, each sample taken under its cell's lock.
+
+    The named `assume a` travels from the declaration to the query head
+    (`UFnKopf.annahme`) to the elaborated foreign body (`UAx.beleg`, resolved
+    against the unit's `assume` items) to the declaration (`D.axHerkunft`,
+    `D.axBeleg`): that, together with the named `AxVertragO` ensures on the
+    answer, is the ONE hardware premise of the core query
+    (`Kernzelle.KernAbfrageHerkunft`). A declaration without `assume` keeps
+    `beleg` at `none`: it elaborates, but no query list admits it.
 
     The merge per operator, with its range/overflow duty:
 
@@ -47,24 +60,33 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
     Generated names carry `#`, which never occurs in a source name, so they
     meet neither user functions nor user locals. -/
 
-/-- The generated names and the core count of one accumulator. -/
+/-- The generated names, the core count and the named origin of one accumulator. -/
 structure AkkuPlan where
   name : String
   frage : String
   akt : String
   falt : String
   kernZahl : Nat
+  /-- The `assume` clause witnessing the query's hardware origin (`none`
+      without one: the query elaborates, but no query list admits it). -/
+  herkunft : Option String := none
   deriving DecidableEq, Repr
 
 /-- The plan of one accumulator: `n#kern`, `n#aktualisiere`, `n#falte`. -/
-def uAkkuPlan (n : String) (k : Nat) : AkkuPlan :=
+def uAkkuPlan (n : String) (k : Nat) (herkunft : Option String := none) : AkkuPlan :=
   { name := n, frage := n ++ "#kern", akt := n ++ "#aktualisiere",
-    falt := n ++ "#falte", kernZahl := k }
+    falt := n ++ "#falte", kernZahl := k, herkunft := herkunft }
 
-/-- The query head: a foreign body answering the running core in `0 .. k-1`. -/
+/-- The query wrapper name: `n#query`. -/
+def uAkkuHuelle (p : AkkuPlan) : String :=
+  p.name ++ "#query"
+
+/-- The query head: a foreign body answering the running core in `0 .. k-1`,
+    witnessed by the named `assume` (`UFnKopf.annahme`). -/
 def uAkkuFrageKopf (p : AkkuPlan) : UFnKopf :=
   { name := p.frage, names := [], kinds := [], types := [],
-    res := some (0, (p.kernZahl : Int) - 1), held := [], ext := true }
+    res := some (0, (p.kernZahl : Int) - 1), held := [], ext := true,
+    annahme := p.herkunft }
 
 /-- The neutral element as a surface literal. -/
 def uAkkuNeutralExpr (z : Int) : SExpr :=
@@ -105,11 +127,25 @@ def uAkkuVersand (p : AkkuPlan) (lo hi : Int) (op : String) : Nat → SAnw
       (.block [uAkkuAktArm p lo hi op k] none) []
       (some (uAkkuVersand p lo hi op k))
 
-/-- The update body: query once, dispatch, locked load/merge/store. -/
+/-- The update body: call the query wrapper once, dispatch, locked load/merge/store. -/
 def uAkkuAktKoerper (p : AkkuPlan) (lo hi : Int) (op : String) : SAnw :=
-  .block [.bind false "k" none (.call p.frage []),
+  .block [.bind false "k" none (.call (uAkkuHuelle p) []),
       uAkkuVersand p lo hi op p.kernZahl]
     none
+
+/-- The query wrapper body: bind the hardware query once, return its answer. -/
+def uAkkuHuelleKoerper (p : AkkuPlan) : SAnw :=
+  .block [.bind false "k" none (.call p.frage [])]
+    (some (.ret (some (.variable "k"))))
+
+/-- The query wrapper function: no parameters, answer `0 .. k - 1`, costs
+    counting the foreign bind and the return. -/
+def uAkkuHuelleFn (p : AkkuPlan) : FnSig × SAnw :=
+  ({ art := "impl", name := uAkkuHuelle p, params := [],
+    res := some (.range (.atom "u32") (.lit 0) (.lit (p.kernZahl - 1))),
+    fehler := none,
+    klauseln := [.cost (.lit 2)] },
+    uAkkuHuelleKoerper p)
 
 /-- The update function: one value parameter, no answer, writes every cell,
     costs counting query, dispatch, `k` locked load/merge/store triples and
@@ -164,15 +200,16 @@ def uAkkuFaltFn (p : AkkuPlan) (t : STyp) (lo hi neutral : Int)
     uAkkuFaltKoerper p t lo hi neutral op)
 
 /-- The generated functions of one accumulator item: the query head, the
-    update and the reduction. Storage errors keep their exact names. -/
+    update, the reduction and the query wrapper. Storage errors keep their
+    exact names. -/
 def uAkkuGenItem (consts : List (String × Int))
     (alias : List (String × (Int × Int))) : SItemTief → Except String
-    (AkkuPlan × UFnKopf × (FnSig × SAnw) × (FnSig × SAnw))
-  | .accT n t m cnt =>
+    (AkkuPlan × UFnKopf × (FnSig × SAnw) × (FnSig × SAnw) × (FnSig × SAnw))
+  | .accT n t m cnt q =>
     match uAkkuAnzahl consts cnt with
     | .error e => .error e
     | .ok k =>
-      let p := uAkkuPlan n k
+      let p := uAkkuPlan n k q
       match uAkkuBereich alias t with
       | .error e => .error e
       | .ok (lo, hi) =>
@@ -183,17 +220,31 @@ def uAkkuGenItem (consts : List (String × Int))
             .error "accumulator neutral outside its range without G form"
           else if !(akkuOperatorOk m) then .error "accumulator operator without G form"
           else .ok (p, uAkkuFrageKopf p, uAkkuAktFn p t lo hi m,
-            uAkkuFaltFn p t lo hi z m)
+            uAkkuFaltFn p t lo hi z m, uAkkuHuelleFn p)
   | _ => .error "expected accumulator declaration"
+
+/-- One item with its origin checked: a named `assume` must be declared in
+    the unit; an unknown name is refused by name. -/
+def uAkkuGenEintrag (annahmen : List String) (consts : List (String × Int))
+    (alias : List (String × (Int × Int))) : SItemTief → Except String
+    (AkkuPlan × UFnKopf × (FnSig × SAnw) × (FnSig × SAnw) × (FnSig × SAnw))
+  | .accT n t m cnt (some a) =>
+    if annahmen.any (strEq · a) then
+      uAkkuGenItem consts alias (.accT n t m cnt (some a))
+    else .error ("core query assumption unknown: " ++ a)
+  | it => uAkkuGenItem consts alias it
 
 /-- The generated functions of the unit's accumulators; a repeated name is
     refused (it would generate the same cells twice). -/
 def uAkkuGenFns (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (ms : List SItemTief) : Except String
-    (List (AkkuPlan × UFnKopf × (FnSig × SAnw) × (FnSig × SAnw))) :=
+    (List (AkkuPlan × UFnKopf × (FnSig × SAnw) × (FnSig × SAnw) × (FnSig × SAnw))) :=
+  let annahmen := ms.filterMap fun
+    | .assumT n _ _ _ => some n
+    | _ => none
   match uSeq ((ms.filterMap fun
-    | .accT n t m cnt => some (.accT n t m cnt)
-    | _ => none).map (uAkkuGenItem consts alias)) with
+    | .accT n t m cnt q => some (.accT n t m cnt q)
+    | _ => none).map (uAkkuGenEintrag annahmen consts alias)) with
   | .error e => .error e
   | .ok gen =>
     if (uEindeutig (gen.map fun g => g.1.name)).length != gen.length then

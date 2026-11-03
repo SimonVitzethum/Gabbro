@@ -70,6 +70,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   let fnItems := msSub.filterMap (fun
     | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
     | _ => none)
+  let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
   -- C15 use export: query/update/fold per accumulator, then expand uses.
   match uAkkuVorlauf consts alias ms fnItems with
   | .error e => .error e
@@ -122,7 +123,6 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .ok gateKoepfe =>
   let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
-  let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
   -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
   match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) (uKonstArrays alias functions consts ms) zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) with
   | .error e => .error e
@@ -153,7 +153,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     | .error e => .error e
     | .ok regiert =>
     let u : UProg :=
-      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records }
+      { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs, beleg := k.annahme.bind (fun n => annahmen.findIdx? fun x => strEq x n) }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records }
     let u := uMitBoden u
     match Generic.checkStaticConformance consts alias u staticRequirements valueScope.types with
     | .error error => .error error

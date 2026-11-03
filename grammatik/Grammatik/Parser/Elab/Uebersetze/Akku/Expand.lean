@@ -416,10 +416,11 @@ def uAkkuExpandUnit (ps : List AkkuPlan) (fns : List (FnSig × SAnw))
       | .error x => .error x
       | .ok fremd' => .ok (fns', fremd')
 
-/-- The C15 pipeline step: generate the query, update and reduction per
-    `accumulates` item, expand accumulator uses in the user functions and
-    foreign signatures. Returns the user functions with the generated ones
-    appended, the query heads and the expanded foreign pairs. -/
+/-- The C15 pipeline step: generate the query, update, reduction and query
+    wrapper per `accumulates` item, expand accumulator uses in the user
+    functions and foreign signatures. Returns the user functions with the
+    generated ones appended (update, reduction, wrapper, in this order), the
+    query heads and the expanded foreign pairs. -/
 def uAkkuVorlauf (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (ms : List SItemTief)
     (fnItems : List (FnSig × SAnw)) : Except String
@@ -431,7 +432,7 @@ def uAkkuVorlauf (consts : List (String × Int))
     match uAkkuExpandUnit (gen.map fun g => g.1) fnItems (fremdPaare.map (·.1)) with
     | .error e => .error e
     | .ok (fnItems', fremdSigs') =>
-      .ok (fnItems' ++ gen.flatMap fun g => [g.2.2.1, g.2.2.2],
+      .ok (fnItems' ++ gen.flatMap fun g => [g.2.2.1, g.2.2.2.1, g.2.2.2.2],
         gen.map fun g => g.2.1,
         (fremdPaare.map (·.2)).zip fremdSigs' |>.map Prod.swap)
 

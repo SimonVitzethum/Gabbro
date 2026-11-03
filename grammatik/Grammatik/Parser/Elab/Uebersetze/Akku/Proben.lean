@@ -98,11 +98,27 @@ theorem akkuSchatten_abgelehnt :
         .block [] none)] =
       .error "accumulator name bound as a local without G form: s" := rfl
 
+/-- The query wrapper name is the accumulator name with `#query`. -/
+theorem akkuHuelleName_zeuge : uAkkuHuelle probenAkku = "s#query" := rfl
+
+/-- The wrapper binds the hardware query once and returns its answer. -/
+theorem akkuHuelleKoerper_zeuge :
+    uAkkuHuelleKoerper probenAkku =
+      .block [.bind false "k" none (.call "s#kern" [])]
+        (some (.ret (some (.variable "k")))) := rfl
+
+/-- The update samples through the wrapper, never the axiom directly. -/
+theorem akkuAktRuftHuelle_zeuge :
+    uAkkuAktKoerper probenAkku 0 255 "add" =
+      .block [.bind false "k" none (.call "s#query" []),
+        uAkkuVersand probenAkku 0 255 "add" 2]
+      none := rfl
+
 /-! ## The elaborated unit -/
 
 /-- The probe accumulator: two unsigned `add` cells over `0 .. 255`. -/
 def probenAccT : SItemTief :=
-  .accT "s" (.atom "u32") "add" (some (.lit 2))
+  .accT "s" (.atom "u32") "add" (some (.lit 2)) none
 
 /-- The probe update use: merge the argument. -/
 def probenMelde : SItemTief :=
@@ -121,10 +137,11 @@ def probenLies : SItemTief :=
     generated query, update and reduction. -/
 theorem akkuVerwendung_zeuge : (elabU [probenAccT, probenMelde, probenLies]).isOk = true := rfl
 
-/-- The generated functions travel with the unit, after the user functions. -/
+/-- The generated functions travel with the unit, after the user functions:
+    update, reduction, then the query wrapper. -/
 theorem akkuFunktionen_zeuge :
     (elabU [probenAccT, probenMelde, probenLies]).map (fun u => u.fns.map (·.name)) =
-      .ok ["melde", "lies", "s#aktualisiere", "s#falte"] := rfl
+      .ok ["melde", "lies", "s#aktualisiere", "s#falte", "s#query"] := rfl
 
 /-- The generated query travels with the unit as the only foreign body. -/
 theorem akkuFrage_zeuge :
