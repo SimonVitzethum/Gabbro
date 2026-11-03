@@ -125,6 +125,14 @@ def post : List II × Nat :=
 def lowered (good : Bool) : Option (List II × Nat) :=
   lowS 1 (fun _ => 2048) layout (functionFrame program ()) post [3] (0, 0) (statement good)
 
+/-- The unadmitted candidate uses the actual recursive body compiler, with
+    one explicit reserved control pair. This is emission evidence only. -/
+def candidate (good : Bool) : Option (List II × Nat) :=
+  Consuming.lower layout (functionFrame program ()) () member edge
+    (invariant good) 2 mass 2 0 [3]
+    (fun protected exits => lowB 1 (fun _ => 2048) layout
+      (functionFrame program ()) post protected exits body (reserved := 2))
+
 /-- Exact represented indices, shared by the selector and the source body. -/
 def zero : Wert D (.index 2) := ⟨0, by decide, by decide⟩
 def one : Wert D (.index 2) := ⟨1, by decide, by decide⟩
