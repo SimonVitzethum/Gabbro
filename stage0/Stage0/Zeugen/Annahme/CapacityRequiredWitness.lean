@@ -1,5 +1,6 @@
 module
 public import Stage0.SourceWitness
+public import Stage0.Zeugen.Annahme.NarrowRequiredWitness
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -38,9 +39,9 @@ namespace Gabbro.Stage0.CapacityRequiredWitness
 set_option maxRecDepth 2000
 set_option maxHeartbeats 400000
 
-/-- A required allocation: the success path of the `else` form, with `stopC 107`
-    on capacity exhaustion (the Stage-0 shape of `narrowRequired`, which
-    `Block.arenaAllocRequired` unfolds to). A full arena is `Logik.kapazitaet`,
+/-- A required end-block allocation, with `stopC 107` on capacity exhaustion
+    (the Stage-0 shape of `narrowRequired`, which `Endblock.arenaAllocRequired`
+    unfolds to). A full arena is `Logik.kapazitaet`,
     excluded by the caller's `KoerperGutS/SA` duty; the static arena commits
     all its slots. -/
 def text : String :=
@@ -54,5 +55,41 @@ def output : Emitted text 64 := candidate.toOption.get candidate_present
 
 theorem accepted_image : emit text 64 = .ok output :=
   Gabbro.Grammatik.except_ok_get candidate_present
+
+/-- A required allocation inside an ordinary block, using its bound index. -/
+def blockText : String :=
+  "module capacity_block { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { if true { let i = alloc A (10); return i; } return 23; } }"
+
+/-- Filling the last slot is success, even though the updated counter is the ceiling. -/
+def lastText : String :=
+  "module capacity_last { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { let i = alloc A (10); let j = alloc A (20); return j; } }"
+
+/-- The same last-slot boundary inside an ordinary block. -/
+def blockLastText : String :=
+  "module capacity_block_last { arena A capacity 1 .. 2 of u32; impl fn main() -> u64 in 0 .. 100 effects { writes A } { if true { let i = alloc A (10); let j = alloc A (20); return j; } return 23; } }"
+
+theorem block_image_zeuge : (emit blockText 64).isOk = true := by decide +kernel
+
+theorem last_image_zeuge : (emit lastText 64).isOk = true := by decide +kernel
+
+theorem block_last_image_zeuge : (emit blockLastText 64).isOk = true := by decide +kernel
+
+/-- Instantiating the source-image theorem keeps the required stop and the
+    successful store-and-bump path under the actual compiler's correctness proof. -/
+theorem image_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] : output.Correct :=
+  output.correct
+
+/-- The capacity outcome uses the same runtime stop at either nesting level. -/
+theorem stop_code_zeuge :
+    Senke.logikCode (D := Senke.ControlProbe.D) .kapazitaet = 107 := rfl
+
+/-- The imported range fixtures cover success and capacity failure for both
+    generic narrowing arms; allocation reuses those arms after source expansion. -/
+theorem narrowing_images_zeuge :
+    [2, 3, 7, 8].all (fun n =>
+      (Senke.ControlProbe.imageOf (NarrowRequiredWitness.body n)).isOk) = true ∧
+    [2, 3, 7, 8].all (fun n =>
+      (Senke.ControlProbe.blockImageOf (NarrowRequiredWitness.block n)).isOk) = true :=
+  ⟨NarrowRequiredWitness.accepted_end_zeuge, NarrowRequiredWitness.accepted_block_zeuge⟩
 
 end Gabbro.Stage0.CapacityRequiredWitness
