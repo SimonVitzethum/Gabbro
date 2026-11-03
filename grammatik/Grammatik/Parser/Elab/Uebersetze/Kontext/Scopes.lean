@@ -183,6 +183,8 @@ structure UFn where
   nimmt : List String := []
   /-- The linear marks the function produces (`effects { allocs m }`, C16). -/
   gibt : List String := []
+  /-- Private typed reporter metadata, consumed only by ghost replay. -/
+  checkReturn : Option UCheckReturn := none
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/
