@@ -190,8 +190,8 @@ def TiefK (P : Programm D) (A : D.Lock → Prop) : Nat → D.Fn → Prop
   | 0, _ => False
   | n + 1, g => EndR A (TiefK P A n) (P.rumpf g) ∧ (P.rumpf g).kOk = true
 
-/-- The residues the converse follows: covered blocks in the fragment in
-    `dann` position, covered end blocks, `schrumpf` and `frei` layers. -/
+/-- The residues the converse follows: covered source continuations and
+    the pending or completed cleanup of a normal scoped return. -/
 inductive RestK {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
     {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ Λ → Prop where
   | ende {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e : Endblock D V l Γ Λ)
@@ -205,6 +205,11 @@ inductive RestK {V : Vertrag D} (A : D.Lock → Prop) (C : D.Fn → Prop) :
       (hk : RestK A C k) : RestK A C (.frei L k)
   | abbruch {l : Bool} {Γ : Ctx} {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk)
       (hk : RestK A C k) : RestK A C (.abbruch (Λ := Λ) k)
+  | aufraeumen {l : Bool} {Γ : Ctx} (v : ErgVal D V.erg) (vor : World D)
+      (remaining : List D.Lock) :
+      RestK A C (.aufraeumen (l := l) (Γ := Γ) ⟨.inl v, vor⟩ remaining)
+  | zurueckgekehrt {l : Bool} {Γ : Ctx} (v : ErgVal D V.erg) (vor : World D) :
+      RestK A C (.zurueckgekehrt (l := l) (Γ := Γ) ⟨.inl v, vor⟩)
 
 section RestKInv
 
