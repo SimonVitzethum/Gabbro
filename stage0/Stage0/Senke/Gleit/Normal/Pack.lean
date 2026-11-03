@@ -75,11 +75,14 @@ theorem routineRoundPackL_ok {reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Ru
     (g := fun x y => some (x >>> (y.toNat % 64))) rfl rfl (by decide : 12 < 256)
   have zero : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 0 (by decide)
   have maxExp : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.const (L := L) (ρ := ρ) (W := W) 2047 (by decide)
-  have subnormal := packL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W) @hs @zero @sig
+  have subnormal : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
+    @packL_ok _ D L reserved Γ ρ W _ _ _ _ _ _ @hs @zero @sig
   have fraction : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin sig hidden
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  have normal := packL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W) @hs @exponent @fraction
-  have overflow := packL_ok (L := L) (reserved := reserved) (ρ := ρ) (W := W) @hs @maxExp @zero
+  have normal : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
+    @packL_ok _ D L reserved Γ ρ W _ _ _ _ _ _ @hs @exponent @fraction
+  have overflow : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
+    @packL_ok _ D L reserved Γ ρ W _ _ _ _ _ _ @hs @maxExp @zero
   have finite : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
     routineChooseL_ok (routineLessL_ok sig hidden) (fun _ => subnormal) (fun _ => normal)
   have result : WordCode (L := L) (reserved := reserved) ρ W _ _ :=
