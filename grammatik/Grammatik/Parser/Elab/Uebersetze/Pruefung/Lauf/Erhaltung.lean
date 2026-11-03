@@ -44,7 +44,7 @@ theorem duty_cycle_conservation (D : Deklaration) (c : CheckDecl D)
 theorem duty_retirement_payload (D : Deklaration) (V : Vertrag D)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (m : D.Marke) (s : Nat) (present : Res.marke m s ∈ Λ)
-    (O : Orakel D) (passes : Nat) (calls : Ruf D) (world : World D) (env : Env D Γ) :
+    (O : Orakel D) (passes : Nat) (calls : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (world : World D) (env : Env D Γ) :
     execStmt O passes calls (Stmt.retires (V := V) (l := l) m s present D.a10)
       world env = .ok world env := rfl
 
