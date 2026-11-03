@@ -282,8 +282,8 @@ def fussWXB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
         geteiltVB P fs c) &&
     ((P.rumpf f).regs.flatMap D.rtraeger).all (fun c => sigB f c || getrenntW P fs ws c)
 
-/-- **The checker with the atomic rely**: `Akzeptiert` with `fussWXB` in place of `fussWB`.
-    The C02 library conjunct rides along unchanged (`libraryB_immer`). -/
+/-- The atomic-rely checker keeps the same final bounded guest admission.
+    Source adapters must retain the complete descriptor list, as for Akzeptiert. -/
 def AkzeptiertX (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
