@@ -19,7 +19,7 @@ macro "rangA1" : tactic => `(tactic| (
   refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
   · first
       | (simp only [rufUpdateG_self]; done)
-      | (simp only [rufUpdateG_self]; subst_vars; first | rfl | exact lese_offen _ _ _)
+      | (simp only [rufUpdateG_self]; subst_vars; simp only [lese_offen]; rfl)
   · intro K hK
     dsimp only; rw [rufUpdateG_self]
     rw [‹(M.faeden f).kopf.rest = _›] at hK
@@ -32,11 +32,23 @@ macro "rangA1h" t:term : tactic => `(tactic| (
   refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
   · first
       | (simp only [rufUpdateG_self]; done)
-      | (simp only [rufUpdateG_self]; subst_vars; first | rfl | exact lese_offen _ _ _)
+      | (simp only [rufUpdateG_self]; subst_vars; simp only [lese_offen]; rfl)
   · intro K hK
     dsimp only; rw [rufUpdateG_self]
     rw [‹(M.faeden f).kopf.rest = _›] at hK
     exact $t K hK))
+
+set_option hygiene false in
+/-- A foreign call keeps the held locks while its signature updates holdings. -/
+macro "rangAxiomOpt" ho:term "," hs:term "," hh:term : tactic => `(tactic| (
+  refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+  · simp only [rufUpdateG_self]
+    rw [$ho, $hs]
+    exact lese_offen _ _ _
+  · intro K hK
+    dsimp only; rw [rufUpdateG_self]
+    rw [$hh] at hK
+    exact (held_nachSig_iff _ _ K).mpr hK))
 
 set_option hygiene false in
 /-- A push. -/
@@ -115,6 +127,8 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
+    | endeBindAxiomOpt l Γ Λ e a args he hp hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax =>
+      rangAxiomOpt (axiom_offen' hO _ _ _ _ _ hax), hs₁, hhead
     | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
       rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩
     | rueck caller rst hpop Γ Λ e hperm ρ hhead g hfg rho hrho s0 hs0 hΛ s1 hs1 v hv neu hneu hnw =>
@@ -223,6 +237,10 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         rcases hcaller with hc | ⟨_, _, hc⟩ <;> rw [hc]
       · simp only [rufUpdateG_self]; rw [hs1]; exact lese_offen _ _ _
       · rw [hhead]; exact hperm
+    | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax =>
+      rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
+    | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax =>
+      rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
   | g4 hs =>
     cases hs with
     | peelFreiLeave l Γ Λ L rest k ρ hleave hhead =>
@@ -349,6 +367,12 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         by dsimp only; rw [rufUpdateG_self], ?_, by dsimp only; rw [rufUpdateG_self], ?_⟩)
       · dsimp only; rw [rufUpdateG_self]; dsimp only; rw [hcaller]
       · rw [hhead]; exact hperm
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax =>
+      rangAxiomOpt (axiom_offen' hO _ _ _ _ _ hax), hs₁, hhead
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax =>
+      rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
+    | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax =>
+      rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
     | _ => rangA1
   | g6 hs =>
     cases hs with
@@ -370,8 +394,32 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
+    | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax =>
+      rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
+    | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax =>
+      rangAxiomOpt (axiomSonst_offen' hO _ _ _ _ _ hax), hs₁, hhead
   | g7 hs =>
     cases hs with
+    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave
+        hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall σ₁ hs₁ =>
+      refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+      · simp only [rufUpdateG_self]
+        rw [hs₁, lese_offen, hsm, lese_offen, leave_welt' _ _ _ _ _ _ _ _ hstep]
+        rfl
+      · intro K hK
+        dsimp only; rw [rufUpdateG_self]
+        rw [hhead] at hK
+        exact (Block.held_iff restb K).mpr hK
+    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext
+        hhead σ' ρ' neu hstep hneu hkein σm hsm =>
+      refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+      · simp only [rufUpdateG_self]
+        rw [hsm, lese_offen, next_welt' _ _ _ _ _ _ _ _ hstep]
+        rfl
+      · intro K hK
+        dsimp only; rw [rufUpdateG_self]
+        rw [hhead] at hK
+        exact (Block.held_iff restb K).mpr hK
     | _ => rangA1
 
 #print axioms Gabbro.Grammatik.schrittRang
