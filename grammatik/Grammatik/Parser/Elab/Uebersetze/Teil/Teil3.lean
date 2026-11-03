@@ -106,6 +106,10 @@ def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : L
     | .ok (.int _ _), some a, some b => .ok (.int a (if o then b - 1 else b))
     | .error e, _, _ => .error e
     | _, _, _ => .error "range requires an integer type and known bounds"
+  | .index true t =>
+    match uTabNr tabs t with
+    | .ok (_, count) => .ok (.opt count)
+    | .error error => .error error
   | .index false t =>
     match uTabNr tabs t with
     | .ok (num, c) =>
