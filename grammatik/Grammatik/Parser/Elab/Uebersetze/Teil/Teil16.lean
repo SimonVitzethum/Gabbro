@@ -94,6 +94,8 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && beqUSide x y && beqUSide n m
   | .floatLit a q lo hi, .floatLit b r low high =>
     strEq a b && decide (q = r) && decide (lo = low) && decide (hi = high)
+  | .floatOf a x lo hi, .floatOf b y low high =>
+    strEq a b && beqUSide x y && decide (lo = low) && decide (hi = high)
   | .float a op x y lo hi, .float b other z w low high =>
     strEq a b && decide (op = other) && beqUSide x z && beqUSide y w &&
       decide (lo = low) && decide (hi = high)
