@@ -94,7 +94,7 @@ theorem frage_ist_else : entzuckere frageSugared = .ok frageExplizit := rfl
 
 /-- The explicit form elaborates. -/
 theorem frage_explizit_ok : (elabU frageExplizit).isOk = true := by
-  decide
+  decide +kernel
 
 /-- The desugared unit elaborates exactly like the written one: same functions. -/
 theorem frage_gleiches_programm :
@@ -150,6 +150,6 @@ theorem adapt_ist_funktion : entzuckere adaptSugared = .ok adaptExplizit := rfl
 
 /-- The expanded function elaborates. -/
 theorem adapt_explizit_ok : (elabU adaptExplizit).isOk = true := by
-  decide
+  decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben42
