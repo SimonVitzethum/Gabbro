@@ -115,7 +115,6 @@ theorem integerFloat_round (z : Int) (large : 2 ^ 55 ≤ z.natAbs) :
     rw [rounded, index, routineRoundPackWord_model (decide (z < 0)) 2047 j (by decide) bounded.2]
     have exp : ¬ softCarryExp 2047 (rundeInt (j / 8) (j % 8) 8) < 2047 := by
       unfold softCarryExp; split <;> omega
-    dsimp only
     simp only [if_neg exp]
 
 /-- Wide halfway cases retain the entire discarded tail, in both signs. -/
