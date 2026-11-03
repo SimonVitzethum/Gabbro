@@ -273,6 +273,48 @@ theorem tree_quantifier_lower_zeuge :
       (.filtered true "T" "root" "next" false (.param "root")
         (.cmp "<=" (.param "root") (.lit 1)))).toOption.isSome = true := by rfl
 
+/-- The source adapter requires one genuine optional-self child edge. -/
+theorem consuming_edge_zeuge :
+    uConsumingEdge relationContext "T" = .ok "next" ∧
+    uConsumingEdge {relationContext with tabs := [{name := "T", count := 3, cols := []}]} "T" =
+      .error "consuming traversal requires one declared child edge" ∧
+    uConsumingEdge {relationContext with tabs := [{name := "T", count := 3, cols := [],
+      kanten := [("child", "a"), ("child", "b")]}]} "T" =
+      .error "consuming traversal requires exactly one declared child edge" := by
+  exact ⟨rfl, rfl, rfl⟩
+
+theorem consuming_effects_zeuge :
+    lowConsumingEffects relationUnit {relationFunction with puts := ["T"]} "T" "consumes T.slots" =
+      .ok () ∧
+    lowConsumingEffects relationUnit relationFunction "T" "consumes T.slots" =
+      .error "consuming traversal touches exceeds function writes" ∧
+    lowConsumingEffects relationUnit relationFunction "T" "reads T.slots" =
+      .error "consuming traversal touches must consume its domain" := by
+  exact ⟨rfl, rfl, rfl⟩
+
+theorem consuming_negative_measure_zeuge :
+    lowConsumingMass relationUnit [] [] relationFunction (.lit (-1)) =
+      .error "consuming traversal decreases must have a nonnegative range" := by rfl
+
+theorem consuming_exits_refused_zeuge :
+    let context := {relationContext with loops := ["#consume:node"]}
+    uEndeStmt context (some (.leave "node")) = .error "consuming traversal forbids leave" ∧
+    uEndeStmt context (some (.next "node")) = .error "consuming traversal forbids next" := by
+  exact ⟨rfl, rfl⟩
+
+/-- Nonempty represented domain, two ordered index binders and a current-world count
+    jointly reach the production consuming branch of the structured lowerer. -/
+theorem consuming_traversal_lower_zeuge :
+    let fn := {relationFunction with puts := ["T"]}
+    let u := {relationUnit with fns := [fn]}
+    let caller : Fin u.fns.length := ⟨0, by decide⟩
+    let header := UStmt.consumeLoopBeg "node" "T" "#consume:predecessor"
+      (.reach "T" "next" (.param "root") (.param "node"))
+      (.reach "T" "next" (.param "#consume:predecessor") (.param "node")) .tru
+      (.zaehleBaum "T" "j" "next" false (.param "root") .tru) "consumes T.slots"
+    (lowStructL (l := false) u caller [.index 3, .index 3] fn 2 [] (some ())
+      header [.blkEnd]).toOption.isSome = true := by rfl
+
 theorem index_scope_zeuge (entry state : World (declOf relationUnit))
     (root other binder : Zahl 0 2) :
     eval entry (Expr.weaken (Expr.var (D := declOf relationUnit) (Λ := [])
