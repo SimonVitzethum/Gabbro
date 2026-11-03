@@ -49,7 +49,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 theorem ist_some_baum : (match parseUnary 10
     [.ident "o", .zeichen ".", .ident "is_some", .zeichen "(", .zeichen ")", .ende] with
     | .ok (.ext .call [] [.field (.variable "o") "is_some"], [.ende]) => true
-    | _ => false) = true := by decide
+    | _ => false) = true := by decide +kernel
 
 /-- A context with the option parameter `o` over table 0 and the number `k`. -/
 def ctx : UCtx :=
@@ -59,16 +59,16 @@ def ctx : UCtx :=
 /-- `o.is_some()` over the option parameter is the option test. -/
 theorem ist_some_wert : (match uBool ctx (.ext .call [] [.field (.variable "o") "is_some"]) with
     | .ok v => v == .istSome (.var "o") 0
-    | .error _ => false) = true := by decide
+    | .error _ => false) = true := by decide +kernel
 
 /-- Twin: `!o.is_some()` is its negation. -/
 theorem ist_some_nicht : (match uBool ctx (.un "!" (.ext .call [] [.field (.variable "o") "is_some"])) with
     | .ok v => v == .not (.istSome (.var "o") 0)
-    | .error _ => false) = true := by decide
+    | .error _ => false) = true := by decide +kernel
 
 /-- Refused: `.is_some()` over a number. -/
 theorem ist_some_zahl : (match uBool ctx (.ext .call [] [.field (.variable "k") "is_some"]) with
     | .ok _ => false
-    | .error _ => true) = true := by decide
+    | .error _ => true) = true := by decide +kernel
 
 end Gabbro.Grammatik.Parser.UebersetzeProben39
