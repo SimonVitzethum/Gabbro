@@ -55,6 +55,9 @@ theorem Stmt.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
   | .callIndElse _ _ _ _ _ err, h, hr => by
       simp only [Stmt.gOk, Stmt.regs, Bool.and_eq_true] at h hr ⊢
       exact ⟨hKK _ h.1, Endblock.gOk_mono err h.2 hr⟩
+  | .axiomCallElse (err := err) .., h, hr => by
+      simp only [Stmt.gOk, Stmt.regs] at h hr ⊢
+      exact Endblock.gOk_mono err h hr
   | .assignSlot .., _, _ => rfl
   | .assignThru .., _, _ | .assignThruOwn .., _, _ | .assignSlotRef .., _, _ => rfl
   | .assignGlob .., _, _ => rfl
@@ -94,13 +97,20 @@ theorem Block.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       exact ⟨hKK _ h.1, Block.gOk_mono rest h.2 hr⟩
   | .bindCallIndElse _ _ _ _ _ err rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
-      exact ⟨hKK _ h.1.1, Endblock.gOk_mono err h.1.2 (fun r h' => hr r (Or.inl h')),
+      exact ⟨⟨hKK _ h.1.1, Endblock.gOk_mono err h.1.2 (fun r h' => hr r (Or.inl h'))⟩,
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
   | .bindCallElse _ _ _ _ _ err rest, h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, hr => by
+      simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
+      exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
+        Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
+  | .bindAxiomOpt (rest := rest) .., h, hr => by
+      simp only [Block.gOk, Block.regs] at h hr ⊢
+      exact Block.gOk_mono rest h hr
+  | .bindAxiomOptElse (err := err) (rest := rest) .., h, hr => by
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
@@ -177,6 +187,13 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
         Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
+  | .bindAxiomOpt (rest := rest) .., h, hr => by
+      simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
+      exact Endblock.gOk_mono rest h hr
+  | .bindAxiomOptElse (err := err) (rest := rest) .., h, hr => by
+      simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
+      exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
+        Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
   | .regRead r _ rest, h, hr => by
       simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_cons] at h hr ⊢
       exact ⟨hr r (Or.inl rfl), Endblock.gOk_mono rest h.2 (fun r' h' => hr r' (Or.inr h'))⟩
@@ -194,7 +211,7 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
       exact ⟨hKK _ h.1, Endblock.gOk_mono rest h.2 hr⟩
   | .bindCallIndElse _ _ _ _ _ err rest, h, hr => by
       simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
-      exact ⟨hKK _ h.1.1, Endblock.gOk_mono err h.1.2 (fun r h' => hr r (Or.inl h')),
+      exact ⟨⟨hKK _ h.1.1, Endblock.gOk_mono err h.1.2 (fun r h' => hr r (Or.inl h'))⟩,
         Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
   | .narrow _ _ _ sonst rest, h, hr => by
       simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢

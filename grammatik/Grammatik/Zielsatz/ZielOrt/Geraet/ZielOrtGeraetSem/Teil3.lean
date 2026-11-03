@@ -62,6 +62,10 @@ theorem Stmt.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
       simp only [Stmt.vOk, Bool.and_eq_true] at h
       have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.2
       simp only [Stmt.gOk, Stmt.regs, h.1, he.1, he.2, Bool.and_self, and_self]
+  | .axiomCallElse (err := err) .., h => by
+      simp only [Stmt.vOk] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h
+      simp only [Stmt.gOk, Stmt.regs, he.1, he.2, and_self]
   | .assignSlot .., _ => ⟨rfl, rfl⟩
   | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => ⟨rfl, rfl⟩
   | .assignGlob .., _ => ⟨rfl, rfl⟩
@@ -114,6 +118,15 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       simp only [Block.gOk, Block.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
+      simp only [Block.gOk, Block.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
+        and_self]
+  | .bindAxiomOpt (rest := rest) .., h => by
+      simp only [Block.vOk] at h
+      exact Block.gOk_of_vOk rest h
+  | .bindAxiomOptElse (err := err) (rest := rest) .., h => by
       simp only [Block.vOk, Bool.and_eq_true] at h
       have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
@@ -190,6 +203,15 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       simp only [Endblock.vOk] at h
       exact Endblock.gOk_of_vOk rest h
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
+      simp only [Endblock.gOk, Endblock.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
+        and_self]
+  | .bindAxiomOpt (rest := rest) .., h => by
+      simp only [Endblock.vOk] at h
+      exact Endblock.gOk_of_vOk rest h
+  | .bindAxiomOptElse (err := err) (rest := rest) .., h => by
       simp only [Endblock.vOk, Bool.and_eq_true] at h
       have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
