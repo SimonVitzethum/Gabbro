@@ -136,19 +136,22 @@ def uTyp (alias : List (String × (Int × Int))) (tabs : List UTab) (spaces : Li
   uTypIn alias tabs [] spaces
 
 /-- Collect constant functions independently of their statement body shape. -/
-def uKonstFns : List SItemTief → List UKonstFn
+def uKonstFnsWith (alias : List (String × (Int × Int))) : List SItemTief → List UKonstFn
   | [] => []
   | .fnT sig body :: rest =>
     if strEq sig.art "const" then
       match sig.res with
       | some result =>
-        match uTyp [] [] result, sig.params.mapM (fun (n, ty) => (uTyp [] [] ty).map (fun t => (n, t))) with
+        match uTyp alias [] result, sig.params.mapM (fun (n, ty) => (uTyp alias [] ty).map (fun t => (n, t))) with
         | .ok resultType, .ok parameters =>
-          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFns rest
-        | _, _ => uKonstFns rest
-      | none => uKonstFns rest
-    else uKonstFns rest
-  | _ :: rest => uKonstFns rest
+          { name := sig.name, params := parameters, erg := resultType, rumpf := body, signature := sig } :: uKonstFnsWith alias rest
+        | _, _ => uKonstFnsWith alias rest
+      | none => uKonstFnsWith alias rest
+    else uKonstFnsWith alias rest
+  | _ :: rest => uKonstFnsWith alias rest
+
+/-- Builtin-only collector retained as the canonical initial discovery pass. -/
+def uKonstFns (items : List SItemTief) : List UKonstFn := uKonstFnsWith [] items
 
 /-- A slot field type as an integer range (the field loop of
     `read_table`; `wrapping` and everything else are explicit
