@@ -39,10 +39,10 @@ def kDannCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Block D (vertragVon D f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D f) l Γ Λ'') : KErg D :=
   if GEntfaltbar s = true then kEntf P O passes st f rho spur sp ρ s rest k
-  else match s with
-    | .retScoped e R => kRufDann P st f rho spur sp ρ (.retScoped e R) rest k
-    | .retWhyScoped r R => kRufDann P st f rho spur sp ρ (.retWhyScoped r R) rest k
-    | _ =>
+  else match s, rest, k with
+    | .retScoped e R, rest, k => kRufDann P st f rho spur sp ρ (.retScoped e R) rest k
+    | .retWhyScoped r R, rest, k => kRufDann P st f rho spur sp ρ (.retWhyScoped r R) rest k
+    | s, rest, k =>
         if s.istBlatt = true then
           kAusDann st f rho rest k (execStmt O passes keinRuf s (sp.welt spur) ρ)
         else kRufDann P st f rho spur sp ρ s rest k
@@ -51,10 +51,10 @@ def kDannCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen
 def kEndeCons (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Endblock D (vertragVon D f) l Γ Λ') : KErg D :=
   if GEntfaltbar s = true then kLokal st f rho ρ (.dann (.cons s .nil) (.ende rest)) spur sp
-  else match s with
-    | .retScoped e R => kRufEnde P st f rho spur sp ρ (.retScoped e R) rest
-    | .retWhyScoped r R => kRufEnde P st f rho spur sp ρ (.retWhyScoped r R) rest
-    | _ =>
+  else match s, rest with
+    | .retScoped e R, rest => kRufEnde P st f rho spur sp ρ (.retScoped e R) rest
+    | .retWhyScoped r R, rest => kRufEnde P st f rho spur sp ρ (.retWhyScoped r R) rest
+    | s, rest =>
         if s.istBlatt = true then
           kAusEnde st f rho rest (execStmt O passes keinRuf s (sp.welt spur) ρ)
         else kRufEnde P st f rho spur sp ρ s rest

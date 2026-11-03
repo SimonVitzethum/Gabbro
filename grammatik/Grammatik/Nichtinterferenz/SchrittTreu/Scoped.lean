@@ -21,7 +21,6 @@ theorem kPop_rufAntwortG (z z' : RufFadenG D) (vor σ : World D)
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at h
       subst z'
-      rw [hst]
       cases a <;> rfl
   | cons c st =>
       cases hr : antwortRestG z.kopf.f a c.rest with
@@ -29,15 +28,32 @@ theorem kPop_rufAntwortG (z z' : RufFadenG D) (vor σ : World D)
       | some result =>
           simp [rufAntwortG, hst, hr] at h
           subst z'
-          rw [hst]
           obtain ⟨cf, crho, cs0, ⟨l, Γ, Λ, ρ, rest⟩⟩ := c
-          unfold antwortRestG at hr
-          cases a <;> cases rest <;>
-            simp_all [kPop, kPopGrund, kBinde,
-              RufFadenG.kern, RufRahmenG.kern, GRest.kern, GRest.wartend]
-          all_goals split at hr <;>
-            simp_all [kPop, kPopGrund, kBinde,
-              RufFadenG.kern, RufRahmenG.kern, GRest.kern, GRest.wartend]
+          cases a with
+          | inl v =>
+            cases rest with
+            | wartet body k | wartetSonst _ _ body k =>
+              simp only [antwortRestG] at hr
+              split at hr
+              · rename_i he
+                cases hr
+                simp [kPop, kBinde, RufFadenG.kern, RufRahmenG.kern,
+                  GRest.kern, GRest.wartend, he]
+              · contradiction
+            | _ =>
+              simp only [antwortRestG, Option.some.injEq] at hr
+              cases hr
+              simp [kPop, RufFadenG.kern, RufRahmenG.kern, GRest.kern, GRest.wartend]
+          | inr reason =>
+            cases rest with
+            | wartetSonst n err body k =>
+              simp only [antwortRestG] at hr
+              split at hr
+              · rename_i hn
+                cases hr
+                simp [kPopGrund, RufFadenG.kern, RufRahmenG.kern, GRest.kern, hn]
+              · contradiction
+            | _ => cases hr
 
 /-- The value head computes exactly the source read followed by the
     canonical release fold. No expression is evaluated in the released world. -/
