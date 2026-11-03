@@ -2,7 +2,7 @@ module
 
 public import Bruecke.Kodierung
 public import Bruecke.Pflichten
-public import Bruecke.Ausdruck.Teil2
+public import Bruecke.Ausdruck.Accumulator
 
 @[expose] public section
 
