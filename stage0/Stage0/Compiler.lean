@@ -1,5 +1,6 @@
 module
 public import Stage0.Frontend.Elaboration
+public import Stage0.Frontend.ExpansionGate
 public import Stage0.Frontend.Constants.ArrayConstants
 public import Stage0.Frontend.Initializers
 public import Stage0.Frontend.Measures
@@ -23,7 +24,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
     (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
     (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))}) = .ok unit
+      (fun u => {u with exportGate := .ok ()}) = .ok unit
   entry : fnIdx unit.fns "main" = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
@@ -31,7 +32,18 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
   initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.elaborierbar)) unit = .ok ()
   constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ()
-  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))
+  /-- The canonical expansion the elaborator consumes, with its requirements. -/
+  expanded : List SItemTief
+  requirements : List (STyp × String)
+  gateExpansion : Gabbro.Grammatik.Parser.Modules.prepare
+    (pre108 source.prepared.elaborierbar) = .ok (expanded, requirements)
+  /-- The gate checks the expanded unit: either the original members or the
+      expanded members carry no unbound metadata. Headers the expansion
+      consumes (generics, module templates and uses, spec groups, tagged and
+      dyn dispatch) are accepted through the expanded side. -/
+  gateChecked : (uMembers expanded).any ExportMetadata.itemMetadata = false ∨
+    (uMembers (pre108 source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false
+  metadata : unit.exportGate = .ok ()
   /-- The exact source-derived measure, checked by generic lowering at entry parameters/resources. -/
   measures : {exported : Measures.Export unit // Measures.lowerMeasures unit = .ok exported} :=
     Measures.checkedExport unit (by
@@ -52,38 +64,63 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
   match hc : ExportMetadata.checkConstants members with
   | .error error => throw error
   | .ok () => do
-    match he : Frontend.elabWithScopes declarations
-        source.scopes.values source.scopes.types source.scopes.functions
-        (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
+    match hp : Gabbro.Grammatik.Parser.Modules.prepare declarations with
     | .error e => throw e
-    | .ok candidate => do
-      let unit := {candidate with exportGate := ExportMetadata.check members}
-      have elaborated : (Frontend.elabWithScopes declarations
-          source.scopes.values source.scopes.types source.scopes.functions
-          (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-            (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
-        rw [he]
-        rfl
-      match hi : Frontend.checkInitializers members unit with
-      | .error error => throw error
-      | .ok () => do
-        let arrays ← Frontend.checkArrays unit source.scopes members
-        match hm : fnIdx unit.fns "main" with
+    | .ok (expanded, requirements) =>
+      match ho : ExportMetadata.check members, hx : ExportMetadata.check (uMembers expanded) with
+      | .ok (), _ =>
+        compileChecked source hc expanded requirements hp
+          (Or.inr (ExportMetadata.check_sound _ ho))
+      | _, .ok () =>
+        compileChecked source hc expanded requirements hp
+          (Or.inl (ExportMetadata.check_sound _ hx))
+      | .error eo, .error _ => throw eo
+
+/-- The remainder of compilation once the expansion-aware gate has accepted.
+    `gateChecked` is the checked original-or-expanded disjunct for this unit. -/
+def compileChecked (source : Frontend.Source text options)
+    (hc : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ())
+    (expanded : List SItemTief) (requirements : List (STyp × String))
+    (hp : Gabbro.Grammatik.Parser.Modules.prepare (pre108 source.prepared.elaborierbar) =
+      .ok (expanded, requirements))
+    (gateChecked : (uMembers expanded).any ExportMetadata.itemMetadata = false ∨
+      (uMembers (pre108 source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false) :
+    Except String (Compiled text options) := do
+  let declarations := pre108 source.prepared.elaborierbar
+  match he : Frontend.elabWithScopes declarations
+      source.scopes.values source.scopes.types source.scopes.functions
+      (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
+  | .error e => throw e
+  | .ok candidate => do
+    let unit := {candidate with exportGate := .ok ()}
+    have elaborated : (Frontend.elabWithScopes declarations
+        source.scopes.values source.scopes.types source.scopes.functions
+        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+          (fun u => {u with exportGate := .ok ()}) = .ok unit := by
+      rw [he]
+      rfl
+    have metadata : unit.exportGate = .ok () := rfl
+    match hi : Frontend.checkInitializers (uMembers declarations) unit with
+    | .error error => throw error
+    | .ok () => do
+      let arrays ← Frontend.checkArrays unit source.scopes (uMembers declarations)
+      match hm : fnIdx unit.fns "main" with
+      | .error e => throw e
+      | .ok main =>
+        match hl : lowerAllg unit with
         | .error e => throw e
-        | .ok main =>
-          match hl : lowerAllg unit with
+        | .ok (raw, fs) =>
+          match hr : OldSource.restore declarations unit raw with
           | .error e => throw e
-          | .ok (raw, fs) =>
-            match hr : OldSource.restore declarations unit raw with
+          | .ok program =>
+            match ha : OldSource.accepts unit program with
             | .error e => throw e
-            | .ok program =>
-              match ha : OldSource.accepts unit program with
-              | .error e => throw e
-              | .ok false => throw "refused by the checker (AkzeptiertX)"
-              | .ok true => pure { source, unit, main, program, elaborated,
-                  entry := hm, lowered := ⟨raw, fs, hl, hr⟩, accepted := ha,
-                  arrayConstants := arrays.down, initializerExports := hi,
-                  constantExports := hc, metadata := rfl }
+            | .ok false => throw "refused by the checker (AkzeptiertX)"
+            | .ok true => pure { source, unit, main, elaborated,
+                entry := hm, lowered := ⟨raw, fs, hl, hr⟩, accepted := ha,
+                arrayConstants := arrays.down, initializerExports := hi,
+                constantExports := hc, expanded, requirements,
+                gateExpansion := hp, gateChecked, metadata }
 
 /-- The actual source program keeps all declared table/global carriers and their exact read bound. -/
 theorem Compiled.invariants {text : String} {options : Profil.Options} (result : Compiled text options)
@@ -131,12 +168,16 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.compileTimeSafe original = true ∧
     (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
       (Frontend.tableWithEmpty scope.values scope.types)).map
-        (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
+        (fun u => {u with exportGate := .ok ()}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
     (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
-    result.unit.exportGate = ExportMetadata.check original ∧
+    (∃ expanded requirements, Gabbro.Grammatik.Parser.Modules.prepare declarations =
+      .ok (expanded, requirements) ∧
+      ((uMembers expanded).any ExportMetadata.itemMetadata = false ∨
+        original.any ExportMetadata.itemMetadata = false)) ∧
+    result.unit.exportGate = .ok () ∧
     Measures.lowerMeasures result.unit = .ok result.measures.val ∧
     (∀ f, Measures.SourceTuple result.unit f (result.measures.val.mass f)) ∧
     Measures.cycleLengths result.unit result.program result.measures.val.mass = true ∧
@@ -150,9 +191,29 @@ theorem compile_source_program (text : String) {options : Profil.Options} (resul
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.selection, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
-    result.accepted, result.arrayConstants, result.metadata, result.measures.property,
+    result.accepted, result.arrayConstants,
+    ⟨result.expanded, result.requirements, result.gateExpansion, result.gateChecked⟩,
+    result.metadata, result.measures.property,
     result.measures.val.source, result.measureLengths, result.invariants,
     result.source.prepared.bindungOk, result.source.prepared.abschnittFrei⟩
+
+/-- Gate acceptance ties the source to the expanded unit lowering compiles:
+    either the expansion gate accepts the declarations with exactly the stored
+    expanded unit and requirements, or the original members were already clean.
+    The elaborated and lowered fields consume that same expansion. -/
+theorem Compiled.expansion_gate {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    Frontend.checkExpansionGate (pre108 result.source.prepared.elaborierbar) =
+      .ok (result.expanded, result.requirements) ∨
+    (uMembers (pre108 result.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false := by
+  cases result.gateChecked with
+  | inl hclean =>
+    exact Or.inl (by
+      have hc := ExportMetadata.check_clear _ hclean
+      show Frontend.checkExpansionGate _ = .ok _
+      unfold Frontend.checkExpansionGate
+      rw [result.gateExpansion, hc])
+  | inr hclean => exact Or.inr hclean
 
 /-- The image is built for exactly the checked profile binding. -/
 theorem Compiled.profile_binding {text : String} {options : Profil.Options} (result : Compiled text options) :
