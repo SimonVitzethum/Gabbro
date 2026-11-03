@@ -23,7 +23,7 @@ def position {lo hi : Int} (input : Expr D Γ Λ (.int lo hi))
         (.widen (by omega) (by omega) (position input start half))
         (.widen (by omega) (by omega) (position input pivot (fuel - half)))
 termination_by fuel
-decreasing_by all_goals dsimp only; omega
+decreasing_by all_goals (dsimp only; omega)
 
 /-- The comparison used by the emitted search decides exactly whether the
     leading position precedes the pivot, including equality to a power of two. -/
@@ -87,4 +87,13 @@ theorem position_value_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
 
 #print axioms position_value
 #print axioms position_value_zeuge
+
+/-- Zero is excluded only from the mathematical logarithm theorem. The
+    total emitted search itself returns zero, so small-value dispatch never
+    needs an invalid positive-integer input or a special source assumption. -/
+theorem position_zero_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
+    (eval σ₀ (position (Expr.lit (Λ := Λ) 0) 0 3) σ ρ).n = 0 ∧
+    (eval σ₀ (position (Expr.lit (Λ := Λ) 1) 0 3) σ ρ).n = 0 := by
+  constructor <;> rfl
+
 end Gabbro.Stage0.Senke.WideFloat
