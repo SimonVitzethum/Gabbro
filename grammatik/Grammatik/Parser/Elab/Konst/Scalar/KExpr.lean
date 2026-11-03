@@ -63,9 +63,9 @@ open Konstanten
     This is indexed by the original typed body and arguments, never by a program name. -/
 structure Quoted {D : Deklaration} {Γ : Ctx} {lo hi : Int}
     (args : Env D Γ) (body : Expr D Γ [] (.int lo hi)) where
-  syntax : KExpr
+  «syntax» : KExpr
   equation : ∀ before after,
-    syntax.evalInt = some (eval before body after args).n
+    «syntax».evalInt = some (eval before body after args).n
 
 /-- Literal and parameter quotation retain exact signed values. -/
 def quoteValue {D : Deklaration} {Γ : Ctx} {lo hi : Int}
@@ -87,7 +87,7 @@ theorem KExpr_to_G_denotation_zeuge :
     let body : Expr (declaration [] (.int (-10) 10)) [] [] (.int (-3) (-3)) := .lit (-3)
     ∃ quoted : Quoted args body, quoted.syntax.evalInt = some (-3) := by
   dsimp only
-  exact ⟨quoteValue .nil (.lit (-3)) (-3) (by intros; rfl), KExpr.ofInt_eval (-3)⟩
+  exact ⟨quoteValue .nil (.lit (-3)) (-3) (by intros; rfl), by simp only [quoteValue, KExpr.ofInt_eval]⟩
 
 end Gabbro.Grammatik.Parser.Konst.Scalar
 namespace Gabbro.Grammatik.Parser.Konst.Scalar
@@ -170,8 +170,8 @@ theorem quote_denotes_zeuge :
     .cons ⟨3, by decide, by decide⟩ .nil
   let body : Expr (declaration [.int 0 10] (.int 0 20)) [.int 0 10] [] (.int 2 12) :=
     .add (.var .here) (.lit 2)
-  refine ⟨(quote body args).toOption.get (by decide), ?_, ?_⟩
-  · rfl
-  · rfl
+  refine ⟨_, by simp only [quote, bind, Except.bind, pure, Except.pure]; rfl, ?_⟩
+  simp only [quoteBinary, quoteValue, KExpr.evalInt, KExpr.ofInt_eval, KBinOp.evalInt]
+  decide
 
 end Gabbro.Grammatik.Parser.Konst.Scalar
