@@ -277,25 +277,29 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .narrow e lo' hi' sonst rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hscope_sonst : sonst.ScopesOk := by scopes_treu
+      simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;> simp only [hc, dif_pos, dif_neg] at h ⊢
       · exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
       · exact (TreuEnd.vor hl (end_treu bo hbV sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
   | .narrowRequired e lo' hi' rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
+      simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;> simp only [hc, dif_pos, dif_neg] at h ⊢
       · exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [dite_false, Ausgang.welt, reduceCtorEq] at h
   | .check c sonst rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hscope_sonst : sonst.ScopesOk := by scopes_treu
+      simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
       by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
       · exact (TreuAusgang.vor hl (block_treu bo hbV rest _ ρ hscope_rest (hl.heldB hh))) σ' h
       · exact (TreuEnd.vor hl (end_treu bo hbV sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
   | .float op a b lo hi rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
+      simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (a.orte ++ b.orte)
       generalize hv : gleitPasst lo hi (gleitRechne op (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = ov at h ⊢
       cases ov with
@@ -310,6 +314,7 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       | none => simp only [Ausgang.welt, reduceCtorEq] at h
   | .floatOf e lo hi rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
+      simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       generalize hv : gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = ov at h ⊢
       cases ov with
@@ -318,6 +323,7 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .floatNarrow e lo hi sonst rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hscope_sonst : sonst.ScopesOk := by scopes_treu
+      simp only [execBlock] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       generalize hv : gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = ov at h ⊢
       cases ov with
@@ -418,6 +424,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .narrow e lo' hi' sonst rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       have hscope_sonst : sonst.ScopesOk := by scopes_treu
+      simp only [execEnd] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;> simp only [hc, dif_pos, dif_neg] at h ⊢
       · exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
@@ -434,25 +441,27 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ite c t e, σ, ρ, hscope, hh, σ', h => by
       have hscope_t : t.ScopesOk := by scopes_treu
       have hscope_e : e.ScopesOk := by scopes_treu
+      simp only [execEnd] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
       by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
       · exact (TreuEnd.vor hl (end_treu bo hbV t _ ρ hscope_t (hl.heldB hh))) σ' h
       · exact (TreuEnd.vor hl (end_treu bo hbV e _ ρ hscope_e (hl.heldB hh))) σ' h
   | .narrowRequired e lo' hi' rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
+      simp only [execEnd] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;> simp only [hc, dif_pos, dif_neg] at h ⊢
       · exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-      · simp only [EndAusgang.welt, reduceCtorEq] at h
+      · simp only [dite_false, EndAusgang.welt, reduceCtorEq] at h
 
 theorem arms_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),
     arms.ScopesOk → HeldB bo Λ σ.haelt →
     TreuAusgang V.schreibt V.gschreibt σ (execArms O passes R arms v σ ρ)
-  | .cons b _, ⟨⟨0, _⟩, _⟩, σ, _, hscope, hh, σ', h =>
+  | .cons b _, ⟨⟨0, _⟩, _⟩, σ, _, hscope, hh, σ', h => by
       have hscope_b : b.ScopesOk := by scopes_treu
       exact (block_treu bo hbV b σ _ hscope_b hh).schrumpfArm _ σ' h
-  | .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩, σ, ρ, hscope, hh, σ', h =>
+  | .cons _ rest, ⟨⟨_ + 1, _⟩, _⟩, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact arms_treu bo hbV rest _ σ ρ hscope_rest hh σ' h
 
@@ -460,10 +469,10 @@ theorem grund_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : GrundArms D V l Γ Λ Λ' n) (r : Fin n) (σ : World D) (ρ : Env D Γ),
     arms.ScopesOk → HeldB bo Λ σ.haelt →
     TreuAusgang V.schreibt V.gschreibt σ (execGrund O passes R arms r σ ρ)
-  | .cons b _, ⟨0, _⟩, σ, ρ, hscope, hh, σ', h =>
+  | .cons b _, ⟨0, _⟩, σ, ρ, hscope, hh, σ', h => by
       have hscope_b : b.ScopesOk := by scopes_treu
       exact block_treu bo hbV b σ ρ hscope_b hh σ' h
-  | .cons _ rest, ⟨_ + 1, _⟩, σ, ρ, hscope, hh, σ', h =>
+  | .cons _ rest, ⟨_ + 1, _⟩, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact grund_treu bo hbV rest _ σ ρ hscope_rest hh σ' h
 
