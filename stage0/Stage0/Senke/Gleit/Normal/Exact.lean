@@ -88,7 +88,8 @@ theorem routineLeftCount_round_exact (n e : Nat) (tail : n % 8 = 0) :
   have shifted := Nat.div_add_mod' (n * 2 ^ routineLeftCount n e) 8
   rw [tail] at initial
   rw [zero] at shifted
-  nlinarith
+  have scaled := congrArg (fun v : Nat => v * 2 ^ routineLeftCount n e) initial
+  nlinarith [scaled]
 
 variable [Kern] {D : Deklaration} {L : Lay D}
 
