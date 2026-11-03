@@ -39,8 +39,9 @@ import all Init.Data.String.ToSlice
   File:      Grammatik/Parser/Profil/EintrittZeuge.lean
   Subject:   WITNESSES for the userspace entry admission and the guest boundary (C14): a dispatch-only entry
              admitted, its binding read off, one negative twin per refusal (vector, interrupt routing,
-             register state, stack region, per-CPU, unsupported architecture, unknown root); a boundary that
-             WOULD be admitted with a declared service, and the one read off the source, which is refused.
+             register state, stack region, per-CPU, unsupported architecture, unknown root).
+             Canonical guest admission witnesses live in `Logik/Ruf/Guest/Witness.lean`;
+             the source witnesses below pin the missing binding, ABI and register refusals.
 -/
 
 namespace Gabbro.Grammatik.Parser.ProfilBindung
