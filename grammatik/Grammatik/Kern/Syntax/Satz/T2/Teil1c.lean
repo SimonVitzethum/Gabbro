@@ -187,7 +187,7 @@ theorem erase_nimmt_gibt (L : D.Lock) (Ls : List D.Lock) (h : List D.Lock) (hn :
   | cons M Ms ih =>
       simp only [List.foldl_cons]
       by_cases heq : M = L
-      · subst heq
+      · subst M
         simp only [List.erase_cons_head]
         have h_erase : h.erase L = h := List.erase_of_not_mem hn
         rw [h_erase]
@@ -213,7 +213,7 @@ theorem gut_nimmt_gibtRet {W G} (σ σ1 : World D) (L : D.Lock)
   · exact (rahmen_gleich (W := W) (G := G) (σ := σ) (σ' := σ.nimmt L) rfl rfl).trans
       (h.1.trans (rahmen_gleich rfl rfl))
   · refine ⟨Ls, ?_⟩
-    show (offen σ1.spur).erase L = Ls.foldl (fun h M => h.erase M) (offen σ.spur)
+    change σ1.haelt.erase L = Ls.foldl (fun h M => h.erase M) σ.haelt
     have e1 : σ1.haelt = Ls.foldl (fun h M => h.erase M) (L :: σ.haelt) := by
       have := hLs
       simp only [World.haelt, World.nimmt, offen] at this ⊢
