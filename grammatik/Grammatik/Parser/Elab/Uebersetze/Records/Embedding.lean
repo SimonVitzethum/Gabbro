@@ -31,7 +31,9 @@ def recordMembers : Nat → List Token → Except String (List SRecordMember × 
     | _ => throw "record embedding: comma or closing brace expected"
 
 def recordSurface (text : String) : Except String (List SRecordMember) := do
-  let tokens ← lex text
+  let tokens ← match lex text with
+    | .ok tokens => pure tokens
+    | .error _ => throw "source export: record schema unreadable"
   let tokens ← fordereZeichen "{" tokens
   let (members, rest) ← recordMembers (tokens.length + 1) tokens
   if rest.all (fun | .ende => true | _ => false) then pure members
