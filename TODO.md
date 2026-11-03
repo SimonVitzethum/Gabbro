@@ -520,7 +520,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Expr.rem` | yes G2:438 | yes E:110, unsigned or wide remainder | `lowE_ok`, Q:309 | same source range rule |
 | `Expr.sdiv` | yes G2:425 | yes E:113, signed or wide fallback | `lowE_ok`, Q:313 | denominator must exclude zero; minimum-word case uses wide fallback |
 | `Expr.srem` | yes G2:442 | yes E:118, signed or wide fallback | `lowE_ok`, Q:317 | denominator must exclude zero |
-| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes E:206, `readBytesL` | `lowE_ok`, Q:405 | E:207: `else none` for `n > 8`; source byte-span export missing |
+| `Expr.getBytes` | skipped: SYNTAX.md defines no byte-span expression; Lean `parseSuffixe` (`Parser/Expr/Ausdruck/Teil2a.lean:264`–`:285`) parses one index only | yes E:206, `readBytesL` | `lowE_ok`, Q:405 | E:207: `else none` for `n > 8`; no defined source byte-span syntax to export |
 | `Expr.band` | yes G2:378 | yes E:123, scalar or wide bits | `lowE_ok`, Q:321 | source operands nonnegative |
 | `Expr.bor` | yes G2:395 | yes E:126, scalar resize or wide bits | `lowE_ok`, Q:325 | source width/range rule |
 | `Expr.bxor` | yes G2:409 | yes E:130, scalar resize or wide bits | `lowE_ok`, Q:329 | source width/range rule |
