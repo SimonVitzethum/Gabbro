@@ -21,6 +21,17 @@ theorem sigAt_produziert (u : UProg) (i : Fin u.fns.length) :
     (sigAt u i.val).produziert = [] := by
   rw [sigAt_get]; rfl
 
+/-- No signature number carries an owner flow yet (the C09 handoff wires real flows). -/
+theorem sigNrOwner_nil (u : UProg) (n : Nat) : (sigAt u n).owner = {} := by
+  unfold sigAt
+  split <;> rfl
+
+/-- No elaborated function carries an owner flow yet. -/
+theorem signaturOwner_nil (u : UProg) (f : Fin u.fns.length) :
+    ((declOf u).signatur f).owner = {} := by
+  show (sigAt u f.val).owner = {}
+  exact sigNrOwner_nil u f.val
+
 /-- Parameters through the declaration. -/
 theorem params_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).params i = (fnAt u i).params.map (·.2) := by

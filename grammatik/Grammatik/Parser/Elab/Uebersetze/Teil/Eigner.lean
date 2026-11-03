@@ -25,4 +25,10 @@ def uEignerMs (ms : List SItemTief) : List String :=
     if flags.any (fun f => strEq f "linear") then some n else none | _ => none) ++
     (ms.filterMap fun | .tableT _ _ _ _ o _ _ => o | _ => none)
 
+/-- A mark name as a declaration mark: its index in the unit's mark table
+    (`u.marken`), if declared. Undeclared names have no mark and can never
+    satisfy a guard. -/
+def markFin (marken : List String) (m : String) : Option (Fin marken.length) :=
+  (List.finRange marken.length).find? (fun i => strEq (marken.get i) m)
+
 end Gabbro.Grammatik.Parser.Uebersetze

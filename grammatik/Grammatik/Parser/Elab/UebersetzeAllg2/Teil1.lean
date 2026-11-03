@@ -117,7 +117,7 @@ theorem nach_eq (u : UProg) (i : Fin u.fns.length)
   have hK := sigKonsumiert_nil u i
   have hP := sigProduziert_nil u i
   unfold nach nachSig Signatur.inputMarks Signatur.outputMarks
-  rw [OwnerFlow.empty_of_empty ((declOf u).signatur i).owner]
+  rw [signaturOwner_nil u i]
   rw [hK, hP]
   change L ++ [] = L
   exact List.append_nil L
@@ -138,7 +138,7 @@ theorem anfangRes_eq (u : UProg) (c : Fin u.fns.length) :
     sigKonsumiert_nil u c
   show ((heldAt u (fnAt u c)).map (Res.held (D := declOf u))) = _
   unfold Signatur.anfang Signatur.inputMarks
-  rw [h1, h2, OwnerFlow.empty_of_empty ((declOf u).signatur c).owner]
+  rw [h1, h2, signaturOwner_nil u c]
   rfl
 
 /-- The held resources are the contract end. -/

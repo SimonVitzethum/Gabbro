@@ -274,7 +274,7 @@ theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
     Untermulti (((declOf u).signatur callee).inputMarks.map
       (Res.vonMarke (declOf u))) Λ := by
   unfold Signatur.inputMarks
-  rw [sigKonsumiert_nil u callee, OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner]
+  rw [sigKonsumiert_nil u callee, signaturOwner_nil u callee]
   show Untermulti ([] : List (Res (declOf u))) Λ
   exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
 
@@ -410,7 +410,7 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
               rw [sigGSchreibt_eq u callee g] at hg0
               rw [vGSchreibt_eq u caller g]
               exact hG g hg0
-            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (OwnerFlow.empty_of_empty ((declOf u).signatur callee).owner) } }
+            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (signaturOwner_nil u callee) } }
           else .error "call: a held lock does not rank below the callee's floor"
          else .error "call: the caller's lock floor is above the callee's"
         else .error "call without held guard"

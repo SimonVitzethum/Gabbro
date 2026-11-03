@@ -99,9 +99,10 @@ def typAt (u : UProg) (t : Fin u.tabs.length)
     | some w => .int w.1 w.2
     | none => .int 0 0
 
-/-- The guards of a table: the locks whose `schutz` names it. -/
+/-- The guards of a table: the locks whose `schutz` names it, plus the owner mark
+    (`D.Marke`) when the table declares one (resolved against the unit's mark table). -/
 def needsAt (u : UProg) (t : Fin u.tabs.length) :
-    List (Fin u.locks.length ⊕ (Empty × Nat)) :=
+    List (Fin u.locks.length ⊕ (Fin u.marken.length × Nat)) :=
   List.finRange u.locks.length |>.filterMap fun l =>
     if (lockAt u l).guard.any (· == (tabAt u t).name) then some (.inl l)
     else none
@@ -110,10 +111,18 @@ def globAt (u : UProg) (g : Fin u.globs.length) : UGlob := u.globs.get g
 
 /-- The guards of a static: the locks whose `protects` list names it (`gbraucht`). -/
 def gneedsAt (u : UProg) (g : Fin u.globs.length) :
-    List (Fin u.locks.length ⊕ (Empty × Nat)) :=
+    List (Fin u.locks.length ⊕ (Fin u.marken.length × Nat)) :=
   List.finRange u.locks.length |>.filterMap fun l =>
     if (lockAt u l).guard.any (· == (globAt u g).name) then some (.inl l)
     else none
+
+/-- The owner guard of a table as declaration marks (C12): the `owner` mark resolved
+    against the unit's mark table, at stage 0. An unresolvable owner gives no mark that
+    could ever be held, so the table stays inaccessible. -/
+def eignerAt (u : UProg) (t : Fin u.tabs.length) : List (Fin u.marken.length) :=
+  match (tabAt u t).owner with
+  | none => []
+  | some m => match markFin u.marken m with | none => [] | some i => [i]
 
 /-- The foreign body at an index. -/
 def uaxAt (u : UProg) (a : Fin u.axs.length) : UAx := u.axs.get a
@@ -220,9 +229,10 @@ theorem traegerD_of_ok (u : UProg) (i : Fin u.invs.length) (h : invOkB u i = tru
   unfold traegerD
   rw [if_pos h]
 
-/-- The signature of an elaborated function. -/
+/-- The signature of an elaborated function: ordinary marks and owner flows stay
+    empty until the C16/C09 export wires them from `nimmt`/`gibt` and the owner gates. -/
 def mkSig (u : UProg) (f : UFn) :
-    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) where
   params := f.params.map (·.2)
   erg := f.ergTy
   gruende := f.gruende
@@ -235,7 +245,7 @@ def mkSig (u : UProg) (f : UFn) :
 
 /-- The dummy signature: no parameters, no rights. -/
 def dummySig (u : UProg) :
-    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty where
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) where
   params := []
   erg := none
   gruende := 0
@@ -251,12 +261,12 @@ def sigFns (u : UProg) : List UFn := u.fns ++ u.ptrs
 /-- The `n`th signature, or the dummy (an out-of-range number names
     no function and no pointer type). -/
 def sigAt (u : UProg) (n : Nat) :
-    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) Empty :=
+    Signatur (Fin u.tabs.length) (Fin u.globs.length) (Fin u.locks.length) (Fin u.marken.length) :=
   if h : n < (sigFns u).length then mkSig u ((sigFns u).get ⟨n, h⟩) else dummySig u
 
 /-- **Conformance, decided** (`SigPasst` over the finite carriers of an elaborated unit): the first
-    signature fits the second. -/
-def sigPasstB {a b c : Nat} (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin b) (Fin c) Empty) : Bool :=
+    signature fits the second, with the same owner flow (the C09 handoff is part of conformance). -/
+def sigPasstB {a b c : Nat} {Marke : Type} [DecidableEq Marke] (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin b) (Fin c) Marke) : Bool :=
   decide (S.params = T.params) && decide (S.erg = T.erg) && decide (S.gruende = T.gruende) &&
   (List.finRange a).all (fun t => !S.schreibt t || T.schreibt t) &&
   (List.finRange b).all (fun g => !S.gschreibt g || T.gschreibt g) &&
@@ -266,15 +276,16 @@ def sigPasstB {a b c : Nat} (rang : Fin c → Int) (S T : Signatur (Fin a) (Fin 
     (match S.boden with | some c => decide (rang L < c) | none => false)) &&
   (match T.boden with
     | none => true
-    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false)
+    | some c => match S.boden with | some c' => decide (c ≤ c') | none => false) &&
+  decide (S.owner = T.owner)
 
-theorem sigPasstB_ok {a b c : Nat} {rang : Fin c → Int} {S T : Signatur (Fin a) (Fin b) (Fin c) Empty}
+theorem sigPasstB_ok {a b c : Nat} {Marke : Type} [DecidableEq Marke] {rang : Fin c → Int} {S T : Signatur (Fin a) (Fin b) (Fin c) Marke}
     (h : sigPasstB rang S T = true) : SigPasst rang S T := by
   unfold sigPasstB at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨hp, he⟩, hg⟩, hw⟩, hgw⟩, hk⟩, hpr⟩, hh⟩, hx⟩, hb⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨hp, he⟩, hg⟩, hw⟩, hgw⟩, hk⟩, hpr⟩, hh⟩, hx⟩, hb⟩, ho⟩ := h
   refine ⟨hp, he, hg, fun t ht => ?_, fun g' hg' => ?_, hk, hpr, fun L hL => hh L hL, fun L hL hn => ?_,
-    fun c hc => ?_, (OwnerFlow.empty_of_empty S.owner).trans (OwnerFlow.empty_of_empty T.owner).symm⟩
+    fun c hc => ?_, of_decide_eq_true ho⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
@@ -362,8 +373,9 @@ def anbieterAt (u : UProg) (t : Fin u.tabs.length) : Option (Fin u.axs.length) :
     | .error _ => none
 
 /-- The declaration built from the elaborated program itself: index
-    carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
-    (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
+    carriers (`Fin`) for tables, statics, locks, marks, fields, functions, foreign bodies
+    and device registers (`Reg := Fin u.regs.length`: type, class, mirror, promise and
+    carriers read off `UReg`). -/
 def declOf (u : UProg) : Deklaration where
   dataSpaces := u.spaces
   tableSpace := fun t => (tabAt u t).space
@@ -387,19 +399,27 @@ def declOf (u : UProg) : Deklaration where
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
   maskiert := fun l => (lockAt u l).masks
-  Marke := Empty
+  Marke := Fin u.marken.length
   decMarke := inferInstance
-  stufen := fun e => nomatch e
-  braucht := needsAt u
+  /-- Every mark at stage 0: ordinary consumption/production and the owner guards
+      below need no order yet (the C09 advance/retire stages come with real flows). -/
+  stufen := fun _ => 1
+  braucht := fun t => needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
   gbraucht := gneedsAt u
-  eigner := fun _ => []
+  eigner := eignerAt u
   Fn := Fin u.fns.length
   sig := fun f => f.val
   sigNr := sigAt u
   passt := passtAt u
   passt_ok := passtAt_ok u
-  eigner_nie_erzeugt :=
-    fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
+  eigner_nie_erzeugt := by
+    intro n t m s _ hprod
+    have hnil : ((declOf u).sigNr n).produziert = [] := by
+      show (sigAt u n).produziert = []
+      unfold sigAt
+      split <;> rfl
+    rw [hnil] at hprod
+    exact (List.not_mem_nil hprod).elim
   Inv := Fin u.invs.length
   traeger := traegerD u
   invs := List.finRange u.invs.length
