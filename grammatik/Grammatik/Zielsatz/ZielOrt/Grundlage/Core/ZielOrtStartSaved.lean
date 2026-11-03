@@ -74,7 +74,8 @@ private theorem rufAntwortG_gut {P : Programm D} {z z' : RufFadenG D}
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
-      exact ⟨hg, by simp⟩
+      refine ⟨?_, by simp⟩
+      simpa only [rahmenAntwortGut, GRest.antwortGut, antwortGut] using hg
   | cons c st =>
       obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a c.rest = some r := by
         cases hr : antwortRestG z.kopf.f a c.rest with
@@ -83,7 +84,9 @@ private theorem rufAntwortG_gut {P : Programm D} {z z' : RufFadenG D}
       simp [rufAntwortG, hst, hr] at ha
       subst z'
       refine ⟨?_, ?_⟩
-      · exact antwortRestG_gut _ _ _ _ _ (hz.2 c (by simp [hst])) hr
+      · have hc := antwortRestG_gut z.kopf.f a (antwortGut P c) c.rest r
+          (hz.2 c (by simp [hst])) hr
+        simpa only [rahmenAntwortGut, antwortGut] using hc
       · intro F hF
         exact hz.2 F (by simp only [hst, List.mem_cons]; exact Or.inr hF)
 
@@ -95,19 +98,26 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
   cases hs with
   | g7 hs =>
       cases hs with
-      | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu =>
+      | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
           dsimp only
           rw [rufUpdateG_self]
           refine ⟨?_, h.2⟩
           subst σ₁
-          exact hsc t _ _ _ ρ r e R hhead hret
-      | rueckScopedGrund ρ r grund R hhead hret hscope hΛ =>
-          exact ⟨trivial, h.2⟩
-      | rueckFreigabe ρ a L remaining hhead =>
+          simpa only [rahmenAntwortGut, GRest.antwortGut, antwortGut] using
+            (hsc t _ _ _ ρ r e R hhead hret)
+      | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
+          dsimp only
+          rw [rufUpdateG_self]
+          refine ⟨?_, h.2⟩
+          simp only [rahmenAntwortGut, GRest.antwortGut, antwortGut]
+      | rueckFreigabe ρ a L remaining hhead hnonempty =>
+          dsimp only
+          rw [rufUpdateG_self]
+          refine ⟨?_, h.2⟩
           have hk := h.1
           change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
           rw [hhead] at hk
-          exact ⟨hk, h.2⟩
+          simpa only [rahmenAntwortGut, GRest.antwortGut, antwortGut] using hk
       | rueckFreigabeLetzte ρ a L hhead z ha =>
           dsimp only
           rw [rufUpdateG_self]
@@ -115,7 +125,7 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           have hk := h.1
           change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
           rw [hhead] at hk
-          exact hk
+          simpa only [GRest.antwortGut] using hk
       | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
           dsimp only
           rw [rufUpdateG_self]
@@ -125,14 +135,19 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
       | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
           dsimp only
           rw [rufUpdateG_self]
-          exact rufAntwortG_gut h trivial ha
+          exact rufAntwortG_gut (a := .inr grund) h (by simp only [antwortGut]) ha
       | _ =>
+          dsimp only
+          rw [rufUpdateG_self]
           simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut,
-            GRest.antwortGut, rufUpdateG_self]
+            GRest.antwortGut, RufDannHeadG, RufEndHeadG]
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
-      cases hs <;>
-        simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut,
-          GRest.antwortGut, antwortGut_weiterOpt, rufUpdateG_self]
+      cases hs <;> dsimp only <;> rw [rufUpdateG_self]
+      all_goals try
+        rcases ‹RufWartetHeadG _ _ _ _› with hc | ⟨n, err, hc⟩
+      all_goals
+        simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut, GRest.antwortGut,
+          antwortGut_weiterOpt, RufDannHeadG, RufEndHeadG]
 
 /-- Replay supplies the guarantee at the cleanup source; a structural
     invariant carries it with the saved snapshot through all later steps.
@@ -147,7 +162,7 @@ theorem startScopedEndeG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
     | start =>
         intro t
         rw [start_faden]
-        exact ⟨trivial, by simp⟩
+        simp [fadenAntwortGut, rahmenAntwortGut, GRest.antwortGut]
     | schritt N N' u hn hs ih =>
         intro t
         by_cases htu : t = u
@@ -159,6 +174,6 @@ theorem startScopedEndeG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
   have h := (hgood t).1
   change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at h
   rw [hhead] at h
-  exact h
+  simpa only [GRest.antwortGut, antwortGut] using h
 
 end Gabbro.Grammatik
