@@ -78,18 +78,18 @@ def durchTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
 
 /-- The owned-access proof bundle (C12): the capability owner resolves to the
     declaration mark `m`, the table declares `m` as its owner, and the guard at
-    the held stage is in hand. -/
+    the held stage is in hand (so the held mark itself follows from `hL`). -/
 theorem ownGuard_holds (u : UProg) (Λ : List (Res (declOf u)))
     (t : Fin u.tabs.length) (o : Nat) (m : Fin u.marken.length)
     (hm : eignerMarke u o = some m) (he : m ∈ eignerAt u t)
     (hL : ∀ wdd ∈ (declOf u).braucht t, Res.von (declOf u) wdd ∈ Λ) :
     (declOf u).ownerNr o = some m ∧ m ∈ (declOf u).eigner t ∧
-      Sum.inr (m, (0 : Nat)) ∈ (declOf u).braucht t ∧ Res.marke m 0 ∈ Λ := by
+      Sum.inr (m, (0 : Nat)) ∈ (declOf u).braucht t := by
   have ho : (declOf u).ownerNr o = some m := by rw [ownerNr_eq]; exact hm
   have hg : Sum.inr (m, (0 : Nat)) ∈ (declOf u).braucht t := by
     show Sum.inr (m, 0) ∈ needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
     exact List.mem_append_right _ (List.mem_map.mpr ⟨m, he, rfl⟩)
-  exact ⟨ho, he, hg, hL _ hg⟩
+  exact ⟨ho, he, hg⟩
 
 /-- An owned `durch` term at its recorded range: the same guarded carrier as
     `durchTerm` through the `own@m` capability, holding the owner mark. -/
@@ -103,9 +103,9 @@ def durchOwnTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       Res.von (declOf u) wdd ∈ Λ) :
     Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2) := by
   rw [← fh.hint]
-  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ ⟨num, h⟩ o m hm he hL
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ ⟨num, h⟩ o m hm he hL
   exact Expr.thruOwn (D := declOf u) (Expr.var v) ⟨num, h⟩
-    (capTab_some u num h) fh.idx i m 0 ho he' hg hmΛ hL
+    (capTab_some u num h) fh.idx i m 0 ho he' hg hL
 
 /-- An owned `durch` term for a bool field: the same guarded carrier as the
     plain bool `durch`, holding the owner mark. -/
@@ -119,9 +119,9 @@ def durchOwnTermB (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       Res.von (declOf u) wdd ∈ Λ) :
     Expr (declOf u) Γ Λ .bool := by
   rw [← fh.hbool]
-  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ ⟨num, h⟩ o m hm he hL
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ ⟨num, h⟩ o m hm he hL
   exact Expr.thruOwn (D := declOf u) (Expr.var v) ⟨num, h⟩
-    (capTab_some u num h) fh.idx i m 0 ho he' hg hmΛ hL
+    (capTab_some u num h) fh.idx i m 0 ho he' hg hL
 
 /-- A `slot` term at its recorded range. -/
 def slotTerm (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
