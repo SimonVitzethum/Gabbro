@@ -10,9 +10,10 @@
   and every `&&`/`||` in parentheses (`druckToks`).
 
   The reader takes a parenthesis at the atom level: it first tries the expression reader
-  (`parseCmp`) and falls back to `( pred )` when that fails. So the proof carries two legs per
-  predicate (`PredBein`): the atom leg (what `parsePredAtom` returns) and, for a predicate that is
-  no expression, the error leg (the expression reader fails on its print, `parseUnary` and up).
+  (`parseCmp`) and falls back to `( pred )` when that fails. The proof carries an atom leg
+  (`parsePredAtom` returns the intended tree) and an expression-attempt leg: `parseUnary`
+  either returns that same tree and tail or fails. In particular, `exists` now succeeds
+  through `parsePrimary` and `parseQuant .any`; only `forall` is predicate-only.
 
   Excluded (recorded in the CUTS at the end): `count x in D : p` (it reads as an expression at the
   primary level), `e in D`, `a reaches b via f`, the domains `fields of` and `chain (x, y) in`.
