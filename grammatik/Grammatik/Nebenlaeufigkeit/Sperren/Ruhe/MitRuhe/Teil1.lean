@@ -96,7 +96,7 @@ def nutzR : (c : Option Ty) → Nutzlast D.Fn D.passt c →
 def valZ : (τ : Ty) → Val (Option D.Fn) (passtM D) (tyR τ) → Val D.Fn D.passt τ :=
   Val.restrict (fun n => n + 1) id fun n v => match v with
     | ⟨some f, h⟩ => ⟨f, h⟩
-    | ⟨none, h⟩ => absurd h (by simp only [passtM, decide_false, Bool.false_eq_true] at h)
+    | ⟨none, h⟩ => absurd h (by simp [passtM])
 
 theorem valZ_valR (τ : Ty) (v : Val D.Fn D.passt τ) : valZ τ (valR τ v) = v :=
   Val.restrict_relocate (fun n => n + 1) id _ _ (fun _ _ => rfl) τ v

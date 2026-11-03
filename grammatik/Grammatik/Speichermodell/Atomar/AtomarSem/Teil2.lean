@@ -102,8 +102,10 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         simp only [stmtOrteP, List.mem_append, h, true_or, or_true])
       have h2 : ∀ x ∈ blockOrteP P body, ¬ T x := fun x h => hT x (by
         simp only [stmtOrteP, List.mem_append, h, or_true])
-      simp only [execStmtHA, execStmtH, leseA_frei hA h1, leseA_frei hA hsel,
-        leseA_frei hA hmass, verbrauchSelA, verbrauchSel]
+      have hS : verbrauchSelA A t member edge = verbrauchSel t member edge := by
+        funext σ ρ
+        simp only [verbrauchSelA, verbrauchSel, leseA_frei hA hsel]
+      simp only [execStmtHA, execStmtH, leseA_frei hA h1, leseA_frei hA hmass, hS]
       rw [show (fun σ ρ => execBlockHA S O U A passes R body σ ρ) =
         (fun σ ρ => execBlockH S O U passes R body σ ρ) from
           funext fun σ => funext fun ρ => Block.execHA_frei body h2 σ ρ]
