@@ -212,7 +212,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
             if hr : ((declOf u).sigNr m).gruende = 0 then
               .ok (⟨Λ', Block.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b⟩, r')
             else .error "call of a function with a reason channel needs `let .. else`"
-  | Γ, fn, Λ, pe, .bindCallIndElse x p _ args e :: rest =>
+  | Γ, fn, Λ, pe, .bindCallIndElse y p _ args e :: rest =>
     (lowZeigerN u Γ fn p).bind fun ⟨m, v⟩ =>
       (lowRufKopfN u caller Γ fn Λ m args).bind fun k =>
         if hr : 0 < ((declOf u).sigNr m).gruende then

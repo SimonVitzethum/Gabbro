@@ -246,7 +246,22 @@ theorem hoistAnw_shape (source : List SItemTief) (locals : Spec.Locals)
       obtain ⟨rfl⟩ := h
       exact Or.inl ⟨_, _, rfl,
         (hoistList_free source locals args args' prefix hH).2⟩
+  | callIndElse pointer args reason body =>
+    simp only [hoistAnw] at h
+    cases hH : hoistList source locals (pointer :: args) with
+    | error err => simp [hH] at h
+    | ok pair =>
+      obtain ⟨operands, prefix⟩ := pair
+      simp [hH] at h
+      cases hO : operands with
+      | nil => simp [hO] at h
+      | cons pointer' args' =>
+        simp [hO] at h
+        obtain ⟨rfl⟩ := h
+        exact Or.inl ⟨_, _, rfl,
+          (hoistList_free source locals (pointer :: args) operands prefix hH).2⟩
   | callElse name args reason body =>
+
     simp only [hoistAnw] at h
     cases hH : hoistList source locals args with
     | error err => simp [hH] at h

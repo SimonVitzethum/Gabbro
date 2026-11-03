@@ -73,6 +73,7 @@ def hasRangeFoldAnw : SAnw → Bool
   | .bindElse _ _ e _ a | .bindAxiomOptElse _ _ e _ a =>
       hasRangeFold e || hasRangeFoldAnw a
   | .genericCall _ _ args => hasRangeFoldList args
+  | .callIndElse pointer args _ body => hasRangeFold pointer || hasRangeFoldList args || hasRangeFoldAnw body
   | .callElse _ args _ body => hasRangeFoldList args || hasRangeFoldAnw body
 def hasRangeFoldAnwList : List SAnw → Bool
   | [] => false

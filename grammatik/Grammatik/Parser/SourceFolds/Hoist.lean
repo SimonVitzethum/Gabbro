@@ -124,6 +124,11 @@ def hoistAnw (source : List SItemTief) (locals : Spec.Locals)
   | .callQ name args => do
     let (args', prefix) ← hoistList source locals args
     pure (afterPrefix (.callQ name args') prefix)
+  | .callIndElse pointer args reason body => do
+    let (operands, prefix) ← hoistList source locals (pointer :: args)
+    match operands with
+    | pointer' :: args' => pure (afterPrefix (.callIndElse pointer' args' reason body) prefix)
+    | [] => throw "fold range: hoist shape"
   | .callElse name args reason body => do
     let (args', prefix) ← hoistList source locals args
     pure (afterPrefix (.callElse name args' reason body) prefix)

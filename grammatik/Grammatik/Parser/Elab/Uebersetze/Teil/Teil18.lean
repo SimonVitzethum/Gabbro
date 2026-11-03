@@ -246,8 +246,6 @@ def rufNamenE : SExpr → List String
   | .arrow a _ => rufNamenE a
   | .un _ a => rufNamenE a
   | .bin _ a b => rufNamenE a ++ rufNamenE b
-  | .callIndElse pointer args _ body => rufNamenE pointer ++ rufNamenEL args ++ rufNamenS body
-  | .callElse name args _ body => name :: (rufNamenEL args ++ rufNamenS body)
   | .call f args => f :: rufNamenEL args
   | .built _ args => rufNamenEL args
   | .old a => rufNamenE a
@@ -262,6 +260,8 @@ end
 mutual
 /-- The call names of a statement, recursing into every block. -/
 def rufNamenS : SAnw → List String
+  | .callIndElse pointer args _ body => rufNamenE pointer ++ rufNamenEL args ++ rufNamenS body
+  | .callElse name args _ body => name :: (rufNamenEL args ++ rufNamenS body)
   | .bind _ _ _ e => rufNamenE e
   | .bindElse _ _ e _ b => rufNamenE e ++ rufNamenS b
   | .bindQ _ _ _ e => rufNamenE e
