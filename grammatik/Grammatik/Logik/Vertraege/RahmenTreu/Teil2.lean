@@ -115,7 +115,7 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         (fun σ ρ _ => treu_lese σ Λ inv.orte) _ σ ρ hh σ' h
   | .consumeTraverse t member edge inv bound mass body, σ, ρ, hscope, hh, σ', h =>
       have hscope_body : body.ScopesOk := by scopes_treu
-      exact verbrauchLauf_treu bo _ t _ _ _ _ _ _
+      exact verbrauchLauf_treu bo _ t _ _ _ _ _
         (fun σ ρ hh => block_treu bo hbV body σ ρ hscope_body hh)
         (fun σ ρ _ => treu_lese σ Λ inv.orte)
         (fun σ ρ _ => treu_lese σ Λ (member.orte ++ edge.orte))
