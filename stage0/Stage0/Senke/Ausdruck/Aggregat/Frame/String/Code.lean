@@ -1,4 +1,5 @@
-/- Shared long-string normalization and the actual concatenation/order kernels. -/
+/- Shared long-string normalization and the actual concatenation/order kernels.
+   Operand and result spans use the canonical length-plus-padded-bytes representation. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
@@ -97,4 +98,3 @@ theorem stringScanC_length_le (k n q a b acc : Nat) :
     split <;> split <;> omega
 
 end Gabbro.Stage0.Senke
-
