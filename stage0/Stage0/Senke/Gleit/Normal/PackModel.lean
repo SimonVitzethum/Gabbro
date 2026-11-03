@@ -90,8 +90,14 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
       ((Runner.IR.bool (decide (q = 2 ^ 53))).toNat % 64) =
       BitVec.ofNat 64 (softCarry q) := by
     by_cases hc : q = 2 ^ 53
-    · rw [hc]
-      decide +kernel
+    · simp only [softCarry, hc, decide_true, Runner.IR.bool, ite_true]
+      apply BitVec.eq_of_toNat_eq
+      simp only [BitVec.toNat_ushiftRight, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt (by decide : 2 ^ 53 < 2 ^ 64),
+        Nat.mod_eq_of_lt (by decide : 2 ^ 52 < 2 ^ 64)]
+      change (2 ^ 53 : Nat) >>> 1 = 2 ^ 52
+      rw [Nat.shiftRight_eq_div_pow]
+      decide
     · simp only [softCarry, hc, decide_false, Runner.IR.bool,
         Bool.false_eq_true, ite_false]
       simp
@@ -111,13 +117,17 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   · simp only [finite, decide_true, ite_true]
     by_cases subnormal : softCarry q < 2 ^ 52
     · simp only [subnormal, decide_true, ite_true]
-      exact packWord_canonical ⟨s, 0, softCarry q⟩ ⟨by decide, subnormal⟩
+      simpa only [float_bits] using
+        packWord_canonical ⟨s, 0, softCarry q⟩ ⟨by decide, subnormal⟩
     · simp only [subnormal, decide_false, Bool.false_eq_true, ite_false]
       rw [BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) (by omega)]
-      exact packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
-        ⟨by change softCarryExp e q ≤ 2047; omega, by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
+      simpa only [float_bits] using
+        packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
+          ⟨by change softCarryExp e q ≤ 2047; omega,
+            by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
   · simp only [finite, decide_false, Bool.false_eq_true, ite_false]
-    exact packWord_canonical ⟨s, 2047, 0⟩ ⟨by decide, by decide⟩
+    simpa only [float_bits] using
+      packWord_canonical ⟨s, 2047, 0⟩ ⟨by decide, by decide⟩
 
 /-- The same continuation reaches a normal tie, a subnormal result and an
     overflowing carry. Every fixture satisfies the model theorem's bounds. -/

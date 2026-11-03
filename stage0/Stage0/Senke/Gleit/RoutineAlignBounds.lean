@@ -74,10 +74,16 @@ theorem routineAlignL_emission
     FloatEmission (fun d => routineAlignL d a b)
       (67 * na + 67 * nb + 1613) (2 * wa + 2 * wb + 40) := by
   -- Solve arithmetic before the context contains the nested code generators.
-  have leftBound : 16 * (27 * nb + 39 * na + 787) < 2 ^ 31 := by omega
-  have rightBound : 16 * (27 * na + 39 * nb + 787) < 2 ^ 31 := by omega
+  have leftBound : 16 * (27 * nb + 39 * na + 787) < 2 ^ 31 := by
+    clear ha hb a b
+    omega
+  have rightBound : 16 * (27 * na + 39 * nb + 787) < 2 ^ 31 := by
+    clear ha hb a b
+    omega
   have branchBound : 16 * ((27 * nb + 39 * na + 787) +
-      (27 * na + 39 * nb + 787) + 2) < 2 ^ 31 := by omega
+      (27 * na + 39 * nb + 787) + 2) < 2 ^ 31 := by
+    clear ha hb a b
+    omega
   have sizeBound : (na + nb + 37) + (27 * nb + 39 * na + 787) +
       (27 * na + 39 * nb + 787) + 2 = 67 * na + 67 * nb + 1613 := by omega
   have widthBound : max (max (wa + wb + 9)
