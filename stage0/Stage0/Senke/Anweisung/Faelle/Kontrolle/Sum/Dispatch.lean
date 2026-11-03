@@ -1,6 +1,6 @@
 /- Generic complete-span sum dispatch, preserving inputs until an arm is selected. -/
 module
-public import Stage0.Senke.Anweisung.Faelle.Sum.Arm
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Arm
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
