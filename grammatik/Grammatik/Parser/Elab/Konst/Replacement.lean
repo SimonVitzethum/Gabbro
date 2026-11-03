@@ -38,6 +38,9 @@ def checkReplacement (k : UKonstFn) (fns : List UKonstFn)
     typed literal denotation. No semantic obligation is a caller premise. -/
 def ReplacementEvidence.Sound : {syntax : SExpr} → ReplacementEvidence k fns env sources syntax → Prop
   | _, .integer call =>
+    (Scalar.expression (Scalar.locals k.params)
+      (Scalar.normalizeNames (Scalar.locals k.params) k.constants call.function.source) =
+        .ok ⟨_, call.function.model.body.2.2⟩) ∧
     (∀ before after,
       uKonstWert call.lo call.hi fns call.bindings 64
         (Scalar.normalizeNames (Scalar.locals k.params) k.constants call.function.source) =
@@ -55,7 +58,7 @@ def ReplacementEvidence.Sound : {syntax : SExpr} → ReplacementEvidence k fns e
 theorem Replacement.sound (replacement : Replacement k fns env sources) : replacement.evidence.Sound := by
   rcases replacement with ⟨syntax, evidence⟩
   cases evidence with
-  | integer call => exact ⟨call.normalized_denotation, call.sound⟩
+  | integer call => exact ⟨call.function.normalized, call.normalized_denotation, call.sound⟩
   | portable call => exact call.sound
 
 end Gabbro.Grammatik.Parser.Konst
