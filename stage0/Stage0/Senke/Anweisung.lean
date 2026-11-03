@@ -62,6 +62,10 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let cv ← lowE (reserved := reserved) L v ((frei Γ reserved))
       let ca ← lowTags (reserved := reserved) passes A L layout ens pr ex arms 0
       pure (cv.1 ++ ca.1, max cv.2 ca.2)
+    else if cs.length < 2 ^ 31 then do
+      let cv ← lowE (reserved := reserved) L v (frei Γ reserved)
+      let ca ← lowSumTags (reserved := reserved) passes A L layout ens pr ex arms (valueWords (.sum cs)) 0
+      pure (cv.1 ++ ca.1, max cv.2 ca.2)
     else none
   | _, Γ, _, _, .onWhy (n := n) r arms, reserved =>
     if n < 2 ^ 31 then do
@@ -337,6 +341,23 @@ def lowTags (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout)
       pure (tagTestC ((frei Γ reserved)) k ++ [ci 19 ((frei Γ reserved) + 1) (16 * (cp.length + cb.1.length + 2)) 0] ++
         cp ++ cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
         max ((frei Γ reserved) + 3) (max cb.2 cr.2))
+    else none
+
+/-- Separated sums keep the whole input below the test scratch. Once selected,
+    the complete payload is copied into the arm binder's canonical slots. -/
+def lowSumTags (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout)
+    (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → {cs : List (Option Ty)} →
+    Arms D V l Γ Λ Λ' cs → Nat → Nat → (reserved : Nat := 0) → Option (List II × Nat)
+  | _, Γ, _, _, _, .nil, span, _, reserved => some ([], frei Γ reserved + span + 2)
+  | _, Γ, _, _, c :: _, .cons b rest, span, k, reserved => if k < 2 ^ 31 then do
+      let cr ← lowSumTags (reserved := reserved) passes A L layout ens pr ex rest span (k + 1)
+      let cb ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (cr.1.length + 1)) b
+      let s := frei Γ reserved
+      let cp := sumSpanPayloadC s c
+      pure (sumSpanTestC s (s + span) k ++ [ci 19 (s + span) (16 * (cp.length + cb.1.length + 2)) 0] ++
+        cp ++ cb.1 ++ [ci 18 (16 * (cr.1.length + 1)) 0 0] ++ cr.1,
+        max (s + span + 2) (max cb.2 cr.2))
     else none
 
 /-- Reason dispatch uses full word comparisons in declaration order. -/
