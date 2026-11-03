@@ -270,4 +270,16 @@ theorem checkSourceMetadata_sound (items : List SItemTief)
     · contradiction
     · exact ExportMetadata.check_sound _ gate
 
+/-- New compile-time header positions use the same original-source certificate. -/
+def checkSourceConstants (items : List SItemTief) : Except String Unit :=
+  if items.any ExportMetadata.constantExpansion then checkSourceMetadata items else .ok ()
+
+theorem checkSourceConstants_sound (items : List SItemTief)
+    (used : items.any ExportMetadata.constantExpansion = true)
+    (accepted : checkSourceConstants items = .ok ()) :
+    ∃ rewritten, konstErsetzePipeline items = .ok rewritten ∧
+      checkErsetzt items rewritten = .ok () ∧
+      (ohneKonst rewritten).any ExportMetadata.itemMetadata = false :=
+  checkSourceMetadata_sound items (by simpa [checkSourceConstants, used] using accepted)
+
 end Gabbro.Grammatik.Parser.Konst
