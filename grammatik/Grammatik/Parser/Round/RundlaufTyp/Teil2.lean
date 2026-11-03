@@ -158,7 +158,7 @@ theorem kopfP (p : SExpr) (hp : gutPlatz p = true) (rest : List Token) (F : Nat)
   have hmiss : ∀ (R : List Token), suffToks suff ++ rest ≠ .zeichen "(" :: R := by
     intro R hcon
     exact suffToks_nopar suff rest R hr hcon
-  simp only [rufKopf_ohne, suffToks_nogeneric suff rest hr, hmiss]
+  rw [rufKopf_ohne _ _ _ _ (suffToks_nogeneric suff rest hr) hmiss]
   exact suffM suff (.variable a) rest F' (suffLegs_gut suff hgs) hr (by omega)
 
 /-- A place prints with an identifier head. -/

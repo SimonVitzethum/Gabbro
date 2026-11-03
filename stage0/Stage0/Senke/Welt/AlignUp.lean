@@ -1,5 +1,5 @@
-/-! Byte alignment arithmetic for canonical layouts. -/
 module
+/-! Byte alignment arithmetic for canonical layouts. -/
 public import Stage0.Senke.Welt.WeltAt
 
 @[expose] public section
