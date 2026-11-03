@@ -246,6 +246,8 @@ def rufNamenE : SExpr → List String
   | .arrow a _ => rufNamenE a
   | .un _ a => rufNamenE a
   | .bin _ a b => rufNamenE a ++ rufNamenE b
+  | .callIndElse pointer args _ body => rufNamenE pointer ++ rufNamenEL args ++ rufNamenS body
+  | .callElse name args _ body => name :: (rufNamenEL args ++ rufNamenS body)
   | .call f args => f :: rufNamenEL args
   | .built _ args => rufNamenEL args
   | .old a => rufNamenE a
@@ -317,6 +319,7 @@ def bindNamenS : SAnw → List String
   | .child b => bindNamenS b
   | .grow _ _ b => bindNamenS b
   | .alloc _ x _ _ _ s => x :: (match s with | none => [] | some b => bindNamenS b)
+  | .callIndElse _ _ reason body | .callElse _ _ reason body => reason :: bindNamenS body
   | .bindElse x _ _ g b => x :: g :: bindNamenS b
   | s => Gabbro.Grammatik.Parser.Aufloesung.gebunden s
 /-- The names a prelude binds, list form. -/
