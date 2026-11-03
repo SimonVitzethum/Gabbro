@@ -192,6 +192,9 @@ def declOf (u : UProg) : Deklaration where
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
 
+/-- The capability owner registry is the unit's owner namespace (C12). -/
+theorem ownerNr_eq (u : UProg) (o : Nat) : (declOf u).ownerNr o = eignerMarke u o := rfl
+
 /-- `sigAt` at a live index is the elaborated signature. -/
 theorem sigAt_get (u : UProg) (i : Fin u.fns.length) :
     sigAt u i.val = mkSig u (fnAt u i) := by
