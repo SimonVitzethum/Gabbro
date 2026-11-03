@@ -61,5 +61,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
 public import Grammatik.Parser.Elab.Uebersetze.Folds.ExistsWitness
 public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatWitnesses
 public import Grammatik.Parser.Elab.Modules.PipelineWitness
+public import Grammatik.Parser.Elab.Instantiation.Witness
 
 @[expose] public section

@@ -10,9 +10,10 @@ namespace Gabbro.Grammatik.Parser
 
 /-- Declaration expansion used by the actual elaborator. Parse-time `by` metadata
     is consumed only after complete signature resolution and match generation. -/
-def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) := do
+def exportTaggedUnitDetailed (items : List SItemTief) :
+    Except String (List SItemTief × List String) := do
   let declarations := items.filterMap fun | .taggedByT decl spec => some (decl, spec) | _ => none
-  if declarations.isEmpty then return items
+  if declarations.isEmpty then return (items, [])
   Spec.check items
   let mut generated := []
   let mut bindings := []
@@ -32,14 +33,28 @@ def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) :
       | .call name args =>
         return .call (← taggedResolveCall ordinary bindings sources locals name args) args
       | _ => return e }
-  ordinary.mapM (rewrite.item 100000)
+  let output ← ordinary.mapM (rewrite.item 100000)
+  pure (output, bindings.map (fun b => b.signature.name))
 
-/-- Shared declaration-expansion entry point, before ordinary item admission. -/
-def exportDeclarationUnit (items : List SItemTief) : Except String (List SItemTief) := do
+def exportTaggedUnit (items : List SItemTief) : Except String (List SItemTief) :=
+  (exportTaggedUnitDetailed items).map Prod.fst
+
+/-- Shared declaration expansion with explicit allocation provenance for the hygiene gate. -/
+def exportDeclarationUnitDetailed (items : List SItemTief) :
+    Except String (List SItemTief × List String) := do
   let items ← SourceFolds.prepare items
   let (closed, items) ← Dyn.prepare items
-  let items ← exportTaggedUnit items
+  let (items, dispatchNames) ← exportTaggedUnitDetailed items
+  let implementationNames := (Spec.instances items).zipIdx.flatMap fun (instance, index) =>
+    instance.functions.filterMap fun
+      | .fnT sig _ => some (Spec.implementationName index sig.name)
+      | _ => none
   let output ← Spec.prepare (Dyn.finish closed items)
-  exportLibraryUnit (← Dyn.checkedOutput items output)
+  let output ← exportLibraryUnit (← Dyn.checkedOutput items output)
+  pure (output, closed.map (·.name) ++ dispatchNames ++ implementationNames)
+
+/-- Ordinary callers project the same expansion, never a second implementation. -/
+def exportDeclarationUnit (items : List SItemTief) : Except String (List SItemTief) :=
+  (exportDeclarationUnitDetailed items).map Prod.fst
 
 end Gabbro.Grammatik.Parser
