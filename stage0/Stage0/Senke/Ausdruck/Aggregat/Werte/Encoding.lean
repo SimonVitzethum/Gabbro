@@ -120,11 +120,15 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
 
 termination_by sizeOf τ
 decreasing_by
-  all_goals first
-    | decreasing_trivial
-    | have hs := List.sizeOf_lt_of_mem member
-      simp_all only [Ty.prod.sizeOf_spec]
-      omega
+  all_goals
+    subst_vars
+    first
+      | decreasing_trivial
+      | (simp_wf; simp only [Ty.arr.sizeOf_spec]; omega)
+      | (simp_wf
+         have hs := List.sizeOf_lt_of_mem ‹_ ∈ _›
+         simp only [Ty.prod.sizeOf_spec] at *
+         omega)
 
 /-- Typed parameters use the same tail-first order as lexical variable offsets.
     Starts and ordinary calls therefore share one encoded parameter sequence. -/
