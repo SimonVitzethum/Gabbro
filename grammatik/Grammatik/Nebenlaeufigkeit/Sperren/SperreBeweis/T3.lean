@@ -124,7 +124,7 @@ theorem fadenS_blatt (hO : GutO O) (hQ : AxVertragO Q O)
       obtain ⟨σs, hes, hgs, hls⟩ := blatt_lokalV P O passes s hleaf hax hs' hg hstep
       refine ⟨σs, hls, gleichAuf_stabil_iff hΛ' ⟨fun t ht => hgs.1 t ht, fun g hg' => hgs.2 g hg'⟩,
         hK, fun R O' U => ?_⟩
-      rw [hsem, execStmtH_blatt S O' U passes R s hleaf, hes]
+      rw [hsem, execStmtH_blatt S O' U passes R s hleaf (Stmt.sRet_of_ok _ _ _ s _ _ _ _ hstep), hes]
       exact ZErgG.folgt_refl _
   | true =>
       cases s with

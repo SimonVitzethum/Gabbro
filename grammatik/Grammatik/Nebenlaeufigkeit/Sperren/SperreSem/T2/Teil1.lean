@@ -215,6 +215,8 @@ def Stmt.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ
   | .onTag _ arms => arms.ohneLocks
   | .onWhy _ arms => arms.ohneLocks
   | .locks .. => false
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
   | .breaking _ body => body.ohneLocks
   | .traverse _ _ body => body.ohneLocks
   | .consumeTraverse _ _ _ _ _ _ body => body.ohneLocks
@@ -251,8 +253,8 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
 def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
-  | .retScoped .. => true
-  | .retWhyScoped .. => true
+  | .retScoped .. => false
+  | .retWhyScoped .. => false
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.ohneLocks && rest.ohneLocks

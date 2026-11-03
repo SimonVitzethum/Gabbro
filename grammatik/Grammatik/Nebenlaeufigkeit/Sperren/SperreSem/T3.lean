@@ -284,12 +284,14 @@ theorem Endblock.execBlockH_alsBlock :
       execBlockH S O U passes R e.alsBlock.2 σ ρ = (execEndH S O U passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
   | _, _, .retWhy _ _, _, _ => rfl
-  | _, _, .retScoped _ _, _, _ => by
-      simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH]
-      split <;> rfl
-  | _, _, .retWhyScoped _ _, _, _ => by
-      simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH]
-      split <;> rfl
+  | _, Λ, .retScoped e R, σ, _ => by
+      by_cases h : scopesInvH S R.scopes (σ.lese Λ e.orte) = true
+      · simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH, h, if_true]; rfl
+      · simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH, h, if_false]; rfl
+  | _, Λ, .retWhyScoped r R, σ, _ => by
+      by_cases h : scopesInvH S R.scopes σ = true
+      · simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH, h, if_true]; rfl
+      · simp only [Endblock.alsBlock, execBlockH, execStmtH, execEndH, h, if_false]; rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by

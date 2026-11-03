@@ -193,14 +193,14 @@ theorem fadenS_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     have h' := blatt_logik P s hb hss' hg O (orakelAus O HA) passes keinRuf (rufAusL H) ρ e he
     refine hno e ?_
     show zErgG (execEndH S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) (.cons s K) σ ρ) = _
-    simp only [execEndH, execStmtH_blatt S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) s hb,
+    simp only [execEndH, execStmtH_blatt S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) s hb (Stmt.sRet_of_logik O passes keinRuf s _ ρ e he),
       h', zErgG]
   · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
     obtain ⟨_, hss, _⟩ := okS_dann_cons hok
     have hss' := orte_stabil (hFS _) (s.blatt_darf P hb) hss
     have h' := blatt_logik P s hb hss' hg O (orakelAus O HA) passes keinRuf (rufAusL H) ρ e he
     refine hno e ?_
-    rw [semH_dann_cons, execStmtH_blatt S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) s hb,
+    rw [semH_dann_cons, execStmtH_blatt S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) s hb (Stmt.sRet_of_logik O passes keinRuf s _ ρ e he),
       h']
     exact weiterH_logik _ _ _ _ _ _ e
 

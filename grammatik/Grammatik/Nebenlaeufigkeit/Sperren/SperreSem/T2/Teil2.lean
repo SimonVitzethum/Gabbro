@@ -84,8 +84,8 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .retires .., _, _, _ => rfl
   | .ret .., _, _, _ => rfl
   | .retWhy .., _, _, _ => rfl
-  | .retScoped .., _, _, _ => rfl
-  | .retWhyScoped .., _, _, _ => rfl
+  | .retScoped .., h, _, _ => by simp only [Stmt.ohneLocks, Bool.false_eq_true] at h
+  | .retWhyScoped .., h, _, _ => by simp only [Stmt.ohneLocks, Bool.false_eq_true] at h
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
 
@@ -166,8 +166,8 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       execEndH S O U passes R b σ ρ = execEnd O passes R b σ ρ
   | .ret .., _, _, _ => rfl
   | .retWhy .., _, _, _ => rfl
-  | .retScoped .., _, _, _ => rfl
-  | .retWhyScoped .., _, _, _ => rfl
+  | .retScoped .., h, _, _ => by simp only [Endblock.ohneLocks, Bool.false_eq_true] at h
+  | .retWhyScoped .., h, _, _ => by simp only [Endblock.ohneLocks, Bool.false_eq_true] at h
   | .leave .., _, _, _ => rfl
   | .next .., _, _, _ => rfl
   | .cons s rest, h, σ, ρ => by
@@ -253,13 +253,41 @@ theorem GrundArms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : 
 end
 
 end Ohne
-/-- **A leaf means the same in both semantics** (a leaf contains no `locks`). -/
+/-- The scoped-return statements (index-free test): their lock-invariant semantics checks the
+    cleanup invariants, so it differs from the plain one. -/
+def Stmt.sRet {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
+    Stmt D V l Γ Λ Λ' → Bool
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
+  | _ => false
+
+/-- A statement whose plain run answers `.ok` is no scoped return. -/
+theorem Stmt.sRet_of_ok (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (σ σ' : World D)
+    (ρ ρ' : Env D Γ) (hok : execStmt O passes R s σ ρ = Ausgang.ok σ' ρ') : s.sRet = false := by
+  cases s <;> first | rfl | (simp only [execStmt, reduceCtorEq] at hok)
+
+/-- A statement whose plain run answers `.logik` is no scoped return. -/
+theorem Stmt.sRet_of_logik (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (σ : World D)
+    (ρ : Env D Γ) (e : Logik D) (hl : execStmt O passes R s σ ρ = Ausgang.logik e) :
+    s.sRet = false := by
+  cases s <;> first | rfl | (simp only [execStmt, reduceCtorEq] at hl)
+
+/-- **A leaf means the same in both semantics** (a leaf contains no `locks`; scoped returns,
+    which release locks, are excluded). -/
 theorem execStmtH_blatt (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D} {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') (hb : s.istBlatt = true)
+    (hsr : s.sRet = false)
     (σ : World D) (ρ : Env D Γ) :
     execStmtH S O U passes R s σ ρ = execStmt O passes R s σ ρ := by
-  cases s <;> first | rfl | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb)
+  cases s <;> first
+    | rfl
+    | (simp only [Stmt.istBlatt, Bool.false_eq_true] at hb; done)
+    | (simp only [Stmt.sRet, Bool.true_eq_false] at hsr; done)
 
 /-! ## 2a. Frame results WITH the reason channel
 
