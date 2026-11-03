@@ -204,4 +204,28 @@ theorem zeugeOhneRest :
     hatKonstRufSExpr ["add"] (literalVonInt 6) = false := by
   rfl
 
+/-- Check the original declarations through the same certified substitution used
+    by runtime elaboration. Every remaining annotation is checked before export. -/
+def checkSourceMetadata (items : List SItemTief) : Except String Unit := do
+  let rewritten ← konstErsetzePipeline items
+  checkErsetzt items rewritten
+
+/-- The compiler gate retains an actual successful substitution and the metadata
+    check of its remaining runtime declarations. -/
+theorem checkSourceMetadata_sound (items : List SItemTief)
+    (accepted : checkSourceMetadata items = .ok ()) :
+    ∃ rewritten, konstErsetzePipeline items = .ok rewritten ∧
+      checkErsetzt items rewritten = .ok () ∧
+      (ohneKonst rewritten).any ExportMetadata.itemMetadata = false := by
+  cases hr : konstErsetzePipeline items with
+  | error error => simp [checkSourceMetadata, hr] at accepted
+  | ok rewritten =>
+    have gate : checkErsetzt items rewritten = .ok () := by
+      simpa [checkSourceMetadata, hr] using accepted
+    refine ⟨rewritten, hr, gate, ?_⟩
+    unfold checkErsetzt at gate
+    split at gate
+    · contradiction
+    · exact ExportMetadata.check_sound _ gate
+
 end Gabbro.Grammatik.Parser.Konst
