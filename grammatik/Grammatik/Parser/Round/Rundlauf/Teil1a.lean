@@ -37,8 +37,8 @@ theorem rufKopf_ohne {α : Type} (toks : List Token)
     cases tok <;> try rfl
     rename_i s
     simp only [rufKopf]
-    split
-    · rename_i hs
+    by_cases hs : strEq s "::" = true
+    · simp only [hs, ite_true]
       have heq := strKlingt _ _ hs
       subst s
       cases rest with
@@ -46,18 +46,20 @@ theorem rufKopf_ohne {α : Type} (toks : List Token)
       | cons tok tail =>
         cases tok <;> try rfl
         rename_i s
-        split
-        · rename_i hs
+        change (if strEq s "[" then generic tail else other ()) = other ()
+        by_cases hs : strEq s "[" = true
+        · simp only [hs, ite_true]
           have heq := strKlingt _ _ hs
           subst s
           exact (hgeneric tail rfl).elim
-        · rfl
-    · split
-      · rename_i hs
+        · simp only [hs, ite_false]
+    · simp only [hs, ite_false]
+      by_cases hs : strEq s "(" = true
+      · simp only [hs, ite_true]
         have heq := strKlingt _ _ hs
         subst s
         exact (hmiss rest rfl).elim
-      · rfl
+      · simp only [hs, ite_false]
 
 /-- Word-list equality is sound. -/
 theorem beqWorte_klingt : ∀ (a b : List String), beqWorte a b = true → a = b := by
