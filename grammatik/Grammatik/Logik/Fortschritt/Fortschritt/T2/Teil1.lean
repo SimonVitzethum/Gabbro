@@ -163,6 +163,8 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | narrow e lo' hi' sonst rest =>
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
+  | narrowRequired e lo' hi' rest =>
+      exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | exchange g neu hw hL rest =>
       exact fort_schritt' ⟨_, RufSchrittG.endeForm M t l Γ Λ _ ρ hl rfl hx⟩
   | ite c t' e =>
