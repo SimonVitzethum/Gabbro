@@ -189,7 +189,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · rw [hhead] at hok ⊢
         dsimp only at hok ⊢
         simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS, Bool.and_eq_true] at hok ⊢
-        exact ⟨⟨⟨hok.1.1.2, rfl⟩, hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1.1, hg, by omega⟩⟩
+        exact ⟨⟨⟨hok.1.1.2, by trivial⟩, hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1.1, hg, by omega⟩⟩
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         fun c' Z' ZS' EW' => ?_⟩)
