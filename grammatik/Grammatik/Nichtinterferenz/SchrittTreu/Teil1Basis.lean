@@ -163,6 +163,13 @@ theorem schrittK_von_g1 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [kr, kDann]
       rw [dif_pos h]
       rfl
+  | dannNarrowRequired l Γ Λ Λ' lo hi lo' hi' e rest k ρ hhead σ₁ hs₁ h neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [RufMaschineG.weltVon] at h
+      simp only [kr, kDann]
+      rw [dif_pos h]
+      rfl
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       kstart
       subst hs₁
