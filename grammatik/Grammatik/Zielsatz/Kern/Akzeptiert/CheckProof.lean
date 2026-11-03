@@ -162,12 +162,14 @@ theorem checkSitePflicht_aus {P : Programm D} {S : SperrInv D} {Q : AxEns D}
 /-! ## Probes: the decider on the fixture -/
 
 private theorem pruef_fns_voll (f : pruefD.Fn) : f ∈ [true, false] := by
-  cases f <;> simp
+  cases f
+  · exact List.mem_cons_of_mem _ (List.mem_singleton_self _)
+  · exact List.mem_cons_self
 
 private theorem pruef_checkOkB : checkOkB pruefP [] [] [true, false] pruefC = true := by
   apply (checkOkB_iff (D := pruefD) (tabs := []) (globs := [])
     pruef_fns_voll (fun t => nomatch t) (fun g => nomatch g)).mpr
-  refine ⟨pruef_expansion, ?_, by simp [pruefC], ?_⟩
+  refine ⟨pruef_expansion, ?_, List.mem_cons_self, ?_⟩
   · intro f _ hne
     cases f with
     | false => exact ⟨(fun t => nomatch t), (fun g => nomatch g), List.not_mem_nil⟩
@@ -175,7 +177,7 @@ private theorem pruef_checkOkB : checkOkB pruefP [] [] [true, false] pruefC = tr
   · intro g hg
     have hf : g = false := List.mem_singleton.mp hg
     subst g
-    simp
+    exact List.mem_cons_of_mem _ (List.mem_singleton_self _)
 
 private theorem pruef_checkB : checkB pruefP [] [] [true, false] [pruefC] = true := by
   simp [checkB, pruef_checkOkB, eindeutigeNamen]
