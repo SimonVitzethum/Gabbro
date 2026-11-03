@@ -302,8 +302,7 @@ theorem lowRetiresL_unheld {l : Bool} (u : UProg) (caller : Fin u.fns.length) (�
     lowRetiresL (l := l) u caller Γ Λ name = .error ("retire without held mark: " ++ name) := by
   simp [lowRetiresL, hb, hm, held]
 
-/-- One non-marker statement at the held list
- `Λ`, in the scope `Γ`/`fn` (the parameters and the
+/-- One non-marker statement at the held list `Λ`, in the scope `Γ`/`fn` (the parameters and the
     `let` bindings read so far). Calls step to the call transformer (C16). -/
 def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
     (Λ : List (Res (declOf u))) : UStmt →
