@@ -122,16 +122,20 @@ def post : List II × Nat :=
   (lowPost layout (functionFrame program ()) program ()
     ((functionFrame program ()).internalResult + returnWords (D.erg ()) (D.gruende ()))).getD ([], 0)
 
+/-- Use exactly the reservation computed from the complete source function. -/
+def controlReserved : Nat := (functionFrame program ()).bodyReserved
+
 def lowered (good : Bool) : Option (List II × Nat) :=
   lowS 1 (fun _ => 2048) layout (functionFrame program ()) post [3] (0, 0) (statement good)
+    (reserved := controlReserved)
 
 /-- The unadmitted candidate uses the actual recursive body compiler, with
-    one explicit reserved control pair. This is emission evidence only. -/
+    the source-derived reservation. This is emission evidence only. -/
 def candidate (good : Bool) : Option (List II × Nat) :=
   Consuming.lower layout (functionFrame program ()) () member edge
-    (invariant good) 2 mass 2 0 [3]
+    (invariant good) 2 mass controlReserved (counterDepthB body) [3]
     (fun protected exits => lowB 1 (fun _ => 2048) layout
-      (functionFrame program ()) post protected exits body (reserved := 2))
+      (functionFrame program ()) post protected exits body (reserved := controlReserved))
 
 /-- Exact represented indices, shared by the selector and the source body. -/
 def zero : Wert D (.index 2) := ⟨0, by decide, by decide⟩
