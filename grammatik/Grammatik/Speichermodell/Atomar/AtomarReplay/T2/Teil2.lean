@@ -27,7 +27,7 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
-  | assignThruOwn p t ht f i e m s ho he hg hm hw hL =>
+  | assignThruOwn p t ht f i e m s ho he hg hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact spur_laenge_erw (Erw.schreibSlot _ _ _ _ _ _)
