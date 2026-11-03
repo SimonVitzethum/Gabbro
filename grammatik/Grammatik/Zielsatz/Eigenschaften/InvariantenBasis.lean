@@ -259,7 +259,7 @@ theorem invRuhe_erreichbar (hO : GutO O) (sp : Speicher D)
               exact List.mem_singleton.mp hk
             obtain ⟨-, -, hSE, hKS⟩ := hIR M' hr'
             obtain ⟨l, Γ, Λ, ρ, r, e, hrest, hret⟩ := fertig_retKopf hFu hKS
-            have hI := (hSE u hst l Γ Λ ρ r e hrest hret).2
+            have hI := (hSE.1 u hst l Γ Λ ρ r e hrest hret).2
             refine hwelt _ ?_ (hI i hi ?_)
             · show (M'.weltVon u).speicher = M'.speicher
               exact speicher_welt_speicher _ _

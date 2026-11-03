@@ -92,14 +92,14 @@ def antwortRestG {V : Vertrag D} (g : D.Fn)
 /-- Return after cleanup. A root keeps its entry record and a completed
     residue; a callee pops and records its answer at the released world.
     The returned value is supplied, never re-evaluated after a release. -/
-def rufAntwortG (z : RufFadenG D) (σ : World D)
+def rufAntwortG (z : RufFadenG D) (vor σ : World D)
     (antwort : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende) :
     Option (RufFadenG D) :=
   match z.stapel with
   | [] => some ⟨[],
       ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
         ⟨false, D.params z.kopf.f, (vertragVon D z.kopf.f).ende,
-          z.kopf.rho, .zurueckgekehrt antwort⟩⟩, σ.spur, z.log⟩
+          z.kopf.rho, .zurueckgekehrt ⟨antwort, vor⟩⟩⟩, σ.spur, z.log⟩
   | c :: st => do
       let rest ← antwortRestG z.kopf.f antwort c.rest
       let ev := match antwort with

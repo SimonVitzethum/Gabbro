@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Logik.Fortschritt.Fortschritt.T1
 public import Grammatik.Logik.Fortschritt.Fortschritt.T2.Teil1
+public import Grammatik.Logik.Fortschritt.Fortschritt.T2.ScopeReplay
 
 @[expose] public section
 
@@ -23,7 +24,9 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
     (b : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ')
     (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ')
     (hx : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann b k⟩) (hnimmt : k.nimmtAb = true)
-    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) (hAnt : b.ants.all (stelleC D) = true) :
+    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) (hAnt : b.ants.all (stelleC D) = true)
+    (hScope : b.scopesOk (vertragVon D (M.faeden t).kopf.f).haelt
+      (vertragVon D (M.faeden t).kopf.f).boden = true) :
     FortFaden P O passes M t := by
   cases b with
   | nil => exact fort_schritt (w_dannLeer rfl k ρ hx)
@@ -282,6 +285,12 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             | cons caller rst =>
                 obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
                 exact fort_schritt (w_dannRetGrundP rfl caller rst hst hart r hp rest k ρ hx hΛ)
+        | retScoped e R =>
+            exact fort_schritt' (w_scopedWert ρ _ e R hx rfl
+              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
+        | retWhyScoped grund R =>
+            exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl
+              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
         | leave h =>
             subst h
             have habs : k.absorb = true := by simpa [GRest.nimmtAb] using hnimmt
@@ -298,24 +307,25 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
     (hI : FortInvG (M.faeden t)) (hnw : (M.faeden t).kopf.wartend = false)
     (hH : HeldIn (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
     (hP : PrueftG O passes M t) (hB : BereichG M t) (hR : RangInvG w0 (M.faeden t))
-    (hA : (M.faeden t).kopf.rest.2.2.2.2.aR (stelleC D)) :
+    (hA : (M.faeden t).kopf.rest.2.2.2.2.aR (stelleC D))
+    (hScope : (M.faeden t).kopf.rest.2.2.2.2.scopesGut) :
     FortFaden P O passes M t := by
   obtain ⟨hk, hb, _, hkt⟩ := hI
   have hnw' : (M.faeden t).kopf.rest.2.2.2.2.wartend = false := hnw
-  generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw' hA
+  generalize hx : (M.faeden t).kopf.rest = x at hk hb hH hnw' hA hScope
   obtain ⟨l, Γ, Λ, ρ, r⟩ := x
   have hΛ : HeldIn Λ (offen (M.faeden t).spur) := hH
   cases r with
   | ende e =>
       have hl : l = false := by simpa [GRest.fOk] using hk
-      exact fort_ende hO hkt hP ρ e hx hl hΛ hA
+      exact fort_ende hO hkt hP ρ e hx hl hΛ hA hScope
   | dann b k =>
       have hn : k.nimmtAb = true := by
         revert hk
         simp only [GRest.fOk, Bool.and_eq_true]
         intro hk
         exact hk.1.2
-      exact fort_dann hO hkt hP hB hR ρ b k hx hn hΛ hA.1
+      exact fort_dann hO hkt hP hB hR ρ b k hx hn hΛ hA.1 hScope.1
   | schrumpf k =>
       cases ρ with
       | cons v ρ₀ => exact fort_schritt (w_schrumpf rfl k v ρ₀ hx)

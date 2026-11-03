@@ -165,10 +165,11 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ) :
       GRest D V true (.index (D.count t) :: Γ) Λ
   /-- A completed scoped return. The expression has already been evaluated and
-      every lexical scope released. Only the contract's end resources remain;
+      every lexical scope released. Its snapshot is the expression's read world,
+      before any release. Only the contract's end resources remain;
       a root keeps this residue, whereas a callee immediately resumes its caller. -/
   | zurueckgekehrt {l : Bool} {Γ : Ctx}
-      (antwort : ErgVal D V.erg ⊕ Fin V.gruende) : GRest D V l Γ V.ende
+      (antwort : (ErgVal D V.erg ⊕ Fin V.gruende) × World D) : GRest D V l Γ V.ende
 
 /-- The three value-return heads consumed by scoped cleanup. Keeping this
     selection next to the residue prevents separate root/callee shape lists. -/

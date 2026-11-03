@@ -257,7 +257,7 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hs₂ : σ₂ = R.scopes.foldl World.gibt σ₁)
       (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
       (z : RufFadenG D)
-      (hantwort : rufAntwortG (M.faeden f) σ₂ (.inl (evalErg σ₁ e σ₁ ρ)) = some z) :
+      (hantwort : rufAntwortG (M.faeden f) σ₁ σ₂ (.inl (evalErg σ₁ e σ₁ ρ)) = some z) :
       RufSchrittG7 P O passes M f
         ⟨σ₂.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
   /-- The reason channel performs the same cleanup without an expression read. -/
@@ -273,7 +273,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (σ₂ : World D) (hs₂ : σ₂ = R.scopes.foldl World.gibt (M.weltVon f))
       (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
-      (z : RufFadenG D) (hantwort : rufAntwortG (M.faeden f) σ₂ (.inr grund) = some z) :
+      (z : RufFadenG D)
+      (hantwort : rufAntwortG (M.faeden f) (M.weltVon f) σ₂ (.inr grund) = some z) :
       RufSchrittG7 P O passes M f
         ⟨σ₂.speicher, rufUpdateG M.faeden f z, M.lauf ++ rufEigenG f neu, M.start⟩
 

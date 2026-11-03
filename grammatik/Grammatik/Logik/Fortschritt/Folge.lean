@@ -84,6 +84,9 @@ def fNach {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (w : Bool) : Stmt D V l 
   | .axiomCallElse .. => false
   | .retry .. => false
   | .forever .. => false
+  -- Scope cleanup records no call: a return keeps its predecessor bit.
+  | .retScoped .. => w
+  | .retWhyScoped .. => w
   | _ => w
 
 mutual

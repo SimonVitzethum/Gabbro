@@ -57,22 +57,21 @@ theorem schritt_an_sperre {w : D.Fn} {M : RufMaschineG D} {t : Faden}
 end Folgen
 /-! ## 4. No wait cycle -/
 
-/-- A statement is already at a plain return. A scoped return must first
-    release its scopes; only its completed residue counts as returned. -/
+/-- A return statement, including the forms that still owe scope cleanup. -/
 def Stmt.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
   | .retWhy .. => true
-  | .retScoped .. => false
-  | .retWhyScoped .. => false
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | _ => false
 
 def Endblock.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
-  | .retScoped .. => false
-  | .retWhyScoped .. => false
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .cons s _ => s.istRueck
   | _ => false
 
@@ -81,17 +80,32 @@ def Block.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | .cons s _ => s.istRueck
   | _ => false
 
-/-- The residue stands at a return (the shapes a pop fires on). -/
+/-- A completed return. Scoped heads must take their cleanup step first;
+    a root is finished only once that step stores `zurueckgekehrt`. -/
 def GRest.anRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     GRest D V l Γ Λ → Bool
+  | .ende (.retScoped ..) => false
+  | .ende (.retWhyScoped ..) => false
+  | .ende (.cons (.retScoped ..) _) => false
+  | .ende (.cons (.retWhyScoped ..) _) => false
+  | .dann (.cons (.retScoped ..) _) _ => false
+  | .dann (.cons (.retWhyScoped ..) _) _ => false
   | .ende e => e.istRueck
   | .dann b _ => b.istRueck
   | .zurueckgekehrt _ => true
   | _ => false
 
+/-- A source return owns exactly the residual plus its pending scopes.
+    For an ordinary return the scope list is empty, retaining the original
+    permutation conclusion. Completed residues use `anRueck_perm` below. -/
 theorem Stmt.istRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
-    (s : Stmt D V l Γ Λ Λ') (h : s.istRueck = true) : Λ.Perm V.ende := by
-  cases s <;> simp_all [Stmt.istRueck]
+    (s : Stmt D V l Γ Λ Λ') (h : s.istRueck = true) :
+    Λ.Perm (V.ende ++ (match s with
+      | .retScoped _ R => R.scopes
+      | .retWhyScoped _ R => R.scopes
+      | _ => []).map Res.held) := by
+  cases s <;> simp only [Stmt.istRueck, List.map_nil, List.append_nil, Bool.false_eq_true] at h ⊢
+  all_goals first | assumption | exact RueckRessourcen.genau _
 
 theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r : GRest D V l Γ Λ) (h : r.anRueck = true) : Λ.Perm V.ende := by
@@ -100,11 +114,13 @@ theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
       cases e with
       | ret _ hp => exact hp
       | retWhy _ hp => exact hp
-      | cons s _ => exact s.istRueck_perm h
+      | cons s _ =>
+          cases s <;> simp_all [anRueck, Endblock.istRueck, Stmt.istRueck]
       | _ => simp only [anRueck, Endblock.istRueck, Bool.false_eq_true] at h
   | dann b _ =>
       cases b with
-      | cons s _ => exact s.istRueck_perm h
+      | cons s _ =>
+          cases s <;> simp_all [anRueck, Block.istRueck, Stmt.istRueck]
       | _ => simp only [anRueck, Block.istRueck, Bool.false_eq_true] at h
   | zurueckgekehrt _ => exact List.Perm.refl _
   | _ => simp only [anRueck, Bool.false_eq_true] at h
@@ -118,8 +134,8 @@ def FertigG (M : RufMaschineG D) (t : Faden) : Prop :=
     saved answer. The holdings equality is enforced by the residue's index. -/
 theorem fertigG_zurueckgekehrt {M : RufMaschineG D} {t : Faden}
     (hst : (M.faeden t).stapel = []) {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
-    (a : ErgVal D (vertragVon D (M.faeden t).kopf.f).erg ⊕
-      Fin (vertragVon D (M.faeden t).kopf.f).gruende)
+    (a : (ErgVal D (vertragVon D (M.faeden t).kopf.f).erg ⊕
+      Fin (vertragVon D (M.faeden t).kopf.f).gruende) × World D)
     (hhead : (M.faeden t).kopf.rest =
       ⟨l, Γ, (vertragVon D (M.faeden t).kopf.f).ende, ρ, .zurueckgekehrt a⟩) :
     FertigG M t := by

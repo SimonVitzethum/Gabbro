@@ -263,6 +263,7 @@ theorem fR_anRueck (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       | cons s _ =>
           cases s <;> simp_all [GRest.anRueck, Block.istRueck, Stmt.istRueck, GRest.fR, fB, fS]
       | _ => simp only [GRest.anRueck, Block.istRueck, Bool.false_eq_true] at ha
+  | zurueckgekehrt _ => simpa only [GRest.fR, Bool.not_true, Bool.false_or] using h
   | _ => simp only [GRest.anRueck, Bool.false_eq_true] at ha
 
 end Hilfen

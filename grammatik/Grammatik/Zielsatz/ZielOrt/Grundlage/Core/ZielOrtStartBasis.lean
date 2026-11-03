@@ -41,8 +41,9 @@
   machines of every budget (probe D, `Durchgaenge.lean`, `ProbeD.lean`;
   the per-budget statements are the lemmas `*_bei` of §3), and start
   functions declare no reasons (§2a: `StartOhneGrund`, `KeinStartGrundG`),
-  so plain returns are covered by `StartEndeG`; scoped releases additionally need
-  `ScopedRueckGutG` (ZielOrtStartScoped.lean).
+  `StartEndeG` covers both plain and completed scoped returns. Replay supplies
+  `ScopedRueckGutG` at the release source; `ZielOrtStartSaved.lean` carries
+  that guarantee with the saved pre-release world.
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
@@ -67,12 +68,24 @@ def RetKopf {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (∃ (Λ'' : List (Res D)) (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ''),
       r = .dann (.cons (.ret e hperm) rest) k)
 
+/-- A completed scoped root owes its contract at the saved read world,
+    before cleanup. The frame retains its entry environment and world. -/
+def StartScopedEndeG (P : Programm D) (M : RufMaschineG D) : Prop :=
+  ∀ (t : Faden), (M.faeden t).stapel = [] →
+    ∀ (l : Bool) (Γ : Ctx) (ρ : Env D Γ)
+      (v : ErgVal D (vertragVon D (M.faeden t).kopf.f).erg) (vor : World D),
+      (M.faeden t).kopf.rest =
+        ⟨l, Γ, (vertragVon D (M.faeden t).kopf.f).ende, ρ, .zurueckgekehrt ⟨.inl v, vor⟩⟩ →
+      EnsAmRueck P (M.faeden t).kopf.f (M.faeden t).kopf.s0 vor (M.faeden t).kopf.rho v ∧
+        InvAmRueck P (M.faeden t).kopf.f vor
+
 /-- **The start function's completion**: at every thread whose stack is
     empty and whose head stands at `return e`, the start function's
     `ensures` and every invariant it owes hold at the world the return
-    reads, with the returned value. -/
+    reads, with the returned value. Completed scoped roots additionally owe
+    the same guarantees at their saved world before scope release. -/
 def StartEndeG (P : Programm D) (M : RufMaschineG D) : Prop :=
-  ∀ (t : Faden), (M.faeden t).stapel = [] →
+  (∀ (t : Faden), (M.faeden t).stapel = [] →
     ∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
       (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
       (e : ErgExpr D Γ Λ (vertragVon D (M.faeden t).kopf.f).erg),
@@ -80,7 +93,8 @@ def StartEndeG (P : Programm D) (M : RufMaschineG D) : Prop :=
       EnsAmRueck P (M.faeden t).kopf.f (M.faeden t).kopf.s0 ((M.weltVon t).lese Λ e.orte)
           (M.faeden t).kopf.rho (evalErg ((M.weltVon t).lese Λ e.orte) e
             ((M.weltVon t).lese Λ e.orte) ρ) ∧
-        InvAmRueck P (M.faeden t).kopf.f ((M.weltVon t).lese Λ e.orte)
+        InvAmRueck P (M.faeden t).kopf.f ((M.weltVon t).lese Λ e.orte)) ∧
+    StartScopedEndeG P M
 
 /-! ## 2. From the replay -/
 
