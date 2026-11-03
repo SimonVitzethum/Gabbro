@@ -10,6 +10,7 @@ public import Grammatik.Parser.Elab.UebersetzePipeline
 public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Images.Bild
 public import Stage0.Senke.Welt.Anordnung
+public import Stage0.Senke.Welt.GlobalAlignment
 public import Stage0.Senke.Welt.MainEnv
 @[expose] public section
 
@@ -120,10 +121,58 @@ theorem Emitted.correct [Runner.IR.Kern] [Senke.CloneOK] {src : String} {K : Nat
 
 /-- The actual successful CLI byte result realizes its original source's canonical program.
     This includes C05 through `compile_source_program` and the generic return epilogue theorem.\n    Reason exits keep the original program and its separate `InvGutGrundA` user duty.\n    This is conditional on successful compilation and inherited runner contracts, not total coverage. -/
+/-- The image is built for exactly the profile the program was checked against:
+    the checked binding travels from `Prepared` into the canonical program. -/
+theorem Emitted.profile_binding {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) :
+    Gabbro.Grammatik.Parser.ProfilBindung.bindungB output.compiled.source.prepared.bindung = true :=
+  output.compiled.profile_binding
+
+/-- The built image has no named sections: the flat runner image carries no
+    section relocation. -/
+theorem Emitted.sections_free {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) :
+    Profil.abschnittFehler output.compiled.source.prepared.selected = none :=
+  output.compiled.sections_free
+
+/-- Every placed global's absolute address meets its declared alignment, once the
+    image base lies on the combined grid (the loader base-placement duty). -/
+def Emitted.Placed {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) : Prop :=
+  ∀ g : Fin (declOf output.compiled.unit).globs.length,
+    0 < Senke.globAlign output.compiled.unit g →
+    Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ output.image.Y.lo →
+    Senke.globAlign output.compiled.unit g ∣ output.image.Y.ga g ∧
+      8 ∣ output.image.Y.ga g
+
+theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
+    (output : Emitted src K options) : output.Placed := by
+  intro g hpos hbase
+  have hb := output.emission
+  generalize hgen : output.image = bimg at hb hbase ⊢
+  simp only [Senke.bild] at hb
+  split at hb
+  · cases hb
+  · next cs0 h0 =>
+    split at hb
+    · cases hb
+    · next cs h1 =>
+      split at hb
+      · next hg =>
+        simp only [Except.ok.injEq] at hb
+        subst hb
+        dsimp only at hbase ⊢
+        exact ⟨Senke.layU_ga_aligned _ _ _ _ hpos hbase,
+          Senke.layU_ga_word_aligned _ _ _ _ hpos hbase⟩
+      · exfalso
+        revert hb
+        repeat' split
+        all_goals intro hb; cases hb
+
 theorem irBild_correct [Runner.IR.Kern] [Senke.CloneOK] (src : String) (K : Nat) (bytes : List Runner.B) {options : Profil.Options}
     (h : irBild src K options = .ok bytes) :
-    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.image.bytes = bytes ∧ output.Correct := by
+    ∃ output : Emitted src K options, emit src K options = .ok output ∧ output.image.bytes = bytes ∧ output.Correct ∧ output.Placed := by
   obtain ⟨output, he, hb⟩ := irBild_emitted src K bytes h
-  exact ⟨output, he, hb, output.correct⟩
+  exact ⟨output, he, hb, output.correct, output.placed⟩
 
 end Gabbro.Stage0

@@ -142,14 +142,27 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Measures.cycleLengths result.unit result.program result.measures.val.mass = true ∧
     (∀ i : Fin result.unit.invs.length,
       (declOf result.unit).traeger i = invTraeger result.unit i ∧
-      ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i)
+      ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i) ∧
+    Gabbro.Grammatik.Parser.ProfilBindung.bindungB result.source.prepared.bindung = true ∧
+    Gabbro.Stage0.Profil.abschnittFehler result.source.prepared.selected = none
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.selection, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted, result.arrayConstants, result.metadata, result.measures.property,
-    result.measures.val.source, result.measureLengths, result.invariants⟩
+    result.measures.val.source, result.measureLengths, result.invariants,
+    result.source.prepared.bindungOk, result.source.prepared.abschnittFrei⟩
+
+/-- The image is built for exactly the checked profile binding. -/
+theorem Compiled.profile_binding {text : String} {options : Profil.Options} (result : Compiled text options) :
+    Gabbro.Grammatik.Parser.ProfilBindung.bindungB result.source.prepared.bindung = true :=
+  result.source.prepared.bindungOk
+
+/-- The compiled unit carries no named sections into the flat image. -/
+theorem Compiled.sections_free {text : String} {options : Profil.Options} (result : Compiled text options) :
+    Gabbro.Stage0.Profil.abschnittFehler result.source.prepared.selected = none :=
+  result.source.prepared.abschnittFrei
 
 /-- The optional termination certificate uses the final compiled program and its exact source
     measure. The user supplies the existing duty; ordinary compilation and depth fuel are unchanged. -/

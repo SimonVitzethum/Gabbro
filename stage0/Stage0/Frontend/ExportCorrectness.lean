@@ -26,7 +26,7 @@ theorem exported_source_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         output.compiled.unit.exportGate = .ok () ∧
         ∃ lock, lockIdx output.compiled.unit.locks name = .ok lock ∧
           Res.held lock ∈ Λ ∧ value = .tru) := by
-  obtain ⟨output, emitted, image, correct⟩ := irBild_correct text K bytes h
+  obtain ⟨output, emitted, image, correct, _⟩ := irBild_correct text K bytes h
   exact ⟨output, emitted, image, compile_source_program text output.compiled, correct,
     fun Γ Λ name value held => held_lower output.compiled.unit Γ Λ name value held⟩
 
@@ -47,7 +47,7 @@ theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         uRecordOf output.compiled.unit.records (.prod identity (sides.map (·.1))) = .ok schema →
         lowWertE output.compiled.unit Γ Λ fn er (.product identity reordered sides) =
           .ok ⟨.prod identity (sides.map (·.1)), Expr.prod identity args⟩ := by
-  obtain ⟨output, emitted, image, correct⟩ := irBild_correct text K bytes h
+  obtain ⟨output, emitted, image, correct, _⟩ := irBild_correct text K bytes h
   refine ⟨output, emitted, image, correct, ?_⟩
   intro Γ Λ fn er identity reordered sides args schema gate lowered declared
   exact record_lower output.compiled.unit Γ Λ fn er identity reordered sides args
@@ -123,7 +123,7 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         lowWertE output.compiled.unit Γ Λ fn er b = .ok ⟨.str m, y⟩ →
         lowCmp output.compiled.unit Γ Λ fn er op a b = .ok value →
         (uMembers (pre108 output.compiled.source.prepared.selected)).any ExportMetadata.itemMetadata = false) := by
-  obtain ⟨output, emitted, image, correct⟩ := irBild_correct text K bytes h
+  obtain ⟨output, emitted, image, correct, _⟩ := irBild_correct text K bytes h
   refine ⟨output, emitted, image, compile_source_program text output.compiled, correct,
     output.compiled.constantExports, ?_, ?_, ?_, ?_, ?_⟩
   · intro Γ Λ fn er universal source binder body value lowered
