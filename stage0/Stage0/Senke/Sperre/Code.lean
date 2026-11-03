@@ -96,6 +96,9 @@ def retFreiS : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Stmt D 
   | _, _, _, _, .locks _ _ b => retFreiB b
   | _, _, _, _, .axiomCallElse .. => false
   | _, _, _, _, .callIndElse .. => false
+  | _, _, _, _, .consumeTraverse .. => false
+  | _, _, _, _, .retScoped .. => false
+  | _, _, _, _, .retWhyScoped .. => false
   | _, _, _, _, _ => false
 
 def retFreiB : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → Bool

@@ -115,6 +115,9 @@ theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} �
   | _, _, _, _, .transition .., h, _, _ | _, _, _, _, .ret .., h, _, _
   | _, _, _, _, .axiomCallElse .., h, _, _ => by simp [retFreiS] at h
   | _, _, _, _, .callIndElse .., h, _, _ => by simp [retFreiS] at h
+  | _, _, _, _, .consumeTraverse .., h, _, _ => by simp [retFreiS] at h
+  | _, _, _, _, .retScoped .., h, _, _ => by simp [retFreiS] at h
+  | _, _, _, _, .retWhyScoped .., h, _, _ => by simp [retFreiS] at h
   | _, _, _, _, .retWhy .., h, _, _ | _, _, _, _, .assignSlotRef .., h, _, _ => by simp [retFreiS] at h
 
 theorem retFreiB_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (b : Block D V l Γ Λ Λ') →
