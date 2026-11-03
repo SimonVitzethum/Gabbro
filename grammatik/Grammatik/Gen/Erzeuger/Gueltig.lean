@@ -99,10 +99,11 @@ def komp (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock) (
     accumulator, so the admission is decided empty there. -/
 theorem akzeptiertX_iff (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
-    (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D)) :
+    (aks : List (Gabbro.Grammatik.Kernzelle.AccumulatorDecl D))
+    (aqs : List D.Ax := []) :
     AkzeptiertX P S fs ls cs ws aks = true ↔
       (∀ c, komp P S fs ls cs ws c = true) ∧
-        Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true ∧ resetB cs = true := by
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks = true ∧ resetB cs = true := by
   unfold AkzeptiertX
   simp only [Bool.and_eq_true]
   constructor

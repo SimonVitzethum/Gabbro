@@ -17,7 +17,7 @@ variable {D : Deklaration}
 
 section Bool
 
-variable [DecidableEq D.Fn]
+variable [DecidableEq D.Fn] [DecidableEq D.Ax]
 
 variable {fs : List D.Fn} {cs : List (D.Tab ⊕ D.Glob)} {e : D.Fn → Bool} {E₁ E₂ : Einheit D}
 
@@ -107,16 +107,23 @@ theorem poolSicherVB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
       · rw [Bool.not_true, Bool.false_or]
         exact (hex c).mpr (h3 f ((huelleB_iff hvoll).mp hf) c hc)
 
-/-- **The link Bool decides exactly `SchnittstelleSpec`** (given complete member lists). -/
-theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
-    schnittstelleB fs cs e E₁ E₂ = true ↔ SchnittstelleSpec fs e E₁ E₂ := by
+/-- **The link Bool decides exactly `SchnittstelleSpec`** (given complete member
+    lists), with the listed queries for the linked accumulators. -/
+theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
+    (qs : List D.Ax) :
+    schnittstelleB fs cs e E₁ E₂ qs = true ↔
+      (SchnittstelleSpec fs e E₁ E₂ ∧
+        ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
+          Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q) := by
   unfold schnittstelleB
   simp only [Bool.and_eq_true]
   constructor
   · rintro ⟨⟨⟨⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩, h8⟩, h9⟩
-    refine ⟨(platzhalterB_iff hvoll).mp h1, (platzhalterB_iff hvoll).mp h2,
+    have hAkku := (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs)
+      (globsOf_voll hcs)).mp h8
+    refine ⟨⟨(platzhalterB_iff hvoll).mp h1, (platzhalterB_iff hvoll).mp h2,
       (keinRueckrufB_iff hvoll).mp h3, fun c hc => ?_, fun c hB hA => ?_, fun w hw => ?_,
-      fun w hw h hh => ?_, (Kernzelle.accumulatorB_iff hvoll hcs).mp h8, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h9⟩
+      fun w hw h hh => ?_, hAkku.1, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h9⟩, hAkku.2⟩
     · have h := List.all_eq_true.mp h4 c (hcs c)
       rw [(lokBedarfB_iff hvoll).mpr hc, Bool.not_true, Bool.false_or] at h
       exact (getrenntVB_iff hvoll).mp h
@@ -133,24 +140,25 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
       rw [(huelleB_iff hvoll).mpr hh, Bool.not_true, Bool.false_or] at h2
       exact h2
   · intro h
-    refine ⟨⟨⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr h.blatt₁, (platzhalterB_iff hvoll).mpr h.blatt₂⟩,
-      (keinRueckrufB_iff hvoll).mpr h.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩
+    obtain ⟨hS, hq⟩ := h
+    refine ⟨⟨⟨⟨⟨⟨⟨⟨(platzhalterB_iff hvoll).mpr hS.blatt₁, (platzhalterB_iff hvoll).mpr hS.blatt₂⟩,
+      (keinRueckrufB_iff hvoll).mpr hS.keinRueckruf⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr hS.pruef⟩
     · refine List.all_eq_true.mpr fun c _ => ?_
       cases hc : lokBedarfB fs e E₁ E₂ c
       · rfl
       · rw [Bool.not_true, Bool.false_or]
-        exact (getrenntVB_iff hvoll).mpr (h.lok c ((lokBedarfB_iff hvoll).mp hc))
+        exact (getrenntVB_iff hvoll).mpr (hS.lok c ((lokBedarfB_iff hvoll).mp hc))
     · refine List.all_eq_true.mpr fun c _ => ?_
       cases ha : ausgenommenB c
       · obtain ⟨hB, hA⟩ := ausgenommenB_false.mp ha
         rw [Bool.false_or]
-        exact (schreibGetrenntVB_iff hvoll).mpr (h.renn c hB hA)
+        exact (schreibGetrenntVB_iff hvoll).mpr (hS.renn c hB hA)
       · rfl
     · refine List.all_eq_true.mpr fun w _ => ?_
       cases hm : mehrfachB (verbinde e E₁ E₂).ws w
       · rfl
       · rw [Bool.not_true, Bool.false_or]
-        exact (poolSicherVB_iff hvoll hcs).mpr (h.einzeln w (mehrfachB_iff.mp hm))
+        exact (poolSicherVB_iff hvoll hcs).mpr (hS.einzeln w (mehrfachB_iff.mp hm))
     · refine List.all_eq_true.mpr fun w _ => ?_
       cases hw : E₁.P.unterbricht w
       · rfl
@@ -158,8 +166,8 @@ theorem schnittstelleB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab
         cases hk : huelleB fs e E₁ E₂ w k
         · rfl
         · rw [Bool.not_true, Bool.false_or]
-          exact h.masken w hw k ((huelleB_iff hvoll).mp hk)
-    · exact (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku
+          exact hS.masken w hw k ((huelleB_iff hvoll).mp hk)
+    · exact (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨hS.akku, hq⟩
 
 end Bool
 
@@ -193,12 +201,15 @@ theorem verbinde_akzeptiert {E₁ E₂ : Einheit D} {e : D.Fn → Bool} {fs : Li
     (hls : ∀ L : D.Lock, L ∈ ls) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     (h₁ : Akzeptiert E₁.P E₁.S fs ls cs E₁.ws E₁.akku = true)
     (h₂ : Akzeptiert E₂.P E₂.S fs ls cs E₂.ws E₂.akku = true) (hV : Verbindbar E₁ E₂)
-    (hS : schnittstelleB fs cs e E₁ E₂ = true) :
-    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) = true :=
-  spec_akzeptiert hvoll hls hcs
+    (qs : List D.Ax)
+    (hS : schnittstelleB fs cs e E₁ E₂ qs = true)
+    (hq : ∀ a ∈ (verbinde e E₁ E₂).akku, ∃ q ∈ qs,
+      Kernzelle.KernAbfrageVerbunden (verbinde e E₁ E₂).P a q) :
+    Akzeptiert (verbinde e E₁ E₂).P (verbinde e E₁ E₂).S fs ls cs (verbinde e E₁ E₂).ws (verbinde e E₁ E₂).akku (E₁.pruefungen ++ E₂.pruefungen) qs = true :=
+  spec_akzeptiert hvoll hls hcs qs hq
     (h := akzeptiertSpec_verbinde hvoll
       (akzeptiertSpec_of hvoll hls hcs [] h₁) (akzeptiertSpec_of hvoll hls hcs [] h₂) hV
-      ((schnittstelleB_iff hvoll hcs).mp hS))
+      (((schnittstelleB_iff hvoll hcs qs).mp hS).1))
 
 /-- **The user duty of the linked unit, restricted to what the two users own** (`a₁` inside
     unit 1's share, `a₂` inside unit 2's): the premise (b) of a further link. -/

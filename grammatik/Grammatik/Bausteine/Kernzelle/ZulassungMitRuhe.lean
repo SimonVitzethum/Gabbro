@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Kernzelle.Zulassung
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
 
 @[expose] public section
 
@@ -13,6 +14,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Isabelle.AccumulatesMonoid Gabbro.Grammat
 variable {D : Deklaration}
 
 variable [DecidableEq D.Fn]
+
+variable [DecidableEq D.Ax]
 
 /-! ## The idle-root transfer -/
 
@@ -38,8 +41,8 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
     (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (reachB P fs w))
     {a : AccumulatorDecl D} (h : akkuZulaessig P fs a) :
     akkuZulaessig P.mitRuhe (fsRuhe fs) (AccumulatorDecl.mitRuhe a) := by
-  obtain ⟨h0, h1, h2, h3, h4, h5⟩ := h
-  refine ⟨?_, fun i => ?_, fun f' hf1 hf2 i => ?_, ?_, ?_, ?_⟩
+  obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7⟩ := h
+  refine ⟨?_, fun i => ?_, fun f' hf1 hf2 i => ?_, ?_, ?_, ?_, ?_, h7⟩
   · refine ⟨h0.1, h0.2.1, h0.2.2.1, h0.2.2.2.1, fun i => ?_,
       fun i j hij => h0.2.2.2.2.2.1 hij, fun i j hij => h0.2.2.2.2.2.2.1 hij,
       fun hcon => h0.2.2.2.2.2.2.2 (Option.some_injective hcon)⟩
@@ -117,6 +120,8 @@ theorem akkuZulaessig_mitRuhe (P : Programm D) {fs : List D.Fn}
           · show mE (bodenM (some g)) (P.mitRuhe.rumpf (some g)) = true
             rw [rumpf_mitRuhe_mE]
             exact hm
+  · obtain ⟨q, hq⟩ := h6
+    exact ⟨q, kernAbfrageVerbunden_mitRuhe P hq⟩
 
 /-- Transfer of the admission to the idle-root program. -/
 theorem accumulatorAdmission_mitRuhe (P : Programm D) {fs : List D.Fn}

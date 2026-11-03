@@ -172,7 +172,7 @@ theorem vz_ziel (passes : Nat) (lebt0 : Faden → Bool) (K : FadenMaschine zD.mi
         exact vz_app_akzeptiert)
     (by show Akzeptiert vzBib zS zFs [()] [.inl ()] [] = true
         exact vz_bib_akzeptiert) vz_verbindbar
-    ((schnittstelleB_iff zFs_voll zCs_voll).mp vz_schnittstelle) vz_nutzer1 vz_nutzer2 rfl zO
+    (((schnittstelleB_iff zFs_voll zCs_voll []).mp vz_schnittstelle).1) vz_nutzer1 vz_nutzer2 rfl zO
     ⟨zO_gut, zO_lokal, axVertragO_wahr zO⟩ passes _ _ (laufzeit_initRuhe _) lebt0 K hK
 
 /-- The linked unit IS the pool of fix lane F10 (`zPool`): the link reassembles the program. -/
@@ -253,7 +253,9 @@ theorem vm_abgelehnt :
 
 /-- The refusal at the specification: no `SchnittstelleSpec` for this pair. -/
 theorem vm_abgelehnt_spec : ¬ SchnittstelleSpec mFs vmE mE vmE2 := fun h => by
-  have := (schnittstelleB_iff mFs_voll mCs_voll).mpr h
+  have hak : (verbinde vmE mE vmE2).akku = [] := rfl
+  have := (schnittstelleB_iff mFs_voll mCs_voll []).mpr
+    ⟨h, fun a ha => by rw [hak] at ha; exact absurd ha List.not_mem_nil⟩
   rw [vm_abgelehnt.2.2.2.1] at this
   cases this
 

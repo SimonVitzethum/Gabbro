@@ -46,6 +46,7 @@ open Zielsatz
 variable {D : Deklaration}
 section Akzeptiert
 variable [DecidableEq D.Fn]
+variable [DecidableEq D.Ax]
 section Komponenten
 variable {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
   {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn}
@@ -158,13 +159,16 @@ theorem akzeptiertSpec_of (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock
   exact ⟨h1, (abgAlleB_iff hvoll).mp h2, (fussWB_iff hvoll).mp h3, (stufenB_iff hvoll).mp h4,
     (sperrOrteB_iff hls).mp h5, wurzelnB_iff.mp h6, (einzelnPoolB_iff hvoll hcs).mp h7,
     (rennB_iff hvoll hcs).mp h8, (antwortenB_iff hvoll).mp h9, (maskenB_iff hvoll).mp h10,
-    (schnittstellenB_iff hvoll).mp h11, (resetB_iff hcs).mp h12, (libraryB_iff _ _).mp h13, (Kernzelle.accumulatorB_iff hvoll hcs).mp h14, checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h15⟩
+    (schnittstellenB_iff hvoll).mp h11, (resetB_iff hcs).mp h12, (libraryB_iff _ _).mp h13,
+    ((Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h14).1,
+    checks, (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mp h15⟩
 
 /-- **An `AkzeptiertSpec` value is accepted by `Akzeptiert` at its own checks**:
-    the reverse direction. -/
+    the reverse direction, at the listed query axioms. -/
 theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, L ∈ ls)
-    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks} :
-    Akzeptiert P S fs ls cs ws aks h.checks = true := by
+    (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) {aks : List (Kernzelle.AccumulatorDecl D)} {h : AkzeptiertSpec P S fs ws aks}
+    (qs : List D.Ax) (hq : ∀ a ∈ aks, ∃ q ∈ qs, Kernzelle.KernAbfrageVerbunden P a q) :
+    Akzeptiert P S fs ls cs ws aks h.checks qs = true := by
   unfold Akzeptiert
   simp only [Bool.and_eq_true]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨h.frag, (abgAlleB_iff hvoll).mpr h.abg⟩, (fussWB_iff hvoll).mpr h.fuss⟩,
@@ -172,7 +176,7 @@ theorem spec_akzeptiert (hvoll : ∀ g : D.Fn, g ∈ fs) (hls : ∀ L : D.Lock, 
     wurzelnB_iff.mpr h.wurzeln⟩, (einzelnPoolB_iff hvoll hcs).mpr h.einzeln⟩,
     (rennB_iff hvoll hcs).mpr h.renn⟩,
     (antwortenB_iff hvoll).mpr h.antworten⟩, (maskenB_iff hvoll).mpr h.masken⟩,
-    (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll hcs).mpr h.akku⟩,
+    (schnittstellenB_iff hvoll).mpr h.schnittstellen⟩, (resetB_iff hcs).mpr h.reset⟩, (libraryB_iff _ _).mpr h.bibliothek⟩, (Kernzelle.accumulatorB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr ⟨h.akku, hq⟩⟩,
     (checkB_iff hvoll (tabsOf_voll hcs) (globsOf_voll hcs)).mpr h.pruef⟩
 
 end Komponenten

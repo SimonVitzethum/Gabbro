@@ -54,16 +54,19 @@ def zD : Deklaration where
   Inv := Empty
   traeger := fun i => (nomatch i)
   invs := []
-  Ax := Empty
-  aparams := fun e => (nomatch e)
-  aerg := fun e => (nomatch e)
-  aschreibt := fun e => (nomatch e)
-  agschreibt := fun e => (nomatch e)
+  Ax := Fin 1
+  aparams := fun _ => []
+  aerg := fun _ => some (Ty.int 0 1)
+  aschreibt := fun _ t => nomatch t
+  agschreibt := fun _ _ => false
+  agruende := fun _ => 0
   Reg := Empty
   rtyp := fun e => (nomatch e)
   rklasse := fun e => (nomatch e)
   spiegel := fun e => (nomatch e)
   rzusage := fun e => (nomatch e)
+  axHerkunft := fun _ => some .hardware
+  axBeleg := fun _ => some ()
   Annahme := Unit
   a10 := ()
   geteilt_bewacht := fun t => (nomatch t)
@@ -292,17 +295,19 @@ def zAQ : zAD.Fn := .q
 def zAU : zAD.Fn := .u
 def zAF : zAD.Fn := .f
 
-/-- Literal `0` in `0 .. 1`: the query answer. -/
-def zALitQ {Γ : Ctx} {Λ : List (Res zAD)} : Expr zAD Γ Λ (Ty.int 0 1) :=
-  .widen (by decide) (by decide) (.lit 0)
+/-- The hardware core-query axiom. -/
+def zAX : zAD.Ax := ⟨0, by decide⟩
 
 /-- Literal `0` in `0 .. 255`: the `or` neutral the reduction returns. -/
 def zALitN {Γ : Ctx} {Λ : List (Res zAD)} : Expr zAD Γ Λ (Ty.int 0 255) :=
   .widen (by decide) (by decide) (.lit 0)
 
-/-- The query body: return `0`. -/
+/-- The query body: bind the hardware axiom, return its answer. -/
 def zARumpfQ : Endblock zAD (vertragVon zAD zAQ) false [] [] :=
-  .ret (.val zALitQ) (List.Perm.refl _)
+  .bindAxiom zAX Args.nil rfl
+    (fun t _ => nomatch t) (fun g h => by simp at h)
+    (fun t _ => nomatch t) (fun g h => by simp at h)
+    (.ret (.val (.var .here)) (List.Perm.refl _))
 
 /-- The reduction body: return the neutral `0` (read-only, hence admitted;
     the sampled fold it should return is the quiescent leg, not admission). -/
@@ -343,15 +348,19 @@ def zA : AccumulatorDecl zAD where
 
 def zAFs : List zAD.Fn := [zAQ, zAU, zAF]
 
-def zACs : List (zAD.Tab ⊕ zAD.Glob) := [.inr ⟨0, by decide⟩, .inr ⟨1, by decide⟩]
+def zATabs : List zAD.Tab := []
+
+def zAGlobs : List zAD.Glob := [⟨0, by decide⟩, ⟨1, by decide⟩]
+
+def zAQs : List zAD.Ax := [zAX]
 
 theorem zAFs_voll : ∀ g : zAD.Fn, g ∈ zAFs := fun g => by cases g <;> simp only [zAFs, List.mem_cons,
   List.not_mem_nil, List.mem_singleton]
 
-theorem zACs_voll : ∀ c : zAD.Tab ⊕ zAD.Glob, c ∈ zACs := fun c => by
-  cases c with
-  | inl t => exact nomatch t
-  | inr g => fin_cases g <;> simp only [zACs, List.mem_cons, List.not_mem_nil, List.mem_singleton]
+theorem zATabs_voll : ∀ t : zAD.Tab, t ∈ zATabs := fun t => nomatch t
+
+theorem zAGlobs_voll : ∀ g : zAD.Glob, g ∈ zAGlobs := fun g => by
+  fin_cases g <;> simp only [zAGlobs, List.mem_cons, List.not_mem_nil, List.mem_singleton]
 
 /-- The fixture descriptor is valid, decided. -/
 theorem zA_okB : akkuOkB zA = true := by decide
@@ -365,13 +374,15 @@ theorem zA_nichtEntartet : zA.zellen ⟨0, by decide⟩ ≠ zA.zellen ⟨1, by d
   refine ⟨by decide, rfl⟩
 
 /-- **The full-program admission, decided**: every clause of `akkuZulaessig`
-    plus global cell/lock distinctness holds on the fixture. -/
-theorem zA_akkuB : accumulatorB zAP zAFs zACs [zA] = true := by decide
+    plus global cell/lock distinctness holds on the fixture, with the
+    connected hardware query listed. -/
+theorem zA_akkuB : accumulatorB zAP zAFs zATabs zAGlobs zAQs [zA] = true := by decide
 
 /-- **The full-program admission `_zeuge`**: the fixture's accumulator is
     admitted (non-degenerate: two distinct cells, `or` with neutral `0`). -/
-theorem akkuProgramm_zeuge : AccumulatorAdmission zAP zAFs [zA] :=
-  (accumulatorB_iff zAFs_voll zACs_voll).mp zA_akkuB
+theorem akkuProgramm_zeuge : AccumulatorAdmission zAP zAFs [zA] ∧
+    ∀ a ∈ [zA], ∃ q ∈ zAQs, KernAbfrageVerbunden zAP a q :=
+  (accumulatorB_iff zAFs_voll zATabs_voll zAGlobs_voll).mp zA_akkuB
 
 #print axioms Gabbro.Grammatik.Kernzelle.zA_ok
 #print axioms Gabbro.Grammatik.Kernzelle.zA_nichtEntartet
