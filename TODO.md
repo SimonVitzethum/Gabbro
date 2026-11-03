@@ -29,7 +29,10 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: escrow simulation in progress.
     - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
-    - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
+    - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
+      as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
+      borrow/return witness and the no-mark/forged-loan refusals (c12-own, lead to build). Open: byte/raw/entry
+      targets (still refused: no live grant/history interface yet).
     - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
       carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
       bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
