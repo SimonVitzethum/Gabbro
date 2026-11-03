@@ -53,8 +53,8 @@ def markFin (marken : List String) (m : String) : Option (Fin marken.length) :=
 /-- Preserve the order of each linear declaration. Duplicate labels or nominal
     declarations would make an unqualified source advance ambiguous. Value
     payloads and unknown modifiers retain a named refusal. -/
-def uMarkOrders (ms : List SItemTief) : Except String (List (String × List String)) :=
-  ms.foldlM (fun orders item =>
+def uMarkOrders (ms : List SItemTief) : Except String (List (String × List String)) := do
+  let orders : List (String × List String) ← ms.foldlM (fun orders item =>
     match item with
     | .typeT flags name args stages body =>
       if flags.any (strEq · "linear") then
@@ -68,5 +68,6 @@ def uMarkOrders (ms : List SItemTief) : Except String (List (String × List Stri
         else .ok (orders ++ [(name, stages)])
       else .ok orders
     | _ => .ok orders) []
+  pure (orders.filter (fun p => !p.2.isEmpty))
 
 end Gabbro.Grammatik.Parser.Uebersetze
