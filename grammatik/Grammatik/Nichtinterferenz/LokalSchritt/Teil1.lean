@@ -263,17 +263,20 @@ theorem kDannCons_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp
     (hs : nS S Ax s = true) (hk : k.nR S Ax) :
     KRel T (kDannCons P O passes st f rho spur sp₁ ρ s rest k)
       (kDannCons P O passes st f rho spur sp₂ ρ s rest k) := by
-  unfold kDannCons
-  by_cases h1 : GEntfaltbar s = true
-  · rw [if_pos h1, if_pos h1]
-    exact kEntf_rel hST hAx P O passes st f rho spur hO hsp ρ s rest k hs
-  · rw [if_neg h1, if_neg h1]
-    by_cases h2 : s.istBlatt = true
-    · rw [if_pos h2, if_pos h2]
-      exact kAusDann_rel hST st f rho rest k hk
-        (blatt_rel O passes hST hAx hO s h2 hs (WRel.welt hsp spur) ρ)
-    · rw [if_neg h2, if_neg h2]
-      exact kRufDann_rel hST P st f rho spur hsp ρ s rest k hs
+  cases s with
+  | retScoped e R =>
+      simp only [kDannCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte]
+      exact kRufDann_rel hST P st f rho spur hsp ρ _ rest k hs
+  | retWhyScoped r R =>
+      simp only [kDannCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte]
+      exact kRufDann_rel hST P st f rho spur hsp ρ _ rest k hs
+  | _ =>
+      simp only [kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte]
+      first
+      | exact kEntf_rel hST hAx P O passes st f rho spur hO hsp ρ _ rest k hs
+      | exact kAusDann_rel hST st f rho rest k hk
+          (blatt_rel O passes hST hAx hO _ (by rfl) hs (WRel.welt hsp spur) ρ)
+      | exact kRufDann_rel hST P st f rho spur hsp ρ _ rest k hs
 
 include hAx in
 theorem kEndeCons_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool}
@@ -281,17 +284,20 @@ theorem kEndeCons_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp
     (rest : Endblock D (vertragVon D f) l Γ Λ') (hs : nS S Ax s = true) :
     KRel T (kEndeCons P O passes st f rho spur sp₁ ρ s rest)
       (kEndeCons P O passes st f rho spur sp₂ ρ s rest) := by
-  unfold kEndeCons
-  by_cases h1 : GEntfaltbar s = true
-  · rw [if_pos h1, if_pos h1]
-    exact KRel.lokal _ _ _ _ _ rfl hsp
-  · rw [if_neg h1, if_neg h1]
-    by_cases h2 : s.istBlatt = true
-    · rw [if_pos h2, if_pos h2]
-      exact kAusEnde_rel st f rho rest
-        (blatt_rel O passes hST hAx hO s h2 hs (WRel.welt hsp spur) ρ)
-    · rw [if_neg h2, if_neg h2]
-      exact kRufEnde_rel hST P st f rho spur hsp ρ s rest hs
+  cases s with
+  | retScoped e R =>
+      simp only [kEndeCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte]
+      exact kRufEnde_rel hST P st f rho spur hsp ρ _ rest hs
+  | retWhyScoped r R =>
+      simp only [kEndeCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte]
+      exact kRufEnde_rel hST P st f rho spur hsp ρ _ rest hs
+  | _ =>
+      simp only [kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte]
+      first
+      | exact KRel.lokal _ _ _ _ _ rfl hsp
+      | exact kAusEnde_rel st f rho rest
+          (blatt_rel O passes hST hAx hO _ (by rfl) hs (WRel.welt hsp spur) ρ)
+      | exact kRufEnde_rel hST P st f rho spur hsp ρ _ rest hs
 
 include hAx in
 theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂) {l : Bool}

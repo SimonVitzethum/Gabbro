@@ -216,19 +216,37 @@ theorem kDannCons_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : En
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Block D (vertragVon D f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D f) l Γ Λ'') (hs : nS S Ax s = true) (hr : nB S Ax rest = true)
     (hk : k.nR S Ax) : KErgOk P S Ax (kDannCons P O passes st f rho spur sp ρ s rest k) := by
-  unfold kDannCons
-  refine KErgOk.ite (fun _ => kEntf_ok P O passes hst f rho spur sp ρ s rest k hs hr hk)
-    (fun _ => KErgOk.ite (fun _ => kAusDann_ok P hst f rho rest k hr hk _)
-      (fun _ => kRufDann_ok P hst f rho spur sp ρ s rest k hr hk))
+  cases s with
+  | retScoped e R =>
+      simp only [kDannCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte, kRufDann]
+      exact kScoped_ok (l := l) hst f rho ρ _ _ R.scopes
+  | retWhyScoped r R =>
+      simp only [kDannCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte, kRufDann]
+      exact kScoped_ok (l := l) hst f rho ρ (.inr r) _ R.scopes
+  | _ =>
+      simp only [kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte]
+      first
+      | exact kEntf_ok P O passes hst f rho spur sp ρ _ rest k hs hr hk
+      | exact kAusDann_ok P hst f rho rest k hr hk _
+      | exact kRufDann_ok P hst f rho spur sp ρ _ rest k hr hk
 
 theorem kEndeCons_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Endblock D (vertragVon D f) l Γ Λ')
     (hs : nS S Ax s = true) (hr : nE S Ax rest = true) :
     KErgOk P S Ax (kEndeCons P O passes st f rho spur sp ρ s rest) := by
-  unfold kEndeCons
-  refine KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact ⟨by simp only [nB, hs, Bool.and_self], hr⟩ | (simp only [GRest.nR]; exact ⟨by simp [nB, hs], hr⟩)) _ _)
-    (fun _ => KErgOk.ite (fun _ => kAusEnde_ok P hst f rho rest hr _)
-      (fun _ => kRufEnde_ok P hst f rho spur sp ρ s rest hr))
+  cases s with
+  | retScoped e R =>
+      simp only [kEndeCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte, kRufEnde]
+      exact kScoped_ok (l := l) hst f rho ρ _ _ R.scopes
+  | retWhyScoped r R =>
+      simp only [kEndeCons, GEntfaltbar, Bool.false_eq_true, ↓reduceIte, kRufEnde]
+      exact kScoped_ok (l := l) hst f rho ρ (.inr r) _ R.scopes
+  | _ =>
+      simp only [kEndeCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte]
+      first
+      | exact KErgOk.lokal hst _ _ _ (by first | exact ⟨by simp only [nB, hs, Bool.and_self], hr⟩ | (simp only [GRest.nR]; exact ⟨by simp [nB, hs], hr⟩)) _ _
+      | exact kAusEnde_ok P hst f rho rest hr _
+      | exact kRufEnde_ok P hst f rho spur sp ρ _ rest hr
 
 end Ok
 end Gabbro.Grammatik
