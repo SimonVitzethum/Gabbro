@@ -87,7 +87,7 @@ theorem member_borrow_ok {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
   have memberPre : Pre L m2 _ fp K (s + 4) cb
       (Env.cons (show Wert D (.index count) from predecessor) ρ) W reserved :=
     { h2.left with
-      ctx := by simp only [frei, contextWords_cons, widthOne]; dsimp [s]; omega
+      ctx := by simp only [s, frei, contextWords_cons, widthOne]; omega
       env := envAt_cons h2.env (ValueAt.of_enc widthOne newBinder rfl) }
   obtain ⟨m3, memberRun, a3, result, resultRead, resultProperty⟩ := operand m2 _ memberPre
   have h3 := h2.next a3 (Nat.le_refl _) (by omega)
