@@ -266,13 +266,12 @@ theorem verbrauchLauf_kongruent {l : Bool} {Γ : Ctx} (t : D.Tab)
       · rw [if_pos hc, if_pos hc]; exact Or.inl rfl
       · rw [if_neg hc, if_neg hc]
         obtain ⟨σr, w, b⟩ := sel (inv σ ρ).1 ρ
-        cases w with
-        | none =>
-            cases b with
-            | false => exact Or.inl rfl
-            | true => exact Or.inl rfl
+        cases b <;> cases w with
+        | none => exact Or.inl rfl
         | some v =>
+            simp only
             obtain ⟨σm, m⟩ := massW σr ρ
+            simp only
             rcases hs σm (.cons v ρ) with h | ⟨m', h1, hE⟩
             · rw [h]
               cases hx : s₂ σm (Env.cons v ρ) with
@@ -294,7 +293,7 @@ theorem verbrauchLauf_kongruent {l : Bool} {Γ : Ctx} (t : D.Tab)
                   by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
                       (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
                   · rw [if_pos hfall, if_pos hfall]
-                    by_cases hc' : (inv σ' ρ'.tail).2 = true
+                    by_cases hc' : (inv (massW σ' ρ'.tail).1 ρ'.tail).2 = true
                     · rw [if_pos hc', if_pos hc']; exact Or.inl rfl
                     · rw [if_neg hc', if_neg hc']; exact Or.inl rfl
                   · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
