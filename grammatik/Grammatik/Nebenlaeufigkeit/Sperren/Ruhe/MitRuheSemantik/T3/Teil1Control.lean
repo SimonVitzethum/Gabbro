@@ -236,7 +236,7 @@ theorem execStmt_ru_consumeTraverse {V : Vertrag D}
         erw [henv, eval_ru]
         rfl
       · intro j _ k _
-        simp only [valR, Val.relocate]
+        rfl
     · apply congrArg (fun b : Bool => !b)
       change (alleIndizes (D.count t)).all _ = _
       conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]

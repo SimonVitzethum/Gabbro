@@ -284,12 +284,30 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.dannBindAxiomElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
     | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        simpa only [RufMaschineG.plus, RufFadenG.plus, RufRahmenG.plus, GRest.plus, plus_weiterOpt] using
-          (RufSchrittG.dannBindAxiomOpt (P := P) (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ)
+        change RufSchrittG P O (p + j) (M.plus j) f
+          ⟨σ₂.speicher, rufUpdateG (M.plus j).faeden f
+            ⟨((M.plus j).faeden f).stapel,
+              ⟨((M.plus j).faeden f).kopf.f, ((M.plus j).faeden f).kopf.rho,
+                ((M.plus j).faeden f).kopf.s0,
+                ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
+                  .dann rest ((GRest.weiterOpt (Λ := Λ') e k).plus j)⟩⟩,
+              σ₂.spur, ((M.plus j).faeden f).log⟩,
+            (M.plus j).lauf ++ rufEigenG f neu, (M.plus j).start⟩
+        rw [plus_weiterOpt]
+        exact RufSchrittG.dannBindAxiomOpt (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
     | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        simpa only [RufMaschineG.plus, RufFadenG.plus, RufRahmenG.plus, GRest.plus, plus_weiterOpt] using
-          (RufSchrittG.dannBindAxiomOptElseOk (P := P) (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ)
+        change RufSchrittG P O (p + j) (M.plus j) f
+          ⟨σ₂.speicher, rufUpdateG (M.plus j).faeden f
+            ⟨((M.plus j).faeden f).stapel,
+              ⟨((M.plus j).faeden f).kopf.f, ((M.plus j).faeden f).kopf.rho,
+                ((M.plus j).faeden f).kopf.s0,
+                ⟨l, ErgCtx Γ e, nachSig D (D.asignatur a) Λ, ergEnv e (he ▸ v) ρ,
+                  .dann rest ((GRest.weiterOpt (Λ := Λ') e k).plus j)⟩⟩,
+              σ₂.spur, ((M.plus j).faeden f).log⟩,
+            (M.plus j).lauf ++ rufEigenG f neu, (M.plus j).start⟩
+        rw [plus_weiterOpt]
+        exact RufSchrittG.dannBindAxiomOptElseOk (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
     | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomOptElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
