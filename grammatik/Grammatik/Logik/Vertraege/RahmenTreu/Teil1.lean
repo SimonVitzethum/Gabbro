@@ -1,15 +1,11 @@
 module
-
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1a
 
 @[expose] public section
 
-
-
 namespace Gabbro.Grammatik
-
-variable {D : Deklaration} {V : Vertrag D}
+variable {D : Deklaration} {V : vertrag D}
 
 
 /-! ## 4. The three loop combinators -/

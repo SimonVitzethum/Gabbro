@@ -318,9 +318,11 @@ theorem arenaT_zeuge :
   exact ⟨rfl, rfl, rfl⟩
 
 /-- Owner production stays refused: the model admits escrow-ready flows
-    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), but the elaborator
-    still exports `Marke := Empty` with no owner bindings, so no source form
-    can supply them. -/
+    (`RufPasst.ownerReady` is `OwnerFlow.EscrowReady`), and the elaborator
+    exports the nontrivial mark namespace (`Marke := Fin u.marken.length`) with
+    declared owner guards (`eigner`/`braucht`), but every exported signature
+    still carries the empty flow with no produced marks, so no source form
+    can mint an owner. -/
 theorem owner_mint_type_refused_zeuge :
     itemMetadata (.typeT ["linear", "ghost"] "Mark" [] [] none) = true := by rfl
 

@@ -137,6 +137,19 @@ inductive Stmt : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
       (err : Endblock l (.why (D.sigNr n).gruende :: Γ) (nachSig D (D.sigNr n) Λ)) :
       Stmt l Γ Λ (nachSig D (D.sigNr n) Λ)
+  /-- `r->f = e;` through an OWNED capability (`own@m`): the same guarded
+      store to the underlying table as `assignThru`, with the same guards --
+      plus the held owner mark itself. The pointer carries the resolved owner
+      identity `o` (`D.ownerNr o = some m`), the table declares `m` as its
+      owner (`he`) and the guard at the held stage (`hg`); `hw` and `hL` are
+      the table's write right and remaining guards. Machine G executes it
+      exactly like `assignThru` on `t`. -/
+  | assignThruOwn {read : Bool} (p : Expr D Γ Λ (.ptr ⟨space, ⟨read, true, some o⟩, .table n⟩))
+      (t : D.Tab) (ht : D.capTab space n = some t) (f : D.Feld t)
+      (i : Expr D Γ Λ (.index (D.count t))) (e : Expr D Γ Λ (D.typ t f))
+      (m : D.Marke) (s : Nat) (ho : D.ownerNr o = some m) (he : m ∈ D.eigner t)
+      (hg : Sum.inr (m, s) ∈ D.braucht t)
+      (hw : V.schreibt t = true) (hL : darf D t Λ) : Stmt l Γ Λ Λ
 
 inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
   | nil : Block l Γ Λ Λ

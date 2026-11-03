@@ -4,7 +4,7 @@ public import Grammatik.Code.Refine.Env
 public import Grammatik.Code.Refine.Match.Opt
 public import Grammatik.Code.Refine.Match.Case
 public import Grammatik.Code.Refine.Bits.Forms
-public import Grammatik.Code.Refine.Expr.Teil1
+public import Grammatik.Code.Refine.Expr.Teil1Pointer
 
 @[expose] public section
 

@@ -21,7 +21,7 @@ def checkStaticConformance (consts : List (String × Int))
       | .raw raw => pure raw
       | _ => throw "static function parameter requires a function-pointer type"
     let (_, pointer) ← elabZeigerTyp consts aliases unit.tabs unit.locks unit.globs
-      unit.whys unit.sums unit.ptrKeys (unit.fns.length) 0 raw unit.spaces named
+      unit.whys unit.sums unit.ptrKeys (unit.fns.length) 0 raw unit.spaces named unit.eigner
     let actual ← fnIdx unit.fns target
     staticSignatureFits unit (fnAt unit actual) pointer
 

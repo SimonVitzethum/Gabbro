@@ -251,7 +251,7 @@ theorem Stmt.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res 
       simp only [Stmt.vOk, Bool.and_eq_true] at h ⊢
       exact ⟨hKK _ h.1, Endblock.vOk_mono err h.2⟩
   | .assignSlot .., _ => rfl
-  | .assignThru .., _ | .assignSlotRef .., _ => rfl
+  | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
   | .putBytes .., _ => rfl
   | .assignVar .., _ => rfl

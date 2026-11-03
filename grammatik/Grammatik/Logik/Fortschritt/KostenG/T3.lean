@@ -17,6 +17,7 @@ def kostenKS (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   -- `Zuweisung`: `1 + ausdruck(wert)` -- the target place is not read (F1)
   | .assignSlot _ _ _ e _ _ => 1 + kostenExpr e
   | .assignThru _ _ _ _ _ e _ _ => 1 + kostenExpr e
+  | .assignThruOwn _ _ _ _ _ e _ _ _ _ _ _ _ => 1 + kostenExpr e
   | .assignSlotRef _ _ _ _ _ e _ _ => 1 + kostenExpr e
   | .assignGlob _ e _ _ => 1 + kostenExpr e
   | .putBytes _ _ _ _ _ _ _ e _ _ => 1 + kostenExpr e
@@ -138,6 +139,7 @@ def zusatzS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Nat
   | .assignSlot _ _ i _ _ _ => kostenExpr i
   | .assignThru p _ _ _ i _ _ _ => kostenExpr p + kostenExpr i
+  | .assignThruOwn p _ _ _ i _ _ _ _ _ _ _ => kostenExpr p + kostenExpr i
   | .assignSlotRef r _ _ _ _ _ _ _ => kostenExpr r
   | .assignGlob .. => 0
   | .putBytes _ _ _ _ i _ _ _ _ _ => kostenExpr i

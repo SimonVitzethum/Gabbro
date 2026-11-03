@@ -27,6 +27,9 @@ theorem Stmt.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignThru p t _ f i e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
+  | .assignThruOwn p t _ _ i e _ _ _ _ _ _ _, hT, σ, ρ => by
+      simp only [stmtOrteP] at hT
+      simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)
   | .assignSlotRef r t _ _ f e _ _, hT, σ, ρ => by
       simp only [stmtOrteP] at hT
       simp only [execStmtHA, execStmtH, leseA_frei hA hT] <;> (try rfl)

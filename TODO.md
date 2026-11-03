@@ -21,6 +21,31 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
   now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
+  - **Stage-0 refusals with their missing step (C09/C12 line):**
+    - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
+    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
+    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
+    - C11 `by consuming`: refused by design.
+    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C10 RW locks: reader-wait liveness remains open.
+    - C09 owner flows: mint (`mints`) and handback moves (`moves`) elaborate with
+      witnesses and refusals (c09-mint, lead to build); terminal moves are signature-complete with
+      fixture witnesses, their body-level retire lowering still open (as for C16 takes). The dynamic
+      escrow replay and the C08 software-call transition remain open.
+    - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
+    - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
+      as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
+      borrow/return witness and the no-mark/forged-loan refusals (c12-own, lead to build). Open: byte/raw/entry
+      targets (still refused: no live grant/history interface yet).
+    - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
+      carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
+      bindings refused by name. Open: elaboration of admitted profile blocks (still refused at the Stage-0 gate).
+    - C14 `aligned`/`section`: relative grid (`wordAlign`, `globStarts`) plus the conditional absolute placement
+      lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
+      witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
+      loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
+    - C14 `entrust`: refused by the model (no isolation/call service).
+    - C07 fallible indirect calls: Stage-0 arms being added.
   - **Stage-0 refusals (source audit 2026-11-03).** Exact constructor tables, checks, proof connections and
     refusal witnesses: [measured coverage](dokumente/IR-COMPILATION-LANES.md#stage-0-coverage-measured-2026-11-03).
     No builds were run for that audit. Remaining refusals include:

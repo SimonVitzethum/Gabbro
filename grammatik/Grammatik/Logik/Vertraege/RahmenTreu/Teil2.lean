@@ -34,6 +34,9 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .assignThru p t _ f i e hw hL, σ, ρ, _hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt; exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibSlot _ t Λ _ f _ hw)
+  | .assignThruOwn p t _ f i e _ _ _ _ _ hw hL, σ, ρ, _hscope, _hh, σ', h => by
+      frame_value execStmt Ausgang.welt; exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
+        (treu_schreibSlot _ t Λ _ f _ hw)
   | .assignSlotRef r t _ _ f e hw hL, σ, ρ, _hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt; exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
         (treu_schreibSlot _ t Λ _ f _ hw)

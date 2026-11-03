@@ -78,6 +78,19 @@ theorem mem_mapE {r : Res D} {Λ : List (Res D)} : E.resE r ∈ Λ.map E.resE �
     exact ha
   · exact List.mem_map_of_mem
 
+/-- A table owner maps to a table owner (C12). -/
+theorem eignerE {t : D.Tab} {m : D.Marke} (h : m ∈ D.eigner t) :
+    E.marke m ∈ D'.eigner (E.tab t) := by
+  rw [E.eigner]
+  exact List.mem_map.mpr ⟨m, h, rfl⟩
+
+/-- An owner guard maps to the renamed owner guard (C12). -/
+theorem brauchtE {t : D.Tab} {m : D.Marke} {s : Nat}
+    (h : Sum.inr (m, s) ∈ D.braucht t) :
+    Sum.inr (E.marke m, s) ∈ D'.braucht (E.tab t) := by
+  rw [E.braucht]
+  exact List.mem_map.mpr ⟨_, h, rfl⟩
+
 /-- A held lock among the images is the image of a held lock. -/
 theorem held_mem_mapE {M : D'.Lock} {Λ : List (Res D)} (h : Res.held M ∈ Λ.map E.resE) :
     ∃ L, M = E.lock L ∧ Res.held L ∈ Λ := by

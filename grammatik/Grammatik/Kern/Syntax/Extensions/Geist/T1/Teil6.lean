@@ -3,7 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Extraktion
 public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Maschine
-public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil1
+public import Grammatik.Kern.Syntax.Extensions.Geist.T1.Teil1Sound
 
 @[expose] public section
 

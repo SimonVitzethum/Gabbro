@@ -4,6 +4,7 @@ public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze.Records.Records
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil4
+public import Grammatik.Parser.Elab.Generic.C09Sig
 
 @[expose] public section
 

@@ -25,6 +25,7 @@ def requirements {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} : Expr D Γ Λ τ → 
   | .var x => [.varUse x]
   | .slot t _ i _ => .access t i :: requirements i
   | .thru p t _ _ i _ => .access t i :: (requirements p ++ requirements i)
+  | .thruOwn p t _ _ i _ _ _ _ _ _ => .access t i :: (requirements p ++ requirements i)
   | .oldS t _ i _ => .range t :: requirements i
   | .getBytes t _ _ _ i _ _ _ => .range t :: requirements i
   | .widen _ _ e | .neg e | .not e | .some e | .istSome e => requirements e

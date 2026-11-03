@@ -97,19 +97,43 @@ def declOf (u : UProg) : Deklaration where
   decLock := inferInstance
   rang := fun l => (lockAt u l).rank
   maskiert := fun l => (lockAt u l).masks
-  Marke := Empty
+  Marke := Fin u.marken.length
   decMarke := inferInstance
-  stufen := fun e => nomatch e
-  braucht := needsAt u
+  /-- Every mark at stage 0: ordinary consumption/production and the owner guards
+      below need no order yet (the C09 advance/retire stages come with real flows). -/
+  stufen := fun _ => 1
+  braucht := fun t => needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0))
   gbraucht := gneedsAt u
-  eigner := fun _ => []
+  eigner := eignerAt u
+  /-- The capability owner registry (C12): `DataRights.owner` numbers resolve
+      through the unit's owner namespace (`eignerMarke`) to declaration marks. -/
+  ownerNr := eignerMarke u
   Fn := Fin u.fns.length
   sig := fun f => f.val
   sigNr := sigAt u
   passt := passtAt u
   passt_ok := fun f n h => (passtAt_ok u f n h).1
-  eigner_nie_erzeugt :=
-    fun _ _ _ _ h => (List.not_mem_nil (show _ ∈ ([] : List Empty) from h)).elim
+  eigner_nie_erzeugt := by
+    intro n t m s ho hprod
+    have ho' : m ∈ eignerAt u t := ho
+    obtain ⟨o, hoo, hmo⟩ := mem_eignerAt u t m ho'
+    have hgo : u.marken.get m = o := markFin_get u.marken o m hmo
+    by_cases hlt : n < (sigFns u).length
+    · have hsig : (sigAt u n).produziert = gibtAt u ((sigFns u).get ⟨n, hlt⟩) := by
+        unfold sigAt
+        rw [dif_pos hlt]
+      rw [hsig] at hprod
+      have hall := gibtAt_keinEigner u _ m s hprod
+      have hmem : (tabAt u t) ∈ u.tabs := List.get_mem u.tabs t
+      have hall' := List.all_eq_true.mp hall (tabAt u t) hmem
+      simp only [decide_eq_true_eq] at hall'
+      rw [hgo] at hall'
+      exact absurd hoo hall'
+    · have hsig : (sigAt u n).produziert = [] := by
+        unfold sigAt
+        rw [dif_neg hlt]
+      rw [hsig] at hprod
+      exact (List.not_mem_nil hprod).elim
   Inv := Fin u.invs.length
   traeger := traegerD u
   invs := List.finRange u.invs.length
@@ -145,8 +169,20 @@ def declOf (u : UProg) : Deklaration where
   geteilt_bewacht := fun t h => by
     have h' : ((tabAt u t).shared && !((needsAt u t).isEmpty)) = true := h
     simp only [Bool.and_eq_true] at h'
-    exact notEmpty_ne_nil _ h'.2
-  invarianten_gehalten := fun n i h t ht L hL => invGehalten u n i h t ht L hL
+    intro he
+    have hn := notEmpty_ne_nil (needsAt u t) h'.2
+    cases hs : needsAt u t with
+    | nil => exact hn hs
+    | cons x xs => simp [hs] at he
+  invarianten_gehalten := fun n i h c hc L hL => by
+    cases c with
+    | inl t =>
+      change Sum.inl L ∈ needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0)) at hL
+      rcases List.mem_append.mp hL with hlock | hmark
+      · exact invGehalten u n i h (.inl t) hc L hlock
+      · obtain ⟨m, _, hm⟩ := List.mem_map.mp hmark
+        cases hm
+    | inr g => exact invGehalten u n i h (.inr g) hc L hL
   ggeteilt_bewacht := fun g h => by
     have h' : ((globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)) = true := h
     simp only [Bool.and_eq_true, Bool.or_eq_true] at h'
@@ -155,6 +191,9 @@ def declOf (u : UProg) : Deklaration where
     · exact Or.inr h2
 
 /-! ## Bridge lemmas: the computed declaration meets the U data -/
+
+/-- The capability owner registry is the unit's owner namespace (C12). -/
+theorem ownerNr_eq (u : UProg) (o : Nat) : (declOf u).ownerNr o = eignerMarke u o := rfl
 
 /-- `sigAt` at a live index is the elaborated signature. -/
 theorem sigAt_get (u : UProg) (i : Fin u.fns.length) :

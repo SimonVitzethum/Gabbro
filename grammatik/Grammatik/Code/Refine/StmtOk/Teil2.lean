@@ -9,7 +9,7 @@ public import Grammatik.Code.Refine.Match.OnOption
 public import Grammatik.Code.Refine.Match.Why
 public import Grammatik.Code.Refine.Match.Tag
 public import Grammatik.Code.Refine.Match.Else
-public import Grammatik.Code.Refine.StmtOk.Teil1
+public import Grammatik.Code.Refine.StmtOk.Teil1Pointer
 
 @[expose] public section
 

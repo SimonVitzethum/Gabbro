@@ -1,13 +1,10 @@
-/- Part 3 of 5 of `Satz` (split by instrumente/teile/lean-teilen.py; the umbrella `Satz.lean` imports all parts). -/
 module
 public import Grammatik.Kern.Syntax.Satz.T2
 public import Grammatik.Kern.Syntax.Satz.T3a
 @[expose] public section
 
-
 namespace Gabbro.Grammatik
-
-variable {D : Deklaration} {V : Vertrag D}
+variable {D : Deklaration} {V : vertrag D}
 
 /-! ### The lock floor of a body (held-set relaxation, 2026-09-13)
 

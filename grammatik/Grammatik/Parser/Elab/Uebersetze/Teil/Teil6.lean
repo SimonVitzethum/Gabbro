@@ -110,7 +110,7 @@ def uOhneGriffe (devs : List String) (ps : List (String × STyp)) : List (String
 def elabKopf (_consts : List (String × Int))
     (alias : List (String × (Int × Int))) (tabs : List UTab)
     (locks : List ULock) (globs : List UGlob) (whys : List UWhy) (sums : List USum := [])
-    (sig : FnSig) (devs : List String := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (named : List (String × Ty) := []) :
+    (sig : FnSig) (devs : List String := []) (zeiger : List String := []) (zb : Nat := 0) (spaces : List String := []) (named : List (String × Ty) := []) (eigner : List String := []) :
     Except String (UFnKopf × List String) :=
   match sig with
   | { art, name, params := params0, res, fehler, klauseln } =>
@@ -126,7 +126,7 @@ def elabKopf (_consts : List (String × Int))
       | .error e, _ => .error e
       | _, .error e => .error e
       | .ok _, .ok _ =>
-        match uSeq (params.map (uParam alias tabs sums whys zeiger zb spaces named)) with
+        match uSeq (params.map (uParam alias tabs sums whys zeiger zb spaces named eigner)) with
         | .error e => .error e
         | .ok ps =>
           let names := ps.map (·.1)
@@ -155,7 +155,7 @@ def elabKopf (_consts : List (String × Int))
               -- it inside the body, and an access whose guard is not held is refused by the LOWERING
               -- (`access without held guard`), so nothing is claimed here.
               let puts := uEindeutig eff.puts
-              let kopf := { kopf with gputs := uEindeutig eff.gputs, nimmt := uEindeutig eff.nimmt, gibt := uEindeutig eff.gibt }
+              let kopf := { kopf with gputs := uEindeutig eff.gputs, nimmt := uEindeutig eff.nimmt, gibt := uEindeutig eff.gibt, leiht := uEindeutig eff.leiht, bewegt := uEindeutig eff.bewegt, praegt := uEindeutig eff.praegt }
               match res with
               | .none => .ok (kopf, puts)
               | .some (.atom "bool") =>
@@ -179,14 +179,14 @@ def elabKopf (_consts : List (String × Int))
                     | .some w => .ok ({ kopf with resWhy := some (k, w.cases.length) }, puts)
                     | .none => .error ("reason unknown: " ++ a)
                   | .none =>
-                  match uTypIn alias tabs named spaces (.atom a) with
+                  match uTypIn alias tabs named spaces eigner (.atom a) with
                   | .error e => .error e
                   | .ok (.int lo hi) => .ok ({ kopf with res := some (lo, hi) }, puts)
                   | .ok ty => .ok ({ kopf with resTy := some ty }, puts)
               | .some t =>
                 match t with
                 | .array _ _ | .str _ =>
-                  match uTypIn alias tabs named spaces t with
+                  match uTypIn alias tabs named spaces eigner t with
                   | .error e => .error e
                   | .ok τ => .ok ({ kopf with resTy := .some τ }, puts)
                 | _ =>

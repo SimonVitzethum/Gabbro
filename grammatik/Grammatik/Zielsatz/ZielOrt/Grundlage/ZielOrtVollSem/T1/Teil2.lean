@@ -39,7 +39,7 @@ theorem Stmt.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   | .callInd .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .callIndElse .., h => by simp only [Stmt.kOk, Bool.false_eq_true] at h
   | .assignSlot .., _ => rfl
-  | .assignThru .., _ | .assignSlotRef .., _ => rfl
+  | .assignThru .., _ | .assignThruOwn .., _ | .assignSlotRef .., _ => rfl
   | .assignGlob .., _ => rfl
   | .putBytes .., _ => rfl
   | .assignVar .., _ => rfl

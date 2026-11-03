@@ -30,6 +30,7 @@ def stmtKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → List D.Fn
   | .assignSlot _ _ _ _ _ _ => []
   | .assignThru _ _ _ _ _ _ _ _ => []
+  | .assignThruOwn _ _ _ _ _ _ _ _ _ _ _ _ _ => []
   | .assignSlotRef _ _ _ _ _ _ _ _ => []
   | .assignGlob _ _ _ _ => []
   | .putBytes _ _ _ _ _ _ _ _ _ _ => []

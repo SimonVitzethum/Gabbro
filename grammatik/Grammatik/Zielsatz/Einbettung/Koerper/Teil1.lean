@@ -252,6 +252,34 @@ theorem sim_stmt_assignThru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.vrel_um hZ (E.typ t f) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
+theorem sim_stmt_assignThruOwn {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {zi_n}
+    (p)
+    (t)
+    (ht)
+    (f)
+    (i)
+    (e)
+    (m)
+    (s)
+    (ho)
+    (he)
+    (hg)
+    (hw)
+    (hL)
+    : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ _))) :=
+  by
+  intro M σ σ' ρ ρ' hM hρ
+  obtain ⟨M₁, σ₁, hs, hΦ, hI, hev⟩ := E.lese_eval hZ hM T hB.havocA hB.atom Λ (Λ.map E.resE)
+    (p.orte ++ i.orte ++ e.orte)
+  have hev0 := E.frei_alle hZ (@hev) hρ
+  refine ⟨M₁, .ok (σ₁.schreibSlot t Λ (eval σ₁ i σ₁ ρ).n f (eval σ₁ e σ₁ ρ)) ρ, hs,
+    fun Φ hP => ?_, ?_⟩
+  · simp only [execStmtHA, hΦ Φ hP]
+  · simp only [exS, execStmtHA, Expr.orte_umTy, Args.orte_umτs, Expr.orte_umΓ, Einbettung.orte_exE, Einbettung.orte_exA, Einbettung.orte_exErg, ← List.map_append, ← List.map_cons, ortE_inl, ortE_inr, eval_umTy, castW_index_n, valE_index_n, hev0 _ _ _ zf_int, hev0 _ _ _ zf_index, hev0 _ _ _ zf_bool, hev0 _ _ _ zf_opt, hev0 _ _ _ zf_why, hev0 _ _ _ zf_fl, hev0 _ _ _ zf_ref]
+    exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.vrel_um hZ (E.typ t f) (hev e ρ ρ' hρ)), hρ⟩
+
+set_option linter.unusedSectionVars false in
 theorem sim_stmt_assignSlotRef {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {zi_n}
     (r)

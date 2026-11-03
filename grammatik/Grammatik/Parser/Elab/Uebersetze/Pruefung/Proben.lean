@@ -89,6 +89,33 @@ example : uMarkenPruef ["p#duty"] [torGate] = .ok () := rfl
 /-- An undeclared mark is refused. -/
 example : uMarkenPruef [] [{ torGate with nimmt := ["m"] }] = .error "mark unknown: m" := rfl
 
+/-- Moved and minted marks name declared marks too. -/
+example : uMarkenPruef ["m"] [{ torGate with bewegt := ["m"], praegt := ["m"] }] = .ok () := rfl
+
+/-- A handoff of a table owner is admitted. -/
+example : uBewegtPruef ["m"] [{ torGate with bewegt := ["m"] }] = .ok () := rfl
+
+/-- A handoff of a non-owner is refused. -/
+example : uBewegtPruef ["m"] [{ torGate with bewegt := ["x"] }] = .error "move without owner: x" := rfl
+
+/-- A mark both consumed and moved is refused. -/
+example : uBewegtPruef ["m"] [{ torGate with nimmt := ["m"], bewegt := ["m"] }] =
+    .error "mark both consumed and moved: m" := rfl
+
+/-- A mark both borrowed and moved is refused. -/
+example : uBewegtPruef ["m"] [{ torGate with leiht := ["m"], bewegt := ["m"] }] =
+    .error "mark both borrowed and moved: m" := rfl
+
+/-- A mint of a table owner is admitted. -/
+example : uMintPruef ["m"] [{ torGate with praegt := ["m"] }] = .ok () := rfl
+
+/-- A mint of a non-owner is refused. -/
+example : uMintPruef ["m"] [{ torGate with praegt := ["x"] }] = .error "mint without owner: x" := rfl
+
+/-- The second mint of the same instance is refused. -/
+example : uMintPruef ["m"] [{ torGate with praegt := ["m"] }, { torGate with praegt := ["m"] }] =
+    .error "duplicate mint: m" := rfl
+
 /-- One gate derives its Duty-consuming wrapper, forwarding the empty result. -/
 example : uTorHuelle "p#duty" [torGate] "p" "g" =
     .ok { name := "p#tor#g", params := [], kinds := [], res := none, held := [], puts := [], gputs := [], nimmt := ["p#duty"], gives := [], needs := [], body := [.call "g" []], ret := .empty } := rfl

@@ -42,6 +42,12 @@ theorem os_meta (hO : GutO O) : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
     injection h with h1 _
     subst σ'
     exact (MetaSame.reads A σ _ _).trans (MetaSame.writeSlot A _ t _ _ f _ hn)
+  | _, _, _, _, _, _, _, _, .assignThruOwn _ t _ _ _ _ _ _ _ _ _ _ _ hn _ _ _ _ => by
+    intro _ σ ρ σ' ρ' h
+    simp only [execStmt] at h
+    injection h with h1 _
+    subst σ'
+    exact (MetaSame.reads A σ _ _).trans (MetaSame.writeSlot A _ t _ _ f _ hn)
   | _, _, _, _, _, _, _, _, .assignGlob g _ _ _ hg _ => by
     intro _ σ ρ σ' ρ' h
     simp only [execStmt] at h

@@ -14,11 +14,11 @@ theorem sigAt_haelt (u : UProg) (i : Fin u.fns.length) :
   rw [sigAt_get]; rfl
 
 theorem sigAt_konsumiert (u : UProg) (i : Fin u.fns.length) :
-    (sigAt u i.val).konsumiert = [] := by
+    (sigAt u i.val).konsumiert = nimmtAt u (fnAt u i) := by
   rw [sigAt_get]; rfl
 
 theorem sigAt_produziert (u : UProg) (i : Fin u.fns.length) :
-    (sigAt u i.val).produziert = [] := by
+    (sigAt u i.val).produziert = gibtAt u (fnAt u i) := by
   rw [sigAt_get]; rfl
 
 /-- Parameters through the declaration. -/
@@ -36,13 +36,44 @@ theorem haelt_eq (u : UProg) (i : Fin u.fns.length) :
     (declOf u).haelt i = heldAt u (fnAt u i) := by
   simp only [declOf, Deklaration.haelt, Deklaration.signatur, sigAt_haelt]
 
-/-- The contract end: held locks only (no marks travel). -/
-theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
-    (vertragVon (declOf u) f).ende =
-      (heldAt u (fnAt u f)).map (Res.held (D := declOf u)) := by
-  simp only [vertragVon, Vertrag.vonSig, Vertrag.ende, Deklaration.signatur,
-    declOf, sigAt_haelt, sigAt_produziert]
-  exact List.append_nil _
+/-- **Decided call-boundary escrow (C09/C12).** The callee's owner flow is valid over
+    its own inputs at stage 0, disjoint from ordinary consumption, and every
+    input resolves to a table owner. Empty flows pass; a borrowing, moving or
+    minting callee passes exactly when its loans, handbacks and mints name
+    declared table owners nothing else consumes. -/
+def ownerReadyB (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+    (Fin u.locks.length) (Fin u.marken.length)) : Bool :=
+  S.owner.validB (fun m => decide (m ∈ S.owner.inputs.map Prod.fst)) (fun _ => 1) &&
+  (S.konsumiert.map Prod.fst).all (fun p => !((S.owner.inputs.map Prod.fst).any (· == p))) &&
+  (S.owner.inputs.map Prod.fst).all
+    (fun m => (List.finRange u.tabs.length).any (fun t => decide (m ∈ eignerAt u t)))
+
+/-- The decided check supplies the static escrow condition of the call. -/
+theorem ownerReadyB_ok (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+    (Fin u.locks.length) (Fin u.marken.length)) (h : ownerReadyB u S = true) :
+    S.owner.EscrowReady (fun m => decide (m ∈ S.owner.inputs.map Prod.fst))
+      (declOf u).stufen (fun m => ∃ t, m ∈ (declOf u).eigner t) S.konsumiert := by
+  unfold ownerReadyB at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨hV, hD, hR⟩ := h
+  have hV' := (OwnerFlow.validB_iff _ _ _).mp hV
+  have hst : (declOf u).stufen = fun _ => 1 := rfl
+  rw [hst]
+  refine ⟨hV', ?_, ?_⟩
+  · intro p hp
+    have hm : p.1 ∈ S.konsumiert.map Prod.fst :=
+      List.mem_map.mpr ⟨p, hp, rfl⟩
+    have ha := List.all_eq_true.mp hD p.1 hm
+    intro hcon
+    have hbeq : (S.owner.inputs.map Prod.fst).any (· == p.1) = true := by
+      rw [List.any_eq_true]
+      exact ⟨p.1, hcon, by simp⟩
+    simp only [hbeq, Bool.not_true] at ha
+  · intro m hm
+    have ha := List.all_eq_true.mp hR m hm
+    rw [List.any_eq_true] at ha
+    obtain ⟨t, _, ht⟩ := ha
+    exact ⟨t, of_decide_eq_true ht⟩
 
 /-- Every field index has its recorded range. -/
 theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)

@@ -18,6 +18,7 @@ def constStmtCalls (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Î“ : Ctx} {Î
   | .call f args hp hr => [f]
   | .assignSlot .. => []
   | .assignThru .. => []
+  | .assignThruOwn .. => []
   | .assignGlob .. => []
   | .putBytes .. => []
   | .shift .. => []
