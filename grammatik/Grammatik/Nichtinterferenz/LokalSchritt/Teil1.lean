@@ -101,13 +101,6 @@ theorem kAusEnde_rel (st : List (KRahmen D)) (f : D.Fn)
   · exact KRel.none_l _
   · exact KRel.none_l _
 
-theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
-  cases a
-  cases b
-  simp only at h
-  subst h
-  rfl
-
 theorem KRel.lokalEnv (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)} {ρ₁ ρ₂ : Env D Γ} (hρ : ρ₁ = ρ₂)
     (r : GRest D (vertragVon D f) l Γ Λ) {s₁ s₂ : List (Ereignis D)} {m₁ m₂ : Speicher D}

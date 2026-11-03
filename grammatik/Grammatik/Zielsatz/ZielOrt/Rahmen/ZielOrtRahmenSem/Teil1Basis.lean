@@ -192,12 +192,6 @@ theorem traegerSchreibt_passt {f g : D.Fn} {Λ : List (Res D)}
   | .inl t, h => hp.hw t h
   | .inr x, h => hp.hg x h
 
-theorem traegerGleich_trans {s s' s'' : Speicher D} {c : D.Tab ⊕ D.Glob}
-    (h1 : TraegerGleich s s' c) (h2 : TraegerGleich s' s'' c) : TraegerGleich s s'' c := by
-  cases c with
-  | inl t => exact Eq.trans h1 h2
-  | inr x => exact Eq.trans h1 h2
-
 section Stapel
 
 variable (P : Programm D)

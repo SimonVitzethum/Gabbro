@@ -77,9 +77,6 @@ theorem gibt_foldl_worldR (σ : World D) (Ls : List D.Lock) :
       simp only [List.foldl_cons, gibt_worldR]
       exact ih (σ.gibt L)
 
-theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
-  cases a; cases b; simp only at h; subst h; rfl
-
 theorem kongr₃ {α β γ δ : Sort _} (f : α → β → γ → δ) {a a' : α} {b b' : β} {c c' : γ}
     (ha : a = a') (hb : b = b') (hc : c = c') : f a b c = f a' b' c' := by
   subst ha; subst hb; subst hc; rfl

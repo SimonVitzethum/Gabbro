@@ -250,7 +250,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           withErgN u m fun τ hE =>
             match R.ende (l := l) (Ty.why (((declOf u).sigNr m).gruende) :: Γ) (fn.mitWhy e 0 (((declOf u).sigNr m).gruende)) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe rest with
             | .error err => .error err
-            | .ok (errb, .blkEnd :: tail) => match R.seq (l := l) (τ :: Γ) (fn.mitTy x τ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe tail with
+            | .ok (errb, .blkEnd :: tail) => match R.seq (l := l) (τ :: Γ) (fn.mitTy y τ) (nachSig (declOf u) ((declOf u).sigNr m) Λ) pe tail with
               | .error err => .error err
               | .ok ((⟨Λ', body⟩, remaining)) => .ok (⟨Λ', nestedElseN u caller Γ Λ m v k τ hE hr errb body⟩, remaining)
             | .ok (_, _) => .error "lower: a let else is not closed"

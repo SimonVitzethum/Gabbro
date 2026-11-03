@@ -764,10 +764,13 @@ listed above, not counted as extra constructors):
   forms still lack a canonical form: live byte capabilities (`DataTarget` has no byte target; U3:121/:127),
   and top-level/end-block float introduction/arithmetic (dangling references above). Device ASM/boot/raw
   addresses and register access/transition are outside this userspace inventory's unfinished-work count.
-- **Front end (originally 15 otherwise lowered/proof-connected constructors; `floatOf` source export added, UNCHECKED):** `Expr.getBytes`;
-  `Stmt.putBytes`, `breaking`, `advances`, `retires`, `consumeTraverse`, `retScoped`, `retWhyScoped`,
-  `callIndElse`; `Block.bindAxiomElse`, `check`, `floatNarrow`;
-  `Endblock.retScoped`, `retWhyScoped`. `oldG` has the Stage-0 numeric bridge, not a general canonical
+- **Front end:** `Expr.getBytes`, `Stmt.putBytes` and `Block.check` still have no surface producer;
+  `Stmt.advances` is deliberately refused because exported marks have only one stage. `Stmt.breaking`
+  has an unchecked exporter, but complete source units remain blocked by the invariant metadata gate.
+  `Block.floatOf` and `Block.floatNarrow` have unchecked continuing-block exporters; their end-block
+  forms remain absent. Retirement, consuming traversal, scoped returns, indirect call handlers and
+  foreign `let .. else` retain their newer exporters listed above, all awaiting lead checks.
+  `oldG` has the Stage-0 numeric bridge, not a general canonical
   parser export. Provider-reference initialization and top-level float source compilation remain separate
   connected-path gaps even though their component constructors appear in the positive structural count.
 - **Lowering (6 constructors):** out-of-scope `Stmt.regWrite`, `Stmt.transition`, `Block.regRead`,

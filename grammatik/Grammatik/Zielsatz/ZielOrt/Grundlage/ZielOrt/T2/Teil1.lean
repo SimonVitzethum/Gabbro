@@ -285,5 +285,11 @@ def TraegerGleich (s s' : Speicher D) : D.Tab ⊕ D.Glob → Prop
 theorem traegerGleich_refl (s : Speicher D) (c : D.Tab ⊕ D.Glob) : TraegerGleich s s c := by
   cases c <;> rfl
 
+theorem traegerGleich_trans {s s' s'' : Speicher D} {c : D.Tab ⊕ D.Glob}
+    (h1 : TraegerGleich s s' c) (h2 : TraegerGleich s' s'' c) : TraegerGleich s s'' c := by
+  cases c
+  · exact h1.trans h2
+  · exact h1.trans h2
+
 end Sperren
 end Gabbro.Grammatik

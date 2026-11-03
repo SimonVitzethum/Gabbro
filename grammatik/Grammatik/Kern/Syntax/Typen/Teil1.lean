@@ -50,6 +50,9 @@ structure Zahl (lo hi : Int) where
   lo_le : lo ≤ n
   le_hi : n ≤ hi
 
+theorem zahl_ext {lo hi : Int} {a b : Zahl lo hi} (h : a.n = b.n) : a = b := by
+  cases a; cases b; simp only at h; subst h; rfl
+
 /-- **The model's float: an IEEE-754 binary64 value as DATA** (`Gleitkomma.lean`, the
     kernel-computable model; until the switch of 2026-09-14 this was Lean's opaque
     `Float`). `Ty.fl` carries no width, and the old `Float` was binary64 too, so the

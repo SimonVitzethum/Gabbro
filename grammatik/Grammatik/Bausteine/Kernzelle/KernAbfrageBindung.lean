@@ -177,21 +177,6 @@ theorem kernAbfrageEinzelB_iff {P : Programm D} {tabs : List D.Tab}
     exact ⟨(kernAbfrageGestaltB_iff hT hG).mpr h1,
       (kernAbfrageHerkunftB_iff).mpr h2, h3⟩
 
-/-- The Bool decides the connected query. -/
-theorem kernAbfrageEinzelB_iff {P : Programm D} {tabs : List D.Tab}
-    {globs : List D.Glob} {a : AccumulatorDecl D} {q : D.Ax}
-    (hT : ∀ t : D.Tab, t ∈ tabs) (hG : ∀ g : D.Glob, g ∈ globs) :
-    kernAbfrageEinzelB P tabs globs a q = true ↔ KernAbfrageVerbunden P a q := by
-  unfold kernAbfrageEinzelB KernAbfrageVerbunden
-  simp only [Bool.and_eq_true]
-  constructor
-  · rintro ⟨h1, h2, h3⟩
-    exact ⟨(kernAbfrageGestaltB_iff hT hG).mp h1,
-      (kernAbfrageHerkunftB_iff).mp h2, h3⟩
-  · rintro ⟨h1, h2, h3⟩
-    exact ⟨(kernAbfrageGestaltB_iff hT hG).mpr h1,
-      (kernAbfrageHerkunftB_iff).mpr h2, h3⟩
-
 #print axioms Gabbro.Grammatik.Kernzelle.kernAbfrageEinzelB_iff
 
 /-! ## 3. Transfer to the idle-root program
