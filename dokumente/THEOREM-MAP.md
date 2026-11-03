@@ -6064,3 +6064,72 @@ On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. 
 * **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
 
 Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.
+
+## 140. C17: scalar const-call certificates and connected source gates (2026-11-03)
+
+Implementation branch `c17-const2`; **not built or executed by its implementation worker**.
+`Spec.lean` and the goal theorem statement are unchanged. Standard-axiom preservation remains a
+lead check, not a result of static inspection. Zero new source-to-IR cases have been measured.
+
+`grammatik/Grammatik/Parser/Elab/Konst/Scalar/Model.lean` and `Expression.lean`:
+
+* `Code.equation` and `expression_denotes`: typed scalar expression elaboration carries a generic G
+  evaluation equation, independent of entry/current worlds, at every typed environment. Names resolve
+  to original parameter positions; arithmetic uses G's exact interval constructors. Contract predicates
+  retain their original expressions and declaration order. Unsupported effects/clauses are errors.
+* `declaration`: one closed ordinary G call signature with the original parameter and result types.
+  It introduces no hardware assumption, global store, lock or alternative execution backend.
+
+`grammatik/Grammatik/Parser/Elab/Konst/Scalar/KExpr.lean`:
+
+* `KExpr.evalInt`, `KExpr.ofInt_eval`: exact closed integer interpretation of existing KExpr syntax;
+  unresolved names, parameters and calls return `none`, not zero. The existing natural table evaluator
+  remains unchanged. G division/remainder use truncation; signed literals use existing subtraction syntax.
+* `quote`, `quoteBinary`, `quote_denotes`, `KExpr_to_G_denotation`: structural typed-G-to-KExpr quotation
+  at the actual checked arguments builds a generic denotation equation for every supported arithmetic
+  branch. `quote_denotes_zeuge` jointly instantiates a parameter, arithmetic body and successful quotation.
+
+`grammatik/Grammatik/Parser/Elab/Konst/Scalar/Export.lean`:
+
+* `Function.call_equation`: for arbitrary typed arguments, worlds, oracles, pass budgets and positive
+  depths, the ordinary G call checks requires, evaluates the original typed body, narrows exactly to its
+  declared result range, and checks ensures. No clipping, saturation, wrapping or default result.
+* `Function.Certificate.sound`: a successful checked body/result/predicate certificate yields that exact
+  ordinary G call result at every world/oracle/pass budget/positive depth, preserving the entire world.
+* `SourceFunction`, `CheckedCall`, `CheckedCall.sound`: retain original body/predicate elaboration
+  equations, parameter binding, canonical bounded candidate computation, structural KExpr quotation and
+  its exact value, together with the generic G call certificate. Every delivered replacement has them.
+
+`Ersetzung.lean` and `ErsetzungTor.lean` in the same parent directory:
+
+* `ersetzeSExpr_call_certified`: success of the actual recursive const-call substitution branch yields
+  a `Scalar.CheckedCall` and the exact substituted literal; a certificate is not a caller premise.
+* `checkSourceMetadata_sound`, `checkSourceMetadata_runtime_sound`, `checkSourceConstants_sound`:
+  original-source gates retain the successful certified rewrite, the original runtime metadata check
+  and the residual runtime metadata check. Only const declarations leave this runtime domain.
+* Known global constants reuse Generic's capture-free traversal, including parameter/local/pattern/loop
+  shadowing and the repaired reason binders in `bindElse`/`bindAxiomOptElse`. A full denotational theorem
+  for this global-name normalization is still open; post-normalization elaboration equations alone do
+  not prove it. This is a remaining acceptance obligation, not a closed source-meaning claim.
+
+`stage0/Stage0/Compiler.lean`, `Frontend/Source.lean`, `Frontend/ExportCorrectness.lean`:
+
+* `compile_source_program` retains these original-source gates through ordinary G lowering,
+  old-state restoration and `AkzeptiertX`. Source extraction checks named failures before scope
+  discovery can turn a failed constant initializer into a generic unknown constant.
+* `Compiled.const_substitution`, `Compiled.exports_metadata`, `Compiled.constant_exports_metadata`
+  expose certified rewriting and the original/residual runtime checks. `exported_batch2_ir_correct`
+  carries the original runtime-domain metadata guarantee through the existing image proof.
+
+`stage0/Stage0/Frontend/ConstWitness.lean` (included by `Stage0.lean`): two contracted calls with
+values 4 and 6 and their G/KExpr certificates; named requires/ensures failures; open argument and
+intermediate overflow; source-text compilation and checker witness; contracted initializer; parameter
+and reason shadowing. The image witness reuses `irBild_correct` under an explicit successful-emission
+premise; it does not claim that an image was emitted or run. All witnesses await the lead's checks.
+
+The canonical evaluator is centralized in `Uebersetze/Folds/ConstEvaluation.lean`; bounded integer
+contexts reject Boolean truth encodings, every intermediate result is range checked, nested calls
+retain both predicates, and arguments use their own declared parameter ranges. Refused shapes:
+block bodies, nested calls needing parameter binding inside const bodies/contracts, non-integer
+results, statement-position const calls, and missing typed scalar rules such as source-width-aware
+shifts. These are not counted as completed language cases.
