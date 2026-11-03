@@ -238,7 +238,7 @@ def terminalMoveSource (body : String) : String :=
 
 def terminalMoveRetires : String := terminalMoveSource "retires Marke;"
 
-theorem terminalMoveRetires_ok : stufe terminalMoveRetires = "OK" := by
+theorem terminalMoveRetires_zeuge : stufe terminalMoveRetires = "OK" := by
   decide +kernel
 
 /-- Omitting retire leaves an input outside `ende`; exact return inventory
@@ -272,7 +272,7 @@ theorem repeatedRetire_refused :
 def ordinaryRetire : String :=
   "module m { linear type Duty; impl fn gate() effects { consumes Duty } { retires Duty; } impl fn caller() effects { consumes Duty } { gate(); } }"
 
-theorem ordinaryRetire_ok : stufe ordinaryRetire = "OK" := by
+theorem ordinaryRetire_zeuge : stufe ordinaryRetire = "OK" := by
   decide +kernel
 
 /-- Retiring a handback move cannot satisfy its promised returned owner. -/
