@@ -16,7 +16,7 @@ private theorem zeros_top (q z : Nat) : (constWords (List.replicate q 0) z).2 = 
   | zero => simp [constWords]
   | succ q ih =>
     simp only [List.replicate_succ, constWords, ih]
-    simp [wordConst, lit32, Nat.max_eq_right (by omega : z + 1 ≤ z + 1 + q)]
+    simp [wordConst, lit32, Nat.max_eq_right (by omega : z + 1 ≤ z + 1 + q)] <;> omega
 
 private theorem trimPre {m : Runner.Mem} {pc : Runner.W} {d bound : Nat} {code : List II}
     (pre : Pre L m pc fp K d code ρ W reserved) (fits : bound ≤ K) :
@@ -51,8 +51,9 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
       (copyWords n (d + 1) (a + 1) ++
         ((constWords (List.replicate q 0) (d + 1 + n)).1 ++
           (stringAppendC q (d + 1) (b + 1) a ptr 0 ++ [ci 3 d a b]))) ρ W reserved := by
-    simpa only [stringCatC, List.append_assoc] using pre
-  obtain ⟨m1, s1, ch1, copied⟩ := copyWords_run (stringBytes n vs.1) pre.frame small
+    simpa only [stringCatC, ci, List.append_assoc] using pre
+  obtain ⟨m1, s1, ch1, copied⟩ := copyWords_run (stringBytes n vs.1)
+    (dst := d + 1) (src := a + 1) (pc := pc) pre.frame small
     (by omega) (by omega) (Or.inl (by omega))
     (by simpa only [widthA] using p.left.code)
     (by simpa only [widthA, copyWords_length] using p.left.far) bytesA
@@ -83,6 +84,7 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
     rw [agree_rd_above ch12 room (by omega) (by omega)]
     exact bytesB i hi
   obtain ⟨m3, s3, ch3, appended, kept⟩ := stringAppend_ok (L := L) (stringBytes q vt.1)
+    (base := d + 1) (src := b + 1) (lenSlot := a) (ptr := ptr) (index := 0) (len := vs.1.length)
     (by omega) (by omega) (by omega) (by omega) lenA2 bytesB2
     (by simpa only [widthB] using p2'.left)
   simp only [widthB] at s3
@@ -97,23 +99,35 @@ theorem stringCatC_ok {n q d a b ptr need : Nat} {m : Runner.Mem} {pc : Runner.W
     readA readB (g := fun a b => some (a + b)) rfl (by decide) rfl
   have bytes3 : WordsAt m3 fp (d + 1)
       (vs.1.map (fun b => BitVec.ofInt 64 b.n) ++ stringBytes q vt.1 ++ List.replicate (n - vs.1.length) 0) := by
-    apply wordsAt_cat _ _ (by simpa using la) (by simpa using lb) (by omega)
-    · simpa only [stringBytes, List.append_assoc, List.replicate_append_replicate, List.length_map] using old
-    · simpa only [stringBytes, List.length_map, Nat.add_zero] using appended
-    · simpa only [List.length_map, widthB, Nat.add_zero] using kept
+    have combined := wordsAt_cat (m := m2) (m' := m3) (fp := fp)
+      (base := d + 1) (ptr := ptr) (n := n) (q := q)
+      (vs.1.map (fun b => BitVec.ofInt 64 b.n)) (vt.1.map (fun b => BitVec.ofInt 64 b.n))
+      (by simpa only [List.length_map] using la) (by simpa only [List.length_map] using lb) (by omega)
+      (by simpa only [stringBytes, List.append_assoc, List.replicate_append_replicate,
+        List.length_map] using old)
+      (by simpa only [stringBytes, List.length_map, Nat.add_zero] using appended)
+      (by simpa only [List.length_map, widthB, Nat.add_zero] using kept)
+    simpa only [stringBytes, List.length_map, List.append_assoc] using combined
+  have payloadWidth :
+      (vs.1.map (fun b => BitVec.ofInt 64 b.n) ++ stringBytes q vt.1 ++
+        List.replicate (n - vs.1.length) 0).length = n + q := by
+    simp only [List.length_append, List.length_map, widthB, List.length_replicate]
+    omega
   refine ⟨m4, ?_, ((Agree.widen ch12 (by omega)).mono (by omega)).trans
     ((ch3.mono (by omega)).trans (Agree.widen ch4 (by omega))), trivial, ?_⟩
   · simpa only [stringCatC, List.length_append, copyWords_length, widthA, widthB,
-      stringAppendC_length, List.length_cons, List.length_nil, pc_add, Nat.reduceAdd,
-      BitVec.add_assoc] using s1.trans (s2.trans (s3.trans s4))
+      stringAppendC_length, List.length_cons, List.length_nil, pc_add16, pc_add,
+      Nat.add_assoc, Nat.reduceAdd, Nat.reduceMul] using s1.trans (s2.trans (s3.trans s4))
   · rw [stringCat_encoding L long vs vt]
     intro i hi
     cases i with
     | zero => simpa only [Nat.add_zero, List.getElem_cons_zero, BitVec.ofNat_add] using header
     | succ i =>
+      have bound : i < n + q := by
+        simp only [List.length_cons, payloadWidth] at hi
+        omega
       rw [show d + (i + 1) = d + 1 + i by omega,
-        agree_rd_above ch4 room (by omega) (by simp at hi; simp only [List.length_append,
-          List.length_map, stringBytes_length vt.1 lb, List.length_replicate] at hi; omega)]
-      exact bytes3 i (by simpa using hi)
+        agree_rd_above ch4 room (by omega) (by omega)]
+      exact bytes3 i (by rw [payloadWidth]; exact bound)
 
 end Gabbro.Stage0.Senke
