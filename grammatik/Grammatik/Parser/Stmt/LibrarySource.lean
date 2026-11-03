@@ -163,7 +163,7 @@ end
     there instead of a misleading gate name. -/
 mutual
 def callFreeStmt : SAnw → Bool
-  | .call _ _ | .lcall _ | .bindLib _ _ _ _ => false
+  | .call _ _ | .callElse .. | .callIndElse .. | .lcall _ | .bindLib _ _ _ _ => false
   | .each _ _ _ _ _ _ _ _ | .loop _ _ | .retry _ _ => false
   | .emit _ _ _ | .await _ _ _ _ | .swap _ _ _ _ => false
   | .alloc _ _ _ _ _ _ | .allocVon _ _ _ _ | .reset _ _ | .grow _ _ _ | .free _ | .genericCall _ _ _ => false
@@ -238,6 +238,10 @@ def exportLibraryStmt (members : List SItemTief) : SAnw → Except String SAnw
       match torZurErweiterung true (callFreeStmt lib.translatorBody) with
       | .error e => .error e
       | .ok _ => .ok (exportLibraryBind m x ty lib c)
+  | .callElse name args reason body =>
+    (exportLibraryStmt members body).map (.callElse name args reason)
+  | .callIndElse pointer args reason body =>
+    (exportLibraryStmt members body).map (.callIndElse pointer args reason)
   | .bindElse y t e g b =>
     match exportLibraryStmt members b with
     | .error e => .error e
