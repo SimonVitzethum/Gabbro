@@ -130,7 +130,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
         obtain ⟨neu, hneu, -⟩ := herw
-        exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOpt M t l Γ Λ _ _ e a args he hp hd hgd rest
+        exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOpt M t l Γ Λ _ e a args he hp hd hgd rest
           k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
   | bindAxiomOptElse e a args he hp hd hgd hr err rest =>
       rcases hax : axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
@@ -156,9 +156,9 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
             ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
         rw [hσ] at herw
         obtain ⟨neu, hneu, -⟩ := herw
-      · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOptElseOk M t l Γ Λ _ _ e a args he hr hp hd hgd err rest
+      · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOptElseOk M t l Γ Λ _ e a args he hr hp hd hgd err rest
           k ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
-      · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOptElseGrund M t l Γ Λ _ _ e a args he hr hp hd hgd err rest
+      · exact fort_schritt' ⟨_, RufSchrittG.dannBindAxiomOptElseGrund M t l Γ Λ _ e a args he hr hp hd hgd err rest
           k ρ hx _ rfl σ₂ r hax neu hneu hΛ⟩
   | regRead r hk rest =>
       by_cases hex : ∃ v, einpassen (D := D) O.zeiger (D.rtyp r) (O.regLies r ((M.weltVon t).fragt (.inr (.inl r)))) = some v ∧
@@ -287,11 +287,11 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
                 obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
                 exact fort_schritt (w_dannRetGrundP rfl caller rst hst hart r hp rest k ρ hx hΛ)
         | retScoped e R =>
-            exact fort_schritt' (w_scopedWert ρ _ e R hx rfl
-              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
+            simp only [Block.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
+            exact fort_schritt' (w_scopedWert ρ _ e R hx rfl hScope.1 hΛ hkt)
         | retWhyScoped grund R =>
-            exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl
-              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
+            simp only [Block.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
+            exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl hScope.1 hΛ hkt)
         | leave h =>
             subst h
             have habs : k.absorb = true := by simpa [GRest.nimmtAb] using hnimmt
