@@ -370,6 +370,8 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindCallInd .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindCallIndElse .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, st, st', blks, hlt, h =>
       lowerEnd_lbl_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
         (ih_lowerEnd_lbl_rest := fun cenv' lb st st' blks hlt hk => lowerEnd_lbl lay cenv' lv rest lb st st' blks hlt hk)

@@ -392,6 +392,8 @@ theorem lowerEnd_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindCallInd .., lb, st, st', blks, h => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindCallIndElse .., lb, st, st', blks, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .narrowRequired (lo := lo) (hi := hi) e lo' hi' rest, lb, st, st', blks, h =>
       lowerEnd_shape_narrowRequired (lay := lay) (cenv := cenv) (lv := lv) (lo := lo) (hi := hi) (e := e) (lo' := lo') (hi' := hi') (rest := rest) (lb := lb) (st := st) (st' := st') (blks := blks) (h := h)
         (ih_lowerEnd_shape_rest := fun a st1 st1' br hk => lowerEnd_shape lay (a :: cenv) lv rest (st.l + 2) st1 st1' br hk)

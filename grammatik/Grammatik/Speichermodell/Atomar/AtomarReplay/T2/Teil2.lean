@@ -81,6 +81,8 @@ theorem blatt_lese_laenge (P : Programm D) (O : Orakel D) (passes : Nat)
   | axiomCallElse => simp only [Stmt.istAxiom, Bool.true_eq_false] at ha
   | ret e hp => simp only [execStmt, reduceCtorEq] at h
   | retWhy r hp => simp only [execStmt, reduceCtorEq] at h
+  | retScoped => simp only [execStmt, reduceCtorEq] at h
+  | retWhyScoped => simp only [execStmt, reduceCtorEq] at h
   | leave hl => simp only [execStmt, reduceCtorEq] at h
   | next hl => simp only [execStmt, reduceCtorEq] at h
   | _ => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb

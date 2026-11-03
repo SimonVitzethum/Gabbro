@@ -156,6 +156,8 @@ theorem execStmt_blatt_aussen {O : Orakel D} (hI : ImBereichO O) (p : Nat)
       exact AussenGleich.refl _
   | ret e _ => simp only [execStmt, reduceCtorEq] at h
   | retWhy r _ => simp only [execStmt, reduceCtorEq] at h
+  | retScoped => simp only [execStmt, reduceCtorEq] at h
+  | retWhyScoped => simp only [execStmt, reduceCtorEq] at h
   | leave _ => simp only [execStmt, reduceCtorEq] at h
   | next _ => simp only [execStmt, reduceCtorEq] at h
   | _ => simp only [Stmt.istBlatt, Bool.false_eq_true] at hleaf
