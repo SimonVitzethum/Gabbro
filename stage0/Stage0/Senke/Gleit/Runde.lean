@@ -397,6 +397,7 @@ theorem softRound_replay (u v : Exakt) (hle : u.zweierExp ≤ v.zweierExp)
             rw [← Nat.pow_add]
           rw [e3, hexp]
           unfold softNormDen
+          rfl
         exact (softRound_normQD S _ _ hRd hagree).symm
     exact softRound_kern S _ _ E _ hlo hhi hQr hQr53
 
