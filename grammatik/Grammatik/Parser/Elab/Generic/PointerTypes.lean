@@ -66,7 +66,7 @@ def uZeigerAnw : Nat → SAnw → List String
   | f + 1, a => match a with
     | .bind _ _ (some t) _ => uZeigerTexte [t]
     | .bindElse _ (some t) _ _ b => uZeigerTexte [t] ++ uZeigerAnw f b
-    | .callElse _ _ _ b => uZeigerAnw f b
+    | .callIndElse _ _ _ b | .callElse _ _ _ b => uZeigerAnw f b
     | .bindElse _ none _ _ b => uZeigerAnw f b
     | .cond _ t es e => uZeigerAnw f t ++ (es.flatMap (uZeigerAnw f)) ++ (match e with | some b => uZeigerAnw f b | none => [])
     | .elsif _ b => uZeigerAnw f b
