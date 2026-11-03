@@ -5,6 +5,7 @@ public import Grammatik.Parser.Round.RundlaufQuant.Teil1
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser
+set_option maxRecDepth 100000
 
 /-- An expression attempt either returns the intended tree and tail, or fails.
     Failure permits the predicate reader's parenthesised fallback. -/
