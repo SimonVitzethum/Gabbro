@@ -29,9 +29,9 @@
    and the gate call is the ordinary foreign call Stage 0 already lowers.
    Infallible answer-less foreign bodies ride `axCall`; infallible `int`/`bool`
    answers ride `bindAx` with the forwarded result; fallible (reason-channel)
-   `int`/`bool` answers ride `bindAxElse` whose error branch answers the range
-   bottom (`false` for `bool`) while threading the Duty -- a foreign failure
-   stays observable data, never a dropped or forged Duty. Anything else keeps
+   `int`/`bool` answers ride `bindAxElse` whose error branch rethrows the exact
+   declared reason while retaining the Duty -- a foreign failure never becomes
+   a normal answer or successful discharge. Anything else keeps
    its named refusal: parameters, device handles, `never` answers, and answers
    without a wrapper form (references, options, tagged values, reason values,
    aggregates). An unclosed error branch is refused by the lowering, never
@@ -42,6 +42,7 @@ module
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil6
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil9
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 
 public section
@@ -96,11 +97,19 @@ def torErgebnis (gate : String) (f : UFn) : List UStmt × URet :=
   else if f.resTy.isSome then ([.bindCall "ans" gate []], .wert (.param "ans"))
   else ([.call gate []], .empty)
 
+/-- Preserve every case of a closed foreign reason channel. Each arm returns
+    that exact case; the final return only closes the syntactic continuation
+    after the exhaustive match. All returns still owe the same Duty. -/
+def torFehler (count : Nat) : List UStmt :=
+  [.matchWhyBeg "e"] ++
+    uMitTrenner ((List.range count).map fun i => [.ret (.why i)]) ++
+    [.blkEnd, .ret (.why 0)]
+
 /-- One gate wrapper over a C08 foreign body: a nullary function that threads the
     check's Duty and invokes the foreign body with the ordinary foreign call.
     The Duty threads on every path -- success and error alike -- so no path
-    forges or drops it; a foreign failure answers the range bottom (`false` for
-    `bool`) and stays observable data. -/
+    forges or drops it; foreign failures retain their exact reason channel and
+    cannot complete the gate normally. -/
 def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
   if !k.names.isEmpty then .error ("gate with parameters without wrapper form: " ++ gate)
   else if !k.griffe.isEmpty then .error ("gate with device handles without wrapper form: " ++ gate)
@@ -115,12 +124,13 @@ def uFremdHuelle (duty cname gate : String) (k : UFnKopf) : Except String UFn :=
     | .some .bool =>
       .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAx "ans" gate []], ret := .bool (.var "ans"), boden := none }
     | .some _ => .error ("foreign gate answer without wrapper form: " ++ gate)
-  | .some _ =>
+  | .some (_, count) =>
+    if count == 0 then .error ("foreign gate has an empty reason channel: " ++ gate) else
     match UFnKopf.axErg k with
     | .some (.int lo hi) =>
-      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := some (lo, hi), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e", .ret (.val (.lit lo)), .blkEnd], ret := .val (.param "ans"), boden := none }
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := some (lo, hi), resBool := false, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := count, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e"] ++ torFehler count ++ [.blkEnd], ret := .val (.param "ans"), boden := none }
     | .some .bool =>
-      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := 0, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e", .ret (.bool .fls), .blkEnd], ret := .bool (.var "ans"), boden := none }
+      .ok { name := torHuellenName cname gate, params := [], kinds := [], res := none, resBool := true, resOpt := none, resSum := none, resWhy := none, resTy := none, gruende := count, held := [], puts := k.puts, gputs := k.gputs, nimmt := [duty], gibt := [duty], gives := [], needs := [], body := [.bindAxElse "ans" gate [] "e"] ++ torFehler count ++ [.blkEnd], ret := .bool (.var "ans"), boden := none }
     | _ => .error ("foreign gate answer without wrapper form: " ++ gate)
 
 /-- One gate wrapper: a nullary function that threads the check's Duty and invokes
