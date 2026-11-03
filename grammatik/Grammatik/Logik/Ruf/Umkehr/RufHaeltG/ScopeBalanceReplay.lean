@@ -9,6 +9,12 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- Keep arbitrary residues folded so that frame equations rewrite the
+    entire sigma before its dependent projections are reduced. -/
+private theorem restScopeBalance_mk {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (ρ : Env D Γ) (r : GRest D V l Γ Λ) :
+    RestScopeBalance ⟨l, Γ, Λ, ρ, r⟩ ↔ r.scopeChain := Iff.rfl
+
 private theorem cons_cons_ne_self {α : Type} (a b : α) (xs : List α) :
     a :: b :: xs ≠ xs := by
   intro he
@@ -21,6 +27,8 @@ private theorem heldCountEq_refl (Λ : List (Res D)) : HeldCountEq Λ Λ := fun 
 private theorem heldCountEq_symm {Λ Λ' : List (Res D)}
     (h : HeldCountEq Λ Λ') : HeldCountEq Λ' Λ := fun L => (h L).symm
 
+/-- Forward closure uses two existing witnesses; backward application would
+    invent an intermediate resource list and recursively search for it. -/
 private theorem heldCountEq_trans {Λ Λ' Λ'' : List (Res D)}
     (h : HeldCountEq Λ Λ') (h' : HeldCountEq Λ' Λ'') : HeldCountEq Λ Λ'' :=
   fun L => (h L).trans (h' L)
@@ -40,6 +48,14 @@ private theorem heldCountEq_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx}
 private theorem heldCountEq_nach (S : Signatur D.Tab D.Glob D.Lock D.Marke)
     (Λ : List (Res D)) : HeldCountEq (nachSig D S Λ) Λ :=
   fun L => count_held_nachSig S Λ L
+
+private theorem heldCountEq_nach_left (S : Signatur D.Tab D.Glob D.Lock D.Marke)
+    (Λ Λ' : List (Res D)) : HeldCountEq (nachSig D S Λ) Λ' ↔ HeldCountEq Λ Λ' := by
+  simp only [HeldCountEq, count_held_nachSig]
+
+private theorem heldCountEq_nach_right (S : Signatur D.Tab D.Glob D.Lock D.Marke)
+    (Λ Λ' : List (Res D)) : HeldCountEq Λ (nachSig D S Λ') ↔ HeldCountEq Λ Λ' := by
+  simp only [HeldCountEq, count_held_nachSig]
 
 private theorem scopeChain_weiterOpt {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ') :
@@ -150,17 +166,23 @@ theorem rufSchrittG_scopeMove {P : Programm D} {O : Orakel D} {pa : Nat}
           simp only [rufUpdateG_self]
           exact rufAntwortG_scopeMove ha
       | _ =>
-          constructor <;> simp_all [rufUpdateG_self, RestScopeBalance, GRest.scopeChain, cons_cons_ne_self]
+          simp only [rufUpdateG_self]
+          constructor <;>
+            simp_all [restScopeBalance_mk, GRest.scopeChain, cons_cons_ne_self]
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
-      cases hs <;> constructor <;>
-        simp_all [RestScopeBalance, GRest.scopeChain, scopeChain_weiterOpt,
-          GRest.scopeChain_eintritt (P := P), RufWartetHeadG, cons_cons_ne_self, nach, rufUpdateG_self]
-      all_goals aesop (add safe forward (immediate := [b]) heldCountEq_block,
+      cases hs <;> simp only [rufUpdateG_self] <;> constructor <;>
+        simp_all [restScopeBalance_mk, GRest.scopeChain, scopeChain_weiterOpt,
+          GRest.scopeChain_eintritt (P := P), RufWartetHeadG, cons_cons_ne_self, nach,
+          heldCountEq_nach_left, heldCountEq_nach_right]
+      all_goals aesop (add norm simp restScopeBalance_mk,
+        norm simp GRest.scopeChain, norm simp scopeChain_weiterOpt,
+        norm simp heldCountEq_nach_left, norm simp heldCountEq_nach_right,
+        safe forward (immediate := [b]) heldCountEq_block,
         safe forward (immediate := [s]) heldCountEq_stmt,
         safe forward (immediate := [e]) heldCountEq_alsBlock,
         safe forward (immediate := [h]) heldCountEq_symm,
-        safe apply heldCountEq_refl, unsafe apply heldCountEq_trans,
-        safe apply heldCountEq_nach) (config := { maxRuleApplications := 500 })
+        safe forward (immediate := [h, h']) heldCountEq_trans,
+        safe apply heldCountEq_refl) (config := { maxRuleApplications := 500, terminal := true })
 
 set_option maxHeartbeats 4000000 in
 /-- Counted scope provenance is preserved by G, independently of memory,
@@ -178,18 +200,22 @@ theorem fadenScopeBalanceG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           simp only [rufUpdateG_self]
           exact rufAntwortG_scopeChain ⟨hk, hst⟩ ha
       | _ =>
-          simp_all [FadenScopeBalanceG, RestScopeBalance, GRest.scopeChain, rufUpdateG_self]
+          simp only [rufUpdateG_self]
+          simp_all [FadenScopeBalanceG, restScopeBalance_mk, GRest.scopeChain]
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
-      cases hs <;>
-        simp_all [FadenScopeBalanceG, RestScopeBalance, GRest.scopeChain,
+      cases hs <;> simp only [rufUpdateG_self] <;>
+        simp_all [FadenScopeBalanceG, restScopeBalance_mk, GRest.scopeChain,
           scopeChain_weiterOpt, GRest.scopeChain_eintritt (P := P), RufWartetHeadG, cons_cons_ne_self,
-          nach, rufUpdateG_self]
-      all_goals aesop (add safe forward (immediate := [b]) heldCountEq_block,
+          nach, heldCountEq_nach_left, heldCountEq_nach_right]
+      all_goals aesop (add norm simp restScopeBalance_mk,
+        norm simp GRest.scopeChain, norm simp scopeChain_weiterOpt,
+        norm simp heldCountEq_nach_left, norm simp heldCountEq_nach_right,
+        safe forward (immediate := [b]) heldCountEq_block,
         safe forward (immediate := [s]) heldCountEq_stmt,
         safe forward (immediate := [e]) heldCountEq_alsBlock,
         safe forward (immediate := [h]) heldCountEq_symm,
-        safe apply heldCountEq_refl, unsafe apply heldCountEq_trans,
-        safe apply heldCountEq_nach)
+        safe forward (immediate := [h, h']) heldCountEq_trans,
+        safe apply heldCountEq_refl) (config := { maxRuleApplications := 500, terminal := true })
 
 /-- The initial residue has no local acquisitions or pending releases. -/
 theorem fadenScopeBalanceG_start (P : Programm D) (sp : Speicher D)
