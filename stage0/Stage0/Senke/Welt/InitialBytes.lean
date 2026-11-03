@@ -24,6 +24,20 @@ theorem BytesAt.right {m : Runner.Mem} {p : Nat} {xs ys : List Runner.B} (h : By
   simp only [Nat.add_sub_cancel_left] at this
   rwa [Nat.add_assoc]
 
+theorem BytesAt.take {m : Runner.Mem} {p : Nat} {bs : List Runner.B}
+    (h : BytesAt m p bs) (n : Nat) : BytesAt m p (bs.take n) := by
+  have split : BytesAt m p (bs.take n ++ bs.drop n) := by
+    simpa only [List.take_append_drop] using h
+  exact split.left
+
+theorem BytesAt.drop {m : Runner.Mem} {p : Nat} {bs : List Runner.B}
+    (h : BytesAt m p bs) (n : Nat) (hn : n ≤ bs.length) :
+    BytesAt m (p + n) (bs.drop n) := by
+  have split : BytesAt m p (bs.take n ++ bs.drop n) := by
+    simpa only [List.take_append_drop] using h
+  have tail := split.right
+  simpa only [List.length_take, Nat.min_eq_left hn] using tail
+
 theorem ofNat_add64 (p k : Nat) : BitVec.ofNat 64 p + BitVec.ofNat 64 k = BitVec.ofNat 64 (p + k) :=
   (BitVec.ofNat_add p k).symm
 
