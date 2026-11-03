@@ -72,12 +72,38 @@ def errorItems : List SItemTief :=
 /-- The generic construction theorem applies jointly to a selected fallible source binding. -/
 theorem torVonFor_via_zeuge :
     torVonFor "x86_64" (some "selected") errorItems errorCall =
-      torAusBindung "x86_64" errorItems errorCall errorBinding :=
+      torAusBindung "x86_64" errorItems errorCall.name errorCall.params errorCall.fail errorBinding :=
   torVonFor_via _ _ _ _ _ _ rfl rfl rfl
 
 /-- Duplicate numeric entries retain source order, as the canonical first-entry decoder requires. -/
 example : (torVonFor "x86_64" (some "selected") errorItems errorCall).toOption.map Tor.fehler =
     some [(-9, 0), (-9, 1)] := by rfl
+
+def foreignSignature : FnSig :=
+  ⟨"extern", "probe", [], some (.atom "bool"), some "Error", []⟩
+
+def foreignItems : List SItemTief :=
+  [.protoT foreignSignature,
+   .goalT "selected" (some ("linux", "x86_64", [("probe", errorBinding, .core [])])),
+   .whyT "Error" [("BadFd", .lit 9, "bad descriptor"), ("Other", .lit 4, "other")] true]
+
+/-- The actual head list resolves the foreign symbol, with its complete errno map. -/
+theorem foreign_binding_selected_zeuge :
+    (toreVonFor "x86_64" (some "selected") foreignItems).toOption.map
+      (fun gates => gates.map (fun gate => (gate.name, gate.nummer, gate.fehler))) =
+      some [("probe", 1, [(-9, 0), (-9, 1)])] := by rfl
+
+/-- Absence stays a named refusal, with no invented executable gate. -/
+theorem unbound_foreign_named_zeuge :
+    toreVonFor "x86_64" none [.protoT foreignSignature] =
+      .error "gate variable probe: no binding for x86_64 in the selected target" := by rfl
+
+/-- An axiom head follows the identical explicit profile mechanism. -/
+theorem axiom_binding_selected_zeuge :
+    (toreVonFor "x86_64" (some "selected")
+      [.axiomT "probe" [] (some (.atom "bool")) none [] (.probe "falsifier"),
+       .goalT "selected" (some ("linux", "x86_64", [("probe", binding, .core [])]))]).toOption.map
+      (fun gates => gates.map Tor.name) = some ["probe"] := by rfl
 
 #print axioms uniqueBinding_ok
 #print axioms torVonFor_via
