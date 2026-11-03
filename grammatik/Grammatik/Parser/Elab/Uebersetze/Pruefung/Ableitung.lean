@@ -20,6 +20,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.SondeCode
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil5Rest
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil1
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
@@ -78,7 +79,8 @@ def uCheckDecl (u : UProg) (c : UCheck) : Except String (CheckDecl (declOf u)) :
     sonde := c.sonde, testbau := c.testbau }
 
 /-- Every elaborated check of the unit as a kernel descriptor. -/
-def uCheckDecls (u : UProg) : Except String (List (CheckDecl (declOf u))) :=
+def uCheckDecls (u : UProg) : Except String (List (CheckDecl (declOf u))) := do
+  uSondenPruef u
   uSeq (u.checks.map (uCheckDecl u))
 
 /-- The derivation from resolved parts: the record the derivation builds. -/
