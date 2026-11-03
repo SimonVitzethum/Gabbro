@@ -20,7 +20,7 @@ inductive CheckAtom where
   deriving DecidableEq, Repr
 
 def checkAtom (D : Deklaration) : (ty : Ty) → Wert D ty → Option CheckAtom
-  | .int _ _, value => some (.number value.val)
+  | .int _ _, value => some (.number value.n)
   | .bool, value => some (.truth value)
   | _, _ => none
 
@@ -109,7 +109,7 @@ def checkGhostStep (u : UProg) (c : CheckDecl (declOf u))
       match consumeCheckEntry gate state.history with
       | some history => result := { result with history }
       | none => result := { result with refused := true }
-    else if state.frames.drop 1 |>.head? == some c.probe then
+    else if (state.frames.drop 1).head? == some c.probe then
       match actualCheckReturn u f env value with
       | some (name, report) =>
         if name == c.name then result := { result with pending := some report }
