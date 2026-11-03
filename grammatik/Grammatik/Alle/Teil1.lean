@@ -175,6 +175,8 @@ public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Bericht
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Herkunft
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Export
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Proben
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Herkunft
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
