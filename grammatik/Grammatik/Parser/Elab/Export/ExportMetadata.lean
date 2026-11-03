@@ -37,9 +37,11 @@ def bodyMetadata : Nat → SAnw → Bool
   /- A required allocation binds a plain index and runs no continuation: the
       counter narrowing is required, so a full arena is `Logik.kapazitaet` under
       the caller's `KoerperGutS/SA` duty -- no provider, storage-availability or
-      failure-continuation duty can disappear. Mutable and type-annotated binders
-      elaborate to no G form, and the else branch keeps its own refusal below. -/
+      failure-continuation duty can disappear. An explicit failure continuation
+      uses the existing arena lowering and is recursively checked here. Mutable
+      and type-annotated binders still elaborate to no G form. -/
   | _ + 1, .alloc false _ none _ _ none => false
+  | n + 1, .alloc false _ none _ _ (some body) => bodyMetadata n body
   | _ + 1, .retry .. | _ + 1, .loop .. | _ + 1, .swap .. | _ + 1, .await .. |
     _ + 1, .alloc .. | _ + 1, .allocVon .. | _ + 1, .grow .. |
     _ + 1, .free .. | _ + 1, .child .. | _ + 1, .other .. => true
@@ -207,7 +209,8 @@ theorem nested_duties_refused_zeuge :
     let sig : FnSig := ⟨"impl", "sample", [], some (.atom "u8"), none, [.cost (.lit 0)], []⟩
     check [.fnT sig (.child body)] =
       .error "source export: declared costs lack a checked source-to-kostenPasst binding: sample" ∧
-    bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0) (some body)) = true ∧
+    bodyMetadata 10000 (.alloc false "cell" none "A" (.lit 0)
+      (some (.bind false "value" (some (.wrap (.atom "bool"))) .tru))) = true ∧
     bodyMetadata 10000 (.grow "A" (.lit 1) body) = true ∧
     bodyMetadata 10000 (.bind false "value" (some (.wrap (.atom "bool"))) .tru) = true := by
   exact ⟨rfl, rfl, rfl, rfl⟩
@@ -301,7 +304,7 @@ theorem allocRequired_bound (x an : String) (v : SExpr) (n : Nat) :
 
 theorem allocRequired_zeuge :
     bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) none) = false ∧
-    bodyMetadata 1 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = true ∧
+    bodyMetadata 2 (.alloc false "i" none "A" (.lit 0) (some (.block [] none))) = false ∧
     bodyMetadata 1 (.alloc true "i" none "A" (.lit 0) none) = true := by
   exact ⟨rfl, rfl, rfl⟩
 
