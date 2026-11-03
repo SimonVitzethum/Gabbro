@@ -5,14 +5,14 @@ namespace Gabbro.Grammatik.Parser.Uebersetze
 
 /-- Syntactic contract coverage is a refusal check, never an isolation proof.
     Only resolved table subjects count; a similarly named scalar does not. -/
-def guestMentions (region : String) : SExpr → Bool
-  | .ext _ _ args => args.any fun
+def guestMentions : Nat → String → SExpr → Bool
+  | 0, _, _ => false
+  | fuel + 1, region, .ext _ _ args => args.any fun
       | .variable name => strEq name region
-      | e => guestMentions region e
-  | .bin _ a b => guestMentions region a || guestMentions region b
-  | .un _ a => guestMentions region a
-  | _ => false
-termination_by e => sizeOf e
+      | e => guestMentions fuel region e
+  | fuel + 1, region, .bin _ a b => guestMentions fuel region a || guestMentions fuel region b
+  | fuel + 1, region, .un _ a => guestMentions fuel region a
+  | _ + 1, _, _ => false
 
 /-- Resolve a declared C08 item, retaining its exact requires/ensures. Gate
     ABI metadata remains the ordinary backend binding's responsibility. -/
@@ -32,11 +32,13 @@ def guestService (items : List SItemTief) (name : String) : Except String FnSig 
 
 /-- A wrapper preserves both the success result and the actual failure reason.
     It is ordinary source sugar for the existing optional foreign-call binder. -/
-def guestWrapper (name : String) (sig : FnSig) : SItemTief :=
+def guestWrapper (name reason : String) (cases : List String) (fallback : String) (sig : FnSig) : SItemTief :=
   .fnT { sig with art := "impl", name }
     (.block [.bindAxiomOptElse "#guest-result" none
       (.call sig.name (sig.params.map fun p => .variable p.1)) "#guest-error"
-      (.block [] (some (.ret (some (.variable "#guest-error")))))]
+      (.block [.cases (.variable "#guest-error") (cases.map fun c =>
+        .arm c none (.block [] (some (.ret (some (.why reason c))))))]
+        (some (.ret (some (.why reason fallback)))))]
       (some (.ret (sig.res.map fun _ => .variable "#guest-result"))))
 
 /-- All non-code region inputs need real owner resources. The current source
@@ -54,7 +56,15 @@ def guestSource (items : List SItemTief) : SItemTief → Except String (UGuest �
       | some name => pure name
       | none => throw "entrust: missing isolation service binding"
     let sig ← guestService items service
-    if sig.fehler.isNone then throw "entrust: isolation service needs a failure channel"
+    let reason ← match sig.fehler with
+      | some reason => pure reason
+      | none => throw "entrust: isolation service needs a failure channel"
+    let cases ← match items.find? (fun | .whyT n _ _ => strEq n reason | _ => false) with
+      | some (.whyT _ cases _) => pure (cases.map (·.1))
+      | _ => throw "entrust: isolation service needs a declared failure channel"
+    let fallback ← match cases with
+      | first :: _ => pure first
+      | [] => throw "entrust: isolation service needs a failure channel"
     let pointers := sig.params.filterMap fun
       | (_, .ptr space rights (.atom table)) => some (space, rights, table)
       | _ => none
@@ -66,11 +76,11 @@ def guestSource (items : List SItemTief) : SItemTief → Except String (UGuest �
     | _ => throw "entrust: caller does not own a transferred region"
     let pre := sig.klauseln.filterMap fun | .needs e => some e | _ => none
     let post := sig.klauseln.filterMap fun | .gives e => some e | _ => none
-    if !pre.any (guestMentions code) || !post.any (guestMentions code) then
+    if !pre.any (guestMentions 10000 code) || !post.any (guestMentions 10000 code) then
       throw "entrust: isolation service contract does not mention transferred regions"
     if items.any (fun | .fnT s _ => strEq s.name name | _ => false) then
       throw "entrust: guest wrapper conflicts with a declared function"
-    pure (⟨name, code, arch, service⟩, guestWrapper name sig)
+    pure (⟨name, code, arch, service⟩, guestWrapper name reason cases fallback sig)
   | _ => throw "entrust: expected guest declaration"
 
 /-- Keep every descriptor in source order, and add exactly one ordinary
