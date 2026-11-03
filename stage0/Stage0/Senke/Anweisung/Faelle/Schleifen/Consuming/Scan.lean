@@ -2,7 +2,7 @@
    ordinary runner executions; there is no additional execution semantics. -/
 module
 public import Stage0.Senke.Anweisung.SchleifeTeile
-public section
+@[expose] public section
 
 namespace Gabbro.Stage0.Senke.Consuming
 open Gabbro.Grammatik Runner Runner.IR
@@ -29,8 +29,8 @@ theorem ScanRun.bind {start middle finish : W} {m : Mem}
   exact ⟨m2, s1.trans s2, a1.trans a2, k1.trans k2, h2⟩
 
 /-- Predecessor-loop simulation, in the same suffix/fuel form as trav_loop.
-    The three edges are the emitted bound test, the rejecting branch and the
-    increment/backedge. `ready j` includes the predecessor counter word j;
+    The emitted bound test, rejecting branch and
+    increment/backedge are explicit premises below. `ready j` includes the predecessor counter word j;
     `result` restores the candidate binder even after membership borrowing.
     Self edges are ignored, exactly as in the canonical keinVorgaenger. -/
 theorem predecessor_scan (count : Int) (candidate : Zahl 0 (count - 1))
