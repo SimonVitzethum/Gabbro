@@ -120,9 +120,8 @@ theorem stringSpan_bytes {D : Deklaration} {L : Lay D} {cap n base : Nat}
   have read := span.2 (j + 1) inRange
   have capGet : (encodeWords L (.str cap) v)[j + 1]? =
       some (BitVec.ofInt 64 (strGetW v (j : Int)).n) := by
-    erw [encodeWords.eq_def L (.str cap) v]
-    rw [ite_eq_right (show ¬ cap ≤ 1 by omega)]
-    exact strBytes_word v j (by omega)
+    simpa only [encodeWords, if_neg (show ¬ cap ≤ 1 by omega)] using
+      strBytes_word v j (by omega : j < cap)
   rw [List.getElem?_eq_getElem inRange] at capGet
   have get := stringBytes_get v.1 length j bound
   rw [List.getElem?_eq_getElem hj] at get
