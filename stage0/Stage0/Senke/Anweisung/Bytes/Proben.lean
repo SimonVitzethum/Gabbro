@@ -102,9 +102,9 @@ theorem byte_roundtrip8_zeuge :
 
 /-- Nine bytes now reach the chunked complete-value read path. -/
 theorem getBytes_wide_accepted_zeuge :
-    lowE (layU u (fun _ => none) 65536)
+    (lowE (layU u (fun _ => none) 65536)
       (.getBytes (Γ := []) (Λ := []) tab field rfl 9 (.lit 2) (by decide) (by decide)
-        (by intro w hw; change w ∈ [] at hw; cases hw)) 3 |>.isSome = true := by decide +kernel
+        (by intro w hw; change w ∈ [] at hw; cases hw)) 3).isSome = true := by decide +kernel
 
 /-- Capturing the operands matters when the destination overlaps their source bytes. -/
 def overlapBody : Endblock D (vertragVon D entry) false [] [] :=
