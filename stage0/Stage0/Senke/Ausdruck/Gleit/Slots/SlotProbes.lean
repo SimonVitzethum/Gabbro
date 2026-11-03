@@ -187,7 +187,13 @@ theorem computedFloatOfE_ok_zeuge (F : Gleitkomma.Format)
     · simp [code, List.all_append, os, ci]
     · decide
   refine ⟨code, max 9 st, hc, hp, ?_⟩
-  have run := computedFloatOfE_ok (σ₀ := σ₀) (σ := σ) hc hp (by omega) ?_
+  have scalar : computedFloatOfL F 8
+      (fun j => lowE L (Expr.lit (Γ := []) (Λ := []) 37) j 4) = some (code, max 9 st) := by
+    simpa only [computedFloatOfE, hF, show -(2^63 : Int) ≤ 37 by decide,
+      show (37 : Int) < 2^63 by decide, and_self, ↓reduceIte] using hc
+  have run := computedFloatOfL_ok F hF
+    (eval σ₀ (Expr.lit (Γ := []) (Λ := []) 37) σ (Env.nil : Env D []))
+    (by decide) (by decide) scalar hp (by omega) ?_
   · simpa only [eval] using run
   · intro ce ct he ht pre
     simp only [lowE_eqs, show lit32 37 = true by decide, ↓reduceIte,
