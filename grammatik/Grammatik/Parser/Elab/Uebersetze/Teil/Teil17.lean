@@ -150,6 +150,10 @@ def uAkkuInExpr : Nat → List String → SExpr → Bool
   | f + 1, ns, .bin _ x y => uAkkuInExpr f ns x || uAkkuInExpr f ns y
   | f + 1, ns, .genericCall g _ args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
+  | f + 1, ns, .callIndElse pointer args _ body =>
+    uAkkuInExpr f ns pointer || args.any (uAkkuInExpr f ns) || uAkkuInAnw f ns body
+  | f + 1, ns, .callElse name args _ body =>
+    ns.any (strEq · name) || args.any (uAkkuInExpr f ns) || uAkkuInAnw f ns body
   | f + 1, ns, .call g args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
   | f + 1, ns, .fnref g => ns.any fun m => strEq m g

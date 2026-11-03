@@ -107,6 +107,9 @@ theorem bein_gut : ∀ (r : Rolle) (s : SAnw), AnwGut r s → Bein r s := by
   | call f xs hf hw hxs =>
     exact ⟨anw_call f xs hf hw hxs, anwKopf_ident _ f (by intro e; subst e; revert hw; decide)
       ⟨_, by simp only [druckAnw, rohToks_nameGut f hf, List.cons_append, List.nil_append, List.cons.injEq, true_and] <;> rfl⟩⟩
+  | callIndElse pointer args reason body hp ha _ ih =>
+    exact ⟨anw_callIndElse pointer args reason body hp ha ih.1 ih.2,
+      ⟨.zeichen "(", _, rfl, by decide, by decide, by decide⟩⟩
   | callElse name args reason body hn hw ha _ ih =>
     exact ⟨anw_callElse name args reason body hn hw ha ih.1 ih.2,
       anwKopf_ident _ name (by intro e; subst e; revert hw; decide)

@@ -8,6 +8,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.UebersetzeAllg3.CallElse
+public import Grammatik.Parser.Elab.UebersetzeAllg3.IndirectElse
 
 @[expose] public section
 
@@ -24,6 +25,8 @@ set_option maxRecDepth 100000
 def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe u caller) :
     (Γ : Ctx) → UFn → (Λ : List (Res (declOf u))) → AtTop u caller Λ → UStmt → List UStmt →
     Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
+  | Γ, fn, Λ, pe, .callIndElseBeg p _ args reason, rest =>
+    lowCallIndElse u caller R Γ fn Λ pe p args reason rest
   | Γ, fn, Λ, pe, .axCallElseBeg c args reason, rest =>
     (lowAxCallElse u caller R Γ fn Λ pe c args reason rest).map fun (st, rest') => (⟨Λ, st⟩, rest')
   | Γ, fn, Λ, _, .lockBeg g, rest =>

@@ -26,7 +26,7 @@ def bodyMetadata : Nat → SAnw → Bool
   | n + 1, .bindElse _ ty _ _ b | n + 1, .bindAxiomOptElse _ ty _ _ b => ty.any typeMetadata || bodyMetadata n b
   | n + 1, .bindQ _ _ ty _ => ty.any typeMetadata
   | n + 1, .callQ .. => false
-  | n + 1, .callElse _ _ _ body => bodyMetadata n body
+  | n + 1, .callIndElse _ _ _ body | n + 1, .callElse _ _ _ body => bodyMetadata n body
   | n + 1, .waive _ b | n + 1, .locks _ _ b | n + 1, .watch _ b |
     n + 1, .trim _ _ b => bodyMetadata n b
   | n + 1, .cond _ a bs b => bodyMetadata n a || bs.any (bodyMetadata n) || b.any (bodyMetadata n)

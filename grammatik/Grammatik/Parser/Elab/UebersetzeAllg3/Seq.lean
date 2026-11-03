@@ -59,8 +59,8 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .foreverBeg k :: rest =>
     (R.struct Γ fn Λ pe (.foreverBeg k) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.seq Γ fn Λ₁ pe rest').bind fun (⟨Λ₂, b⟩, r) => .ok (⟨Λ₂, Block.cons st b⟩, r)
-  | Γ, fn, Λ, pe, .axCallElseBeg c args reason :: rest =>
-    (R.struct Γ fn Λ pe (.axCallElseBeg c args reason) rest).bind fun (⟨Λ₁, statement⟩, tail) =>
+  | Γ, fn, Λ, pe, st@(.callIndElseBeg ..) :: rest | Γ, fn, Λ, pe, st@(.axCallElseBeg ..) :: rest =>
+    (R.struct Γ fn Λ pe st rest).bind fun (⟨Λ₁, statement⟩, tail) =>
       (R.seq Γ fn Λ₁ pe tail).bind fun (⟨Λ₂, body⟩, remaining) => .ok (⟨Λ₂, Block.cons statement body⟩, remaining)
   | Γ, fn, Λ, pe, .bind x d v :: rest =>
     (lowBindWert u Γ Λ fn d v).bind fun s =>
@@ -212,7 +212,7 @@ def lowSeqStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
             if hr : ((declOf u).sigNr m).gruende = 0 then
               .ok (⟨Λ', Block.bindCallInd (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr b⟩, r')
             else .error "call of a function with a reason channel needs `let .. else`"
-  | Γ, fn, Λ, pe, .bindCallIndElse x p _ args e :: rest =>
+  | Γ, fn, Λ, pe, .bindCallIndElse y p _ args e :: rest =>
     (lowZeigerN u Γ fn p).bind fun ⟨m, v⟩ =>
       (lowRufKopfN u caller Γ fn Λ m args).bind fun k =>
         if hr : 0 < ((declOf u).sigNr m).gruende then

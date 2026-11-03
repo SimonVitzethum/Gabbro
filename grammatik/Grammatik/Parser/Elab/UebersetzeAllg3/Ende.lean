@@ -44,8 +44,8 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
     if h : l = true then .ok (Endblock.leave h, rest) else .error "lower: leave outside a traverse"
   | _, _, _, _, .next _ :: rest =>
     if h : l = true then .ok (Endblock.next h, rest) else .error "lower: next outside a traverse"
-  | Γ, fn, Λ, pe, .axCallElseBeg c args reason :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.axCallElseBeg c args reason) rest).bind fun (⟨Λ₁, st⟩, rest') =>
+  | Γ, fn, Λ, pe, st@(.callIndElseBeg ..) :: rest | Γ, fn, Λ, pe, st@(.axCallElseBeg ..) :: rest =>
+    (R.struct (l := l) Γ fn Λ pe st rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .bind x d v :: rest =>
     (lowBindWert u Γ Λ fn d v).bind fun s =>

@@ -39,6 +39,7 @@ the clause introduces no integer-to-pointer conversion or implicit region storag
 
 ```ebnf
 statement += path "(" [ arguments ] ")" [ "?" | "else" [ "(" ident ")" ] block ] ";" ;
+statement += "(" expr ")" "(" [ arguments ] ")" "else" [ "(" ident ")" ] block ";" ;
 ```
 
 `f(args) else { ... };` handles failure of a fallible foreign call and discards
@@ -50,6 +51,19 @@ A user function or an infallible foreign callee with a statement handler is
 refused by the named `call else needs an axiom callee` or
 `call else needs a fallible axiom callee` elaboration error, respectively.
 The existing foreign result-type and contract admission rules still apply.
+
+For a function pointer, `p(args) else { ... };` and
+`(p)(args) else (reason) { ... };` use the pointer type's argument, effect,
+result and reason contract. `(&f)(args) else { ... };` evaluates the function
+reference once through the existing typed pointer binding. Success discards the
+value; the ending failure block has its own reason scope. An infallible pointer
+is refused with `indirect call else needs a fallible function pointer`; an
+explicit expression that is not a pointer is refused with
+`call else needs a function pointer`. The current exporter admits local
+function pointers and function references as these expressions; other expression
+shapes are refused with `indirect call else expression without G form`.
+The canonical `Stmt.callIndElse` requires a value result type; a fallible void
+pointer statement is therefore refused with `indirect call else needs a result type`.
 
 
 ### Flat record embedding

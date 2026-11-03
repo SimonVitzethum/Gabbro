@@ -98,6 +98,9 @@ def uArrayBody : Nat → SAnw → Bool
     | .cases value branches => uArrayExpr fuel value || branches.any (uArrayBody fuel)
     | .arm _ _ body | .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body => uArrayBody fuel body
     | .set a _ b => uArrayExpr fuel a || uArrayExpr fuel b
+    | .callIndElse pointer arguments _ body => uArrayExpr fuel pointer ||
+        arguments.any (uArrayExpr fuel) || uArrayBody fuel body
+    | .callElse _ arguments _ body => arguments.any (uArrayExpr fuel) || uArrayBody fuel body
     | .call _ arguments => arguments.any (uArrayExpr fuel)
     | _ => false
 
@@ -120,7 +123,7 @@ def uArrayBodyTypes : Nat → SAnw → List STyp
     | .elsif _ body | .arm _ _ body | .waive _ body | .trim _ _ body | .locks _ _ body | .watch _ body =>
         uArrayBodyTypes fuel body
     | .cases _ branches => branches.flatMap (uArrayBodyTypes fuel)
-    | .each _ _ _ _ _ _ _ body => uArrayBodyTypes fuel body
+    | .callIndElse _ _ _ body | .callElse _ _ _ body | .each _ _ _ _ _ _ _ body => uArrayBodyTypes fuel body
     | .block statements _ => statements.flatMap (uArrayBodyTypes fuel)
     | _ => []
 

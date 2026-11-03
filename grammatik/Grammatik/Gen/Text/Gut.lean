@@ -168,6 +168,7 @@ def anwGutB : Nat → Bool → SAnw → Bool
   | _ + 1, false, .bind _ x none e => x != "mut" && gut e
   | n + 1, false, .bindElse x none e _ b => x != "mut" && gut e && anwGutB n true b
   | _ + 1, false, .set z o w => gutPlatz z && istZuweis o && gut w
+  | n + 1, false, .callIndElse p xs _ b => gut p && gutListe xs && anwGutB n true b
   | n + 1, false, .callElse f xs _ b => nameForm f && !istAnwWort f && gutListe xs && anwGutB n true b
   | _ + 1, false, .call f xs => nameForm f && !istAnwWort f && gutListe xs
   | n + 1, false, .cond c t [] s => gut c && anwGutB n true t && s.all (anwGutB n true)
@@ -213,6 +214,9 @@ theorem anwGutB_sound : ∀ (n : Nat) (b : Bool) (s : SAnw), anwGutB n b s = tru
       | .set z o w, h =>
         simp only [anwGutB, Bool.and_eq_true] at h
         exact .set z o w h.1.1 h.1.2 h.2
+      | .callIndElse pointer xs reason body, h =>
+        simp only [anwGutB, Bool.and_eq_true] at h
+        exact .callIndElse pointer xs reason body h.1.1 h.1.2 (by simpa using ih true body h.2)
       | .callElse f xs reason body, h =>
         simp only [anwGutB, Bool.and_eq_true, Bool.not_eq_true'] at h
         exact .callElse f xs reason body h.1.1.1 h.1.1.2 h.1.2 (by simpa using ih true body h.2)

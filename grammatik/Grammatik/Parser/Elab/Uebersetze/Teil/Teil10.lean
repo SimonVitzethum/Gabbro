@@ -10,7 +10,6 @@ public import Grammatik.Parser.Elab.Uebersetze.Folds.Expressions
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
-set_option maxRecDepth 100000
 mutual
 /-- Expand expression folds before processing the ordinary statement forms. -/
 def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
@@ -31,6 +30,7 @@ def uAnwReiheCore (tabs : List UTab) (koepfe : List UFnKopf) :
   | _ + 1, ctx, [] => .ok ([], ctx)
   | _ + 1, _, .lcall .. :: _ | _ + 1, _, .bindLib .. :: _ =>
       .error "C02: library call needs certified immutable payload initialization and ordinary call expansion"
+  | f + 1, ctx, .callIndElse p args e body :: rest => uCallIndElse tabs koepfe (uAnwReihe tabs koepfe f) ctx p args e body rest
   | f + 1, ctx, .callElse c args e body :: rest => uCallElse tabs koepfe (uAnwReihe tabs koepfe f) ctx c args e body rest
   | f + 1, ctx, .bind mu x t e :: rest =>
     match uBindWert ctx tabs koepfe mu x t e with

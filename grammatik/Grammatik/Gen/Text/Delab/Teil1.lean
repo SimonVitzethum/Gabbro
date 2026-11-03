@@ -202,6 +202,10 @@ def delabS {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res z.deklaration)} :
       let e' ← delabB e
       .ok [.cond c' (.block t' none) [] (if e'.isEmpty then none else some (.block e' none))]
   | .call f args _ _ => do .ok [.call (nFn (show Fin z.fns.length from f).val) (← delabA z args)]
+  | .callIndElse p args _ _ _ err => do
+      let (statements, ending) ← delabEnd err
+      .ok [.callIndElse (← delabE z none p) (← delabA z args)
+        (nVar Γ.length) (.block statements ending)]
   | .callInd p args _ _ => do
       let as ← delabA z args
       match p with
