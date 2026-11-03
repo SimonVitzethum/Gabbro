@@ -1,8 +1,8 @@
 /- A computed conversion rejects infinity before the ordinary finite range test. -/
 module
 public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
-public import Stage0.Senke.Gleit.RoutineModel
-public import Stage0.Senke.Gleit.RoutineBranch
+public import Stage0.Senke.Gleit.Routine.RoutineModel
+public import Stage0.Senke.Gleit.Routine.RoutineBranch
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
