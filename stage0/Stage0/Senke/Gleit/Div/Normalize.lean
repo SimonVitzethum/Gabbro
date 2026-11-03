@@ -79,8 +79,8 @@ theorem softDivCore_finite (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   let t := (ea - min ea eb).toNat
   let j := (eb - min ea eb).toNat
   have scale : (t : Int) - (j : Int) = ((max a.bexp 1 : Nat) : Int) - max b.bexp 1 := by
-    have left := min_le_left ea eb
-    have right := min_le_right ea eb
+    have left := Int.min_le_left ea eb
+    have right := Int.min_le_right ea eb
     dsimp only [t, j, ea, eb] at *
     omega
   rw [softDivCore, special, softDivFraction_round a b ap bp]
@@ -91,7 +91,15 @@ theorem softDivCore_finite (a b : GFloat) (ha : wf f64 a) (hb : wf f64 b)
   rw [scale] at result
   exact result
 
+/-- The least subnormal and an ordinary normal share the normalization
+    theorem despite using opposite ends of its permitted shift range. -/
+theorem softDiv_operand_bounds_zeuge :
+    softMulNormalizeCount (softSig 0 1) = 52 ∧
+    softMulNormalizeCount (softSig 1023 0) = 0 := by
+  decide +kernel
+
 #print axioms softDiv_operand_bounds
 #print axioms softDivFraction_round
 #print axioms softDivCore_finite
+#print axioms softDiv_operand_bounds_zeuge
 end Gabbro.Stage0.Senke
