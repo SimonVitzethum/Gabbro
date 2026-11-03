@@ -139,8 +139,13 @@ def storageDisjointB (prot guestOwned : List (Konzession D)) : Bool :=
 
 theorem storageDisjointB_iff (prot guestOwned : List (Konzession D)) :
     storageDisjointB prot guestOwned = true ↔ StorageDisjoint prot guestOwned := by
-  simp [storageDisjointB, StorageDisjoint, Konzession.ueberschneidet,
-    List.all_eq_true, Bool.and_eq_true]
+  unfold storageDisjointB StorageDisjoint
+  simp only [List.all_eq_true]
+  refine forall_congr' fun p => imp_congr_right fun _ =>
+    forall_congr' fun g => imp_congr_right fun _ => ?_
+  unfold Konzession.ueberschneidet
+  by_cases ha : p.tab = g.tab <;> by_cases hb : p.basis < g.basis + (g.laenge : Int) <;>
+    by_cases hc : g.basis < p.basis + (p.laenge : Int) <;> simp [ha, hb, hc]
 
 /-- The ordinary-call certificate names the existing typed G node. No guest
     interpreter, instruction semantics or additional step rule is introduced. -/
