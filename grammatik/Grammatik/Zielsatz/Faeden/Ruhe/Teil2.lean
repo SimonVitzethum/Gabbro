@@ -30,6 +30,7 @@ theorem akzeptiert_mitRuhe {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)}
     (CheckAdmission.mitRuhe P hvoll hA.abg hChecks)
     (h := akzeptiertSpec_mitRuhe P hvoll hA)
 
+omit [DecidableEq D.Ax] in
 /-- **The root is an idle start of `P.mitRuhe`.** -/
 theorem ruhig_mitRuhe : Ruhig P.mitRuhe (fsRuhe fs) none :=
   ⟨rfl, rfl, fun f' hf => by

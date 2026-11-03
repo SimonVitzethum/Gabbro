@@ -159,7 +159,8 @@ theorem akzeptiertSpec_mitRuhe (hvoll : ∀ g : D.Fn, g ∈ fs) {A : List (Kernz
       cases hT
       exact zeroAdmitting_tyR (hA.reset g _ _ hτ)
     | ptr cap =>
-      rcases cap with ⟨space, rights, .table table⟩
+      rcases cap with ⟨space, rights, target⟩
+      cases target
       intro hT
       simp only [tyR, Ty.mapNumbers, reduceCtorEq] at hT
     | _ => intro hT; simp only [tyR, Ty.mapNumbers, reduceCtorEq] at hT
