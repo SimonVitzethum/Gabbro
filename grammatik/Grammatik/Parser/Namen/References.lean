@@ -81,7 +81,7 @@ def namenTO : Option STyp → List String
 /-- The names an effect writes. -/
 def namenE (lok : List String) : SEffekt → List String
   | .reads e | .writes e | .locks _ e | .takes e | .posts e => namenA lok e
-  | .masks n | .allocs n => [n]
+  | .masks n | .allocs n | .borrows n => [n]
   | .instanceEffects n ts => n :: ts.flatMap namenT
   | _ => []
 

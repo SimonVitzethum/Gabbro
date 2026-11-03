@@ -33,6 +33,10 @@ inductive SEffekt
   | pure : SEffekt
   | param : String → SEffekt
   | instanceEffects : String → List STyp → SEffekt
+  /-- `borrows m` (C12): a call-scoped loan of the owner mark `m` -- the
+      callee holds it during the call, the caller gets it back on return
+      (`OwnerFlow.loans`). Last constructor: coverage numbers it by position. -/
+  | borrows : String → SEffekt
   deriving Repr
 
 mutual
@@ -48,6 +52,7 @@ def beqSEffekt : SEffekt → SEffekt → Bool
   | .posts a, .posts b => beqSExpr a b
   | .loops, .loops => true
   | .pure, .pure => true
+  | .borrows a, .borrows b => strEq a b
   | _, _ => false
 def beqSEffektList : List SEffekt → List SEffekt → Bool
   | [], [] => true

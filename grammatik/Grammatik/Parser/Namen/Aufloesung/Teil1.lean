@@ -191,6 +191,7 @@ def effekt (k : Kontext) : SEffekt → SEffekt
   | .writes e => .writes (aus k e)
   | .locks s e => .locks s (aus k e)
   | .allocs n => .allocs (k.ref n)
+  | .borrows n => .borrows (k.ref n)
   | .takes e => .takes (aus k e)
   | .posts e => .posts (aus k e)
   | .instanceEffects n ts => .instanceEffects (k.ref n) (ts.map (typ k))

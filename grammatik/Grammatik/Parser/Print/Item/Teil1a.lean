@@ -33,6 +33,7 @@ def druckEffekt : SEffekt → List Token
   | .masks n => [.wort "masks", nameTok n]
   | .allocs n => [.wort "allocs", nameTok n]
   | .takes p => [.wort "consumes"] ++ druckToks p
+  | .borrows n => [.wort "borrows", nameTok n]
   | .posts p => [.wort "publishes"] ++ druckToks p
   | .loops => [.wort "diverges"]
   | .pure => [.wort "pure"]
