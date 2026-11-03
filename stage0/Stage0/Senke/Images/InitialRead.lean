@@ -68,7 +68,7 @@ theorem Bild.initializedBytes_locks {u : UProg} (valid : GabbroV.sp0OkB u = true
     (rootCount : b.rootArgs.length = b.roots.length)
     (codeEnd : b.fp0 = codeBase + 16 * b.code.length)
     (separate : b.fp0 + 8 * (b.Ks * (b.roots.length + 1)) ≤ b.Y.lo)
-    (ordered : b.Y.hi ≤ b.Y.sye) (inside : b.Y.sye ≤ b.fp0 + 8 * b.K)
+    (worldInside : b.Y.hi ≤ b.fp0 + 8 * b.K) (inside : b.Y.sye ≤ b.fp0 + 8 * b.K)
     {m : Runner.Mem} (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) :
     BytesAt m b.Y.hi (List.replicate (b.Y.sye - b.Y.hi) 0) := by
   let prefix := Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq ++ b.code.flatMap encII ++ stacks
@@ -116,7 +116,7 @@ theorem Bild.initializedBytes_loaded {u : UProg} (valid : GabbroV.sp0OkB u = tru
     (rootCount : b.rootArgs.length = b.roots.length)
     (codeEnd : b.fp0 = codeBase + 16 * b.code.length)
     (separate : b.fp0 + 8 * (b.Ks * (b.roots.length + 1)) ≤ b.Y.lo)
-    (ordered : b.Y.hi ≤ b.Y.sye) (inside : b.Y.sye ≤ b.fp0 + 8 * b.K)
+    (worldInside : b.Y.hi ≤ b.fp0 + 8 * b.K) (inside : b.Y.sye ≤ b.fp0 + 8 * b.K)
     {m : Runner.Mem} (loaded : BytesAt m Runner.Prog.IMG (b.initializedBytes u valid)) :
     BytesAt m Runner.Prog.IMG (Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq) ∧
     BytesAt m codeBase (b.code.flatMap encII ++ stacks) ∧
@@ -130,6 +130,6 @@ theorem Bild.initializedBytes_loaded {u : UProg} (valid : GabbroV.sp0OkB u = tru
   have upper : b.Y.hi ≤ Runner.Prog.IMG + b.bytes.length := by omega
   obtain ⟨header, startup⟩ := b.initializedBytes_startup valid layout made rootCount codeEnd separate upper loaded
   exact ⟨header, startup, b.initializedBytes_world valid layout lower upper loaded,
-    b.initializedBytes_locks valid layout made rootCount codeEnd separate ordered inside loaded⟩
+    b.initializedBytes_locks valid layout made rootCount codeEnd separate worldInside inside loaded⟩
 
 end Gabbro.Stage0.Senke
