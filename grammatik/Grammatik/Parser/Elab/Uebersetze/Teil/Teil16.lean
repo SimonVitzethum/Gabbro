@@ -87,6 +87,9 @@ def beqUStmt : UStmt → UStmt → Bool
   | .ifBeg a, .ifBeg b => beqUEns a b
   | .ifElse, .ifElse => true
   | .loopBeg a t i, .loopBeg b u j => strEq a b && strEq t u && beqUEns i j
+  | .consumeLoopBeg a t p m e i mass effects, .consumeLoopBeg b u q n f j measure other =>
+    strEq a b && strEq t u && strEq p q && beqUEns m n && beqUEns e f &&
+      beqUEns i j && beqUSide mass measure && beqSEffektList effects other
   | .arrayLoopBeg a source inv, .arrayLoopBeg b target other =>
       strEq a b && beqUSide source target && beqUEns inv other
   | .resetRange a x n, .resetRange b y m =>
