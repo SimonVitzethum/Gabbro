@@ -28,8 +28,7 @@ private theorem scopedWert_semV (O : Orakel D) (passes : Nat)
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle hret <;> subst r
   · simp only [semV, weiterZ, execEnd]
     exact ZErg.gleich_refl _
-  · change (zErg (execEnd O passes calls (.cons _ rest) σ ρ)).gleich _
-    simp only [execEnd, execStmt, semV, weiterZ, laufA, zErg, weiterZ_grund]
+  · simp only [execEnd, execStmt, semV, weiterZ, laufA, zErg, weiterZ_grund]
     exact ZErg.gleich_refl _
   · rw [semV_dann_cons]
     simp only [execStmt, semV, weiterZ, laufA, zErg, weiterZ_grund]
@@ -46,8 +45,7 @@ private theorem scopedGrund_semV (O : Orakel D) (passes : Nat)
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle hret <;> subst r
   · simp only [semV, weiterZ, execEnd]
     exact ZErg.gleich_refl _
-  · change (zErg (execEnd O passes calls (.cons _ rest) σ ρ)).gleich _
-    simp only [execEnd, execStmt, semV, weiterZ, laufA, zErg, weiterZ_grund]
+  · simp only [execEnd, execStmt, semV, weiterZ, laufA, zErg, weiterZ_grund]
     exact ZErg.gleich_refl _
   · rw [semV_dann_cons]
     simp only [execStmt, semV, weiterZ, laufA, zErg, weiterZ_grund]
@@ -154,7 +152,8 @@ theorem fadenV_scopedAntwort (hO : GutO O)
         intro calls O'
         apply ZErg.folgt_of_eq
         simp only [semV, weiterZ, List.foldl_nil])
-    simpa only [hs] using hroot
+    have hw : W.speicher.welt W.spur = W := Speicher.welt_speicher W
+    simpa only [hs, hw] using hroot
   | cons caller rst =>
     have hSt := hF.2
     rw [hs] at hSt
@@ -167,8 +166,8 @@ theorem fadenV_scopedAntwort (hO : GutO O)
       cases ha : antwortRestG z.kopf.f (.inl v) caller.rest with
       | none => simp [rufAntwortG, hs, ha] at hantwort
       | some resp =>
-        simp only [rufAntwortG, hs, ha, Option.bind, Option.some.injEq] at hantwort
-        subst z'
+        simp [rufAntwortG, hs, ha] at hantwort
+        subst hantwort
         refine ⟨⟨?_, hSt'⟩, logOk_rueck hL hens⟩
         rcases caller with ⟨cf, crho, cs0, lc, Γc, Λc, ρc, rc⟩
         cases rc <;> simp only [antwortRestG] at ha
@@ -193,8 +192,8 @@ theorem fadenV_scopedAntwort (hO : GutO O)
       cases ha : antwortRestG z.kopf.f (.inr grund) caller.rest with
       | none => simp [rufAntwortG, hs, ha] at hantwort
       | some resp =>
-        simp only [rufAntwortG, hs, ha, Option.bind, Option.some.injEq] at hantwort
-        subst z'
+        simp [rufAntwortG, hs, ha] at hantwort
+        subst hantwort
         refine ⟨⟨?_, hSt'⟩, logOk_grund hL⟩
         rcases caller with ⟨cf, crho, cs0, lc, Γc, Λc, ρc, rc⟩
         cases rc <;> simp only [antwortRestG] at ha
