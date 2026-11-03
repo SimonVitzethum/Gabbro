@@ -42,7 +42,11 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   have qb : q ≤ 2 ^ 53 := by
     dsimp only [q]
     unfold rundeInt
-    split <;> omega
+    split
+    · omega
+    · split
+      · omega
+      · split <;> omega
   have q64 : q < 2 ^ 64 := by omega
   have sigBound : softCarry q < 2 ^ 53 := by
     unfold softCarry
@@ -53,6 +57,7 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   have magnitude : routineRoundMagnitudeWord (BitVec.ofNat 64 n) = BitVec.ofNat 64 q := by
     simp only [routineRoundMagnitudeWord, BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (by omega : n < 2 ^ 64)]
+    rfl
   have carry : (BitVec.ofNat 64 q == BitVec.ofNat 64 (2 ^ 53)) =
       decide (q = 2 ^ 53) := by
     apply Bool.eq_iff_iff.mpr
@@ -61,15 +66,21 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
       Nat.mod_eq_of_lt (by decide : 2 ^ 53 < 2 ^ 64)]
   have exponent : BitVec.ofNat 64 e + Runner.IR.bool (decide (q = 2 ^ 53)) =
       BitVec.ofNat 64 (softCarryExp e q) := by
-    by_cases hc : q = 2 ^ 53 <;>
-      simp [hc, softCarryExp, Runner.IR.bool, BitVec.ofNat_add]
+    by_cases hc : q = 2 ^ 53
+    · simp only [softCarryExp, hc, decide_true, Runner.IR.bool, ite_true]
+      rw [BitVec.ofNat_add]
+    · simp only [softCarryExp, hc, decide_false, Runner.IR.bool,
+        Bool.false_eq_true, ite_false]
+      simp
   have significand : BitVec.ofNat 64 q >>>
       ((Runner.IR.bool (decide (q = 2 ^ 53))).toNat % 64) =
       BitVec.ofNat 64 (softCarry q) := by
     by_cases hc : q = 2 ^ 53
     · rw [hc]
       decide +kernel
-    · simp [hc, softCarry, Runner.IR.bool]
+    · simp only [softCarry, hc, decide_false, Runner.IR.bool,
+        Bool.false_eq_true, ite_false]
+      simp
   have expTest : (BitVec.ofNat 64 (softCarryExp e q)).ult 2047 =
       decide (softCarryExp e q < 2047) := by
     simp only [BitVec.ult, BitVec.toNat_ofNat, Nat.mod_eq_of_lt expBound]
@@ -80,8 +91,8 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
       Nat.mod_eq_of_lt (by omega : softCarry q < 2 ^ 64),
       Nat.mod_eq_of_lt (by decide : 2 ^ 52 < 2 ^ 64)]
   change routineRoundPackWord (Runner.IR.bool s) (BitVec.ofNat 64 e) (BitVec.ofNat 64 n) = _
-  unfold routineRoundPackWord
-  rw [magnitude, carry, exponent, significand, expTest, sigTest]
+  simp only [routineRoundPackWord, magnitude]
+  rw [carry, exponent, significand, expTest, sigTest]
   by_cases finite : softCarryExp e q < 2047
   · simp only [finite, decide_true, ite_true]
     by_cases subnormal : softCarry q < 2 ^ 52
