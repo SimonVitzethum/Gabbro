@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Bausteine.Kernzelle.Operator
 public import Grammatik.Kern.Syntax.Syntax.Teil1
+public import Grammatik.Kern.Syntax.Syntax.Teil1b
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil1
 
 @[expose] public section
