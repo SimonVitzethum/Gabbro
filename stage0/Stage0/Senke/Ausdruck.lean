@@ -31,6 +31,7 @@ public import Stage0.Senke.Welt.Lay
 public import Stage0.Senke.Welt.Spans.CellCode
 public import Stage0.Senke.Ausdruck.Aggregat.Wert
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Code
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Code
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.CompareCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringGetCode
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeCode
@@ -158,7 +159,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
     if n ≤ 1 then wordK 12 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) 8 else
       (lowE (currentOld := currentOld) L (reserved := reserved) s d).map fun p => (p.1, max p.2 (d + valueWords (.str n)))
   | _, _, @Expr.strCat _ _ _ n m s t, d =>
-    if n + m ≤ 1 then (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d else lowE (currentOld := currentOld) L (reserved := reserved) s d) else none
+    if n + m ≤ 1 then (if n = 0 then lowE (currentOld := currentOld) L (reserved := reserved) t d else lowE (currentOld := currentOld) L (reserved := reserved) s d) else
+      strCatSpanL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s (d + (n + m + 1)))
+        (lowE (currentOld := currentOld) L (reserved := reserved) t (d + (n + m + 1) + (stringCapacity n + 1)))
   | _, _, @Expr.strGet _ _ _ n lo hi s i, d =>
     if n ≤ 1 ∧ inW lo hi = true then strGetL d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) i d)
     else if scalarFits lo hi = true then
@@ -170,7 +173,9 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
       strEqMixedL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + valueWords (.str n)))
     else strEqLongL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + (n + 1)))
   | _, _, @Expr.strLt _ _ _ n m s t, d =>
-    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1)) else none
+    if n ≤ 1 ∧ m ≤ 1 then wordL 13 d (lowE (currentOld := currentOld) L (reserved := reserved) s d) (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1)) else
+      strLtSpanL n m d (lowE (currentOld := currentOld) L (reserved := reserved) s (d + 1))
+        (lowE (currentOld := currentOld) L (reserved := reserved) t (d + 1 + (stringCapacity n + 1)))
   | _, _, @Expr.strWeit _ _ _ n m s, d =>
     if n ≤ 1 ∧ m ≤ 1 then (if m = 0 then some ([ci 1 d 0 0], d + 1) else lowE (currentOld := currentOld) L (reserved := reserved) s d)
     else if 2 ≤ n ∧ n ≤ m then
