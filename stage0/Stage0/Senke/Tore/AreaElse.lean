@@ -85,6 +85,7 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
     obtain ⟨m2, run2, change2⟩ := dispatch
     have next2 := next1.next (Agree.widen (change2.mono (Nat.le_succ _)) (by omega))
       (Nat.le_refl _) (by omega)
+    simp only [fehlC_len] at next2
     have payload2 : ValueAt L m2 fp (foreignResultBase (frei Γ reserved)) τ (ergWert he value) := by
       refine ⟨payload.1, ?_⟩
       intro i hi
@@ -98,7 +99,6 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
     obtain ⟨m3, run3, change3, output⟩ := (areaReceive_ok layout span next2.left input2).1 zero payload2
     refine .inl ⟨value, m3, decode _ decoded, ?_, ?_, output, ?_⟩
     · have run12 := run1.trans run2
-      rw [pc_add] at run12
       simpa only [fehlC_len, pc_add] using run12.trans run3
     · exact change1.trans (agreeW_of (((Agree.widen change2 (by omega)).mono (Nat.le_succ _)).trans
         (Agree.widen change3 ks)))
@@ -110,14 +110,17 @@ theorem areaElse_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
       change1.trans (agreeW_of (Agree.widen change2 (by omega))), output,
       weltAt_stab layout.lay (by have := layout.lo; omega) m1 m2 world1
         ((Agree.widen change2 enough).mono (Nat.zero_le _))⟩)
-    rw [adr_int]
-    congr 2
-    simp only [Int.natCast_add, Int.natCast_mul]
-    omega
+    rw [adr_int, show ((16 * request.length : Nat) : Int) +
+      (16 * (6 * (binding.fehler.length : Int)) +
+        ((16 * ((areaReceive τ (frei Γ reserved)).length + success.length) : Nat) : Int)) =
+      ((16 * (request.length + 6 * binding.fehler.length +
+        (areaReceive τ (frei Γ reserved)).length + success.length) : Nat) : Int) by
+        simp only [Int.natCast_add, Int.natCast_mul]; omega, BitVec.ofInt_natCast]
   · rw [missing] at dispatch
     obtain ⟨m2, run2, change2⟩ := dispatch
     have next2 := next1.next (Agree.widen (change2.mono (Nat.le_succ _)) (by omega))
       (Nat.le_refl _) (by omega)
+    simp only [fehlC_len] at next2
     have input2 : m2.rd64 (slot fp (BitVec.ofNat 64 (frei Γ reserved))) = some tag := by
       rw [agree_rd_low change2 short.frame.room (by omega) (by omega)]
       exact input
