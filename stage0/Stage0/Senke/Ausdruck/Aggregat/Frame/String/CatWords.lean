@@ -32,7 +32,8 @@ theorem stringSpan_bytes {D : Deklaration} {L : Lay D} {cap n base : Nat}
   have capGet : (encodeWords L (.str cap) v)[j + 1]? =
       some (BitVec.ofInt 64 (strGetW v (j : Int)).n) := by
     simpa only [encodeWords, if_neg (show ¬ cap ≤ 1 by omega)] using strBytes_word v j (by omega)
-  rw [List.getElem?_eq_getElem] at capGet
+  rw [List.getElem?_eq_getElem (by rw [encodeWords_length];
+    simp only [valueWords, if_neg (show ¬ cap ≤ 1 by omega)]; omega)] at capGet
   have get := stringBytes_get v.1 length j bound
   rw [List.getElem?_eq_getElem hj] at get
   rw [show base + 1 + j = base + (j + 1) by omega, read]
