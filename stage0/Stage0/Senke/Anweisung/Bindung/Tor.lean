@@ -14,6 +14,7 @@
 module
 public import Stage0.Senke.Rueckkehr
 public import Stage0.Senke.Tore.RequestModel
+public import Stage0.Senke.Tore.AreaModel
 public import Stage0.Senke.Welt.Packen
 public import Stage0.Senke.Ausdruck.Aggregat.Scalar
 @[expose] public section
@@ -86,6 +87,8 @@ class TorOK (L : Lay D) (O : Orakel D) : Prop where
     L.tor a ≠ none → ∀ (σ : World D) (ρ : Env D (D.aparams a)) (raw : Int),
     (raw = (O.wirkt a σ ρ).2 ∨ raw = (O.wirkt a σ ρ).2 / ((D.agruende a : Int) + 1)) →
     0 ≤ raw → ValueValid L (.ref n) (Val.vonZelle raw.toNat)
+  /-- Explicit software-provider duty for caller-owned multiword results. -/
+  area : AreaContract L O
 
 theorem packV_congr {ws ws' : Nat → Runner.W} {c i : Nat} (h : ∀ k, k < c → ws k = ws' k) :
     (J : Nat) → packV ws c i J = packV ws' c i J
