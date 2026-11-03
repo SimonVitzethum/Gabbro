@@ -33,7 +33,7 @@ set_option linter.unusedSectionVars false
 /-! ## The indirect else-call statement arm -/
 
 theorem stmt_callIndElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
-    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Nat} {τ : Ty}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
     (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
     (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ)
     (hr : 0 < (D.sigNr n).gruende)

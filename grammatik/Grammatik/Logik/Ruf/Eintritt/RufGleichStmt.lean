@@ -249,7 +249,7 @@ theorem block_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       | some v =>
           have heq := block_gleich bo hbV rest (σ.fragt (.inr (.inl r))) (.cons v ρ)
             hscope_rest ((treu_fragt (W := V.schreibt) (G := V.gschreibt) σ (.inr (.inl r))).heldB hh)
-          rw [heq]
+          simp only [heq]
   | .regReadElse r hr zusage sonst rest, σ, ρ, hscope, hh =>
       block_regReadElse_gleich O passes R₁ R₂ hAgr hT₁ hO bo hbV
         r hr zusage sonst rest
@@ -386,7 +386,7 @@ theorem end_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       | some v =>
           have heq := end_gleich bo hbV rest (σ.fragt (.inr (.inl r))) (.cons v ρ)
             hscope_rest ((treu_fragt (W := V.schreibt) (G := V.gschreibt) σ (.inr (.inl r))).heldB hh)
-          rw [heq]
+          simp only [heq]
   | .regReadElse r hr zusage sonst rest, σ, ρ, hscope, hh =>
       end_regReadElse_gleich O passes R₁ R₂ hAgr hT₁ hO bo hbV
         r hr zusage sonst rest

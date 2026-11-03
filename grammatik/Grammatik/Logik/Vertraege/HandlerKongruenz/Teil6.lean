@@ -178,7 +178,6 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
             have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
             have heq := end_unter bo hbV err σ2 (.cons r ρ) hscope_err
               (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-            simp only [hx] at ⊢
             exact heq.schrumpf.zuAusgang
   | .regWrite .., _, _, _, _ => AusgangUnter.refl _
   | .transition .., _, _, _, _ => AusgangUnter.refl _
