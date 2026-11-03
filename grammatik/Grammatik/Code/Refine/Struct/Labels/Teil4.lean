@@ -203,6 +203,8 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       exact lowerB_lbl lay cenv (k, lb) body lb lb st st' blks hlt h
   | _, _, _, _, .axiomCall .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
+  | _, _, _, _, .axiomCallElse .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .regWrite .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .transition .., lb, k, st, st', blks, hlt, h => by
@@ -264,7 +266,11 @@ theorem lowerB_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         (fun a st1 s2 be hlt' hk => lowerEnd_lbl lay (a :: cenv) lv err (st.l + 3) st1 s2 be hlt' hk) h
   | _, _, _, _, .bindAxiom .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindAxiomOpt .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .bindAxiomElse .., lb, k, st, st', blks, hlt, h => by
+      simp only [lowerB, reduceCtorEq] at h
+  | _, _, _, _, .bindAxiomOptElse .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, reduceCtorEq] at h
   | _, _, _, _, .regRead .., lb, k, st, st', blks, hlt, h => by
       simp only [lowerB, reduceCtorEq] at h
@@ -350,7 +356,11 @@ theorem lowerEnd_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiom .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindAxiomOpt .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .bindAxiomElse .., lb, st, st', blks, hlt, h => by
+      simp only [lowerEnd, reduceCtorEq] at h
+  | _, _, _, .bindAxiomOptElse .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
   | _, _, _, .regRead .., lb, st, st', blks, hlt, h => by
       simp only [lowerEnd, reduceCtorEq] at h
