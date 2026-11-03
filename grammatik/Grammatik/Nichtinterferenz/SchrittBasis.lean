@@ -96,6 +96,15 @@ def kLeave (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) :
       let σ₁ := σ'.lese Λ₀ inv.orte
       if wahr? (eval σ₁ inv σ₁ ρ'.tail) = true then kLokal st f rho ρ'.tail k σ₁.spur σ₁.speicher
       else none
+  | _, _, _, GRest.verbrauchRest (Λ := Λ₀) _ _ _ inv bound mass _ _ vor k, _, σ', ρ' =>
+      let σm := σ'.lese Λ₀ mass.orte
+      let m' := (eval σm mass σm ρ'.tail).n
+      if 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor then
+        let σ₁ := σm.lese Λ₀ inv.orte
+        if wahr? (eval σ₁ inv σ₁ ρ'.tail) = true then
+          kLokal st f rho ρ'.tail k σ₁.spur σ'.speicher
+        else none
+      else none
   | _, _, _, .wiederRest _ _ _ _ k, _, σ', ρ' => kLokal st f rho ρ' k σ'.spur σ'.speicher
   | _, _, _, .ewigRest _ _ _ _ k, _, σ', ρ' => kLokal st f rho ρ' k σ'.spur σ'.speicher
   | _, _, _, GRest.dann (Λ' := Λ2) _ k, h, σ', ρ' =>
@@ -118,6 +127,13 @@ def kNext (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) :
     World D → Env D Γ → KErg D
   | _, _, _, .travRest t inv body is k, _, σ', ρ' =>
       kLokal st f rho ρ'.tail (.trav t inv body is k) σ'.spur σ'.speicher
+  | _, _, _, GRest.verbrauchRest (Λ := Λ₀) t member edge inv bound mass body rest vor k, _, σ', ρ' =>
+      let σm := σ'.lese Λ₀ mass.orte
+      let m' := (eval σm mass σm ρ'.tail).n
+      if 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor then
+        kLokal st f rho ρ'.tail (.verbrauch t member edge inv bound mass body rest k)
+          σm.spur σ'.speicher
+      else none
   | _, _, _, .wiederRest n bis body ueber k, _, σ', ρ' =>
       kLokal st f rho ρ' (.wieder n bis body ueber k) σ'.spur σ'.speicher
   | _, _, _, .ewigRest a n inv body k, _, σ', ρ' =>
