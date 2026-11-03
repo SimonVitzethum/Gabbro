@@ -28,7 +28,7 @@
      `rufAt` adds on its own -- `vorbedingung`, `nachbedingung`,
      `invariante` -- fall to the caller duty, the body triple and `InvGutS`.
 
-  WHAT IS LEFT -- AND SINCE 2026-09-15 IT IS NOTHING BUT THE DEPTH.
+  WHAT WAS LEFT -- AND HOW IT CLOSED (C11, 2026-11-03).
   `RespektiertRahmen P (rufAt P O passes n)` has two halves. The CONTRACT
   half is `rufAt_vertraege` below. The FRAME half was carried as a named
   hypothesis (`RufRahmenTreu`) for one day, because `rufAt_gut` (`Satz.lean`)
@@ -38,9 +38,12 @@
   (`rufAt_treu`, by the same induction over the grammar with the trace
   quality deleted from the conclusion): the frame and the held set never
   needed the trace, but collapsing a callee release to an equality needs the
-  entry discipline -- part 4 as stated quantifies over ANY world, so
-  `rufAt_nurAbstieg` still needs the entry discipline (or vacuous scopes)
-  there. See `messung/muse/OPUS-BERICHT-RAHMEN.md` and `-KONGRUENZ.md`.
+  entry discipline -- and an arbitrary world does not meet it. So part 4
+  now carries the discipline as a premise (`NurAbstieg`, `RufLogika.lean`):
+  the user obligation is applied to the entry-gated handler (`rufEintritt`,
+  in `RespektiertRahmen`), whose runs coincide with the patched handler's
+  from disciplined entries (`RufGleich*.lean`), and whose step-3 congruence
+  is gated the same way (`rufSchritt_unter`, over `HandlerKongruenz`).
 -/
 module
 public import Grammatik.Logik.Vertraege.RahmenTreu
