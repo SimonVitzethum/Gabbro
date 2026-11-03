@@ -4,12 +4,10 @@
    it on every normal return (`Erzeuge.uProbeFn`), each gate wrapper threads it
    (`nimmt` and `gibt` both name the Duty): the wrapper consumes the Duty at its
    call and produces it back at its return, so the lowered body typechecks (the
-   return needs the held marks to match the contract end up to order). The true
-   retirement of a completed Duty -- dropping the mark instead of threading it --
-   waits for the C14 test driver with an explicit retire step; until then no
-   wrapper forges or drops a Duty: it threads exactly one. The formal admission
-   (`checkOkB`, `CheckEntladung`) constrains only consumption membership, which
-   threading satisfies, so no guarantee is weakened.
+   return needs the held marks to match the contract end up to order). The
+   C14-selected ordinary consumer in `Lauf/Consumer` invokes this wrapper and
+   explicitly retires its returning Duty on each channel. The wrapper keeps
+   its common returning signature; neither channel invents a resource.
 
    `uMarken` is the declaration's mark table (the `linear`-flagged type items, then every
    check's Duty); `uMarkenPruef` refuses a `nimmt`/`gibt` that names no member.
