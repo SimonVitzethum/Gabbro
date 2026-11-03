@@ -113,8 +113,7 @@ theorem Compiled.guest_descriptors {text : String} {options : Profil.Options}
       ∀ guest ∈ guests, guest.admittedB = true :=
   OldSource.accepts_guests result.unit result.program result.accepted
 
-/-- Original-source scalar and function semantics,
- a unique acyclic alias namespace with a
+/-- Original-source scalar and function semantics, a unique acyclic alias namespace with a
     certified declaration permutation, and the identical
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
