@@ -265,6 +265,82 @@ theorem lowerE_ok_slot (lay : Layout D) (hL : LayoutOk lay)
   · simp only [hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
 
 set_option linter.unusedSectionVars false in
+theorem lowerE_ok_thruOwn (lay : Layout D) (hL : LayoutOk lay)
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_n}
+    {zi_rw}
+    {zi_space : Nat}
+    {zi_eig}
+    (p)
+    (t)
+    (ht)
+    (f)
+    (i)
+    (mo)
+    (s)
+    (ho)
+    (he)
+    (hg)
+    (hm)
+    (hL')
+    (cenv : List Reg)
+    (r : Nat)
+    (c : LR)
+    (h : lowerE lay cenv (.thruOwn (n := zi_n) (rw := zi_rw) (space := zi_space) (o := zi_eig) p t ht f i mo s ho he hg hm hL' : Expr D Γ Λ (D.typ t f)) r = some c)
+    (σ₀ : World D)
+    (σ : World D)
+    (ρ : Env D Γ)
+    (m : Mem)
+    (rs : Regs)
+    (hR : Rep lay σ m)
+    (hE : EnvRep lay rs m cenv ρ)
+    (hc : (∀ x ∈ cenv, x < r))
+    (ih_lowerE_ok_p : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv p r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.ptr ⟨zi_space, ⟨true, zi_rw, some zi_eig⟩, .table zi_n⟩) (eval σ₀ p σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.ptr ⟨zi_space, ⟨true, zi_rw, some zi_eig⟩, .table zi_n⟩))
+    (ih_lowerE_ok_i : ∀ (lay : Layout D) (hL : LayoutOk lay), ∀ (cenv : List Reg), ∀ (r : Nat), ∀ (c : LR), lowerE lay cenv i r = some c → ∀ (σ₀ : World D), ∀ (σ : World D), ∀ (ρ : Env D Γ), ∀ (m : Mem), ∀ (rs : Regs), Rep lay σ m → EnvRep lay rs m cenv ρ → (∀ x ∈ cenv, x < r) → Frag m rs r c (encR lay (Gabbro.Grammatik.Ty.index (D.count t)) (eval σ₀ i σ ρ)) ∧ FitsT (Gabbro.Grammatik.Ty.index (D.count t)))
+    : Frag m rs r c (encR lay (D.typ t f) (eval σ₀ (.thruOwn (n := zi_n) (rw := zi_rw) (space := zi_space) (o := zi_eig) p t ht f i mo s ho he hg hm hL' : Expr D Γ Λ (D.typ t f)) σ ρ)) ∧ FitsT (D.typ t f) :=
+  by
+  have htab := (Deklaration.capTab_sound ht).1
+  simp only [lowerE] at h
+  rcases hp : lowerE lay cenv p r with _ | ⟨cp, op, r1⟩
+  · simp only [hp, reduceCtorEq] at h
+  simp only [hp] at h
+  rcases hi : lowerE lay cenv i r1 with _ | ⟨ci, oi, r2⟩
+  · simp only [hi, reduceCtorEq] at h
+  simp only [hi] at h
+  rcases hsa : slotAddr lay t f op (.int 0 (D.count t - 1)) oi r2 with _ | ⟨ca, oa, r3⟩
+  · simp only [hsa, reduceCtorEq] at h
+  simp only [hsa] at h
+  by_cases hs : supp (D.typ t f) = true
+  · simp only [hs, if_true] at h
+    rcases hld : loadG (D.typ t f) oa r3 with _ | ⟨cl, ol, r4⟩
+    · simp only [hld, reduceCtorEq] at h
+    simp only [hld] at h
+    obtain rfl := Option.some.inj h
+    obtain ⟨Ip, _⟩ := ih_lowerE_ok_p lay hL cenv r (cp, op, r1) hp σ₀ σ ρ m rs hR hE hc
+    have hrp := Frag.le Ip
+    let z : Zahl 0 (D.count t - 1) := eval σ₀ i σ ρ
+    have hk0 : 0 ≤ z.n := z.lo_le
+    have hk1 : z.n < D.count t := by have := z.le_hi; omega
+    refine ⟨?_, fitsT_supp hs⟩
+    have T := frag_three Ip (fun rsA hag =>
+        (ih_lowerE_ok_i lay hL cenv r1 (ci, oi, r2) hi σ₀ σ ρ m rsA hR
+          (envRep_regs cenv ρ (fun x hx => hag x (hc x hx)) hE)
+          (fun x hx => Nat.lt_of_lt_of_le (hc x hx) hrp)).1)
+      (fun rsB hagB hoa hob hla hlb => frag_two (ct := (cl, ol, r4))
+        (slotAddr_frag lay hL t f hs z.n hk0 hk1 op oi r2 m rsB
+          (by rw [hoa]; simp only [encR, htab]) hla hob hlb ⟨_, hR.1 t z.n f hs hk0 hk1⟩ (ca, oa, r3) hsa)
+        (fun rsC hagC hoa' hlta => by
+          obtain ⟨c', hc', F⟩ := loadG_frag lay (D.typ t f) (σ.slots t z.n f) hs oa (lay.gblk t)
+            (lay.off t z.n f) m rsC r3 hoa' (hR.1 t z.n f hs hk0 hk1)
+          rw [hld] at hc'
+          obtain rfl := Option.some.inj hc'
+          exact F))
+    rw [List.append_assoc (cp ++ ci) ca cl]
+    exact T
+  · simp only [hs, Bool.false_eq_true, ↓reduceIte, reduceCtorEq] at h
+
+set_option linter.unusedSectionVars false in
 theorem lowerE_ok_thru (lay : Layout D) (hL : LayoutOk lay)
     {Γ : Ctx}
     {Λ : List (Res D)}
