@@ -22,10 +22,10 @@ namespace Gabbro.Grammatik.EscrowWitness
     signature produces an owner. -/
 
 /-- The escrowed owner: a nominal loan, same stage back on either channel. -/
-def escrowLoan : OwnerFlow Bool := { loans := [(true, 0)] }
+@[expose, reducible] def escrowLoan : OwnerFlow Bool := { loans := [(true, 0)] }
 
 /-- The one shared signature: no params, no result, holds the loaned owner. -/
-def escrowSig : Signatur Unit Empty Empty Bool where
+@[expose, reducible] def escrowSig : Signatur Unit Empty Empty Bool where
   params := []
   erg := none
   gruende := 0
@@ -34,12 +34,13 @@ def escrowSig : Signatur Unit Empty Empty Bool where
   gschreibt := fun e => nomatch e
   konsumiert := []
   produziert := []
+  boden := none
   owner := escrowLoan
 
 /-- The witness declaration: one table `Unit` with one field, no locks, no
     globals, one owner mark with three stages, two functions sharing the
     loan signature above. `false` calls, `true` is entered. -/
-def escrowD : Deklaration where
+@[expose, reducible] def escrowD : Deklaration where
   Tab := Unit
   decTab := inferInstance
   count := fun _ => 2
@@ -68,7 +69,7 @@ def escrowD : Deklaration where
   Fn := Bool
   sig := fun _ => 0
   sigNr := fun _ => escrowSig
-  eigner_nie_erzeugt := fun _ _ _ _ _ h => absurd h (List.not_mem_nil _)
+  eigner_nie_erzeugt := fun _ _ _ _ _ h => List.not_mem_nil h
   Inv := Empty
   traeger := fun e => nomatch e
   invs := []
@@ -97,17 +98,17 @@ theorem escrowErg (f : escrowD.Fn) : escrowD.erg f = none := by
   cases f <;> rfl
 
 /-- The caller and callee identities. -/
-def callerFn : escrowD.Fn := false
+@[expose, reducible] def callerFn : escrowD.Fn := false
 
-def calleeFn : escrowD.Fn := true
+@[expose, reducible] def calleeFn : escrowD.Fn := true
 
 /-- The nominal namespace: the one mark against the grant ledger. -/
-def escrowNames : OwnerNamespace escrowD where
+@[expose, reducible] def escrowNames : OwnerNamespace escrowD where
   key := fun m => if m then 0 else 1
   injective := by intro a b h; cases a <;> cases b <;> simp_all
 
 /-- The distinguished mint: `true` at stage 0, issued for the caller. -/
-def escrowMint : OwnerMintDecl escrowD where
+@[expose, reducible] def escrowMint : OwnerMintDecl escrowD where
   mark := true
   minter := ()
   root := false
@@ -117,29 +118,30 @@ def escrowMint : OwnerMintDecl escrowD where
   bounded := by decide
 
 /-- The caller and callee activation identities of the witness run. -/
-def callerF : ArenaOwnership.Frame := ⟨0, 0⟩
+@[expose, reducible] def callerF : ArenaOwnership.Frame := ⟨0, 0⟩
 
-def calleeF : ArenaOwnership.Frame := ⟨0, 1⟩
+@[expose, reducible] def calleeF : ArenaOwnership.Frame := ⟨0, 1⟩
 
-def tokenE : OwnerToken escrowD := ⟨true, 0, ⟨0, 0, 0⟩⟩
+@[expose, reducible] def tokenE : OwnerToken escrowD := ⟨true, 0, ⟨0, 0, 0⟩⟩
 
-def mintedLedgerE : ArenaOwnership.State :=
+@[expose, reducible] def mintedLedgerE : ArenaOwnership.State :=
   { (ArenaOwnership.State.empty.put 0 (some ⟨0, 0, callerF, []⟩)) with next := 1 }
 
-def mintedE : OwnerState escrowD :=
-  { OwnerState.empty with ledger := mintedLedgerE,
-    spent := fun m => if m = true then true else false,
+@[expose, reducible] def mintedE : OwnerState escrowD :=
+  { OwnerState.empty with
+    ledger := mintedLedgerE
+    spent := fun m => if m = true then true else false
     stage := fun m => if m = true then 0 else 0 }
 
-def loanedE : OwnerState escrowD := mintedE.withLedger
+@[expose, reducible] def loanedE : OwnerState escrowD := mintedE.withLedger
   (mintedLedgerE.put 0 (some ⟨0, 0, callerF, [calleeF]⟩))
 
-def movedLedgerE : ArenaOwnership.State :=
+@[expose, reducible] def movedLedgerE : ArenaOwnership.State :=
   { (mintedLedgerE.put 0 (some ⟨0, 1, calleeF, []⟩)) with next := 2 }
 
-def movedE : OwnerState escrowD := mintedE.withLedger movedLedgerE
+@[expose, reducible] def movedE : OwnerState escrowD := mintedE.withLedger movedLedgerE
 
-def movedTokenE : OwnerToken escrowD := { tokenE with handle := ⟨0, 0, 1⟩ }
+@[expose, reducible] def movedTokenE : OwnerToken escrowD := { tokenE with handle := ⟨0, 0, 1⟩ }
 
 theorem mintStepE : OwnerState.recordMint escrowNames escrowMint
     OwnerState.empty callerF = some (mintedE, tokenE) := rfl
@@ -178,7 +180,7 @@ theorem escrowReadyE : escrowLoan.EscrowReady
   rw [e]
   refine ⟨(OwnerFlow.validB_iff _ _ _).mp (by decide), ?_, ?_⟩
   · intro p hp
-    exact (List.not_mem_nil p hp).elim
+    exact (List.not_mem_nil hp).elim
   · intro m hm
     have hm' : m = true := by
       simpa [escrowLoan, OwnerFlow.inputs] using hm

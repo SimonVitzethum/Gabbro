@@ -31,6 +31,7 @@ theorem hoare_callInd (P : Programm D) (O : Orakel D) (passes : Nat)
         ∃ v, R target.val s0 (umsig target.property ρa) = RufAusgang.ok s1 v ∧
           EnsAmRueck P target.val s0 s1 (umsig target.property ρa) v ∧
           (P.ptrVertrag n).postHolds s0 s1 ρa (ptrResult target.property v)) := by
+  dsimp only
   let target := eval s0 p s0 r0
   let ρa := evalArgs s0 args s0 r0
   intro σ ρ hPre s1 ρ' hrun
