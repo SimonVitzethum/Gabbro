@@ -77,7 +77,7 @@ def plainForeignC (L : Lay D) {Γ : Ctx} {Λ : List (Res D)} (a : D.Ax)
   if usesArea L a then
     if D.agruende a = 0 then do
       let request ← areaC L a args τ s reserved
-      pure (request.1 ++ areaReceive τ s, request.2)
+      pure (request.1 ++ copyWords (valueWords τ) s (foreignResultBase s), request.2)
     else none
   else do
     let request ← torC0 L a args s reserved
