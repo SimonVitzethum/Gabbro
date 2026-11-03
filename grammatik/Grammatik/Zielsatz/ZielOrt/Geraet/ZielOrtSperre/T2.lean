@@ -1,6 +1,6 @@
 /- Part 2 of 2 of `ZielOrtSperre` (split by instrumente/teile/lean-teilen.py; the umbrella `ZielOrtSperre.lean` imports all parts). -/
 module
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.T1
+public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre.VerbrauchPruefung
 @[expose] public section
 
 
@@ -153,7 +153,10 @@ theorem fadenS_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   have hK' := hF.1
   refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,
     fun l Γ Λ Λx ρ tb inv body is k rest hl i hr => ?_,
-    fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_⟩
+    fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
+    fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
+    fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
   · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
     refine wahr_of_nicht_falsch fun hw => hno .schleife ?_
     apply semH_trav_falsch
@@ -189,6 +192,41 @@ theorem fadenS_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     rw [semH_dann_cons, execStmtH_blatt S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusL H) s hb,
       h']
     exact weiterH_logik _ _ _ _ _ _ e
+
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    refine Classical.byContradiction fun hbad => ?_
+    apply hno .schleife
+    apply semH_verbrauch_pruefung_falsch
+    intro hp
+    apply hbad
+    exact (verbrauchKopfWerte_gleich tb member edge inv rest ρ
+      (expr_stabil (hFS _) inv hok.2.2.1) (expr_stabil (hFS _) member hok.1)
+      (expr_stabil (hFS _) edge hok.2.1) (hg.lese Λ Λ inv.orte inv.orte)
+      ((hg.lese Λ Λ inv.orte inv.orte).lese Λ Λ (member.orte ++ edge.orte)
+        (member.orte ++ edge.orte))).mp hp
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    refine Classical.byContradiction fun hbad => ?_
+    apply hno .schleife
+    apply semH_verbrauchRest_falsch
+    intro hp
+    apply hbad
+    dsimp only [verbrauchAbstiegPrueft] at hp ⊢
+    rw [eval_gleichAuf mass (expr_stabil (hFS _) mass hok.2.2.2.1) (hg.lese Λ Λ mass.orte mass.orte) ρ] at hp
+    exact hp
+  · obtain ⟨H, HA, HU, σ, hg, hok, hno⟩ := kopfS_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    have hg' := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
+    refine Classical.byContradiction fun hbad => ?_
+    apply hno .schleife
+    apply semH_abbVerbrauch_falsch
+    intro hp
+    apply hbad
+    have hm := eval_gleichAuf mass (expr_stabil (hFS _) mass hok.2.2.2.2.2.1)
+      (hg'.lese Λ Λ mass.orte mass.orte) ρ
+    have hi := eval_gleichAuf inv (expr_stabil (hFS _) inv hok.2.2.2.2.1)
+      ((hg'.lese Λ Λ mass.orte mass.orte).lese Λ Λ inv.orte inv.orte) ρ
+    dsimp only [verbrauchAbbruchPrueft, verbrauchAbstiegPrueft] at hp ⊢
+    rw [hm, hi] at hp
+    exact hp
 
 end Ziel
 /-! ## 3. The goal theorem -/
