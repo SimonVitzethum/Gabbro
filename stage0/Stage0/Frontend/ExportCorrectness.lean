@@ -55,13 +55,19 @@ theorem exported_records_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
 
 /-- Original-source admission retains the successful certified const substitution
     and all remaining runtime metadata checks before G lowering. -/
-theorem Compiled.exports_metadata {text : String} {options : Profil.Options} (result : Compiled text options)
+theorem Compiled.const_substitution {text : String} {options : Profil.Options} (result : Compiled text options)
     (h : result.unit.exportGate = .ok ()) :
     ∃ rewritten,
       Konst.konstErsetzePipeline (uMembers (pre108 result.source.prepared.elaborierbar)) = .ok rewritten ∧
       Konst.checkErsetzt (uMembers (pre108 result.source.prepared.elaborierbar)) rewritten = .ok () ∧
       (Konst.ohneKonst rewritten).any ExportMetadata.itemMetadata = false :=
   Konst.checkSourceMetadata_sound _ (result.metadata.symm.trans h)
+
+/-- All original runtime annotations retain their pre-rewrite metadata check. -/
+theorem Compiled.exports_metadata {text : String} {options : Profil.Options} (result : Compiled text options)
+    (h : result.unit.exportGate = .ok ()) :
+    (Konst.ohneKonst (uMembers (pre108 result.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false :=
+  Konst.checkSourceMetadata_runtime_sound _ (result.metadata.symm.trans h)
 
 /-- The entry-global adapter preserves both original operand snapshots inside implication.
     It never treats a current read as an entry read. -/
@@ -102,25 +108,25 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
     ∃ output : Emitted text K options,
       emit text K options = .ok output ∧ output.image.bytes = bytes ∧
       CanonicalSourceProgram output.compiled ∧ output.Correct ∧
-      ExportMetadata.checkConstants (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) = .ok () ∧
+      Konst.checkSourceConstants (uMembers (pre108 output.compiled.source.prepared.elaborierbar)) = .ok () ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (universal : Bool) (source : USide) (binder : String) (body : UEns)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowEns output.compiled.unit Γ Λ fn er (.arrayElements universal source binder body) = .ok value →
-        (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (shift : Nat)
         (table field : String) (a b : UIdx) (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowReach output.compiled.unit Γ Λ fn shift table field a b = .ok value →
-        (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (universal reverse : Bool) (table binder field : String) (source : UIdx) (body : UEns)
         (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowEns output.compiled.unit Γ Λ fn er (.filtered universal table binder field reverse source body) = .ok value →
-        (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (shift : Nat)
         (table : String) (source : UIdx) (value : Expr (declOf output.compiled.unit) Γ Λ .bool),
         lowMember output.compiled.unit Γ Λ fn shift table source = .ok value →
-        (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false) ∧
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) ∧
       (∀ (Γ : Ctx) (Λ : List (Res (declOf output.compiled.unit))) (fn : UFn) (er : Option Ty)
         (op : String) (a b : USide) (n m : Nat)
         (x : Expr (declOf output.compiled.unit) Γ Λ (.str n)) (y : Expr (declOf output.compiled.unit) Γ Λ (.str m))
@@ -128,7 +134,7 @@ theorem exported_batch2_ir_correct [Runner.IR.Kern] [Senke.CloneOK]
         lowWertE output.compiled.unit Γ Λ fn er a = .ok ⟨.str n, x⟩ →
         lowWertE output.compiled.unit Γ Λ fn er b = .ok ⟨.str m, y⟩ →
         lowCmp output.compiled.unit Γ Λ fn er op a b = .ok value →
-        (uMembers (pre108 output.compiled.source.prepared.elaborierbar)).any ExportMetadata.itemMetadata = false) := by
+        (Konst.ohneKonst (uMembers (pre108 output.compiled.source.prepared.elaborierbar))).any ExportMetadata.itemMetadata = false) := by
   obtain ⟨output, emitted, image, correct, _⟩ := irBild_correct text K bytes h
   refine ⟨output, emitted, image, compile_source_program text output.compiled, correct,
     output.compiled.constantExports, ?_, ?_, ?_, ?_, ?_⟩
