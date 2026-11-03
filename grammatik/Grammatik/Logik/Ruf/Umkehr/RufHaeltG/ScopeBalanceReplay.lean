@@ -54,7 +54,7 @@ private theorem stepReplay {P : Programm D} {O : Orakel D} {pa : Nat}
       · exact signatureChain (D.asignatur a)
     | dannBlatt | dannLeer | dannIteWahr | dannIteFalsch
     | dannOnOptionSome | dannOnOptionNone | dannOnTagSome | dannOnTagNone
-    | dannOnGrund | endeBind | endeBindAxiom | dannBind | dannNarrowOk =>
+    | dannOnGrund | endeBind | endeBindAxiom | dannBind | dannNarrowOk | dannNarrowRequired =>
       simp only [rufUpdateG_self]
       apply headStep
       · assumption

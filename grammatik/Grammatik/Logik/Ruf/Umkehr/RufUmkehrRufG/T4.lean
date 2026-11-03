@@ -187,6 +187,10 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       refine Or.inl ⟨_, _, _, _, .dann rest (.schrumpf k), _, rufUpdateG_self _ _ _, RestK.dann _ _ hr ho.2 (RestK.schrumpf _ hk), ?_⟩
       rw [weltVon_upd]
       exact REnde.gleich_of_eq (semK_narrowOk O passes R e lo' hi' sonst rest k _ _ h)
+    | dannNarrowRequired l2 Γ2 Λ2 Λ2' lo hi lo' hi' e rest k ρ2 hhead =>
+      umkehr_head
+      obtain ⟨⟨_, hb⟩, _, _⟩ := hcov.dann_inv
+      cases hb
     | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | endeBindAxiomOpt _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | g2 hs =>

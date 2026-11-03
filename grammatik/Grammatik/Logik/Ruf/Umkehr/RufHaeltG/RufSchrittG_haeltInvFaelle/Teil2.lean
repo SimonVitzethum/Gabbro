@@ -104,6 +104,33 @@ theorem rufSchrittG_haeltInv_dannNarrowOk {D : Deklaration} {P : Programm D} {O 
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨hk.1, GRest.kette_top k hk.2, hk.2⟩ ?_
   rw [hs₁, offen_lese]; exact hh
 
+/-- Required narrowing keeps the continuation's locks while binding the checked value. -/
+theorem rufSchrittG_haeltInv_dannNarrowRequired {D : Deklaration}
+    {M : RufMaschineG D} {f : Faden} (h : HaeltInvG (M.faeden f))
+    (hk0 : GRest.kette (D.haelt (M.faeden f).kopf.f) (M.faeden f).kopf.rest.2.2.2.2)
+    (hh0 : HeldIn (M.faeden f).kopf.rest.2.2.1 (offen (M.faeden f).spur))
+    (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (lo hi lo' hi' : Int)
+    (e : Expr D Γ Λ (.int lo hi))
+    (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (.int lo' hi' :: Γ) Λ Λ')
+    (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ') (ρ : Env D Γ)
+    (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.narrowRequired e lo' hi' rest) k⟩)
+    (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
+    (hn : lo' ≤ (eval σ₁ e σ₁ ρ).n ∧ (eval σ₁ e σ₁ ρ).n ≤ hi')
+    (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
+    (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+    HaeltInvG ((⟨M.speicher, rufUpdateG M.faeden f
+      ⟨(M.faeden f).stapel,
+        ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+          ⟨l, .int lo' hi' :: Γ, Λ,
+            .cons ⟨(eval σ₁ e σ₁ ρ).n, hn.1, hn.2⟩ ρ, .dann rest (.schrumpf k)⟩⟩,
+        σ₁.spur, (M.faeden f).log⟩,
+      M.lauf ++ rufEigenG f neu, M.start⟩ : RufMaschineG D).faeden f) := by
+  simp only [rufUpdateG_self]
+  have hk := kette_von hhead hk0
+  have hh := heldIn_von hhead hh0
+  refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨hk.1, GRest.kette_top k hk.2, hk.2⟩ ?_
+  rw [hs₁, offen_lese]; exact hh
+
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_dannNarrowElse {D : Deklaration} {P : Programm D} {O : Orakel D}
   {passes : Nat} (hO : GutO O) {M : RufMaschineG D} {f : Faden} (h : HaeltInvG (M.faeden f))
