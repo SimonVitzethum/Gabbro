@@ -128,28 +128,36 @@ theorem exchange_liest_schreibt {M M' : RufMaschineG D} {u : Faden} {g : D.Glob}
     (hk : ExchangeKopf M u g) (hs : RufSchrittG P O passes M u M') :
     LiestG M M' u (.inr g) ∧ SchreibG M M' u (.inr g) := by
   obtain ⟨l, Γ, Λ, Λ', neuE, hw, hL, rest, k, ρ, hK⟩ := hk
-  rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs
-  all_goals (kopf_vergleich hK)
-  all_goals (try (exact Bool.noConfusion (congrArg exchangeRest hk)))
-  case dannExchange σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
-    cases hk
-    have hX : (rufUpdateG M.faeden u ⟨(M.faeden u).stapel,
-        ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
-         ⟨l, D.gtyp g :: Γ, Λ, .cons (σ₁.globs g) ρ, .dann rest (.schrumpf k)⟩⟩,
-        σ₂.spur, (M.faeden u).log⟩ u).spur = (Ereignis.gzugriff g true Λ σ₁.haelt ::
-          leseEv (M.weltVon u) Λ (Sum.inr g :: neuE.orte)) ++ (M.faeden u).spur := by
-      simp only [rufUpdateG_self]
-      rw [hs₂, hs₁]
-      rfl
-    have hE := ereignisse_eq (M := M) (M' := ⟨σ₂.speicher, _, M.lauf ++ rufEigenG u neu, M.start⟩)
-      (f := u) hX
-    refine ⟨?_, Or.inl ?_⟩
-    · show (Sum.inr g, false) ∈ zugriffe M _ u
-      rw [zugriffe_ereignisse, hE]
-      exact List.mem_filterMap.mpr ⟨_, List.mem_cons_of_mem _ List.mem_cons_self, rfl⟩
-    · show (Sum.inr g, true) ∈ zugriffe M _ u
-      rw [zugriffe_ereignisse, hE]
-      exact List.mem_filterMap.mpr ⟨_, List.mem_cons_self, rfl⟩
+  cases hs with
+  | g5 hs =>
+    cases hs with
+    | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+      kopf_vergleich hK
+      cases hk
+      have hX : (rufUpdateG M.faeden u ⟨(M.faeden u).stapel,
+          ⟨(M.faeden u).kopf.f, (M.faeden u).kopf.rho, (M.faeden u).kopf.s0,
+           ⟨l, D.gtyp g :: Γ, Λ, .cons (σ₁.globs g) ρ, .dann rest (.schrumpf k)⟩⟩,
+          σ₂.spur, (M.faeden u).log⟩ u).spur = (Ereignis.gzugriff g true Λ σ₁.haelt ::
+            leseEv (M.weltVon u) Λ (Sum.inr g :: neuE.orte)) ++ (M.faeden u).spur := by
+        simp only [rufUpdateG_self]
+        rw [hs₂, hs₁]
+        rfl
+      have hE := ereignisse_eq (M := M) (M' := ⟨σ₂.speicher, _, M.lauf ++ rufEigenG u neu, M.start⟩)
+        (f := u) hX
+      refine ⟨?_, Or.inl ?_⟩
+      · show (Sum.inr g, false) ∈ zugriffe M _ u
+        rw [zugriffe_ereignisse, hE]
+        exact List.mem_filterMap.mpr ⟨_, List.mem_cons_of_mem _ List.mem_cons_self, rfl⟩
+      · show (Sum.inr g, true) ∈ zugriffe M _ u
+        rw [zugriffe_ereignisse, hE]
+        exact List.mem_filterMap.mpr ⟨_, List.mem_cons_self, rfl⟩
+    | _ =>
+      kopf_vergleich hK
+      exact Bool.noConfusion (congrArg exchangeRest hk)
+  | g1 hs | g2 hs | g3 hs | g4 hs | g6 hs | g7 hs =>
+    cases hs
+    all_goals (kopf_vergleich hK)
+    all_goals (exact Bool.noConfusion (congrArg exchangeRest hk))
 
 end WR
 
