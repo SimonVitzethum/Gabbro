@@ -26,7 +26,9 @@ def PayloadAt (L : Lay D) (m : Runner.Mem) (fp : Runner.W) (s : Nat)
 
 @[simp] theorem payloadEncoding_length (L : Lay D) (c : Option Ty)
     (v : Nutzlast D.Fn D.passt c) : (payloadEncoding L c v).length = payloadWords c := by
-  cases c <;> simp only [payloadEncoding, payloadWords, List.length_nil, encodeWords_length]
+  cases c with
+  | none => rfl
+  | some τ => exact encodeWords_length L τ (v : Wert D τ)
 
 theorem payloadWords_bound : ∀ (cs : List (Option Ty)) (i : Fin cs.length),
     payloadWords (cs.get i) ≤ sumPayloadWords cs
@@ -42,9 +44,11 @@ theorem encodeSumPayload_selected (L : Lay D) : ∀ (cs : List (Option Ty))
     encodeSumPayload L cs i v = payloadEncoding L (cs.get i) (Fall.toNutzlast _ _ _ _ v)
   | [], i, _ => Fin.elim0 i
   | none :: _, ⟨0, _⟩, _ => rfl
-  | some _ :: _, ⟨0, _⟩, _ => rfl
-  | _ :: cs, ⟨i + 1, hi⟩, v =>
-    encodeSumPayload_selected L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+  | some _ :: _, ⟨0, _⟩, _ => by
+    rw [encodeSumPayload.eq_def] <;> rfl
+  | c :: cs, ⟨i + 1, hi⟩, v => by
+    cases c <;> rw [encodeSumPayload.eq_def, Fall.toNutzlast_succ] <;>
+      exact encodeSumPayload_selected L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
 
 theorem sumValid_selected (L : Lay D) : ∀ (cs : List (Option Ty))
     (i : Fin cs.length) (v : Fall D.Fn D.passt cs i),
@@ -52,36 +56,37 @@ theorem sumValid_selected (L : Lay D) : ∀ (cs : List (Option Ty))
   | [], i, _ => Fin.elim0 i
   | none :: _, ⟨0, _⟩, _ => Iff.rfl
   | some _ :: _, ⟨0, _⟩, _ => Iff.rfl
-  | _ :: cs, ⟨i + 1, hi⟩, v =>
-    sumValid_selected L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+  | c :: cs, ⟨i + 1, hi⟩, v => by
+    cases c <;> rw [SumValid.eq_def, Fall.toNutzlast_succ] <;>
+      exact sumValid_selected L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+
+/-- The packed schema admits only absent payloads and bounded integers. Their model types
+    already carry the range, and neither has additional representation obligations. -/
+private theorem packedPayload_valid (L : Lay D) (c : Option Ty)
+    (fits : (match c with
+      | none => true
+      | some (.int lo hi) => decide (hi - lo < 2 ^ 56)
+      | some _ => false) = true)
+    (v : Nutzlast D.Fn D.passt c) : PayloadValid L c v := by
+  cases c with
+  | none => trivial
+  | some τ =>
+    cases τ with
+    | int lo hi =>
+      rw [PayloadValid, ValueValid.eq_def]
+      trivial
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | str _ | prod _ _ =>
+      exact Bool.noConfusion fits
 
 /-- Packed payloads have no recursive validity obligations: their schema admits
     only bare cases and bounded integers. -/
 theorem packedSum_valid (L : Lay D) : ∀ (cs : List (Option Ty)), sumFits cs = true →
-    ∀ (i : Fin cs.length) (v : Fall D.Fn D.passt cs i), SumValid L cs i v
-  | [], _, i, _ => Fin.elim0 i
-  | c :: cs, fits, ⟨i, hi⟩, v => by
-    have parts : cs.length + 1 ≤ 256 ∧
-        (match c with
-         | none => true
-         | some (.int lo high) => decide (high - lo < 2 ^ 56)
-         | some _ => false) = true ∧
-        cs.all (fun c => match c with
-         | none => true
-         | some (.int lo high) => decide (high - lo < 2 ^ 56)
-         | some _ => false) = true := by
-      simpa only [sumFits, Bool.and_eq_true, decide_eq_true_eq, List.length_cons,
-        List.all_cons] using fits
-    cases i with
-    | zero =>
-      cases c with
-      | none => trivial
-      | some τ =>
-        cases τ <;> first | trivial | (simp only at parts; contradiction)
-    | succ i =>
-      exact packedSum_valid L cs
-        (by simp only [sumFits, Bool.and_eq_true, decide_eq_true_eq]; exact ⟨by omega, parts.2.2⟩)
-        ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+    ∀ (i : Fin cs.length) (v : Fall D.Fn D.passt cs i), SumValid L cs i v := by
+  intro cs fits i v
+  simp only [sumFits, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true] at fits
+  apply (sumValid_selected L cs i v).mpr
+  exact packedPayload_valid L (cs.get i) (fits.2 _ (List.get_mem cs i))
+    (Fall.toNutzlast _ _ _ _ v)
 
 theorem encodeWords_sum (L : Lay D) {cs : List (Option Ty)}
     (separate : sumFits cs = false) (v : Wert D (.sum cs)) :
