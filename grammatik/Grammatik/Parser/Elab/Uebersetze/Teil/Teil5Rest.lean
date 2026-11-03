@@ -111,6 +111,8 @@ structure UFnKopf where
   /-- The named `assume` witnessing a hardware origin (the generated core
       query's `assume` clause; `none` for software items and while unresolved). -/
   annahme : Option String := none
+  /-- Written C08 clauses; lowered in the binding parameter/result context. -/
+  clauses : List SKlausel := []
 
 /-- The kind and the type of the value a call of a function of the unit binds: a truth value, a number, a
     reason. -/
