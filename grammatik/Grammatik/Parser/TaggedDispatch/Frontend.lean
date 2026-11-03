@@ -4,6 +4,7 @@ public import Grammatik.Parser.TaggedDispatch.Expressions
 public import Grammatik.Parser.Dyn.Frontend
 public import Grammatik.Parser.Stmt.LibrarySource
 public import Grammatik.Parser.SourceFolds.Range
+public import Grammatik.Parser.SourceFolds.Hoist
 public import Grammatik.Parser.SourceFolds.RangeProofs
 
 @[expose] public section
