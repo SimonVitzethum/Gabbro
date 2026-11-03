@@ -52,12 +52,10 @@ theorem stringScan_admitted {K n q a b acc : Nat}
     intro i hi
     simp only [stringScanC, List.mem_append] at hi
     rcases hi with ((hx | hy) | hc) | ht
-    · cases stringKey_admitted (K := K) (k := k) hn (by omega : a + n + 1 ≤ acc + 1)
-        (by omega : acc + 1 < acc + 3) (by omega) i hx <;>
-        constructor <;> first | assumption | omega
-    · cases stringKey_admitted (K := K) (k := k) hq (by omega : b + q + 1 ≤ acc + 2)
-        (by omega : acc + 2 < acc + 3) (by omega) i hy <;>
-        constructor <;> first | assumption | omega
+    · exact (stringKey_admitted (K := K) (k := k) hn (by omega : a + n + 1 ≤ acc + 1)
+        (by omega : acc + 1 < acc + 3) (by omega) i hx).lower (by omega)
+    · exact (stringKey_admitted (K := K) (k := k) hq (by omega : b + q + 1 ≤ acc + 2)
+        (by omega : acc + 2 < acc + 3) (by omega) i hy).lower (by omega)
     · exact stringCompare_admitted hK i hc
     · exact ih i ht
 
@@ -76,7 +74,10 @@ theorem stringKey_value {n a k out tmp : Nat} (s : Nat → Runner.W)
       OfNat.ofNat_ne_one, Nat.reduceEqDiff, ne_eq, not_false_eq_true]
     rw [len, bytes k hk, keyAt_byte]
     have byte0 := ((bs[k]?).getD ⟨0, by omega, by omega⟩).lo_le
-    rw [← Int.toNat_of_nonneg byte0, BitVec.ofInt_natCast]
+    have byteWord : BitVec.ofInt 64 ((bs[k]?).getD ⟨0, by omega, by omega⟩).n =
+        BitVec.ofNat 64 ((bs[k]?).getD ⟨0, by omega, by omega⟩).n.toNat := by
+      rw [← Int.toNat_of_nonneg byte0, BitVec.ofInt_natCast]
+    rw [byteWord]
     by_cases present : k < bs.length
     · have flag : (BitVec.ofInt 64 (k : Int)).ult (BitVec.ofNat 64 bs.length) = true := by
         simp only [BitVec.ofInt_natCast, BitVec.ult, BitVec.toNat_ofNat, decide_eq_true_eq]; omega
