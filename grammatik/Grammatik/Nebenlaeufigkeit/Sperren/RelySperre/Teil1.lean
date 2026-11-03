@@ -76,14 +76,14 @@ theorem sperre_exklusiv (P : Programm D) (O : Orakel D) (passes : Nat) (hO : Gut
           · subst hf0
             have hLf' : L ∈ offen (M.spuren f) := by
               have h1 : L ∈ offen σ'.spur := by
-                have h2 := hLf; rw [genUpdate_self] at h2; exact h2
+                have h2 : L ∈ offen (genUpdate M.spuren f σ'.spur f) := hLf; rw [genUpdate_self] at h2; exact h2
               exact hback h1
             have hgoal : L ∉ offen (genUpdate M.spuren f σ'.spur g) := by
               rw [genUpdate_noteq _ _ _ (Ne.symm hfg)]
               exact ih f g hfg L hLf'
             exact hgoal
           · have hLf' : L ∈ offen (M.spuren f) := by
-              have h2 := hLf; rw [genUpdate_noteq _ _ _ hf0] at h2; exact h2
+              have h2 : L ∈ offen (genUpdate M.spuren f0 σ'.spur f) := hLf; rw [genUpdate_noteq _ _ _ hf0] at h2; exact h2
             by_cases hg0 : g = f0
             · subst hg0
               have hgoal : L ∉ offen (genUpdate M.spuren g σ'.spur g) := by
