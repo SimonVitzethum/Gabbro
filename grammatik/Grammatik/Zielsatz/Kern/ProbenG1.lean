@@ -176,7 +176,9 @@ def g1PR : Programm g1D where
 def g1S : SperrInv g1D := ⟨fun L => (L : Empty).elim, fun L _ => (L : Empty).elim⟩
 
 /-- Both probes pass the checker (with `haupt` declared): a refusal is (b)'s. -/
-theorem g1PA_akzeptiert : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = true := by decide
+theorem g1PA_akzeptiert : Akzeptiert g1PA g1S [g1Haupt] [] [] [g1Haupt] = true := by
+  -- The answer-site check uses the well-founded `Ty.decEq` on `g1Erg` and `never`.
+  decide +kernel
 
 theorem g1PR_akzeptiert : Akzeptiert g1PR g1S [g1Haupt] [] [] [g1Haupt] = true := by decide
 
@@ -213,9 +215,9 @@ def g1HalbW : Gleit (0, 1) (1, 1) :=
 /-- The word of `0.5` decodes to `g1HalbW`. -/
 theorem g1_temp_wort : gleitWortPasst (0, 1) (1, 1) g1Halb = some g1HalbW := by
   unfold gleitWortPasst
-  rw [if_pos (by decide +kernel : 0 ≤ g1Halb ∧ g1Halb < gleitWortGrenze)]
+  rw [ite_eq_left (by decide +kernel : 0 ≤ g1Halb ∧ g1Halb < gleitWortGrenze)]
   unfold gleitPasst
-  rw [dif_pos ⟨g1HalbW.endlich, g1HalbW.lo_le, g1HalbW.le_hi⟩]
+  rw [dite_eq_left ⟨g1HalbW.endlich, g1HalbW.lo_le, g1HalbW.le_hi⟩]
   rfl
 
 theorem g1_temp_dekodiert (σ : World g1D) :
@@ -360,7 +362,8 @@ theorem g1_never_leer : AntwortLeer g1D (some .never) := antwortLeer_never
 
 /-- The G1 types are not empty: `ok | err` and `f64 in 0 .. 1` have answers. -/
 theorem g1_nicht_leer : ¬ AntwortLeer g1D (some g1Erg) ∧ ¬ AntwortLeer g1D (some g1Temp) := by
-  refine ⟨nicht_leer_von g1Erg (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg) (by decide), ?_⟩
+  refine ⟨nicht_leer_von g1Erg (⟨⟨1, by decide⟩, ()⟩ : Wert g1D g1Erg)
+    (show sumWort g1Fall = true from rfl), ?_⟩
   obtain ⟨v, hv⟩ := g1_temp_passt
   exact nicht_leer_von g1Temp v (einpassen_wertOk _ _ _ v hv)
 
