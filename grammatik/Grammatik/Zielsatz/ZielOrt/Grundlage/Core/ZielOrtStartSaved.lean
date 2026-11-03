@@ -33,14 +33,15 @@ def GRest.antwortGut {V : Vertrag D}
   | _, _, _, .aufraeumen a _ => good a
   | _, _, _, .leer => True
 
-private def antwortGut (P : Programm D) (F : RufRahmenG D)
-    (a : (ErgVal D (vertragVon D F.f).erg ⊕ Fin (vertragVon D F.f).gruende) × World D) : Prop :=
+private def antwortGut (P : Programm D) (f : D.Fn) (s0 : World D)
+    (rho : Env D (D.params f))
+    (a : (ErgVal D (vertragVon D f).erg ⊕ Fin (vertragVon D f).gruende) × World D) : Prop :=
   match a.1 with
-  | .inl v => EnsAmRueck P F.f F.s0 a.2 F.rho v ∧ InvAmRueck P F.f a.2
+  | .inl v => EnsAmRueck P f s0 a.2 rho v ∧ InvAmRueck P f a.2
   | .inr _ => True
 
 private def rahmenAntwortGut (P : Programm D) (F : RufRahmenG D) : Prop :=
-  F.rest.2.2.2.2.antwortGut (antwortGut P F)
+  F.rest.2.2.2.2.antwortGut (antwortGut P F.f F.s0 F.rho)
 
 private def fadenAntwortGut (P : Programm D) (z : RufFadenG D) : Prop :=
   rahmenAntwortGut P z.kopf ∧ ∀ F ∈ z.stapel, rahmenAntwortGut P F
@@ -68,14 +69,16 @@ private theorem antwortRestG_gut {V : Vertrag D} (g : D.Fn)
 private theorem rufAntwortG_gut {P : Programm D} {z z' : RufFadenG D}
     {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
-    (hz : fadenAntwortGut P z) (hg : antwortGut P z.kopf ⟨a, vor⟩)
+    (hz : fadenAntwortGut P z) (hg : antwortGut P z.kopf.f z.kopf.s0 z.kopf.rho ⟨a, vor⟩)
     (ha : rufAntwortG z vor σ a = some z') : fadenAntwortGut P z' := by
   cases hst : z.stapel with
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
       refine ⟨?_, by simp⟩
-      simpa only [rahmenAntwortGut, GRest.antwortGut, antwortGut] using hg
+      unfold rahmenAntwortGut
+      cases a <;>
+        simpa only [GRest.antwortGut] using hg
   | cons c st =>
       obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a c.rest = some r := by
         cases hr : antwortRestG z.kopf.f a c.rest with
@@ -84,9 +87,10 @@ private theorem rufAntwortG_gut {P : Programm D} {z z' : RufFadenG D}
       simp [rufAntwortG, hst, hr] at ha
       subst z'
       refine ⟨?_, ?_⟩
-      · have hc := antwortRestG_gut z.kopf.f a (antwortGut P c) c.rest r
+      · have hc := antwortRestG_gut z.kopf.f a (antwortGut P c.f c.s0 c.rho) c.rest r
           (hz.2 c (by simp [hst])) hr
-        simpa only [rahmenAntwortGut, antwortGut] using hc
+        unfold rahmenAntwortGut
+        exact hc
       · intro F hF
         exact hz.2 F (by simp only [hst, List.mem_cons]; exact Or.inr hF)
 
@@ -103,13 +107,15 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           rw [rufUpdateG_self]
           refine ⟨?_, h.2⟩
           subst σ₁
-          simpa only [rahmenAntwortGut, GRest.antwortGut, antwortGut] using
+          unfold rahmenAntwortGut
+          simpa only [GRest.antwortGut, antwortGut] using
             (hsc t _ _ _ ρ r e R hhead hret)
       | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
           dsimp only
           rw [rufUpdateG_self]
           refine ⟨?_, h.2⟩
-          simp only [rahmenAntwortGut, GRest.antwortGut, antwortGut]
+          unfold rahmenAntwortGut
+          simp only [GRest.antwortGut, antwortGut]
       | rueckFreigabe ρ a L remaining hhead hnonempty =>
           dsimp only
           rw [rufUpdateG_self]
@@ -117,7 +123,10 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           have hk := h.1
           change (M.faeden t).kopf.rest.2.2.2.2.antwortGut _ at hk
           rw [hhead] at hk
-          simpa only [rahmenAntwortGut, GRest.antwortGut, antwortGut] using hk
+          unfold rahmenAntwortGut
+          rcases a with ⟨answer, world⟩
+          cases answer <;>
+            simpa only [GRest.antwortGut] using hk
       | rueckFreigabeLetzte ρ a L hhead z ha =>
           dsimp only
           rw [rufUpdateG_self]
@@ -139,14 +148,31 @@ private theorem antwortGut_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
       | _ =>
           dsimp only
           rw [rufUpdateG_self]
-          simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut,
+          have hh := h.1
+          unfold rahmenAntwortGut at hh
+          refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) ?_
+          swap
+          · assumption
+          rw [headRest] at hh
+          simp_all [fadenAntwortGut, rahmenAntwortGut,
             GRest.antwortGut, RufDannHeadG, RufEndHeadG]
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
       cases hs <;> dsimp only <;> rw [rufUpdateG_self]
-      all_goals try
-        rcases ‹RufWartetHeadG _ _ _ _› with hc | ⟨n, err, hc⟩
       all_goals
-        simp_all [fadenAntwortGut, rahmenAntwortGut, antwortGut, GRest.antwortGut,
+        have hh := h.1
+        unfold rahmenAntwortGut at hh
+        refine (fun headRest : (M.faeden t).kopf.rest = _ => ?_) ?_
+        swap
+        · assumption
+        rw [headRest] at hh
+      all_goals first
+        | (refine (fun waiting : RufWartetHeadG (D := D) _ _ _ _ => ?_) ?_
+           swap
+           · assumption
+           rcases waiting with hc | ⟨n, err, hc⟩)
+        | skip
+      all_goals
+        simp_all [fadenAntwortGut, rahmenAntwortGut, GRest.antwortGut,
           antwortGut_weiterOpt, RufDannHeadG, RufEndHeadG]
 
 /-- Replay supplies the guarantee at the cleanup source; a structural
