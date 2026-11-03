@@ -114,7 +114,11 @@ theorem routineLeftCountL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
   have budget : WordCode (L := L) ρ W _ _ := WordCode.bin he (WordCode.const 1 (by decide))
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)
-  exact routineChooseL_ok (routineLessL_ok count budget) (fun _ => count) (fun _ => budget)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineLessL_ok count budget) (fun _ => count) (fun _ => budget)
+  intro fp K d c top h hK m pc hp
+  simpa only [routineLeftCountL, routineLeftCountWord, wordK] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 theorem routineLeftCountWord_model (n e : Nat)
     (low : 4 ≤ n) (high : n < 2 ^ 56) (ep : 1 ≤ e) (eb : e < 2 ^ 64) :
@@ -138,9 +142,11 @@ theorem routineLeftCountWord_model (n e : Nat)
       Nat.mod_eq_of_lt (by omega : e - 1 < 2 ^ 64)]
   rw [compare]
   by_cases small : 56 - bitlen n < e - 1
-  · simp only [small, decide_true, ite_true, routineLeftCount, Nat.min_eq_left (by omega)]
+  · simp only [small, decide_true, ite_true, routineLeftCount]
+    rw [Nat.min_eq_left (by omega : 56 - bitlen n ≤ e - 1)]
   · simp only [small, decide_false, Bool.false_eq_true, ite_false,
-      routineLeftCount, Nat.min_eq_right (by omega)]
+      routineLeftCount]
+    rw [Nat.min_eq_right (by omega : e - 1 ≤ 56 - bitlen n)]
 
 theorem routineLeftCountL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a index : Nat → Option (List II × Nat)} {n e : Nat}
@@ -163,7 +169,7 @@ theorem routineLeftShiftL_exact {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
       (fun d => wordL 11 d (a d) (routineLeftCountL (d + 1) a index))
       (BitVec.ofNat 64 (n * 2 ^ routineLeftCount n e)) ∧
     n * 2 ^ routineLeftCount n e < 2 ^ 56 := by
-  have count := routineLeftCountL_ok ha he low high ep eb
+  have count : WordCode (L := L) ρ W _ _ := routineLeftCountL_ok ha he low high ep eb
   have bounds := routineLeftCount_bounds n e low high ep
   have shift : WordCode (L := L) ρ W _ _ := WordCode.bin ha count
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
