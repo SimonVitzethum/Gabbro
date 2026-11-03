@@ -23,7 +23,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   - **Stage-0 refusals with their missing step:**
     - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
-    - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
+    - C11 `retScoped`/`retWhyScoped`: lowered (ordinary `ret`/`retWhy` code, ghost scope release via `List.foldl World.gibt`, generic `lowS_ok`/`lowEnd_ok` cases proved); `locks` bodies with scoped returns still refused (`retFreiB` gate unchanged).
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
