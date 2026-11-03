@@ -5,7 +5,7 @@ public import Grammatik.GabbroV.Start.GvStartPflicht
 public import Stage0.Senke.Welt.AnordnungLayout
 public import Stage0.Senke.Welt.StartLayout
 public import Stage0.Senke.Welt.InitialBytes
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.Encoding
+public import Stage0.Senke.Ausdruck.Aggregat.Sum.Model
 @[expose] public section
 
 
@@ -64,7 +64,19 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
             exact mapM_valid (GabbroV.konstWert τ) (ValueValid L τ) (fun x y h => ih x y h)
               ks vs values _ (List.get_mem _ _)
           · simp [items, values, length] at made
+  | sum cs =>
+    intro k v made
+    cases k <;> simp only [GabbroV.konstWert] at made
+    all_goals
+      split at made
+      · next bound =>
+        obtain ⟨payload, payloadMade, equal⟩ := Option.map_eq_some_iff.mp made
+        cases equal
+        apply (sumValid_selected L cs _ _).mpr
+        simpa only [Fall.of_to] using nutzKonst_valid L _ _ payload payloadMade
+      · cases made
   | prod name fs =>
+
     intro k v made
     cases k <;> simp only [GabbroV.konstWert] at made
     split at made
@@ -72,8 +84,24 @@ theorem initialConstant_valid {D : Deklaration} (L : Lay D) (τ : Ty) :
     · contradiction
   | _ => intro _ _ _; trivial
 termination_by sizeOf τ
+decreasing_by
+  all_goals first
+    | decreasing_trivial
+    | (have hs := List.sizeOf_get cs _
+       simp only [Ty.sum.sizeOf_spec]
+       omega)
 
-/-- Successful product initialization preserves every field's representation obligations. -/
+/-- The selected constant payload keeps the obligations of its declared type. -/
+theorem nutzKonst_valid {D : Deklaration} (L : Lay D) (c : Option Ty) :
+    ∀ (k : UKonst) (v : Nutzlast D.Fn D.passt c),
+      GabbroV.nutzKonst c k = some v → PayloadValid L c v := by
+  cases c with
+  | none => intro _ _ _; trivial
+  | some τ => intro k v made; exact initialConstant_valid L τ k v made
+termination_by sizeOf c
+
+/-- Successful product initialization
+ preserves every field's representation obligations. -/
 theorem prodKonst_valid {D : Deklaration} (L : Lay D) (fs : List Ty) :
     ∀ (ks : List UKonst) (v : ProdVal D.Fn D.passt fs),
       GabbroV.prodKonst GabbroV.konstWert fs ks = some v → ProdValid L fs v := by
