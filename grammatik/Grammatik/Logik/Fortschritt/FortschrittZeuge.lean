@@ -31,6 +31,7 @@ variable {D : Deklaration}
     invisible `awaits`). Float forms are no stop since 2026-09-15 (verdict F1). -/
 def Block.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Block D V l Γ Λ Λ' → Bool
+  | .cons (.axiomCallElse ..) _ => true
   | .cons s _ => s.istBlatt
   | .bindAxiom .. => true
   | .bindAxiomElse .. => true
@@ -47,6 +48,7 @@ def GRest.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ewig _ n _ _ _ => n == 0
   | .ende e =>
       match e with
+      | .cons (.axiomCallElse ..) _ => true
       | .cons s _ => s.istBlatt
       | .bindAxiom .. => true
       | .bindAxiomElse .. => true
@@ -68,9 +70,12 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
   | ende e =>
       cases e with
       | cons s rest =>
-          cases k
-          · exact h.1
-          all_goals exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
+          cases s with
+          | axiomCallElse => rfl
+          | _ =>
+              cases k
+              · exact h.1
+              all_goals exact absurd h (by simp only [Zielsatz.RestHalt, not_false_eq_true])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
       | bindAxiomOpt => rfl
@@ -79,9 +84,12 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
   | dann b k' =>
       cases b with
       | cons s rest =>
-          cases k
-          · exact h.1
-          all_goals exact absurd h (by simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt, not_false_eq_true])
+          cases s with
+          | axiomCallElse => rfl
+          | _ =>
+              cases k
+              · exact h.1
+              all_goals exact absurd h (by simp only [Zielsatz.RestHalt, Zielsatz.KopfHalt, not_false_eq_true])
       | bindAxiom => rfl
       | bindAxiomElse => rfl
       | bindAxiomOpt => rfl

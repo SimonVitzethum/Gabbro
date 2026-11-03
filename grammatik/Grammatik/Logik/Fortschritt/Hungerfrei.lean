@@ -53,8 +53,11 @@ theorem kopfHalt_keineSperre {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
     b.sperreVon = none := by
   cases b with
   | cons s _ =>
-      cases k <;> simp only [Zielsatz.KopfHalt] at h
-      exact Stmt.blatt_sperreVon s h.1
+      cases s with
+      | axiomCallElse => rfl
+      | _ =>
+          cases k <;> simp only [Zielsatz.KopfHalt] at h
+          exact Stmt.blatt_sperreVon _ h.1
   | _ => simp only [Block.sperreVon]
 
 /-- A residue at a named stop stands at no lock. -/

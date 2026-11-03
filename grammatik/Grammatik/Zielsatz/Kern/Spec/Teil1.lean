@@ -356,6 +356,9 @@ inductive HaltArt where
     (`flagge`). -/
 def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} (σ : World D) (ρ : Env D Γ) : HaltArt → Block D V l Γ Λ Λ' → Prop
+  | .hardware, .cons (.axiomCallElse _ a args ..) _ =>
+      (axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | .hardware, .cons s _ => s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
   | .hardware, .bindAxiom a args .. =>
       (axiomAntwort O a (σ.lese Λ args.orte)
@@ -386,6 +389,9 @@ def KopfHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
 def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (σ : World D) (ρ : Env D Γ) : HaltArt → GRest D V l Γ Λ → Prop
   | .budget, .ewig _ 0 _ _ _ => True
+  | .hardware, .ende (.cons (.axiomCallElse _ a args ..) _) =>
+      (axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none
   | .hardware, .ende (.cons s _) =>
       s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
   | .hardware, @GRest.ende _ _ _ _ Λ (.bindAxiom a args ..) =>
