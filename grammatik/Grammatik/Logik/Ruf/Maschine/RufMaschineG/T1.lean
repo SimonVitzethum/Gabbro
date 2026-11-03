@@ -96,7 +96,10 @@ theorem antwortRestG_ressourcen {V : Vertrag D} (g : D.Fn)
     (h : antwortRestG g a c = some c') : c'.2.2.1 = c.2.2.1 := by
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;> simp_all [antwortRestG]
-  all_goals split at h <;> simp_all
+  all_goals first
+    | (subst h; rfl)
+    | (obtain ⟨_, h⟩ := h; subst h; rfl)
+    | (split at h <;> simp_all)
 
 /-- Return after cleanup. A root keeps its entry record and a completed
     residue; a callee pops and records its answer at the released world.
@@ -126,6 +129,7 @@ theorem rufAntwortG_spur {z z' : RufFadenG D} {vor σ : World D}
       simp only [rufAntwortG, hs] at h
       cases hr : antwortRestG z.kopf.f a c.rest <;>
         simp_all [Option.bind]
+      all_goals first | (subst h; rfl) | (subst h; simp [hs])
 
 /-- Answering either keeps an empty root stack or removes its first frame. -/
 theorem rufAntwortG_stapel {z z' : RufFadenG D} {vor σ : World D}
@@ -137,6 +141,7 @@ theorem rufAntwortG_stapel {z z' : RufFadenG D} {vor σ : World D}
       simp only [rufAntwortG, hs] at h
       cases hr : antwortRestG z.kopf.f a c.rest <;>
         simp_all [Option.bind]
+      all_goals first | (subst h; rfl) | (subst h; simp [hs])
 
 /-- Cleanup changes only the trace, including for an empty scope list. -/
 theorem World.gibt_foldl_mem (σ : World D) (Ls : List D.Lock) :
