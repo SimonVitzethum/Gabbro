@@ -32,7 +32,7 @@ theorem CandState.agree (h : q.CandState σ ρ j live m) {d : Nat}
 
 /-- Rejected and absent candidates execute the same increment/backedge. -/
 theorem candidate_next (h : q.CandState σ ρ j live m) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 31) (x.at 8) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 31) (x.addr 8) m
       (q.CandState σ ρ (j + 1) live) := by
   apply (h.ready.increment (i := 31) (j := 32)
     (by rw [← q.origin]) (Nat.le_refl _) (by omega) h.candidateRead rfl
@@ -49,8 +49,8 @@ theorem candidate_test (k : Wert D (.index (D.count x.table))) (hk : k.n = j)
     (h : q.CandState σ ρ j live m) :
     let minimal := istMinimalVerbrauch (alleIndizes (D.count x.table))
       (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 10)
-      (if minimal then x.at 37 else x.at 8) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 10)
+      (if minimal then x.addr 37 else x.addr 8) m
       (fun m' => if minimal then q.CandResult σ ρ (some k) true m'
         else q.CandState σ ρ (j + 1) (live || q.memberAt σ ρ k) m')
  := by
@@ -73,7 +73,7 @@ theorem candidate_test (k : Wert D (.index (D.count x.table))) (hk : k.n = j)
     have pass := state1.ready.branch 11 31 (x.s + 4) .candidateNext 1 rfl
       (by consume_arith x) (by consume_arith x) (by consume_arith x)
       (by omega) read (by consume_arith x)
-    have pass' : Star ⟨x.at 11, x.fp⟩ m1 ⟨x.at 12, x.fp⟩ m1 := by simpa using pass
+    have pass' : Star ⟨x.addr 11, x.fp⟩ m1 ⟨x.addr 12, x.fp⟩ m1 := by simpa using pass
     apply ScanRun.prefix pass'
     apply (state1.ready.literals (i := 12) (a := x.s + 2) (b := x.s + 1)
       rfl (by rw [← q.origin]; omega) (by omega) (by omega) (by omega)
@@ -87,7 +87,7 @@ theorem candidate_test (k : Wert D (.index (D.count x.table))) (hk : k.n = j)
     have scan := q.predecessor_path σ ρ k true (D.count x.table).toNat 0
       (by omega) m2 initial
     rw [← alleIndizes_ab] at scan
-    have entry : x.at 13 = x.at 14 := by consume_arith x
+    have entry : x.addr 13 = x.addr 14 := by consume_arith x
     rw [entry]
     generalize answerEq : keinVorgaenger (alleIndizes (D.count x.table))
       (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k = answer at scan ⊢
@@ -124,11 +124,11 @@ theorem candidate_path : ∀ remaining j, j + remaining = (D.count x.table).toNa
     let choice := verbrauchWahlAux (alleIndizes (D.count x.table))
       (idxAb (D.count x.table) j remaining) (q.memberAt σ ρ) (q.edgeAt σ ρ)
       (fun a b => decide (a.n = b.n))
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 8)
-      (if choice.isSome then x.at 37 else x.at 34) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 8)
+      (if choice.isSome then x.addr 37 else x.addr 34) m
       (q.CandResult σ ρ choice (live || (idxAb (D.count x.table) j remaining).any (q.memberAt σ ρ))) := by
   apply candidate_scan (D.count x.table) (q.memberAt σ ρ) (q.edgeAt σ ρ)
-    (x.at 8) (x.at 37) (x.at 34) (q.CandState σ ρ) (q.CandResult σ ρ)
+    (x.addr 8) (x.addr 37) (x.addr 34) (q.CandState σ ρ) (q.CandResult σ ρ)
   · intro live mem h
     apply (h.ready.bound (i := 8) (by rw [← q.origin]; omega) (by omega)
       (by have := x.bounds.2.2.1; simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at this; omega)
@@ -148,8 +148,8 @@ theorem candidate_path : ∀ remaining j, j + remaining = (D.count x.table).toNa
     have iteration :
         let minimal := istMinimalVerbrauch (alleIndizes (D.count x.table))
           (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k
-        ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 8)
-          (if minimal then x.at 37 else x.at 8) mem
+        ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 8)
+          (if minimal then x.addr 37 else x.addr 8) mem
           (fun m' => if minimal then q.CandResult σ ρ (some k) true m'
             else q.CandState σ ρ (j + 1) (live || q.memberAt σ ρ k) m') := by
       apply (h.ready.bound (i := 8) (by rw [← q.origin]; omega) (by omega)
@@ -174,8 +174,8 @@ theorem selection (h : x.Ready m σ ρ) :
     let choice := verbrauchWahl (alleIndizes (D.count x.table))
       (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n))
     let live := !((alleIndizes (D.count x.table)).all fun k => !(q.memberAt σ ρ k))
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 6)
-      (if choice.isSome then x.at 37 else x.at 34) m (q.CandResult σ ρ choice live) := by
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 6)
+      (if choice.isSome then x.addr 37 else x.addr 34) m (q.CandResult σ ρ choice live) := by
   apply (h.literals (i := 6) (a := x.s) (b := x.s + 2) rfl
     (by rw [← q.origin]; omega) (by omega)
     (by have := x.scratch; have := x.layout.ks; omega)
@@ -186,6 +186,6 @@ theorem selection (h : x.Ready m σ ρ) :
   have scan := q.candidate_path σ ρ (D.count x.table).toNat 0 (by omega) false mem ⟨ready, zero, flag⟩
   rw [← alleIndizes_ab] at scan
   simpa only [verbrauchWahl, Bool.false_or, List.any_eq_not_all_not,
-    show x.at 7 = x.at 8 by consume_arith x] using scan
+    show x.addr 7 = x.addr 8 by consume_arith x] using scan
 
 end Gabbro.Stage0.Senke.Consuming.Selector
