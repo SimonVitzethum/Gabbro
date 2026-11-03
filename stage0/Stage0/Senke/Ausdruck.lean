@@ -221,7 +221,7 @@ def lowE (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {τ : Ty} (e : Expr D Γ Λ 
   | Γ, _, .forallSlots t body _, d => quantL true (frei Γ reserved) d (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
   | Γ, _, .existsSlots t body _, d => quantL false (frei Γ reserved) d (D.count t) (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
   | Γ, _, .count n body, d => countL (frei Γ reserved) d n (lowE (currentOld := currentOld) L (reserved := reserved) body (d + 3))
-  | _, _, .prod _ args, d => prodL d (lowA (currentOld := currentOld) L (reserved := reserved) args d)
+  | _, _, .prod _ args, d => prodL d (lowProductArgs (currentOld := currentOld) L (reserved := reserved) args d)
   | _, _, .prodGet (r := name) v i, d => prodGetL (name := name) i d (lowE (currentOld := currentOld) L (reserved := reserved) v d)
   | _, _, .prodSet (r := name) (fs := fields) v i e, d => prodSetL (name := name) i d (lowE (currentOld := currentOld) L (reserved := reserved) v d) (lowE (currentOld := currentOld) L (reserved := reserved) e (d + valueWords (.prod name fields)))
   | _, _, .reaches t f _ a b _, d => reachesL L t f d (lowE (currentOld := currentOld) L (reserved := reserved) a d) (lowE (currentOld := currentOld) L (reserved := reserved) b (d + 1))
@@ -249,25 +249,25 @@ def lowN (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) {c : Option Ty} 
   | _, _ => none
 
 /-- Traverse the actual argument spine in the expression's mutual recursion. -/
-def lowA (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {fs : List Ty}
+def lowProductArgs (L : Lay D) {Λ : List (Res D)} {Γ : Ctx} {fs : List Ty}
     (args : Args D Γ Λ fs) (d : Nat) (reserved : Nat := 0) (currentOld : Bool := true) : Option (List II × Nat) :=
   match fs, args with
   | _, .nil => some ([], d)
   | _, @Args.cons _ _ _ τ _ e rest => do
     let head ← lowE (currentOld := currentOld) L (reserved := reserved) e d
-    let tail ← lowA (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ)
+    let tail ← lowProductArgs (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ)
     pure (head.1 ++ tail.1, max head.2 tail.2)
 end
 
 /-- The structural compiler traversal is the parameterized product traversal. -/
 theorem lowA_eq_prodArgsL {Λ : List (Res D)} {Γ : Ctx} {reserved : Nat} {currentOld : Bool} :
     ∀ {fs} (args : Args D Γ Λ fs) d,
-    lowA (currentOld := currentOld) L (reserved := reserved) args d = prodArgsL (lowE (currentOld := currentOld) L (reserved := reserved)) args d
+    lowProductArgs (currentOld := currentOld) L (reserved := reserved) args d = prodArgsL (lowE (currentOld := currentOld) L (reserved := reserved)) args d
   | _, .nil, _ => rfl
   | _, @Args.cons _ _ _ τ fs e rest, d => by
     change (do
       let head ← lowE (currentOld := currentOld) L (reserved := reserved) e d
-      let tail ← lowA (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ)
+      let tail ← lowProductArgs (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ)
       pure (head.1 ++ tail.1, max head.2 tail.2)) = _
     rw [lowA_eq_prodArgsL rest]
     rfl
