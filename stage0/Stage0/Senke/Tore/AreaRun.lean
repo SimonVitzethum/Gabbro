@@ -141,4 +141,28 @@ theorem areaRequest_run {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)
     · exact .inr (.inl reason)
     · exact .inr (.inr invalid)
 
+/-- The actual checked area emitter executes the request proved above. -/
+theorem areaC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D)}
+    {a : D.Ax} {args : Args D Γ Λ (D.aparams a)} {τ : Ty} (he : D.aerg a = some τ)
+    {s reserved top : Nat} {code : List II}
+    (emitted : areaC L a args τ s reserved = some (code, top))
+    {fp pc : Runner.W} {K Ks : Nat} {m : Runner.Mem} {σ : World D} {ρ : Env D Γ}
+    (capacity : top ≤ Ks) (layout : WIn L fp Ks K)
+    (pre : PreS L m pc fp K s code ρ reserved) (world : WeltAt m L σ) :
+    ∃ b, L.tor a = some b ∧ ∃ m' tag,
+      Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * code.length), fp⟩ m' ∧
+      AgreeW L fp s K m m' ∧ m'.rd64 (slot fp (BitVec.ofNat 64 s)) = some tag ∧
+      WeltAt m' L (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).1 ∧
+      AreaReply L O a b τ he (σ.fragt (.inl a)) (evalArgs σ args σ ρ)
+        m' fp (foreignResultBase s) tag := by
+  simp only [areaC, bind, Option.bind_eq_some_iff] at emitted
+  obtain ⟨b, bound, j, register, emitted⟩ := emitted
+  split at emitted
+  · next accepted =>
+    simp only [Bool.and_eq_true] at accepted
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at emitted
+    obtain ⟨⟨ca, ta⟩, arguments, rfl, rfl⟩ := emitted
+    exact ⟨b, bound, areaRequest_run he bound accepted.1 arguments capacity layout pre world⟩
+  · cases emitted
+
 end Gabbro.Stage0.Senke
