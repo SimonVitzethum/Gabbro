@@ -36,7 +36,7 @@ theorem refSchrittC : RufSchrittD refP refO 0 refM2B 1 refM3B := by
       ⟨false, [.int 0 10], [Res.held (D := refD) ()],
         .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
           refHpLiesAt rfl)
-          (.ret .empty (by simp [Vertrag.ende]))⟩ := rfl
+          (.ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig])))⟩ := rfl
   have hs0 : refM2B.weltVon 1 =
       (refM2B.weltVon 1).lese [Res.held (D := refD) ()]
         (Args.orte refArgsLies) := rfl

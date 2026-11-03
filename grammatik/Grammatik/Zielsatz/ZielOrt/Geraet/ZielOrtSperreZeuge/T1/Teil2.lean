@@ -90,7 +90,7 @@ def sEnsSetze : Expr sD (ErgCtx (sD.params sSetze) (sD.erg sSetze)) (vertragVon 
 /-- `setze(x)`: `konto[0] = x; konto[1] = x; return`. -/
 def sRumpfSetze : Endblock sD (vertragVon sD sSetze) false [.int 0 100] sL :=
   .cons (.assignSlot () () sIdx0 (.var .here) rfl sDarf)
-    (.cons (.assignSlot () () sIdx1 (.var .here) rfl sDarf) (.ret .empty (by simp [Vertrag.ende])))
+    (.cons (.assignSlot () () sIdx1 (.var .here) rfl sDarf) (.ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))))
 
 
 end Gabbro.Grammatik

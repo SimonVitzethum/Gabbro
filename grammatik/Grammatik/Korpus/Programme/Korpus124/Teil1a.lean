@@ -221,7 +221,7 @@ theorem kHpPruefe : RufPasst kD (vertragVon kD kHauptA) (kD.signatur kPruefeA) [
 /-- `setze(x)`: `konto.slots[0].stand = x; konto.slots[1].stand = x;`. -/
 def kRumpfSetze : Endblock kD (vertragVon kD kSetze) false [.int 0 100] kL :=
   .cons (.assignSlot KTab.konto () kI0 (.var .here) rfl kDarfK)
-    (.cons (.assignSlot KTab.konto () kI1 (.var .here) rfl kDarfK) (.ret .empty (by simp [Vertrag.ende])))
+    (.cons (.assignSlot KTab.konto () kI1 (.var .here) rfl kDarfK) (.ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))))
 
 /-- `pruefeA()`: `return privA.slots[0].stand;`. -/
 def kRumpfP : Endblock kD (vertragVon kD kPruefeA) false [] [] :=

@@ -16,7 +16,7 @@ theorem refSchrittDF : RufSchrittF refP refO 0 refM3F 1 MB := by
   have hhead : (refM3F.faeden 1).kopf.rest =
       ⟨false, refD.params refLies,
         Signatur.anfang refD (refD.signatur refLies),
-        Env.nil, .ret refRetLies (by simp [Vertrag.ende])⟩ := by
+        Env.nil, .ret refRetLies (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))⟩ := by
     rw [refM3Frest]
     rfl
   have hfg : (refM3F.faeden 1).kopf.f = refLies := rfl

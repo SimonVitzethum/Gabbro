@@ -80,11 +80,11 @@ def vzE : zD.Fn → Bool
   | _ => false
 
 /-- The app's placeholder for `einzahlen`: a leaf. -/
-def vzStubEin : Endblock zD (vertragVon zD zEin) false [] zL := .ret .empty (by simp [Vertrag.ende])
+def vzStubEin : Endblock zD (vertragVon zD zEin) false [] zL := .ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
 /-- The app's placeholder for `lies`: a leaf. -/
-def vzStubLies : Endblock zD (vertragVon zD zLies) false [] zL := .ret (.val zHundert) (by simp [Vertrag.ende])
+def vzStubLies : Endblock zD (vertragVon zD zLies) false [] zL := .ret (.val zHundert) (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
 /-- The app's placeholder for `wrap`: a leaf. -/
-def vzStubWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .ret .empty (by simp [Vertrag.ende])
+def vzStubWrap : Endblock zD (vertragVon zD zWrap) false [] zL := .ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
 /-- The library's placeholder for `haupt`: a leaf. -/
 def vzStubHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] := .ret .empty List.Perm.nil
 
@@ -224,7 +224,7 @@ def vmLeser : Endblock mD (vertragVon mD mPruefeA) false [] [] :=
 
 /-- The library's program: `pruefeA` reads `privB`; leaves for the app's functions. -/
 def vmBib : Programm mD := mitRumpf mP fun
-  | .setze => .ret .empty (by simp [Vertrag.ende])
+  | .setze => .ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
   | .hauptA => .ret .empty List.Perm.nil
   | .hauptB => .ret .empty List.Perm.nil
   | .pruefeA => vmLeser
