@@ -33,6 +33,9 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .assignThru p t _ f i e hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
+  | .assignThruOwn p t _ f i e _ _ _ _ _ hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append (orte_append p.orte_darf i.orte_darf) e.orte_darf) hh.heldIn
+      exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
   | .assignSlotRef r t _ _ f e hw hL, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append r.orte_darf e.orte_darf) hh.heldIn
       exact hl.trans (gut_schreibSlot _ t Λ _ f _ hw hL (hl.heldB hh).heldIn)
