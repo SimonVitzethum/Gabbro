@@ -49,12 +49,14 @@ def akkuBreitePasst (vorzeichen : Bool) (lo hi : Int) (w : Nat) : Prop :=
 
 /-- **Descriptor validity**: a positive core count, a positive width, a
     valid schema whose neutral inhabits the range, a fitting width, cells of
-    the accumulator's value type, and pairwise distinct cells and locks. -/
+    the accumulator's value type, pairwise distinct cells and locks, and
+    distinct update and reduction functions. -/
 def akkuOk (D : Deklaration) (a : AccumulatorDecl D) : Prop :=
   1 ≤ a.kernZahl ∧ 1 ≤ a.breite ∧ akkuGueltig a.op a.lo a.hi a.breite ∧
     akkuBreitePasst a.vorzeichen a.lo a.hi a.breite ∧
     (∀ i, D.gtyp (a.zellen i) = Ty.int a.lo a.hi) ∧
-    Function.Injective a.zellen ∧ Function.Injective a.sperren
+    Function.Injective a.zellen ∧ Function.Injective a.sperren ∧
+    a.aktualisiere ≠ a.falte
 
 /-- The neutral element inhabits the declaration's range. -/
 theorem akkuNeutralBewohnt {D : Deklaration} {a : AccumulatorDecl D}
