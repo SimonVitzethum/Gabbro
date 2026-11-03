@@ -85,6 +85,13 @@ theorem Ready.bound (h : x.Ready m σ ρ) {i index j : Nat}
     ctx (by omega) (by have := x.scratch; have := x.layout.ks; omega)
   exact ⟨m', path, a, kept, ready, localFrame, rv⟩
 
+/-- Read a surviving selector word after expression scratch has been used. -/
+theorem read_agree {d cell : Nat} {v : W} (a : Agree x.fp d x.K m m')
+    (h : FrameOK m x.fp x.K) (below : cell < d) (room : d ≤ x.K)
+    (read : x.read m cell v) : x.read m' cell v := by
+  rw [Image.read, agree_rd_low a h.room below room]
+  exact read
+
 /-- A binary instruction with its exact destination write. -/
 theorem binary_to {m : Mem} {pc fp : W} {K cell a b o : Nat} {va vb value : W}
     {g : W → W → Option W} (code : CodeAt m pc [ci o cell a b])
@@ -153,13 +160,6 @@ theorem Ready.stop (h : x.Ready m σ ρ) :
     _ rfl rfl
   exact stop_ok slice.1 (by simpa [stopC, sysC] using slice.2) h.frame
     (by have := x.scratch; have := x.layout.ks; omega) x.small x.bounds.2.1
-
-/-- Read a surviving selector word after expression scratch has been used. -/
-theorem read_agree {d cell : Nat} {v : W} (a : Agree x.fp d x.K m m')
-    (h : FrameOK m x.fp x.K) (below : cell < d) (room : d ≤ x.K)
-    (read : x.read m cell v) : x.read m' cell v := by
-  rw [Image.read, agree_rd_low a h.room below room]
-  exact read
 
 /-- A literal edge with an exact write, for the two selector initializers. -/
 theorem Ready.literal (h : x.Ready m σ ρ) {pc : W} {cell : Nat} {value : Int}
