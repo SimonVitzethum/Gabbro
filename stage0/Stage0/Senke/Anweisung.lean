@@ -21,6 +21,7 @@ public import Stage0.Senke.Tor
 public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Lower
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
 public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
@@ -114,13 +115,15 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         ((wordConstant (frei Γ reserved) nach).1 ++ ca.1 ++ [stC ((frei Γ reserved))])),
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
-  | _, Γ, _, _, .traverse t inv body, reserved
-  | _, Γ, _, _, .consumeTraverse t _ _ inv _ _ body, reserved => /- C11: lowers today's canonical fixed sweep; selection and measure are unused by execStmt. -/
+  | _, Γ, _, _, .traverse t inv body, reserved =>
     if inW (D.count t) (D.count t) then do
       let ci' ← lowE (reserved := reserved) L inv ((frei Γ reserved) + 1)
       let cb ← lowB (reserved := reserved) passes A L layout ens ((frei Γ reserved) :: pr) (48, 0) body
       travC ((frei Γ reserved)) (D.count t) ci' cb
     else none
+  | _, _, _, _, .consumeTraverse t member edge inv bound mass body, reserved =>
+    Consuming.lower L layout t member edge inv bound mass reserved (counterDepthB body) pr
+      (fun protected targets => lowB (reserved := reserved) passes A L layout ens protected targets body)
   | _, Γ, _, _, .retry n bis body overflow, reserved => do
     let cc ← lowE (reserved := reserved) L bis ((frei Γ reserved))
     let cu ← lowB (reserved := reserved) passes A L layout ens pr ex overflow

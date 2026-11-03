@@ -51,7 +51,7 @@ public import Stage0.Senke.Anweisung.Faelle.Kontrolle.ControlProbes
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.AxiomElseProbes
 
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Zeuge
-public import Stage0.Senke.Anweisung.Faelle.Schleifen.ConsumeRun
+public import Stage0.Senke.Anweisung.Faelle.Schleifen.Consuming.Run
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Proben
 public import Stage0.Senke.Tore.Proben
 
