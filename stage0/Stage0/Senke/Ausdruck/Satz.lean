@@ -10,6 +10,7 @@ public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
 public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
+public import Stage0.Senke.Ausdruck.Aggregat.Sum.Construct
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
@@ -373,7 +374,19 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
             simp only [sumFits, Bool.and_eq_true] at hfit; exact hfit.1))
       exact (lowN_ok (same := same) σ₀ σ hWL hLay i.val (by have := i.isLt; omega) nutz d c top h hK m pc ρ hp).mono
         (fun w hw => ⟨hfit, hw⟩)
-    · cases h
+    · next separate =>
+      have hsep : sumFits cs = false := Bool.eq_false_iff.mpr separate
+      cases nutz with
+      | empty =>
+        exact sumSpan_ok i () hsep (by
+          intro ca ta made fits m pc pre
+          cases made
+          exact ⟨m, by simpa using Star.refl ⟨pc, fp⟩ m,
+            Agree.refl _ _ _ _, trivial, by simp [WordsAt, payloadEncoding]⟩) h hK hp
+      | val e =>
+        exact sumSpan_ok i (eval σ₀ e σ ρ) hsep
+          (fun ca ta made fits m pc pre =>
+            lowE_ok (same := same) σ₀ σ hWL hLay e _ ca ta made fits m pc ρ pre) h hK hp
   | _, _, .wenn cond a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, h⟩ := h
