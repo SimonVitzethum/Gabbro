@@ -257,6 +257,7 @@ theorem lowA_eq_prodArgsL {Λ : List (Res D)} {Γ : Ctx} {reserved : Nat} {curre
       let tail ← lowA (currentOld := currentOld) L (reserved := reserved) rest (d + valueWords τ)
       pure (head.1 ++ tail.1, max head.2 tail.2)) = _
     rw [lowA_eq_prodArgsL rest]
+    rfl
 
 /-! ## Values in words -/
 
