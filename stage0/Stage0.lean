@@ -57,6 +57,7 @@ public import Stage0.Senke.Tore.Proben
 
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.WhyProben
 public import Stage0.Senke.Ausdruck.Aggregat.Proben
+public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Proben
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.TagProben
 public import Stage0.Senke.Ausdruck.Aggregat.ValueProbe
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Proben
