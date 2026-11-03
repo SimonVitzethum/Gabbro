@@ -396,16 +396,19 @@ theorem schrittOrte {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       | nil =>
           simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
           subst z
-          exact Or.inl ⟨hs.symm, rfl, fun _ _ => trivial⟩
+          refine Or.inl ⟨rfl, rfl, ?_⟩
+          intro C hm
+          rw [rufUpdateG_self]
+          trivial
       | cons caller rst =>
           simp only [rufAntwortG, hs] at hantwort
-          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
-          | none => simp [hr] at hantwort
-          | some rest =>
-              simp [hr] at hantwort
-              subst z
-              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl, rfl,
-                fun C hm => antwortRestG_oR P _ _ _ _ hr C hm⟩)
+          obtain ⟨rest, hr, hz⟩ := Option.bind_eq_some_iff.mp hantwort
+          have hz' := Option.some.inj hz
+          subst z
+          refine Or.inr (Or.inr ⟨caller, rst, rfl, rfl, rfl, ?_⟩)
+          intro C hm
+          rw [rufUpdateG_self]
+          exact antwortRestG_oR P _ _ _ _ hr C hm
     | _ =>
       kopfO
       all_goals simp_all

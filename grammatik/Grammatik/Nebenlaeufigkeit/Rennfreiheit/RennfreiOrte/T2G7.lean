@@ -69,7 +69,9 @@ theorem schritt_ev_g7 {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO 
       subst hs₁
       rw [hhead] at hC
       exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ (GRest.scopedWert_oR hC hret)⟩
-  | rueckScopedGrund => leseO
+  | rueckScopedGrund =>
+      simp only [rufUpdateG_self]
+      exact ⟨[], rfl, fun e he => (List.not_mem_nil he).elim⟩
   | rueckFreigabe ρ a L remaining hhead =>
       simp only [rufUpdateG_self]
       exact ⟨[.gibt L], rfl, fun e he c w hz => by
