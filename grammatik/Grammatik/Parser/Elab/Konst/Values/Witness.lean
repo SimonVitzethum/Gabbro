@@ -91,6 +91,24 @@ theorem bool_collected_zeuge :
 theorem zero_string_zeuge :
     ersetzeSExpr [shortText "" 0] (.call "shortText" []) = .ok (.ext .text [""] []) := rfl
 
+def reasonTag : UKonstFn where
+  name := "reasonTag"
+  params := []
+  erg := .why 2
+  rumpf := .block [] (some (.ret (some (.why "Reason" "Second"))))
+  signature := { art := "const", name := "reasonTag", params := [],
+    res := some (.atom "Reason"), fehler := none, klauseln := [] }
+  sums := [{ name := "Foreign", cases := [("Other", none), ("Second", none)] },
+    { name := "Reason", cases := [("First", none), ("Second", none)] }]
+
+/-- Ordinary reason-tag values keep both their owner and the exact selected case. -/
+theorem reason_value_zeuge :
+    ersetzeSExpr [reasonTag] (.call "reasonTag" []) = .ok (.why "Reason" "Second") := rfl
+
+theorem foreign_reason_refused_zeuge :
+    ersetzeSExpr [{ reasonTag with rumpf := .block [] (some (.ret (some (.why "Foreign" "Second")))) }]
+      (.call "reasonTag" []) = .error "const reason owner is unknown: Foreign" := rfl
+
 /-- The witnesses instantiate the generic G/literal theorem jointly with a
     successfully generated certificate and a checked complete result value. -/
 theorem portable_call_sound_zeuge :
