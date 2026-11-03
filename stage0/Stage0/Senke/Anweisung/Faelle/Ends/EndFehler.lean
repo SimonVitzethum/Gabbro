@@ -29,14 +29,14 @@ theorem endAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} 
   intro ihErr ihRest c top h hK hs hW m pc σ ρ hp hlo hu hk hWa hpr
   simp only [lowEnd, ← hlo0, resultWords_vertragVon] at h
   split at h
-  · next b lo' hi' hb hτ =>
+  · next b answer hb hτ =>
     split at h
     · next hc =>
       obtain ⟨hf, hlo', hn, hwhy⟩ := hc
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
       obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨ce, te⟩, hce, ⟨cr, tr⟩, hr, hc⟩ := h
       have hwτ : valueWords τ = 1 := by
-        have e : τ = .int lo' hi' := Option.some.inj (he.symm.trans hτ)
+        have e : τ = answer := Option.some.inj (he.symm.trans hτ)
         rw [e]; exact chkC_width hck
       split at hc
       · next hJ =>
