@@ -6,8 +6,8 @@ namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 open Uebersetze UebersetzeAllg
 
 /-- Every actual successful program assembly retains every source foreign
-    pre/postcondition. The total projection cannot choose its fallback on
-    this path: the same unit gate checks successful contract lowering. -/
+    pre/postcondition. The projection carries successful contract lowering
+    from the same unit gate; a substitute contract cannot be selected. -/
 theorem lowerAllg_axVertrag (u : UProg) (P : Programm (declOf u))
     (fs : List (declOf u).Fn) (h : lowerAllg u = .ok (P, fs))
     (a : (declOf u).Ax) : lowerAxContract u a = .ok (P.axVertrag a) := by
