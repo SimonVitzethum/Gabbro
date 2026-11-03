@@ -159,8 +159,9 @@ def kostenStmt (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ct
   | .breaking _ body => 1 + kostenBlock c pa body
   | .traverse t inv body =>
       2 + (D.count t).toNat * (kostenBlock c pa body + kostenExpr inv + 2)
-  | .consumeTraverse t member edge inv _ mass body =>
-      2 + (D.count t).toNat * (kostenBlock c pa body + kostenExpr member +
+  -- Each selection pass spends one unit of the fuel installed by `dannVerbrauch`.
+  | .consumeTraverse t member edge inv bound mass body =>
+      2 + ((D.count t).toNat + bound.toNat + 1) * (kostenBlock c pa body + kostenExpr member +
         kostenExpr edge + kostenExpr inv + kostenExpr mass + 2)
   | .retry n bis body ueber =>
       2 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber)
