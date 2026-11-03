@@ -13,14 +13,14 @@ variable {D : Deklaration}
 theorem mint_mem_inputs (F : OwnerFlow D.Marke) {m : D.Marke} {s : Nat}
     (h : (m, s) ∈ F.mints) : (m, s) ∈ F.inputs := by
   simp only [inputs]
-  exact List.mem_append.mpr (Or.inr (Or.inr h))
+  exact List.mem_append_right _ (List.mem_append_right _ h)
 
 /-- Every minted owner is returned: mints are outputs, never ordinaria
     production (`eigner_nie_erzeugt` stays about `produziert` alone). -/
 theorem mint_mem_outputs (F : OwnerFlow D.Marke) {m : D.Marke} {s : Nat}
     (h : (m, s) ∈ F.mints) : (m, s) ∈ F.outputs := by
   simp only [outputs]
-  exact List.mem_append.mpr (Or.inr (Or.inr h))
+  exact List.mem_append_right _ (List.mem_append_right _ h)
 
 /-- A call appends every mint output: the minter's caller (and, by the same
     transformer, the checked start frame) gains the fresh owner. Ghost:
@@ -55,7 +55,6 @@ theorem mint_ende_mem (V : Vertrag D) (S : Signatur D.Tab D.Glob D.Lock D.Marke)
   apply List.mem_append_right
   apply List.mem_map.mpr
   refine ⟨(m, s), ?_, rfl⟩
-  simp only [Signatur.outputMarks]
   exact List.mem_append.mpr (Or.inr (mint_mem_outputs S.owner h))
 
 /-- A minted output is a declared eigner: provenance from the checked
@@ -78,7 +77,7 @@ theorem mint_disjoint {S : Signatur D.Tab D.Glob D.Lock D.Marke}
   have hmem : q.1 ∈ S.owner.inputs.map Prod.fst :=
     List.mem_map.mpr ⟨q, mint_mem_inputs S.owner hq, rfl⟩
   have hne := h.2.1 p hp
-  have heq : q.1 = p.1 := congrArg Prod.fst he
+  have heq : q.1 = p.1 := he
   rw [heq] at hmem
   exact hne hmem
 

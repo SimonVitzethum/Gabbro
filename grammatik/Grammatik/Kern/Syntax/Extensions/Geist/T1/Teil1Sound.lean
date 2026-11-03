@@ -76,6 +76,29 @@ theorem g001Stmt_korrekt_ite {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   · exact ih_g001_korrekt_e h1.2 o ho'
 
 set_option linter.unusedSectionVars false in
+theorem g001Stmt_korrekt_assignThru {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {zi_n}
+    (p)
+    (t)
+    (ht)
+    (f)
+    (i)
+    (e)
+    (hw)
+    (hL)
+    (zr_h : g001Stmt (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)) = true)
+    (o : D.Tab ⊕ D.Glob)
+    (zr_ho : o ∈ Extraktion.stmtOrte (.assignThru (n := zi_n) (read := zi_read) (space := zi_space) p t ht f i e hw hL : Stmt D V l Γ Λ (Λ)))
+    : ¬ istGeist (D := D) o :=
+  by
+  revert zr_h zr_ho
+  intro h ho
+  have h0 : (orteOk (D := D) (p.orte ++ i.orte ++ e.orte)) = true := h
+  have ho' : o ∈ p.orte ++ i.orte ++ e.orte := by
+    simpa [Extraktion.stmtOrte] using ho
+  exact nge_of_eq_false (orteOk_korrekt (D := D) _ h0 o ho')
+
+set_option linter.unusedSectionVars false in
 theorem g001Stmt_korrekt_assignThruOwn {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {zi_n}
     (p)

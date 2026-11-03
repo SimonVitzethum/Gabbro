@@ -52,7 +52,7 @@ def lowerS (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
             | none => none
         | none => none
       else none
-  | _, _, _, _, .assignThruOwn p t _ _ i e _ _ _ _ _ _ _, lb, k, s =>
+  | _, _, _, _, .assignThruOwn p t _ f i e _ _ _ _ _ _ _, lb, k, s =>
       if supp (D.typ t f) then
         match lowerE lay cenv p s.r with
         | some (cp, op, r1) =>

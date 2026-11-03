@@ -45,6 +45,7 @@ theorem adaptFolge_druck : ∀ (ps : List (String × STyp)) (R : List Token) (F 
       have hA := adaptEinzel_druck n t (.zeichen ")" :: R) F' hT
       simp only [druckParams, druckParam, List.cons_append, List.nil_append,
         List.append_assoc, parseAdaptParamFolge, hA, List.map_cons, List.map_nil]
+      split <;> simp_all
     | cons q qs =>
       obtain ⟨m, u⟩ := q
       obtain ⟨Z, hZ⟩ : ∃ Z, druckParams ((m, u) :: qs) = nameTok m :: Z := by
@@ -52,13 +53,13 @@ theorem adaptFolge_druck : ∀ (ps : List (String × STyp)) (R : List Token) (F 
       have hd : druckParams ((n, t) :: (m, u) :: qs) ++ .zeichen ")" :: R =
           nameTok n :: .zeichen ":" ::
             (druckTyp t ++ .zeichen "," :: nameTok m :: (Z ++ .zeichen ")" :: R)) := by
-        change (druckParam (n, t) ++ [.zeichen ","] ++
+        change (druckParam (n, t) ++ [Token.zeichen ","] ++
           druckParams ((m, u) :: qs)) ++ .zeichen ")" :: R = _
         rw [hZ]
         simp only [druckParam, List.cons_append, List.nil_append, List.append_assoc]
       have hlen : (druckParams ((n, t) :: (m, u) :: qs)).length =
           (druckTyp t).length + 3 + (druckParams ((m, u) :: qs)).length := by
-        change (druckParam (n, t) ++ [.zeichen ","] ++
+        change (druckParam (n, t) ++ [Token.zeichen ","] ++
           druckParams ((m, u) :: qs)).length = _
         simp only [druckParam, List.length_append, List.length_cons, List.length_nil]
         omega
@@ -70,9 +71,10 @@ theorem adaptFolge_druck : ∀ (ps : List (String × STyp)) (R : List Token) (F 
       have hT := parse_druckTyp t ht (.zeichen "," :: nameTok m :: (Z ++ .zeichen ")" :: R)) F'
         (typFolge_parameter "," _ (Or.inl rfl)) (by simp only [fbT]; omega)
       have hA := adaptEinzel_druck n t (.zeichen "," :: nameTok m :: (Z ++ .zeichen ")" :: R)) F' hT
-      rw [hd]
-      simp only [parseAdaptParamFolge, hA, List.cons.injEq, nameTok_ne_zeichen,
-        false_and, imp_self, implies_true, hRec, List.map_cons]
+      rw [hd, parseAdaptParamFolge]
+      simp only [hA, List.cons.injEq, nameTok_ne_zeichen,
+        false_and, imp_self, implies_true, List.map_cons]
+      split <;> simp_all [nameTok_ne_zeichen]
 
 theorem adaptParams_druck (ps : List (String × STyp)) (hg : ∀ p ∈ ps, TypGut p.2)
     (R : List Token) (F : Nat) (hF : 8 * (druckParams ps).length + 35 ≤ F) :
@@ -99,7 +101,7 @@ theorem istAdaptKopf_sigToks (sig : FnSig) (hs : SigGut sig) (R : List Token) :
   let tail := resToks sig.res ++ fehlerToks sig.fehler ++ druckKlauseln sig.klauseln ++ R
   have hd : sigToks sig ++ R = .wort "fn" :: nameTok sig.name :: .zeichen "(" ::
       (druckParams sig.params ++ .zeichen ")" :: tail) := by
-    simp only [sigToks_eq, tail, List.cons_append, List.nil_append, List.append_assoc]
+    simp only [sigToks_eq sig hs.2.2.2.2, tail, List.cons_append, List.nil_append, List.append_assoc]
   rw [hd]
   have hP := adaptParams_druck sig.params hs.2.1 tail
     (8 * (.wort "fn" :: nameTok sig.name :: .zeichen "(" ::
