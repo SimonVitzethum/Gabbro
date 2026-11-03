@@ -12,6 +12,7 @@
 module
 
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Teil3
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckProof
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem.Teil1
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis.Teil1
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1
@@ -29,11 +30,14 @@ open Zielsatz
 theorem pruef_koerperR_true (passes : Nat) : KoerperGutR pruefP passes true := by
   intro O' _ _ R _ _ σ ρ _
   refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
-  · have hcomp : execEnd (V := vertragVon pruefD true) O' passes R (pruefP.rumpf true) σ ρ = EndAusgang.zurueck σ true := rfl
+  · have hcomp : execEnd (V := vertragVon pruefD true) O' passes R (pruefP.rumpf true) σ ρ =
+        EndAusgang.zurueck (V := vertragVon pruefD true) σ true := rfl
     rw [hcomp] at hrun
     cases hrun
     rfl
-  · have hcomp : execEnd (V := vertragVon pruefD true) O' passes (torRuf pruefP R) (pruefP.rumpf true) σ ρ = EndAusgang.zurueck σ true := rfl
+  · have hcomp : execEnd (V := vertragVon pruefD true) O' passes (torRuf pruefP R)
+        (pruefP.rumpf true) σ ρ =
+        EndAusgang.zurueck (V := vertragVon pruefD true) σ true := rfl
     rw [hcomp] at hrun
     cases hrun
 
@@ -41,11 +45,14 @@ theorem pruef_koerperR_true (passes : Nat) : KoerperGutR pruefP passes true := b
 theorem pruef_koerperR_false (passes : Nat) : KoerperGutR pruefP passes false := by
   intro O' _ _ R _ _ σ ρ _
   refine ⟨fun σ' v hrun => ?_, fun g hrun => ?_⟩
-  · have hcomp : execEnd (V := vertragVon pruefD false) O' passes R (pruefP.rumpf false) σ ρ = EndAusgang.zurueck σ () := rfl
+  · have hcomp : execEnd (V := vertragVon pruefD false) O' passes R (pruefP.rumpf false) σ ρ =
+        EndAusgang.zurueck (V := vertragVon pruefD false) σ () := rfl
     rw [hcomp] at hrun
     cases hrun
     rfl
-  · have hcomp : execEnd (V := vertragVon pruefD false) O' passes (torRuf pruefP R) (pruefP.rumpf false) σ ρ = EndAusgang.zurueck σ () := rfl
+  · have hcomp : execEnd (V := vertragVon pruefD false) O' passes (torRuf pruefP R)
+        (pruefP.rumpf false) σ ρ =
+        EndAusgang.zurueck (V := vertragVon pruefD false) σ () := rfl
     rw [hcomp] at hrun
     cases hrun
 
@@ -78,9 +85,7 @@ theorem pruef_grund (passes : Nat) (f : Bool) :
     InvGutGrund pruefP passes (axWahr pruefD) (SperrInv.leer pruefD) f := by
   intro O' _ _ _ U _ R _ _ σ ρ _ σ' r hrun
   have h0 : pruefD.gruende f = 0 := by cases f <;> rfl
-  have h := r.isLt
-  rw [h0] at h
-  omega
+  exact (Fin.cast h0 r).elim0
 
 /-- **The fixture's full user logic**: both bodies at every budget, no owed invariants at
     value or reason exits, the empty lock family and the trivial axiom ensures. -/
