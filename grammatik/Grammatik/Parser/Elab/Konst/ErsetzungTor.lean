@@ -97,6 +97,7 @@ def hatKonstRufSAnw (namen : List String) : SAnw → Bool
   | .emit z w _ => hatKonstRufSExpr namen z || hatKonstRufSExpr namen w
   | .await _ _ q _ => hatKonstRufSExpr namen q
   | .swap _ _ o _ => hatKonstRufSExpr namen o
+  | .retires _ => false
   | .step _ _ => false
   | .ret x => match x with | none => false | some e => hatKonstRufSExpr namen e
   | .alloc _ _ _ _ v s =>
