@@ -21,7 +21,7 @@ variable {D : Deklaration}
 theorem encodeProductFields_length (L : Lay D) (fs : List Ty)
     (v : ProdVal D.Fn D.passt fs) :
     (encodeProductFields L fs v).length = productWords fs := by
-  induction fs generalizing v with
+  induction fs with
   | nil => simp only [encodeProductFields_nil, List.length_nil, productWords]
   | cons τ fs ih =>
     simp only [encodeProductFields_cons, List.length_append, encodeWords_length, ih, productWords]
