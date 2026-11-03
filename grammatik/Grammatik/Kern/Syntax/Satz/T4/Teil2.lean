@@ -73,7 +73,7 @@ theorem stmt_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       · simp only [Ausgang.welt, reduceCtorEq] at h
   | .callIndElse p args he hp hr err, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execStmt] at h ⊢; exact indSonst_gutB R hR bo hbV p args he hp hr σ _ ρ hh hresid (gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ (orte_append p.orte_darf args.orte_darf) hh.heldIn)
-        _ _ (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Gut.refl _ _ _) (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_tac) hresid hh1).schrumpf.zuAusgang) σ' h
+        _ _ (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Gut.refl _ _ _) (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_tac) (ResidHeld.of_iff (held_nachSig_iff _ _ _) hresid) hh1).schrumpf.zuAusgang) σ' h
   | .locks L hr body, σ, ρ, hbo, hscope, hresid, hh, σ', h =>
       (GutAusgang.gibt L (nicht_gehaltenB L hr hh (fun c hc => by
           have hsc := hbo c hc; simp only [Stmt.ueberBoden, Bool.and_eq_true, decide_eq_true_eq] at hsc; exact hsc.1))
@@ -174,7 +174,7 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         _ _ ?_ ?_ σ' h
       · exact fun s1 v hh1 => (block_gutB bo hbV rest s1 _ (by boden_tac) (by scopes_tac)
           (ResidHeld.of_iff (held_nachSig_iff _ _ _) hresid) hh1).schrumpf
-      · exact fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_tac) hresid hh1).schrumpf.zuAusgang
+      · exact fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_tac) (ResidHeld.of_iff (held_nachSig_iff _ _ _) hresid) hh1).schrumpf.zuAusgang
   | .bindCallElse f args he hp _ err rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execBlock] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn; split at h ⊢
       · rename_i σ1 v hR1
@@ -463,7 +463,7 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         (fun s1 r => (execEnd O passes R err s1 (.cons r ρ)).schrumpf)
         (fun s1 v hh1 => (end_gutB bo hbV rest s1 _ (by boden_tac) (by scopes_tac)
           (ResidHeld.of_iff (held_nachSig_iff _ _ _) hresid) hh1).schrumpf)
-        (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_tac) hresid hh1).schrumpf) σ' h
+        (fun s1 r hh1 => (end_gutB bo hbV err s1 _ (by boden_tac) (by scopes_tac) (ResidHeld.of_iff (held_nachSig_iff _ _ _) hresid) hh1).schrumpf) σ' h
   | .narrow e lo' hi' sonst rest, σ, ρ, hbo, hscope, hresid, hh, σ', h => by
       simp only [execEnd] at h ⊢; have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn; split at h ⊢
       · exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (by scopes_tac) hresid (hl.heldB hh))).schrumpf σ' h

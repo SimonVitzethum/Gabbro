@@ -70,8 +70,8 @@ theorem GutR.rahmen (hR : GutR R) {f : D.Fn} {σ : World D} {ρ : Env D (D.param
   cases he : R f σ ρ with
   | ok _ _ => rw [he] at h2; exact h2.1
   | why _ _ => rw [he] at h2; exact h2.1
-  | logik _ => simp only [RufAusgang.welt, reduceCtorEq] at h
-  | hardware _ => simp only [RufAusgang.welt, reduceCtorEq] at h
+  | logik _ => simp only [he, RufAusgang.welt, reduceCtorEq] at h
+  | hardware _ => simp only [he, RufAusgang.welt, reduceCtorEq] at h
 
 /-- The write events of one axiom over explicit carrier domains, in a fixed
     order (tables, then globals): one `zugriff`-with-`true` per declared table
