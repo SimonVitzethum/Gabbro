@@ -145,6 +145,46 @@ theorem orFalte_zeuge : faltet orNatMonoid [5, 3] = 7 := rfl
 theorem andFalte_zeuge :
     (faltet (andMaskMonoid 8 (by omega)) [⟨12, by omega⟩, ⟨10, by omega⟩]).val = 8 := rfl
 
+/-- Under quiescence the sampled `min` fold is the contribution fold and the RMW chain. -/
+theorem ruhigMin_zeuge :
+    faltet (minZahlMonoid (-100) 100 (by omega))
+        [faltet (minZahlMonoid (-100) 100 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩],
+         faltet (minZahlMonoid (-100) 100 (by omega)) [⟨-10, by omega, by omega⟩]] =
+      faltet (minZahlMonoid (-100) 100 (by omega))
+        [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩, ⟨-10, by omega, by omega⟩] ∧
+    faltet (minZahlMonoid (-100) 100 (by omega))
+        [faltet (minZahlMonoid (-100) 100 (by omega)) [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩],
+         faltet (minZahlMonoid (-100) 100 (by omega)) [⟨-10, by omega, by omega⟩]] =
+      rmwKette (minZahlMonoid (-100) 100 (by omega))
+        (minZahlMonoid (-100) 100 (by omega)).neutral
+        [⟨30, by omega, by omega⟩, ⟨70, by omega, by omega⟩, ⟨-10, by omega, by omega⟩] := by
+  have hM := minZahlMonoid (-100) 100 (by omega)
+  exact ruhigFalte hM _ _ rfl
+
+/-- Under quiescence the sampled `or` fold is the contribution fold and the RMW chain. -/
+theorem ruhigOr_zeuge :
+    faltet orNatMonoid [faltet orNatMonoid [5, 3], faltet orNatMonoid [6]] =
+      faltet orNatMonoid [5, 3, 6] ∧
+    faltet orNatMonoid [faltet orNatMonoid [5, 3], faltet orNatMonoid [6]] =
+      rmwKette orNatMonoid orNatMonoid.neutral [5, 3, 6] := by
+  exact ruhigFalte orNatMonoid _ _ rfl
+
+/-- Under quiescence the sampled `and` fold is the contribution fold and the RMW chain. -/
+theorem ruhigAnd_zeuge :
+    faltet (andMaskMonoid 8 (by omega))
+        [faltet (andMaskMonoid 8 (by omega)) [⟨12, by omega⟩, ⟨10, by omega⟩],
+         faltet (andMaskMonoid 8 (by omega)) [⟨14, by omega⟩]] =
+      faltet (andMaskMonoid 8 (by omega))
+        [⟨12, by omega⟩, ⟨10, by omega⟩, ⟨14, by omega⟩] ∧
+    faltet (andMaskMonoid 8 (by omega))
+        [faltet (andMaskMonoid 8 (by omega)) [⟨12, by omega⟩, ⟨10, by omega⟩],
+         faltet (andMaskMonoid 8 (by omega)) [⟨14, by omega⟩]] =
+      rmwKette (andMaskMonoid 8 (by omega))
+        (andMaskMonoid 8 (by omega)).neutral
+        [⟨12, by omega⟩, ⟨10, by omega⟩, ⟨14, by omega⟩] := by
+  have hM := andMaskMonoid 8 (by omega)
+  exact ruhigFalte hM _ _ rfl
+
 /-- Under quiescence the sampled `max` fold is the contribution fold and the RMW chain. -/
 theorem ruhigMax_zeuge :
     faltet (maxZahlMonoid (-100) 100 (by omega))
@@ -396,6 +436,9 @@ theorem akkuProgramm_zeuge : AccumulatorAdmission zAP zAFs [zA] ∧
 #print axioms Gabbro.Grammatik.Kernzelle.orFalte_zeuge
 #print axioms Gabbro.Grammatik.Kernzelle.andFalte_zeuge
 #print axioms Gabbro.Grammatik.Kernzelle.ruhigMax_zeuge
+#print axioms Gabbro.Grammatik.Kernzelle.ruhigMin_zeuge
+#print axioms Gabbro.Grammatik.Kernzelle.ruhigOr_zeuge
+#print axioms Gabbro.Grammatik.Kernzelle.ruhigAnd_zeuge
 #print axioms Gabbro.Grammatik.Kernzelle.addVertauschung_zeuge
 #print axioms Gabbro.Grammatik.Kernzelle.zN0_abgelehnt
 #print axioms Gabbro.Grammatik.Kernzelle.zBreit_abgelehnt

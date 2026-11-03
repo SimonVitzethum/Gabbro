@@ -229,7 +229,56 @@ theorem addNichtnegGenuegt {lo hi z : Int} {xs : List Int}
       have hxs_nn : 0 ≤ xs.sum := sumNonneg hrest
       refine ⟨h0.1, h0.2, by omega, by omega, ih ⟨by omega, by omega⟩ hrest (by omega)⟩
 
-/-! ## 4. The named traps -/
+/-! ## 4. Merge duties at the cell update -/
+
+/-- `max` of two in-range values stays in range: the update's conditional
+    selection needs no check, never wraps or saturates. -/
+theorem maxMergeImBereich {lo hi a b : Int} (ha : lo ≤ a ∧ a ≤ hi)
+    (hb : lo ≤ b ∧ b ≤ hi) :
+    lo ≤ mergeInt .max a b ∧ mergeInt .max a b ≤ hi := by
+  unfold mergeInt
+  constructor <;> omega
+
+/-- `min` of two in-range values stays in range: the update's conditional
+    selection needs no check, never wraps or saturates. -/
+theorem minMergeImBereich {lo hi a b : Int} (ha : lo ≤ a ∧ a ≤ hi)
+    (hb : lo ≤ b ∧ b ≤ hi) :
+    lo ≤ mergeInt .min a b ∧ mergeInt .min a b ≤ hi := by
+  unfold mergeInt
+  constructor <;> omega
+
+/-- Checked `add`: under the single-step prefix duty the merge stays in
+    range. The elaborated update enforces the duty with `trim`, dropping the
+    contribution (no store, no history record) when it fails. -/
+theorem addMergeSchritt {lo hi z x : Int}
+    (h : lo ≤ z ∧ z ≤ hi ∧ lo ≤ z + x ∧ z + x ≤ hi) :
+    lo ≤ mergeInt .add z x ∧ mergeInt .add z x ≤ hi := by
+  unfold mergeInt
+  omega
+
+/-- Bitwise `or` of two values below `2 ^ w` stays below `2 ^ w`: the
+    encoding is closed, while the declared `[lo, hi]` bound stays a checked
+    `trim` duty of the update. -/
+theorem orMergeWeite {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w) :
+    0 ≤ mergeInt .or (a : Int) (b : Int) ∧
+      mergeInt .or (a : Int) (b : Int) < ((2 ^ w : Nat) : Int) := by
+  have h := Nat.or_lt_two_pow ha hb
+  unfold mergeInt
+  rw [Int.toNat_natCast, Int.toNat_natCast]
+  exact ⟨Int.natCast_nonneg _, Int.ofNat_lt.mpr h⟩
+
+/-- Bitwise `and` of natural values stays non-negative and below each
+    operand: the upper range bound is free, the lower bound and the width
+    stay checked duties of the update. -/
+theorem andMergeSchranke {a b : Nat} :
+    0 ≤ mergeInt .and (a : Int) (b : Int) ∧
+      mergeInt .and (a : Int) (b : Int) ≤ (b : Int) := by
+  have h := Nat.and_le_left (n := a) (m := b)
+  unfold mergeInt
+  rw [Int.toNat_natCast, Int.toNat_natCast]
+  exact ⟨Int.natCast_nonneg _, Int.ofNat_le.mpr h⟩
+
+/-! ## 5. The named traps -/
 
 /-- The named trap: `min` started at `0` drags every nonnegative result to `0`
     (the word case of `min_mit_null_start_zieht_auf_null`). -/
@@ -246,6 +295,11 @@ theorem andStartBeiNullFalle (x : Nat) : x &&& 0 = 0 :=
 #print axioms Gabbro.Grammatik.Kernzelle.addKetteImBereich
 #print axioms Gabbro.Grammatik.Kernzelle.sumNonneg
 #print axioms Gabbro.Grammatik.Kernzelle.addNichtnegGenuegt
+#print axioms Gabbro.Grammatik.Kernzelle.maxMergeImBereich
+#print axioms Gabbro.Grammatik.Kernzelle.minMergeImBereich
+#print axioms Gabbro.Grammatik.Kernzelle.addMergeSchritt
+#print axioms Gabbro.Grammatik.Kernzelle.orMergeWeite
+#print axioms Gabbro.Grammatik.Kernzelle.andMergeSchranke
 
 /-- The unsigned byte accumulator starts bitwise AND at all eight bits set. -/
 theorem neutralAndByte_zeuge : neutralInt .and 0 255 8 = 255 := by decide
