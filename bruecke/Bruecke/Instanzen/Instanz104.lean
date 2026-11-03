@@ -119,7 +119,7 @@ theorem bruecke_zeuge : ∃ (u : UProg) (P : Gabbro.Grammatik.Programm (Gabbro.G
     (∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧ meetsU u (wfU u) (fnAt u c) body) ∧
     ∃ c : Fin u.fns.length, ∃ g args, UStmt.call g args ∈ (fnAt u c).body :=
   ⟨u, _, _, Gabbro.Grammatik.Einheit104.low4, stimmig, rang, meets_alle,
-    ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" false, .val (.param "i")], by decide⟩⟩
+    ⟨⟨0, by decide⟩, "lies", [.freshPtr "Konto" (.table 0 (true, false)), .val (.param "i")], by decide⟩⟩
 
 /-! BRIDGE-ATOMIC beispiele/0104-referenz.gab nutzerA_bruecke -/
 
