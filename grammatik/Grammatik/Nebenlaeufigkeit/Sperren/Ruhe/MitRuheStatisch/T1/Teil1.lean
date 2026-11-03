@@ -45,9 +45,11 @@ theorem ruS_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, .breaking _ body => ruB_orteP P body
   | _, _, _, _, .traverse _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)
   | _, _, _, _, .consumeTraverse _ member edge inv _ mass body =>
-      kongr₂ (· ++ ·) (ruE_orte member)
-        (kongr₂ (· ++ ·) (ruE_orte edge)
-          (kongr₂ (· ++ ·) (ruE_orte inv) (kongr₂ (· ++ ·) (ruE_orte mass) (ruB_orteP P body))))
+      kongr₂ (· ++ ·)
+        (kongr₂ (· ++ ·)
+          (kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte member) (ruE_orte edge)) (ruE_orte inv))
+          (ruE_orte mass))
+        (ruB_orteP P body)
   | _, _, _, _, .retry _ bis body ueber =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte bis) (ruB_orteP P body)) (ruB_orteP P ueber)
   | _, _, _, _, .forever _ inv body => kongr₂ (· ++ ·) (ruE_orte inv) (ruB_orteP P body)

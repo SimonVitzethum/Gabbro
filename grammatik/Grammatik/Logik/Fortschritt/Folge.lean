@@ -81,6 +81,7 @@ def fNach {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (w : Bool) : Stmt D V l 
   | .breaking .. => false
   | .traverse .. => false
   | .consumeTraverse .. => false
+  | .axiomCallElse .. => false
   | .retry .. => false
   | .forever .. => false
   | _ => w
