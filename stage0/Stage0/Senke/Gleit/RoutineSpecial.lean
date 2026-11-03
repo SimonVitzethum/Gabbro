@@ -136,7 +136,11 @@ theorem routineSpecialL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   have infRight : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineInfL_ok hb) (fun _ => hb) (fun _ => finiteOrZero)
   have infinities : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineInfL_ok ha) (fun _ => infLeft) (fun _ => infRight)
   have rightNan : WordCode (L := L) ρ W _ _ := routineChooseL_ok (routineNanL_ok hb) (fun _ => hb) (fun _ => infinities)
-  exact routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun _ => rightNan)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (routineNanL_ok ha) (fun _ => ha) (fun _ => rightNan)
+  intro fp K d c top h hK m pc hp
+  simpa only [routineSpecialL, routineSpecialWord] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Payload priority, opposite infinities, negative zeros and finite fallthrough
     all exercise the same dispatcher used in the emitted routine. -/
