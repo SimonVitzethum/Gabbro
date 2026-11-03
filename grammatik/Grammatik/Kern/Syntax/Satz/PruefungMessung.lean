@@ -64,28 +64,44 @@ theorem messWert_zeuge : messWert messBerichtWahr "x" 0 = some 3 := rfl
 theorem messWert_anderer_zeuge : messWert messBerichtWahr "y" 0 = none := rfl
 
 /-- An unread entry is no sample either. -/
+def messBerichtUngelesen : CheckReport :=
+  { proben := [{ ort := "x", punkt := 0, wert := 3, gelesen := false }],
+    boeden := [], urteil := true }
+
 theorem messWert_ungelesen_zeuge :
-    messWert { proben := [{ ort := "x", punkt := 0, wert := 3, gelesen := false }],
-      boeden := [], urteil := true } "x" 0 = none := rfl
+    messWert messBerichtUngelesen "x" 0 = none := rfl
 
 /-- The held floor holds. -/
-theorem bodenHalten_zeuge : bodenHalten messBerichtWahr := by decide
+theorem bodenHalten_zeuge : bodenHalten messBerichtWahr := by
+  intro b hb
+  simp only [messBerichtWahr, List.mem_singleton] at hb
+  exact hb
 
 /-- The failed floor does not hold. -/
-theorem bodenFehlt_zeuge : ¬ bodenHalten messBerichtFalsch := by decide
+theorem bodenFehlt_zeuge : ¬ bodenHalten messBerichtFalsch := fun h =>
+  Bool.false_ne_true (h false (by simp only [messBerichtFalsch, List.mem_singleton]))
 
 /-- The read sample covers its place. -/
-theorem berichtDeckt_zeuge : berichtDeckt ["x"] messBerichtWahr := by decide
+theorem berichtDeckt_zeuge : berichtDeckt ["x"] messBerichtWahr := by
+  intro m hm
+  simp only [List.mem_singleton] at hm
+  subst hm
+  exact ⟨{ ort := "x", punkt := 0, wert := 3, gelesen := true },
+    by simp only [messBerichtWahr, List.mem_singleton], rfl, rfl⟩
 
 /-- An unread entry covers nothing: the early-returning path before a local
     sample stays an explicit gap. -/
-theorem berichtLuecke_zeuge :
-    ¬ berichtDeckt ["x"] { proben := [{ ort := "x", punkt := 0, wert := 3,
-      gelesen := false }], boeden := [], urteil := true } := by decide
+theorem berichtLuecke_zeuge : ¬ berichtDeckt ["x"] messBerichtUngelesen := by
+  intro h
+  obtain ⟨p, hp, _, hg⟩ := h "x" (List.mem_singleton_self _)
+  simp only [messBerichtUngelesen, List.mem_singleton] at hp
+  subst hp
+  exact Bool.false_ne_true hg
 
 /-- An incomplete report: a report with an unread sample is not complete. -/
-theorem berichtUnvollstaendig_zeuge :
-    ¬ CheckReport.vollstaendig { proben := [{ ort := "x", punkt := 0, wert := 3,
-      gelesen := false }], boeden := [], urteil := true } := by decide
+theorem berichtUnvollstaendig_zeuge : ¬ CheckReport.vollstaendig messBerichtUngelesen :=
+  fun h => Bool.false_ne_true
+    (h { ort := "x", punkt := 0, wert := 3, gelesen := false }
+      (by simp only [messBerichtUngelesen, List.mem_singleton]))
 
 end Gabbro.Grammatik

@@ -93,6 +93,7 @@ public import Grammatik.Speichermodell.Adressen.AdressZeuge
 public import Grammatik.Speichermodell.Adressen.NamedSpaces
 public import Grammatik.Speichermodell.Adressen.Capabilities
 public import Grammatik.Parser.Elab.Proben.Capabilities
+public import Grammatik.Parser.Elab.Proben.ConsumingKopf
 public import Grammatik.Speichermodell.Maschine.Sicht
 public import Grammatik.Speichermodell.Maschine.MaschineW
 public import Grammatik.Speichermodell.Maschine.DRF

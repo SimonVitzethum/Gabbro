@@ -13,7 +13,9 @@ namespace Gabbro.Grammatik.Parser.ExportMetadata
     measure and declared domain/edge; the structured lowerer checks the retained touches.
     The original-source gate reuses this reader, so unsupported clauses cannot disappear. -/
 def consumingHeader (raw : String) : Except String (SExpr × String) := do
-  let tokens ← lex raw
+  let tokens ← match lex raw with
+    | .ok ts => pure ts
+    | .error _ => throw "consuming traversal header does not lex"
   let rest ← match tokens with
     | .wort "decreases" :: rest => pure rest
     | _ => throw "consuming traversal requires decreases"
@@ -397,12 +399,6 @@ theorem consuming_bound (fuel : Nat) (binder kind raw touches : String) (origin 
   simp only [bodyMetadata, BEq.rfl, ↓reduceIte, parsed, Except.toOption,
     Option.isNone_some, Bool.false_or]
 
-theorem consuming_bound_zeuge :
-    bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
-      "decreases 1 touches consumes T.slots" none (.block [] none)) = false ∧
-    bodyMetadata 3 (.each "k" none "slots" (.variable "T") "consuming"
-      "touches consumes T.slots" none (.block [] none)) = true := by
-  exact ⟨rfl, rfl⟩
 /-- C14 gates are consumed only by canonical build selection, before metadata checking.
     Raw wrappers remain refused; selection never suppresses the retained item's duties. -/
 theorem gateT_bound (m : Auswahl.BauModus) (items selected : List SItemTief)

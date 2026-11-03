@@ -4,7 +4,7 @@
    * `CheckIdentitaet` (item 9): the resolved descriptor names unit functions --
      the probe and every gate are members, the probe is none of its gates, and
      the gates are pairwise distinct. It follows from the admission
-     (`identitaet_aus_zulassung`); the fixture pins it (`pruef_identitaet_zeuge`).
+     (`identitaet_aus_zulassung`, `Zielsatz/Kern/Akzeptiert/CheckDecide`); the fixture pins it (`pruef_identitaet_zeuge`).
    * `CheckAbschluss` (item 12): a completed report. Duty records a completed
      measurement with its verdict, never proof of the prose claim: the probe
      produces the Duty on every normal return (`CheckExpansion.produziert`),
@@ -40,16 +40,6 @@ variable [DecidableEq D.Fn]
 def CheckIdentitaet (fs : List D.Fn) (c : CheckDecl D) : Prop :=
   c.probe ∈ fs ∧ (∀ g ∈ c.gates, g ∈ fs) ∧ c.probe ∉ c.gates ∧ c.gates.Nodup
 
-/-- The identity follows from the admission. -/
-theorem identitaet_aus_zulassung {P : Programm D} {fs : List D.Fn}
-    {checks : List (CheckDecl D)} {c : CheckDecl D}
-    (hA : CheckAdmission P fs checks) (hc : c ∈ checks) :
-    CheckIdentitaet fs c := by
-  obtain ⟨hexp, _, hprobe, hgates, _⟩ := hA
-  obtain ⟨_, _, _, _, _, _, _, hfrisch, hnodup⟩ := hexp c hc
-  exact ⟨hprobe c hc, hgates c hc, hfrisch, hnodup⟩
-
-/-- Every declared floor has exactly one evaluated outcome in the report. -/
 def berichtTraegt (r : CheckReport) (c : CheckDecl D) : Prop :=
   r.boeden.length = c.boden.length
 
@@ -109,33 +99,53 @@ theorem pruef1_expansion : CheckExpansion pruefP pruefC1 := by
   · change ([false] : List Bool).Nodup
     decide
 
+/-- The read sample of both fixture reports was observed. -/
+theorem messBerichtWahr_vollstaendig : messBerichtWahr.vollstaendig := by
+  intro p hp
+  simp only [messBerichtWahr, List.mem_singleton] at hp
+  subst hp
+  rfl
+
+theorem messBerichtFalsch_vollstaendig : messBerichtFalsch.vollstaendig := by
+  intro p hp
+  simp only [messBerichtFalsch, List.mem_singleton] at hp
+  subst hp
+  rfl
+
 /-- The completed report with a positive verdict: the sample was read, the
     floor holds, the Duty is produced. -/
 theorem abschluss_wahr_zeuge : CheckAbschluss pruefP pruefC1 messBerichtWahr :=
-  ⟨pruef1_expansion, by decide, rfl⟩
+  ⟨pruef1_expansion, messBerichtWahr_vollstaendig, rfl⟩
 
 /-- The completed report with a negative verdict: the sample was read, the
     floor failed, the verdict records it -- and the same Duty is produced. -/
 theorem abschluss_falsch_zeuge : CheckAbschluss pruefP pruefC1 messBerichtFalsch :=
-  ⟨pruef1_expansion, by decide, rfl⟩
+  ⟨pruef1_expansion, messBerichtFalsch_vollstaendig, rfl⟩
 
 /-- The failed floor stays a distinguishable negative outcome. -/
-theorem abschluss_falsch_boden_zeuge : ¬ bodenHalten messBerichtFalsch := by decide
+theorem abschluss_falsch_boden_zeuge : ¬ bodenHalten messBerichtFalsch := bodenFehlt_zeuge
+
+/-- The unread fixture report with its held floor outcome. -/
+def messBerichtLuecke : CheckReport :=
+  { proben := [{ ort := "x", punkt := 0, wert := 3, gelesen := false }],
+    boeden := [true], urteil := true }
 
 /-- An unread sample completes nothing. -/
-theorem abschluss_luecke_zeuge :
-    ¬ CheckAbschluss pruefP pruefC1 { proben := [{ ort := "x", punkt := 0, wert := 3,
-      gelesen := false }], boeden := [true], urteil := true } := by
+theorem abschluss_luecke_zeuge : ¬ CheckAbschluss pruefP pruefC1 messBerichtLuecke := by
   intro h
-  exact berichtUnvollstaendig_zeuge h.2.1
+  exact Bool.false_ne_true
+    (h.2.1 { ort := "x", punkt := 0, wert := 3, gelesen := false }
+      (by simp only [messBerichtLuecke, List.mem_singleton]))
+
+/-- A report with two outcomes for one declared floor. -/
+def messBerichtUeberhang : CheckReport :=
+  { proben := [], boeden := [true, true], urteil := true }
 
 /-- A surplus floor outcome completes nothing: every declared floor has exactly
     one evaluated outcome. -/
-theorem abschluss_ueberhang_zeuge :
-    ¬ CheckAbschluss pruefP pruefC1 { proben := [], boeden := [true, true],
-      urteil := true } := by
+theorem abschluss_ueberhang_zeuge : ¬ CheckAbschluss pruefP pruefC1 messBerichtUeberhang := by
   intro h
-  exact absurd h.2.2 (by decide)
+  exact absurd h.2.2 (by unfold berichtTraegt; decide)
 
 /-- The gate discharges the completed positive report. -/
 theorem entladung_wahr_zeuge : CheckEntladung pruefP pruefC1 messBerichtWahr false :=
@@ -149,7 +159,7 @@ theorem entladung_falsch_zeuge : CheckEntladung pruefP pruefC1 messBerichtFalsch
 /-- The success-only gate admits the held positive report. -/
 theorem entladung_erfolg_zeuge :
     CheckEntladungErfolg pruefP pruefC1 messBerichtWahr false :=
-  ⟨entladung_wahr_zeuge, rfl, by decide⟩
+  ⟨entladung_wahr_zeuge, rfl, bodenHalten_zeuge⟩
 
 /-- The success-only gate refuses the negative report: its explicit
     user-logic precondition fails. -/

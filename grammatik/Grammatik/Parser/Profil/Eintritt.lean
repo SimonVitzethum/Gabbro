@@ -137,6 +137,6 @@ theorem gastQuelle_ohne_dienst (arch : String)
     (ha : (wertVon .arch arch).isNone = false) :
     gastQuellePruefung arch [] "" "" none =
       .error "entrust: missing isolation service binding" := by
-  simp [gastQuellePruefung, ha]
+  simp [gastQuellePruefung, ha]; rfl
 
 end Gabbro.Grammatik.Parser.ProfilBindung

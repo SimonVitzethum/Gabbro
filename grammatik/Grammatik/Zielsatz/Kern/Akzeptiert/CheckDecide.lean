@@ -12,6 +12,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Satz.Pruefung
+public import Grammatik.Kern.Syntax.Satz.PruefungAbschluss
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 
 @[expose] public section
@@ -91,6 +92,15 @@ def CheckAdmission (P : Programm D) (fs : List D.Fn) (checks : List (CheckDecl D
 /-- No check is vacuously admitted: the admission over the empty list holds. -/
 theorem CheckAdmission.nil (P : Programm D) (fs : List D.Fn) : CheckAdmission P fs [] :=
   ⟨fun c hc => absurd hc List.not_mem_nil, fun c hc => absurd hc List.not_mem_nil, fun c hc => absurd hc List.not_mem_nil, fun c hc _ _ => absurd hc List.not_mem_nil, List.nodup_nil⟩
+
+/-- The identity follows from the admission. -/
+theorem identitaet_aus_zulassung {P : Programm D} {fs : List D.Fn}
+    {checks : List (CheckDecl D)} {c : CheckDecl D}
+    (hA : CheckAdmission P fs checks) (hc : c ∈ checks) :
+    CheckIdentitaet fs c := by
+  obtain ⟨hexp, _, hprobe, hgates, _⟩ := hA
+  obtain ⟨_, _, _, _, _, _, _, hfrisch, hnodup⟩ := hexp c hc
+  exact ⟨hprobe c hc, hgates c hc, hfrisch, hnodup⟩
 
 end Pruefung
 

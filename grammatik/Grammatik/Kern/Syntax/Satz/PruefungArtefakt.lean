@@ -47,17 +47,17 @@ theorem sondenNachweisB_sound (checks : List (CheckDecl D)) (c : CheckDecl D)
     (status : ProbenStand) (report : CheckReport) (member : c ∈ checks)
     (accepted : sondenNachweisB checks c selectedImage artifact status report = true) :
     SondenNachweis checks c selectedImage artifact status report := by
-  obtain ⟨bound, measured⟩ := Bool.and_eq_true.mp accepted
+  obtain ⟨bound, measured⟩ := Bool.and_eq_true_iff.mp accepted
   cases identity : c.sonde with
   | none => simp [sondenBindungB, identity] at bound
   | some pair =>
     obtain ⟨externalName, text⟩ := pair
     have nameEq : externalName = artifact.name := by
-      have first := (Bool.and_eq_true.mp (Bool.and_eq_true.mp bound).1).1
+      have first := (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp bound).1).1
       simpa [sondenBindungB, identity] using first
     have others : checks.all (fun d => decide (d.name = c.name) ||
         decide (d.sonde.map Prod.fst ≠ some artifact.name)) = true :=
-      (Bool.and_eq_true.mp bound).2
+      (Bool.and_eq_true_iff.mp bound).2
     have binding : SondenBindung checks c artifact.name text := by
       refine ⟨?_, member, ?_⟩
       · simpa [nameEq] using identity

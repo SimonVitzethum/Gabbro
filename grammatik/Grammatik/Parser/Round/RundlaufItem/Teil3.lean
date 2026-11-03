@@ -137,6 +137,7 @@ theorem item_mod (segs : List String) (its : List SItemTief) (hs : PfadGut segs)
   have hI := items_rund its (.zeichen "}" :: rest) F' hits (Or.inr (Or.inl ⟨rest, rfl⟩)) (by omega)
   rw [hd, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_module]
   simp only [parseModulTief, nimmWort, strEq_self, ↓reduceIte, hP, fordereZeichen, hI]
+  split <;> simp_all [fordereZeichen, strEq_self]
 
 /-! ### `atomic` -/
 

@@ -57,8 +57,8 @@ def HerkunftSchritt (e₁ e₂ : CheckEvidenz D) : Prop :=
 theorem herkunft_schritt_aus_entladung {P : Programm D} {c : CheckDecl D}
     {r : CheckReport} {g : D.Fn} (h : CheckEntladung P c r g) :
     HerkunftSchritt (D := D) ⟨c.probe, r, true, none⟩ ⟨c.probe, r, false, some g⟩ := by
-  obtain ⟨_, _, hg⟩ := h
-  exact ⟨rfl, rfl, rfl, rfl, rfl, g, hg, rfl⟩
+  obtain ⟨_, _, _⟩ := h
+  exact ⟨rfl, rfl, rfl, rfl, rfl, g, rfl⟩
 
 /-! ## Witnesses: the travel step on the fixture, for both verdicts -/
 

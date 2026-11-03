@@ -69,11 +69,9 @@ theorem sondenNamen_mem {rest : List (CheckDecl D)} {n : String}
       have e : sondenNamen (d :: ds) = m :: sondenNamen ds := by
         simp [sondenNamen, hd]
       rw [e] at hm
-      cases hm with
-      | inl he =>
-        exact ⟨d, List.mem_cons.mpr (Or.inl rfl), t, by rw [he]; exact hd⟩
-      | inr hm' =>
-        obtain ⟨d', hmem, t', ht⟩ := ih hm'
+      rcases List.mem_cons.mp hm with he | hm'
+      · exact ⟨d, List.mem_cons.mpr (Or.inl rfl), t, by rw [he]; exact hd⟩
+      · obtain ⟨d', hmem, t', ht⟩ := ih hm'
         exact ⟨d', List.mem_cons.mpr (Or.inr hmem), t', ht⟩
 
 /-- A check of the unit carrying a sonde name puts it in the unit's list. -/
@@ -90,7 +88,7 @@ theorem sondenNamen_mem_of {d : CheckDecl D} {rest : List (CheckDecl D)}
       have e' : sondenNamen (e :: es) = sondenNamen es := by
         simp [sondenNamen, he]
       rw [e']
-      rcases hd with rfl | hd
+      rcases List.mem_cons.mp hd with rfl | hd
       · simp [ht] at he
       · exact ih hd ht
     | some p =>
@@ -98,9 +96,9 @@ theorem sondenNamen_mem_of {d : CheckDecl D} {rest : List (CheckDecl D)}
       have e' : sondenNamen (e :: es) = m :: sondenNamen es := by
         simp [sondenNamen, he]
       rw [e']
-      rcases hd with rfl | hd
+      rcases List.mem_cons.mp hd with rfl | hd
       · have h3 : some (m, t) = some (n, t') := by rw [← he]; exact ht
-        have hmn : m = n := congrArg Prod.fst h3
+        have hmn : m = n := congrArg Prod.fst (Option.some.inj h3)
         rw [hmn]
         exact List.mem_cons.mpr (Or.inl rfl)
       · exact List.mem_cons.mpr (Or.inr (ih hd ht))
@@ -151,7 +149,7 @@ theorem sondenEindeutigB_ok {checks : List (CheckDecl D)} :
         rw [List.any_eq_false]
         intro d hd
         cases hd' : d.sonde with
-        | none => by decide
+        | none => simp
         | some q =>
           obtain ⟨m, t'⟩ := q
           have hne : m ≠ n := by
@@ -172,7 +170,7 @@ theorem sonde_name_in_namen {checks : List (CheckDecl D)} {c : CheckDecl D}
     {name text : String} (h : SondenBindung checks c name text) :
     name ∈ sondenNamen checks := by
   obtain ⟨hs, hc, _⟩ := h
-  exact sondenNamen_mem_of hc (by rw [hs]; rfl)
+  exact sondenNamen_mem_of hc (by rw [hs])
 
 /-- The artifact identity: the external name, the build mode and the image
     the run was measured on. -/
@@ -206,7 +204,7 @@ theorem bestanden_kein_mass {c : CheckDecl D} {a : SondenArtefakt}
     {st : ProbenStand} {r : CheckReport} (h : r.urteil = true) :
     ¬ Gemessen c a st r := by
   intro g
-  exact absurd (h.trans g.2.1) (by decide)
+  exact Bool.false_ne_true (g.2.1.symm.trans h)
 
 /-- A stale artifact (wrong name or mode) measures nothing. -/
 theorem fremd_artefakt {c : CheckDecl D} {a : SondenArtefakt}
@@ -229,11 +227,14 @@ def sondeBerichtFalsch : CheckReport :=
   { proben := [], boeden := [], urteil := false }
 
 /-- The single bound sonde owns its name. -/
-theorem sondenEindeutig_zeuge : SondenEindeutig [pruefCSonde] := by decide
+theorem sondenEindeutig_zeuge : SondenEindeutig [pruefCSonde] :=
+  sondenEindeutigB_ok.mp rfl
 
 /-- A duplicated sonde name breaks the ownership. -/
 theorem sondenKonflikt_zeuge :
-    ¬ SondenEindeutig [pruefCSonde, pruefCSonde] := by decide
+    ¬ SondenEindeutig [pruefCSonde, pruefCSonde] := fun h => by
+  have hb := sondenEindeutigB_ok.mpr h
+  simp [sondenEindeutigB, pruefCSonde] at hb
 
 /-- The fixture binding: the check carries its name and text, alone. -/
 theorem sondenBindung_zeuge :
@@ -263,8 +264,7 @@ theorem artefakt_fremd_zeuge :
   obtain ⟨_, _, t, ht⟩ := h
   have ht' : (some ("ext", "assert x") : Option (String × String)) =
       some ("alt", t) := ht
-  have h2 : ("ext", "assert x") = ("alt", t) := by simpa using ht'
-  exact absurd (congrArg Prod.fst h2) (by decide)
+  simp at ht'
 
 end Gegenprobe
 

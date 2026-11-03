@@ -43,7 +43,7 @@ theorem erhaltung_kreislauf {P : Programm D} {c : CheckDecl D}
     {r : CheckReport} {g : D.Fn} (h : CheckEntladung P c r g) :
     (D.signatur c.probe).produziert = [c.duty] ∧
       c.duty ∈ (D.signatur g).konsumiert :=
-  ⟨CheckExpansion.produziert h.1, h.2.1⟩
+  ⟨CheckExpansion.produziert h.1.1, h.2.1⟩
 
 /-- The replayed entry: folding the same completed cycle on G or on GX yields
     the same evidence -- the entry is a pure function of probe, report and

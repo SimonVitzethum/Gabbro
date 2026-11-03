@@ -69,17 +69,17 @@ theorem abschluss_fremd_ueberhang_zeuge :
     ¬ CheckAbschluss pruefP pruefC
       { proben := [], boeden := [true], urteil := true } := by
   intro h
-  exact absurd h.2.2 (by decide)
+  exact absurd h.2.2 (by unfold berichtTraegt; decide)
 
 /-- A check with no consuming gate: the Duty would be dropped. -/
 def pruefCOhneTor : CheckDecl pruefD :=
   { pruefC with gates := [] }
 
 /-- A dropped Duty discharges nothing: no gate consumes it. -/
-theorem entladung_ohne_tor {P : Programm D} {r : CheckReport} {g : D.Fn} :
+theorem entladung_ohne_tor {P : Programm pruefD} {r : CheckReport} {g : pruefD.Fn} :
     ¬ CheckEntladung P pruefCOhneTor r g := by
   intro h
-  exact absurd h.2.2 (by decide)
+  exact absurd h.2.2 (by simp [pruefCOhneTor])
 
 end ExportAnspruch
 

@@ -231,6 +231,9 @@ def pruefD : Deklaration where
   invarianten_gehalten := fun n i _ => i.elim
   ggeteilt_bewacht := fun g _ => g.elim
 
+/-- The fixture's functions are the two Booleans. -/
+instance : DecidableEq pruefD.Fn := inferInstanceAs (DecidableEq Bool)
+
 /-- The fixture check: the probe `true` with its gate `false`. -/
 def pruefC : CheckDecl pruefD where
   name := "p"
