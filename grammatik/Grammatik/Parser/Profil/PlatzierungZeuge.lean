@@ -94,7 +94,7 @@ def pzL : AdressLayout pzD where
 
 /-- The layout is correct: the two statics' regions are disjoint. -/
 theorem pzL_ok : LayoutOk pzL where
-  geschlossen := fun t => t.elim
+  tabellenRaum := fun t => t.elim
   offen := fun t => t.elim
   feld := fun t _ => t.elim
   felder := fun t _ _ _ => t.elim
@@ -108,6 +108,7 @@ theorem pzL_ok : LayoutOk pzL where
       first
       | exact absurd rfl hne
       | (simp only [pzL] at h1 h2 h3 h4; omega)
+  globalerRaum := fun _ => ⟨by change 0 < 1; decide, rfl⟩
 
 /-- JOINT witness: the admitted source requests, the layout's bases on the alignments, and the model's
     `PlatzOk` -- the whole chain on one fixture. -/

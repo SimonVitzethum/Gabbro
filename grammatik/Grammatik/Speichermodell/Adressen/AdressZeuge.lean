@@ -125,10 +125,19 @@ theorem az_aendert : ∃ M1, RufErreichbarGX aP oG 0 (fun _ => False) aM0 M1 ∧
   exact absurd h5 (by decide)
 
 /-- The layout: table in space 0 at 100, elements of 8 bytes, the field 4 bytes at offset 0. -/
-def aL : AdressLayout aD := ⟨fun _ => 0, fun _ => 100, fun _ => 8, fun _ _ => 0, fun _ _ => 4, fun g => g.elim, fun g => g.elim⟩
+def aL : AdressLayout aD where
+  raum := fun _ => 0
+  basis := fun _ => 100
+  breite := fun _ => 8
+  versatz := fun _ _ => 0
+  groesse := fun _ _ => 4
+  gbasis := fun g => g.elim
+  ggroesse := fun g => g.elim
+  graum := fun g => g.elim
+  nominal := fun _ => 0
 
 theorem aL_ok : LayoutOk aL where
-  tabellenRaum := fun _ => ⟨by decide, rfl⟩
+  tabellenRaum := fun _ => ⟨by change 0 < 1; decide, rfl⟩
   offen := fun _ h => by simp only [Bool.false_eq_true] at h
   feld := fun _ _ => by simp only [aL, Nat.zero_add, Nat.reduceLeDiff]
   felder := fun _ _ _ h => absurd rfl h
