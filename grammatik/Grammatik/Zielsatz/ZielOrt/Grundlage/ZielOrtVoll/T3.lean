@@ -82,9 +82,10 @@ private theorem rufAntwortG_grund_treu {z z' : RufFadenG D} {vor σ : World D}
     | some resp =>
       simp [rufAntwortG, hs, hr] at ha
       subst ha
-      simp only [List.cons.injEq, RufEreignisF.why.injEq] at hlog
-      obtain ⟨⟨hg, _, heq, _, _⟩, _⟩ := hlog
-      subst g
+      simp only [List.cons.injEq] at hlog
+      obtain ⟨hev, _⟩ := hlog
+      injection hev with hg _ heq _ _
+      subst hg
       have hreason : grund = r := eq_of_heq heq
       subst r
       refine ⟨rfl, ⟨grund, hgrund, ?_⟩, ?_⟩
@@ -97,7 +98,7 @@ private theorem rufAntwortG_grund_treu {z z' : RufFadenG D} {vor σ : World D}
           · rename_i hn
             cases hr
             exact ⟨⟨cf, crho, cs0, ⟨lc, Γc, Λc, ρc, .wartetSonst n err restb k⟩⟩,
-              rst, lc, Γc, Λc, _, _, n, err, restb, k, ρc, hn, hs, rfl, rfl, rfl⟩
+              rst, lc, Γc, Λc, _, _, n, err, restb, k, ρc, hn, rfl, rfl, rfl, rfl⟩
           · cases hr
         | _ => cases hr
 
