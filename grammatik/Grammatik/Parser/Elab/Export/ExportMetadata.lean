@@ -88,6 +88,8 @@ def itemMetadata : SItemTief → Bool
   | .transT _ translator _ => clausesMetadata translator.klauseln ||
       translator.params.any (fun p => typeMetadata p.2) || translator.res.any typeMetadata
   | .specT .. => true -- Typed macro/proof admission is not supplied by predicate inlining alone.
+  | .callT sc => sc.gate.cost.isSome || sc.params.any (fun p => typeMetadata p.2) ||
+    sc.res.any typeMetadata
   | .protoT sig => clausesMetadata sig.klauseln || sig.params.any (fun p => typeMetadata p.2) ||
       sig.res.any typeMetadata
   | .tableT _ provider _ place _ _ parts => provider.isSome || place.isSome ||
