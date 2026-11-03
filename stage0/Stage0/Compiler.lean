@@ -30,7 +30,7 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   accepted : OldSource.accepts unit program = .ok true
   arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
   initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.elaborierbar)) unit = .ok ()
-  constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ()
+  constantExports : Konst.checkSourceConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ()
   metadata : unit.exportGate = Konst.checkSourceMetadata (uMembers (pre108 source.prepared.elaborierbar))
   /-- The exact source-derived measure, checked by generic lowering at entry parameters/resources. -/
   measures : {exported : Measures.Export unit // Measures.lowerMeasures unit = .ok exported} :=
@@ -49,7 +49,7 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
   let source ← Frontend.source text options
   let declarations := pre108 source.prepared.elaborierbar
   let members := uMembers declarations
-  match hc : ExportMetadata.checkConstants members with
+  match hc : Konst.checkSourceConstants members with
   | .error error => throw error
   | .ok () => do
     match he : Frontend.elabWithScopes declarations
@@ -127,7 +127,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.typedConstants scope.declared scope.functions scope.scalarOrder [] = some scope.values ∧
     (∀ item ∈ original, Frontend.ConstantMeaning scope.types scope.functions scope.values item) ∧
     Frontend.checkInitializers original result.unit = .ok () ∧
-    ExportMetadata.checkConstants original = .ok () ∧
+    Konst.checkSourceConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
     (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
       (Frontend.tableWithEmpty scope.values scope.types)).map
