@@ -383,7 +383,12 @@ theorem ruArms_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     (arms : Arms D V l Γ Λ Λ' cs) (q : D.Ax),
     bindetAxArms (D := D.mitRuhe) q (ruArms arms) = bindetAxArms q arms
   | _, _, _, _, _, .nil, _ => rfl
-  | _, _, _, _, _, .cons b rest, _ => kongr₂ (· || ·) (ruB_bindetAx b _) (ruArms_bindetAx rest _)
+  | _, _, _, _, _, .cons (c := none) b rest, _ => by
+      simp only [ruArms, bindetAxArms]
+      exact kongr₂ (· || ·) (ruB_bindetAx b _) (ruArms_bindetAx rest _)
+  | _, _, _, _, _, .cons (c := some τ) b rest, _ => by
+      simp only [ruArms, bindetAxArms]
+      exact kongr₂ (· || ·) (ruB_bindetAx b _) (ruArms_bindetAx rest _)
 
 /-- The body translation keeps the binding observation on reason arms. -/
 theorem ruGArms_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
