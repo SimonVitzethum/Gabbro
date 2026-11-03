@@ -203,14 +203,13 @@ theorem execStmt_ru_consumeTraverse {V : Vertrag D}
     : execStmt O.mitRuhe passes R' (ruS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmt]
-  rw [show (D.mitRuhe.count t).toNat + bound.toNat + 1 =
-    (D.count t).toNat + bound.toNat + 1 from by rfl]
   refine verbrauchLauf_ru (D := D) t
     (execBlock O passes R body) (execBlock O.mitRuhe passes R' (ruB body))
     (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
     (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
       wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv) (σ.lese (Λ.map resR) (ruE inv).orte) ρ)))
-    (verbrauchSel t member edge) (verbrauchSel t (ruE member) (ruE edge))
+    (verbrauchSel (D := D) t member edge)
+    (verbrauchSel (D := D.mitRuhe) (show D.mitRuhe.Tab from t) (ruE member) (ruE edge))
     (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
     (fun σ ρ => let σ := σ.lese (Λ.map resR) (ruE mass).orte; (σ, (eval σ (ruE mass) σ ρ).n))
     bound (fun σ ρ => ih_execBlock_ru_body σ ρ) (fun σ ρ => ?_) ?_ ?_
@@ -230,9 +229,9 @@ theorem execStmt_ru_consumeTraverse {V : Vertrag D}
             envR (Env.cons j (Env.cons k ρ')) := rfl
         simp only [henv, eval_ru, valR_bool]
       · intro j _ k _
-        simp only [show (valR _ j).n = j.n from congrArg Zahl.n (valR_int j),
-          show (valR _ k).n = k.n from congrArg Zahl.n (valR_int k)]
-    · conv => lhs; rw [show D.mitRuhe.count t = D.count t from rfl]
+        simp only [valR, Val.relocate]
+    · apply congrArg (fun b : Bool => !b)
+      change (alleIndizes (D.count t)).all _ = _
       conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
       exact map_all_beibehalt _ _ _ _ (fun k _ => by
         have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
