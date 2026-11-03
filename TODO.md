@@ -36,15 +36,14 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       lemma (`layU_ga_lcm_dvd`, connected to `irBild_correct` via `Emitted.Placed`) are proved, with an aligned-16
       witness; named sections are refused by name (flat runner image has no relocation policy). Open: the unconditional
       loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
-    - C14 `entrust`: the bounded model (`GuestBoundary`, owner/ABI checks, C08
-      `GuestServicePflicht`, ordinary `bindAxiomOptElse` invocation) is implemented
-      with model witnesses, pending the lead's Lean checks (THEOREM-MAP §150).
-      Source remains refused: `trustT` has no explicit service-binding field, and
-      the current C08 source exporter does not yet populate software provenance or
-      `Programm.axVertrag`. Open: retain the source service binding, export its
-      declared requires/ensures without a hardware assumption, pass source-derived
-      descriptors through the actual unit/checker adapter, and add an accepted
-      source-to-Stage-0 image witness. No connected entrust case is counted complete.
+    - C14 `entrust`: explicit `via SERVICE` source bindings now resolve declared C08 foreign
+      contracts, export software provenance and their exact requires/ensures, generate ordinary
+      fallible wrappers, and retain every descriptor in canonical and Stage-0 admission.
+      The source-to-image witness and named refusal twins are written (THEOREM-MAP §150).
+      Open: lead compilation, witness reduction and standard-axiom checks; no build was run by
+      the implementation worker. Additional source region inputs remain refused until the
+      unit can export their real owner resources (`declOf` currently has `Marke := Empty`);
+      register/privileged handover and unknown ABIs stay refused. `Spec.lean` is unchanged.
     - C07 fallible indirect calls: Stage-0 arms being added.
   - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,
     already expand into the connected `lowB_ok`/`lowEnd_ok` narrowing and store arms. Source-image witnesses now
