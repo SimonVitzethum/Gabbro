@@ -36,6 +36,10 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindAxiomOpt e a args he hp hd hgd rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindAxiomOptElse e a args he hp hd hgd hr err rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .regRead r hk rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .regReadElse r hk z sonst rest => by

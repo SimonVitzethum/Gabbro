@@ -197,8 +197,9 @@ def kRufDann (P : Programm D) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D
       | ⟨g, hg⟩ => kPush P st f rho ρ (.dann rest k) g (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
   | _, _, _, _, _, _, _, _, _ => none
 
-/-- The compound unfolds in `dann` position. -/
-def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) : {l : Bool} → {Γ : Ctx} → {Λ Λ' Λ'' : List (Res D)} → Env D Γ →
+/-- A compound step in `dann` position. The program and oracle keep the
+    fallible calls fused into the same single push or answer step as G3. -/
+def kEntf (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) : {l : Bool} → {Γ : Ctx} → {Λ Λ' Λ'' : List (Res D)} → Env D Γ →
     Stmt D (vertragVon D f) l Γ Λ Λ' → Block D (vertragVon D f) l Γ Λ' Λ'' →
     GRest D (vertragVon D f) l Γ Λ'' → KErg D
   | _, _, Λ, _, _, ρ, .ite c t e, rest, k =>
@@ -233,8 +234,20 @@ def kEntf (passes : Nat) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.para
       kLokal st f rho ρ (.wieder n bis body ueber (.dann rest k)) spur sp
   | _, _, _, _, _, ρ, .forever a inv body, rest, k =>
       kLokal st f rho ρ (.ewig a passes inv body (.dann rest k)) spur sp
-  | _, _, Λ, _, _, ρ, .callIndElse p args he hp hr err, rest, k =>
-      kLokal st f rho ρ (.dann (.bindCallIndElse p args he hp hr err .nil) (.dann rest k)) spur sp
+  | _, _, Λ, _, _, ρ, .callIndElse (τ := τ) (n := n) p args _ _ _ err, rest, k =>
+      let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
+      match eval s0 p s0 ρ with
+      | ⟨g, hg⟩ => kPush P st f rho ρ
+          (.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k)) g
+          (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
+  | _, _, Λ, _, _, ρ, .axiomCallElse _ a args _ _ _ _ _ err, rest, k =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some (Sum.inl _)) => kLokal st f rho ρ (.dann rest k) σ₂.spur σ₂.speicher
+      | (σ₂, some (Sum.inr r)) =>
+          kLokal st f rho (Env.cons (τ := reasonTy (D.agruende a)) r ρ)
+            (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur σ₂.speicher
+      | (_, none) => none
   | _, _, _, _, _, _, _, _, _ => none
 
 

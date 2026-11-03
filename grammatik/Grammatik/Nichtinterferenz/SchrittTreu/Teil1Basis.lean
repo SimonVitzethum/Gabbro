@@ -2,7 +2,7 @@
   File:      Grammatik/Nichtinterferenz/SchrittTreu.lean
   Subject:   EVERY RULE OF MACHINE G COMPUTES `kSchrittK` (`schrittK_von`).
 
-  One case per rule (74): the head residue named by the rule's `hhead` is
+  One case per rule: the head residue named by the rule's `hhead` is
   put into the ghost-free state (`kSchrittK_kern`), the side conditions are
   dropped, the value premises (`hw`, `hv`, `hstep`, …) decide the branch of
   the function, and both sides are the same term.

@@ -25,6 +25,13 @@ theorem kLeave_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D (vertra
   | travRest t inv body is k =>
       try simp only [kLeave]
       exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ (by first | exact hk.2.2 | (simp only [GRest.nR]; exact hk.2.2)) _ _) (fun _ => KErgOk.none)
+  | verbrauchRest t member edge inv bound mass body rest vor k =>
+      simp only [GRest.nR] at hk
+      simp only [kLeave]
+      exact KErgOk.ite
+        (fun _ => KErgOk.ite
+          (fun _ => KErgOk.lokal hst _ _ _ hk.2.2.2.2.2 _ _)
+          (fun _ => KErgOk.none)) (fun _ => KErgOk.none)
   | wiederRest n bis body ueber k =>
       try simp only [kLeave]
       exact KErgOk.lokal hst _ _ _ (by first | exact hk.2.2.2 | (simp only [GRest.nR]; exact hk.2.2.2)) _ _
@@ -52,6 +59,10 @@ theorem kNext_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest D (vertrag
   | travRest t inv body is k =>
       try simp only [kNext]
       exact KErgOk.lokal hst _ _ _ (by first | exact hk | (simp only [GRest.nR]; exact hk)) _ _
+  | verbrauchRest t member edge inv bound mass body rest vor k =>
+      simp only [kNext]
+      exact KErgOk.ite (fun _ => KErgOk.lokal hst _ _ _ hk _ _)
+        (fun _ => KErgOk.none)
   | wiederRest n bis body ueber k =>
       try simp only [kNext]
       exact KErgOk.lokal hst _ _ _ (by first | exact hk | (simp only [GRest.nR]; exact hk)) _ _
@@ -128,7 +139,7 @@ theorem kRufDann_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env
 theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ)
     (s : Stmt D (vertragVon D f) l Γ Λ Λ') (rest : Block D (vertragVon D f) l Γ Λ' Λ'')
     (k : GRest D (vertragVon D f) l Γ Λ'') (hs : nS S Ax s = true) (hr : nB S Ax rest = true)
-    (hk : k.nR S Ax) : KErgOk P S Ax (kEntf passes st f rho spur sp ρ s rest k) := by
+    (hk : k.nR S Ax) : KErgOk P S Ax (kEntf P O passes st f rho spur sp ρ s rest k) := by
   cases s with
   | ite c t e =>
       simp only [nS, Bool.and_eq_true] at hs
@@ -169,6 +180,11 @@ theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D 
       simp only [nS, Bool.and_eq_true] at hs
       try simp only [kEntf]
       exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hs.1, hs.2, hr, hk⟩ | (simp only [GRest.nR]; exact ⟨hs.1, hs.2, hr, hk⟩)) _ _
+  | consumeTraverse t member edge inv bound mass body =>
+      simp only [nS, Bool.and_eq_true] at hs
+      simp only [kEntf]
+      exact KErgOk.lokal hst _ _ _
+        ⟨hs.1.1.1.1, hs.1.1.1.2, hs.1.1.2, hs.1.2, hs.2, hr, hk⟩ _ _
   | retry n bis body ueber =>
       simp only [nS, Bool.and_eq_true] at hs
       try simp only [kEntf]
@@ -177,6 +193,18 @@ theorem kEntf_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D 
       simp only [nS, Bool.and_eq_true] at hs
       try simp only [kEntf]
       exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hs.1, hs.2, hr, hk⟩ | (simp only [GRest.nR]; exact ⟨hs.1, hs.2, hr, hk⟩)) _ _
+  | callIndElse p args he hp hr' err =>
+      simp only [nS, Bool.and_eq_true] at hs
+      simp only [kEntf]
+      split
+      exact KErgOk.push hst _ _ _ ⟨hs.2, rfl, hr, hk⟩ _ _ _ _
+  | axiomCallElse e a args he hp hd hgd hr' err =>
+      simp only [nS, Bool.and_eq_true] at hs
+      simp only [kEntf]
+      split
+      · exact KErgOk.lokal hst _ _ _ ⟨hr, hk⟩ _ _
+      · exact KErgOk.lokal hst _ _ _ ⟨by rw [nB_alsBlock]; exact hs.2, hk⟩ _ _
+      · exact KErgOk.none
   | _ => exact KErgOk.none
 
 theorem kDannCons_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : Env D Γ)
@@ -184,7 +212,7 @@ theorem kDannCons_ok {l : Bool} {Γ : Ctx} {Λ Λ' Λ'' : List (Res D)} (ρ : En
     (k : GRest D (vertragVon D f) l Γ Λ'') (hs : nS S Ax s = true) (hr : nB S Ax rest = true)
     (hk : k.nR S Ax) : KErgOk P S Ax (kDannCons P O passes st f rho spur sp ρ s rest k) := by
   unfold kDannCons
-  refine KErgOk.ite (fun _ => kEntf_ok P passes hst f rho spur sp ρ s rest k hs hr hk)
+  refine KErgOk.ite (fun _ => kEntf_ok P O passes hst f rho spur sp ρ s rest k hs hr hk)
     (fun _ => KErgOk.ite (fun _ => kAusDann_ok P hst f rho rest k hr hk _)
       (fun _ => kRufDann_ok P hst f rho spur sp ρ s rest k hr hk))
 

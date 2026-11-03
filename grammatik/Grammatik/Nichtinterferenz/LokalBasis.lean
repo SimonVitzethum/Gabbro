@@ -52,6 +52,7 @@ def nS (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .retry _ bis body ueber => bis.orte.all S && nB S Ax body && nB S Ax ueber
   | .forever _ inv body => inv.orte.all S && nB S Ax body
   | .axiomCall a args _ _ _ _ _ => Ax a && args.orte.all S
+  | .axiomCallElse _ a args _ _ _ _ _ err => Ax a && args.orte.all S && nE S Ax err
   | .regWrite _ _ e => e.orte.all S
   | .transition .. => true
   | .publish _ e _ _ _ _ => e.orte.all S
@@ -75,6 +76,8 @@ def nB (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .bindCallElse _ args _ _ _ err rest => args.orte.all S && nE S Ax err && nB S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nB S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nB S Ax rest
+  | .bindAxiomOpt _ a args _ _ _ _ rest => Ax a && args.orte.all S && nB S Ax rest
+  | .bindAxiomOptElse _ a args _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nB S Ax rest
   | .regRead r _ rest => (D.rtraeger r).all S && nB S Ax rest
   | .regReadElse r _ zusage sonst rest =>
       (D.rtraeger r).all S && zusage.orte.all S && nE S Ax sonst && nB S Ax rest
@@ -102,6 +105,8 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .bindCallElse _ args _ _ _ err rest => args.orte.all S && nE S Ax err && nE S Ax rest
   | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nE S Ax rest
   | .bindAxiomElse a args _ _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nE S Ax rest
+  | .bindAxiomOpt _ a args _ _ _ _ rest => Ax a && args.orte.all S && nE S Ax rest
+  | .bindAxiomOptElse _ a args _ _ _ _ _ err rest => Ax a && args.orte.all S && nE S Ax err && nE S Ax rest
   | .regRead r _ rest => (D.rtraeger r).all S && nE S Ax rest
   | .regReadElse r _ zusage sonst rest =>
       (D.rtraeger r).all S && zusage.orte.all S && nE S Ax sonst && nE S Ax rest
