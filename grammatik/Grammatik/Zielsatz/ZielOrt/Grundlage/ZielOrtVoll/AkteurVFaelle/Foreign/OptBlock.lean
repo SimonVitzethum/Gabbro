@@ -54,7 +54,7 @@ theorem akteurV_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
   cases e with
   | none =>
     refine ⟨fadenV_ax e0 hF hhead ρ (.dann rest k) σ₂.spur a args
-      (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
+      (fun hok => ⟨hok.1, (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
@@ -63,8 +63,8 @@ theorem akteurV_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel 
     simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
-    refine ⟨fadenV_ax e0 hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
-      (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
+    refine ⟨fadenV_ax e0 hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
+      (fun hok => ⟨hok.1, (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun O' R σ hz hwk => ?_), hL⟩
@@ -133,7 +133,7 @@ theorem akteurV_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : O
     simp only [execBlock, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
-    refine ⟨fadenV_ax e0 hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
+    refine ⟨fadenV_ax e0 hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (.schrumpf k)) σ₂.spur a args
       (fun hok => ⟨by have h1 := hok.1; simp only [Block.vOk, Bool.and_eq_true] at h1; exact h1.2,
         by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append h2).2, hok.2.2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
@@ -202,6 +202,6 @@ theorem akteurV_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O 
   apply ZErg.folgt_of_eq
   show weiterZ O' passes R k (execBlock O' passes R (.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ ρ) = _
   simp only [execBlock, axiomAntwortSonst, hwk, (show O'.zeiger = O.zeiger from hz), hv]
-  simp only [semV_alsBlock_schrumpf]
+  exact (semV_alsBlock_schrumpf O' passes R err k _ _).symm
 
 end Gabbro.Grammatik

@@ -120,7 +120,12 @@ theorem akteurA_dannAxiomCallElseGrund {D : Deklaration} {P : Programm D} {O : O
   rw [semV_dann_cons]
   simp only [execStmt, axiomAntwortSonst, hwk,
     (show O'.zeiger = O.zeiger from hz), hv]
-  simp only [semV_alsBlock_schrumpf]
-  cases execEnd O' passes R err (axWelt e0 a ((σ.lese Λ args.orte).fragt (.inl a)) σ₂) (Env.cons (τ := reasonTy (D.agruende a)) r ρ) <;> rfl
+  refine Eq.trans ?_ (semV_alsBlock_schrumpf O' passes R err k _ _).symm
+  have key : ∀ {τ : Ty} (o : EndAusgang (vertragVon D (M.faeden u).kopf.f) l (τ :: Γ)),
+      weiterZ O' passes R (GRest.dann rest k) o.schrumpf.zuAusgang =
+        weiterZ O' passes R k o.schrumpf.zuAusgang := by
+    intro τ o
+    cases o <;> rfl
+  exact key _
 
 end Gabbro.Grammatik

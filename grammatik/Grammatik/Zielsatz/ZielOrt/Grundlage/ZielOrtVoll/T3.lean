@@ -91,7 +91,7 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
         | (simp only [List.cons.injEq, reduceCtorEq, false_and] at hlog)
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r0 hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
+    | rueckConsGrund _ _ r0 hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
         hfg rho' hrho s0' hs0 rg hrg hn =>
       simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
       obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog
@@ -102,7 +102,7 @@ theorem rufG_grund_treu {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : R
         hn, hpop, hcaller, rfl, ?_⟩
       cases hr
       rfl
-    | dannRetGrund r0 hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
+    | dannRetGrund _ _ r0 hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g'
         hfg rho' hrho s0' hs0 rg hrg hn =>
       simp only [rufUpdateG_self, List.cons.injEq, RufEreignisF.why.injEq] at hlog ⊢
       obtain ⟨⟨hg, hrho', hr, _, _⟩, _⟩ := hlog

@@ -63,7 +63,7 @@ theorem akteurSA_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by simpa [blockOrteP] using (teil_append hok.2.1).1))
-      (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
+      (fun hok => ⟨hok.1, (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun _ => rfl) hlok (fun w hw' => by rw [e2]; exact hQ a _ _ w hw')
@@ -74,11 +74,11 @@ theorem akteurSA_dannBindAxiomOpt {D : Deklaration} {P : Programm D} {O : Orakel
     simp only [execBlockHA, axiomAntwort, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
-    refine ⟨fadenSA_ax hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
+    refine ⟨fadenSA_ax hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by simpa [blockOrteP] using (teil_append hok.2.1).1))
-      (fun hok => ⟨hok.1, by simpa [blockOrteP] using (teil_append hok.2.1).2, hok.2.2⟩)
+      (fun hok => ⟨hok.1, (teil_append hok.2.1).2, hok.2.2⟩)
       (σ₂, (O.wirkt a (((M.weltVon u).lese Λ args.orte).fragt (.inl a))
         (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
       hfr (fun _ => rfl) hlok (fun w hw' => by rw [e2]; exact hQ a _ _ w hw')
@@ -160,7 +160,7 @@ theorem akteurSA_dannBindAxiomOptElseOk {D : Deklaration} {P : Programm D} {O : 
     simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv, Ausgang.weiterOpt, ergEnv]
     rfl
   | some τ =>
-    refine ⟨fadenSA_ax hF hhead (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
+    refine ⟨fadenSA_ax hF hhead (ergEnv (some τ) (he ▸ v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
       (fun L => held_nachSig_iff (D.asignatur a) Λ L) a args
       (fun hok => args_stabilX (hFS _) args
         (by have h2 := hok.2.1; simp only [blockOrteP] at h2; exact (teil_append (teil_append h2).1).1))
@@ -245,6 +245,6 @@ theorem akteurSA_dannBindAxiomOptElseGrund {D : Deklaration} {P : Programm D} {O
   show weiterHA S O' U A passes R k
     (execBlockHA S O' U A passes R (.bindAxiomOptElse e a args he hp hd hgd hr err rest) σ0 ρ) = _
   simp only [execBlockHA, axiomAntwortSonst, hκ, hwk, (show O'.zeiger = O.zeiger from hz), hv]
-  simp only [semHA_alsBlock_schrumpf]
+  exact (semHA_alsBlock_schrumpf S O' U A passes R err k _ _).symm
 
 end Gabbro.Grammatik

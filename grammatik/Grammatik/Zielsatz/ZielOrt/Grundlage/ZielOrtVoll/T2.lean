@@ -252,8 +252,7 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .awaits .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiom .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .bindAxiomElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
-  | .bindAxiomOpt .., h, _, _ | .bindAxiomOptElse .., h, _, _ | .bindCallElse .., h, _, _ | .bindCallInd .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
-  | .regRead .., h, _, _ | .regReadElse .., h, _, _ | .awaits .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
+  | .bindAxiomOpt .., h, _, _ | .bindAxiomOptElse .., h, _, _ => by simp only [Endblock.kOk, Bool.false_eq_true] at h
   | .narrow _ _ _ sonst rest, h, σ, ρ => by
       simp only [Endblock.kOk, Bool.and_eq_true] at h
       simp only [execEnd, Endblock.orakel_kOk sonst h.1, Endblock.orakel_kOk rest h.2]
@@ -395,7 +394,6 @@ theorem ziel_ort_aus_voll (P : Programm D) (O : Orakel D) (passes : Nat) (fs : L
 #print axioms Gabbro.Grammatik.akteurV
 #print axioms Gabbro.Grammatik.andereV
 #print axioms Gabbro.Grammatik.ziel_ort_voll
-#print axioms Gabbro.Grammatik.rufG_grund_treu
 #print axioms Gabbro.Grammatik.koerperGutV_of_kOk
 #print axioms Gabbro.Grammatik.ziel_ort_aus_voll
 
