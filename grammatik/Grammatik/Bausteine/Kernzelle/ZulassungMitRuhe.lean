@@ -16,8 +16,6 @@ variable {D : Deklaration}
 
 variable [DecidableEq D.Fn]
 
-variable [DecidableEq D.Ax]
-
 /-! ## The idle-root transfer -/
 
 /-- Signature facts ride `some` (types shift by `tyR`, which fixes `int`). -/
