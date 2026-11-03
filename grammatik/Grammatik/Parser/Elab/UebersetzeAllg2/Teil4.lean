@@ -338,6 +338,8 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu
+  | .floatOf .. =>
+    .error "floatOf: canonical Endblock has no integer-to-float introduction"
   | .floatLit .. | .float .. =>
     .error "float: IEEE introduction requires a continuing G block; no canonical Endblock form"
   | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>
