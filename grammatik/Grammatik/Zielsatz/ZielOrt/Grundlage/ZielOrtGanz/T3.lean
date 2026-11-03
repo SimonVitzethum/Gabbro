@@ -50,7 +50,7 @@ theorem schritt_an_pruefungI {M : RufMaschineG D} (t : Faden) (hP : PrueftG O pa
     obtain ⟨M', hs, _⟩ := w_blatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
       _ K ρ rfl hr hH σ' ρ' hst herw
     exact ⟨M', hs⟩
-  · have hno := hP.2.2.2.2 l Γ Λ Λ Λ'' ρ _ rst k rfl hr
+  · have hno := hP.2.2.2.2.1 l Γ Λ Λ Λ'' ρ _ rst k rfl hr
     rw [hr] at hH
     obtain ⟨σ', ρ', hst, herw⟩ := uebergang_ok O passes tb fl hτ i von nach hn he hw hL _ ρ hno
     obtain ⟨M', hs, _⟩ := w_dannBlatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl

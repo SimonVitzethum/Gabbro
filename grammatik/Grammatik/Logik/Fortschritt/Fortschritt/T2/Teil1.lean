@@ -96,6 +96,23 @@ theorem fort_abb {M : RufMaschineG D} {t : Faden} (hP : PrueftG O passes M t) (w
               obtain ⟨M', hs, _⟩ := w_nextTrav (P := P) (O := O) (passes := passes) rfl tb inv body
                 is k' rest i ρ₀ hx hΛ
               exact ⟨M', hs⟩
+  | verbrauchRest tb member edge inv bound mass body nr vor k' =>
+      cases ρ with
+      | cons i ρ₀ =>
+          have hp := hP.2.2.2.2.2.2.2 _ _ _ _ ρ₀ tb member edge inv bound mass body nr vor k'
+            rest i w hx
+          obtain ⟨neum, hneum, _⟩ := Erw.lese (M.weltVon t) Λ1 mass.orte
+          cases w with
+          | false =>
+              exact ⟨_, RufSchrittG.dannNextVerbrauch M t _ _ Λ1 tb member edge inv bound mass body
+                nr vor k' rest i ρ₀ rfl hx (M.weltVon t) (.cons i ρ₀) [] rfl (by simp)
+                (by simp) _ rfl _ rfl hp.1 neum hneum hΛ⟩
+          | true =>
+              obtain ⟨neu₁, hneu₁, _⟩ := (Erw.lese (M.weltVon t) Λ1 mass.orte).trans
+                (Erw.lese ((M.weltVon t).lese Λ1 mass.orte) Λ1 inv.orte)
+              exact ⟨_, RufSchrittG.dannLeaveVerbrauch M t _ _ Λ1 tb member edge inv bound mass body
+                nr vor k' rest i ρ₀ rfl hx (M.weltVon t) (.cons i ρ₀) [] rfl (by simp)
+                (by simp) _ rfl _ rfl hp.1 _ rfl (hp.2 rfl) neu₁ hneu₁ hΛ⟩
   | wiederRest n bis body ueber k' =>
       obtain ⟨M', hs, _⟩ := w_abbWieder (P := P) (O := O) (passes := passes) rfl w n bis body ueber
         k' rest ρ hx hΛ
