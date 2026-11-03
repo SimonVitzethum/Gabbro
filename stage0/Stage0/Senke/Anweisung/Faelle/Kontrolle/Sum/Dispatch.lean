@@ -40,6 +40,7 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   cases arms with
   | nil => exact Fin.elim0 v.1
   | cons b rest =>
+    rename_i payloadTy restSchema
     simp only [lowSumTags, ← hlo0] at made
     split at made
     · next hkSmall =>
@@ -50,7 +51,7 @@ theorem lowSumTags_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       have spanPositive : 0 < span := by have := width v.1; omega
       have selectedWidth := width v.1
       have hks := hW.ks
-      let cp := sumSpanPayloadC (frei Γ reserved) _
+      let cp := sumSpanPayloadC (frei Γ reserved) payloadTy
       have p : PreS L m pc fp K (frei Γ reserved)
           (sumSpanTestC (frei Γ reserved) (frei Γ reserved + span) k ++
             [ci 19 (frei Γ reserved + span) (16 * ((cp ++ cb).length + 2)) 0] ++
@@ -127,4 +128,3 @@ theorem lowSumTags_code_bound {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : Li
 termination_by cs.length
 
 end Gabbro.Stage0.Senke
-
