@@ -32,7 +32,7 @@ theorem execStmt_ru_onTag {V : Vertrag D}
     : execStmt O.mitRuhe passes R' (ruS (.onTag (cs := zi_cs) v arms : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.onTag (cs := zi_cs) v arms : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmt]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   exact ih_execArms_ru_arms _ _ ρ
 
 set_option linter.unusedSectionVars false in
@@ -50,7 +50,7 @@ theorem execStmt_ru_onWhy {V : Vertrag D}
     : execStmt O.mitRuhe passes R' (ruS (.onWhy (n := zi_n) r arms : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.onWhy (n := zi_n) r arms : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmt]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   exact ih_execGrund_ru_arms _ _ ρ
 
 set_option linter.unusedSectionVars false in
@@ -240,8 +240,8 @@ theorem execStmt_ru_consumeTraverse {V : Vertrag D}
   · intro σ' ρ'
     simp only [ruE_orte, lese_worldR, Prod.mk.injEq]
     refine ⟨rfl, ?_⟩
-    simp only [eval_ru]
-    exact congrArg Zahl.n (valR_int _)
+    exact congrArg Zahl.n
+      (eval_ru (σ'.lese Λ mass.orte) (σ'.lese Λ mass.orte) mass ρ')
 
 set_option linter.unusedSectionVars false in
 theorem execStmt_ru_retry {V : Vertrag D}
