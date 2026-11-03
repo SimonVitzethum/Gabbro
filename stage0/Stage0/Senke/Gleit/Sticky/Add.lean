@@ -47,6 +47,7 @@ theorem softRound_aligned_sub (large : Nat) (small gap : Runner.W)
   dsimp only
   have dp : 0 < (2 : Nat) ^ gap.toNat := Nat.two_pow_pos _
   have difference := Nat.sub_add_cancel ordered
+  have differenceScaled := congrArg (fun n : Nat => n * 2 ^ gap.toNat) difference
   have numerator := Nat.sub_add_cancel cover
   rcases floatShiftJamWord_interval small gap with exactValue | ⟨odd, lo, hi⟩
   · apply softRound_scaled _ _ _ _ dp (by omega)
@@ -61,6 +62,8 @@ theorem softRound_aligned_sub (large : Nat) (small gap : Runner.W)
     have jp : 0 < (floatShiftJamWord small gap).toNat := by omega
     have jpred : (floatShiftJamWord small gap).toNat - 1 + 1 =
         (floatShiftJamWord small gap).toNat := by omega
+    have predScaled := congrArg (fun n : Nat => n * 2 ^ gap.toNat) pred
+    have jpredScaled := congrArg (fun n : Nat => n * 2 ^ gap.toNat) jpred
     exact softRound_odd_interval _ _ _ _ dp tp oddDifference (by nlinarith) (by nlinarith)
 
 /-- The subtraction is not an exact-value replacement. Its final rounded
