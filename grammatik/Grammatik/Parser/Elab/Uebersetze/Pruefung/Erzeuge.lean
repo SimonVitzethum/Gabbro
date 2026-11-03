@@ -19,6 +19,7 @@ module
 
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil11
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Data
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.FloorCode
 
 public section
 
@@ -36,8 +37,9 @@ def uProbeFn (consts : List (String × Int)) (alias : List (String × (Int × In
     (locks : List ULock) (globs : List UGlob) (koepfe : List UFnKopf) (whys : List UWhy)
     (sums : List USum) (devs : List String) (regs : List UReg) (zustaende : List UZustand)
     (specs : List (String × List String × SExpr)) (arrKonst : List (String × USide))
-    (zeiger : List String) (zb : Nat) (c : SCheck) : Except String UFn :=
-  match c.canFail with
+    (zeiger : List String) (zb : Nat) (c : SCheck) : Except String UFn := do
+  let koerper ← checkProbeCode c
+  match koerper with
   | .block ss ende =>
     let pname := probeFnName c.cname
     match elabKopf consts alias tabs locks globs whys sums (probeSig pname) devs zeiger zb with
