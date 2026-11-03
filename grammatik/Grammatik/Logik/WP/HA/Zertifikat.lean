@@ -16,6 +16,7 @@ so that nothing is lumped and nothing is missing:
 * per lock `L`, that its invariant reads only its protected carriers (`SperrLokalAn`) and holds at the declared
   initial memory (`SperrAmStart`);
 * per foreign body `a`, that its declared `ensures` reads only its declared write carriers (`AxLokalAn`);
+* every admitted function-pointer target refines its declared interface (`PtrVerfeinert`);
 * per declared start, that its `requires` holds at the initial memory with its declared arguments (`StartAmStart`).
 
 `LogikPflichten E` collects them; `logikPflichten_iff` proves that they are EXACTLY premise (b) of the goal theorem
@@ -99,6 +100,7 @@ structure LogikPflichten [DecidableEq D.Fn] (E : Einheit D) : Prop where
   keinHalt : ∀ f passes, PflichtKeinHalt E.P passes E.Q E.S (GeteiltA E.P E.ws) f
   sperrLokal : ∀ L, SperrLokalAn E.S L
   axLokal : ∀ a, AxLokalAn E.Q a
+  ptrVerfeinert : PtrVerfeinert E.P
   sperrStart : ∀ L, SperrAmStart E L
   startReq : ∀ a ∈ E.starts ++ E.gestartet, StartAmStart E a
 
@@ -108,9 +110,9 @@ theorem logikPflichten_iff [DecidableEq D.Fn] (E : Einheit D) : LogikPflichten E
   constructor
   · intro h
     exact ⟨fun passes f => pflichtWP_iff_drei.2 ⟨h.rueck f passes, h.keineVor f passes, h.keinHalt f passes⟩,
-      fun L => h.sperrLokal L, fun a => h.axLokal a, ⟨h.sperrStart, h.startReq⟩⟩
-  · intro ⟨h, hS, hQ, hStart⟩
+      fun L => h.sperrLokal L, fun a => h.axLokal a, h.ptrVerfeinert, ⟨h.sperrStart, h.startReq⟩⟩
+  · intro ⟨h, hS, hQ, hPtr, hStart⟩
     exact ⟨fun f passes => (pflichtWP_iff_drei.1 (h passes f)).1, fun f passes => (pflichtWP_iff_drei.1 (h passes f)).2.1,
-      fun f passes => (pflichtWP_iff_drei.1 (h passes f)).2.2, hS, hQ, hStart.sperren, hStart.req⟩
+      fun f passes => (pflichtWP_iff_drei.1 (h passes f)).2.2, hS, hQ, hPtr, hStart.sperren, hStart.req⟩
 
 end Gabbro.Grammatik.WP
