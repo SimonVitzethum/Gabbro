@@ -90,6 +90,24 @@ theorem routineFiniteDirectionalWord_zero (large small : Runner.W)
     routineFiniteDirectionalWord large small = 0 := by
   simp only [routineFiniteDirectionalWord, zero, beq_self_eq_true, ite_true]
 
+/-- Actual finite operands jointly satisfy the normalization premises on
+    both branches. The cancellation fixture also tests the zero shortcut. -/
+theorem routineFiniteDirectionalWord_exact_zeuge :
+    let one := BitVec.ofNat 64 4607182418800017408
+    let two := BitVec.ofNat 64 4611686018427387904
+    let minusOne := BitVec.ofNat 64 13830554455654793216
+    routineDirectionalWord two one = BitVec.ofNat 64 (3 * 2 ^ 54) ∧
+    routineIndexWord two = 1024 ∧ unpackSignWord two = 0 ∧
+    routineFiniteDirectionalWord two one = BitVec.ofNat 64 (zuBits f64
+      (rundeExakt f64 ⟨3 * 2 ^ 54, -54⟩)) ∧
+    routineDirectionalWord two two = BitVec.ofNat 64 (2 ^ 56) ∧
+    routineFiniteDirectionalWord two two = BitVec.ofNat 64 (zuBits f64
+      (rundeExakt f64 ⟨2 ^ 56, -54⟩)) ∧
+    routineDirectionalWord one minusOne = 0 ∧
+    routineFiniteDirectionalWord one minusOne = 0 := by
+  decide +kernel
+
 #print axioms routineFiniteDirectionalWord_exact
 #print axioms routineFiniteDirectionalWord_zero
+#print axioms routineFiniteDirectionalWord_exact_zeuge
 end Gabbro.Stage0.Senke
