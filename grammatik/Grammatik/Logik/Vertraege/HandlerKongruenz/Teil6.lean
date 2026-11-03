@@ -81,13 +81,13 @@ theorem stmt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_a : arms.ScopesOk := by scopes_treu
       simp only [execStmt]
       exact arms_unter bo hbV
-        (fun σ ρ hs hh => block_unter bo hbV _ σ ρ hs hh)
+        (fun b σ ρ hs hh => block_unter bo hbV b σ ρ hs hh)
         arms _ _ _ hscope_a hh
   | .onWhy r arms, σ, ρ, hscope, hh => by
       have hscope_a : arms.ScopesOk := by scopes_treu
       simp only [execStmt]
       exact grundArms_unter bo hbV
-        (fun σ ρ hs hh => block_unter bo hbV _ σ ρ hs hh)
+        (fun b σ ρ hs hh => block_unter bo hbV b σ ρ hs hh)
         arms _ _ _ hscope_a hh
   | .locks L hr body, σ, ρ, hscope, hh => by
       have hscope_body : body.ScopesOk := by scopes_treu

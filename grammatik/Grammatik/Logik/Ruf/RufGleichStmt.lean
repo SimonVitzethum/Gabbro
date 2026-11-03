@@ -22,6 +22,7 @@ public import Grammatik.Kern.Syntax.Satz
 public import Grammatik.Kern.Semantik.Semantik
 public import Grammatik.Logik.Vertraege.RahmenTreu.Tactics
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
+public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2
 public import Grammatik.Logik.Ruf.RufGleichSchleife
 public import Grammatik.Logik.Ruf.RufGleichBindBlock
 public import Grammatik.Logik.Ruf.RufGleichBindAxiom
