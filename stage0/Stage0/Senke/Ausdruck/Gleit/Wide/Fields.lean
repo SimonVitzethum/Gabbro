@@ -51,7 +51,7 @@ def denominator {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
   .eng (.shl (w + 2) (by have := upper_one (w + 1); unfold upper at this; omega)
     (by omega) (by omega) (by omega) (.lit 1) (shift w e))
     1 ((2 : Int) ^ w)
-    (.widen (by omega) (by have := Int.pow_pos (a := (2 : Int)) (n := w) (by decide); omega) (.lit 1))
+    (.widen (by omega) (by have := Int.pow_pos (n := (2 : Int)) (m := w) (by decide); omega) (.lit 1))
 
 def sticky {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
     Expr D Γ Λ (.int 0 1) :=
