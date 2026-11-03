@@ -7,8 +7,8 @@ public import Stage0.Senke.Ausdruck.Arithmetik.Wide.Run
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
 
-private theorem stringKey_admitted {K n a k out tmp : Nat}
-    (ha : a + n + 1 ≤ out) (ht : out < tmp) (hK : tmp + 1 < K) :
+theorem stringKey_admitted {K n a k out tmp : Nat}
+    (hn : n < 2 ^ 31) (ha : a + n + 1 ≤ out) (ht : out < tmp) (hK : tmp + 1 < K) :
     ∀ i ∈ stringKeyC n a k out tmp, AluIns K out i := by
   intro i hi
   unfold stringKeyC at hi
@@ -26,7 +26,7 @@ private theorem stringKey_admitted {K n a k out tmp : Nat}
     subst i
     exact AluIns.const _ _ (by omega) (by omega) (by decide)
 
-private theorem stringCompare_admitted {K acc : Nat} (hK : acc + 5 ≤ K) :
+theorem stringCompare_admitted {K acc : Nat} (hK : acc + 5 ≤ K) :
     ∀ i ∈ stringCompareC (acc + 1) (acc + 2) acc (acc + 3), AluIns K acc i := by
   intro i hi
   simp only [stringCompareC, List.mem_cons, List.mem_nil_iff, or_false] at hi
@@ -37,6 +37,7 @@ private theorem stringCompare_admitted {K acc : Nat} (hK : acc + 5 ≤ K) :
   · exact AluIns.bin 9 _ _ _ _ rfl (by omega) (by omega) (by omega) (by omega)
 
 theorem stringScan_admitted {K n q a b acc : Nat}
+    (hn : n < 2 ^ 31) (hq : q < 2 ^ 31)
     (ha : a + n + 1 ≤ acc) (hb : b + q + 1 ≤ acc) (hK : acc + 5 ≤ K) :
     ∀ k i, i ∈ stringScanC k n q a b acc → AluIns K acc i := by
   intro k
@@ -46,10 +47,10 @@ theorem stringScan_admitted {K n q a b acc : Nat}
     intro i hi
     simp only [stringScanC, List.mem_append] at hi
     rcases hi with ((hx | hy) | hc) | ht
-    · cases stringKey_admitted (K := K) (k := k) (by omega : a + n + 1 ≤ acc + 1)
+    · cases stringKey_admitted (K := K) (k := k) hn (by omega : a + n + 1 ≤ acc + 1)
         (by omega : acc + 1 < acc + 3) (by omega) i hx <;>
         constructor <;> first | assumption | omega
-    · cases stringKey_admitted (K := K) (k := k) (by omega : b + q + 1 ≤ acc + 2)
+    · cases stringKey_admitted (K := K) (k := k) hq (by omega : b + q + 1 ≤ acc + 2)
         (by omega : acc + 2 < acc + 3) (by omega) i hy <;>
         constructor <;> first | assumption | omega
     · exact stringCompare_admitted hK i hc
@@ -103,6 +104,6 @@ theorem stringCompare_value (acc : Nat) (s : Nat → Runner.W) (x y : Nat) (r : 
     · intro h; have := congrArg BitVec.toNat h; simpa [Nat.mod_eq_of_lt hx, Nat.mod_eq_of_lt hy] using this
     · exact congrArg (BitVec.ofNat 64)
   rw [lt, eq]
-  cases r <;> cases (decide (x < y)) <;> cases (x == y) <;> decide +revert
+  cases r <;> cases (decide (x < y)) <;> cases (x == y) <;> simp_all [Runner.IR.bool, scanStep]
 
 end Gabbro.Stage0.Senke
