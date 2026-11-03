@@ -308,8 +308,8 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 k.hgd errb ee)
           | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: let else of a foreign call without a reason channel"
-  | Γ, fn, n + 1, (.matchTagBeg sidx m bs) :: rest, r =>
-    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) (.matchTagBeg sidx m bs) rest with
+  | Γ, fn, n + 1, st@(.matchTagBeg ..) :: rest, r | Γ, fn, n + 1, st@(.axCallElseBeg ..) :: rest, r =>
+    match lowStructL (l := false) u caller Γ fn blockFuel (resOf u caller) (some ⟨rfl⟩) st rest with
     | .error err => .error err
     | .ok (st, rest') =>
       match lowBodyF u caller Γ fn n rest' r with

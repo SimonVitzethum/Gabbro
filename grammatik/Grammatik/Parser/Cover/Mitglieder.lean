@@ -130,6 +130,7 @@ def cS {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V 
       "Stmt.consumeTraverse" :: (eE member ++ eE edge ++ eE inv ++ eE mass ++ cB body)
   | .retry _ bis body ueber => "Stmt.retry" :: (eE bis ++ cB body ++ cB ueber)
   | .forever _ inv body => "Stmt.forever" :: (eE inv ++ cB body)
+  | .axiomCallElse (args := args) (err := handler) .. => "Stmt.axiomCallElse" :: (eA args ++ cE handler)
   | .axiomCall (args := args) .. => "Stmt.axiomCall" :: eA args
   | .regWrite (e := e) .. => "Stmt.regWrite" :: eE e
   | .transition .. => ["Stmt.transition"]

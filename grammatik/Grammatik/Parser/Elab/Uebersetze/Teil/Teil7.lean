@@ -133,7 +133,7 @@ def anwArt : SAnw → String
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w
   | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
-  | .callQ .. => "call query"
+  | .callQ .. => "call query" | .callElse .. => "call else"
   | .genericCall .. => "unexpanded generic call"
 
 /-- One body statement: an assignment or a direct call (the

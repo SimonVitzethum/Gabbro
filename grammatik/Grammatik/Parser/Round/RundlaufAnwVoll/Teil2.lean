@@ -134,7 +134,7 @@ theorem anw_call (f : String) (xs : List SExpr) (hf : NameGut f) (hw : istAnwWor
   have hA := argsM xs (.zeichen ";" :: rest) F' (args_gut xs hxs) (by omega)
   simp only [parseKopfStmt]
   rw [show F' + 1 = F' + 1 from rfl, kopf_ruf_head, hA]
-  simp only [parseRufSchwanz, strEq_semi_frage, Bool.false_eq_true, fordereZeichen, strEq_self, ↓reduceIte]
+  simp only [parseRufMitElse, parseRufSchwanz, strEq_semi_frage, Bool.false_eq_true, fordereZeichen, strEq_self, ↓reduceIte]
 
 /-! ### Statements with a block -/
 

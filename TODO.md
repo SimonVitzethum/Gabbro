@@ -21,8 +21,8 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
   code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 void and fallible optional binders
   now have connected lowering cases and accepted-image/outcome witnesses; lead validation of this completion is pending.
+  C08 statement calls have `f(args) else [(reason)] { ... };` source syntax exported to `Stmt.axiomCallElse`.
   - **Stage-0 refusals with their missing step:**
-    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
