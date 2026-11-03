@@ -338,10 +338,10 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   6. C02 pure execution, termination and effect/cost obligations.
   7. C02 immutable payload initialization and ordinary call expansion.
   8. C02 connected source/image correctness and refusal witnesses.
-  9. C16 declared-check identity and checked expansion.
-  10. C16 generated producer/probe/gate functions.
-  11. C16 actual measurement samples and floor results.
-  12. C16 completed reports for both verdicts and linear Duty discharge.
+  9. C16 declared-check identity and checked expansion (done on `c16-a`, THEOREM-MAP §136: `CheckIdentitaet`, `identitaet_aus_zulassung`, elaborated identity record).
+  10. C16 generated producer/probe/gate functions (done on `c16-a`, THEOREM-MAP §136: Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, `bool` wrapper forwarding).
+  11. C16 actual measurement samples and floor results (done on `c16-a`, THEOREM-MAP §136: `messWert`, `bodenHalten`, `berichtDeckt` with witnesses).
+  12. C16 completed reports for both verdicts and linear Duty discharge (done on `c16-a`, THEOREM-MAP §136: `CheckAbschluss`, `CheckEntladung`, `CheckEntladungErfolg` with both-verdict witnesses).
   13. C16 report/token provenance through call push and normal return.
   14. C16 G/GX replay and ownership conservation.
   15. C16 counterprobe binding, artifact identity and measured status.

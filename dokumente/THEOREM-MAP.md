@@ -6064,3 +6064,42 @@ On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. 
 * **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
 
 Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.
+
+## 136. C16: samples, floors, completed reports and Duty discharge (2026-11-03)
+
+On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 9-12 of the C16/C02 round-3 list: the report data gets its kernel meaning (item 11), the declared-check identity and the completed reports for both verdicts with the linear Duty discharge (items 9/12), and the front-end probes pinning the elaborated identity and the Duty threading (items 9/10/12). The C12 linear marks (`D.Marke`, `markFin`, `konsumiert`/`produziert`) stay the other branch's work; the interface to them is only the existing `konsumiert`/`produziert` signature fields.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungMessung.lean`:
+
+* **`messWert`**: For arbitrary `r : CheckReport`, `ort : String`, `punkt : Nat`, the first read sample at that place and point (`none` for absence, never zero).
+* **`bodenHalten`**: For arbitrary `r : CheckReport`, every evaluated floor outcome holds.
+* **`berichtDeckt`**: For arbitrary `misst : List String`, `r : CheckReport`, every measured place has a read sample at some point.
+* **`berichtDeckt_leer`**: For arbitrary `r : CheckReport`, the conclusion is `berichtDeckt [] r`.
+* **`messBerichtWahr`/`messBerichtFalsch`**: The completed fixture reports with a positive/negative verdict.
+* **`messWert_zeuge`**, **`messWert_anderer_zeuge`**, **`messWert_ungelesen_zeuge`**: The read sample, the other place absent, the unread entry absent.
+* **`bodenHalten_zeuge`**, **`bodenFehlt_zeuge`**: The held floor, the failed floor.
+* **`berichtDeckt_zeuge`**, **`berichtLuecke_zeuge`**, **`berichtUnvollstaendig_zeuge`**: Coverage, the early-return gap, the incomplete report.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungAbschluss.lean`:
+
+* **`CheckIdentitaet`**: For arbitrary `fs : List D.Fn`, `c : CheckDecl D`, the probe and every gate are members, the probe is none of its gates, the gates are pairwise distinct.
+* **`identitaet_aus_zulassung`**: For arbitrary `P : Programm D`, `fs : List D.Fn`, `checks : List (CheckDecl D)`, `c : CheckDecl D`, assuming `hA : CheckAdmission P fs checks` and `hc : c ∈ checks`, the conclusion is `CheckIdentitaet fs c`.
+* **`berichtTraegt`**: For arbitrary `r : CheckReport`, `c : CheckDecl D`, every declared floor has exactly one evaluated outcome.
+* **`CheckAbschluss`**: For arbitrary `P : Programm D`, `c : CheckDecl D`, `r : CheckReport`, the probe expands exactly, every sample was observed, every floor has its outcome.
+* **`CheckEntladung`**: For arbitrary `P`, `c`, `r`, `g : D.Fn`, the gate discharges that same report once.
+* **`CheckEntladungErfolg`**: For arbitrary `P`, `c`, `r`, `g`, the success-only precondition (verdict `true`, floors hold).
+* **`entladung_eintrag`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the discharged report travels on as the consumed evidence entry of the goal leg.
+* **`pruef_identitaet_zeuge`**, **`pruefC1`**, **`pruef1_expansion`**: The fixture identity, the floored fixture check, its exact expansion.
+* **`abschluss_wahr_zeuge`**, **`abschluss_falsch_zeuge`**, **`abschluss_falsch_boden_zeuge`**: Both verdicts completed, the failed floor distinguished.
+* **`abschluss_luecke_zeuge`**, **`abschluss_ueberhang_zeuge`**: The unread sample and the surplus outcome complete nothing.
+* **`entladung_wahr_zeuge`**, **`entladung_falsch_zeuge`**, **`entladung_erfolg_zeuge`**, **`entladung_erfolg_abgelehnt_zeuge`**, **`entladung_eintrag_zeuge`**: Both discharges, the success-only admission and refusal, the consumed entry.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Bericht.lean`:
+
+* **`probenCheckFalsch`**, **`probenCheckSonde`**: The false-verdict probe and the counterprobe fixture. Decided: the elaborated identity record, the counterprobe passthrough, the retained floors, the false probe's generated producer, the Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, the false check's generated shape, the `bool` wrapper forwarding.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungZeugen.lean`:
+
+* **`messung_abschluss_zeuge`**: Coverage, the held floor, the completed true report and the discharged negative report, jointly.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change); items 13-16 (token provenance, G/GX replay, counterprobe binding, export/Stage-0 closure) remain open.
