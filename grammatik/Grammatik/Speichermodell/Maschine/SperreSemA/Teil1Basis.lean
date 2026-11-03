@@ -258,8 +258,12 @@ theorem Endblock.execBlockHA_alsBlock :
       execBlockHA S O U A passes R e.alsBlock.2 σ ρ = (execEndHA S O U A passes R e σ ρ).zuAusgang
   | _, _, .ret _ _, _, _ => rfl
   | _, _, .retWhy _ _, _, _ => rfl
-  | _, _, .retScoped _ _, _, _ => rfl
-  | _, _, .retWhyScoped _ _, _, _ => rfl
+  | _, _, .retScoped _ _, _, _ => by
+      simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA]
+      split <;> rfl
+  | _, _, .retWhyScoped _ _, _, _ => by
+      simp only [Endblock.alsBlock, execBlockHA, execStmtHA, execEndHA]
+      split <;> rfl
   | _, _, .leave _, _, _ => rfl
   | _, _, .next _, _, _ => rfl
   | _, _, .cons s rest, σ, ρ => by

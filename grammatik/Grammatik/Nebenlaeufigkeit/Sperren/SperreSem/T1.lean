@@ -124,8 +124,15 @@ def execStmtH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhy r _, σ, _ => .why σ r
-  | .retScoped e cleanup, σ, ρ => let σ := σ.lese Λ e.orte; .zurueck (cleanup.scopes.foldl World.gibt σ) (evalErg σ e σ ρ)
-  | .retWhyScoped r cleanup, σ, _ => .why (cleanup.scopes.foldl World.gibt σ) r
+  | .retScoped e cleanup, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      if scopesInvH S cleanup.scopes σ = true then
+        .zurueck (cleanup.scopes.foldl World.gibt σ) (evalErg σ e σ ρ)
+      else .logik .schleife
+  | .retWhyScoped r cleanup, σ, _ =>
+      if scopesInvH S cleanup.scopes σ = true then
+        .why (cleanup.scopes.foldl World.gibt σ) r
+      else .logik .schleife
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
 
@@ -252,8 +259,15 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := σ.lese Λ e.orte
       .zurueck σ (evalErg σ e σ ρ)
   | .retWhy r _, σ, _ => .why σ r
-  | .retScoped e cleanup, σ, ρ => let σ := σ.lese Λ e.orte; .zurueck (cleanup.scopes.foldl World.gibt σ) (evalErg σ e σ ρ)
-  | .retWhyScoped r cleanup, σ, _ => .why (cleanup.scopes.foldl World.gibt σ) r
+  | .retScoped e cleanup, σ, ρ =>
+      let σ := σ.lese Λ e.orte
+      if scopesInvH S cleanup.scopes σ = true then
+        .zurueck (cleanup.scopes.foldl World.gibt σ) (evalErg σ e σ ρ)
+      else .logik .schleife
+  | .retWhyScoped r cleanup, σ, _ =>
+      if scopesInvH S cleanup.scopes σ = true then
+        .why (cleanup.scopes.foldl World.gibt σ) r
+      else .logik .schleife
   | .leave h, σ, ρ => .leave h σ ρ
   | .next h, σ, ρ => .next h σ ρ
   | .cons s rest, σ, ρ =>
