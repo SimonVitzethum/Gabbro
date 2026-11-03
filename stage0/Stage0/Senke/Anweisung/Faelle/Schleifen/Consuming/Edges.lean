@@ -12,7 +12,7 @@ macro "consume_arith " x:ident : tactic => `(tactic| (
   have imageLength := assemble_length $x.assembled
   have imageSize := assemble_size $x.assembled
   have initialLiteral := lit32_nat $x.bounds.1
-  simp [Image.at, Image.offset, Image.fragment, pieces, position, width, Piece.width,
+  simp [Image.addr, Image.offset, Image.fragment, pieces, position, width, Piece.width,
     travCountC_length, travCountSize, initialLiteral, decrease, narrowC,
     stopC, sysC, List.length_append] at imageLength imageSize ⊢
   first | omega | rfl | ac_rfl | (rw [addr_norm]; congr 2 <;> omega)))
@@ -44,8 +44,8 @@ theorem Ready.save (h : x.Ready m σ ρ) {i cell source : Nat} {value : W}
     (low : x.lo ≤ cell) (allocated : cell < FB + reserved)
     (savedCell : cell = x.saved)
     (ctx : frei Γ reserved ≤ x.K)
-    (endAt : x.at i + 16 = x.at (i + 1)) :
-    ∃ m', Star ⟨x.at i, x.fp⟩ m ⟨x.at (i + 1), x.fp⟩ m' ∧
+    (endAt : x.addr i + 16 = x.addr (i + 1)) :
+    ∃ m', Star ⟨x.addr i, x.fp⟩ m ⟨x.addr (i + 1), x.fp⟩ m' ∧
       AgreeW L x.fp x.lo x.K m m' ∧ x.Ready m' σ ρ ∧
       Keeps x.fp (x.counter :: x.pr) m m' ∧ x.read m' cell value ∧
       (∀ j, j < x.K → j ≠ cell →
@@ -77,9 +77,9 @@ theorem Ready.bound (h : x.Ready m σ ρ) {i index j : Nat}
     (smallIndex : j < 2 ^ 63) (read : x.read m index (BitVec.ofNat 64 j))
     (found : x.fragment[i]? = some (.code
       (travCountC (x.s + 5) (D.count x.table) ++ [ci 13 (x.s + 4) index (x.s + 5)])))
-    (endAt : x.at i + BitVec.ofNat 64 (16 * (travCountSize (D.count x.table) + 1)) =
-      x.at (i + 1)) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at (i + 1)) m
+    (endAt : x.addr i + BitVec.ofNat 64 (16 * (travCountSize (D.count x.table) + 1)) =
+      x.addr (i + 1)) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr i) (x.addr (i + 1)) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 4) x.K m m' ∧ x.read m' (x.s + 4)
         (Runner.IR.bool (decide ((j : Int) < D.count x.table)))) := by
   have pre := h.pre i (x.s + 4) _ ctx found
@@ -123,8 +123,8 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
     (room : cell < x.s + 4) (read : x.read m cell (BitVec.ofNat 64 n))
     (found : x.fragment[i]? = some (.code
       [ci 1 (x.s + 4) 1 0, ci 3 cell cell (x.s + 4)]))
-    (endAt : x.at i + 32 = x.at j) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at j) m
+    (endAt : x.addr i + 32 = x.addr j) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr i) (x.addr j) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp cell x.K m m' ∧
         (∀ q, q < x.s + 4 → q ≠ cell →
           m'.rd64 (slot x.fp (BitVec.ofNat 64 q)) = m.rd64 (slot x.fp (BitVec.ofNat 64 q))) ∧
@@ -160,7 +160,7 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
 
 /-- Stop code is reached through an ordinary extracted block. -/
 theorem Ready.stop (h : x.Ready m σ ρ) :
-    Stops ⟨x.at 49, x.fp⟩ m (logikCode (D := D) .schleife) := by
+    Stops ⟨x.addr 49, x.fp⟩ m (logikCode (D := D) .schleife) := by
   have slice := h.slice 49 (.code (stopC (logikCode (D := D) .schleife) (x.s + 4)))
     _ rfl rfl
   exact stop_ok slice.1 (by simpa [stopC, sysC] using slice.2) h.frame
@@ -185,7 +185,7 @@ theorem Ready.same (h : x.Ready m σ ρ) {a b : Zahl 0 (D.count x.table - 1)}
     (ctx : frei Γ reserved ≤ x.s + 4)
     (ra : x.read m (x.s + 1) (BitVec.ofInt 64 a.n))
     (rb : x.read m x.s (BitVec.ofInt 64 b.n)) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 16) (x.at 17) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 16) (x.addr 17) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 4) x.K m m' ∧
         x.read m' (x.s + 4) (Runner.IR.bool (decide (a.n = b.n)))) := by
   have pre := h.pre 16 (x.s + 4) [ci 14 (x.s + 4) (x.s + 1) x.s] ctx rfl
