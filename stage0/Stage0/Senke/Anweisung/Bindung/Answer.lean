@@ -105,10 +105,9 @@ theorem fallible_decode {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} {n :
   have raw : rohW b n w = (if negative then -1 else w.toInt) * ((n : Int) + 1) := by
     simp only [rohW, nz, ↓reduceIte]
     by_cases error : negative
-    · rw [if_pos error, miss, if_pos error]
-      simp only
+    · simp only [if_pos error, miss]
       omega
-    · rw [if_neg error, if_neg error]
+    · simp only [if_neg error]
   rw [raw]
   simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte, Int.mul_ediv_cancel _ divisor]
   by_cases error : negative
