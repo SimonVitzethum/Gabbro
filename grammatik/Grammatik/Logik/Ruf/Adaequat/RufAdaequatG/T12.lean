@@ -130,6 +130,12 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     | verbrauchFort => kopfwegH
     | dannLeaveVerbrauch => kopfwegH
     | dannNextVerbrauch => kopfwegH
+    | rueckScopedWert ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
+        subst r <;> kopfwegH
+    | rueckScopedGrund ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
+        subst r <;> kopfwegH
 
 theorem ruf_fortsetzung :
     (M7G.faeden 0).kopf = callerFrameG ∧

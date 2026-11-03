@@ -107,6 +107,50 @@ def rufAntwortG (z : RufFadenG D) (σ : World D)
         | .inr r => RufEreignisF.why z.kopf.f z.kopf.rho r z.kopf.s0 σ
       pure ⟨st, ⟨c.f, c.rho, c.s0, rest⟩, σ.spur, ev :: z.log⟩
 
+/-- Both answer channels retain exactly the cleanup trace. -/
+theorem rufAntwortG_spur {z z' : RufFadenG D} {σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z σ a = some z') : z'.spur = σ.spur := by
+  cases hs : z.stapel with
+  | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; rfl
+  | cons c st =>
+      simp only [rufAntwortG, hs] at h
+      cases hr : antwortRestG z.kopf.f a c.rest <;>
+        simp_all [Option.bind]
+
+/-- Answering either keeps an empty root stack or removes its first frame. -/
+theorem rufAntwortG_stapel {z z' : RufFadenG D} {σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z σ a = some z') : z'.stapel = z.stapel.tail := by
+  cases hs : z.stapel with
+  | nil => simp only [rufAntwortG, hs, Option.some.injEq] at h; subst z'; rfl
+  | cons c st =>
+      simp only [rufAntwortG, hs] at h
+      cases hr : antwortRestG z.kopf.f a c.rest <;>
+        simp_all [Option.bind]
+
+/-- Cleanup changes only the trace, including for an empty scope list. -/
+theorem World.gibt_foldl_mem (σ : World D) (Ls : List D.Lock) :
+    (Ls.foldl World.gibt σ).speicher = σ.speicher := by
+  obtain ⟨hs, hg⟩ := World.gibt_foldl_speicher σ Ls
+  simp only [World.speicher, hs, hg]
+
+/-- Releasing several locks cannot introduce a held lock. -/
+theorem mem_of_mem_eraseScopes (Ls : List D.Lock) (held : List D.Lock) {K : D.Lock}
+    (h : K ∈ Ls.foldl (fun h L => h.erase L) held) : K ∈ held := by
+  induction Ls generalizing held with
+  | nil => exact h
+  | cons L Ls ih => exact List.mem_of_mem_erase (ih _ h)
+
+/-- A lock outside the cleanup list survives every release. -/
+theorem mem_eraseScopes_of_not_mem (Ls : List D.Lock) (held : List D.Lock) {K : D.Lock}
+    (hn : K ∉ Ls) (h : K ∈ held) : K ∈ Ls.foldl (fun h L => h.erase L) held := by
+  induction Ls generalizing held with
+  | nil => exact h
+  | cons L Ls ih =>
+      apply ih _ (fun hm => hn (List.mem_cons_of_mem _ hm))
+      exact (List.mem_erase_of_ne (fun he => hn (List.mem_cons.mpr (Or.inl he)))).mpr h
+
 /-- The current world of thread `f`: live shared memory plus its own trace. -/
 def RufMaschineG.weltVon (M : RufMaschineG D) (f : Faden) : World D :=
   M.speicher.welt (M.faeden f).spur

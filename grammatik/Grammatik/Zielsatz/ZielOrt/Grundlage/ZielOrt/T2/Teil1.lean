@@ -36,7 +36,7 @@ theorem lese_offen (σ : World D) (Λ : List (Res D)) (os : List (D.Tab ⊕ D.Gl
 
 /-- **How one step moves the held locks of the acting thread** on the
     repaired G: they stay; or one lock `L` is added while no other thread
-    holds it (`dannLocks`, the only take); or one lock is released that the
+    holds it (`dannLocks`, the only take); or a list of locks is released that the
     head's static holdings NAME (`freiGib` and the `frei` peels, the
     release markers of an enclosing `locks` of the head frame). The bare
     `gibt` -- a release of ANY held lock at ANY time -- is gone: there is
@@ -45,8 +45,8 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     (hs : RufSchrittG P O passes M f M') :
     offen (M'.faeden f).spur = offen (M.faeden f).spur ∨
     (∃ L, RufFreiG M f L ∧ offen (M'.faeden f).spur = L :: offen (M.faeden f).spur) ∨
-    (∃ L, Res.held L ∈ (M.faeden f).kopf.rest.2.2.1 ∧
-      offen (M'.faeden f).spur = (offen (M.faeden f).spur).erase L) := by
+    (∃ Ls : List D.Lock, (∀ L ∈ Ls, Res.held L ∈ (M.faeden f).kopf.rest.2.2.1) ∧
+      offen (M'.faeden f).spur = Ls.foldl (fun held L => held.erase L) (offen (M.faeden f).spur)) := by
   cases hs with
   | g1 hs =>
     cases hs with
@@ -77,7 +77,10 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         exact Or.inr (Or.inl ⟨L, hfrei, rfl⟩)
     | freiGib l Γ Λ L k ρ hhead =>
         simp only [rufUpdateG_self]
-        refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
+        refine Or.inr (Or.inr ⟨[L], ?_, rfl⟩)
+        intro K hK
+        have he : K = L := List.mem_singleton.mp hK
+        subst K
         rw [hhead]
         exact List.mem_cons_self
     | _ =>
@@ -129,12 +132,18 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
     cases hs with
     | peelFreiLeave l Γ Λ L rest k ρ hl hhead =>
         simp only [rufUpdateG_self]
-        refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
+        refine Or.inr (Or.inr ⟨[L], ?_, rfl⟩)
+        intro K hK
+        have he : K = L := List.mem_singleton.mp hK
+        subst K
         rw [hhead]
         exact (Block.held_iff rest L).mp List.mem_cons_self
     | peelFreiNext l Γ Λ L rest k ρ hl hhead =>
         simp only [rufUpdateG_self]
-        refine Or.inr (Or.inr ⟨L, ?_, rfl⟩)
+        refine Or.inr (Or.inr ⟨[L], ?_, rfl⟩)
+        intro K hK
+        have he : K = L := List.mem_singleton.mp hK
+        subst K
         rw [hhead]
         exact (Block.held_iff rest L).mp List.mem_cons_self
     | dannNextEwig l Γ Λ a n inv body k rest ρ hl _ σ' ρ' _ hstep =>
@@ -217,6 +226,24 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         simp only [rufUpdateG_self]
         refine Or.inl ?_
         simp only [lese_offen] <;> rfl
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
+        simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        refine Or.inr (Or.inr ⟨R.scopes, ?_, ?_⟩)
+        · intro L hL
+          rw [hhead]
+          exact R.genau.symm.mem_iff.mp (List.mem_append_right _ (List.mem_map.mpr ⟨L, hL, rfl⟩))
+        · rw [hs₂]
+          change (R.scopes.foldl World.gibt σ₁).haelt = _
+          rw [haelt_gibt_foldl, hs₁, lese_haelt]
+          rfl
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
+        simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
+        refine Or.inr (Or.inr ⟨R.scopes, ?_, ?_⟩)
+        · intro L hL
+          rw [hhead]
+          exact R.genau.symm.mem_iff.mp (List.mem_append_right _ (List.mem_map.mpr ⟨L, hL, rfl⟩))
+        · rw [hs₂]
+          exact haelt_gibt_foldl _ _
     | _ =>
         simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *
         subst_vars
@@ -270,7 +297,7 @@ theorem exklusivG (hO : GutO O) (sp : Speicher D)
           · exact hfrei g hg hLg
           · exact ih f g hfg L hLf hLg
         · rw [e] at hLf
-          exact ih f g hfg L (List.mem_of_mem_erase hLf) hLg
+          exact ih f g hfg L (mem_of_mem_eraseScopes _ _ hLf) hLg
       · rw [hfremd f hf] at hLf
         by_cases hg : g = f0
         · subst hg
@@ -282,7 +309,7 @@ theorem exklusivG (hO : GutO O) (sp : Speicher D)
             · exact hfrei f hf hLf
             · exact ih f g hfg L hLf hLg
           · rw [e] at hLg
-            exact ih f g hfg L hLf (List.mem_of_mem_erase hLg)
+            exact ih f g hfg L hLf (mem_of_mem_eraseScopes _ _ hLg)
         · rw [hfremd g hg] at hLg
           exact ih f g hfg L hLf hLg
 

@@ -1,5 +1,7 @@
 module
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2a
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2G6
+public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte.T2G7
 @[expose] public section
 
 
@@ -434,138 +436,8 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         rw [e2, hX, List.append_assoc]
         rfl
     | _ => leseO
-  | g6 hs =>
-    cases hs with
-    | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR, endblockOrteP, List.all_append, Bool.and_eq_true] at hC
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-          (Args.orte_darf args) hΛ
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-            (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-          (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
-          (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-        refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
-          evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
-        rw [e2, hX, List.append_assoc]
-        rfl
-    | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR, endblockOrteP, List.all_append, Bool.and_eq_true] at hC
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-          (Args.orte_darf args) hΛ
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-            (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-          (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
-          (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
-        refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
-          evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
-        rw [e2, hX, List.append_assoc]
-        rfl
-
-    | endeBindAxiomOptElseOk l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR, endblockOrteP, List.all_append, Bool.and_eq_true] at hC
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-          (Args.orte_darf args) hΛ
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-            (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-          (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
-          (hl.heldIn hΛ) (fun t ht => hp.hw t ht) (fun g hgg => hp.hg g hgg)
-        refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
-          evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
-        rw [e2, hX, List.append_assoc]
-        rfl
-    | endeBindAxiomOptElseGrund l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR, endblockOrteP, List.all_append, Bool.and_eq_true] at hC
-        subst hs₁
-        have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
-          (Args.orte_darf args) hΛ
-        have e2 : σ₂ = (O.wirkt a (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-            (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
-          have := congrArg Prod.fst hax
-          simp only [axiomAntwortSonst] at this
-          exact this.symm
-        obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
-          (((M.weltVon f).lese Λ args.orte).fragt (.inl a))
-          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
-          (hl.heldIn hΛ) (fun t ht => hp.hw t ht) (fun g hgg => hp.hg g hgg)
-        refine ⟨X ++ ([Ereignis.fremd (.inl a)] ++ leseEv (M.weltVon f) Λ args.orte), ?_,
-          evOk_append hok (evOk_append (evOk_fremd _) (evOk_lese _ _ hC.1.1))⟩
-        rw [e2, hX, List.append_assoc]
-        rfl
-  | g7 hs =>
-    cases hs with
-    | dannVerbrauch => leseO
-    | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead
-        σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR] at hC
-        refine ⟨leseEv σ₂ Λ mass.orte ++
-          (leseEv σ₁ Λ (member.orte ++ edge.orte) ++ leseEv (M.weltVon f) Λ inv.orte), ?_,
-          evOk_append (evOk_lese _ _ hC.2.2.2.1)
-            (evOk_append (evOk_lese _ _ (by
-              simp only [List.all_append, Bool.and_eq_true]; exact ⟨hC.1, hC.2.1⟩))
-              (evOk_lese _ _ hC.2.2.1))⟩
-        simp only [hs₃, hs₂, hs₁, lese_spur, List.append_assoc] <;> rfl
-    | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead
-        σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR] at hC
-        refine ⟨leseEv σ₁ Λ (member.orte ++ edge.orte) ++ leseEv (M.weltVon f) Λ inv.orte, ?_,
-          evOk_append (evOk_lese _ _ (by
-            simp only [List.all_append, Bool.and_eq_true]; exact ⟨hC.1, hC.2.1⟩))
-            (evOk_lese _ _ hC.2.2.1)⟩
-        simp only [hs₂, hs₁, lese_spur, List.append_assoc] <;> rfl
-    | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead
-        σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR] at hC
-        subst hs₁
-        exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ hC.2.2.2.1⟩
-    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
-        hleave hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall σ₁ hs₁ hw
-        neu₁ hneu₁ hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR] at hC
-        refine ⟨leseEv σm Λ inv.orte ++ leseEv σ' Λ mass.orte, ?_,
-          evOk_append (evOk_lese _ _ hC.2.2.2.1) (evOk_lese _ _ hC.2.2.2.2.1)⟩
-        simp only [hs₁, hsm, lese_spur, List.append_assoc,
-          leave_welt' _ _ _ _ _ _ _ _ hstep] <;> rfl
-    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
-        hnext hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall neum hneum hΛ =>
-        simp only [rufUpdateG_self]
-        rw [hhead] at hC
-        simp only [GRest.oR] at hC
-        rw [hsm, next_welt' _ _ _ _ _ _ _ _ hstep]
-        exact ⟨leseEv _ _ _, rfl, evOk_lese _ _ hC.2.2.2.2.1⟩
+  | g6 hs => exact schritt_ev_g6 hO hs hC
+  | g7 hs => exact schritt_ev_g7 hO hs hC
 
 /-! ## 5. Every access of a step is bounded by its function -/
 

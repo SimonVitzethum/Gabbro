@@ -452,6 +452,12 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
     | dannNextVerbrauch =>
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
+    | rueckScopedWert ρ r2 e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
+        widerlegeK hhead
+    | rueckScopedGrund ρ r2 grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
+        widerlegeK hhead
 
 
 /-! ## 5. The pending call chain

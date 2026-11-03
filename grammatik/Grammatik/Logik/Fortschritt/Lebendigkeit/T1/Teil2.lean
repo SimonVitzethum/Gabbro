@@ -58,6 +58,12 @@ theorem ende_ret_kein_schritt {M M' : RufMaschineG D} {t : Faden}
         simp only [GRest.istEndeRet, Bool.false_eq_true] at hk
   | g7 hs =>
     cases hs with
+    | rueckScopedWert ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hk <;> simp only [GRest.istEndeRet, Bool.false_eq_true, reduceCtorEq] at hk
+    | rueckScopedGrund ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r <;>
+        rw [hhead] at hk <;> simp only [GRest.istEndeRet, Bool.false_eq_true, reduceCtorEq] at hk
     | _ =>
         rw [‹(M.faeden t).kopf.rest = _›] at hk
         simp only [GRest.istEndeRet, Bool.false_eq_true] at hk

@@ -346,6 +346,13 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannNextVerbrauch (passes := p + j) (M.plus j) f l Γ Λ t member edge inv bound mass body rest vor (k.plus j) restb i ρ hnext (RufRahmenG.plus_rest hhead) σ' ρ' neu ((execStmt_blatt_passes O p (p + j) keinRuf _ rfl _ _).symm.trans hstep) hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ
 
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.rueckScopedWert (passes := p + j) (M.plus j) f ρ (r.plus j) e R (RufRahmenG.plus_rest hhead) (by rw [GRest.plus_scopedWert]; exact hret) hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu (z.plus j) (rufAntwortG_plus j hantwort)
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
+        rw [RufMaschineG.plus_update]
+        exact RufSchrittG.rueckScopedGrund (passes := p + j) (M.plus j) f ρ (r.plus j) grund R (RufRahmenG.plus_rest hhead) (by rw [GRest.plus_scopedGrund]; exact hret) hscope hΛ σ₂ hs₂ neu hneu (z.plus j) (rufAntwortG_plus j hantwort)
+
 theorem rufErreichbarG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M0 M : RufMaschineG D}
     (h : RufErreichbarG P O p M0 M) : RufErreichbarG P O (p + j) (M0.plus j) (M.plus j) := by
   induction h with

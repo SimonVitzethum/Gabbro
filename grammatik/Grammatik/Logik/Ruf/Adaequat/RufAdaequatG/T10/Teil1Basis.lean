@@ -479,6 +479,12 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | dannNextVerbrauch =>
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | rueckScopedWert ρ r2 e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
+        widerlege hhead
+    | rueckScopedGrund ρ r2 grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r2 <;>
+        widerlege hhead
 
 
 end Gabbro.Grammatik

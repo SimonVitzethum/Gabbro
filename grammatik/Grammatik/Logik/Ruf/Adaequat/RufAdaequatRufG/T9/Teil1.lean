@@ -198,6 +198,12 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | verbrauchFort => kopfwegH
     | dannLeaveVerbrauch => kopfwegH
     | dannNextVerbrauch => kopfwegH
+    | rueckScopedWert ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
+        subst r <;> kopfwegH
+    | rueckScopedGrund ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;>
+        subst r <;> kopfwegH
 
 /-- A thread whose head waits stays so, and logs nothing, along any run. -/
 theorem wartet_lauf {P : Programm D} {O : Orakel D} {passes : Nat} {f : Faden}

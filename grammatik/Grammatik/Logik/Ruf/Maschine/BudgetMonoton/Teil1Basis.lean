@@ -141,6 +141,32 @@ theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .zurueckgekehrt _ => rfl
   | _, _, _, .leer => rfl
 
+/-- Shifting loop counters does not change the source return selected. -/
+theorem GRest.plus_scopedWert (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (r : GRest D V l Γ Λ) : (r.plus j).scopedWert = r.scopedWert := by
+  cases r <;> rfl
+
+theorem GRest.plus_scopedGrund (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (r : GRest D V l Γ Λ) : (r.plus j).scopedGrund = r.scopedGrund := by
+  cases r <;> rfl
+
+/-- Returning a saved answer commutes with shifting the suspended counters. -/
+theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z σ a = some z') : rufAntwortG (z.plus j) σ a = some (z'.plus j) := by
+  obtain ⟨st, kopf, spur, log⟩ := z
+  cases st with
+  | nil =>
+      simp only [rufAntwortG, Option.some.injEq] at h
+      subst z'
+      rfl
+  | cons c st =>
+      obtain ⟨cf, crho, cs0, ⟨l, Γ, Λ, ρ, r⟩⟩ := c
+      cases a <;> cases r <;>
+        simp_all [rufAntwortG, antwortRestG, RufFadenG.plus, RufRahmenG.plus, GRest.plus]
+      all_goals split at h <;>
+        simp_all [rufAntwortG, antwortRestG, RufFadenG.plus, RufRahmenG.plus, GRest.plus]
+
 /-! ## 2. The budget decides nothing but the budget -/
 
 /-- **A leaf runs the same at every budget** (it contains no loop). -/

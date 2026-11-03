@@ -455,4 +455,17 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       exact ownInv_step_dannNextVerbrauch (P := P) (O := O) (passes := passes) (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hnext := hnext) (hhead := hhead) (σm := σm) (ρr := ρ'.tail)
 #print axioms ownInv_step
 
+    | rueckScopedWert ρ r e R hhead hret =>
+      rcases GRest.scopedWert_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;> subst r <;>
+        rw [hhead] at hH <;> obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
+      · cases hor with | ende _ he => cases he
+      · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; cases hs
+      · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; cases hs
+    | rueckScopedGrund ρ r grund R hhead hret =>
+      rcases GRest.scopedGrund_faelle hret with hr | ⟨rest, hr⟩ | ⟨Λ', rest, k, hr⟩ <;> subst r <;>
+        rw [hhead] at hH <;> obtain ⟨k0, c, g, hk, hf, hor⟩ := head_run hH rfl
+      · cases hor with | ende _ he => cases he
+      · obtain ⟨c2, hs, _⟩ := hor.stmtEnde; cases hs
+      · obtain ⟨c2, hs, _⟩ := hor.stmt trivial; cases hs
+
 end Gabbro.Grammatik.ArenaOwnership.Machine

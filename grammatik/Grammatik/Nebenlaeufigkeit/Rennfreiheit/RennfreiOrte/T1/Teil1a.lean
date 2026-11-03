@@ -120,6 +120,50 @@ private theorem GRest.oR_weiterOpt (P : Programm D) (C : D.Tab ⊕ D.Glob → Bo
 
 /-! ## 2. Every rule keeps the read bound -/
 
+/-- A scoped value-return head contributes only the return expression's reads. -/
+theorem GRest.scopedWert_oR {P : Programm D} {C : D.Tab ⊕ D.Glob → Bool}
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {r : GRest D V l Γ Λ} {e : ErgExpr D Γ Λ V.erg} {R : RueckRessourcen D V Λ}
+    (hc : r.oR P C) (h : r.scopedWert = some (e, R)) : e.orte.all C = true := by
+  rcases GRest.scopedWert_faelle h with he | ⟨rest, he⟩ | ⟨Λ', rest, k, he⟩ <;> subst r
+  · exact hc
+  · simp only [GRest.oR, endblockOrteP, stmtOrteP, List.all_append, Bool.and_eq_true] at hc
+    exact hc.1
+  · simp only [GRest.oR, blockOrteP, stmtOrteP, List.all_append, Bool.and_eq_true] at hc
+    exact hc.1.1
+
+/-- Resuming a caller preserves its static read-carrier bound. -/
+theorem antwortRestG_oR (P : Programm D) (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    {V : Vertrag D}
+    (c c' : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ)
+    (h : antwortRestG g a c = some c') (C : D.Tab ⊕ D.Glob → Bool) (hm : c.2.2.2.2.oR P C) :
+    c'.2.2.2.2.oR P C := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a with
+  | inl v =>
+      cases r with
+      | wartet b k =>
+          simp only [antwortRestG] at h
+          split at h
+          · simp only [Option.some.injEq] at h; subst c'; exact hm
+          · cases h
+      | wartetSonst n err b k =>
+          simp only [antwortRestG] at h
+          split at h
+          · simp only [Option.some.injEq] at h; subst c'; exact hm.2
+          · cases h
+      | _ => simp only [antwortRestG, Option.some.injEq] at h; subst c'; exact hm
+  | inr grund =>
+      cases r with
+      | wartetSonst n err b k =>
+          simp only [antwortRestG] at h
+          split at h
+          · simp only [Option.some.injEq] at h; subst c'
+            exact ⟨by rw [blockOrteP_alsBlock]; exact hm.1, hm.2.2⟩
+          · cases h
+      | _ => cases h
+
 set_option hygiene false in
 /-- Case (A) of `schrittOrte`: a head-local step. -/
 macro "kopfO" : tactic => `(tactic| (
@@ -343,6 +387,38 @@ theorem schrittOrte {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       all_goals simp_all
   | g7 hs =>
     cases hs with
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
+      simp only [rufUpdateG_self]
+      cases hs : (M.faeden f).stapel with
+      | nil =>
+          simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
+          subst z
+          exact Or.inl ⟨hs.symm, rfl, fun _ _ => trivial⟩
+      | cons caller rst =>
+          simp only [rufAntwortG, hs] at hantwort
+          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
+          | none => simp [hr] at hantwort
+          | some rest =>
+              simp [hr] at hantwort
+              subst z
+              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl, rfl,
+                fun C hm => antwortRestG_oR P _ _ _ _ hr C hm⟩)
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ σ₂ hs₂ neu hneu z hantwort =>
+      simp only [rufUpdateG_self]
+      cases hs : (M.faeden f).stapel with
+      | nil =>
+          simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
+          subst z
+          exact Or.inl ⟨hs.symm, rfl, fun _ _ => trivial⟩
+      | cons caller rst =>
+          simp only [rufAntwortG, hs] at hantwort
+          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
+          | none => simp [hr] at hantwort
+          | some rest =>
+              simp [hr] at hantwort
+              subst z
+              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl, rfl,
+                fun C hm => antwortRestG_oR P _ _ _ _ hr C hm⟩)
     | _ =>
       kopfO
       all_goals simp_all

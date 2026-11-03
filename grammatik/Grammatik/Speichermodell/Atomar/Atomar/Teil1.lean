@@ -165,7 +165,7 @@ theorem gaInv_exklusiv (hO : GutO O) (sp : Speicher D)
       rcases List.mem_cons.mp hLf with rfl | hLf
       · exact hfrei g hg hLg
       · exact ih f g hfg L hLf hLg
-    · rw [e] at hLf; exact ih f g hfg L (List.mem_of_mem_erase hLf) hLg
+    · rw [e] at hLf; exact ih f g hfg L (mem_of_mem_eraseScopes _ _ hLf) hLg
   · rw [hfremd f hf] at hLf
     by_cases hg : g = f0
     · subst hg
@@ -175,7 +175,7 @@ theorem gaInv_exklusiv (hO : GutO O) (sp : Speicher D)
         rcases List.mem_cons.mp hLg with rfl | hLg
         · exact hfrei f hf hLf
         · exact ih f g hfg L hLf hLg
-      · rw [e] at hLg; exact ih f g hfg L hLf (List.mem_of_mem_erase hLg)
+      · rw [e] at hLg; exact ih f g hfg L hLf (mem_of_mem_eraseScopes _ _ hLg)
     · rw [hfremd g hg] at hLg; exact ih f g hfg L hLf hLg
 
 /-- **Every access holds the guard**, from the trace invariant after the step alone (the
