@@ -159,6 +159,8 @@ inductive UStmt
   | retires : String → UStmt
   /-- One named invariant scope, closed by `blkEnd`. Source metadata duties stay gated. -/
   | breakingBeg : String → UStmt
+  /-- Integer-to-float introduction, retaining the operand and declared result bounds. -/
+  | floatOf : String → USide → (Int × Int) → (Int × Int) → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
