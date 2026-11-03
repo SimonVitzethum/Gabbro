@@ -20,19 +20,19 @@ theorem resume {m : Mem} {σ : World D} {ρ : Env D (.index (D.count x.table) ::
     (savedRead : x.read m x.saved (BitVec.ofInt 64 old))
     (σ' : World D) (ρ' : Env D (.index (D.count x.table) :: Γ))
     (body : Reach L x.fp x.lo x.K (x.s :: x.counter :: x.saved :: x.pr)
-      ⟨x.at 39, x.fp⟩ m (if leaving then x.at 44 else x.at 41) σ' ρ' reserved) :
+      ⟨x.addr 39, x.fp⟩ m (if leaving then x.addr 44 else x.addr 41) σ' ρ' reserved) :
     let measured := q.massW σ' ρ'.tail
     if 0 ≤ measured.2 ∧ measured.2 ≤ x.bound ∧ measured.2 < old then
       if leaving then
         if (q.invW measured.1 ρ'.tail).2 = true then
-          Reach L x.fp x.lo x.K x.pr ⟨x.at 39, x.fp⟩ m (x.at 50)
+          Reach L x.fp x.lo x.K x.pr ⟨x.addr 39, x.fp⟩ m (x.addr 50)
             (q.invW measured.1 ρ'.tail).1 ρ'.tail reserved
-        else Stops ⟨x.at 39, x.fp⟩ m (logikCode (D := D) .schleife)
-      else ∃ m', Star ⟨x.at 39, x.fp⟩ m ⟨x.at 2, x.fp⟩ m' ∧
+        else Stops ⟨x.addr 39, x.fp⟩ m (logikCode (D := D) .schleife)
+      else ∃ m', Star ⟨x.addr 39, x.fp⟩ m ⟨x.addr 2, x.fp⟩ m' ∧
         AgreeW L x.fp x.lo x.K m m' ∧ Keeps x.fp x.pr m m' ∧ q.Entry n m' measured.1 ρ'.tail
-    else Stops ⟨x.at 39, x.fp⟩ m (logikCode (D := D) .schleife) := by
+    else Stops ⟨x.addr 39, x.fp⟩ m (logikCode (D := D) .schleife) := by
   have body' : Reach L x.fp x.lo x.K (x.counter :: x.saved :: x.pr)
-      ⟨x.at 39, x.fp⟩ m (if leaving then x.at 44 else x.at 41) σ' ρ' reserved := by
+      ⟨x.addr 39, x.fp⟩ m (if leaving then x.addr 44 else x.addr 41) σ' ρ' reserved := by
     obtain ⟨mem, path, frame, env, world, kept⟩ := body
     exact ⟨mem, path, frame, env, world, fun j hj => kept j (by simp [hj])⟩
   obtain ⟨m1, bodyRun, bodyFrame, bodyEnv, bodyWorld, bodyKept, fuelRead1, savedRead1⟩ :=
@@ -73,11 +73,11 @@ theorem correct {O : Orakel D} {passes : Nat}
     {l : Bool} {outerLeave outerNext : W}
     (bodyRun : ∀ m σ ρ, x.Ready m σ ρ →
       Sim L P f x.σ0 x.ρ0 x.rp x.cfp x.fp x.lo x.K
-        (x.s :: x.counter :: x.saved :: x.pr) ⟨x.at 39, x.fp⟩ m
-        (x.at 41) (x.at 44) (x.at 41) (execBlock O passes R body σ ρ) reserved) :
+        (x.s :: x.counter :: x.saved :: x.pr) ⟨x.addr 39, x.fp⟩ m
+        (x.addr 41) (x.addr 44) (x.addr 41) (execBlock O passes R body σ ρ) reserved) :
     ∀ n m σ ρ, q.Entry n m σ ρ →
-      Sim L P f x.σ0 x.ρ0 x.rp x.cfp x.fp x.lo x.K x.pr ⟨x.at 2, x.fp⟩ m
-        (x.at 50) outerLeave outerNext
+      Sim L P f x.σ0 x.ρ0 x.rp x.cfp x.fp x.lo x.K x.pr ⟨x.addr 2, x.fp⟩ m
+        (x.addr 50) outerLeave outerNext
         (verbrauchLauf (l := l) x.table (fun σ ρ => execBlock O passes R body σ ρ)
           q.invW q.sel q.massW x.bound n σ ρ) reserved := by
   apply runtime x.table (fun σ ρ => execBlock O passes R body σ ρ)
@@ -121,13 +121,13 @@ theorem correct {O : Orakel D} {passes : Nat}
     dsimp only
     have again : ∀ σ' ρ',
         Reach L x.fp x.lo x.K (x.s :: x.counter :: x.saved :: x.pr)
-          ⟨x.at 39, x.fp⟩ m2 (x.at 41) σ' ρ' reserved →
+          ⟨x.addr 39, x.fp⟩ m2 (x.addr 41) σ' ρ' reserved →
         let measured := q.massW σ' ρ'.tail
         if 0 ≤ measured.2 ∧ measured.2 ≤ x.bound ∧ measured.2 < (q.massW σr ρ).2 then
-          ∃ m', Star ⟨x.at 2, x.fp⟩ mem ⟨x.at 2, x.fp⟩ m' ∧
+          ∃ m', Star ⟨x.addr 2, x.fp⟩ mem ⟨x.addr 2, x.fp⟩ m' ∧
             AgreeW L x.fp x.lo x.K mem m' ∧ Keeps x.fp x.pr mem m' ∧
             q.Entry n m' measured.1 ρ'.tail
-        else Stops ⟨x.at 2, x.fp⟩ mem (logikCode (D := D) .schleife) := by
+        else Stops ⟨x.addr 2, x.fp⟩ mem (logikCode (D := D) .schleife) := by
       intro σ' ρ' body
       have resumed := q.resume false ready2 (by have := entry.2.2; omega)
         oldBound fuelRead2 savedRead σ' ρ' body
