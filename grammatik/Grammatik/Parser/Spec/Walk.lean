@@ -172,6 +172,9 @@ def Walk.statement (w : Walk) (locals : Locals) : Nat → SAnw → Except String
     | .bindQ b n t e =>
       let t ← t.mapM ty
       return .bindQ b n t (← { w with expected := t }.expr locals f e)
+    | .callIndElse pointer args reason body =>
+      return .callIndElse (← ex pointer) (← args.mapM ex) reason
+        (← w.statement (locals.filter (fun p => !strEq p.1 reason)) f body)
     | .callElse name args reason body =>
       let .call name args ← ex (.call name args) | throw "spec.statement.call"
       return .callElse name args reason (← w.statement (locals.filter (fun p => !strEq p.1 reason)) f body)
