@@ -355,12 +355,12 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
     | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedWert (passes := p + j) (M.plus j) f ρ (r.plus j) e R
-          (RufRahmenG.plus_rest (j := j) hhead) (by rw [GRest.plus_scopedWert]; exact hret)
+          (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedWert j r |>.trans hret)
           hscope hΛ σ₁ hs₁ neu hneu hnonempty
     | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedGrund (passes := p + j) (M.plus j) f ρ (r.plus j) grund R
-          (RufRahmenG.plus_rest (j := j) hhead) (by rw [GRest.plus_scopedGrund]; exact hret) hscope hΛ hnonempty
+          (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedGrund j r |>.trans hret) hscope hΛ hnonempty
     | rueckFreigabe ρ a L remaining hhead hnonempty =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckFreigabe (passes := p + j) (M.plus j) f ρ a L remaining
@@ -373,12 +373,12 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
     | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedWertDirekt (passes := p + j) (M.plus j) f ρ (r.plus j) e R
-          (RufRahmenG.plus_rest (j := j) hhead) (by rw [GRest.plus_scopedWert]; exact hret)
+          (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedWert j r |>.trans hret)
           hscope hΛ σ₁ hs₁ neu hneu hempty (z.plus j) (rufAntwortG_plus j ha)
     | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.rueckScopedGrundDirekt (passes := p + j) (M.plus j) f ρ (r.plus j) grund R
-          (RufRahmenG.plus_rest (j := j) hhead) (by rw [GRest.plus_scopedGrund]; exact hret)
+          (RufRahmenG.plus_rest (j := j) hhead) (GRest.plus_scopedGrund j r |>.trans hret)
           hscope hΛ hempty (z.plus j) (rufAntwortG_plus j ha)
 
 theorem rufErreichbarG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M0 M : RufMaschineG D}

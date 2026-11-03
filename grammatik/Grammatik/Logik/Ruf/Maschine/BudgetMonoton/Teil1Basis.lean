@@ -174,7 +174,7 @@ private theorem antwortRestG_plus (j : Nat) {V : Vertrag D} (g : D.Fn)
   cases a <;> cases r <;> first
   | rfl
   | (simp only [antwortRestG, GRest.plus]
-     split <;> simp_all only [Option.map, ↓reduceDIte])
+     split <;> simp_all only [Option.map, ↓reduceDIte, GRest.plus])
 
 /-- Returning a saved answer commutes with shifting the suspended counters. -/
 theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {vor σ : World D}
@@ -188,14 +188,17 @@ theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {vor σ : World D}
       rfl
   | cons c st =>
       cases hr : antwortRestG kopf.f a c.rest with
-      | none => simp only [rufAntwortG, hr, Option.bind] at h
+      | none =>
+          simp only [rufAntwortG, hr, bind, Option.bind] at h
+          cases h
       | some rest =>
           have hplus := antwortRestG_plus j kopf.f a c.rest
           rw [hr] at hplus
           simp only [Option.map] at hplus
-          simp only [rufAntwortG, hr, Option.bind, Option.some.injEq] at h
+          simp only [rufAntwortG, hr, bind, pure, Option.bind, Option.some.injEq] at h
           subst z'
-          simp only [RufFadenG.plus, RufRahmenG.plus, rufAntwortG, List.map_cons, hplus, Option.bind]
+          simp only [RufFadenG.plus, RufRahmenG.plus, rufAntwortG, List.map_cons, hplus, bind, pure, Option.bind]
+          cases a <;> rfl
 
 /-! ## 2. The budget decides nothing but the budget -/
 
