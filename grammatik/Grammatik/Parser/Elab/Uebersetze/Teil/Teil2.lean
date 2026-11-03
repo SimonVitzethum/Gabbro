@@ -176,7 +176,7 @@ structure UKonstFn where
   rumpf : SAnw
   signature : FnSig
 
-/-- Bind integer arguments only when their checked parameter types admit them. -/
+/-- Bind integer arguments only when their checked parameter types accept them. -/
 def uKonstBinde : List (String × Ty) → List Int → Option (List (String × Int))
   | [], [] => some []
   | (n, .int pl ph) :: ps, v :: vs =>
