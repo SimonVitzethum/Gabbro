@@ -151,6 +151,18 @@ def parseAdapt (f : Nat) (art : String) (toks : List Token) :
                         | _ => .error "adapter without body"
 
 
+/-- `spec S[` / `impl S[` open a group (`spec fn` / `impl fn` do not): the group kind and
+    the tokens behind the word. Compared with `strEq`, so proofs reduce it with literal lemmas. -/
+def itemGroupKopf : List Token → Option (Bool × List Token)
+  | .wort s :: rest =>
+    let nachFn : Bool := match rest with
+      | .wort t :: _ => strEq t "fn"
+      | _ => false
+    if strEq s "spec" then (if nachFn then none else some (true, rest))
+    else if strEq s "impl" then (if nachFn then none else some (false, rest))
+    else none
+  | _ => none
+
 mutual
 /-- `module path { items }`. -/
 def parseModulTief (f : Nat) (toks : List Token) :
@@ -214,11 +226,7 @@ def parseItemKopfTief (f : Nat) (toks : List Token) :
   match f with
   | 0 => .error "out of fuel"
   | f + 1 =>
-    let group := match toks with
-      | .wort "spec" :: .wort "fn" :: _ | .wort "impl" :: .wort "fn" :: _ => none
-      | .wort "spec" :: rest => some (true, rest)
-      | .wort "impl" :: rest => some (false, rest)
-      | _ => none
+    let group := itemGroupKopf toks
     match group with
     | some (spec, rest) => parseTaggedGroup f spec rest
     | none => match sammleModifikatoren toks with
