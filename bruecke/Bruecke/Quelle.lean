@@ -46,8 +46,9 @@ that statement for premise (b) of the goal theorem:
 
 * `Pflichten src` is a `Prop` COMPUTED from the text: the Lean front end `uebersetzeAllg` elaborates
   `src` (`uOf`), and the duties are `meetsU` of every function (the statement a person proves),
-  next to the Bool checks of the unit's shape (`nullB`, `stimmigB`, `rangB`). Nothing printed by
-  Rust is in it.
+  next to the Bool checks of the unit's shape (`nullB`, `stimmigB`, `rangB`,
+  `ohneTransitionB`) and the separate O43 duty (`SchnittstellenPflicht`). Nothing printed by
+  Rust is in it; Body proofs alone no longer close the interface-refinement component.
 * `nutzer_aus_quelle` is the theorem over EVERY `src`: if the front end accepts `src` and
   `Pflichten src` is proved, premise (b) (`NutzerPflicht`, and with the atomic rely
   `NutzerPflichtA`) holds for the unit `einheitAllg` built from what the front end produced.
