@@ -221,10 +221,10 @@ def lowAssignDurchW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
   | .error _ => none
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr ⟨0, ⟨read, true, none⟩, .table num⟩) =>
+    | some (.ptr ⟨space, ⟨read, true, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         (fieldHitW u ⟨num, h⟩ fname).map fun fi =>
-          match lowVar Γ j (.ptr (.table num (read, true))), lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix,
+          match lowVar Γ j (.ptr ⟨space, ⟨read, true, none⟩, .table num⟩), lowIdx u Γ Λ fn 0 ⟨num, h⟩ ix,
               lowWertAtE u Γ Λ fn none ((declOf u).typ ⟨num, h⟩ fi) v with
           | .ok pv, .ok i, .ok e =>
             if hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ then
@@ -233,7 +233,9 @@ def lowAssignDurchW {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx
                   show (vertragVon (declOf u) caller).schreibt ⟨num, h⟩ = true
                   rw [vSchreibt_eq u caller ⟨num, h⟩]
                   exact hw
-                .ok (Stmt.assignThru (D := declOf u) (Expr.var pv) ⟨num, h⟩ (capTab_some u num h) fi i e hwV hL)
+                do
+                  let cap ← checkedTableCap u space num h
+                  pure (Stmt.assignThru (D := declOf u) (Expr.var pv) ⟨num, h⟩ cap.down fi i e hwV hL)
               else .error "write without right"
             else .error "access without held guard"
           | .error e, _, _ | _, .error e, _ | _, _, .error e => .error e

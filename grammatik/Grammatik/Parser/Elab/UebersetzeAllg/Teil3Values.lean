@@ -56,12 +56,12 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .error e => .error e
   | .ok j =>
     match fn.kinds[j]? with
-    | some (.ptr (.table num (true, w))) =>
+    | some (.ptr ⟨space, ⟨true, w, none⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
         | .ok fh =>
-          match lowVar Γ (sh + j) (.ptr (.table num (true, w))) with
+          match lowVar Γ (sh + j) (.ptr ⟨space, ⟨true, w, none⟩, .table num⟩) with
           | .error e => .error e
           | .ok v =>
             match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
@@ -69,13 +69,14 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
             | .ok i =>
               if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
                   Res.von (declOf u) wdd ∈ Λ) then
-                .ok (by
-                  rw [← fh.hbool]
-                  exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩
-                    (capTab_some u num h) fh.idx i hL)
+                do
+                  let cap ← checkedTableCap u space num h
+                  pure (by
+                    rw [← fh.hbool]
+                    exact Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ cap.down fh.idx i hL)
               else .error "access without held guard"
       else .error "pointer table unknown"
-    | some (.ptr ⟨0, ⟨true, w, some owner⟩, .table num⟩) =>
+    | some (.ptr ⟨space, ⟨true, w, some owner⟩, .table num⟩) =>
       if h : num < u.tabs.length then
         match fieldHitB u ⟨num, h⟩ fname with
         | .error e => .error e
@@ -83,7 +84,7 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
           match heig : eignerMarke u owner with
           | .none => .error "owned read without a declared owner mark"
           | .some m =>
-            match lowVar Γ (sh + j) (.ptr ⟨0, ⟨true, w, some owner⟩, .table num⟩) with
+            match lowVar Γ (sh + j) (.ptr ⟨space, ⟨true, w, some owner⟩, .table num⟩) with
             | .error e => .error e
             | .ok v =>
               match lowIdx u Γ Λ fn sh ⟨num, h⟩ ix with
@@ -92,7 +93,9 @@ def lowBoolDurch (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
                 if hL : (∀ wdd ∈ (declOf u).braucht ⟨num, h⟩,
                     Res.von (declOf u) wdd ∈ Λ) then
                   if he : m ∈ eignerAt u ⟨num, h⟩ then
-                    .ok (durchOwnTermB u Γ Λ num w h fh owner m v i heig he hL)
+                    do
+                      let cap ← checkedTableCap u space num h
+                      pure (durchOwnTermB u Γ Λ num w h fh owner m v cap.down i heig he hL)
                   else .error "owned read without owner guard"
                 else .error "access without held guard"
       else .error "pointer table unknown"

@@ -3,6 +3,7 @@ module
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil1
+public import Grammatik.Parser.Elab.UebersetzeAllg.TableCapabilities
 
 @[expose] public section
 
@@ -117,18 +118,6 @@ theorem typAt_bool (u : UProg) (t : Fin u.tabs.length)
   unfold typAt
   rw [hb]
   rfl
-
-/-- `tabNr` at a live number. -/
-theorem tabNr_some (u : UProg) (num : Nat) (h : num < u.tabs.length) :
-    (declOf u).tabNr num = some (⟨num, h⟩ : Fin u.tabs.length) := by
-  show (if h' : num < u.tabs.length then
-    (some ⟨num, h'⟩ : Option (Fin u.tabs.length)) else none) = _
-  rw [dif_pos h]
-
-/-- Exported tables use the registered normal space. -/
-theorem capTab_some (u : UProg) (num : Nat) (h : num < u.tabs.length) :
-    (declOf u).capTab 0 num = some (⟨num, h⟩ : Fin u.tabs.length) :=
-  Deklaration.capTab_of (tabNr_some u num h) rfl (by decide)
 
 /-! ## Generic lowering: field search, variables -/
 
