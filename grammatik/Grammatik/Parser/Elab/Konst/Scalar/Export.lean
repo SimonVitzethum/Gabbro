@@ -102,6 +102,13 @@ structure SourceFunction (k : UKonstFn) (lo hi : Int) where
   postSource : normalizeClauses (locals (("result", .int lo hi) :: k.params)) k.constants true
     k.signature.klauseln = .ok model.post
 
+/-- The source-expression induction reaches the exact body retained by the call
+    certificate, not an independently supplied post-normalization elaboration. -/
+theorem SourceFunction.normalized (fn : SourceFunction k lo hi) :
+    expression (locals k.params) (normalizeNames (locals k.params) k.constants fn.source) =
+      .ok ⟨_, fn.model.body.2.2⟩ := by
+  simpa only [fn.bodySource] using fn.normalization.meaning.normalized
+
 /-- Elaborate the original body and both original contracts before computing a candidate. -/
 def elaborate (k : UKonstFn) :
     Except String (Sigma fun lo : Int => Sigma fun hi : Int => SourceFunction k lo hi) :=
@@ -191,7 +198,6 @@ theorem CheckedCall.normalized_denotation (call : CheckedCall k fns env sources)
     uKonstWert call.lo call.hi fns call.bindings 64
       (normalizeNames (locals k.params) k.constants call.function.source) =
         some (eval before call.function.model.body.2.2.expr after call.args).n := by
-  have structural := call.function.normalization.meaning.normalized
   rw [call.function.model.body.2.2.equation, call.certificate.body]
   exact call.candidate
 
