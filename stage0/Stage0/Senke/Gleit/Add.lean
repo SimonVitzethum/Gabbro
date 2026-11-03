@@ -8,8 +8,8 @@
     connects the reference to the shared special-case dispatcher
     (`floatAddSpecial_model`), so the later IR routine replays the same
     decomposition (unpack, special cases, align, add, round, normalize,
-    pack) lemma by lemma. `sub`/`mul`/`div` have no reference here and
-    stay refused. -/
+    pack) lemma by lemma. `Normal/Sub.lean` derives subtraction from
+    the composed adder; multiplication and division remain refused. -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Stage0.Senke.Ausdruck.Arithmetik.AddSub
