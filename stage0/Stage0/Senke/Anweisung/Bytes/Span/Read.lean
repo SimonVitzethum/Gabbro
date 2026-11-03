@@ -57,7 +57,7 @@ theorem readBytesWords_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
 
 theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (i : Expr D Γ Λ (.int a b)) {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .int 0 255)
-    (n : Nat) (lower : 0 ≤ a) (upper : b + n ≤ D.count t)
+    (n : Nat) (lower : 0 ≤ a) (upper : b + n ≤ D.count t) (access : darf D t Λ)
     {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W} {c : List II}
     (world : ∀ m, W m → WeltAt m L σ)
@@ -66,7 +66,7 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     (made : readBytesWideL L t f (lowE (currentOld := currentOld) L i (reserved := reserved)) n d = some (c, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.int 0 (256 ^ n - 1))
-      (eval σ₀ (.getBytes t f hf n i lower upper (by assumption)) σ ρ) := by
+      (eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) := by
   simp only [readBytesWideL] at made
   split at made
   · next representable =>
@@ -76,5 +76,37 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
     refine ⟨m', steps, changed, trivial, ?_⟩
     simpa only [encodeWords, eval, Int.natCast_zero, Int.add_zero] using output
   · cases made
+
+/-- Actual expression lowering uses the same complete-value conclusion for both
+    the single-word kernel and the chunk-count induction. -/
+theorem getBytes_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
+    (i : Expr D Γ Λ (.int a b)) {t : D.Tab} {f : D.Feld t} (hf : D.typ t f = .int 0 255)
+    (n : Nat) (hlo : 0 ≤ a) (hhi : b + n ≤ D.count t) (access : darf D t Λ)
+    {σ₀ σ : World D} {fp : Runner.W} {K d top : Nat} {W : Runner.Mem → Prop}
+    {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W} {c : List II}
+    (hWL : ∀ m, W m → WeltAt m L σ)
+    (ih : ∀ d c top, lowE (currentOld := currentOld) L i d reserved = some (c, top) → top ≤ K → ∀ m pc,
+      Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c (Enc L (.int a b) (eval σ₀ i σ ρ)))
+    (h : lowE (currentOld := currentOld) L (reserved := reserved) (.getBytes t f hf n i hlo hhi access) d = some (c, top))
+    (hK : top ≤ K) (hp : Pre L m pc fp K d c ρ W reserved) :
+    ValueOk L m pc fp K d c (.int 0 (256 ^ n - 1))
+      (eval σ₀ (.getBytes t f hf n i hlo hhi access) σ ρ) := by
+    simp only [lowE_eqs] at h
+    split at h
+    · next hn =>
+      have power : (256 : Int) ^ n ≤ (256 : Int) ^ 8 := by
+        have natural := Nat.pow_le_pow_right (n := 256) (i := n) (by decide) hn
+        have cast : ((256 ^ n : Nat) : Int) ≤ ((256 ^ 8 : Nat) : Int) := Int.ofNat_le.mpr natural
+        simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using cast
+      have ceiling : (256 : Int) ^ 8 = 2 ^ 64 := by decide
+      rw [ceiling] at power
+      refine Ok.value ?_ (integerWords_unsigned (by decide) (by omega))
+      have hr := readBytesL_ok i hf hWL hlo
+        ih
+        n 0 d c top (by simpa using hhi) (by omega) h hK m pc hp
+      exact hr.mono (fun w hw => by
+        change w = BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf n (eval σ₀ i σ ρ).n))
+        simpa only [Int.natCast_zero, Int.add_zero] using hw)
+    · exact readBytesWide_ok i hf n hlo hhi access hWL ih h hK hp
 
 end Gabbro.Stage0.Senke
