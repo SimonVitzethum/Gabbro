@@ -76,6 +76,12 @@ theorem saved_measure_before_child (abi depth parent child : Nat)
       (counterPair (abi + 2 * depth) child).1 :=
   counterPair_nested abi depth parent child hp hc
 
+/-- Saving the pre-body measure never overwrites the remaining fuel. -/
+theorem control_pair_distinct (reserved remaining : Nat) :
+    (counterPair reserved remaining).1 ≠ (counterPair reserved remaining).2 := by
+  simp only [counterPair]
+  omega
+
 /-- Every selector operand starts beyond both live index words, the domain
     flag and the candidate backup used by the predecessor membership test. -/
 theorem scratch_above_binders (Γ : Ctx) (count : Int) (reserved : Nat)
