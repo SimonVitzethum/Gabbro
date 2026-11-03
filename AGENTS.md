@@ -39,12 +39,16 @@ The Lean module-system migration and the split of every Lean file below 500 line
 
 ### Scope: every userspace Gabbro form to Stage-0 IR
 
-The active implementation task is **only to compile every existing Gabbro language form needed by userspace
-programs into Stage-0 IR and build the connected translation pipeline**, formally verified. Outside this task, and
-not counted as unfinished work: device-register reads, writes, fallible reads and register transitions; source ASM
-bodies, boot code, privileged instructions and the proposed raw-address syntax (planned only, in
-[LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md); ASM/boot behaviour is user logic with explicit proof
-obligations, never silently a hardware assumption). Existing safe region/reference userspace memory is in scope.
+The active implementation task is to compile every existing Gabbro language form needed by userspace
+programs into Stage-0 IR and build the connected translation pipeline, formally verified, **and, from 2026-11-03
+(owner), to implement [LOW-LEVEL-SYNTAX-PLAN.md](dokumente/LOW-LEVEL-SYNTAX-PLAN.md) completely**: source ASM bodies,
+boot code, privileged instructions, address/context/view types with the raw-address syntax, device-register
+reads/writes/fallible reads/register transitions, and the proof boundary of that plan (ASM/boot behaviour is user
+logic with explicit proof obligations, never silently a hardware assumption). The low-level work follows the plan's
+own order (canonical Lean model first, then generic refinement and bridge, then parser/exporter/checker/lowering);
+the recommended answers to its four owner questions are approved, EXCEPT that the proposed diff of `Spec.lean`
+(question 2: splitting the software foreign assumptions into user obligations) is shown to the owner before it is
+merged. Existing safe region/reference userspace memory stays in scope as before.
 Work is prioritized by completed, connected source-to-IR cases, not by the number of helper lemmas, commits or added
 lines. Cover the whole language rather than repeatedly expanding infrastructure for a small subset.
 

@@ -1,8 +1,9 @@
 # Future low-level syntax and proof boundary
 
-Status: design only, 2026-10-31. This document proposes a future canonical language/model change;
-none of its new syntax is accepted or implemented by this task. Source ASM, boot, privileged
-instructions and raw-address access are outside the current userspace Gabbro-to-IR assignment.
+Status: design 2026-10-31; ORDERED FOR COMPLETE IMPLEMENTATION by the owner on 2026-11-03 (recommendations of
+"Rule changes and owner decisions" approved; the `Spec.lean` diff of decision 2 goes to the owner before merge).
+The syntax below is still not accepted until its canonical Lean rules exist. Source ASM, boot, privileged
+instructions and raw-address access are now part of the active assignment (see AGENTS.md).
 Device-register forms remain excluded; normal RAM authority below never authorizes MMIO, ports,
 DMA or device-register operations. Keep the existing assembly IR runner. Do not restore a source
 interpreter, create a second runner or modify seL4 for this design.
