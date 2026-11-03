@@ -40,7 +40,7 @@ theorem execStmtH_ru_putBytes {V : Vertrag D}
   by
   refine Or.inl ?_
   simp only [ruS, execStmtH]
-  rw [orte2, lese_worldR, eval_ru, eval_ru, schreibBytes_worldR t f hf]
+  erw [orte2, lese_worldR, eval_ru, eval_ru, schreibBytes_worldR t f hf]
   rfl
 
 set_option linter.unusedSectionVars false in
@@ -112,7 +112,7 @@ theorem execStmtH_ru_ite {V : Vertrag D}
     : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.ite c t e : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.ite c t e : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtH]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   cases h : (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ : Bool)
   · simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
     exact ih_execBlockH_ru_e _ ρ
@@ -136,7 +136,7 @@ theorem execStmtH_ru_onOption {V : Vertrag D}
     : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.onOption (n := zi_n) o p a : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.onOption (n := zi_n) o p a : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtH]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
   cases h : eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ with
   | none => exact ih_execBlockH_ru_a _ ρ
@@ -159,7 +159,7 @@ theorem execStmtH_ru_onTag {V : Vertrag D}
     : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.onTag (cs := zi_cs) v arms : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.onTag (cs := zi_cs) v arms : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtH]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   exact ih_execArmsH_ru_arms _ _ ρ
 
 set_option linter.unusedSectionVars false in
@@ -177,7 +177,7 @@ theorem execStmtH_ru_onWhy {V : Vertrag D}
     : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.onWhy (n := zi_n) r arms : Stmt D V l Γ Λ Λ')) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.onWhy (n := zi_n) r arms : Stmt D V l Γ Λ Λ') σ ρ) :=
   by
   simp only [ruS, execStmtH]
-  rw [ruE_orte, lese_worldR, eval_ru]
+  erw [ruE_orte, lese_worldR, eval_ru]
   exact ih_execGrundH_ru_arms _ _ ρ
 
 set_option linter.unusedSectionVars false in
