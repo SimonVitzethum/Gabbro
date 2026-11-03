@@ -354,7 +354,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .glob g _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs] at h
     exact globalValueC_ok h hK hWL hp
-  | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp => by
+  | _, _, .slot t f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thru _ t _ f i _, d, c, top, h, hK, m, pc, ρ, hp | _, _, .thruOwn _ t _ _ i _ _ _ _ _ _, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ci1, ti⟩, hci, hs⟩ := h
     have tops := slotValueC_top hs
