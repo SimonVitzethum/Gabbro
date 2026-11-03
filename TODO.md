@@ -29,8 +29,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - Computed wide-integer-to-float conversion, long string concatenation/order, wide option
       tests, non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
       wide statement narrowing, and unsupported entry-snapshot subtrees.
-    - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
+    - Unbound foreign gates; wide/reference/region
       foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
+    - Fallible indirect statement-else source syntax is implemented, including expression AST, printer,
+      generic round trip and export to `Stmt.callIndElse`; acceptance/refusal witnesses await the lead build.
+      Fallible void pointer statements and pointer expressions beyond locals/function references remain refused.
     - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
       owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual generic calls/module headers, counterprobes,
       annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
