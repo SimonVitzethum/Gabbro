@@ -171,7 +171,8 @@ theorem checkOkB_abgeleitet (u : UProg) (P : Programm (declOf u))
       rw [sigAt_konsumiert, nimmtAt_singleton u _ _ _ (hgates_nimmt g hg) hmark]
     simp only [hk, decide_eq_true_eq, List.mem_singleton, Bool.and_eq_true]
     exact ⟨rfl, hgates_mem g hg⟩
-  have htor : toreEindeutig gates = true := toreEindeutig_iff.mpr hnodup
+  have htor : toreEindeutig (D := declOf u) gates = true :=
+    (toreEindeutig_iff (D := declOf u)).mpr hnodup
   unfold checkOkB
   rw [decide_eq_true hergS, decide_eq_true hgruS,
     decide_eq_true (show ((declOf u).signatur probe).konsumiert = [(duty, 0)] from hkons),

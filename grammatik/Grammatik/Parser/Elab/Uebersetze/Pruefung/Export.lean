@@ -138,7 +138,7 @@ theorem treue_aus_entladung {P : Programm D} {c : CheckDecl D}
     simp only [List.mem_singleton] at he hc'
     subst he
     subst hc'
-    exact ⟨rfl, g, hg, rfl⟩
+    exact Or.inr ⟨rfl, g, hg, rfl⟩
   · intro c' hc' e₁ he₁ e₂ he₂ _ _ _ _
     simp only [List.mem_singleton] at hc' he₁ he₂
     subst hc'

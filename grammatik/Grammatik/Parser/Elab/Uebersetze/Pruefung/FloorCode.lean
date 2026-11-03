@@ -38,6 +38,6 @@ theorem uSichert_floor_step_zeuge (ctx : UCtx) :
     completed verdicts; neither removes the returning resource obligation. -/
 theorem floorUrteil_bool (verdict floor : Bool) :
     (verdict && floor) = true ↔ verdict = true ∧ floor = true :=
-  Bool.and_eq_true
+  Bool.and_eq_true_iff
 
 end Gabbro.Grammatik.Parser.Uebersetze

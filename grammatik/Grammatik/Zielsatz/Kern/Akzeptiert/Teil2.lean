@@ -56,9 +56,9 @@ variable {P : Programm D} {S : SperrInv D} {fs : List D.Fn} {ls : List D.Lock}
 theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs)
     {w : D.Fn} : poolSicherWB P fs cs w = true ↔ PoolSicherW P fs w := by
   unfold poolSicherWB PoolSicherW PoolSicher
-  simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq]
+  simp only [Bool.and_eq_true, List.isEmpty_iff, decide_eq_true_eq, and_assoc]
   constructor
-  · rintro ⟨⟨⟨⟨h1, h2⟩, h3⟩
+  · rintro ⟨h1, h2, h3⟩
     refine ⟨h1, h2, fun f hf c hc => ?_⟩
     have h4 := (List.all_eq_true.mp h3) f (hvoll f)
     rw [hf] at h4
@@ -76,7 +76,7 @@ theorem poolSicherWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) (hcs : ∀ c : D.Tab �
         | inr g => exact Or.inr ⟨g, rfl, h5⟩
     | cons L _ => exact Or.inl ⟨L, waechterVon_mem.mp (hl.symm ▸ List.mem_cons_self)⟩
   · rintro ⟨h1, h2, h3⟩
-    refine ⟨⟨h1, h2⟩, List.all_eq_true.mpr fun f _ => ?_⟩
+    refine ⟨h1, h2, List.all_eq_true.mpr fun f _ => ?_⟩
     cases hf : reachB P fs w f with
     | false => rfl
     | true =>

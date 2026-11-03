@@ -35,7 +35,7 @@ theorem akzeptiert_guest_sound {P : Programm D} {S : SperrInv D}
     Akzeptiert P S fs ls cs ws aks checks qs = true ∧
       ∀ g ∈ guests, g.admittedB = true := by
   rw [akzeptiert_guest_eq] at h
-  obtain ⟨hprogram, hguests⟩ := Bool.and_eq_true.mp h
+  obtain ⟨hprogram, hguests⟩ := Bool.and_eq_true_iff.mp h
   exact ⟨hprogram, fun g hg => GuestBoundary.admissionB_each hguests g hg⟩
 
 /-- The identical extra component survives the atomic-rely adapter. -/
@@ -56,7 +56,7 @@ end Bool
 def Zielsatz.Pruefer.withGuests (C : Pruefer)
     (guests : ∀ {D : Deklaration}, Einheit D → List (GuestBoundary D)) : Pruefer where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && GuestBoundary.admissionB (guests E)
-  korrekt := fun E fs ls cs h => C.korrekt E fs ls cs (Bool.and_eq_true.mp h).1
+  korrekt := fun E fs ls cs h => C.korrekt E fs ls cs (Bool.and_eq_true_iff.mp h).1
 
 /-- Every descriptor is retained by the checker adapter, even though the
     unchanged goal theorem consumes just its existing program-safety facts. -/
@@ -66,7 +66,7 @@ theorem Zielsatz.Pruefer.withGuests_admitted (C : Pruefer)
     (cs : List (D.Tab ⊕ D.Glob))
     (h : (C.withGuests guests).akzeptiert E fs ls cs = true)
     (g : GuestBoundary D) (hg : g ∈ guests E) : g.admittedB = true :=
-  GuestBoundary.admissionB_each (Bool.and_eq_true.mp h).2 g hg
+  GuestBoundary.admissionB_each (Bool.and_eq_true_iff.mp h).2 g hg
 
 /-- The stronger checker of GX keeps start ownership and accumulator-start
     admission as well as the guest component; it delegates every established
@@ -74,7 +74,7 @@ theorem Zielsatz.Pruefer.withGuests_admitted (C : Pruefer)
 def Zielsatz.PrueferX.withGuests (C : PrueferX)
     (guests : ∀ {D : Deklaration}, Einheit D → List (GuestBoundary D)) : PrueferX where
   akzeptiert := fun E fs ls cs => C.akzeptiert E fs ls cs && GuestBoundary.admissionB (guests E)
-  korrekt := fun E fs ls cs h => C.korrekt E fs ls cs (Bool.and_eq_true.mp h).1
+  korrekt := fun E fs ls cs h => C.korrekt E fs ls cs (Bool.and_eq_true_iff.mp h).1
 
 theorem Zielsatz.PrueferX.withGuests_admitted (C : PrueferX)
     (guests : ∀ {D : Deklaration}, Einheit D → List (GuestBoundary D))
@@ -82,7 +82,7 @@ theorem Zielsatz.PrueferX.withGuests_admitted (C : PrueferX)
     (cs : List (D.Tab ⊕ D.Glob))
     (h : (C.withGuests guests).akzeptiert E fs ls cs = true)
     (g : GuestBoundary D) (hg : g ∈ guests E) : g.admittedB = true :=
-  GuestBoundary.admissionB_each (Bool.and_eq_true.mp h).2 g hg
+  GuestBoundary.admissionB_each (Bool.and_eq_true_iff.mp h).2 g hg
 
 /-- A unit with no guest keeps exactly its previous checker verdict. The
     adapter cannot introduce or discharge a hardware or user-logic duty. -/
