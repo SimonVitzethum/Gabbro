@@ -1,0 +1,3 @@
+type Pair = { small : u8, other : u8, };
+const UNUSED : Pair = Pair(other: 7, small: (255 + 1) - 214);
+impl fn main() -> u8 effects { pure } { return 42; }

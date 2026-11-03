@@ -203,22 +203,25 @@ theorem constants_collected (env : List (String × (Int × Int))) (fns : List UK
 def typedItem (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values : List (String × Int)) : SItemTief → Option (List (String × Int))
   | .constT name ty (.one expr) => do
-    let range ← (uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty).toOption
-    let value ← uKonstWert range.1 range.2 fns values 64 expr
-    pure (values ++ [(name, value)])
+    match uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
+    | .error _ => pure values -- Deferred to the mandatory whole-source typed literal check.
+    | .ok range => do
+      let value ← uKonstWert range.1 range.2 fns values 64 expr
+      pure (values ++ [(name, value)])
   | _ => some values
 
 /-- Every successful scalar step checks the original type through canonical elaboration and
     every expression intermediate through the existing exact-range evaluator. -/
 theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonstFn)
     (values result : List (String × Int)) (name : String) (ty : STyp) (expr : SExpr)
+    (scalar : (uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty).toOption.isSome = true)
     (h : typedItem env fns values (.constT name ty (.one expr)) = some result) :
     ∃ lo hi value,
       uTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) [] [] ty = .ok (.int lo hi) ∧
       uKonstWert lo hi fns values 64 expr = some value ∧ result = values ++ [(name, value)] := by
   unfold typedItem at h
   cases ht : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
-  | error e => simp [ht, Except.toOption] at h
+  | error e => simp [ht, Except.toOption] at scalar
   | ok range =>
     rcases range with ⟨lo, hi⟩
     cases hv : uKonstWert lo hi fns values 64 expr with

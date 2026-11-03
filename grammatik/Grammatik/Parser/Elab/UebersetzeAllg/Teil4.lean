@@ -56,6 +56,7 @@ def lowTabWert (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) (fn : UFn) (s
         else .error "access without held guard"
       | .error e => .error e
 
+mutual
 /-- A constant literal at its type (`USide.typed`): numbers inside the range, array literals element by element,
     string literals under the maximum. -/
 def lowLit {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : (τ : Ty) → USide → Except String (Expr (declOf u) Γ Λ τ)
@@ -63,6 +64,13 @@ def lowLit {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : (τ : Ty) → U
     if h1 : lo ≤ n then
       if h2 : n ≤ hi then .ok (Expr.widen h1 h2 (Expr.lit n)) else .error "constant outside its range"
     else .error "constant outside its range"
+  | .bool, .truth true => .ok Expr.tru
+  | .bool, .truth false => .ok Expr.fls
+  | .prod identity fields, .product actual _ values => do
+    if identity != actual then throw "source export: constant has a foreign record identity"
+    let _ ← uRecordOf u.records (.prod identity fields)
+    let args ← lowLitFields fields values
+    pure (.prod identity args)
   | .arr _ 0, .arrNil => .ok Expr.arrNil
   | .arr τ (k + 1), .arrCons a r =>
     match lowLit τ a, lowLit (.arr τ k) r with
@@ -73,6 +81,20 @@ def lowLit {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} : (τ : Ty) → U
     | some zs => if h : zs.length ≤ m then .ok (Expr.strLit zs h) else .error "string literal longer than the maximum"
     | none => .error "string literal outside bytes"
   | _, _ => .error "constant without G form"
+termination_by _ value => sizeOf value
+
+/-- Literal fields use the declared ordered schema and their complete canonical types. -/
+def lowLitFields {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :
+    (fields : List Ty) → List (Ty × USide) → Except String (Args (declOf u) Γ Λ fields)
+  | [], [] => .ok .nil
+  | ty :: fields, (actual, value) :: values => do
+    if ty != actual then throw "source export: constant record field has a foreign type"
+    let head ← lowLit ty value
+    let tail ← lowLitFields fields values
+    pure (.cons head tail)
+  | _, _ => .error "source export: record arity disagrees with its fields"
+termination_by _ values => sizeOf values
+end
 
 /-- The integer side of a value. -/
 def zahlVon {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} :

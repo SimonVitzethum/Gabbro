@@ -5,6 +5,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.Uebersetze.Guest.Source
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.SondeCode
+public import Grammatik.Parser.Elab.Uebersetze.Records.Constants
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -54,6 +55,8 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uTypes consts alias tabs msE eigner with
   | .error e => .error e
   | .ok valueScope =>
+  let constants := uKonstArrays alias functions consts ms
+    (uRecordConstantTypes valueScope.records) (uRecordConstant valueScope.records alias functions consts) true
   -- C16: every `check` item elaborates now, with its generated probe below.
   match uChecks tabs globs ms with
   | .error e => .error e
@@ -141,13 +144,13 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .ok axs =>
   let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
   -- C16: every `can_fail` body elaborates into its generated Boolean producer now.
-  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) (uKonstArrays alias functions consts ms) zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) with
+  match uProbeFns consts alias tabs locks globs koepfe whys sums devs regs zustaende (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none)) constants zeiger zb (fnItems.map (fun (s, _) => s.name) ++ axKoepfe.map (·.name) ++ zeigerPaare.map (fun p => p.1.name)) (ms.filterMap (fun | .checkT c => some c | _ => none)) with
   | .error e => .error e
   | .ok probeFns =>
   match uSeq (fnItems.map (fun (s, b) =>
       elabUFunktion (spaces := spaces) (valueScope := valueScope) (eigner := eigner) consts alias tabs locks globs koepfe s b annahmen whys sums devs regs zustaende zeiger zb
         (ms.filterMap (fun | .specT sg body => some (sg.name, sg.params.map (·.1), body) | _ => none))
-        (uKonstArrays alias functions consts ms))) with
+        constants)) with
   | .error e => .error e
   | .ok fns =>
   let fns := fns ++ transitionFns ++ probeFns

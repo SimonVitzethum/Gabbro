@@ -1,0 +1,22 @@
+C01 structured constant fixtures. PROPOSED expectations, STATIC AND UNVERIFIED.
+The implementation worker did not run Lean, the compiler or the runner.
+Accepted fixtures have .code = expected runner exit value, all 42.
+Refused fixtures contain unused declarations deliberately; a use-based collector is insufficient.
+
+accepted/product-order: reordered labels retain declaration-order field meaning.
+accepted/nested-array: complete nested array of a nominal product with integer/Bool fields.
+accepted/nested-product: nested explicit nominal constructors.
+accepted/const-call: numeric record leaf retains the original pre/postcondition-aware call hull.
+accepted/unused-product: valid unused declarations receive the same literal certificate.
+refused/unused-overflow: every numeric intermediate must fit the exact original field range.
+refused/duplicate-label, missing-label, unknown-label: no dropped/defaulted/duplicated fields.
+refused/unused-nested-length: every original array dimension remains exact.
+refused/unused-contract: a constructor/row cannot hide a failed const-call contract.
+refused/foreign-constructor: equal field shapes do not erase nominal identity.
+refused/unused-unknown-scalar: scalar deferral cannot admit an unknown type.
+
+Bounded form: explicit record constructors with integer, literal Bool and nested product fields;
+any existing outer constant-row dimensions. Product aliases, product constant references within
+initializers, product-valued const functions and tagged/reason constants remain refused when
+there is no existing canonical constant rule. No global/image initializer changes.
+Refusal wording is left to the lead's integration measurement; no unmeasured exact .error text.

@@ -36,6 +36,8 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
+  /-- Every original constant, including unused products and nested rows, has a canonical typed
+      literal. Scalar scope deferral alone never admits a declaration. -/
   arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
   initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.elaborierbar)) unit = .ok ()
   constantExports : Konst.checkSourceConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ()
@@ -205,7 +207,7 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
-    (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
+    (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item ∧ Frontend.ScalarStep scope item) ∧
     (∃ expanded requirements, Gabbro.Grammatik.Parser.Modules.prepare declarations =
       .ok (expanded, requirements) ∧
       ((result.gateMembers = uMembers expanded ∧
@@ -225,11 +227,31 @@ theorem compile_source_program (text : String) {options : Profil.Options} (resul
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.selection, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
-    result.accepted, result.arrayConstants,
+    result.accepted, fun item member => ⟨result.arrayConstants item member,
+      Frontend.arrayMeaning_scalarStep result.unit result.source.scopes item (result.arrayConstants item member)⟩,
     ⟨result.expanded, result.requirements, result.gateExpansion, result.gateChecked⟩,
     result.metadata, result.measures.property,
     result.measures.val.source, result.measureLengths, result.invariants,
     result.source.prepared.bindungOk, result.source.prepared.abschnittFrei⟩
+
+/-- The actual compiler certificate retains every original constant in the same canonical
+    collector used for function expressions, with its complete source type and value. -/
+theorem Compiled.constant_collected {text : String} {options : Profil.Options}
+    (result : Compiled text options) (name : String) (ty : STyp) (payload : SKonstWert)
+    (original : SItemTief.constT name ty payload ∈ uMembers (pre108 result.source.prepared.elaborierbar)) :
+    Frontend.ArrayCollected result.unit result.source.scopes name :=
+  Frontend.constantMeaning_collected result.unit result.source.scopes name ty payload original
+    (result.arrayConstants _ original)
+
+/-- Admission is the conjunction of the final canonical literal check for every original
+    declaration and the source scalar guarantee, with no caller-supplied typing premise. -/
+theorem Compiled.constant_semantics {text : String} {options : Profil.Options}
+    (result : Compiled text options) :
+    ∀ item ∈ uMembers (pre108 result.source.prepared.elaborierbar),
+      Frontend.ArrayMeaning result.unit result.source.scopes item ∧
+        Frontend.ScalarStep result.source.scopes item :=
+  fun item member => ⟨result.arrayConstants item member,
+    Frontend.arrayMeaning_scalarStep result.unit result.source.scopes item (result.arrayConstants item member)⟩
 
 /-- Gate acceptance ties the selected metadata side to the stored canonical expansion.
     Each side retains the complete certified C17 substitution and runtime checks. -/

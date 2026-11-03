@@ -1,0 +1,6 @@
+// The numeric field goes through the canonical contract-aware const evaluator.
+type Small = u8 in 0 .. 100;
+type Pair = { small : Small, other : u8, };
+const fn identity(x : Small) -> Small requires x < 43 ensures result == x effects { pure } { return x; }
+const VALUE : Pair = Pair(other: 7, small: identity(42));
+impl fn main() -> Small effects { pure } { return VALUE.small; }

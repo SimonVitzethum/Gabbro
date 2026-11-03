@@ -1,0 +1,4 @@
+// Proposed acceptance fixture; not executed by the implementation worker.
+type Pair = { first : u8, second : u8, };
+const VALUE : Pair = Pair(second: 7, first: 42);
+impl fn main() -> u8 effects { pure } { return VALUE.first; }

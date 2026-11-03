@@ -1,0 +1,4 @@
+type Pair = { small : u8, other : u8, };
+const fn restricted(x : u8) -> u8 requires x < 10 effects { pure } { return x; }
+const UNUSED : Pair = Pair(small: restricted(42), other: 7);
+impl fn main() -> u8 effects { pure } { return 42; }

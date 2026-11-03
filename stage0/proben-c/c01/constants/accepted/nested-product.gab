@@ -1,0 +1,5 @@
+// Nested nominal construction uses the existing schema for each level.
+type Pair = { small : u8, flag : bool, };
+type Outer = { inner : Pair, other : u8, };
+const VALUE : Outer = Outer(other: 7, inner: Pair(flag: false, small: 42));
+impl fn main() -> u8 effects { pure } { return VALUE.inner.small; }

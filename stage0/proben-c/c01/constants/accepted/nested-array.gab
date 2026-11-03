@@ -1,0 +1,4 @@
+// Every row and named field retains its declared type and order.
+type Pair = { small : u8 in 0 .. 100, flag : bool, };
+const VALUES : [[Pair; 1]; 1] = [[Pair(flag: true, small: 40 + 2)]];
+impl fn main() -> u8 in 0 .. 100 effects { pure } { return VALUES[0][0].small; }

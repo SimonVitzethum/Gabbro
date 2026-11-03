@@ -93,16 +93,28 @@ end
 /-- Source declarations and their compile-time dependencies. Function bodies cannot capture
     global constants in uKonstWert; only calls and signature types contribute global edges. -/
 def dependencyDeclarations (items : List SItemTief) : List (DependencyName × List DependencyName) :=
-  items.filterMap fun
+  let constructor := fun name => items.any fun
+    | .typeT flags declared [] [] (some (.raw _)) => strEq declared name &&
+        !flags.any (fun flag => strEq flag "tagged" || strEq flag "linear")
+    | _ => false
+  let resolve : DependencyName → DependencyName := fun reference => match reference with
+    | .function name => if constructor name then .type name else reference
+    | _ => reference
+  (items.filterMap fun
     | .typeT _ name [] _ (some ty@(.atom _))
     | .typeT _ name [] _ (some ty@(.range _ _ _ _)) => some (.type name, typeReferences ty)
+    | .typeT flags name [] [] (some (.raw _)) =>
+      if flags.any (fun flag => strEq flag "tagged" || strEq flag "linear") then none
+      else match expandRecord (items.length + 1) items [] name with
+        | .ok fields => some (.type name, fields.flatMap (fun field => typeReferences field.ftyp))
+        | .error _ => some (.type name, [.type name])
     | .constT name ty payload => some (.value name, typeReferences ty ++ payloadReferences payload)
     | .fnT sig (.block [] (some (.ret (some body)))) =>
       if sig.art == "const" then some (.function sig.name,
         sig.params.flatMap (fun p => typeReferences p.2) ++
         (sig.res.toList.flatMap typeReferences) ++ (calls body).map DependencyName.function)
       else none
-    | _ => none
+    | _ => none).map fun (name, deps) => (name, deps.map resolve)
 
 def constantNames (items : List SItemTief) : List String :=
   items.filterMap fun | .constT name _ _ => some name | _ => none

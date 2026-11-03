@@ -197,28 +197,38 @@ def uFeldBreiten (alias : List (String × (Int × Int))) (fds : List SFeld) : Li
 
 mutual
 /-- A constant row folded at its element type: numbers by the constant evaluator, nested rows element by element. -/
-def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int)) :
-    Ty → SKonstWert → Option USide
+def uKonstZeile (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
+    (ty : Ty) (value : SKonstWert) (leaf : Ty → SExpr → Option USide := fun _ _ => none) : Option USide :=
+  match ty, value with
   | .int lo hi, .one e => (uKonstWert lo hi fns consts 64 e).map USide.lit
-  | .arr τ _, .rows ks => uKonstZeilen alias fns consts τ ks
+  | .arr τ _, .rows ks => uKonstZeilen alias fns consts τ ks leaf
+  | τ, .one e => leaf τ e
   | _, _ => none
-def uKonstZeilen (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int)) :
-    Ty → List SKonstWert → Option USide
+def uKonstZeilen (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
+    (ty : Ty) (values : List SKonstWert) (leaf : Ty → SExpr → Option USide := fun _ _ => none) : Option USide :=
+  match ty, values with
   | _, [] => some .arrNil
   | τ, k :: ks =>
-    match uKonstZeile alias fns consts τ k, uKonstZeilen alias fns consts τ ks with
+    match uKonstZeile alias fns consts τ k leaf, uKonstZeilen alias fns consts τ ks leaf with
     | some a, some r => some (.arrCons a r)
     | _, _ => none
 end
 
 /-- The constant arrays of a unit (`const T : [u32; N] = [..]`): each as its folded literal at its type. -/
 def uKonstArrays (alias : List (String × (Int × Int))) (fns : List UKonstFn) (consts : List (String × Int))
-    (ms : List SItemTief) : List (String × USide) :=
+    (ms : List SItemTief) (named : List (String × Ty) := [])
+    (leaf : Ty → SExpr → Option USide := fun _ _ => none)
+    (values : Bool := false) : List (String × USide) :=
   ms.filterMap fun
     | .constT n t@(.array _ _) v =>
-      match uTyp alias [] t with
-      | .ok τ => (uKonstZeile alias fns consts τ v).map fun l => (n, .typed τ l)
+      match uTypIn alias [] named [] [] t with
+      | .ok τ => (uKonstZeile alias fns consts τ v leaf).map fun l => (n, .typed τ l)
       | .error _ => none
+    | .constT n t v => if values then
+      match uTypIn alias [] named [] [] t with
+      | .ok τ => (uKonstZeile alias fns consts τ v leaf).map fun l => (n, .typed τ l)
+      | .error _ => none
+      else none
     | _ => none
 
 /-- A count: a literal or a named constant (the `numeral` of

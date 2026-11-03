@@ -1,0 +1,2 @@
+const UNUSED : Missing = 42;
+impl fn main() -> u8 effects { pure } { return 42; }

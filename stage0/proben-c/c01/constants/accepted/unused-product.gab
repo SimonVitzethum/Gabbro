@@ -1,0 +1,4 @@
+// Unused valid declarations still receive a typed canonical literal certificate.
+type Pair = { small : u8, other : u8, };
+const UNUSED : Pair = Pair(other: 7, small: 42);
+impl fn main() -> u8 effects { pure } { return 42; }

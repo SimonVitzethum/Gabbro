@@ -48,7 +48,7 @@ theorem typedItem_sound_zeuge :
       [("LIMIT", 42), ("ANSWER", 42)] = [("LIMIT", 42)] ++ [("ANSWER", value)] :=
   typedItem_sound [] [] [("LIMIT", 42)] [("LIMIT", 42), ("ANSWER", 42)] "ANSWER"
     (.range (.atom "u8") (.lit 0) (.bin "+" (.variable "LIMIT") (.lit 1)) true)
-    (.variable "LIMIT") (by decide +kernel)
+    (.variable "LIMIT") (by decide +kernel) (by decide +kernel)
 
 /-- Complete ordered scalar scope: negatives and shadowed bindings are not filtered. -/
 def typedConstants (env : List (String × (Int × Int))) (fns : List UKonstFn)
