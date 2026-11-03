@@ -6100,7 +6100,8 @@ Implementation branch `c17-const2`, continued from `cb63c4f9a`.
   to the G body, and normalization equations for both original predicate lists.
 * `CheckedCall` retains those fields, original argument derivations, typed bindings, the
   canonical bounded candidate, the structural KExpr quotation and exact result agreement.
-* `CheckedCall.normalized_denotation` connects canonical evaluation of the normalized body
+* `SourceFunction.normalized` connects that structural induction to the exact retained G body.
+  `CheckedCall.normalized_denotation` connects canonical evaluation of the normalized body
   to the G evaluation of the original source-derived body, with no separate caller duty.
 * `Function.call_equation`, `Function.Certificate.sound`, `CheckedCall.sound` retain the
   ordinary G call, exact required return narrowing, requires/ensures and unchanged world,
@@ -6166,13 +6167,13 @@ both Bool results; None/Some; bare tags and numeric/Boolean/string payloads; clo
 owner/case identity; empty/one-byte/zero-maximum strings; original qualified names in body
 and argument; and joint instantiations of the normalization, argument, quotation, common
 replacement and actual substitution theorems. Negative witnesses cover wrong result/payload
-types, option bounds, unknown tags, UTF-8 overflow, wider strings, false ensures, a foreign
+types, option bounds, unknown tags, UTF-8 overflow, wider strings, false requires/ensures, missing payloads, statement calls, a foreign
 reason owner, and parameter/local/pattern/quantifier shadowing.
 
 `stage0/Stage0/Frontend/ConstWitness.lean` retains the previous scalar values 4/6, contracts,
 source/initializer compilation, generic-contract bypass and argument-type refusals.
 `ConstValuesWitness.lean` adds source-text Bool, Some/None, tagged numeric payload, short
-string and captured-global compilation declarations, with canonical-admission and conditional
+string and original/qualified captured-global compilation declarations, with canonical-admission and conditional
 production-image witnesses. `Stage0.lean` includes both. These witness declarations are
 **unbuilt**; the image theorem still has an explicit successful-emission premise and no
 emitted or executed image is claimed.
@@ -6185,6 +6186,6 @@ still need a typed Stage-0 scope; function-result replacement does not claim tha
 binding path. No safety, metadata, range, contract, cost or hardware obligation was weakened.
 
 Measured locally: static diff/whitespace checks, module headers and <500-line limits for the
-21 changed Lean modules, no forbidden proof tokens added, directory caps, and no cycles among
+22 changed Lean modules, no forbidden proof tokens added, directory caps, and no cycles among
 2897 reachable local imports. The lead still owes changed-module/dependent checks, final witness
 integration, standard-axiom inspection and the guardians. **Zero new compiled/executed cases.**
