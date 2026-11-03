@@ -64,7 +64,6 @@ theorem wideComputedFloatOfE_ok {Γ : Ctx} {Λ : List (Res D)}
     apply computedFloatOfL_ok f64 (by simp) (eval σ₀ (WideFloat.small e) σ ρ)
       (by decide) (by decide) emitted pre fits
     intro ce child
-    have shape := computedFloatOfL_parts f64 d _ emitted
     have childTop : ce.2 ≤ K := by
       simp only [computedFloatOfL, bind, Option.bind_eq_some_iff, pure,
         Option.some.injEq] at emitted
