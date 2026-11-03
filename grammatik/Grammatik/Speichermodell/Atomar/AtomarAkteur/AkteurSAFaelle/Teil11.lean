@@ -193,26 +193,16 @@ theorem akteurSA_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D}
           ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
           (M.weltVon u).speicher)
         (.cons k ρ)))) = true := by
-    have heq : (fun k => !(wahr? (eval
-        (mischT Tg (member.orte ++ edge.orte)
-          ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
-          (M.weltVon u).speicher)
-        member
-        (mischT Tg (member.orte ++ edge.orte)
-          ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
-          (M.weltVon u).speicher)
-        (.cons k ρ)))) =
-        (fun k => !(wahr? (eval σ₂ member σ₂ (.cons k ρ)))) :=
-      funext fun k => by rw [eM k]
-    rw [heq]; exact hkein
+    exact (congrArg (fun p : Wert D (.index (D.count t)) → Bool =>
+      (alleIndizes (D.count t)).all fun k => !(p k)) hW).trans hkein
   refine ⟨mischT Tg (member.orte ++ edge.orte)
       ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
       (M.weltVon u).speicher,
     HX', hfx', hkx',
     hsub,
     Nat.le_trans (mischT_laenge Tg inv.orte σ Λ (M.weltVon u).speicher)
-      (lese_laenge (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) Λ
-        (member.orte ++ edge.orte))),
+      (mischT_laenge Tg (member.orte ++ edge.orte)
+        (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) Λ (M.weltVon u).speicher),
     GleichAuf.mono (fun _ h => List.mem_append_left _ (List.mem_append_left _ h))
       (g₂.trans (GleichAuf.vonSpeicher rfl)),
     hk,
@@ -353,9 +343,13 @@ theorem akteurSA_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D}
     ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       have hmA : (eval (leseA A σ0 Λ mass.orte) mass (leseA A σ0 Λ mass.orte) ρ).n = m' := by
-        rw [hσ0, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) hg ρ, ← hs₁]
-        exact hm'.symm
-      rw [semHA_verbrauchFort S O' U A passes R t member edge inv bound mass body rest vor k i σ0 ρ
-        (leseA A σ0 Λ mass.orte) rfl m' hmA hfall, hσ0])⟩
+        rw [hσ0]
+        exact (congrArg (fun v : Wert D (.int 0 bound) => v.n)
+          (eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) hg ρ)).trans
+          ((congrArg (fun σr : World D => (eval σr mass σr ρ).n) hs₁).symm.trans hm'.symm)
+      have hsem := semHA_verbrauchFort S O' U A passes R t member edge inv bound mass body rest vor k i σ0 ρ
+        (leseA A σ0 Λ mass.orte) rfl m' hmA hfall
+      rw [hσ0] at hsem
+      exact hsem)⟩
 
 end Gabbro.Grammatik

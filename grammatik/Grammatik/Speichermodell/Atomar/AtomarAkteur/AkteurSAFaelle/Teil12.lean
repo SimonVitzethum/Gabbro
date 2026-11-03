@@ -157,7 +157,8 @@ theorem akteurSA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orak
     HX', hfx', hkx',
     hsub,
     Nat.le_trans (mischT_laenge Tg mass.orte σ Λ (M.weltVon u).speicher)
-      (lese_laenge (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) Λ inv.orte),
+      (mischT_laenge Tg inv.orte
+        (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) Λ (M.weltVon u).speicher),
     GleichAuf.mono (fun _ h => List.mem_append_left _ (List.mem_append_left _ h))
       (g₂.trans (GleichAuf.vonSpeicher rfl)),
     hk,
@@ -167,8 +168,8 @@ theorem akteurSA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orak
           (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher)
           mass
           (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) ρ).n = m' := by
-        rw [eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₁m ρ]
-        exact hm'.symm
+        exact (congrArg (fun v : Wert D (.int 0 bound) => v.n)
+          (eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₁m ρ)).trans hm'.symm
       have hwA : wahr? (eval
           (leseA A
             (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) Λ inv.orte)
@@ -311,9 +312,13 @@ theorem akteurSA_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
     hTR,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       have hmA : (eval (leseA A σ0 Λ mass.orte) mass (leseA A σ0 Λ mass.orte) ρ).n = m' := by
-        rw [hσ0, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) hg ρ, ← hsm]
-        exact hm'.symm
-      rw [semHA_nextVerbrauch S O' U A passes R t member edge inv bound mass body rest vor k restb i σ0 ρ
-        hnext (leseA A σ0 Λ mass.orte) rfl m' hmA hfall, hσ0])⟩
+        rw [hσ0]
+        exact (congrArg (fun v : Wert D (.int 0 bound) => v.n)
+          (eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) hg ρ)).trans
+          ((congrArg (fun σr : World D => (eval σr mass σr ρ).n) hsm).symm.trans hm'.symm)
+      have hsem := semHA_nextVerbrauch S O' U A passes R t member edge inv bound mass body rest vor k restb i σ0 ρ
+        hnext (leseA A σ0 Λ mass.orte) rfl m' hmA hfall
+      rw [hσ0] at hsem
+      exact hsem)⟩
 
 end Gabbro.Grammatik
