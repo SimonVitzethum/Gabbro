@@ -73,6 +73,9 @@ theorem Stmt.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .callIndElse p args he hp hr err, h, σ, ρ => by
       simp only [Stmt.ohneLocks] at h
       simp only [execStmtH, execStmt, indSonst, Endblock.execH_ohne err h] <;> rfl
+  | .axiomCallElse _ a args _ _ _ _ _ err, h, σ, ρ => by
+      simp only [Stmt.ohneLocks] at h
+      simp only [execStmtH, execStmt, Endblock.execH_ohne err h] <;> rfl
   | .axiomCall .., _, _, _ => rfl
   | .regWrite .., _, _, _ => rfl
   | .transition .., _, _, _ => rfl
