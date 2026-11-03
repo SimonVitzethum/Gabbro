@@ -37,7 +37,7 @@ def hasCanonicalHandler (text : String) : Bool :=
   match uebersetzeAllg text with
   | .error _ => false
   | .ok ⟨u, program, functions⟩ =>
-    (Cover.mitglieder u program functions).contains "Stmt.axiomCallElse"
+    (Cover.Mitglieder.mitglieder u program functions).contains "Stmt.axiomCallElse"
 
 theorem named_accepted_zeuge : acceptedText namedSource = true := by decide +kernel
 theorem unnamed_accepted_zeuge : acceptedText unnamedSource = true := by decide +kernel
