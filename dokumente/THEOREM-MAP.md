@@ -6064,3 +6064,27 @@ On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. 
 * **`fremd_annahme_abgelehnt`**: An unknown `assume` name is the named elaboration error.
 
 Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.
+
+## 136. C02 items 1-4: sound decoders, resolved identity and export metadata (2026-11-03)
+
+On `c02-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Takes the recommended owner answers: exact source-bound map correspondence with kernel-checked execution certificates, and table-shaped translator inputs as immutable by-value row collections. Covers inventory items 1-4 (lossless call arguments and region tokens, resolved translator/library identity and export metadata, typed input schemas and sound decoders, canonical translator map and payload typing); items 5-16 stay with their owners. No new execution constructor, no new `Akzeptiert` component: `libraryB`/`LibraryAdmission` still record library-closedness, certificate correctness stays a separate proof.
+
+`grammatik/Grammatik/Logik/Vertraege/UebersetzungDecoder.lean`:
+
+* **`IntegerSchema_traegt`**: For arbitrary `schema : IntegerSchema`, the schema type carries `ImmutablePayload`: a by-value array of ranged integers, never a capability to an unrelated mutable runtime table.
+* **`decodeIntegerRows_bereich`**: For arbitrary `D`, `schema`, `tokens` and `v` with `decodeIntegerRows D schema tokens = some v`, every row of `v` satisfies its schema range; a well-typed wrong output can never reuse a certificate.
+* **`exportLibraryCall_stelligkeit`**, **`exportLibraryBind_stelligkeit`**: For arbitrary `lib : ULibrary` and `c : SLibraryCall`, the certified expansion is the ordinary call (resp. the bound ordinary call value) with the ordinary arguments once in source order and the per-site payload last.
+* **`decodeIntegerRows_zwei_zeuge`**, **`decodeIntegerRows_negativ_zeuge`**: The non-degenerate two-row region and a negative row decode to the certified rows.
+* **`decodeIntegerRows_zuviele_zeuge`**, **`decodeIntegerRows_leer_zeuge`**, **`decodeIntegerRows_negativ_ausserhalb_zeuge`**: Wrong count, empty region and out-of-range negative row refuse.
+* **`integerRows_verweigert_*`**: Closed token grammar: words, identifiers, texts, floats, documentation, the end marker, braces, `+` and a dangling `-` refuse.
+
+`grammatik/Grammatik/Parser/Stmt/LibraryIdentity.lean` (fixtures from `LibraryFixtures.lean`):
+
+* **`translation_payload_letzt_zeuge`**, **`translation_payload_position_zeuge`**: The resolved library takes one more parameter than the source call supplies; the payload sits at the final position, filled once per site.
+* **`translation_schluessel_zeuge`**: Translator and resolved function carry the same selected key.
+* **`translation_kopf_zeuge`**, **`translation_kopf_ohne_last_zeuge`**: The export normalizes a `library` head to `impl` and consumes the payload clause.
+* **`translation_erweitert_ohne_translator_zeuge`**: The pre-pass consumes every translator of the expanded unit (`ohneTranslator`).
+* **`translation_qual_index_zeuge`**: Qualifier selection resolves distinct libraries for distinct qualifiers.
+* **`library_region_geschachtelt_zeuge`**: Nested regions round-trip with their token kinds intact.
+
+Open: the lead build of this branch (single-module checks of the two new modules and their importers, then the guardians); general translator maps still need C17, product schemas still need C01, both refused by name; source coordinates on `SLibraryCall` remain future diagnostics work.

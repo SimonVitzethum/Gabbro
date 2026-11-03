@@ -349,3 +349,8 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
 - Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
   `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
   TODO (Muse): prove generic expansion soundness for the connected implementation.
+- C02 items 1-4 on branch `c02-a` (2026-11-03, needs the lead build): `Logik/Vertraege/UebersetzungDecoder.lean`
+  (decoder soundness, immutable payload typing, expansion shape, token-grammar refusals) and
+  `Parser/Stmt/LibraryIdentity.lean` (payload position, key correspondence, head normalization,
+  translator-free expansion, qualifier selection, nested-region round-trip), wired into `Alle/Teil1`
+  (THEOREM-MAP §136). Items 5-16 stay open.
