@@ -18,12 +18,14 @@ theorem encodeProductFields_field_split (L : Lay D) {fs : List Ty} {τ : Ty}
       before.length = productOffset i := by
   induction i with
   | head =>
-    exact ⟨[], encodeProductFields L _ (ProdVal.tl v), rfl, rfl⟩
+    refine ⟨[], encodeProductFields L _ (ProdVal.tl v), ?_, rfl⟩
+    simp only [encodeProductFields_cons, prodGetW, List.nil_append]
   | @tail τ σ rest i ih =>
     obtain ⟨before, after, split, offset⟩ := ih (ProdVal.tl v)
     refine ⟨encodeWords L σ (ProdVal.hd v) ++ before, after, ?_, ?_⟩
     · simp only [encodeProductFields_cons, prodGetW]
-      rw [split, List.append_assoc, List.append_assoc]
+      rw [split]
+      simp only [List.append_assoc]
     · simp only [List.length_append, encodeWords_length, productOffset]
       rw [offset]
 
@@ -35,7 +37,9 @@ theorem encodeProduct_field_split (L : Lay D) {name : Nat} {fs : List Ty} {τ : 
       before.length = productOffset i := by
   have nonempty : fs ≠ [] := by
     cases i <;> simp
-  simpa only [encodeWords, encodeProduct, if_neg nonempty] using
+  rw [encodeWords.eq_def]
+  dsimp only
+  simpa only [encodeProduct.eq_def, if_neg nonempty] using
     encodeProductFields_field_split L i v
 
 /-- Project only the physical words; validity is a separate obligation. -/
@@ -45,7 +49,8 @@ theorem wordsAt_product_field {L : Lay D} {name : Nat} {fs : List Ty} {τ : Ty}
     (input : WordsAt m fp d (encodeWords L (.prod name fs) v)) :
     WordsAt m fp (d + productOffset i) (encodeWords L τ (prodGetW i v)) := by
   obtain ⟨before, after, split, offset⟩ := encodeProduct_field_split L i v
-  rw [split, wordsAt_append] at input
+  rw [split, List.append_assoc] at input
+  have input := (wordsAt_append before (encodeWords L τ (prodGetW i v) ++ after)).mp input
   have selected := (wordsAt_append (encodeWords L τ (prodGetW i v)) after).mp input.2
   simpa only [offset] using selected.1
 
@@ -62,7 +67,7 @@ theorem prodGet_fieldBound {name : Nat} {fs : List Ty} {τ : Ty}
   omega
 
 /-- Static projection transport with a complete product reservation. -/
-theorem prodGet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
+theorem prodGet_ok [Runner.IR.Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     {name : Nat} {fs : List Ty} {τ : Ty} (i : FieldAt fs τ)
     (v : Expr D Γ Λ (.prod name fs))
     {σ₀ σ : World D} {fp pc : Runner.W} {K d top reserved : Nat}
