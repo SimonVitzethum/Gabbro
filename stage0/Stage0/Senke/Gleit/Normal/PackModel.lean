@@ -51,9 +51,10 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
           else ⟨s, exponent, significand - 2 ^ 52⟩
         else ⟨s, 2047, 0⟩)) := by
   dsimp only
-  let q := rundeInt (n / 8) (n % 8) 8
+  -- Keep canonical-field type comparisons independent of the rounding expression's reduction.
+  generalize rounded : rundeInt (n / 8) (n % 8) 8 = q
   have qb : q ≤ 2 ^ 53 := by
-    dsimp only [q]
+    rw [← rounded]
     unfold rundeInt
     split
     · omega
@@ -70,7 +71,7 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   have magnitude : routineRoundMagnitudeWord (BitVec.ofNat 64 n) = BitVec.ofNat 64 q := by
     simp only [routineRoundMagnitudeWord, BitVec.toNat_ofNat,
       Nat.mod_eq_of_lt (by omega : n < 2 ^ 64)]
-    rfl
+    rw [rounded]
   have carry : (BitVec.ofNat 64 q == BitVec.ofNat 64 (2 ^ 53)) =
       decide (q = 2 ^ 53) := by
     apply Bool.eq_iff_iff.mpr
@@ -117,16 +118,23 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   · simp only [finite, decide_true, ite_true]
     by_cases subnormal : softCarry q < 2 ^ 52
     · simp only [subnormal, decide_true, ite_true]
-      exact packWord_canonical ⟨s, 0, softCarry q⟩
+      have valid : wf f64 (⟨s, 0, softCarry q⟩ : GFloat) :=
         ⟨by change 0 ≤ 2047; omega, subnormal⟩
+      have packed := packWord_canonical (⟨s, 0, softCarry q⟩ : GFloat) valid
+      simpa only [BitVec.ofNat_eq_ofNat] using packed
     · simp only [subnormal, decide_false, Bool.false_eq_true, ite_false]
       rw [BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) (by omega)]
-      exact packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
+      have valid : wf f64 (⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩ : GFloat) :=
         ⟨by change softCarryExp e q ≤ 2047; omega,
           by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
+      have packed := packWord_canonical
+        (⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩ : GFloat) valid
+      simpa only [BitVec.ofNat_eq_ofNat] using packed
   · simp only [finite, decide_false, Bool.false_eq_true, ite_false]
-    exact packWord_canonical ⟨s, 2047, 0⟩
+    have valid : wf f64 (⟨s, 2047, 0⟩ : GFloat) :=
       ⟨by change 2047 ≤ 2047; omega, by change 0 < 2 ^ 52; omega⟩
+    have packed := packWord_canonical (⟨s, 2047, 0⟩ : GFloat) valid
+    simpa only [BitVec.ofNat_eq_ofNat] using packed
 
 /-- The same continuation reaches a normal tie, a subnormal result and an
     overflowing carry. Every fixture satisfies the model theorem's bounds. -/
