@@ -238,6 +238,25 @@ theorem qFalscherKern_abgelehnt : ¬ KernAbfrageTreue (fun _ => 0) 0 1 := by dec
 /-- An out-of-range answer is refused: `5` lies outside `0 .. 1`. -/
 theorem qAusserhalb_abgelehnt : ¬ (0 ≤ (5 : Int) ∧ (5 : Int) ≤ (2 : Int) - 1) := by decide
 
+/-! ## 5. Overflow stops with a capacity failure -/
+
+/-- **An overflowing update stops with `kapazitaet`**: merging `100` into a
+    cell holding `200` leaves `0 .. 255`, so the update's required narrowing
+    of the merge to the cell range is the capacity stop -- never a dropped
+    contribution, a restart from neutral, a wrap or a saturation. The merge
+    value is concrete (`300`); the world, the environment and the
+    continuation are arbitrary, since the literal decides the outcome. -/
+theorem akkuUeberlaufStoppt_zeuge (O : Orakel qD) (passes : Nat)
+    (R : ∀ f : qD.Fn, World qD → Env qD (qD.params f) → RufAusgang f)
+    (σ : World qD) (ρ : Env qD [])
+    (rest : Block qD (vertragVon qD qF) false [Ty.int 0 255] [] []) :
+    execBlock O passes R
+      (Block.narrowRequired (Expr.lit (mergeInt .add 200 100)) 0 255 rest) σ ρ
+      = .logik .kapazitaet := by
+  apply narrowRequiredAusserhalb
+  show ¬ ((0 : Int) ≤ 300 ∧ 300 ≤ 255)
+  decide
+
 #print axioms Gabbro.Grammatik.Kernzelle.qA_ok
 #print axioms Gabbro.Grammatik.Kernzelle.qA_nichtEntartet
 #print axioms Gabbro.Grammatik.Kernzelle.qGestalt
@@ -249,5 +268,6 @@ theorem qAusserhalb_abgelehnt : ¬ (0 ≤ (5 : Int) ∧ (5 : Int) ≤ (2 : Int) 
 #print axioms Gabbro.Grammatik.Kernzelle.qN0_abgelehnt
 #print axioms Gabbro.Grammatik.Kernzelle.qFalscherKern_abgelehnt
 #print axioms Gabbro.Grammatik.Kernzelle.qAusserhalb_abgelehnt
+#print axioms Gabbro.Grammatik.Kernzelle.akkuUeberlaufStoppt_zeuge
 
 end Gabbro.Grammatik.Kernzelle

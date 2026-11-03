@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Isabelle.AccumulatesMonoid
 public import Grammatik.Kern.Syntax.Typen.Teil1
+public import Grammatik.Kern.Semantik.Semantik.T2.Teil2
 
 @[expose] public section
 
@@ -248,8 +249,9 @@ theorem minMergeImBereich {lo hi a b : Int} (ha : lo ≤ a ∧ a ≤ hi)
   constructor <;> omega
 
 /-- Checked `add`: under the single-step prefix duty the merge stays in
-    range. The elaborated update enforces the duty with `trim`, dropping the
-    contribution (no store, no history record) when it fails. -/
+    range. The elaborated update and fold enforce the duty with required
+    narrowing (`trimReq`): a violated duty stops with `Logik.kapazitaet`,
+    never a dropped contribution or a restart from neutral. -/
 theorem addMergeSchritt {lo hi z x : Int}
     (h : lo ≤ z ∧ z ≤ hi ∧ lo ≤ z + x ∧ z + x ≤ hi) :
     lo ≤ mergeInt .add z x ∧ mergeInt .add z x ≤ hi := by
@@ -257,8 +259,8 @@ theorem addMergeSchritt {lo hi z x : Int}
   omega
 
 /-- Bitwise `or` of two values below `2 ^ w` stays below `2 ^ w`: the
-    encoding is closed, while the declared `[lo, hi]` bound stays a checked
-    `trim` duty of the update. -/
+    encoding is closed, while the declared `[lo, hi]` bound stays a required
+    (`trimReq`) duty of the update and the fold. -/
 theorem orMergeWeite {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w) :
     0 ≤ mergeInt .or (a : Int) (b : Int) ∧
       mergeInt .or (a : Int) (b : Int) < ((2 ^ w : Nat) : Int) := by
@@ -269,7 +271,7 @@ theorem orMergeWeite {w a b : Nat} (ha : a < 2 ^ w) (hb : b < 2 ^ w) :
 
 /-- Bitwise `and` of natural values stays non-negative and below each
     operand: the upper range bound is free, the lower bound and the width
-    stay checked duties of the update. -/
+    stay required (`trimReq`) duties of the update and the fold. -/
 theorem andMergeSchranke {a b : Nat} :
     0 ≤ mergeInt .and (a : Int) (b : Int) ∧
       mergeInt .and (a : Int) (b : Int) ≤ (b : Int) := by
@@ -300,8 +302,30 @@ theorem andStartBeiNullFalle (x : Nat) : x &&& 0 = 0 :=
 #print axioms Gabbro.Grammatik.Kernzelle.addMergeSchritt
 #print axioms Gabbro.Grammatik.Kernzelle.orMergeWeite
 #print axioms Gabbro.Grammatik.Kernzelle.andMergeSchranke
+#print axioms Gabbro.Grammatik.Kernzelle.narrowRequiredAusserhalb
 
 /-- The unsigned byte accumulator starts bitwise AND at all eight bits set. -/
 theorem neutralAndByte_zeuge : neutralInt .and 0 255 8 = 255 := by decide
+
+/-! ## 6. Required narrowing: overflow stops -/
+
+/-- Out of range at a required narrowing is a capacity failure: the generic
+    half of the accumulator's overflow duty. The generated update narrows the
+    merge to the cell range and the fold narrows the running total to the
+    result range; either step outside its range is `Logik.kapazitaet`,
+    excluded by the caller's capacity duty (`KoerperGutS/SA`) -- never a
+    dropped contribution, a restart from neutral, a wrap or a saturation. -/
+theorem narrowRequiredAusserhalb {D : Deklaration} (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {lo hi lo' hi' : Int} (e : Expr D Γ Λ (.int lo hi))
+    (rest : Block D V l (.int lo' hi' :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ)
+    (h : ¬ (lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi')) :
+    execBlock (V := V) O passes R (Block.narrowRequired e lo' hi' rest) σ ρ
+      = .logik .kapazitaet := by
+  simp only [execBlock]
+  rw [dif_neg h]
 
 end Gabbro.Grammatik.Kernzelle

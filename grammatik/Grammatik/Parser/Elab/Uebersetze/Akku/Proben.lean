@@ -36,6 +36,24 @@ theorem akkuNeutralExpr_zeuge : uAkkuNeutralExpr 0 = .lit 0 ∧
 /-- The narrow range text of the value type. -/
 theorem akkuBereichText_zeuge : uAkkuBereichText 0 255 = "0 .. 255" := rfl
 
+/-- The update arm merges and narrows required: an overflowing merge stops
+    with `Logik.kapazitaet`, the contribution is never dropped. -/
+theorem akkuAktArm_zeuge :
+    uAkkuAktArm probenAkku 0 255 "add" 0 =
+      .locks false (.variable "s#sperre0") (.block
+        [.bind false "s0" none (.bin "+" (.variable "s#zelle0") (.variable "v")),
+         .trimReq (.variable "s0") "0 .. 255",
+         .set (.variable "s#zelle0") "=" (.variable "s0")] none) := rfl
+
+/-- The fold step accumulates and narrows required: an overflowing prefix
+    stops with `Logik.kapazitaet`, the fold never restarts from neutral. -/
+theorem akkuFaltSchritt_zeuge :
+    uAkkuFaltSchritt probenAkku 0 255 "add" 0 =
+      [.locks false (.variable "s#sperre0") (.block
+        [.bind false "s0" none (.bin "+" (.variable "m") (.variable "s#zelle0")),
+         .trimReq (.variable "s0") "0 .. 255",
+         .set (.variable "m") "=" (.variable "s0")] none)] := rfl
+
 /-- A `writes s` effect names every cell. -/
 theorem akkuEffektSchreibt_zeuge :
     uAkkuExpandEffs [probenAkku] ["s"] [.writes (.variable "s")] =
