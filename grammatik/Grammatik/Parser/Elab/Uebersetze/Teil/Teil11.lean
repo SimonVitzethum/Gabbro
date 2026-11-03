@@ -31,6 +31,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
+public import Grammatik.Parser.Profil.Eintritt
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
 public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
@@ -390,14 +391,13 @@ def uRestFehler : List SItemTief → Except String Unit
   | .goalT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
+  | .trustT _ _ arch regs _ _ :: _ => .error (ProfilBindung.gastQuelleFehler arch regs)
   | .concT _ :: rest => uRestFehler rest
   | .devT .. :: rest => uRestFehler rest
   | .groupT .. :: rest => uRestFehler rest
   | .stateT .. :: rest => uRestFehler rest
   | .specT .. :: rest => uRestFehler rest
   | .asmT .. :: rest => uRestFehler rest
-  -- `axiom f(..) effects { .. } falsifier p;`: a foreign body under a named hardware assumption; a `requires` has no
-  -- G form yet (the model's foreign bodies carry no caller duty)
   | .axiomT _ _ _ .none _ _ :: rest => uRestFehler rest
   -- `accumulates` (C15 storage slice): admitted surface forms expand to guarded
   -- cells (`UebersetzeAkku`); anything else is refused by name (the core query
