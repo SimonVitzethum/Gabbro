@@ -133,6 +133,7 @@ theorem index_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     change (2047 : Int) = _
     unfold integerFloatIndex integerFloatShift
     rw [Nat.min_eq_left (by omega)]
+    rfl
 
 variable [Kern] {L : Lay D}
 
