@@ -73,18 +73,19 @@ theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   by_cases maximum : x.bexp = 2047 <;>
     simpa [softFloatRangeL, softFloatReject, maximum, Runner.IR.bool] using chosen
 
-/-- Add/sub share one kernel; multiply selects the wide-product kernel.
-    Division has no emitter and is refused before this selection is used. -/
+/-- Add/sub share one kernel; multiply and divide select their checked
+    integer routines behind the same result and memory interface. -/
 def softFloatKernel : GleitOp → SoftFloatKernel
   | .mul => .mul
-  | .add | .sub | .div => .add
+  | .div => .div
+  | .add | .sub => .add
 
 /-- One rounded-result guard and continuation template serves every checked
     arithmetic kernel. Subtraction keeps its single sign-bit xor adapter. -/
 def floatArithmeticBlockL (op : GleitOp) (d : Nat) (lo hi : Int × Int)
     (left right : Nat → Option (List II × Nat))
     (rest : Unit → Option (List II × Nat)) : Option (List II × Nat) :=
-  if op = .div then none else do
+  do
     let producer := fun j => softFloatWordsL (softFloatKernel op) j left
       (fun k => softAddOperandL (decide (op = .sub)) k right)
     let cc ← softFloatRangeL d lo hi producer
@@ -93,8 +94,8 @@ def floatArithmeticBlockL (op : GleitOp) (d : Nat) (lo hi : Int × Int)
     pure (floatNarrowC d cc.1 (stopC 107 d) ce.1 cr.1,
       max cc.2 (max (d + 8) (max ce.2 cr.2)))
 
-/-- Successful operation selection uses exactly the shared code template. -/
-theorem floatArithmeticBlockL_supported (op : GleitOp) (supported : op ≠ .div)
+/-- Every arithmetic operation uses exactly the shared code template. -/
+theorem floatArithmeticBlockL_eq (op : GleitOp)
     (d : Nat) (lo hi : Int × Int) (left right : Nat → Option (List II × Nat))
     (rest : Unit → Option (List II × Nat)) :
     floatArithmeticBlockL op d lo hi left right rest = (do
@@ -106,9 +107,9 @@ theorem floatArithmeticBlockL_supported (op : GleitOp) (supported : op ≠ .div)
       let cr ← rest ()
       pure (floatNarrowC d cc.1 (stopC 107 d) ce.1 cr.1,
         max cc.2 (max (d + 8) (max ce.2 cr.2)))) := by
-  simp only [floatArithmeticBlockL, if_neg supported]
+  rfl
 
-#print axioms floatArithmeticBlockL_supported
+#print axioms floatArithmeticBlockL_eq
 #print axioms softFloatReject_none
 #print axioms softFloatRangeL_ok
 end Gabbro.Stage0.Senke
