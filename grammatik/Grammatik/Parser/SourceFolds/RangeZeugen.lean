@@ -57,4 +57,47 @@ theorem parseFoldNode_no_array_zeuge :
       (.ext .foldAdd ["i", "range"] [.lit 0, .lit 2, .tru, .variable "x"]) =
       .error "fold range: indexed array required" := rfl
 
+private def tableSource : List SItemTief :=
+  [.tableT "T" none (some (.lit 2)) none none false
+    [.tSlot [⟨"v", .atom "u8", none, none, none, false, false⟩]]]
+
+private def rowProjection : SExpr :=
+  .field (.index (.variable "T") (.variable "k")) "v"
+
+/-- A fold over a table reads row projections and accumulates in `u64`. -/
+theorem parseFoldNode_table_zeuge :
+    parseFoldNode tableSource [] none []
+      (.ext .foldAdd ["k", "range"] [.lit 0, .lit 2, .tru, rowProjection]) =
+      .ok ⟨.foldAdd, "k", .lit 0, .lit 2, .tru, rowProjection,
+        none, .atom "u64", "T", .lit 2, true⟩ := rfl
+
+private def nestedRowFold : SExpr :=
+  .ext .foldAdd ["i", "range"]
+    [.lit 0, .lit 2, .tru,
+      .bin "+" (.index (.variable "xs") (.variable "i"))
+        (.ext .foldAdd ["k", "range"] [.lit 0, .lit 2, .tru, rowProjection])]
+
+/-- An inner fold over table rows nests inside an outer fold over an array:
+    the inner loop traverses the table domain, the outer loop the array. -/
+theorem returnFold_nested_row_zeuge :
+    returnFold tableSource [("xs", .array (.atom "u8") (.lit 2))]
+      (some (.atom "u16")) (.ret (some nestedRowFold)) =
+    .ok (.block
+      [.bind true "$rangeFold$acc$0" (some (.atom "u16")) (.lit 0),
+       .each "i" none "elems" (.variable "xs") "unvisited" "" none
+         (.block
+           [.bind true "$rangeFold$acc$1" (some (.atom "u64")) (.lit 0),
+            .each "k" none "slots" (.variable "T") "unvisited" "" none
+              (.block
+                [.bind false "$rangeFold$value$1" none rowProjection,
+                 .set (.variable "$rangeFold$acc$1") "+="
+                   (.variable "$rangeFold$value$1")] none),
+            .bind false "$rangeFold$result$1" none (.variable "$rangeFold$acc$1"),
+            .bind false "$rangeFold$value$0" none
+              (.bin "+" (.index (.variable "xs") (.variable "i"))
+                (.variable "$rangeFold$result$1")),
+            .set (.variable "$rangeFold$acc$0") "+="
+              (.variable "$rangeFold$value$0")] none)]
+      (some (.ret (some (.variable "$rangeFold$acc$0"))))) := rfl
+
 end Gabbro.Grammatik.Parser.SourceFolds
