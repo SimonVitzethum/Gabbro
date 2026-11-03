@@ -82,21 +82,28 @@ theorem softAddContinuationL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → P
 /-- Ordinary source producers may use any reserved prefix. Their concrete
     results are retained while the integer-only routine uses a fresh suffix. -/
 theorem softAddWordsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
-    {left right : Nat → Option (List II × Nat)} {reserved : Nat}
-    (a b : GFloat) (hA : wf f64 a) (hB : wf f64 b)
-    (hl : WordCode (L := L) (reserved := reserved) ρ W left (BitVec.ofNat 64 (zuBits f64 a)))
-    (hr : WordCode (L := L) (reserved := reserved) ρ W right (BitVec.ofNat 64 (zuBits f64 b))) :
-    WordCode (L := L) (reserved := reserved) ρ W (fun d => softAddWordsL d left right)
-      (BitVec.ofNat 64 (zuBits f64 (add f64 a b))) := by
-  intro fp K d code top hc ht m pc hp
+    {left right : Nat → Option (List II × Nat)} {reserved : Nat} {fp : Runner.W} {K : Nat}
+    (a b : GFloat)
+    (hl : ∀ j c t, left j = some (c, t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K j c ρ W reserved → Ok m pc fp K j c
+        (fun w => wf f64 a ∧ w = BitVec.ofNat 64 (zuBits f64 a)))
+    (hr : ∀ j c t, right j = some (c, t) → t ≤ K → ∀ m pc,
+      Pre L m pc fp K j c ρ W reserved → Ok m pc fp K j c
+        (fun w => wf f64 b ∧ w = BitVec.ofNat 64 (zuBits f64 b)))
+    {d top : Nat} {code : List II} (hc : softAddWordsL d left right = some (code, top))
+    (ht : top ≤ K) {m : Runner.Mem} {pc : Runner.W} (hp : Pre L m pc fp K d code ρ W reserved) :
+    Ok m pc fp K d code (fun w => wf f64 (add f64 a b) ∧
+      w = BitVec.ofNat 64 (zuBits f64 (add f64 a b))) := by
   have room := softAddWordsL_room hc
   simp only [softAddWordsL, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
   obtain ⟨⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, ⟨suffix, ts⟩, hs, hc⟩ := hc
   cases hc
-  obtain ⟨m1, s1, a1, wa, ra, ea⟩ := hl ha (by omega) m pc hp.left
+  obtain ⟨m1, s1, a1, wa, ra, ea⟩ := hl _ _ _ ha (by omega) m pc hp.left
+  obtain ⟨hA, ea⟩ := ea
   subst wa
   have hp1 := hp.next a1 (show d ≤ d + 1 by omega) (by omega)
-  obtain ⟨m2, s2, a2, wb, rb, eb⟩ := hr hb (by omega) m1 _ hp1.left
+  obtain ⟨m2, s2, a2, wb, rb, eb⟩ := hr _ _ _ hb (by omega) m1 _ hp1.left
+  obtain ⟨hB, eb⟩ := eb
   subst wb
   have hp2 := hp1.next a2 (Nat.le_refl _) (by omega)
   have leftRead := slotRead_agree hp1.frame a2 (Nat.lt_succ_self d) (by omega) ra
@@ -104,7 +111,7 @@ theorem softAddWordsL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     ⟨hp.ctx, hp2.small, hp2.frame, hp2.code, hp2.far, hp2.env, hp2.welt, hp2.wstab⟩
   obtain ⟨m3, s3, a3, w, rw, ew⟩ := softAddContinuationL_ok a b hA hB hs pre
     (by omega) leftRead rb
-  refine ⟨m3, ?_, (a1.trans (a2.mono (Nat.le_succ d))).trans a3, w, rw, ew⟩
+  refine ⟨m3, ?_, (a1.trans (a2.mono (Nat.le_succ d))).trans a3, w, rw, ⟨add_wf f64 f64_p a b hA hB, ew⟩⟩
   simpa only [List.length_append, pc_add] using (s1.trans s2).trans s3
 
 #print axioms softAddContinuationL_ok
