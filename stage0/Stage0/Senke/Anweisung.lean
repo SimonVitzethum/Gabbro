@@ -6,7 +6,7 @@
   `ite c t e` tests `c` with `brz` and jumps over the other branch; a call (`call`, `bindCall`) places the
   callee's frame at the first free slot (`callC`). `layout.internalResult` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the shared ensures/invariant epilogue, which
-  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
+  a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`/`assignThruOwn` (the owner mark is ghost), `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
   give on every way out), the scoped returns `retScoped`/`retWhyScoped` (the ordinary `ret`/`retWhy` code: the scope
   release is ghost), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`, `bindCallIndElse`, `leave`
@@ -90,6 +90,10 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
     let ci' ← lowE (reserved := reserved) L i (frei Γ reserved + valueWords (D.typ t f))
     slotStoreC L t f (frei Γ reserved) ce ci'
   | _, Γ, _, _, .assignThru _ t _ f i e _ _, reserved => do
+    let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
+    let ci' ← lowE (reserved := reserved) L i (frei Γ reserved + valueWords (D.typ t f))
+    slotStoreC L t f (frei Γ reserved) ce ci'
+  | _, Γ, _, _, .assignThruOwn _ t _ f i e _ _ _ _ _ _ _, reserved => do
     let ce ← lowE (reserved := reserved) L e (frei Γ reserved)
     let ci' ← lowE (reserved := reserved) L i (frei Γ reserved + valueWords (D.typ t f))
     slotStoreC L t f (frei Γ reserved) ce ci'

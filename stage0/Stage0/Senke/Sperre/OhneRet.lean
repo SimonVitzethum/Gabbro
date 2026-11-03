@@ -58,7 +58,7 @@ mutual
 theorem retFreiS_istZ : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → (s : Stmt D V l Γ Λ Λ') →
     retFreiS s = true → ∀ σ ρ, istZ (execStmt O passes R s σ ρ) = false
   | _, _, _, _, .assignVar .., _, _, _ | _, _, _, _, .assignGlob .., _, _, _
-  | _, _, _, _, .assignSlot .., _, _, _ | _, _, _, _, .assignThru .., _, _, _
+  | _, _, _, _, .assignSlot .., _, _, _ | _, _, _, _, .assignThru .., _, _, _ | _, _, _, _, .assignThruOwn .., _, _, _
   | _, _, _, _, .advances .., _, _, _ | _, _, _, _, .retires .., _, _, _
   | _, _, _, _, .leave _, _, _, _ | _, _, _, _, .next _, _, _, _
   | _, _, _, _, .publish .., _, _, _ | _, _, _, _, .putBytes .., _, _, _ => by simp only [execStmt]; rfl

@@ -81,7 +81,8 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .publish g e zz1 zz2 zz3 zz4, c, top, h, hK, zzh5, hW, m, pc, σ, ρ, hp, zzh6, hlo2, zzh7, zzh8, hWa, hpr =>
       lowS_ok_publish (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (g := g) (e := e) (zz1 := zz1) (zz2 := zz2) (zz3 := zz3) (zz4 := zz4) (c := c) (top := top) (h := h) (hK := hK) (zzh5 := zzh5) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (zzh6 := zzh6) (hlo2 := hlo2) (zzh7 := zzh7) (zzh8 := zzh8) (hWa := hWa) (hpr := hpr)
   | _, Γ, Λ, _, .assignSlot t f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr
-  | _, Γ, Λ, _, .assignThru _ t _ f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
+  | _, Γ, Λ, _, .assignThru _ t _ f i e _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr
+  | _, Γ, Λ, _, .assignThruOwn _ t _ f i e _ _ _ _ _ _ _, c, top, h, hK, _, hW, m, pc, σ, ρ, hp, _, hlo2, _, _, hWa, hpr => by
     simp only [lowS, ← hlo0, resultWords_vertragVon, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨ce, te⟩, he, ⟨ci1, ti⟩, hi, hc⟩ := h
     simp only [execStmt, Sim]
