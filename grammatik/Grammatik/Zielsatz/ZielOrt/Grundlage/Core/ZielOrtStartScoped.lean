@@ -43,14 +43,46 @@ theorem kopfS_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     stabilS_mono fun L hL => R.genau.symm.mem_iff.mp (List.mem_append_left _ hL)
   have he := erg_stabil (hFS G.f) e (scopedWert_orte (kopfS_okS hG hr) hret)
   have hens := ens_stabil (hFS G.f) (List.Perm.refl ((vertragVon D G.f).ende))
-  refine ⟨popS_ens hO hRL hQ hS hsp hK hG hr e he
-      (fun c hc => hmono (hens hc)) (fun O' calls U σ =>
-        semH_scopedWert S O' U passes calls r e R hret σ ρ), ?_⟩
-  apply popS_inv hO hRL hQ hS hsp hI hG hr e
-  · intro i hi hs c hc
-    exact hmono (inv_stabil (hFS G.f) (List.Perm.refl _) hi hs hc)
-  · intro O' calls U σ
-    exact semH_scopedWert S O' U passes calls r e R hret σ ρ
+  have hcheckW := kopfS_scopedWert_inv hO hRL hQ hS hsp hK hG hr e R hret
+  have hheld : ∀ L ∈ R.scopes, Res.held L ∈ Λ := by
+    intro L hL
+    exact R.genau.symm.mem_iff.mp
+      (List.mem_append_right _ (List.mem_map.mpr ⟨L, hL, rfl⟩))
+  obtain ⟨H, HA, HU, σ, hreq, hf, hv, _, hfa, hra, hqa, _, hfu, hiu, _, hg, _, heq⟩ := hG
+  have h1 := heq (rufAusV H) (orakelAus O HA) (umweltAus S sp HU) (rufAusV_passt hf)
+    (orakelAus_passt O hfa) (umweltAus_passt S sp hfu) (gleichRS_orakelAus O HA)
+  rw [hr] at h1 hg
+  simp only at h1 hg
+  -- The guard belongs to this replay world, not to an arbitrary callback world.
+  have hcheck : scopesInvH S R.scopes (σ.lese Λ e.orte) = true := by
+    change scopesInvH S R.scopes σ = true
+    change scopesInvH S R.scopes W = true at hcheckW
+    exact (scopesInvH_gleich hS hg R.scopes hheld).trans hcheckW
+  have h2 := ZErgG.folgt_zurueck (ZErgG.folgt_trans h1 (ZErgG.folgt_of_gleich
+    (semH_scopedWert S (orakelAus O HA) (umweltAus S sp HU) passes (rufAusV H)
+      r e R hret σ ρ hcheck)))
+  obtain ⟨σ', hex, hsg⟩ := zErgG_gleich_zurueck h2
+  have hE := ((hK G.f).1 (orakelAus O HA) (orakelAus_rahmen hO hra)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
+    (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq).1 σ' _ hex
+  have hInv := (hI G.f) (orakelAus O HA) (orakelAus_rahmen hO hra)
+    (regLokal_orakelAus hRL HA) (orakelAus_vertrag hQ hqa)
+    (umweltAus S sp HU) (umweltAus_ok hS hsp hiu) (rufAusV H)
+    (rufAusV_rahmen hv) (rufAusV_ohneVorbedingung hv.1) G.s0 G.rho hreq σ' _ hex
+  have hgl : GleichAuf (stabilS P S lok G.f Λ) (σ.lese Λ e.orte) (W.lese Λ e.orte) :=
+    hg.lese Λ Λ e.orte e.orte
+  have hfinal : GleichAuf (stabilS P S lok G.f Λ) σ' (W.lese Λ e.orte) :=
+    (gleichAuf_SG hsg).trans hgl
+  rw [evalErg_gleichAuf e (fun _ h => he h) hgl ρ] at hE
+  refine ⟨ens_transfer hE (GleichAuf.refl _ _)
+    (GleichAuf.mono (fun _ h => hmono (hens h)) hfinal), ?_⟩
+  intro i hi hs
+  have h3 := hInv i hi hs
+  unfold InvHaelt at h3 ⊢
+  rw [← eval_gleichAuf (P.invariante i)
+    (fun _ h => hmono (inv_stabil (hFS G.f) (List.Perm.refl _) hi hs h)) hfinal .nil]
+  exact h3
 
 /-- The all-head release-step property, including roots. The saved-answer
     invariant carries this guarantee into `StartEndeG` after cleanup. -/
