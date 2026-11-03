@@ -60,6 +60,35 @@ theorem execStmt_ru_assignThru {V : Vertrag D}
   rfl
 
 set_option linter.unusedSectionVars false in
+theorem execStmt_ru_assignThruOwn {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    {zi_n}
+    (p)
+    (t)
+    (ht)
+    (f)
+    (i)
+    (e)
+    (m)
+    (s)
+    (ho)
+    (he)
+    (hg)
+    (hm)
+    (hw)
+    (hL)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : execStmt O.mitRuhe passes R' (ruS (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ) = ausR (execStmt O passes R (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  simp only [ruS, execStmt]
+  rw [show (ruE p).orte ++ (ruE i).orte ++ (ruE e).orte = p.orte ++ i.orte ++ e.orte from
+    kongr₂ (· ++ ·) (orte2 p i) (ruE_orte e), lese_worldR, eval_ru, eval_ru, schreibSlot_worldR]
+  rfl
+
+set_option linter.unusedSectionVars false in
 theorem execStmt_ru_assignSlotRef {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
