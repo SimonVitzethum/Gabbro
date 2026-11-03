@@ -106,6 +106,7 @@ theorem stringCompare_value (acc : Nat) (s : Nat → Runner.W) (x y : Nat) (r : 
   have eq : (BitVec.ofNat 64 x == BitVec.ofNat 64 y) = (x == y) := by
     simp only [Bool.beq_eq_decide_eq]
     congr 1
+    apply propext
     constructor
     · intro h; have := congrArg BitVec.toNat h; simpa [Nat.mod_eq_of_lt hx, Nat.mod_eq_of_lt hy] using this
     · exact congrArg (BitVec.ofNat 64)
