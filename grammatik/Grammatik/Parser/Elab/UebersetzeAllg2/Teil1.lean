@@ -198,9 +198,9 @@ def assignDurchOwnStmt {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : Lis
     show Expr (declOf u) Γ Λ (typAt u t fh.idx)
     rw [fh.hint]
     exact e
-  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ t o m hm he hL
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ t o m hm he hL
   exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) fh.idx i e2 m 0
-    ho he' hg hmΛ hw hL
+    ho he' hg hw hL
 
 /-- A `slot` write at its recorded range. -/
 def assignSlotStmt {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -252,9 +252,9 @@ def assignDurchOwnStmtB {read : Bool} {l : Bool} (u : UProg) (Γ : Ctx) (Λ : Li
     show Expr (declOf u) Γ Λ (typAt u t bh.idx)
     rw [bh.hbool]
     exact e
-  obtain ⟨ho, he', hg, hmΛ⟩ := ownGuard_holds u Λ t o m hm he hL
+  obtain ⟨ho, he', hg⟩ := ownGuard_holds u Λ t o m hm he hL
   exact Stmt.assignThruOwn (D := declOf u) p t (capTab_some u t.val t.isLt) bh.idx i e2 m 0
-    ho he' hg hmΛ hw hL
+    ho he' hg hw hL
 
 /-- A `slot` write into a BOOL field. -/
 def assignSlotStmtB {l : Bool} (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
