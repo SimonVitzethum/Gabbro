@@ -201,7 +201,7 @@ theorem verbrauchLauf_ohneHardware {l : Bool} {Γ : Ctx} (t : D.Tab)
       · split at h
         · cases h
         · cases h
-        · rename_i σr k hsel_eq
+        · rename_i σr k _ hsel_eq
           split at h
           · rename_i σ1 ρ1 hstep_eq
             split at h
