@@ -97,6 +97,17 @@ theorem multiword_images_zeuge :
     (image 192 true false).isOk = true ∧ (image 192 true true).isOk = true := by
   decide +kernel
 
+/-- The fixtures satisfy the canonical checker jointly with the emitted paths;
+    the complete carrier enumeration is empty for this table-free program. -/
+theorem multiword_admission_zeuge :
+    Akzeptiert (program 96 false false) ⟨fun l => l.elim, fun l => l.elim⟩
+      [entry 96 false] [] [] [entry 96 false] = true ∧
+    Akzeptiert (program 96 true false) ⟨fun l => l.elim, fun l => l.elim⟩
+      [entry 96 true] [] [] [entry 96 true] = true ∧
+    Akzeptiert (program 96 true true) ⟨fun l => l.elim, fun l => l.elim⟩
+      [entry 96 true] [] [] [entry 96 true] = true := by
+  decide +kernel
+
 /-- A twelve-word value also exercises overlap when copied back down the frame. -/
 theorem overlapping_multiword_image_zeuge :
     valueWords (answerTy 768) = 12 ∧ (image 768 false false).isOk = true := by
