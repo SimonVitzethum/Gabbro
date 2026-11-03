@@ -397,6 +397,6 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     | rueckFreigabeLetzte ρ a L hhead z ha =>
       simp only [rufUpdateG_self]
       have hrelease := haeltInvG_scopedRelease ρ a L [] hhead h
-      exact haeltInvG_rufAntwort (vor := a.2) (σ := (M.weltVon f).gibt L)
-        (a := a.1) hrelease rfl ha
+      apply haeltInvG_rufAntwort (σ := (M.weltVon f).gibt L) hrelease rfl
+      exact (rufAntwortG_rest_irrel (M.faeden f) _ _ _).trans ha
 end Gabbro.Grammatik

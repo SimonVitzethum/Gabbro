@@ -58,6 +58,12 @@ theorem GRest.scopedGrund_budget (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D}
     simp only [scopedReturnSteps, potRest, kostenBlock, kostenStmt]
     omega
 
+/-- The own-step test on a whole sigma residue (a non-dependent argument, so that the head
+    equation of a rule can rewrite it). -/
+private def RestArb {V : Vertrag D}
+    (x : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) : Bool :=
+  x.2.2.2.2.arbeitsfaehig
+
 /-- A rule can fire only at a residue with positive own-step potential. -/
 theorem rufSchrittG_arbeitsfaehig {P : Programm D} {O : Orakel D} {pa : Nat}
     {M M' : RufMaschineG D} {t : Faden} (hs : RufSchrittG P O pa M t M') :
@@ -73,8 +79,14 @@ theorem rufSchrittG_arbeitsfaehig {P : Programm D} {O : Orakel D} {pa : Nat}
       | rueckScopedGrundDirekt ρ r grund R hhead hret =>
           rw [hhead]
           rcases GRest.scopedGrund_faelle hret with rfl | ⟨_, rfl⟩ | ⟨_, _, _, rfl⟩ <;> rfl
-      | _ => simp_all [GRest.arbeitsfaehig]
+      | _ =>
+          show RestArb (M.faeden t).kopf.rest = true
+          rw [‹(M.faeden t).kopf.rest = _›]
+          rfl
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
-      cases hs <;> simp_all [GRest.arbeitsfaehig]
+      cases hs <;>
+        (show RestArb (M.faeden t).kopf.rest = true
+         rw [‹(M.faeden t).kopf.rest = _›]
+         rfl)
 
 end Gabbro.Grammatik

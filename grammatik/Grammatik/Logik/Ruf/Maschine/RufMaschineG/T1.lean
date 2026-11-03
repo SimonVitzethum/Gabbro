@@ -119,6 +119,19 @@ def rufAntwortG (z : RufFadenG D) (vor σ : World D)
         | .inr r => RufEreignisF.why z.kopf.f z.kopf.rho r z.kopf.s0 σ
       pure ⟨st, ⟨c.f, c.rho, c.s0, rest⟩, σ.spur, ev :: z.log⟩
 
+/-- Delivery ignores the head residue and the trace of the answering thread. -/
+theorem rufAntwortG_rest_irrel (z : RufFadenG D)
+    (r : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D (vertragVon D z.kopf.f) l Γ Λ)
+    (sp : List (Ereignis D)) {vor σ : World D}
+    (a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende) :
+    rufAntwortG ⟨z.stapel, ⟨z.kopf.f, z.kopf.rho, z.kopf.s0, r⟩, sp, z.log⟩ vor σ a =
+      rufAntwortG z vor σ a := by
+  cases hs : z.stapel with
+  | nil => simp [rufAntwortG, hs]
+  | cons c st =>
+      simp only [rufAntwortG, hs]
+      cases a <;> rfl
+
 /-- Both answer channels retain exactly the cleanup trace. -/
 theorem rufAntwortG_spur {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
