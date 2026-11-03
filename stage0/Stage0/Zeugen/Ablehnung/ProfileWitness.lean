@@ -43,8 +43,8 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- Profile binding exists in `Parser.Profil`, but Stage0 has no certificate transport
-    from that binding to the selected image and its named hardware assumptions. -/
+/-- The profile binding is admitted and carried in the image certificate, but
+    profile blocks have no Stage0 elaboration yet and are refused here. -/
 theorem candidate_refused :
     (match candidate with | .error message => some message | .ok _ => none) =
       some "ir: profile: canonical source-to-goal profile binding missing" := by decide +kernel

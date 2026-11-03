@@ -58,3 +58,10 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel
 #print axioms Gabbro.Stage0.Senke.ReturnProtocolProbe.publishResult_run_zeuge
 #print axioms Gabbro.Stage0.Senke.EntryProtocolProbe.entryFrame_run_zeuge
+-- C14 Stage-0 image placement and profile certificate transport.
+#print axioms Gabbro.Stage0.Senke.layU_ga_lcm_dvd
+#print axioms Gabbro.Stage0.Emitted.placed
+#print axioms Gabbro.Stage0.Compiled.profile_binding
+#print axioms Gabbro.Stage0.AlignedStaticWitness.addr_aligned
+#print axioms Gabbro.Stage0.ProfileMismatchWitness.candidate_refused
+#print axioms Gabbro.Stage0.SectionWitness.candidate_refused
