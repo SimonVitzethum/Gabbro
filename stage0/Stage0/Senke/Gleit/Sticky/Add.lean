@@ -8,22 +8,22 @@ open Gabbro.Grammatik Gleitkomma Runner.IR
 
 /-- Translating an odd interval by an even guard-scaled magnitude preserves
     its rounding decision. This covers the same-sign aligned addition path. -/
-theorem softRound_aligned_add (large : Nat) (small gap : Runner.W)
+theorem softRoundNat_aligned_add (large small gap : Nat)
     (even : large % 2 = 0) (t : Nat) (tp : 0 < t) :
-    let d := 2 ^ gap.toNat
-    let j := (floatShiftJamWord small gap).toNat
-    rundeInt ((large * d + small.toNat) / (4 * t * d))
-      ((large * d + small.toNat) % (4 * t * d)) (4 * t * d) =
+    let d := 2 ^ gap
+    let j := softShiftJamNat small gap
+    rundeInt ((large * d + small) / (4 * t * d))
+      ((large * d + small) % (4 * t * d)) (4 * t * d) =
       rundeInt ((large + j) / (4 * t)) ((large + j) % (4 * t)) (4 * t) := by
   dsimp only
-  have dp : 0 < (2 : Nat) ^ gap.toNat := Nat.two_pow_pos _
-  rcases floatShiftJamWord_interval small gap with exactValue | ⟨odd, lo, hi⟩
+  have dp : 0 < (2 : Nat) ^ gap := Nat.two_pow_pos _
+  rcases softShiftJamNat_interval small gap with exactValue | ⟨odd, lo, hi⟩
   · apply softRound_scaled _ _ _ _ dp (by omega)
     rw [exactValue.2]
     ring
-  · have jp : 0 < (floatShiftJamWord small gap).toNat := by omega
-    have pred : large + (floatShiftJamWord small gap).toNat - 1 =
-        large + ((floatShiftJamWord small gap).toNat - 1) := by omega
+  · have jp : 0 < softShiftJamNat small gap := by omega
+    have pred : large + softShiftJamNat small gap - 1 =
+        large + (softShiftJamNat small gap - 1) := by omega
     apply softRound_odd_interval _ _ _ _ dp tp
     · rw [Nat.add_mod, even, odd]
       decide
@@ -35,6 +35,49 @@ theorem softRound_aligned_add (large : Nat) (small gap : Runner.W)
 /-- Subtraction reflects the interval. The ordered magnitude premise keeps
     natural subtraction exact, including the separate exact-zero case.
     In particular the discarded nonzero tail has the correct negative sign. -/
+theorem softRoundNat_aligned_sub (large small gap : Nat)
+    (even : large % 2 = 0)
+    (ordered : softShiftJamNat small gap ≤ large)
+    (cover : small ≤ large * 2 ^ gap) (t : Nat) (tp : 0 < t) :
+    let d := 2 ^ gap
+    let j := softShiftJamNat small gap
+    rundeInt ((large * d - small) / (4 * t * d))
+      ((large * d - small) % (4 * t * d)) (4 * t * d) =
+      rundeInt ((large - j) / (4 * t)) ((large - j) % (4 * t)) (4 * t) := by
+  dsimp only
+  have dp : 0 < (2 : Nat) ^ gap := Nat.two_pow_pos _
+  have difference := Nat.sub_add_cancel ordered
+  have differenceScaled := congrArg (fun n : Nat => n * 2 ^ gap) difference
+  have numerator := Nat.sub_add_cancel cover
+  rcases softShiftJamNat_interval small gap with exactValue | ⟨odd, lo, hi⟩
+  · apply softRound_scaled _ _ _ _ dp (by omega)
+    nlinarith [exactValue.2]
+  · have oddDifference : (large - softShiftJamNat small gap) % 2 = 1 := by
+      have parity := congrArg (fun n : Nat => n % 2) difference
+      rw [Nat.add_mod, odd, even] at parity
+      omega
+    have positive : 0 < large - softShiftJamNat small gap := by omega
+    have pred : large - softShiftJamNat small gap - 1 + 1 =
+        large - softShiftJamNat small gap := by omega
+    have jp : 0 < softShiftJamNat small gap := by omega
+    have jpred : softShiftJamNat small gap - 1 + 1 =
+        softShiftJamNat small gap := by omega
+    have predScaled := congrArg (fun n : Nat => n * 2 ^ gap) pred
+    have jpredScaled := congrArg (fun n : Nat => n * 2 ^ gap) jpred
+    exact softRound_odd_interval _ _ _ _ dp tp oddDifference (by nlinarith) (by nlinarith)
+
+/-- The same-sign theorem applies directly to the actual emitted word jam. -/
+theorem softRound_aligned_add (large : Nat) (small gap : Runner.W)
+    (even : large % 2 = 0) (t : Nat) (tp : 0 < t) :
+    let d := 2 ^ gap.toNat
+    let j := (floatShiftJamWord small gap).toNat
+    rundeInt ((large * d + small.toNat) / (4 * t * d))
+      ((large * d + small.toNat) % (4 * t * d)) (4 * t * d) =
+      rundeInt ((large + j) / (4 * t)) ((large + j) % (4 * t)) (4 * t) := by
+  simpa only [floatShiftJamWord_nat] using
+    softRoundNat_aligned_add large small.toNat gap.toNat even t tp
+
+/-- Ordered subtraction uses the same unbounded certificate as addition. -/
 theorem softRound_aligned_sub (large : Nat) (small gap : Runner.W)
     (even : large % 2 = 0)
     (ordered : (floatShiftJamWord small gap).toNat ≤ large)
@@ -44,27 +87,9 @@ theorem softRound_aligned_sub (large : Nat) (small gap : Runner.W)
     rundeInt ((large * d - small.toNat) / (4 * t * d))
       ((large * d - small.toNat) % (4 * t * d)) (4 * t * d) =
       rundeInt ((large - j) / (4 * t)) ((large - j) % (4 * t)) (4 * t) := by
-  dsimp only
-  have dp : 0 < (2 : Nat) ^ gap.toNat := Nat.two_pow_pos _
-  have difference := Nat.sub_add_cancel ordered
-  have differenceScaled := congrArg (fun n : Nat => n * 2 ^ gap.toNat) difference
-  have numerator := Nat.sub_add_cancel cover
-  rcases floatShiftJamWord_interval small gap with exactValue | ⟨odd, lo, hi⟩
-  · apply softRound_scaled _ _ _ _ dp (by omega)
-    nlinarith [exactValue.2]
-  · have oddDifference : (large - (floatShiftJamWord small gap).toNat) % 2 = 1 := by
-      have parity := congrArg (fun n : Nat => n % 2) difference
-      rw [Nat.add_mod, odd, even] at parity
-      omega
-    have positive : 0 < large - (floatShiftJamWord small gap).toNat := by omega
-    have pred : large - (floatShiftJamWord small gap).toNat - 1 + 1 =
-        large - (floatShiftJamWord small gap).toNat := by omega
-    have jp : 0 < (floatShiftJamWord small gap).toNat := by omega
-    have jpred : (floatShiftJamWord small gap).toNat - 1 + 1 =
-        (floatShiftJamWord small gap).toNat := by omega
-    have predScaled := congrArg (fun n : Nat => n * 2 ^ gap.toNat) pred
-    have jpredScaled := congrArg (fun n : Nat => n * 2 ^ gap.toNat) jpred
-    exact softRound_odd_interval _ _ _ _ dp tp oddDifference (by nlinarith) (by nlinarith)
+  simpa only [floatShiftJamWord_nat] using
+    softRoundNat_aligned_sub large small.toNat gap.toNat even
+      (by simpa only [floatShiftJamWord_nat] using ordered) cover t tp
 
 /-- The subtraction is not an exact-value replacement. Its final rounded
     decision nevertheless agrees, including both sides of a halfway point. -/
@@ -78,6 +103,8 @@ theorem softRound_aligned_zeuge :
     9 ≤ 16 * 8 ∧ (floatShiftJamWord 9 3).toNat ≤ 16 ∧ (16 : Nat) % 2 = 0 := by
   decide +kernel
 
+#print axioms softRoundNat_aligned_add
+#print axioms softRoundNat_aligned_sub
 #print axioms softRound_aligned_add
 #print axioms softRound_aligned_sub
 #print axioms softRound_aligned_zeuge
