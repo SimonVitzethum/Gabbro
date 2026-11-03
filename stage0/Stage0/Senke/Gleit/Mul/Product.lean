@@ -75,8 +75,12 @@ theorem softMulHighL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     rfl rfl (by decide : 3 < 256)
   have hi1 : WordCode (L := L) ρ W _ _ := WordCode.bin hi0 p2h (g := fun x y => some (x + y))
     rfl rfl (by decide : 3 < 256)
-  exact WordCode.bin hi1 midh (g := fun x y => some (x + y))
-    rfl rfl (by decide : 3 < 256)
+  have result : WordCode (L := L) ρ W _ _ :=
+    WordCode.bin hi1 midh (g := fun x y => some (x + y))
+      rfl rfl (by decide : 3 < 256)
+  intro fp K d c top h hK m pc hp
+  simpa only [mulHiW, m32, BitVec.ofInt_ofNat] using
+    result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Both limbs identify one untruncated product, for arbitrary input words.
     This equation also rules out silently discarding the top 42 product bits. -/
@@ -96,7 +100,9 @@ theorem softMulHighL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     rw [← mulHiW_toNat]
     simp only [BitVec.ofNat_toNat, BitVec.setWidth_eq]
   rw [← exactWord]
-  exact softMulHighL_word ha hb
+  have result : WordCode (L := L) ρ W _ _ := softMulHighL_word ha hb
+  intro fp K d c top h hK m pc hp
+  exact result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- A maximal binary64 significand really occupies both limbs; two maximal
     machine words additionally exercise every carry of the general formula. -/
