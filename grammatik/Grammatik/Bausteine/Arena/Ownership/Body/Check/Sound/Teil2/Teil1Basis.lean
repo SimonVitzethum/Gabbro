@@ -77,19 +77,18 @@ theorem chkS_sound_assignThruOwn
     (ho)
     (he)
     (hg)
-    (hm)
     (hw)
     (hL)
     (k : Context)
     (c : Context)
     (zzh1 : k.bounded)
     (hc : c.bounded)
-    : Supports (OS A I out k c (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ _)) (chkS A I fs out (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ _) k c) :=
+    : Supports (OS A I out k c (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ _)) (chkS A I fs out (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ _) k c) :=
   by
   simp only [chkS]
   exact supports_if (fun h => by
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h
-    exact OS.assignThruOwn p t ht f i e m s ho he hg hm hw hL h.1.1.1.1 h.1.1.1.2 h.1.1.2 h.1.2 h.2) hc
+    exact OS.assignThruOwn p t ht f i e m s ho he hg hw hL h.1.1.1.1 h.1.1.1.2 h.1.1.2 h.1.2 h.2) hc
 
 set_option linter.unusedSectionVars false in
 theorem chkS_sound_assignGlob 
