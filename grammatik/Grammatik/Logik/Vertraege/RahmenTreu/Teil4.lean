@@ -44,11 +44,13 @@ theorem TreuR.rahmen (hR : TreuR R) {f : D.Fn} {σ : World D} {ρ : Env D (D.par
 /-- Joint frame for the two exits of an indirect else-call («C07»): the pointer is
     evaluated once in the recorded world `s0`, the actual conforming function runs
     under its transported caller duty, and both continuations see the transported
-    value (`runOk`) or reason (`runWhy`). The ok exit of the callee is `Treu`
-    (held equality, from `TreuR` under the transported entry discipline); a
-    propagated reason is collapsed back to `Treu` (`TreuRet.toTreu_entry`) before
-    the continuation runs (`TreuAusgang.vorCall`). The conclusion is outcome-aware
-    (`TreuRet` at `.zurueck`/`.why`, `Treu` elsewhere). -/
+    value (`runOk`) or reason (`runWhy`) under the transported caller discipline
+    (`HeldB` over the caller's `nachSig` residual, derived from the restored
+    frame). The ok exit of the callee is `Treu` (held equality, from `TreuR`
+    under the transported entry discipline); a propagated reason is collapsed
+    back to `Treu` (`TreuRet.toTreu_entry`) before the continuation runs
+    (`TreuAusgang.vorCall`). The conclusion is outcome-aware (`TreuRet` at
+    `.zurueck`/`.why`, `Treu` elsewhere). -/
 theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (hR : TreuR R)
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
@@ -59,8 +61,10 @@ theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
     (bo : Option Int) (hbV : BodenUnter bo V.boden) (hh : HeldB bo Λ σ.haelt)
     (ok : World D → Wert D τ → Ausgang V l Γ)
     (why : World D → Fin (D.sigNr n).gruende → Ausgang V l Γ)
-    (runOk : ∀ σ1 v, TreuAusgang V.schreibt V.gschreibt σ1 (ok σ1 v))
-    (runWhy : ∀ σ1 r, TreuAusgang V.schreibt V.gschreibt σ1 (why σ1 r))
+    (runOk : ∀ σ1 v, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
+      TreuAusgang V.schreibt V.gschreibt σ1 (ok σ1 v))
+    (runWhy : ∀ σ1 r, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
+      TreuAusgang V.schreibt V.gschreibt σ1 (why σ1 r))
     (σ' : World D) (h : (indSonst R p args he hr s0 ρ ok why).welt = some σ') :
     match (indSonst R p args he hr s0 ρ ok why) with
     | .zurueck _ _ => TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
@@ -79,14 +83,16 @@ theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufA
       have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
       rw [hR1] at h2
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-      exact (TreuAusgang.vorCall g1 (runOk σ1 (ergWert (ergSig hf he) v))) σ' h
+      exact (TreuAusgang.vorCall g1 (runOk σ1 (ergWert (ergSig hf he) v)
+        (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
   | why σ1 r =>
       have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
       rw [hR1] at h2
       have gcall : Treu V.schreibt V.gschreibt s0 σ1 :=
         (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry
       have g1 := hl.trans gcall
-      exact (TreuAusgang.vorCall g1 (runWhy σ1 (grundSig hf r))) σ' h
+      exact (TreuAusgang.vorCall g1 (runWhy σ1 (grundSig hf r)
+        (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
   | logik _ => simp only [Ausgang.welt, reduceCtorEq] at h
   | hardware _ => simp only [Ausgang.welt, reduceCtorEq] at h
 
@@ -102,8 +108,10 @@ theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
     (bo : Option Int) (hbV : BodenUnter bo V.boden) (hh : HeldB bo Λ σ.haelt)
     (ok : World D → Wert D τ → EndAusgang V l Γ)
     (why : World D → Fin (D.sigNr n).gruende → EndAusgang V l Γ)
-    (runOk : ∀ σ1 v, TreuEnd V.schreibt V.gschreibt σ1 (ok σ1 v))
-    (runWhy : ∀ σ1 r, TreuEnd V.schreibt V.gschreibt σ1 (why σ1 r))
+    (runOk : ∀ σ1 v, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
+      TreuEnd V.schreibt V.gschreibt σ1 (ok σ1 v))
+    (runWhy : ∀ σ1 r, HeldB bo (nachSig D (D.sigNr n) Λ) σ1.haelt →
+      TreuEnd V.schreibt V.gschreibt σ1 (why σ1 r))
     (σ' : World D) (h : (indSonstE R p args he hr s0 ρ ok why).welt = some σ') :
     match (indSonstE R p args he hr s0 ρ ok why) with
     | .zurueck _ _ => TreuRet V.schreibt V.gschreibt V.haelt V.boden σ σ'
@@ -122,14 +130,16 @@ theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → Ruf
       have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
       rw [hR1] at h2
       have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-      exact (TreuEnd.vorCall g1 (runOk σ1 (ergWert (ergSig hf he) v))) σ' h
+      exact (TreuEnd.vorCall g1 (runOk σ1 (ergWert (ergSig hf he) v)
+        (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
   | why σ1 r =>
       have h2 := (hR f s0 _ σ1 (by rw [hR1]; rfl)).2 hentry
       rw [hR1] at h2
       have gcall : Treu V.schreibt V.gschreibt s0 σ1 :=
         (Treu.weiter hp.hw hp.hg h2).toTreu_entry hentry
       have g1 := hl.trans gcall
-      exact (TreuEnd.vorCall g1 (runWhy σ1 (grundSig hf r))) σ' h
+      exact (TreuEnd.vorCall g1 (runWhy σ1 (grundSig hf r)
+        (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh)))) σ' h
   | logik _ => simp only [EndAusgang.welt, reduceCtorEq] at h
   | hardware _ => simp only [EndAusgang.welt, reduceCtorEq] at h
 
