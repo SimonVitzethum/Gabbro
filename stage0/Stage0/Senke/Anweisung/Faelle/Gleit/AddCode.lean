@@ -1,4 +1,4 @@
-/- Binary64 add/sub candidates and the complete rounded-result range guard. -/
+/- Binary64 arithmetic candidates and the complete rounded-result range guard. -/
 module
 public import Stage0.Senke.Gleit.Normal.Sub
 public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
@@ -73,36 +73,42 @@ theorem softFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
   by_cases maximum : x.bexp = 2047 <;>
     simpa [softFloatRangeL, softFloatReject, maximum, Runner.IR.bool] using chosen
 
-/-- Add and subtract share the total adder and the rounded-result guard.
-    Subtraction adapts the right operand with one sign-bit xor. -/
-def floatAddSubBlockL (op : GleitOp) (d : Nat) (lo hi : Int × Int)
+/-- Add/sub share one kernel; multiply selects the wide-product kernel.
+    Division has no emitter and is refused before this selection is used. -/
+def softFloatKernel : GleitOp → SoftFloatKernel
+  | .mul => .mul
+  | _ => .add
+
+/-- One rounded-result guard and continuation template serves every checked
+    arithmetic kernel. Subtraction keeps its single sign-bit xor adapter. -/
+def floatArithmeticBlockL (op : GleitOp) (d : Nat) (lo hi : Int × Int)
     (left right : Nat → Option (List II × Nat))
     (rest : Unit → Option (List II × Nat)) : Option (List II × Nat) :=
-  do
-    let subtract ← match op with
-      | .add => some false
-      | .sub => some true
-      | _ => none
-    let producer := fun j => softAddWordsL j left (fun k => softAddOperandL subtract k right)
+  if op = .div then none else do
+    let producer := fun j => softFloatWordsL (softFloatKernel op) j left
+      (fun k => softAddOperandL (decide (op = .sub)) k right)
     let cc ← softFloatRangeL d lo hi producer
     let ce ← producer d
     let cr ← rest ()
     pure (floatNarrowC d cc.1 (stopC 107 d) ce.1 cr.1,
       max cc.2 (max (d + 8) (max ce.2 cr.2)))
 
-/-- Both supported operation tags select the same code template. -/
-theorem floatAddSubBlockL_addSub (subtract : Bool) (d : Nat) (lo hi : Int × Int)
-    (left right : Nat → Option (List II × Nat))
+/-- Successful operation selection uses exactly the shared code template. -/
+theorem floatArithmeticBlockL_supported (op : GleitOp) (supported : op ≠ .div)
+    (d : Nat) (lo hi : Int × Int) (left right : Nat → Option (List II × Nat))
     (rest : Unit → Option (List II × Nat)) :
-    floatAddSubBlockL (if subtract then .sub else .add) d lo hi left right rest = (do
+    floatArithmeticBlockL op d lo hi left right rest = (do
       let cc ← softFloatRangeL d lo hi
-        (fun j => softAddWordsL j left (fun k => softAddOperandL subtract k right))
-      let ce ← softAddWordsL d left (fun k => softAddOperandL subtract k right)
+        (fun j => softFloatWordsL (softFloatKernel op) j left
+          (fun k => softAddOperandL (decide (op = .sub)) k right))
+      let ce ← softFloatWordsL (softFloatKernel op) d left
+        (fun k => softAddOperandL (decide (op = .sub)) k right)
       let cr ← rest ()
       pure (floatNarrowC d cc.1 (stopC 107 d) ce.1 cr.1,
         max cc.2 (max (d + 8) (max ce.2 cr.2)))) := by
-  cases subtract <;> rfl
+  simp only [floatArithmeticBlockL, if_neg supported]
 
+#print axioms floatArithmeticBlockL_supported
 #print axioms softFloatReject_none
 #print axioms softFloatRangeL_ok
 end Gabbro.Stage0.Senke
