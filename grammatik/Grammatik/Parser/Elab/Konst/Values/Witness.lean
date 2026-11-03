@@ -12,7 +12,7 @@ def positive : UKonstFn where
   params := [("x", .int 0 10)]
   erg := .bool
   rumpf := .block [] (some (.ret (some (.bin ">" (.variable "x") (.lit 0)))))
-  signature := { art := "const", name := "positive", params := [("x", .atom "u8")],
+  signature := { art := "const", name := "positive", params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)],
     res := some (.atom "bool"), fehler := none, klauseln :=
       [.gives (.bin "==" .res (.bin ">" (.variable "x") (.lit 0)))] }
 
@@ -26,7 +26,7 @@ def optional : UKonstFn where
   params := [("x", .int 0 3)]
   erg := .opt 4
   rumpf := .block [] (some (.ret (some (.call "Some" [.variable "x"])))))
-  signature := { art := "const", name := "optional", params := [("x", .atom "u8")],
+  signature := { art := "const", name := "optional", params := [("x", .range (.atom "u8") (.lit 0) (.lit 3) false)],
     res := some (.index true "Slots"), fehler := none, klauseln := [] }
 
 def absent : UKonstFn :=
@@ -48,7 +48,7 @@ def tagged : UKonstFn where
   params := [("x", .int 0 10)]
   erg := .sum schema.spec
   rumpf := .block [] (some (.ret (some (.call "Data" [.bin "+" (.variable "x") (.lit 1)])))))
-  signature := { art := "const", name := "tagged", params := [("x", .atom "u8")],
+  signature := { art := "const", name := "tagged", params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)],
     res := some (.atom "Choice"), fehler := none, klauseln := [] }
   sums := [schema]
 
@@ -82,6 +82,14 @@ def shortText (text : String) (maximum : Nat := 1) : UKonstFn where
 theorem string_values_zeuge :
     ersetzeSExpr [shortText ""] (.call "shortText" []) = .ok (.ext .text [""] []) ∧
     ersetzeSExpr [shortText "A"] (.call "shortText" []) = .ok (.ext .text ["A"] []) := ⟨rfl, rfl⟩
+
+/-- The production collector binds the Boolean fixture to its actual source signature. -/
+theorem bool_collected_zeuge :
+    collectFunctions [.fnT positive.signature positive.rumpf] = .ok [positive] := rfl
+
+/-- A zero-byte maximum is checked separately from an empty string under maximum one. -/
+theorem zero_string_zeuge :
+    ersetzeSExpr [shortText "" 0] (.call "shortText" []) = .ok (.ext .text [""] []) := rfl
 
 /-- The witnesses instantiate the generic G/literal theorem jointly with a
     successfully generated certificate and a checked complete result value. -/
@@ -133,8 +141,8 @@ def captured : UKonstFn where
   params := [("x", .int 0 10)]
   erg := .int 0 20
   rumpf := .block [] (some (.ret (some (.bin "+" (.variable "x") (.variable "math::K")))))
-  signature := { art := "const", name := "captured", params := [("x", .atom "u8")],
-    res := some (.atom "u8"), fehler := none, klauseln := [] }
+  signature := { art := "const", name := "captured", params := [("x", .range (.atom "u8") (.lit 0) (.lit 10) false)],
+    res := some (.range (.atom "u8") (.lit 0) (.lit 20) false), fehler := none, klauseln := [] }
   constants := [("math::K", 5), ("x", 99)]
 
 /-- Original global names in both body and arguments reach their certificates.
