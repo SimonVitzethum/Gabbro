@@ -48,4 +48,14 @@ def AreaContract [Kern] (L : Lay D) (O : Orakel D) : Prop :=
     AgreeW L fp base (base + valueWords τ) m m' ∧
     WeltAt m' L (O.wirkt a σ ρ).1 ∧ AreaReply L O a b τ he σ ρ m' fp base tag
 
+/-- Register-only profiles impose no result-area provider obligation. -/
+theorem areaContract_register_only [Kern] {L : Lay D} (O : Orakel D)
+    (registers : ∀ a b, L.tor a = some b → b.resultArea = none) : AreaContract L O := by
+  intro a b τ he j bound accepted
+  have absent := registers a b bound
+  simp only [areaGut, Bool.and_eq_true, decide_eq_true_eq] at accepted
+  have present : b.resultArea = some j := accepted.2
+  rw [absent] at present
+  cases present
+
 end Gabbro.Stage0.Senke
