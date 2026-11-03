@@ -215,6 +215,5 @@ theorem akteurR_dannOnTagNone {D : Deklaration} {P : Programm D} {O : Orakel D} 
     ⟨armWahlG_gOk' arms _ hw' hks, fun _ h => hss.2 (armWahlG_orteP' arms _ hw' h), hrest⟩,
     fun R O' => ZErg.folgt_of_eq (semV_tagNone O' passes R v arms rest k σ ρ b nutz hw')⟩
 
-set_option maxHeartbeats 4000000 in
 
 end Gabbro.Grammatik

@@ -270,6 +270,5 @@ theorem akteurR_ruf {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : 
       | hardware e => trivial)
   exact ⟨hFad, logOk_eintritt hL hReq⟩
 
-set_option maxHeartbeats 4000000 in
 
 end Gabbro.Grammatik

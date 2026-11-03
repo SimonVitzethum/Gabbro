@@ -75,7 +75,7 @@ theorem end104_retDurch_zeuge :
       ∃ (M : RufMaschineF refD),
         RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) M ∧
         M.speicher.slots () 0 () ≠ refSp0.slots () 0 () :=
-  ⟨witDurch104, witDurchArgs104, by decide, MB, refB_erreicht, refB_schreibt⟩
+  ⟨witDurch104, witDurchArgs104, by decide +kernel, MB, refB_erreicht, refB_schreibt⟩
 
 /-- Inhabitation witness for `zeugnisStmt104b_sound`: the call shape
     through the top theorem. -/
@@ -161,13 +161,13 @@ def args104_lies :
 example : certEnd104Ok G104_referenz.gD
     (vertragVon G104_referenz.gD G104_referenz.g_lies) false
     G104_referenz.gCtx_lies G104_referenz.gL_lies cert104_lies = true := by
-  decide
+  decide +kernel
 
 /-- End to end: the valid print YIELDS an accepted body. -/
 example : ∃ _ : Endblock G104_referenz.gD
     (vertragVon G104_referenz.gD G104_referenz.g_lies) false
     G104_referenz.gCtx_lies G104_referenz.gL_lies, True :=
-  zeugnisStmt104b_sound _ _ false _ _ _ args104_lies (by decide)
+  zeugnisStmt104b_sound _ _ false _ _ _ args104_lies (by decide +kernel)
 
 /-! ### Rejection probes: forged prints are provably invalid -/
 

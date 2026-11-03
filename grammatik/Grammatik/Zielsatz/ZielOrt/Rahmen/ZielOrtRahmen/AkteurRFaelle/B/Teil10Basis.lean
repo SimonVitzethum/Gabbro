@@ -209,6 +209,5 @@ theorem akteurR_dannGleitLit {D : Deklaration} {P : Programm D} {O : Orakel D} {
   exact ⟨σ, Nat.le_refl _, hg, ⟨hks, hss, hrest⟩,
     fun R O' => ZErg.folgt_of_eq (semV_gleitLit O' passes R q lo hi rest k σ ρ v hv)⟩
 
-set_option maxHeartbeats 4000000 in
 
 end Gabbro.Grammatik

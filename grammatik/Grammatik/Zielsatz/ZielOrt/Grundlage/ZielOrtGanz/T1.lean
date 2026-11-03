@@ -248,6 +248,8 @@ theorem blatt_logik (P : Programm D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | onWhy => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | call => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | callInd => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | callIndElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
+  | axiomCallElse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | locks => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | breaking => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
   | consumeTraverse => simp only [Stmt.istBlatt, Bool.false_eq_true] at hb
@@ -283,6 +285,7 @@ def Stmt.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | .breaking _ body => body.logikFrei
   | .retry _ _ body ueber => body.logikFrei && ueber.logikFrei
   | .callIndElse _ _ _ _ _ err => err.logikFrei
+  | .axiomCallElse (err := err) .. => err.logikFrei
   | _ => true
 
 def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -296,6 +299,8 @@ def Block.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)
   | .bindCallElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
+  | .bindAxiomOpt (rest := rest) .. => rest.logikFrei
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => err.logikFrei && rest.logikFrei
   | .regRead _ _ rest => rest.logikFrei
   | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .awaits _ _ _ _ _ rest => rest.logikFrei
@@ -312,6 +317,8 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
+  | .retScoped .. => true
+  | .retWhyScoped .. => true
   | .leave .. => true
   | .next .. => true
   | .cons s rest => s.logikFrei && rest.logikFrei
@@ -320,6 +327,8 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .bindCallElse _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
   | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.logikFrei && rest.logikFrei
+  | .bindAxiomOpt (rest := rest) .. => rest.logikFrei
+  | .bindAxiomOptElse (err := err) (rest := rest) .. => err.logikFrei && rest.logikFrei
   | .regRead _ _ rest => rest.logikFrei
   | .regReadElse _ _ _ sonst rest => sonst.logikFrei && rest.logikFrei
   | .awaits _ _ _ _ _ rest => rest.logikFrei
