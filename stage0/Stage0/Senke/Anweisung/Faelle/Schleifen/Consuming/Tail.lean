@@ -14,7 +14,7 @@ theorem before_body (k : Wert D (.index (D.count x.table)))
     {live : Bool} (h : q.selector.CandResult σ ρ (some k) live m)
     (fuelRead : x.read m x.counter (BitVec.ofNat 64 n)) :
     let measured := q.massW σ ρ
-    ∃ m', Star ⟨x.at 37, x.fp⟩ m ⟨x.at 39, x.fp⟩ m' ∧
+    ∃ m', Star ⟨x.addr 37, x.fp⟩ m ⟨x.addr 39, x.fp⟩ m' ∧
       AgreeW L x.fp x.lo x.K m m' ∧ Keeps x.fp x.pr m m' ∧
       x.Ready m' measured.1 (.cons k ρ) ∧
       x.read m' x.counter (BitVec.ofNat 64 n) ∧
@@ -54,9 +54,9 @@ theorem after_body (i : Nat) (which : i = 41 ∨ i = 44) (old : Int)
     (savedRead : x.read m x.saved (BitVec.ofInt 64 old)) :
     let measured := q.massW σ ρ
     if 0 ≤ measured.2 ∧ measured.2 ≤ x.bound ∧ measured.2 < old then
-      ScanRun L x.fp x.lo x.K x.pr (x.at i) (x.at (i + 1)) m
+      ScanRun L x.fp x.lo x.K x.pr (x.addr i) (x.addr (i + 1)) m
         (fun m' => x.Ready m' measured.1 ρ ∧ x.read m' x.counter (BitVec.ofNat 64 n))
-    else Stops ⟨x.at i, x.fp⟩ m (logikCode (D := D) .schleife) := by
+    else Stops ⟨x.addr i, x.fp⟩ m (logikCode (D := D) .schleife) := by
   have bounds := q.measure_bounds σ ρ
   have found : x.fragment[i]? = some (.code (decrease (x.s + 4) x.saved
       (logikCode (D := D) .schleife) x.bound x.measure)) := by
@@ -65,8 +65,8 @@ theorem after_body (i : Nat) (which : i = 41 ∨ i = 44) (old : Int)
   have checked := decrease_ok q.massCode q.massTop (by have := x.scratch; omega) x.layout
     pre h.world (by have := x.controls; have := x.scratch; omega) x.bounds.2.1
     x.bounds.2.2.2 oldBound savedRead
-  have endAt : x.at i + BitVec.ofNat 64 (16 * (decrease (x.s + 4) x.saved
-      (logikCode (D := D) .schleife) x.bound x.measure).length) = x.at (i + 1) := by
+  have endAt : x.addr i + BitVec.ofNat 64 (16 * (decrease (x.s + 4) x.saved
+      (logikCode (D := D) .schleife) x.bound x.measure).length) = x.addr (i + 1) := by
     rcases which with rfl | rfl <;> consume_arith x
   by_cases falls : (q.massW σ ρ).2 < old
   · simp only [bounds.1, bounds.2, falls, and_self, ↓reduceIte]
@@ -84,8 +84,8 @@ theorem after_body (i : Nat) (which : i = 41 ∨ i = 44) (old : Int)
 /-- The leave continuation checks its invariant after the falling measure. -/
 theorem leave_invariant (h : x.Ready m σ ρ) :
     if (q.invW σ ρ).2 = true then
-      Reach L x.fp x.lo x.K x.pr ⟨x.at 45, x.fp⟩ m (x.at 50) (q.invW σ ρ).1 ρ reserved
-    else Stops ⟨x.at 45, x.fp⟩ m (logikCode (D := D) .schleife) := by
+      Reach L x.fp x.lo x.K x.pr ⟨x.addr 45, x.fp⟩ m (x.addr 50) (q.invW σ ρ).1 ρ reserved
+    else Stops ⟨x.addr 45, x.fp⟩ m (logikCode (D := D) .schleife) := by
   have ready : x.Ready m (q.invW σ ρ).1 ρ := h.lese
   obtain ⟨mem, run, frame, kept, ready', localFrame, value, read, encoding⟩ := ready.eval 45
     (by rw [← q.selector.origin]; omega) q.invCode q.invTop rfl trivial
