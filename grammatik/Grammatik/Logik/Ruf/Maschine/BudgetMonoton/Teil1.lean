@@ -12,6 +12,12 @@ public import Grammatik.Speichermodell.Maschine.GXMaschine
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
+
+private theorem plus_weiterOpt (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ : List (Res D)} (e : Option Ty) (k : GRest D V l Γ Λ) :
+    (GRest.weiterOpt e k).plus j = GRest.weiterOpt e (k.plus j) := by
+  cases e <;> rfl
+
 theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M M' : RufMaschineG D}
     {f : Faden} (h : RufSchrittG P O p M f M') : RufSchrittG P O (p + j) (M.plus j) f (M'.plus j) := by
   cases h with
@@ -155,10 +161,10 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.dannBindCallElse (passes := p + j) (M.plus j) f l Γ Λ Λ' Λ'' τ g args he hp hr err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) hΛ s0 hs0 rho hrho neu hneu
     | dannAxiomCallElseOk l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannAxiomCallElseOk (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
+        exact RufSchrittG.dannAxiomCallElseOk (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd hr err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
     | dannAxiomCallElseGrund l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannAxiomCallElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd hr err rest k ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
+        exact RufSchrittG.dannAxiomCallElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd hr err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
     | dannBindCallIndElse l Γ Λ Λ' Λ'' τ n pB args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho hrho
         neu hneu =>
         rw [RufMaschineG.plus_update]
@@ -278,10 +284,12 @@ theorem rufSchrittG_plus {P : Programm D} {O : Orakel D} {p : Nat} (j : Nat) {M 
         exact RufSchrittG.dannBindAxiomElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
     | dannBindAxiomOpt _ _ l Γ Λ Λ' e a args he hp hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannBindAxiomOpt (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
+        simpa only [RufMaschineG.plus, RufFadenG.plus, RufRahmenG.plus, GRest.plus, plus_weiterOpt] using
+          (RufSchrittG.dannBindAxiomOpt (P := P) (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hp hd hgd rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ)
     | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
-        exact RufSchrittG.dannBindAxiomOptElseOk (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ
+        simpa only [RufMaschineG.plus, RufFadenG.plus, RufRahmenG.plus, GRest.plus, plus_weiterOpt] using
+          (RufSchrittG.dannBindAxiomOptElseOk (P := P) (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ v hax neu hneu hΛ)
     | dannBindAxiomOptElseGrund _ _ l Γ Λ Λ' e a args he hr hp hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
         rw [RufMaschineG.plus_update]
         exact RufSchrittG.dannBindAxiomOptElseGrund (passes := p + j) (M.plus j) f l Γ Λ Λ' e a args he hr hp hd hgd err rest (k.plus j) ρ (RufRahmenG.plus_rest hhead) σ₁ hs₁ σ₂ r hax neu hneu hΛ
