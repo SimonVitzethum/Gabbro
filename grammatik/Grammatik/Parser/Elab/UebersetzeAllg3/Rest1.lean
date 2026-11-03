@@ -111,6 +111,21 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
             | .ok b => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
+  /-- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
+      `Logik.kapazitaet` (`Endblock.narrowRequired`). -/
+  | Γ, fn, n + 1, .narrowReqBeg x lo hi :: rest, r =>
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        match lowVar Γ j (.int l1 h1) with
+        | .error e => .error e
+        | .ok v =>
+          match lowBodyF u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n rest r with
+          | .error e => .error e
+          | .ok b => .ok (Endblock.narrowRequired (D := declOf u) (Expr.var v) lo hi b)
+      | _ => .error "lower: narrow of a non-number"
   | Γ, fn, n + 1, .bindFnref x f m :: rest, r =>
     match fnIdx u.fns f with
     | .error e => .error e

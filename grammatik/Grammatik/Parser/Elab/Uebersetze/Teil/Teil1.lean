@@ -347,6 +347,13 @@ inductive UStmt
   | bindOptBeg : String → String → List UArg → UStmt
   /-- Optional-result axiom binding with an end-block reason continuation. -/
   | bindOptElseBeg : String → String → List UArg → String → UStmt
+  /-- Required narrowing `narrow x to lo .. hi` with no `else` (C15, from
+      `SAnw.trimReq`): `narrowReqBeg x lo hi`; the rest of the block reads `x`
+      at `lo .. hi`. Out of range is `Logik.kapazitaet` under the caller's
+      capacity duty (`Block/Endblock.narrowRequired`); there is no failure
+      continuation and no `blkEnd`. Appended at the end, so earlier
+      constructor positions keep their names. -/
+  | narrowReqBeg : String → Int → Int → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/

@@ -401,6 +401,16 @@ def uAnwReihe (tabs : List UTab) (koepfe : List UFnKopf) :
           match uAnwReihe tabs koepfe f ctx' rest with
           | .error err => .error err
           | .ok (xs, cE) => .ok ([UStmt.narrowBeg x lo hi] ++ body ++ endS ++ [UStmt.blkEnd] ++ xs, cE)
+  /-- Required narrowing (C15, from `SAnw.trimReq`): the rest of the run reads
+      `x` at the narrowed range; out of range is `Logik.kapazitaet`, so unlike
+      `trim` there is no `else` and no `blkEnd`. -/
+  | f + 1, ctx, .trimReq (.variable x) t :: rest =>
+    match uNarrowKopf ctx x t with
+    | .error err => .error err
+    | .ok (lo, hi, ctx') =>
+      match uAnwReihe tabs koepfe f ctx' rest with
+      | .error err => .error err
+      | .ok (xs, cE) => .ok ([UStmt.narrowReqBeg x lo hi] ++ xs, cE)
   | _ + 1, _, .waive .. :: _ =>
     .error "source export: invariant cost/runs/by duties lack a checked source binding"
   | f + 1, ctx, .locks g lk (.block ss .none) :: rest =>
