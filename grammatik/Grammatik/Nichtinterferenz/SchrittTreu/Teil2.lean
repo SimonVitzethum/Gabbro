@@ -12,7 +12,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG5 P O passes M f M') :
     kSchrittK P O passes (M.faeden f).kern M.speicher = some ((M'.faeden f).kern, M'.speicher) := by
   cases hs with
-  | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
+  | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
       hfg rho hrho s0 hs0 rg hrg hn =>
       subst hfg hrho hrg
       kstart
@@ -22,7 +22,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufRahmenG.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
-  | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
+  | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g
       hfg rho hrho s0 hs0 rg hrg hn =>
       subst hfg hrho hrg
       kstart
@@ -32,14 +32,14 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufRahmenG.kern, hcaller]
       rw [dif_pos (show (vertragVon D (M.faeden f).kopf.f).gruende = n from hn)]
       rfl
-  | dannRegLies l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
+  | dannRegLies _ _ l Γ Λ Λ' r hk rest k ρ hhead v hv hz hΛ =>
       kstart
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hv
       rw [hv]
       simp only [hz, if_true]
       rfl
-  | dannRegLiesElseWahr l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+  | dannRegLiesElseWahr _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
@@ -48,7 +48,7 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only
       rw [if_pos hw]
       rfl
-  | dannRegLiesElseFalsch l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+  | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hk zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
@@ -57,65 +57,65 @@ theorem schrittK_von_g5 (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only
       rw [if_neg (by rw [hw]; exact Bool.false_ne_true)]
       rfl
-  | dannAwaits l Γ Λ Λ' g payload hp hL _ rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+  | dannAwaits _ _ l Γ Λ Λ' g payload hp hL _ rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hvis
       rw [if_pos hvis]
       rfl
-  | dannExchange l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+  | dannExchange _ _ l Γ Λ Λ' g neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
       kstart
       subst hs₂ hs₁
       rfl
-  | dannGleit l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+  | dannGleit _ _ l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hv
       rw [hv]
       rfl
-  | dannGleitLit l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
+  | dannGleitLit _ _ l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
       kstart
       simp only [kr, kDann]
       rw [hv]
       rfl
-  | dannGleitVon l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
-      kstart
-      subst hs₁
-      simp only [kr, kDann]
-      simp only [RufMaschineG.weltVon] at hv
-      rw [hv]
-      rfl
-  | dannGleitNarrowOk l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+  | dannGleitVon _ _ l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hv
       rw [hv]
       rfl
-  | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+  | dannGleitNarrowOk _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kDann]
+      simp only [RufMaschineG.weltVon] at hv
+      rw [hv]
+      rfl
+  | dannGleitNarrowElse _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hn
       rw [hn]
       rfl
-  | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+  | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl
-  | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+  | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl
-  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+  | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       kstart
       subst hs₁
       simp only [kr, kDann]
