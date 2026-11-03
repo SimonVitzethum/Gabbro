@@ -88,9 +88,20 @@ theorem softDivRoutineL_ok_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → 
     (WordCode.konst 4611686018427387904 (by decide))
   exact run
 
+/-- An invalid ratio still uses the same emitter theorem; its NaN result
+    is subsequently rejected by the source Block's ordinary range guard. -/
+theorem softDivRoutineL_invalid_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem → Prop) :
+    WordCode (L := L) ρ W (fun d => softDivRoutineL d
+      (fun j => some ([ci 1 j 0 0], j + 1))
+      (fun j => some ([ci 1 j 0 0], j + 1)))
+      (BitVec.ofNat 64 9218868437227405313) := by
+  exact softDivRoutineL_ok (⟨false, 0, 0⟩ : GFloat) (⟨false, 0, 0⟩ : GFloat)
+    (by decide) (by decide) (WordCode.const 0 (by decide)) (WordCode.const 0 (by decide))
+
 #print axioms softDivRoutineWord_model
 #print axioms softDivRoutine_ok
 #print axioms softDivRoutineL_ok
 #print axioms softDivRoutine_ok_zeuge
 #print axioms softDivRoutineL_ok_zeuge
+#print axioms softDivRoutineL_invalid_zeuge
 end Gabbro.Stage0.Senke
