@@ -254,7 +254,8 @@ theorem bruecke_keineLogik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
 /-! ## 5. Premise (b) of the goal theorem -/
 
 /-- **The bodies' logic of premise (b)** (`LogikPflicht`), for the lowered program with the
-    parser's empty lock family and the trivial axiom ensures -- from GabbroV's duties. -/
+    parser's empty lock family and trivial axiom ensures: Body duties establish the body
+    component; `hPtr` separately establishes refinement of every lowered pointer interface. -/
 theorem bruecke_logik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : Stimmig u) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
@@ -272,8 +273,8 @@ theorem bruecke_logik {P : Programm (declOf u)} {fs : List (declOf u).Fn}
    fun _ _ _ _ => rfl, axEnsLokal_wahr, hPtr⟩
 
 /-- **PREMISE (b) OF THE GOAL THEOREM, FROM GABBROV** -- for a unit whose program is the Lean
-    parser's lowering of its source text: the bodies' logic from the duties (S3), the start from
-    the shape of the lowering (S4, `startPflicht_wahr`). -/
+    parser's ordinary-body lowering: the bodies' logic from the duties (S3), O43 from `hPtr`,
+    and the start from the shape of the lowering (S4, `startPflicht_wahr`). -/
 theorem bruecke_nutzer {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (hlow : lowerAllg u = .ok (P, fs)) (S : Stimmig u) (rk : String → Nat) (hR : Rang u rk)
     (hZ : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
