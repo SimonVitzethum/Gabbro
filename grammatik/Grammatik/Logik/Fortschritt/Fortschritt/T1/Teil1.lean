@@ -257,6 +257,9 @@ theorem fortInvG_schritt {M M' : RufMaschineG D} {f : Faden}
   | g6 hs =>
     cases hs with
     | _ => kopfLokal
+  | g7 hs =>
+    cases hs with
+    | _ => kopfLokal
 
 /-- Every rule keeps `FortInvG` at every thread. -/
 theorem fortInvG_schritt_alle {M M' : RufMaschineG D} {f : Faden}

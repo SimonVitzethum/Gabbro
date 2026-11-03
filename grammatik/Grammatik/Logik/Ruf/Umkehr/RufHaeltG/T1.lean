@@ -49,6 +49,8 @@ def GRest.kette {V : Vertrag D} (A : List D.Lock) :
   | _, _, _, @GRest.frei _ _ _ _ Λk L k => Res.held L ∉ Λk ∧ k.kette A
   | _, _, Λ, .trav _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .travRest _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
+  | _, _, Λ, .verbrauch _ _ _ _ _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
+  | _, _, Λ, .verbrauchRest _ _ _ _ _ _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .wieder _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .wiederRest _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
   | _, _, Λ, .ewig _ _ _ _ k => (∀ L ∈ A, Res.held L ∈ Λ) ∧ k.kette A
@@ -71,6 +73,8 @@ theorem GRest.kette_top {V : Vertrag D} {A : List D.Lock} :
   | _, _, _, .frei _ k, h => fun L hL => List.mem_cons_of_mem _ (GRest.kette_top k h.2 L hL)
   | _, _, _, .trav _ _ _ _ _, h => h.1
   | _, _, _, .travRest _ _ _ _ _, h => h.1
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ _, h => h.1
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ _, h => h.1
   | _, _, _, .wieder _ _ _ _ _, h => h.1
   | _, _, _, .wiederRest _ _ _ _ _, h => h.1
   | _, _, _, .ewig _ _ _ _ _, h => h.1
@@ -143,6 +147,8 @@ def GRest.freis {V : Vertrag D} :
   | _, _, _, .frei L k => L :: k.freis
   | _, _, _, .trav _ _ _ _ k => k.freis
   | _, _, _, .travRest _ _ _ _ k => k.freis
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k => k.freis
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k => k.freis
   | _, _, _, .wieder _ _ _ _ k => k.freis
   | _, _, _, .wiederRest _ _ _ _ k => k.freis
   | _, _, _, .ewig _ _ _ _ k => k.freis

@@ -177,6 +177,55 @@ theorem traverseLauf_ohneHardware {l : Bool} {Γ : Ctx} {τ : Ty}
           cases h
           exact hs _ _ _ heq
 
+/-- A consuming run answers no hardware failure when its body never does:
+    by induction on the fuel; every failing check is `.logik .schleife`. -/
+theorem verbrauchLauf_ohneHardware {l : Bool} {Γ : Ctx} (t : D.Tab)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int)
+    (hs : ∀ σ ρ e, schritt σ ρ ≠ .hardware e) :
+    ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ) (e : Hardware D),
+      verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ ≠ .hardware e
+  | 0, σ, ρ, e => by
+      intro h
+      simp only [verbrauchLauf] at h
+      cases h
+  | n + 1, σ, ρ, e => by
+      intro h
+      simp only [verbrauchLauf] at h
+      split at h
+      · cases h
+      · split at h
+        · cases h
+        · cases h
+        · rename_i σr k hsel_eq
+          split at h
+          · rename_i σ1 ρ1 hstep_eq
+            split at h
+            · exact verbrauchLauf_ohneHardware t schritt inv sel massW bound hs
+                n _ _ e h
+            · cases h
+          · rename_i σ1 ρ1 hstep_eq
+            split at h
+            · exact verbrauchLauf_ohneHardware t schritt inv sel massW bound hs
+                n _ _ e h
+            · cases h
+          · rename_i σ1 ρ1 hstep_eq
+            split at h
+            · split at h <;> cases h
+            · cases h
+          · rename_i σ1 v hstep_eq
+            cases h
+          · rename_i σ1 r hstep_eq
+            cases h
+          · cases h
+          · rename_i heq
+            cases h
+            exact hs _ _ _ heq
+
 theorem retryLauf_ohneHardware {l : Bool} {Γ : Ctx}
     (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueber : World D → Env D Γ → Ausgang V l Γ)

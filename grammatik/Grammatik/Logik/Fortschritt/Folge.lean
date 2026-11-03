@@ -202,6 +202,8 @@ def GRest.fR (e : Bool) :
   | _, _, _, w, .frei _ k => k.fR e w
   | _, _, _, _, .trav _ _ body _ k => fB Φ e false body = true ∧ k.fR e false
   | _, _, _, _, .travRest _ _ body _ k => fB Φ e false body = true ∧ k.fR e false
+  | _, _, _, _, .verbrauch _ _ _ _ _ _ body _ k => fB Φ e false body = true ∧ k.fR e false
+  | _, _, _, _, .verbrauchRest _ _ _ _ _ _ body _ _ k => fB Φ e false body = true ∧ k.fR e false
   | _, _, _, _, .wieder _ _ body ueber k =>
       fB Φ e false body = true ∧ fB Φ e false ueber = true ∧ k.fR e false
   | _, _, _, _, .wiederRest _ _ body ueber k =>

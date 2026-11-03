@@ -140,6 +140,30 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       sequential/replay equality are OPEN. Exact return is `scopes = []`. -/
   | rueckBereit {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       (scopes : List D.Lock) → GRest D V l Γ Λ → GRest D V l Γ (scopes.map Res.held ++ Λ)
+  /-- C11 consuming loop (`traverse … by consuming`) with its remaining fuel:
+      each round re-selects the least edge-minimal member in the current
+      world. `rest` is the remaining fuel (entry: the domain size plus the
+      measure span, as in `execStmt`); the round-entry measure travels in
+      `verbrauchRest`, where the resume step checks the strict fall. -/
+  | verbrauch {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+      (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+      (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+      (inv : Expr D Γ Λ .bool) (bound : Int)
+      (mass : Expr D Γ Λ (.int 0 bound))
+      (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+      (rest : Nat) :
+      GRest D V l Γ Λ → GRest D V l Γ Λ
+  /-- One consuming body pass at the loop context, then the resume: like
+      `travRest`, but carrying the round-entry measure `vor` for the strict
+      fall check of `verbrauchFort`/`dannLeaveVerbrauch`/`dannNextVerbrauch`. -/
+  | verbrauchRest {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+      (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+      (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+      (inv : Expr D Γ Λ .bool) (bound : Int)
+      (mass : Expr D Γ Λ (.int 0 bound))
+      (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+      (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ) :
+      GRest D V true (.index (D.count t) :: Γ) Λ
 
 /-- **The continuation behind a generalized foreign binder** («C08»): void keeps the
     residue, a value pushes a shrink -- the residue half of `Ausgang.weiterOpt`. -/

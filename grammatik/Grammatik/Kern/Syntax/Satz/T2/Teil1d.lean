@@ -150,4 +150,3 @@ theorem nicht_gehalten {Λ : List (Res D)} {h : List D.Lock} (L : D.Lock)
   omega
 
 end Gabbro.Grammatik
-

@@ -248,6 +248,8 @@ theorem kr_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | ewigRest a n inv body k =>
       try simp only [kr]
       exact KErgOk.lokal hst _ _ _ (by first | exact hr | (simp only [GRest.nR]; exact hr)) _ _
+  | verbrauch t member edge inv bound mass body rest k => exact KErgOk.none
+  | verbrauchRest t member edge inv bound mass body rest vor k => exact KErgOk.none
   | wartet b k => exact KErgOk.none
   | wartetSonst n err b k => exact KErgOk.none
   | abbruch k => exact KErgOk.none

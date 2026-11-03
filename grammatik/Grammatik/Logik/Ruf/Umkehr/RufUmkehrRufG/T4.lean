@@ -468,6 +468,20 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     | endeBindAxiomOptElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
     | endeBindAxiomOptElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
+    | verbrauchWeiter =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
+    | verbrauchLeer =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
+    | verbrauchFort =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
+    | dannLeaveVerbrauch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
+    | dannNextVerbrauch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlegeK hhead
 
 
 /-! ## 5. The pending call chain

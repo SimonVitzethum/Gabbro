@@ -110,8 +110,11 @@ theorem stmt_treu :
       traverseLauf_treu _ _ (fun σ ρ => block_treu body σ ρ)
         (fun σ ρ => treu_lese σ Λ inv.orte) _ σ ρ σ' h
   | .consumeTraverse t member edge inv bound mass body, σ, ρ, σ', h =>
-      traverseLauf_treu _ _ (fun σ ρ => block_treu body σ ρ)
-        (fun σ ρ => treu_lese σ Λ inv.orte) _ σ ρ σ' h
+      verbrauchLauf_treu t _ _ _ _ _
+        (fun σ ρ => block_treu body σ ρ)
+        (fun σ ρ => treu_lese σ Λ inv.orte)
+        (fun σ ρ => treu_lese σ Λ (member.orte ++ edge.orte))
+        (fun σ ρ => treu_lese σ Λ mass.orte) _ σ ρ σ' h
   | .retry n bis body ueberlauf, σ, ρ, σ', h =>
       retryLauf_treu _ _ _ (fun σ ρ => block_treu body σ ρ)
         (fun σ ρ => treu_lese σ Λ bis.orte)

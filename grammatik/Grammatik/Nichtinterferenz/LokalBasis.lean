@@ -135,6 +135,12 @@ def GRest.nR (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D
   | _, _, _, .trav _ inv body _ k => inv.orte.all S = true ∧ nB S Ax body = true ∧ k.nR S Ax
   | _, _, _, .travRest _ inv body _ k =>
       inv.orte.all S = true ∧ nB S Ax body = true ∧ k.nR S Ax
+  | _, _, _, .verbrauch _ member edge inv _ mass body _ k =>
+      member.orte.all S = true ∧ edge.orte.all S = true ∧ inv.orte.all S = true ∧
+        mass.orte.all S = true ∧ nB S Ax body = true ∧ k.nR S Ax
+  | _, _, _, .verbrauchRest _ member edge inv _ mass body _ _ k =>
+      member.orte.all S = true ∧ edge.orte.all S = true ∧ inv.orte.all S = true ∧
+        mass.orte.all S = true ∧ nB S Ax body = true ∧ k.nR S Ax
   | _, _, _, .wieder _ bis body ueber k =>
       bis.orte.all S = true ∧ nB S Ax body = true ∧ nB S Ax ueber = true ∧ k.nR S Ax
   | _, _, _, .wiederRest _ bis body ueber k =>

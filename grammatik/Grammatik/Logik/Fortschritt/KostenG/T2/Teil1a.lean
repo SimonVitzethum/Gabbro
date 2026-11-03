@@ -300,6 +300,12 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       kopfA
       · cases EW <;> simp_all
       · omega
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
 /-! ## 6. Counting one thread's steps -/
 
 /- `RufErreichbarG` lives in `Prop`, so no function can count the steps of

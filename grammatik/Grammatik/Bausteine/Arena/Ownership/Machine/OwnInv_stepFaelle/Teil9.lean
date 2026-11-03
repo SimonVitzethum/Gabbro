@@ -3,6 +3,7 @@ module
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.Teil9Basis
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Stack.Return
 public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.A.Teil8
+public import Grammatik.Bausteine.Arena.Ownership.Machine.OwnInv_stepFaelle.A.Teil9
 
 @[expose] public section
 

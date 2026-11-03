@@ -308,6 +308,11 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
     | _ =>
       kopfF
       all_goals (simp_all [fB_von_false, fR_von_false]; done)
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      kopfF
+      all_goals (simp_all [fB_von_false, fR_von_false]; done)
 
 end Schritt
 

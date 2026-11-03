@@ -224,4 +224,3 @@ theorem held_nachSig_iff (S : Signatur D.Tab D.Glob D.Lock D.Marke) (Λ : List (
     exact key _ _ h
 
 end Gabbro.Grammatik
-

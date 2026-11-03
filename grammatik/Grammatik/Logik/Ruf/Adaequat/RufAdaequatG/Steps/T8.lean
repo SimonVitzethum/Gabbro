@@ -40,6 +40,8 @@ def semR : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .frei L k, σ, ρ => semR k (σ.gibt L) ρ
   | _, _, _, .trav .., _, _ => .sonst
   | _, _, _, .travRest .., _, _ => .sonst
+  | _, _, _, .verbrauch .., _, _ => .sonst
+  | _, _, _, .verbrauchRest .., _, _ => .sonst
   | _, _, _, .wieder .., _, _ => .sonst
   | _, _, _, .wiederRest .., _, _ => .sonst
   | _, _, _, .ewig .., _, _ => .sonst
@@ -202,6 +204,8 @@ theorem semR_SG (O : Orakel D) (passes : Nat) {V : Vertrag D} (A : D.Lock → Pr
       exact semR_SG O passes A k hr.frei_inv (σ.gibt L) (σ'.gibt L) ρ (h.gibt L)
   | _, _, _, .trav .., hr => by cases hr
   | _, _, _, .travRest .., hr => by cases hr
+  | _, _, _, .verbrauch .., hr => by cases hr
+  | _, _, _, .verbrauchRest .., hr => by cases hr
   | _, _, _, .wieder .., hr => by cases hr
   | _, _, _, .wiederRest .., hr => by cases hr
   | _, _, _, .ewig .., hr => by cases hr

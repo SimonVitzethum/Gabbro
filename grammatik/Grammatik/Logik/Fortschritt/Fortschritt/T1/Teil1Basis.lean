@@ -103,6 +103,7 @@ def GRest.absorb {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : GRest D V l Γ Λ �
   | .travRest .. => true
   | .wiederRest .. => true
   | .ewigRest .. => true
+  | .verbrauchRest .. => true
   | .dann _ k => k.absorb
   | .schrumpf k => k.absorb
   | .frei _ k => k.absorb
@@ -131,6 +132,8 @@ def GRest.fOk : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V 
   | _, _, _, .frei _ k => k.fOk && k.nimmtAb && !k.blockiert
   | _, _, _, .trav _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert
   | _, _, _, .travRest _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert
   | _, _, _, .wieder _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert
   | _, _, _, .wiederRest _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert
   | _, _, _, .ewig _ _ _ _ k => k.fOk && k.nimmtAb && !k.blockiert

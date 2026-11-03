@@ -4,6 +4,7 @@ public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.T1
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil7
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil8
 public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil8b
+public import Grammatik.Logik.Ruf.Umkehr.RufHaeltG.RufSchrittG_haeltInvFaelle.Teil9
 @[expose] public section
 
 namespace Gabbro.Grammatik
@@ -346,4 +347,30 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     | endeBindAxiomOptElseGrund =>
       rename_i l Γ Λ e a args he hr hp hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ
       exact rufSchrittG_haeltInv_endeBindAxiomOptElseGrund (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (e := e) (a := a) (args := args) (he := he) (hr := hr) (hp := hp) (hd := hd) (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch _ _ l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+      exact rufSchrittG_haeltInv_dannVerbrauch (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (Λ'' := Λ'') (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead)
+    | verbrauchWeiter _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v _ σ₃ hs₃ m _ neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_verbrauchWeiter (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (σ₂ := σ₂) (hs₂ := hs₂) (v := v) (σ₃ := σ₃) (hs₃ := hs₃) (m := m) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | verbrauchLeer _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ _ _ neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_verbrauchLeer (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (σ₂ := σ₂) (hs₂ := hs₂) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | verbrauchFort _ _ l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+      exact rufSchrittG_haeltInv_verbrauchFort (D := D) (P := P) (O := O) (passes := passes) (hO := hO) (M := M) (f := f) (h := h) (hk0 := hk0) (hh0 := hh0) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (i := i) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (m' := m') (hm' := hm') (hfall := hfall) (neu := neu) (hneu := hneu) (hΛ := hΛ)
+    | dannLeaveVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb _ ρ hleave hhead σ' ρ' neu hstep hneu _ σm hsm _ _ _ σ₁ hs₁ _ neu₁ hneu₁ hΛ =>
+      simp only [rufUpdateG_self]
+      have hk := kette_von hhead hk0
+      have hh := heldIn_von hhead hh0
+      have e := leave_welt' O passes keinRuf _ _ hleave σ' ρ' hstep
+      refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.2.2 ?_
+      simp only [hsm, hs₁, offen_lese]
+      rw [e]; exact heldIn_block restb hh
+    | dannNextVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb _ ρ hnext hhead σ' ρ' neu hstep hneu _ σm hsm _ _ _ neum hneum hΛ =>
+      simp only [rufUpdateG_self]
+      have hk := kette_von hhead hk0
+      have hh := heldIn_von hhead hh0
+      have e := next_welt' O passes keinRuf _ _ hnext σ' ρ' hstep
+      refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk.2 ?_
+      simp only [hsm, offen_lese]
+      rw [e]; exact heldIn_block restb hh
 end Gabbro.Grammatik

@@ -465,6 +465,20 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
     | endeBindAxiomOptElseGrund =>
       have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | verbrauchWeiter =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | verbrauchLeer =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | verbrauchFort =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannLeaveVerbrauch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
+    | dannNextVerbrauch =>
+      have hhead := ‹(M.faeden f).kopf.rest = _›; widerlege hhead
 
 
 end Gabbro.Grammatik

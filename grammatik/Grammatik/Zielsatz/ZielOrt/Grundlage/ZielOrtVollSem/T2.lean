@@ -51,6 +51,36 @@ def weiterZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
       | .why σ r => weiterZ k (.why σ r)
       | .logik e => weiterZ k (.logik e)
       | .hardware e => weiterZ k (.hardware e)
+  | _, _, _, .verbrauch t member edge inv bound mass body rest k, o =>
+      weiterZ k (laufA (verbrauchLauf t (fun σ ρ => execBlock O passes R body σ ρ)
+        (leseB inv) (verbrauchSel t member edge)
+        (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n)) bound rest) o)
+  | _, _, _, .verbrauchRest t member edge inv bound mass body rest vor k, o =>
+      match o with
+      | .ok σ ρ =>
+          let mm := (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n)) σ ρ.tail
+          if 0 ≤ mm.2 ∧ mm.2 ≤ bound ∧ mm.2 < vor then
+            weiterZ k (verbrauchLauf t (fun σ ρ => execBlock O passes R body σ ρ)
+              (leseB inv) (verbrauchSel t member edge)
+              (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n)) bound rest mm.1 ρ.tail)
+          else weiterZ k (.logik .schleife)
+      | .next _ σ ρ =>
+          let mm := (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n)) σ ρ.tail
+          if 0 ≤ mm.2 ∧ mm.2 ≤ bound ∧ mm.2 < vor then
+            weiterZ k (verbrauchLauf t (fun σ ρ => execBlock O passes R body σ ρ)
+              (leseB inv) (verbrauchSel t member edge)
+              (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n)) bound rest mm.1 ρ.tail)
+          else weiterZ k (.logik .schleife)
+      | .leave _ σ ρ =>
+          let mm := (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n)) σ ρ.tail
+          if 0 ≤ mm.2 ∧ mm.2 ≤ bound ∧ mm.2 < vor then
+            weiterZ k (if (leseB inv mm.1 ρ.tail).2 = true then .ok (leseB inv mm.1 ρ.tail).1 ρ.tail
+              else .logik .schleife)
+          else weiterZ k (.logik .schleife)
+      | .zurueck σ v => weiterZ k (.zurueck σ v)
+      | .why σ r => weiterZ k (.why σ r)
+      | .logik e => weiterZ k (.logik e)
+      | .hardware e => weiterZ k (.hardware e)
   | _, _, _, .wieder n bis body ueber k, o =>
       weiterZ k (laufA (retryLauf (fun σ ρ => execBlock O passes R body σ ρ) (leseB bis)
         (fun σ ρ => execBlock O passes R ueber σ ρ) n) o)
@@ -135,6 +165,8 @@ theorem weiterZ_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .frei _ k, e => weiterZ_logik k e
   | _, _, _, .trav _ _ _ _ k, e => weiterZ_logik k e
   | _, _, _, .travRest _ _ _ _ k, e => weiterZ_logik k e
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, e => weiterZ_logik k e
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k, e => weiterZ_logik k e
   | _, _, _, .wieder _ _ _ _ k, e => weiterZ_logik k e
   | _, _, _, .wiederRest _ _ _ _ k, e => weiterZ_logik k e
   | _, _, _, .ewig _ _ _ _ k, e => weiterZ_logik k e
@@ -152,6 +184,8 @@ theorem weiterZ_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRest
   | _, _, _, .frei L k, σ, r => weiterZ_grund k (σ.gibt L) r
   | _, _, _, .trav _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .travRest _ _ _ _ k, σ, r => weiterZ_grund k σ r
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, r => weiterZ_grund k σ r
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .wieder _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .wiederRest _ _ _ _ k, σ, r => weiterZ_grund k σ r
   | _, _, _, .ewig _ _ _ _ k, σ, r => weiterZ_grund k σ r
@@ -190,6 +224,8 @@ theorem weiterZ_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRe
       ZErg.gleich_trans (weiterZ_zurueck k (σ.gibt L) v) ⟨sg_gibt σ L, rfl⟩
   | _, _, _, .trav _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .travRest _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .wieder _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .wiederRest _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
   | _, _, _, .ewig _ _ _ _ k, σ, v => weiterZ_zurueck k σ v
@@ -253,6 +289,12 @@ def GRest.okV (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
       inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .travRest _ inv body _ k =>
       inv.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+  | _, _, _, .verbrauch _ member edge inv _ mass body _ k =>
+      member.orte ⊆ S ∧ edge.orte ⊆ S ∧ inv.orte ⊆ S ∧ mass.orte ⊆ S ∧
+        body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
+  | _, _, _, .verbrauchRest _ member edge inv _ mass body _ _ k =>
+      member.orte ⊆ S ∧ edge.orte ⊆ S ∧ inv.orte ⊆ S ∧ mass.orte ⊆ S ∧
+        body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧ k.okV P S
   | _, _, _, .wieder _ bis body ueber k =>
       bis.orte ⊆ S ∧ body.vOk (kandP P S) = true ∧ blockOrteP P body ⊆ S ∧
         ueber.vOk (kandP P S) = true ∧

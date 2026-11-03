@@ -303,6 +303,8 @@ def GRest.okZ (P : Programm D) (S : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} :
   | _, _, _, .wartet b k => b.kOk = true ∧ blockOrteP P b ⊆ S ∧ k.okZ P S
   | _, _, _, .trav .. => False
   | _, _, _, .travRest .. => False
+  | _, _, _, .verbrauch .. => False
+  | _, _, _, .verbrauchRest .. => False
   | _, _, _, .wieder .. => False
   | _, _, _, .wiederRest .. => False
   | _, _, _, .ewig .. => False

@@ -130,6 +130,14 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
     | endeBindAxiomOptElseGrund => kopfwegH
     | endeBindAxiomElseOk => kopfwegH
     | endeBindAxiomElseGrund => kopfwegH
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch => kopfwegH
+    | verbrauchWeiter => kopfwegH
+    | verbrauchLeer => kopfwegH
+    | verbrauchFort => kopfwegH
+    | dannLeaveVerbrauch => kopfwegH
+    | dannNextVerbrauch => kopfwegH
 
 /-- `traverse konto invariant false { }` in the witness function. -/
 def adTrav : Stmt adD (vertragVon adD adFn) false [] [] [] :=

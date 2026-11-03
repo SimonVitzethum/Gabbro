@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil2
+public import Grammatik.Kern.Syntax.Syntax.Teil3
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Grammatik.Kern.Semantik.Semantik.T1.Teil1
@@ -139,6 +140,122 @@ def traverseLauf (schritt : World D → Env D (τ :: Γ) → Ausgang V true (τ 
       | .why σ' r => .why σ' r
       | .logik e => .logik e
       | .hardware e => .hardware e
+
+
+
+/-- **One consuming selection round in the CURRENT world** (`traverse …
+    by consuming`, C11): the read world (recording the `member`/`edge`
+    reads), the least remaining member that is minimal w.r.t. the declared
+    edge relation (`verbrauchWahl` over `alleIndizes`: first in index order,
+    so the least such index), and whether any member remains at all. The
+    second component is `none` both when the domain is empty (the loop ends)
+    and when members remain but none is minimal (a cyclic edge: the writer's
+    duty is violated, and the run answers `.logik .schleife`); the third
+    component tells the two apart. -/
+def verbrauchSel {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (σ : World D) (ρ : Env D Γ) :
+    World D × Option (Wert D (.index (D.count t))) × Bool :=
+  let σr := σ.lese Λ (member.orte ++ edge.orte)
+  (σr, verbrauchWahl (alleIndizes (D.count t))
+    (fun k => wahr? (eval σr member σr (.cons k ρ)))
+    (fun j k => wahr? (eval σr edge σr (.cons j (.cons k ρ))))
+    (fun j k => decide (j.n = k.n)),
+   !((alleIndizes (D.count t)).all fun k =>
+      !(wahr? (eval σr member σr (.cons k ρ)))))
+
+/-- A selected index is a live member of the current domain. -/
+theorem verbrauchSel_istMitglied {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (σ : World D) (ρ : Env D Γ) {v : Wert D (.index (D.count t))}
+    (h : (verbrauchSel t member edge σ ρ).2.1 = some v) :
+    let σr := σ.lese Λ (member.orte ++ edge.orte)
+    wahr? (eval σr member σr (.cons v ρ)) = true ∧
+      v ∈ alleIndizes (D.count t) := by
+  simp only [verbrauchSel] at h ⊢
+  exact verbrauchWahl_istMitglied h
+
+/-- A selected index is minimal: no different live member strictly precedes
+    it under the declared edge relation. -/
+theorem verbrauchSel_istMinimal {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (σ : World D) (ρ : Env D Γ) {v : Wert D (.index (D.count t))}
+    (h : (verbrauchSel t member edge σ ρ).2.1 = some v)
+    {j : Wert D (.index (D.count t))} (hj : j ∈ alleIndizes (D.count t))
+    (hpj : wahr? (eval (σ.lese Λ (member.orte ++ edge.orte)) member
+      (σ.lese Λ (member.orte ++ edge.orte)) (.cons j ρ)) = true)
+    (hne : decide (j.n = v.n) = false) :
+    wahr? (eval (σ.lese Λ (member.orte ++ edge.orte)) edge
+      (σ.lese Λ (member.orte ++ edge.orte)) (.cons j (.cons v ρ))) = false := by
+  simp only [verbrauchSel] at h
+  exact verbrauchWahl_istMinimal h hj hpj hne
+
+/-- Empty selection is complete: no selection with no remaining member, and
+    every all-absent domain selects nothing. -/
+theorem verbrauchSel_vollstaendig {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (σ : World D) (ρ : Env D Γ) :
+    (verbrauchSel t member edge σ ρ).2.1 = none ↔
+      ∀ v ∈ alleIndizes (D.count t),
+        istMinimalVerbrauch (alleIndizes (D.count t))
+          (fun k => wahr? (eval (σ.lese Λ (member.orte ++ edge.orte)) member
+            (σ.lese Λ (member.orte ++ edge.orte)) (.cons k ρ)))
+          (fun j k => wahr? (eval (σ.lese Λ (member.orte ++ edge.orte)) edge
+            (σ.lese Λ (member.orte ++ edge.orte)) (.cons j (.cons k ρ))))
+          (fun j k => decide (j.n = k.n)) v = false := by
+  simp only [verbrauchSel]
+  exact verbrauchWahl_vollstaendig
+
+/-- **A consuming run over the CURRENT domain** (`traverse … by consuming`,
+    C11): every round re-selects in the post-body world. `sel` answers the
+    read world, the minimal member (if any) and whether a member remains;
+    `massW` answers the read world and the current measure value. The loop
+    ends when no member is left. A round whose post-body measure does not
+    strictly fall inside `0 .. bound` is the writer's logic
+    (`.logik .schleife`), like a failed `decreases` at `traverse` (S005) --
+    never a successful early exit. Fuel bounds the run: exhaustion is the
+    same logical failure. -/
+def verbrauchLauf {Γ : Ctx} (t : D.Tab)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int) :
+    Nat → World D → Env D Γ → Ausgang V l Γ
+  | 0, _, _ => .logik .schleife
+  | n + 1, σ, ρ =>
+      if (inv σ ρ).2 = false then .logik .schleife
+      else match sel (inv σ ρ).1 ρ with
+      | (σr, none, false) => .ok σr ρ
+      | (σr, none, true) => .logik .schleife
+      | (σr, some k, _) =>
+          let (σm, m) := massW σr ρ
+          match schritt σm (.cons k ρ) with
+          | .ok σ' ρ' =>
+              let (σm', m') := massW σ' ρ'.tail
+              if 0 ≤ m' ∧ m' ≤ bound ∧ m' < m then
+                verbrauchLauf t schritt inv sel massW bound n σm' ρ'.tail
+              else .logik .schleife
+          | .next _ σ' ρ' =>
+              let (σm', m') := massW σ' ρ'.tail
+              if 0 ≤ m' ∧ m' ≤ bound ∧ m' < m then
+                verbrauchLauf t schritt inv sel massW bound n σm' ρ'.tail
+              else .logik .schleife
+          | .leave _ σ' ρ' =>
+              let (σm', m') := massW σ' ρ'.tail
+              if 0 ≤ m' ∧ m' ≤ bound ∧ m' < m then
+                if (inv σm' ρ'.tail).2 = true then .ok (inv σm' ρ'.tail).1 ρ'.tail
+                else .logik .schleife
+              else .logik .schleife
+          | .zurueck σ' v => .zurueck σ' v
+          | .why σ' r => .why σ' r
+          | .logik e => .logik e
+          | .hardware e => .hardware e
 
 
 

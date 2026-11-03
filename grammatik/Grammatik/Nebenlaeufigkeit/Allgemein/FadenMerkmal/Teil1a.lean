@@ -261,6 +261,12 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       kopfM
       all_goals simp_all [GRest.mR_weiterOpt]
 
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      kopfM
+      all_goals simp_all [GRest.mR_weiterOpt]
+
 /-! ## 4. The thread invariant -/
 
 /-- **The thread invariant**: every frame runs a function in `Z`, and its

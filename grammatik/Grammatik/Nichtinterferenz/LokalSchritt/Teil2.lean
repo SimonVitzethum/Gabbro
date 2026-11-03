@@ -227,6 +227,8 @@ theorem kr_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGleic
           rw [(hW.lese Λ inv.orte).eval inv (alle_von hST hr.1) ρ]
           exact KRel.ite (fun _ => KRel.lokal _ _ _ _ _ rfl hsp) (fun _ => KRel.none_l _)
   | ewigRest a n inv body k => exact KRel.lokal _ _ _ _ _ rfl hsp
+  | verbrauch t member edge inv bound mass body rest k => exact KRel.none_l _
+  | verbrauchRest t member edge inv bound mass body rest vor k => exact KRel.none_l _
   | wartet b k => exact KRel.none_l _
   | wartetSonst n err b k => exact KRel.none_l _
   | abbruch k => exact KRel.none_l _

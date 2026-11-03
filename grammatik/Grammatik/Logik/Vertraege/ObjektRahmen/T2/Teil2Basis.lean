@@ -87,7 +87,9 @@ theorem stmt_obj {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
         (fun _ _ => slotRahmen_gleich rfl) _ σ ρ hinv
   | .consumeTraverse t member edge inv bound mass body, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]
-      exact traverseLauf_obj hlen _ _ (fun σ ρ h => block_obj body hok σ ρ (hlen.cons _) h)
+      exact verbrauchLauf_obj t hlen _ _ _ _ _
+        (fun σ ρ h => block_obj body hok σ ρ (hlen.cons _) h)
+        (fun _ _ => slotRahmen_gleich rfl) (fun _ _ => slotRahmen_gleich rfl)
         (fun _ _ => slotRahmen_gleich rfl) _ σ ρ hinv
   | .retry n bis body ueberlauf, hok, σ, ρ, hlen, hinv => by
       simp only [execStmt]

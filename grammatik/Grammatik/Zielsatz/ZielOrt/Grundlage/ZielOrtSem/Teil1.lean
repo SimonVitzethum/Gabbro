@@ -72,6 +72,8 @@ def semZ : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .frei L k, σ, ρ => semZ k (σ.gibt L) ρ
   | _, _, _, .trav .., _, _ => .sonst
   | _, _, _, .travRest .., _, _ => .sonst
+  | _, _, _, .verbrauch .., _, _ => .sonst
+  | _, _, _, .verbrauchRest .., _, _ => .sonst
   | _, _, _, .wieder .., _, _ => .sonst
   | _, _, _, .wiederRest .., _, _ => .sonst
   | _, _, _, .ewig .., _, _ => .sonst

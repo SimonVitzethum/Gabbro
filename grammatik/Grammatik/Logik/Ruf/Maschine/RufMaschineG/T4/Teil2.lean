@@ -28,6 +28,8 @@ def GRest.sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .frei _ k => k.sauber
   | .trav _ _ _ _ k => k.sauber
   | .travRest _ _ _ _ k => k.sauber
+  | .verbrauch _ _ _ _ _ _ _ _ k => k.sauber
+  | .verbrauchRest _ _ _ _ _ _ _ _ _ k => k.sauber
   | .wieder _ _ _ _ k => k.sauber
   | .wiederRest _ _ _ _ k => k.sauber
   | .ewig _ _ _ _ k => k.sauber

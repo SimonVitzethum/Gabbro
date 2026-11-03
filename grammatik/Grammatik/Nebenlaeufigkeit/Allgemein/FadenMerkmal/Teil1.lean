@@ -160,6 +160,8 @@ def GRest.mR (A : Merkmal D) {V : Vertrag D} :
   | _, _, _, .frei _ k => k.mR A
   | _, _, _, .trav _ _ body _ k => mB A body = true ∧ k.mR A
   | _, _, _, .travRest _ _ body _ k => mB A body = true ∧ k.mR A
+  | _, _, _, .verbrauch _ _ _ _ _ _ body _ k => mB A body = true ∧ k.mR A
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ body _ _ k => mB A body = true ∧ k.mR A
   | _, _, _, .wieder _ _ body ueber k => mB A body = true ∧ mB A ueber = true ∧ k.mR A
   | _, _, _, .wiederRest _ _ body ueber k => mB A body = true ∧ mB A ueber = true ∧ k.mR A
   | _, _, _, .ewig _ _ _ body k => mB A body = true ∧ k.mR A

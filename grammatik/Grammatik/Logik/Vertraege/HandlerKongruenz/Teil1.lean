@@ -244,6 +244,66 @@ theorem traverseLauf_kongruent {l : Bool} {Γ : Ctx} {τ : Ty}
           | hardware e => exact Or.inl rfl
         · exact Or.inr ⟨m, by rw [h1]; cases m <;> rfl, hE⟩
 
+/-- A consuming run with congruent bodies: like `traverseLauf_kongruent`,
+    by induction on the fuel. Selection, invariant and measure are shared;
+    every failing check is `.logik .schleife` on both sides. -/
+theorem verbrauchLauf_kongruent {l : Bool} {Γ : Ctx} (t : D.Tab)
+    (s₁ s₂ : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int)
+    (hs : ∀ σ ρ, AusgangUnter Er (s₁ σ ρ) (s₂ σ ρ)) :
+    ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ),
+      AusgangUnter Er
+        (verbrauchLauf (l := l) t s₁ inv sel massW bound fuel σ ρ)
+        (verbrauchLauf (l := l) t s₂ inv sel massW bound fuel σ ρ)
+  | 0, σ, ρ => Or.inl rfl
+  | n + 1, σ, ρ => by
+      simp only [verbrauchLauf]
+      by_cases hc : (inv σ ρ).2 = false
+      · rw [if_pos hc, if_pos hc]; exact Or.inl rfl
+      · rw [if_neg hc, if_neg hc]
+        obtain ⟨σr, w, b⟩ := sel (inv σ ρ).1 ρ
+        cases w with
+        | none =>
+            cases b with
+            | false => exact Or.inl rfl
+            | true => exact Or.inl rfl
+        | some v =>
+            obtain ⟨σm, m⟩ := massW σr ρ
+            rcases hs σm (.cons v ρ) with h | ⟨m', h1, hE⟩
+            · rw [h]
+              cases hx : s₂ σm (Env.cons v ρ) with
+              | ok σ' ρ' =>
+                  by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
+                      (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
+                  · rw [if_pos hfall, if_pos hfall]
+                    exact verbrauchLauf_kongruent t s₁ s₂ inv sel massW bound
+                      hs n (massW σ' ρ'.tail).1 ρ'.tail
+                  · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
+              | next hl σ' ρ' =>
+                  by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
+                      (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
+                  · rw [if_pos hfall, if_pos hfall]
+                    exact verbrauchLauf_kongruent t s₁ s₂ inv sel massW bound
+                      hs n (massW σ' ρ'.tail).1 ρ'.tail
+                  · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
+              | leave hl σ' ρ' =>
+                  by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
+                      (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
+                  · rw [if_pos hfall, if_pos hfall]
+                    by_cases hc' : (inv σ' ρ'.tail).2 = true
+                    · rw [if_pos hc', if_pos hc']; exact Or.inl rfl
+                    · rw [if_neg hc', if_neg hc']; exact Or.inl rfl
+                  · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
+              | zurueck σ' v => exact Or.inl rfl
+              | why σ' r => exact Or.inl rfl
+              | logik e => exact Or.inl rfl
+              | hardware e => exact Or.inl rfl
+            · exact Or.inr ⟨m', by rw [h1]; cases m' <;> rfl, hE⟩
+
 theorem retryLauf_kongruent {l : Bool} {Γ : Ctx}
     (s₁ s₂ : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool)

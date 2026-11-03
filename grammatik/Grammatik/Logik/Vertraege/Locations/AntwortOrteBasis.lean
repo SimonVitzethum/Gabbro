@@ -194,6 +194,8 @@ def GRest.aR (C : D.Ax ⊕ D.Reg → Bool) {V : Vertrag D} :
   | _, _, _, .frei _ k => k.aR C
   | _, _, _, .trav _ _ body _ k => body.ants.all C = true ∧ k.aR C
   | _, _, _, .travRest _ _ body _ k => body.ants.all C = true ∧ k.aR C
+  | _, _, _, .verbrauch _ _ _ _ _ _ body _ k => body.ants.all C = true ∧ k.aR C
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ body _ _ k => body.ants.all C = true ∧ k.aR C
   | _, _, _, .wieder _ _ body ueber k =>
       body.ants.all C = true ∧ ueber.ants.all C = true ∧ k.aR C
   | _, _, _, .wiederRest _ _ body ueber k =>

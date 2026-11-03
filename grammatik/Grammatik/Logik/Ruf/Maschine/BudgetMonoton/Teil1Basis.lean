@@ -22,6 +22,10 @@ def GRest.plus (j : Nat) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : L
   | _, _, _, .frei L k => .frei L (k.plus j)
   | _, _, _, .trav t inv body ks k => .trav t inv body ks (k.plus j)
   | _, _, _, .travRest t inv body ks k => .travRest t inv body ks (k.plus j)
+  | _, _, _, .verbrauch t member edge inv bound mass body rest k =>
+      .verbrauch t member edge inv bound mass body rest (k.plus j)
+  | _, _, _, .verbrauchRest t member edge inv bound mass body rest vor k =>
+      .verbrauchRest t member edge inv bound mass body rest vor (k.plus j)
   | _, _, _, .wieder n bis body ueber k => .wieder n bis body ueber (k.plus j)
   | _, _, _, .wiederRest n bis body ueber k => .wiederRest n bis body ueber (k.plus j)
   | _, _, _, .ewig a n inv body k => .ewig a (n + j) inv body (k.plus j)
@@ -93,6 +97,8 @@ theorem GRest.plus_zero {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (
   | _, _, _, .frei _ k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .trav .. => by rename_i k; simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .travRest _ _ _ _ k => by simp only [GRest.plus, GRest.plus_zero k]
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k => by simp only [GRest.plus, GRest.plus_zero k]
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .wieder .. => by rename_i k; simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .wiederRest _ _ _ _ k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .ewig .. => by rename_i k; simp only [GRest.plus, GRest.plus_zero k, Nat.add_zero]
@@ -110,6 +116,8 @@ theorem GRest.plus_plus (i j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} 
   | _, _, _, .frei _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .trav .. => by rename_i k; simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .travRest _ _ _ _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .wieder .. => by rename_i k; simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .wiederRest _ _ _ _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .ewig .. => by rename_i k; simp only [GRest.plus, GRest.plus_plus i j k, Nat.add_assoc]
@@ -122,7 +130,7 @@ theorem GRest.plus_plus (i j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} 
 theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (g : GRest D V l Γ Λ), (g.plus j).wartend = g.wartend
   | _, _, _, .ende _ | _, _, _, .dann .. | _, _, _, .schrumpf _ | _, _, _, .frei .. | _, _, _, .trav ..
-  | _, _, _, .travRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
+  | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _
   | _, _, _, .leer => rfl
 
@@ -147,7 +155,7 @@ theorem RufRahmenG.plus_wartend (j : Nat) (r : RufRahmenG D) : (r.plus j).warten
 theorem GRest.plus_anRueck (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (g : GRest D V l Γ Λ), (g.plus j).anRueck = g.anRueck
   | _, _, _, .ende _ | _, _, _, .dann .. | _, _, _, .schrumpf _ | _, _, _, .frei .. | _, _, _, .trav ..
-  | _, _, _, .travRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
+  | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _
   | _, _, _, .leer => rfl
 

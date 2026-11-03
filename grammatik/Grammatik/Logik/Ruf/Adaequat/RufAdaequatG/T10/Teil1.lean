@@ -13,7 +13,7 @@ variable {D : Deklaration}
 theorem rufSchrittG_log {P : Programm D} {O : Orakel D} {passes : Nat} {M M' : RufMaschineG D}
     {f : Faden} (hs : RufSchrittG P O passes M f M') :
     (M'.faeden f).log = (M.faeden f).log ∨ ∃ e, (M'.faeden f).log = e :: (M.faeden f).log := by
-  (rcases hs with hs | hs | hs | hs | hs | hs <;> cases hs) <;> rw [faeden_upd] <;>
+  (rcases hs with hs | hs | hs | hs | hs | hs | hs <;> cases hs) <;> rw [faeden_upd] <;>
     first
     | exact Or.inl rfl
     | exact Or.inr ⟨_, rfl⟩

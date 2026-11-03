@@ -49,6 +49,25 @@ theorem leseA_spur (A : AUmwelt D) {T : D.Tab ⊕ D.Glob → Prop} (hA : HavocA 
     (Λ : List (Res D)) (X : List (D.Tab ⊕ D.Glob)) : (leseA A σ Λ X).spur = (σ.lese Λ X).spur :=
   (hA X _).1
 
-/-! ## 2. The semantics -/
+/-! ## 2. Consuming selection through the atomic environment -/
+
+/-- One consuming selection round through `A`: like `verbrauchSel`, with
+    every read going through `leseA`. Off `T` (`leseA_frei`) this is
+    `verbrauchSel`. -/
+def verbrauchSelA {Γ : Ctx} {Λ : List (Res D)} (A : AUmwelt D)
+    (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (σ : World D) (ρ : Env D Γ) :
+    World D × Option (Wert D (.index (D.count t))) × Bool :=
+  let σr := leseA A σ Λ (member.orte ++ edge.orte)
+  (σr, verbrauchWahl (alleIndizes (D.count t))
+    (fun k => wahr? (eval σr member σr (.cons k ρ)))
+    (fun j k => wahr? (eval σr edge σr (.cons j (.cons k ρ))))
+    (fun j k => decide (j.n = k.n)),
+   !((alleIndizes (D.count t)).all fun k =>
+      !(wahr? (eval σr member σr (.cons k ρ)))))
+
+/-! ## 3. The semantics -/
 
 end Gabbro.Grammatik

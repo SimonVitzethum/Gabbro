@@ -225,6 +225,24 @@ theorem semH_leaveTrav_falsch {Λ Λx : List (Res D)} (t : D.Tab) (inv : Expr D 
   simp only [weiterH, leseB, Env.tail, hw]
   exact weiterH_logik S O U passes R k _
 
+theorem semH_verbrauch_falsch {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = false) :
+    semH S O U passes R (.verbrauch t member edge inv bound mass body rest k) σ ρ =
+      .logik .schleife := by
+  cases rest with
+  | zero =>
+      simp only [semH, weiterH, laufA, verbrauchLauf]
+      exact weiterH_logik S O U passes R k _
+  | succ n =>
+      simp only [semH, weiterH, laufA, verbrauchLauf, leseB, hw]
+      exact weiterH_logik S O U passes R k _
+
 end Stufen
 
 end Gabbro.Grammatik

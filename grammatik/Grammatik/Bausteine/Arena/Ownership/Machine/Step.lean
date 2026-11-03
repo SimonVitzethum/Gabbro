@@ -439,6 +439,20 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       exact ownInv_step_endeBindAxiomElseOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr0 hw hg hd' hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       exact ownInv_step_endeBindAxiomElseGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
+  | g7 hstep =>
+    cases hstep with
+    | dannVerbrauch _ _ l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+      exact ownInv_step_dannVerbrauch (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (Λ'' := Λ'') (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead)
+    | verbrauchWeiter _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+      exact ownInv_step_verbrauchWeiter (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (m := m) (σ₃ := σ₃)
+    | verbrauchLeer _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+      exact ownInv_step_verbrauchLeer (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₂ := σ₂)
+    | verbrauchFort _ _ l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+      exact ownInv_step_verbrauchFort (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (i := i) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁)
+    | dannLeaveVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
+      exact ownInv_step_dannLeaveVerbrauch (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hleave := hleave) (hhead := hhead) (σ₁ := σ₁)
+    | dannNextVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
+      exact ownInv_step_dannNextVerbrauch (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hnext := hnext) (hhead := hhead) (σm := σm)
 #print axioms ownInv_step
 
 end Gabbro.Grammatik.ArenaOwnership.Machine
