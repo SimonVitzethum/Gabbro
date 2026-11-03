@@ -44,8 +44,8 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .assignVar x e, σ, ρ, _hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt; exact treu_lese σ Λ _
   | .shift t f hτ i von nach hn he hw hL, σ, ρ, _hscope, _hh, σ', h => by
-      simp only [execStmt] at h
-      split at h
+      simp only [execStmt] at h ⊢
+      by_cases hc : (hτ ▸ (σ.lese Λ (.inl t :: i.orte)).slots t (eval (σ.lese Λ (.inl t :: i.orte)) i (σ.lese Λ (.inl t :: i.orte)) ρ).n f : Zahl _ _).n = von <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
       · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         exact (treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _).trans
           (treu_schreibSlot _ t Λ _ f _ hw)
@@ -53,13 +53,20 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .ite c t e, σ, ρ, hscope, hh, σ', h => by
       have hscope_t : t.ScopesOk := by scopes_treu
       have hscope_e : e.ScopesOk := by scopes_treu
-      frame_read_split execStmt (c.orte)
-        ((TreuAusgang.vor hl (block_treu bo hbV t _ _ hscope_t (hl.heldB hh))) σ' h) ((TreuAusgang.vor hl (block_treu bo hbV e _ _ hscope_e (hl.heldB hh))) σ' h)
+      simp only [execStmt] at h ⊢
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
+      by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
+      · exact (TreuAusgang.vor hl (block_treu bo hbV t _ _ hscope_t (hl.heldB hh))) σ' h
+      · exact (TreuAusgang.vor hl (block_treu bo hbV e _ _ hscope_e (hl.heldB hh))) σ' h
   | .onOption o p a, σ, ρ, hscope, hh, σ', h => by
       have hscope_p : p.ScopesOk := by scopes_treu
       have hscope_a : a.ScopesOk := by scopes_treu
-      frame_read_split execStmt (o.orte)
-        ((TreuAusgang.vor hl (block_treu bo hbV p _ _ hscope_p (hl.heldB hh))).schrumpf σ' h) ((TreuAusgang.vor hl (block_treu bo hbV a _ _ hscope_a (hl.heldB hh))) σ' h)
+      simp only [execStmt] at h ⊢
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ o.orte
+      generalize hv : eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = ov at h ⊢
+      cases ov with
+      | some v => exact (TreuAusgang.vor hl (block_treu bo hbV p _ _ hscope_p (hl.heldB hh))).schrumpf σ' h
+      | none => exact (TreuAusgang.vor hl (block_treu bo hbV a _ _ hscope_a (hl.heldB hh))) σ' h
   | .onTag v arms, σ, ρ, hscope, hh, σ', h => by
       have hscope_a : arms.ScopesOk := by scopes_treu
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ v.orte
@@ -131,30 +138,31 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       exact foreverLauf_treu bo _ a _ _ (fun σ ρ hh => block_treu bo hbV body σ ρ hscope_body hh)
         (fun σ ρ _ => treu_lese σ Λ inv.orte) passes σ ρ hh σ' h
   | .axiomCall a args _ hw hg hd hgd, σ, ρ, _hscope, _hh, σ', h => by
-      frame_read_cases execStmt (args.orte)
-      · rename_i σ1 v ha
-        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+      simp only [execStmt] at h ⊢
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      generalize ha : axiomAntwort O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
+      rcases av with ⟨σ1, _ | v⟩
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
         rw [ha] at h1
         exact hl.trans (Treu.weiter hw hg h1)
-      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .axiomCallElse _ a args _ hp hd hgd _ err, σ, ρ, hscope, hh, σ', h => by
-      simp only [execStmt] at h
+      simp only [execStmt] at h ⊢
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
       have hscope_err : err.ScopesOk := by scopes_treu
       frame_axiom_else
-      split at h
-      · rename_i σ1 v ha
-        simp only [Ausgang.welt, Option.some.injEq] at h; subst h
+      generalize ha : axiomAntwortSonst O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
+      rcases av with ⟨σ1, _ | (v | r)⟩
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · simp only [Ausgang.welt, Option.some.injEq] at h; subst h
         rw [ha] at h1
         exact hl.trans (Treu.weiter hp.hw hp.hg h1)
-      · rename_i σ1 r ha
-        rw [ha] at h1
+      · rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
         exact (TreuAusgang.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf.zuAusgang)) σ' h
-      · simp only [Ausgang.welt, reduceCtorEq] at h
   | .regWrite r _ e, σ, ρ, _hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt; exact treu_lese σ Λ _
   | .transition .., σ, ρ, _hscope, _hh, σ', h => by
@@ -167,9 +175,9 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .retires .., σ, ρ, _hscope, _hh, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
   | .ret e _, σ, ρ, _hscope, _hh, σ', h => by
-      frame_value execStmt Ausgang.welt; exact treu_lese σ Λ _
+      frame_value execStmt Ausgang.welt; exact (treu_lese σ Λ _).toRet
   | .retWhy .., σ, ρ, _hscope, _hh, σ', h => by
-      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact Treu.refl _ _ _
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h; exact (Treu.refl _ _ _).toRet
   | .retScoped e R, σ, ρ, hscope, _hh, σ', h => by
       frame_value execStmt Ausgang.welt
       have hsc : scopesOkScopes V.haelt V.boden R.scopes = true := by scopes_treu
