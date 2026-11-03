@@ -63,7 +63,7 @@ theorem strict_compare {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
     The final strict comparison is still a runtime check against the saved
     pre-body value and stops on equality or increase. -/
 theorem decrease_ok {Γ : Ctx} {Λ : List (Res D)} {ρ : Env D Γ}
-    {mass : Expr D Γ Λ (.int 0 bound)} {bound old : Int}
+    {bound old : Int} {mass : Expr D Γ Λ (.int 0 bound)}
     {m : Mem} {pc fp : W} {K Ks d saved failure te : Nat} {ce : List II}
     {σ : World D}
     (lowered : lowE (reserved := reserved) L mass d = some (ce, te))
