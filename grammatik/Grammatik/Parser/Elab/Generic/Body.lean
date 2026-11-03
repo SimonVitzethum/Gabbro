@@ -13,7 +13,7 @@ def rewriteBody (env : Environment) (bindings : Bindings) : SAnw → RewriteM SA
   | .callElse name args reason body => do
     let .call target values ← rewriteExpression env bindings (.call name args) |
       liftResult (.error "foreign statement did not produce a direct call")
-    return .callElse target values reason (← rewriteBody env (bindings.filter (fun p => !strEq p.1 reason)) body)
+    return .callElse target values reason (← rewriteBody env (bindings.without [reason]) body)
   | .callQ name args => do
     match ← rewriteExpression env bindings (.call name args) with
     | .call target values => pure (.callQ target values)
