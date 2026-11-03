@@ -26,6 +26,16 @@ inductive UMessOrt where
   | stelle (basis : String) (feld : String) (index : Int)
   deriving DecidableEq, Repr
 
+/-- Source-indexed return capture. Parameter indices refer to the private
+    ordinary reporter function; absent observations have no parameter. -/
+structure UCheckReturn where
+  check : String
+  point : Nat
+  samples : List (String × Option Nat)
+  floorStart : Nat
+  floorCount : Nat
+  deriving DecidableEq, Repr
+
 /-- One declared check in elaborated form. -/
 structure UCheck where
   name : String
