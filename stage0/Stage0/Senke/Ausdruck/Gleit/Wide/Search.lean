@@ -96,4 +96,5 @@ theorem position_zero_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
     (eval σ₀ (position (Expr.lit (Λ := Λ) 1) 0 3) σ ρ).n = 0 := by
   constructor <;> rfl
 
+#print axioms position_zero_zeuge
 end Gabbro.Stage0.Senke.WideFloat
