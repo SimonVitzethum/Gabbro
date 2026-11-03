@@ -36,22 +36,23 @@ private theorem antwortRestG_fR {V : Vertrag D} (g : D.Fn)
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a with
   | inl value =>
+      change c'.2.2.2.2.fR Φ b (Φ.vor g)
       cases r with
       | wartet body k =>
-          unfold antwortRestG at ha
-          split at ha
-          · simp only [Option.some.injEq] at ha
+          rename_i Λ' τ
+          by_cases he : (vertragVon D g).erg = some τ
+          · simp only [antwortRestG, he, ↓reduceDIte, Option.some.injEq] at ha
             subst c'
             simpa only [GRest.fR] using hc
-          · cases ha
+          · simp only [antwortRestG, he, ↓reduceDIte, reduceCtorEq] at ha
       | wartetSonst n err body k =>
-          unfold antwortRestG at ha
-          split at ha
-          · simp only [Option.some.injEq] at ha
+          rename_i Λ' τ
+          by_cases he : (vertragVon D g).erg = some τ
+          · simp only [antwortRestG, he, ↓reduceDIte, Option.some.injEq] at ha
             subst c'
             simp only [GRest.fR] at hc ⊢
             exact hc.2
-          · cases ha
+          · simp only [antwortRestG, he, ↓reduceDIte, reduceCtorEq] at ha
       | _ =>
           unfold antwortRestG at ha
           change some _ = some c' at ha
@@ -59,15 +60,15 @@ private theorem antwortRestG_fR {V : Vertrag D} (g : D.Fn)
           subst c'
           exact hc
   | inr reason =>
+      change c'.2.2.2.2.fR Φ b false
       cases r with
       | wartetSonst n err body k =>
-          unfold antwortRestG at ha
-          split at ha
-          · simp only [Option.some.injEq] at ha
+          by_cases hn : (vertragVon D g).gruende = n
+          · simp only [antwortRestG, hn, ↓reduceDIte, Option.some.injEq] at ha
             subst c'
             simp only [GRest.fR, fB_alsBlock] at hc ⊢
             exact ⟨hc.1, hc.2.2⟩
-          · cases ha
+          · simp only [antwortRestG, hn, ↓reduceDIte, reduceCtorEq] at ha
       | _ =>
           unfold antwortRestG at ha
           change none = some c' at ha
