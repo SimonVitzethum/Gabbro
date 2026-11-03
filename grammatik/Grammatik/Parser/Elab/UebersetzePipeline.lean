@@ -137,5 +137,10 @@ theorem fnsVon_laenge (u : UProg) (ns : List String) (h : ∀ n ∈ ns, (fnIdx u
 instance instDecEqDeclOfFn (u : UProg) : DecidableEq (declOf u).Fn :=
   inferInstanceAs (DecidableEq (Fin u.fns.length))
 
+/-- The foreign bodies of a generically lowered program are numbered
+    (the core-query checker decides over them). -/
+instance instDecEqDeclOfAx (u : UProg) : DecidableEq (declOf u).Ax :=
+  inferInstanceAs (DecidableEq (Fin u.axs.length))
+
 
 end Gabbro.Grammatik

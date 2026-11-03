@@ -66,7 +66,9 @@ set_option maxRecDepth 100000
     Against `ast.rs` `StmtArt`: `bind` = `Let`, `bindElse` =
     `LetSonst`, `set` = `Zuweisung`, `wenn` = `Wenn`, `cases` =
     `Match`, `each`/`retry`/`loop` = `Schleife`, `waive`
-    = `Bricht`, `trim` = `Narrow`, `locks` = `Sperrt`,
+    = `Bricht`, `trim` = `Narrow`, `trimReq` = required narrowing
+    (`Block/Endblock.narrowRequired`, generated only, no source word),
+    `locks` = `Sperrt`,
     `watch` = `Observiert`, `leave` = `Leave`, `weiter` =
     `Next`, `emit` = `Publish`, `erwartet` = `AwaitLoad`,
     `swap` = `Exchange`, `rueck` = `Return`, `ruf` = `Ruf`,
@@ -107,6 +109,12 @@ inductive SAnw
   | loop : String → SAnw → SAnw
   | waive : List String → SAnw → SAnw
   | trim : SExpr → String → SAnw → SAnw
+  /-- Required narrowing `narrow x to lo .. hi` with no `else` (C15, generated
+      only): out of range is `Logik.kapazitaet`, never a clipped value. The
+      continuation is the following siblings, as after a `bind`. No source
+      syntax (C11/C18 have none either); the printer emits a form the parser
+      refuses, never a silent `else`. -/
+  | trimReq : SExpr → String → SAnw
   | locks : Bool → SExpr → SAnw → SAnw
   | watch : String → SAnw → SAnw
   | leave : String → SAnw
@@ -141,6 +149,8 @@ inductive SAnw
   | bindAxiomOpt : String → Option STyp → SExpr → SAnw
   /-- Optional axiom result binding with a reason handler. -/
   | bindAxiomOptElse : String → Option STyp → SExpr → String → SAnw → SAnw
+  /-- Explicit generic call statement, consumed before ordinary export. -/
+  | genericCall : String → List String → List SExpr → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -196,6 +206,8 @@ def beqSAnw : SAnw → SAnw → Bool
     beqWorte inv jnv && beqSAnw b d
   | .trim o z s, .trim p w t =>
     beqSExpr o p && strEq z w && beqSAnw s t
+  | .trimReq o z, .trimReq p w =>
+    beqSExpr o p && strEq z w
   | .locks g o b, .locks h p d =>
     g == h && beqSExpr o p && beqSAnw b d
   | .watch d b, .watch e c => strEq d e && beqSAnw b c
@@ -211,6 +223,8 @@ def beqSAnw : SAnw → SAnw → Bool
   | .ret x, .ret y => beqOptExpr x y
   | .alloc m n y t w s, .alloc k o z u v r =>
     m == k && strEq n o && beqSTypOpt y z && strEq t u && beqSExpr w v && beqOptAnw s r
+  | .genericCall n words args, .genericCall m other values =>
+    strEq n m && beqWorte words other && beqSExprList args values
   | .allocVon m n y t, .allocVon k o z u => m == k && strEq n o && beqSTypOpt y z && strEq t u
   | .bindQ m a t x, .bindQ n b u y =>
     m == n && strEq a b && beqSTypOpt t u && beqSExpr x y

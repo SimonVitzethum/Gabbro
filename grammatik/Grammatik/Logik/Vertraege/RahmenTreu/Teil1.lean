@@ -1,144 +1,12 @@
 module
-
 public import Grammatik.Kern.Syntax.Satz
+
+public import Grammatik.Logik.Vertraege.RahmenTreu.Grundlagen
 
 @[expose] public section
 
-
-
 namespace Gabbro.Grammatik
-
 variable {D : Deklaration} {V : Vertrag D}
-
-/-! ## 1. `Treu`: the frame and the held locks, without the trace quality -/
-
-/-- **The two facts of `Gut` that need no lock discipline**: `σ'` differs
-    from `σ` only at carriers the contract may write, and holds exactly the
-    locks `σ` held. -/
-def Treu (W : D.Tab → Bool) (G : D.Glob → Bool) (σ σ' : World D) : Prop :=
-  Rahmen W G σ σ' ∧ σ'.haelt = σ.haelt
-
-theorem Treu.refl (W G) (σ : World D) : Treu W G σ σ := ⟨Rahmen.refl _ _ _, rfl⟩
-
-theorem Treu.trans {W G} {a b c : World D} (h1 : Treu W G a b) (h2 : Treu W G b c) :
-    Treu W G a c := ⟨h1.1.trans h2.1, h2.2.trans h1.2⟩
-
-theorem Treu.weiter {W W' : D.Tab → Bool} {G G' : D.Glob → Bool} {a b : World D}
-    (hW : ∀ t, W t = true → W' t = true) (hG : ∀ g, G g = true → G' g = true)
-    (h : Treu W G a b) : Treu W' G' a b := ⟨h.1.weiter hW hG, h.2⟩
-
-/-- Asking outside the program changes no cell and no lock. -/
-theorem treu_fragt {W G} (σ : World D) (q : D.Ax ⊕ D.Reg ⊕ D.Glob) : Treu W G σ (σ.fragt q) :=
-  ⟨rahmen_gleich rfl rfl, rfl⟩
-
-/-- Everything `Satz.lean` proves is at least this. -/
-theorem Gut.treu {W G} {a b : World D} (h : Gut W G a b) : Treu W G a b := ⟨h.1, h.2.1⟩
-
-/-! ## 2. The leaves: reading, writing, taking and giving a lock -/
-
-theorem treu_merke {W G} (σ : World D) (es : List (Ereignis D))
-    (hz : ∀ e ∈ es, e.zugriffMit σ.haelt) : Treu W G σ (σ.merke es) :=
-  ⟨rahmen_gleich rfl rfl,
-   show offen (es ++ σ.spur) = offen σ.spur from offen_append_zugriffe _ es σ.spur hz⟩
-
-/-- **A read keeps everything.** No premise: `lese` appends `zugriff` events
-    and changes no slot, no global and no held lock. -/
-theorem treu_lese {W G} (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob)) :
-    Treu W G σ (σ.lese Λ orte) := ⟨rahmen_gleich rfl rfl, lese_haelt σ Λ orte⟩
-
-theorem treu_schreibSlot {W G} (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int)
-    (f : D.Feld t) (v : Wert D (D.typ t f)) (hw : W t = true) :
-    Treu W G σ (σ.schreibSlot t Λ k f v) :=
-  Treu.trans ⟨rahmen_storeSlot W G σ t k f v hw, rfl⟩
-    (treu_merke _ _ (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; simp only [Ereignis.zugriffMit]; rfl))
-
-theorem treu_schreibGlob {W G} (σ : World D) (g : D.Glob) (Λ : List (Res D))
-    (v : Wert D (D.gtyp g)) (hg : G g = true) : Treu W G σ (σ.schreibGlob g Λ v) :=
-  Treu.trans ⟨rahmen_storeGlob W G σ g v hg, rfl⟩
-    (treu_merke _ _ (by intro e he; simp only [List.mem_cons, List.not_mem_nil, or_false] at he; subst he; simp only [Ereignis.zugriffMit]; rfl))
-
-theorem treu_schreibBytes {W G} (σ : World D) (t : D.Tab) (f : D.Feld t)
-    (hf : D.typ t f = .int 0 255) (Λ : List (Res D)) (hw : W t = true) :
-    ∀ (bs : List Byte) (k : Int), Treu W G σ (σ.schreibBytes t f hf Λ k bs) := by
-  intro bs
-  induction bs generalizing σ with
-  | nil => intro k; exact Treu.refl _ _ _
-  | cons b bs ih =>
-      intro k
-      simp only [World.schreibBytes]
-      exact (treu_schreibSlot (W := W) (G := G) σ t Λ k f
-        (cast (congrArg (Wert D) hf).symm (b : Wert D (.int 0 255))) hw).trans (ih _ _)
-
-/-- The owed invariants are READ at the return of a call; reading keeps the
-    frame and the held locks. -/
-theorem treu_foldl_lese {W G} (P : Programm D) :
-    ∀ (is : List D.Inv) (σ : World D),
-      Treu W G σ (is.foldl (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte) σ)
-  | [], _ => Treu.refl _ _ _
-  | i :: is, σ => (treu_lese σ (invSicht D i) (P.invariante i).orte).trans
-      (treu_foldl_lese P is (σ.lese (invSicht D i) (P.invariante i).orte))
-
-/-- **`locks L { .. }` gives back what it took, at EVERY world.** The `Gut`
-    version (`gut_nimmt_gibt`) needs `L ∉ σ.haelt` and the rank order for the
-    `nimmt` EVENT to be good; the held set itself survives without them,
-    because `offen` erases the FIRST `L` and that is the one `nimmt` put
-    there. -/
-theorem treu_nimmt_gibt {W G} (σ σ1 : World D) (L : D.Lock)
-    (h : Treu W G (σ.nimmt L) σ1) : Treu W G σ (σ1.gibt L) := by
-  refine ⟨?_, ?_⟩
-  · exact (rahmen_gleich (W := W) (G := G) (σ := σ) (σ' := σ.nimmt L) rfl rfl).trans
-      (h.1.trans (rahmen_gleich rfl rfl))
-  · show (offen σ1.spur).erase L = offen σ.spur
-    have := h.2
-    simp only [World.haelt, World.nimmt, offen] at this
-    rw [this]; exact List.erase_cons_head _ _
-
-/-! ## 3. Outcomes -/
-
-def TreuAusgang (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : Ausgang V l Γ) : Prop :=
-  ∀ σ', o.welt = some σ' → Treu W G σ σ'
-
-def TreuEnd (W : D.Tab → Bool) (G : D.Glob → Bool) (σ : World D) (o : EndAusgang V l Γ) : Prop :=
-  ∀ σ', o.welt = some σ' → Treu W G σ σ'
-
-theorem TreuAusgang.schrumpf {W G} {σ : World D} {o : Ausgang V l (τ :: Γ)}
-    (h : TreuAusgang W G σ o) : TreuAusgang W G σ o.schrumpf := by
-  intro σ' hs; cases o <;> simp only [Ausgang.welt, Ausgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
-    (subst hs; exact h _ rfl)
-
-theorem TreuAusgang.schrumpfArm {W G} {σ : World D} (c : Option Ty)
-    {o : Ausgang V l (ArmCtx Γ c)} (h : TreuAusgang W G σ o) :
-    TreuAusgang W G σ (o.schrumpfArm c) := by
-  cases c with
-  | none => exact h
-  | some _ => exact h.schrumpf
-
-theorem TreuEnd.schrumpf {W G} {σ : World D} {o : EndAusgang V l (τ :: Γ)}
-    (h : TreuEnd W G σ o) : TreuEnd W G σ o.schrumpf := by
-  intro σ' hs; cases o <;> simp only [EndAusgang.welt, EndAusgang.schrumpf, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
-    (subst hs; exact h _ rfl)
-
-theorem TreuEnd.zuAusgang {W G} {σ : World D} {o : EndAusgang V l Γ} (h : TreuEnd W G σ o) :
-    TreuAusgang W G σ o.zuAusgang := by
-  intro σ' hs; cases o <;> simp only [Ausgang.welt, EndAusgang.zuAusgang, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
-    (subst hs; exact h _ rfl)
-
-theorem TreuAusgang.vor {W G} {σ σ1 : World D} {o : Ausgang V l Γ}
-    (h1 : Treu W G σ σ1) (h : TreuAusgang W G σ1 o) : TreuAusgang W G σ o :=
-  fun σ' hs => h1.trans (h σ' hs)
-
-theorem TreuEnd.vor {W G} {σ σ1 : World D} {o : EndAusgang V l Γ}
-    (h1 : Treu W G σ σ1) (h : TreuEnd W G σ1 o) : TreuEnd W G σ o :=
-  fun σ' hs => h1.trans (h σ' hs)
-
-theorem TreuAusgang.gibt {W G} {σ : World D} (L : D.Lock) {o : Ausgang V l Γ}
-    (h : TreuAusgang W G (σ.nimmt L) o) : TreuAusgang W G σ (o.mapWelt (·.gibt L)) := by
-  intro σ' hs
-  cases o <;> simp only [Ausgang.welt, Ausgang.mapWelt, Option.some.injEq, reduceCtorEq] at hs ⊢ <;>
-    (subst hs; exact treu_nimmt_gibt _ _ L (h _ rfl))
-
-/-! ## 4. The three loop combinators -/
-
 section Schleifen
 variable {W : D.Tab → Bool} {G : D.Glob → Bool}
 
@@ -180,6 +48,100 @@ theorem traverseLauf_treu (schritt : World D → Env D (τ :: Γ) → Ausgang V 
           exact hinv.trans (hstep _ (by rw [hs1]; rfl))
         · simp only [Ausgang.welt, reduceCtorEq] at h
         · simp only [Ausgang.welt, reduceCtorEq] at h
+
+/-- Frame of a consuming run: like `traverseLauf_treu`, by induction on
+    the fuel. Selection, measure and invariant reads are premises; every
+    failing check is `.logik .schleife`, which carries no world. -/
+theorem verbrauchLauf_treu (t : D.Tab)
+    (schritt : World D → Env D (.index (D.count t) :: Γ) →
+      Ausgang V true (.index (D.count t) :: Γ))
+    (inv : World D → Env D Γ → World D × Bool)
+    (sel : World D → Env D Γ →
+      World D × Option (Wert D (.index (D.count t))) × Bool)
+    (massW : World D → Env D Γ → World D × Int) (bound : Int)
+    (hs : ∀ σ ρ, TreuAusgang W G σ (schritt σ ρ))
+    (hi : ∀ σ ρ, Treu W G σ (inv σ ρ).1)
+    (hsel : ∀ σ ρ, Treu W G σ (sel σ ρ).1)
+    (hmass : ∀ σ ρ, Treu W G σ (massW σ ρ).1) :
+    ∀ (fuel : Nat) (σ : World D) (ρ : Env D Γ),
+      TreuAusgang W G σ
+        (verbrauchLauf (l := l) t schritt inv sel massW bound fuel σ ρ) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro σ ρ σ' h
+      simp only [verbrauchLauf, Ausgang.welt, reduceCtorEq] at h
+  | succ n ih =>
+      intro σ ρ σ' h
+      simp only [verbrauchLauf] at h ⊢
+      split at h ⊢
+      · simp only [Ausgang.welt, reduceCtorEq] at h
+      · have hinv := hi σ ρ
+        have hselg := hsel (inv σ ρ).1 ρ
+        split at h ⊢
+        · rename_i σr hsel_eq
+          simp only [Ausgang.welt, Option.some.injEq] at h
+          subst h
+          have hselr : Treu W G (inv σ ρ).1 σr := by
+            rw [hsel_eq] at hselg
+            exact hselg
+          exact hinv.trans hselr
+        · simp only [Ausgang.welt, reduceCtorEq] at h
+        · rename_i σr k hsel_eq
+          have hselr : Treu W G (inv σ ρ).1 σr := by
+            rw [hsel_eq] at hselg
+            exact hselg
+          have gsel : Treu W G σ σr := hinv.trans hselr
+          have hmassg := hmass σr ρ
+          have hstep := hs (massW σr ρ).1 (.cons k ρ)
+          split at h ⊢
+          · rename_i σ1 ρ1 hstep_eq
+            simp only [hstep_eq] at hstep
+            have g1 : Treu W G σ σ1 :=
+              (gsel.trans hmassg).trans (hstep σ1 rfl)
+            have hmassg2 := hmass σ1 ρ1.tail
+            split at h ⊢
+            · have g2 : Treu W G σ (massW σ1 ρ1.tail).1 :=
+                g1.trans hmassg2
+              exact (TreuAusgang.vor g2 (ih (massW σ1 ρ1.tail).1 ρ1.tail)) σ' h
+            · simp only [Ausgang.welt, reduceCtorEq] at h
+          · rename_i σ1 ρ1 hstep_eq
+            simp only [hstep_eq] at hstep
+            have g1 : Treu W G σ σ1 :=
+              (gsel.trans hmassg).trans (hstep σ1 rfl)
+            have hmassg2 := hmass σ1 ρ1.tail
+            split at h ⊢
+            · have g2 : Treu W G σ (massW σ1 ρ1.tail).1 :=
+                g1.trans hmassg2
+              exact g2.trans (ih (massW σ1 ρ1.tail).1 ρ1.tail σ' h)
+            · simp only [Ausgang.welt, reduceCtorEq] at h
+          · rename_i σ1 ρ1 hstep_eq
+            simp only [hstep_eq] at hstep
+            have g1 : Treu W G σ σ1 :=
+              (gsel.trans hmassg).trans (hstep σ1 rfl)
+            have hmassg2 := hmass σ1 ρ1.tail
+            split at h ⊢
+            · split at h ⊢
+              · simp only [Ausgang.welt, Option.some.injEq] at h
+                subst h
+                have h3 := hi (massW σ1 ρ1.tail).1 ρ1.tail
+                exact g1.trans (hmassg2.trans h3)
+              · simp only [Ausgang.welt, reduceCtorEq] at h
+            · simp only [Ausgang.welt, reduceCtorEq] at h
+          · rename_i σ1 v hstep_eq
+            simp only [hstep_eq] at hstep
+            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
+            subst h
+            exact (gsel.trans hmassg).transRet
+              (hstep _ rfl)
+          · rename_i σ1 r hstep_eq
+            simp only [hstep_eq] at hstep
+            simp only [Ausgang.welt, Option.some.injEq] at h ⊢
+            subst h
+            exact (gsel.trans hmassg).transRet
+              (hstep _ rfl)
+          · simp only [Ausgang.welt, reduceCtorEq] at h
+          · simp only [Ausgang.welt, reduceCtorEq] at h
 
 theorem retryLauf_treu (schritt : World D → Env D Γ → Ausgang V true Γ)
     (bis : World D → Env D Γ → World D × Bool) (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
@@ -265,9 +227,18 @@ def TreuO (O : Orakel D) : Prop :=
 theorem gutO_treuO {O : Orakel D} (hO : GutO O) : TreuO O :=
   fun a σ ρ => ⟨(hO a σ ρ).1, (hO a σ ρ).2.1⟩
 
-/-- **The handler's half**, WITHOUT the `HeldB` premise of `GutR`. -/
+/-- **The handler's half**, WITHOUT the `HeldB` premise of `GutR`. A completed
+    call keeps the frame; EITHER exit may release the scopes the callee
+    unwound (`TreuRet`), never more. Unlike `GutR` there is no held-lock
+    premise, so a release can never be collapsed back to an equality — it is
+    carried explicitly on both channels. -/
 def TreuR (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
-  ∀ f σ ρ σ', (R f σ ρ).welt = some σ' → Treu (D.schreibt f) (D.gschreibt f) σ σ'
+  ∀ f σ ρ σ', (R f σ ρ).welt = some σ' →
+    match (R f σ ρ) with
+    | .ok _ _ => TreuRet (D.schreibt f) (D.gschreibt f) σ σ'
+    | .why _ _ => TreuRet (D.schreibt f) (D.gschreibt f) σ σ'
+    | .logik _ => True
+    | .hardware _ => True
 
 /-! ## 6. THE INDUCTION over the whole grammar -/
 
@@ -286,74 +257,5 @@ include hR hO
 set_option linter.unusedSectionVars false
 
 end Rumpf
-
-/-- Joint frame for the two exits of an indirect else-call («C07»): the pointer is
-    evaluated once in the recorded world `s0`, the actual conforming function runs
-    under its transported caller duty, and both continuations see the transported
-    value (`runOk`) or reason (`runWhy`). The three `*_treu` cases instantiate it
-    with their runners. -/
-theorem indSonst_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    (hR : TreuR R)
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
-    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
-    (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
-    (σ s0 : World D) (ρ : Env D Γ)
-    (hl : Treu V.schreibt V.gschreibt σ s0)
-    (ok : World D → Wert D τ → Ausgang V l Γ)
-    (why : World D → Fin (D.sigNr n).gruende → Ausgang V l Γ)
-    (runOk : ∀ σ1 v, TreuAusgang V.schreibt V.gschreibt σ1 (ok σ1 v))
-    (runWhy : ∀ σ1 r, TreuAusgang V.schreibt V.gschreibt σ1 (why σ1 r))
-    (σ' : World D) (h : (indSonst R p args he hr s0 ρ ok why).welt = some σ') :
-    Treu V.schreibt V.gschreibt σ σ' := by
-  simp only [indSonst] at h
-  generalize hpv : eval s0 p s0 ρ = pv at h
-  obtain ⟨f, hf⟩ := pv
-  simp only at h
-  split at h
-  · rename_i σ1 v hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runOk σ1 (ergWert (ergSig hf he) v) σ' h)
-  · rename_i σ1 r hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runWhy σ1 (grundSig hf r) σ' h)
-  · simp only [Ausgang.welt, reduceCtorEq] at h
-  · simp only [Ausgang.welt, reduceCtorEq] at h
-
-/-- Joint frame for the two exits of an indirect else-call at the end of a body («C07»):
-    the `TreuEnd` variant of `indSonst_treu`, for the `end_treu` case. -/
-theorem indSonstE_treu (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
-    (hR : TreuR R)
-    {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {τ : Ty}
-    (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
-    (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
-    (σ s0 : World D) (ρ : Env D Γ)
-    (hl : Treu V.schreibt V.gschreibt σ s0)
-    (ok : World D → Wert D τ → EndAusgang V l Γ)
-    (why : World D → Fin (D.sigNr n).gruende → EndAusgang V l Γ)
-    (runOk : ∀ σ1 v, TreuEnd V.schreibt V.gschreibt σ1 (ok σ1 v))
-    (runWhy : ∀ σ1 r, TreuEnd V.schreibt V.gschreibt σ1 (why σ1 r))
-    (σ' : World D) (h : (indSonstE R p args he hr s0 ρ ok why).welt = some σ') :
-    Treu V.schreibt V.gschreibt σ σ' := by
-  simp only [indSonstE] at h
-  generalize hpv : eval s0 p s0 ρ = pv at h
-  obtain ⟨f, hf⟩ := pv
-  simp only at h
-  split at h
-  · rename_i σ1 v hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runOk σ1 (ergWert (ergSig hf he) v) σ' h)
-  · rename_i σ1 r hR1
-    replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-    have g1 := hl.trans (Treu.weiter hp.hw hp.hg
-      (hR f s0 _ σ1 (by rw [hR1]; rfl)))
-    exact g1.trans (runWhy σ1 (grundSig hf r) σ' h)
-  · simp only [EndAusgang.welt, reduceCtorEq] at h
-  · simp only [EndAusgang.welt, reduceCtorEq] at h
 
 end Gabbro.Grammatik

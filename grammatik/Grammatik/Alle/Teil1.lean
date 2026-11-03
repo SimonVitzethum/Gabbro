@@ -5,6 +5,7 @@ public import Grammatik.Kern.Syntax.Typen.ProduktZeuge
 public import Grammatik.Bausteine.Walk.Abbildung
 public import Grammatik.Bausteine.Walk.AbbildungZeuge
 public import Grammatik.Bausteine.Walk.BindingZeuge
+public import Grammatik.Bausteine.Walk.Correctness
 public import Grammatik.Bausteine.Walk.CorrectnessEnum
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 public import Grammatik.Kern.Syntax.Syntax.Teil2
@@ -173,6 +174,8 @@ public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben11
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben12
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben13
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Proben
+public import Grammatik.Parser.Elab.Uebersetze.Akku.Proben
+public import Grammatik.Parser.Elab.Uebersetze.Akku.Herkunft
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben14
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben15
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben16
@@ -193,7 +196,7 @@ public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben30
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben31
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben32
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben33
-public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben42
+public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben42
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben34
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben35
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben36
@@ -257,6 +260,9 @@ public import Grammatik.Bausteine.Kernzelle.ZulassungMitRuhe
 public import Grammatik.Bausteine.Kernzelle.SperrProtokoll
 public import Grammatik.Bausteine.Kernzelle.Zeuge
 public import Grammatik.Bausteine.Kernzelle.KernzelleZeugen
+public import Grammatik.Bausteine.Kernzelle.KernAbfrage
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageZeuge
 public import Grammatik.Isabelle.GruppeErhaltung
 public import Grammatik.Isabelle.FormatRoundtrip
 public import Grammatik.Isabelle.OptionSonderwert
@@ -353,6 +359,7 @@ public import Grammatik.Logik.Ruf.RufLogik
 public import Grammatik.Logik.Ruf.RufLogika
 public import Grammatik.Logik.Ruf.RufLogikZeuge
 public import Grammatik.Logik.Ruf.Schnittstellen.Zeuge
+public import Grammatik.Logik.Ruf.Schnittstellen.Bruecke
 public import Grammatik.Logik.Ruf.Schnittstellen.SchnittstellenZeugen
 public import Grammatik.Logik.Ruf.Schnittstellen.Prefix
 public import Grammatik.Logik.Ruf.Schnittstellen.Pruefung
@@ -372,3 +379,6 @@ public import Grammatik.Kern.Syntax.Konst.AuswertungZeuge
 public import Grammatik.Kern.Syntax.Konst.Geschlossen
 public import Grammatik.Kern.Syntax.Konst.Literal
 public import Grammatik.Kern.Syntax.Konst.Ersetzung
+public import Grammatik.Parser.Spec.Zeugen
+public import Grammatik.Parser.Dyn.Witnesses
+public import Grammatik.Parser.Dyn.SourceWitnesses

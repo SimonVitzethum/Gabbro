@@ -12,7 +12,7 @@ open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
   Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
   Gabbro.Grammatik.Parser.Cover.Differenz
 
-/-- The actual source-to-G endpoint. Canonical elaboration consumes original runtime declarations
+/-- The actual source-to-G endpoint. Canonical expansion consumes lexically scoped declarations
     and certified source scopes. The existing old(global) bridge and full checker remain mandatory. -/
 structure Compiled (text : String) (options : Profil.Options := {}) where
   source : Frontend.Source text options
@@ -20,18 +20,18 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   main : (declOf unit).Fn
   program : Programm (declOf unit)
   elaborated : (Frontend.elabWithScopes
-    ((uMembers (pre108 source.prepared.selected)).map OldSource.normalizeItem)
+    (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
     (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
-      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.selected))}) = .ok unit
+      (fun u => {u with exportGate := ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))}) = .ok unit
   entry : fnIdx unit.fns "main" = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
-    OldSource.restore (uMembers (pre108 source.prepared.selected)) unit raw = .ok program
+    OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
-  arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.selected), Frontend.ArrayMeaning unit source.scopes item
-  initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.selected)) unit = .ok ()
-  constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.selected)) = .ok ()
-  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.prepared.selected))
+  arrayConstants : ∀ item ∈ uMembers (pre108 source.prepared.elaborierbar), Frontend.ArrayMeaning unit source.scopes item
+  initializerExports : Frontend.checkInitializers (uMembers (pre108 source.prepared.elaborierbar)) unit = .ok ()
+  constantExports : ExportMetadata.checkConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ()
+  metadata : unit.exportGate = ExportMetadata.check (uMembers (pre108 source.prepared.elaborierbar))
   /-- The exact source-derived measure, checked by generic lowering at entry parameters/resources. -/
   measures : {exported : Measures.Export unit // Measures.lowerMeasures unit = .ok exported} :=
     Measures.checkedExport unit (by
@@ -40,23 +40,25 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
       exact ⟨exported, origin⟩)
   /-- Cycle lengths are checked on the final program, after old-state restoration. -/
   measureLengths : Measures.cycleLengths unit program measures.val.mass = true :=
-    Frontend.compiled_measure_lengths (uMembers (pre108 source.prepared.selected)) unit program
+    Frontend.compiled_measure_lengths (pre108 source.prepared.elaborierbar) unit program
       measures.val measures.property lowered
 
-/-- Compilation only: the result is the same canonical G program passed to the IR emitter. -/
+/-- Compilation only: expansion sees the full lexical unit before any module flattening.
+    Source scopes and metadata checks retain their original declaration certificates. -/
 def compile (text : String) (options : Profil.Options := {}) : Except String (Compiled text options) := do
   let source ← Frontend.source text options
-  let members := uMembers (pre108 source.prepared.selected)
+  let declarations := pre108 source.prepared.elaborierbar
+  let members := uMembers declarations
   match hc : ExportMetadata.checkConstants members with
   | .error error => throw error
   | .ok () => do
-    match he : Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+    match he : Frontend.elabWithScopes declarations
         source.scopes.values source.scopes.types source.scopes.functions
         (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
     | .error e => throw e
     | .ok candidate => do
       let unit := {candidate with exportGate := ExportMetadata.check members}
-      have elaborated : (Frontend.elabWithScopes (members.map OldSource.normalizeItem)
+      have elaborated : (Frontend.elabWithScopes declarations
           source.scopes.values source.scopes.types source.scopes.functions
           (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
             (fun u => {u with exportGate := ExportMetadata.check members}) = .ok unit := by
@@ -72,7 +74,7 @@ def compile (text : String) (options : Profil.Options := {}) : Except String (Co
           match hl : lowerAllg unit with
           | .error e => throw e
           | .ok (raw, fs) =>
-            match hr : OldSource.restore members unit raw with
+            match hr : OldSource.restore declarations unit raw with
             | .error e => throw e
             | .ok program =>
               match ha : OldSource.accepts unit program with
@@ -98,13 +100,14 @@ theorem Compiled.invariants {text : String} {options : Profil.Options} (result :
     UProg/declOf/lowerAllg endpoint of the actual compiler. Supplied scopes are not arbitrary premises:
     they are derived from the original declarations by Source.scopes and the canonical evaluators. -/
 def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : Compiled text options) : Prop :=
-    let original := uMembers (pre108 result.source.prepared.selected)
+    let declarations := pre108 result.source.prepared.elaborierbar
+    let original := uMembers declarations
     let scope := result.source.scopes
     Profil.runnerCompatible options ∧
     result.source.prepared.selected = Gabbro.Grammatik.Parser.Auswahl.waehleL options.mode result.source.items ∧
     lex text = .ok result.source.tokens ∧
     parseTopTief result.source.tokens = .ok result.source.items ∧
-    Oeffentlich.huelleZu result.source.prepared.selected = true ∧
+    Oeffentlich.huelleZu result.source.prepared.elaborierbar = true ∧
     (scope.aliasConstants = uConstsRech (uKonstFns original) original [] ∨ scope.aliasConstants = scope.values) ∧
     Frontend.AliasAcyclic original ∧
     (Frontend.aliasNames original).Nodup ∧
@@ -126,11 +129,11 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.checkInitializers original result.unit = .ok () ∧
     ExportMetadata.checkConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
-    (Frontend.elabWithScopes (original.map OldSource.normalizeItem) scope.values scope.types scope.functions
+    (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
       (Frontend.tableWithEmpty scope.values scope.types)).map
         (fun u => {u with exportGate := ExportMetadata.check original}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
-      OldSource.restore original result.unit raw = .ok result.program) ∧
+      OldSource.restore declarations result.unit raw = .ok result.program) ∧
     OldSource.accepts result.unit result.program = .ok true ∧
     (∀ item ∈ original, Frontend.ArrayMeaning result.unit scope item) ∧
     result.unit.exportGate = ExportMetadata.check original ∧
@@ -139,14 +142,27 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Measures.cycleLengths result.unit result.program result.measures.val.mass = true ∧
     (∀ i : Fin result.unit.invs.length,
       (declOf result.unit).traeger i = invTraeger result.unit i ∧
-      ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i)
+      ∀ c ∈ (result.program.invariante i).orte, c ∈ (declOf result.unit).traeger i) ∧
+    Gabbro.Grammatik.Parser.ProfilBindung.bindungB result.source.prepared.bindung = true ∧
+    Gabbro.Stage0.Profil.abschnittFehler result.source.prepared.selected = none
 
 theorem compile_source_program (text : String) {options : Profil.Options} (result : Compiled text options) :
     CanonicalSourceProgram result := by
   exact ⟨result.source.prepared.compatible, result.source.prepared.selection, result.source.lexed, result.source.parsed, result.source.visibility, result.source.scopes.aliasOrigin, result.source.aliasDependencies.1, result.source.aliasDependencies.2, result.source.constantDependencies.1, result.source.constantDependencies.2, result.source.scopes.scalarPermutation, result.source.scopes.aliasPermutation, result.source.scopes.aliases, result.source.aliasMeanings, result.source.scopes.functionOrigin, result.source.scopes.functionMeaning, Frontend.tableWithEmpty_sound _ _, result.source.derived.stable,
     result.source.scopes.scalarValues, result.source.constantMeanings, result.initializerExports, result.constantExports, result.source.compileTime, result.elaborated, result.lowered,
     result.accepted, result.arrayConstants, result.metadata, result.measures.property,
-    result.measures.val.source, result.measureLengths, result.invariants⟩
+    result.measures.val.source, result.measureLengths, result.invariants,
+    result.source.prepared.bindungOk, result.source.prepared.abschnittFrei⟩
+
+/-- The image is built for exactly the checked profile binding. -/
+theorem Compiled.profile_binding {text : String} {options : Profil.Options} (result : Compiled text options) :
+    Gabbro.Grammatik.Parser.ProfilBindung.bindungB result.source.prepared.bindung = true :=
+  result.source.prepared.bindungOk
+
+/-- The compiled unit carries no named sections into the flat image. -/
+theorem Compiled.sections_free {text : String} {options : Profil.Options} (result : Compiled text options) :
+    Gabbro.Stage0.Profil.abschnittFehler result.source.prepared.selected = none :=
+  result.source.prepared.abschnittFrei
 
 /-- The optional termination certificate uses the final compiled program and its exact source
     measure. The user supplies the existing duty; ordinary compilation and depth fuel are unchanged. -/
@@ -183,7 +199,7 @@ theorem Compiled.termination {text : String} {options : Profil.Options} (result 
 theorem compile_transitions_certified {text : String} {options : Profil.Options}
     (result : Compiled text options) :
     ∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
-      OldSource.restore (uMembers (pre108 result.source.prepared.selected)) result.unit raw = .ok result.program ∧
+      OldSource.restore (pre108 result.source.prepared.elaborierbar) result.unit raw = .ok result.program ∧
       ∀ c : Fin result.unit.fns.length, (fnAt result.unit c).name.startsWith "#transition#" = true →
         ∃ (state : UZustand) (tr : UTransition), transitionOfFn result.unit c = some (state, tr) ∧
           (Nonempty (TransitionExpansion raw c) ∨ Nonempty (TransitionShiftExpansion raw c)) := by

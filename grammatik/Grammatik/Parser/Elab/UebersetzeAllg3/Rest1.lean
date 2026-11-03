@@ -1,5 +1,4 @@
 module
-
 public import Grammatik.Parser.Elab.Export.ExportControl
 public import Grammatik.Parser.Elab.UebersetzeSum
 public import Grammatik.Bausteine.Arena.ArenaZucker
@@ -9,7 +8,6 @@ import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Stufe
 public import Grammatik.Parser.Elab.UebersetzeAllg3.Transition
-
 @[expose] public section
 
 
@@ -48,6 +46,14 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       match lowBodyF u caller (w.ty :: Γ) (fn.mitWert x w.ty) n Λ rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind w.term e)
+  | Γ, fn, n + 1, Λ, .floatLit x q lo hi :: rest, r => do
+    let body ← lowBodyF u caller (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) n Λ rest r
+    pure (Endblock.floatLit q lo hi body)
+  | Γ, fn, n + 1, Λ, .float x op a b lo hi :: rest, r => do
+    let ⟨.fl _ _, left⟩ ← lowWertE u Γ Λ fn none a | .error "float: left operand is not a float"
+    let ⟨.fl _ _, right⟩ ← lowWertE u Γ Λ fn none b | .error "float: right operand is not a float"
+    let body ← lowBodyF u caller (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) n Λ rest r
+    pure (Endblock.float op left right lo hi body)
   | Γ, fn, n + 1, Λ, .axCall c args :: rest, r =>
     match lowAxKopf u caller Γ fn Λ c args with
     | .error e => .error e
@@ -91,7 +97,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           if hr : (declOf u).gruende k.callee = 0 then
             .ok (Endblock.bindCall (D := declOf u) k.callee k.args hE k.hp hr e)
           else .error "call of a function with a reason channel needs `let .. else`"
-  | Γ, fn, n + 1, .narrowBeg x lo hi :: rest, r =>
+  | Γ, fn, n + 1, Λ, .narrowBeg x lo hi :: rest, r =>
     match paramPos fn.params x with
     | .error e => .error e
     | .ok j =>
@@ -108,7 +114,22 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
             | .ok b => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b)
           | .ok (_, _) => .error "lower: a narrow is not closed"
       | _ => .error "lower: narrow of a non-number"
-  | Γ, fn, n + 1, .bindFnref x f m :: rest, r =>
+  /-- Required narrowing (C15): no `else`, no `blkEnd`; out of range is
+      `Logik.kapazitaet` (`Endblock.narrowRequired`). -/
+  | Γ, fn, n + 1, Λ, .narrowReqBeg x lo hi :: rest, r =>
+    match paramPos fn.params x with
+    | .error e => .error e
+    | .ok j =>
+      match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        match lowVar Γ j (.int l1 h1) with
+        | .error e => .error e
+        | .ok v =>
+          match lowBodyF u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ rest r with
+          | .error e => .error e
+          | .ok b => .ok (Endblock.narrowRequired (D := declOf u) (Expr.var v) lo hi b)
+      | _ => .error "lower: narrow of a non-number"
+  | Γ, fn, n + 1, Λ, .bindFnref x f m :: rest, r =>
     match fnIdx u.fns f with
     | .error e => .error e
     | .ok g =>
@@ -150,7 +171,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 .ok (Endblock.bindCallIndElse (D := declOf u) (n := m) (Expr.var v) k.args hE k.hp hr errb ee)
             | .ok (_, _) => .error "lower: a let else is not closed"
         else .error "lower: let else of a call without a reason channel"
-  | Γ, fn, n + 1, .tausch x a v zweige neu :: rest, r =>
+  | Γ, fn, n + 1, Λ, .tausch x a v zweige neu :: rest, r =>
     match globIdx u.globs a with
     | .error e => .error e
     | .ok g =>
@@ -164,7 +185,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
           | .ok b => .ok (Endblock.exchange (D := declOf u) g ne hw hd b)
       else .error "access without held guard"
       else .error "exchange of a static the function does not write"
-  | Γ, fn, n + 1, .awaitBind x a :: rest, r =>
+  | Γ, fn, n + 1, Λ, .awaitBind x a :: rest, r =>
     match globIdx u.globs a with
     | .error e => .error e
     | .ok g =>
@@ -175,7 +196,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
         | .ok e => .ok (Endblock.awaits (D := declOf u) g ((declOf u).nutzlast g) rfl hd ha e)
       else .error "access without held guard"
       else .error "awaits at a static that is not atomic"
-  | Γ, fn, n + 1, .regRead x d rg :: rest, r =>
+  | Γ, fn, n + 1, Λ, .regRead x d rg :: rest, r =>
     match regIdx u.regs d rg with
     | .error e => .error e
     | .ok g =>
@@ -184,7 +205,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
         | .error e => .error e
         | .ok e => .ok (Endblock.regRead (D := declOf u) g hk e)
       else .error "lower: register read against its class"
-  | Γ, fn, n + 1, .regReadElse x d rg :: rest, r =>
+  | Γ, fn, n + 1, Λ, .regReadElse x d rg :: rest, r =>
     match regIdx u.regs d rg with
     | .error e => .error e
     | .ok g =>
@@ -204,23 +225,31 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
               | .ok e => .ok (Endblock.regReadElse (D := declOf u) g hk zu sonst e)
             | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: register read against its class"
-  | _, _, _ + 1, .allocBeg .. :: _, _ =>
-    .error "lower: an alloc at the top level of a body has no G form (Endblock lacks arenaAlloc)"
-  | Γ, fn, n + 1, (.bindOptBeg x c args) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.allocBeg x an v) :: rest, r =>
+    match lowEndL (l := false) u caller Γ fn blockFuel Λ (some ())
+        (.allocBeg x an v :: rest ++ [.ret r]) with
+    | .error e => .error e
+    | .ok (b, []) => .ok b
+    | .ok (_, _) => .error "lower: alloc leaves trailing statements"
+  | Γ, fn, n + 1, Λ, (.bindOptBeg x c args) :: rest, r =>
     match lowEndL (l := false) u caller Γ fn blockFuel Λ (some ())
         (.bindOptBeg x c args :: rest ++ [.ret r]) with
     | .error e => .error e
     | .ok (b, []) => .ok b
     | .ok (_, _) => .error "lower: optional bind leaves trailing statements"
-  | Γ, fn, n + 1, (.bindOptElseBeg x c args e) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.bindOptElseBeg x c args e) :: rest, r =>
     match lowEndL (l := false) u caller Γ fn blockFuel Λ (some ())
         (.bindOptElseBeg x c args e :: rest ++ [.ret r]) with
     | .error err => .error err
     | .ok (b, []) => .ok b
     | .ok (_, _) => .error "lower: optional bind leaves trailing statements"
-  | _, _, _ + 1, .allocReqBeg .. :: _, _ =>
-    .error "lower: an alloc without else at the top level of a body has no G form (Endblock lacks arenaAllocRequired)"
-  | Γ, fn, n + 1, .ret v :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.allocReqBeg x an v) :: rest, r =>
+    match lowEndL (l := false) u caller Γ fn blockFuel Λ (some ())
+        (.allocReqBeg x an v :: rest ++ [.ret r]) with
+    | .error e => .error e
+    | .ok (b, []) => .ok b
+    | .ok (_, _) => .error "lower: alloc leaves trailing statements"
+  | Γ, fn, n + 1, Λ, .ret v :: rest, r =>
     match lowRetStmt (l := false) u caller Γ fn Λ (some ()) v with
     | .error e => .error e
     | .ok st =>
@@ -243,7 +272,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
               .ok (Endblock.bindCallElse (D := declOf u) k.callee k.args hE k.hp hr errb ee)
           | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: let else of a call without a reason channel"
-  | Γ, fn, n + 1, .bindAxElse y c args e :: rest, r =>
+  | Γ, fn, n + 1, Λ, .bindAxElse y c args e :: rest, r =>
     match lowAxKopf u caller Γ fn Λ c args with
     | .error err => .error err
     | .ok k =>
@@ -263,14 +292,14 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
                 k.hgd errb ee)
           | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: let else of a foreign call without a reason channel"
-  | Γ, fn, n + 1, (.matchTagBeg sidx m bs) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.matchTagBeg sidx m bs) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.matchTagBeg sidx m bs) rest with
     | .error err => .error err
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error err => .error err
       | .ok ee => .ok (Endblock.cons st ee)
-  | Γ, fn, n + 1, .bindSum x sidx v :: rest, r =>
+  | Γ, fn, n + 1, Λ, .bindSum x sidx v :: rest, r =>
     if hs : sidx < u.sums.length then
       match lowSVal u Γ Λ fn 0 sidx hs v with
       | .error e => .error e
@@ -280,7 +309,7 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
         | .error e => .error e
         | .ok ee => .ok (Endblock.bind ev ee)
     else .error "tagged type unknown"
-  | Γ, fn, n + 1, (.matchWhyBeg e) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.matchWhyBeg e) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.matchWhyBeg e) rest with
     | .error err => .error err
     | .ok (⟨Λ₁, st⟩, rest') =>
@@ -288,35 +317,35 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       | .error err => .error err
       | .ok ee => .ok (Endblock.cons st ee)
   | Γ, fn, n + 1, Λ, .startS :: rest, r => lowBodyF u caller Γ fn n Λ rest r
-  | Γ, fn, n + 1, .bindB x v :: rest, r =>
+  | Γ, fn, n + 1, Λ, .bindB x v :: rest, r =>
     match lowEns u Γ Λ fn none v with
     | .error e => .error e
     | .ok ev =>
       match lowBodyF u caller (.bool :: Γ) (fn.mitBindungB x) n Λ rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind ev e)
-  | Γ, fn, n + 1, .bindMut x lo hi v :: rest, r =>
+  | Γ, fn, n + 1, Λ, .bindMut x lo hi v :: rest, r =>
     match lowWertAt u Γ Λ fn lo hi v with
     | .error e => .error e
     | .ok ev =>
       match lowBodyF u caller (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) n Λ rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.bind ev e)
-  | Γ, fn, n + 1, (.lockBeg g) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.lockBeg g) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.lockBeg g) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.ifBeg c) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.ifBeg c) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.ifBeg c) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.ifEnde c) :: rest, .keins =>
+  | Γ, fn, n + 1, Λ, (.ifEnde c) :: rest, .keins =>
     -- the last statement of a body without a trailing return, both arms ending: `Endblock.ite`
     match lowEns u Γ Λ fn none c,
         lowEndL (l := false) u caller Γ fn blockFuel Λ (some ()) rest with
@@ -327,42 +356,42 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
       | .error err => .error err
     | .error err, _ => .error err
     | _, _ => .error "fn with a result falls off"
-  | Γ, fn, n + 1, (.ifEnde c) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.ifEnde c) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.ifBeg c) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.arrayLoopBeg b array i) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.arrayLoopBeg b array i) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.arrayLoopBeg b array i) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.loopBeg b t i) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.loopBeg b t i) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.loopBeg b t i) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.retryBeg c b) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.retryBeg c b) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.retryBeg c b) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, (.matchBeg num o k) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.matchBeg num o k) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.matchBeg num o k) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, .bindOpt x num o :: rest, r =>
+  | Γ, fn, n + 1, Λ, .bindOpt x num o :: rest, r =>
     if hnum : num < u.tabs.length then
       match lowOpt u Γ Λ fn 0 num hnum o with
       | .error e => .error e
@@ -372,18 +401,18 @@ def lowBodyF (u : UProg) (caller : Fin u.fns.length) :
         | .error e => .error e
         | .ok e => .ok (Endblock.bind ev e)
     else .error "option table unknown"
-  | Γ, fn, n + 1, (.foreverBeg k) :: rest, r =>
+  | Γ, fn, n + 1, Λ, (.foreverBeg k) :: rest, r =>
     match lowStructL (l := false) u caller Γ fn blockFuel Λ (some ()) (.foreverBeg k) rest with
     | .error e => .error e
     | .ok (⟨Λ₁, st⟩, rest') =>
       match lowBodyF u caller Γ fn n Λ₁ rest' r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
-  | Γ, fn, n + 1, s :: rest, r =>
+  | Γ, fn, n + 1, Λ, s :: rest, r =>
     match lowStmtL u caller Γ fn Λ s with
     | .error e => .error e
-    | .ok st =>
-      match lowBodyF u caller Γ fn n Λ rest r with
+    | .ok ⟨Λ₁, st⟩ =>
+      match lowBodyF u caller Γ fn n Λ₁ rest r with
       | .error e => .error e
       | .ok e => .ok (Endblock.cons st e)
 

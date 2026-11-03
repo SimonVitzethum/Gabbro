@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Round.RundlaufAnwVoll.Teil5
 public import Grammatik.Parser.Round.RundlaufItem.Teil2
+public import Grammatik.Parser.Round.RundlaufItem.AdaptKopf
 
 @[expose] public section
 
@@ -46,6 +47,8 @@ theorem item_fnkopf (sig : FnSig) (hs : SigGut sig) (R : List Token) (hR : Klaus
     ∃ G, F ≤ G + 4 ∧ parseItemTief F (druckFnSig sig ++ R) = parseFnRest G sig R := by
   obtain ⟨hart, -⟩ := id hs
   obtain ⟨ts, hts⟩ := sigToks_kopf sig
+  have hA := istAdaptKopf_sigToks sig hs R
+  rw [hts, List.cons_append] at hA
   rw [druckFnSig_eq]
   rcases hart with h | h | h
   · obtain ⟨F', rfl⟩ : ∃ F', F = F' + 2 := ⟨F - 2, by omega⟩
@@ -53,7 +56,7 @@ theorem item_fnkopf (sig : FnSig) (hs : SigGut sig) (R : List Token) (hR : Klaus
     rw [h] at hS
     refine ⟨F', by omega, ?_⟩
     simp only [h, strEq_self, ite_true, List.nil_append]
-    rw [hts, List.cons_append, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_fn,
+    rw [hts, List.cons_append, parseItemTief_wort _ _ _ (by decide) (by decide), parseItemKopf_fn _ _ hA,
       ← List.cons_append, ← hts, hS]
   · obtain ⟨F', rfl⟩ : ∃ F', F = F' + 2 := ⟨F - 2, by omega⟩
     have hS := fnSig_rund sig hs R hR F' (by omega)
@@ -76,7 +79,7 @@ theorem item_fnkopf (sig : FnSig) (hs : SigGut sig) (R : List Token) (hR : Klaus
     simp only [hne, Bool.false_eq_true, ite_false, List.singleton_append]
     rw [hts] at hS ⊢
     simp only [List.cons_append] at hS ⊢
-    rw [parseItemTief_wort _ _ _ hw1 hw2, parseItemKopf_art _ _ _ h, hS]
+    rw [parseItemTief_wort _ _ _ hw1 hw2, parseItemKopf_art _ _ _ h hA, hS]
 
 theorem druckFnSig_len (sig : FnSig) : (sigToks sig).length ≤ (druckFnSig sig).length := by
   rw [druckFnSig_eq]; simp only [List.length_append, Nat.le_add_left]

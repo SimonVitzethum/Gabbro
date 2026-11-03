@@ -12,6 +12,7 @@
 module
 public import Grammatik.Gen.Abdeckung.Satz.MerkmalGOk
 public import Grammatik.Bausteine.Kernzelle.Zulassung
+public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -269,7 +270,7 @@ theorem akzeptiertX_zellen (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (l
     (hcs : ∀ c : D.Tab ⊕ D.Glob, c ∈ cs) :
     AkzeptiertX P S fs ls cs ws aks = true ↔
       (∀ z ∈ alleZellen P S fs ls cs ws, z.schlecht = false) ∧
-        Gabbro.Grammatik.Kernzelle.accumulatorB P fs cs aks = true ∧ resetB cs = true := by
+        Gabbro.Grammatik.Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) [] aks = true ∧ resetB cs = true := by
   rw [akzeptiertX_iff]
   constructor
   · intro h

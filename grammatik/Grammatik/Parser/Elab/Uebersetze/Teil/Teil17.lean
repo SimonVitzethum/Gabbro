@@ -64,7 +64,7 @@ def uAkkuZellen (n : String) (k : Nat) : List String :=
     acquisition respects the rank order). -/
 def uAkkuItem (consts : List (String × Int)) (alias : List (String × (Int × Int)))
     (boden : Int) : SItemTief → Except String (List UGlob × List ULock)
-  | .accT n t m p =>
+  | .accT n t m p _ =>
     match uAkkuAnzahl consts p with
     | .error e => .error e
     | .ok k =>
@@ -89,7 +89,7 @@ def uAkkuDecl {D : Deklaration}
     (cells : (k : Nat) → Fin k → D.Glob)
     (locks : (k : Nat) → Fin k → D.Lock)
     (query update fold : D.Fn) : Except String (Kernzelle.AccumulatorDecl D) := do
-  let .accT name ty merge count := item
+  let .accT name ty merge count _ := item
     | .error "expected accumulator declaration"
   let k ← uAkkuAnzahl consts count
   let (lo, hi) ← uAkkuBereich alias ty
@@ -120,27 +120,24 @@ def uAkkuErweiterung (consts : List (String × Int)) (alias : List (String × (I
       | .error e => .error e
       | .ok (gs', ls') => .ok (gs ++ gs', ls ++ ls')
 
-/-! ## Uses stay refused: the core query needs C08 (task 4)
+/-! ## Uses expand to the generated functions
 
     The generated cells are `n#zelle<i>`; the source name `n` is no global, so
-    any update or read of `n` fails resolution. The scan below turns that
-    into a NAMED refusal (core query and per-cell lock protocol, task 4);
-    whatever it misses still fails later as an unknown name -- never
-    silently accepted.
+    any update or read of `n` expands before resolution (`Akku.Expand`):
+    `n = v` becomes the update call `n#aktualisiere(v)`, `let x = n` and
+    `return n` become the sampled fold `n#falte()`, and `reads`/`writes n`
+    effects name every cell. The scan below detects the remaining mentions
+    for the expansion's narrow refusals (a nested read, a compound update,
+    a contract clause, a foreign signature); whatever it misses still fails
+    later as an unknown name -- never silently accepted.
 
-    Why the core query stays refused: C08's query contract must return exactly
+    Why the core query stays generated: C08's query contract must return exactly
     a `Fin N`-equivalent bounded value with a boundary record identifying the
     executing core at that query, tied to the same declared core assignment
     the scheduler uses. A Rust thread number, a modulo reduction or a
-    constant `0` is not evidence; migration after the query must not reselect
-    the destination (or a proved pinned scope must span query and store).
-    None of that exists without C08's software boundary and grant history. -/
-
-/-- The accumulator names of the unit. -/
-def uAkkuNamen : List SItemTief → List String
-  | [] => []
-  | .accT n _ _ _ :: rest => n :: uAkkuNamen rest
-  | _ :: rest => uAkkuNamen rest
+    constant `0` is not evidence; only the generated `n#kern` foreign body,
+    with its exact shape, is. Migration after the query does not reselect
+    the destination: the sampled value is bound once per source update. -/
 
 /-- Whether an expression mentions an accumulator name. -/
 def uAkkuInExpr : Nat → List String → SExpr → Bool
@@ -151,6 +148,8 @@ def uAkkuInExpr : Nat → List String → SExpr → Bool
   | f + 1, ns, .arrow x _ => uAkkuInExpr f ns x
   | f + 1, ns, .un _ x => uAkkuInExpr f ns x
   | f + 1, ns, .bin _ x y => uAkkuInExpr f ns x || uAkkuInExpr f ns y
+  | f + 1, ns, .genericCall g _ args =>
+    (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
   | f + 1, ns, .call g args =>
     (ns.any fun m => strEq m g) || (args.any fun a => uAkkuInExpr f ns a)
   | f + 1, ns, .fnref g => ns.any fun m => strEq m g
@@ -220,6 +219,7 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
   | f + 1, ns, .retry _ b => uAkkuInAnw f ns b
   | f + 1, ns, .loop _ b => uAkkuInAnw f ns b
   | f + 1, ns, .trim e _ b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
+  | f + 1, ns, .trimReq e _ => uAkkuInExpr f ns e
   | f + 1, ns, .locks _ e b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
   | f + 1, ns, .grow _ e b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
   | f + 1, ns, .child b => uAkkuInAnw f ns b
@@ -231,25 +231,10 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
     (ns.any fun m => strEq m x) || uAkkuInExpr f ns e
   | _, _, _ => false
 
-/-- Whether the signatures mention an accumulator name. -/
+/-- Whether the signatures mention an accumulator name (for the expansion's
+    narrow refusals: foreign signatures never go through the update or fold). -/
 def uAkkuInSigs : Nat → List String → List FnSig → Bool
   | _, _, [] => false
   | f, ns, s :: ss => uAkkuInKlauseln f ns s.klauseln || uAkkuInSigs f ns ss
-
-/-- A unit whose bodies or contracts mention an accumulator is refused by name:
-    updates read the core (C08), reductions fold under quiescence -- neither
-    is connected. -/
-def uAkkuVerwendung (ns : List String) : List (FnSig × SAnw) → Except String Unit
-  | [] => .ok ()
-  | (sig, b) :: rest =>
-    if uAkkuInKlauseln 100000 ns sig.klauseln || uAkkuInAnw 100000 ns b then
-      .error "accumulator update/read without G form: the core query (C08) and per-cell lock protocol are not connected"
-    else uAkkuVerwendung ns rest
-
-/-- Foreign signatures mentioning an accumulator are refused by the same name. -/
-def uAkkuFremdVerwendung (ns : List String) (sigs : List FnSig) : Except String Unit :=
-  if uAkkuInSigs 100000 ns sigs then
-    .error "accumulator update/read without G form: the core query (C08) and per-cell lock protocol are not connected"
-  else .ok ()
 
 end Gabbro.Grammatik.Parser.Uebersetze

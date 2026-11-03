@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 public import Grammatik.Parser.Namen.Namensraum
 public import Grammatik.Parser.Namen.Aufloesung.Teil1
 
@@ -96,14 +96,23 @@ def adaptSig (k : Kontext) (s : FnSig) (neu : List String) : FnSig :=
 /-- **An item, resolved** in its module: its own key and every name it writes. Item kinds without a G
     form pass unchanged (the elaborator refuses them). -/
 def item (k : Kontext) : SItemTief → SItemTief
+  | .taggedByT decl spec => .taggedByT (item k decl) (k.ref spec)
   | .typeT fl n args ord t => .typeT fl (k.eigen n) (args.map (typ k)) ord (typO k t)
   | .constT n t v => .constT (k.eigen n) (typ k t) (konst k v)
   | .globT m n t v al s sh => .globT m (k.eigen n) (typ k t) (konst k v) (ausO k al) s sh
-  | .fnT s b => .fnT (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+  | .specGroupT n ts es fs =>
+    .specGroupT (k.eigen n) ts es
+      (fs.map fun s => { sig (k.mit (ts ++ es)) s with name := s.name })
+  | .implGroupT n ts es fs =>
+    .implGroupT (k.ref n) (ts.map (typ k)) (es.map fun xs => xs.map (effekt k))
+      (fs.map fun
+        | .fnT s b => .fnT { sig k s with name := s.name } (anw (k.mit (s.params.map Prod.fst)) b)
+        | it => it)
+  | .fnT s b => .fnT (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .transT target s b =>
-    .transT (k.ref target) (sig k s) (anw (k.mit (s.params.map Prod.fst)) b)
+    .transT (k.ref target) (sig k s) (anw (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) b)
   | .protoT s => .protoT (sig k s)
-  | .specT s p => .specT (sig k s) (aus (k.mit (s.params.map Prod.fst)) p)
+  | .specT s p => .specT (sig k s) (aus (k.mit (s.generics.map SGenericParam.name ++ s.params.map Prod.fst)) p)
   | .asmT s h => .asmT (sig k s) h
   | .tableT n v c b o sh ps => .tableT (k.eigen n) (v.map k.ref) (ausO k c) b o sh (ps.map (tabTeil k))
   | .lockT n ps rk h sh m i =>
@@ -112,6 +121,7 @@ def item (k : Kontext) : SItemTief → SItemTief
   | .arenaT n lo hi mx t pb =>
     .arenaT (k.eigen n) (aus k lo) (aus k hi) (ausO k mx) (typ k t) (pb.map fun (ps, e) => (ps, aus k e))
   | .assumT n a s c => .assumT (k.eigen n) a s c
+  | .accT n t m p q => .accT n t m p (q.map k.ref)
   | .whyT n cs ex => .whyT (k.eigen n) (cs.map fun (a, e, b) => (a, aus k e, b)) ex
   | .callT c => .callT (syscall k c)
   | .varT n => .varT (k.eigen n)
@@ -141,7 +151,7 @@ def loeseI (q : Quelle) (von : Pfad) : SItemTief → List SItemTief
   | .modT p b => loeseL q (von ++ segmente p) b
   | .useT _ => []
   | .pubT it => loeseI q von it
-  | it => [item ⟨q, von, []⟩ it]
+  | it => [item { q, von, lok := [] } it]
 def loeseL (q : Quelle) (von : Pfad) : List SItemTief → List SItemTief
   | [] => []
   | it :: rest => loeseI q von it ++ loeseL q von rest
@@ -178,7 +188,7 @@ theorem ref_lokal {k : Kontext} {s : String} (h : k.lok.any (strEq · s) = true)
 /-- **A name that resolves names its item's key.** -/
 theorem ref_aufgeloest {k : Kontext} {s : String} {c : Pfad} (hl : k.lok.any (strEq · s) = false)
     (h : aufloeseK k.q ⟨none, []⟩ k.von (segmente s) = some c) :
-    k.ref s = schluessel k.q.namen c := by
+    k.ref s = k.key c := by
   simp only [Kontext.ref, hl, Bool.false_eq_true, ↓reduceIte, h]
 
 /-- **A name of an item that is not visible from here is poisoned**: no item carries the text. -/

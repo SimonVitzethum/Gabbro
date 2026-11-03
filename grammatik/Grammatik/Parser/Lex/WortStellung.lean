@@ -80,10 +80,9 @@ theorem cNamen_in_reserviert :
 
 set_option maxRecDepth 100000
 
-/-- The closed vocabulary counts 248 words: the 248 entries of `kw.rs` (`Kw::text`), diffed
-    word by word on 2026-10-17 (the table held 243 before: `grow`, `pb`, `blw`, `free` and
-    `target` were missing). -/
-theorem wortschatz_248 : wortschatz.length = 248 := by
+/-- The closed Lean front-end vocabulary has 249 words: the earlier 248-word table
+    plus the link-time `dyn` form. Rust mirroring is separate integration work. -/
+theorem wortschatz_249 : wortschatz.length = 249 := by
   decide
 
 /-- Every reserved word stands in the closed vocabulary: the split

@@ -235,5 +235,107 @@ theorem semHA_travDone {Λ : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .bool
   simp only [traverseLauf, hl, if_true]
   rfl
 
+/-! ### Consuming runs -/
+
+theorem semHA_dannVerbrauch {Λ Λ'' : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
+    semHA S O U A passes R (.dann (.cons
+      (.consumeTraverse t member edge inv bound mass body) rest) k) σ ρ =
+      semHA S O U A passes R (.verbrauch t member edge inv bound mass body
+        ((D.count t).toNat + bound.toNat + 1) (.dann rest k)) σ ρ := by
+  rw [semHA_dann_cons]
+  rfl
+
+theorem semHA_verbrauchWeiter {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (leseA A σ Λ inv.orte) inv (leseA A σ Λ inv.orte) ρ) = true)
+    (σ₂ : World D) (v : Wert D (.index (D.count t))) (b : Bool) (m : Int)
+    (hsel : verbrauchSelA A t member edge (leseBA A inv σ ρ).1 ρ = (σ₂, some v, b))
+    (hm : (eval (leseA A σ₂ Λ mass.orte) mass (leseA A σ₂ Λ mass.orte) ρ).n = m) :
+    semHA S O U A passes R (.verbrauch t member edge inv bound mass body (rest + 1) k) σ ρ =
+      semHA S O U A passes R (.dann body
+        (.verbrauchRest t member edge inv bound mass body rest m k))
+        (leseA A σ₂ Λ mass.orte) (.cons v ρ) := by
+  have hl : (leseBA A inv σ ρ).2 = true := hw
+  show weiterHA S O U A passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+    weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest m k)
+      (execBlockHA S O U A passes R body (leseA A σ₂ Λ mass.orte) (.cons v ρ))
+  simp only [verbrauchLauf, hl, Bool.true_eq_false, if_false, hsel]
+  cases execBlockHA S O U A passes R body (leseA A σ₂ Λ mass.orte) (.cons v ρ) with
+  | ok σ' ρ' =>
+      by_cases hfall : 0 ≤ (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n ∧
+          (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n ≤ bound ∧
+          (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n < m
+      · simp only [hfall, if_true]
+      · simp only [hfall, if_false]
+  | next _ σ' ρ' =>
+      by_cases hfall : 0 ≤ (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n ∧
+          (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n ≤ bound ∧
+          (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n < m
+      · simp only [hfall, if_true]
+      · simp only [hfall, if_false]
+  | leave _ σ' ρ' =>
+      by_cases hfall : 0 ≤ (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n ∧
+          (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n ≤ bound ∧
+          (eval (leseA A σ' Λ mass.orte) mass (leseA A σ' Λ mass.orte) ρ'.tail).n < m
+      · simp only [hfall, if_true]
+        by_cases hc' : (leseBA A inv (leseA A σ' Λ mass.orte) ρ'.tail).2 = true
+        · simp only [hc', if_true]
+        · simp only [show (leseBA A inv (leseA A σ' Λ mass.orte) ρ'.tail).2 = false from by
+            cases h' : (leseBA A inv (leseA A σ' Λ mass.orte) ρ'.tail).2 with
+            | false => rfl
+            | true => exact absurd h' hc', if_false]
+      · simp only [hfall, if_false]
+  | zurueck σ' v => rfl
+  | why σ' r => rfl
+  | logik e => rfl
+  | hardware e => rfl
+
+theorem semHA_verbrauchLeer {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (leseA A σ Λ inv.orte) inv (leseA A σ Λ inv.orte) ρ) = true)
+    (σ₂ : World D)
+    (hsel : verbrauchSelA A t member edge (leseBA A inv σ ρ).1 ρ = (σ₂, none, false)) :
+    semHA S O U A passes R (.verbrauch t member edge inv bound mass body (rest + 1) k) σ ρ =
+      semHA S O U A passes R k σ₂ ρ := by
+  have hl : (leseBA A inv σ ρ).2 = true := hw
+  show weiterHA S O U A passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+    weiterHA S O U A passes R k (.ok σ₂ ρ)
+  simp only [verbrauchLauf, hl, hsel, Bool.true_eq_false, if_false]
+
+theorem semHA_verbrauchFort {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ)
+    (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ)
+    (σ₁ : World D) (hs₁ : σ₁ = leseA A σ Λ mass.orte)
+    (m' : Int) (hm' : (eval σ₁ mass σ₁ ρ).n = m')
+    (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor) :
+    semHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      σ (.cons i ρ) =
+      semHA S O U A passes R (.verbrauch t member edge inv bound mass body rest k) σ₁ ρ := by
+  show weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      (.ok σ (.cons i ρ)) =
+    weiterHA S O U A passes R (.verbrauch t member edge inv bound mass body rest k) (.ok σ₁ ρ)
+  simp only [weiterHA, hs₁, hm', hfall, if_true, laufA]
+
 end StufenA
 end Gabbro.Grammatik

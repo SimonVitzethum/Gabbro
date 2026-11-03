@@ -1,5 +1,6 @@
 module
 public import Grammatik.Zielsatz.Einbettung.Syntax
+public import Grammatik.Zielsatz.Einbettung.Syntaxb
 @[expose] public section
 
 

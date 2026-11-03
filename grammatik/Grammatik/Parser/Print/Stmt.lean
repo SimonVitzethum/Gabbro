@@ -30,6 +30,10 @@ def rohToks (s : String) : List Token :=
 
 /-- A surface type as tokens (the inverse of `parseTyp`). -/
 def druckTyp : STyp → List Token
+  | .dyn n bound => [.wort "dyn"] ++ rohToks n ++
+      (match bound with
+      | none => []
+      | some raw => [.wort "effects", .zeichen "{"] ++ rohToks raw)
   | .atom a => [nameTok a]
   | .path segs => pfadToks segs
   | .ptr r w t =>
@@ -104,6 +108,8 @@ def druckAnw : SAnw → List Token
   | .set z o w => druckToks z ++ [.zeichen o] ++ druckToks w ++ [.zeichen ";"]
   | .shift z a b =>
     [.wort "transition"] ++ druckToks z ++ [.zeichen ":", nameTok a, .zeichen "->", nameTok b, .zeichen ";"]
+  | .genericCall name words args =>
+    druckToks (.ext .instantiate (name :: words) args) ++ [.zeichen ";"]
   | .call f xs => rohToks f ++ [.zeichen "("] ++ druckToksListe xs ++ [.zeichen ")", .zeichen ";"]
   | .lcall c => druckLibraryCall c ++ [.zeichen ";"]
   | .cond c t eis s =>
@@ -133,6 +139,9 @@ def druckAnw : SAnw → List Token
   | .loop h b => [.wort "forever"] ++ rohToks h ++ druckAnw b
   | .waive ns b => [.wort "breaking"] ++ druckNamen ns ++ druckAnw b
   | .trim o t b => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "else"] ++ druckAnw b
+  /-- Required narrowing has no source syntax: print a form the parser refuses
+      (`required` is no narrow continuation), never a silent `else`. -/
+  | .trimReq o t => [.wort "narrow"] ++ druckToks o ++ [.wort "to"] ++ rohToks t ++ [.wort "required", .zeichen ";"]
   | .locks g o b => [.wort "locks"] ++ (if g then [.wort "shared"] else []) ++ druckToks o ++ druckAnw b
   | .watch d b => [.wort "observes", nameTok d] ++ druckAnw b
   | .leave l => [.wort "leave", nameTok l, .zeichen ";"]

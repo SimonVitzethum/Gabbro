@@ -178,7 +178,7 @@ inductive SItemTief
   | groupT : String → List String → List SGruppenInv → SItemTief
   /-- `concurrent { m::f, m::g(a, b) }`: each start's path and its arguments (none: a function without parameters). -/
   | concT : List (List String × List SExpr) → SItemTief
-  | accT : String → STyp → String → Option SExpr → SItemTief
+  | accT : String → STyp → String → Option SExpr → Option String → SItemTief
   | walkT : SWeg → SItemTief
   | entryT : SEingang → SItemTief
   | trustT : String → String → String → List SRegBind → String → String → SItemTief
@@ -201,14 +201,30 @@ inductive SItemTief
       ordinary `fnT` before elaboration. -/
   | adaptT : FnSig → List SAdaptParam → SAdapt → Option SAnw → SItemTief
   | taggedByT : SItemTief → String → SItemTief
-  /-- Closed-dispatch declarations retain signatures and bodies until expansion. -/
-  | specGroupT : String → String → List FnSig → SItemTief
-  | implGroupT : String → STyp → List (FnSig × SAnw) → SItemTief
+  /-- Check model A: type and effect parameters, followed by abstract function heads. -/
+  | specGroupT : String → List String → List String → List FnSig → SItemTief
+  /-- A concrete type tuple, effect arguments and ordinary implementation functions. -/
+  | implGroupT : String → List STyp → List (List SEffekt) → List SItemTief → SItemTief
+  /-- A parametric module template; instantiated before ordinary name resolution. -/
+  | moduleTemplateT : String → List SGenericParam → List SItemTief → SItemTief
+  /-- A generative module application: each written alias owns fresh declarations. -/
+  | moduleUseT : String → List String → List String → SItemTief
   deriving Repr
 
 def beqOptPathExpr : Option (List String × SExpr) → Option (List String × SExpr) → Bool
   | none, none => true
   | some (a, x), some (b, y) => beqWorte a b && beqSExpr x y
+  | _, _ => false
+
+def beqEffectArgs : List (List SEffekt) → List (List SEffekt) → Bool
+  | [], [] => true
+  | e :: es, f :: fs => beqSEffektList e f && beqEffectArgs es fs
+  | _, _ => false
+
+/-- Shape equality of signature lists. -/
+def beqFnSigs : List FnSig → List FnSig → Bool
+  | [], [] => true
+  | a :: as, b :: bs => beqFnSig a b && beqFnSigs as bs
   | _, _ => false
 
 mutual
@@ -257,8 +273,8 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .groupT a m i, .groupT b n j =>
     strEq a b && beqWorte m n && beqSGruppenInvList i j
   | .concT a, .concT b => beqStartListe a b
-  | .accT a t m p, .accT b u n q =>
-    strEq a b && beqSTyp t u && strEq m n && beqOptExpr p q
+  | .accT a t m p q, .accT b u n r s =>
+    strEq a b && beqSTyp t u && strEq m n && beqOptExpr p r && beqOptWort q s
   | .walkT a, .walkT b => beqSWeg a b
   | .entryT a, .entryT b => beqSEingang a b
   | .trustT a b c r s t, .trustT d e f u v w =>
@@ -278,12 +294,14 @@ def beqSItemTief : SItemTief → SItemTief → Bool
   | .adaptT s p a b, .adaptT t q c d =>
     beqFnSig s t && beqSAdaptParamList p q && beqSAdapt a c && beqOptAnw b d
   | .taggedByT a s, .taggedByT b t => beqSItemTief a b && strEq s t
-  | .specGroupT n p fs, .specGroupT m q gs =>
-    strEq n m && strEq p q && fs.length == gs.length &&
-      (fs.zip gs).all (fun (f, g) => beqFnSig f g)
-  | .implGroupT n t fs, .implGroupT m u gs =>
-    strEq n m && beqSTyp t u && fs.length == gs.length &&
-      (fs.zip gs).all (fun (f, g) => beqFnSig f.1 g.1 && beqSAnw f.2 g.2)
+  | .specGroupT n ts es fs, .specGroupT m us ds gs =>
+    strEq n m && beqWorte ts us && beqWorte es ds && beqFnSigs fs gs
+  | .implGroupT n ts es fs, .implGroupT m us ds gs =>
+    strEq n m && beqSTypList ts us && beqEffectArgs es ds && beqSItemTiefList fs gs
+  | .moduleTemplateT n ps xs, .moduleTemplateT m qs ys =>
+    strEq n m && beqSGenericParams ps qs && beqSItemTiefList xs ys
+  | .moduleUseT n p args, .moduleUseT m q other =>
+    strEq n m && beqWorte p q && beqWorte args other
   | _, _ => false
 def beqSItemTiefList : List SItemTief → List SItemTief → Bool
   | [], [] => true

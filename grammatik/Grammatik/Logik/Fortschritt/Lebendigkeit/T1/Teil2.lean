@@ -56,6 +56,11 @@ theorem ende_ret_kein_schritt {M M' : RufMaschineG D} {t : Faden}
     | _ =>
         rw [‹(M.faeden t).kopf.rest = _›] at hk
         simp only [GRest.istEndeRet, Bool.false_eq_true] at hk
+  | g7 hs =>
+    cases hs with
+    | _ =>
+        rw [‹(M.faeden t).kopf.rest = _›] at hk
+        simp only [GRest.istEndeRet, Bool.false_eq_true] at hk
 
 /-- A named hardware stop, read off the head residue. -/
 theorem halt_kopf {M : RufMaschineG D} {t : Faden} {k : Zielsatz.HaltArt}

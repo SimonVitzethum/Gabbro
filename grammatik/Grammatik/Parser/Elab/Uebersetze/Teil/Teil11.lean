@@ -33,7 +33,7 @@ public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
-public import Grammatik.Parser.Elab.Uebersetze.Teil.SpecExpansion
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
@@ -57,9 +57,12 @@ def uSpecKlauseln (ctx : UCtx) (params : List String) (ks : List SKlausel) : Exc
       | .refs _ => .error "refines without one spec fn"
       | .keeps _ | .induc _ => .ok r
       | k => .ok (k :: r)) (.ok [])
-/-- Pass two: contracts and body of one function. -/
-def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
-    (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
+/-- The contracts of one head: `gives` (with `refines` inlined) and `needs`
+    beside `Held(..)` (which rides `kopf.held`, never a predicate). Shared by
+    functions (`elabFn`) and pointer types (`elabZeigerTyp`, C06): the two
+    lists are the normalised predicate lists the conformance check compares. -/
+def elabKlauseln (ctx : UCtx) (klauseln0 : List SKlausel) :
+    Except String (List UEns × List UEns) :=
   match (if ctx.specs.isEmpty then .ok klauseln0 else uSpecKlauseln ctx ctx.names klauseln0) with
   | .error e => .error e
   | .ok klauseln =>
@@ -73,18 +76,27 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
       | .needs e => some (uBool ctx e)
       | _ => none))) with
     | .error e => .error e
-    | .ok needs =>
+    | .ok needs => .ok (gives, needs)
+/-- Pass two: contracts and body of one function. -/
+def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
+    (koerper : SAnw) : Except String (List UEns × List UEns × List UStmt × URet) :=
+  match elabKlauseln ctx klauseln0 with
+  | .error e => .error e
+  | .ok (gives, needs) =>
     match koerper with
     | .block ss ende =>
       match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with
       | .error e => .error e
       | .ok (body, ctxE) =>
+        match expandFoldEnd ctxE ende with
+        | .error e => .error e
+        | .ok (prefix, ctxE, ende) =>
         match uEnde ctxE ende with
         | .error e =>
           if ende.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
             .ok (gives, needs, body, .keins)
           else .error e
-        | .ok r => .ok (gives, needs, body, r)
+        | .ok r => .ok (gives, needs, body ++ prefix, r)
     | _ => .error "fn body without G form"
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))
@@ -101,12 +113,12 @@ def elabUFunktion (consts : List (String × Int))
     (koerper : SAnw) (annahmen : List String := []) (whys : List UWhy := []) (sums : List USum := [])
     (devs : List String := []) (regs : List UReg := []) (zustaende : List UZustand := [])
     (zeiger : List String := []) (zb : Nat := 0) (specs : List (String × List String × SExpr) := [])
-    (arrKonst : List (String × USide) := []) (spaces : List String := []) (eigner : List String := []) :
+    (arrKonst : List (String × USide) := []) (spaces : List String := []) (valueScope : UTypeScope := { types := [] }) (eigner : List String := []) :
     Except String UFn :=
-  match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb spaces eigner with
+  match elabKopf consts alias tabs locks globs whys sums sig devs zeiger zb spaces valueScope.types eigner with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst with zeiger := zeiger, zeigerBasis := zb, spaces := spaces }
+    let ctx := { uCtxVon alias consts tabs locks globs kopf sig.name annahmen whys sums regs zustaende specs arrKonst with zeiger := zeiger, zeigerBasis := zb, spaces := spaces, records := valueScope.records, namedTypes := valueScope.types, eigner := eigner }
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (gives, needs, body, r) =>
@@ -351,7 +363,7 @@ def akkuOperatorOk (m : String) : Bool :=
     `and`) are checked at expansion (`UebersetzeAkku`); updates, reads and the
     core query stay refused there (they need C08). -/
 def akkuFormZulaessig : SItemTief → Bool
-  | .accT _ _ m (some _) => akkuOperatorOk m
+  | .accT _ _ m (some _) _ => akkuOperatorOk m
   | _ => false
 /-- Items outside the fragment: everything but constants,
     type aliases, statics, tables, locks and functions is an explicit
@@ -390,7 +402,7 @@ def uRestFehler : List SItemTief → Except String Unit
   -- `accumulates` (C15 storage slice): admitted surface forms expand to guarded
   -- cells (`UebersetzeAkku`); anything else is refused by name (the core query
   -- and updates/reads need C08, task 4; `and` needs the stored width).
-  | ((.accT _ _ m p) as it) :: rest =>
+  | ((.accT _ _ m p _) as it) :: rest =>
     if akkuFormZulaessig it then uRestFehler rest
     else if !akkuOperatorOk m then .error "accumulator operator without G form"
     else .error "accumulator without per cpu count without G form"

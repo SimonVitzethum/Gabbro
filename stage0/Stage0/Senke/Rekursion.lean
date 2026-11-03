@@ -127,7 +127,7 @@ theorem lowFun_spec {P : Programm D} {O : Orakel D} [TorOK Y O] [SichtOK O]
           (by simpa only [List.length_append] using far1), hE, trivial, wstab_true _ _⟩
     have reqWorldPre := PreS.welt reqPre hks requiresWorld hW.lay hW.lo
     obtain ⟨m1, reqRun, reqChanged, b, reqRead, reqValue⟩ :=
-      lowE_ok (fp := fp) (K := Ks) σR σR (fun _ h => h) hW.lay (P.requires f)
+      lowE_ok (same := by intro _; rfl) (fp := fp) (K := Ks) σR σR (fun _ h => h) hW.lay (P.requires f)
         q cq tq hq (by omega) m _ ρ reqWorldPre |>.word trivial
     have first := Agree.widen reqChanged hks
     have frame1 := hF.agree first

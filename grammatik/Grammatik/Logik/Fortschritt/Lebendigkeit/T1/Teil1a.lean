@@ -150,6 +150,15 @@ theorem schritt_sperre_art (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
         refine Or.inr (Or.inl ?_)
         rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
         exact lese_offen _ _ _
+  | g7 hs =>
+    cases hs with
+    | _ =>
+        subst_vars
+        simp only [rufUpdateG_self]
+        first
+          | exact Or.inr (Or.inl trivial)
+          | exact Or.inr (Or.inl rfl)
+          | exact Or.inr (Or.inl (lese_offen _ _ _))
 
 /-- **A lock enters a held set only at a `locks` head of that lock.** -/
 theorem nimmt_an_sperre (hO : GutO O) {M M' : RufMaschineG D} {f : Faden} {L : D.Lock}

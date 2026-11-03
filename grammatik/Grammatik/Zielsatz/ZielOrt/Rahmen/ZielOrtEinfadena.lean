@@ -315,6 +315,12 @@ theorem kein_schritt_ruhig {M M' : RufMaschineG D} {u : Faden}
     | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       rw [hhead] at hRet
       simp only [GRest.istRetEnde, Endblock.istRet, Bool.false_eq_true] at hRet
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      have hhead := ‹(M.faeden u).kopf.rest = _›
+      rw [hhead] at hRet
+      simp only [GRest.istRetEnde, Bool.false_eq_true] at hRet
 
 end Stumm
 end Gabbro.Grammatik

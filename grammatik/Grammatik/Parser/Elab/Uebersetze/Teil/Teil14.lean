@@ -164,6 +164,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
+  | .floatLit .. :: _, _ | .float .. :: _, _ => .error "float without G form in the 104 lowering"
   | .bindW .. :: _, _ | .assignGlobO .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | .tausch .. :: _, _ => .error "exchange without G form in the 104 lowering"
   | .ifEnde .. :: _, _ | [], .keins => .error "terminal if without G form in the 104 lowering"
@@ -190,7 +191,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       by name. -/
   | .resetRange .. :: _, _ =>
     .error "static array reset without G form in the 104 lowering (no array statics)"
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindOptBeg .. :: _, _ | .bindOptElseBeg .. :: _, _ | .allocReqBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .narrowReqBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindOptBeg .. :: _, _ | .bindOptElseBeg .. :: _, _ | .allocReqBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .arrayLoopBeg .. :: _, _ | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
     | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .regWriteB .. :: _, _ | .awaitBind .. :: _, _
     | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .bindCallIndElse .. :: _, _ | .shiftTab .. :: _, _ =>
@@ -205,6 +206,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
   | .assignGlob .. :: _, _ | .assignGlobB .. :: _, _ | .storeAtom .. :: _, _ | .storeAtomB .. :: _, _ =>
     .error "static without G form in the 104 lowering"
   | .assignRef .. :: _, _ => .error "reference without G form in the 104 lowering"
+  | .floatLit .. :: _, _ | .float .. :: _, _ => .error "float without G form in the 104 lowering"
   | .bindW .. :: _, _ | .assignGlobO .. :: _, _ | [], .wert _ => .error "aggregate without G form in the 104 lowering"
   | .tausch .. :: _, _ => .error "exchange without G form in the 104 lowering"
   | .ifEnde .. :: _, _ | [], .keins => .error "terminal if without G form in the 104 lowering"
@@ -237,7 +239,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
       checked range-store expansion of the generic lowering has no target here. -/
   | .resetRange .. :: _, _ =>
     .error "static array reset without G form in the 104 lowering (no array statics)"
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindOptBeg .. :: _, _ | .bindOptElseBeg .. :: _, _ | .allocReqBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .narrowReqBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindOptBeg .. :: _, _ | .bindOptElseBeg .. :: _, _ | .allocReqBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
     | .arrayLoopBeg .. :: _, _ | .loopBeg .. :: _, _ | .ret _ :: _, _ | .leave _ :: _, _ | .next _ :: _, _
     | .regRead .. :: _, _ | .regReadElse .. :: _, _ | .regWrite .. :: _, _ | .regWriteB .. :: _, _ | .awaitBind .. :: _, _
     | .bindFnref .. :: _, _ | .callInd .. :: _, _ | .bindCallInd .. :: _, _ | .bindCallIndElse .. :: _, _ | .shiftTab .. :: _, _ =>

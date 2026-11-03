@@ -7,6 +7,7 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Transition.Resolve
+public import Grammatik.Parser.Elab.Uebersetze.Records.Update
 
 @[expose] public section
 
@@ -67,7 +68,7 @@ def uSetzeLokal (ctx : UCtx) (x : String) (wert : SExpr) : Except String UStmt :
   | .error e => .error e
   | .ok j =>
     match uArtBei ctx.kinds j with
-    | .ok .int =>
+    | .ok .int | .ok .wert =>
       match uWertBody ctx wert with
       | .error e => .error e
       | .ok v => .ok (.setVar x v)
@@ -92,6 +93,10 @@ def uSetze (ctx : UCtx) (ziel : SExpr) (op : String) (wert : SExpr) : Except Str
   | some w =>
     match ziel with
     | .variable x => if ctx.muts.any (strEq · x) then uSetzeLokal ctx x w else uSetzePlatz ctx ziel w
+    | .field .. =>
+      match uRecordLocal ctx ziel with
+      | some name => uSetzeRecord ctx name ziel w
+      | none => uSetzePlatz ctx ziel w
     | .arrow (.variable r) f =>
       match uRefLokal ctx r with
       | .some _ =>
@@ -126,12 +131,13 @@ def anwArt : SAnw → String
   | .bindAxiomOpt .. => "let?" | .bindAxiomOptElse .. => "let? else" | .bindLib .. => "library let" | .set .. => "assignment"
   | .shift .. => "shift" | .call .. => "call" | .lcall .. => "library call" | .cond .. => "if"
   | .elsif .. => "else if" | .cases .. => "match" | .arm .. => "match arm" | .each .. => "traverse"
-  | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .locks .. => "locks"
+  | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .trimReq .. => "trim required" | .locks .. => "locks"
   | .watch .. => "watch" | .leave .. => "leave" | .next .. => "next" | .emit .. => "emit" | .await .. => "await"
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w
   | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
   | .callQ .. => "call query"
+  | .genericCall .. => "unexpanded generic call"
 
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/

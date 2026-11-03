@@ -370,6 +370,9 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
         dsimp only; rw [rufUpdateG_self]
         rw [hhead] at hK
         exact hK
+  | g7 hs =>
+    cases hs with
+    | _ => rangA1
 
 #print axioms Gabbro.Grammatik.schrittRang
 

@@ -2,7 +2,8 @@ module
 
 public import Grammatik.Kern.Syntax.Zucker
 public import Grammatik.Parser.Elab.Uebersetze
-public import Grammatik.Parser.Elab.UebersetzeAllg.Signaturen
+public import Grammatik.Parser.Elab.Generic.Signatures
+public import Grammatik.Parser.Elab.UebersetzeAllg.Beleg
 
 @[expose] public section
 
@@ -13,221 +14,6 @@ namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 open Gabbro.Grammatik.Parser.Uebersetze
 
 /-! ## Declaration data looked up from `UProg` -/
-
-/-- The table at an index. -/
-def tabAt (u : UProg) (t : Fin u.tabs.length) : UTab :=
-  u.tabs.get t
-
-/-- The lock at an index. -/
-def lockAt (u : UProg) (l : Fin u.locks.length) : ULock :=
-  u.locks.get l
-
-/-- The function at an index. -/
-def fnAt (u : UProg) (f : Fin u.fns.length) : UFn :=
-  u.fns.get f
-
-/-- The field count of a table. -/
-def fieldCount (u : UProg) (t : Fin u.tabs.length) : Nat :=
-  (tabAt u t).cols.length
-
-/-- A table index by name (structural, so the `Fin` proof is free). -/
-def tabIdx : (tabs : List UTab) → (n : String) → Except String (Fin tabs.length)
-  | [], n => .error ("table unknown: " ++ n)
-  | t :: rest, n =>
-    if t.name == n then .ok 0
-    else match tabIdx rest n with
-      | .error e => .error e
-      | .ok j => .ok j.succ
-
-/-- A function index by name. -/
-def fnIdx : (fns : List UFn) → (n : String) → Except String (Fin fns.length)
-  | [], n => .error ("function unknown: " ++ n)
-  | f :: rest, n =>
-    if f.name == n then .ok 0
-    else match fnIdx rest n with
-      | .error e => .error e
-      | .ok j => .ok j.succ
-
-/-- A field range by table and field index (`some` always: the
-    index is inside the table's field list). -/
-def fieldRangeO (u : UProg) (t : Fin u.tabs.length)
-    (f : Fin (fieldCount u t)) : Option (Int × Int) :=
-  ((tabAt u t).cols[f.val]?).map (·.2)
-
-/-- The field is a `bool` field (named in `bools`). -/
-def boolFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Bool :=
-  match (tabAt u t).cols[f.val]? with
-  | some q => (tabAt u t).bools.contains q.1
-  | none => false
-
-/-- The number of the table an option field points at (`none` for a field that is no option). -/
-def optNumAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Nat :=
-  match (tabAt u t).cols[f.val]? with
-  | some q => ((tabAt u t).opts.find? (fun p => p.1 == q.1)).map (·.2)
-  | none => none
-
-/-- The count of the table an option field points at: the `n` of its type `Ty.opt n`. -/
-def optFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Int :=
-  (optNumAt u t f).bind fun num => (u.tabs[num]?).map (·.count)
-
-/-- The type of an aggregate field (`none` for any other field). -/
-def wertFeldAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) : Option Ty :=
-  match (tabAt u t).cols[f.val]? with
-  | some q => ((tabAt u t).werte.find? (fun p => p.1 == q.1)).map (·.2)
-  | none => none
-
-/-- The field type: `bool` for a bool field, `opt` for an option field, the aggregate of an aggregate field, else
-    the recorded range, or `.int 0 0` off the table (unreachable through `fieldRangeO`, kept for totality). -/
-def typAt (u : UProg) (t : Fin u.tabs.length)
-    (f : Fin (fieldCount u t)) : Ty :=
-  if boolFeldAt u t f then .bool else
-  match optFeldAt u t f with
-  | some n => .opt n
-  | none =>
-    match wertFeldAt u t f with
-    | some τ => τ
-    | none =>
-    match fieldRangeO u t f with
-    | some w => .int w.1 w.2
-    | none => .int 0 0
-
-/-- The guards of a table: the locks whose `schutz` names it, plus the owner mark
-    (`D.Marke`) when the table declares one (resolved against the unit's mark table). -/
-def needsAt (u : UProg) (t : Fin u.tabs.length) :
-    List (Fin u.locks.length ⊕ (Fin u.marken.length × Nat)) :=
-  List.finRange u.locks.length |>.filterMap fun l =>
-    if (lockAt u l).guard.any (· == (tabAt u t).name) then some (.inl l)
-    else none
-
-/-- The guards of a static: the locks whose `protects` list names it (`gbraucht`). -/
-def gneedsAt (u : UProg) (g : Fin u.globs.length) :
-    List (Fin u.locks.length ⊕ (Fin u.marken.length × Nat)) :=
-  List.finRange u.locks.length |>.filterMap fun l =>
-    if (lockAt u l).guard.any (· == (globAt u g).name) then some (.inl l)
-    else none
-
-/-- The owner guard of a table as declaration marks (C12): the `owner` mark resolved
-    against the unit's mark table, at stage 0. An unresolvable owner gives no mark that
-    could ever be held, so the table stays inaccessible. -/
-def eignerAt (u : UProg) (t : Fin u.tabs.length) : List (Fin u.marken.length) :=
-  match (tabAt u t).owner with
-  | none => []
-  | some m => match markFin u.marken m with | none => [] | some i => [i]
-
-/-- The foreign body at an index. -/
-def uaxAt (u : UProg) (a : Fin u.axs.length) : UAx := u.axs.get a
-
-/-- A foreign body by name. -/
-def uaxIdx : (xs : List UAx) → (n : String) → Except String (Fin xs.length)
-  | [], n => .error ("function unknown: " ++ n)
-  | a :: rest, n =>
-    if a.name == n then .ok 0
-    else match uaxIdx rest n with
-      | .error e => .error e
-      | .ok j => .ok j.succ
-
-/-- Membership in a table's owner list names that table's owner mark. -/
-theorem mem_eignerAt (u : UProg) (t : Fin u.tabs.length) (m : Fin u.marken.length)
-    (h : m ∈ eignerAt u t) :
-    ∃ o, (tabAt u t).owner = some o ∧ markFin u.marken o = some m := by
-  cases ho : (tabAt u t).owner with
-  | none =>
-    have he : eignerAt u t = [] := by unfold eignerAt; rw [ho]
-    rw [he] at h
-    exact (List.not_mem_nil h).elim
-  | some o =>
-    refine ⟨o, ho, ?_⟩
-    cases hm : markFin u.marken o with
-    | none =>
-      have he : eignerAt u t = [] := by unfold eignerAt; rw [ho, hm]
-      rw [he] at h
-      exact (List.not_mem_nil h).elim
-    | some j =>
-      have he : eignerAt u t = [j] := by unfold eignerAt; rw [ho, hm]
-      rw [he] at h
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at h
-      subst h
-      exact hm
-
-/-- A static by name. -/
-def globIdx : (gs : List UGlob) → (n : String) → Except String (Fin gs.length)
-  | [], n => .error ("static unknown: " ++ n)
-  | g :: rest, n =>
-    if g.name == n then .ok 0
-    else match globIdx rest n with
-      | .error e => .error e
-      | .ok j => .ok j.succ
-
-/-- The payload of an atomic (`D.nutzlast`): its declared statics, by name. -/
-def nutzAt (u : UProg) (g : Fin u.globs.length) : List (Fin u.globs.length) :=
-  (globAt u g).nutzlast.filterMap fun n => (globIdx u.globs n).toOption
-
-/-- `D.erlaubt`: the field is governed by a state (a `transition` statement applies it there) whose
-    `transition` lines allow `von -> nach` (stage numbers). -/
-def erlaubtAt (u : UProg) (t : Fin u.tabs.length) (f : Fin (fieldCount u t)) (von nach : Int) : Bool :=
-  match (tabAt u t).cols[f.val]? with
-  | none => false
-  | some (fname, _) =>
-    u.regiert.any fun (tb, fld, s) => tb == (tabAt u t).name && fld == fname &&
-      (u.zustaende.find? (fun z => z.name == s)).any fun z =>
-        z.paare.any fun (a, c) => decide ((a : Int) = von) && decide ((c : Int) = nach)
-
-/-- The register at an index. -/
-def regAt (u : UProg) (r : Fin u.regs.length) : UReg := u.regs.get r
-
-/-- A register by device and name. -/
-def regIdx : (rs : List UReg) → (d n : String) → Except String (Fin rs.length)
-  | [], _, n => .error ("register unknown: " ++ n)
-  | g :: rest, d, n =>
-    if g.dev == d && g.name == n then .ok 0
-    else match regIdx rest d n with
-      | .error e => .error e
-      | .ok j => .ok j.succ
-
-/-- The mirror of a register (`mirrors R from M`): a register of the same device. -/
-def spiegelAt (u : UProg) (r : Fin u.regs.length) : Option (Fin u.regs.length) :=
-  (regAt u r).spiegel.bind fun m => (regIdx u.regs (regAt u r).dev m).toOption
-
-/-- The carriers a register's answer rests on (`depends { .. }`): tables first by name, else statics. -/
-def rtraegerAt (u : UProg) (r : Fin u.regs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
-  (regAt u r).traeger.filterMap fun n =>
-    match (tabIdx u.tabs n).toOption with
-    | some t => some (.inl t)
-    | none => (globIdx u.globs n).toOption.map .inr
-
-/-- The invariant at an index. -/
-def invAt (u : UProg) (i : Fin u.invs.length) : UInv := u.invs.get i
-
-/-- The carriers of an invariant, by name: a table, else a static (C05). `uInv` resolves every name to exactly
-    one carrier, so for an elaborated unit nothing is dropped. -/
-def invTraeger (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
-  (invAt u i).traeger.filterMap fun n =>
-    match (tabIdx u.tabs n).toOption with
-    | some t => some (.inl t)
-    | none => (globIdx u.globs n).toOption.map .inr
-
-/-- `U003` at an invariant, decided over the elaborated functions: a writer of a carrier (a table through
-    `writesAt`, a static through `writesGAt`) holds every lock that guards a carrier (the elaborator refuses a
-    unit where it fails, `uU003`, and so does the lowering, `lowerInvAt`). -/
-def invOkB (u : UProg) (i : Fin u.invs.length) : Bool :=
-  (u.fns ++ u.ptrs).all fun f =>
-    !((invTraeger u i).any (Sum.elim (writesAt u f) (writesGAt u f))) ||
-    (invTraeger u i).all fun c => (Sum.elim (needsAt u) (gneedsAt u) c).all fun w =>
-      match w with
-      | .inl L => decide (L ∈ heldAt u f)
-      | .inr _ => true
-
-/-- The carriers of an invariant in the declaration: its carriers where `U003` holds (always, for a lowered
-    unit: `lowerInvAt` refuses otherwise), none otherwise -- so `invarianten_gehalten` holds for every `UProg`.
-    The fallback is never reached by a unit that lowers (`traegerD_of_ok`, `lowerInvAt_facts`). -/
-def traegerD (u : UProg) (i : Fin u.invs.length) : List (Fin u.tabs.length ⊕ Fin u.globs.length) :=
-  if invOkB u i then invTraeger u i else []
-
-/-- Where `U003` holds, the declared carriers are ALL the invariant's carriers. -/
-theorem traegerD_of_ok (u : UProg) (i : Fin u.invs.length) (h : invOkB u i = true) :
-    traegerD u i = invTraeger u i := by
-  unfold traegerD
-  rw [if_pos h]
 
 /-- `invarianten_gehalten` for the declaration of every `UProg`. -/
 theorem invGehalten (u : UProg) (n : Nat) (i : Fin u.invs.length)
@@ -286,9 +72,8 @@ def anbieterAt (u : UProg) (t : Fin u.tabs.length) : Option (Fin u.axs.length) :
     | .error _ => none
 
 /-- The declaration built from the elaborated program itself: index
-    carriers (`Fin`) for tables, statics, locks, marks, fields, functions, foreign bodies
-    and device registers (`Reg := Fin u.regs.length`: type, class, mirror, promise and
-    carriers read off `UReg`). -/
+    carriers (`Fin`) for tables, statics, locks, fields, functions, foreign bodies and device registers
+    (`Reg := Fin u.regs.length`: type, class, mirror, promise and carriers read off `UReg`). -/
 def declOf (u : UProg) : Deklaration where
   dataSpaces := u.spaces
   tableSpace := fun t => (tabAt u t).space
@@ -324,7 +109,7 @@ def declOf (u : UProg) : Deklaration where
   sig := fun f => f.val
   sigNr := sigAt u
   passt := passtAt u
-  passt_ok := passtAt_ok u
+  passt_ok := fun f n h => (passtAt_ok u f n h).1
   eigner_nie_erzeugt := by
     intro n t m s ho hprod
     have ho' : m ∈ eignerAt u t := ho
@@ -356,6 +141,8 @@ def declOf (u : UProg) : Deklaration where
   agschreibt := fun a g => (uaxAt u a).gputs.any (· == (globAt u g).name)
   agruende := fun a => (uaxAt u a).gruende
   anbieter := anbieterAt u
+  axHerkunft := herkunftAt u
+  axBeleg := belegAt u
   anbieter_passt := fun t a h => by
     unfold anbieterAt at h
     split at h
@@ -379,8 +166,20 @@ def declOf (u : UProg) : Deklaration where
   geteilt_bewacht := fun t h => by
     have h' : ((tabAt u t).shared && !((needsAt u t).isEmpty)) = true := h
     simp only [Bool.and_eq_true] at h'
-    exact notEmpty_ne_nil _ h'.2
-  invarianten_gehalten := fun n i h t ht L hL => invGehalten u n i h t ht L hL
+    intro he
+    have hn := notEmpty_ne_nil (needsAt u t) h'.2
+    cases hs : needsAt u t with
+    | nil => exact hn hs
+    | cons x xs => simp [hs] at he
+  invarianten_gehalten := fun n i h c hc L hL => by
+    cases c with
+    | inl t =>
+      change Sum.inl L ∈ needsAt u t ++ (eignerAt u t).map (fun m => Sum.inr (m, 0)) at hL
+      rcases List.mem_append.mp hL with hlock | hmark
+      · exact invGehalten u n i h (.inl t) hc L hlock
+      · obtain ⟨m, _, hm⟩ := List.mem_map.mp hmark
+        cases hm
+    | inr g => exact invGehalten u n i h (.inr g) hc L hL
   ggeteilt_bewacht := fun g h => by
     have h' : ((globAt u g).shared && (!((gneedsAt u g).isEmpty) || (globAt u g).atomic)) = true := h
     simp only [Bool.and_eq_true, Bool.or_eq_true] at h'

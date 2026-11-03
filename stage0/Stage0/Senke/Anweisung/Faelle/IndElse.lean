@@ -37,7 +37,7 @@ theorem lowIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
     {R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f} {reserved : Nat} {dv : Runner.W} {cap : Nat}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
     {Λ : List (Res D)} {Γ : Ctx} {n : Nat} (p : Expr D Γ Λ (.fnptr n))
-    (args : Args D Γ Λ (D.sigNr n).params) (σ₀ σ : World D) {c : List II} {top : Nat}
+    (args : Args D Γ Λ (D.sigNr n).params) (σ₀ σ : World D) {same : σ₀ = σ} {c : List II} {top : Nat}
     {m : Runner.Mem} {pc fp : Runner.W} {K Ks : Nat} {ρ : Env D Γ}
     (hc : lowIndElse L p args reserved = some (c, top)) (ht : top + cap ≤ Ks)
     (hp : PreS L m pc fp K (frei Γ reserved) c ρ reserved) (hu : Umf L A C dv m fp Ks K)
@@ -77,11 +77,11 @@ theorem lowIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
   change D.params (eval σ₀ p σ ρ).1 = (D.sigNr n).params at hpar
   have hp0 : PreS L m pc fp K (frei Γ reserved) (cp ++ (ca ++ callTailN (contextWords (D.sigNr n).params) 0 (frei Γ reserved) true)) ρ reserved := hp
   have hpw := PreS.welt hp0.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, hw, he⟩ := lowE_ok σ₀ σ (fun _ h => h) hW.lay p _ cp tp hcp (by omega) m pc ρ hpw |>.word trivial
+  obtain ⟨m1, s1, a1s, w, hw, he⟩ := lowE_ok (same := by intro _; exact same) σ₀ σ (fun _ h => h) hW.lay p _ cp tp hcp (by omega) m pc ρ hpw |>.word trivial
   have a1 := Agree.widen a1s hks
   have hp1 := hp0.next (d' := frei Γ reserved + FB) a1 (by omega) (by omega)
   have hpw1 := PreS.welt hp1.left hks (hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))) hW.lay (by have := hW.lo; omega)
-  obtain ⟨m2, s2, a2s, e2⟩ := lowA_ok (F := frei Γ reserved) σ₀ σ (fun _ h => h) hW.lay args ca ta hca (by omega) (by omega) m1 _ ρ hpw1
+  obtain ⟨m2, s2, a2s, e2⟩ := lowA_ok (same := same) (F := frei Γ reserved) σ₀ σ (fun _ h => h) hW.lay args ca ta hca (by omega) (by omega) m1 _ ρ hpw1
   have a2 := Agree.widen a2s hks
   have hp2 := hp1.next a2 (Nat.le_refl _) (by omega)
   have hWa2 := hpw1.wstab m1 m2 hpw1.welt (a2s.mono (Nat.zero_le _))
@@ -139,7 +139,7 @@ theorem callIndElse_ok {A : D.Fn → Nat} {C : D.Fn → List II}
       (receiveC (D.sigNr n) (frei Γ reserved) ++ [ci 19 (frei Γ reserved + FB + (contextWords (D.sigNr n).params) + returnWords (D.erg (D.sigNr n)) (D.gruende (D.sigNr n))) (16 * (cr.length + 2)) 0] ++
       cr ++ [ci 18 (16 * (ce.length + 1)) 0 0] ++ ce)) ρ reserved := by
     simpa only [Deklaration.params, Deklaration.erg, Deklaration.gruende, elseC, List.append_assoc, Int.natCast_add, Int.ofNat_one] using hp
-  have hc := lowIndElse_ok hS hA p args σ σ hcc (by omega) hpc.left hu hW hWa
+  have hc := lowIndElse_ok (same := rfl) hS hA p args σ σ hcc (by omega) hpc.left hu hW hWa
   obtain ⟨f, hf⟩ := eval σ p σ ρ
   dsimp only at hc ⊢
   generalize R f σ (umsig hf (evalArgs σ args σ ρ)) = o at hc ⊢

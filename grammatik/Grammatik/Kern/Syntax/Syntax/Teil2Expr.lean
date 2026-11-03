@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Kern.Syntax.Typen.Teil2
 public import Grammatik.Kern.Syntax.Syntax.Teil1
+public import Grammatik.Kern.Syntax.Syntax.Teil1b
 public import Grammatik.Kern.Syntax.Typen.IntBuiltin
 
 @[expose] public section

@@ -21,6 +21,7 @@ public import Stage0.Senke.Sperre.Code
 public import Stage0.Senke.Anweisung.Bytes.Code
 public import Stage0.Senke.Anweisung.Faelle.Schleifen.Allocation
 public import Stage0.Senke.Anweisung.Faelle.Hilfen
+public import Stage0.Senke.Anweisung.Faelle.Gleit.AddCode
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -112,7 +113,8 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         ((wordConstant (frei Γ reserved) nach).1 ++ ca.1 ++ [stC ((frei Γ reserved))])),
         max test.2 (max ca.2 ((frei Γ reserved) + 8)))
     else none
-  | _, Γ, _, _, .traverse t inv body, reserved =>
+  | _, Γ, _, _, .traverse t inv body, reserved
+  | _, Γ, _, _, .consumeTraverse t _ _ inv _ _ body, reserved => /- C11: lowers today's canonical fixed sweep; selection and measure are unused by execStmt. -/
     if inW (D.count t) (D.count t) then do
       let ci' ← lowE (reserved := reserved) L inv ((frei Γ reserved) + 1)
       let cb ← lowB (reserved := reserved) passes A L layout ens ((frei Γ reserved) :: pr) (48, 0) body
@@ -172,7 +174,6 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
       pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
-  | _, _, _, _, .consumeTraverse .., reserved => none
   -- C11 execStmt still ignores R.scopes: scope unwinding and invariant
   -- restoration are OPEN in Kern/Semantik/Semantik/T2/Teil2.lean.
   -- Keep both scoped returns refused until the canonical semantics is complete.
@@ -324,12 +325,8 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         pure (exC ((frei Γ reserved)) (L.ga g) cn.1 ++ cr.1, max (max cn.2 ((frei Γ reserved) + 4)) cr.2)
       else none
     else none
-  -- IEEE arithmetic needs its software algorithms and proofs.
-  -- All four IEEE binary64 operations remain refused: Runner.IR.op has no float
-  -- arithmetic instruction; integer opcodes 3–6 do not implement gleitRechne.
-  -- floatLit materialises rounded bits, while floatOf uses software conversion;
-  -- neither supplies a verified binary-operation lowering for this arm.
-  | _, _, _, _, .float .., reserved => none
+  -- Binary64 add uses the proved integer routine; sub, mul and div stay refused.
+  | _, Γ, _, _, .float op a b low high rest, reserved => floatArithmeticBlockL op (frei Γ reserved) low high (lowE (reserved := reserved) L a) (lowE (reserved := reserved) L b) (fun _ => lowB (reserved := reserved) passes A L layout ens pr ex rest)
   | _, _, _, _, _, reserved => none
 
 /-- Dispatch in declaration order. Each branch jumps over the remaining arms; loop exits

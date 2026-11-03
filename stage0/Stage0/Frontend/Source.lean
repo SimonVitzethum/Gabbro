@@ -19,16 +19,16 @@ structure Source (text : String) (options : Profil.Options := {}) where
   lexed : lex text = .ok tokens
   parsed : parseTopTief tokens = .ok items
   prepared : Profil.Prepared options items
-  visibility : Oeffentlich.huelleZu prepared.selected = true
-  compileTime : compileTimeSafe (uMembers (pre108 prepared.selected)) = true
-  normalized : Normalization (uMembers (pre108 prepared.selected)) members
-  aliasDependencies : AliasAcyclic (uMembers (pre108 prepared.selected)) ∧
-    (aliasNames (uMembers (pre108 prepared.selected))).Nodup
-  constantDependencies : ConstantAcyclic (uMembers (pre108 prepared.selected)) ∧
-    (constantNames (uMembers (pre108 prepared.selected))).Nodup
-  derived : DerivedScopes (uMembers (pre108 prepared.selected))
-  aliasMeanings : ∀ item ∈ uMembers (pre108 prepared.selected), AliasMeaning derived.scope.types item
-  constantMeanings : ∀ item ∈ uMembers (pre108 prepared.selected),
+  visibility : Oeffentlich.huelleZu prepared.elaborierbar = true
+  compileTime : compileTimeSafe (uMembers (pre108 prepared.elaborierbar)) = true
+  normalized : Normalization (uMembers (pre108 prepared.elaborierbar)) members
+  aliasDependencies : AliasAcyclic (uMembers (pre108 prepared.elaborierbar)) ∧
+    (aliasNames (uMembers (pre108 prepared.elaborierbar))).Nodup
+  constantDependencies : ConstantAcyclic (uMembers (pre108 prepared.elaborierbar)) ∧
+    (constantNames (uMembers (pre108 prepared.elaborierbar))).Nodup
+  derived : DerivedScopes (uMembers (pre108 prepared.elaborierbar))
+  aliasMeanings : ∀ item ∈ uMembers (pre108 prepared.elaborierbar), AliasMeaning derived.scope.types item
+  constantMeanings : ∀ item ∈ uMembers (pre108 prepared.elaborierbar),
     ConstantMeaning derived.scope.types derived.scope.functions derived.scope.values item
 
 /-- The actual whole-source frontend, producing a proof of provenance and normalization. -/
@@ -42,15 +42,15 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
       match Profil.prepareItems options items with
       | .error e => .error e
       | .ok prepared =>
-        if hv : Oeffentlich.huelleZu prepared.selected then
-          if hc : compileTimeSafe (uMembers (pre108 prepared.selected)) then do
-            let order ← orderAliases (uMembers (pre108 prepared.selected))
-            let result := normalize (uMembers (pre108 prepared.selected))
-            match hd : elaborateConstantScopes (uMembers (pre108 prepared.selected)) with
+        if hv : Oeffentlich.huelleZu prepared.elaborierbar then
+          if hc : compileTimeSafe (uMembers (pre108 prepared.elaborierbar)) then do
+            let order ← orderAliases (uMembers (pre108 prepared.elaborierbar))
+            let result := normalize (uMembers (pre108 prepared.elaborierbar))
+            match hd : elaborateConstantScopes (uMembers (pre108 prepared.elaborierbar)) with
             | .error e => .error e
             | .ok derived =>
-              if ha : (uMembers (pre108 prepared.selected)).all (checkAliasMeaning derived.scope.types) then
-                if hs : (uMembers (pre108 prepared.selected)).all
+              if ha : (uMembers (pre108 prepared.elaborierbar)).all (checkAliasMeaning derived.scope.types) then
+                if hs : (uMembers (pre108 prepared.elaborierbar)).all
                     (checkConstantMeaning derived.scope.types derived.scope.functions derived.scope.values) then
                   .ok ⟨tokens, items, result.val, hl, hp, prepared, hv, hc, result.property,
                     ⟨order.acyclic, order.unique⟩, elaborateConstantScopes_dependencies _ derived hd,
@@ -67,25 +67,25 @@ def source (text : String) (options : Profil.Options := {}) : Except String (Sou
     preservation is a separate obligation, not implied by projecting this certificate. -/
 theorem source_sound (text : String) {options : Profil.Options} (result : Source text options) :
     lex text = .ok result.tokens ∧ parseTopTief result.tokens = .ok result.items ∧
-    Oeffentlich.huelleZu result.prepared.selected = true ∧
-    compileTimeSafe (uMembers (pre108 result.prepared.selected)) = true ∧
-    Normalization (uMembers (pre108 result.prepared.selected)) result.members ∧
+    Oeffentlich.huelleZu result.prepared.elaborierbar = true ∧
+    compileTimeSafe (uMembers (pre108 result.prepared.elaborierbar)) = true ∧
+    Normalization (uMembers (pre108 result.prepared.elaborierbar)) result.members ∧
     ScopeStable result.derived.scope :=
   ⟨result.lexed, result.parsed, result.visibility, result.compileTime, result.normalized, result.derived.stable⟩
 
 /-- A successful frontend uses exactly canonical name resolution and width normalization;
     visibility failures cannot be hidden by flattening the item list. -/
 theorem source_names (text : String) {options : Profil.Options} (result : Source text options) :
-    pre108 result.prepared.selected = normTopU32 (Aufloesung.loese result.prepared.selected) := by
+    pre108 result.prepared.elaborierbar = normTopU32 (Aufloesung.loese result.prepared.elaborierbar) := by
   simp only [pre108, result.visibility, ↓reduceIte]
 
 /-- A scalar compile-time call from the original source has a complete safe call-hull derivation
     before normalization, so a later baseline evaluator is never the first contract check. -/
 theorem source_constant_hull (text : String) {options : Profil.Options} (result : Source text options)
     (name : String) (ty : STyp) (expr : SExpr)
-    (hm : SItemTief.constT name ty (.one expr) ∈ uMembers (pre108 result.prepared.selected))
+    (hm : SItemTief.constT name ty (.one expr) ∈ uMembers (pre108 result.prepared.elaborierbar))
     (callee : String) (hc : callee ∈ calls expr) :
-    SafeHull (uMembers (pre108 result.prepared.selected)) [] callee := by
+    SafeHull (uMembers (pre108 result.prepared.elaborierbar)) [] callee := by
   have h := compileTimeSafe_constants result.compileTime hm
   exact safeConstantName_sound _ _ _ _ ((List.all_eq_true.mp h) callee hc)
 
@@ -93,15 +93,15 @@ theorem source_constant_hull (text : String) {options : Profil.Options} (result 
     the frozen uKonstArrays/uKonstFns path can evaluate it. -/
 theorem source_constant_leaf_hull (text : String) {options : Profil.Options} (result : Source text options)
     (name : String) (ty : STyp) (value : SKonstWert) (expr : SExpr)
-    (hm : SItemTief.constT name ty value ∈ uMembers (pre108 result.prepared.selected))
+    (hm : SItemTief.constT name ty value ∈ uMembers (pre108 result.prepared.elaborierbar))
     (leaf : ConstantLeaf expr value) (callee : String) (hc : callee ∈ calls expr) :
-    SafeHull (uMembers (pre108 result.prepared.selected)) [] callee := by
+    SafeHull (uMembers (pre108 result.prepared.elaborierbar)) [] callee := by
   have h := safeConstantValue_leaf _ leaf (compileTimeSafe_constants result.compileTime hm)
   exact safeConstantName_sound _ _ _ _ ((List.all_eq_true.mp h) callee hc)
 
 /-- Runtime elaboration receives source-derived scopes whose scalar/function origin is proved
     over the original declarations, after eliminating alias normalization from those facts. -/
-def Source.scopes {text : String} {options : Profil.Options} (result : Source text options) : Scopes (uMembers (pre108 result.prepared.selected)) :=
+def Source.scopes {text : String} {options : Profil.Options} (result : Source text options) : Scopes (uMembers (pre108 result.prepared.elaborierbar)) :=
   result.derived.scope
 
 end Gabbro.Stage0.Frontend

@@ -56,6 +56,36 @@ def weiterHA : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l
       | .why σ r => weiterHA k (.why σ r)
       | .logik e => weiterHA k (.logik e)
       | .hardware e => weiterHA k (.hardware e)
+  | _, _, _, .verbrauch t member edge inv bound mass body rest k, o =>
+      weiterHA k (laufA (verbrauchLauf t (fun σ ρ => execBlockHA S O U A passes R body σ ρ)
+        (leseBA A inv) (verbrauchSelA A t member edge)
+        (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n)) bound rest) o)
+  | _, _, _, .verbrauchRest t member edge inv bound mass body rest vor k, o =>
+      match o with
+      | .ok σ ρ =>
+          let mm := (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n)) σ ρ.tail
+          if 0 ≤ mm.2 ∧ mm.2 ≤ bound ∧ mm.2 < vor then
+            weiterHA k (verbrauchLauf t (fun σ ρ => execBlockHA S O U A passes R body σ ρ)
+              (leseBA A inv) (verbrauchSelA A t member edge)
+              (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n)) bound rest mm.1 ρ.tail)
+          else weiterHA k (.logik .schleife)
+      | .next _ σ ρ =>
+          let mm := (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n)) σ ρ.tail
+          if 0 ≤ mm.2 ∧ mm.2 ≤ bound ∧ mm.2 < vor then
+            weiterHA k (verbrauchLauf t (fun σ ρ => execBlockHA S O U A passes R body σ ρ)
+              (leseBA A inv) (verbrauchSelA A t member edge)
+              (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n)) bound rest mm.1 ρ.tail)
+          else weiterHA k (.logik .schleife)
+      | .leave _ σ ρ =>
+          let mm := (fun σ ρ => let σ := leseA A σ Λ mass.orte; (σ, (eval σ mass σ ρ).n)) σ ρ.tail
+          if 0 ≤ mm.2 ∧ mm.2 ≤ bound ∧ mm.2 < vor then
+            weiterHA k (if (leseBA A inv mm.1 ρ.tail).2 = true then .ok (leseBA A inv mm.1 ρ.tail).1 ρ.tail
+              else .logik .schleife)
+          else weiterHA k (.logik .schleife)
+      | .zurueck σ v => weiterHA k (.zurueck σ v)
+      | .why σ r => weiterHA k (.why σ r)
+      | .logik e => weiterHA k (.logik e)
+      | .hardware e => weiterHA k (.hardware e)
   | _, _, _, .wieder n bis body ueber k, o =>
       weiterHA k (laufA (retryLauf (fun σ ρ => execBlockHA S O U A passes R body σ ρ) (leseBA A bis)
         (fun σ ρ => execBlockHA S O U A passes R ueber σ ρ) n) o)
@@ -137,6 +167,8 @@ theorem weiterHA_logik : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRes
   | _, _, _, .frei _ k, e => weiterHA_logik k e
   | _, _, _, .trav _ _ _ _ k, e => weiterHA_logik k e
   | _, _, _, .travRest _ _ _ _ k, e => weiterHA_logik k e
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, e => weiterHA_logik k e
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k, e => weiterHA_logik k e
   | _, _, _, .wieder _ _ _ _ k, e => weiterHA_logik k e
   | _, _, _, .wiederRest _ _ _ _ k, e => weiterHA_logik k e
   | _, _, _, .ewig _ _ _ _ k, e => weiterHA_logik k e
@@ -156,6 +188,8 @@ theorem weiterHA_zurueck : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GR
       ZErgG.gleich_trans (weiterHA_zurueck k (σ.gibt L) v) ⟨sg_gibt σ L, rfl⟩
   | _, _, _, .trav _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
   | _, _, _, .travRest _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
   | _, _, _, .wieder _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
   | _, _, _, .wiederRest _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
   | _, _, _, .ewig _ _ _ _ k, σ, v => weiterHA_zurueck k σ v
@@ -177,6 +211,8 @@ theorem weiterHA_grund : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (k : GRes
       ZErgG.gleich_trans (weiterHA_grund k (σ.gibt L) r) ⟨sg_gibt σ L, rfl⟩
   | _, _, _, .trav _ _ _ _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .travRest _ _ _ _ k, σ, r => weiterHA_grund k σ r
+  | _, _, _, .verbrauch _ _ _ _ _ _ _ _ k, σ, r => weiterHA_grund k σ r
+  | _, _, _, .verbrauchRest _ _ _ _ _ _ _ _ _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .wieder _ _ _ _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .wiederRest _ _ _ _ k, σ, r => weiterHA_grund k σ r
   | _, _, _, .ewig _ _ _ _ k, σ, r => weiterHA_grund k σ r

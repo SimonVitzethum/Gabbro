@@ -145,6 +145,11 @@ theorem sim_stmt_traverse {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
     (alleIndizes (D'.count (E.tab t)))
     (Einbettung.alleIndizes_bild (D' := D') (E.count t)) M σ σ' ρ ρ' hM hρ
 
+/-- Cast index values keep their number (for `same`-transport). -/
+theorem castW_index_n {n n' : Int} (h : Ty.index n = Ty.index n')
+    (v : Wert D (Ty.index n)) : (castW h v).n = v.n := by
+  cases h; rfl
+
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_consumeTraverse {V : Vertrag D}
     {l : Bool}
@@ -165,14 +170,77 @@ theorem sim_stmt_consumeTraverse {V : Vertrag D}
     (show (Ty.index (D.count t) :: Γ).map E.tyE = Ty.index (D'.count (E.tab t)) :: Γ.map E.tyE by
       rw [List.map_cons, E.count]) _ _ (ih_sim_block_body)
   have hi := E.pruef_sim hZ T hB.havocA hB.atom inv
-  exact E.traverse_sim (l := l) _ _ _ _ hsb hi
+  have hf : ∀ k : Wert D (.index (D.count t)),
+      ∃ h : (Ty.index (D'.count (E.tab t))) = E.tyE (Ty.index (D.count t)),
+        E.VRel hZ _ k (castW h ((fun k => castW (D := D')
+          (show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by rw [E.count]) k))) :=
+    fun k => ⟨(show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by rw [E.count]).symm,
+      castW_symm (D := D') (τ := Ty.index (D'.count (E.tab t))) (σ := Ty.index (D.count t)) _ k⟩
+  simp only [execStmtHA, exS]
+  rw [show (D'.count (E.tab t)).toNat + bound.toNat + 1 =
+    (D.count t).toNat + bound.toNat + 1 from by rw [E.count t]]
+  refine E.verbrauch_sim (l := l) t bound _ _ _ _ _ _ _ _ hsb hi
     (fun k => castW (D := D') (show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by
       rw [E.count]) k)
-    (fun k => ⟨(show Ty.index (D.count t) = Ty.index (D'.count (E.tab t)) by rw [E.count]).symm,
-      castW_symm (D := D') (τ := Ty.index (D'.count (E.tab t))) (σ := Ty.index (D.count t)) _ k⟩)
-    (alleIndizes (D.count t))
-    (alleIndizes (D'.count (E.tab t)))
-    (Einbettung.alleIndizes_bild (D' := D') (E.count t)) M σ σ' ρ ρ' hM hρ
+    hf ?hsel ?hmass ((D.count t).toNat + bound.toNat + 1) M σ σ' ρ ρ' hM hρ
+  · intro M₀ σ₀ σ₀' ρ₀ ρ₀' hM₀ hρ₀
+    obtain ⟨M₁, σ₁, hs1, hΦ1, hI1, hev⟩ := E.lese_eval' hZ T hM₀ hB.havocA hB.atom
+      Λ (Λ.map E.resE) (member.orte ++ edge.orte)
+      ((exE E member).orte ++ (exE E edge).orte)
+      (by simp only [List.map_append, E.orte_exE])
+    simp only [verbrauchSelA, Expr.orte_umΓ] at ⊢
+    refine ⟨M₁, σ₁, _, _, _, hs1, ?_, ?_, ?_⟩
+    · intro Φ hP
+      simp only [verbrauchSelA, hΦ1 Φ hP]
+    · simp only [verbrauchSelA, Expr.orte_umΓ, eval_umΓ]
+      rw [Prod.mk.injEq, Prod.mk.injEq]
+      refine ⟨?_, ?_, ?_⟩
+      · rfl
+      · rw [alleIndizes_bild ((E.count t).symm)]
+        refine verbrauchWahl_map _ _ _ _ _ _ _ _ ?_ ?_ ?_
+        · intro k _
+          have henv : E.EnvR hZ (Env.cons k ρ₀)
+              (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
+                Ty.index (D'.count (E.tab t)) by rw [E.count]) k) (castE _ ρ₀')) :=
+            ⟨hf k, (E.envR_um hZ _ _ _).mpr hρ₀⟩
+          have h := hev member (Env.cons k ρ₀) _ henv
+          simp only [VRel] at h
+          show wahr? _ = wahr? _
+          simp only [h]
+        · intro j _ k _
+          have henv : E.EnvR hZ (Env.cons j (Env.cons k ρ₀))
+              (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
+                Ty.index (D'.count (E.tab t)) by rw [E.count]) j)
+                (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
+                  Ty.index (D'.count (E.tab t)) by rw [E.count]) k) (castE _ ρ₀'))) :=
+            ⟨hf j, hf k, (E.envR_um hZ _ _ _).mpr hρ₀⟩
+          have h := hev edge (Env.cons j (Env.cons k ρ₀)) _ henv
+          simp only [VRel] at h
+          show wahr? _ = wahr? _
+          simp only [h]
+        · intro j _ k _
+          show decide (_ = _) = decide (_ = _)
+          rw [castW_index_n, castW_index_n]
+      · exact map_all_beibehalt _ _ _ _ (fun k _ => by
+          have henv : E.EnvR hZ (Env.cons k ρ₀)
+              (Env.cons ((fun k => castW (D := D') (show Ty.index (D.count t) =
+                Ty.index (D'.count (E.tab t)) by rw [E.count]) k) (castE _ ρ₀')) :=
+            ⟨hf k, (E.envR_um hZ _ _ _).mpr hρ₀⟩
+          have h := hev member (Env.cons k ρ₀) _ henv
+          simp only [VRel] at h
+          show (!(wahr? _)) = (!(wahr? _))
+          simp only [h])
+    · exact hI1
+  · intro M₀ σ₀ σ₀' ρ₀ ρ₀' hM₀ hρ₀
+    obtain ⟨M₁, σ₁, hs1, hΦ1, hI1, hev⟩ := E.lese_eval' hZ T hM₀ hB.havocA hB.atom
+      Λ (Λ.map E.resE) mass.orte (exE E mass).orte (E.orte_exE mass).symm
+    refine ⟨M₁, σ₁, _, (eval σ₁ mass σ₁ ρ₀).n, hs1, ?_, ?_, ?_⟩
+    · intro Φ hP
+      simp only [hΦ1 Φ hP]
+    · have hm' := hev mass ρ₀ ρ₀' hρ₀
+      simp only [VRel] at hm'
+      simp only [hm']
+    · exact hI1
 
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_retry {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

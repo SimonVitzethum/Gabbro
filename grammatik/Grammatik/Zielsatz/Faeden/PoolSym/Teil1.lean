@@ -46,6 +46,9 @@ namespace Gabbro.Grammatik
 open Zielsatz
 
 variable {D : Deklaration}
+
+/-- Decidable axiom equality, for the accumulator admission the lifted checker conjoins. -/
+variable [DecidableEq D.Ax]
 /-! ## The decidable pool checks, and "never weakened" (fix lane F10)
 
 The Bools `poolSicherWB`/`einzelnPoolB` and their iff lemmas live in
@@ -163,6 +166,8 @@ theorem akzeptiert_nodup_gleich {P : Programm D} {S : SperrInv D} {fs : List D.F
     {ls : List D.Lock} {cs : List (D.Tab ⊕ D.Glob)} {ws : List D.Fn} (hnd : ws.Nodup) :
     Akzeptiert P S fs ls cs ws = (AkzeptiertVor P S fs ls cs ws && maskenB P fs && resetB cs && libraryB P fs) := by
   unfold Akzeptiert AkzeptiertVor fussWB fussWBVor
+  rw [Kernzelle.accumulatorB_leer]
+  simp only [Bool.true_and]
   rw [getrenntW_nodup hnd, einzelnPoolB_of_einzelnB (P := P) (fs := fs) (cs := cs)
     (decide_eq_true hnd), show einzelnB ws = true from decide_eq_true hnd]
 
@@ -241,16 +246,16 @@ end PoolBool
     conjunct is `true`: `maskenB_ohne`); since C15 with the accumulator admission it never
     judged (an old program declares no accumulator, where it holds vacuously). -/
 def pruefer_vor_neu
-    (akz : ∀ {D : Deklaration} [DecidableEq D.Fn],
+    (akz : ∀ {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax],
       Einheit D → List D.Fn → List D.Lock → List (D.Tab ⊕ D.Glob) → Bool)
-    (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] (E : Einheit D)
+    (korr : ∀ {D : Deklaration} [DecidableEq D.Fn] [DecidableEq D.Ax] (E : Einheit D)
       (fs : Aufzaehlung D.Fn) (ls : Aufzaehlung D.Lock) (cs : Aufzaehlung (D.Tab ⊕ D.Glob)),
       akz E fs.1 ls.1 cs.1 = true → AkzeptiertSpecVor E.P E.S fs.1 E.ws) : Pruefer where
-  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs && resetB cs && Kernzelle.accumulatorB E.P fs cs E.akku
+  akzeptiert := fun E fs ls cs => akz E fs ls cs && maskenB E.P fs && resetB cs && Kernzelle.accumulatorB E.P fs (tabsOf cs) (globsOf cs) [] E.akku
   korrekt := fun E fs ls cs h => by
     simp only [Bool.and_eq_true] at h
     exact (akzeptiertSpecVor_neu (korr E fs ls cs h.1.1.1) ((maskenB_iff fs.2).mp h.1.1.2)
-      ((resetB_iff cs.2).mp h.1.2)).mitAkku ((Kernzelle.accumulatorB_iff fs.2 cs.2).mp h.2)
+      ((resetB_iff cs.2).mp h.1.2)).mitAkku (((Kernzelle.accumulatorB_iff fs.2 (tabsOf_voll cs.2) (globsOf_voll cs.2)).mp h.2).1)
 
 /-- **(d) OF THE REVIEWED DIFF: every run admitted before is admitted now.** The old
     `Laufzeit.einmal` (no declared start on two threads) implies the new one. -/

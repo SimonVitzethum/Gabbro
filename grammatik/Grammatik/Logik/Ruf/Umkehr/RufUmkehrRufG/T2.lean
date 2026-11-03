@@ -45,6 +45,8 @@ theorem semK_SG : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (r : GRest D V l
       exact semK_SG k hr.frei_inv (σ.gibt L) (σ'.gibt L) ρ (h.gibt L)
   | _, _, _, .trav .., hr => by cases hr
   | _, _, _, .travRest .., hr => by cases hr
+  | _, _, _, .verbrauch .., hr => by cases hr
+  | _, _, _, .verbrauchRest .., hr => by cases hr
   | _, _, _, .wieder .., hr => by cases hr
   | _, _, _, .wiederRest .., hr => by cases hr
   | _, _, _, .ewig .., hr => by cases hr

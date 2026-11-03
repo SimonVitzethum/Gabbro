@@ -122,6 +122,14 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
     | endeBindAxiomOptElseGrund => kopfwegH
     | endeBindAxiomElseOk => kopfwegH
     | endeBindAxiomElseGrund => kopfwegH
+  | g7 hs =>
+    cases hs with
+    | dannVerbrauch => kopfwegH
+    | verbrauchWeiter => kopfwegH
+    | verbrauchLeer => kopfwegH
+    | verbrauchFort => kopfwegH
+    | dannLeaveVerbrauch => kopfwegH
+    | dannNextVerbrauch => kopfwegH
 
 theorem ruf_fortsetzung :
     (M7G.faeden 0).kopf = callerFrameG ∧

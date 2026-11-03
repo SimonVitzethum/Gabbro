@@ -25,6 +25,13 @@ inductive XKind
   | all | any | count | mem | reach | imp | text | call
   /-- One labelled call argument: `names = [label]`, `subs = [value]`. -/
   | label
+  /-- Producer: names = [spec], subs = [payload]. -/
+  | dyn
+  /-- Explicit instantiation: `names = callee :: argument spellings`, `subs = call arguments`.
+      Argument spellings are balanced token groups, interpreted by the declared parameter kind. -/
+  | instantiate
+  /-- Folds: binder/domain names; domain operands, filter, value, optional empty value. -/
+  | foldAdd | foldMin | foldMax
   deriving DecidableEq, Repr
 
 def beqWorte : List String → List String → Bool
@@ -93,6 +100,17 @@ def beqSExprList : List SExpr → List SExpr → Bool
   | x :: xs, y :: ys => beqSExpr x y && beqSExprList xs ys
   | _, _ => false
 end
+
+/-- One token as raw text (for unsplit headers). -/
+def zeigeTok : Token → String
+  | .ident s => s
+  | .wort s => s
+  | .num n => toString n
+  | .float s => s
+  | .text s => "\"" ++ s ++ "\""
+  | .zeichen s => s
+  | .doku s => "///" ++ s
+  | .ende => "<ende>"
 
 /-- A name token (identifier or contextual keyword) with its text.
     `parse.rs` `erwarte_ident` takes the same two token shapes. -/
@@ -205,6 +223,22 @@ def sammleSegmente : List Token → List String → List String × List Token
     | some s => sammleSegmente rest (acc ++ [s])
     | none => (acc, .zeichen "::" :: t :: rest)
   | toks, acc => (acc, toks)
+
+/-- Dispatch a generic call, an ordinary call, or the unchanged name tail.
+    Constructor-only patterns keep delimiter tests available to rewriting. -/
+def rufKopf {α : Type} (toks : List Token)
+    (generic call : List Token → α) (other : Unit → α) : α :=
+  match toks with
+  | .zeichen s :: rest =>
+    if strEq s "::" then
+      match rest with
+      | .zeichen t :: tail => if strEq t "[" then generic tail else other ()
+      | _ => other ()
+    else if strEq s "(" then call rest else other ()
+  | _ => other ()
+
+theorem strEq_paren_doppelpunkt : strEq "(" "::" = false := by decide
+theorem strEq_paren_paren : strEq "(" "(" = true := by decide
 
 
 -- The expression levels of SYNTAX.md section 4 (`expr` down to

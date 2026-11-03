@@ -7,7 +7,8 @@ import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
-public import Grammatik.Parser.Elab.Uebersetze.Teil.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
+public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatLiterals
 
 @[expose] public section
 
@@ -110,6 +111,7 @@ def sTypText : STyp → String
   | .raw n => "raw " ++ n
   | .str _ => "string"
   | .entry n _ => "entry " ++ n
+  | .dyn n _ => "dyn " ++ n
 
 /-- Normalize the complete table access rights. Owner identities resolve
     against the unit's declared owner namespace; anything else (unknown
@@ -148,6 +150,7 @@ def uDataSpace (spaces : List String) (name : String) : Except String Nat :=
     explicit errors. -/
 def uTypIn (alias : List (String × (Int × Int))) (tabs : List UTab) (named : List (String × Ty)) (spaces : List String := []) (eigner : List String := []) : STyp → Except String Ty
   | .atom "bool" => .ok .bool
+  | .atom "f32" | .atom "f64" => .ok uFloatTy
   | .atom a =>
     match named.find? (fun entry => strEq entry.1 a) with
     | some (_, τ) => .ok τ
@@ -300,7 +303,7 @@ def uFeld (alias : List (String × (Int × Int))) (tnames : List String) :
       match tnames.findIdx? (fun x => strEq x tn) with
       | .some num => .ok ((fname, (0, 1)), UFeldArt.opt num)
       | .none => .error ("table unknown: " ++ tn)
-    | .array _ _ | .str _ =>
+    | .atom "f32" | .atom "f64" | .array _ _ | .str _ =>
       match uTyp alias [] ftyp with
       | .ok τ => .ok ((fname, (0, 0)), UFeldArt.wert τ)
       | .error e => .error e

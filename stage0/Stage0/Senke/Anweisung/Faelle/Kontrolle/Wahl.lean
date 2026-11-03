@@ -61,7 +61,7 @@ theorem ite_ok {O : Orakel D} {passes : Nat} {R : (f : D.Fn) → World D → Env
   intro hpc
   have hks := hW.ks
   have hpw := PreS.welt hpc hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte)
+  obtain ⟨m1, st, a1, w, hw, hen⟩ := lowE_ok (same := by intro _; rfl) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte)
     (fun _ h => h) hW.lay cnd (frei Γ reserved) cc tc hcc htc m pc ρ hpw |>.word trivial
   exact ⟨m1, st, Agree.widen a1 hks, w, hw, hen⟩
 

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Kern.Syntax.Syntax.Teil1
+public import Grammatik.Kern.Syntax.Syntax.Teil1b
 public import Grammatik.Kern.Syntax.Marken.Owner.Flow
 public import Grammatik.Kern.Syntax.Marken.Owner.Ledger
 public import Grammatik.Kern.Syntax.Marken.Owner.Conservation

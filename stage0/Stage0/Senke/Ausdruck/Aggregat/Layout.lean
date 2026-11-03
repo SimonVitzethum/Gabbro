@@ -27,10 +27,10 @@ def sumPayloadWords (cs : List (Option Ty)) : Nat :=
     | some (.int lo hi) => integerWords 0 (hi - lo)
     | some _ => 0)) 0
 
+mutual
 /-- Canonical width in runner words, including the empty value's zero marker.
     Long strings contain length followed by one word per byte, padded with zero.
     Short strings retain their established packed encoding. -/
-mutual
 def valueWords : Ty → Nat
   | .int lo hi => integerWords lo hi
   | .arr τ n => max 1 (n * valueWords τ)

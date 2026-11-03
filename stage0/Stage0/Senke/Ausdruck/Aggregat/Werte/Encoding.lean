@@ -14,9 +14,9 @@ namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
 
+mutual
 /-- The unique canonical word sequence of a model value. Reference validity, floating
     well-formedness and world permissions remain separate proof obligations. -/
-mutual
 def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .int lo hi, v => integerEncoding (integerWords lo hi) v.n
   | .bool, v => [if wahr? (D := D) v then 1 else 0]
@@ -67,25 +67,37 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
       have : 1 ≤ n * valueWords τ := Nat.mul_pos (by omega) (by omega)
       omega
   | prod name fs =>
-    have fields : ∀ (vs : ProdVal D.Fn D.passt fs),
+    have fields : (∀ σ ∈ fs, ∀ w : Wert D σ,
+        (encodeWords L σ w).length = valueWords σ) → ∀ (vs : ProdVal D.Fn D.passt fs),
         (encodeProductFields L fs vs).length = productWords fs := by
+      clear v
       induction fs with
-      | nil => intro vs; rfl
+      | nil => intro _ vs; simp only [encodeProductFields, productWords, List.length_nil]
       | cons σ rest ih =>
-        intro vs
+        intro widths vs
         simp only [encodeProductFields, List.length_append, productWords]
-        rw [encodeWords_length L σ (ProdVal.hd vs), ih]
-    simp only [encodeWords, encodeProduct, valueWords]
-    split
-    · next h => subst fs; rfl
-    · next h =>
-      rw [fields]
-      cases fs with
-      | nil => exact False.elim (h rfl)
-      | cons σ rest =>
-        have := valueWords_pos σ
-        simp only [productWords]
-        omega
+        rw [widths σ List.mem_cons_self,
+          ih (fun χ member => widths χ (List.mem_cons_of_mem _ member))]
+    have widths : ∀ σ ∈ fs, ∀ w : Wert D σ,
+        (encodeWords L σ w).length = valueWords σ := by
+      intro σ member w
+      exact encodeWords_length L σ w
+    have hp : ∀ vs : ProdVal D.Fn D.passt fs,
+        (encodeProduct L fs vs).length = max 1 (productWords fs) := by
+      intro vs
+      rw [encodeProduct.eq_def]
+      split
+      · next h => subst fs; simp [productWords]
+      · next h =>
+        rw [fields widths]
+        cases fs with
+        | nil => exact False.elim (h rfl)
+        | cons σ rest =>
+          have := valueWords_pos σ
+          simp only [productWords]
+          omega
+    simp only [encodeWords, valueWords]
+    exact hp v
   | str n =>
     simp only [encodeWords, valueWords]
     split
@@ -93,7 +105,8 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     · simp only [List.length_append, List.length_cons, List.length_map, List.length_replicate]
       have := v.2; omega
   | opt n =>
-    simp only [encodeWords, valueWords]
+    rw [encodeWords.eq_def]; dsimp only
+    simp only [valueWords]
     split
     · rfl
     · cases v <;> simp [integerEncoding_length, Nat.add_comm]
@@ -106,6 +119,16 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
   | _ => simp [encodeWords, integerEncoding_length, valueWords]
 
 termination_by sizeOf τ
+decreasing_by
+  all_goals
+    subst_vars
+    first
+      | decreasing_trivial
+      | (simp_wf; simp only [Ty.arr.sizeOf_spec]; omega)
+      | (simp_wf
+         have hs := List.sizeOf_lt_of_mem ‹_ ∈ _›
+         simp only [Ty.prod.sizeOf_spec] at *
+         omega)
 
 /-- Typed parameters use the same tail-first order as lexical variable offsets.
     Starts and ordinary calls therefore share one encoded parameter sequence. -/
@@ -119,10 +142,10 @@ def encodeEnv (L : Lay D) : {Γ : Ctx} → Env D Γ → List Runner.W
   | nil => rfl
   | cons v ρ ih => simp only [encodeEnv, List.length_append, ih, encodeWords_length, contextWords_cons]
 
+mutual
 /-- Representation validity retains the target obligations of scalar references
     and IEEE values recursively through every aggregate element. Source ranges,
     string bounds and tag membership are already carried by `Wert`. -/
-mutual
 def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
   | .ref n, v => v.zelle < 2 ^ 64 ∧
       ∃ t, D.tabNr n = some t ∧ D.offen t = true ∧ (v.zelle : Int) < L.count t
@@ -142,7 +165,7 @@ end
 theorem ProdValid.field {L : Lay D} {fs : List Ty} {σ : Ty}
     (i : FieldAt fs σ) (v : ProdVal D.Fn D.passt fs)
     (valid : ProdValid L fs v) : ValueValid L σ (prodGetW i v) := by
-  induction i generalizing v with
+  induction i with
   | head => exact valid.1
   | tail i ih => exact ih (ProdVal.tl v) valid.2
 
@@ -166,18 +189,26 @@ theorem ValueAt.array_element {L : Lay D} {m : Runner.Mem} {fp : Runner.W}
 theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (.arr τ n)) :
     encodeWords L (.arr τ (n + 1)) (arrConsW a rest) =
       encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) rest) := by
-  simp only [encodeWords, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false, if_false,
-    elementEncoding, arrConsW, ↓reduceDIte]
-  have tail : (fun i : Fin n => encodeWords L τ
-      (if h : i.succ.val = 0 then a else rest ⟨i.succ.val - 1, by have := i.isLt; omega⟩)) =
-      (fun i => encodeWords L τ (rest i)) := by
-    funext i
-    simp only [Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false, ↓reduceDIte,
-      Nat.add_sub_cancel]
-  rw [tail]
-  by_cases empty : n = 0
-  · subst n; simp [elementEncoding]
-  · simp only [if_neg empty]
+  have consEncoding (xs : Fin n → Wert D τ) :
+      encodeWords L (.arr τ (n + 1)) (arrConsW a xs) =
+        encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) xs) := by
+    rw [encodeWords.eq_def L (.arr τ (n + 1)) (arrConsW a xs)]
+    dsimp only
+    rw [if_neg (by omega), elementEncoding]
+    have head : encodeWords L τ (arrConsW a xs ⟨0, by omega⟩) = encodeWords L τ a := by
+      simp only [arrConsW, ↓reduceDIte]
+    have tail : (fun i : Fin n => encodeWords L τ (arrConsW a xs i.succ)) =
+        (fun i => encodeWords L τ (xs i)) := by
+      funext i
+      simp only [arrConsW, Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false,
+        ↓reduceDIte, Nat.add_sub_cancel]
+    rw [head, tail]
+    by_cases empty : n = 0
+    · subst n; simp [elementEncoding]
+    · rw [if_neg empty, encodeWords.eq_def L (.arr τ n) xs]
+      dsimp only
+      rw [if_neg empty]
+  exact consEncoding (fun i => rest i)
 
 theorem ValueValid.arrCons {τ : Ty} {n : Nat} {a : Wert D τ} {rest : Wert D (.arr τ n)}
     (head : ValueValid L τ a) (tail : ValueValid L (.arr τ n) rest) :

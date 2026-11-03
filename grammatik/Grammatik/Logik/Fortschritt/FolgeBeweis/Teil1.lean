@@ -153,6 +153,8 @@ theorem fR_mono (e : Bool) :
   | _, _, _, .frei _ k, w, w', hw, h => fR_mono e k w w' hw h
   | _, _, _, .trav .., _, _, _, h => h
   | _, _, _, .travRest .., _, _, _, h => h
+  | _, _, _, .verbrauch .., _, _, _, h => h
+  | _, _, _, .verbrauchRest .., _, _, _, h => h
   | _, _, _, .wieder .., _, _, _, h => h
   | _, _, _, .wiederRest .., _, _, _, h => h
   | _, _, _, .ewig .., _, _, _, h => h

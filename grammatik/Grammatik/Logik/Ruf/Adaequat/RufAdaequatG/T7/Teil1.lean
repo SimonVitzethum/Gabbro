@@ -37,6 +37,12 @@ theorem SG.nimmt {σ σ' : World D} (h : SG σ σ') (L : D.Lock) : SG (σ.nimmt 
 
 theorem SG.gibt {σ σ' : World D} (h : SG σ σ') (L : D.Lock) : SG (σ.gibt L) (σ'.gibt L) := h
 
+/-- Releasing the same scope list on both sides keeps `SG`. -/
+theorem SG.gibt_foldl : ∀ (Ls : List D.Lock) (σ σ' : World D),
+    SG σ σ' → SG (Ls.foldl World.gibt σ) (Ls.foldl World.gibt σ')
+  | [], _, _, h => h
+  | _ :: Ls, σ, σ', h => SG.gibt_foldl Ls _ _ (h.gibt _)
+
 theorem SG.schreibSlot {σ σ' : World D} (h : SG σ σ') (t : D.Tab) (Λ : List (Res D))
     (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
     SG (σ.schreibSlot t Λ k f v) (σ'.schreibSlot t Λ k f v) := by

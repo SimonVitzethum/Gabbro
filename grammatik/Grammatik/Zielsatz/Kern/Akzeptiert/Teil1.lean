@@ -32,6 +32,7 @@ import all Init.Data.String.Termination
 import all Init.Data.String.ToSlice
 
 public import Grammatik.Zielsatz.Kern.Spec
+public import Grammatik.Kern.Syntax.Satz.T3
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Logik.Vertraege.EinpassenVoll
@@ -300,6 +301,13 @@ def fussWB (P : Programm D) (S : SperrInv D) (fs ws : List D.Fn) : Bool :=
 def stufenB (P : Programm D) (fs : List D.Fn) : Bool :=
   fs.all fun f => mE (bodenM f) (P.rumpf f)
 
+/-- **The scope discipline on every body (C11)**: every `retScoped`/
+    `retWhyScoped` releases only locks outside the residual and at or
+    above the floor (`ScopesOkProg`). The Satz carries it as a premise
+    (`rufAt_gut`, `exec_gut`); the checker decides it here. -/
+def scopesOkProgB (P : Programm D) (fs : List D.Fn) : Bool :=
+  fs.all fun f => (P.rumpf f).scopesOk (D.signatur f).haelt (D.signatur f).boden
+
 /-- Every protected carrier is guarded by its lock (first half of
     `SperrInvOk`). -/
 def sperrOrteB (S : SperrInv D) (ls : List D.Lock) : Bool :=
@@ -366,12 +374,13 @@ def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
 /-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** The last conjunct is the C02
     library binding: generated programs are ordinary, so it holds by construction
     (`libraryB_immer`); the content is source-level (`Uebersetzung.lean`). -/
-def Akzeptiert (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
+def Akzeptiert [DecidableEq D.Ax] (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
-    (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := []) : Bool :=
+    (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
+    (aqs : List D.Ax := []) : Bool :=
   programmImFragmentG P fs && abgAlleB P fs && fussWB P S fs ws && stufenB P fs &&
     sperrOrteB S ls && wurzelnB ws && einzelnPoolB P fs cs ws && rennB P fs cs ws &&
-    antwortenB P fs && maskenB P fs && schnittstellenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs cs aks && checkB P (tabsOf cs) (globsOf cs) fs checks
+    antwortenB P fs && maskenB P fs && schnittstellenB P fs && resetB cs && libraryB P fs && Kernzelle.accumulatorB P fs (tabsOf cs) (globsOf cs) aqs aks && checkB P (tabsOf cs) (globsOf cs) fs checks && scopesOkProgB P fs
 
 /-! ## 4. Each component decides its field of `AkzeptiertSpec` -/
 
@@ -421,6 +430,11 @@ theorem fussWB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
 
 omit [DecidableEq D.Fn] in
 theorem stufenB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) : stufenB P fs = true ↔ StufenM P :=
+  ⟨fun h f => (List.all_eq_true.mp h) f (hvoll f), fun h => List.all_eq_true.mpr fun f _ => h f⟩
+
+omit [DecidableEq D.Fn] in
+theorem scopesOkProgB_iff (hvoll : ∀ g : D.Fn, g ∈ fs) :
+    scopesOkProgB P fs = true ↔ ScopesOkProg P :=
   ⟨fun h f => (List.all_eq_true.mp h) f (hvoll f), fun h => List.all_eq_true.mpr fun f _ => h f⟩
 
 omit [DecidableEq D.Fn] in

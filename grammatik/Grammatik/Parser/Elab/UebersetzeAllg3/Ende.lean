@@ -50,6 +50,14 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .bindW x d v :: rest =>
     (lowBindW u Γ Λ fn d v).bind fun w =>
       (R.ende (l := l) (w.ty :: Γ) (fn.mitWert x w.ty) Λ pe rest).bind fun (b, r) => .ok (Endblock.bind w.term b, r)
+  | Γ, fn, Λ, pe, .floatLit x q lo hi :: rest => do
+    let (body, remaining) ← R.ende (l := l) (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest
+    pure (Endblock.floatLit q lo hi body, remaining)
+  | Γ, fn, Λ, pe, .float x op a b lo hi :: rest => do
+    let ⟨.fl _ _, left⟩ ← lowWertE u Γ Λ fn none a | .error "float: left operand is not a float"
+    let ⟨.fl _ _, right⟩ ← lowWertE u Γ Λ fn none b | .error "float: right operand is not a float"
+    let (body, remaining) ← R.ende (l := l) (.fl lo hi :: Γ) (fn.mitWert x (.fl lo hi)) Λ pe rest
+    pure (Endblock.float op left right lo hi body, remaining)
   | Γ, fn, Λ, pe, .bindB x v :: rest =>
     (lowEns u Γ Λ fn none v).bind fun ev =>
       (R.ende (l := l) (.bool :: Γ) (fn.mitBindungB x) Λ pe rest).bind fun (b, r) => .ok (Endblock.bind ev b, r)
@@ -73,6 +81,15 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           | .ok (sonst, .blkEnd :: rest') =>
             (R.ende (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest').bind fun (b, r) => .ok (Endblock.narrow (D := declOf u) (Expr.var v) lo hi sonst b, r)
           | .ok (_, _) => .error "lower: a narrow is not closed"
+      | _ => .error "lower: narrow of a non-number"
+  /-- Required narrowing at the top level of a body (C15): no `else`, no
+      `blkEnd`; out of range is `Logik.kapazitaet`
+      (`Endblock.narrowRequired`). -/
+  | Γ, fn, Λ, pe, .narrowReqBeg x lo hi :: rest =>
+    (paramPos fn.params x).bind fun j => match fn.params[j]? with
+      | some (_, .int l1 h1) =>
+        (lowVar Γ j (.int l1 h1)).bind fun v =>
+          (R.ende (l := l) (.int lo hi :: Γ) (fn.mitBindung x (lo, hi)) Λ pe rest).bind fun (b, r) => .ok (Endblock.narrowRequired (D := declOf u) (Expr.var v) lo hi b, r)
       | _ => .error "lower: narrow of a non-number"
   | Γ, fn, Λ, pe, .bindFnref x f m :: rest =>
     (fnIdx u.fns f).bind fun g =>
@@ -134,8 +151,18 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
               (R.ende (l := l) ((regAt u g).ty :: Γ) (fn.mitTy x (regAt u g).ty) Λ pe rest').bind fun (b, r') => .ok (Endblock.regReadElse (D := declOf u) g hk zu sonst b, r')
             | .ok (_, _) => .error "lower: a let else is not closed"
       else .error "lower: register read against its class"
-  | _, _, _, _, .allocBeg .. :: _ =>
-    .error "lower: an alloc in an else branch has no G form (Endblock lacks arenaAlloc)"
+  | Γ, fn, Λ, pe, .allocBeg x an v :: rest =>
+    (tabIdx u.tabs an).bind fun t =>
+      (globIdx u.globs (an ++ "#used")).bind fun g =>
+        (fieldHit u t "wert").bind fun fh =>
+          (lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v).bind fun ev0 =>
+            match R.ende (l := l) Γ fn Λ pe rest with
+            | .error e => .error e
+            | .ok (voll, .blkEnd :: rest') =>
+              match R.ende (l := l) (Ty.index ((declOf u).count t) :: Γ) (fn.mitIndex x t.val ((declOf u).count t)) Λ pe rest' with
+              | .error e => .error e
+              | .ok (b, r) => (mkAllocEndBlock u caller Γ Λ t g fh ev0 voll b).bind fun blk => .ok (blk, r)
+            | .ok (_, _) => .error "lower: an alloc is not closed"
   | Γ, fn, Λ, pe, .bindOptBeg x c args :: rest =>
     (lowAxKopf u caller Γ fn Λ c args).bind fun k =>
       if hp : rufPasstB u (verOf u caller) ((declOf u).asignatur k.ax) Λ = true then
@@ -163,8 +190,14 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
           | .ok (_, _) => .error "lower: a let else is not closed"
         else .error "lower: let else of a foreign call without a reason channel"
       else .error "foreign call does not conform to caller contract"
-  | _, _, _, _, .allocReqBeg .. :: _ =>
-    .error "lower: an alloc without else in an else branch has no G form (Endblock lacks arenaAllocRequired)"
+  | Γ, fn, Λ, pe, .allocReqBeg x an v :: rest =>
+    (tabIdx u.tabs an).bind fun t =>
+      (globIdx u.globs (an ++ "#used")).bind fun g =>
+        (fieldHit u t "wert").bind fun fh =>
+          (lowWertAt u Γ Λ fn fh.range.1 fh.range.2 v).bind fun ev0 =>
+            match R.ende (l := l) (Ty.index ((declOf u).count t) :: Γ) (fn.mitIndex x t.val ((declOf u).count t)) Λ pe rest with
+            | .error e => .error e
+            | .ok (b, r) => (mkAllocRequiredEndBlock u caller Γ Λ t g fh ev0 b).bind fun blk => .ok (blk, r)
   | Γ, fn, Λ, pe, .bindAxElse y c args e :: rest => match lowAxKopf u caller Γ fn Λ c args with
     | .error err => .error err
     | .ok k =>
@@ -190,7 +223,7 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .matchTagBeg sidx m bs :: rest =>
     match R.struct (l := l) Γ fn Λ pe (.matchTagBeg sidx m bs) rest with
     | .error err => .error err
-    | .ok (⟨Λ₁, st, rest'⟩) => match R.ende (l := l) Γ fn Λ₁ pe rest' with
+    | .ok ((⟨Λ₁, st⟩, rest')) => match R.ende (l := l) Γ fn Λ₁ pe rest' with
       | .error err => .error err
       | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .bindSum x sidx v :: rest =>
@@ -203,15 +236,15 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
   | Γ, fn, Λ, pe, .matchWhyBeg e :: rest =>
     match R.struct (l := l) Γ fn Λ pe (.matchWhyBeg e) rest with
     | .error err => .error err
-    | .ok (⟨Λ₁, st, rest'⟩) => match R.ende (l := l) Γ fn Λ₁ pe rest' with
+    | .ok ((⟨Λ₁, st⟩, rest')) => match R.ende (l := l) Γ fn Λ₁ pe rest' with
       | .error err => .error err
       | .ok (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .startS :: rest => R.ende (l := l) Γ fn Λ pe rest
   | Γ, fn, Λ, pe, .lockBeg g :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.lockBeg g) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.lockBeg g) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .ifBeg c :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.ifBeg c) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.ifBeg c) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .ifEnde c :: rest =>
     -- both arms end: `Endblock.ite`; with anything but a closer behind it, the plain `if`
@@ -221,23 +254,23 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
       | .ok (e, .blkEnd :: .ifElse :: rest2) => .ok (Endblock.ite cv t e, .ifElse :: rest2)
       | .ok (e, [.blkEnd]) => .ok (Endblock.ite cv t e, [])
       | _ =>
-        (R.struct (l := l) Γ fn Λ pe (.ifBeg c) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+        (R.struct (l := l) Γ fn Λ pe (.ifBeg c) rest).bind fun (⟨Λ₁, st⟩, rest') =>
           (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
     | .error e, _ => .error e
     | _, _ =>
-      (R.struct (l := l) Γ fn Λ pe (.ifBeg c) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+      (R.struct (l := l) Γ fn Λ pe (.ifBeg c) rest).bind fun (⟨Λ₁, st⟩, rest') =>
         (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .arrayLoopBeg bnd array inv :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.arrayLoopBeg bnd array inv) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.arrayLoopBeg bnd array inv) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .loopBeg bnd tab inv :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.loopBeg bnd tab inv) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.loopBeg bnd tab inv) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .retryBeg cnt bis :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.retryBeg cnt bis) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.retryBeg cnt bis) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .matchBeg num o k :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.matchBeg num o k) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.matchBeg num o k) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, .bindOpt x num o :: rest =>
     if hnum : num < u.tabs.length then
@@ -247,7 +280,7 @@ def lowEndStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe 
         | .ok (b, r) => .ok (Endblock.bind ev b, r)
     else .error "option table unknown"
   | Γ, fn, Λ, pe, .foreverBeg k :: rest =>
-    (R.struct (l := l) Γ fn Λ pe (.foreverBeg k) rest).bind fun ⟨Λ₁, st, rest'⟩ =>
+    (R.struct (l := l) Γ fn Λ pe (.foreverBeg k) rest).bind fun (⟨Λ₁, st⟩, rest') =>
       (R.ende (l := l) Γ fn Λ₁ pe rest').bind fun (b, r) => .ok (Endblock.cons st b, r)
   | Γ, fn, Λ, pe, s :: rest =>
     (lowStmtL u caller Γ fn Λ s).bind fun ⟨Λ₁, st⟩ =>

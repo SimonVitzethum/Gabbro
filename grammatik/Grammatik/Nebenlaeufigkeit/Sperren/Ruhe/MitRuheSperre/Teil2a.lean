@@ -156,17 +156,47 @@ theorem execStmtH_ru_consumeTraverse {V : Vertrag D}
     : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ _) σ ρ) :=
   by
   simp only [ruS, execStmtH]
-  have hL := traverseLauf_rel (l := l) (fun σ ρ => execBlockH S O U passes R body σ ρ)
+  rw [show (D.mitRuhe.count t).toNat + bound.toNat + 1 =
+    (D.count t).toNat + bound.toNat + 1 from by rfl]
+  refine verbrauchLauf_rel (D := D) t
+    (fun σ ρ => execBlockH S O U passes R body σ ρ)
     (fun σ ρ => execBlockH S.mitRuhe O' U' passes R' (ruB body) σ ρ)
     (fun σ ρ => (σ.lese Λ inv.orte, wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ)))
     (fun σ ρ => (σ.lese (Λ.map resR) (ruE inv).orte,
       wahr? (eval (σ.lese (Λ.map resR) (ruE inv).orte) (ruE inv)
         (σ.lese (Λ.map resR) (ruE inv).orte) ρ)))
-    (fun σ ρ => ih_execBlockH_ru_body σ ρ)
+    (verbrauchSel t member edge) (verbrauchSel t (ruE member) (ruE edge))
+    (fun σ ρ => let σ := σ.lese Λ mass.orte; (σ, (eval σ mass σ ρ).n))
+    (fun σ ρ => let σ := σ.lese (Λ.map resR) (ruE mass).orte; (σ, (eval σ (ruE mass) σ ρ).n))
+    bound (fun σ ρ => ih_execBlockH_ru_body σ ρ)
     (fun σ ρ => by simp only [ruE_orte, lese_worldR, eval_ru, valR_bool, wahr?])
-    (alleIndizes (D.count t)) σ ρ
-  rw [map_valR_int] at hL
-  exact hL
+    ?_ ?_ ((D.count t).toNat + bound.toNat + 1) σ ρ
+  · intro σ' ρ'
+    simp only [verbrauchSel, ruE_orte, lese_worldR, Prod.mk.injEq]
+    refine ⟨rfl, ?_, ?_⟩
+    · change verbrauchWahl (alleIndizes (D.count t)) _ _ _ = _
+      conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
+      refine verbrauchWahl_map _ _ _ _ _ _ _ _ ?_ ?_ ?_
+      · intro k _
+        have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
+        simp only [henv, eval_ru, valR_bool]
+      · intro j _ k _
+        have henv : Env.cons (valR _ j) (Env.cons (valR _ k) (envR ρ')) =
+            envR (Env.cons j (Env.cons k ρ')) := rfl
+        simp only [henv, eval_ru, valR_bool]
+      · intro j _ k _
+        simp only [show (valR _ j).n = j.n from congrArg Zahl.n (valR_int j),
+          show (valR _ k).n = k.n from congrArg Zahl.n (valR_int k)]
+    · conv => lhs; rw [show D.mitRuhe.count t = D.count t from rfl]
+      conv => lhs; rw [← map_valR_int (D := D) 0 (D.count t - 1) (alleIndizes (D.count t))]
+      exact map_all_beibehalt _ _ _ _ (fun k _ => by
+        have henv : Env.cons (valR _ k) (envR ρ') = envR (Env.cons k ρ') := rfl
+        simp only [henv, eval_ru, valR_bool])
+  · intro σ' ρ'
+    simp only [ruE_orte, lese_worldR, Prod.mk.injEq]
+    refine ⟨rfl, ?_⟩
+    simp only [eval_ru]
+    exact congrArg Zahl.n (valR_int _)
 
 set_option linter.unusedSectionVars false in
 theorem execStmtH_ru_retry {V : Vertrag D}
@@ -344,7 +374,23 @@ theorem execStmtH_ru_retScoped {V : Vertrag D}
   refine Or.inl ?_
   simp only [ruS, execStmtH]
   erw [ruErg_orte, lese_worldR, evalErg_ru]
+  rw [gibt_foldl_worldR]
   rfl
+
+set_option linter.unusedSectionVars false in
+theorem execStmtH_ru_retWhyScoped {V : Vertrag D}
+    {l : Bool}
+    {Γ : Ctx}
+    {Λ : List (Res D)}
+    (r)
+    (R)
+    (σ : World D)
+    (ρ : Env D Γ)
+    : AusRelRu (execStmtH S.mitRuhe O' U' passes R' (ruS (.retWhyScoped r R : Stmt D V l Γ Λ _)) (worldR σ) (envR ρ)) (execStmtH S O U passes R (.retWhyScoped r R : Stmt D V l Γ Λ _) σ ρ) :=
+  by
+  refine Or.inl ?_
+  simp only [ruS, execStmtH]
+  rw [gibt_foldl_worldR]
 
 set_option linter.unusedSectionVars false in
 theorem execBlockH_ru_cons {V : Vertrag D}

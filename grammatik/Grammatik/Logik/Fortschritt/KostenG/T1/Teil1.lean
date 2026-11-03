@@ -129,6 +129,8 @@ def rufeR (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) {V : Vertrag D} {l
   | .frei _ k => rufeR Z ZS EW k
   | .trav _ _ body _ k => rufeB Z ZS EW body && rufeR Z ZS EW k
   | .travRest _ _ body _ k => rufeB Z ZS EW body && rufeR Z ZS EW k
+  | .verbrauch _ _ _ _ _ _ body _ k => rufeB Z ZS EW body && rufeR Z ZS EW k
+  | .verbrauchRest _ _ _ _ _ _ body _ _ k => rufeB Z ZS EW body && rufeR Z ZS EW k
   | .wieder _ _ body ueber k => rufeB Z ZS EW body && rufeB Z ZS EW ueber && rufeR Z ZS EW k
   | .wiederRest _ _ body ueber k => rufeB Z ZS EW body && rufeB Z ZS EW ueber && rufeR Z ZS EW k
   | .ewig _ _ _ body k => EW && rufeB Z ZS EW body && rufeR Z ZS EW k
@@ -156,6 +158,12 @@ def potRest (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
       1 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
   | .travRest _ inv body ks k =>
       2 + ks.length * (kostenBlock c pa body + kostenExpr inv + 2) + potRest c pa k
+  | .verbrauch _ member edge inv _ mass body rest k =>
+      1 + rest * (kostenBlock c pa body + kostenExpr member + kostenExpr edge +
+        kostenExpr inv + kostenExpr mass + 2) + potRest c pa k
+  | .verbrauchRest _ member edge inv _ mass body rest _ k =>
+      2 + rest * (kostenBlock c pa body + kostenExpr member + kostenExpr edge +
+        kostenExpr inv + kostenExpr mass + 2) + potRest c pa k
   | .wieder n bis body ueber k =>
       1 + n * (kostenBlock c pa body + kostenExpr bis + 2) + (2 + kostenExpr bis + kostenBlock c pa ueber) +
         potRest c pa k

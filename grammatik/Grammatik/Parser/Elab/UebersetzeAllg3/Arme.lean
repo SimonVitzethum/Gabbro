@@ -26,7 +26,7 @@ def lowArmsStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe
     Except String (Arms (declOf u) (verOf u caller) l Γ Λ Λ cs × List UStmt)
   | _, _, _, _, [], _, rest => .ok (Arms.nil, rest)
   | Γ, fn, Λ, pe, none :: cs', bs, rest =>
-    (R.seq (l := l) Γ fn Λ pe rest).bind fun ⟨Λ₁, b, r⟩ => match cs' with
+    (R.seq (l := l) Γ fn Λ pe rest).bind fun (⟨Λ₁, b⟩, r) => match cs' with
       | [] =>
         if h : Λ₁ = Λ then
           .ok (Arms.cons (by subst h; exact b) Arms.nil, r)
@@ -39,7 +39,7 @@ def lowArmsStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStufe
             else .error "lower: a match arm changes held marks"
         | _ => .error "lower: a match has fewer arms than cases"
   | Γ, fn, Λ, pe, some τ :: cs', bs, rest =>
-    (R.seq (l := l) (τ :: Γ) (fn.mitTy (bs.headD "") τ) Λ pe rest).bind fun ⟨Λ₁, b, r⟩ =>
+    (R.seq (l := l) (τ :: Γ) (fn.mitTy (bs.headD "") τ) Λ pe rest).bind fun (⟨Λ₁, b⟩, r) =>
       match cs' with
       | [] =>
         if h : Λ₁ = Λ then
@@ -60,7 +60,7 @@ def lowGArmsStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStuf
     Except String (GrundArms (declOf u) (verOf u caller) l Γ Λ Λ m × List UStmt)
   | _, _, _, _, 0, rest => .ok (GrundArms.nil, rest)
   | Γ, fn, Λ, pe, m + 1, rest =>
-    (R.seq (l := l) Γ fn Λ pe rest).bind fun ⟨Λ₁, b, r⟩ => match m with
+    (R.seq (l := l) Γ fn Λ pe rest).bind fun (⟨Λ₁, b⟩, r) => match m with
       | 0 =>
         if h : Λ₁ = Λ then
           .ok (GrundArms.cons (by subst h; exact b) GrundArms.nil, r)

@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Parser.Elab.Uebersetze
+public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil2
 public import Grammatik.Parser.Namen.Namensraum
 
 import all Init.Data.Repr
@@ -165,6 +165,8 @@ def letzter (p : Pfad) : String := p.getLast?.getD ""
 
 /-- The declared name of an item, if it declares one. -/
 def itemName : SItemTief → Option String
+  | .taggedByT decl _ => itemName decl
+  | .specGroupT n _ _ _ => some n
   | .typeT _ n _ _ _ => some n
   | .constT n _ _ => some n
   | .globT _ n _ _ _ _ _ => some n
@@ -185,7 +187,7 @@ def itemName : SItemTief → Option String
   | .lockT n _ _ _ _ _ _ => some n
   | .rcuT n _ _ => some n
   | .groupT n _ _ => some n
-  | .accT n _ _ _ => some n
+  | .accT n _ _ _ _ => some n
   | .walkT w => some w.name
   | .entryT e => some e.name
   | .callT c => some c.name

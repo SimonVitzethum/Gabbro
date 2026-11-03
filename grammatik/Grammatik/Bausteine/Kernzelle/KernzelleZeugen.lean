@@ -47,8 +47,10 @@ theorem akkuZellTyp_zeuge : zAD.gtyp (zA.zellen 1) = Ty.int zA.lo zA.hi :=
   akkuZellTyp zA_ok 1
 
 theorem akkuEinzelB_iff_zeuge :
-    akkuEinzelB zAP zAFs zACs zA = true ↔ akkuZulaessig zAP zAFs zA :=
-  akkuEinzelB_iff zAFs_voll zACs_voll
+    akkuEinzelB zAP zAFs zATabs zAGlobs zAQs zA = true ↔
+      (akkuZulaessig zAP zAFs zA ∧
+        ∃ q ∈ zAQs, KernAbfrageVerbunden zAP zA q) :=
+  akkuEinzelB_iff zAFs_voll zATabs_voll zAGlobs_voll
 
 private theorem closed : ∀ w, AbgK zAP zAFs (reachB zAP zAFs w) := by
   intro w
@@ -66,7 +68,7 @@ theorem akkuZulaessig_mitRuhe_zeuge :
 theorem accumulatorAdmission_mitRuhe_zeuge :
     AccumulatorAdmission zAP.mitRuhe (fsRuhe zAFs)
       ([zA].map AccumulatorDecl.mitRuhe) :=
-  accumulatorAdmission_mitRuhe zAP zAFs_voll closed akkuProgramm_zeuge
+  accumulatorAdmission_mitRuhe zAP zAFs_voll closed akkuProgramm_zeuge.1
 
 private def startUnit : Einheit zAD where
   P := zAP
@@ -82,6 +84,6 @@ theorem akkuStartB_sound_zeuge : AkkuStart startUnit [zA] :=
   akkuStartB_sound (by decide)
 
 theorem akkuStartB_vollst_zeuge : akkuStartB startUnit [zA] = true :=
-  akkuStartB_vollst akkuProgramm_zeuge akkuStartB_sound_zeuge
+  akkuStartB_vollst akkuProgramm_zeuge.1 akkuStartB_sound_zeuge
 
 end Gabbro.Grammatik.Kernzelle

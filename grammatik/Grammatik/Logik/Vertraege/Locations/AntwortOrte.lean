@@ -222,6 +222,12 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       kopfAnt
       all_goals simp_all [GRest.aR_weiterOpt]
 
+  | g7 hs =>
+    cases hs with
+    | _ =>
+      kopfAnt
+      all_goals simp_all [GRest.aR_weiterOpt]
+
 /-! ## 4. The frame invariant -/
 
 /-- **The site bound of a thread**: every frame's residue has its answer sites in `C`. -/

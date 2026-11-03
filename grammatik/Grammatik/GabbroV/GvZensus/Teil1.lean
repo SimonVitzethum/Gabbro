@@ -105,7 +105,7 @@ def alsFunktion : SItemTief → Option (FnSig × SAnw)
   | .fnT s b => some (s, b)
   | _ => none
 
-/-- Statement tag (all 33 arms of `SAnw`; `Anweisung.lean`). -/
+/-- Statement tag (all 34 arms of `SAnw`; `Anweisung.lean`). -/
 def artAnw : SAnw → String
   | .bind .. => "let"
   | .bindElse .. => "let-else"
@@ -125,6 +125,7 @@ def artAnw : SAnw → String
   | .loop .. => "forever"
   | .waive .. => "waive"
   | .trim .. => "narrow"
+  | .trimReq .. => "narrow-required"
   | .locks .. => "locks"
   | .watch .. => "observe"
   | .leave .. => "leave"

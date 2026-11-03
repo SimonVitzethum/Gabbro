@@ -263,6 +263,12 @@ def GRest.okS (P : Programm D) (S S' : List (D.Tab ⊕ D.Glob)) {V : Vertrag D} 
       inv.orte ⊆ S ∧ body.gOk (kandP P S) (regP S') = true ∧ blockOrteP P body ⊆ S ∧ k.okS P S S'
   | _, _, _, .travRest _ inv body _ k =>
       inv.orte ⊆ S ∧ body.gOk (kandP P S) (regP S') = true ∧ blockOrteP P body ⊆ S ∧ k.okS P S S'
+  | _, _, _, .verbrauch _ member edge inv _ mass body _ k =>
+      member.orte ⊆ S ∧ edge.orte ⊆ S ∧ inv.orte ⊆ S ∧ mass.orte ⊆ S ∧
+        body.gOk (kandP P S) (regP S') = true ∧ blockOrteP P body ⊆ S ∧ k.okS P S S'
+  | _, _, _, .verbrauchRest _ member edge inv _ mass body _ _ k =>
+      member.orte ⊆ S ∧ edge.orte ⊆ S ∧ inv.orte ⊆ S ∧ mass.orte ⊆ S ∧
+        body.gOk (kandP P S) (regP S') = true ∧ blockOrteP P body ⊆ S ∧ k.okS P S S'
   | _, _, _, .wieder _ bis body ueber k =>
       bis.orte ⊆ S ∧ body.gOk (kandP P S) (regP S') = true ∧ blockOrteP P body ⊆ S ∧
         ueber.gOk (kandP P S) (regP S') = true ∧

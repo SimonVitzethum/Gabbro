@@ -106,11 +106,11 @@ def atFunction (items : List SItemTief) (u : UProg) (P : Programm (declOf u))
     (f : Fin u.fns.length) : Except String (EnsTy u f) := do
   let src := clauses items (fnAt u f).name
   if !src.any hasEntry then return P.ensures f
-  let e ← predicates u (ErgCtx (ctxOf u f) ((verOf u f).erg)) (resOf u f)
+  let e ← predicates u (ErgCtx (ctxOf u f) ((verOf u f).erg)) (verOf u f).ende
     (fnAt u f) (fnAt u f).ergTy src (fnAt u f).gives
   pure (by
     unfold EnsTy
-    rw [← ensCtx_eq u f, ← endeRes_eq u f]
+    rw [← ensCtx_eq u f]
     exact e)
 
 /-- Evaluate a dependent family once, retaining each result at its own index. -/
@@ -124,7 +124,8 @@ def collect : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except Str
 
 def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
     Except String (Programm (declOf u)) := do
-  let es ← collect u.fns.length (EnsTy u) (atFunction items u P)
+  let expanded ← expandU items
+  let es ← collect u.fns.length (EnsTy u) (atFunction expanded.1 u P)
   pure {P with ensures := es}
 
 /-- Entry-postcondition restoration preserves the exact invariant family. -/
@@ -132,12 +133,16 @@ theorem restore_invariante (items : List SItemTief) (u : UProg)
     (P Q : Programm (declOf u)) (h : restore items u P = .ok Q) :
     Q.invariante = P.invariante := by
   unfold restore at h
-  cases hs : collect u.fns.length (EnsTy u) (atFunction items u P) with
-  | error e => simp [hs] at h
-  | ok es =>
-    simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
-    subst Q
-    rfl
+  cases hx : expandU items with
+  | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
+  | ok expanded =>
+    simp only [hx, bind, Except.bind] at h
+    cases hs : collect u.fns.length (EnsTy u) (atFunction expanded.1 u P) with
+    | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
+    | ok es =>
+      simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
+      subst Q
+      rfl
 
 /-- The full goal-theorem checker, on the final restored program and all original enumerations. -/
 def accepts (u : UProg) (P : Programm (declOf u)) : Except String Bool := do

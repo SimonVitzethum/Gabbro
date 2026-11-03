@@ -70,7 +70,7 @@ theorem eng_ok_zeuge [Kern] :
       unfold CodeFar
       decide +kernel
     · intro _ x; nomatch x
-  exact lowE_int_value_ok FnptrProben.world FnptrProben.world (fun _ h => h)
+  exact lowE_int_value_ok (same := rfl) FnptrProben.world FnptrProben.world (fun _ h => h)
     FnptrProben.call_win.lay expression (by decide) lowered (by change compiled.2 ≤ 256; rw [code_top]; decide) memory Env.nil pre
 
 end Gabbro.Stage0.Senke

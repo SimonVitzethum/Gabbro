@@ -40,7 +40,7 @@ theorem endIte_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (
     simpa [List.append_assoc] using hp
   have hks := hW.ks
   have hpw := PreS.welt hq.left hks hWa hW.lay (by have := hW.lo; omega)
-  obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (fp := fp) (K := Ks) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) (fun _ h => h) hW.lay cnd
+  obtain ⟨m1, s1, a1s, w, hw, hen⟩ := lowE_ok (same := by intro _; rfl) (fp := fp) (K := Ks) (σ.lese Λ cnd.orte) (σ.lese Λ cnd.orte) (fun _ h => h) hW.lay cnd
     (frei Γ reserved) cc tc hcc (by omega) m pc ρ hpw |>.word trivial
   have a1 := Agree.widen a1s hks
   have hWa1 : WeltAt m1 L σ := hpw.wstab m m1 hWa (a1s.mono (Nat.zero_le _))

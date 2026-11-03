@@ -2,11 +2,20 @@
   File:      stage0/Stage0/Senke/Bild.lean
   Subject:   The `S0IR` image of a whole program: header, start code, every function, the stack.
 
-  Layout at `IMG` (the runner's loader maps the file there): word 0 the first frame's address, word 1 zero, the code
-  from byte 16 (the loader's first `pc`), then the stack of `Ks` slots, then the world (`Y b` with `b` its first
-  byte, `Senke/Welt/Lay.lean`); the first frame's `K` slots reach over both, so every frame ends where the world
-  ends (`WIn`). The world starts as the image's zero bytes. The code is the start code (`startC`) and
-  then every function of the program in the order of `fs`, at the addresses `A`.
+  Layout at `IMG` (the runner's loader maps the file there): word 0 the first frame's address, word 1 the
+  required base alignment the builder aligned the world base up to (`baseReq`, a multiple of the combined
+  grid of every declared static alignment), the code from byte 16 (the loader's first `pc`), then the
+  stack of `Ks` slots, then the world (`Y b` with `b` its first byte, `Senke/Welt/Lay.lean`); the first
+  frame's `K` slots reach over both, so every frame ends where the world ends (`WIn`). The world starts
+  as the image's zero bytes. The code is the start code (`startC`) and then every function of the program
+  in the order of `fs`, at the addresses `A`.
+
+  The loader maps the file byte-exact at `IMG` (`Runner/Prog/Code.lean`: `mmap` at `IMG`, private,
+  read-write; `fp` is word 0, `pc` is `IMG + 16`): a builder-chosen file offset alignment is honoured
+  exactly, with no page-granularity limit on intra-image offsets (page granularity constrains only `IMG`
+  itself, `2 ^ 28`). Word 1 records the requirement for audit; it is satisfied by construction
+  (`bodenAusrichtung`, `boden_teilt`), never checked at load time. An alignment the image cannot hold
+  below `2^31` is refused as before ("the image does not fit below 2^31").
 
   The addresses enter the code only as call targets, function references and world addresses (`const`), so a function's code length
   does not depend on them: `bild` lowers once with the address 0 for every function and the world at 0, lays the
@@ -28,6 +37,7 @@
 -/
 module
 public import Stage0.Senke.Rekursion
+public import Stage0.Senke.Welt.AlignUp
 public import Stage0.Senke.Welt.StartLayout
 public import Runner.Prog.IRAsm
 @[expose] public section
@@ -111,13 +121,16 @@ structure Bild (D : Deklaration) where
   roots : List D.Fn
   /-- the words of `main`'s environment, in the first stack frame at the callee's parameter span -/
   args : List Runner.W
+  /-- the required base alignment the world base was aligned up to (`bodenAusrichtung` of the unit);
+      `Y.lo` is a multiple of it, so every placed global is absolutely aligned -/
+  baseReq : Nat
 
 def lowFunE (passes : Nat) (P : Programm D) (Y : Lay D) (name : D.Fn → String) (A : D.Fn → Nat) (g : D.Fn) : Except String (List II × Nat) :=
   match lowFun passes P A Y g with
   | some ct => .ok ct
   | none => .error ("ir: the function " ++ name g ++
       if (lowEns Y (functionFrame P g) (P.ensures g) (functionFrame P g).internalStatus).isNone then
-        " has an unsupported postcondition; old table indices must be closed arithmetic expressions"
+        " has an unsupported postcondition; oldS requires a checked index and an entry column within the frame limit"
       else if (EntrySnapshots.capture Y (oldCells (P.ensures g)) FB).isNone then
         " has an entry snapshot outside the checked storage layout"
       else if (lowInvs Y P g (functionFrame P g).internalStatus D.invs).isNone then
@@ -150,10 +163,12 @@ instance (D : Deklaration) (main : D.Fn) (roots : List D.Fn) (lens : List Nat) (
     (fp0 Ks K : Nat) (Y : Lay D) (code : List II) : Decidable (BildGut D main roots lens cs fp0 Ks K Y code) := by
   unfold BildGut; infer_instance
 
-/-- The image of a program, or why not: `Ks` slots of stack, the world laid out by `Y` from its first byte, `main`
-    started with the environment `ρ` (its words in the first frame). -/
+/-- The image of a program, or why not: `Ks` slots of stack, the world laid out by `Y` from its first
+    byte, `main` started with the environment `ρ` (its words in the first frame). The world base is the
+    stack end aligned up to the required base alignment `req` (`alignUp`: `0` imposes no alignment);
+    `K` covers the stacks, the alignment padding and the world. -/
 def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (pos : D.Fn → Nat) (name : D.Fn → String) (main : D.Fn)
-    (ρ : Env D (D.params main)) (roots : List D.Fn) (Ks : Nat) : Except String (Bild D) :=
+    (ρ : Env D (D.params main)) (roots : List D.Fn) (Ks : Nat) (req : Nat) : Except String (Bild D) :=
   match lowAll passes P (Y 0) name (fun _ => 0) fs with
   | .error e => .error e
   | .ok cs0 =>
@@ -161,8 +176,9 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
     let k := roots.length
     let A : D.Fn → Nat := fun g => (addrs (codeBase + 16 * headLen k) lens).getD (pos g) 0
     let fp0 := codeBase + 16 * (headLen k + lens.sum)
-    let Yb := { Y (fp0 + 8 * (Ks * (k + 1))) with fa := A, sb := fp0, st := 8 * Ks }
-    let K := Ks * (k + 1) + (Yb.sye - Yb.lo + 7) / 8
+    let b := alignUp (fp0 + 8 * (Ks * (k + 1))) req
+    let Yb := { Y b with fa := A, sb := fp0, st := 8 * Ks }
+    let K := (Yb.sye - fp0 + 7) / 8
     match lowAll passes P Yb name A fs with
     | .error e => .error e
     | .ok cs =>
@@ -170,8 +186,8 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
       let n := depthOf Ks (maxTop cs)
       let sp := (List.range k).map fun j => (codeBase + 16 * (3 * k + startLen + startLen * j), fp0 + 8 * (Ks * (j + 1)))
       let code := spawnC (startScratch main) sp ++ startC A main n 231 true ++ rootsC A n roots ++ body
-      if BildGut D main roots lens cs fp0 Ks K Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
-        .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ⟩
+      if BildGut D main roots lens cs fp0 K Ks Yb code ∧ fp0 = codeBase + 16 * (headLen k + body.length) then
+        .ok ⟨code, A, fp0, K, Ks, Yb, n, passes, roots, encodeEnv Yb ρ, req⟩
       else if D.gruende main != 0 then .error "ir: main has an uncaught reason channel"
       else if (roots.all fun f => decide (D.gruende f = 0)) = false then .error "ir: a root has an uncaught reason channel"
       else if (roots.all fun f => (D.params f).isEmpty) = false then .error "ir: a root takes parameters"
@@ -185,9 +201,9 @@ def bild (passes : Nat) (P : Programm D) (Y : Nat → Lay D) (fs : List D.Fn) (p
 def encII (i : II) : List Runner.B := Runner.Prog.insB i.o i.a i.b i.c
 
 /-- The file the runner loads: header, code, `main`'s frame with its parameter words, then the zero bytes of the roots'
-    stacks and the world. -/
+    stacks, the alignment padding and the world. -/
 def Bild.bytes (b : Bild D) : List Runner.B :=
-  Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 0 ++ b.code.flatMap encII ++
+  Runner.Prog.leN 8 b.fp0 ++ Runner.Prog.leN 8 b.baseReq ++ b.code.flatMap encII ++
     ((startFrameBytes b.Ks (FB + FB) b.args).getD [] ++ List.replicate (8 * (b.K - b.Ks)) (0 : Runner.B))
 
 end Gabbro.Stage0.Senke

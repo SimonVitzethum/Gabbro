@@ -4,6 +4,8 @@ public import Stage0.Senke.Ausdruck.Aggregat.Product
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 @[expose] public section
 
+variable {currentOld : Bool}
+
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 variable {D : Deklaration}
@@ -65,10 +67,10 @@ theorem prodGet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     (v : Expr D Γ Λ (.prod name fs))
     {σ₀ σ : World D} {fp pc : Runner.W} {K d top reserved : Nat}
     {W : Runner.Mem → Prop} {ρ : Env D Γ} {c : List Runner.IR.II} {m : Runner.Mem}
-    (ih : ∀ ca ta, lowE L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
+    (ih : ∀ ca ta, lowE (currentOld := currentOld) L (reserved := reserved) v d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved →
         ValueOk L m pc fp K d ca (.prod name fs) (eval σ₀ v σ ρ))
-    (h : prodGetL (name := name) i d (lowE L (reserved := reserved) v d) = some (c, top))
+    (h : prodGetL (name := name) i d (lowE (currentOld := currentOld) L (reserved := reserved) v d) = some (c, top))
     (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c τ (prodGetW i (eval σ₀ v σ ρ)) := by

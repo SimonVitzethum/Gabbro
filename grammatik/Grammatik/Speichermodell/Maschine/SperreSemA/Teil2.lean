@@ -131,6 +131,49 @@ theorem semHA_nextTrav {Λ Λx : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .
   rw [semHA_dann_cons]
   rfl
 
+theorem semHA_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ)
+    (restb : Block D V true (.index (D.count t) :: Γ) Λx Λ)
+    (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ) (h : true = true)
+    (σm : World D) (hsm : σm = leseA A σ Λ mass.orte)
+    (m' : Int) (hm' : (eval σm mass σm ρ).n = m')
+    (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor)
+    (hw : wahr? (eval (leseA A σm Λ inv.orte) inv (leseA A σm Λ inv.orte) ρ) = true) :
+    semHA S O U A passes R (.dann (.cons (.leave h) restb)
+      (.verbrauchRest t member edge inv bound mass body rest vor k)) σ (.cons i ρ) =
+      semHA S O U A passes R k ((leseA A σm Λ inv.orte)) ρ := by
+  rw [semHA_dann_cons]
+  show weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      (.leave h σ (.cons i ρ)) = _
+  simp only [weiterHA, hsm, hm', hfall, if_true]
+  have hl : (leseBA A inv σm ρ).2 = true := hw
+  simp only [hl, if_true]
+
+theorem semHA_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ)
+    (restb : Block D V true (.index (D.count t) :: Γ) Λx Λ)
+    (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ) (h : true = true)
+    (σm : World D) (hsm : σm = leseA A σ Λ mass.orte)
+    (m' : Int) (hm' : (eval σm mass σm ρ).n = m')
+    (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor) :
+    semHA S O U A passes R (.dann (.cons (.next h) restb)
+      (.verbrauchRest t member edge inv bound mass body rest vor k)) σ (.cons i ρ) =
+      semHA S O U A passes R (.verbrauch t member edge inv bound mass body rest k) σm ρ := by
+  rw [semHA_dann_cons]
+  show weiterHA S O U A passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      (.next h σ (.cons i ρ)) = _
+  simp only [weiterHA, hsm, hm', hfall, if_true, laufA]
+
 theorem semHA_leaveWieder {Λ Λx : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)
     (rest : Block D V true Γ Λx Λ) (σ : World D) (ρ : Env D Γ) (h : true = true) :

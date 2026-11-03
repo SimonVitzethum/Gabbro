@@ -88,7 +88,9 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       · exact KErgOk.lokal hst _ _ _ (by first | exact he.1.2 | (simp only [GRest.nR]; exact he.1.2)) _ _
       · exact KErgOk.none
   | ret e _ => exact kPop_ok hst f _ _
+  | retScoped e R => exact kPop_ok hst f _ _
   | retWhy r _ => exact kPopGrund_ok hst f _ _ r
+  | retWhyScoped r R => exact kPopGround_ok hst f _ _ r
   | leave _ => exact KErgOk.none
   | next _ => exact KErgOk.none
 
@@ -246,6 +248,8 @@ theorem kr_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
   | ewigRest a n inv body k =>
       try simp only [kr]
       exact KErgOk.lokal hst _ _ _ (by first | exact hr | (simp only [GRest.nR]; exact hr)) _ _
+  | verbrauch t member edge inv bound mass body rest k => exact KErgOk.none
+  | verbrauchRest t member edge inv bound mass body rest vor k => exact KErgOk.none
   | wartet b k => exact KErgOk.none
   | wartetSonst n err b k => exact KErgOk.none
   | abbruch k => exact KErgOk.none

@@ -1,138 +1,13 @@
 module
-
 public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T3
-
+public import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem.T4.Grundlagen
 @[expose] public section
-
-
-
 namespace Gabbro.Grammatik
-
 variable {D : Deklaration}
-
 section Stufen
-
 variable (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes : Nat)
   (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) {V : Vertrag D}
   {l : Bool} {Γ : Ctx}
-
-theorem semH_ende_cons {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
-    (rest : Endblock D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.ende (.cons s rest)) σ ρ =
-      weiterH S O U passes R (.ende rest) (execStmtH S O U passes R s σ ρ) := by
-  show zErgG (execEndH S O U passes R (.cons s rest) σ ρ) = _
-  simp only [execEndH]
-  cases execStmtH S O U passes R s σ ρ <;> rfl
-
-theorem laufAH_nil {Λ : List (Res D)} (o : Ausgang V l Γ) :
-    laufA (fun σ ρ => execBlockH S O U passes R (.nil : Block D V l Γ Λ Λ) σ ρ) o = o := by
-  cases o <;> rfl
-
-theorem semH_endeEntf {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ')
-    (rest : Endblock D V l Γ Λ') (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.ende (.cons s rest)) σ ρ =
-      semH S O U passes R (.dann (.cons s .nil) (.ende rest)) σ ρ := by
-  rw [semH_ende_cons, semH_dann_cons]
-  show _ = weiterH S O U passes R (.ende rest) (laufA _ _)
-  rw [laufAH_nil]
-
-theorem semH_dannLeer {Λ : List (Res D)} (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.dann .nil k) σ ρ = semH S O U passes R k σ ρ := by rfl
-
-theorem semH_ite {Λ Λ' Λ'' : List (Res D)} (c : Expr D Γ Λ .bool)
-    (t e : Block D V l Γ Λ Λ') (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'')
-    (σ : World D) (ρ : Env D Γ) (b : Bool)
-    (hw : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = b) :
-    semH S O U passes R (.dann (.cons (.ite c t e) rest) k) σ ρ =
-      semH S O U passes R (.dann (if b then t else e) (.dann rest k)) (σ.lese Λ c.orte) ρ := by
-  rw [semH_dann_cons]
-  cases b <;> simp only [execStmtH, hw] <;> rfl
-
-theorem semH_optSome {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.opt n))
-    (p : Block D V l (.index n :: Γ) Λ Λ') (a : Block D V l Γ Λ Λ')
-    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (v : Wert D (.index n))
-    (hv : eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = Option.some v) :
-    semH S O U passes R (.dann (.cons (.onOption o p a) rest) k) σ ρ =
-      semH S O U passes R (.dann p (.schrumpf (.dann rest k))) (σ.lese Λ o.orte) (.cons v ρ) := by
-  rw [semH_dann_cons]
-  simp only [execStmtH, hv]
-  rfl
-
-theorem semH_optNone {Λ Λ' Λ'' : List (Res D)} {n : Int} (o : Expr D Γ Λ (.opt n))
-    (p : Block D V l (.index n :: Γ) Λ Λ') (a : Block D V l Γ Λ Λ')
-    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (hv : eval (σ.lese Λ o.orte) o (σ.lese Λ o.orte) ρ = Option.none) :
-    semH S O U passes R (.dann (.cons (.onOption o p a) rest) k) σ ρ =
-      semH S O U passes R (.dann a (.dann rest k)) (σ.lese Λ o.orte) ρ := by
-  rw [semH_dann_cons]
-  simp only [execStmtH, hv]
-  rfl
-
-theorem semH_tagSome {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
-    (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
-    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (τ : Ty) (b : Block D V l (τ :: Γ) Λ Λ') (nutz : Nutzlast D.Fn D.passt (some τ))
-    (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) =
-      ⟨some τ, b, nutz⟩) :
-    semH S O U passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ =
-      semH S O U passes R (.dann b (.schrumpf (.dann rest k))) (σ.lese Λ v.orte)
-        (armEnv nutz ρ) := by
-  rw [semH_dann_cons]
-  simp only [execStmtH]
-  rw [execArmsH_wahl, hw]
-  rfl
-
-theorem semH_tagNone {Λ Λ' Λ'' : List (Res D)} {cs : List (Option Ty)}
-    (v : Expr D Γ Λ (.sum cs)) (arms : Arms D V l Γ Λ Λ' cs)
-    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ)
-    (b : Block D V l Γ Λ Λ') (nutz : Nutzlast D.Fn D.passt none)
-    (hw : armWahlG arms (eval (σ.lese Λ v.orte) v (σ.lese Λ v.orte) ρ) = ⟨none, b, nutz⟩) :
-    semH S O U passes R (.dann (.cons (.onTag v arms) rest) k) σ ρ =
-      semH S O U passes R (.dann b (.dann rest k)) (σ.lese Λ v.orte) (armEnv nutz ρ) := by
-  rw [semH_dann_cons]
-  simp only [execStmtH]
-  rw [execArmsH_wahl, hw]
-  rfl
-
-theorem semH_grund {Λ Λ' Λ'' : List (Res D)} {n : Nat} (r : Expr D Γ Λ (.why n))
-    (arms : GrundArms D V l Γ Λ Λ' n) (rest : Block D V l Γ Λ' Λ'')
-    (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.dann (.cons (.onWhy r arms) rest) k) σ ρ =
-      semH S O U passes R (.dann (grundWahlG arms (eval (σ.lese Λ r.orte) r (σ.lese Λ r.orte) ρ))
-        (.dann rest k)) (σ.lese Λ r.orte) ρ := by
-  rw [semH_dann_cons]
-  simp only [execStmtH]
-  rw [execGrundH_wahlW S O U passes R arms]
-  rfl
-
-theorem semH_breaking {Λ Λ' Λ'' : List (Res D)} (i : D.Inv) (body : Block D V l Γ Λ Λ')
-    (rest : Block D V l Γ Λ' Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.dann (.cons (.breaking i body) rest) k) σ ρ =
-      semH S O U passes R (.dann body (.dann rest k)) σ ρ := by
-  rw [semH_dann_cons]
-  rfl
-
-/-- **The acquire**: the body runs from the environment's move of the
-    acquire world, and the release marker `frei L` carries the release
-    check. -/
-theorem semH_locks {Λ Λ'' : List (Res D)} (L : D.Lock)
-    (hr : ∀ M, Res.held M ∈ Λ → D.rang M < D.rang L)
-    (body : Block D V l Γ (Res.held L :: Λ) (Res.held L :: Λ))
-    (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
-    semH S O U passes R (.dann (.cons (.locks L hr body) rest) k) σ ρ =
-      semH S O U passes R (.dann body (.frei L (.dann rest k))) ((U L σ).nimmt L) ρ := by
-  rw [semH_dann_cons]
-  rfl
-
-/-- **The release**, where the invariant holds. -/
-theorem semH_frei {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ) (σ : World D)
-    (ρ : Env D Γ) (hi : S.inv L σ.speicher = true) :
-    semH S O U passes R (.frei L k) σ ρ = semH S O U passes R k (σ.gibt L) ρ := by
-  show weiterH S O U passes R k (freiH S L (.ok σ ρ)) = _
-  simp only [freiH, hi, if_true]
-  rfl
-
 /-- **A release where the invariant fails predicts `logik schleife`.** -/
 theorem semH_frei_falsch {Λ : List (Res D)} (L : D.Lock) (k : GRest D V l Γ Λ) (σ : World D)
     (ρ : Env D Γ) (hi : S.inv L σ.speicher = false) :
@@ -435,6 +310,150 @@ theorem semH_nextTrav {Λ Λx : List (Res D)} (t : D.Tab) (inv : Expr D Γ Λ .b
       semH S O U passes R (.trav t inv body is k) σ ρ := by
   rw [semH_dann_cons]
   rfl
+
+/-! ### Consuming runs -/
+
+theorem semH_dannVerbrauch {Λ Λ'' : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Block D V l Γ Λ Λ'') (k : GRest D V l Γ Λ'') (σ : World D) (ρ : Env D Γ) :
+    semH S O U passes R (.dann (.cons (.consumeTraverse t member edge inv bound mass body) rest) k) σ ρ =
+      semH S O U passes R (.verbrauch t member edge inv bound mass body
+        ((D.count t).toNat + bound.toNat + 1) (.dann rest k)) σ ρ := by
+  rw [semH_dann_cons]
+  rfl
+
+theorem semH_verbrauchWeiter {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = true)
+    (σ₂ : World D) (v : Wert D (.index (D.count t))) (b : Bool) (m : Int)
+    (hsel : verbrauchSel t member edge (leseB inv σ ρ).1 ρ = (σ₂, some v, b))
+    (hm : (eval (σ₂.lese Λ mass.orte) mass (σ₂.lese Λ mass.orte) ρ).n = m) :
+    semH S O U passes R (.verbrauch t member edge inv bound mass body (rest + 1) k) σ ρ =
+      semH S O U passes R (.dann body
+        (.verbrauchRest t member edge inv bound mass body rest m k))
+        (σ₂.lese Λ mass.orte) (.cons v ρ) := by
+  have hl : (leseB inv σ ρ).2 = true := hw
+  show weiterH S O U passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+    weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest m k)
+      (execBlockH S O U passes R body (σ₂.lese Λ mass.orte) (.cons v ρ))
+  simp only [verbrauchLauf, hl, Bool.true_eq_false, if_false, hsel]
+  cases execBlockH S O U passes R body (σ₂.lese Λ mass.orte) (.cons v ρ) with
+  | ok σ' ρ' =>
+      by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
+          (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
+          (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
+      · simp only [hfall, if_true]
+      · simp only [hfall, if_false]
+  | next _ σ' ρ' =>
+      by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
+          (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
+          (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
+      · simp only [hfall, if_true]
+      · simp only [hfall, if_false]
+  | leave _ σ' ρ' =>
+      by_cases hfall : 0 ≤ (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ∧
+          (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n ≤ bound ∧
+          (eval (σ'.lese Λ mass.orte) mass (σ'.lese Λ mass.orte) ρ'.tail).n < m
+      · simp only [hfall, if_true]
+        by_cases hc' : (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 = true
+        · simp only [hc', if_true]
+        · simp only [show (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 = false from by
+            cases h' : (leseB inv (σ'.lese Λ mass.orte) ρ'.tail).2 with
+            | false => rfl
+            | true => exact absurd h' hc', if_false]
+      · simp only [hfall, if_false]
+  | zurueck σ' v => rfl
+  | why σ' r => rfl
+  | logik e => rfl
+  | hardware e => rfl
+
+theorem semH_verbrauchLeer {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (k : GRest D V l Γ Λ) (σ : World D) (ρ : Env D Γ)
+    (hw : wahr? (eval (σ.lese Λ inv.orte) inv (σ.lese Λ inv.orte) ρ) = true)
+    (σ₂ : World D)
+    (hsel : verbrauchSel t member edge (leseB inv σ ρ).1 ρ = (σ₂, none, false)) :
+    semH S O U passes R (.verbrauch t member edge inv bound mass body (rest + 1) k) σ ρ =
+      semH S O U passes R k σ₂ ρ := by
+  have hl : (leseB inv σ ρ).2 = true := hw
+  show weiterH S O U passes R k (verbrauchLauf _ _ (rest + 1) σ ρ) =
+    weiterH S O U passes R k (.ok σ₂ ρ)
+  simp only [verbrauchLauf, hl, hsel, Bool.true_eq_false, if_false]
+
+theorem semH_verbrauchFort {Λ : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ)
+    (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ)
+    (σ₁ : World D) (hs₁ : σ₁ = σ.lese Λ mass.orte)
+    (m' : Int) (hm' : (eval σ₁ mass σ₁ ρ).n = m')
+    (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor) :
+    semH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      σ (.cons i ρ) =
+      semH S O U passes R (.verbrauch t member edge inv bound mass body rest k) σ₁ ρ := by
+  show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      (.ok σ (.cons i ρ)) =
+    weiterH S O U passes R (.verbrauch t member edge inv bound mass body rest k) (.ok σ₁ ρ)
+  simp only [weiterH, hs₁, hm', hfall, if_true, laufA]
+
+theorem semH_leaveVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ)
+    (restb : Block D V true (.index (D.count t) :: Γ) Λx Λ)
+    (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ) (h : true = true)
+    (σm : World D) (hsm : σm = σ.lese Λ mass.orte)
+    (m' : Int) (hm' : (eval σm mass σm ρ).n = m')
+    (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor)
+    (hw : wahr? (eval (σm.lese Λ inv.orte) inv (σm.lese Λ inv.orte) ρ) = true) :
+    semH S O U passes R (.dann (.cons (.leave h) restb)
+      (.verbrauchRest t member edge inv bound mass body rest vor k)) σ (.cons i ρ) =
+      semH S O U passes R k ((σm.lese Λ inv.orte)) ρ := by
+  rw [semH_dann_cons]
+  show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      (.leave h σ (.cons i ρ)) = _
+  simp only [weiterH, hsm, hm', hfall, if_true]
+  have hl : (leseB inv σm ρ).2 = true := hw
+  simp only [hl, if_true]
+
+theorem semH_nextVerbrauch {Λ Λx : List (Res D)} (t : D.Tab)
+    (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
+    (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
+    (inv : Expr D Γ Λ .bool) (bound : Int)
+    (mass : Expr D Γ Λ (.int 0 bound))
+    (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
+    (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ)
+    (restb : Block D V true (.index (D.count t) :: Γ) Λx Λ)
+    (i : Wert D (.index (D.count t))) (σ : World D) (ρ : Env D Γ) (h : true = true)
+    (σm : World D) (hsm : σm = σ.lese Λ mass.orte)
+    (m' : Int) (hm' : (eval σm mass σm ρ).n = m')
+    (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor) :
+    semH S O U passes R (.dann (.cons (.next h) restb)
+      (.verbrauchRest t member edge inv bound mass body rest vor k)) σ (.cons i ρ) =
+      semH S O U passes R (.verbrauch t member edge inv bound mass body rest k) σm ρ := by
+  rw [semH_dann_cons]
+  show weiterH S O U passes R (.verbrauchRest t member edge inv bound mass body rest vor k)
+      (.next h σ (.cons i ρ)) = _
+  simp only [weiterH, hsm, hm', hfall, if_true, laufA]
 
 theorem semH_leaveWieder {Λ Λx : List (Res D)} (n : Nat) (bis : Expr D Γ Λ .bool)
     (body : Block D V true Γ Λ Λ) (ueber : Block D V l Γ Λ Λ) (k : GRest D V l Γ Λ)

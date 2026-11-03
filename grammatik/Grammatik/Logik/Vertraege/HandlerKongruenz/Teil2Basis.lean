@@ -34,7 +34,7 @@ theorem Stmt.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
       simp only [execStmt]; exact traverseLauf_kongruent _ _ _
         (fun σ' ρ' => Block.kongruent hR body σ' ρ') _ σ ρ
   | .consumeTraverse t member edge inv bound mass body, σ, ρ => by
-      simp only [execStmt]; exact traverseLauf_kongruent _ _ _
+      simp only [execStmt]; exact verbrauchLauf_kongruent t _ _ _ _ _ _
         (fun σ' ρ' => Block.kongruent hR body σ' ρ') _ σ ρ
   | .retry n bis body ueber, σ, ρ => by
       simp only [execStmt]; exact retryLauf_kongruent _ _ _ _ _

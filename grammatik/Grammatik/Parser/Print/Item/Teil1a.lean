@@ -19,12 +19,14 @@ def druckPred (e : SExpr) : List Token :=
     match k with
     | .text => druckToks e
     | .call => druckToks e
-    | .label => druckToks e
+    | .label | .instantiate | .dyn => druckToks e
     | _ => (druckToks e).drop 1 |>.dropLast
   | _ => druckToks e
 
 /-- An effect arm. -/
 def druckEffekt : SEffekt → List Token
+  | .param n => rohToks n
+  | .instanceEffects n ts => rohToks n ++ [.zeichen "["] ++ ((ts.map druckTyp).intersperse [.zeichen ","]).flatten ++ [.zeichen "]"]
   | .reads p => [.wort "reads"] ++ druckToks p
   | .writes p => [.wort "writes"] ++ druckToks p
   | .locks sh p => [.wort "locks"] ++ (if sh then [.wort "shared"] else []) ++ druckToks p
@@ -69,9 +71,22 @@ def druckParams : List (String × STyp) → List Token
   | [p] => druckParam p
   | p :: ps => druckParam p ++ [.zeichen ","] ++ druckParams ps
 
+/-- Generic parameters print their declared kinds; constants use the explicit `const` spelling. -/
+def druckGenericParam : SGenericParam → List Token
+  | .type n bounds => [nameTok n] ++ (match bounds with
+    | [] => []
+    | b :: bs => [.zeichen ":", nameTok b] ++ bs.flatMap (fun x => [.zeichen "+", nameTok x]))
+  | .constant n ty => [nameTok n, .zeichen ":", .wort "const"] ++ druckTyp ty
+  | .function n ty => [nameTok n, .zeichen ":"] ++ druckTyp ty
+
+def druckGenericParams : List SGenericParam → List Token
+  | [] => []
+  | p :: ps => [.zeichen "["] ++ druckGenericParam p ++
+    ps.flatMap (fun q => .zeichen "," :: druckGenericParam q) ++ [.zeichen "]"]
+
 /-- A function head: `[art] fn name (params) [-> T] [or R] clauses`. -/
 def druckFnSig (s : FnSig) : List Token :=
-  (if strEq s.art "" then [] else [.wort s.art]) ++ [.wort "fn", nameTok s.name, .zeichen "("] ++
+  (if strEq s.art "" then [] else [.wort s.art]) ++ [.wort "fn", nameTok s.name] ++ druckGenericParams s.generics ++ [.zeichen "("] ++
     druckParams s.params ++ [.zeichen ")"] ++
     (match s.res with
       | some t => [.zeichen "->"] ++ druckTyp t

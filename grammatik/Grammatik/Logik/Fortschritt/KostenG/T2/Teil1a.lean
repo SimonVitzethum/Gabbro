@@ -189,7 +189,7 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · rw [hhead] at hok ⊢
         dsimp only at hok ⊢
         simp only [potRest, kostenBlock, kostenStmt, rufeR, rufeB, rufeS, Bool.and_eq_true] at hok ⊢
-        exact ⟨⟨⟨hok.1.1.2, hok.1.2⟩, hok.2⟩, Or.inr ⟨n, hok.1.1.1, hg, by omega⟩⟩
+        exact ⟨⟨⟨hok.1.1.2, by trivial⟩, hok.1.2, hok.2⟩, Or.inr ⟨n, hok.1.1.1, hg, by omega⟩⟩
     | rueckBind caller rst hpop l Γ Λ Λ' τ restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         fun c' Z' ZS' EW' => ?_⟩)
@@ -270,14 +270,20 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · omega
   | g5 hs =>
     cases hs with
-    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | dannBindAxiomOpt _ _ l Γ Λ Λ' e =>
+      cases e <;> kopfA
+      all_goals first | (solve | simp_all) | omega
+    | dannBindAxiomOptElseOk _ _ l Γ Λ Λ' e =>
+      cases e <;> kopfA
+      all_goals first | (solve | simp_all) | omega
+    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         fun c' Z' ZS' EW' => ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only
       rw [hcaller]; dsimp only
       simp only [potRest, rufeR, kostenBlock_alsBlock, rufeB_alsBlock, Bool.and_eq_true]
       exact ⟨fun h => ⟨h.1.1, h.2⟩, by omega⟩
-    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
+    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller =>
       refine Or.inr (Or.inr ⟨caller, rst, hpop, by dsimp only; rw [rufUpdateG_self],
         fun c' Z' ZS' EW' => ?_⟩)
       dsimp only; rw [rufUpdateG_self]; dsimp only
@@ -289,6 +295,12 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       · cases EW <;> simp_all
       · omega
   | g6 hs =>
+    cases hs with
+    | _ =>
+      kopfA
+      · cases EW <;> simp_all
+      · omega
+  | g7 hs =>
     cases hs with
     | _ =>
       kopfA

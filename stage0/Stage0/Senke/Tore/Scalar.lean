@@ -132,7 +132,7 @@ theorem lowR_ok_zeuge [Kern] :
     change (k : Int) < 4 at hk
     change 2048 ≤ 2048 + 8 * k ∧ 2048 + 8 * k + 8 ≤ 2080
     omega
-  obtain ⟨m', steps, changed, values⟩ := lowR_ok world world (fun _ h => h) lay
+  obtain ⟨m', steps, changed, values⟩ := lowR_ok (same := rfl) world world (fun _ h => h) lay
     arguments 8 code 11 emitted (by decide) (by decide) memory 0 environment
     (PreS.welt pre (Nat.le_refl _) world_at lay (by decide))
   refine ⟨emitted, environment_at, by decide +kernel, (by change ¬ (99 : Runner.W) = 0; decide +kernel), m', ?_, changed, values⟩

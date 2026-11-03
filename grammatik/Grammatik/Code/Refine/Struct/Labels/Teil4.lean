@@ -10,8 +10,7 @@ variable [Conf] {D : Deklaration}
 variable {V : Vertrag D}
 mutual
 theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
-    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ')
-      (lb k : Lbl) (st st' : St) (blks : List Block), (lb : Nat) < st.l →
+    ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Gabbro.Grammatik.Stmt D V l Γ Λ Λ') (lb k : Lbl) (st st' : St) (blks : List Block), (lb : Nat) < st.l →
       lowerS lay cenv lv s lb k st = some (blks, st') → LblWf lb st st' blks
   | _, _, _, _, .assignSlot t f i e zz1 zz2, lb, k, st, st', blks, hlt, h =>
       lowerS_lbl_assignSlot (lay := lay) (cenv := cenv) (lv := lv) (t := t) (f := f) (i := i) (e := e) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (hlt := hlt) (h := h)
@@ -54,14 +53,10 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         · simp only [hb2, reduceCtorEq] at h
         simp only [hb2, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv a st.l k ⟨r3, st.l + 3⟩ s1 ba
-          (by show (st.l : Nat) < st.l + 3; omega) hb1
+        obtain ⟨m1, n1, a1⟩ := lowerB_lbl lay cenv lv a st.l k ⟨r3, st.l + 3⟩ s1 ba (by show (st.l : Nat) < st.l + 3; omega) hb1
         have m1' : st.l + 3 ≤ s1.l := m1
-        obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (c :: cenv) lv p (st.l + 2) k s1 s2 bp
-          (by show (st.l + 2 : Nat) < s1.l; omega) hb2
-        exact lw_narrow (b0 := ⟨lb, [], co, .brc .slt (Ar.wid (-1) (n - 1)) oo
-            (.int (Ar.wid (-1) (n - 1)) 0) st.l (st.l + 1)⟩)
-          (b1 := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 2)⟩) rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
+        obtain ⟨m2, n2, a2⟩ := lowerB_lbl lay (c :: cenv) lv p (st.l + 2) k s1 s2 bp (by show (st.l + 2 : Nat) < s1.l; omega) hb2
+        exact lw_narrow (b0 := ⟨lb, [], co, .brc .slt (Ar.wid (-1) (n - 1)) oo (.int (Ar.wid (-1) (n - 1)) 0) st.l (st.l + 1)⟩) (b1 := ⟨st.l + 1, [], cv ++ cb, .jmp (st.l + 2)⟩) rfl rfl hlt m1' m2 ⟨n1, a1⟩ ⟨n2, a2⟩
       · simp only [reduceCtorEq] at h
   | _, _, _, _, .onTag (cs := cs) v arms, lb, k, st, st', blks, hlt, h => by
       simp only [lowerS] at h
@@ -74,8 +69,7 @@ theorem lowerS_lbl (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
         · simp only [hga, reduceCtorEq] at h
         simp only [hga, Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨m1, n1, a1⟩ := lowerAr_lbl lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms
-          (st.l + 1) k ⟨r1 + 1, st.l + 1 + cs.length⟩ s1 ba
+        obtain ⟨m1, n1, a1⟩ := lowerAr_lbl lay cenv lv (sumTop cs) (Ar.wid 0 (sumTop cs)) cs.length ov arms (st.l + 1) k ⟨r1 + 1, st.l + 1 + cs.length⟩ s1 ba
           (by show (st.l + 1 : Nat) + cs.length ≤ st.l + 1 + cs.length; omega) hga
         have m1' : st.l + 1 + cs.length ≤ s1.l := m1
         have hlt' : @LT.lt Nat instLTNat lb st.l := hlt

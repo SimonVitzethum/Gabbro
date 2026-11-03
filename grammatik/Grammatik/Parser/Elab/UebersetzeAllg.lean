@@ -18,7 +18,7 @@
 -/
 module
 
-public import Grammatik.Parser.Elab.UebersetzeAllg.Signaturen
+public import Grammatik.Parser.Elab.Generic.Signatures
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil1
 public import Grammatik.Parser.Elab.UebersetzeAllg.Teil2
 public import Grammatik.Parser.Elab.UebersetzeAllg.Eingebaut

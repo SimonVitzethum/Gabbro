@@ -28,7 +28,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
     (lockIdx u.locks g).bind fun L =>
       if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) none rest with
         | .error e => .error e
-        | .ok (⟨Λ', body, .blkEnd :: rest'⟩) =>
+        | .ok ((⟨Λ', body⟩, .blkEnd :: rest')) =>
           if h : Λ' = Res.held L :: Λ then
             .ok (⟨Λ, Stmt.locks L (rangOkB_sound u Λ L hr) (by subst h; exact body)⟩, rest')
           else .error "lower: a locks block changes held marks"
@@ -37,9 +37,9 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
   | Γ, fn, Λ, pe, .ifBeg c, rest =>
     (lowEns u Γ Λ fn none c).bind fun cv => match R.seq Γ fn Λ pe rest with
       | .error e => .error e
-      | .ok (⟨Λ₁, tb, .ifElse :: rest1⟩) => match R.seq Γ fn Λ pe rest1 with
+      | .ok ((⟨Λ₁, tb⟩, .ifElse :: rest1)) => match R.seq Γ fn Λ pe rest1 with
         | .error e => .error e
-        | .ok (⟨Λ₂, eb, .blkEnd :: rest2⟩) =>
+        | .ok ((⟨Λ₂, eb⟩, .blkEnd :: rest2)) =>
           if h : Λ₁ = Λ₂ then
             .ok (⟨Λ₁, Stmt.ite cv tb (by subst h; exact eb)⟩, rest2)
           else .error "lower: if arms end with different held marks"
@@ -52,7 +52,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
     let iv ← lowEns u Γ Λ fn none invariant
     match R.seq (l := true) (Ty.index ((declOf u).count carrier.table) :: Γ) (fn.mitTy binder (.index ((declOf u).count carrier.table))) Λ pe rest with
     | .error error => .error error
-    | .ok (⟨Λ', body, .blkEnd :: remaining⟩) =>
+    | .ok ((⟨Λ', body⟩, .blkEnd :: remaining)) =>
       if h : Λ' = Λ then
         .ok (⟨Λ, Stmt.traverse carrier.table iv (by subst h; exact body)⟩, remaining)
       else .error "lower: an array traverse body changes held marks"
@@ -62,7 +62,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
       (lowEns u Γ Λ fn none inv).bind fun iv =>
         match R.seq (l := true) (Ty.index ((declOf u).count t) :: Γ) (fn.mitIndex bnd t.val ((declOf u).count t)) Λ pe rest with
         | .error e => .error e
-        | .ok (⟨Λ', body, .blkEnd :: rest'⟩) =>
+        | .ok ((⟨Λ', body⟩, .blkEnd :: rest')) =>
           if h : Λ' = Λ then
             .ok (⟨Λ, Stmt.traverse t iv (by subst h; exact body)⟩, rest')
           else .error "lower: a traverse body changes held marks"
@@ -70,9 +70,9 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
   | Γ, fn, Λ, pe, .retryBeg cnt bis, rest =>
     (lowEns u Γ Λ fn none bis).bind fun bv => match R.seq (l := true) Γ fn Λ pe rest with
       | .error e => .error e
-      | .ok (⟨Λ₁, body, .ifElse :: rest1⟩) => match R.seq (l := l) Γ fn Λ pe rest1 with
+      | .ok ((⟨Λ₁, body⟩, .ifElse :: rest1)) => match R.seq (l := l) Γ fn Λ pe rest1 with
         | .error e => .error e
-        | .ok (⟨Λ₂, ueb, .blkEnd :: rest2⟩) =>
+        | .ok ((⟨Λ₂, ueb⟩, .blkEnd :: rest2)) =>
           if h₁ : Λ₁ = Λ then
             if h₂ : Λ₂ = Λ then
               .ok (⟨Λ, Stmt.retry cnt bv (by subst h₁; exact body) (by subst h₂; exact ueb)⟩, rest2)
@@ -90,8 +90,8 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
           if hd : (∀ w ∈ (declOf u).gbraucht g, Res.von (declOf u) w ∈ Λ) then match h : (declOf u).gtyp g with
             | .sum cs => match R.arms (l := l) Γ fn Λ pe cs bs rest with
               | .error err => .error err
-              | .ok (⟨Λ', arms, .blkEnd :: rest'⟩) =>
-                .ok (⟨Λ', Stmt.onTag (D := declOf u) (h ▸ Expr.glob (D := declOf u) g hd) arms⟩, rest')
+              | .ok (arms, .blkEnd :: rest') =>
+                .ok (⟨Λ, Stmt.onTag (D := declOf u) (h ▸ Expr.glob (D := declOf u) g hd) arms⟩, rest')
               | .ok (_, _) => .error "lower: a match is not closed"
             | _ => .error "lower: match of a non-tagged value"
           else .error "access without held guard"
@@ -100,7 +100,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
           | .error err => .error err
           | .ok v => match R.arms (l := l) Γ fn Λ pe cs bs rest with
             | .error err => .error err
-            | .ok (⟨Λ', arms, .blkEnd :: rest'⟩) => .ok (⟨Λ', Stmt.onTag (D := declOf u) (Expr.var v) arms⟩, rest')
+            | .ok (arms, .blkEnd :: rest') => .ok (⟨Λ, Stmt.onTag (D := declOf u) (Expr.var v) arms⟩, rest')
             | .ok (_, _) => .error "lower: a match is not closed"
         | _ => .error "lower: match of a non-tagged value"
     else .error "tagged type unknown"
@@ -111,7 +111,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
         | .error err => .error err
         | .ok v => match R.garms (l := l) Γ fn Λ pe cnt rest with
           | .error err => .error err
-          | .ok (⟨Λ', arms, .blkEnd :: rest'⟩) => .ok (⟨Λ', Stmt.onWhy (D := declOf u) (Expr.var v) arms⟩, rest')
+          | .ok (arms, .blkEnd :: rest') => .ok (⟨Λ, Stmt.onWhy (D := declOf u) (Expr.var v) arms⟩, rest')
           | .ok (_, _) => .error "lower: a match is not closed"
       | _ => .error "lower: match of a non-reason"
   | Γ, fn, Λ, pe, .matchBeg num o k, rest =>
@@ -119,9 +119,9 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
       (lowOpt u Γ Λ fn 0 num hnum o).bind fun ov =>
         match R.seq (l := l) (Ty.index ((declOf u).count ⟨num, hnum⟩) :: Γ) (fn.mitIndex k num ((declOf u).count ⟨num, hnum⟩)) Λ pe rest with
         | .error e => .error e
-        | .ok (⟨Λ₁, sb, .ifElse :: rest1⟩) => match R.seq (l := l) Γ fn Λ pe rest1 with
+        | .ok ((⟨Λ₁, sb⟩, .ifElse :: rest1)) => match R.seq (l := l) Γ fn Λ pe rest1 with
           | .error e => .error e
-          | .ok (⟨Λ₂, nb, .blkEnd :: rest2⟩) =>
+          | .ok ((⟨Λ₂, nb⟩, .blkEnd :: rest2)) =>
             if h : Λ₁ = Λ₂ then
               .ok (⟨Λ₁, Stmt.onOption (D := declOf u) ov sb (by subst h; exact nb)⟩, rest2)
             else .error "lower: match arms end with different held marks"
@@ -131,7 +131,7 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
   | Γ, fn, Λ, pe, .foreverBeg k, rest =>
     if hk : k < u.annahmen.length then match R.seq (l := true) Γ fn Λ pe rest with
       | .error e => .error e
-      | .ok (⟨Λ', body, .blkEnd :: rest'⟩) =>
+      | .ok ((⟨Λ', body⟩, .blkEnd :: rest')) =>
         if h : Λ' = Λ then
           .ok (⟨Λ, Stmt.forever (D := declOf u) (some ⟨k, hk⟩) Expr.tru (by subst h; exact body)⟩, rest')
         else .error "lower: a forever body changes held marks"
