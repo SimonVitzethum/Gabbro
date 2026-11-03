@@ -82,8 +82,11 @@ def hasRangeFoldEnde : Option SEnde → Bool
   | some _ => false
 end
 
-/-- A range fold obtains its finite domain from an indexed array, never from a
-    generated table or an unchecked numeric bound. -/
+/-- A range fold obtains its finite domain from an indexed array variable or a
+    table, never from a generated table or an unchecked numeric bound. A nested
+    fold node contributes its own domain to its own loop: collection looks
+    through it, so an outer fold over one collection may contain an inner fold
+    over another. -/
 private def indexedArrays (binder : String) : Nat → SExpr → Except String (List String)
   | 0, _ => .error "fold range: operand nesting limit"
   | n + 1, .index (.variable array) (.variable index) =>
@@ -92,8 +95,11 @@ private def indexedArrays (binder : String) : Nat → SExpr → Except String (L
     indexedArrays binder n e
   | n + 1, .index a b | n + 1, .bin _ a b => do
     return (← indexedArrays binder n a) ++ (← indexedArrays binder n b)
-  | n + 1, .call _ args | n + 1, .built _ args | n + 1, .ext _ _ args => do
+  | n + 1, .call _ args | n + 1, .built _ args => do
     return (← args.mapM (indexedArrays binder n)).flatten
+  | n + 1, .ext k _ args =>
+    if isFoldKind k then pure []
+    else do return (← args.mapM (indexedArrays binder n)).flatten
   | _ + 1, _ => pure []
 
 /-- Pre-order tags for every fold node: the index names the generated bindings,
