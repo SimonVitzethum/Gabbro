@@ -341,9 +341,12 @@ end Gabbro.Grammatik
       environment / the device, trace grows, memory stands), `transition`
       (device mirror step, the world passes through untouched), `advances`
       and `retires` (mark bookkeeping, `.ok` on the input world), `ret` and
-      `retScoped` (reads only, `.zurueck` on the read world), `retGrund`,
+      `retScoped` (reads only, `.zurueck` on the read world, `retScoped`
+      additionally releasing its scope list -- releases only extend the
+      trace, so memory still stands), `retGrund`,
       `retWhyScoped`, `leave`, `next`
-      (pass-through outcomes on the input world). Everything else tests false:
+      (pass-through outcomes on the input world, `retWhyScoped` additionally
+      releasing its scope list). Everything else tests false:
       the four writes (`assignSlot`, `assignDurch`, `assignGlob`,
       `schreibBytes`), the conditional write (`uebergang`), the oracle answer
       (`axiomCall`), the global publish (`publish`), and all twelve compounds.

@@ -92,12 +92,16 @@ theorem blatt_ev (P : Programm D) (O : Orakel D) (passes : Nat)
   | .retWhy .., _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨[], rfl, evOk_nil⟩
-  | .retScoped e _, _, hC, σ, ρ, _, σ', h => by
+  | .retScoped e Rr, _, hC, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact ⟨leseEv σ Λ e.orte, rfl, evOk_lese σ Λ hC⟩
-  | .retWhyScoped .., _, _, σ, ρ, _, σ', h => by
+      refine ⟨Rr.scopes.map (fun L => Ereignis.gibt L) ++ leseEv σ Λ e.orte, ?_,
+        evOk_append (evOk_gibt _) (evOk_lese σ Λ hC)⟩
+      rw [World.gibt_foldl_spur, List.append_assoc]
+      rfl
+  | .retWhyScoped r Rr, _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
-      exact ⟨[], rfl, evOk_nil⟩
+      refine ⟨Rr.scopes.map (fun L => Ereignis.gibt L), ?_, evOk_gibt _⟩
+      rw [World.gibt_foldl_spur]
   | .leave _, _, _, σ, ρ, _, σ', h => by
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at h; subst h
       exact ⟨[], rfl, evOk_nil⟩

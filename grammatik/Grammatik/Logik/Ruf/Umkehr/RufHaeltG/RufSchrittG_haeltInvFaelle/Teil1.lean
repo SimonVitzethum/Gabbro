@@ -48,9 +48,13 @@ theorem rufSchrittG_haeltInv_blatt {D : Deklaration} {P : Programm D} {O : Orake
   simp only [rufUpdateG_self]
   have hk := kette_von hhead hk0
   have hh := heldIn_von hhead hh0
+  have hscope : s.ScopesOk :=
+    Stmt.scopesOk_of_ok O passes keinRuf s hleaf (M.weltVon f) ρ σ' ρ' hstep
+  have hG := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope (M.weltVon f) ρ hΛ) σ'
+    (by rw [hstep]; rfl)
+  rw [hstep] at hG
   have ho : offen σ'.spur = offen (M.faeden f).spur :=
-    (Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ σ'
-      (by rw [hstep]; rfl)).2.1
+    hG.2.1
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) (nennt_stmt s hk) ?_
   rw [ho]; exact heldIn_stmt s hh
 
@@ -194,9 +198,13 @@ theorem rufSchrittG_haeltInv_dannBlatt {D : Deklaration} {P : Programm D} {O : O
   simp only [rufUpdateG_self]
   have hk := kette_von hhead hk0
   have hh := heldIn_von hhead hh0
+  have hscope : s.ScopesOk :=
+    Stmt.scopesOk_of_ok O passes keinRuf s hleaf (M.weltVon f) ρ σ' ρ' hstep
+  have hG := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope (M.weltVon f) ρ hΛ) σ'
+    (by rw [hstep]; rfl)
+  rw [hstep] at hG
   have ho : offen σ'.spur = offen (M.faeden f).spur :=
-    (Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ σ'
-      (by rw [hstep]; rfl)).2.1
+    hG.2.1
   refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨nennt_stmt s hk.1, hk.2⟩ ?_
   rw [ho]; exact heldIn_stmt s hh
 

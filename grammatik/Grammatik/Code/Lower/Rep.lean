@@ -183,6 +183,16 @@ def Rep (lay : Layout D) (σ : World D) (m : Mem) : Prop :=
       (lay.shared g = false →
         m.load (lay.ggblk g) 0 (memTy (D.gtyp g)) = some (encM lay (D.gtyp g) (σ.globs g))))
 
+/-- The memory presentation ignores the trace: releasing one scope keeps it. -/
+theorem Rep.gibt {lay : Layout D} {σ : World D} {m : Mem} (h : Rep lay σ m) (L : D.Lock) :
+    Rep lay (σ.gibt L) m := h
+
+/-- Releasing a list of scopes keeps the memory presentation. -/
+theorem Rep.gibt_foldl : ∀ (Ls : List D.Lock) (σ : World D) (m : Mem),
+    Rep lay σ m → Rep lay (Ls.foldl World.gibt σ) m
+  | [], _, _, h => h
+  | _ :: Ls, σ, m, h => Rep.gibt_foldl Ls _ _ (h.gibt _)
+
 theorem load_blk_lt {m : Mem} (hw : m.Wf) {b : Nat} {o : Int} {t : Ty} {v : Val}
     (h : m.load b o t = some v) : b < m.next := by
   apply hw

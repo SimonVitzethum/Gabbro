@@ -311,6 +311,17 @@ theorem Inv.gibt {M : Keys D D'} {σ : World D} {σ' : World D'}
     (h : E.Inv hZ M σ σ') (L : D.Lock) (L' : D'.Lock) : E.Inv hZ M (σ.gibt L) (σ'.gibt L') :=
   h.wachs E (by simp only [World.gibt, List.length_cons, Nat.lt_add_one]) h.treu
 
+/-- Releasing a list of scopes on both sides keeps the keys functional:
+    the `D` scopes against their `E.lock` images. -/
+theorem Inv.gibt_foldl {M : Keys D D'} {σ : World D} {σ' : World D'}
+    (h : E.Inv hZ M σ σ') (Ls : List D.Lock) :
+    E.Inv hZ M (Ls.foldl World.gibt σ) ((Ls.map E.lock).foldl World.gibt σ') := by
+  induction Ls generalizing σ σ' with
+  | nil => exact h
+  | cons L Ls ih =>
+      simp only [List.foldl_cons, List.map_cons]
+      exact ih (h.gibt E L (E.lock L))
+
 end Einbettung
 
 end Gabbro.Grammatik.Einbettung

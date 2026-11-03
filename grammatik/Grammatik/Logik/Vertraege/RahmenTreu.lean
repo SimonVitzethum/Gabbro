@@ -47,3 +47,4 @@ module
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil3
+public import Grammatik.Logik.Vertraege.RahmenTreu.Teil4

@@ -49,6 +49,29 @@ def World.lese (σ : World D) (Λ : List (Res D)) (orte : List (D.Tab ⊕ D.Glob
     | .inr g => Ereignis.gzugriff g false Λ σ.haelt)
 def World.nimmt (σ : World D) (L : D.Lock) : World D := { σ with spur := .nimmt L σ.haelt :: σ.spur }
 def World.gibt (σ : World D) (L : D.Lock) : World D := { σ with spur := .gibt L :: σ.spur }
+
+/-- A single release keeps memory (slots and globals); only the trace grows. -/
+theorem World.gibt_speicher (σ : World D) (L : D.Lock) :
+    (σ.gibt L).slots = σ.slots ∧ (σ.gibt L).globs = σ.globs := ⟨rfl, rfl⟩
+
+/-- Releasing a list of scopes keeps memory. -/
+theorem World.gibt_foldl_speicher (σ : World D) (Ls : List D.Lock) :
+    (Ls.foldl World.gibt σ).slots = σ.slots ∧ (Ls.foldl World.gibt σ).globs = σ.globs := by
+  induction Ls generalizing σ with
+  | nil => exact ⟨rfl, rfl⟩
+  | cons L Ls ih =>
+      simp only [List.foldl_cons]
+      exact (ih (σ.gibt L)).trans ⟨rfl, rfl⟩
+
+/-- The trace after releasing a list of scopes: one `gibt` event per scope, then the old trace. -/
+theorem World.gibt_foldl_spur (σ : World D) (Ls : List D.Lock) :
+    (Ls.foldl World.gibt σ).spur = Ls.map (fun L => Ereignis.gibt (D := D) L) ++ σ.spur := by
+  induction Ls generalizing σ with
+  | nil => rfl
+  | cons L Ls ih =>
+      simp only [List.foldl_cons, World.gibt, List.map_cons, List.cons_append]
+      exact ih (σ.gibt L)
+
 /-- Ein Schreiben in einen Slot: alle anderen Orte bleiben -- der RAHMEN faellt hier aus. -/
 def World.storeSlot (σ : World D) (t : D.Tab) (k : Int) (f : D.Feld t) (v : Wert D (D.typ t f)) :
     World D :=

@@ -121,9 +121,9 @@ theorem sim_stmt_retScoped {V : Vertrag D}
     e.orte (E.exErg e).orte (E.orte_exErg e).symm
   have hev0 := E.frei_alle hZ (@hev) hρ
   have he := E.evalErg_exErg hZ hI.treu hI.treu e ρ ρ' hρ
-  refine ⟨M₁, .zurueck σ₁ (evalErg σ₁ e σ₁ ρ), hs, fun Φ hP => ?_, ?_⟩
+  refine ⟨M₁, .zurueck (R.scopes.foldl World.gibt σ₁) (evalErg σ₁ e σ₁ ρ), hs, fun Φ hP => ?_, ?_⟩
   · simp only [execStmtHA, hΦ Φ hP]
-  · exact ⟨hI, he⟩
+  · exact ⟨hI.gibt_foldl E R.scopes, he⟩
 
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_retWhy {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -142,8 +142,8 @@ theorem sim_stmt_retWhyScoped {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (
     : E.KoerperSim hZ (fun Φ => execStmtHA S (E.orakelΦ hZ pad Φ O') (E.umweltΦ hZ Φ S U') (E.aumweltΦ hZ Φ T A') passes (E.rufΦ hZ hS pad Φ R') (.retWhyScoped r R : Stmt D V l Γ Λ _)) (execStmtHA S' O' U' A' passes R' (exS hS (.retWhyScoped r R : Stmt D V l Γ Λ _))) :=
   by
   intro M σ σ' ρ ρ' hM hρ
-  exact ⟨M, .why σ r, teil_refl M, fun Φ hP => by simp only [execStmtHA],
-    by simp only [exS, execStmtHA]; exact ⟨hM, rfl⟩⟩
+  exact ⟨M, .why (R.scopes.foldl World.gibt σ) r, teil_refl M, fun Φ hP => by simp only [execStmtHA],
+    by simp only [exS, execStmtHA]; exact ⟨hM.gibt_foldl E R.scopes, rfl⟩⟩
 
 set_option linter.unusedSectionVars false in
 theorem sim_stmt_leave {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

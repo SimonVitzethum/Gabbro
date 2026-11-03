@@ -30,7 +30,8 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ
         split at h
         · rename_i σ2 v hs
-          have g2 : Treu (D.schreibt f) (D.gschreibt f) _ σ2 := hb σ2 (by rw [hs]; rfl)
+          have hbb := hb σ2 (by rw [hs]; rfl); rw [hs] at hbb
+          have g2 : TreuRet (D.schreibt f) (D.gschreibt f) _ σ2 := hbb
           have g3 : Treu (D.schreibt f) (D.gschreibt f) σ2
               (σ2.lese (vertragVon D f).ende (P.ensures f).orte) :=
             treu_lese σ2 (vertragVon D f).ende (P.ensures f).orte
@@ -44,10 +45,11 @@ theorem rufAt_treu (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
             split at h
             · simp only [RufAusgang.welt, reduceCtorEq] at h
             · simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
-              exact ((g0.trans g2).trans g3).trans g4
+              exact ((g0.transRet g2).transGut g3).transGut g4
         · rename_i σ2 r hs
           simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
-          exact g0.trans (hb _ (by rw [hs]; rfl))
+          have hbb := hb _ (by rw [hs]; rfl); rw [hs] at hbb
+          exact g0.transRet hbb
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · rename_i hl _ _ _; exact absurd hl (by decide)
         · simp only [RufAusgang.welt, reduceCtorEq] at h

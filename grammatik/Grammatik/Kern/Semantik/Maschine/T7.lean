@@ -57,9 +57,9 @@ end Gabbro.Grammatik
       firing data (`hstep` out of the thread world `M.weltVon f` under `hΛ`)
       and the oracle bound (`hO`), the post-world keeps the statement
       contract's frame (`Rahmen V.schreibt V.gschreibt`), by direct reuse of
-      `stmt_gut` (`Satz.lean`, the `Gut` half that is the frame). The leaf
-      shape is the caller's evidence: the frame holds for every fired
-      statement, leaves included, so no `hleaf` premise is taken.
+      `gut_blatt` (`Maschine/T1`, leaf-local so no caller residual is
+      needed: the `Gut` half that is the frame). The leaf shape travels as
+      `hleaf`; the static scope check as `hscope`.
     - `blatt_rahmen_schritt`: the code frame of a fired step. The contract
       frame widened (`Rahmen.weiter`) to the thread's code frame
       (`D.schreibt (code f)` / `D.gschreibt (code f)`) under the
@@ -76,8 +76,8 @@ end Gabbro.Grammatik
       memories). The step-level lift of the `hlock` exclusion: a framed
       fired leaf extends the tracking chain.
 
-    Read-only inputs, never modified: `stmt_gut`, `keinRuf_gut`,
-    `Rahmen.weiter` (`Satz.lean`); the induction-step construction
+    Read-only inputs, never modified: `gut_blatt`
+    (`Maschine/T1`), `Rahmen.weiter` (`Satz.lean`); the induction-step construction
     (`kette_aus_maschinenlauf_schritt` above, mirrored except for the
     new-step frame); the projection theorems it reuses (`gen_konsistent`,
     `gen_gut_obs`, `gen_ausschluss`, `genWelten_letzte`,
@@ -99,7 +99,7 @@ end Gabbro.Grammatik
 
     Coverage (exactly): one single-thread step by a member thread for any
     fired statement -- every leaf included, oracle leaves included (their
-    frame is the same `stmt_gut` derivation under the same bound `hO`) --
+    frame is the same `gut_blatt` derivation under the same bound `hO`) --
     with `SerialLink` guarded-vacuous at the new step exactly as for lock
     steps (a writer owes no witness under the guard).
 
@@ -117,18 +117,20 @@ variable {D : Deklaration}
 /-- **The contract frame of a fired step.** From the firing data out of the
     thread world (`hstep` under `hΛ`) and the oracle bound (`hO`), the
     post-world keeps the statement contract's frame -- the `Rahmen` half of
-    `stmt_gut` (`Satz.lean`), read directly. Every premise is load-bearing:
-    each feeds `stmt_gut` or its application. -/
+    the plain leaf fact `gutRet_blatt` (`Maschine/T1`, scope-free: the frame
+    never needed spare-and-rank), read directly. Every premise is
+    load-bearing: each feeds `gutRet_blatt` or its application. -/
 theorem blatt_rahmen_vertrag
     (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
-    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (V : vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D)
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ') :
     Rahmen V.schreibt V.gschreibt (M.weltVon f) σ' := by
-  exact ((stmt_gut O passes keinRuf keinRuf_gut hO s (M.weltVon f) ρ hΛ) σ' hstep).1
+  exact (Stmt.gutRet_blatt O passes keinRuf hO s hleaf (M.weltVon f) ρ hΛ.heldIn σ' hstep).1
 
 /-- **The code frame of a fired step (`blatt_rahmen_schritt`).** A fired
     step's memory movement satisfies the chain-step frame: the contract
@@ -139,8 +141,9 @@ theorem blatt_rahmen_vertrag
 theorem blatt_rahmen_schritt
     (O : Orakel D) (passes : Nat) (hO : GutO O)
     (M : GenMaschine D) (f : Faden)
-    (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
+    (V : vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D)
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -148,7 +151,7 @@ theorem blatt_rahmen_schritt
     (hW : ∀ t, V.schreibt t = true → D.schreibt (code f) t = true)
     (hG : ∀ g, V.gschreibt g = true → D.gschreibt (code f) g = true) :
     Rahmen (D.schreibt (code f)) (D.gschreibt (code f)) (M.weltVon f) σ' := by
-  exact (blatt_rahmen_vertrag O passes hO M f V l Γ Λ Λ' s ρ hΛ σ' hstep).weiter hW hG
+  exact (blatt_rahmen_vertrag O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep).weiter hW hG
 
 /-- **The chain from the machine, one framed leaf step.** A chain tracking
     `M` extends along a fired framed step of a member thread: worlds and run
@@ -168,6 +171,7 @@ theorem kette_aus_maschinenlauf_blatt
     (hReach' : GenErreichbar P O passes (GenStart sp) M')
     (V : Vertrag D) (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D))
     (s : Stmt D V l Γ Λ Λ') (ρ : Env D Γ)
+    (hleaf : s.istBlatt = true)
     (hΛ : HeldGenau Λ (offen (M.spuren f)))
     (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf s (M.weltVon f) ρ).welt = some σ')
@@ -272,7 +276,7 @@ theorem kette_aus_maschinenlauf_blatt
         rw [eW2] at hkn
         have hnach0 : σ' = nach0 := Option.some_inj.mp hkn
         rw [hg0, hvor, ← hnach0]
-        have hR := blatt_rahmen_schritt O passes hO M f V l Γ Λ Λ' s ρ hΛ σ' hstep
+        have hR := blatt_rahmen_schritt O passes hO M f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
           J.code hW hG
         refine ⟨hmem, ?_, ?_⟩
         · intro t ht k2 fld

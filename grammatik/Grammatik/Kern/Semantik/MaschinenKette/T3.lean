@@ -93,7 +93,7 @@ theorem kette_aus_lauf_gesamt
           exact hGt g0 hg0
         have hFrameBlatt : Rahmen (D.schreibt (J.code f)) (D.gschreibt (J.code f))
             (Mmid.weltVon f) σ' :=
-          blatt_rahmen_schritt O passes hO Mmid f V l Γ Λ Λ' s ρ hΛ σ' hstep
+          blatt_rahmen_schritt O passes hO Mmid f V l Γ Λ Λ' s ρ hleaf hΛ σ' hstep
             J.code hW hG
         obtain ⟨J', hJ'w, hJ'l, hmemJ', hJcodeJ', hnwJ', hJ'link⟩ :=
           kette_aus_lauf_schritt_rahmen P O passes hO sp Nb Mmid _ f

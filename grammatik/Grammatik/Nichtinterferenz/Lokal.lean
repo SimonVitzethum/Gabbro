@@ -169,9 +169,18 @@ theorem blatt_rel (hST : ∀ c, S c = true → T c = true) (hAx : ∀ a, Ax a = 
       simp only [execStmt, AusRel]
       rw [h1.evalErg e (alle_von hST hn) ρ]
       exact ⟨h1, rfl⟩
+  | retScoped e R =>
+      simp only [nS] at hn
+      have h1 := h.lese Λ e.orte
+      simp only [execStmt, AusRel]
+      rw [h1.evalErg e (alle_von hST hn) ρ]
+      exact ⟨h1.gibt_foldl R.scopes, rfl⟩
   | retWhy r hp =>
       simp only [execStmt, AusRel]
       exact ⟨h, trivial⟩
+  | retWhyScoped r R =>
+      simp only [execStmt, AusRel]
+      exact ⟨h.gibt_foldl R.scopes, rfl⟩
   | leave h' =>
       simp only [execStmt, AusRel]
       exact ⟨h, trivial⟩

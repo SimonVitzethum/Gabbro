@@ -60,8 +60,11 @@ def c11ret : Stmt Wit.wD (vertragVon Wit.wD Wit.WFn.wipe) true [] [] [] :=
   .retScoped .empty c11retR
 
 /-- Scoped reason return `1` of two with empty scope evidence. -/
+def c11retWhyR : Gabbro.Grammatik.RueckRessourcen Wit.wD (vertragVon Wit.wD Wit.WFn.fail) [] :=
+  { scopes := [], genau := List.Perm.refl [] }
+
 def c11retWhy : Gabbro.Grammatik.Endblock Wit.wD (vertragVon Wit.wD Wit.WFn.fail) false [.int 0 3] [] :=
-  .retWhyScoped ⟨1, by decide⟩ { scopes := [], genau := List.Perm.refl [] }
+  .retWhyScoped ⟨1, by decide⟩ c11retWhyR
 
 /-- The consuming traversal lowers (closed evaluation). -/
 theorem zeuge_c11_consume_lower :

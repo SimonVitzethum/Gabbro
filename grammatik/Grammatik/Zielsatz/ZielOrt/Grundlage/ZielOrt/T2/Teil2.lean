@@ -19,7 +19,7 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
     the write, on `exchange`, on the axiom's declared writes) and the
     signature permission (`hw`, or `RufPasst` for the generalized C08 calls),
     and every writing step now demands `HeldGenau`, so (a) contradicts a
-    write; the frame of `stmt_gut` and of the oracle (`GutO`) gives (b). -/
+    write; the frame of `gut_blatt` and of the oracle (`GutO`) gives (b). -/
 theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
     (hs : RufSchrittG P O passes M u M') (c : D.Tab ⊕ D.Glob)
     (hc : (∃ L, Bewacht c L ∧ L ∉ offen (M.faeden u).spur) ∨
@@ -32,8 +32,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
         have hw : (execStmt O passes keinRuf s ((genAusG M).weltVon u) ρ).welt = some σ' := by
           show (execStmt O passes keinRuf s (M.weltVon u) ρ).welt = some σ'
           rw [hstep]; rfl
-        have hR := ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon u) ρ hΛ) σ'
-          (by rw [hstep]; rfl)).1
+        have hscope : s.ScopesOk :=
+          Stmt.scopesOk_of_ok O passes keinRuf s hleaf (M.weltVon u) ρ σ' ρ' hstep
+        have hR := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope (M.weltVon u) ρ hΛ) σ'
+          (by rw [hstep]; rfl)
+        rw [hstep] at hR
         cases c with
         | inl t =>
             show σ'.slots t = M.speicher.slots t
@@ -50,8 +53,11 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
         have hw : (execStmt O passes keinRuf s ((genAusG M).weltVon u) ρ).welt = some σ' := by
           show (execStmt O passes keinRuf s (M.weltVon u) ρ).welt = some σ'
           rw [hstep]; rfl
-        have hR := ((Stmt.gut_blatt O passes keinRuf hO s hleaf (M.weltVon u) ρ hΛ) σ'
-          (by rw [hstep]; rfl)).1
+        have hscope : s.ScopesOk :=
+          Stmt.scopesOk_of_ok O passes keinRuf s hleaf (M.weltVon u) ρ σ' ρ' hstep
+        have hR := (Stmt.gut_blatt O passes keinRuf hO s hleaf hscope (M.weltVon u) ρ hΛ) σ'
+          (by rw [hstep]; rfl)
+        rw [hstep] at hR
         cases c with
         | inl t =>
             show σ'.slots t = M.speicher.slots t
