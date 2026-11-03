@@ -45,19 +45,19 @@ example : (uCheck [] [] ["g"] ["p"] [] { probenCheck with boden := [.tru, .fls] 
 /-- The false-verdict probe elaborates to its generated producer, exactly like
     the true one. -/
 example : (uProbeFns [] [] [] [] [] [] [] [] [] [] [] [] [] [] 0 ["g"] [probenCheckFalsch]).map
-    (List.map (·.name)) = .ok ["p#probe"] := rfl
+    (List.map (·.name)) = .ok ["p#probe", "p#report#0"] := rfl
 
 /-- The elaborated unit carries the Duty: the probe threads it (`nimmt` and
     `gibt`), the gate wrapper threads it too. -/
 example : (elabU [probenFn, .checkT probenCheck]).map
     (fun u => u.fns.map fun f => (f.name, f.nimmt, f.gibt)) =
     .ok [("g", [], []), ("p#probe", ["p#duty"], ["p#duty"]),
-      ("p#tor#g", ["p#duty"], ["p#duty"])] := rfl
+      ("p#report#0", [], []), ("p#tor#g", ["p#duty"], ["p#duty"])] := rfl
 
 /-- The false-verdict check elaborates to the same generated shape: the Duty
     threads through `false` returns too. -/
 example : (elabU [probenFn, .checkT probenCheckFalsch]).map (fun u => u.fns.map (·.name)) =
-    .ok ["g", "p#probe", "p#tor#g"] := rfl
+    .ok ["g", "p#probe", "p#report#0", "p#tor#g"] := rfl
 
 /-- A `bool` gate derives its Duty-threading wrapper forwarding the answer:
     the wrapper binds the gate call and returns it. -/
