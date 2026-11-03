@@ -60,18 +60,6 @@ theorem integerFloat_normalized (n : Nat) (large : 2 ^ 55 ≤ n) :
     exact Nat.left_le_or
   exact ⟨by omega, log⟩
 
-/-- Integer conversion can overflow, but cannot produce a NaN. -/
-theorem integerFloat_not_nan (z : Int) : klasse f64 (ofInt f64 z) ≠ .nan := by
-  by_cases zero : z = 0
-  · subst z; decide
-  · have replay := softRound_replay_all z 0 zero
-    change ofInt f64 z = _ at replay
-    rw [replay]
-    split <;> (try split) <;> (try split) <;> (try split) <;> (try split)
-    all_goals simp only [klasse]
-    all_goals split <;> (try split) <;> (try split) <;>
-      simp_all [f64, Format.bexpMax, Format.emin, Format.emax] <;> omega
-
 /-- Saturating the exponent index only affects values already rounding to
     infinity. The complete magnitude is compressed once with a sticky bit,
     then passed to precisely the adder/multiplier guard-rounding kernel. -/
@@ -102,7 +90,8 @@ theorem integerFloat_round (z : Int) (large : 2 ^ 55 ≤ z.natAbs) :
     have interval := softRound_signed_interval (decide (z < 0)) j n k (k : Int)
       (by omega) (by rw [bits]; change (-1022 : Int) ≤ _; omega) certificate
     simp only [sub_self, signed] at interval
-    convert interval.symm using 2 <;> omega
+    have scale : ((k + 1078 : Nat) : Int) - 1078 = (k : Int) := by omega
+    simpa only [scale] using interval.symm
   · have index : integerFloatIndex n = 2047 := Nat.min_eq_left (by omega)
     have overflow : (f64.emax : Int) < (bitlen n : Int) - 1 := by
       rw [integerFloat_bitlen n (by omega)]
