@@ -45,6 +45,13 @@ theorem consumeTraverse_lowS_refused (passes : Nat) (A : D.Fn → Nat)
     lowS passes A L layout ens pr ex
       (.consumeTraverse t member edge inv bound mass body : Stmt D V l Γ Λ Λ) reserved = none := rfl
 
+/-- The source entry always has fuel for its initial invariant/selection
+    round, even for an empty index domain and a zero measure bound. Fuel
+    exhaustion can occur only on a subsequent continuing round. -/
+theorem consumeTraverse_initial_fuel (t : D.Tab) (bound : Int) :
+    0 < (D.count t).toNat + bound.toNat + 1 := by
+  omega
+
 variable [Kern] {L : Lay D}
 
 /-- The statement theorem remains connected to the actual lowS path. This
