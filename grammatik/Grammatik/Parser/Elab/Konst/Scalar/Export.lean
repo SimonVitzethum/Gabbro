@@ -158,7 +158,7 @@ def checkCall (k : UKonstFn) (fns : List UKonstFn)
     Except String (CheckedCall k fns env sources) := do
   let ⟨lo, hi, fn⟩ ← elaborate k
   match hv : argumentValues fns env k.params sources with
-  | .error error => throw ("const open argument at `" ++ k.name ++ "`: " ++ error)
+  | .error error => throw ("const argument failure at `" ++ k.name ++ "`: " ++ error)
   | .ok values =>
     match ha : arguments (declaration (k.params.map Prod.snd) (.int lo hi)) k.params values with
     | .error error => throw error
