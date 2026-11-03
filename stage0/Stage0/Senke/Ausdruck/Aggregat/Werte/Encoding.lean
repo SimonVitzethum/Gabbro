@@ -77,7 +77,7 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
         simp only [encodeProductFields, List.length_append, productWords]
         rw [encodeWords_length L σ (ProdVal.hd vs), ih]
     simp only [encodeWords, valueWords]
-    unfold encodeProduct
+    simp only [encodeProduct]
     split
     · next h => subst fs; simp [productWords]
     · next h =>
@@ -96,7 +96,7 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
       have := v.2; omega
   | opt n =>
     change Option (Zahl 0 (n - 1)) at v
-    unfold encodeWords
+    simp only [encodeWords]
     simp only [valueWords]
     split
     · rfl
@@ -172,8 +172,7 @@ theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (
       encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) rest) := by
   change Fin n → Wert D τ at rest
   have nonempty : n + 1 ≠ 0 := by omega
-  conv => lhs; unfold encodeWords
-  rw [if_neg nonempty, elementEncoding]
+  conv => lhs; simp only [encodeWords, if_neg nonempty, elementEncoding]
   change encodeWords L τ a ++
       elementEncoding n (fun i => encodeWords L τ (arrConsW a rest i.succ)) = _
   have tail : (fun i : Fin n => encodeWords L τ (arrConsW a rest i.succ)) =
@@ -184,9 +183,7 @@ theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (
   rw [tail]
   by_cases empty : n = 0
   · subst n; simp [elementEncoding]
-  · rw [if_neg empty]
-    conv => rhs; arg 2; unfold encodeWords
-    rw [if_neg empty]
+  · simp only [encodeWords, if_neg empty]
 
 theorem ValueValid.arrCons {τ : Ty} {n : Nat} {a : Wert D τ} {rest : Wert D (.arr τ n)}
     (head : ValueValid L τ a) (tail : ValueValid L (.arr τ n) rest) :
