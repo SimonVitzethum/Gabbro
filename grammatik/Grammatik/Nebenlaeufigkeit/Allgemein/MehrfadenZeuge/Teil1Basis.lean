@@ -204,6 +204,8 @@ theorem mHp (caller callee : mD.Fn) {Λ : List (Res mD)}
     exact ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩
   hh := hh
   hx := fun L hL hn => absurd (hx L hL) hn
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (mD.signatur callee).owner)
 
 theorem mHpSetzeA : RufPasst mD (vertragVon mD mHauptA) (mD.signatur mSetze) mL :=
   mHp mHauptA mSetze (fun t h => by cases t <;> simp_all [mD, mSetze, mHauptA, Deklaration.signatur,

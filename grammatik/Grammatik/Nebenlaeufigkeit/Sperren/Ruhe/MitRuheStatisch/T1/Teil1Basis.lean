@@ -15,6 +15,14 @@ theorem kongr₂ {α β γ : Sort _} (f : α → β → γ) {a a' : α} {b b' : 
     (hb : b = b') : f a b = f a' b' := by
   subst ha; subst hb; rfl
 
+theorem orte_cast_nutz {D' : Deklaration} {Γ' : Ctx} {Λ' : List (Res D')} {c₁ c₂ : Option Ty}
+    (h : c₁ = c₂) (n : NutzlastExpr D' Γ' Λ' c₁) : (h ▸ n).orte = n.orte := by
+  subst h; rfl
+
+theorem orte_cast_args {D' : Deklaration} {Γ' : Ctx} {Λ' : List (Res D')} {τs₁ τs₂ : List Ty}
+    (h : τs₁ = τs₂) (a : Args D' Γ' Λ' τs₁) : (h ▸ a).orte = a.orte := by
+  subst h; rfl
+
 /-! ## 1. Read carriers of expressions -/
 
 mutual
@@ -62,7 +70,7 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .none _ => rfl
   | _, _, _, .some a => ruE_orte a
   | _, _, _, .istSome a => ruE_orte a
-  | _, _, _, .case _ _ nutz => ruN_orte nutz
+  | _, _, _, .case _ _ nutz => (orte_cast_nutz _ (ruN nutz)).trans (ruN_orte nutz)
   | _, _, _, .why _ _ => rfl
   | _, _, _, .forallSlots t body _ => congrArg (Sum.inl t :: ·) (ruE_orte body)
   | _, _, _, .existsSlots t body _ => congrArg (Sum.inl t :: ·) (ruE_orte body)
@@ -83,7 +91,7 @@ theorem ruE_orte : ∀ {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ �
   | _, _, _, .intBuiltin1 _ a => ruE_orte a
   | _, _, _, .intBuiltin2 _ a b => kongr₂ (· ++ ·) (ruE_orte a) (ruE_orte b)
   | _, _, _, .count _ body => ruE_orte body
-  | _, _, _, .prod _ args => ruA_orte args
+  | _, _, _, .prod _ args => (orte_cast_args _ (ruA args)).trans (ruA_orte args)
   | _, _, _, .prodGet v _ => ruE_orte v
   | _, _, _, .prodSet v _ e => kongr₂ (· ++ ·) (ruE_orte v) (ruE_orte e)
 

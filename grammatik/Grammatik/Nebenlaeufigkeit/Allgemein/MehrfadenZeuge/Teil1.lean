@@ -1,6 +1,5 @@
 /-
   File:      Grammatik/MehrfadenZeuge.lean
-public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1Basis
   Subject:   THE WITNESS for the three concurrency repairs of 2026-09-14
              (THEOREM-MAP §16): two ACTIVE threads, each writing its OWN
              private table unguarded, both updating one shared table under a
@@ -33,6 +32,7 @@ module
 
 public import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+public import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge.Teil1Basis
 
 @[expose] public section
 
