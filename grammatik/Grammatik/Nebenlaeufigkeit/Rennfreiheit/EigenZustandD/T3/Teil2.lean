@@ -133,12 +133,14 @@ theorem blattSlots_dispatch (O : Orakel D) (hO : GutO O)
       refine Or.inr (Or.inl fun k f => ?_)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).1]
+      try rfl
   | retWhyScoped r R =>
       refine Or.inr (Or.inl fun k f => ?_)
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
-      rfl
+      rw [(World.gibt_foldl_speicher _ _).1]
+      try rfl
 
 /-! ## 10. The step theorem: a foreign step keeps the slots of `t`.
 

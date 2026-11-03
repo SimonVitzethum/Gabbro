@@ -107,7 +107,7 @@ theorem prodSet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
       (cv ++ (ce ++ copyWords (valueWords τ) (d + productOffset i) src)) ρ W reserved := by
     simpa only [src, List.append_assoc] using hp
   obtain ⟨m1, run1, changed1, product⟩ := ihv cv tv hv (by omega) m pc hp'.left
-  have next1 := hp'.next changed1 (show d ≤ src by simp only [src]; omega) (show src ≤ K by simp only [src]; omega)
+  have next1 := hp'.next changed1 (show d ≤ src by simp only [src]; omega) (by simp only [src] at *; omega)
   obtain ⟨m2, run2, changed2, value⟩ := ihe ce te he (by omega) m1 _ next1.left
   have product2 := product.agree changed2 (hp.frame.agree changed1)
     (show d + valueWords (.prod name fs) ≤ src from Nat.le_refl _) (show src ≤ K by simp only [src]; omega)
@@ -116,7 +116,7 @@ theorem prodSet_ok [Kern] {L : Lay D} {Γ : Ctx} {Λ : List (Res D)}
     (by simp only [src] at *; omega) (by simp only [src] at *; omega)
     (Or.inl (by simp only [src]; omega)) tail.code
     (by simpa only [copyWords_length] using tail.far) value
-  refine ⟨m3, ?_, changed1.trans ((changed2.mono (by simp only [src]; omega)).trans
+  refine ⟨m3, ?_, changed1.trans ((changed2.mono (by first | omega | (simp only [src] at *; omega))).trans
     ((Agree.widen changed3 (by simp only [src] at *; omega)).mono (by omega))),
     ProdValid.set i _ _ product.1 value.1, ?_⟩
   · simpa only [src, List.length_append, copyWords_length, pc_add, List.append_assoc,

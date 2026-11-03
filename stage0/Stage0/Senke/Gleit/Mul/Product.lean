@@ -79,7 +79,8 @@ theorem softMulHighL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     WordCode.bin hi1 midh (g := fun x y => some (x + y))
       rfl rfl (by decide : 3 < 256)
   intro fp K d c top h hK m pc hp
-  simpa only [mulHiW, m32, BitVec.ofInt_ofNat] using
+  have h32 : (32#64).toNat % 64 = 32 := by decide
+  simpa only [mulHiW, m32, BitVec.ofInt_ofNat, h32] using
     result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
 
 /-- Both limbs identify one untruncated product, for arbitrary input words.

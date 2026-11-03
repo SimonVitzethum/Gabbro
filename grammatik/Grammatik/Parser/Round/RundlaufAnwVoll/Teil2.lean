@@ -57,6 +57,29 @@ theorem platz_nicht_start (z : SExpr) (hz : gutPlatz z = true) (X : List Token)
     | cons s _ => cases s <;> rfl
   · intro e; subst e; revert hka; decide
 
+/-- An assignment operator cannot open an ordinary or generic call. -/
+theorem zuweis_keineRufOeffnung (o : String) (ho : istZuweis o = true)
+    (R : List Token) :
+    (∀ tail, Token.zeichen o :: R ≠ .zeichen "(" :: tail) ∧
+    (∀ tail, Token.zeichen o :: R ≠ .zeichen "::" :: .zeichen "[" :: tail) := by
+  have hnparen : o ≠ "(" := by
+    intro h
+    subst h
+    simp only [istZuweis, strEq_paren_gleich, strEq_paren_plusgleich,
+      strEq_paren_minusgleich, strEq_paren_undgleich, strEq_paren_odergleich,
+      Bool.false_or, Bool.false_eq_true] at ho
+  have hngeneric : o ≠ "::" := by
+    intro h
+    subst h
+    simp only [istZuweis, strEq_doppelpunkt_gleich, strEq_doppelpunkt_plusgleich,
+      strEq_doppelpunkt_minusgleich, strEq_doppelpunkt_undgleich,
+      strEq_doppelpunkt_odergleich, Bool.false_or, Bool.false_eq_true] at ho
+  constructor
+  · intro tail h
+    exact hnparen (Token.zeichen.inj (List.cons.inj h).1)
+  · intro tail h
+    exact hngeneric (Token.zeichen.inj (List.cons.inj h).1)
+
 theorem anw_set (z : SExpr) (o : String) (w : SExpr) (hz : gutPlatz z = true)
     (ho : istZuweis o = true) (hw : gut w = true) : AnwBein (.set z o w) := by
   intro rest F _ hF
@@ -73,12 +96,15 @@ theorem anw_set (z : SExpr) (o : String) (w : SExpr) (hz : gutPlatz z = true)
   have hK := kopfP z hz (.zeichen o :: (druckToks w ++ .zeichen ";" :: rest)) F'
     (by rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> rfl) (by omega)
   have hO := ausdruck w hw (.zeichen ";" :: rest) F' rfl rfl rfl (by omega)
+  obtain ⟨hmiss, hgeneric⟩ := zuweis_keineRufOeffnung o ho
+    (druckToks w ++ .zeichen ";" :: rest)
   simp only [parseKopfStmt, hK]
   split
   · simp only [gutPlatz, Bool.false_eq_true] at hz
   · simp only [gutPlatz, Bool.false_eq_true] at hz
-  · rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;>
-      simp only [String.reduceEq, imp_self, strEq_self, Bool.true_or, ↓reduceIte, List.tail_cons, hO, fordereZeichen, Bool.or_true]
+  · simp only [gutPlatz, Bool.false_eq_true] at hz
+  · rcases zuweis_is o ho with h | h | h | h | h <;> subst h <;> split <;>
+      simp_all [hO, fordereZeichen, strEq_self]
 
 theorem anw_shift (z : SExpr) (a b : String) (hz : gutPlatz z = true) : AnwBein (.shift z a b) := by
   intro rest F _ hF

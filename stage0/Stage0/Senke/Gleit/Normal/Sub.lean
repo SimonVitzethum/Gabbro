@@ -2,8 +2,6 @@
    The kernel defines sub as add with negation, including NaN propagation. -/
 module
 public import Stage0.Senke.Gleit.Normal.Inputs
-import Std.Tactic.BVDecide
-meta import Std.Tactic.BVDecide.Reflect
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -18,7 +16,24 @@ def softNegWord (b : Runner.W) : Runner.W := b ^^^ BitVec.ofNat 64 (2 ^ 63)
 
 private theorem xorHighBit (b : Runner.W) :
     b ^^^ BitVec.ofNat 64 (2 ^ 63) = b + BitVec.ofNat 64 (2 ^ 63) := by
-  bv_decide
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_xor, BitVec.toNat_add, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (by omega : 2 ^ 63 < 2 ^ 64)]
+  apply Nat.eq_of_testBit_eq
+  intro i
+  rw [Nat.testBit_xor, Nat.testBit_two_pow, Nat.testBit_mod_two_pow]
+  by_cases low : i < 63
+  · rw [Nat.add_comm b.toNat (2 ^ 63), Nat.testBit_two_pow_add_gt low]
+    simp [show 63 ≠ i by omega, show i < 64 by omega]
+  · by_cases top : i = 63
+    · subst i
+      rw [Nat.add_comm b.toNat (2 ^ 63), Nat.testBit_two_pow_add_eq]
+      simp
+    · have high : 64 ≤ i := by omega
+      have outside : b.toNat.testBit i = false :=
+        Nat.testBit_lt_two_pow (lt_of_lt_of_le b.isLt
+          (Nat.pow_le_pow_right Nat.zero_lt_two high))
+      simp [show 63 ≠ i by omega, show ¬i < 64 by omega, outside]
 
 /-- The single xor implements model negation on every well-formed triple. -/
 theorem softNegWord_model (b : GFloat) (hb : wf f64 b) :

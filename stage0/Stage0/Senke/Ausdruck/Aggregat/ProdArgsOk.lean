@@ -22,7 +22,7 @@ def ProdFieldsOk (L : Lay D) (σ₀ σ : World D) (fp : Runner.W) (K reserved : 
     (∀ d ca ta, lowE (currentOld := currentOld) L (reserved := reserved) e d = some (ca, ta) → ta ≤ K → ∀ m pc,
       Pre L m pc fp K d ca ρ W reserved →
         ValueOk L m pc fp K d ca τ (eval σ₀ e σ ρ)) ∧
-    ProdFieldsOk (currentOld := currentOld) L σ₀ σ fp K reserved W ρ rest
+    ProdFieldsOk L σ₀ σ fp K reserved W ρ rest
 
 /-- Each field hypothesis is reusable at the offset selected by the traversal. -/
 theorem prodArgs_ok :
@@ -72,18 +72,20 @@ theorem prod_ok {name : Nat} {fs : List Ty} (args : Args D Γ Λ fs)
     refine ⟨m', run, changed, trivial, ?_⟩
     have zero : w = 0 := by simpa using encoded
     subst w
-    change WordsAt m' fp d [0]
+    erw [encodeWords_prod]; simp only [encodeProduct, if_pos rfl]
     intro i hi
     have index : i = 0 := by simpa using hi
     subst i
     simpa using read
-  | @cons τ rest e tail =>
+  | cons e tail =>
+    rename_i τ rest
     have span := prodArgsL_top (lowE (currentOld := currentOld) L (reserved := reserved)) (.cons e tail) d code bound lower
     have positive := productWords_pos_of_ne_nil (by simp : τ :: rest ≠ [])
     have nonempty : bound ≠ d := by omega
     simp only [if_neg nonempty] at hp ⊢
     exact (prodArgs_ok (.cons e tail) fields d code bound lower (by omega) m pc hp).mono
       (fun _ result => by
-        simpa only [ValueAt, ValueValid, encodeWords, encodeProduct,
-          if_neg (by simp : τ :: rest ≠ [])] using result)
+        simp only [ValueAt, ValueValid]
+        erw [encodeWords_prod]
+        simpa only [encodeProduct, if_neg (by simp : τ :: rest ≠ [])] using result)
 end Gabbro.Stage0.Senke

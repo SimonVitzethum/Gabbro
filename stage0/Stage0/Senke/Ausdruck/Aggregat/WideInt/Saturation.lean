@@ -3,6 +3,7 @@ module
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Eng
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.Ring
 public import Stage0.Senke.Ausdruck.Aggregat.Materialize
+public import Stage0.Senke.Ausdruck.Wenn
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -16,7 +17,7 @@ theorem intConstL_ok {lo hi : Int} (v : Zahl lo hi)
     (h : intConstL lo hi v.n d = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.int lo hi) v :=
-  constValue_ok v trivial h hK hp
+  constValue_ok (τ := .int lo hi) v trivial (by erw [encodeWords_int]; exact h) hK hp
 
 theorem saturatingAddL_ok {lo hi : Int} (x y : Zahl lo hi)
     {fa fb : Nat → Option (List II × Nat)} {fp : Runner.W} {K d top : Nat} {c : List II}
@@ -39,6 +40,7 @@ theorem saturatingAddL_ok {lo hi : Int} (x y : Zahl lo hi)
         ValueOk L m pc fp K q cc (.int (lo + lo) (hi + hi)) (Zahl.add x y) := by
     intro q cc tt emitted fits m pc pre
     exact wideAdd_ok x y (iha q) (ihb _) emitted fits pre
+  unfold saturatingAddL at h
   apply wideEng_ok (Zahl.add x y) fallback (Zahl.addS x y)
     (fun inside => addS_exakt_wenn_passt x y inside.1 inside.2) ?_ (sum_ok d) ?_ h hK hp
   · intro outside
@@ -60,10 +62,14 @@ theorem saturatingAddL_ok {lo hi : Int} (x y : Zahl lo hi)
           cond (by omega) pre).word trivial
       · intro below m pc pre
         have below : (Zahl.add x y).n < lo := of_decide_eq_true below
-        simpa only [fallback, if_pos below] using intConstL_ok low left (by omega) pre
+        have r := intConstL_ok low left (by omega) pre
+        simp only [fallback, if_pos below]
+        exact r
       · intro above m pc pre
         have above : ¬ (Zahl.add x y).n < lo := by simpa only [decide_eq_false_iff_not] using above
-        simpa only [fallback, if_neg above] using intConstL_ok high right (by omega) pre
+        have r := intConstL_ok high right (by omega) pre
+        simp only [fallback, if_neg above]
+        exact r
     · cases emitted
 
 end Gabbro.Stage0.Senke

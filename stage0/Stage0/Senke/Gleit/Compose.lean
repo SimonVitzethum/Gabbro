@@ -30,6 +30,7 @@ public import Stage0.Senke.Gleit.Align
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik
 open Gleitkomma
+variable [Runner.IR.Kern]
 
 /-- Composed software addition on words: the dispatcher decides special
     inputs; the silent finite path runs the kernel `rundeExakt` of the

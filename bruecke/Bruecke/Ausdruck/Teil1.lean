@@ -116,7 +116,7 @@ theorem durchTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count ⟨num, h⟩)))
     (hL : ∀ wdd ∈ (declOf u).braucht ⟨num, h⟩, Res.von (declOf u) wdd ∈ Λ) :
     HEq (durchTerm u Γ Λ num w h fh v i hL)
-      (Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (tabNr_some u num h) fh.idx i hL) := by
+      (Expr.thru (D := declOf u) (Expr.var v) ⟨num, h⟩ (capTab_some u num h) fh.idx i hL) := by
   unfold durchTerm; exact mpr_heq _ _
 
 theorem slotTerm_heq (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -151,6 +151,19 @@ theorem ptrTab_of (fn : UFn) (hA : ArtStimmt fn) (b : String) (j num : Nat) (w :
   rw [hτ] at hw'
   simp only [Option.map_some, Option.some.injEq] at hw'
   subst hw'
+  unfold ptrTab
+  rw [paramPos_find _ _ _ hj, hτ]
+  simp [tabAt, List.getElem?_eq_getElem h]
+
+/-- Typed parameter lookup also identifies a write-only capability's table. -/
+theorem ptrTab_of_type (fn : UFn) (b : String) (j num : Nat) (read write : Bool)
+    (hj : paramPos fn.params b = .ok j)
+    (hp : (fn.params[j]?).map (·.2) = some (.ptr (.table num (read, write))))
+    (h : num < u.tabs.length) : ptrTab u fn b = some (tabAt u ⟨num, h⟩).name := by
+  obtain ⟨τ, hτ⟩ := paramPos_name _ _ _ hj
+  rw [hτ] at hp
+  simp only [Option.map_some, Option.some.injEq] at hp
+  subst hp
   unfold ptrTab
   rw [paramPos_find _ _ _ hj, hτ]
   simp [tabAt, List.getElem?_eq_getElem h]
@@ -310,30 +323,27 @@ theorem fieldHitW_none {t : Fin u.tabs.length} (hw : (tabAt u t).werte = []) (fn
       intro f; unfold wertFeldAt; rw [hw]; split <;> rfl
     simp [hn]
 
-/-- No aggregate, reference or `never` parameter: the value lookup of a parameter answers nothing. -/
+/-- A numeric parameter in the scalar fragment bypasses the general value lookup. -/
 theorem lowParamWert_none {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat} {p : String}
-    (hA : ArtStimmt fn) : lowParamWert u Γ Λ fn sh p = none := by
+    (hA : ArtStimmt fn) (hN : numericParam fn p = true) : lowParamWert u Γ Λ fn sh p = none := by
   unfold lowParamWert
   split
   · rfl
-  · rename_i j _
-    have hk : ∀ k, fn.kinds[j]? = some k → ArtSchlicht k = true :=
-      fun k hk => hA.2.1 k (List.mem_of_getElem? hk)
-    have hq : ∀ q, fn.params[j]? = some q → TySchlicht q.2 = true :=
-      fun q hq => by
-        have := hA.2.2 q (List.mem_of_getElem? hq)
-        simp only [ParamSchlicht, Bool.and_eq_true] at this
-        exact this.1
-    rcases hkj : fn.kinds[j]? with _ | k <;> rcases hpj : fn.params[j]? with _ | ⟨n, τ⟩
-    · rfl
-    · have h2 := hq _ hpj
-      cases τ <;> first | rfl | (simp [TySchlicht] at h2; done)
-    · have h1 := hk _ hkj
-      cases k <;> first | rfl | (simp [ArtSchlicht] at h1; done)
-    · have h1 := hk _ hkj
-      have h2 := hq _ hpj
-      cases k <;> cases τ <;>
-        first | rfl | (simp [ArtSchlicht] at h1; done) | (simp [TySchlicht] at h2; done)
+  · rename_i j hj
+    unfold numericParam at hN
+    rw [paramPos_find _ _ _ hj] at hN
+    cases hpj : fn.params[j]? with
+    | none => simp [hpj] at hN
+    | some q =>
+      rw [hpj] at hN
+      obtain ⟨name, τ⟩ := q
+      cases τ <;> try { simp at hN }
+      case int lo hi =>
+        cases hkj : fn.kinds[j]? with
+        | none => rfl
+        | some k =>
+          have hk := hA.2.1 k (List.mem_of_getElem? hkj)
+          cases k <;> first | rfl | (simp [ArtSchlicht] at hk; done)
 
 /-- No aggregate field: the value lookup of a slot read through a pointer answers nothing. -/
 theorem lowDurchWert_none {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Nat}
