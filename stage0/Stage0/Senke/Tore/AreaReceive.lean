@@ -33,8 +33,9 @@ theorem areaCheck_ok {s reserved : Nat} {m : Runner.Mem} {pc fp : Runner.W}
   have tested : Ok m pc fp (s + 10) (s + 1)
       ([ci 1 (s + 1) 0 0] ++ [ci 14 (s + 1) s (s + 1)])
       (· = Runner.IR.bool (tag == 0)) := by
-    refine ⟨m2, run1.trans run2, change1.trans change2, w2, read2, ?_⟩
-    simpa only [encoded1] using encoded2
+    refine ⟨m2, ?_, change1.trans change2, w2, read2, ?_⟩
+    · simpa only [List.length_append, List.length_singleton, pc_add] using run1.trans run2
+    · simpa only [encoded1] using encoded2
   have checked := test_ok pre0 tested (by omega) (by omega)
   refine ⟨fun success => checked.1 ?_, fun failure => checked.2 ?_⟩
   · subst tag
