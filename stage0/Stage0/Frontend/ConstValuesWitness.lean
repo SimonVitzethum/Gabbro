@@ -55,6 +55,13 @@ def globalText : String := String.ofList
 
 theorem globals_compiled_zeuge : (compile globalText).toOption.isSome = true := by decide +kernel
 
+def qualifiedText : String := String.ofList
+  ("module Constants { pub const K : u8 = 5; } ".toList ++
+   "const fn addK(x : u8 in 0 .. 10) -> u8 in 0 .. 20 { return x + Constants::K; } ".toList ++
+   "impl fn main() -> u8 { return addK(Constants::K + 1); }".toList)
+
+theorem qualified_compiled_zeuge : (compile qualifiedText).toOption.isSome = true := by decide +kernel
+
 /-- The same source result retains the compiler's existing admission theorem. -/
 theorem portable_source_pipeline_zeuge :
     ∃ result : Compiled boolText,
