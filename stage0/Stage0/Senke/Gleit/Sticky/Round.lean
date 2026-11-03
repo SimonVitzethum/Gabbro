@@ -6,6 +6,7 @@ public import Mathlib.Tactic.Linarith
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Gleitkomma Runner.IR
+variable [Kern]
 
 /-- An odd jammed magnitude is strictly between adjacent even endpoints.
     A rounding grid divisible by four has an even midpoint, so every exact
@@ -88,20 +89,27 @@ theorem softShiftJamNat_interval (a k : Nat) :
     have upper : a / 2 ^ k + 1 ≤ softShiftJamNat a k + 1 := by omega
     have lowScaled := Nat.mul_le_mul_right (2 ^ k) lower
     have highScaled := Nat.mul_le_mul_right (2 ^ k) upper
-    exact ⟨odd, by nlinarith, by nlinarith⟩
+    refine ⟨odd, by omega, ?_⟩
+    calc
+      a < (a / 2 ^ k + 1) * 2 ^ k := by
+        rw [Nat.add_mul, Nat.one_mul]
+        omega
+      _ ≤ (softShiftJamNat a k + 1) * 2 ^ k := highScaled
 
 /-- The emitted word shift is the unbounded operation on the input word's
     natural value, including shifts wider than the word. -/
 theorem floatShiftJamWord_nat (a k : Runner.W) :
     (floatShiftJamWord a k).toNat = softShiftJamNat a.toNat k.toNat := by
   have model := congrArg BitVec.toNat (floatShiftJamWord_model a k)
+  have zero : (0 : Runner.W).toNat = 0 := by decide
+  have one : (1 : Runner.W).toNat = 1 := by decide
   simp only [BitVec.toNat_or, BitVec.toNat_ushiftRight] at model
   by_cases tail : a.toNat % 2 ^ k.toNat = 0
   · simpa only [softShiftJamNat, tail, ite_true, ne_eq, not_true_eq_false,
       decide_false, Runner.IR.bool, Bool.false_eq_true, ite_false,
-      BitVec.toNat_zero] using model
+      zero] using model
   · simpa only [softShiftJamNat, tail, ite_false, ne_eq, not_false_eq_true,
-      decide_true, Runner.IR.bool, ite_true] using model
+      decide_true, Runner.IR.bool, ite_true, one] using model
 
 /-- The existing word sticky lemma yields the complete rounding certificate:
     an exact quotient, or an odd word surrounding the original rational.
@@ -132,7 +140,8 @@ theorem floatShiftJamWord_large (a k : Runner.W) (large : a.toNat < 2 ^ k.toNat)
   rw [floatShiftJamWord_model]
   have zero : a >>> k.toNat = 0 := by
     apply BitVec.eq_of_toNat_eq
-    simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, BitVec.toNat_zero]
+    simp only [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
+      show (0 : Runner.W).toNat = 0 by decide]
     exact Nat.div_eq_of_lt large
   rw [zero, Nat.mod_eq_of_lt large, BitVec.zero_or]
 
