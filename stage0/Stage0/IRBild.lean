@@ -52,7 +52,7 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
   validateTargetFor options.arch options.target members
   let tore ← toreVonFor options.arch options.target members
   let tor : (declOf u).Ax → Option Senke.TorB := fun a =>
-    (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler⟩
+    (tore.find? (·.name == (uaxAt u a).name)).map fun t => ⟨t.nummer, t.regs, t.fehler, t.resultArea⟩
   let rs ← (uOhneDoppelte (u.roots ++ u.gestartet)).mapM (fnIdx u.fns)
   let roots := rs.filter (· != main)
   match hp : Senke.mainEnv ((declOf u).params main) with
