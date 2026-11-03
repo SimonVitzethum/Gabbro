@@ -50,7 +50,7 @@ theorem World.bytesAb_append (σ : World D) (t : D.Tab) (f : D.Feld t)
     σ.bytesAb t f hf (k + n) p =
       σ.bytesAb t f hf k p ++ σ.bytesAb t f hf n (p + k) := by
   induction k generalizing p with
-  | zero => rfl
+  | zero => simp [World.bytesAb]
   | succ k ih =>
     simp only [Nat.succ_add, World.bytesAb, ih, List.cons_append,
       Int.natCast_add, Int.natCast_one]
