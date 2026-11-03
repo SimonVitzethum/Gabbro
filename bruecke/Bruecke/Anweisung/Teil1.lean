@@ -66,9 +66,9 @@ def lowEndF (u : UProg) (c : Fin u.fns.length) (r : URet) :
 
 /-! ## 1. The writes: the lowering's casts are the constructors -/
 
-theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
+theorem assignDurchStmt_eq {read : Bool} (Γ : Ctx) (Λ : List (Res (declOf u)))
     (V : Vertrag (declOf u)) (t : Fin u.tabs.length)
-    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (true, true))))
+    (fh : FieldHit u t) (p : Expr (declOf u) Γ Λ (.ptr (.table t.val (read, true))))
     (ht : (declOf u).tabNr t.val = some t)
     (i : Expr (declOf u) Γ Λ (.index ((declOf u).count t)))
     (e : Expr (declOf u) Γ Λ (.int fh.range.1 fh.range.2))
@@ -114,7 +114,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
   · cases h
   · rename_i j hj
     split at h
-    · rename_i num hp
+    · rename_i read num hp
       split at h
       · rename_i hlt
         split at h
@@ -137,7 +137,11 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
                     obtain ⟨e2, he2, heq⟩ := assignDurchStmt_eq (ctxOf u c) (resOf u c) (verOf u c)
                       ⟨num, hlt⟩ fh (Expr.var pv) (tabNr_some u num hlt) i e _ hG
                     rw [heq]
-                    have hpt := ptrTab_of (fnAt u c) hA b j num true hj hp hlt
+                    have hparam : ((fnAt u c).params[j]?).map (·.2) =
+                        some (.ptr (.table num (read, true))) := by
+                      simpa only [ctxOf, List.getElem?_map] using
+                        (lowVar_typ (ctxOf u c) j _ pv hpv)
+                    have hpt := ptrTab_of_type (fnAt u c) b j num read true hj hparam hlt
                     simp only [stmtBody, hpt] at hb
                     cases hsv : sideExpr u (fnAt u c) v with
                     | none => rw [hsv] at hb; cases hb
