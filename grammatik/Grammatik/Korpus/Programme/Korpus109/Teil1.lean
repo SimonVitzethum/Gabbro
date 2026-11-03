@@ -44,12 +44,12 @@ namespace K109
 /-- `write_a(i)`: `T.slots[i].v = 1;`. -/
 def kRumpfWriteA : Endblock kD (vertragVon kD kWriteA) false [Ty.index 4] kLA :=
   .cons (.assignSlot KTab.t () (.var .here) kEins rfl kDarfTA)
-    (.ret .empty (by rfl))
+    (.ret .empty (by simp [Vertrag.ende]))
 
 /-- `write_b(i)`: `U.slots[i].v = 2;`. -/
 def kRumpfWriteB : Endblock kD (vertragVon kD kWriteB) false [Ty.index 4] kLB :=
   .cons (.assignSlot KTab.u () (.var .here) kZwei rfl kDarfUB)
-    (.ret .empty (by rfl))
+    (.ret .empty (by simp [Vertrag.ende]))
 
 /-- The call `write_a(0)` inside `distribute_a`'s lock. -/
 def kRufA : Stmt kD (vertragVon kD kDistA) false [] kLA kLA :=

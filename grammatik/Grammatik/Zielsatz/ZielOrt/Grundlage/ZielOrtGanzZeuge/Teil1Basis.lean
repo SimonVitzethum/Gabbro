@@ -108,13 +108,13 @@ def paTrav {V : Vertrag zD} {Γ : Ctx} {Λ : List (Res zD)} : Stmt zD V false Γ
   .traverse () .fls .nil
 
 def paRumpfEin : Endblock zD (vertragVon zD zEin) false [] zL :=
-  .cons paTrav (.ret .empty (by rfl))
+  .cons paTrav (.ret .empty (by simp [Vertrag.ende]))
 
 def paRumpfLies : Endblock zD (vertragVon zD zLies) false [] zL :=
-  .cons paTrav (.ret (.val zHundert) (by rfl))
+  .cons paTrav (.ret (.val zHundert) (by simp [Vertrag.ende]))
 
 def paRumpfWrap : Endblock zD (vertragVon zD zWrap) false [] zL :=
-  .cons paTrav (.ret .empty (by rfl))
+  .cons paTrav (.ret .empty (by simp [Vertrag.ende]))
 
 def paRumpfHaupt : Endblock zD (vertragVon zD zHaupt) false [] [] :=
   .cons paTrav (.ret .empty List.Perm.nil)

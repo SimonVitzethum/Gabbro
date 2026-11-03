@@ -150,6 +150,8 @@ theorem geHeld_ne : Res.held (D := geD) GeLock.lt ≠ Res.held GeLock.lg :=
 
 /-- `haupt` calls `leser`: same writes, same lock. -/
 theorem geHpLeser : RufPasst geD (vertragVon geD geHaupt) (geD.signatur geLeser) geLg where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (geD.signatur geLeser).owner)
   hw := fun t h => by cases t <;> first | rfl | exact nomatch h
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩

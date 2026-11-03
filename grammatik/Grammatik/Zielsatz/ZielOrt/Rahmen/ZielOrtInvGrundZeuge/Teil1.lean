@@ -173,6 +173,8 @@ def igRumpfSchlecht : Endblock igD (vertragVon igD igSetze) false [] igL :=
 
 /-- The call of `setze` from `haupt`: both hold `L` by signature. -/
 theorem igHp : RufPasst igD (vertragVon igD igHaupt) (igD.signatur igSetze) igL where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (igD.signatur igSetze).owner)
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩

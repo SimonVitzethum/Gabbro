@@ -181,6 +181,8 @@ def ivRumpfSchlecht : Endblock ivD (vertragVon ivD ivSetze) false [] ivL :=
 
 /-- The call of `setze` from `haupt`: both hold `L` by signature. -/
 theorem ivHp : RufPasst ivD (vertragVon ivD ivHaupt) (ivD.signatur ivSetze) ivL where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (ivD.signatur ivSetze).owner)
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩

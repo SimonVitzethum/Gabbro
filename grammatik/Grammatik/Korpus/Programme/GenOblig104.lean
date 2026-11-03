@@ -171,6 +171,8 @@ theorem gDarf_einzahlen_Konto : darf gD GTab.Konto gL_einzahlen := by unfold dar
 theorem gDarf_lies_Konto : darf gD GTab.Konto gL_lies := by unfold darf; decide
 
 theorem gHp_einzahlen_lies : RufPasst gD (vertragVon gD g_einzahlen) (gD.signatur g_lies) gL_einzahlen where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (gD.signatur g_lies).owner)
   hw := fun t => by cases t <;> decide
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
