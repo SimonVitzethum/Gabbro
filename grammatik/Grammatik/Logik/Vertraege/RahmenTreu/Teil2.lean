@@ -2,6 +2,8 @@ module
 
 public import Grammatik.Logik.Vertraege.RahmenTreu.Tactics
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil1
+public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2BindBlock
+public import Grammatik.Logik.Vertraege.RahmenTreu.Teil2BindEnd
 public import Grammatik.Logik.Vertraege.RahmenTreu.Teil4
 
 @[expose] public section
@@ -217,36 +219,9 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
   | .bindCall f args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize hR1 : R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = rv at h ⊢
-      cases rv with
-      | ok σ1 v =>
-          frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuAusgang.vorCall g1 ((block_treu bo hbV rest σ1 _ hscope_rest
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
-      | why σ1 r => exact keinGrund hr r
-      | logik _ => simp only [Ausgang.welt, reduceCtorEq] at h
-      | hardware _ => simp only [Ausgang.welt, reduceCtorEq] at h
+      exact block_bindCall_treu bo hbV (block_treu bo hbV) f args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallInd p args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at h ⊢
-      obtain ⟨f, hf⟩ := pv
-      simp only at h ⊢
-      replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-      generalize hR1 : R f (σ.lese Λ (p.orte ++ args.orte)) (umsig hf (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) = rv at h ⊢
-      cases rv with
-      | ok σ1 v =>
-          frame_call_ok (σ.lese Λ (p.orte ++ args.orte))
-          have g2 := block_treu bo hbV rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) hscope_rest
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-          exact (TreuAusgang.vorCall g1 g2.schrumpf) σ' h
-      | why σ1 r => exact keinGrundSig hf hr r
-      | logik _ => simp only [Ausgang.welt, reduceCtorEq] at h
-      | hardware _ => simp only [Ausgang.welt, reduceCtorEq] at h
+      exact block_bindCallInd_treu bo hbV (block_treu bo hbV) p args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
       simp only [execBlock] at h
       have hscope_rest : rest.ScopesOk := by scopes_treu
@@ -255,91 +230,16 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         bo hbV hh
         _ _
         (fun s1 v hh1 => (block_treu bo hbV rest s1 _ hscope_rest hh1).schrumpf) (fun s1 r hh1 => (end_treu bo hbV err s1 _ hscope_err hh1).schrumpf.zuAusgang) σ' h
-  | .bindCallElse f args he hp _ err rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_err : err.ScopesOk := by scopes_treu
-      generalize hR1 : R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = rv at h ⊢
-      cases rv with
-      | ok σ1 v =>
-          frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuAusgang.vorCall g1 ((block_treu bo hbV rest σ1 _ hscope_rest
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
-      | why σ1 r =>
-          frame_call_why (σ.lese Λ args.orte)
-          exact (TreuAusgang.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf.zuAusgang)) σ' h
-      | logik _ => simp only [Ausgang.welt, reduceCtorEq] at h
-      | hardware _ => simp only [Ausgang.welt, reduceCtorEq] at h
+  | .bindCallElse f args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
+      exact block_bindCallElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) f args he hp hr err rest σ ρ hscope hh σ' h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize ha : axiomAntwort O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | v⟩
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
-          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuAusgang.vorCall g1 ((block_treu bo hbV rest σ1 _ hscope_rest
-          (g1.heldB hh)).schrumpf)) σ' h
+      exact block_bindAxiom_treu bo hbV (block_treu bo hbV) a args he hw hg hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_err : err.ScopesOk := by scopes_treu
-      frame_axiom_else
-      generalize ha : axiomAntwortSonst O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | (v | r)⟩
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuAusgang.vorCall g1 ((block_treu bo hbV rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuAusgang.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err (g1.heldB hh)).schrumpf.zuAusgang)) σ' h
+      exact block_bindAxiomElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) a args he hr hw hg hd hgd err rest σ ρ hscope hh σ' h
   | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize ha : axiomAntwort O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | v⟩
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
-          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => block_treu bo hbV rest σ1 ρ' hscope_rest
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        cases e with
-        | none =>
-            simp only [Ausgang.weiterOpt] at h; exact (TreuAusgang.vorCall g1 (ihr _)) σ' h
-        | some τ =>
-            simp only [Ausgang.weiterOpt] at h; exact (TreuAusgang.vorCall g1 ((ihr _).schrumpf)) σ' h
+      exact block_bindAxiomOpt_treu bo hbV (block_treu bo hbV) e a args he hp hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execBlock] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_err : err.ScopesOk := by scopes_treu
-      frame_axiom_else
-      generalize ha : axiomAntwortSonst O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | (v | r)⟩
-      · simp only [Ausgang.welt, reduceCtorEq] at h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => block_treu bo hbV rest σ1 ρ' hscope_rest
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        cases e with
-        | none =>
-            simp only [Ausgang.weiterOpt] at h; exact (TreuAusgang.vorCall g1 (ihr _)) σ' h
-        | some τ =>
-            simp only [Ausgang.weiterOpt] at h; exact (TreuAusgang.vorCall g1 ((ihr _).schrumpf)) σ' h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        exact (TreuAusgang.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf.zuAusgang)) σ' h
+      exact block_bindAxiomOptElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) e a args he hp hd hgd hr err rest σ ρ hscope hh σ' h
   | .regRead r _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execBlock] at h ⊢
@@ -353,21 +253,8 @@ theorem block_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           · exact (block_treu bo hbV rest σ _ hscope_rest hh).schrumpf σ' h
           · simp only [Ausgang.welt, reduceCtorEq] at h
       | none => simp only [Ausgang.welt, reduceCtorEq] at h
-  | .regReadElse r _ zusage sonst rest, σ, ρ, hscope, hh, σ', h => by
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_sonst : sonst.ScopesOk := by scopes_treu
-      simp only [execBlock] at h ⊢
-      refine (TreuAusgang.vor (treu_fragt σ (.inr (.inl r))) ?_) σ' h; intro σ' h
-      rw [← fragt_haelt σ (.inr (.inl r))] at hh
-      generalize σ.fragt (.inr (.inl r)) = σ at h hh ⊢
-      generalize hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = ov at h ⊢
-      cases ov with
-      | some v =>
-        have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
-        by_cases hc : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
-        · exact (TreuAusgang.vor hl (block_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-        · exact (TreuEnd.vor hl (end_treu bo hbV sonst _ ρ hscope_sonst (hl.heldB hh))).zuAusgang σ' h
-      | none => simp only [Ausgang.welt, reduceCtorEq] at h
+  | .regReadElse r hk zusage sonst rest, σ, ρ, hscope, hh, σ', h => by
+      exact block_regReadElse_treu bo hbV (block_treu bo hbV) (end_treu bo hbV) r hk zusage sonst rest σ ρ hscope hh σ' h
   | .awaits g _ _ hL _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execBlock] at h ⊢
@@ -481,102 +368,17 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
       have hscope_rest : rest.ScopesOk := by scopes_treu
       exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
   | .bindCall f args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize hR1 : R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = rv at h ⊢
-      cases rv with
-      | ok σ1 v =>
-          frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuEnd.vorCall g1 ((end_treu bo hbV rest σ1 _ hscope_rest
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
-      | why σ1 r => exact keinGrund hr r
-      | logik _ => simp only [EndAusgang.welt, reduceCtorEq] at h
-      | hardware _ => simp only [EndAusgang.welt, reduceCtorEq] at h
-  | .bindCallElse f args he hp _ err rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_err : err.ScopesOk := by scopes_treu
-      generalize hR1 : R f (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = rv at h ⊢
-      cases rv with
-      | ok σ1 v =>
-          frame_call_ok (σ.lese Λ args.orte)
-          exact (TreuEnd.vorCall g1 ((end_treu bo hbV rest σ1 _ hscope_rest
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
-      | why σ1 r =>
-          frame_call_why (σ.lese Λ args.orte)
-          exact (TreuEnd.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
-      | logik _ => simp only [EndAusgang.welt, reduceCtorEq] at h
-      | hardware _ => simp only [EndAusgang.welt, reduceCtorEq] at h
+      exact end_bindCall_treu bo hbV (end_treu bo hbV) f args he hp hr rest σ ρ hscope hh σ' h
+  | .bindCallElse f args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
+      exact end_bindCallElse_treu bo hbV (end_treu bo hbV) f args he hp hr err rest σ ρ hscope hh σ' h
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize ha : axiomAntwort O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | v⟩
-      · simp only [EndAusgang.welt, reduceCtorEq] at h
-      · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
-          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuEnd.vorCall g1 ((end_treu bo hbV rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
+      exact end_bindAxiom_treu bo hbV (end_treu bo hbV) a args he hw hg hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_err : err.ScopesOk := by scopes_treu
-      frame_axiom_else
-      generalize ha : axiomAntwortSonst O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | (v | r)⟩
-      · simp only [EndAusgang.welt, reduceCtorEq] at h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuEnd.vorCall g1 ((end_treu bo hbV rest σ1 _ hscope_rest (g1.heldB hh)).schrumpf)) σ' h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hw hg h1)
-        exact (TreuEnd.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err (g1.heldB hh)).schrumpf)) σ' h
+      exact end_bindAxiomElse_treu bo hbV (end_treu bo hbV) a args he hr hw hg hd hgd err rest σ ρ hscope hh σ' h
   | .bindAxiomOpt e a args he hp hd hgd rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize ha : axiomAntwort O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | v⟩
-      · simp only [EndAusgang.welt, reduceCtorEq] at h
-      · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
-          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => end_treu bo hbV rest σ1 ρ' hscope_rest
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        cases e with
-        | none =>
-            simp only [EndAusgang.weiterOpt] at h; exact (TreuEnd.vorCall g1 (ihr _)) σ' h
-        | some τ =>
-            simp only [EndAusgang.weiterOpt] at h; exact (TreuEnd.vorCall g1 ((ihr _).schrumpf)) σ' h
+      exact end_bindAxiomOpt_treu bo hbV (end_treu bo hbV) e a args he hp hd hgd rest σ ρ hscope hh σ' h
   | .bindAxiomOptElse e a args he hp hd hgd hr err rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_err : err.ScopesOk := by scopes_treu
-      frame_axiom_else
-      generalize ha : axiomAntwortSonst O a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) = av at h ⊢
-      rcases av with ⟨σ1, _ | (v | r)⟩
-      · simp only [EndAusgang.welt, reduceCtorEq] at h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        have ihr := fun ρ' => end_treu bo hbV rest σ1 ρ' hscope_rest
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        cases e with
-        | none =>
-            simp only [EndAusgang.weiterOpt] at h; exact (TreuEnd.vorCall g1 (ihr _)) σ' h
-        | some τ =>
-            simp only [EndAusgang.weiterOpt] at h; exact (TreuEnd.vorCall g1 ((ihr _).schrumpf)) σ' h
-      · rw [ha] at h1
-        have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-        exact (TreuEnd.vorCall g1 ((end_treu bo hbV err σ1 _ hscope_err
-          (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))).schrumpf)) σ' h
+      exact end_bindAxiomOptElse_treu bo hbV (end_treu bo hbV) e a args he hp hd hgd hr err rest σ ρ hscope hh σ' h
   | .regRead r _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execEnd] at h ⊢
@@ -590,21 +392,8 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           · exact (end_treu bo hbV rest σ _ hscope_rest hh).schrumpf σ' h
           · simp only [EndAusgang.welt, reduceCtorEq] at h
       | none => simp only [EndAusgang.welt, reduceCtorEq] at h
-  | .regReadElse r _ zusage sonst rest, σ, ρ, hscope, hh, σ', h => by
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      have hscope_sonst : sonst.ScopesOk := by scopes_treu
-      simp only [execEnd] at h ⊢
-      refine (TreuEnd.vor (treu_fragt σ (.inr (.inl r))) ?_) σ' h; intro σ' h
-      rw [← fragt_haelt σ (.inr (.inl r))] at hh
-      generalize σ.fragt (.inr (.inl r)) = σ at h hh ⊢
-      generalize hv : einpassen O.zeiger (D.rtyp r) (O.regLies r σ) = ov at h ⊢
-      cases ov with
-      | some v =>
-        have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ zusage.orte
-        by_cases hc : wahr? (eval (σ.lese Λ zusage.orte) zusage (σ.lese Λ zusage.orte) (.cons v ρ)) = true <;> simp only [hc, ite_true, ite_false, Bool.true_eq_false, Bool.false_eq_true] at h ⊢
-        · exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
-        · exact (TreuEnd.vor hl (end_treu bo hbV sonst _ ρ hscope_sonst (hl.heldB hh))) σ' h
-      | none => simp only [EndAusgang.welt, reduceCtorEq] at h
+  | .regReadElse r hk zusage sonst rest, σ, ρ, hscope, hh, σ', h => by
+      exact end_regReadElse_treu bo hbV (end_treu bo hbV) r hk zusage sonst rest σ ρ hscope hh σ' h
   | .awaits g _ _ hL _ rest, σ, ρ, hscope, hh, σ', h => by
       have hscope_rest : rest.ScopesOk := by scopes_treu
       simp only [execEnd] at h ⊢
@@ -616,23 +405,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         exact (TreuEnd.vor hl (end_treu bo hbV rest _ _ hscope_rest (hl.heldB hh))).schrumpf σ' h
       · simp only [EndAusgang.welt, reduceCtorEq] at h
   | .bindCallInd p args he hp hr rest, σ, ρ, hscope, hh, σ', h => by
-      simp only [execEnd] at h ⊢
-      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (p.orte ++ args.orte)
-      have hscope_rest : rest.ScopesOk := by scopes_treu
-      generalize hpv : eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = pv at h ⊢
-      obtain ⟨f, hf⟩ := pv
-      simp only at h ⊢
-      replace hp := RufPasst.vonPasst (D.passt_sig hf) hp
-      generalize hR1 : R f (σ.lese Λ (p.orte ++ args.orte)) (umsig hf (evalArgs (σ.lese Λ (p.orte ++ args.orte)) args (σ.lese Λ (p.orte ++ args.orte)) ρ)) = rv at h ⊢
-      cases rv with
-      | ok σ1 v =>
-          frame_call_ok (σ.lese Λ (p.orte ++ args.orte))
-          have g2 := end_treu bo hbV rest σ1 (.cons (ergWert (ergSig hf he) v) ρ) hscope_rest
-            (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-          exact (TreuEnd.vorCall g1 (g2.schrumpf)) σ' h
-      | why σ1 r => exact keinGrundSig hf hr r
-      | logik _ => simp only [EndAusgang.welt, reduceCtorEq] at h
-      | hardware _ => simp only [EndAusgang.welt, reduceCtorEq] at h
+      exact end_bindCallInd_treu bo hbV (end_treu bo hbV) p args he hp hr rest σ ρ hscope hh σ' h
   | .bindCallIndElse p args he hp hr err rest, σ, ρ, hscope, hh, σ', h => by
       simp only [execEnd] at h
       have hscope_rest : rest.ScopesOk := by scopes_treu
