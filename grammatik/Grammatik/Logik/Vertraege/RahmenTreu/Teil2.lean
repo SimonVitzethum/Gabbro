@@ -103,30 +103,30 @@ theorem stmt_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         bo hbV hh
         _ _
         (fun s1 _ _ s2 h2 => by simp only [Ausgang.welt, Option.some.injEq] at h2; subst h2; exact Treu.refl _ _ _) (fun s1 r hh1 => (end_treu bo hbV err s1 _ hscope_err hh1).schrumpf.zuAusgang) σ' h
-  | .locks L hr body, σ, ρ, hscope, hh, σ', h =>
+  | .locks L hr body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       exact (TreuAusgang.gibt L (block_treu bo hbV body (σ.nimmt L) ρ hscope_body (heldB_locks L hh))) σ' h
-  | .breaking _ body, σ, ρ, hscope, hh, σ', h =>
+  | .breaking _ body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       exact block_treu bo hbV body σ ρ hscope_body hh σ' h
-  | .traverse t inv body, σ, ρ, hscope, hh, σ', h =>
+  | .traverse t inv body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       exact traverseLauf_treu bo _ _ _ (fun σ ρ hh => block_treu bo hbV body σ ρ hscope_body hh)
         (fun σ ρ _ => treu_lese σ Λ inv.orte) _ σ ρ hh σ' h
-  | .consumeTraverse t member edge inv bound mass body, σ, ρ, hscope, hh, σ', h =>
+  | .consumeTraverse t member edge inv bound mass body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       exact verbrauchLauf_treu bo _ t _ _ _ _ _
         (fun σ ρ hh => block_treu bo hbV body σ ρ hscope_body hh)
         (fun σ ρ _ => treu_lese σ Λ inv.orte)
         (fun σ ρ _ => treu_lese σ Λ (member.orte ++ edge.orte))
         (fun σ ρ _ => treu_lese σ Λ mass.orte) _ σ ρ hh σ' h
-  | .retry n bis body ueberlauf, σ, ρ, hscope, hh, σ', h =>
+  | .retry n bis body ueberlauf, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       have hscope_ueber : ueberlauf.ScopesOk := by scopes_treu
       exact retryLauf_treu bo _ _ _ _ (fun σ ρ hh => block_treu bo hbV body σ ρ hscope_body hh)
         (fun σ ρ _ => treu_lese σ Λ bis.orte)
         (fun σ ρ hh => block_treu bo hbV ueberlauf σ ρ hscope_ueber hh) n σ ρ hh σ' h
-  | .forever a inv body, σ, ρ, hscope, hh, σ', h =>
+  | .forever a inv body, σ, ρ, hscope, hh, σ', h => by
       have hscope_body : body.ScopesOk := by scopes_treu
       exact foreverLauf_treu bo _ a _ _ (fun σ ρ hh => block_treu bo hbV body σ ρ hscope_body hh)
         (fun σ ρ _ => treu_lese σ Λ inv.orte) passes σ ρ hh σ' h
@@ -464,7 +464,7 @@ theorem end_treu (bo : Option Int) (hbV : BodenUnter bo V.boden) :
           (HeldB.of_iff s.held_iff (g1.heldB hh)))) σ' h
       all_goals first
         | (simp only [EndAusgang.welt, Option.some.injEq] at h; subst h
-          simpa only [hs1] using hs _ (by rw [hs1]; rfl))
+           simpa only [hs1] using hs _ (by rw [hs1]; rfl))
         | (simp only [EndAusgang.welt, reduceCtorEq] at h)
   | .bind e rest, σ, ρ, hscope, hh, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
