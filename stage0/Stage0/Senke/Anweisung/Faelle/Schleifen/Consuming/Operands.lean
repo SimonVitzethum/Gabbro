@@ -29,8 +29,8 @@ theorem Ready.literals (h : x.Ready m σ ρ) {i a b : Nat} {va vb : Int}
     (ctx : frei Γ reserved ≤ min a b) (low : x.s ≤ min a b)
     (insideA : a < x.K) (insideB : b < x.K) (distinct : a ≠ b)
     (literalA : lit32 va = true) (literalB : lit32 vb = true)
-    (endAt : x.at i + 32 = x.at (i + 1)) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at (i + 1)) m
+    (endAt : x.addr i + 32 = x.addr (i + 1)) :
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr i) (x.addr (i + 1)) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (min a b) x.K m m' ∧
         x.read m' a (BitVec.ofInt 64 va) ∧ x.read m' b (BitVec.ofInt 64 vb)) := by
   have slice := (h.slice i (.code [ci 1 a va 0, ci 1 b vb 0]) _ found rfl).1
@@ -63,25 +63,25 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
     (topBound : top ≤ x.Ks)
     (rc : x.read m x.s (BitVec.ofInt 64 candidate.n))
     (rp : x.read m (x.s + 1) (BitVec.ofInt 64 predecessor.n)) :
-    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 20) (x.at 23) m
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.addr 20) (x.addr 23) m
       (fun m' => x.Ready m' σ ρ ∧ Agree x.fp (x.s + 3) x.K m m' ∧
         x.read m' (x.s + 4)
           (Runner.IR.bool (wahr? (eval σ member σ (.cons predecessor ρ))))) := by
   have save := (h.slice 20 (.code [ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0]) _ rfl rfl).1
   have memberCode := (h.slice 21 (.code x.member) _ rfl rfl).1
   have restore := (h.slice 22 (.code [ci 2 x.s (x.s + 3) 0]) _ rfl rfl).1
-  have code : CodeAt m (x.at 20)
+  have code : CodeAt m (x.addr 20)
       ([ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0] ++ x.member ++
         [ci 2 x.s (x.s + 3) 0]) := by
     apply codeAt_join
     · apply codeAt_join save
-      simpa only [show x.at 20 + BitVec.ofNat 64 (16 *
-        [ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0].length) = x.at 21 by consume_arith x]
+      simpa only [show x.addr 20 + BitVec.ofNat 64 (16 *
+        [ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0].length) = x.addr 21 by consume_arith x]
         using memberCode
-    · simpa only [show x.at 20 + BitVec.ofNat 64 (16 *
+    · simpa only [show x.addr 20 + BitVec.ofNat 64 (16 *
         ([ci 2 (x.s + 3) x.s 0, ci 2 x.s (x.s + 1) 0] ++ x.member).length) =
-          x.at 22 by consume_arith x] using restore
-  have far : CodeFar (x.at 20) (x.member.length + 3) x.fp x.K := by
+          x.addr 22 by consume_arith x] using restore
+  have far : CodeFar (x.addr 20) (x.member.length + 3) x.fp x.K := by
     have := codeFar_at (i := x.offset 20) (k := x.member.length + 3) x.far (by consume_arith x)
     exact this
   have pre := mkPreS (L := L) (ρ := ρ) (d := x.s + 4) (by omega)
@@ -104,8 +104,8 @@ theorem Ready.borrow (h : x.Ready m σ ρ) {Λ : List (Res D)}
       have := x.protected j hj; omega) scratchRoom,
     h.agree frame (by omega) (by rw [← x.abi]; have := x.controls; have := x.scratch; omega)
       scratchRoom, frame, ?_⟩
-  · simpa only [← origin, show x.at 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)) =
-      x.at 23 by consume_arith x] using path
+  · simpa only [← origin, show x.addr 20 + BitVec.ofNat 64 (16 * (x.member.length + 3)) =
+      x.addr 23 by consume_arith x] using path
   · simpa only [Enc, bool_word] using encoding ▸ read
 
 end Image
