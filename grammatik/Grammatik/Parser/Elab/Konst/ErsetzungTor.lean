@@ -89,6 +89,7 @@ def hatKonstRufSAnw (namen : List String) : SAnw → Bool
   | .bindLib _ _ _ _ => false
   | .set z _ x => hatKonstRufSExpr namen z || hatKonstRufSExpr namen x
   | .shift z _ _ => hatKonstRufSExpr namen z
+  | .callIndElse p args _ body => hatKonstRufSExpr namen p || hatKonstRufSExprList namen args || hatKonstRufSAnw namen body
   | .callElse g args _ body => namen.any (strEq · g) || hatKonstRufSExprList namen args || hatKonstRufSAnw namen body
   | .callQ g args | .genericCall g _ args => namen.any (strEq · g) || hatKonstRufSExprList namen args
   | .call g args => namen.any (strEq · g) || hatKonstRufSExprList namen args
