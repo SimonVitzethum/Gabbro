@@ -73,7 +73,12 @@ theorem routineAlignL_emission
     (bound : 16 * (67 * na + 67 * nb + 1613) < 2 ^ 31) :
     FloatEmission (fun d => routineAlignL d a b)
       (67 * na + 67 * nb + 1613) (2 * wa + 2 * wb + 40) := by
-  let order := routineLessL_emission (routineMagnitudeL_emission ha) (routineMagnitudeL_emission hb)
+  have order : FloatEmission (fun d => routineLessL d
+      (fun j => routineMagnitudeL j a) (fun j => routineMagnitudeL j b))
+      (na + nb + 37) (wa + wb + 9) :=
+    FloatEmission.bounds
+      (routineLessL_emission (routineMagnitudeL_emission ha) (routineMagnitudeL_emission hb))
+      (by omega) (by omega)
   have left : FloatEmission (fun d => routineDirectionalL d b a)
       (27 * nb + 39 * na + 787) (wb + 2 * wa + 40) :=
     routineDirectionalL_emission hb ha (by omega)
