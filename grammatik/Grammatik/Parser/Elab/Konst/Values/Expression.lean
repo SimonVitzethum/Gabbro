@@ -49,6 +49,16 @@ def expression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
         if h : bytes.length ≤ n then
           .ok ⟨.strLit bytes h, fun _ => ⟨bytes, h⟩, by intros; rfl⟩
         else .error "const string literal exceeds its declared maximum"
+    | .why n, .why owner name => do
+      let some schema := schemas.find? (fun schema => strEq schema.name owner)
+        | throw ("const reason owner is unknown: " ++ owner)
+      if schema.cases.length != n || !schema.cases.all (fun entry => entry.2.isNone) then
+        throw "const reason owner differs from its declared type"
+      let some index := schema.cases.findIdx? (fun entry => strEq entry.1 name)
+        | throw ("const reason case is unknown: " ++ name)
+      if hi : index < n then
+        return ⟨.why n ⟨index, hi⟩, fun _ => ⟨index, hi⟩, by intros; rfl⟩
+      else throw "const reason case lies outside its declared type"
     | .sum cases, source => do
       let schema ← match schemas.find? (fun schema => schema.spec = cases) with
         | some schema => pure schema
@@ -85,7 +95,7 @@ end
 /-- Only portable A28 results enter this additional value path. Other types keep
     a named refusal; integer calls retain the existing bounded/KExpr certificate. -/
 def resultType : Ty → Bool
-  | .bool | .opt _ | .sum _ => true
+  | .bool | .opt _ | .sum _ | .why _ => true
   | .str n => n ≤ 1
   | _ => false
 
