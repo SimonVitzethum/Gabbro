@@ -37,11 +37,16 @@ theorem torBind_ok {reserved : Nat} {L : Lay D} {O : Orakel D} [TorOK L O] {Λ :
     split at ht
     · exact torC_bound ht
     · cases ht
+  have noReasons : D.agruende a = 0 := by
+    simp only [torC0] at ht
+    split at ht
+    · assumption
+    · cases ht
   have valid : ∀ n, τ = .ref n → 0 ≤ w.toInt →
       ValueValid L (.ref n) (Val.vonZelle w.toInt.toNat) := by
     intro n type nonnegative
     exact TorOK.ref_answer a n (he.trans (congrArg some type)) bound
-      (σ.fragt (.inl a)) (evalArgs σ args σ ρ) w.toInt (.inl raw.symm) nonnegative
+      (σ.fragt (.inl a)) (evalArgs σ args σ ρ) w.toInt (.inl ⟨noReasons, raw.symm⟩) nonnegative
   have checked := chkAnswer_ok (z := O.zeiger) he hck' pre htk input valid
   rw [axiomAntwort_eq, raw]
   cases result : einpassenErg O.zeiger (D.aerg a) w.toInt with
