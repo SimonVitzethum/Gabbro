@@ -44,6 +44,7 @@ public import Grammatik.Kern.Syntax.Satz.PruefungZeugen
 public import Grammatik.Kern.Syntax.Satz.PruefungHerkunft
 public import Grammatik.Kern.Syntax.Satz.PruefungReplay
 public import Grammatik.Kern.Syntax.Satz.PruefungGegenprobe
+public import Grammatik.Kern.Syntax.Satz.PruefungArtefakt
 public import Grammatik.Kern.Syntax.Satz.PruefungExport
 @[expose] public section
 
