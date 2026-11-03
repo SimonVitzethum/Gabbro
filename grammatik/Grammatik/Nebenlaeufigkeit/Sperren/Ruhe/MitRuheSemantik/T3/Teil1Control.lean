@@ -162,7 +162,8 @@ theorem execStmt_ru_locks {V : Vertrag D}
   by
   simp only [ruS, execStmt]
   rw [nimmt_worldR]
-  exact (congrArg _ (ih_execBlock_ru_body (σ.nimmt L) ρ)).trans (ausR_gibt L _)
+  erw [ih_execBlock_ru_body (σ.nimmt L) ρ]
+  cases execBlock O passes R body (σ.nimmt L) ρ <;> rfl
 
 set_option linter.unusedSectionVars false in
 theorem execStmt_ru_traverse {V : Vertrag D}
