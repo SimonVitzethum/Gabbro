@@ -72,19 +72,20 @@ def uConsumingEdge (ctx : UCtx) (table : String) : Except String String := do
 
 /-- Read the existing decreases and touches clauses completely; neither is inferred or erased.
     The state-reading measure is elaborated in the outer scope, not under the selected index. -/
-def uConsumingClauses (ctx : UCtx) (raw : String) : Except String (USide × List SEffekt) := do
+def uConsumingClauses (ctx : UCtx) (raw : String) : Except String (USide × String) := do
   let tokens ← lex raw
   let rest ← match tokens with
     | .wort "decreases" :: rest => pure rest
     | _ => throw "consuming traversal requires decreases"
   let (expression, rest) ← parseOr 10000 rest
   let mass ← (uZSeite ctx expression).mapError ("consuming traversal decreases: " ++ ·)
-  let rest ← match rest with
+  let touchTokens ← match rest with
     | .wort "touches" :: rest => pure rest
     | _ => throw "consuming traversal requires touches consumes"
-  let (effects, rest) ← parseEffektListe 10000 rest
+  let (_, rest) ← parseEffektListe 10000 touchTokens
   match rest with
-  | [.ende] => pure (mass, effects)
+  | [.ende] => pure (mass, String.intercalate " " (touchTokens.filterMap fun token =>
+      match token with | .ende => none | _ => some (zeigeTok token)))
   | _ => throw "consuming traversal has an unsupported or duplicate header clause"
 
 /-- Consuming keeps A14's domain predicate as a current-world member test. The declared
