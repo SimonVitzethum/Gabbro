@@ -180,8 +180,8 @@ def potRest (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .wartetSonst _ err rest k =>
       max (kostenSonst c pa err + 2 + potRest c pa k) (kostenBlock c pa rest + 1 + potRest c pa k)
   | .abbruch k => 1 + potRest c pa k
-  | .zurueckgekehrt _ => 1
-  | .aufraeumen _ remaining => remaining.length + 2
+  | .zurueckgekehrt _ => 0
+  | .aufraeumen _ remaining => remaining.length
   | .leer => 1
   | .rueckBereit _ k => 1 + potRest c pa k
 
@@ -205,13 +205,27 @@ theorem kostenEnd_pos {Λ : List (Res D)} (e : Endblock D V l Γ Λ) :
   | cons s rest => have := kostenStmt_pos c pa s; simp only [kostenEnd]; omega
   | _ => simp only [kostenEnd]; omega
 
-theorem potRest_pos {Λ : List (Res D)} (r : GRest D V l Γ Λ) : 1 ≤ potRest c pa r := by
+/-- A completed answer has no own step, and an empty cleanup has no rule. -/
+def GRest.arbeitsfaehig {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Bool
+  | .zurueckgekehrt _ => false
+  | .aufraeumen _ remaining => !remaining.isEmpty
+  | _ => true
+
+theorem potRest_pos {Λ : List (Res D)} (r : GRest D V l Γ Λ)
+    (h : r.arbeitsfaehig = true) : 1 ≤ potRest c pa r := by
   cases r with
   | ende e => exact kostenEnd_pos c pa e
   | dann b k => have := kostenBlock_pos c pa b; simp only [potRest]; omega
   | wartet rest k => simp only [potRest]; omega
   | wartetSonst n err rest k => simp only [potRest]; omega
+  | zurueckgekehrt a => cases h
+  | aufraeumen a remaining =>
+      cases remaining with
+      | nil => cases h
+      | cons L remaining => simp only [potRest, List.length_cons]; omega
   | _ => simp only [potRest]; omega
 
 end Positiv
+
 end Gabbro.Grammatik

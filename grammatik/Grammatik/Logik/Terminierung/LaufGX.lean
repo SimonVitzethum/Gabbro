@@ -29,6 +29,29 @@ theorem LaufGX.erreichbar {P : Programm D} {O : Orakel D} {passes : Nat} {Tg : D
       | none => rw [R.stotter n h]; exact R.erreichbar h0 n
       | some u => exact .schritt _ _ u (R.erreichbar h0 n) (R.schritt n u h)
 
+/-- Scope balance follows the thread vector, including when GX replaces
+    the shared memory presented to a G step. -/
+theorem LaufGX.scopeBalance {P : Programm D} {O : Orakel D} {passes : Nat}
+    {Tg : D.Tab ⊕ D.Glob → Prop} (R : LaufGX P O passes Tg)
+    {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
+    (h0 : R.M 0 = RufStartG P sp init) :
+    ∀ n t, FadenScopeBalanceG ((R.M n).faeden t) := by
+  intro n
+  induction n with
+  | zero => rw [h0]; exact fadenScopeBalanceG_start P sp init
+  | succ n ih =>
+      intro t
+      cases ha : R.akt n with
+      | none => rw [R.stotter n ha]; exact ih t
+      | some u =>
+          obtain ⟨σ, M', hs, _, _, _, hfa, _, _⟩ := R.schritt n u ha
+          rw [hfa]
+          by_cases htu : t = u
+          · subst t
+            exact fadenScopeBalanceG_schritt hs (ih u)
+          · rw [rufSchrittG_fremd hs t htu]
+            exact ih t
+
 /-- **An infinite run of the thread machine over GX**: at every index thread `u` takes a step of machine GX (a `lauf`
     step, `akt n = some u`), or a thread is started, spawned or joined, or nothing moves; those leave the machine-G
     state alone. A dormant slot keeps its start frame until it is started, and runs from there. -/

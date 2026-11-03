@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Logik.Fortschritt.KostenG.T1
-public import Grammatik.Logik.Fortschritt.KostenG.T1.Scoped
+public import Grammatik.Logik.Fortschritt.KostenG.T1.Antwort
 
 @[expose] public section
 
@@ -15,7 +15,7 @@ variable {D : Deklaration}
     the callee's cost `c g`; one through an indirect call (signature `n`, admitted by `ZS n`) charges nothing for
     the callee, whose cost the model does not name. -/
 theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschineG D} {f : Faden}
-    (hs : RufSchrittG P O pa M f M') (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
+    (hs : RufSchrittG P O pa M f M') (hb : RestScopeBalance (M.faeden f).kopf.rest) (c : D.Fn → Nat) (Z : D.Fn → Bool) (ZS : Nat → Bool) (EW : Bool) :
     ((M'.faeden f).stapel = (M.faeden f).stapel ∧
       (rufeR Z ZS EW (M.faeden f).kopf.rest.2.2.2.2 = true →
         rufeR Z ZS EW (M'.faeden f).kopf.rest.2.2.2.2 = true ∧
@@ -337,6 +337,58 @@ theorem schrittArt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
       kopfA
       · simp_all
       · omega
+    | rueckScopedWert ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hnonempty =>
+      have hbudget := r.scopedWert_budget c pa e R (scopeBalance_von hhead hb) hret
+      refine Or.inl ⟨by simp only [rufUpdateG_self], fun _ => ?_⟩
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, ?_⟩
+      rw [hhead]
+      change R.scopes.length + 1 ≤ potRest c pa r
+      unfold scopedReturnSteps at hbudget
+      omega
+    | rueckScopedGrund ρ r grund R hhead hret hscope hΛ hnonempty =>
+      have hbudget := r.scopedGrund_budget c pa grund R (scopeBalance_von hhead hb) hret
+      refine Or.inl ⟨by simp only [rufUpdateG_self], fun _ => ?_⟩
+      simp only [rufUpdateG_self]
+      refine ⟨rfl, ?_⟩
+      rw [hhead]
+      change R.scopes.length + 1 ≤ potRest c pa r
+      unfold scopedReturnSteps at hbudget
+      omega
+    | rueckFreigabe ρ a L remaining hhead hnonempty =>
+      kopfA
+      · rfl
+      · omega
+    | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
+      have hbudget := r.scopedWert_budget c pa e R (scopeBalance_von hhead hb) hret
+      rcases rufAntwortG_kosten ha pa with ⟨hst, hroot⟩ | hpop
+      · refine Or.inl ⟨by simpa only [rufUpdateG_self] using hst, fun _ => ?_⟩
+        simp only [rufUpdateG_self]
+        obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
+        refine ⟨hok, ?_⟩
+        rw [hhead, hzero]
+        simpa only [hempty, scopedReturnSteps, List.length_nil, Nat.add_zero] using hbudget
+      · exact Or.inr (Or.inr (by simpa only [rufUpdateG_self] using hpop))
+    | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z ha =>
+      have hbudget := r.scopedGrund_budget c pa grund R (scopeBalance_von hhead hb) hret
+      rcases rufAntwortG_kosten ha pa with ⟨hst, hroot⟩ | hpop
+      · refine Or.inl ⟨by simpa only [rufUpdateG_self] using hst, fun _ => ?_⟩
+        simp only [rufUpdateG_self]
+        obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
+        refine ⟨hok, ?_⟩
+        rw [hhead, hzero]
+        simpa only [hempty, scopedReturnSteps, List.length_nil, Nat.add_zero] using hbudget
+      · exact Or.inr (Or.inr (by simpa only [rufUpdateG_self] using hpop))
+    | rueckFreigabeLetzte ρ a L hhead z ha =>
+      rcases rufAntwortG_kosten ha pa with ⟨hst, hroot⟩ | hpop
+      · refine Or.inl ⟨by simpa only [rufUpdateG_self] using hst, fun _ => ?_⟩
+        simp only [rufUpdateG_self]
+        obtain ⟨hok, hzero⟩ := hroot c Z ZS EW
+        refine ⟨hok, ?_⟩
+        rw [hhead, hzero]
+        exact Nat.le_refl 1
+      · exact Or.inr (Or.inr (by simpa only [rufUpdateG_self] using hpop))
+
 /-! ## 6. Counting one thread's steps -/
 
 /- `RufErreichbarG` lives in `Prop`, so no function can count the steps of

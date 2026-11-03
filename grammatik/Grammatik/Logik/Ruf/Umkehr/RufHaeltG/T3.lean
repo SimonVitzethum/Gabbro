@@ -36,11 +36,11 @@ theorem rufG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO 
     (h : RufErreichbarG P O passes (RufStartG P sp init) M) : ∀ t, HaeltInvG (M.faeden t) := by
   induction h with
   | start => exact haeltInvG_start P sp init
-  | schritt M M' g _ hs ih =>
+  | schritt M M' g hr hs ih =>
       intro t
       by_cases htg : t = g
       · subst htg
-        exact rufSchrittG_haeltInv hO hs (ih t)
+        exact rufSchrittG_haeltInv hO hs (ih t) (fadenScopeBalanceG_erreichbar hr t)
       · rw [rufSchrittG_passt_anders P O passes M M' g t htg hs]
         exact ih t
 
