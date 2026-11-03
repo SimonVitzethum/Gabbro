@@ -76,18 +76,22 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
         intro vs
         simp only [encodeProductFields, List.length_append, productWords]
         rw [encodeWords_length L σ (ProdVal.hd vs), ih]
+    have hp : ∀ vs : ProdVal D.Fn D.passt fs,
+        (encodeProduct L fs vs).length = max 1 (productWords fs) := by
+      intro vs
+      rw [encodeProduct.eq_def]
+      split
+      · next h => subst fs; simp [productWords]
+      · next h =>
+        rw [fields]
+        cases fs with
+        | nil => exact False.elim (h rfl)
+        | cons σ rest =>
+          have := valueWords_pos σ
+          simp only [productWords]
+          omega
     simp only [encodeWords, valueWords]
-    simp only [encodeProduct]
-    split
-    · next h => subst fs; simp [productWords]
-    · next h =>
-      rw [fields]
-      cases fs with
-      | nil => exact False.elim (h rfl)
-      | cons σ rest =>
-        have := valueWords_pos σ
-        simp only [productWords]
-        omega
+    exact hp v
   | str n =>
     simp only [encodeWords, valueWords]
     split
@@ -95,8 +99,7 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     · simp only [List.length_append, List.length_cons, List.length_map, List.length_replicate]
       have := v.2; omega
   | opt n =>
-    change Option (Zahl 0 (n - 1)) at v
-    simp only [encodeWords]
+    rw [encodeWords.eq_def]; dsimp only
     simp only [valueWords]
     split
     · rfl
@@ -170,20 +173,18 @@ theorem ValueAt.array_element {L : Lay D} {m : Runner.Mem} {fp : Runner.W}
 theorem encodeWords_arrCons {τ : Ty} {n : Nat} (a : Wert D τ) (rest : Wert D (.arr τ n)) :
     encodeWords L (.arr τ (n + 1)) (arrConsW a rest) =
       encodeWords L τ a ++ (if n = 0 then [] else encodeWords L (.arr τ n) rest) := by
-  change Fin n → Wert D τ at rest
-  have nonempty : n + 1 ≠ 0 := by omega
-  conv => lhs; simp only [encodeWords, if_neg nonempty, elementEncoding]
-  change encodeWords L τ a ++
-      elementEncoding n (fun i => encodeWords L τ (arrConsW a rest i.succ)) = _
+  rw [encodeWords.eq_def]; simp only []; rw [if_neg (by omega), elementEncoding]
+  have head : encodeWords L τ (arrConsW a rest ⟨0, by omega⟩) = encodeWords L τ a := by
+    simp only [arrConsW, ↓reduceDIte]
   have tail : (fun i : Fin n => encodeWords L τ (arrConsW a rest i.succ)) =
       (fun i => encodeWords L τ (rest i)) := by
     funext i
     simp only [arrConsW, Fin.val_succ, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false,
       ↓reduceDIte, Nat.add_sub_cancel]
-  rw [tail]
+  rw [head, tail]
   by_cases empty : n = 0
   · subst n; simp [elementEncoding]
-  · simp only [encodeWords, if_neg empty]
+  · rw [if_neg empty, encodeWords (τ := .arr τ n), if_neg empty]
 
 theorem ValueValid.arrCons {τ : Ty} {n : Nat} {a : Wert D τ} {rest : Wert D (.arr τ n)}
     (head : ValueValid L τ a) (tail : ValueValid L (.arr τ n) rest) :
