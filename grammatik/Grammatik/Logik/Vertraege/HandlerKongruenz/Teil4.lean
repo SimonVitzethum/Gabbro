@@ -66,7 +66,7 @@ theorem block_bindCall_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
     (f : D.Fn) (args : Args D Γ Λ (D.params f)) (he : D.erg f = some τ)
     (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0)
-    (rest : Block D V l (τ :: Γ) (nach D f Λ))
+    (rest : Block D V l (τ :: Γ) (nach D f Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo (nach D f Λ) σ.haelt →
       AusgangUnter Er (execBlock O passes R₁ rest σ ρ) (execBlock O passes R₂ rest σ ρ))
@@ -89,9 +89,8 @@ theorem block_bindCall_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have h2 := hT₁ f _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r => exact AusgangUnter.refl _
     | logik e => exact AusgangUnter.refl _
@@ -103,7 +102,7 @@ theorem block_bindCallInd_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     (p : Expr D Γ Λ (.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params)
     (he : (D.sigNr n).erg = some τ) (hp : RufPasst D V (D.sigNr n) Λ)
     (hr : (D.sigNr n).gruende = 0)
-    (rest : Block D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ))
+    (rest : Block D V l (τ :: Γ) (nachSig D (D.sigNr n) Λ) Λ')
     (ih_rest : ∀ (σ : World D) (ρ : Env D (τ :: Γ)), rest.ScopesOk →
       HeldB bo (nachSig D (D.sigNr n) Λ) σ.haelt →
       AusgangUnter Er (execBlock O passes R₁ rest σ ρ) (execBlock O passes R₂ rest σ ρ))
@@ -132,9 +131,8 @@ theorem block_bindCallInd_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have h2 := hT₁ g _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert (ergSig hg he) v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r => exact AusgangUnter.refl _
     | logik e => exact AusgangUnter.refl _
@@ -173,9 +171,8 @@ theorem block_bindCallElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have h2 := hT₁ f _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r =>
         have h2 := hT₁ f _ _ hentry σ1 (by rw [h, hx]; rfl)
@@ -183,9 +180,8 @@ theorem block_bindCallElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
         have gcall : Treu V.schreibt V.gschreibt (σ.lese Λ args.orte) σ1 :=
           (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
         have g1 := hl.trans gcall
-        have heq := ih_err σ1 _ hscope_err
+        have heq := ih_err σ1 (.cons r ρ) hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf.zuAusgang
     | logik e => exact AusgangUnter.refl _
     | hardware e => exact AusgangUnter.refl _
@@ -256,9 +252,8 @@ theorem block_bindCallIndElse_unter (bo : Option Int) (hbV : BodenUnter bo V.bod
         have h2 := hT₁ g _ _ hentry σ1 (by rw [h, hx]; rfl)
         rw [h, hx] at h2
         have g1 := hl.trans (Treu.weiter hp.hw hp.hg h2)
-        have heq := ih_rest σ1 _ hscope_rest
+        have heq := ih_rest σ1 (.cons (ergWert (ergSig hg he) v) ρ) hscope_rest
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf
     | why σ1 r =>
         have h2 := hT₁ g _ _ hentry σ1 (by rw [h, hx]; rfl)
@@ -267,9 +262,8 @@ theorem block_bindCallIndElse_unter (bo : Option Int) (hbV : BodenUnter bo V.bod
             (σ.lese Λ (p.orte ++ args.orte)) σ1 :=
           (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
         have g1 := hl.trans gcall
-        have heq := ih_err σ1 _ hscope_err
+        have heq := ih_err σ1 (.cons (grundSig hg r) ρ) hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf.zuAusgang
     | logik e => exact AusgangUnter.refl _
     | hardware e => exact AusgangUnter.refl _
@@ -303,10 +297,8 @@ theorem block_bindAxiom_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
           have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
             (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
           rw [hx] at h1
-          simp only [hx] at ⊢
           have g1 := hl.trans (Treu.weiter hw hg h1)
-          have heq := ih_rest σ1 _ hscope_rest (g1.heldB hh)
-          simp only [hx] at ⊢
+          have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest (g1.heldB hh)
           exact heq.schrumpf
 
 theorem block_bindAxiomElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -342,19 +334,15 @@ theorem block_bindAxiomElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden
       · exact AusgangUnter.refl _
       · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [hx] at h1
-        simp only [hx] at ⊢
+        rw [← axiomAntwortSonst_fst, hx] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        have heq := ih_rest σ1 _ hscope_rest (g1.heldB hh)
-        simp only [hx] at ⊢
+        have heq := ih_rest σ1 (.cons (ergWert he v) ρ) hscope_rest (g1.heldB hh)
         exact heq.schrumpf
       · have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
           (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
-        rw [hx] at h1
-        simp only [hx] at ⊢
+        rw [← axiomAntwortSonst_fst, hx] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
-        have heq := ih_err σ1 _ hscope_err (g1.heldB hh)
-        simp only [hx] at ⊢
+        have heq := ih_err σ1 (.cons r ρ) hscope_err (g1.heldB hh)
         exact heq.schrumpf.zuAusgang
 
 theorem block_bindAxiomOpt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -387,9 +375,8 @@ theorem block_bindAxiomOpt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
               have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
                 (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
               rw [hx] at h1
-              simp only [hx] at ⊢
               have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-              have heq := ihr σ1 _
+              have heq := ihr σ1 (ergEnv none (he ▸ v) ρ)
                 (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
               exact heq
   | some τ =>
@@ -403,11 +390,9 @@ theorem block_bindAxiomOpt_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
               have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
                 (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
               rw [hx] at h1
-              simp only [hx] at ⊢
               have g1 := hl.trans (Treu.weiter hp.hw hp.hg h1)
-              have heq := ihr σ1 _
+              have heq := ihr σ1 (ergEnv (some τ) (he ▸ v) ρ)
                 (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-              simp only [hx] at ⊢
               exact heq.schrumpf
 
 theorem stmt_callIndElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -448,9 +433,8 @@ theorem stmt_callIndElse_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
             (σ.lese Λ (p.orte ++ args.orte)) σ' :=
           (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
         have g1 := hl.trans gcall
-        have heq := ih_err σ' _ hscope_err
+        have heq := ih_err σ' (.cons (grundSig hg r) ρ) hscope_err
           (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-        simp only [hx] at ⊢
         exact heq.schrumpf.zuAusgang
     | logik e => exact AusgangUnter.refl _
     | hardware e => exact AusgangUnter.refl _
