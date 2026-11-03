@@ -1,0 +1,87 @@
+/- A computed conversion rejects infinity before the ordinary finite range test. -/
+module
+public import Stage0.Senke.Ausdruck.Gleit.Slots.Test
+public import Stage0.Senke.Gleit.RoutineModel
+public import Stage0.Senke.Gleit.RoutineBranch
+@[expose] public section
+
+namespace Gabbro.Stage0.Senke
+open Gabbro.Grammatik Gleitkomma Runner.IR Runner.Mem
+
+/-- Integer conversion may overflow even when either endpoint is infinite.
+    The source float value must still be finite. -/
+def computedFloatRangeReject (lo hi : Int × Int) (x : GFloat) : Bool :=
+  if x.bexp = 2047 then true else floatRangeReject lo hi x
+
+theorem computedFloatRangeReject_none {lo hi : Int × Int} {x : GFloat}
+    (hw : wf f64 x) :
+    gleitPasst lo hi x = none ↔ computedFloatRangeReject lo hi x = true := by
+  by_cases infinite : x.bexp = 2047
+  · have notFinite : gleitEndlich x = false := by
+      simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, infinite, ite_true]
+      split <;> rfl
+    simp [computedFloatRangeReject, infinite, gleitPasst, notFinite]
+  · have finite : gleitEndlich x = true := by
+      simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, if_neg infinite]
+      split <;> (try split) <;> rfl
+    simpa only [computedFloatRangeReject, if_neg infinite] using floatRangeReject_none hw finite
+
+def computedFloatRangeL (d : Nat) (lo hi : Int × Int)
+    (producer : Nat → Option (List II × Nat)) : Option (List II × Nat) :=
+  routineChooseL d
+    (fun j => wordK 14 j (unpackBexpL j producer) 2047)
+    (fun j => some ([ci 1 j 1 0], j + 1))
+    (fun j => canonicalFloatRangeL j lo hi producer)
+
+variable [Kern] {D : Deklaration} {L : Lay D}
+
+/-- The exponent check and the existing range comparison both consume the
+    very same proved producer. No finite-conversion premise is needed. -/
+theorem computedFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {reserved : Nat} (x : GFloat) (hw : wf f64 x)
+    (lo hi : Int × Int) (producer : Nat → Option (List II × Nat))
+    (run : ∀ {fp K d c top}, producer d = some (c, top) → top ≤ K → ∀ m pc,
+      Pre L m pc fp K d c ρ W reserved → Ok m pc fp K d c
+        (fun w => wf f64 x ∧ w = BitVec.ofNat 64 (zuBits f64 x))) :
+    WordCode (L := L) ρ W (fun d => computedFloatRangeL d lo hi producer)
+      (Runner.IR.bool (computedFloatRangeReject lo hi x)) reserved := by
+  have source : WordCode (L := L) ρ W producer (BitVec.ofNat 64 (zuBits f64 x)) reserved := by
+    intro fp K d c top emitted fits m pc pre
+    exact (run emitted fits m pc pre).mono (fun _ h => h.2)
+  have exponent := unpackBexpL_ok source
+  rw [(routineUnpack_canonical x hw).2.1] at exponent
+  have equal : (BitVec.ofNat 64 x.bexp == (2047 : Runner.W)) = decide (x.bexp = 2047) := by
+    apply Bool.eq_iff_iff.mpr
+    simp only [beq_iff_eq, decide_eq_true_eq, ← BitVec.toNat_inj,
+      BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := hw.1; change x.bexp ≤ 2047 at this; omega)]
+    rfl
+  have check := WordCode.bin exponent (WordCode.const 2047 (by decide))
+    (g := fun a b => some (Runner.IR.bool (a == b))) rfl rfl (by decide : 14 < 256)
+  rw [show BitVec.ofInt 64 2047 = (2047 : Runner.W) from rfl, equal] at check
+  have yes : decide (x.bexp = 2047) = true →
+      WordCode (L := L) ρ W (fun j => some ([ci 1 j 1 0], j + 1))
+        (Runner.IR.bool true) reserved := fun _ => WordCode.const 1 (by decide)
+  have no : decide (x.bexp = 2047) = false →
+      WordCode (L := L) ρ W (fun j => canonicalFloatRangeL j lo hi producer)
+        (Runner.IR.bool (floatRangeReject lo hi x)) reserved := by
+    intro flag fp K d c top emitted fits m pc pre
+    have nonmax : x.bexp ≠ 2047 := by simpa using flag
+    have finite : gleitEndlich x = true := by
+      simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl, if_neg nonmax]
+      split <;> (try split) <;> rfl
+    exact canonicalFloatRangeL_ok x hw finite producer
+      (fun d c top hc ht m pc hp => run hc ht m pc hp) emitted fits pre
+  have result := routineChooseL_ok check yes no
+  simpa only [computedFloatRangeL, computedFloatRangeReject, decide_eq_true_eq] using result
+
+/-- Overflow must reject even when the declared upper endpoint is infinite. -/
+theorem computedFloatRangeReject_overflow_zeuge :
+    computedFloatRangeReject (0, 1) (2 ^ 1025, 1) (gleitAusInt (2 ^ 1024)) = true ∧
+    computedFloatRangeReject (0, 1) (2 ^ 129, 1) (gleitAusInt (2 ^ 127 + 1)) = false ∧
+    computedFloatRangeReject (-(2 ^ 129), 1) (0, 1) (gleitAusInt (-(2 ^ 127 + 1))) = false := by
+  decide +kernel
+
+#print axioms computedFloatRangeL_ok
+#print axioms computedFloatRangeReject_none
+#print axioms computedFloatRangeReject_overflow_zeuge
+end Gabbro.Stage0.Senke
