@@ -256,7 +256,7 @@ theorem schrittOrte {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
       exact ⟨hok.1.1.2, hok.1.2, hok.2⟩
     | dannCallIndElse l Γ Λ Λ' Λ'' τ n p args he hp hr err rest k ρ hhead hΛ s0 hs0 g hg hv rho =>
       refine Or.inr (Or.inl ⟨g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
-        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (D.sigNr n).gruende err .nil
+        ⟨l, Γ, nachSig D (D.sigNr n) Λ, ρ, .wartetSonst (τ := τ) (D.sigNr n).gruende err .nil
           (.dann rest k)⟩⟩, rho, s0,
         by dsimp only; rw [rufUpdateG_self], rfl,
         by dsimp only; rw [rufUpdateG_self], fun C hok => ?_⟩)

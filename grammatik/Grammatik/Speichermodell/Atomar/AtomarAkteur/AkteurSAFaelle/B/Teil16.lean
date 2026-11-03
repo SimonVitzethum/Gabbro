@@ -222,7 +222,7 @@ theorem akteurSA_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel 
             { stapel :=
                 { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                     rest := (⟨l, (⟨Γ, (⟨nachSig D (D.sigNr n) Λ,
-                      (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil (GRest.dann rest k))⟩ :
+                      (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (GRest.dann rest k))⟩ :
                       (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
@@ -241,7 +241,7 @@ theorem akteurSA_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel 
             { stapel :=
                 { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                     rest := (⟨l, (⟨Γ, (⟨nachSig D (D.sigNr n) Λ,
-                      (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil (GRest.dann rest k))⟩ :
+                      (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (GRest.dann rest k))⟩ :
                       (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
@@ -261,7 +261,7 @@ theorem akteurSA_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel 
               { stapel :=
                   { f := (M.faeden u).kopf.f, rho := (M.faeden u).kopf.rho, s0 := (M.faeden u).kopf.s0,
                     rest := (⟨l, (⟨Γ, (⟨nachSig D (D.sigNr n) Λ,
-                      (ρ, GRest.wartetSonst (D.sigNr n).gruende err .nil (GRest.dann rest k))⟩ :
+                      (ρ, GRest.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (GRest.dann rest k))⟩ :
                       (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                       (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ)⟩ :
                     (l : Bool) × (Γ : Ctx) × (Λ : List (Res D)) × Env D Γ × GRest D (vertragVon D (M.faeden u).kopf.f) l Γ Λ) :
@@ -298,7 +298,7 @@ theorem akteurSA_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel 
       show umsig hg _ = umsig hg _
       rw [evalArgs_gleichAuf args
         (fun _ h => List.mem_append_right _ (List.mem_append_right _ h)) hgσ ρ])
-    ρ (.wartetSonst (D.sigNr n).gruende err .nil (.dann rest k)) (fun L => held_nachSig_iff _ _ L)
+    ρ (.wartetSonst (τ := τ) (D.sigNr n).gruende err .nil (.dann rest k)) (fun L => held_nachSig_iff _ _ L)
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := okS_dann_cons hok
       simp only [Stmt.gOk, Bool.and_eq_true] at hks'
