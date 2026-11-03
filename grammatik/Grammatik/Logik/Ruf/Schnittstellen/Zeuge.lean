@@ -201,7 +201,7 @@ def strongerInterfacePost : Programm decl :=
 
 theorem stronger_interface_post_refused : ¬ PtrVerfeinert strongerInterfacePost := by
   intro h
-  have hp := (h false 0 rfl).2 entry later arguments ⟨4, by decide, by decide⟩ rfl rfl
+  have hp := (h false 0 rfl).2 entry later arguments ⟨4, by decide, by decide⟩ (by rfl) (by rfl)
   change false = true at hp
   cases hp
 
@@ -213,7 +213,7 @@ def strongerTargetPre : Programm decl :=
 
 theorem stronger_target_pre_refused : ¬ PtrVerfeinert strongerTargetPre := by
   intro h
-  have hr := (h true 0 rfl).1 entry (.cons ⟨4, by decide, by decide⟩ .nil) rfl
+  have hr := (h true 0 rfl).1 entry (.cons ⟨4, by decide, by decide⟩ .nil) (by rfl)
   change false = true at hr
   cases hr
 
@@ -225,7 +225,7 @@ theorem reversed_pre_refused :
       ReqAmEintritt prog true s0 (umsig pointer.property ρ) →
       (prog.ptrVertrag 0).preHolds s0 ρ) := by
   intro h
-  have hr := h entry (.cons ⟨1, by decide, by decide⟩ .nil) rfl
+  have hr := h entry (.cons ⟨1, by decide, by decide⟩ .nil) (by rfl)
   change false = true at hr
   cases hr
 
@@ -236,7 +236,7 @@ theorem reversed_post_refused :
       (prog.ptrVertrag 0).postHolds s0 s1 ρ (ptrResult pointer.property v) →
       EnsAmRueck prog true s0 s1 (umsig pointer.property ρ) v) := by
   intro h
-  have hp := h entry later arguments ⟨4, by decide, by decide⟩ rfl
+  have hp := h entry later arguments ⟨4, by decide, by decide⟩ (by rfl)
   change false = true at hp
   cases hp
 
