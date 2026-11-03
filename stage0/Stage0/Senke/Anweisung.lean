@@ -7,7 +7,8 @@
   callee's frame at the first free slot (`callC`). `layout.internalResult` is the lowest slot an assignment may write (a function's
   body keeps its parameters for `ensures`); `A f` is the code address of `f`; `ens` the shared ensures/invariant epilogue, which
   a `ret` runs (`retC`). Accepted so far: `assignVar`, `ite`, `onTag`, `onWhy`, `onOption` (the index word kept for the bound variable), `call`, `callInd`, `ret`, `retWhy`, the writes `assignGlob`, `assignSlot`, `assignThru`, `putBytes` (zero through eight bytes, operands captured once), the checked state transition `shift` (failed prestate: stop 106), `leave` and `next` (a jump to their target), `traverse` (`travC`), `breaking` (its block), `advances` and `retires` (no code: G only marks them), the gates `axiomCall` and `bindAxiom` (`torC`), `axiomCallElse` (discarding a value or VOID answer, binding a reason in its end block), `publish` (a store, release under TSO), `locks` without `ret` in its body (`locksCode`: take, the body,
-  give on every way out), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
+  give on every way out), the scoped returns `retScoped`/`retWhyScoped` (the ordinary `ret`/`retWhy` code: the scope
+  release is ghost), and the blocks `nil`, `cons`, `bind`, `floatLit` (kernel-rounded binary64 bits), `floatOf` (signed-word conversion or arbitrary integer literals), `floatNarrow` (inclusive range with its fallback), `bindCall`, `bindCallElse`, `bindCallInd`, `bindCallIndElse` (fallible indirect: indirect dispatch plus else branch), `awaits` (a load) and `exchange` (`exC`, a `cas` loop); everything else is refused (`none`). The answer's
   number is an upper bound of the slots the code writes. End blocks also lower `retWhy`, `bindCallElse`, `bindCallIndElse`, `leave`
   and `next` (keeping the loop targets); statements also lower `callIndElse` (value discarded, reason to its end block).
 -/
@@ -174,11 +175,8 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
       let cb ← lowB (reserved := reserved) passes A L layout ens pr (16 * 30, 16 * 60) body
       pure (locksCode L (L.lk Lk) ((frei Γ reserved)) cb.1 ex.1 ex.2, max (cb.2 + 1) ((frei Γ reserved) + 18))
     else none
-  -- C11 execStmt still ignores R.scopes: scope unwinding and invariant
-  -- restoration are OPEN in Kern/Semantik/Semantik/T2/Teil2.lean.
-  -- Keep both scoped returns refused until the canonical semantics is complete.
-  | _, _, _, _, .retScoped .., reserved => none
-  | _, _, _, _, .retWhyScoped .., reserved => none
+  | _, Γ, _, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
+  | _, Γ, _, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
   | _, _, _, _, _, reserved => none
 
 def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (ens : List II × Nat) (pr : List Nat) (ex : Int × Int) :
@@ -485,10 +483,8 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
         else none
       else none
     | _, _ => none
-  -- C11 execEnd has the same placeholder as execStmt; it ignores R.scopes.
-  -- Keep both scoped returns refused until scope unwinding is modelled.
-  | _, _, _, .retScoped .., reserved => none
-  | _, _, _, .retWhyScoped .., reserved => none
+  | _, Γ, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
+  | _, Γ, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
   | _, _, _, _, reserved => none
 
 end

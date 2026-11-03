@@ -184,11 +184,12 @@ theorem ignored_selection_zeuge :
       (.consumeTraverse () .fls .tru .tru 0 (.lit 0) body :
         Stmt D (vertragVon D ()) false [] [] []) = lowered true := ⟨rfl, rfl⟩
 
-/-- A body with an unsupported scoped return retains its precise refusal. -/
-theorem consumeTraverse_refused_zeuge :
-    lowS 1 (fun _ => 2048) layout (functionFrame program ()) post [3] (0, 0)
+/-- A body with a scoped return lowers: scoped returns emit the ordinary
+    return code with a ghost scope release (`RueckgabeScoped`). -/
+theorem consumeTraverse_scoped_zeuge :
+    (lowS 1 (fun _ => 2048) layout (functionFrame program ()) post [3] (0, 0)
       (.consumeTraverse () member .fls .tru 2 mass
         (.cons (.retScoped .empty { scopes := [], genau := .refl [] }) .nil) :
-        Stmt D (vertragVon D ()) false [] [] []) = none := rfl
+        Stmt D (vertragVon D ()) false [] [] []).isSome = true := rfl
 
 end Gabbro.Stage0.Senke.ConsumeProbe

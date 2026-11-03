@@ -109,6 +109,7 @@ public import Stage0.Zeugen.Pipeline.ProductValueWitness
 public import Stage0.Frontend.MeasureWitness
 public import Stage0.Senke.Rueckkehr.Proben
 public import Stage0.Senke.Rueckkehr.EntryProbe
+public import Stage0.Senke.Rueckkehr.ScopedZeuge
 public import Stage0.Senke.Ausdruck.Aggregat.WideInt.BitBuiltin.Probes
 public import Stage0.Zeugen.Annahme.TypedSumWitness
 public import Stage0.Zeugen.Annahme.PointerContractWitness
