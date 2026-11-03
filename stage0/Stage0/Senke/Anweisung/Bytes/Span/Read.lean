@@ -128,7 +128,7 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
         funext dst
         simp only [capturedExpr, lowE_eqs, iw, vslot_here, base]
       have cp : Pre L m1 _ fp K (d + 1) chunks capturedEnv W (d - FB) :=
-        ⟨by rw [depth], p1.small, p1.frame, p1.left.code, p1.left.far,
+        ⟨by rw [depth]; exact Nat.le_refl _, p1.small, p1.frame, p1.left.code, p1.left.far,
           capturedAt, p1.welt, p1.wstab⟩
       have chunksMade' : readBytesWordsL L t f
           (lowE (currentOld := currentOld) L (reserved := d - FB) capturedExpr)
@@ -152,12 +152,12 @@ theorem readBytesWide_ok {Λ : List (Res D)} {Γ : Ctx} {a b : Int}
         (τ := .int 0 (256 ^ n - 1))
         (v := eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) p2.frame p2.small
         (by change d + words ≤ K; omega) (by change d + 1 + words ≤ K; omega)
-        (Or.inl (by omega)) p2.code (by simpa only [copyWords_length] using p2.far)
+        (Or.inl (by omega)) p2.code (by simpa only [copyWords_length, valueWords, words] using p2.far)
         (show ValueAt L m2 fp (d + 1) (.int 0 (256 ^ n - 1))
           (eval σ₀ (.getBytes t f hf n i lower upper access) σ ρ) from ⟨trivial, out⟩)
       refine ⟨m3, ?_, (ch1.trans (ch2.mono (Nat.le_succ d))).trans
         (Agree.widen ch3 (by change d + words ≤ K; omega)), result⟩
-      simpa only [List.length_append, copyWords_length, pc_add, words] using s1.trans (s2.trans s3)
+      simpa only [List.length_append, copyWords_length, pc_add, words, valueWords] using s1.trans (s2.trans s3)
     · rw [if_neg representable] at made
       cases made
 
