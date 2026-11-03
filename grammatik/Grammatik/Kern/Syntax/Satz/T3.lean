@@ -265,7 +265,7 @@ theorem stufenOk_ohne (P : Programm D) (h : ∀ f : D.Fn, (D.signatur f).boden =
 
 section Scopes
 
-variable {V : vertrag D}
+variable {V : Vertrag D}
 
 def scopesOkScopes (haelt : List D.Lock) (boden : Option Int) : List D.Lock → Bool
   | [] => true
@@ -414,7 +414,7 @@ theorem scopesOkScopes_of_forall {haelt : List D.Lock} {boden : Option Int} {Ls 
           exact decide_eq_true (hrK c hb)
 
 /-- A scoped return at a counted frame meets the scope check. -/
-theorem scopesOk_retScopedAux {V : vertrag D} {Λ : List (Res D)}
+theorem scopesOk_retScopedAux {V : Vertrag D} {Λ : List (Res D)}
     (R : RueckRessourcen D V Λ) (hcount : HCountScope V Λ) :
     scopesOkScopes V.haelt V.boden R.scopes = true := by
   apply scopesOkScopes_of_forall
