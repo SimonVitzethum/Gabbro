@@ -79,6 +79,8 @@ theorem Stmt.blatt_darf (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {
   | retires => simp only [stmtOrteP, List.not_mem_nil] at ho
   | ret e hp => exact e.orte_darf o ho
   | retWhy => simp only [stmtOrteP, List.not_mem_nil] at ho
+  | retScoped e _ => exact e.orte_darf o ho
+  | retWhyScoped => simp only [stmtOrteP, List.not_mem_nil] at ho
   | leave => simp only [stmtOrteP, List.not_mem_nil] at ho
   | next => simp only [stmtOrteP, List.not_mem_nil] at ho
   | _ => simp only [istBlatt, Bool.false_eq_true] at hb
