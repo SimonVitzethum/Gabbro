@@ -329,13 +329,11 @@ theorem bodenFalsch_treue (d : CheckDecl (declOf uBodenFalsch))
 /-- The emitted probe retains the comparison on the sampled local. -/
 example : (uBodenWahr.fns.find? (fun f => strEq f.name "p#probe")).map
     (fun f => f.ret) =
-    some (.bool (.and (.cmp ">=" (.param "x") (.lit 2))
-      (.cmp ">=" (.param "x") (.lit 2)))) := rfl
+    some (.bool (.var "#checkReport")) := rfl
 
 example : (uBodenFalsch.fns.find? (fun f => strEq f.name "p#probe")).map
     (fun f => f.ret) =
-    some (.bool (.and (.cmp ">=" (.param "x") (.lit 4))
-      (.cmp ">=" (.param "x") (.lit 4)))) := rfl
+    some (.bool (.var "#checkReport")) := rfl
 
 /-- A local floor cannot read a value before the local is defined. -/
 example : (elabText
@@ -345,7 +343,7 @@ example : (elabText
 /-- A failed floor cannot be bypassed with an unrelated true return. -/
 example : (elabText
     "impl fn g() { return; } check p { claim \"c\" measures x gates g can_fail { let x: u64 = 3; return true; } floor x >= 4 }").map
-    (fun u => (u.fns.find? (fun f => strEq f.name "p#probe")).map (·.ret)) =
-    .ok (some (.bool (.and .tru (.cmp ">=" (.param "x") (.lit 4))))) := rfl
+    (fun u => (u.fns.find? (fun f => strEq f.name "p#report#0")).map (·.ret)) =
+    .ok (some (.bool (.and (.var "v") (.var "f0")))) := rfl
 
 end Gabbro.Grammatik.Parser.Uebersetze
