@@ -63,6 +63,7 @@ def constExprB (c : ConstProgram) {Γ : Ctx} {Λ : List (Res c.D)} {τ : Ty} : E
   | .glob .. => false
   | .slot .. => false
   | .thru .. => false
+  | .thruOwn .. => false
   | .ptrOf .. => false
   | .fnref .. => false
   | .oldG .. => false
@@ -92,6 +93,7 @@ def constStmtB (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {Λ Λ
   | .call f args hp hr => constArgsB c args
   | .assignSlot .. => false
   | .assignThru .. => false
+  | .assignThruOwn .. => false
   | .assignGlob .. => false
   | .putBytes .. => false
   | .shift .. => false
