@@ -187,8 +187,8 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
     let body ← ersetzeSAnwIn (reason :: shadowed) fns body
     pure (.callIndElse pointer args reason body)
   | .callElse name args reason body => do
-    let args ← ersetzeSExprList fns args
-    let body ← ersetzeSAnw fns body
+    let args ← ersetzeSExprListIn shadowed fns args
+    let body ← ersetzeSAnwIn (reason :: shadowed) fns body
     pure (.callElse name args reason body)
   | .callQ f args =>
     (ersetzeSExprListIn shadowed fns args).map (fun args' => .callQ f args')
