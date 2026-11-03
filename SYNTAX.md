@@ -1,3 +1,40 @@
+### Foreign result areas
+
+A C14 target binding may declare `result area REGISTER` immediately after
+`regs out { ... }`, before any `stack` or `clobbers` clause:
+
+```ebnf
+result_area = "result" "area" ident ;
+sysbind     = "number" expr "regs" "in" regmap "regs" "out" regmap
+              [ result_area ] { "stack" ident } "clobbers" names "errors" errmap ;
+```
+
+The register is an explicit hidden argument containing the address of a
+caller-owned result area. It must be an unused request argument register;
+overlap with a source parameter is refused by name. Source arguments retain
+their existing order. Stage 0 currently supports this profile with scalar
+request arguments; combining it with the separate pointer-buffer profile is
+refused.
+
+The area uses the ordinary internal value ABI: exactly `valueWords(resultType)`
+64-bit words, in canonical word order. The provider must initialize the complete
+value and preserve every other frame byte and all permission maps. Declared
+world effects retain their original source contract. This realization is a
+binding/user-logic duty, not a hardware assumption. The compiler copies the
+complete value into the local binding with the ordinary value transport.
+
+For a fallible call, the normal answer register carries only a tag: zero means
+success, and a listed negative errno selects its declared reason. Unknown
+nonzero tags stop with 110 before reading the payload. An infallible area
+provider supplies a valid typed result under its contract; its answer register
+is ignored. Without an explicit area clause, a multiword answer is refused by
+name. Existing one-word integer, Bool and capability profiles remain available.
+
+Reference answers name cells of their nominal represented open region. Region
+capabilities retain their nominal identity and canonical capability encoding.
+Freshness and disjointness remain obligations of the binding's source contract;
+the clause introduces no integer-to-pointer conversion or implicit region storage.
+
 ### Statement calls with a reason handler
 
 ```ebnf
