@@ -10,6 +10,22 @@ open Gabbro.Grammatik Runner.IR
 set_option maxRecDepth 10000
 set_option maxHeartbeats 2000000
 
+/-- The complete source function reserves its control pair above result and
+    status, below the relocated lexical binder. No fixture assigns slots. -/
+theorem reservation_zeuge :
+    (functionFrame program ()).counterDepth = 1 ∧ controlReserved = 4 ∧
+    counterPair controlReserved (counterDepthB body) = (6, 7) ∧
+    frei [] controlReserved = 8 := by
+  decide +kernel
+
+/-- A consuming loop and a nested forever require two simultaneously live
+    pairs; sequential and alternative code still reuse the same frame demand. -/
+theorem nested_reservation_zeuge :
+    let nested : Block D (vertragVon D ()) true [.index 2] [] [] :=
+      .cons (.forever () .tru .nil) .nil
+    counterDepthS (.consumeTraverse () member edge .tru 2 mass nested :
+      Stmt D (vertragVon D ()) false [] [] []) = 2 := rfl
+
 /-- The actual edge is oriented from predecessor to candidate. Initially
     zero is minimal; after removing zero, one becomes minimal. -/
 theorem edge_selection_zeuge :
