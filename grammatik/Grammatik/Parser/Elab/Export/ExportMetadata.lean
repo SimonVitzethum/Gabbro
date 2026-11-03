@@ -393,6 +393,12 @@ theorem reset_bound_zeuge :
     bodyMetadata 3 (.reset "A" (some (.lit 1, .lit 2))) = false :=
   reset_bound 2 "A" (some (.lit 1, .lit 2))
 
+/-- Mint output admission still needs the root-once and software-call bridge. -/
+theorem mint_effect_metadata_refused :
+    clausesMetadata [.effs [.mints "Mark"]] = true ∧
+    clausesMetadataWithoutLoad [.effs [.mints "Mark"]] = true := by
+  exact ⟨rfl, rfl⟩
+
 /-- Plain marks carry no erased body or proof metadata; ghost value types still refuse. -/
 theorem linear_mark_metadata_zeuge :
     itemMetadata (.typeT ["linear"] "Mark" [] [] none) = false ∧
