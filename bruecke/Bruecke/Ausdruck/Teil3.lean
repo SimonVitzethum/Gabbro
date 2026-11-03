@@ -162,8 +162,12 @@ theorem lowEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i re a2 hr
           simp only [Option.some.injEq, Prod.mk.injEq] at hb
           obtain ⟨rfl, rfl⟩ := hb
-          simp only [lowEns, lowCmp] at h
+          simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
+            Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp] at h
           split at h
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
           · rename_i hx1 _
             obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
             simp [LowSide.wert] at hls
@@ -341,8 +345,12 @@ theorem ensExpr_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
         · rename_i re a2 hr
           simp only [Option.some.injEq, Prod.mk.injEq] at hb
           obtain ⟨rfl, rfl⟩ := hb
-          simp only [lowEns, lowCmp] at h
+          simp only [lowEns, ensSide_ohneCount hl, ensSide_ohneCount hr,
+            Bool.false_or, Bool.false_eq_true, ↓reduceIte, lowCmp] at h
           split at h
+          · rename_i hx1 _
+            obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
+            simp [LowSide.wert] at hls
           · rename_i hx1 _
             obtain ⟨_, hls⟩ := lowWertEns_int hx1 hl hA hT σ₀ ρ s₀ hW₀ hL₀
             simp [LowSide.wert] at hls
