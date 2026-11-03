@@ -75,9 +75,8 @@ theorem stmt_callIndElse_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       have gcall : Treu V.schreibt V.gschreibt (σ.lese Λ (p.orte ++ args.orte)) σ' :=
         (TreuRet.weiter hp.hw hp.hg h2).toTreu_entry hentry
       have g1 := hl.trans gcall
-      have heq := ih_err σ' _ hscope_err
+      have heq := ih_err σ' (.cons (grundSig hg r) ρ) hscope_err
         (HeldB.of_iff (fun L => held_nachSig_iff _ _ L) (g1.heldB hh))
-      simp only [hx] at ⊢
       rw [heq]
   | logik e => rfl
   | hardware e => rfl
@@ -104,11 +103,14 @@ theorem block_narrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
   by_cases hc : lo' ≤ (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ∧
-    (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi' <;>
-    simp only [hc, dif_pos, dif_neg] at ⊢
-  · have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
+    (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n ≤ hi'
+  · simp only [dite_eq_left hc]
+    have heq := ih_rest (σ.lese Λ e.orte)
+      (.cons ⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ ρ)
+      hscope_rest (hl.heldB hh)
     rw [heq]
-  · have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
+  · simp only [dite_eq_right hc]
+    have heq := ih_sonst (σ.lese Λ e.orte) ρ hscope_sonst (hl.heldB hh)
     rw [heq]
 
 theorem block_check_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -129,11 +131,12 @@ theorem block_check_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_sonst : sonst.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ c.orte
-  by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true <;>
-    simp only [hc, ite_true, ite_false, Bool.true_eq_true, Bool.false_eq_true] at ⊢
-  · have heq := ih_rest _ ρ hscope_rest (hl.heldB hh)
+  by_cases hc : wahr? (eval (σ.lese Λ c.orte) c (σ.lese Λ c.orte) ρ) = true
+  · simp only [ite_eq_left hc]
+    have heq := ih_rest _ ρ hscope_rest (hl.heldB hh)
     rw [heq]
-  · have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
+  · simp only [ite_eq_right hc]
+    have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
     rw [heq]
 
 theorem block_float_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -151,13 +154,13 @@ theorem block_float_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ (a.orte ++ b.orte)
-  generalize hv : gleitPasst lo hi (gleitRechne op
+  cases hv : gleitPasst lo hi (gleitRechne op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
-      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) = ov at ⊢
-  cases ov with
+      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) with
+  | none => rfl
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
+      have heq := ih_rest (σ.lese Λ (a.orte ++ b.orte)) (.cons v ρ)
+        hscope_rest (hl.heldB hh)
       rw [heq]
 
 theorem block_floatLit_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -173,11 +176,10 @@ theorem block_floatLit_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
       execBlock O passes R₂ (Block.floatLit q lo hi rest) σ ρ := by
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execBlock]
-  generalize hv : gleitPasst lo hi (bruch q) = ov at ⊢
-  cases ov with
+  cases hv : gleitPasst lo hi (bruch q) with
+  | none => rfl
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest σ _ hscope_rest hh
+      have heq := ih_rest σ (.cons v ρ) hscope_rest hh
       rw [heq]
 
 theorem block_floatOf_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -195,12 +197,11 @@ theorem block_floatOf_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_rest : rest.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-  generalize hv : gleitPasst lo hi
-      (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) = ov at ⊢
-  cases ov with
+  cases hv : gleitPasst lo hi
+      (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
+  | none => rfl
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
+      have heq := ih_rest (σ.lese Λ e.orte) (.cons v ρ) hscope_rest (hl.heldB hh)
       rw [heq]
 
 theorem block_floatNarrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
@@ -222,16 +223,13 @@ theorem block_floatNarrow_gleich (bo : Option Int) (hbV : BodenUnter bo V.boden)
   have hscope_sonst : sonst.ScopesOk := by scopes_treu
   simp only [execBlock]
   have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
-  generalize hv : gleitPasst lo hi
-      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x = ov at ⊢
-  cases ov with
+  cases hv : gleitPasst lo hi
+      (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
   | some v =>
-      simp only [hv] at ⊢
-      have heq := ih_rest _ _ hscope_rest (hl.heldB hh)
+      have heq := ih_rest (σ.lese Λ e.orte) (.cons v ρ) hscope_rest (hl.heldB hh)
       rw [heq]
   | none =>
-      simp only [hv] at ⊢
-      have heq := ih_sonst _ ρ hscope_sonst (hl.heldB hh)
+      have heq := ih_sonst (σ.lese Λ e.orte) ρ hscope_sonst (hl.heldB hh)
       rw [heq]
 
 end GleichTests

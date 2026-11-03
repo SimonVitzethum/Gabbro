@@ -48,39 +48,34 @@ theorem traverseLauf_unter (bo : Option Int)
       AusgangUnter Er
         (traverseLauf (l := l) (fun σ ρ => execBlock O passes R₁ body₁ σ ρ) inv ks σ ρ)
         (traverseLauf (l := l) (fun σ ρ => execBlock O passes R₂ body₂ σ ρ) inv ks σ ρ)
-  | [], σ, ρ, _ => by
-      simp only [traverseLauf]
-      by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]; exact AusgangUnter.refl _
-      · rw [if_neg hc, if_neg hc]; exact AusgangUnter.refl _
+  | [], _, _, _ => AusgangUnter.refl _
   | k :: ks, σ, ρ, hh => by
       simp only [traverseLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]; exact AusgangUnter.refl _
-      · rw [if_neg hc, if_neg hc]
+      · simp only [ite_eq_left hc]; exact AusgangUnter.refl _
+      · simp only [ite_eq_right hc]
         have hinv := hi σ ρ hh
-        rcases ih (inv σ ρ).1 (.cons k ρ) hscope₁ hscope₂ (hinv.heldB hh) with
-        | inl heq =>
-            rw [heq]
-            cases hx : execBlock O passes R₂ body₂ (inv σ ρ).1 (Env.cons k ρ) with
-            | ok σ' ρ' =>
-                have hT' := treuAus_ok (hT _ _ hscope₁ (hinv.heldB hh))
-                  (by rw [heq, hx]; rfl)
-                have g1 := hinv.trans hT'
-                exact traverseLauf_unter bo body₁ body₂ inv ih hT hi hscope₁ hscope₂
-                  ks σ' ρ'.tail (g1.heldB hh)
-            | next hl σ' ρ' =>
-                have hT' := treuAus_ok (hT _ _ hscope₁ (hinv.heldB hh))
-                  (by rw [heq, hx]; rfl)
-                have g1 := hinv.trans hT'
-                exact traverseLauf_unter bo body₁ body₂ inv ih hT hi hscope₁ hscope₂
-                  ks σ' ρ'.tail (g1.heldB hh)
-            | leave hl σ' ρ' => exact AusgangUnter.refl _
-            | zurueck σ' v => exact AusgangUnter.refl _
-            | why σ' r => exact AusgangUnter.refl _
-            | logik e => exact AusgangUnter.refl _
-            | hardware e => exact AusgangUnter.refl _
-        | inr herr => exact Or.inr ⟨herr.1, by rw [herr.2.1]; cases herr.1 <;> rfl, herr.2.2⟩
+        rcases ih (inv σ ρ).1 (.cons k ρ) hscope₁ hscope₂ (hinv.heldB hh) with heq | ⟨m, hm, hE⟩
+        · rw [heq]
+          cases hx : execBlock O passes R₂ body₂ (inv σ ρ).1 (Env.cons k ρ) with
+          | ok σ' ρ' =>
+              have hT' := treuAus_ok (hT (inv σ ρ).1 (.cons k ρ) hscope₁ (hinv.heldB hh))
+                (by rw [heq, hx]; rfl)
+              have g1 := hinv.trans hT'
+              exact traverseLauf_unter bo body₁ body₂ inv ih hT hi hscope₁ hscope₂
+                ks σ' ρ'.tail (g1.heldB hh)
+          | next hl σ' ρ' =>
+              have hT' := treuAus_next (hT (inv σ ρ).1 (.cons k ρ) hscope₁ (hinv.heldB hh))
+                (by rw [heq, hx]; rfl)
+              have g1 := hinv.trans hT'
+              exact traverseLauf_unter bo body₁ body₂ inv ih hT hi hscope₁ hscope₂
+                ks σ' ρ'.tail (g1.heldB hh)
+          | leave hl σ' ρ' => exact AusgangUnter.refl _
+          | zurueck σ' v => exact AusgangUnter.refl _
+          | why σ' r => exact AusgangUnter.refl _
+          | logik e => exact AusgangUnter.refl _
+          | hardware e => exact AusgangUnter.refl _
+        · exact Or.inr ⟨m, by rw [hm]; cases m <;> rfl, hE⟩
 
 /-- A consuming run under two related handlers. -/
 theorem verbrauchLauf_unter (bo : Option Int)
@@ -113,8 +108,8 @@ theorem verbrauchLauf_unter (bo : Option Int)
   | n + 1, σ, ρ, hh => by
       simp only [verbrauchLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]; exact AusgangUnter.refl _
-      · rw [if_neg hc, if_neg hc]
+      · simp only [ite_eq_left hc]; exact AusgangUnter.refl _
+      · simp only [ite_eq_right hc]
         have hinv := hi σ ρ hh
         have hselg := hsel (inv σ ρ).1 ρ (hinv.heldB hh)
         generalize heq_sel : sel (inv σ ρ).1 ρ = selected at hselg ⊢
@@ -129,46 +124,45 @@ theorem verbrauchLauf_unter (bo : Option Int)
             simp only
             have gm : Treu V.schreibt V.gschreibt σ σm :=
               (hinv.trans hselg).trans hmassg
-            rcases ih σm (.cons v ρ) hscope₁ hscope₂ (gm.heldB hh) with
-            | inl heq =>
-                rw [heq]
-                cases hx : execBlock O passes R₂ body₂ σm (Env.cons v ρ) with
-                | ok σ' ρ' =>
-                    dsimp only
-                    have hT' := treuAus_ok (hT _ _ hscope₁ (gm.heldB hh))
-                      (by rw [heq, hx]; rfl)
-                    have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
-                    have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
-                    generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
-                    rcases p2 with ⟨σm', m'⟩
-                    dsimp only
-                    by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                    · rw [if_pos hfall, if_pos hfall]
-                      have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
-                      exact verbrauchLauf_unter bo t body₁ body₂ inv sel massW bound
-                        ih hT hi hsel hmass hscope₁ hscope₂ n σm' ρ'.tail (g2.heldB hh)
-                    · rw [if_neg hfall, if_neg hfall]; exact AusgangUnter.refl _
-                | next hl σ' ρ' =>
-                    dsimp only
-                    have hT' := treuAus_ok (hT _ _ hscope₁ (gm.heldB hh))
-                      (by rw [heq, hx]; rfl)
-                    have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
-                    have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
-                    generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
-                    rcases p2 with ⟨σm', m'⟩
-                    dsimp only
-                    by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
-                    · rw [if_pos hfall, if_pos hfall]
-                      have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
-                      exact verbrauchLauf_unter bo t body₁ body₂ inv sel massW bound
-                        ih hT hi hsel hmass hscope₁ hscope₂ n σm' ρ'.tail (g2.heldB hh)
-                    · rw [if_neg hfall, if_neg hfall]; exact AusgangUnter.refl _
-                | leave hl σ' ρ' => simp only; exact AusgangUnter.refl _
-                | zurueck σ' v => simp only; exact AusgangUnter.refl _
-                | why σ' r => simp only; exact AusgangUnter.refl _
-                | logik e => simp only; exact AusgangUnter.refl _
-                | hardware e => simp only; exact AusgangUnter.refl _
-            | inr herr => exact Or.inr ⟨herr.1, by rw [herr.2.1]; cases herr.1 <;> rfl, herr.2.2⟩
+            rcases ih σm (.cons v ρ) hscope₁ hscope₂ (gm.heldB hh) with heq | ⟨m, hm, hE⟩
+            · rw [heq]
+              cases hx : execBlock O passes R₂ body₂ σm (Env.cons v ρ) with
+              | ok σ' ρ' =>
+                  dsimp only
+                  have hT' := treuAus_ok (hT σm (.cons v ρ) hscope₁ (gm.heldB hh))
+                    (by rw [heq, hx]; rfl)
+                  have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
+                  have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
+                  generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
+                  rcases p2 with ⟨σm', m'⟩
+                  dsimp only
+                  by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+                  · simp only [ite_eq_left hfall]
+                    have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
+                    exact verbrauchLauf_unter bo t body₁ body₂ inv sel massW bound
+                      ih hT hi hsel hmass hscope₁ hscope₂ n σm' ρ'.tail (g2.heldB hh)
+                  · simp only [ite_eq_right hfall]; exact AusgangUnter.refl _
+              | next hl σ' ρ' =>
+                  dsimp only
+                  have hT' := treuAus_next (hT σm (.cons v ρ) hscope₁ (gm.heldB hh))
+                    (by rw [heq, hx]; rfl)
+                  have g1 : Treu V.schreibt V.gschreibt σ σ' := gm.trans hT'
+                  have hmassg2 := hmass σ' ρ'.tail (g1.heldB hh)
+                  generalize heq_mass2 : massW σ' ρ'.tail = p2 at hmassg2 ⊢
+                  rcases p2 with ⟨σm', m'⟩
+                  dsimp only
+                  by_cases hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < m
+                  · simp only [ite_eq_left hfall]
+                    have g2 : Treu V.schreibt V.gschreibt σ σm' := g1.trans hmassg2
+                    exact verbrauchLauf_unter bo t body₁ body₂ inv sel massW bound
+                      ih hT hi hsel hmass hscope₁ hscope₂ n σm' ρ'.tail (g2.heldB hh)
+                  · simp only [ite_eq_right hfall]; exact AusgangUnter.refl _
+              | leave hl σ' ρ' => simp only; exact AusgangUnter.refl _
+              | zurueck σ' v => simp only; exact AusgangUnter.refl _
+              | why σ' r => simp only; exact AusgangUnter.refl _
+              | logik e => simp only; exact AusgangUnter.refl _
+              | hardware e => simp only; exact AusgangUnter.refl _
+            · exact Or.inr ⟨m, by rw [hm]; cases m <;> rfl, hE⟩
 
 end SchleifenUnter
 
@@ -205,40 +199,38 @@ theorem retryLauf_unter (bo : Option Int)
   | 0, σ, ρ, hh => by
       simp only [retryLauf]
       by_cases hc : (bis σ ρ).2 = true
-      · rw [if_pos hc, if_pos hc]
+      · simp only [ite_eq_left hc]; exact AusgangUnter.refl _
+      · simp only [ite_eq_right hc]
         exact ihu (bis σ ρ).1 ρ hscope_u1 hscope_u2 ((hb σ ρ hh).heldB hh)
-      · rw [if_neg hc, if_neg hc]; exact AusgangUnter.refl _
   | n + 1, σ, ρ, hh => by
       simp only [retryLauf]
       by_cases hc : (bis σ ρ).2 = true
-      · rw [if_pos hc, if_pos hc]
-        exact ihu (bis σ ρ).1 ρ hscope_u1 hscope_u2 ((hb σ ρ hh).heldB hh)
-      · rw [if_neg hc, if_neg hc]
+      · simp only [ite_eq_left hc]; exact AusgangUnter.refl _
+      · simp only [ite_eq_right hc]
         have hinv := hb σ ρ hh
-        rcases ih (bis σ ρ).1 ρ hscope₁ hscope₂ (hinv.heldB hh) with
-        | inl heq =>
-            rw [heq]
-            cases hx : execBlock O passes R₂ body₂ (bis σ ρ).1 ρ with
-            | ok σ' ρ' =>
-                have hT' := treuAus_ok (hT _ _ hscope₁ (hinv.heldB hh))
-                  (by rw [heq, hx]; rfl)
-                have g1 := hinv.trans hT'
-                exact retryLauf_unter bo body₁ body₂ bis ueber₁ ueber₂
-                  ih hT ihu hb hscope₁ hscope₂ hscope_u1 hscope_u2
-                  n σ' ρ' (g1.heldB hh)
-            | next hl σ' ρ' =>
-                have hT' := treuAus_ok (hT _ _ hscope₁ (hinv.heldB hh))
-                  (by rw [heq, hx]; rfl)
-                have g1 := hinv.trans hT'
-                exact retryLauf_unter bo body₁ body₂ bis ueber₁ ueber₂
-                  ih hT ihu hb hscope₁ hscope₂ hscope_u1 hscope_u2
-                  n σ' ρ' (g1.heldB hh)
-            | leave hl σ' ρ' => exact AusgangUnter.refl _
-            | zurueck σ' v => exact AusgangUnter.refl _
-            | why σ' r => exact AusgangUnter.refl _
-            | logik e => exact AusgangUnter.refl _
-            | hardware e => exact AusgangUnter.refl _
-        | inr herr => exact Or.inr ⟨herr.1, by rw [herr.2.1]; cases herr.1 <;> rfl, herr.2.2⟩
+        rcases ih (bis σ ρ).1 ρ hscope₁ hscope₂ (hinv.heldB hh) with heq | ⟨m, hm, hE⟩
+        · rw [heq]
+          cases hx : execBlock O passes R₂ body₂ (bis σ ρ).1 ρ with
+          | ok σ' ρ' =>
+              have hT' := treuAus_ok (hT (bis σ ρ).1 ρ hscope₁ (hinv.heldB hh))
+                (by rw [heq, hx]; rfl)
+              have g1 := hinv.trans hT'
+              exact retryLauf_unter bo body₁ body₂ bis ueber₁ ueber₂
+                ih hT ihu hb hscope₁ hscope₂ hscope_u1 hscope_u2
+                n σ' ρ' (g1.heldB hh)
+          | next hl σ' ρ' =>
+              have hT' := treuAus_next (hT (bis σ ρ).1 ρ hscope₁ (hinv.heldB hh))
+                (by rw [heq, hx]; rfl)
+              have g1 := hinv.trans hT'
+              exact retryLauf_unter bo body₁ body₂ bis ueber₁ ueber₂
+                ih hT ihu hb hscope₁ hscope₂ hscope_u1 hscope_u2
+                n σ' ρ' (g1.heldB hh)
+          | leave hl σ' ρ' => exact AusgangUnter.refl _
+          | zurueck σ' v => exact AusgangUnter.refl _
+          | why σ' r => exact AusgangUnter.refl _
+          | logik e => exact AusgangUnter.refl _
+          | hardware e => exact AusgangUnter.refl _
+        · exact Or.inr ⟨m, by rw [hm]; cases m <;> rfl, hE⟩
 
 /-- A forever run under two related handlers. -/
 theorem foreverLauf_unter (bo : Option Int)
@@ -261,31 +253,30 @@ theorem foreverLauf_unter (bo : Option Int)
   | n + 1, σ, ρ, hh => by
       simp only [foreverLauf]
       by_cases hc : (inv σ ρ).2 = false
-      · rw [if_pos hc, if_pos hc]; exact AusgangUnter.refl _
-      · rw [if_neg hc, if_neg hc]
+      · simp only [ite_eq_left hc]; exact AusgangUnter.refl _
+      · simp only [ite_eq_right hc]
         have hinv := hi σ ρ hh
-        rcases ih (inv σ ρ).1 ρ hscope₁ hscope₂ (hinv.heldB hh) with
-        | inl heq =>
-            rw [heq]
-            cases hx : execBlock O passes R₂ body₂ (inv σ ρ).1 ρ with
-            | ok σ' ρ' =>
-                have hT' := treuAus_ok (hT _ _ hscope₁ (hinv.heldB hh))
-                  (by rw [heq, hx]; rfl)
-                have g1 := hinv.trans hT'
-                exact foreverLauf_unter bo a body₁ body₂ inv ih hT hi
-                  hscope₁ hscope₂ n σ' ρ' (g1.heldB hh)
-            | next hl σ' ρ' =>
-                have hT' := treuAus_ok (hT _ _ hscope₁ (hinv.heldB hh))
-                  (by rw [heq, hx]; rfl)
-                have g1 := hinv.trans hT'
-                exact foreverLauf_unter bo a body₁ body₂ inv ih hT hi
-                  hscope₁ hscope₂ n σ' ρ' (g1.heldB hh)
-            | leave hl σ' ρ' => exact AusgangUnter.refl _
-            | zurueck σ' v => exact AusgangUnter.refl _
-            | why σ' r => exact AusgangUnter.refl _
-            | logik e => exact AusgangUnter.refl _
-            | hardware e => exact AusgangUnter.refl _
-        | inr herr => exact Or.inr ⟨herr.1, by rw [herr.2.1]; cases herr.1 <;> rfl, herr.2.2⟩
+        rcases ih (inv σ ρ).1 ρ hscope₁ hscope₂ (hinv.heldB hh) with heq | ⟨m, hm, hE⟩
+        · rw [heq]
+          cases hx : execBlock O passes R₂ body₂ (inv σ ρ).1 ρ with
+          | ok σ' ρ' =>
+              have hT' := treuAus_ok (hT (inv σ ρ).1 ρ hscope₁ (hinv.heldB hh))
+                (by rw [heq, hx]; rfl)
+              have g1 := hinv.trans hT'
+              exact foreverLauf_unter bo a body₁ body₂ inv ih hT hi
+                hscope₁ hscope₂ n σ' ρ' (g1.heldB hh)
+          | next hl σ' ρ' =>
+              have hT' := treuAus_next (hT (inv σ ρ).1 ρ hscope₁ (hinv.heldB hh))
+                (by rw [heq, hx]; rfl)
+              have g1 := hinv.trans hT'
+              exact foreverLauf_unter bo a body₁ body₂ inv ih hT hi
+                hscope₁ hscope₂ n σ' ρ' (g1.heldB hh)
+          | leave hl σ' ρ' => exact AusgangUnter.refl _
+          | zurueck σ' v => exact AusgangUnter.refl _
+          | why σ' r => exact AusgangUnter.refl _
+          | logik e => exact AusgangUnter.refl _
+          | hardware e => exact AusgangUnter.refl _
+        · exact Or.inr ⟨m, by rw [hm]; cases m <;> rfl, hE⟩
 
 end SchleifenUnterZwei
 end Gabbro.Grammatik
