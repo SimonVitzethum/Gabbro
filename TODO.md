@@ -522,7 +522,8 @@ inventory and are not added to the 143 syntax cases. `Ty.index n` is the alias `
 The `front-gaps2` source reinspection annotates individual rows below (no Lean/build execution):
 finite float narrowing and labelled breaking export were added; breaking remains refused by the
 unchanged invariant metadata gate. Retirement already had a producer, so its old row was stale.
-Advance markers now have a named one-stage refusal. Missing check-statement and byte-span syntax is
+Advance markers now preserve declared stage orders and use checked adjacent transitions; unstaged
+marks still have no successor. Missing check-statement and byte-span syntax is
 identified explicitly. The later `front-floatof` change adds the documented integer-to-float conversion
 export. The original snapshot totals above have not been remeasured.
 

@@ -14,10 +14,13 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
-/-- The current source declaration cannot supply the successor-stage premise
-    of `Stmt.advances`; this is a representation gap, not an erasable marker. -/
-theorem exportedMark_no_successor (u : UProg) (m : Fin u.marken.length) (stage : Nat) :
+/-- An unstaged source mark cannot supply the successor-stage premise of
+    `Stmt.advances`; only a declared order can provide additional stages. -/
+theorem exportedMark_no_successor (u : UProg) (m : Fin u.marken.length) (stage : Nat)
+    (unstaged : markStages u m = []) :
     ¬ stage + 1 < (declOf u).stufen m := by
+  change ¬ stage + 1 < max 1 (markStages u m).length
+  rw [unstaged]
   change ¬ stage + 1 < 1
   omega
 

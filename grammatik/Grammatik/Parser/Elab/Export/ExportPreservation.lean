@@ -13,18 +13,39 @@ theorem retires_export (ctx : UCtx) (tabs : List UTab) (heads : List UFnKopf) (n
     exactly one held input is erased and no hardware assumption is introduced. -/
 theorem retires_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
     (fn : UFn) (Λ : List (Res (declOf u))) (name : String) (mark : Fin u.marken.length)
+    (stage : Nat)
     (notBorrowed : (fnAt u caller).leiht.any (strEq · name) = false)
-    (resolved : markFin u.marken name = some mark) (held : Res.marke mark 0 ∈ Λ) :
+    (resolved : markFin u.marken name = some mark) (held : heldMarkStage mark Λ = some stage) :
     lowStmtL (l := l) u caller Γ fn Λ (.retires name) =
-      .ok ⟨Λ.erase (.marke mark 0), Stmt.retires mark 0 held none⟩ := by
-  exact lowRetiresL_exact u caller Γ Λ name mark notBorrowed resolved held
+      .ok ⟨Λ.erase (.marke mark stage),
+        Stmt.retires mark stage (heldMarkStage_mem mark Λ stage held) none⟩ := by
+  exact lowRetiresL_exact u caller Γ Λ name mark stage notBorrowed resolved held
 
-/-- No exported mark has a successor stage. Refuse the surface marker by name
-    instead of erasing it or fabricating the premise of `Stmt.advances`. -/
-theorem advances_export_refused (ctx : UCtx) (tabs : List UTab) (heads : List UFnKopf)
+/-- The surface advance preserves both labels for checked order resolution. -/
+theorem advances_export (ctx : UCtx) (tabs : List UTab) (heads : List UFnKopf)
     (before after : String) :
-    uAnw1 ctx tabs heads (.step before after) =
-      .error "advances without G form: exported marks have only stage 0" := rfl
+    uAnw1 ctx tabs heads (.step before after) = .ok (.advances before after) := rfl
+
+/-- The production dispatcher retains possession, declaration bounds and the
+    canonical erase/add inventory of a successfully resolved advance. -/
+theorem advances_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (fn : UFn) (Λ : List (Res (declOf u))) (before after : String) (hit : AdvanceHit u)
+    (resolved : resolveAdvance u before after = .ok hit)
+    (notBorrowed : (fnAt u caller).leiht.any (strEq · (u.marken.get hit.mark)) = false)
+    (held : Res.marke hit.mark hit.stage ∈ Λ) :
+    lowStmtL (l := l) u caller Γ fn Λ (.advances before after) =
+      .ok ⟨Λ.erase (.marke hit.mark hit.stage) ++ [.marke hit.mark (hit.stage + 1)],
+        Stmt.advances hit.mark hit.stage held hit.bounded⟩ := by
+  exact lowAdvancesL_exact u caller Γ Λ before after hit resolved notBorrowed held
+
+/-- Unknown, ambiguous, nonadjacent and terminal edges retain their named
+    refusal in the production dispatcher; no G premise is fabricated. -/
+theorem advances_export_refused {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u))) (before after error : String)
+    (refused : resolveAdvance u before after = .error error) :
+    lowStmtL (l := l) u caller Γ fn Λ (.advances before after) = .error error := by
+  show lowAdvancesL (l := l) u caller Γ Λ before after = .error error
+  simp only [lowAdvancesL, refused]
 
 /-- The production source reader delegates labelled scopes to the exporter with
     the same recursive reader; its original outer context is retained. -/
