@@ -267,10 +267,15 @@ entrustdecl = "entrust" ident "at" ident "arch" ident "{"
                 "stack"  ident
                 "assume" ident ";"
               "}" ;
-(* `entrust` -- the room whose CONTENT Gabbro does not know. Gabbro says nothing about the
-   guest; what it says is the CONTRACT AT ENTRY. `at` takes a NAME (`N006`): a jump to a
-   computed address is exactly what must not be nameable. `assume` is compulsory and must be
-   falsifiable (`N004`/`N005`), the same rule as `progress`. *)
+(* Bounded userspace meaning: `at` names a code-region capability, never a
+   computed address. Guest interaction is an ordinary fallible call to an
+   explicitly bound isolation service with declared Gabbro requires/ensures;
+   isolation and the implementation are user-logic duties. Guest instructions
+   are never executed as G code. `assume` can name genuine hardware only and
+   cannot assert OS isolation. Register-state and privileged handover remain
+   excluded. The current surface has no service-binding field yet, so canonical
+   source compilation refuses it by name; the typed model is not a completed
+   source-to-IR feature. *)
 entryextra = "stack" ident [ "per" "cpu" ] [ "ist" constexpr ]
              [ "nested" ( "never" | "masked" | "bounded" constexpr ) ] ;
 (* Checked since lane S5 («SS-1», §12.1): the user side of a
