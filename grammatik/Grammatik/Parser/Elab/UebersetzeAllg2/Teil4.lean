@@ -13,6 +13,13 @@ open Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg
 set_option maxRecDepth 100000
 
+/-- The current source declaration cannot supply the successor-stage premise
+    of `Stmt.advances`; this is a representation gap, not an erasable marker. -/
+theorem exportedMark_no_successor (u : UProg) (m : Fin u.marken.length) (stage : Nat) :
+    ¬ stage + 1 < (declOf u).stufen m := by
+  change ¬ stage + 1 < 1
+  omega
+
 /-- `p(..);` through a function pointer (`Stmt.callInd`): against the signature of `p`'s type,
     stepping to its call transformer (C16). -/
 def lowCallIndL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
@@ -321,6 +328,7 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .retires m => lowRetiresL u caller Γ Λ m
+  | .breakingBeg _ => .error "lower: a breaking block opens here"
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => (lowRegWriteL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
   | .regWriteB d r v => (lowRegWriteBL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
@@ -330,6 +338,8 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .lockBeg _ => .error "lower: a locks block opens here"
   | .blkEnd => .error "lower: a block closes here without opening"
   | .resetRange a iu nu => lowResetRangeL u caller Γ fn Λ a iu nu
+  | .floatOf .. =>
+    .error "floatOf: canonical Endblock has no integer-to-float introduction"
   | .floatLit .. | .float .. =>
     .error "float: IEEE introduction requires a continuing G block; no canonical Endblock form"
   | .bind .. | .bindB .. | .bindMut .. | .bindCall .. | .axCall .. | .bindAx .. | .narrowBeg .. | .narrowReqBeg .. | .retryBeg .. | .foreverBeg .. | .bindOpt .. | .matchBeg .. | .startS | .allocBeg .. | .bindOptBeg .. | .bindOptElseBeg .. | .axCallElseBeg .. | .allocReqBeg .. | .bindElse .. | .matchWhyBeg .. | .bindSum .. | .matchTagBeg .. | .bindAxElse .. | .ifBeg _ | .ifElse | .arrayLoopBeg .. | .loopBeg .. | .regRead .. | .regReadElse .. | .awaitBind .. | .bindFnref .. | .bindCallInd .. | .bindCallIndElse .. | .bindW .. | .tausch .. | .ifEnde .. =>

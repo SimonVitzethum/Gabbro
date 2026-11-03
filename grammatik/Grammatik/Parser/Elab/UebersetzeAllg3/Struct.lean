@@ -18,6 +18,14 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg
 
 set_option maxRecDepth 100000
 
+/-- Resolve exactly one declared invariant. Unknown and ambiguous names cannot
+    turn a source scope into an unlabelled body. -/
+def invariantIdx (u : UProg) (name : String) : Except String (Fin u.invs.length) :=
+  match (List.finRange u.invs.length).filter (fun i => strEq (u.invs.get i).name name) with
+  | [i] => .ok i
+  | [] => .error ("lower: breaking of an unknown invariant: " ++ name)
+  | _ => .error ("lower: breaking of an ambiguous invariant: " ++ name)
+
 /-- The structured statements, each with the rest of the run after its body: `locks g { … }` (the lock
     by name, the rank rule; no `return` inside), `if c { … } else { … }` and `traverse` (its body is a
     block with `l = true`, the binder an index into the table, the invariant read in the OUTER scope). -/
@@ -26,6 +34,14 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
     Except String ((Σ Λ' : List (Res (declOf u)), Stmt (declOf u) (verOf u caller) l Γ Λ Λ') × List UStmt)
   | Γ, fn, Λ, pe, .axCallElseBeg c args reason, rest =>
     (lowAxCallElse u caller R Γ fn Λ pe c args reason rest).map fun (st, rest') => (⟨Λ, st⟩, rest')
+  | Γ, fn, Λ, pe, .breakingBeg name, rest => do
+    u.exportGate
+    let invariant ← invariantIdx u name
+    match R.seq (l := l) Γ fn Λ pe rest with
+    | .error error => .error error
+    | .ok (⟨Λ', body⟩, .blkEnd :: remaining) =>
+      pure (⟨Λ', Stmt.breaking invariant body⟩, remaining)
+    | .ok (_, _) => .error "lower: a breaking block is not closed"
   | Γ, fn, Λ, _, .lockBeg g, rest =>
     (lockIdx u.locks g).bind fun L =>
       if hr : rangOkB u Λ L = true then match R.seq Γ fn (Res.held L :: Λ) none rest with
@@ -140,5 +156,26 @@ def lowStructStep {l : Bool} (u : UProg) (caller : Fin u.fns.length) (R : LowStu
       | .ok (_, _) => .error "lower: a forever is not closed"
     else .error "lower: assumption unknown"
   | _, _, _, _, _, _ => .error "lower: not a structured statement"
+
+/-- The labelled G scope contains precisely the recursively lowered body. Its
+    full resource transformer is preserved, with the original metadata gate. -/
+theorem lowStructStep_breaking {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ Λ' : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (name : String) (invariant : Fin u.invs.length)
+    (rest remaining : List UStmt)
+    (body : Block (declOf u) (verOf u caller) l Γ Λ Λ')
+    (gate : u.exportGate = .ok ()) (resolved : invariantIdx u name = .ok invariant)
+    (inside : R.seq (l := l) Γ fn Λ pe rest = .ok (⟨Λ', body⟩, .blkEnd :: remaining)) :
+    lowStructStep (l := l) u caller R Γ fn Λ pe (.breakingBeg name) rest =
+      .ok (⟨Λ', Stmt.breaking invariant body⟩, remaining) := by
+  simp only [lowStructStep, gate, resolved, inside, bind, Except.bind, pure, Except.pure]
+
+/-- A refused source duty stops the scope before its body can be exported. -/
+theorem lowStructStep_breaking_refused {l : Bool} (u : UProg) (caller : Fin u.fns.length)
+    (R : LowStufe u caller) (Γ : Ctx) (fn : UFn) (Λ : List (Res (declOf u)))
+    (pe : AtTop u caller Λ) (name error : String) (rest : List UStmt)
+    (gate : u.exportGate = .error error) :
+    lowStructStep (l := l) u caller R Γ fn Λ pe (.breakingBeg name) rest = .error error := by
+  simp only [lowStructStep, gate, bind, Except.bind]
 
 end Gabbro.Grammatik.Parser.UebersetzeAllg2

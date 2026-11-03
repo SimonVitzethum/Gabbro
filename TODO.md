@@ -462,6 +462,13 @@ out-of-scope device forms; the remaining 17 are userspace gaps. These are struct
 that 120 cases have been compiled successfully. The 13 `Ty` constructors below are a separate representation
 inventory and are not added to the 143 syntax cases. `Ty.index n` is the alias `.int 0 (n - 1)`.
 
+The `front-gaps2` source reinspection annotates individual rows below (no Lean/build execution):
+finite float narrowing and labelled breaking export were added; breaking remains refused by the
+unchanged invariant metadata gate. Retirement already had a producer, so its old row was stale.
+Advance markers now have a named one-stage refusal. Missing check-statement and byte-span syntax is
+identified explicitly. The later `front-floatof` change adds the documented integer-to-float conversion
+export. The original snapshot totals above have not been remeasured.
+
 Locations use these exact file abbreviations (a suffix `:N` is the source line; e.g. `E:64` means
 `stage0/Stage0/Senke/Ausdruck.lean:64`):
 
@@ -520,7 +527,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Expr.rem` | yes G2:438 | yes E:110, unsigned or wide remainder | `lowE_ok`, Q:309 | same source range rule |
 | `Expr.sdiv` | yes G2:425 | yes E:113, signed or wide fallback | `lowE_ok`, Q:313 | denominator must exclude zero; minimum-word case uses wide fallback |
 | `Expr.srem` | yes G2:442 | yes E:118, signed or wide fallback | `lowE_ok`, Q:317 | denominator must exclude zero |
-| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes E:218, `readBytesWideL` captures the start once; `readBytesWordsL` emits <=8-byte kernels in canonical limb order | `lowE_ok`, Q:419 → `getBytes_ok` → `readBytesWide_ok`/`readBytesWords_ok` | no 8-byte cap; refuses `n ≥ 2^31` before expansion and inherited layout/frame/code failures; whole-span bounds/rights are constructor premises; source export and lead Lean/image checks pending |
+| `Expr.getBytes` | skipped: SYNTAX.md defines no byte-span expression; Lean `parseSuffixe` (`Parser/Expr/Ausdruck/Teil2a.lean:264`–`:285`) parses one index only | yes E:218, `readBytesWideL` captures the start once; `readBytesWordsL` emits <=8-byte kernels in canonical limb order | `lowE_ok`, Q:419 → `getBytes_ok` → `readBytesWide_ok`/`readBytesWords_ok` | no 8-byte cap; refuses `n ≥ 2^31` before expansion and inherited layout/frame/code failures; whole-span bounds/rights are constructor premises; source export and lead Lean/image checks pending |
 | `Expr.band` | yes G2:378 | yes E:123, scalar or wide bits | `lowE_ok`, Q:321 | source operands nonnegative |
 | `Expr.bor` | yes G2:395 | yes E:126, scalar resize or wide bits | `lowE_ok`, Q:325 | source width/range rule |
 | `Expr.bxor` | yes G2:409 | yes E:130, scalar resize or wide bits | `lowE_ok`, Q:329 | source width/range rule |
@@ -567,7 +574,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.assignSlot` | yes H1:219 | yes A:88, `slotStoreC` | `lowS_ok`, P:83 | layout/store guards |
 | `Stmt.assignThru` | yes H1:182 | yes A:92, resolved table/index | `lowS_ok`, P:84 | layout/store guards |
 | `Stmt.assignGlob` | yes H3:103 | yes A:80, `globalStoreC` | `lowS_ok`, P:79 | layout/store guards |
-| `Stmt.putBytes` | no producer in `Parser/Elab/**` | yes A:83, `putBytesL`/`putBytesWideL`; captures value and start before all chunk stores | `lowS_ok`, P:122 → `putBytes_ok` → `putBytesWide_ok`/`putBytesWords_ok` | no 8-byte cap; refuses `n ≥ 2^31` before expansion and inherited layout/frame/code failures; whole-span bounds/rights are constructor premises; source export and lead Lean/image checks pending |
+| `Stmt.putBytes` | skipped: SYNTAX.md defines no byte-span store statement; `Parser/Stmt/Anweisung/Defs2a.lean:31`–`:83` has ordinary place assignment only | yes A:83, `putBytesL`/`putBytesWideL`; captures value and start before all chunk stores | `lowS_ok`, P:122 → `putBytes_ok` → `putBytesWide_ok`/`putBytesWords_ok` | no 8-byte cap; refuses `n ≥ 2^31` before expansion and inherited layout/frame/code failures; whole-span bounds/rights are constructor premises; source export and lead Lean/image checks pending |
 | `Stmt.assignVar` | yes H3:306/:321 | yes A:38, copies complete value | `lowS_ok`, P:66 | A:42: `else none` if parameter/protected span would be overwritten |
 | `Stmt.shift` | yes H4:54 | partial A:107 | `lowS_ok`, P:123 | A:117: `else none` unless source/prestate intervals fit signed word; runtime prestate mismatch stops 106 |
 | `Stmt.ite` | yes J/Struct:46 | yes A:43 | `lowS_ok`, P:69 | recursive branches/code size |
@@ -577,7 +584,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.call` | yes H3:75 | yes A:72, `lowA`/`callC` | `lowS_ok`, P:73 | recursive arguments, image/frame bounds; fallible calls need else form |
 | `Stmt.callInd` | yes H4:29 | yes A:59, `lowInd` | `lowS_ok`, P:129 | signature/address/argument guards |
 | `Stmt.locks` | yes J/Struct:35 | partial A:176, `locksCode` | `lowS_ok`, P:131 | A:180: `else none` unless `retFreiB body` and jump offsets fit; source J/Kopf:214: `.error "lower: return under locks has no G form"` |
-| `Stmt.breaking` | no producer; unsupported surface statement U7:216 | yes A:139, recurse into body | `lowS_ok`, P:113 | U7:216: `.error ("stmt without G form: " ++ anwArt s)` |
+| `Stmt.breaking` | added, UNCHECKED: `Uebersetze/Breaking.lean` transports `breaking I { ... }`; `J/Struct` resolves the invariant and emits G | yes A:139, recurse into body | `lowS_ok`, P:113; exporter `uBreaking_exact`/`lowStructStep_breaking` | full source units STILL REFUSED by unchanged invariant cost/runs/by metadata gate; unknown/ambiguous invariant and unclosed scope also refused |
 | `Stmt.traverse` | yes J/Struct:59/:69 | partial A:118, `travC` | `lowS_ok`, P:111 | A:123: `else none` if count not signed-word representable |
 | `Stmt.retry` | yes J/Struct:80 | yes A:127, `retryC` | `lowS_ok`, P:133 | counter/branch/recursive-body guards |
 | `Stmt.forever` | yes J/Struct:138 | partial A:131, `foreverC` | `lowS_ok`, P:135 | A:138: `else none` if reserved/protected counter pair unavailable; bounded compiled passes |
@@ -585,8 +592,8 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.regWrite` | yes H3:349/:366 | refused by wildcard | refusal-only P:146, not an execution arm | A:183: `\| _, _, _, _, _, reserved => none`; device access out of scope |
 | `Stmt.transition` | no source producer; device declarations refused U12:322 | refused by wildcard | refusal-only P:147 | A:183: `\| _, _, _, _, _, reserved => none`; U12:322: `.error "device transition without G form"`; out of scope |
 | `Stmt.publish` | yes H3:178/:209, payload-free atomics | partial A:83, release store | `lowS_ok`, P:81 | A:87: `else none` unless address and `aggregateFits`; source payload export restricted |
-| `Stmt.advances` | no producer in `Parser/Elab/**` | yes A:140, ghost/no instructions | `lowS_ok`, P:115 | source clause is not an explicit statement exporter; no constructor-producing path |
-| `Stmt.retires` | no producer in `Parser/Elab/**` | yes A:141, ghost/no instructions | `lowS_ok`, P:116 | source retirement export missing |
+| `Stmt.advances` | deliberately refused, UNCHECKED named source refusal in `U7/uAnw1`; parser `.step` exists | yes A:140, ghost/no instructions | `lowS_ok`, P:115; `exportedMark_no_successor` proves the missing exporter premise | `declOf.stufen := 1` (`G1:104`) makes `stage + 1 < D.stufen m` impossible; no stage fabricated or marker dropped |
+| `Stmt.retires` | already produced by `U7/uAnw1` → `H4/lowStmtL` → `lowRetiresL`; original inventory row was stale | yes A:141, ghost/no instructions | `lowS_ok`, P:116; exporter `retires_export`/`retires_lower`, source-text owner and ordinary-mark `_zeuge` in `Proben/Fruehe/UebersetzeProben11` | borrowed, unknown, unheld and repeated retirement stay refused; source witnesses UNCHECKED in this pass |
 | `Stmt.ret` | yes J/Kopf:228 | yes A:77, shared ensures epilogue | `lowS_ok`, P:76 | source rejects return under locks J/Kopf:214 |
 | `Stmt.retWhy` | yes J/Kopf:220 | yes A:75 | `lowS_ok`, P:148 | separate reason channel, same source lock restriction |
 | `Stmt.leave` | yes J/Seq:265 | partial A:142 | `lowS_ok`, P:105 | A:142: `else none` if jump not `lit32`; source loop scope required |
@@ -611,11 +618,11 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Block.awaits` | yes J/Seq:237 | partial A:316, one load | `lowB_ok`, P:211 | A:320: `else none` unless address and `aggregateFits`; no waiting liveness claim |
 | `Block.exchange` | yes J/Seq:230 | partial A:321, CAS loop | `lowB_ok`, P:213 | A:327/:328: `else none` for code-size/address/single-word guards |
 | `Block.narrow` | yes J/Seq:191 | partial A:233 | `lowB_ok`, P:215 | A:239: `else none` unless input/bounds fit signed words |
-| `Block.check` | no producer in `Parser/Elab/**` | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | source export absent; no named constructor-specific refusal |
+| `Block.check` | skipped: no standalone surface statement in `SAnw` or `parseStmt` (`Parser/Stmt/Anweisung/Kopf.lean:95`, `Defs2a.lean:92`); C16 `check` is an item | yes A:310, condition plus end-handler | `lowB_ok`, P:219 | no standalone source check syntax; format-field checks are not a statement producer |
 | `Block.float` | yes J/Seq:78 | yes A:330, software IEEE add/sub/mul/div | `lowB_ok`, P:221 | recursive values/range/code guards; stale TODO claim that this constructor is wholly refused is superseded |
 | `Block.floatLit` | yes J/Seq:73 | yes A:211, `floatLiteralL` | `lowB_ok`, P:225 | kernel-rounded binary64 value and range |
-| `Block.floatOf` | no producer in `Parser/Elab/**` | yes A:213, literal or computed conversion | `lowB_ok`, P:227 | source conversion export absent; computed conversion helper's supported integer representation |
-| `Block.floatNarrow` | no producer in `Parser/Elab/**` | yes A:202, range/fallback | `lowB_ok`, P:229 | source export absent; NaN endpoints lower the fallback |
+| `Block.floatOf` | added, UNCHECKED: documented `f32(n)` / `f64(n)` parse as calls; U8 `uBindWert` retains the operand and declared float range; `J/Seq` emits `Block.floatOf` | yes A:213, literal or computed conversion | `lowB_ok`, P:227; exporter `lowSeqStep_floatOf` | integer operand required; closed rational target ranges supported, exclusive float upper bounds refused by name; canonical `Endblock.floatOf` absent; both source widths retain the existing binary64 model; computed source-text witnesses await lead checking |
+| `Block.floatNarrow` | added, UNCHECKED: `narrow x to finite else { ... }` in continuing blocks; `U8` `uNarrowKopf`, `J/Seq` float arm | yes A:202, range/fallback | `lowB_ok`, P:229; exporter `lowSeqStep_floatNarrow` | fractional ranges and end-block narrowing remain refused; no canonical Endblock float-narrow constructor; NaN endpoints lower the fallback |
 | `Block.narrowRequired` | yes J/Seq:200; arena expansion too | partial A:240 | `lowB_ok`, P:217 | A:245: `else none` unless signed-word input/bounds; failed runtime capacity stops 107 |
 | `Block.bindAxiomOpt` | yes J/Seq:154 | yes A:251/:256, some/VOID result | `lowB_ok`, P:197 | non-VOID answers still pass `chkC`; gate restrictions |
 | `Block.bindAxiomOptElse` | yes J/Seq:169 | partial A:266/:280 | `lowB_ok`, P:205 | A:279/:294: `\| _, _ => none`; VOID or nonnegative integer result, checked reason map |
@@ -649,7 +656,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Ty.sum cs` | yes named tagged schemas, G5:51/:60 | L:40; packed scalar or tag/payload word spans V:30 | `encodeWords_length`, `lowE_ok` arms `var`/`case`, `lowS_ok` arm `onTag` | L:20: `\| some _ => false`; `sumFits`: ≤256 cases and integer payload span <2^56; general introduction/match absent |
 | `Ty.why n` | yes U5R:128, H2:167 | arbitrary-width reason value, V:27 | `encodeWords_length`, `lowE_ok` arm `why`, generic return arms | reason match still requires `n < 2^31`; gate reason maps require one-word channel |
 | `Ty.never` | yes U5R:133, U6:164 | no inhabited value (V:40: `nomatch v`); foreign result checker emits stop T:165 | `encodeWords_length` empty case; generic axiom/return proof | not a materializable value; no extra syntax case counted |
-| `Ty.fl lo hi` | yes U3:98 (`f32`/`f64` map to `uFloatTy`) | binary64 bits V:38; software arithmetic A:330 | `lowE_ok` arms `fllt`/`flle`, `lowB_ok` arm `float`, `blockFloatArithmetic_case` | this inventory does not establish a separate binary32 execution path; top-level source float model gap below |
+| `Ty.fl lo hi` | yes U3:98 (`f32`/`f64` map to `uFloatTy`); closed rational `in` ranges added, UNCHECKED | binary64 bits V:38; software arithmetic A:330 | `lowE_ok` arms `fllt`/`flle`, `lowB_ok` arm `float`, `blockFloatArithmetic_case` | this inventory does not establish a separate binary32 execution path; top-level source float model gap below |
 | `Ty.fnptr sig` | yes U5R:151, J/Seq:205 | address V:29; ordinary/indirect call ABI | `lowE_ok` arm `fnref`, `lowS_ok`/`lowB_ok`/`lowEnd_ok` indirect arms | E:195: `else none` for non-`lit32` function address |
 | `Ty.ptr cap` | yes U3:120–127; table capabilities only, resolved owner/space | ghost zero V:39; accesses name resolved table | `lowE_ok` arms `ptrOf`/`thru`; ordinary copied-value proofs | owned access arms missing; live byte capability refused U3:121/:127; `DataTarget` has only `table` (`Typen/DataCap.lean:11`) |
 | `Ty.ref t` | yes U3:118; provider result U5R:132 | cell number V:28; `slotRef`/`assignSlotRef`/`refEq` | corresponding `lowE_ok`/`lowS_ok` arms, with `ValueValid` | provider answer cannot enter through `bindAxiom`: T:166 `\| _, _ => none` in `chkC`; type encoding alone is not a connected allocator |
@@ -698,9 +705,9 @@ listed above, not counted as extra constructors):
   forms still lack a canonical form: live byte capabilities (`DataTarget` has no byte target; U3:121/:127),
   and top-level/end-block float introduction/arithmetic (dangling references above). Device ASM/boot/raw
   addresses and register access/transition are outside this userspace inventory's unfinished-work count.
-- **Front end (15 otherwise lowered/proof-connected constructors):** `Expr.getBytes`;
+- **Front end (originally 15 otherwise lowered/proof-connected constructors; `floatOf` source export added, UNCHECKED):** `Expr.getBytes`;
   `Stmt.putBytes`, `breaking`, `advances`, `retires`, `consumeTraverse`, `retScoped`, `retWhyScoped`,
-  `callIndElse`; `Block.bindAxiomElse`, `check`, `floatOf`, `floatNarrow`;
+  `callIndElse`; `Block.bindAxiomElse`, `check`, `floatNarrow`;
   `Endblock.retScoped`, `retWhyScoped`. `oldG` has the Stage-0 numeric bridge, not a general canonical
   parser export. Provider-reference initialization and top-level float source compilation remain separate
   connected-path gaps even though their component constructors appear in the positive structural count.

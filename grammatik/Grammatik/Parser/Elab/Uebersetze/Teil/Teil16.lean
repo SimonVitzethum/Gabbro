@@ -70,6 +70,7 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq x y && strEq c d && beqUArgList a b && strEq e f
   | .axCallElseBeg c a e, .axCallElseBeg d b f => strEq c d && beqUArgList a b && strEq e f
   | .retires a, .retires b => strEq a b
+  | .breakingBeg a, .breakingBeg b => strEq a b
   | .assign a f x s, .assign b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignTab a f x s, .assignTab b g y t =>
@@ -93,6 +94,8 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && beqUSide x y && beqUSide n m
   | .floatLit a q lo hi, .floatLit b r low high =>
     strEq a b && decide (q = r) && decide (lo = low) && decide (hi = high)
+  | .floatOf a x lo hi, .floatOf b y low high =>
+    strEq a b && beqUSide x y && decide (lo = low) && decide (hi = high)
   | .float a op x y lo hi, .float b other z w low high =>
     strEq a b && decide (op = other) && beqUSide x z && beqUSide y w &&
       decide (lo = low) && decide (hi = high)

@@ -5,6 +5,37 @@ public import Grammatik.Parser.Elab.UebersetzeAllg3
 namespace Gabbro.Grammatik.Parser.ExportPreservation
 open Uebersetze UebersetzeAllg UebersetzeAllg2
 
+/-- Retirement already has a source producer: preserve its name unchanged. -/
+theorem retires_export (ctx : UCtx) (tabs : List UTab) (heads : List UFnKopf) (name : String) :
+    uAnw1 ctx tabs heads (.retires name) = .ok (.retires name) := rfl
+
+/-- The production statement dispatcher uses the checked retire constructor;
+    exactly one held input is erased and no hardware assumption is introduced. -/
+theorem retires_lower {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx)
+    (fn : UFn) (Λ : List (Res (declOf u))) (name : String) (mark : Fin u.marken.length)
+    (notBorrowed : (fnAt u caller).leiht.any (strEq · name) = false)
+    (resolved : markFin u.marken name = some mark) (held : Res.marke mark 0 ∈ Λ) :
+    lowStmtL (l := l) u caller Γ fn Λ (.retires name) =
+      .ok ⟨Λ.erase (.marke mark 0), Stmt.retires mark 0 held none⟩ := by
+  exact lowRetiresL_exact u caller Γ Λ name mark notBorrowed resolved held
+
+/-- No exported mark has a successor stage. Refuse the surface marker by name
+    instead of erasing it or fabricating the premise of `Stmt.advances`. -/
+theorem advances_export_refused (ctx : UCtx) (tabs : List UTab) (heads : List UFnKopf)
+    (before after : String) :
+    uAnw1 ctx tabs heads (.step before after) =
+      .error "advances without G form: exported marks have only stage 0" := rfl
+
+/-- The production source reader delegates labelled scopes to the exporter with
+    the same recursive reader; its original outer context is retained. -/
+theorem breaking_export (tabs : List UTab) (heads : List UFnKopf) (fuel : Nat)
+    (ctx finalCtx : UCtx) (names : List String) (body : SAnw) (rest : List SAnw)
+    (code : List UStmt)
+    (exported : uBreaking (uAnwReihe tabs heads fuel) ctx names body rest = .ok (code, finalCtx)) :
+    uAnwReiheCore tabs heads (fuel + 1) ctx (.waive names body :: rest) =
+      .ok (code, finalCtx) := by
+  exact exported
+
 /-- Both operands retain their original predicate context; neither old/result nor a binder is
     invented by implication expansion. Failed operand exports stay failures. -/
 theorem implication_export (ctx : UCtx) (p q : SExpr) (a b : UEns)

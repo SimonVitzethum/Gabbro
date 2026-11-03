@@ -46,6 +46,13 @@ open Gabbro.Grammatik.Parser.UebersetzeProben (stufe)
 
 set_option maxRecDepth 100000
 
+/-- The parser accepts the stage marker, but one-stage exported declarations
+    cannot satisfy the canonical advance constructor's successor premise. -/
+theorem advances_refused_zeuge :
+    stufe "module m { impl fn f() { advances setup -> live; } }" =
+      "elab: advances without G form: exported marks have only stage 0" := by
+  decide +kernel
+
 /-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
 
 /-- One table program with the source rights supplied at its capability parameter. -/
@@ -231,7 +238,7 @@ def terminalMoveSource (body : String) : String :=
 
 def terminalMoveRetires : String := terminalMoveSource "retires Marke;"
 
-theorem terminalMoveRetires_ok : stufe terminalMoveRetires = "OK" := by
+theorem terminalMoveRetires_zeuge : stufe terminalMoveRetires = "OK" := by
   decide +kernel
 
 /-- Omitting retire leaves an input outside `ende`; exact return inventory
@@ -265,7 +272,7 @@ theorem repeatedRetire_refused :
 def ordinaryRetire : String :=
   "module m { linear type Duty; impl fn gate() effects { consumes Duty } { retires Duty; } impl fn caller() effects { consumes Duty } { gate(); } }"
 
-theorem ordinaryRetire_ok : stufe ordinaryRetire = "OK" := by
+theorem ordinaryRetire_zeuge : stufe ordinaryRetire = "OK" := by
   decide +kernel
 
 /-- Retiring a handback move cannot satisfy its promised returned owner. -/
