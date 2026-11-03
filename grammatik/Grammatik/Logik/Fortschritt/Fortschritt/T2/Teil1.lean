@@ -137,7 +137,7 @@ theorem fort_abb {M : RufMaschineG D} {t : Faden} (hP : PrueftG O passes M t) (w
   | abbruch k' =>
       obtain ⟨M', hs, _⟩ := w_peelAbbruch (P := P) (O := O) (passes := passes) rfl w rest k' ρ hx
       exact ⟨M', hs⟩
-  | _ => simp only [GRest.absorb, Bool.false_eq_true] at habs
+  | _ => exact (Bool.false_ne_true (show false = true from habs)).elim
 
 /-- **An `ende` head**: a leaf, an unfold, a call, a pop, or a finished
     thread; `leave`/`next` cannot stand there (`fOk`: no `ende` node in a
@@ -154,13 +154,19 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
   cases e with
   | ret e hp =>
       cases hst : (M.faeden t).stapel with
-      | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
+      | nil =>
+          exact Or.inl ⟨hst, by
+            rw [hx]
+            simp only [GRest.anRueck, Endblock.istRueck]⟩
       | cons caller rst =>
           obtain ⟨ziel, hart⟩ := popArt_von hst hkt
           exact fort_schritt (w_rueckP rfl caller rst hst hart e hp ρ hx hΛ)
   | retWhy r hp =>
       cases hst : (M.faeden t).stapel with
-      | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
+      | nil =>
+          exact Or.inl ⟨hst, by
+            rw [hx]
+            simp only [GRest.anRueck, Endblock.istRueck]⟩
       | cons caller rst =>
           obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
           exact fort_schritt (w_rueckGrundP rfl caller rst hst hart r hp ρ hx hΛ)
@@ -199,13 +205,12 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
         ⟨σ₂, _ | v⟩
       · by_cases hleer : AntwortLeer D (D.aerg a)
         · simp only [Endblock.ants, List.all_cons, Bool.and_eq_true] at hAnt
-          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx,
-            (stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer⟩
-        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_, hleer⟩
-        show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
-          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
-            = none
-        rw [hax]
+          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, by
+            simpa only [Zielsatz.RestHalt] using
+              ((stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer)⟩
+        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
+        simp only [Zielsatz.RestHalt]
+        exact ⟨congrArg Prod.snd hax, hleer⟩
       · have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
               ρ)).1 = σ₂ := by
@@ -227,10 +232,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v | r⟩
       · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
-        show (axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
-          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
-            = none
-        rw [hax]
+        simpa only [Zielsatz.RestHalt] using congrArg Prod.snd hax
       all_goals
         have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
@@ -256,13 +258,12 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
         ⟨σ₂, _ | v⟩
       · by_cases hleer : AntwortLeer D (D.aerg a)
         · simp only [Endblock.ants, List.all_cons, Bool.and_eq_true] at hAnt
-          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx,
-            (stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer⟩
-        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_, hleer⟩
-        show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
-          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
-            = none
-        rw [hax]
+          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx, by
+            simpa only [Zielsatz.RestHalt] using
+              ((stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer)⟩
+        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
+        simp only [Zielsatz.RestHalt]
+        exact ⟨congrArg Prod.snd hax, hleer⟩
       · have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
               ρ)).1 = σ₂ := by
@@ -284,10 +285,7 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
           (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
         ⟨σ₂, _ | v | r⟩
       · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
-        show (axiomAntwortSonst O a ((M.weltVon t).lese Λ args.orte)
-          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
-            = none
-        rw [hax]
+        simpa only [Zielsatz.RestHalt] using congrArg Prod.snd hax
       all_goals
         have hσ : (O.wirkt a (((M.weltVon t).lese Λ args.orte).fragt (.inl a))
             (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
@@ -312,7 +310,9 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
       · rcases blatt_fall hO passes s hbl.1 hbl.2 (M.weltVon t) ρ hΛ with
           ⟨σ', ρ', hst, herw⟩ | ⟨h, hh⟩ | ⟨e, he⟩
         · exact fort_schritt (w_blatt rfl s rest ρ hbl.1 hx hΛ σ' ρ' hst herw)
-        · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hbl.1, h, hh⟩
+        · refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_⟩
+          simp only [Zielsatz.RestHalt]
+          exact ⟨hbl.1, h, hh⟩
         · exact absurd he (hP.2.2.2.1 l Γ Λ _ ρ s rest hbl.1 hx e)
       · cases s with
         | call g args hp hr => exact fort_schritt (w_rufEnde rfl g args hp hr rest ρ hx hΛ)
@@ -323,22 +323,30 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
                 ((M.weltVon t).lese Λ (p.orte ++ args.orte)) ρ).2 rfl _ rfl neu hneu⟩
         | ret e hp =>
             cases hst : (M.faeden t).stapel with
-            | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
+            | nil =>
+                exact Or.inl ⟨hst, by
+                  rw [hx]
+                  simp only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck]⟩
             | cons caller rst =>
                 obtain ⟨ziel, hart⟩ := popArt_von hst hkt
                 exact fort_schritt (w_rueckConsP rfl caller rst hst hart e hp rest ρ hx hΛ)
         | retWhy r hp =>
             cases hst : (M.faeden t).stapel with
-            | nil => exact Or.inl ⟨hst, by rw [hx]; rfl⟩
+            | nil =>
+                exact Or.inl ⟨hst, by
+                  rw [hx]
+                  simp only [GRest.anRueck, Endblock.istRueck, Stmt.istRueck]⟩
             | cons caller rst =>
                 obtain ⟨zielG, hart⟩ := popGrund_von hst hkt r
                 exact fort_schritt (w_rueckConsGrundP rfl caller rst hst hart r hp rest ρ hx hΛ)
         | retScoped e R =>
+            simp only [Endblock.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
             exact fort_schritt' (w_scopedWert ρ _ e R hx rfl
-              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
+              hScope.1 hΛ hkt)
         | retWhyScoped grund R =>
+            simp only [Endblock.scopesOk, Stmt.scopesOk, Bool.and_eq_true] at hScope
             exact fort_schritt' (w_scopedGrund ρ _ grund R hx rfl
-              (Bool.and_eq_true.mp hScope).1 hΛ hkt)
+              hScope.1 hΛ hkt)
         | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
         | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
         | _ =>
