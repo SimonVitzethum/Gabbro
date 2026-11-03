@@ -12,10 +12,11 @@ def intConstL (lo hi n : Int) (d : Nat) : Option (List II × Nat) :=
 
 theorem intConstL_top {lo hi n : Int} {d top : Nat} {c : List II}
     (h : intConstL lo hi n d = some (c, top)) : d < top := by
-  obtain ⟨rfl, rfl⟩ := Option.some.inj h
+  have ceiling : (constWords (integerEncoding (integerWords lo hi) n) d).2 = top :=
+    congrArg Prod.snd (Option.some.inj h)
   have size := constWords_span (integerEncoding (integerWords lo hi) n) d
   have positive : 0 < integerWords lo hi := valueWords_pos (.int lo hi)
-  rw [integerEncoding_length] at size
+  rw [integerEncoding_length, ceiling] at size
   omega
 
 namespace BitBuiltin
@@ -133,16 +134,24 @@ theorem choose_top {fc fa fb : Emitter} {d top : Nat} {c : List II}
 theorem unary_top {τ1 τ : Ty} (op : IntBuiltin [τ1] τ) {fa : Emitter}
     {d top : Nat} {c : List II} (h : unary op fa d = some (c, top)) : d < top := by
   cases op with
-  | clz w => exact cast_top h
-  | ctz w => exact cast_top h
+  | clz w =>
+    simp only [unary, sub] at h
+    exact cast_top h
+  | ctz w =>
+    simp only [unary] at h
+    exact cast_top h
   | log2Floor w =>
+    simp only [unary] at h
     cases w with
     | zero => exact intConstL_top h
     | succ w => exact choose_top h
-  | popcount w => exact cast_top h
-  | bswap16 => exact cast_top h
-  | bswap32 => exact cast_top h
-  | bswap64 => exact cast_top h
+  | popcount w =>
+    simp only [unary, population, add] at h
+    exact cast_top h
+  | bswap16 | bswap32 | bswap64 =>
+    simp only [unary] at h
+    rw [reverseBytes] at h
+    exact cast_top h
 
 end BitBuiltin
 end Gabbro.Stage0.Senke
