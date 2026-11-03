@@ -58,17 +58,16 @@ def g0 : Fin output.compiled.unit.globs.length := ⟨0, by rw [globs_one]; decid
 /-- The elaborated static keeps its declared alignment of sixteen. -/
 theorem align_sixteen : Senke.globAlign output.compiled.unit g0 = 16 := by decide +kernel
 
-/-- The built image base lies on the combined sixteen-grid. -/
+/-- The built image base lies on the combined sixteen-grid: the builder aligned it
+    up to the required base alignment, which the sixteen-grid divides. -/
 theorem base_grid : Nat.lcm 8 16 ∣ output.image.Y.lo := by decide +kernel
 
-/-- The aligned global's absolute address is divisible by sixteen (and eight),
-    through the placement lemma connected to the image theorem. -/
+/-- The aligned global's absolute address is divisible by sixteen (and eight):
+    `placed` holds unconditionally for every successfully built image. -/
 theorem addr_aligned : 16 ∣ output.image.Y.ga g0 ∧ 8 ∣ output.image.Y.ga g0 := by
   have hpos : 0 < Senke.globAlign output.compiled.unit g0 := by
     rw [align_sixteen]; decide
-  have hbase : Nat.lcm 8 (Senke.globAlign output.compiled.unit g0) ∣ output.image.Y.lo := by
-    rw [align_sixteen]; exact base_grid
-  have h := output.placed g0 hpos hbase
+  have h := output.placed g0 hpos
   rw [align_sixteen] at h
   exact h
 

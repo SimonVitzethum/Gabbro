@@ -38,7 +38,8 @@ structure Emitted (text : String) (K : Nat) (options : Profil.Options := {}) whe
   image : Senke.Bild (declOf compiled.unit)
   emission : Senke.bild irDurchlaeufe compiled.program (Senke.layU compiled.unit tor)
     (List.finRange compiled.unit.fns.length) Fin.val
-    (fun g => (compiled.unit.fns[g.val]?.map (·.name)).getD "?") compiled.main args roots K = .ok image
+    (fun g => (compiled.unit.fns[g.val]?.map (·.name)).getD "?") compiled.main args roots K
+    (Senke.bodenAusrichtung compiled.unit) = .ok image
 
 /-- One source-to-image path; no separate unchecked emitter is retained. -/
 def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) : Except String (Emitted src K options) := do
@@ -58,7 +59,8 @@ def emit (src : String) (K : Nat := irStapel) (options : Profil.Options := {}) :
   | none => throw "ir: main takes a parameter that is not a table pointer: no start-argument form"
   | some args =>
     match he : Senke.bild irDurchlaeufe P (Senke.layU u tor) (List.finRange u.fns.length) Fin.val
-        (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args roots K with
+        (fun g => (u.fns[g.val]?.map (·.name)).getD "?") main args roots K
+        (Senke.bodenAusrichtung u) with
     | .error e => throw e
     | .ok image => pure ⟨compiled, tor, roots, args, hp, image, he⟩
 
@@ -135,21 +137,25 @@ theorem Emitted.sections_free {src : String} {K : Nat} {options : Profil.Options
     Profil.abschnittFehler output.compiled.source.prepared.selected = none :=
   output.compiled.sections_free
 
-/-- Every placed global's absolute address meets its declared alignment, once the
-    image base lies on the combined grid (the loader base-placement duty). -/
+/-- Every placed global's absolute address meets its declared alignment: the image builder
+    aligned the world base up to the required base alignment (`bodenAusrichtung`), which every
+    combined grid divides (`boden_teilt`), so no loader base-placement duty remains. -/
 def Emitted.Placed {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : Prop :=
   ∀ g : Fin (declOf output.compiled.unit).globs.length,
     0 < Senke.globAlign output.compiled.unit g →
-    Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ output.image.Y.lo →
     Senke.globAlign output.compiled.unit g ∣ output.image.Y.ga g ∧
       8 ∣ output.image.Y.ga g
 
 theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
     (output : Emitted src K options) : output.Placed := by
-  intro g hpos hbase
+  intro g hpos
+  have hreq : 0 < Senke.bodenAusrichtung output.compiled.unit := Senke.boden_pos _
+  have hdvd : Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣
+      Senke.bodenAusrichtung output.compiled.unit :=
+    Senke.boden_teilt _ _ hpos
   have hb := output.emission
-  generalize hgen : output.image = bimg at hb hbase ⊢
+  generalize hgen : output.image = bimg at hb ⊢
   simp only [Senke.bild] at hb
   split at hb
   · cases hb
@@ -161,6 +167,8 @@ theorem Emitted.placed {src : String} {K : Nat} {options : Profil.Options}
       · next hg =>
         simp only [Except.ok.injEq] at hb
         subst hb
+        have hbase : Nat.lcm 8 (Senke.globAlign output.compiled.unit g) ∣ bimg.Y.lo :=
+          Nat.dvd_trans hdvd (Senke.alignUp_dvd _ _ hreq)
         dsimp only at hbase ⊢
         exact ⟨Senke.layU_ga_aligned _ _ _ _ hpos hbase,
           Senke.layU_ga_word_aligned _ _ _ _ hpos hbase⟩
