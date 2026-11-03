@@ -31,14 +31,11 @@ public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringTakeOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.StringExpandOk
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.String.Values
 @[expose] public section
-
 variable {currentOld : Bool}
-
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat}
-
 mutual
 /-- Ordinary lowering proves `eval σ e σ ρ`; the equality premise states that choice
     explicitly. The ensures fallback disables current-old reads and retains the generic
@@ -472,7 +469,6 @@ theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.M
   | _, _, .cons e rest, ρ =>
     ⟨(fun d c top h hK m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp),
       lowE_ok_args (same := same) σ₀ σ hWL hLay rest ρ⟩
-
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
