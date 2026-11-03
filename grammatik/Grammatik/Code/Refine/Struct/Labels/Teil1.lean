@@ -217,7 +217,6 @@ theorem lowerS_lbl_assignThruOwn (lay : Layout D) (cenv : List Reg) (lv : Lbl ×
     (ho)
     (he)
     (hg)
-    (hm)
     (zz2)
     (zz3)
     (lb : Lbl)
@@ -226,7 +225,7 @@ theorem lowerS_lbl_assignThruOwn (lay : Layout D) (cenv : List Reg) (lv : Lbl ×
     (st' : St)
     (blks : List Block)
     (hlt : (lb : Nat) < st.l)
-    (h : lowerS lay cenv lv (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t zz1 f i e mo s ho he hg hm zz2 zz3 : Gabbro.Grammatik.Stmt D V l Γ Λ _) lb k st = some (blks, st'))
+    (h : lowerS lay cenv lv (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) p t zz1 f i e mo s ho he hg zz2 zz3 : Gabbro.Grammatik.Stmt D V l Γ Λ _) lb k st = some (blks, st'))
     : LblWf lb st st' blks :=
   by
   simp only [lowerS] at h
