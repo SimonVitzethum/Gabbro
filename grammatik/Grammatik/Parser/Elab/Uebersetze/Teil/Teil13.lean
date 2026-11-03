@@ -14,6 +14,7 @@ public import Grammatik.Parser.TaggedDispatch.Frontend
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Elaborate
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Erzeuge
 public import Grammatik.Parser.Elab.Uebersetze.Teil.Teil17
+public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Torhuelle
 public import Grammatik.Parser.Elab.Konst.Export
 public import Grammatik.Parser.Elab.Konst.ErsetzungTor
@@ -267,6 +268,10 @@ def elabUroh : List SItemTief → Except String UProg
     let fnItems := msSub.filterMap (fun
       | .fnT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
       | _ => none)
+    -- C15 use export: query/update/fold per accumulator, then expand uses.
+    match uAkkuVorlauf consts alias ms fnItems with
+    | .error e => .error e
+    | .ok (fnItems, akkuFrage, fremdPaare) =>
     match uWhys ms alias with
     | .error e => .error e
     | .ok whys =>
@@ -307,19 +312,13 @@ def elabUroh : List SItemTief → Except String UProg
     | .error e => .error e
     | .ok [] => .error "unit without a fn"
     | .ok kopfPaare =>
-    match uSeq ((ms.filterMap uFremdSig).map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
+    match uSeq (fremdPaare.map (fun (sig, asm) => elabAxKopf alias tabs whys globs asm sig)) with
     | .error e => .error e
     | .ok axKoepfe0 =>
     match uSeq ((ms.filterMap (fun | .callT sc => some sc | _ => none)).map (elabGateKopf alias tabs whys globs)) with
     | .error e => .error e
     | .ok gateKoepfe =>
-    let axKoepfe := axKoepfe0 ++ gateKoepfe
-    match uAkkuVerwendung (uAkkuNamen ms) fnItems with
-    | .error e => .error e
-    | .ok _ =>
-    match uAkkuFremdVerwendung (uAkkuNamen ms) ((ms.filterMap uFremdSig).map (·.1)) with
-    | .error e => .error e
-    | .ok _ =>
+    let axKoepfe := axKoepfe0 ++ gateKoepfe ++ akkuFrage
     let koepfe := kopfPaare.map (·.1) ++ axKoepfe ++ zeigerPaare.map (·.1)
     let annahmen := ms.filterMap (fun | .assumT n _ _ _ => some n | _ => none)
     -- C16: every `can_fail` body elaborates into its generated Boolean producer now.

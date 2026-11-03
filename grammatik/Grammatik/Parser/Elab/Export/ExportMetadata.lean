@@ -234,7 +234,11 @@ theorem checkT_zeuge :
     check [.checkT good] = .ok () ∧ check [.checkT bad] = .error "source export: check counterprobe duties lack a checked source binding" := by
   exact ⟨rfl, rfl⟩
 
-/-- C15 accumulators are bound by storage expansion. Admitted operators and per-cpu counts expand to private cells plus guarding locks (`uAkkuItem`, `uAkkuErweiterung` with neutral, range and count checked by name); any use in bodies or contracts stays refused (`uAkkuVerwendung`, `uAkkuFremdVerwendung` demand C08). Bad operators and missing counts keep the exact downstream refusals. -/
+/-- C15 accumulators are bound by storage expansion. Admitted operators and per-cpu counts expand to
+    private cells plus guarding locks (`uAkkuItem`, `uAkkuErweiterung` with neutral, range and count
+    checked by name); uses expand to the generated query, update and reduction (`Akku.Expand`),
+    and unsupported positions keep their narrow refusals there.
+    Bad operators and missing counts keep the exact downstream refusals. -/
 theorem accT_bound (n : String) (t : STyp) (m : String) (p : Option SExpr) (o : accOperatorBound m = true) (e : p.isSome = true) : itemMetadata (.accT n t m p) = false := by
   cases p with
   | none => simp at e
