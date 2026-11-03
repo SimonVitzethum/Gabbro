@@ -370,7 +370,7 @@ decreasing_by
 theorem uSideEng_product (v : String) (lo hi : Int) (identity : Nat) (reordered : Bool) (fields : List (Ty × USide)) :
     uSideEng v lo hi (.product identity reordered fields) =
       .product identity reordered (fields.map (fun field => (field.1, uSideEng v lo hi field.2))) := by
-  rw [uSideEng, List.attach_map_val]
+  rw [uSideEng]; exact congrArg (USide.product identity reordered) (List.attach_map_val (l := fields) (f := fun field => (field.1, uSideEng v lo hi field.2)))
 
 /-- The value of an `update` arm with `v` narrowed by the arm's guard (`pos` the arm's own condition, `negs` the
     conditions of the arms before it, all false there), inside the static's range `slo .. shi`. -/

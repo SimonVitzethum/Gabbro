@@ -160,7 +160,7 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
           match ctx.tabs[num]? with
           | .none => .error err
           | .some tb => .ok (.bindOpt x num o, uMitLokal ctx x (UParamArt.opt num) (Ty.opt tb.count) muts)
-  | .some ty@(.prod ..) | .some ty@(.array _ _) | .some ty@(.str _) =>
+  | .some ty@(.array _ _) | .some ty@(.str _) =>
     if mu then .error "let mut of an aggregate without G form"
     else
       match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ctx.eigner ty with
