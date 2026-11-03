@@ -359,7 +359,7 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       cases hr with
       | dann _ _ hb _ => exact absurd (ob_axiomOpt hb) (by simp [blockAxiomOpt])
       | dannDead _ _ hb _ _ => exact absurd (ob_axiomOpt hb) (by simp [blockAxiomOpt])
-    | rueckConsGrund _ _ r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho
+    | rueckConsGrund r hperm restk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho
         s0 hs0 rg hrg hn =>
       rw [hhead] at hH
       obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
@@ -373,7 +373,7 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       have hcl := finish_void hf.1 hf.2.2.2 hfin
       rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hcl
       exact ownInv_pop hag hfo hd hth hpop rfl rfl rfl (resume_why hd hdu hsusp hcl _)
-    | dannRetGrund _ _ r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho
+    | dannRetGrund r hperm restk kk ρ hhead caller rst hpop l Γ Λ Λ' τ n err restb k ρc hcaller hΛ g hfg rho hrho
         s0 hs0 rg hrg hn =>
       rw [hhead] at hH
       obtain ⟨k0, c, gh, hk, hf, hor⟩ := head_run hH rfl
@@ -387,31 +387,31 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       have hcl := finish_void hf.1 hf.2.2.2 hfin
       rw [show (M.faeden u).stapel.length = rst.length + 1 from hdu] at hcl
       exact ownInv_pop hag hfo hd hth hpop rfl rfl rfl (resume_why hd hdu hsusp hcl _)
-    | dannRegLies _ _ l Γ Λ Λ' r hk' rest k ρ hhead v hv hz hΛ =>
+    | dannRegLies l Γ Λ Λ' r hk' rest k ρ hhead v hv hz hΛ =>
       exact ownInv_step_dannRegLies (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk' := hk') (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (hz := hz) (hΛ := hΛ) (hrely := hrely)
-    | dannRegLiesElseWahr _ _ l Γ Λ Λ' r hk' zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseWahr l Γ Λ Λ' r hk' zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
       exact ownInv_step_dannRegLiesElseWahr (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk' := hk') (zusage := zusage) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannRegLiesElseFalsch _ _ l Γ Λ Λ' r hk' zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
+    | dannRegLiesElseFalsch l Γ Λ Λ' r hk' zusage sonst rest k ρ hhead v hv σ₁ hs₁ hw neu hneu hΛ =>
       exact ownInv_step_dannRegLiesElseFalsch (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (r := r) (hk' := hk') (zusage := zusage) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (σ₁ := σ₁) (hs₁ := hs₁) (hw := hw) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannAwaits _ _ l Γ Λ Λ' gl payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
+    | dannAwaits l Γ Λ Λ' gl payload hp hL hat rest k ρ hhead hvis σ₁ hs₁ neu hneu hΛ =>
       exact ownInv_step_dannAwaits (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (gl := gl) (payload := payload) (hp := hp) (hL := hL) (hat := hat) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (hvis := hvis) (σ₁ := σ₁) (hs₁ := hs₁) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannExchange _ _ l Γ Λ Λ' gl neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
+    | dannExchange l Γ Λ Λ' gl neuE hw hL rest k ρ hhead σ₁ hs₁ σ₂ hs₂ neu hneu hΛ =>
       exact ownInv_step_dannExchange (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (gl := gl) (neuE := neuE) (hw := hw) (hL := hL) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (hs₂ := hs₂) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannGleit _ _ l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleit l Γ Λ Λ' l₁ h₁ l₂ h₂ op a b lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
       exact ownInv_step_dannGleit (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (l₂ := l₂) (h₂ := h₂) (op := op) (a := a) (b := b) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannGleitLit _ _ l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
+    | dannGleitLit l Γ Λ Λ' q lo hi rest k ρ hhead v hv =>
       exact ownInv_step_dannGleitLit (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (q := q) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (hv := hv) (hrely := hrely)
-    | dannGleitVon _ _ l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleitVon l Γ Λ Λ' l₁ h₁ e lo hi rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
       exact ownInv_step_dannGleitVon (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannGleitNarrowOk _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
+    | dannGleitNarrowOk l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ v hv neu hneu hΛ =>
       exact ownInv_step_dannGleitNarrowOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (v := v) (hv := hv) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannGleitNarrowElse _ _ l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
+    | dannGleitNarrowElse l Γ Λ Λ' l₁ h₁ e lo hi sonst rest k ρ hhead σ₁ hs₁ hn neu hneu hΛ =>
       exact ownInv_step_dannGleitNarrowElse (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (l₁ := l₁) (h₁ := h₁) (e := e) (lo := lo) (hi := hi) (sonst := sonst) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (hn := hn) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannBindAxiom _ _ l Γ Λ Λ' τ a args he hw hg hd' hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd' hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       exact ownInv_step_dannBindAxiom (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannBindAxiomElseOk _ _ l Γ Λ Λ' τ a args he hr0 hw hg hd' hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr0 hw hg hd' hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       exact ownInv_step_dannBindAxiomElseOk (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (v := v) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
-    | dannBindAxiomElseGrund _ _ l Γ Λ Λ' τ a args he hr0 hw hg hd' hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr0 hw hg hd' hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
       exact ownInv_step_dannBindAxiomElseGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (Λ' := Λ') (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | g6 hstep =>
     cases hstep with
@@ -441,17 +441,17 @@ theorem ownInv_step {P : Programm D} {A : FreiForm D} {I : Interfaces A} {O : Or
       exact ownInv_step_endeBindAxiomElseGrund (D := D) (P := P) (A := A) (I := I) (O := O) (passes := passes) (hO := hO) (hc := hc) (M := M) (u := u) (s := s) (hag := hag) (hfo := hfo) (hd := hd) (hth := hth) (hW := hW) (ha := ha) (ho := ho) (hH := hH) (fin := fin) (l := l) (Γ := Γ) (Λ := Λ) (τ := τ) (a := a) (args := args) (he := he) (hr0 := hr0) (hw := hw) (hg := hg) (hd' := hd') (hgd := hgd) (err := err) (rest := rest) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁) (hs₁ := hs₁) (σ₂ := σ₂) (r := r) (hax := hax) (neu := neu) (hneu := hneu) (hΛ := hΛ) (hrely := hrely)
   | g7 hstep =>
     cases hstep with
-    | dannVerbrauch _ _ l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
+    | dannVerbrauch l Γ Λ Λ'' t member edge inv bound mass body rest k ρ hhead =>
       exact ownInv_step_dannVerbrauch (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (Λ'' := Λ'') (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead)
-    | verbrauchWeiter _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
+    | verbrauchWeiter l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ v hv σ₃ hs₃ m hm neu hneu hΛ =>
       exact ownInv_step_verbrauchWeiter (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (v := v) (m := m) (σ₃ := σ₃)
-    | verbrauchLeer _ _ l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
+    | verbrauchLeer l Γ Λ t member edge inv bound mass body rest k ρ hhead σ₁ hs₁ hw σ₂ hs₂ hleer hkein neu hneu hΛ =>
       exact ownInv_step_verbrauchLeer (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (k := k) (ρ := ρ) (hhead := hhead) (σ₂ := σ₂)
-    | verbrauchFort _ _ l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
+    | verbrauchFort l Γ Λ t member edge inv bound mass body rest vor k i ρ hhead σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
       exact ownInv_step_verbrauchFort (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (i := i) (ρ := ρ) (hhead := hhead) (σ₁ := σ₁)
-    | dannLeaveVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
+    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hleave hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall σ₁ hs₁ hw neu₁ hneu₁ hΛ =>
       exact ownInv_step_dannLeaveVerbrauch (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hleave := hleave) (hhead := hhead) (σ₁ := σ₁)
-    | dannNextVerbrauch _ _ l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
+    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ hnext hhead σ' ρ' neu hstep hneu hkein_nimmt σm hsm m' hm' hfall neum hneum hΛ =>
       exact ownInv_step_dannNextVerbrauch (M := M) (u := u) (s := s) (hH := hH) (l := l) (Γ := Γ) (Λ := Λ) (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body) (rest := rest) (vor := vor) (k := k) (restb := restb) (i := i) (ρ := ρ) (hnext := hnext) (hhead := hhead) (σm := σm)
 #print axioms ownInv_step
 
