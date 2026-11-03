@@ -117,17 +117,16 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   · simp only [finite, decide_true, ite_true]
     by_cases subnormal : softCarry q < 2 ^ 52
     · simp only [subnormal, decide_true, ite_true]
-      simpa only [float_bits] using
-        packWord_canonical ⟨s, 0, softCarry q⟩ ⟨by decide, subnormal⟩
+      exact packWord_canonical ⟨s, 0, softCarry q⟩
+        ⟨by change 0 ≤ 2047; omega, subnormal⟩
     · simp only [subnormal, decide_false, Bool.false_eq_true, ite_false]
       rw [BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) (by omega)]
-      simpa only [float_bits] using
-        packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
-          ⟨by change softCarryExp e q ≤ 2047; omega,
-            by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
+      exact packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
+        ⟨by change softCarryExp e q ≤ 2047; omega,
+          by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
   · simp only [finite, decide_false, Bool.false_eq_true, ite_false]
-    simpa only [float_bits] using
-      packWord_canonical ⟨s, 2047, 0⟩ ⟨by decide, by decide⟩
+    exact packWord_canonical ⟨s, 2047, 0⟩
+      ⟨by change 2047 ≤ 2047; omega, by change 0 < 2 ^ 52; omega⟩
 
 /-- The same continuation reaches a normal tie, a subnormal result and an
     overflowing carry. Every fixture satisfies the model theorem's bounds. -/
