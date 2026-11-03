@@ -6115,3 +6115,84 @@ Open: the lead build of this branch (single-module checks of the touched modules
 guardians); the generator never draws owned access (no owned-pointer generation yet); byte/raw/entry targets stay
 refused (no live grant/generation interface); callers of borrowing functions lower only when escrow-ready, the
 dynamic escrow replay is C09's.
+
+## 175. C09: checked owner mint end to end (2026-11-03)
+
+On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The mint is a separate,
+checked `OwnerFlow` output with provenance and uniqueness, never ordinary production:
+`eigner_nie_erzeugt` still ranges over `produziert` alone. Unbuilt code (no Lean run in this branch);
+the lead builds and reports back.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/Interface.lean`:
+
+* **`OwnerFlow.mints`**: the checked mint list (last field). Mints are start-frame inputs (`inputs`)
+  and both-channel outputs (`outputs`): the admitted minter holds its fresh owner from the start
+  (`anfang`) and returns it (`ende`). `Valid` checks mints owner-only and bounded; conservation
+  (`outputs_nodup`, `output_from_input`, `output_bounded`) and the embedding transport
+  (`escrowReady_map`, with the mapped mint case) cover them; `empty_of_empty` and `map`/`inputs_map`/
+  `outputs_map` carry the third list.
+
+`grammatik/Grammatik/Kern/Syntax/Marken/Owner/MintMove.lean` (new):
+
+* **`mint_mem_inputs` / `mint_mem_outputs`**: mints are held from the start frame and returned.
+* **`mint_present_nachSig` / `mint_anfang_mem` / `mint_ende_mem`**: the call transformer appends
+  every mint output; the start frame holds it; the return carries it on either channel (`Stmt.ret`
+  and `Stmt.retWhy` balance against the one `ende`).
+* **`mint_resolved` / `mint_disjoint`**: every minted owner is a declared eigner; no consumed mark
+  is also minted in one signature (both from `EscrowReady`).
+* **`OwnerState.mint_token_identity`**: a successful `recordMint` issues exactly the declared
+  identity and stage. Uniqueness within a signature is `Valid.1` (one input per nominal identity);
+  across a unit it is elaboration (`uMintPruef`); across runs it is the spent set
+  (`mint_spent_refused`, `mint_spent_monotone`, `retire_cannot_remint`) with the root-once
+  admission (`OwnerAdmission.owner_root_once`).
+
+`grammatik/Grammatik/Parser/Elab/Proben/Fruehe/UebersetzeProben11.lean` (decided in the kernel):
+
+* **`mintAtMarke_ok`**: mint then owned read and write: `stufe = "OK"`.
+* **`mintTwice_refused`**: the second mint of the same instance: `elab: duplicate mint: Marke`.
+* **`mintFremd_refused`**: mint of a non-owner: `elab: mint without owner: Fremd`.
+
+Open: the lead build of this branch; the dynamic escrow replay of the mint edge and the C08
+software-call transition (`recordMint` is bookkeeping after the authorized foreign return); wiring
+the root-once admission into `Akzeptiert` (`ownerB`/`OwnerAdmission` exist unwired, as for the
+borrow side, and `Spec.lean` stays unchanged).
+
+## 176. C09: linear handoff end to end (2026-11-03)
+
+On `c09-mint`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. The handoff is the
+`OwnerMove` handback (`after := some` of the input stage): ownership transfers to the callee frame
+for the call and comes back at the same stage on the normal and the reason return alike. Unbuilt
+code (no Lean run in this branch); the lead builds and reports back.
+
+Model (`Owner/MintMove.lean`, `Owner/Witness.lean`):
+
+* **`OwnerMove.before_mem_inputs` / `output_of_some`**: the handoff names its before-stage input
+  and hands back the same identity at the indicated stage, on either channel (`ende` is
+  channel-independent).
+* **`single_none_outputs`**, `escrow_return_transfer`/`escrow_return_advance`/`escrow_return_retire`
+  (existing, `Escrow.lean`): the terminal shape contributes no output; transfer back, advance and
+  retire at the return.
+* **`mintSignature`/`handbackSignature`/`consumeSignatureT`** with escrow-ready, admitted-call,
+  start-frame, return and call-transformer witnesses (`mint_call_present_zeuge`,
+  `mint_anfang_zeuge`, `mint_ende_zeuge`, `handback_output_zeuge`, `consume_outputs_empty_zeuge`,
+  `escrow_mint/handback_admitted_zeuge`).
+* No duplication or loss on any exit: `outputs_nodup` (one input per identity), `output_from_input`
+  (every output has an input), `nachSig` erases exactly the inputs and appends exactly the outputs;
+  `leave`/`next` preserve the resource list structurally (`Stmt … l Γ Λ Λ`).
+
+Elaboration and Stage 0 (`moves` effect, ghost lowering):
+
+* `SEffekt.moves` (last-but-one constructor) with reader, printer, name resolution, surface and
+  `UFnKopf`/`UEffekte`/`UFn` threading; `bewegtAt`/`bewegtMovesAt` resolve handoffs to table owners
+  at stage 0 (`bewegtMovesAt_inputs/outputs`); `mkSig` carries them; `uBewegtPruef` refuses moves of
+  non-owners and marks both consumed or borrowed and moved; `ende_eq`/`signaturOwner` cover the
+  extended flow; calls check `ownerReadyB` generically and lower with no new IR (ghost handoff).
+* Witnesses (`UebersetzeProben11.lean`, decided in the kernel): `moveAtMarke_ok` (handoff through a
+  call: `stufe = "OK"`); `moveReasonAtMarke_ok` (the moved mark comes back on the reason channel:
+  `stufe = "OK"`); `moveFremd_refused` (move of a non-owner: `elab: move without owner: Fremd`);
+  `moveBorrowed_refused` (borrowed and moved: `elab: mark both borrowed and moved: Marke`);
+  `moveDropped_refused` (move without holding: `lower: call without held mark`).
+
+Open: the lead build of this branch; body-level retire lowering for terminal handoffs (as for C16
+`takes`: terminal moves are signature- and ledger-complete with fixture witnesses, their bodies
+cannot yet eliminate the mark from source); the dynamic transfer replay stays C09's.
