@@ -36,6 +36,19 @@ namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
 
+/-- **The frame half of `RespektiertRahmen`, for a handler**: an `ok` answer
+    keeps the callee's declared frame and gives back every lock it took, at
+    every world meeting the callee-entry discipline. `rufAt_gut` (`Satz.lean`)
+    gives it only at worlds meeting `HeldB`; `rufAt_treu` (`RahmenTreu.lean`)
+    gives it wherever the entry discipline holds -- collapsing the callee's
+    release needs it, and an arbitrary world does not meet it. -/
+def RufRahmenTreu (P : Programm D)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) : Prop :=
+  ∀ (f : D.Fn) (σ : World D) (ρ : Env D (D.params f)) (σ' : World D) (v : ErgVal D (D.erg f)),
+    HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt →
+    R f σ ρ = RufAusgang.ok σ' v →
+      Rahmen (D.schreibt f) (D.gschreibt f) σ σ' ∧ offen σ'.spur = offen σ.spur
+
 /-- **The patched handler is frame-faithful.** `rufFrei` answers `rufAt`'s
     answers except that `logik` becomes the hardware default; at a
     disciplined entry the `ok`/`why` answers satisfy `Treu`/`TreuRet`
