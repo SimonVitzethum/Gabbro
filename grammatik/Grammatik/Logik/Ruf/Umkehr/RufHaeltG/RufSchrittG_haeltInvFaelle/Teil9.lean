@@ -108,8 +108,12 @@ theorem rufSchrittG_haeltInv_verbrauchWeiter {D : Deklaration} {P : Programm D} 
   simp only [rufUpdateG_self]
   have hk := kette_von hhead hk0
   have hh := heldIn_von hhead hh0
-  refine haeltInvG_kopf h (by first | ho_tac | (intro K hK _; simp only [hs₁, hs₂, hs₃, offen_lese]; exact hK)) (by fr_tac) ⟨hk.1, hk.1, hk.2⟩ ?_
-  simp only [hs₁, hs₂, hs₃, offen_lese]; exact hh
+  have ho : offen σ₃.spur = offen (M.faeden f).spur := by
+    rw [hs₃, offen_lese, hs₂, offen_lese, hs₁, offen_lese]
+  refine haeltInvG_kopf h (by intro K hK _; rw [ho]; exact hK)
+    (by fr_tac) ⟨hk.1, hk.1, hk.2⟩ ?_
+  rw [ho]
+  exact hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -159,8 +163,12 @@ theorem rufSchrittG_haeltInv_verbrauchLeer {D : Deklaration} {P : Programm D} {O
   simp only [rufUpdateG_self]
   have hk := kette_von hhead hk0
   have hh := heldIn_von hhead hh0
-  refine haeltInvG_kopf h (by first | ho_tac | (intro K hK _; rw [← hneu, hs₂, offen_lese, hs₁, offen_lese]; exact hK) | (intro K hK _; simp_all [offen_lese])) (by fr_tac) hk.2 ?_
-  simp only [hs₁, hs₂, offen_lese]; exact hh
+  have ho : offen σ₂.spur = offen (M.faeden f).spur := by
+    rw [hs₂, offen_lese, hs₁, offen_lese]
+  refine haeltInvG_kopf h (by intro K hK _; rw [ho]; exact hK)
+    (by fr_tac) hk.2 ?_
+  rw [ho]
+  exact hh
 
 set_option maxHeartbeats 4000000 in
 theorem rufSchrittG_haeltInv_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D}
@@ -214,7 +222,11 @@ theorem rufSchrittG_haeltInv_verbrauchFort {D : Deklaration} {P : Programm D} {O
   simp only [rufUpdateG_self]
   have hk := kette_von hhead hk0
   have hh := heldIn_von hhead hh0
-  refine haeltInvG_kopf h (by first | ho_tac | (intro K hK _; rw [← hneu, hs₂, offen_lese, hs₁, offen_lese]; exact hK) | (intro K hK _; simp_all [offen_lese])) (by fr_tac) ⟨hk.1, hk.2⟩ ?_
-  simp only [hs₁, offen_lese]; exact hh
+  have ho : offen σ₁.spur = offen (M.faeden f).spur := by
+    rw [hs₁, offen_lese]
+  refine haeltInvG_kopf h (by intro K hK _; rw [ho]; exact hK)
+    (by fr_tac) ⟨hk.1, hk.2⟩ ?_
+  rw [ho]
+  exact hh
 
 end Gabbro.Grammatik
