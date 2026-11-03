@@ -8,7 +8,7 @@
    verdicts complete the Duty: the passing floor (true report) and the failing
    floor (false report) each discharge through the gate wrapper, and the
    discharged entry satisfies the goal leg. The measured local and comparison
-   are executable code in the ordinary probe; `floorCode` checks every return
+   are executable code in the ordinary probe; `recordCheckCode` captures every return
    in its actual scope. -/
 module
 
