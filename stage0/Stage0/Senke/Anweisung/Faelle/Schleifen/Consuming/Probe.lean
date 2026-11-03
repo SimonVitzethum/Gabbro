@@ -129,14 +129,6 @@ def lowered (good : Bool) : Option (List II × Nat) :=
   lowS 1 (fun _ => 2048) layout (functionFrame program ()) post [3] (0, 0) (statement good)
     (reserved := controlReserved)
 
-/-- The unadmitted candidate uses the actual recursive body compiler, with
-    the source-derived reservation. This is emission evidence only. -/
-def candidate (good : Bool) : Option (List II × Nat) :=
-  Consuming.lower layout (functionFrame program ()) () member edge
-    (invariant good) 2 mass controlReserved (counterDepthB body) [3]
-    (fun protected exits => lowB 1 (fun _ => 2048) layout
-      (functionFrame program ()) post protected exits body (reserved := controlReserved))
-
 /-- Exact represented indices, shared by the selector and the source body. -/
 def zero : Wert D (.index 2) := ⟨0, by decide, by decide⟩
 def one : Wert D (.index 2) := ⟨1, by decide, by decide⟩
@@ -149,5 +141,37 @@ def absent : Stmt D (vertragVon D ()) false [] [] [] :=
     violates the canonical strict-decrease condition. -/
 def unchanged : Stmt D (vertragVon D ()) false [] [] [] :=
   .consumeTraverse () member edge .tru 0 (.lit 0) body
+/-- Normal, empty-membership, nonfalling-measure and invariant-stop images. -/
+def variant (kind : Fin 4) : Stmt D (vertragVon D ()) false [] [] [] :=
+  match kind.val with
+  | 0 => statement true
+  | 1 => absent
+  | 2 => unchanged
+  | _ => statement false
+
+def loweredVariant (kind : Fin 4) : Option (List II × Nat) :=
+  lowS 1 (fun _ => 2048) layout (functionFrame program ()) post [3] (0, 0)
+    (variant kind) (reserved := controlReserved)
+def code (kind : Fin 4) : List II := ((loweredVariant kind).getD ([], 0)).1
+def top (kind : Fin 4) : Nat := ((loweredVariant kind).getD ([], 0)).2
+
+def functionCode : List II := stopC 104 0
+
+/-- The statement image is disjoint from the callable stop, frame and cells. -/
+def memory (kind : Fin 4) : Runner.Mem where
+  b a := if 16384 ≤ a.toNat ∧ a.toNat < 16384 + 16 * (code kind).length then
+      (((code kind).flatMap encII)[a.toNat - 16384]?).getD 0
+    else if 2048 ≤ a.toNat ∧ a.toNat < 2048 + 16 * functionCode.length then
+      ((functionCode.flatMap encII)[a.toNat - 2048]?).getD 0
+    else if a.toNat = 4112 ∨ a.toNat = 8192 ∨ a.toNat = 8200 then 1
+    else if a.toNat = 4120 then 77 else 0
+  rd _ := true
+  wr _ := true
+
+/-- Retain the canonical read trace as well as the two final cell values. -/
+def finished : World D :=
+  match execStmt oracle 1 calls (statement true) initial .nil with
+  | .ok σ _ => σ
+  | _ => initial
 
 end Gabbro.Stage0.Senke.ConsumeProbe
