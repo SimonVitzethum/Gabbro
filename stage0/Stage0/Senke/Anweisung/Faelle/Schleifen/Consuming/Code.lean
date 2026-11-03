@@ -63,14 +63,17 @@ def decrease (scratch saved failure : Nat) (bound : Int) (measure : List II) : L
       guardC scratch failure scratch)
 
 /-- `s` is the selected-index binder. `s+1` is the predecessor binder,
-    `s+2` records that at least one live member was seen; expression scratch
-    starts at `s+3`. Counter and saved measure are below the lexical context.
-    `member` reads candidate::Γ; `preMember` and `edge` read predecessor::candidate::Γ.
+    `s+2` records that at least one live member was seen and `s+3` saves
+    the candidate while testing predecessor membership. Expression scratch
+    starts at `s+4`. Counter and saved measure are below the lexical context.
+    `member` reads candidate::Γ; `edge` reads predecessor::candidate::Γ.
+    The predecessor test reuses member's original code by temporarily placing
+    the predecessor in its binder slot, then restores the candidate.
     A predecessor edge immediately rejects the current candidate. Self edges
     are ignored, exactly as in `keinVorgaenger`. -/
 def pieces (s counter saved fuel failure : Nat) (count bound : Int)
-    (invariant member preMember edge measure body : List II) : List Piece :=
-  let d := s + 3
+    (invariant member edge measure body : List II) : List Piece :=
+  let d := s + 4
   let post := decrease d saved failure bound measure
   [ .code (travCountC counter fuel), .label .header,
     .zero counter .stop,
@@ -87,7 +90,8 @@ def pieces (s counter saved fuel failure : Nat) (count bound : Int)
     .zero d .selected,
     .code [ci 14 d (s + 1) s], .zero d .different,
     .jump .predecessorNext, .label .different,
-    .code preMember, .zero d .predecessorNext,
+    .code [ci 2 (s + 3) s 0, ci 2 s (s + 1) 0],
+    .code member, .code [ci 2 s (s + 3) 0], .zero d .predecessorNext,
     .code edge, .zero d .predecessorNext,
     .jump .candidateNext,
     .label .predecessorNext,
@@ -115,20 +119,20 @@ def targets (fragment : List Piece) : Option (Int × Int) := do
     with those exact targets, and emission refuses if relocation changes its
     length. `next` and fallthrough both enter the post-measure check. -/
 def emit (s counter saved fuel failure : Nat) (count bound : Int)
-    (invariant member preMember edge measure : List II × Nat)
+    (invariant member edge measure : List II × Nat)
     (body : Int × Int → Option (List II × Nat)) : Option (List II × Nat) := do
   if fuel < 2 ^ 31 ∧ failure < 2 ^ 31 ∧ inW count count = true ∧ inW 0 bound = true then
     let probe ← body (0, 0)
     let fragment := pieces s counter saved fuel failure count bound
-      invariant.1 member.1 preMember.1 edge.1 measure.1 probe.1
+      invariant.1 member.1 edge.1 measure.1 probe.1
     let exits ← targets fragment
     let actual ← body exits
     if actual.1.length = probe.1.length then
       let instructions ← assemble (pieces s counter saved fuel failure count bound
-        invariant.1 member.1 preMember.1 edge.1 measure.1 actual.1)
+        invariant.1 member.1 edge.1 measure.1 actual.1)
       pure (instructions,
-        max invariant.2 (max member.2 (max preMember.2 (max edge.2
-          (max measure.2 (max actual.2 (max (counter + 1) (max (saved + 1) (s + 11)))))))))
+        max invariant.2 (max member.2 (max edge.2 (max measure.2
+          (max actual.2 (max (counter + 1) (max (saved + 1) (s + 12))))))))
     else none
   else none
 
