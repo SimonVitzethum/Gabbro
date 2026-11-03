@@ -66,7 +66,7 @@ theorem image_shape :
     (output.compiled.unit.fns.map fun f => (mkSig output.compiled.unit f).konsumiert) = [[], []] ∧
     (output.compiled.unit.fns.flatMap (·.body)).countP
       (fun | .retires _ => true | _ => false) = 1 ∧
-    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by
   decide +kernel
 
 /-- Every function must return the exact empty residual inventory. -/

@@ -69,7 +69,7 @@ theorem image_shape :
     (fnAt output.compiled.unit output.compiled.main).body.countP
       (fun | .bindCall _ callee _ => callee ==
         Gabbro.Grammatik.Parser.taggedDispatchName "Choice" "Select" "choose" | _ => false) = 2 ∧
-    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by
   decide +kernel
 
 theorem canonical_source : CanonicalSourceProgram output.compiled :=

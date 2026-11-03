@@ -65,7 +65,7 @@ theorem image_shape :
     output.compiled.unit.whys.map (·.name) = ["R"] ∧
     (output.compiled.unit.fns.flatMap (·.body)).countP
       (fun | .bindElse .. => true | _ => false) = 3 ∧
-    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by
   decide +kernel
 
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
@@ -91,7 +91,7 @@ theorem propagation_accepted_image : emit propagationText 256 = .ok propagationO
 
 theorem propagation_image_shape :
     propagationOutput.compiled.unit.fns.length = 3 ∧
-    0 < propagationOutput.image.code.length ∧ 16 < propagationOutput.image.bytes.length := by
+    0 < propagationOutput.image.code.length ∧ 16 < propagationOutput.bytes.length := by
   decide +kernel
 
 theorem propagation_canonical_source : CanonicalSourceProgram propagationOutput.compiled :=

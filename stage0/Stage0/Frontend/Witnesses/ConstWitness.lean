@@ -102,7 +102,7 @@ theorem source_pipeline_zeuge :
 theorem image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneOK]
     (K : Nat) (bytes : List Runner.B) (emitted : irBild text K = .ok bytes) :
     ∃ output : Emitted text K,
-      emit text K = .ok output ∧ output.image.bytes = bytes ∧ output.Correct := by
+      emit text K = .ok output ∧ output.bytes = bytes ∧ output.Correct := by
   obtain ⟨output, he, hb, hc, _⟩ := irBild_correct text K bytes emitted
   exact ⟨output, he, hb, hc⟩
 

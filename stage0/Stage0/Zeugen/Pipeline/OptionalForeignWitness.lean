@@ -60,7 +60,7 @@ theorem image_shape :
     output.compiled.unit.axs.map (·.name) = ["getpid"] ∧
     ((List.finRange output.compiled.unit.axs.length).map
       (fun a => (output.tor a).map (·.nr))) = [some 39] ∧
-    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by
   decide +kernel
 
 /-- The accepted image retains the actual compiler's canonical source-program certificate. -/

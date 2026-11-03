@@ -71,7 +71,7 @@ theorem image_shape :
       (fun | .setVar "pair" (.replace (.param "pair") "first" (.field (.param "pair") "second")) => true
            | _ => false) = 1 ∧
     (fnAt output.compiled.unit output.compiled.main).ret = .val (.field (.param "pair") "first") ∧
-    0 < output.image.code.length ∧ 16 < output.image.bytes.length := by
+    0 < output.image.code.length ∧ 16 < output.bytes.length := by
   decide +kernel
 
 theorem canonical_source : CanonicalSourceProgram output.compiled :=
@@ -82,13 +82,13 @@ theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := outpu
 /-- The actual nonempty image also instantiates the generic C01 export/simulation theorem. -/
 theorem exported_records_ir_correct_zeuge [Runner.IR.Kern] [Senke.CloneOK] :
     ∃ result : Emitted text 256, emit text 256 = .ok result ∧ result.Correct ∧
-      0 < result.image.bytes.length := by
-  have image : irBild text 256 = .ok output.image.bytes := by
-    change (emit text 256).map (fun result => result.image.bytes) = _
+      0 < result.bytes.length := by
+  have image : irBild text 256 = .ok output.bytes := by
+    change (emit text 256).map (fun result => result.bytes) = _
     rw [accepted_image]
     rfl
   obtain ⟨result, emitted, bytes, correct, _⟩ :=
-    exported_records_ir_correct text 256 output.image.bytes image
+    exported_records_ir_correct text 256 output.bytes image
   refine ⟨result, emitted, correct, ?_⟩
   rw [bytes]
   have size := image_shape

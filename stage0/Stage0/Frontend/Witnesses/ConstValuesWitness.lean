@@ -74,7 +74,7 @@ theorem portable_source_pipeline_zeuge :
 theorem portable_image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneOK]
     (K : Nat) (bytes : List Runner.B) (emitted : irBild boolText K = .ok bytes) :
     ∃ output : Emitted boolText K,
-      emit boolText K = .ok output ∧ output.image.bytes = bytes ∧ output.Correct := by
+      emit boolText K = .ok output ∧ output.bytes = bytes ∧ output.Correct := by
   obtain ⟨output, he, hb, hc, _⟩ := irBild_correct boolText K bytes emitted
   exact ⟨output, he, hb, hc⟩
 
