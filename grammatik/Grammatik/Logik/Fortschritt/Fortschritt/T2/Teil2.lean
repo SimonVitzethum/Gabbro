@@ -224,7 +224,7 @@ theorem fort_dann (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Faden}
           ⟨σ', ρ', hst, herw⟩ | ⟨h, hh⟩ | ⟨e, he⟩
         · exact fort_schritt (w_dannBlatt rfl s rest k ρ hbl.1 hx hΛ σ' ρ' hst herw)
         · exact fort_hw ⟨l, Γ, Λ, ρ, _, hx, hbl.1, h, hh⟩
-        · exact absurd he (hP.2.2.2.2 l Γ Λ _ _ ρ s rest k hbl.1 hx e)
+        · exact absurd he (hP.2.2.2.2.1 l Γ Λ _ _ ρ s rest k hbl.1 hx e)
       · cases s with
         | ite c tb eb =>
             cases hw : wahr? (eval ((M.weltVon t).lese Λ c.orte) c ((M.weltVon t).lese Λ c.orte) ρ) with
@@ -328,6 +328,36 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   | travRest tb inv body is k =>
       cases ρ with
       | cons i ρ₀ => exact fort_schritt (w_travFort rfl tb inv body is k i ρ₀ hx)
+  | verbrauch tb member edge inv bound mass body nr k =>
+      have hp := hP.2.2.2.2.2.1 l Γ Λ ρ tb member edge inv bound mass body nr k hx
+      cases nr with
+      | zero =>
+          have : 0 < 0 := hp.1
+          omega
+      | succ nr =>
+          let σ₁ := (M.weltVon t).lese Λ inv.orte
+          let σ₂ := σ₁.lese Λ (member.orte ++ edge.orte)
+          cases hsel : verbrauchWahl (alleIndizes (D.count tb))
+              (fun i => wahr? (eval σ₂ member σ₂ (.cons i ρ)))
+              (fun i j => wahr? (eval σ₂ edge σ₂ (.cons i (.cons j ρ))))
+              (fun i j => decide (i.n = j.n)) with
+          | none =>
+              obtain ⟨neu, hneu, _⟩ := (Erw.lese (M.weltVon t) Λ inv.orte).trans
+                (Erw.lese σ₁ Λ (member.orte ++ edge.orte))
+              exact fort_schritt' ⟨_, RufSchrittG.verbrauchLeer M t l Γ Λ tb member edge inv bound mass
+                body nr k ρ hx σ₁ rfl hp.2.1 σ₂ rfl hsel (hp.2.2 hsel) neu hneu hΛ⟩
+          | some i =>
+              obtain ⟨neu, hneu, _⟩ := ((Erw.lese (M.weltVon t) Λ inv.orte).trans
+                (Erw.lese σ₁ Λ (member.orte ++ edge.orte))).trans (Erw.lese σ₂ Λ mass.orte)
+              exact fort_schritt' ⟨_, RufSchrittG.verbrauchWeiter M t l Γ Λ tb member edge inv bound mass
+                body nr k ρ hx σ₁ rfl hp.2.1 σ₂ rfl i hsel _ rfl _ rfl neu hneu hΛ⟩
+  | verbrauchRest tb member edge inv bound mass body nr vor k =>
+      cases ρ with
+      | cons i ρ₀ =>
+          have hp := hP.2.2.2.2.2.2.1 _ _ Λ ρ₀ tb member edge inv bound mass body nr vor k i hx
+          obtain ⟨neu, hneu, _⟩ := Erw.lese (M.weltVon t) Λ mass.orte
+          exact fort_schritt' ⟨_, RufSchrittG.verbrauchFort M t _ _ Λ tb member edge inv bound mass
+            body nr vor k i ρ₀ hx _ rfl _ rfl hp neu hneu hΛ⟩
   | wieder n bis body ueber k =>
       cases n with
       | zero => exact fort_schritt (w_wiederUeber rfl bis body ueber k ρ hx)

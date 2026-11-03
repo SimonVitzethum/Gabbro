@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T1
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.VerbrauchPruefung
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1
 
 @[expose] public section
@@ -9,7 +9,7 @@ namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
 /-- **The `logik` checks of G pass for thread `t` of `M`.** At each of the
-    five places where a rule of G tests a `logik` condition of the running
+    places where a rule of G tests a `logik` condition of the running
     frame, the test passes at the thread's machine world:
     * a `traverse` boundary (`travNext`, `travDone`): the invariant holds;
     * a `forever` boundary with budget left (`ewigWeiter`): the invariant
@@ -20,6 +20,9 @@ variable {D : Deklaration}
       `dannBlatt`; the only leaf with a `logik` outcome is a `state`
       transition): its outcome is no `logik` outcome, so the transition
       finds its pre-state.
+    Consuming boundaries additionally require fuel and a selectable minimum
+    in a nonempty domain, strict
+    descent at every completed round, and the invariant on `leave`.
     `nachbedingung`, `invariante`, `abstieg` and `vorbedingung` are no
     checks of G at all (G logs entries and returns and has no depth
     bound). -/
@@ -56,7 +59,37 @@ def PrueftG (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (t : Faden) : Pro
         (rst : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ' Λ'')
         (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ''),
       s.istBlatt = true → (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.cons s rst) k⟩ →
-      ∀ e : Logik D, execStmt O passes keinRuf s (M.weltVon t) ρ ≠ .logik e)
+      ∀ e : Logik D, execStmt O passes keinRuf s (M.weltVon t) ρ ≠ .logik e) ∧
+    (∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
+        (member : Expr D (.index (D.count tb) :: Γ) Λ .bool)
+        (edge : Expr D (.index (D.count tb) :: .index (D.count tb) :: Γ) Λ .bool)
+        (inv : Expr D Γ Λ .bool) (bound : Int) (mass : Expr D Γ Λ (.int 0 bound))
+        (body : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λ Λ)
+        (rest : Nat) (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ),
+      (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .verbrauch tb member edge inv bound mass body rest k⟩ →
+      verbrauchKopfPrueft World.lese tb member edge inv rest (M.weltVon t) ρ) ∧
+    (∀ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
+        (member : Expr D (.index (D.count tb) :: Γ) Λ .bool)
+        (edge : Expr D (.index (D.count tb) :: .index (D.count tb) :: Γ) Λ .bool)
+        (inv : Expr D Γ Λ .bool) (bound : Int) (mass : Expr D Γ Λ (.int 0 bound))
+        (body : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λ Λ)
+        (rest : Nat) (vor : Int) (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
+        (i : Wert D (.index (D.count tb))),
+      (M.faeden t).kopf.rest = ⟨true, .index (D.count tb) :: Γ, Λ, .cons i ρ,
+        .verbrauchRest tb member edge inv bound mass body rest vor k⟩ →
+      verbrauchAbstiegPrueft World.lese mass vor (M.weltVon t) ρ) ∧
+    (∀ (l : Bool) (Γ : Ctx) (Λ Λx : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
+        (member : Expr D (.index (D.count tb) :: Γ) Λ .bool)
+        (edge : Expr D (.index (D.count tb) :: .index (D.count tb) :: Γ) Λ .bool)
+        (inv : Expr D Γ Λ .bool) (bound : Int) (mass : Expr D Γ Λ (.int 0 bound))
+        (body : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λ Λ)
+        (rest : Nat) (vor : Int) (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
+        (restb : Block D (vertragVon D (M.faeden t).kopf.f) true (.index (D.count tb) :: Γ) Λx Λ)
+        (i : Wert D (.index (D.count tb))) (w : Bool),
+      (M.faeden t).kopf.rest = ⟨true, .index (D.count tb) :: Γ, Λx, .cons i ρ,
+        .dann (.cons (abbS rfl w) restb) (.verbrauchRest tb member edge inv bound mass body rest vor k)⟩ →
+      verbrauchAbbruchPrueft World.lese inv mass vor w (M.weltVon t) ρ)
+
 
 /-- **No thread of `M` is stopped at a `logik` check of G.** -/
 def KeinLogikHaltG (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
@@ -80,7 +113,10 @@ theorem fadenR_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   have hK := hF.1
   refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,
     fun l Γ Λ Λx ρ tb inv body is k rest hl i hr => ?_,
-    fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_⟩
+    fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
+    fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
+    fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
   · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
     refine wahr_of_nicht_falsch fun hw => hno .schleife ?_
     apply semV_trav_falsch
@@ -108,6 +144,39 @@ theorem fadenR_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     refine hno e ?_
     rw [semV_dann_cons, h']
     exact weiterZ_logik _ _ _ _ e
+
+  · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
+    refine Classical.byContradiction fun hbad => ?_
+    apply hno .schleife
+    apply semV_verbrauch_pruefung_falsch
+    intro hp
+    apply hbad
+    exact (verbrauchKopfWerte_gleich tb member edge inv rest ρ hok.2.2.1 hok.1 hok.2.1
+      (hg.lese Λ Λ inv.orte inv.orte)
+      ((hg.lese Λ Λ inv.orte inv.orte).lese Λ Λ (member.orte ++ edge.orte)
+        (member.orte ++ edge.orte))).mp hp
+  · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
+    refine Classical.byContradiction fun hbad => ?_
+    apply hno .schleife
+    apply semV_verbrauchRest_falsch
+    intro hp
+    apply hbad
+    dsimp only [verbrauchAbstiegPrueft] at hp ⊢
+    rw [eval_gleichAuf mass (hok.2.2.2.1) (hg.lese Λ Λ mass.orte mass.orte) ρ] at hp
+    exact hp
+  · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
+    refine Classical.byContradiction fun hbad => ?_
+    apply hno .schleife
+    apply semV_abbVerbrauch_falsch
+    intro hp
+    apply hbad
+    have hm := eval_gleichAuf mass (hok.2.2.2.2.2.1)
+      (hg.lese Λ Λ mass.orte mass.orte) ρ
+    have hi := eval_gleichAuf inv (hok.2.2.2.2.1)
+      ((hg.lese Λ Λ mass.orte mass.orte).lese Λ Λ inv.orte inv.orte) ρ
+    dsimp only [verbrauchAbbruchPrueft, verbrauchAbstiegPrueft] at hp ⊢
+    rw [hm, hi] at hp
+    exact hp
 
 end Halt
 /-! ## 7. G moves at every `logik` check
