@@ -11,6 +11,21 @@ section Pruefung
 
 variable [DecidableEq D.Fn]
 
+/-- Distinct gates as a Prop: one Duty is never duplicated across them. -/
+theorem toreEindeutig_iff {gates : List D.Fn} :
+    toreEindeutig gates = true ↔ gates.Nodup := by
+  induction gates with
+  | nil => simp [toreEindeutig]
+  | cons g rest ih =>
+    have hmem : (∀ x ∈ rest, x ≠ g) ↔ g ∉ rest := by
+      constructor
+      · intro h hg
+        exact h g hg rfl
+      · intro h x hx heq
+        exact h (heq ▸ hx)
+    simp only [toreEindeutig, Bool.and_eq_true, decide_eq_true_eq, List.nodup_cons]
+    exact and_congr hmem ih
+
 /-- Distinct names as a Prop: no two checks share a name. -/
 theorem eindeutig_iff {checks : List (CheckDecl D)} :
     eindeutigeNamen checks = true ↔ List.Nodup (checks.map CheckDecl.name) := by
@@ -39,7 +54,7 @@ theorem checkOkB_iff {P : Programm D} {tabs : List D.Tab} {globs : List D.Glob}
         ∀ g ∈ c.gates, g ∈ fns) := by
   constructor
   · intro h
-    simp only [checkOkB, Bool.and_eq_true, decide_eq_true_eq] at h
+    simp only [checkOkB, Bool.and_eq_true, decide_eq_true_eq, and_assoc] at h
     obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩ := h
     have hnd : c.gates.Nodup := toreEindeutig_iff.mp h8
     refine ⟨⟨h1, h2, h3, h4, ?_, ?_, ?_, h9, hnd⟩, ?_, h10, ?_⟩
@@ -54,9 +69,9 @@ theorem checkOkB_iff {P : Programm D} {tabs : List D.Tab} {globs : List D.Glob}
       simp only [Bool.and_eq_true, decide_eq_true_eq] at hgg
       exact hgg.1
     · intro f hf hne
-      have hfall := List.all_eq_true.mp h11 f (hvoll f)
-      simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq,
-        Bool.not_eq_true'] at hfall
+      simp only [rahmenOkB, List.all_eq_true, Bool.or_eq_true, Bool.and_eq_true,
+        decide_eq_true_eq, Bool.not_eq_true', or_assoc, and_assoc] at h11
+      have hfall := h11 f (hvoll f)
       cases hfall with
       | inl hnr => simp [hf] at hnr
       | inr h =>
@@ -66,17 +81,15 @@ theorem checkOkB_iff {P : Programm D} {tabs : List D.Tab} {globs : List D.Glob}
           obtain ⟨hft, hfg, hfd⟩ := hframe
           refine ⟨?_, ?_, hfd⟩
           · intro t
-            have ht := List.all_eq_true.mp hft t (htabs t)
-            simpa only [Bool.not_eq_true'] using ht
+            exact hft t (htabs t)
           · intro g
-            have hg := List.all_eq_true.mp hfg g (hglobs g)
-            simpa only [Bool.not_eq_true'] using hg
+            exact hfg g (hglobs g)
     · intro g hg
       have hgg := List.all_eq_true.mp h7 g hg
       simp only [Bool.and_eq_true, decide_eq_true_eq] at hgg
       exact hgg.2
   · rintro ⟨hexp, hrahmen, hprobe, hgates⟩
-    simp only [checkOkB, Bool.and_eq_true, decide_eq_true_eq]
+    simp only [checkOkB, Bool.and_eq_true, decide_eq_true_eq, and_assoc]
     obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hexp
     have hnd : toreEindeutig c.gates = true := toreEindeutig_iff.mpr h9
     refine ⟨h1, h2, h3, h4, ?_, ?_, ?_, hnd, h8, ?_, ?_⟩
@@ -84,7 +97,8 @@ theorem checkOkB_iff {P : Programm D} {tabs : List D.Tab} {globs : List D.Glob}
     · exact List.all_eq_true.mpr fun g _ => by simp [h6 g]
     · exact List.all_eq_true.mpr fun g hg => by simp [h7 g hg, hgates g hg]
     · exact hprobe
-    · exact List.all_eq_true.mpr fun f _ => by
+    · unfold rahmenOkB
+      exact List.all_eq_true.mpr fun f _ => by
         by_cases hr : reachB P fns c.probe f = true
         · by_cases he : f = c.probe
           · simp [hr, he]
@@ -165,7 +179,7 @@ theorem checkAdmission_zeuge : CheckAdmission pruefP [true, false] [pruefC] :=
 
 /-- The fixture gate list is distinct. -/
 theorem toreEindeutig_zeuge : [false].Nodup :=
-  toreEindeutig_iff.mp (by decide)
+  (toreEindeutig_iff (D := pruefD)).mp (by decide)
 
 /-- The fixture check name is unique. -/
 theorem eindeutig_zeuge : ([pruefC].map CheckDecl.name).Nodup :=
