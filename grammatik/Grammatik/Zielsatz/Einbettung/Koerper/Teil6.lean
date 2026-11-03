@@ -33,6 +33,8 @@ theorem sim_stmt {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       sim_stmt_assignVar (x := x) (e := e) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .assignThru p t ht f i e hw hL =>
       sim_stmt_assignThru (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (hw := hw) (hL := hL) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
+  | .assignThruOwn p t ht f i e m s ho he hg hm hw hL =>
+      sim_stmt_assignThruOwn (p := p) (t := t) (ht := ht) (f := f) (i := i) (e := e) (m := m) (s := s) (ho := ho) (he := he) (hg := hg) (hm := hm) (hw := hw) (hL := hL) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .assignSlotRef r t ht ho f e hw hL =>
       sim_stmt_assignSlotRef (r := r) (t := t) (ht := ht) (ho := ho) (f := f) (e := e) (hw := hw) (hL := hL) (E := E) (hZ := hZ) (hS := hS) (pad := pad) (S := S) (T := T) (S' := S') (T' := T') (O' := O') (U' := U') (A' := A') (passes := passes) (R' := R') (hB := hB)
   | .assignGlob g e hw hL =>
