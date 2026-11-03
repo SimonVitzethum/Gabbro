@@ -210,18 +210,33 @@ theorem ownInv_step_dannNarrowOk {D : Deklaration} {P : Programm D}
   subst hs₁
   exact fin (run_narrow hk hf ha ho hr h) rfl rfl hrely
 
+/-- Keep every judgment index variable while recursing on the ownership derivation.
+    Output-context weakening preserves the block head and uses its smaller premise derivation. -/
+private theorem ob_no_required_head {D : Deklaration} {A : FreiForm D} {I : Interfaces A}
+    {V : Vertrag D} {out : Flow.Output A V.erg} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} {k c cout : Context} {b : Block D V l Γ Λ Λ'} :
+    OB A I out k c b cout → (match b with
+      | .narrowRequired .. => False
+      | _ => True)
+  | .weaken _ hb _ => ob_no_required_head hb
+  | .nil | .dead .. | .cons .. | .bind .. | .bindCall .. | .bindCallInd .. | .bindCallElse .. | .bindAxiom ..
+  | .bindAxiomElse .. | .regRead .. | .regReadElse .. | .awaits .. | .exchange .. | .narrow .. | .check ..
+  | .float .. | .floatLit .. | .floatOf .. | .floatNarrow .. | .allocList .. | .allocCounter .. | .release ..
+  | .bindCallIndElse .. => True.intro
+
 /-- Required narrowing remains outside the existing ownership judgment. Weakening an output
     context cannot introduce a missing block form. This preserves the current checker boundary. -/
 private theorem ob_narrowRequired_refused {D : Deklaration} {A : FreiForm D} {I : Interfaces A}
     {V : Vertrag D} {out : Flow.Output A V.erg} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {k c : Context} {lo hi lo' hi' : Int}
     {e : Expr D Γ Λ (.int lo hi)} {rest : Block D V l (.int lo' hi' :: Γ) Λ Λ'} :
-    ∀ {cout : Context}, OB A I out k c (.narrowRequired e lo' hi' rest) cout → False
-  | _, .weaken _ hb _ => ob_narrowRequired_refused hb
+    ∀ {cout : Context}, OB A I out k c (.narrowRequired e lo' hi' rest) cout → False := by
+  intro cout hb
+  exact ob_no_required_head hb
 
+set_option maxHeartbeats 4000000 in
 /-- The appended G1 success rule is unreachable under the existing ownership judgment.
     Its exact range guard and typed successor are retained; ownership acceptance is not extended. -/
-set_option maxHeartbeats 4000000 in
 theorem ownInv_step_dannNarrowRequired {D : Deklaration} {P : Programm D}
   {A : FreiForm D} {I : Interfaces A} {O : Orakel D} {passes : Nat} (hO : GutO O) (hc : Checked P A I)
   {M : RufMaschineG D} {u : Faden} (s : State) (hag : s.agrees A (M.speicher.welt []))
