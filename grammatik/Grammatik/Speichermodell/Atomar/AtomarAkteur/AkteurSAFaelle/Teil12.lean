@@ -115,13 +115,16 @@ theorem akteurSA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orak
               lauf := M.lauf ++ rufEigenG u (neu ++ neu₁), start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  simp only [execStmt] at hstep
-  cases hstep
-  subst hs₁
+  simp only [execStmt, Ausgang.leave.injEq] at hstep
+  obtain ⟨hσ, hρ⟩ := hstep
+  subst σ' ρ'
+  subst σ₁
   refine ⟨fadenSA_lokalQ hF hhead ρ k ((σm.lese Λ inv.orte)).spur
     fun σ HX hfx hkx hg hok => ?_, hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
+  have hgΛ : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) σ (M.weltVon u) :=
+    gleichAuf_stabil_iff (fun L => restb.held_iff L) hg
   have hX₁ : ∀ c ∈ mass.orte, c ∈ stabilS P S lok (M.faeden u).kopf.f Λ ∨ Tg c :=
     fun c hc => expr_stabilX (hFS _) mass hmass c hc
   have hX₂ : ∀ c ∈ inv.orte, c ∈ stabilS P S lok (M.faeden u).kopf.f Λ ∨ Tg c :=
@@ -130,7 +133,7 @@ theorem akteurSA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orak
     (M.weltVon u).speicher
   have g₁ : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ ++ mass.orte)
       (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) ((M.weltVon u).lese Λ mass.orte) :=
-    mischT_gleichAuf hg hX₁ Λ Λ
+    mischT_gleichAuf hgΛ hX₁ Λ Λ
   have g₂ : GleichAuf ((stabilS P S lok (M.faeden u).kopf.f Λ ++ mass.orte) ++ inv.orte)
       (mischT Tg inv.orte
         ((mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher).lese Λ inv.orte)
@@ -160,8 +163,11 @@ theorem akteurSA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orak
     hk,
     fun R O' U A hPX hHA hQ => ZErgG.folgt_of_eq (by
       obtain ⟨e₁, e₂⟩ := hrec A hPX hHA
-      have hmA : (eval (leseA A σ Λ mass.orte) mass (leseA A σ Λ mass.orte) ρ).n = m' := by
-        rw [e₁, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₁m ρ]
+      have hmA : (eval
+          (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher)
+          mass
+          (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) ρ).n = m' := by
+        rw [eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₁m ρ]
         exact hm'.symm
       have hwA : wahr? (eval
           (leseA A
@@ -284,17 +290,24 @@ theorem akteurSA_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
               lauf := M.lauf ++ rufEigenG u (neu ++ neum), start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  simp only [execStmt] at hstep
-  cases hstep
+  simp only [execStmt, Ausgang.next.injEq] at hstep
+  obtain ⟨hσ, hρ⟩ := hstep
+  subst σ' ρ'
+  simp only [Env.tail] at hm' ⊢
   refine ⟨fadenSA_lese hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) _ Λ mass.orte
     (fun hok => by
       obtain ⟨_, _, hTR⟩ := hok
-      exact fun c hc => expr_stabilX (hFS _) mass hTR.2.2.2.1 c hc)
+      intro c hc
+      rcases expr_stabilX (hFS _) mass hTR.2.2.2.1 c hc with hc | hc
+      · exact Or.inl (stabilS_mono (fun L hL => (restb.held_iff L).mp hL) hc)
+      · exact Or.inr hc)
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
   exact ⟨σ, Nat.le_refl _,
-    GleichAuf.mono (fun _ h => List.mem_append_left _ h) hg,
+    GleichAuf.mono
+      (fun _ h => List.mem_append_left _
+        (stabilS_mono (fun L hL => (restb.held_iff L).mp hL) h)) hg,
     hTR,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       have hmA : (eval (leseA A σ0 Λ mass.orte) mass (leseA A σ0 Λ mass.orte) ρ).n = m' := by
