@@ -153,7 +153,16 @@ theorem infallible_service :
     refusal (text.replace "or Failure abi" "abi") =
       some "entrust: isolation service needs a failure channel" := by decide +kernel
 
+theorem incompatible_fallible_result :
+    refusal (text.replace "-> u8 in 0 .. 10 or Failure abi" "-> bool or Failure abi") =
+      some "entrust: isolation service result has no fallible C08 form" := by decide +kernel
+
+theorem noreturn_service :
+    refusal (text.replace "-> u8 in 0 .. 10 or Failure abi" "-> never or Failure abi") =
+      some "entrust: returning service has a never result" := by decide +kernel
+
 theorem missing_region_contract :
+
     refusal (text.replace "requires forall i in slots of Code : Code.slots[i].value == 7" "requires true") =
       some "entrust: isolation service contract does not mention transferred regions" := by decide +kernel
 
