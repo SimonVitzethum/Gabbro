@@ -91,12 +91,12 @@ theorem torElse_ok {L : Lay D} {O : Orakel D} [TorOK L O] {Λ : List (Res D)} {�
       (Nat.le_refl _) (by omega)
     have hpk : PreS L m2 _ fp Ks (frei Γ reserved) ck ρ reserved :=
       mkPreS (by have := hp.ctx; omega) (by omega) (frameOK_sub hnF.frame hks) hnF.left.code (codeFar_sub2 hnF.left.far hks) hnF.env
-    have checked := chkAnswer_ok (L := L) (z := O.zeiger) hck hpk htk hw2
+    have checked := chkAnswer_ok (L := L) (z := O.zeiger) he hck hpk htk hw2
     have s12 := s1.trans s2
     rw [pc_add] at s12
-    have decoded := fallible_decode (L := L) (z := O.zeiger) accepted hn hf w found
-    rw [he, decoded]
-    cases result : einpassenErg O.zeiger (some τ) w.toInt with
+    have decoded := fallible_decode (z := O.zeiger) he accepted hn hf w found
+    rw [decoded]
+    cases result : einpassenErg O.zeiger (D.aerg a) w.toInt with
     | some v =>
       rw [result] at checked
       obtain ⟨m3, w3, s3, a3, hw3, encoded⟩ := checked
