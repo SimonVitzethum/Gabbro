@@ -12,7 +12,7 @@ variable [Kern] {D : Deklaration} {L : Lay D} {reserved : Nat} {currentOld : Boo
 theorem lowN_empty_ok {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) (htag : tag < 256)
     {fp : Runner.W} {K d top : Nat} {c : List II} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W}
-    (made : lowN (currentOld := currentOld) L (reserved := reserved) (Λ := Λ) tag .empty d = some (c, top))
+    (made : lowN (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) tag .empty d = some (c, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d c ρ W reserved) :
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 tag) := by
   simp only [lowN_empty, Option.some.injEq, Prod.mk.injEq] at made
@@ -24,7 +24,7 @@ theorem lowN_empty_ok {Λ : List (Res D)} {Γ : Ctx} (tag : Nat) (htag : tag < 2
 theorem lowPayload_empty_ok {Λ : List (Res D)} {Γ : Ctx}
     {fp : Runner.W} {K d top : Nat} {c : List II} {W : Runner.Mem → Prop}
     {ρ : Env D Γ} {m : Runner.Mem} {pc : Runner.W}
-    (made : lowPayload (currentOld := currentOld) L (reserved := reserved) (Λ := Λ) .empty d = some (c, top))
+    (made : lowPayload (currentOld := currentOld) L (reserved := reserved) (Γ := Γ) (Λ := Λ) .empty d = some (c, top))
     (fits : top ≤ K) (pre : Pre L m pc fp K d c ρ W reserved) :
     Executes m pc fp K d c (fun m' => PayloadAt L m' fp d none ()) := by
   simp only [lowPayload_empty, Option.some.injEq, Prod.mk.injEq] at made

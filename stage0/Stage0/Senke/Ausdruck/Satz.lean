@@ -441,7 +441,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .oldS t f i access, d, c, top, h, hK, m, pc, ρ, hp =>
     oldSlot_ok σ₀ σ hWL hLay t f i access same
       (fun ci ti lower fits m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay i _ ci ti lower fits m pc ρ hp) h hK hp
-termination_by structural e
+termination_by structural _ _ e _ _ _ _ _ _ _ _ _ => e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
     {Γ : Ctx} → {fs : List Ty} → (args : Args D Γ Λ fs) → (ρ : Env D Γ) →
@@ -450,7 +450,7 @@ theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.M
   | _, _, .cons e rest, ρ =>
     ⟨(fun d c top h hK m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp),
       lowE_ok_args (same := same) σ₀ σ hWL hLay rest ρ⟩
-termination_by structural args
+termination_by structural _ _ args _ => args
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
@@ -458,17 +458,23 @@ theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff a (evalNutz σ₀ nutz σ ρ)))
   | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => lowN_empty_ok tag htag h hK hp
-  | _, some τ, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
-    cases τ with
-    | int lo hi =>
-      exact lowN_int_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) e tag htag
-        (fun ce te made fits m pc pre =>
-          lowE_ok (same := same) σ₀ σ hWL hLay e d ce te made fits m pc ρ pre) h hK hp
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ =>
-      have hnone : lowN (currentOld := currentOld) L (reserved := reserved) tag (.val e) d = none := rfl
-      rw [hnone] at h
-      cases h
-termination_by structural nutz
+  | _, some (.int lo hi), .val e, d, c, top, h, hK, m, pc, ρ, hp =>
+    lowN_int_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) e tag htag
+      (fun ce te made fits m pc pre =>
+        lowE_ok (same := same) σ₀ σ hWL hLay e d ce te made fits m pc ρ pre) h hK hp
+  | _, some .bool, .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.opt _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.sum _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.why _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some .never, .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.fl _ _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.fnptr _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.ptr _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.ref _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.arr _ _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.prod _ _), .val _, _, _, _, h, _, _, _, _, _
+  | _, some (.str _), .val _, _, _, _, h, _, _, _, _, _ => by cases h
+termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ => nutz
 /-- A payload uses exactly its canonical words; the absent payload has no marker. -/
 theorem lowPayload_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
@@ -480,6 +486,6 @@ theorem lowPayload_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.
   | _, _, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
     rw [lowPayload_val] at h
     exact lowE_ok (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp
-termination_by structural nutz
+termination_by structural _ _ nutz _ _ _ _ _ _ _ _ _ => nutz
 end
 end Gabbro.Stage0.Senke
