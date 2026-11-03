@@ -39,13 +39,13 @@ def namenL (lok : List String) : List SExpr → List String
 
 /-- Traverse domain operands, then the binder-scoped filter/value, then outer-scope
     fallback arguments. Matching the original list keeps nested recursion structural. -/
-private def namenFoldArgs (lok : List String) (binder : String) :
+def namenFoldArgs (lok : List String) (binder : String) :
     Nat → Nat → List SExpr → List String
   | _, _, [] => []
-  | domain + 1, scoped, x :: xs =>
-    namenA lok x ++ namenFoldArgs lok binder domain scoped xs
-  | 0, scoped + 1, x :: xs =>
-    namenA (binder :: lok) x ++ namenFoldArgs lok binder 0 scoped xs
+  | domain + 1, inner, x :: xs =>
+    namenA lok x ++ namenFoldArgs lok binder domain inner xs
+  | 0, inner + 1, x :: xs =>
+    namenA (binder :: lok) x ++ namenFoldArgs lok binder 0 inner xs
   | 0, 0, x :: xs => namenA lok x ++ namenL lok xs
 end
 

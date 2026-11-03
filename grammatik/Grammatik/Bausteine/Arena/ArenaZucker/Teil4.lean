@@ -176,7 +176,7 @@ theorem zeuge_alloc_leer_end (O : Orakel ArenaZeuge.ZD) (passes : Nat)
           (Endblock.arenaRumpf ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest)
           ((ArenaZeuge.welt 0 (by decide) (by decide)).lese [] [Sum.inr ()])
           (.cons ⟨0, by decide, by decide⟩ .nil)).schrumpf :=
-  arenaAllocEnd_unter_schranke O passes R _ _ rfl _ rfl _ _ _ .nil (by decide)
+  arenaAllocEnd_unter_schranke O passes R ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf voll rest _ .nil (by decide)
 
 /-- **And it IS taken on the full one** -- the ceiling refuses the store, and the
     `else` path is the only continuation. -/
@@ -189,7 +189,7 @@ theorem zeuge_alloc_voll_end (O : Orakel ArenaZeuge.ZD) (passes : Nat)
         (ArenaZeuge.welt 4 (by decide) (by decide)) .nil
       = execEnd O passes R voll
           ((ArenaZeuge.welt 4 (by decide) (by decide)).lese [] [Sum.inr ()]) .nil :=
-  arenaAllocEnd_an_schranke O passes R _ _ rfl _ rfl _ _ _ .nil (by decide)
+  arenaAllocEnd_an_schranke O passes R ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf voll rest _ .nil (by decide)
 
 /-- **The required end-block allocation stores at index `0` on the empty arena.** -/
 theorem zeuge_allocRequired_leer_end (O : Orakel ArenaZeuge.ZD) (passes : Nat)
@@ -202,7 +202,7 @@ theorem zeuge_allocRequired_leer_end (O : Orakel ArenaZeuge.ZD) (passes : Nat)
           (Endblock.arenaRumpf ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest)
           ((ArenaZeuge.welt 0 (by decide) (by decide)).lese [] [Sum.inr ()])
           (.cons ⟨0, by decide, by decide⟩ .nil)).schrumpf :=
-  arenaAllocRequiredEnd_unter_schranke O passes R _ _ rfl _ rfl _ _ _ .nil (by decide)
+  arenaAllocRequiredEnd_unter_schranke O passes R ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest _ .nil (by decide)
 
 /-- **And on the full arena it is a capacity failure, never a wrap** -- the ceiling
     refuses the store; no success continuation can be confused with the failure. -/
@@ -213,7 +213,7 @@ theorem zeuge_allocRequired_voll_end (O : Orakel ArenaZeuge.ZD) (passes : Nat)
         (Endblock.arenaAllocRequired ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest)
         (ArenaZeuge.welt 4 (by decide) (by decide)) .nil
       = .logik .kapazitaet :=
-  arenaAllocRequiredEnd_an_schranke O passes R _ _ rfl _ rfl _ _ _ .nil (by decide)
+  arenaAllocRequiredEnd_an_schranke O passes R ArenaZeuge.Log ArenaZeuge.sieben rfl ArenaZeuge.zeuge_darf rfl ArenaZeuge.zeuge_gdarf rest _ .nil (by decide)
 
 end Bedeutung
 end Gabbro.Grammatik
