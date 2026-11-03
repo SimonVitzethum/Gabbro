@@ -26,8 +26,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     No builds were run for that audit. Remaining refusals include:
     - Scoped returns inside lock bodies; source `by consuming`; `consumeTraverse` (Stage 0 still lowers the old
       fixed-sweep placeholder, not the new `verbrauchLauf` semantics; re-lowering in progress).
-    - Computed wide-integer-to-float conversion,
-      non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
+    - Non-integer/oversized tagged payloads, byte spans above eight, oversized folds/code/addresses,
       and unsupported entry-snapshot subtrees.
     - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
       foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
@@ -49,6 +48,17 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     Only actual capacity/frame/code representability checks remain on these string paths.
     Open: lead Lean validation of the changed closure, axiom checks and runner regression;
     the implementation worker ran no Lean, Lake, compiler, runner or guardian checks.
+  - **Computed wide `floatOf` implementation (`s0-gaps1`, 2026-11-03; UNCHECKED).** The binary64
+    compiler hook now normalizes the complete integer magnitude with balanced leading-position
+    comparisons, retains a 56-bit prefix with sticky and reuses the existing IEEE nearest-even packer.
+    Small runtime values inside wide intervals use the proved scalar continuation. Generic field,
+    rounding and hook proofs connect through `blockFloatOfComputed_case` and `lowB_ok_floatOf`;
+    exponent overflow is rejected before the ordinary range test and remains stop 107.
+    `WideFloatProbe` declares accepted image fixtures for ties, sticky tails, signs, carry, maximum
+    finite, overflow and small values in wide intervals, plus a generic-hook variable witness.
+    Open: lead single-module Lean checks, axiom audits, image acceptance and runner execution.
+    No new compiled-coverage measurement is claimed; tagged payloads and byte spans above eight
+    remain open. The implementation worker ran no Lean, Lake, compiler, runner or guardian checks.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.
