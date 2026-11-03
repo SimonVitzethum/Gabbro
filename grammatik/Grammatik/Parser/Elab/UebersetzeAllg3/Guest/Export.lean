@@ -66,6 +66,7 @@ theorem sourceGuests_complete (u : UProg) (guests : List (GuestBoundary (declOf 
 def SourceGuestPflicht (u : UProg) (E : Zielsatz.Einheit (declOf u))
     (O : Orakel (declOf u)) (history : List (BoundaryRecord (declOf u)))
     (storage : BoundaryRecord (declOf u) → List (Konzession (declOf u))) : Prop :=
+  (∀ a, lowerAxContract u a = .ok (E.P.axVertrag a)) ∧
   ∃ guests, sourceGuests u = .ok guests ∧
     ∀ guest ∈ guests, GuestServicePflicht E O history guest storage
 
