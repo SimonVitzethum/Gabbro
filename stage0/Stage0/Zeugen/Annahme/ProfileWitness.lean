@@ -10,7 +10,7 @@ import all Init.Data.String.FindPos
 import all Init.Data.String.Hashable
 import all Init.Data.String.Iter
 import all Init.Data.String.Iter.Basic
-import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Intercalate
 import all Init.Data.String.Iterate
 import all Init.Data.String.Iterator
 import all Init.Data.String.Legacy
@@ -43,10 +43,24 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- The profile binding is admitted and carried in the image certificate, but
-    profile blocks have no Stage0 elaboration yet and are refused here. -/
-theorem candidate_refused :
-    (match candidate with | .error message => some message | .ok _ => none) =
-      some "ir: profile: canonical source-to-goal profile binding missing" := by decide +kernel
+/-- A consistent non-empty profile is accepted end to end: the admitted binding
+    is stripped before elaboration, never refused at the gate. -/
+theorem candidate_present : candidate.toOption.isSome = true := by decide +kernel
+
+def output : Emitted text 64 := candidate.toOption.get candidate_present
+
+/-- The checked profile binding travels into the image certificate. -/
+theorem binding_carried :
+    Gabbro.Grammatik.Parser.ProfilBindung.bindungB
+      output.compiled.source.prepared.bindung = true :=
+  output.compiled.profile_binding
+
+/-- The elaborated tree carries no profile blocks: admitted profiles elaborate. -/
+theorem elaborated_profilfrei :
+    Gabbro.Grammatik.Parser.ProfilBindung.profilfreiL
+      output.compiled.source.prepared.elaborierbar = true := by decide +kernel
+
+/-- The same image satisfies the inherited execution correctness. -/
+theorem image_correct [Senke.CloneOK] : output.Correct := output.correct
 
 end Gabbro.Stage0.ProfileWitness
