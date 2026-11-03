@@ -28,7 +28,6 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: escrow simulation in progress.
-    - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
     - C12 `own@…`, byte/raw/entry targets: ownership and target support still missing at the Stage-0 gate.
     - C14 `profile`/`requires profile`: the checked binding (`ProfileBinding`, admitted by `bindungB`) is now
       carried from `Prepared` through `CanonicalSourceProgram` into `Emitted.Correct`/`irBild_correct`, with inconsistent
@@ -39,6 +38,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
       loader-base duty (`Nat.lcm 8 N ∣ b` for every positive N stays an explicit hypothesis).
     - C14 `entrust`: refused by the model (no isolation/call service).
     - C07 fallible indirect calls: Stage-0 arms being added.
+  - **C18 static-arena allocation:** required allocation and allocation with `else`, at block and end-block level,
+    already expand into the connected `lowB_ok`/`lowEnd_ok` narrowing and store arms. Source-image witnesses now
+    cover both levels and the last fitting slot; semantic witnesses cover success, ceiling preservation and required
+    capacity failure (stop 107). Duplicate counter-depth arms and two witness import paths are corrected.
+    Open: the lead's Lean checks of these witnesses and the connected pipeline; the implementation worker ran no builds.
 - **Lean module system and the 500-line limit (2026-11-01).** Every Lean file becomes a module and drops below 500 lines
   (AGENTS.md). Measured 2026-11-01 with grep/wc: 0 of about 1500 Lean files start with `module`; 214 files have 500 lines or
   more (194 in `grammatik/`, largest `Parser/Elab/Uebersetze.lean` with 6455). No `grammatik/` change until this is merged.

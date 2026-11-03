@@ -74,8 +74,6 @@ def counterDepthB {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .floatOf _ _ _ rest => counterDepthB rest
   | .floatNarrow _ _ _ sonst rest => max (counterDepthE sonst) (counterDepthB rest)
 
-  | .narrowRequired _ _ _ rest => counterDepthB rest
-
 def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} : Endblock D V l Γ Λ → Nat
   | .ret _ _ => 0
@@ -101,7 +99,6 @@ def counterDepthE {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .exchange _ _ _ _ rest => counterDepthE rest
   | .ite _ t e => max (counterDepthE e) (counterDepthE t)
 
-  | .narrowRequired _ _ _ rest => counterDepthE rest
   | .retScoped .. => 0
   | .retWhyScoped .. => 0
 
