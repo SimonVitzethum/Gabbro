@@ -17,6 +17,8 @@ theorem lowerS_shape (lay : Layout D) (cenv : List Reg) (lv : Lbl × Lbl) :
       lowerS_shape_assignSlot (lay := lay) (cenv := cenv) (lv := lv) (t := t) (f := f) (i := i) (e := e) (zz1 := zz1) (zz2 := zz2) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, .assignThru p t zz1 f i e zz2 zz3, lb, k, st, st', blks, h =>
       lowerS_shape_assignThru (lay := lay) (cenv := cenv) (lv := lv) (p := p) (t := t) (zz1 := zz1) (f := f) (i := i) (e := e) (zz2 := zz2) (zz3 := zz3) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
+  | _, _, _, _, .assignThruOwn p t zz1 f i e mo s ho he hg hm zz2 zz3, lb, k, st, st', blks, h =>
+      lowerS_shape_assignThruOwn (lay := lay) (cenv := cenv) (lv := lv) (p := p) (t := t) (zz1 := zz1) (f := f) (i := i) (e := e) (mo := mo) (s := s) (ho := ho) (he := he) (hg := hg) (hm := hm) (zz2 := zz2) (zz3 := zz3) (lb := lb) (k := k) (st := st) (st' := st') (blks := blks) (h := h)
   | _, _, _, _, .assignSlotRef .., lb, k, st, st', blks, h => by
       simp only [lowerS, reduceCtorEq] at h
   | _, _, _, _, .assignGlob g e zz1 zz2, lb, k, st, st', blks, h =>
