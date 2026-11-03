@@ -220,7 +220,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
       obtain ⟨⟨ce, te⟩, _, he⟩ := h
       simp only [bin2, Prod.mk.injEq] at he
       omega
-    · cases h
+    · exact lowE_top e d c top h
   | _, _, .le a b, d, c, top, h => by
     simp only [lowE_eqs] at h
     split at h

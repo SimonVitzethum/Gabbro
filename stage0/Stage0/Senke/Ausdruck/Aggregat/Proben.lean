@@ -39,6 +39,10 @@ def index : Expr D [] [] (.index 1) := .lit 0
 def replaced : Expr D [] [] (.arr (.int (-100) 100) 1) :=
   .arrSet array index (.widen (by decide) (by decide) (.lit 49))
 
+/-- Both a zero payload and a nonzero high limb retain their independent tag. -/
+def wideSome (n : Int) (lo : 0 ≤ n) (hi : n ≤ 2^100-1) : Expr D [] [] (.opt (2^100)) :=
+  .some (.widen lo hi (.lit n))
+
 def checks : Expr D [] [] .bool :=
   [ .eq (.add (.arrGet array index) (.arrGet replaced index)) (.lit 42),
     .eq (.arrGet (.arrGet (.arrCons array .arrNil) index) index) (.lit (-7)),
@@ -50,7 +54,11 @@ def checks : Expr D [] [] .bool :=
     .eq (.strGet high (.lit (-1))) (.lit 0),
     .eq (.strGet high (.lit 1)) (.lit 0),
     .eq (.strGet empty (.lit 0)) (.lit 0),
-    .not (.strEq empty zero), .strLt empty zero, .not (.strLt high letter)
+    .not (.strEq empty zero), .strLt empty zero, .not (.strLt high letter),
+    .istSome (wideSome 0 (by decide) (by decide)),
+    .istSome (wideSome (2^80+5) (by decide) (by decide)),
+    .not (.istSome (.none (2^100))),
+    .istSome (.wenn .tru (wideSome (2^80+5) (by decide) (by decide)) (.none (2^100)))
   ].foldr Expr.and .tru
 
 theorem semantics_zeuge : wahr? (eval world checks world .nil) = true := by decide +kernel
@@ -127,6 +135,13 @@ theorem read_accepted_zeuge :
     (lowE layout (Expr.var (D := D) (Λ := []) (Γ := [.str 2]) .here) 3).isSome = true ∧
     (lowE layout (Expr.var (D := D) (Λ := []) (Γ := [.arr (.str 2) 1]) .here) 3).isSome = true ∧
     aggregateFits (.arr (.str 2) 0) = true := by decide +kernel
+
+/-- Local presence tests use the complete option read, including its tag, and
+    need no table-count or signed-word restriction on the payload interval. -/
+theorem wide_option_read_zeuge :
+    (lowE layout (Expr.istSome
+      (Expr.var (D := D) (Λ := []) (Γ := [.opt (2^100)]) .here)) 4).isSome = true := by
+  decide +kernel
 
 /-- Constructors, indexing and literals of every length are accepted. -/
 theorem accepted_zeuge :

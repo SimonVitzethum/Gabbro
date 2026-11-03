@@ -46,7 +46,7 @@ variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (L : Lay D) 
     (if decide (n ≤ 2 ^ 63) then do
       let ce ← lowE (currentOld := currentOld) L (reserved := reserved) e d
       pure (bin2 10 d (bin2 14 d ce ([ci 1 (d + 1) (-1) 0], d + 2)) ([ci 1 (d + 1) 1 0], d + 2))
-    else none) := by rfl
+    else lowE (currentOld := currentOld) L (reserved := reserved) e d) := by rfl
 
 @[lowE_eqs] theorem lowE_case (cs : List (Option Ty)) (i : Fin cs.length)
       (nutz : NutzlastExpr D Γ Λ (cs.get i)) :
