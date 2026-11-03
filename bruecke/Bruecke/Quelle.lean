@@ -154,7 +154,7 @@ def einheitAllg (u : UProg) (P : Programm (declOf u)) (h : nullB u = true) : Zie
     some u` fixes it, so a witness can only be the front end's own output. -/
 def Pflichten (src : String) : Prop :=
   ∃ u : UProg, uOf src = some u ∧ nullB u = true ∧ stimmigB u = true ∧
-    rangB u (rangAuto u) = true ∧
+    rangB u (rangAuto u) = true ∧ ohneTransitionB u = true ∧ SchnittstellenPflicht u ∧
     ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = some body ∧
       meetsU u (wfU u) (fnAt u c) body
 
@@ -198,11 +198,12 @@ theorem nutzer_aus_quelle {src : String} (hp : Pflichten src) {u : UProg}
     {P : Programm (declOf u)} {fs : List (declOf u).Fn}
     (h : uebersetzeAllg src = .ok ⟨u, P, fs⟩) :
     ∃ hn : nullB u = true, Zielsatz.NutzerPflicht (einheitAllg u P hn) := by
-  obtain ⟨u', hu', hn, hs, hr, hz⟩ := hp
+  obtain ⟨u', hu', hn, hs, hr, hPlain, hPtr, hz⟩ := hp
   rw [uOf_eq h] at hu'
   injection hu' with hu'
   subst hu'
-  exact ⟨hn, bruecke_nutzer (lower_of_uebersetze h) (stimmig_of hs) (rangAuto u) (rang_of hr) hz
+  exact ⟨hn, bruecke_nutzer (lower_of_uebersetze h) (stimmig_of hs hPlain) (rangAuto u) (rang_of hr) hz
+    (hPtr P fs (lower_of_uebersetze h))
     _ rfl rfl rfl⟩
 
 /-- The same premise WITH THE ATOMIC RELY (`NutzerPflichtA`). -/
