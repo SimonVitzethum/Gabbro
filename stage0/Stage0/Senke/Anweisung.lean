@@ -144,18 +144,11 @@ def lowS (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
   | _, Γ, _, _, .axiomCall a args _ _ _ _ _, reserved => torC0 (reserved := reserved) L a args ((frei Γ reserved))
   | _, Γ, _, _, .axiomCallElse _ a args _ _ _ _ _ err, reserved =>
     match L.tor a, D.aerg a with
-    | some b, some answer =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
-          valueWords (.why (D.agruende a)) = 1 then do
-        let ct ← torC (reserved := reserved) L a args (frei Γ reserved)
-        let ck ← chkC (some answer) (frei Γ reserved)
-        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
-        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + 1) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC (frei Γ reserved) b.fehler ((16 * (ck.length + 1) : Nat) : Int) ++
-            ck ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
-            max ct.2 (max (frei Γ reserved + 10) ce.2))
-        else none
-      else none
+    | some _, some answer => do
+      let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+      let cg ← fallibleForeignC L a args answer (frei Γ reserved) 1 reserved
+      pure (cg.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1,
+        max cg.2 ce.2)
     | some b, none =>
       if fehlGut (D.agruende a) b.fehler = true ∧ 0 < D.agruende a ∧
           valueWords (.why (D.agruende a)) = 1 then do
@@ -275,36 +268,16 @@ def lowB (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) (e
         else none
       else none
     | _, _ => none
-  | _, Γ, _, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
-    match L.tor a, D.aerg a with
-    | some b, some answer =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
-          valueWords (.why (D.agruende a)) = 1 then do
-        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some answer) ((frei Γ reserved))
-        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
-        let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
-        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
-            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
-        else none
-      else none
-    | _, _ => none
-  | _, Γ, _, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
-    match L.tor a, D.aerg a with
-    | some b, some answer =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
-          valueWords (.why (D.agruende a)) = 1 then do
-        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some answer) ((frei Γ reserved))
-        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
-        let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
-        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length) : Nat) : Int) ++ ck ++ (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]) ++ ce.1,
-            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
-        else none
-      else none
-    | _, _ => none
+  | _, Γ, _, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved => do
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+    let cg ← fallibleForeignC L a args τ (frei Γ reserved) (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length reserved
+    pure (cg.1 ++ cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1, max cg.2 (max cr.2 ce.2))
+  | _, Γ, _, _, .bindAxiomElse (τ := τ) a args _ _ _ _ _ _ err rest, reserved => do
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowB (reserved := reserved) passes A L layout ens pr (exPlus ex (ce.1.length + 1)) rest
+    let cg ← fallibleForeignC L a args τ (frei Γ reserved) (cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0]).length reserved
+    pure (cg.1 ++ cr.1 ++ [ci 18 (16 * (ce.1.length + 1)) 0 0] ++ ce.1, max cg.2 (max cr.2 ce.2))
   | _, Γ, _, _, .check c err rest, reserved => do
     let cc ← lowE (reserved := reserved) L c ((frei Γ reserved))
     let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
@@ -439,21 +412,11 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
         else none
       else none
     | _, _ => none
-  | _, Γ, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved =>
-    match L.tor a, D.aerg a with
-    | some b, some answer =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
-          valueWords (.why (D.agruende a)) = 1 then do
-        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some answer) ((frei Γ reserved))
-        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
-        let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
-        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + cr.1.length) : Nat) : Int) ++ ck ++ cr.1 ++ ce.1,
-            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
-        else none
-      else none
-    | _, _ => none
+  | _, Γ, _, .bindAxiomOptElse (e := some τ) a args _ _ _ _ _ err rest, reserved => do
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
+    let cg ← fallibleForeignC L a args τ (frei Γ reserved) cr.1.length reserved
+    pure (cg.1 ++ cr.1 ++ ce.1, max cg.2 (max cr.2 ce.2))
   | _, Γ, _, .awaits g _ _ _ _ rest, reserved =>
     if lit32 (L.ga g) && aggregateFits (D.gtyp g) then do
       let cr ← lowEnd (reserved := reserved) passes A L layout ens pr ex rest
@@ -467,21 +430,11 @@ def lowEnd (passes : Nat) (A : D.Fn → Nat) (L : Lay D) (layout : FrameLayout) 
         pure (exC ((frei Γ reserved)) (L.ga g) cn.1 ++ cr.1, max (max cn.2 ((frei Γ reserved) + 4)) cr.2)
       else none
     else none
-  | _, Γ, _, .bindAxiomElse a args _ _ _ _ _ _ err rest, reserved =>
-    match L.tor a, D.aerg a with
-    | some b, some answer =>
-      if fehlGut (D.agruende a) b.fehler = true ∧ fallibleTy answer = true ∧ 0 < D.agruende a ∧
-          valueWords (.why (D.agruende a)) = 1 then do
-        let ct ← torC (reserved := reserved) L a args ((frei Γ reserved))
-        let ck ← chkC (some answer) ((frei Γ reserved))
-        let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
-        let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
-        if 16 + 16 * (6 * b.fehler.length) + 16 * (ck.length + cr.1.length) < 2 ^ 31 then
-          pure (ct.1 ++ fehlC ((frei Γ reserved)) b.fehler ((16 * (ck.length + cr.1.length) : Nat) : Int) ++ ck ++ cr.1 ++ ce.1,
-            max ct.2 (max ((frei Γ reserved) + 10) (max cr.2 ce.2)))
-        else none
-      else none
-    | _, _ => none
+  | _, Γ, _, .bindAxiomElse (τ := τ) a args _ _ _ _ _ _ err rest, reserved => do
+    let ce ← lowEnd (reserved := reserved) passes A L layout ens pr ex err
+    let cr ← lowEnd (reserved := reserved) passes A L layout ens pr (exPlus ex ce.1.length) rest
+    let cg ← fallibleForeignC L a args τ (frei Γ reserved) cr.1.length reserved
+    pure (cg.1 ++ cr.1 ++ ce.1, max cg.2 (max cr.2 ce.2))
   | _, Γ, _, .retScoped e _, reserved => lowRetScoped L layout ens (frei Γ reserved) e reserved
   | _, Γ, _, .retWhyScoped r _, reserved => lowRetWhyScoped layout r (frei Γ reserved)
   | _, _, _, _, reserved => none
