@@ -10,7 +10,7 @@ public import Grammatik.Kern.Semantik.Maschine.T1.Teil1
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}
-variable {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 /-- **Frame and trace of a LEAF, plain release-aware (`GutRet`).**
 

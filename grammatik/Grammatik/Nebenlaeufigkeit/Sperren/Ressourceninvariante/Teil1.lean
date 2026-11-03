@@ -175,6 +175,7 @@ theorem refInv81_guard : Sum.inl () ∈ refD.braucht () :=
 theorem pc1_speicher_le (M : GenMaschine refD) (pc : PCStand)
     (hreach : PCReach refP refO 0 refB_prog (GenStart refSp0) M pc)
     (hle : pc 1 ≤ 1) : M.speicher = refSp0 := by
+  revert hle
   induction hreach with
   | start => intro _; rfl
   | step M M' pc pc' f hreachM hs ih =>

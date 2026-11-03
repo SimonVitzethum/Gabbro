@@ -140,7 +140,8 @@ theorem kern_prim_var : ∀ (a : String) (rest : List Token) (F : Nat),
     ruhigSuff_nopar rest hrs
   have hgeneric : ∀ R, rest ≠ .zeichen "::" :: .zeichen "[" :: R := by
     simpa only [suffToks, List.nil_append] using suffToks_nogeneric [] rest hrs
-  simp only [parseKopf, nameText_nameTok, hseg, rufKopf_ohne, hgeneric, hmiss] at ⊢
+  simp only [parseKopf, nameText_nameTok, hseg] at ⊢
+  rw [rufKopf_ohne _ _ _ _ hgeneric hmiss]
   have hF3 : 1 ≤ F'' := by omega
   obtain ⟨F''', rfl⟩ : ∃ F''', F'' = F''' + 1 := ⟨F'' - 1, by omega⟩
   exact stopSuffix F''' _ _ hrs

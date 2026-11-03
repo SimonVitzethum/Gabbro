@@ -114,7 +114,7 @@ theorem negative_expression_correct (word : String) (lo hi value : Int)
   have h2 : lo ≤ value - lo ∧ value - lo ≤ hi := by omega
   have h3 : lo ≤ value ∧ value ≤ hi := by omega
   have hsum : lo + (value - lo) = value := by omega
-  simp [uKonstWert, hw, h1, h2, h3, hsum, Int.toNat_of_nonneg h0, strEq]
+  simp [uKonstWert, uKonstEval, hw, h1, h2, h3, hsum, Int.toNat_of_nonneg h0, strEq]
 
 /-- Coverage of every selected signed builtin range, independently of the source alias spelling. -/
 theorem negative_materializes (env : List (String × (Int × Int))) (fns : List UKonstFn)

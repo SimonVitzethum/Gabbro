@@ -33,13 +33,14 @@
   half is `rufAt_vertraege` below. The FRAME half was carried as a named
   hypothesis (`RufRahmenTreu`) for one day, because `rufAt_gut` (`Satz.lean`)
   proves the frame only at worlds meeting
-  `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` and
-  part 4 quantifies over ANY world. `RahmenTreu.lean` now proves it at every
-  world (`rufAt_treu`), by the same induction over the grammar with the lock
-  discipline deleted from the conclusion: the frame and the held set never
-  needed it, only the trace QUALITY did. So `rufAt_nurAbstieg` is
-  unconditional in that hypothesis. See `messung/muse/OPUS-BERICHT-RAHMEN.md`
-  and `-KONGRUENZ.md`.
+  `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt`.
+  `RahmenTreu.lean` proves it wherever that entry discipline holds
+  (`rufAt_treu`, by the same induction over the grammar with the trace
+  quality deleted from the conclusion): the frame and the held set never
+  needed the trace, but collapsing a callee release to an equality needs the
+  entry discipline -- part 4 as stated quantifies over ANY world, so
+  `rufAt_nurAbstieg` still needs the entry discipline (or vacuous scopes)
+  there. See `messung/muse/OPUS-BERICHT-RAHMEN.md` and `-KONGRUENZ.md`.
 -/
 module
 public import Grammatik.Logik.Vertraege.RahmenTreu

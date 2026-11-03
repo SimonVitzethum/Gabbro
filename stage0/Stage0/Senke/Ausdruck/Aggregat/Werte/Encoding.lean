@@ -52,6 +52,15 @@ def encodeProduct (L : Lay D) (fs : List Ty)
   if fs = [] then [0] else encodeProductFields L fs v
 end
 
+/-- The integer branch of `encodeWords` as an equation (the mutual definition is not unfolded by `change`). -/
+theorem encodeWords_int (L : Lay D) (lo hi : Int) (v : Wert D (.int lo hi)) :
+    encodeWords L (.int lo hi) v = integerEncoding (integerWords lo hi) v.n := by
+  rw [encodeWords.eq_def]
+
+theorem encodeWords_prod (L : Lay D) (name : Nat) (fs : List Ty) (v : Wert D (.prod name fs)) :
+    encodeWords L (.prod name fs) v = encodeProduct L fs v := by
+  rw [encodeWords.eq_def]
+
 /-- Width is determined entirely by the declared type, never by runtime contents. -/
 theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     (encodeWords L τ v).length = valueWords τ := by

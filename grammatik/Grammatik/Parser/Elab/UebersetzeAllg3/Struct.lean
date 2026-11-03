@@ -7,7 +7,7 @@ public import Grammatik.Parser.Namen.Oeffentlich
 import all Init.Data.Repr
 import all Init.Data.String.Defs
 import all Init.Data.String.Basic
-public import Grammatik.Parser.Elab.UebersetzeAllg3.Kopf
+public import Grammatik.Parser.Elab.UebersetzeAllg3.CallElse
 
 @[expose] public section
 

@@ -266,17 +266,17 @@ theorem verbrauchLauf_kongruent {l : Bool} {Γ : Ctx} (t : D.Tab)
       · rw [if_pos hc, if_pos hc]; exact Or.inl rfl
       · rw [if_neg hc, if_neg hc]
         obtain ⟨σr, w, b⟩ := sel (inv σ ρ).1 ρ
-        cases w with
-        | none =>
-            cases b with
-            | false => exact Or.inl rfl
-            | true => exact Or.inl rfl
+        cases b <;> cases w with
+        | none => exact Or.inl rfl
         | some v =>
+            simp only
             obtain ⟨σm, m⟩ := massW σr ρ
+            simp only
             rcases hs σm (.cons v ρ) with h | ⟨m', h1, hE⟩
             · rw [h]
               cases hx : s₂ σm (Env.cons v ρ) with
               | ok σ' ρ' =>
+                  dsimp only
                   by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
                       (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
                   · rw [if_pos hfall, if_pos hfall]
@@ -284,6 +284,7 @@ theorem verbrauchLauf_kongruent {l : Bool} {Γ : Ctx} (t : D.Tab)
                       hs n (massW σ' ρ'.tail).1 ρ'.tail
                   · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
               | next hl σ' ρ' =>
+                  dsimp only
                   by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
                       (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
                   · rw [if_pos hfall, if_pos hfall]
@@ -291,13 +292,7 @@ theorem verbrauchLauf_kongruent {l : Bool} {Γ : Ctx} (t : D.Tab)
                       hs n (massW σ' ρ'.tail).1 ρ'.tail
                   · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
               | leave hl σ' ρ' =>
-                  by_cases hfall : 0 ≤ (massW σ' ρ'.tail).2 ∧
-                      (massW σ' ρ'.tail).2 ≤ bound ∧ (massW σ' ρ'.tail).2 < m
-                  · rw [if_pos hfall, if_pos hfall]
-                    by_cases hc' : (inv σ' ρ'.tail).2 = true
-                    · rw [if_pos hc', if_pos hc']; exact Or.inl rfl
-                    · rw [if_neg hc', if_neg hc']; exact Or.inl rfl
-                  · rw [if_neg hfall, if_neg hfall]; exact Or.inl rfl
+                  exact Or.inl rfl
               | zurueck σ' v => exact Or.inl rfl
               | why σ' r => exact Or.inl rfl
               | logik e => exact Or.inl rfl

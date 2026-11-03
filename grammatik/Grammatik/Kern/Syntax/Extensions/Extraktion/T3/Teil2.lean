@@ -1,17 +1,41 @@
 module
+
 public import Grammatik.Kern.Syntax.Extensions.Extraktion.T2
 public import Grammatik.Kern.Syntax.Extensions.Extraktion.T3.Teil1
+
 @[expose] public section
+
 namespace Gabbro.Grammatik.Extraktion
 variable {D : Deklaration}
+
+-- Binary expressions share the footprint induction over the appended operand places.
+set_option hygiene false in
+local macro "footprint_binary" a:term:max b:term:max : tactic => `(tactic| (
+  have ha := eval_liest_nur_orte $a os
+    (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
+    σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+  have hb := eval_liest_nur_orte $b os
+    (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
+    σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
+  simp only [eval]
+  rw [ha, hb]))
+
 mutual
+
 /-- **Der Fussabdruck-Schlussstein (R1, Ausdruck):** `eval` liest nur
     `Expr.orte`. Stimmen zwei Welten -- Eintritt wie Gegenwart -- auf allen
     Orten von `os` ueberein, und deckt `os` die Orte von `e`, so liefert
     `eval` denselben Wert. Die Liste `os` bleibt durch die Induktion
     unveraendert stehen; nur die Deckung (`hsub`) wandert zu den
     Teilausdruecken. -/
-theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) (os : List (D.Tab ⊕ D.Glob)) (hsub : ∀ o ∈ e.orte, o ∈ os) (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ) (hS : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ.slots t k f = σ'.slots t k f) (hSG : ∀ g : D.Glob, .inr g ∈ os → σ.globs g = σ'.globs g) (h0T : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ₀.slots t k f = σ₀'.slots t k f) (h0G : ∀ g : D.Glob, .inr g ∈ os → σ₀.globs g = σ₀'.globs g) :
+theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) (os : List (D.Tab ⊕ D.Glob))
+    (hsub : ∀ o ∈ e.orte, o ∈ os)
+    (σ₀ σ₀' σ σ' : World D) (ρ : Env D Γ)
+    (hS : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ.slots t k f = σ'.slots t k f)
+    (hSG : ∀ g : D.Glob, .inr g ∈ os → σ.globs g = σ'.globs g)
+    (h0T : ∀ t : D.Tab, .inl t ∈ os → ∀ k f, σ₀.slots t k f = σ₀'.slots t k f)
+    (h0G : ∀ g : D.Glob, .inr g ∈ os → σ₀.globs g = σ₀'.globs g) :
     eval σ₀ e σ ρ = eval σ₀' e σ' ρ := by
   match e with
   | .lit _ => rfl
@@ -29,17 +53,20 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
       simp only [eval]
       exact h0G g (hsub _ (by simp only [Expr.orte, List.mem_cons, List.not_mem_nil, or_false]))
   | .slot t f i _ =>
-      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact hS t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .oldS t f i _ =>
-      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_cons_of_mem _ ho))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact h0T t (hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])) _ _
   | .thru _ t _ f i _ =>
-      have hi := eval_liest_nur_orte i os (fun o ho => hsub o (List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ ho))))
+      have hi := eval_liest_nur_orte i os
+        (fun o ho => hsub o (List.mem_append.mpr (Or.inr (List.mem_cons_of_mem _ ho))))
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [eval, hi]
       exact hS t (hsub _ (by simp only [Expr.orte, List.mem_append, List.mem_cons, true_or, or_true])) _ _
@@ -92,176 +119,43 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
       simp only [eval]
       rw [hn]
   | .add a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .sub a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .mul a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .div _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .rem _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .sdiv _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .srem _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .band _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .bor _ _ _ _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .bxor _ _ _ _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .shl _ _ _ _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .shr _ _ _ _ _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .lt a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .le a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .eq a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .fllt a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .flle a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .and a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .or a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .getBytes t f hf n i _ _ _ =>
       have hmemT : .inl t ∈ os := hsub _ (by simp only [Expr.orte, List.mem_cons, true_or])
       have hi := eval_liest_nur_orte i os
@@ -314,59 +208,17 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
   | .arrNil => rfl
   | .strLit _ _ => rfl
   | .arrCons a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .arrGet a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .strCat a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .strGet a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .strEq a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .strLt a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .arrSet a i v =>
       have ha := eval_liest_nur_orte a os
         (fun o ho => hsub o (List.mem_append.mpr (Or.inl (List.mem_append.mpr (Or.inl ho)))))
@@ -420,14 +272,7 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
       simp only [eval]
       rw [ha]
   | .intBuiltin2 _ a b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
   | .count n body =>
       have hbody : ∀ k : Zahl 0 ((n : Int) - 1), k ∈ alleIndizes (n : Int) →
           wahr? (eval σ₀ body σ (.cons k ρ)) = wahr? (eval σ₀' body σ' (.cons k ρ)) := by
@@ -449,14 +294,8 @@ theorem eval_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D
       simp only [eval]
       rw [ha]
   | .prodSet a _ b =>
-      have ha := eval_liest_nur_orte a os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inl ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      have hb := eval_liest_nur_orte b os
-        (fun o ho => hsub o (List.mem_append.mpr (Or.inr ho)))
-        σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
-      simp only [eval]
-      rw [ha, hb]
+      footprint_binary a b
+
 /-- Die Nutzlast D.Fn D.passt liest nur ihre Orte: die zweite Haelfte des Schlusssteins. -/
 theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
     (nutz : NutzlastExpr D Γ Λ c) (os : List (D.Tab ⊕ D.Glob))
@@ -474,6 +313,7 @@ theorem evalNutz_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {c : Option Ty}
         (fun o ho => hsub o ho) σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [evalNutz]
       rw [h]
+
 /-- The field arguments read only their places: the product half of the stone. -/
 theorem evalProd_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
     (args : Args D Γ Λ fs) (os : List (D.Tab ⊕ D.Glob))
@@ -495,5 +335,6 @@ theorem evalProd_liest_nur_orte {Γ : Ctx} {Λ : List (Res D)} {fs : List Ty}
         σ₀ σ₀' σ σ' ρ hS hSG h0T h0G
       simp only [evalProd]
       rw [he, hr]
+
 end
 end Gabbro.Grammatik.Extraktion

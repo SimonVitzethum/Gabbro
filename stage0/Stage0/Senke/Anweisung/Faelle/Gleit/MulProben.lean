@@ -10,19 +10,6 @@ open Gabbro.Grammatik FloatProbe ControlProbe Runner.IR
 set_option maxRecDepth 100000
 set_option maxHeartbeats 8000000
 
-/-- Evaluate distinct operands through the public hook, then compare the
-    rounded product against an independently specified rational result. -/
-def multiplication (a b expected : Int × Int) : Body :=
-  .floatLit a (0, 1) (10, 1)
-    (.floatLit b (0, 1) (10, 1)
-      (.float .mul (.var (.there .here)) (.var .here) (0, 1) (10, 1)
-        (.floatLit expected (0, 1) (10, 1)
-          (.cons (.ite
-            (.and (.flle (.var (.there .here)) (.var .here))
-              (.flle (.var .here) (.var (.there .here))))
-            (returnBlock 7 (by decide) (by decide))
-            (returnBlock 41 (by decide) (by decide))) .nil))))
-
 /-- The same retained-input pipeline is used by Block emission. This lower
     interface additionally admits nonfinite words, for the dispatcher tests. -/
 def multiplicationImage (a b expected : Nat) : Except String (List Runner.B) :=
@@ -31,20 +18,20 @@ def multiplicationImage (a b expected : Nat) : Except String (List Runner.B) :=
 
 /-- A normal-by-normal product is accepted through the actual Block hook. -/
 theorem float_mul_accepted_zeuge :
-    (blockImageOf (multiplication (3, 2) (2, 1) (3, 1))).isOk = true := by
+    (blockImageOf (binaryArithmetic .mul (3, 2) (2, 1) (3, 1))).isOk = true := by
   decide +kernel
 
 /-- The exact product contains a low bit below the retained significand.
     Rounding (1 + 2^-52)^2 removes that bit and retains both higher ones. -/
 theorem float_mul_rounding_accepted_zeuge :
-    (blockImageOf (multiplication (2 ^ 52 + 1, 2 ^ 52) (2 ^ 52 + 1, 2 ^ 52)
+    (blockImageOf (binaryArithmetic .mul (2 ^ 52 + 1, 2 ^ 52) (2 ^ 52 + 1, 2 ^ 52)
       (2 ^ 51 + 1, 2 ^ 51))).isOk = true ∧
     softMul 4607182418800017409 4607182418800017409 = 4607182418800017410 := by
   decide +kernel
 
 /-- A normal-by-normal product reaches a subnormal result without flushing. -/
 theorem float_mul_subnormal_accepted_zeuge :
-    (blockImageOf (multiplication (1, 2 ^ 1022) (1, 2) (1, 2 ^ 1023))).isOk = true ∧
+    (blockImageOf (binaryArithmetic .mul (1, 2 ^ 1022) (1, 2) (1, 2 ^ 1023))).isOk = true ∧
     softMul 4503599627370496 4602678819172646912 = 2251799813685248 := by
   decide +kernel
 
@@ -59,10 +46,10 @@ theorem float_mul_invalid_accepted_zeuge :
 /-- Execution images for the assembly runner. Expected exit 7 means that
     both Block comparisons or the exact result-word comparison succeeded. -/
 def multiplicationImages : List (String × Except String (List Runner.B) × Nat) :=
-  [("float-mul-normal", blockImageOf (multiplication (3, 2) (2, 1) (3, 1)), 7),
+  [("float-mul-normal", blockImageOf (binaryArithmetic .mul (3, 2) (2, 1) (3, 1)), 7),
    ("float-mul-rounding", blockImageOf
-      (multiplication (2 ^ 52 + 1, 2 ^ 52) (2 ^ 52 + 1, 2 ^ 52) (2 ^ 51 + 1, 2 ^ 51)), 7),
-   ("float-mul-subnormal", blockImageOf (multiplication (1, 2 ^ 1022) (1, 2) (1, 2 ^ 1023)), 7),
+      (binaryArithmetic .mul (2 ^ 52 + 1, 2 ^ 52) (2 ^ 52 + 1, 2 ^ 52) (2 ^ 51 + 1, 2 ^ 51)), 7),
+   ("float-mul-subnormal", blockImageOf (binaryArithmetic .mul (1, 2 ^ 1022) (1, 2) (1, 2 ^ 1023)), 7),
    ("float-mul-invalid", multiplicationImage 0 9218868437227405312 9218868437227405313, 7),
    ("float-mul-negative-zero", multiplicationImage 9223372036854775808 4607182418800017408
       9223372036854775808, 7),

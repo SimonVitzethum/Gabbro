@@ -120,6 +120,9 @@ def checkLiteralBody (globals locals : List String) : SAnw → Except String Uni
     checkLiteralExpression globals locals place
     checkLiteralExpression globals locals value
   | .shift place _ _ | .free place | .trimReq place _ => checkLiteralExpression globals locals place
+  | .callElse name args reason body => do
+    checkLiteralExpression globals locals (.call name args)
+    checkLiteralBody globals (reason :: locals) body
   | .call name args | .callQ name args => checkLiteralExpression globals locals (.call name args)
   | .genericCall name words args =>
     checkLiteralExpression globals locals (.ext .instantiate (name :: words) args)

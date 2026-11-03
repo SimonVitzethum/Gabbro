@@ -90,7 +90,7 @@ theorem softMulNormalizeIndexL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem �
     (ha : WordCode (L := L) ρ W a av) :
     WordCode (L := L) ρ W (fun d => softMulNormalizeIndexL d a)
       (softMulNormalizeIndexWord av) := by
-  have index := WordCode.bin (routineIndexL_ok ha) (WordCode.const 64 (by decide))
+  have index : WordCode (L := L) ρ W _ _ := WordCode.bin (routineIndexL_ok ha) (WordCode.const 64 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
   exact WordCode.bin index (softMulNormalizeCountL_word ha)
     (g := fun x y => some (x - y)) rfl rfl (by decide : 4 < 256)

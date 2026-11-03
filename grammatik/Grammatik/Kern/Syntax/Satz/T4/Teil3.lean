@@ -101,13 +101,13 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
       simp only [rufAt] at h ⊢
       have g0 : Gut (D.schreibt f) (D.gschreibt f) σ _ :=
         gut_lese σ _ _ (P.requires f).orte_darf hh.heldIn
-      split at h ⊢
+      revert h; split <;> intro h
       · simp only [RufAusgang.welt, reduceCtorEq] at h
       · have hb := end_gutB O passes (rufAt P O passes n) ih hO (D.signatur f).boden
           (bodenUnter_refl _) (P.rumpf f)
           (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ (hP f) (by exact hS f)
           (residHeld_anfang (D.signatur f)) (g0.heldB hh)
-        split at h ⊢
+        revert h; split <;> intro h
         · rename_i σ2 v hs
           have hbb := hb σ2 (by rw [hs]; rfl); rw [hs] at hbb
           have g2 : Gut (D.schreibt f) (D.gschreibt f) _ σ2 := hbb.toGut_entry (g0.heldB hh)
@@ -116,12 +116,12 @@ theorem rufAt_gut (P : Programm D) (O : Orakel D) (passes : Nat) (hO : GutO O) (
           have g3 : Gut (D.schreibt f) (D.gschreibt f) σ2 _ :=
             gut_lese σ2 (vertragVon D f).ende _ (P.ensures f).orte_darf
               (by intro L hL; exact hh2.heldIn L ((held_anfang _ L).mpr ((held_ende _ L).mp hL)))
-          split at h ⊢
+          revert h; split <;> intro h
           · simp only [RufAusgang.welt, reduceCtorEq] at h
           · have g4 := gut_foldl_lese (W := D.schreibt f) (G := D.gschreibt f) P f
               (D.invs.filter (schuldet f)) _
               (fun i hi => (List.mem_filter.mp hi).2) (g3.heldB hh2).heldIn
-            split at h ⊢
+            revert h; split <;> intro h
             · simp only [RufAusgang.welt, reduceCtorEq] at h
             · simp only [RufAusgang.welt, Option.some.injEq] at h; subst h
               exact ((g0.trans g2).trans g3).trans g4

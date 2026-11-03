@@ -5,6 +5,7 @@ public import Stage0.Senke.Gleit.RoutineSpecial
 
 namespace Gabbro.Stage0.Senke
 open Gabbro.Grammatik Runner.IR
+variable [Kern]
 
 /-- Unpacking has input-independent instruction counts and uses only the
     following temporary slots, including the two-slot constant builder. -/

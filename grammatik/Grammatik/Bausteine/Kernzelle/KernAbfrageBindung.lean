@@ -393,7 +393,7 @@ theorem ruEnd_bindetAxE {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .ite _ t e, _ => kongr₂ (· || ·) (ruEnd_bindetAxE t _) (ruEnd_bindetAxE e _)
 
 /-- The body translation keeps the binding observation on tagged arms. -/
-theorem ruArms_bindetAx {V : vertrag D} : ∀ {l : Bool} {Γ : Ctx}
+theorem ruArms_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option Ty)}
     (arms : Arms D V l Γ Λ Λ' cs) (q : D.Ax),
     bindetAxArms (D := D.mitRuhe) q (ruArms arms) = bindetAxArms q arms
@@ -401,7 +401,7 @@ theorem ruArms_bindetAx {V : vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, _, _, .cons b rest, _ => kongr₂ (· || ·) (ruB_bindetAx b _) (ruArms_bindetAx rest _)
 
 /-- The body translation keeps the binding observation on reason arms. -/
-theorem ruGArms_bindetAx {V : vertrag D} : ∀ {l : Bool} {Γ : Ctx}
+theorem ruGArms_bindetAx {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {n : Nat} (arms : GrundArms D V l Γ Λ Λ' n) (q : D.Ax),
     bindetAxGArms (D := D.mitRuhe) q (ruGArms arms) = bindetAxGArms q arms
   | _, _, _, _, _, .nil, _ => rfl

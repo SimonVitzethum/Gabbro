@@ -18,6 +18,11 @@ def value {D : Deklaration} : Wert D shape := fun i =>
 def env {D : Deklaration} : Env D [shape] := .cons value .nil
 def code : List II := copyWords 3 8 4
 
+theorem value_encoding {D : Deklaration} (L : Lay D) :
+    encodeWords L shape (value (D := D)) = [1, 2, 3] := by
+  simp only [encodeWords.eq_def, shape, elementEncoding]
+  rfl
+
 def memory : Runner.Mem where
   b a := if a.toNat < 48 then
       ((code.flatMap (fun i => Runner.Prog.insB i.o i.a i.b i.c))[a.toNat]?).getD 0
@@ -41,7 +46,7 @@ theorem code_at : CodeAt memory 0 code := by
     simp only [code, copyWords, List.getElem_cons_zero, List.getElem_cons_succ] <;> decide +kernel
 
 theorem input_at {D : Deklaration} (L : Lay D) : ValueAt L memory 4096 4 shape (value (D := D)) := by
-  have encoded : encodeWords L shape (value (D := D)) = [1, 2, 3] := by rfl
+  have encoded := value_encoding L
   constructor
   · intro i; trivial
   · change WordsAt memory 4096 4 (encodeWords L shape value)
@@ -56,7 +61,7 @@ theorem encodeWords_length_zeuge {D : Deklaration} (L : Lay D) :
     encodeWords L shape (value (D := D)) = [1, 2, 3] ∧
     (encodeWords L (.arr shape 2) (fun _ => value)).length = 6 ∧
     (encodeEnv L (env (D := D))).length = 3 := by
-  exact ⟨rfl, encodeWords_length L (.arr shape 2) (fun _ => value), encodeEnv_length L env⟩
+  exact ⟨value_encoding L, encodeWords_length L (.arr shape 2) (fun _ => value), encodeEnv_length L env⟩
 
 theorem copyValue_run_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     ValueOk L memory 0 4096 16 8 code shape (value (D := D)) := by
@@ -76,7 +81,7 @@ theorem env_at {D : Deklaration} (L : Lay D) : EnvAt L memory 4096 env := by
 
 theorem var_value_ok_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     ValueOk L memory 0 4096 16 8 code shape (value (D := D)) := by
-  apply var_value_ok (ρ := env) (W := fun _ => True) (Λ := []) (reserved := 0) (.here : Var [shape] shape)
+  apply var_value_ok (currentOld := false) (ρ := env) (W := fun _ => True) (Λ := []) (reserved := 0) (.here : Var [shape] shape)
     (top := 11) (by rfl) (by decide)
   exact ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
     code_at, by unfold CodeFar; decide, env_at L, trivial, wstab_true _ _⟩
@@ -93,14 +98,20 @@ def parameterMemory : Runner.Mem where
 theorem parameters_ok_zeuge [Kern] {D : Deklaration} (L : Lay D) :
     Executes parameterMemory 0 4096 16 FB parameterCode
       (fun m' => EnvAt L m' 4096 (env (D := D)) ∧ True) := by
+  have encoded : encodeEnv L (env (D := D)) = [1, 2, 3] := by
+    simpa only [env, encodeEnv, List.nil_append] using value_encoding L
+  change Executes parameterMemory 0 4096 16 (FB + 0) (constWords [1, 2, 3] (FB + 0)).1
+    (fun m' => EnvAt L m' 4096 (env (D := D)) ∧ True)
+  rw [← encoded]
   apply parameters_ok (L := L) (Γ := [shape]) (reserved := 0) (W := fun _ => True) (env (D := D))
   · intro τ x
     cases x with
     | here => intro i; trivial
     | there x => nomatch x
-  · change (constWords [1, 2, 3] FB).2 ≤ 16
+  · rw [encoded]
     decide +kernel
-  · refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
+  · rw [encoded]
+    refine ⟨by decide, by decide, ⟨by decide, fun _ _ => rfl, fun _ _ => rfl⟩,
       ?_, ?_, ?_, trivial, wstab_true _ _⟩
     · change CodeAt parameterMemory 0 parameterCode
       have program : parameterCode = [ci 1 4 1 0, ci 1 5 2 0, ci 1 6 3 0] := by decide +kernel
