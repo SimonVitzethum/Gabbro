@@ -56,6 +56,8 @@ open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz.BudgetZeuge
 abbrev Λ0 : List (Res bD) := Signatur.anfang bD (bD.signatur ())
 
 theorem hpB : RufPasst bD (vertragVon bD ()) (bD.signatur ()) Λ0 where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (bD.signatur ()).owner)
   hw := fun t => t.elim
   hg := fun g => g.elim
   hk := ⟨[], List.Perm.refl [], by simp only [List.nil_sublist]⟩

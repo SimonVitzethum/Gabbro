@@ -217,7 +217,7 @@ theorem map_prod_id {α β : Type} (l : List (α × β)) : l.map (Prod.map (fun 
 
 theorem sigE_einE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : (einE D g₀).sigE S = S := by
   cases S with
-  | mk params erg gruende haelt schreibt gschreibt konsumiert produziert boden =>
+  | mk params erg gruende haelt schreibt gschreibt konsumiert produziert boden owner =>
     simp only [Einbettung.sigE]
     congr 1
     · conv => rhs; rw [← List.map_id params]
@@ -228,6 +228,8 @@ theorem sigE_einE (S : Signatur D.Tab D.Glob D.Lock D.Marke) : (einE D g₀).sig
     · exact List.map_id' haelt
     · exact map_prod_id konsumiert
     · exact map_prod_id produziert
+    · cases owner
+      simp only [OwnerFlow.map, map_prod_id, List.map_id']
 
 /-- A cast between array types acts on every element. -/
 theorem arr_cast {F : Type} {P : F → Nat → Bool} {a b : Ty} {n : Nat}

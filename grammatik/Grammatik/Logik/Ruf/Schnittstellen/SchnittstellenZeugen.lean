@@ -10,41 +10,47 @@ namespace Gabbro.Grammatik.C06
 -- are supplied by the same fixture; none of these proofs assumes a duty.
 theorem ptrPost_prefix_zeuge :
     (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ :=
-  ptrPost_prefix prog entry later entry later arguments ⟨3, by decide, by decide⟩
-    rfl (by intro o h; cases h) (by intro o h; cases h)
+  ptrPost_prefix prog (n := 0) entry entry entry later arguments ⟨3, by decide, by decide⟩
+    (by rfl) (GleichAuf.refl _ _)
+    ⟨(by intro t h; cases h), (by intro g h; cases h)⟩
 
 theorem ptrReq_prefix_stmt_zeuge :
     ReqAmEintritt prog true entry (umsig pointer.property arguments) := by
   have h := ptrReq_prefix_stmt refinement operand operands entry entry arguments
     rfl (GleichAuf.refl _ _) rfl
-  simpa using h
+  change ReqAmEintritt prog true entry (umsig pointer.property arguments) at h
+  exact h
 
 theorem ptrEns_prefix_stmt_zeuge :
     (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ := by
   have h := ptrEns_prefix_stmt refinement operand operands entry entry arguments
-    rfl (GleichAuf.refl _ _) rfl later later ⟨3, by decide, by decide⟩ rfl
+    rfl (GleichAuf.refl _ _) rfl later later ⟨3, by decide, by decide⟩ (by rfl)
     (GleichAuf.refl _ _)
-  simpa using h
+  change (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ at h
+  exact h
 
 theorem PtrRufPflicht.torRuf_zeuge :
     torRuf prog handler true entry (umsig pointer.property arguments) =
       handler true entry (umsig pointer.property arguments) := by
   have h := Gabbro.Grammatik.PtrRufPflicht.torRuf refinement handler
     (p := operand) (args := operands) (σ := entry) (ρ := arguments) rfl
-  simpa using h
+  change torRuf prog handler true entry (umsig pointer.property arguments) =
+    handler true entry (umsig pointer.property arguments) at h
+  exact h
 
 theorem PtrRufPflicht.ens_zeuge :
     (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ := by
   have h := Gabbro.Grammatik.PtrRufPflicht.ens refinement
     (p := operand) (args := operands) (σ := entry) (ρ := arguments)
-    rfl later ⟨3, by decide, by decide⟩ rfl
-  simpa using h
+    rfl later ⟨3, by decide, by decide⟩ (by rfl)
+  change (prog.ptrVertrag 0).postHolds entry later arguments ⟨3, by decide, by decide⟩ at h
+  exact h
 
 theorem PtrVerfeinert.ens_zeuge :
     (prog.ptrVertrag 0).postHolds entry later arguments
       (ptrResult pointer.property ⟨3, by decide, by decide⟩) :=
   Gabbro.Grammatik.PtrVerfeinert.ens refinement pointer entry later arguments
-    ⟨3, by decide, by decide⟩ rfl rfl
+    ⟨3, by decide, by decide⟩ (by rfl) (by rfl)
 
 end Gabbro.Grammatik.C06
 
@@ -56,7 +62,12 @@ namespace Gabbro.Grammatik.C06.Locked
   { mD with
     sigNr := fun _ => mSig [.int 0 100] [()] [.konto]
     passt := fun _ _ => true
-    passt_ok := fun _ _ _ => SigPasst.refl _ _ }
+    passt_ok := fun _ _ _ => SigPasst.refl _ _
+    eigner_nie_erzeugt := fun _ _ _ _ _ h => List.not_mem_nil h
+    invarianten_gehalten := fun _ _ _ c hc L hL => by
+      simp only [List.mem_singleton] at hc
+      subst hc
+      cases hL }
 
 @[expose] def predicate {Γ : Ctx} : Expr decl Γ [.held ()] .bool :=
   .eq (.slot .konto () (.widen (by decide) (by decide) (.lit 0))
@@ -75,10 +86,14 @@ namespace Gabbro.Grammatik.C06.Locked
   ⟨fun _ => [.inl .konto], fun _ s => decide ((s.slots .konto 0 ()).n = 0)⟩
 
 theorem permissions :
-    RufPasst decl (vertragVon decl MFn.setze) (decl.sigNr 0) [.held ()] := by
-  refine { hw := fun _ h => h, hg := fun g => nomatch g,
-    hk := ⟨[], List.Perm.refl [], by decide⟩,
-    hh := by decide, hx := by decide }
+    RufPasst decl (vertragVon decl MFn.setze) (decl.sigNr 0) [.held ()] where
+  hw := fun _ h => h
+  hg := fun g => nomatch g
+  hk := ⟨[], List.Perm.refl [], by decide⟩
+  hh := by decide
+  hx := by decide
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (decl.sigNr 0).owner)
 
 theorem footprint : FussS prog locks (fun _ => false) MFn.setze := by
   constructor

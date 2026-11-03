@@ -116,6 +116,8 @@ theorem erkE_maschine_zeuge :
 /-! ## The call form of the section theorem, on the same program -/
 
 theorem hpL : RufPasst FDL FVL (FDL.signatur ()) HL where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (FDL.signatur ()).owner)
   hw := fun _ _ => rfl
   hg := fun _ _ => rfl
   hk := ⟨[], List.Perm.nil, List.nil_sublist _⟩

@@ -220,6 +220,8 @@ def taEnsFuelle : Expr taD (ErgCtx (taD.params taFuelle) (taD.erg taFuelle))
 
 /-- `haupt0` calls `fuelle`: same lock, the callee's writes are the caller's. -/
 theorem taHpFuelle : RufPasst taD (vertragVon taD taHaupt0) (taD.signatur taFuelle) taLL where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (taD.signatur taFuelle).owner)
   hw := fun _ _ => rfl
   hg := fun _ h => by cases h
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩

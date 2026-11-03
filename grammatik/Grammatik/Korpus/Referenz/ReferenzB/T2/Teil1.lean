@@ -110,7 +110,7 @@ def refM2F : RufMaschineF refD :=
        ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
         .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
           refHpLiesAt rfl)
-          (.ret .empty (by rfl))⟩⟩,
+          (.ret .empty (by simp [Vertrag.ende]))⟩⟩,
       (((refM1F.weltVon 1).lese [Res.held (D := refD) ()]
         (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
         refK0 () refV100).spur,
@@ -126,7 +126,7 @@ theorem refSchrittBF : RufSchrittF refP refO 0 refM1F 1 refM2F := by
         .cons refWriteStAt
           (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
             refHpLiesAt rfl)
-            (.ret .empty (by rfl)))⟩ := rfl
+            (.ret .empty (by simp [Vertrag.ende])))⟩ := rfl
   have hstep : (execStmt refO 0 keinRuf refWriteStAt
       (refM1F.weltVon 1) refRho7) =
       Ausgang.ok (D := refD) (V := vertragVon refD refEin)
@@ -181,7 +181,7 @@ theorem refSchrittCF : RufSchrittF refP refO 0 refM2F 1 refM3F := by
       ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
         .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
           refHpLiesAt rfl)
-          (.ret .empty (by rfl))⟩ := rfl
+          (.ret .empty (by simp [Vertrag.ende]))⟩ := rfl
   have hs0 : refM2F.weltVon 1 =
       (refM2F.weltVon 1).lese [Res.held (D := refD) ()]
         (Args.orte refArgsLies) := rfl
@@ -206,7 +206,7 @@ def refCallerFF : RufRahmenF refD :=
    ⟨false, [.int 0 10], [Res.held (D := refD) ()], refRho7,
     .cons (.call (V := vertragVon refD refEin) refLies refArgsLies
       refHpLiesAt rfl)
-      (.ret .empty (by rfl))⟩⟩
+      (.ret .empty (by simp [Vertrag.ende]))⟩⟩
 
 /-- The return value: the cap `100` at the `lies` result type. -/
 def refV100back : ErgVal refD (refD.erg refLies) :=

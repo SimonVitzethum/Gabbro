@@ -205,6 +205,8 @@ theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
     (hx : ∀ L, Res.held L ∈ Λ → L ∈ (kD.signatur callee).haelt)
     (hk : (kD.signatur callee).konsumiert = []) (hbc : (kD.signatur caller).boden = none) :
     RufPasst kD (vertragVon kD caller) (kD.signatur callee) Λ where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (kD.signatur callee).owner)
   hw := hw
   hg := fun g => (nomatch g)
   hb := fun c hc => by

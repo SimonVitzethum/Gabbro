@@ -136,6 +136,8 @@ def r4Schreib : Stmt r4D (vertragVon r4D r4Ein) false r4GEin r4M r4M :=
 
 /-- `einzahlen` calls `lies`: same lock, `lies` writes nothing. -/
 theorem r4HpLies : RufPasst r4D (vertragVon r4D r4Ein) (r4D.signatur r4Lies) r4M where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (r4D.signatur r4Lies).owner)
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
@@ -178,6 +180,8 @@ def r4EnsLies : Expr r4D (ErgCtx (r4D.params r4Lies) (r4D.erg r4Lies)) (vertragV
 
 /-- The driver (flagged addition): `einzahlen(&Konto, 0, 7); lies(&Konto, 0); return`. -/
 theorem r4HpEinT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Ein) r4M where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (r4D.signatur r4Ein).owner)
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩
@@ -189,6 +193,8 @@ theorem r4HpEinT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Ein) 
     exact ⟨fun _ => List.mem_singleton.mpr rfl, fun _ => List.mem_singleton.mpr rfl⟩)
 
 theorem r4HpLiesT : RufPasst r4D (vertragVon r4D r4Treiber) (r4D.signatur r4Lies) r4M where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (r4D.signatur r4Lies).owner)
   hw := fun _ _ => rfl
   hg := fun g => nomatch g
   hk := ⟨[], List.Perm.refl [], by simp only [List.Sublist.refl, List.Sublist.cons]⟩

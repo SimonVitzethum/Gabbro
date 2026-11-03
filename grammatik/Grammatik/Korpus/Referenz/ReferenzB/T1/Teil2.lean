@@ -23,7 +23,7 @@ def refM2B : RufMaschineD refD :=
         .cons (.call (V := vertragVon refD (refM1B.faeden 1).kopf.f)
           refLies refArgsLies
           (refHpLiesAt) rfl)
-          (.ret .empty (by rfl))⟩⟩,
+          (.ret .empty (by simp [Vertrag.ende]))⟩⟩,
       (((refM1B.weltVon 1).lese [Res.held (D := refD) ()]
         (refIdxEin.orte ++ refHundert.orte)).schreibSlot () [Res.held (D := refD) ()]
         refK0 () refV100).spur,
@@ -40,7 +40,7 @@ theorem refM1rest :
         .cons (refEin_start ▸ refWriteSt)
           (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
             refHpLiesAt rfl)
-            (.ret .empty (by rfl)))⟩ := rfl
+            (.ret .empty (by simp [Vertrag.ende])))⟩ := rfl
 
 /-- Step B: thread 1 fires the write `konto[0] := 100`. Every `blatt`
     premise is a named `rfl` fact about the `assignSlot` equation. -/
@@ -50,7 +50,7 @@ theorem refSchrittB : RufSchrittD refP refO 0 refM1B 1 refM2B := by
         .cons refWriteStAt
           (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
             refHpLiesAt rfl)
-            (.ret .empty (by rfl)))⟩ := rfl
+            (.ret .empty (by simp [Vertrag.ende])))⟩ := rfl
   have hstep : (execStmt refO 0 keinRuf refWriteStAt
       (refM1B.weltVon 1) refRho7).welt =
       some (((refM1B.weltVon 1).lese [Res.held (D := refD) ()]

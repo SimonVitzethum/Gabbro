@@ -42,12 +42,12 @@ namespace K59
 /-- `zaehle(i)`: `Takte.slots[i].stand = 1;`. -/
 def kRumpfZaehle : Endblock kD (vertragVon kD kZaehle) false [Ty.index 64] kLT :=
   .cons (.assignSlot KTab.takte () (.var .here) kEins rfl kDarfTakte)
-    (.ret .empty (by rfl))
+    (.ret .empty (by simp [Vertrag.ende]))
 
 /-- `bearbeite(i)`: `Auftraege.slots[i].stand = 1;`. -/
 def kRumpfBearbeite : Endblock kD (vertragVon kD kBearbeite) false [Ty.index 16] kLR :=
   .cons (.assignSlot KTab.auftraege () (.var .here) kEins rfl kDarfAuftr)
-    (.ret .empty (by rfl))
+    (.ret .empty (by simp [Vertrag.ende]))
 
 /-- The call `zaehle(0)` inside `takt_verteiler`'s lock. -/
 def kRufZ : Stmt kD (vertragVon kD kTaktVert) false [] kLT kLT :=

@@ -187,6 +187,8 @@ theorem kHp (caller callee : kD.Fn) {Λ : List (Res kD)}
     (hx : ∀ L, Res.held L ∈ Λ → L ∈ (kD.signatur callee).haelt)
     (hk : (kD.signatur callee).konsumiert = []) (hbc : (kD.signatur caller).boden = none) :
     RufPasst kD (vertragVon kD caller) (kD.signatur callee) Λ where
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (kD.signatur callee).owner)
   hw := hw
   hg := fun g => (nomatch g)
   hb := fun c hc => by
@@ -219,7 +221,7 @@ theorem kHpPruefe : RufPasst kD (vertragVon kD kHauptA) (kD.signatur kPruefeA) [
 /-- `setze(x)`: `konto.slots[0].stand = x; konto.slots[1].stand = x;`. -/
 def kRumpfSetze : Endblock kD (vertragVon kD kSetze) false [.int 0 100] kL :=
   .cons (.assignSlot KTab.konto () kI0 (.var .here) rfl kDarfK)
-    (.cons (.assignSlot KTab.konto () kI1 (.var .here) rfl kDarfK) (.ret .empty (by rfl)))
+    (.cons (.assignSlot KTab.konto () kI1 (.var .here) rfl kDarfK) (.ret .empty (by simp [Vertrag.ende])))
 
 /-- `pruefeA()`: `return privA.slots[0].stand;`. -/
 def kRumpfP : Endblock kD (vertragVon kD kPruefeA) false [] [] :=
