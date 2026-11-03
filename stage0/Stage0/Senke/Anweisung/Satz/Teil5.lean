@@ -152,6 +152,7 @@ theorem lowS_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
       c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
 
   | _, Γ, Λ, _, .consumeTraverse t member edge inv bound mass body, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
+    -- The consuming image recompiles its body with protected control words and resolved exits.
     exact consumeTraverse_case (O := O) (passes := passes) (σ0 := σ0) hS hA hlo0 hens
       (t := t) (member := member) (edge := edge) (inv := inv) (bound := bound) (mass := mass) (body := body)
       (fun {pr ex} => lowB_ok hS hA hlo0 hens body)
