@@ -29,7 +29,8 @@ theorem denominator_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upp
     have := Int.pow_pos (n := (2 : Int)) (m := integerFloatShift (eval σ₀ e σ ρ).n.natAbs) (by decide)
     omega
   have upper : (2 : Int) ^ integerFloatShift (eval σ₀ e σ ρ).n.natAbs ≤ 2 ^ w := by
-    exact_mod_cast Nat.pow_le_pow_right (by decide : 0 < 2) count
+    have power := Int.ofNat_le.mpr (Nat.pow_le_pow_right (by decide : 0 < 2) count)
+    simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using power
   simp [denominator, eval, Zahl.shl, shift, lower, upper]
 
 theorem sticky_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
