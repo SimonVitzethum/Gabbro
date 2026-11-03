@@ -44,12 +44,18 @@ theorem dropBytes_bytes (j : Nat) (bs : List Byte) :
       rw [show j + 1 = 1 + j by omega, dropBytes_add]
       simp only [dropBytes, div, List.drop_succ_cons, ih]
 
-theorem bytesAb_length (σ : World D) (t : D.Tab) (f : D.Feld t)
-    (hf : D.typ t f = .int 0 255) (n : Nat) (p : Int) :
-    (σ.bytesAb t f hf n p).length = n := by
-  induction n generalizing p with
+/-- Adjacent chunks concatenate to precisely the original machine-G read span. -/
+theorem World.bytesAb_append (σ : World D) (t : D.Tab) (f : D.Feld t)
+    (hf : D.typ t f = .int 0 255) (k n : Nat) (p : Int) :
+    σ.bytesAb t f hf (k + n) p =
+      σ.bytesAb t f hf k p ++ σ.bytesAb t f hf n (p + k) := by
+  induction k generalizing p with
   | zero => rfl
-  | succ n ih => simp only [World.bytesAb, List.length_cons, ih]
+  | succ k ih =>
+    simp only [Nat.succ_add, World.bytesAb, ih, List.cons_append,
+      Int.natCast_add, Int.natCast_one]
+    congr 1
+    omega
 
 theorem bytesAb_drop (σ : World D) (t : D.Tab) (f : D.Feld t)
     (hf : D.typ t f = .int 0 255) (k n : Nat) (p : Int) :
@@ -82,15 +88,15 @@ theorem bytes_chunk_word (σ : World D) (t : D.Tab) (f : D.Feld t)
       BitVec.ofInt 64 (bytesZuZahl (σ.bytesAb t f hf (min 8 n) p)) := by
   by_cases short : n ≤ 8
   · rw [Nat.min_eq_right short]
-  · let bs := σ.bytesAb t f hf n p
-    have split := bytesZuZahl_append (bs.take 8) (bs.drop 8)
-    rw [List.take_append_drop] at split
-    have len : (bs.take 8).length = 8 := by simp [bs, bytesAb_length]; omega
-    rw [len] at split
-    rw [split, BitVec.ofInt_add, BitVec.ofInt_mul]
+  · have chunks : σ.bytesAb t f hf n p =
+        σ.bytesAb t f hf 8 p ++ σ.bytesAb t f hf (n - 8) (p + 8) := by
+      rw [← World.bytesAb_append]
+      congr 1
+      omega
+    rw [chunks, bytesZuZahl_append, World.bytesAb_length, BitVec.ofInt_add, BitVec.ofInt_mul]
     have zero : BitVec.ofInt 64 ((256 : Int) ^ 8) = 0 := by decide
     rw [zero, BitVec.zero_mul, BitVec.add_zero]
-    rw [bytesAb_take]
+    rw [Nat.min_eq_left (by omega : 8 ≤ n)]
 
 /-- Dropping a complete limb agrees with advancing by one bounded chunk. -/
 theorem bytes_chunk_quotient (σ : World D) (t : D.Tab) (f : D.Feld t)
