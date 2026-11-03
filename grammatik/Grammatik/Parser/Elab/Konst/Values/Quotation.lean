@@ -122,7 +122,7 @@ def reifyPayload {D : Deklaration} {Γ : Ctx} (schemas : List USum) (texts : Lis
     Nat → (c : Option Ty) → (value : Nutzlast D.Fn D.passt c) →
       Except String (ReifiedPayload D Γ schemas c value)
   | 0, _, _ => .error "const payload quotation exhausted its structural limit"
-  | _ + 1, none, _ => .ok ⟨none, .empty, .empty, by intros; rfl⟩
+  | _ + 1, none, () => .ok ⟨none, .empty, .empty, by intros; rfl⟩
   | fuel + 1, some τ, value => do
     let quoted ← reify schemas texts fuel τ value
     return ⟨some quoted.syntax, .val quoted.expr, .val quoted.syntax value quoted.source,
