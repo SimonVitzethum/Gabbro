@@ -1,124 +1,110 @@
-/-
-  File:      Grammatik/BitVecProben.lean
-  Subject:   MEASURE bv_decide ON BIT-VECTOR OBLIGATIONS (lane 181).
-
-  Standalone measurement file: NOT imported by `Grammatik.lean`, so the project's
-  axiom discipline is untouched. Build it separately with
-  `lean grammatik/Grammatik/BitVecProben.lean` (toolchain `Std` only -- no mathlib,
-  no project imports). Uses `bv_decide`, never `native_decide` (forbidden).
-
-  SOURCES
-    (a) The QF_BV-shaped obligations of `dokumente/GABBROV.md` /
-        `programmlogik/gabbrov/V1.lean` (the 55 sayable of the 66 L rows) and
-        `dokumente/PFLICHTEN.md` (range / wraparound / layout rows). "QF_BV-shaped"
-        means: the statement is a quantifier-free formula over fixed-width
-        values once table domains are instantiated -- propositional combinations
-        of equalities, order tests, shifts and masks. Rows that need `countD`,
-        `firstD`, `reachesIn`, or a state BETWEEN pre and post are NOT in this
-        shape and are listed in CUTS, not tried here.
-    (b) Four kernel idioms the task names: lowest-set-bit clear, power-of-two
-        alignment, page-table index, a CRC-8 step -- plus a modular-inverse
-        Newton step as the nonlinear probe.
-
-  Every theorem below is a VALID BitVec fact (each was checked against an
-  independent Python model before it was written down here); `bv_decide` is
-  measured as the CLOSER, not as the oracle. `#print axioms` after each proof
-  records exactly what it rests on.
--/
+/- Kernel-checked bit-vector obligations from contracts and kernel idioms.
+   These standalone probes use bit extensionality, modular arithmetic and
+   small finite kernel computations. Every theorem prints its dependencies. -/
 module
-public import Std.Tactic.BVDecide
-public meta import Std.Tactic.BVDecide.Reflect
+public import Init.Data.BitVec.Bitblast
 @[expose] public section
-
 
 namespace Gabbro.Grammatik.BitVecProben
 
-/-! ## A. Doc-sourced QF obligations, stated over `BitVec`.
-
-    Each entry names its source row. What is stated is the load-bearing
-    bit-vector fact BEHIND the row (a `requires` clause itself is an assumption
-    about a state, not a tautology, so there is nothing to close). -/
-
-/-- A1 -- OR of disjoint status bits is their sum (behind V1 L36-L39,
-    PFLICHTEN F4:773-779: "the OR of a subset is its sum"). -/
+/-- A1 -- OR of disjoint status bits is their sum. -/
 theorem a1_virtio_or_sum (s : BitVec 8) :
     s &&& (3 : BitVec 8) = 0 → s + 3 = s ||| 3 := by
-  bv_decide
+  exact BitVec.add_eq_or_of_and_eq_zero s 3
 
-/-- A2 -- clearing then setting a status bit sets it (behind V1 L40,
-    PFLICHTEN F4:780-782: "a reset applies from EVERY state"). -/
+/-- A2 -- clearing then setting a status bit sets it. -/
 theorem a2_reset_sets (v : BitVec 8) :
     ((v &&& ~~~(1 : BitVec 8)) ||| 1) &&& 1 = 1 := by
-  bv_decide
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_or, BitVec.getLsbD_not,
+    hi, decide_true, Bool.true_and]
+  cases v.getLsbD i <;> cases (1 : BitVec 8).getLsbD i <;> decide
 
-/-- A3 -- frame reconstruction: low 12 bits plus shifted high part
-    (PFLICHTEN F9:1514-1516: "the frame is bits 51..12 x 4096"). -/
+/-- A3 -- low 12 bits plus the shifted high part reconstruct the frame. -/
 theorem a3_frame_split (va : BitVec 64) :
     ((va >>> 12) <<< 12) ||| (va &&& (0xFFF : BitVec 64)) = va := by
-  bv_decide
+  change ((va >>> 12) <<< 12) |||
+    (va &&& BitVec.ofNat 64 (2 ^ 12 - 1)) = va
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  simp only [BitVec.getLsbD_or, BitVec.getLsbD_shiftLeft,
+    BitVec.getLsbD_ushiftRight, BitVec.getLsbD_and, BitVec.getLsbD_ofNat,
+    Nat.testBit_two_pow_sub_one]
+  by_cases low : i < 12
+  · simp [hi, low]
+  · simp [hi, low, show 12 + (i - 12) = i by omega]
 
-/-- A4 -- W^X per instance (V1 L64, PFLICHTEN F9: W^X over the page table). -/
+/-- A4 -- W^X per page-table instance. -/
 theorem a4_wx_bit (w x : BitVec 1) :
     ¬(w = 1 ∧ x = 1) ↔ (w &&& x) = 0 := by
-  bv_decide
+  rcases BitVec.eq_zero_or_eq_one w with rfl | rfl <;>
+    rcases BitVec.eq_zero_or_eq_one x with rfl | rfl <;> decide
 
-/-- A5 -- the refcount fell by exactly one (V1 L08, PFLICHTEN F1 delete_leaf). -/
+/-- A5 -- the refcount fell by exactly one. -/
 theorem a5_refcount_down (n : BitVec 16) :
     n ≠ 0 → n - (n - 1) = 1 := by
-  bv_decide
+  bv_omega
 
-/-- A6 -- token consumption decreases (V1 L66, PFLICHTEN F10:1656). -/
+/-- A6 -- consuming a nonzero token decreases its count. -/
 theorem a6_token_down (n : BitVec 8) :
     n ≠ 0 → n - 1 < n := by
-  bv_decide
+  bv_omega
 
-/-- A7 -- a wrapping addition had a nonzero length (the overflow half behind
-    V1 L49, PFLICHTEN F5:992-993: "the request lies inside the range"). -/
+/-- A7 -- a wrapping addition had a nonzero length. -/
 theorem a7_wrap_nonzero (s l : BitVec 8) :
     (s + l < s) → l ≠ 0 := by
-  bv_decide
+  bv_omega
 
-/-- A8 -- a masked index is in range (the M103 shape behind PFLICHTEN
-    F1:142-149 "every index into CapObjects lies below 4096"). -/
+/-- A8 -- a masked index is in range. -/
 theorem a8_mask_bound (i : BitVec 64) :
     (i &&& (0xFFF : BitVec 64)) < (4096 : BitVec 64) := by
-  bv_decide
+  rw [BitVec.lt_def, BitVec.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
-/-- A9 -- a single-bit device write preserves every other bit (behind
-    PFLICHTEN F2:400 `mirrors` and F2:450-453: "carrying every bit but the
-    one the transition names"). -/
+/-- A9 -- a single-bit write preserves every other bit. -/
 theorem a9_single_bit_update (g : BitVec 32) :
     (((g &&& ~~~(1 : BitVec 32)) ||| 1) &&& ~~~(1 : BitVec 32))
       = g &&& ~~~(1 : BitVec 32) := by
-  bv_decide
-
-/-! ## B. Kernel idioms (task §4: "3-5 obligations from real kernel idioms"). -/
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_or, BitVec.getLsbD_not,
+    hi, decide_true, Bool.true_and]
+  cases g.getLsbD i <;> cases (1 : BitVec 32).getLsbD i <;> decide
 
 /-- K1 -- lowest-set-bit clear/isolate partition, at full 64-bit width. -/
 theorem k1_lsb_partition (x : BitVec 64) :
     (x &&& (x - 1)) ||| (x &&& -x) = x := by
-  bv_decide
+  rw [← BitVec.not_neg x, ← BitVec.and_or_distrib_left,
+    BitVec.not_or_self, BitVec.and_allOnes]
 
 /-- K2a -- align-up to 4096 yields a multiple of 4096. -/
 theorem k2a_align_mult (x : BitVec 64) :
     (((x + 4095) &&& ~~~(4095 : BitVec 64)) &&& (4095 : BitVec 64)) = 0 := by
-  bv_decide
+  rw [BitVec.and_assoc, BitVec.not_and_self, BitVec.and_zero]
 
 /-- K2b -- align-up is the identity on aligned addresses. -/
 theorem k2b_align_idem (x : BitVec 64) :
     x &&& (4095 : BitVec 64) = 0 →
       (x + 4095) &&& ~~~(4095 : BitVec 64) = x := by
-  bv_decide
+  intro aligned
+  rw [BitVec.add_eq_or_of_and_eq_zero x 4095 aligned,
+    BitVec.and_or_distrib_right, BitVec.and_not_self, BitVec.or_zero]
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  have bit := congrArg (fun v : BitVec 64 => v.getLsbD i) aligned
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_zero] at bit
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_not,
+    hi, decide_true, Bool.true_and]
+  cases x.getLsbD i <;> cases (4095 : BitVec 64).getLsbD i <;> simp_all
 
-/-- K3 -- page-table index extraction is in range (PFLICHTEN F2:505-510,
-    the second-level PTE layout; also F9). -/
+/-- K3 -- page-table index extraction is in range. -/
 theorem k3_pt_index (va : BitVec 64) :
     ((va >>> 12) &&& (0x1FF : BitVec 64)) < (512 : BitVec 64) := by
-  bv_decide
+  rw [BitVec.lt_def, BitVec.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
-/-- K4 -- one CRC-8 byte step, MSB-first, polynomial 0x07, init folded in
-    (`s0 = d`, i.e. init 0). Eight explicit steps: `bv_decide` treats a
-    plain `def` as opaque, so call sites `unfold` it first. -/
+/-- K4 -- one CRC-8 byte, MSB-first, polynomial 0x07, init folded in. -/
 def crc8Byte (d : BitVec 8) : BitVec 8 :=
   let s0 := d
   let s1 := if s0.msb then (s0 <<< 1) ^^^ (0x07 : BitVec 8) else s0 <<< 1
@@ -131,35 +117,75 @@ def crc8Byte (d : BitVec 8) : BitVec 8 :=
   let s8 := if s7.msb then (s7 <<< 1) ^^^ (0x07 : BitVec 8) else s7 <<< 1
   s8
 
-/-- K4a -- closed known answers (checked against an independent Python model:
-    CRC-8/ITU check value of "123456789" is 0xF4 with the same parameters). -/
+private def crc8Step (x : BitVec 8) : BitVec 8 :=
+  if x.msb then (x <<< 1) ^^^ 7 else x <<< 1
+
+private theorem crc8Step_linear (a b : BitVec 8) :
+    crc8Step (a ^^^ b) = crc8Step a ^^^ crc8Step b := by
+  unfold crc8Step
+  rw [BitVec.msb_xor]
+  cases ha : a.msb <;> cases hb : b.msb <;>
+    simp only [ha, hb, Bool.false_xor, Bool.true_xor, Bool.not_false,
+      Bool.not_true, Bool.false_eq_true, ite_false, ite_true,
+      BitVec.shiftLeft_xor_distrib]
+  all_goals
+    apply BitVec.eq_of_getLsbD_eq_iff.mpr
+    intro i hi
+    simp only [BitVec.getLsbD_xor]
+    cases (a <<< 1).getLsbD i <;> cases (b <<< 1).getLsbD i <;>
+      cases (7 : BitVec 8).getLsbD i <;> decide
+
+/-- K4a -- closed known answer for a zero byte. -/
 theorem k4a_crc_zero : crc8Byte 0x00 = 0x00 := by
-  unfold crc8Byte
-  bv_decide
+  decide +kernel
 
+/-- The all-ones byte has CRC-8 value 0xF3. -/
 theorem k4a_crc_ff : crc8Byte 0xFF = 0xF3 := by
-  unfold crc8Byte
-  bv_decide
+  decide +kernel
 
-/-- K4b -- CRC-8 with init 0 is GF(2)-linear (all 65536 pairs checked in
-    Python before stating). -/
+/-- K4b -- eight linear steps give a GF(2)-linear CRC byte operation. -/
 theorem k4b_crc_linear (a b : BitVec 8) :
     crc8Byte (a ^^^ b) = crc8Byte a ^^^ crc8Byte b := by
-  unfold crc8Byte
-  bv_decide
+  change crc8Step (crc8Step (crc8Step (crc8Step
+    (crc8Step (crc8Step (crc8Step (crc8Step (a ^^^ b)))))))) =
+    crc8Step (crc8Step (crc8Step (crc8Step
+      (crc8Step (crc8Step (crc8Step (crc8Step a))))))) ^^^
+    crc8Step (crc8Step (crc8Step (crc8Step
+      (crc8Step (crc8Step (crc8Step (crc8Step b)))))))
+  simp only [crc8Step_linear]
 
-/-- K5 -- one Newton step for the odd modular inverse: if `x` is odd then
-    `x * (2 - x) = 1 mod 4` (the nonlinear probe: 32-bit multiplication). -/
+/-- K5 -- one Newton step gives the odd modular inverse modulo four. -/
 theorem k5_newton_mod4 (x : BitVec 32) :
     (x &&& (1 : BitVec 32)) = 1 → ((x * (2 - x)) &&& (3 : BitVec 32)) = 1 := by
-  bv_decide
+  intro odd
+  have small : ∀ y : BitVec 2, y &&& 1 = 1 → (y * (2 - y)) &&& 3 = 1 := by
+    clear odd x
+    decide +kernel
+  have oddLow := congrArg (BitVec.setWidth 2) odd
+  change (x &&& BitVec.ofNat 32 1).setWidth 2 = (BitVec.ofNat 32 1).setWidth 2 at oddLow
+  simp only [BitVec.setWidth_and,
+    BitVec.setWidth_ofNat_of_le (by decide : 2 ≤ 32)] at oddLow
+  have subtractLow : ((2 : BitVec 32) - x).setWidth 2 = 2 - x.setWidth 2 := by
+    bv_omega
+  have resultLow : ((x * (2 - x)) &&& (3 : BitVec 32)).setWidth 2 =
+      (1 : BitVec 32).setWidth 2 := by
+    simp only [BitVec.setWidth_and, BitVec.setWidth_mul _ _ (by decide : 2 ≤ 32),
+      subtractLow, show (3 : BitVec 32).setWidth 2 = 3 from rfl,
+      show (1 : BitVec 32).setWidth 2 = 1 from rfl]
+    exact small (x.setWidth 2) oddLow
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  by_cases low : i < 2
+  · have bit := congrArg (fun v : BitVec 2 => v.getLsbD i) resultLow
+    simpa only [BitVec.getLsbD_setWidth, low, decide_true, Bool.true_and] using bit
+  · change ((x * (2 - x)) &&& BitVec.ofNat 32 (2 ^ 2 - 1)).getLsbD i =
+      (BitVec.ofNat 32 (2 ^ 0)).getLsbD i
+    simp only [BitVec.getLsbD_and, BitVec.getLsbD_ofNat,
+      Nat.testBit_two_pow_sub_one, Nat.testBit_two_pow,
+      low, decide_false, Bool.and_false, Bool.false_and,
+      show ¬ (0 = i) by omega]
 
-/-! ## C. The kernel-only route: `decide` on small widths.
-
-    No SAT call, no native evaluation, no per-computation axiom -- kernel
-    reduction only. Width 4 keeps the exhaustive check instant. -/
-
-/-- C1 -- the K1 shape at width 4, closed by kernel `decide`. -/
+/-- C1 -- the lowest-set-bit partition also has a small exhaustive witness. -/
 theorem c1_kernel_lsb4 (x : BitVec 4) :
     (x &&& (x - 1)) ||| (x &&& -x) = x := by
   decide +revert

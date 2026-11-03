@@ -2,8 +2,6 @@
 module
 public import Stage0.Senke.Gleit.Normal.Pack
 public import Stage0.Senke.Gleit.RoutineModel
-import Std.Tactic.BVDecide
-meta import Std.Tactic.BVDecide.Reflect
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -11,8 +9,22 @@ open Gabbro.Grammatik Gleitkomma Runner.IR
 
 private theorem packUnpack (w : Runner.W) :
     packWord (unpackSignWord w) (unpackBexpWord w) (unpackFracWord w) = w := by
-  simp only [packWord, unpackSignWord, unpackBexpWord, unpackFracWord]
-  bv_decide
+  change ((((w >>> 63) <<< 63) |||
+      (((w >>> 52) &&& BitVec.ofNat 64 (2 ^ 11 - 1)) <<< 52)) |||
+      (w &&& BitVec.ofNat 64 (2 ^ 52 - 1))) = w
+  apply BitVec.eq_of_getLsbD_eq_iff.mpr
+  intro i hi
+  simp only [BitVec.getLsbD_or, BitVec.getLsbD_and,
+    BitVec.getLsbD_shiftLeft, BitVec.getLsbD_ushiftRight,
+    BitVec.getLsbD_ofNat, Nat.testBit_two_pow_sub_one]
+  by_cases low : i < 52
+  · simp [hi, low, show i < 63 by omega]
+  · by_cases middle : i < 63
+    · simp [hi, low, middle, show i - 52 < 64 by omega,
+        show i - 52 < 11 by omega, show 52 + (i - 52) = i by omega]
+    · have top : i = 63 := by omega
+      subst i
+      simp
 
 /-- Reconstruct the canonical encoding from the existing field extraction
     correspondence. Packing introduces neither a second decoder nor masks. -/
@@ -78,8 +90,14 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
       ((Runner.IR.bool (decide (q = 2 ^ 53))).toNat % 64) =
       BitVec.ofNat 64 (softCarry q) := by
     by_cases hc : q = 2 ^ 53
-    · rw [hc]
-      decide +kernel
+    · simp only [softCarry, hc, decide_true, Runner.IR.bool, ite_true]
+      apply BitVec.eq_of_toNat_eq
+      simp only [BitVec.toNat_ushiftRight, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt (by decide : 2 ^ 53 < 2 ^ 64),
+        Nat.mod_eq_of_lt (by decide : 2 ^ 52 < 2 ^ 64)]
+      change (2 ^ 53 : Nat) >>> 1 = 2 ^ 52
+      rw [Nat.shiftRight_eq_div_pow]
+      decide
     · simp only [softCarry, hc, decide_false, Runner.IR.bool,
         Bool.false_eq_true, ite_false]
       simp
@@ -99,13 +117,17 @@ theorem routineRoundPackWord_model (s : Bool) (e n : Nat)
   · simp only [finite, decide_true, ite_true]
     by_cases subnormal : softCarry q < 2 ^ 52
     · simp only [subnormal, decide_true, ite_true]
-      exact packWord_canonical ⟨s, 0, softCarry q⟩ ⟨by decide, subnormal⟩
+      simpa only [float_bits] using
+        packWord_canonical ⟨s, 0, softCarry q⟩ ⟨by decide, subnormal⟩
     · simp only [subnormal, decide_false, Bool.false_eq_true, ite_false]
       rw [BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) (by omega)]
-      exact packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
-        ⟨by change softCarryExp e q ≤ 2047; omega, by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
+      simpa only [float_bits] using
+        packWord_canonical ⟨s, softCarryExp e q, softCarry q - 2 ^ 52⟩
+          ⟨by change softCarryExp e q ≤ 2047; omega,
+            by change softCarry q - 2 ^ 52 < 2 ^ 52; omega⟩
   · simp only [finite, decide_false, Bool.false_eq_true, ite_false]
-    exact packWord_canonical ⟨s, 2047, 0⟩ ⟨by decide, by decide⟩
+    simpa only [float_bits] using
+      packWord_canonical ⟨s, 2047, 0⟩ ⟨by decide, by decide⟩
 
 /-- The same continuation reaches a normal tie, a subnormal result and an
     overflowing carry. Every fixture satisfies the model theorem's bounds. -/
