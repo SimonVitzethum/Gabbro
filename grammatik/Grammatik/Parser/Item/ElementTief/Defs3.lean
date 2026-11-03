@@ -163,7 +163,7 @@ def parseRcuTief (f : Nat) (toks : List Token) :
               | .error e => .error e
               | .ok r => .ok (.rcuT n ps none, r)
 
-/-- `entrust n at m arch a { regs in {…} stack s assume g ; }`. -/
+/-- `entrust n at Code arch a via service;`; register handover is parsed for named refusal. -/
 def parseAnvertrautTief (f : Nat) (toks : List Token) :
     Except String (SItemTief × List Token) :=
   match f with
@@ -180,7 +180,13 @@ def parseAnvertrautTief (f : Nat) (toks : List Token) :
             | .error e => .error e
             | .ok r5 => match nimmName r5 with
               | .error e => .error e
-              | .ok (a, r6) => match fordereZeichen "{" r6 with
+              | .ok (a, r6) =>
+  match r6 with
+  | .wort "via" :: tail => do
+    let (service, tail) ← nimmName tail
+    let tail ← fordereZeichen ";" tail
+    pure (.trustT n m a [] "" "" (some service), tail)
+  | _ => match fordereZeichen "{" r6 with
                 | .error e => .error e
                 | .ok r7 => match nimmWort "regs" r7 with
                   | .error e => .error e
@@ -204,7 +210,7 @@ def parseAnvertrautTief (f : Nat) (toks : List Token) :
                                   match fordereZeichen "}" r15 with
                                   | .error e => .error e
                                   | .ok r => .ok
-                                    (.trustT n m a ri st g, r)
+                                    (.trustT n m a ri st g none, r)
 
 def parseBootSchritte (f : Nat) (toks : List Token) :
     Except String (List SBootSchritt × List Token) :=
