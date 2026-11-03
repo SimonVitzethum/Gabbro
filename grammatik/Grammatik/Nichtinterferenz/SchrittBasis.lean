@@ -101,7 +101,7 @@ def kScoped (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f))
   | [] => match a with
       | .inl v => kPop st f rho σ v
       | .inr r => kPopGrund st f rho σ.spur σ.speicher r
-  | _ :: _ => kLokal st f rho ρ (.aufraeumen ⟨a, σ.ohneSnapshot⟩ remaining) σ.spur σ.speicher
+  | _ :: _ => kLokal (l := l) st f rho ρ (.aufraeumen ⟨a, σ.ohneSnapshot⟩ remaining) σ.spur σ.speicher
 
 /-- `leave` at the head of a `dann` residue, by the continuation behind it. -/
 def kLeave (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) :
@@ -197,11 +197,11 @@ def kRufEnde (P : Programm D) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D
       let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
       match eval s0 p s0 ρ with
       | ⟨g, hg⟩ => kPush P st f rho ρ (.ende rest) g (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
-  | _, _, Λ, _, ρ, .retScoped e R, _ =>
+  | l, _, Λ, _, ρ, .retScoped e R, _ =>
       let σ := (sp.welt spur).lese Λ e.orte
-      kScoped st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes
-  | _, _, _, _, ρ, .retWhyScoped r R, _ =>
-      kScoped st f rho ρ (.inr r) (sp.welt spur) R.scopes
+      kScoped (l := l) st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes
+  | l, _, _, _, ρ, .retWhyScoped r R, _ =>
+      kScoped (l := l) st f rho ρ (.inr r) (sp.welt spur) R.scopes
   | _, _, _, _, _, _, _ => none
 
 /-- Calls in `dann` position (`rufDann`, `dannCallInd`). -/
@@ -215,11 +215,11 @@ def kRufDann (P : Programm D) (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D
       let s0 := (sp.welt spur).lese Λ (p.orte ++ args.orte)
       match eval s0 p s0 ρ with
       | ⟨g, hg⟩ => kPush P st f rho ρ (.dann rest k) g (umsig hg (evalArgs s0 args s0 ρ)) s0.spur sp
-  | _, _, Λ, _, _, ρ, .retScoped e R, _, _ =>
+  | l, _, Λ, _, _, ρ, .retScoped e R, _, _ =>
       let σ := (sp.welt spur).lese Λ e.orte
-      kScoped st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes
-  | _, _, _, _, _, ρ, .retWhyScoped r R, _, _ =>
-      kScoped st f rho ρ (.inr r) (sp.welt spur) R.scopes
+      kScoped (l := l) st f rho ρ (.inl (evalErg σ e σ ρ)) σ R.scopes
+  | l, _, _, _, _, ρ, .retWhyScoped r R, _, _ =>
+      kScoped (l := l) st f rho ρ (.inr r) (sp.welt spur) R.scopes
   | _, _, _, _, _, _, _, _, _ => none
 
 /-- A compound step in `dann` position. The program and oracle keep the
