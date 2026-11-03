@@ -1,6 +1,7 @@
 /- Fallible statement calls discard success values and bind only the reason. -/
 module
 public import Stage0.Senke.Anweisung.Satz.Teil2OptNoneElse
+public import Stage0.Senke.Tore.FallibleRun
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke
@@ -102,24 +103,20 @@ theorem stmtAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   simp only [lowS, ← hlo0] at h
   split at h
   · next b answer hb hτ =>
-    split at h
-    · next hc =>
-      obtain ⟨hf, hlo', hn, hwhy⟩ := hc
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ct, tt⟩, ht, ck, hck, ⟨ce, te⟩, hce, hc⟩ := h
-      split at hc
-      · next hJ =>
-        simp only [Option.some.injEq, Prod.mk.injEq] at hc
-        obtain ⟨rfl, rfl⟩ := hc
-        have hg := torElse_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) hτ hτ hb hf hlo' hn ht hck
-          (cr := [ci 18 (16 * (ce.length + 1)) 0 0]) hJ (by omega) (by omega) hW hp hWa
-        apply discardGate_result hlo0 hwhy hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
-        rcases hg with ⟨v, m2, w, ha, st, ag, _, _, hw⟩ | ⟨r, m2, ha, st, ag, wr, hw⟩ | ⟨ha, stop⟩
-        · exact .inl ⟨v, m2, ha, by simpa only [List.length_append, fehlC_len] using st, ag, hw⟩
-        · exact .inr (.inl ⟨r, m2, ha, by simpa only [List.length_append, List.length_singleton, fehlC_len] using st, ag, wr, hw⟩)
-        · exact .inr (.inr ⟨ha, stop⟩)
-      · cases hc
-    · cases h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨⟨ce, te⟩, hce, ⟨cg, tg⟩, hg, hc⟩ := h
+    simp only [Prod.mk.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := hc
+    have metadata := fallibleForeignC_top hg
+    have hgate := fallibleForeignC_ok (O := O) (σ := σ.lese Λ args.orte) (ρ := ρ) hτ hg
+      (success := [ci 18 (16 * (ce.length + 1)) 0 0]) (by omega) hW hp hWa
+    apply discardGate_result hlo0 metadata.2.2 hce (by omega) (by omega) hs hW hp hlo hlo2 hu hk hpr ihErr
+    rcases hgate with ⟨v, m2, decoded, run, changed, value, world⟩ |
+        ⟨reason, m2, decoded, run, changed, read, world⟩ | invalid
+    · exact .inl ⟨v, m2, decoded, run, changed, world⟩
+    · exact .inr (.inl ⟨reason, m2, decoded, by simpa only [List.length_singleton] using run,
+        changed, read, world⟩)
+    · exact .inr (.inr invalid)
   · next b hb hτ =>
     split at h
     · next hc =>
