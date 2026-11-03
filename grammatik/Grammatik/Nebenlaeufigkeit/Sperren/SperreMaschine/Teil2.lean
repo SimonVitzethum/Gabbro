@@ -245,7 +245,7 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           by simp only [rufUpdateG_self]; rfl⟩))
     | rueckFreigabeLetzte ρ a L hhead z hantwort =>
         simp only [rufUpdateG_self, rufAntwortG_spur hantwort]
-        exact Or.inr (Or.inr (Or.inr ⟨_, _, ρ, a, L, [], hhead, rfl, rfl⟩))
+        exact Or.inr (Or.inr (Or.inr ⟨_, _, ρ, a, L, [], hhead, by trivial, by trivial⟩))
     | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z ha =>
         simp only [rufUpdateG_self, rufAntwortG_spur ha]
         subst σ₁
