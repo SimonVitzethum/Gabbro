@@ -69,7 +69,7 @@ def kBinde (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) (σ : World D)
     the completed residue has no expression or live local bindings. -/
 def kPop (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (σ : World D) (v : ErgVal D (vertragVon D f).erg) : KErg D :=
   match st with
-  | [] => kLokal [] f rho rho (.zurueckgekehrt (.inl v)) σ.spur σ.speicher
+  | [] => kLokal [] f rho rho (.zurueckgekehrt (l := false) (.inl v)) σ.spur σ.speicher
   | c :: rst =>
       if c.rest.2.2.2.2.wartend = true then kBinde f rst c σ v
       else some (⟨rst, c, σ.spur⟩, σ.speicher)
@@ -79,7 +79,7 @@ def kPop (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (σ : Wor
 def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
     KErg D :=
   match st with
-  | [] => kLokal [] f rho rho (.zurueckgekehrt (.inr r)) spur sp
+  | [] => kLokal [] f rho rho (.zurueckgekehrt (l := false) (.inr r)) spur sp
   | c :: rst =>
       match c.rest with
       | ⟨l, Γ, Λ, ρc, GRest.wartetSonst n err _ k⟩ =>

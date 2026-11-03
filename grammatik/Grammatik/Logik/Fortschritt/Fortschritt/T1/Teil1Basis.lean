@@ -142,6 +142,7 @@ def GRest.fOk : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V 
   | _, _, _, .wartetSonst _ _ rest k => k.fOk && k.nimmtAb && (!k.blockiert || rest.terminal)
   | _, _, _, .abbruch k => k.fOk
   | _, _, _, .rueckBereit .. => false
+  | _, _, _, .zurueckgekehrt _ => true
   | _, _, _, .leer => true
 
 end Formen

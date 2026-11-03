@@ -41,7 +41,8 @@
   machines of every budget (probe D, `Durchgaenge.lean`, `ProbeD.lean`;
   the per-budget statements are the lemmas `*_bei` of §3), and start
   functions declare no reasons (§2a: `StartOhneGrund`, `KeinStartGrundG`),
-  so `StartEndeG` covers every completion of a start function.
+  so plain returns are covered by `StartEndeG`; scoped releases additionally need
+  `ScopedRueckGutG` (ZielOrtStartScoped.lean).
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
@@ -133,7 +134,7 @@ whose body fails with a reason met every premise).
 decidable per start). Then no start frame can stand at a reason return --
 `retGrund` needs an element of `Fin (gruende f)` and the bottom frame of a
 thread always runs its start function (`wurzelFn_erreichbar`) -- so every
-completion of a start function is a VALUE return, where `StartEndeG`
+plain completion of a start function is a VALUE return, where `StartEndeG`
 checks `ensures` and the owed invariants (`keinStartGrundG`; with
 `FertigG`: `fertig_wert`, `Verklemmung.lean`). The alternative -- let a
 reason return of a start function check its owed invariants -- would

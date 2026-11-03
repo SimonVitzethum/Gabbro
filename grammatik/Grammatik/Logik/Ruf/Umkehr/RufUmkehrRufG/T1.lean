@@ -287,6 +287,8 @@ def semK : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l Γ 
   | _, _, _, .abbruch .., _, _ => .sonst
   | _, _, _, .leer, _, _ => .sonst
   | _, _, _, .rueckBereit .., _, _ => .sonst
+  | _, _, _, .zurueckgekehrt (.inl v), σ, _ => .zurueck σ v
+  | _, _, _, .zurueckgekehrt (.inr _), _, _ => .sonst
 
 /-- Continue with `k` after an outcome. -/
 def nachK {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (o : Ausgang V l Γ)

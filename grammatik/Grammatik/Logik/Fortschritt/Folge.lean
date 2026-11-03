@@ -216,6 +216,7 @@ def GRest.fR (e : Bool) :
       fE Φ e false err = true ∧ fB Φ e w b = true ∧ k.fR e false
   | _, _, _, _, .abbruch k => k.fR e false
   | _, _, _, _, .rueckBereit .. => False
+  | _, _, _, w, .zurueckgekehrt _ => (!e || w) = true
   | _, _, _, _, .leer => True
 
 end Pruef

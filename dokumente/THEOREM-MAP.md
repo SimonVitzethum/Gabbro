@@ -6954,3 +6954,51 @@ not a buildable/integratable claim: exhaustive GRest and group-7 consumers and t
 return guarantees are the next implementation stage. `Spec.lean` and all Spec submodule statements
 are untouched. In particular, `RetKopf`/`StartEndeG` still mention source expressions only; they do
 not assert anything about the saved terminal residue. No language case is claimed complete.
+
+The second source checkpoint adds terminal arms to the residue semantics `semR`, `semK`,
+`semZ`, `weiterZ`, `weiterH`, `weiterHA`, their trace/outcome lemmas and residue checks
+(`okZ`/`okV`/`okG`/`okS`, `sauber`, `mR`, `oR`, `aR`, `fR`, `fOk`, `kette`, `freis`,
+budget lifting and cost potential). `fR` retains the existing return obligation `!e || armed`;
+completion does not waive a required call-order obligation. Pending scope selectors now have
+shared three-head decomposition lemmas. The G rules require the existing `scopesOkScopes`
+check, so signature locks and caller locks below the frame floor cannot become cleanup scopes.
+
+`SperreSem/T4/Scoped.lean` relates both scoped-return heads to the pre-release world, using
+`World.gibt_foldl_speicher` and the existing continuation-return lemmas. In dependency order,
+`ZielOrtStartBasis` and this semantics module precede `Core/ZielOrtStartScoped`, which is imported
+by `ZielOrtStart`. The new `kopfS_scopedRet` uses `popS_ens`/`popS_inv`: the exact cleanup
+permutation embeds end resources into the pending holdings; `stabilS_mono` therefore carries
+ensures and owed invariant footprints to the pre-release read. `ScopedRueckGutG` records that
+step-source property for every thread, without a stack-depth restriction;
+`ziel_ort_scoped_rueck_bei` obtains it from the reachable-machine replay. Its closure still depends
+on extending that replay through both new rules: it is not a completed proof of the enlarged model.
+`start_scopedGrund_unmoeglich` uses `StartOhneGrund` and the bottom-frame theorem to exclude
+reason answers at roots, including saved reason answers. All of these are unbuilt proof sources.
+
+**Exact Spec coverage:** `RetKopf` and `StartEndeG` remain textually unchanged. The new
+`zurueckgekehrt_nicht_retKopf` proves that a saved final answer is outside `RetKopf`, regardless
+of the expression supplied. Consequently `Ziel.startEnde` alone still observes only plain
+return heads; the additional release-step property is needed for scoped returns. No claim that
+`StartEndeG` itself now covers all finished states is made. The source comments in the start
+proof modules have been corrected; no Spec statement was edited.
+
+**Open semantic/proof boundary:** `freiH` (`SperreSem/T1a`, also used by the atomic H semantics) releases locks on
+`.zurueck`/`.why` without checking `S.inv`; scoped branches of `execStmtH`/`execEndH` and
+`execStmtHA`/`execEndHA` also fold `World.gibt` directly. Thus the existing no-logic replay does
+not yet justify each newly effective scoped release's lock invariant. An ensures/owed-function-
+invariant proof does not close that separate obligation. Strengthen the scoped H/HA cleanup
+checks and transfer their success through the replay before claiming `SperrInvG` for the new
+rules; do not weaken that conclusion or add a machine premise assuming the user proof's result.
+Also generalize the held-lock step classification (`offen_schrittG`, currently at most one
+release) to the canonical release list and update its clients. Root completion needs the
+progress/shape invariants to account for terminal residues (a final residue at a nonempty stack
+is not produced by `rufAntwortG`, but arbitrary invariant states must exclude or handle it).
+
+Remaining ports include the new group-7 cases of log fidelity/cleanliness, static holdings,
+rank/deadlock, read/site/feature preservation, source/atomic actor replay, logged ensures and
+invariants, ownership, adequacy/converse, progress/liveness, cost and budget-step lemmas.
+`Code`/`Parser`/`stage0/Stage0` have no `GRest` eliminator in the inspected source; their existing
+`Stmt`/`Endblock` scoped arms do not gain verified machine coverage from this checkpoint.
+Lead validation remains mandatory; there is no green build, guardian result or newly completed
+language case. `git diff --check` and the changed/new Lean files' sub-500-line/module headers
+are the static checks performed by this worker.

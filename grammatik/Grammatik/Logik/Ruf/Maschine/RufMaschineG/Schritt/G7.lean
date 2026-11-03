@@ -250,6 +250,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (R : RueckRessourcen D (vertragVon D (M.faeden f).kopf.f) Λ)
       (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
       (hret : r.scopedWert = some (e, R))
+      (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
+        (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (σ₁ σ₂ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
       (hs₂ : σ₂ = R.scopes.foldl World.gibt σ₁)
@@ -266,6 +268,8 @@ inductive RufSchrittG7 (P : Programm D) (O : Orakel D) (passes : Nat) :
       (R : RueckRessourcen D (vertragVon D (M.faeden f).kopf.f) Λ)
       (hhead : (M.faeden f).kopf.rest = ⟨l, Γ, Λ, ρ, r⟩)
       (hret : r.scopedGrund = some (grund, R))
+      (hscope : scopesOkScopes (vertragVon D (M.faeden f).kopf.f).haelt
+        (vertragVon D (M.faeden f).kopf.f).boden R.scopes = true)
       (hΛ : HeldIn Λ (offen (M.faeden f).spur))
       (σ₂ : World D) (hs₂ : σ₂ = R.scopes.foldl World.gibt (M.weltVon f))
       (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)

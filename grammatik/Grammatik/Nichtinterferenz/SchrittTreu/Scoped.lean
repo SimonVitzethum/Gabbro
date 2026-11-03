@@ -42,26 +42,7 @@ theorem kr_scopedWert (P : Programm D) (O : Orakel D) (passes : Nat)
     kr P O passes st f rho spur sp ρ r =
       let σ := (sp.welt spur).lese Λ e.orte
       kPop st f rho (R.scopes.foldl World.gibt σ) (evalErg σ e σ ρ) := by
-  cases r with
-  | ende b =>
-      cases b with
-      | retScoped e' R' =>
-          simp only [GRest.scopedWert, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          rfl
-      | cons s rest =>
-          cases s <;> simp only [GRest.scopedWert, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          rfl
-      | _ => cases h
-  | dann b k =>
-      cases b with
-      | cons s rest =>
-          cases s <;> simp only [GRest.scopedWert, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          rfl
-      | _ => cases h
-  | _ => cases h
+  obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle h <;> subst r <;> rfl
 
 /-- The reason channel has the same release fold and no source read. -/
 theorem kr_scopedGrund (P : Programm D) (O : Orakel D) (passes : Nat)
@@ -73,25 +54,6 @@ theorem kr_scopedGrund (P : Programm D) (O : Orakel D) (passes : Nat)
     kr P O passes st f rho spur sp ρ r =
       let σ := R.scopes.foldl World.gibt (sp.welt spur)
       kPopGrund st f rho σ.spur σ.speicher grund := by
-  cases r with
-  | ende b =>
-      cases b with
-      | retWhyScoped r' R' =>
-          simp only [GRest.scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          rfl
-      | cons s rest =>
-          cases s <;> simp only [GRest.scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          rfl
-      | _ => cases h
-  | dann b k =>
-      cases b with
-      | cons s rest =>
-          cases s <;> simp only [GRest.scopedGrund, Option.some.injEq, Prod.mk.injEq] at h
-          obtain ⟨rfl, rfl⟩ := h
-          rfl
-      | _ => cases h
-  | _ => cases h
+  obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle h <;> subst r <;> rfl
 
 end Gabbro.Grammatik

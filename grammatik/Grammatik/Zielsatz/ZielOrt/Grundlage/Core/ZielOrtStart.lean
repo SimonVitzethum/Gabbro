@@ -41,10 +41,12 @@
   machines of every budget (probe D, `Durchgaenge.lean`, `ProbeD.lean`;
   the per-budget statements are the lemmas `*_bei` of §3), and start
   functions declare no reasons (§2a: `StartOhneGrund`, `KeinStartGrundG`),
-  so `StartEndeG` covers every completion of a start function.
+  so plain returns are covered by `StartEndeG`; scoped releases additionally need
+  `ScopedRueckGutG` (ZielOrtStartScoped.lean).
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStartBasis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.Core.ZielOrtStartScoped
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 public import Grammatik.Kern.Semantik.Evaluation.Durchgaenge
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
