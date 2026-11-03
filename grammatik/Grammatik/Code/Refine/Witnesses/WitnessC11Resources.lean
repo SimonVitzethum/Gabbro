@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Code.Refine.WitnessC11
+public import Grammatik.Code.Refine.Witnesses.WitnessC11
 public import Grammatik.Kern.Syntax.Syntax.Teil4
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil1
 

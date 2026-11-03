@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
-public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Teil15
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.Teil15
 
 @[expose] public section
 

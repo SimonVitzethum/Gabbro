@@ -1,17 +1,17 @@
 module
 
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Teil19
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.Teil19
 
 @[expose] public section
 
 namespace Gabbro.Grammatik
 
 set_option maxHeartbeats 4000000 in
-theorem akteurV_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-  (hO : GutO O) (hK : ∀ (f : D.Fn), KoerperGutV P passes f)
+theorem akteurA_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+  {Q : AxEns D} (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q) (hK : ∀ (f : D.Fn), KoerperGutA P passes Q f)
   (hFrag : ∀ (f : D.Fn), Endblock.vOk (kandP P (fussOrte P f)) (P.rumpf f) = true)
-  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenV P O passes (M.faeden u) (M.weltVon u))
+  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenA P O passes Q (M.faeden u) (M.weltVon u))
   (hL : LogOk P (M.faeden u).log) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (t : D.Tab)
   (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
   (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
@@ -35,7 +35,7 @@ theorem akteurV_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D} 
   (m' : Int) (hm' : m' = (eval σ₁ mass σ₁ ρ).n)
   (hfall : 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor)
   (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
-  FadenV P O passes
+  FadenA P O passes Q
       ({ speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
@@ -98,7 +98,7 @@ theorem akteurV_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D} 
               lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.faeden
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  refine ⟨fadenV_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) σ₁.spur
+  refine ⟨fadenA_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) σ₁.spur
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hok
   have hm'' : (eval (σ.lese Λ mass.orte) mass (σ.lese Λ mass.orte) ρ).n = m' := by
@@ -112,10 +112,10 @@ theorem akteurV_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D} 
       i σ ρ (σ.lese Λ mass.orte) rfl m' hm'' hfall)⟩
 
 set_option maxHeartbeats 4000000 in
-theorem akteurV_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-  (hO : GutO O) (hK : ∀ (f : D.Fn), KoerperGutV P passes f)
+theorem akteurA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+  {Q : AxEns D} (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q) (hK : ∀ (f : D.Fn), KoerperGutA P passes Q f)
   (hFrag : ∀ (f : D.Fn), Endblock.vOk (kandP P (fussOrte P f)) (P.rumpf f) = true)
-  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenV P O passes (M.faeden u) (M.weltVon u))
+  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenA P O passes Q (M.faeden u) (M.weltVon u))
   (hL : LogOk P (M.faeden u).log) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (t : D.Tab)
   (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
   (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
@@ -151,7 +151,7 @@ theorem akteurV_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
   (neu₁ : List (Ereignis D))
   (hneu₁ : σ₁.spur = neu₁ ++ (M.faeden u).spur)
   (hΛ : HeldIn Λx (offen (M.faeden u).spur)) :
-  FadenV P O passes
+  FadenA P O passes Q
       ({ speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
@@ -217,7 +217,7 @@ theorem akteurV_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
   simp only [execStmt] at hstep
   cases hstep
   subst hs₁
-  refine ⟨fadenV_lokal hF hhead ρ k _ (fun σ hg hok => ?_), hL⟩
+  refine ⟨fadenA_lokal hF hhead ρ k _ (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
   have hg1 : GleichAuf (fussOrte P (M.faeden u).kopf.f) (σ.lese Λ mass.orte) σm := by
@@ -238,10 +238,10 @@ theorem akteurV_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orake
       restb i σ ρ hleave (σ.lese Λ mass.orte) rfl m' hm'' hfall hw'')⟩
 
 set_option maxHeartbeats 4000000 in
-theorem akteurV_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-  (hO : GutO O) (hK : ∀ (f : D.Fn), KoerperGutV P passes f)
+theorem akteurA_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+  {Q : AxEns D} (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q) (hK : ∀ (f : D.Fn), KoerperGutA P passes Q f)
   (hFrag : ∀ (f : D.Fn), Endblock.vOk (kandP P (fussOrte P f)) (P.rumpf f) = true)
-  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenV P O passes (M.faeden u) (M.weltVon u))
+  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenA P O passes Q (M.faeden u) (M.weltVon u))
   (hL : LogOk P (M.faeden u).log) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (t : D.Tab)
   (member : Expr D (.index (D.count t) :: Γ) Λ .bool)
   (edge : Expr D (.index (D.count t) :: .index (D.count t) :: Γ) Λ .bool)
@@ -275,7 +275,7 @@ theorem akteurV_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel
   (neum : List (Ereignis D))
   (hneum : σm.spur = neum ++ (M.faeden u).spur)
   (hΛ : HeldIn Λx (offen (M.faeden u).spur)) :
-  FadenV P O passes
+  FadenA P O passes Q
       ({ speicher := M.speicher,
             faeden :=
               rufUpdateG M.faeden u
@@ -340,7 +340,7 @@ theorem akteurV_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   simp only [execStmt] at hstep
   cases hstep
-  refine ⟨fadenV_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) _
+  refine ⟨fadenA_lokal hF hhead ρ (.verbrauch t member edge inv bound mass body rest k) _
     (fun σ hg hok => ?_), hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR

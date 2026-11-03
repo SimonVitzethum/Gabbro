@@ -1,7 +1,7 @@
 /- Emission and slot bounds for ordered finite magnitude arithmetic. -/
 module
-public import Stage0.Senke.Gleit.RoutineAlign
-public import Stage0.Senke.Gleit.RoutineBounds
+public import Stage0.Senke.Gleit.Routine.RoutineAlign
+public import Stage0.Senke.Gleit.Routine.RoutineBounds
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

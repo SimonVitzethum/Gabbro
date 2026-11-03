@@ -1,6 +1,6 @@
 /- The integer-IR special dispatcher for binary64 addition. -/
 module
-public import Stage0.Senke.Gleit.RoutineBranch
+public import Stage0.Senke.Gleit.Routine.RoutineBranch
 public import Stage0.Senke.Gleit.Special
 public import Stage0.Senke.Gleit.Pack
 @[expose] public section

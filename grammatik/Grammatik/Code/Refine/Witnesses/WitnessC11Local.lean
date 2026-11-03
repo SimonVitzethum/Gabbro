@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Code.Refine.WitnessC11Embedding
+public import Grammatik.Code.Refine.Witnesses.WitnessC11Embedding
 
 @[expose] public section
 

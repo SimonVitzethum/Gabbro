@@ -1,17 +1,17 @@
 module
 
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Teil16
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.Teil16
 
 @[expose] public section
 
 namespace Gabbro.Grammatik
 
 set_option maxHeartbeats 4000000 in
-theorem akteurV_rueckConsBind {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-  (hO : GutO O) (hK : ∀ (f : D.Fn), KoerperGutV P passes f)
+theorem akteurA_rueckConsBind {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+  {Q : AxEns D} (hO : GutO O) (hQ : AxVertragO Q O) (hlok : AxEnsLokal Q) (hK : ∀ (f : D.Fn), KoerperGutA P passes Q f)
   (hFrag : ∀ (f : D.Fn), Endblock.vOk (kandP P (fussOrte P f)) (P.rumpf f) = true) (e0 : Ereignis D)
-  {M : RufMaschineG D} {u : Faden} (hF : FadenV P O passes (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
+  {M : RufMaschineG D} {u : Faden} (hF : FadenA P O passes Q (M.faeden u) (M.weltVon u)) (hL : LogOk P (M.faeden u).log)
   (lk : Bool) (Γk : Ctx) (Λk : List (Res D)) (e : ErgExpr D Γk Λk (vertragVon D (M.faeden u).kopf.f).erg)
   (hperm : Λk.Perm (Vertrag.ende D (vertragVon D (M.faeden u).kopf.f)))
   (restk : Endblock D (vertragVon D (M.faeden u).kopf.f) lk Γk Λk) (ρ : Env D Γk)
@@ -46,7 +46,7 @@ theorem akteurV_rueckConsBind {D : Deklaration} {P : Programm D} {O : Orakel D} 
   (hfg : (M.faeden u).kopf.f = g) (rho : Env D (D.params g)) (hrho : (M.faeden u).kopf.rho = Eq.symm hfg ▸ rho)
   (s0 : World D) (hs0 : (M.faeden u).kopf.s0 = s0) (v : ErgVal D (D.erg g)) (hv : v = hfg ▸ evalErg s1 e s1 ρ)
   (he : D.erg g = some τ) (neu : List (Ereignis D)) (hneu : s1.spur = neu ++ (M.faeden u).spur) :
-  FadenV P O passes
+  FadenA P O passes Q
       ({ speicher := s1.speicher,
             faeden :=
               rufUpdateG M.faeden u
@@ -106,13 +106,13 @@ theorem akteurV_rueckConsBind {D : Deklaration} {P : Programm D} {O : Orakel D} 
   subst hfg hs0 hs1 hv
   subst hrho
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  have hok := okV_ende_cons (kopfV_okV hF.1 hhead)
-  have hens := popV_ens hO hK hF.1 hhead e hok.2.1
+  have hok := okV_ende_cons (kopfA_okV hF.1 hhead)
+  have hens := popA_ens hO hQ hK hF.1 hhead e hok.2.1
     (fun O' R σ => semV_rueckCons O' passes R e hperm restk σ ρ)
   have hSt := hF.2
   rw [hpop] at hSt
   obtain ⟨hWc, hSt'⟩ := hSt
-  refine ⟨⟨popV_kopf e0 hWc _ (fun σa => .ok σa _) (Or.inl ⟨_, fun _ => rfl, hens⟩)
+  refine ⟨⟨popA_kopf e0 hWc _ (fun σa => .ok σa _) (Or.inl ⟨_, fun _ => rfl, hens⟩)
     (.cons (ergWert he _) ρc) (.dann restb (.schrumpf k))
     (fun hokc => by
       rcases hcaller with hc | ⟨n, err, hc⟩

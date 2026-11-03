@@ -1,7 +1,7 @@
 /- Canonical operand ordering and finite-path boundary witnesses. -/
 module
-public import Stage0.Senke.Gleit.RoutineAlign
-public import Stage0.Senke.Gleit.RoutineModel
+public import Stage0.Senke.Gleit.Routine.RoutineAlign
+public import Stage0.Senke.Gleit.Routine.RoutineModel
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

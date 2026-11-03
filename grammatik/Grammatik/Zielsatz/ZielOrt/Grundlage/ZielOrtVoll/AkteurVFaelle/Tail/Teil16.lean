@@ -1,7 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
-public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Teil15
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Tail.Teil15
 
 @[expose] public section
 

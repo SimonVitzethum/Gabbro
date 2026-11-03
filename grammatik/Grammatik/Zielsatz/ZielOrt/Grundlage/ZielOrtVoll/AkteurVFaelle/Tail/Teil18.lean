@@ -1,19 +1,22 @@
 module
 
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
-public import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet.AkteurGFaelle.Teil18
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll.AkteurVFaelle.Tail.Teil17
 
 @[expose] public section
 
 namespace Gabbro.Grammatik
 
 set_option maxHeartbeats 4000000 in
-theorem akteurG_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-  (hO : GutO O) (hRL : RegLokal O) (hK : ∀ (f : D.Fn), KoerperGutG P passes f)
-  (hFrag : ∀ (f : D.Fn), Endblock.gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) (P.rumpf f) = true)
-  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenG P O passes (M.faeden u) (M.weltVon u))
-  (hL : LogOk P (M.faeden u).log) (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty) (n : Nat)
-  (p : Expr D Γ Λ (Ty.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) (he : (D.sigNr n).erg = some τ)
+theorem akteurV_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+  (hO : GutO O)
+  (hK : ∀ (f : D.Fn), KoerperGutV P passes f)
+  (hFrag : ∀ (f : D.Fn), Endblock.vOk (kandP P (fussOrte P f)) (P.rumpf f) = true)
+  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenV P O passes (M.faeden u) (M.weltVon u))
+  (hL : LogOk P (M.faeden u).log)
+  (l : Bool) (Γ : Ctx)
+  (Λ Λ' Λ'' : List (Res D)) (τ : Ty) (n : Nat) (p : Expr D Γ Λ (Ty.fnptr n))
+  (args : Args D Γ Λ (D.sigNr n).params) (he : (D.sigNr n).erg = some τ)
   (hp : RufPasst D (vertragVon D (M.faeden u).kopf.f) (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
   (err : Endblock D (vertragVon D (M.faeden u).kopf.f) l (Ty.why (D.sigNr n).gruende :: Γ)
     (nachSig D (D.sigNr n) Λ))
@@ -32,7 +35,7 @@ theorem akteurG_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
   (g : D.Fn) (hg : D.passt g n = true) (hv : eval s0 p s0 ρ = (⟨g, hg⟩ : { f // D.passt f n = true }))
   (rho : Env D (D.params g)) (hrho : rho = umsig hg (evalArgs s0 args s0 ρ)) (neu : List (Ereignis D))
   (hneu : s0.spur = neu ++ (M.faeden u).spur) :
-  FadenG P O passes
+  FadenV P O passes
       ({ speicher := M.speicher,
           faeden :=
             rufUpdateG M.faeden u
@@ -135,25 +138,25 @@ theorem akteurG_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
             lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.faeden u).log := by
   subst hs0 hrho
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  obtain ⟨hks, hss, _⟩ := kopfG_okG hF.1 hhead
-  simp only [Block.gOk, Bool.and_eq_true] at hks
-  have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks.1.1
-  have hpa : p.orte ++ args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
+  obtain ⟨hks, hss, _⟩ := kopfV_okV hF.1 hhead
+  simp only [Block.vOk, Bool.and_eq_true] at hks
+  have hkand : KandOk P (fussOrte P (M.faeden u).kopf.f) n := kandP_ok hks.1.1
+  have hpa : p.orte ++ args.orte ⊆ fussOrte P (M.faeden u).kopf.f := by
     intro x hx
     apply hss
     simp only [blockOrteP, List.mem_append] at hx ⊢
     tauto
-  have hev : ∀ σ : World D, GleichAuf (fussOrteG P (M.faeden u).kopf.f) σ (M.weltVon u) →
+  have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hpa h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hpa _ h) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
-  have hargs : args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
+  have hargs : args.orte ⊆ fussOrte P (M.faeden u).kopf.f := by
     intro x hx
     apply hss
     simp only [blockOrteP, List.mem_append] at hx ⊢
     tauto
-  obtain ⟨hFad, hReq⟩ := pushG_gen hO hRL hK hFrag hF hhead (p.orte ++ args.orte) g
+  obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
     (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
@@ -161,7 +164,7 @@ theorem akteurG_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
     ρ (.wartetSonst (D.sigNr n).gruende err rest k)
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := hok
-      simp only [Block.gOk, Bool.and_eq_true] at hks'
+      simp only [Block.vOk, Bool.and_eq_true] at hks'
       refine ⟨hks'.1.2, ?_, hks'.2, ?_, hk'⟩
       · intro x hx
         apply hss'
@@ -198,12 +201,15 @@ theorem akteurG_dannBindCallIndElse {D : Deklaration} {P : Programm D} {O : Orak
   exact ⟨hFad, logOk_eintritt hL hReq⟩
 
 set_option maxHeartbeats 4000000 in
-theorem akteurG_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
-  (hO : GutO O) (hRL : RegLokal O) (hK : ∀ (f : D.Fn), KoerperGutG P passes f)
-  (hFrag : ∀ (f : D.Fn), Endblock.gOk (kandP P (fussOrteG P f)) (regP (fussOrteG P f)) (P.rumpf f) = true)
-  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenG P O passes (M.faeden u) (M.weltVon u))
-  (hL : LogOk P (M.faeden u).log) (l : Bool) (Γ : Ctx) (Λ Λ' Λ'' : List (Res D)) (τ : Ty) (n : Nat)
-  (p : Expr D Γ Λ (Ty.fnptr n)) (args : Args D Γ Λ (D.sigNr n).params) (he : (D.sigNr n).erg = some τ)
+theorem akteurV_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
+  (hO : GutO O)
+  (hK : ∀ (f : D.Fn), KoerperGutV P passes f)
+  (hFrag : ∀ (f : D.Fn), Endblock.vOk (kandP P (fussOrte P f)) (P.rumpf f) = true)
+  (e0 : Ereignis D) {M : RufMaschineG D} {u : Faden} (hF : FadenV P O passes (M.faeden u) (M.weltVon u))
+  (hL : LogOk P (M.faeden u).log)
+  (l : Bool) (Γ : Ctx)
+  (Λ Λ' Λ'' : List (Res D)) (τ : Ty) (n : Nat) (p : Expr D Γ Λ (Ty.fnptr n))
+  (args : Args D Γ Λ (D.sigNr n).params) (he : (D.sigNr n).erg = some τ)
   (hp : RufPasst D (vertragVon D (M.faeden u).kopf.f) (D.sigNr n) Λ) (hr : 0 < (D.sigNr n).gruende)
   (err : Endblock D (vertragVon D (M.faeden u).kopf.f) l (Ty.why (D.sigNr n).gruende :: Γ)
     (nachSig D (D.sigNr n) Λ))
@@ -222,7 +228,7 @@ theorem akteurG_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
   (g : D.Fn) (hg : D.passt g n = true) (hv : eval s0 p s0 ρ = (⟨g, hg⟩ : { f // D.passt f n = true }))
   (rho : Env D (D.params g)) (hrho : rho = umsig hg (evalArgs s0 args s0 ρ)) (neu : List (Ereignis D))
   (hneu : s0.spur = neu ++ (M.faeden u).spur) :
-  FadenG P O passes
+  FadenV P O passes
       ({ speicher := M.speicher,
           faeden :=
             rufUpdateG M.faeden u
@@ -328,25 +334,25 @@ theorem akteurG_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
             lauf := M.lauf ++ rufEigenG u neu, start := M.start : RufMaschineG D }.faeden u).log := by
   subst hs0 hrho
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
-  obtain ⟨hks, hss, _⟩ := kopfG_okG hF.1 hhead
-  simp only [Block.gOk, Stmt.gOk, Bool.and_eq_true] at hks
-  have hkand : KandOk P (fussOrteG P (M.faeden u).kopf.f) n := kandP_ok hks.1.1
-  have hpa : p.orte ++ args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
+  obtain ⟨hks, hss, _⟩ := kopfV_okV hF.1 hhead
+  simp only [Block.vOk, Stmt.vOk, Bool.and_eq_true] at hks
+  have hkand : KandOk P (fussOrte P (M.faeden u).kopf.f) n := kandP_ok hks.1.1
+  have hpa : p.orte ++ args.orte ⊆ fussOrte P (M.faeden u).kopf.f := by
     intro x hx
     apply hss
     simp only [blockOrteP, stmtOrteP, List.mem_append] at hx ⊢
     tauto
-  have hev : ∀ σ : World D, GleichAuf (fussOrteG P (M.faeden u).kopf.f) σ (M.weltVon u) →
+  have hev : ∀ σ : World D, GleichAuf (fussOrte P (M.faeden u).kopf.f) σ (M.weltVon u) →
       eval (σ.lese Λ (p.orte ++ args.orte)) p (σ.lese Λ (p.orte ++ args.orte)) ρ = ⟨g, hg⟩ := by
     intro σ hgσ
-    rw [eval_gleichAuf p (fun _ h => hpa h) (hgσ.lese Λ Λ _ _) ρ]
+    rw [eval_gleichAuf p (fun _ h => hpa _ h) (hgσ.lese Λ Λ _ _) ρ]
     exact hv
-  have hargs : args.orte ⊆ fussOrteG P (M.faeden u).kopf.f := by
+  have hargs : args.orte ⊆ fussOrte P (M.faeden u).kopf.f := by
     intro x hx
     apply hss
     simp only [blockOrteP, stmtOrteP, List.mem_append] at hx ⊢
     tauto
-  obtain ⟨hFad, hReq⟩ := pushG_gen hO hRL hK hFrag hF hhead (p.orte ++ args.orte) g
+  obtain ⟨hFad, hReq⟩ := pushV_gen hO hK hFrag hF hhead (p.orte ++ args.orte) g
     (fun κ => umsig hg (evalArgs κ args κ ρ)) (fun _ => hkand g hg)
     (fun _ σ hgσ => by
       show umsig hg _ = umsig hg _
@@ -354,8 +360,8 @@ theorem akteurG_dannCallIndElse {D : Deklaration} {P : Programm D} {O : Orakel D
     ρ (.wartetSonst (D.sigNr n).gruende err .nil (.dann rest k))
     (fun hok => by
       obtain ⟨hks', hss', hk'⟩ := hok
-      simp only [Block.gOk, Bool.and_eq_true] at hks'
-      refine ⟨hks'.1.2, ?_, by simp only [Block.gOk], ?_, ⟨hks'.2, ?_, hk'⟩⟩
+      simp only [Block.vOk, Bool.and_eq_true] at hks'
+      refine ⟨hks'.1.2, ?_, by simp only [Block.vOk], ?_, ⟨hks'.2, ?_, hk'⟩⟩
       · intro x hx
         apply hss'
         simp only [blockOrteP, List.mem_append] at hx ⊢

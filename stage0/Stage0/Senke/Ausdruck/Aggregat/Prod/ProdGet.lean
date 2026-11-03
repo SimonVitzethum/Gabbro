@@ -1,6 +1,6 @@
 /- Static encoding decomposition for typed product projection. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.Product
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.Product
 public import Stage0.Senke.Ausdruck.Aggregat.Frame.Copy
 @[expose] public section
 

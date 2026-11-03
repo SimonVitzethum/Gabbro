@@ -1,6 +1,6 @@
 /- Representation preservation for typed product replacement. -/
 module
-public import Stage0.Senke.Ausdruck.Aggregat.ProdGet
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdGet
 @[expose] public section
 
 variable {currentOld : Bool}

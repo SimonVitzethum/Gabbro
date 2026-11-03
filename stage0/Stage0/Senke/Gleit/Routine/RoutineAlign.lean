@@ -1,6 +1,6 @@
 /- Ordered finite magnitude arithmetic for the binary64 addition routine. -/
 module
-public import Stage0.Senke.Gleit.RoutineSpecial
+public import Stage0.Senke.Gleit.Routine.RoutineSpecial
 public import Stage0.Senke.Gleit.Align
 public import Stage0.Senke.Gleit.AddMag
 @[expose] public section

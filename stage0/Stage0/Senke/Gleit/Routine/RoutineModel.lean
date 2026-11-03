@@ -1,6 +1,6 @@
 /- Connect the emitted special dispatcher to the canonical IEEE dispatcher. -/
 module
-public import Stage0.Senke.Gleit.RoutineSpecial
+public import Stage0.Senke.Gleit.Routine.RoutineSpecial
 public import Stage0.Senke.Ausdruck.Arithmetik.Darstellung.Feldera
 public import Stage0.Senke.Ausdruck.Gleit.Schluessel
 @[expose] public section

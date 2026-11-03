@@ -1,8 +1,8 @@
 /- Sequential product arguments preserve prior fields and their canonical encoding. -/
 module
 public import Stage0.Senke.Ausdruck.Aggregat.Array
-public import Stage0.Senke.Ausdruck.Aggregat.ProdArgs
-public import Stage0.Senke.Ausdruck.Aggregat.Product
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.ProdArgs
+public import Stage0.Senke.Ausdruck.Aggregat.Prod.Product
 @[expose] public section
 
 variable {currentOld : Bool}

@@ -1,6 +1,6 @@
 /- Static resource bounds for the binary64 special dispatcher. -/
 module
-public import Stage0.Senke.Gleit.RoutineSpecial
+public import Stage0.Senke.Gleit.Routine.RoutineSpecial
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

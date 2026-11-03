@@ -1,6 +1,6 @@
 module
 
-public import Grammatik.Code.Refine.WitnessC11Resources
+public import Grammatik.Code.Refine.Witnesses.WitnessC11Resources
 public import Grammatik.Zielsatz.Einbettung.Zeuge
 
 @[expose] public section

@@ -1,7 +1,7 @@
 /- Canonical result fields of the guard-rounding and packing continuation. -/
 module
 public import Stage0.Senke.Gleit.Normal.Pack
-public import Stage0.Senke.Gleit.RoutineModel
+public import Stage0.Senke.Gleit.Routine.RoutineModel
 @[expose] public section
 
 namespace Gabbro.Stage0.Senke

@@ -14,7 +14,7 @@
 -/
 module
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
-public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Teil20
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx.AkteurAFaelle.Tail.Teil20
 @[expose] public section
 
 namespace Gabbro.Grammatik
