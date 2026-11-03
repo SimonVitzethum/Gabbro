@@ -28,9 +28,12 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
     - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: mint (`mints`) and handback moves (`moves`) elaborate with
-      witnesses and refusals (c09-mint, lead to build); terminal moves are signature-complete with
-      fixture witnesses, their body-level retire lowering still open (as for C16 takes). The dynamic
-      escrow replay and the C08 software-call transition remain open.
+      witnesses and refusals (c09-mint, lead to build). Body-level `retires Mark;` now exports
+      to `Stmt.retires`, removing exactly one held mark; owner `consumes` uses terminal moves
+      (`after := none`), ordinary C16 consumption uses the same retire statement. Positive call/retire
+      and negative drop/loan/unheld/double-retire witnesses, plus the Stage-0 image witness, are
+      implemented on c09-retire, UNBUILT (lead checks). The dynamic escrow replay and C08
+      software-call/root-once mint admission remain open; Stage 0 still refuses mint effects.
     - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
     - C12 `own@…` through borrowed marks: owned reads/writes (`thruOwn`/`assignThruOwn`, same carrier
       as `thru`/`assignThru`) and call-scoped `borrows` loans (`OwnerFlow.loans`) lower end to end, with the
