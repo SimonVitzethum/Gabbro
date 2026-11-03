@@ -302,6 +302,10 @@ theorem BlattG.erw {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
       exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
+  | assignThruOwn n o p t ht f i e m s ho he hg hm hw hL =>
+      simp only [execStmt, Ausgang.ok.injEq] at hex
+      obtain ⟨rfl, -⟩ := hex
+      exact (Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)
   | assignSlotRef n r t ht ho f e hw hL =>
       simp only [execStmt, Ausgang.ok.injEq] at hex
       obtain ⟨rfl, -⟩ := hex
