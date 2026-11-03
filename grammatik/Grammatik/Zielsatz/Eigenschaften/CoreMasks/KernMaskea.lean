@@ -148,6 +148,11 @@ theorem fertig_kein_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
          | (rw [entfaltbar_nicht_rueck _ ‹GEntfaltbar _ = true›] at hr
             exact Bool.noConfusion hr))
 
+  | g7 hs =>
+    cases hs <;> rw [‹(M.faeden f).kopf.rest = _›] at hr <;>
+      simp only [GRest.anRueck, Block.istRueck, Stmt.istRueck,
+        Bool.false_eq_true] at hr
+
 /-- A finished thread stays finished: other threads leave it alone, and it does not step. -/
 theorem fertig_bleibt {P : Programm D} {O : Orakel D} {passes : Nat}
     {M M' : RufMaschineG D} {f g : Faden} (hs : RufSchrittG P O passes M f M')
