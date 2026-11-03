@@ -151,31 +151,12 @@ def checkUOhneGibt : UProg :=
   { checkU with fns := checkU.fns.map fun f =>
     if strEq f.name "p#probe" then { f with gibt := [] } else f }
 
-/-- The `gibt`-less unit still lowers: dropping happens in the signature,
-    not in the body. -/
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 2000000 in
-theorem checkUOhneGibt_lowered :
-    (lowerAllg checkUOhneGibt).toOption.isSome = true := by
-  decide +kernel
-
-/-- Its lowered program. -/
-def checkPOhneGibt : Programm (declOf checkUOhneGibt) :=
-  ((lowerAllg checkUOhneGibt).toOption.get checkUOhneGibt_lowered).1
-
-/-- Its checks still derive: the names resolve, the Duty does not thread. -/
-theorem checkUOhneGibt_checks :
-    (uCheckDecls checkUOhneGibt).toOption.isSome = true := by
-  decide +kernel
-
-/-- ... and `checkB` refuses them: the probe produces no Duty. -/
+/-- Removing `gibt` cannot silently drop a physical mark at return: the
+    actual body still holds it, so ordinary lowering refuses the mismatch. -/
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 theorem checkU_gibt_abgelehnt :
-    checkB checkPOhneGibt [] []
-      (List.finRange checkUOhneGibt.fns.length)
-      ((uCheckDecls checkUOhneGibt).toOption.get checkUOhneGibt_checks) =
-      false := by
+    (lowerAllg checkUOhneGibt).toOption.isNone = true := by
   decide +kernel
 
 end Gabbro.Grammatik.Parser.Uebersetze
