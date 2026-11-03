@@ -403,7 +403,7 @@ theorem assignDurchOwn_neu (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t = true} {hL : darf D t Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D) (neu : List (Ereignis D))
     (hstep : (execStmt O passes keinRuf
-      (.assignThruOwn p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
+      (.assignThruOwn p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (hneu : σ'.spur = neu ++ σ.spur) :
     Ereignis.zugriff t true Λ
       (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).haelt ∈ neu := by
@@ -414,7 +414,7 @@ theorem assignDurchOwn_neu (O : Orakel D) (passes : Nat)
           | .inl t' => Ereignis.zugriff t' false Λ σ.haelt
           | .inr g' => Ereignis.gzugriff g' false Λ σ.haelt) ++ σ.spur := by
     have hcomp : (execStmt O passes keinRuf
-        ((.assignThruOwn p t ht f i e m s ho he hg hm hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
+        ((.assignThruOwn p t ht f i e m s ho he hg hw hL : Stmt D V l Γ Λ Λ)) σ ρ).welt =
         some ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t Λ
           (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
             (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ).n f
