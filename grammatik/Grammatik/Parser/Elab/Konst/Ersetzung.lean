@@ -224,6 +224,10 @@ def ersetzeSAnw (fns : List UKonstFn) : SAnw → Except String SAnw
     match ersetzeSExpr fns o, ersetzeSAnw fns s with
     | .ok o', .ok s' => .ok (.trim o' z s')
     | .error e, _ | _, .error e => .error e
+  | .trimReq o z =>
+    match ersetzeSExpr fns o with
+    | .error e => .error e
+    | .ok o' => .ok (.trimReq o' z)
   | .locks g o b =>
     match ersetzeSExpr fns o, ersetzeSAnw fns b with
     | .ok o', .ok b' => .ok (.locks g o' b')

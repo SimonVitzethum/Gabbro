@@ -86,6 +86,7 @@ def hatKonstRufSAnw (namen : List String) : SAnw → Bool
   | .loop _ b => hatKonstRufSAnw namen b
   | .waive _ b => hatKonstRufSAnw namen b
   | .trim o _ s => hatKonstRufSExpr namen o || hatKonstRufSAnw namen s
+  | .trimReq o _ => hatKonstRufSExpr namen o
   | .locks _ o b => hatKonstRufSExpr namen o || hatKonstRufSAnw namen b
   | .watch _ b => hatKonstRufSAnw namen b
   | .leave _ => false

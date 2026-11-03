@@ -217,6 +217,7 @@ def uAkkuInAnw : Nat → List String → SAnw → Bool
   | f + 1, ns, .retry _ b => uAkkuInAnw f ns b
   | f + 1, ns, .loop _ b => uAkkuInAnw f ns b
   | f + 1, ns, .trim e _ b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
+  | f + 1, ns, .trimReq e _ => uAkkuInExpr f ns e
   | f + 1, ns, .locks _ e b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
   | f + 1, ns, .grow _ e b => uAkkuInExpr f ns e || uAkkuInAnw f ns b
   | f + 1, ns, .child b => uAkkuInAnw f ns b

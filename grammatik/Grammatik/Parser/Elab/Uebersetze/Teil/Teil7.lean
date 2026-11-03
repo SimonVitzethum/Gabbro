@@ -123,7 +123,7 @@ def anwArt : SAnw → String
   | .bindAxiomOpt .. => "let?" | .bindAxiomOptElse .. => "let? else" | .bindLib .. => "library let" | .set .. => "assignment"
   | .shift .. => "shift" | .call .. => "call" | .lcall .. => "library call" | .cond .. => "if"
   | .elsif .. => "else if" | .cases .. => "match" | .arm .. => "match arm" | .each .. => "traverse"
-  | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .locks .. => "locks"
+  | .retry .. => "retry" | .loop .. => "loop" | .waive .. => "waive" | .trim .. => "trim" | .trimReq .. => "trim required" | .locks .. => "locks"
   | .watch .. => "watch" | .leave .. => "leave" | .next .. => "next" | .emit .. => "emit" | .await .. => "await"
   | .swap .. => "exchange" | .step .. => "step" | .ret .. => "return" | .alloc .. => "alloc" | .reset .. => "reset"
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w

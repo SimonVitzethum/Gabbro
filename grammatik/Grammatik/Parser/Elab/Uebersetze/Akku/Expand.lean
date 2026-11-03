@@ -298,6 +298,9 @@ def uAkkuExpandAnwAtom (ps : List AkkuPlan) (ns : List String) : Nat â†’ SAnw â†
       match uAkkuExpandEins ps ns f b with
       | .error x => .error x
       | .ok b' => .ok [.trim e z b']
+  | f + 1, .trimReq e z =>
+    if uAkkuInExpr 100000 ns e then uAkkuBareRefuse e
+    else .ok [.trimReq e z]
   | f + 1, .locks g e b =>
     if uAkkuInExpr 100000 ns e then uAkkuBareRefuse e
     else

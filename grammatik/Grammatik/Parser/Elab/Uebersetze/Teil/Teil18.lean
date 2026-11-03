@@ -271,6 +271,7 @@ def rufNamenS : SAnw → List String
   | .loop _ b => rufNamenS b
   | .waive _ b => rufNamenS b
   | .trim o _ b => rufNamenE o ++ rufNamenS b
+  | .trimReq o _ => rufNamenE o
   | .locks _ o b => rufNamenE o ++ rufNamenS b
   | .watch _ b => rufNamenS b
   | .emit z w _ => rufNamenE z ++ rufNamenE w
@@ -304,6 +305,7 @@ def bindNamenS : SAnw → List String
   | .loop _ b => bindNamenS b
   | .waive _ b => bindNamenS b
   | .trim _ _ b => bindNamenS b
+  | .trimReq _ _ => []
   | .locks _ _ b => bindNamenS b
   | .watch _ b => bindNamenS b
   | .child b => bindNamenS b

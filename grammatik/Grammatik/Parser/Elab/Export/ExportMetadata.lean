@@ -45,7 +45,7 @@ def bodyMetadata : Nat → SAnw → Bool
   | _ + 1, .set .. | _ + 1, .shift .. | _ + 1, .call .. |
     _ + 1, .leave .. | _ + 1, .next .. | _ + 1, .emit .. | _ + 1, .step .. |
     _ + 1, .ret .. | _ + 1, .start .. |
-    _ + 1, .reset .. |
+    _ + 1, .reset .. | _ + 1, .trimReq .. |
     _ + 1, .bindLib .. | _ + 1, .lcall .. => false
 
 def clausesMetadata (clauses : List SKlausel) : Bool := clauses.any fun
