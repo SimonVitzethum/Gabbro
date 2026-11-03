@@ -67,10 +67,10 @@ theorem ownerInvF_schritt_X {N : OwnerNamespace D} {base : OwnerState D}
     (hI : OwnerInvGX N base Tg K.m threads) (hs : FadenSchrittX P O passes Tg K K') :
     OwnerInvGX N base Tg K'.m threads := by
   cases hs with
-  | lauf K f M' hf hw hs' => exact ownerInvGX_schritt hI hs'
-  | start K p cs hp hw hfrei hcs => exact hI
-  | kind K p c hp hw hc => exact hI
-  | join K p hp hw hf => exact hI
+  | lauf f M' hf hw hs' => exact ownerInvGX_schritt hI hs'
+  | start p cs hp hw hfrei hcs => exact hI
+  | kind p c hp hw hc => exact hI
+  | join p hp hw hf => exact hI
 
 /-- A spawn, kind or join step leaves the G state alone; only `lauf` moves
     it. Used by admission: a dormant start cannot restart the mint. -/
@@ -80,9 +80,9 @@ theorem fadenSpawn_m_X {P : Programm D} {O : Orakel D} {passes : Nat}
     K'.m = K.m ∨
       ∃ (f : Faden) (M' : RufMaschineG D), RufSchrittGX P O passes Tg K.m f M' := by
   cases hs with
-  | lauf K f M' hf hw hs' => exact Or.inr ⟨f, M', hs'⟩
-  | start K p cs hp hw hfrei hcs => exact Or.inl rfl
-  | kind K p c hp hw hc => exact Or.inl rfl
-  | join K p hp hw hf => exact Or.inl rfl
+  | lauf f M' hf hw hs' => exact Or.inr ⟨f, M', hs'⟩
+  | start p cs hp hw hfrei hcs => exact Or.inl rfl
+  | kind p c hp hw hc => exact Or.inl rfl
+  | join p hp hw hf => exact Or.inl rfl
 
 end Gabbro.Grammatik
