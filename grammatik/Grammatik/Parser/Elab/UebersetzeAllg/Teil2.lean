@@ -61,6 +61,44 @@ theorem ende_eq (u : UProg) (f : Fin u.fns.length) :
     declOf, sigAt_haelt, sigAt_produziert, hO, OwnerFlow.outputs,
     List.filterMap_nil, List.nil_append]
 
+/-- **Decided call-boundary escrow (C12).** The callee's owner flow is valid over
+    its own inputs at stage 0, disjoint from ordinary consumption, and every
+    input resolves to a table owner. Empty flows pass; a borrowing callee passes
+    exactly when its loans name declared table owners nothing else consumes. -/
+def ownerReadyB (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+    (Fin u.locks.length) (Fin u.marken.length)) : Bool :=
+  S.owner.validB (fun m => decide (m ∈ S.owner.inputs.map Prod.fst)) (fun _ => 1) &&
+  (S.konsumiert.map Prod.fst).all (fun p => !((S.owner.inputs.map Prod.fst).any (· == p))) &&
+  (S.owner.inputs.map Prod.fst).all
+    (fun m => (List.finRange u.tabs.length).any (fun t => decide (m ∈ eignerAt u t)))
+
+/-- The decided check supplies the static escrow condition of the call. -/
+theorem ownerReadyB_ok (u : UProg) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+    (Fin u.locks.length) (Fin u.marken.length)) (h : ownerReadyB u S = true) :
+    S.owner.EscrowReady (fun m => decide (m ∈ S.owner.inputs.map Prod.fst))
+      (declOf u).stufen (fun m => ∃ t, m ∈ (declOf u).eigner t) S.konsumiert := by
+  unfold ownerReadyB at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨hV, hD, hR⟩ := h
+  have hV' := (OwnerFlow.validB_iff _ _ _).mp hV
+  have hst : (declOf u).stufen = fun _ => 1 := rfl
+  rw [hst]
+  refine ⟨hV', ?_, ?_⟩
+  · intro p hp
+    have hm : p.1 ∈ S.konsumiert.map Prod.fst :=
+      List.mem_map.mpr ⟨p, hp, rfl⟩
+    have ha := List.all_eq_true.mp hD p.1 hm
+    intro hcon
+    have hbeq : (S.owner.inputs.map Prod.fst).any (· == p.1) = true := by
+      rw [List.any_eq_true]
+      exact ⟨p.1, hcon, by simp⟩
+    simp only [hbeq, Bool.not_true] at ha
+  · intro m hm
+    have ha := List.all_eq_true.mp hR m hm
+    rw [List.any_eq_true] at ha
+    obtain ⟨t, _, ht⟩ := ha
+    exact ⟨t, of_decide_eq_true ht⟩
+
 /-- Every field index has its recorded range. -/
 theorem rangeO_some (u : UProg) (t : Fin u.tabs.length)
     (fld : Fin (fieldCount u t)) :
