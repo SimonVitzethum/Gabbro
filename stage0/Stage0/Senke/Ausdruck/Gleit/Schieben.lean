@@ -113,19 +113,19 @@ theorem floatShiftJamWord_signed_exact_zeuge :
 #print axioms floatShiftJamWord_signed_exact
 #print axioms floatShiftJamWord_signed_exact_zeuge
 
-theorem floatShiftQuotL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+{reserved : Nat} {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a k : Nat → Option (List II × Nat)} {av kv : Runner.W}
-    (ha : WordCode (L := L) ρ W a av) (hk : WordCode (L := L) ρ W k kv) :
-    WordCode (L := L) ρ W (fun d => floatShiftQuotL d a k) (av >>> kv.toNat) := by
-  have q : WordCode (L := L) ρ W _ _ := WordCode.bin ha hk
+    (ha : WordCode (L := L) (reserved := reserved) ρ W a av) (hk : WordCode (L := L) (reserved := reserved) ρ W k kv) :
+    WordCode (L := L) (reserved := reserved) ρ W (fun d => floatShiftQuotL d a k) (av >>> kv.toNat) := by
+  have q : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin ha hk
     (g := fun a b => some (a >>> (b.toNat % 64))) rfl rfl (by decide : 12 < 256)
-  have high : WordCode (L := L) ρ W _ _ := WordCode.bin hk
+  have high : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin hk
     (WordCode.const 6 (by decide)) (g := fun a b => some (a >>> (b.toNat % 64)))
     rfl rfl (by decide : 12 < 256)
-  have small : WordCode (L := L) ρ W _ _ := WordCode.bin high
+  have small : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin high
     (WordCode.const 0 (by decide)) (g := fun a b => some (Runner.IR.bool (a == b)))
     rfl rfl (by decide : 14 < 256)
-  have result : WordCode (L := L) ρ W _ _ := WordCode.bin q small
+  have result : WordCode (L := L) (reserved := reserved) ρ W _ _ := WordCode.bin q small
     (g := fun a b => some (a * b)) rfl rfl (by decide : 5 < 256)
   intro fp K d c top h hK m pc hp
   have res := result (fp := fp) (K := K) (d := d) (c := c) (top := top) h hK m pc hp
