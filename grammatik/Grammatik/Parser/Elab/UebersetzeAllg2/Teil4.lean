@@ -279,6 +279,15 @@ def lowStmtL {l : Bool} (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn :
   | .storeAtomB n v => (lowStoreAtomBL u caller Γ fn Λ n v).map fun st => ⟨Λ, st⟩
   | .setVar x v => (lowSetVarL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
   | .setVarB x v => (lowSetVarBL u caller Γ fn Λ x v).map fun st => ⟨Λ, st⟩
+  | .retireMark name =>
+    if !u.checks.any (fun c => strEq c.duty name) then
+      .error ("retirement is not a declared check Duty: " ++ name)
+    else match markFin u.marken name with
+    | none => .error ("duty unknown: " ++ name)
+    | some m =>
+      if hm : Res.marke m 0 ∈ Λ then
+        .ok ⟨Λ.erase (.marke m 0), .retires m 0 hm (declOf u).a10⟩
+      else .error ("check Duty already consumed or unavailable: " ++ name)
   | .call c args => lowCallL u caller Γ fn Λ c args
   | .regWrite d r v => (lowRegWriteL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
   | .regWriteB d r v => (lowRegWriteBL u caller Γ fn Λ d r v).map fun st => ⟨Λ, st⟩
