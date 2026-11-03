@@ -27,6 +27,7 @@ variable (O : Orakel D) (passes : Nat)
     HeldB (D.signatur g).boden (Signatur.anfang D (D.signatur g)) σ.haelt →
     RufUnter Er (R₁ g σ ρ) (R₂ g σ ρ))
   (hT₁ : TreuR R₁) (hO : TreuO O)
+include hR hT₁ hO
 
 theorem block_cons_unter (bo : Option Int) (hbV : BodenUnter bo V.boden)
     {l : Bool} {Γ : Ctx} {Λ Λ' Λm : List (Res D)}
