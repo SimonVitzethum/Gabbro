@@ -6065,7 +6065,7 @@ On `c15-uses`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. 
 
 Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `accT` (no generator change); `akzeptiertU`/`komponenten` (`Cover/Differenz.lean`) still pass the default empty query list.
 
-## 136. C16: samples, floors, completed reports and Duty discharge (2026-11-03)
+## 137. C16: samples, floors, completed reports and Duty discharge (2026-11-03)
 
 On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 9-12 of the C16/C02 round-3 list: the report data gets its kernel meaning (item 11), the declared-check identity and the completed reports for both verdicts with the linear Duty discharge (items 9/12), and the front-end probes pinning the elaborated identity and the Duty threading (items 9/10/12). The C12 linear marks (`D.Marke`, `markFin`, `konsumiert`/`produziert`) stay the other branch's work; the interface to them is only the existing `konsumiert`/`produziert` signature fields.
 
@@ -6102,4 +6102,83 @@ On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inv
 
 * **`messung_abschluss_zeuge`**: Coverage, the held floor, the completed true report and the discharged negative report, jointly.
 
-Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change); items 13-16 (token provenance, G/GX replay, counterprobe binding, export/Stage-0 closure) remain open.
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change); items 13-16 are proved in §138, pending that build.
+
+## 138. C16: provenance, replay, counterprobe, export/Stage-0 (2026-11-03)
+
+On `c16-a`; model extension, `Spec.lean` untouched, `gabbro_ziel` unchanged. Inventory items 13-16 of the C16/C02 round-3 list: the report/token provenance through call push and normal return (item 13), G/GX replay and ownership conservation (item 14), counterprobe binding with artifact identity and measured status (item 15), and the connected export/Stage-0 correctness with emitted sample work (item 16). The elaborator-side provenance/export files are registered in `Alle/Teil1`, not `Satz.lean`: the call machine and the elaborator/`declOf` layers sit above `Satz.lean` in the import order, so `Satz.lean` keeps only the kernel-evidence files. Recommended owner answers kept: completed-report Duty on both verdicts, one fresh producer call per consumption, unrun never means passed.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungHerkunft.lean`:
+
+* **`BerichtHerkunft`**: For arbitrary `P : Programm D`, `c : CheckDecl D`, `r : CheckReport`, `g : D.Fn`, the discharge plus the discharged entry carrying the completed report unchanged.
+* **`bericht_herkunft_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the conclusion is `BerichtHerkunft P c r g`.
+* **`herkunft_proben_vollstaendig`**: For arbitrary `P`, `c`, `r`, assuming `h : CheckAbschluss P c r`, every sample of the completed report was actually observed at its push.
+* **`HerkunftSchritt`**: For arbitrary `e₁ e₂ : CheckEvidenz D`, the live-to-consumed travel for the same probe and the same report.
+* **`herkunft_schritt_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the live completed entry becomes the consumed entry of the discharging gate.
+* **`herkunft_schritt_wahr_zeuge`**, **`herkunft_schritt_falsch_zeuge`**: The travel step on the fixture, for both verdicts.
+* **`herkunft_urteil_zeuge`**, **`herkunft_bericht_wahr_zeuge`**: The consumed false entry carries the negative verdict; the completed true report threads its verdict into the discharge.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Herkunft.lean`:
+
+* **`istPush`/`istPop`**: For arbitrary `c : CheckDecl D`, whether a `RufEreignisF` event pushes the probe activation (`eintritt`) or is its normal pop (`rueck`).
+* **`urteilAusErg`**: A `Bool` answer read as a verdict.
+* **`rueckUrteil`**: For arbitrary `c : CheckDecl D`, the verdict off the normal-pop event (`none` on pushes, other functions' pops and error-channel returns -- no completed report is synthesized there).
+* **`rueckPasst`**: For arbitrary `c`, `ev : RufEreignisF D`, `r : CheckReport`, the event's verdict is the report's -- the report a caller receives is the one the callee produced.
+* **`herkunft_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, `ev`, assuming `h : CheckEntladung P c r g` and `hp : rueckPasst c ev r`, the discharged entry carries the callee-produced verdict.
+* **`herkunft_push_fixture`**, **`herkunft_pop_fixture`**, **`herkunft_fremd_push`**, **`herkunft_grund_kein_pop`**, **`herkunft_fixture_pop`**: Push and pop on the fixture, the foreign push refused, the error-channel return popping nothing with no verdict, the verdict off the normal pop.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungReplay.lean`:
+
+* **`CheckErhaltung`**: For arbitrary `P : Programm D`, `c : CheckDecl D`, the probe produces exactly the Duty it consumes.
+* **`erhaltung_aus_expansion`**: For arbitrary `P`, `c`, assuming `h : CheckExpansion P c`, the conclusion is `CheckErhaltung P c`.
+* **`erhaltung_kreislauf`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, one completed cycle moves one Duty in and one out.
+* **`replayEintrag`**: For arbitrary `c`, `r`, `g`, the replayed evidence entry -- a pure function of probe, report and gate, identical on G and on GX.
+* **`replayEintrag_stabil`**: For arbitrary `c`, `r`, `g`, `e : CheckEvidenz D`, assuming `h : e = replayEintrag c r g`, the same producer, report and consumer.
+* **`erhaltung_zeuge`**, **`erhaltung_kreislauf_zeuge`**, **`replayEintrag_zeuge`**: Conservation and replay on the fixture.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungGegenprobe.lean`:
+
+* **`sondenNamen`**: For arbitrary `checks : List (CheckDecl D)`, the bound external names in unit order.
+* **`SondenEindeutig`**: For arbitrary `checks`, no two checks share a sonde name.
+* **`sondenEindeutigB`**: The ownership, decided.
+* **`sondenNamen_mem`**: For arbitrary `rest`, `n : String`, assuming `hm : n ∈ sondenNamen rest`, some check of the unit carries that name.
+* **`sondenNamen_mem_of`**: For arbitrary `d`, `rest`, `n`, `t'`, assuming `hd : d ∈ rest` and `ht : d.sonde = some (n, t')`, the conclusion is `n ∈ sondenNamen rest`.
+* **`sondenEindeutigB_ok`**: For arbitrary `checks`, `sondenEindeutigB checks = true ↔ SondenEindeutig checks`.
+* **`SondenBindung`**: For arbitrary `checks`, `c`, `name text : String`, the check carries the name with its exact text and no other-named check carries that name.
+* **`sonde_name_in_namen`**: For arbitrary `checks`, `c`, `name text`, assuming `h : SondenBindung checks c name text`, the name stands in the unit's sonde list.
+* **`SondenArtefakt`**: The external name, the build mode and the image.
+* **`artefaktPasst`**: For arbitrary `c`, `a : SondenArtefakt`, the bound sonde, the same mode and the check's exact text under the name.
+* **`Gemessen`**: For arbitrary `c`, `a`, `st : ProbenStand`, `r : CheckReport`, a `durchgefallen` run on the matching artifact with a false verdict.
+* **`nichtGelaufen_unmeasured`**: For arbitrary `c`, `a`, `st`, `r`, assuming `h : st = .nichtGelaufen`, absence stays unmeasured.
+* **`bestanden_kein_mass`**: For arbitrary `c`, `a`, `st`, `r`, assuming `h : r.urteil = true`, an unexpected true verdict fails that measurement.
+* **`fremd_artefakt`**: For arbitrary `c`, `a`, `st`, `r`, assuming `h : ¬ artefaktPasst c a`, a stale artifact measures nothing.
+* **`pruefCSonde`**, **`sondeTest`**, **`sondeBerichtFalsch`**: The bound fixture check, the matching artifact, the negative report.
+* **`sodenEindeutig_zeuge`**, **`sodenKonflikt_zeuge`**: Single ownership and the duplicated-name refusal.
+* **`sondenBindung_zeuge`**, **`sonde_name_in_namen_zeuge`**, **`gemessen_zeuge`**, **`ungemessen_zeuge`**, **`artefakt_fremd_zeuge`**: The binding, the listed name, the measured run, the unrun refusal, the stale-artifact refusal.
+
+`grammatik/Grammatik/Kern/Syntax/Satz/PruefungExport.lean`:
+
+* **`CheckExportAnspruch`**: For arbitrary `P`, `probe : D.Fn`, `gates : List D.Fn`, `duty : D.Marke × Nat`, `c : CheckDecl D`, the resolved names denote this check's fields and the check expands exactly.
+* **`export_expansion`**: For arbitrary `P`, `probe`, `gates`, `duty`, `c`, assuming the claim, the exact expansion.
+* **`export_gate_treu`**: For arbitrary `P`, `probe`, `gates`, `duty`, `c`, `g`, assuming the claim and `hg : g ∈ gates`, the claimed gates discharge the claimed Duty.
+* **`pruefCAnderes`**, **`expansion_fremd_abgelehnt`**, **`abschluss_fremd_zeuge`**, **`abschluss_fremd_ueberhang_zeuge`**: The forged expansion, its refusal, the forged completion and the surplus-outcome refusal.
+* **`pruefCOhneTor`**, **`entladung_ohne_tor`**: The check with no consuming gate and the dropped Duty discharging nothing.
+
+`grammatik/Grammatik/Parser/Elab/Uebersetze/Pruefung/Export.lean`:
+
+* **`uCheckIdx`**: For arbitrary `u : UProg`, `c : UCheck`, the probe and gate indices with the Duty checked against the mark table; unknown gates and Duties refused by name.
+* **`uCheckAufloesung`**: The resolution read back as names. Decided on the real `elabU` output, with the unknown-gate and unknown-Duty refusals.
+* **`checkText`**, **`lexStr`**, **`elabText`**: The minimal check unit and the actual lex/parse/elaborate chain.
+* **End-to-end acceptance witness from source text**: the elaborated check name, the probe and wrapper functions, the mark table and the resolution, all decided by kernel evaluation.
+* **Refusal witnesses from source text**: the unknown gate and the duplicate check name, both `isErr` by decision.
+* **`checkB_leer`**: For arbitrary `P`, `tabs`, `globs`, `fns`, the empty admission holds -- today's `pruef` leg.
+* **`uCheckDecl_unbewohnt`**: For arbitrary `u : UProg`, no `CheckDecl (declOf u)` exists -- `declOf` carries `Marke = Empty`, so full closure needs the lead's Marke-carrying declaration.
+* **`treue_aus_entladung`**: For arbitrary `P`, `c`, `r`, `g`, assuming `h : CheckEntladung P c r g`, the discharge satisfies the goal leg `CheckTreueG`.
+
+`stage0/Stage0/Frontend/CheckExport.lean`:
+
+* **`CheckStage0Anspruch`**: For arbitrary `u : UProg`, `c : UCheck`, the resolution to lowered function indices with the probe name retained.
+* **`stage0_pruef_leer`**: For arbitrary `P`, `S`, `fs`, `ls`, `cs`, `ws`, `AkzeptiertX` runs with the default `checks = []` and the empty admission holds.
+* **`emitted_check_correct`**: For arbitrary `Emitted` output, the inherited IR execution certificate -- check-carrying units travel the same pipeline.
+
+Open: the lead build of this branch (single-module checks of the touched modules and their importers, then the guardians); the generator never draws `checkT` (no generator change); full closure needs the lead's Marke-carrying declaration with the derived `CheckDecl` admission in `checkB`/`accepts`, and the machine-indexed evidence fold on GX.

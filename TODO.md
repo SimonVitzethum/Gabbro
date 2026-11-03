@@ -338,14 +338,14 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   6. C02 pure execution, termination and effect/cost obligations.
   7. C02 immutable payload initialization and ordinary call expansion.
   8. C02 connected source/image correctness and refusal witnesses.
-  9. C16 declared-check identity and checked expansion (done on `c16-a`, THEOREM-MAP §136: `CheckIdentitaet`, `identitaet_aus_zulassung`, elaborated identity record).
-  10. C16 generated producer/probe/gate functions (done on `c16-a`, THEOREM-MAP §136: Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, `bool` wrapper forwarding).
-  11. C16 actual measurement samples and floor results (done on `c16-a`, THEOREM-MAP §136: `messWert`, `bodenHalten`, `berichtDeckt` with witnesses).
-  12. C16 completed reports for both verdicts and linear Duty discharge (done on `c16-a`, THEOREM-MAP §136: `CheckAbschluss`, `CheckEntladung`, `CheckEntladungErfolg` with both-verdict witnesses).
-  13. C16 report/token provenance through call push and normal return.
-  14. C16 G/GX replay and ownership conservation.
-  15. C16 counterprobe binding, artifact identity and measured status.
-  16. C16 connected export/Stage-0 correctness with emitted sample work.
+  9. C16 declared-check identity and checked expansion (done on `c16-a`, THEOREM-MAP §137: `CheckIdentitaet`, `identitaet_aus_zulassung`, elaborated identity record).
+  10. C16 generated producer/probe/gate functions (done on `c16-a`, THEOREM-MAP §137: Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, `bool` wrapper forwarding).
+  11. C16 actual measurement samples and floor results (done on `c16-a`, THEOREM-MAP §137: `messWert`, `bodenHalten`, `berichtDeckt` with witnesses).
+  12. C16 completed reports for both verdicts and linear Duty discharge (done on `c16-a`, THEOREM-MAP §137: `CheckAbschluss`, `CheckEntladung`, `CheckEntladungErfolg` with both-verdict witnesses).
+  13. C16 report/token provenance through call push and normal return (done on `c16-a`, THEOREM-MAP §138: `BerichtHerkunft`, `HerkunftSchritt`, `rueckUrteil` over `RufEreignisF` with fixture witnesses and error-channel refusals).
+  14. C16 G/GX replay and ownership conservation (done on `c16-a`, THEOREM-MAP §138: `CheckErhaltung`, `erhaltung_kreislauf`, `replayEintrag` with witnesses).
+  15. C16 counterprobe binding, artifact identity and measured status (done on `c16-a`, THEOREM-MAP §138: `SondenEindeutig` with exact decider, `SondenBindung`, `Gemessen` with measured/unrun/stale witnesses).
+  16. C16 connected export/Stage-0 correctness with emitted sample work (done on `c16-a`, THEOREM-MAP §138: `uCheckIdx` over real `elabU`, source-text end-to-end witness, forged/dropped-Duty refusals, `uCheckDecl_unbewohnt` Marke gap, `CheckStage0Anspruch`). Open: the lead build; full closure needs the lead's Marke-carrying declaration with derived `CheckDecl` admission in `checkB`/`accepts`, and the machine-indexed evidence fold on GX.
 - Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
   `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
   TODO (Muse): prove generic expansion soundness for the connected implementation.
