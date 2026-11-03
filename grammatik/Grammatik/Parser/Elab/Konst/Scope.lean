@@ -30,7 +30,7 @@ def collectFunctions (items : List SItemTief) : Except String (List UKonstFn) :=
   let named := schemas.map (fun schema => (schema.name, Ty.sum schema.spec)) ++
     reasons.map (fun reason => (reason.name, Ty.why reason.cases.length))
   let schemas := schemas ++ reasonSchemas
-  items.foldrM (fun item rest =>
+  items.reverse.foldlM (fun rest item =>
     match item with
     | .fnT signature body => do
       if !strEq signature.art "const" then return rest
