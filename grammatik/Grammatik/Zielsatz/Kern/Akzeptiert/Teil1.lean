@@ -372,9 +372,9 @@ def maskenDisziplinB (P : Programm D) (fs : List D.Fn) (w : D.Fn) : Bool :=
 def maskenB (P : Programm D) (fs : List D.Fn) : Bool :=
   fs.all fun w => !(P.unterbricht w) || maskenDisziplinB P fs w
 
-/-- **`Akzeptiert` -- what the checker decides, as ONE Bool.** The last conjunct is the C02
-    library binding: generated programs are ordinary, so it holds by construction
-    (`libraryB_immer`); the content is source-level (`Uebersetzung.lean`). -/
+/-- The complete program checker, followed by bounded guest admission. Source
+    adapters must supply every source-derived descriptor; the empty default
+    is the guest-free case and never a guest provenance certificate. -/
 def Akzeptiert [DecidableEq D.Ax] (P : Programm D) (S : SperrInv D) (fs : List D.Fn) (ls : List D.Lock)
     (cs : List (D.Tab ⊕ D.Glob)) (ws : List D.Fn)
     (aks : List (Kernzelle.AccumulatorDecl D) := []) (checks : List (CheckDecl D) := [])
