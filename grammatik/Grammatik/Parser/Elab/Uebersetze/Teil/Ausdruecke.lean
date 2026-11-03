@@ -154,11 +154,11 @@ inductive UEns
   deriving Repr
 end
 
-/-- Decidable equality follows the finite mutual value/predicate tree, including record fields.
-    The deriving handler does not support the nested record-field list. -/
+-- Decidable equality follows the finite mutual value/predicate tree, including record fields.
+-- The deriving handler does not support the nested record-field list.
 mutual
 def USide.decEq (a b : USide) : Decidable (a = b) := by
-  cases a <;> cases b <;> try exact isFalse (by intro h; cases h)
+  cases a <;> cases b <;> try (refine isFalse ?_; intro h; cases h; done)
   case lit.lit a0 b0 =>
     exact decidable_of_iff (a0 = b0) (by simp only [USide.lit.injEq])
   case param.param a0 b0 =>
@@ -298,7 +298,7 @@ def USide.decEq (a b : USide) : Decidable (a = b) := by
 termination_by sizeOf a
 
 def UEns.decEq (a b : UEns) : Decidable (a = b) := by
-  cases a <;> cases b <;> try exact isFalse (by intro h; cases h)
+  cases a <;> cases b <;> try (refine isFalse ?_; intro h; cases h; done)
   case cmp.cmp a0 a1 a2 b0 b1 b2 =>
     letI := USide.decEq a1 b1
     letI := USide.decEq a2 b2
