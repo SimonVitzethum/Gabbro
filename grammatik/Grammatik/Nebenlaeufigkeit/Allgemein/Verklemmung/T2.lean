@@ -62,16 +62,16 @@ def Stmt.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} 
     Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
   | .retWhy .. => true
-  | .retScoped .. => true
-  | .retWhyScoped .. => true
+  | .retScoped _ R => R.scopes.isEmpty
+  | .retWhyScoped _ R => R.scopes.isEmpty
   | _ => false
 
 def Endblock.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     Endblock D V l Γ Λ → Bool
   | .ret .. => true
   | .retWhy .. => true
-  | .retScoped .. => true
-  | .retWhyScoped .. => true
+  | .retScoped _ R => R.scopes.isEmpty
+  | .retWhyScoped _ R => R.scopes.isEmpty
   | .cons s _ => s.istRueck
   | _ => false
 
@@ -89,7 +89,18 @@ def GRest.anRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
 
 theorem Stmt.istRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     (s : Stmt D V l Γ Λ Λ') (h : s.istRueck = true) : Λ.Perm V.ende := by
-  cases s <;> simp_all [Stmt.istRueck]
+  cases s with
+  | retScoped e R =>
+      simp only [Stmt.istRueck, List.isEmpty_iff] at h
+      have hg := R.genau
+      rw [h] at hg
+      simpa using hg
+  | retWhyScoped r R =>
+      simp only [Stmt.istRueck, List.isEmpty_iff] at h
+      have hg := R.genau
+      rw [h] at hg
+      simpa using hg
+  | _ => simp_all [Stmt.istRueck]
 
 theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (r : GRest D V l Γ Λ) (h : r.anRueck = true) : Λ.Perm V.ende := by
@@ -98,6 +109,16 @@ theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
       cases e with
       | ret _ hp => exact hp
       | retWhy _ hp => exact hp
+      | retScoped _ R =>
+          simp only [anRueck, Endblock.istRueck, List.isEmpty_iff] at h
+          have hg := R.genau
+          rw [h] at hg
+          simpa using hg
+      | retWhyScoped _ R =>
+          simp only [anRueck, Endblock.istRueck, List.isEmpty_iff] at h
+          have hg := R.genau
+          rw [h] at hg
+          simpa using hg
       | cons s _ => exact s.istRueck_perm h
       | _ => simp only [anRueck, Endblock.istRueck, Bool.false_eq_true] at h
   | dann b _ =>

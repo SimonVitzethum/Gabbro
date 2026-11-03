@@ -6,6 +6,11 @@ public import Grammatik.Speichermodell.Atomar.AtomarAkteur.AkteurSAFaelle.Teil9
 
 namespace Gabbro.Grammatik
 
+/-- Reading never touches the memory (local copy: the general lemma lives
+    downstream of this module's import chain). -/
+theorem lese_speicher_sa {D : Deklaration} (σ : World D) (Λ : List (Res D))
+    (X : List (D.Tab ⊕ D.Glob)) : (σ.lese Λ X).speicher = σ.speicher := rfl
+
 set_option maxHeartbeats 4000000 in
 theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel D} {passes : Nat}
   {Q : AxEns D} {S : SperrInv D} {lok : D.Tab ⊕ D.Glob → Bool} {Tg : D.Tab ⊕ D.Glob → Prop} {m : Mass D}
@@ -41,7 +46,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
     (fun j k => wahr? (eval σ₂ edge σ₂ (.cons j (.cons k ρ))))
     (fun j k => decide (j.n = k.n)) = some v)
   (σ₃ : World D) (hs₃ : σ₃ = σ₂.lese Λ mass.orte)
-  (m : Int) (hm : m = (eval σ₃ mass σ₃ ρ).n)
+  (mr : Int) (hm : mr = (eval σ₃ mass σ₃ ρ).n)
   (neu : List (Ereignis D)) (hneu : σ₃.spur = neu ++ (M.faeden u).spur) (hΛ : HeldIn Λ (offen (M.faeden u).spur)) :
   FadenSA P O passes Q S lok Tg m zyk
       ({ speicher := M.speicher,
@@ -54,7 +59,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
                         (⟨true,
                             (⟨Ty.index (D.count t) :: Γ,
                                 (⟨Λ, (Env.cons v ρ, GRest.dann body (GRest.verbrauchRest t member edge inv bound mass
-                                  body rest m k))⟩ :
+                                  body rest mr k))⟩ :
                                   (Λ : List (Res D)) ×
                                     Env D (Ty.index (D.count t) :: Γ) ×
                                       GRest D (vertragVon D (M.faeden u).kopf.f) true (Ty.index (D.count t) :: Γ) Λ)⟩ :
@@ -77,7 +82,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
                         (⟨true,
                             (⟨Ty.index (D.count t) :: Γ,
                                 (⟨Λ, (Env.cons v ρ, GRest.dann body (GRest.verbrauchRest t member edge inv bound mass
-                                  body rest m k))⟩ :
+                                  body rest mr k))⟩ :
                                   (Λ : List (Res D)) ×
                                     Env D (Ty.index (D.count t) :: Γ) ×
                                       GRest D (vertragVon D (M.faeden u).kopf.f) true (Ty.index (D.count t) :: Γ) Λ)⟩ :
@@ -101,7 +106,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
                           (⟨true,
                               (⟨Ty.index (D.count t) :: Γ,
                                   (⟨Λ, (Env.cons v ρ, GRest.dann body (GRest.verbrauchRest t member edge inv bound mass
-                                    body rest m k))⟩ :
+                                    body rest mr k))⟩ :
                                     (Λ : List (Res D)) ×
                                       Env D (Ty.index (D.count t) :: Γ) ×
                                         GRest D (vertragVon D (M.faeden u).kopf.f) true (Ty.index (D.count t) :: Γ)
@@ -117,7 +122,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
           u).log := by
   simp only [RufMaschineG.weltVon, rufUpdateG_self]
   refine ⟨fadenSA_lokalQ hF hhead (.cons v ρ)
-    (.dann body (.verbrauchRest t member edge inv bound mass body rest m k)) σ₃.spur
+    (.dann body (.verbrauchRest t member edge inv bound mass body rest mr k)) σ₃.spur
     fun σ HX hfx hkx hg hok => ?_, hL⟩
   obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hok
   have hX₁ : ∀ c ∈ inv.orte, c ∈ stabilS P S lok (M.faeden u).kopf.f Λ ∨ Tg c :=
@@ -136,7 +141,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
     mischT_gleichAuf hg hX₁ Λ Λ
   have g₁W : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte)
       (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) (M.weltVon u) :=
-    g₁.trans (GleichAuf.vonSpeicher (lese_speicher _ _ _))
+    g₁.trans (GleichAuf.vonSpeicher (lese_speicher_sa _ _ _))
   have g₂ : GleichAuf ((stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte) ++ (member.orte ++ edge.orte))
       (mischT Tg (member.orte ++ edge.orte)
         ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
@@ -149,7 +154,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
         ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
         (M.weltVon u).speicher)
       (M.weltVon u) :=
-    g₂.trans (GleichAuf.vonSpeicher (lese_speicher _ _ _))
+    g₂.trans (GleichAuf.vonSpeicher (lese_speicher_sa _ _ _))
   have g₃ : GleichAuf (((stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte) ++ (member.orte ++ edge.orte)) ++
         mass.orte)
       (mischT Tg mass.orte
@@ -163,13 +168,13 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
         (fun h => Or.inl (List.mem_append_left _ (List.mem_append_left _ h))) Or.inr) Λ Λ
   have g₁m : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte)
       (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) σ₁ :=
-    g₁.trans (GleichAuf.vonSpeicher (by simp only [hs₁, lese_speicher]))
+    g₁.trans (GleichAuf.vonSpeicher (by simp only [hs₁, lese_speicher_sa]))
   have g₂m : GleichAuf ((stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte) ++ (member.orte ++ edge.orte))
       (mischT Tg (member.orte ++ edge.orte)
         ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
         (M.weltVon u).speicher)
       σ₂ :=
-    g₂.trans (GleichAuf.vonSpeicher (by simp only [hs₂, hs₁, lese_speicher]))
+    g₂.trans (GleichAuf.vonSpeicher (by simp only [hs₂, hs₁, lese_speicher_sa]))
   have g₃m : GleichAuf (((stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte) ++ (member.orte ++ edge.orte)) ++
         mass.orte)
       (mischT Tg mass.orte
@@ -178,7 +183,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
           (M.weltVon u).speicher).lese Λ mass.orte)
         (M.weltVon u).speicher)
       σ₃ :=
-    g₃.trans (GleichAuf.vonSpeicher (by simp only [hs₃, hs₂, hs₁, lese_speicher]))
+    g₃.trans (GleichAuf.vonSpeicher (by simp only [hs₃, hs₂, hs₁, lese_speicher_sa]))
   have eM : ∀ k, wahr? (eval
       (mischT Tg (member.orte ++ edge.orte)
         ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
@@ -258,12 +263,12 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
           (mischT Tg (member.orte ++ edge.orte)
             ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
             (M.weltVon u).speicher, some v, b) := by
-        refine ⟨_, ?_⟩
+        refine ⟨(verbrauchSelA A t member edge (leseBA A inv σ ρ).1 ρ).2.2, ?_⟩
         have h1 : (leseBA A inv σ ρ).1 =
             mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher := e₁
         rw [h1]
         simp only [verbrauchSelA]
-        refine ⟨?_, ?_, rfl⟩
+        refine Prod.ext ?_ (Prod.ext ?_ rfl)
         · exact e₂
         · rw [hW, hE]; exact hv
       have hmA : (eval
@@ -275,7 +280,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
           (leseA A
             (mischT Tg (member.orte ++ edge.orte)
               ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
-              (M.weltVon u).speicher) Λ mass.orte) ρ).n = m := by
+              (M.weltVon u).speicher) Λ mass.orte) ρ).n = mr := by
         rw [e₃, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₃m ρ]
         exact hm.symm
       have hsem := semHA_verbrauchWeiter S O' U A passes R t member edge inv bound mass body rest k σ ρ
@@ -283,7 +288,7 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
         (mischT Tg (member.orte ++ edge.orte)
           ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
           (M.weltVon u).speicher)
-        v b m hsel hmA
+        v b mr hsel hmA
       rw [e₃] at hsem
       exact hsem)⟩
 

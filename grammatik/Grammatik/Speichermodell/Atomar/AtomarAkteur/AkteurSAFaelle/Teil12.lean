@@ -137,17 +137,17 @@ theorem akteurSA_dannLeaveVerbrauch {D : Deklaration} {P : Programm D} {O : Orak
         (M.weltVon u).speicher)
       ((M.weltVon u).lese Λ inv.orte) :=
     mischT_gleichAuf
-      (g₁.trans (GleichAuf.vonSpeicher (lese_speicher _ _ _)))
+      (g₁.trans (GleichAuf.vonSpeicher (lese_speicher_sa _ _ _)))
       (fun c hc => (hX₂ c hc).elim (fun h => Or.inl (List.mem_append_left _ h)) Or.inr) Λ Λ
   have g₁m : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ ++ mass.orte)
       (mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher) σm :=
-    g₁.trans (GleichAuf.vonSpeicher (by simp only [hsm, lese_speicher]))
+    g₁.trans (GleichAuf.vonSpeicher (by simp only [hsm, lese_speicher_sa]))
   have g₂m : GleichAuf ((stabilS P S lok (M.faeden u).kopf.f Λ ++ mass.orte) ++ inv.orte)
       (mischT Tg inv.orte
         ((mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher).lese Λ inv.orte)
         (M.weltVon u).speicher)
       (σm.lese Λ inv.orte) :=
-    g₂.trans (GleichAuf.vonSpeicher (by simp only [hsm, lese_speicher]))
+    g₂.trans (GleichAuf.vonSpeicher (by simp only [hsm, lese_speicher_sa]))
   refine ⟨mischT Tg inv.orte
       ((mischT Tg mass.orte (σ.lese Λ mass.orte) (M.weltVon u).speicher).lese Λ inv.orte)
       (M.weltVon u).speicher,

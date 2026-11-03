@@ -125,17 +125,17 @@ theorem akteurSA_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D}
         (M.weltVon u).speicher)
       ((M.weltVon u).lese Λ (member.orte ++ edge.orte)) :=
     mischT_gleichAuf
-      (g₁.trans (GleichAuf.vonSpeicher (lese_speicher _ _ _)))
+      (g₁.trans (GleichAuf.vonSpeicher (lese_speicher_sa _ _ _)))
       (fun c hc => (hX₂ c hc).elim (fun h => Or.inl (List.mem_append_left _ h)) Or.inr) Λ Λ
   have g₁m : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte)
       (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) σ₁ :=
-    g₁.trans (GleichAuf.vonSpeicher (by simp only [hs₁, lese_speicher]))
+    g₁.trans (GleichAuf.vonSpeicher (by simp only [hs₁, lese_speicher_sa]))
   have g₂m : GleichAuf ((stabilS P S lok (M.faeden u).kopf.f Λ ++ inv.orte) ++ (member.orte ++ edge.orte))
       (mischT Tg (member.orte ++ edge.orte)
         ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
         (M.weltVon u).speicher)
       σ₂ :=
-    g₂.trans (GleichAuf.vonSpeicher (by simp only [hs₂, hs₁, lese_speicher]))
+    g₂.trans (GleichAuf.vonSpeicher (by simp only [hs₂, hs₁, lese_speicher_sa]))
   have eM : ∀ k, wahr? (eval
       (mischT Tg (member.orte ++ edge.orte)
         ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ (member.orte ++ edge.orte))
