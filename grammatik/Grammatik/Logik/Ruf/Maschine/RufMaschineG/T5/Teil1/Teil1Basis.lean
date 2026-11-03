@@ -26,7 +26,10 @@ theorem antwortRestG_sauber (g : D.Fn)
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;>
     simp_all [antwortRestG, GRest.stapelSauber, GRest.sauber]
-  all_goals split at h <;> simp_all [GRest.sauber]
+  all_goals first
+    | (subst h; simp_all [GRest.sauber])
+    | (obtain ⟨_, h⟩ := h; subst h; simp_all [GRest.sauber])
+    | (split at h <;> simp_all [GRest.sauber])
 
 /-- Cleanup and either answer channel preserve the no-waiting-head invariant. -/
 theorem rufAntwortG_sauber {z z' : RufFadenG D} {vor σ : World D}

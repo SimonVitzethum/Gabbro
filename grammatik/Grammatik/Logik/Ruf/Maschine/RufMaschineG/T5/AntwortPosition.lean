@@ -37,9 +37,36 @@ private theorem antwortPosition_mono {V : Vertrag D} {p q : Prop} (hpq : p → q
     (h : r.antwortPosition p) : r.antwortPosition q := by
   cases r <;> first | exact h | exact hpq h
 
+/-- The position predicate on a whole sigma residue; folding the projections keeps
+    the residue a non-dependent argument, so `hhead` rewrites it. -/
+def RestPos {V : Vertrag D} (root : Prop)
+    (x : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) : Prop :=
+  x.2.2.2.2.antwortPosition root
+
 def AntwortPositionG (z : RufFadenG D) : Prop :=
-  z.kopf.rest.2.2.2.2.antwortPosition (z.stapel = []) ∧
-    ∀ c ∈ z.stapel, c.rest.2.2.2.2.antwortPosition False
+  RestPos (z.stapel = []) z.kopf.rest ∧ ∀ c ∈ z.stapel, RestPos False c.rest
+
+/-- A waiting caller's continuation is in answer position when the caller's residue is. -/
+private theorem wartet_position {caller : RufRahmenG D}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
+    {restb : Block D (vertragVon D caller.f) l (τ :: Γ) Λ Λ'}
+    {k : GRest D (vertragVon D caller.f) l Γ Λ'} {ρ : Env D Γ}
+    (hc : RufWartetHeadG caller restb k ρ) (h : RestPos False caller.rest) :
+    k.antwortPosition False := by
+  unfold RestPos at h
+  rcases hc with hc | ⟨n, err, hc⟩
+  · rw [hc] at h
+    exact h
+  · rw [hc] at h
+    exact h
+
+/-- The continuation behind a generalized foreign binder keeps the answer position. -/
+private theorem weiterOpt_position {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ' : List (Res D)}
+    (e : Option Ty) (k : GRest D V l Γ Λ') (h : k.antwortPosition False) :
+    (GRest.weiterOpt (Λ := Λ') e k).antwortPosition False := by
+  cases e with
+  | none => exact h
+  | some τ => simpa [GRest.weiterOpt, GRest.antwortPosition] using h
 
 private theorem antwortRestG_position {V : Vertrag D} (g : D.Fn)
     (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
@@ -49,7 +76,10 @@ private theorem antwortRestG_position {V : Vertrag D} (g : D.Fn)
   obtain ⟨l, Γ, Λ, ρ, r⟩ := c
   cases a <;> cases r <;>
     simp_all [antwortRestG, GRest.antwortPosition]
-  all_goals split at ha <;> simp_all [GRest.antwortPosition]
+  all_goals first
+    | (subst ha; simp_all [GRest.antwortPosition])
+    | (obtain ⟨_, ha⟩ := ha; subst ha; simp_all [GRest.antwortPosition])
+    | (split at ha <;> simp_all [GRest.antwortPosition])
 
 private theorem rufAntwortG_position {z z' : RufFadenG D} {vor σ : World D}
     {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
@@ -85,12 +115,44 @@ theorem antwortPositionG_schritt {P : Programm D} {O : Orakel D} {pa : Nat}
           simp only [rufUpdateG_self]
           exact rufAntwortG_position h ha
       | _ =>
-          simp_all [AntwortPositionG, GRest.antwortPosition, GRest.weiterOpt,
-            rufUpdateG_self, antwortPosition_mono]
+          try simp only [rufUpdateG_self]
+          simp only [AntwortPositionG] at h ⊢
+          try simp_all
+          all_goals (try simp only [RestPos, GRest.antwortPosition])
+          all_goals first
+            | (apply weiterOpt_position; simpa [RestPos, GRest.antwortPosition] using h.1)
+            | simpa [RestPos, GRest.antwortPosition] using h.1
+            | (refine antwortPosition_mono False.elim _ ?_; simpa [RestPos, GRest.antwortPosition] using h.1)
+            | simpa [RestPos, GRest.antwortPosition] using h.2.1
+            | (refine antwortPosition_mono False.elim _ ?_; simpa [RestPos, GRest.antwortPosition] using h.2.1)
+            | (refine antwortPosition_mono False.elim _ ?_; refine h.2 _ ?_; simp_all)
+            | (simp_all [RestPos, GRest.antwortPosition]; done)
+            | (split <;> simpa [RestPos, GRest.antwortPosition] using h.1)
+            | (split <;> simp_all [RestPos, GRest.antwortPosition]; done)
+            | (apply wartet_position (h := h.2.1); assumption)
+            | (apply wartet_position (h := h.1); assumption)
+            | (rcases ‹Option Ty› with _ | τ <;> simpa [RestPos, GRest.antwortPosition] using h.1)
+            | skip
   | g1 hs | g2 hs | g3 hs | g4 hs | g5 hs | g6 hs =>
       cases hs <;>
-        simp_all [AntwortPositionG, GRest.antwortPosition, GRest.weiterOpt,
-          rufUpdateG_self, antwortPosition_mono]
+        (try simp only [rufUpdateG_self]) <;>
+        (simp only [AntwortPositionG] at h ⊢) <;>
+        (try simp_all)
+      all_goals (try simp only [RestPos, GRest.antwortPosition])
+      all_goals first
+        | (apply weiterOpt_position; simpa [RestPos, GRest.antwortPosition] using h.1)
+        | simpa [RestPos, GRest.antwortPosition] using h.1
+        | (refine antwortPosition_mono False.elim _ ?_; simpa [RestPos, GRest.antwortPosition] using h.1)
+        | simpa [RestPos, GRest.antwortPosition] using h.2.1
+        | (refine antwortPosition_mono False.elim _ ?_; simpa [RestPos, GRest.antwortPosition] using h.2.1)
+        | (refine antwortPosition_mono False.elim _ ?_; refine h.2 _ ?_; simp_all)
+        | (simp_all [RestPos, GRest.antwortPosition]; done)
+        | (split <;> simpa [RestPos, GRest.antwortPosition] using h.1)
+        | (split <;> simp_all [RestPos, GRest.antwortPosition]; done)
+        | (apply wartet_position (h := h.2.1); assumption)
+        | (apply wartet_position (h := h.1); assumption)
+        | (rcases ‹Option Ty› with _ | τ <;> simpa [RestPos, GRest.antwortPosition] using h.1)
+        | skip
 
 theorem antwortPositionG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
     {sp : Speicher D} {init : Faden → Σ f : D.Fn, Env D (D.params f)}
@@ -99,14 +161,16 @@ theorem antwortPositionG_erreichbar {P : Programm D} {O : Orakel D} {pa : Nat}
   induction hr with
   | start =>
       intro t
-      rw [start_faden]
-      exact ⟨trivial, fun _ h => (List.not_mem_nil h).elim⟩
+      unfold AntwortPositionG
+      dsimp only [RufStartG]
+      cases init t with
+      | mk g rho => exact ⟨trivial, fun _ h => (List.not_mem_nil h).elim⟩
   | schritt N N' u hn hs ih =>
       intro t
       by_cases htu : t = u
       · subst t
         exact antwortPositionG_schritt hs (ih u)
-      · rw [rufSchrittG_fremd hs t htu]
+      · rw [rufSchrittG_passt_anders P O pa N N' u t htu hs]
         exact ih t
 
 end Gabbro.Grammatik
