@@ -21,6 +21,7 @@
 -/
 module
 public import Grammatik.Speichermodell.Atomar.AtomarLaufBasis
+public import Grammatik.Speichermodell.Atomar.VerbrauchPruefung
 public import Grammatik.Speichermodell.Atomar.AtomarAkteur
 public import Grammatik.Speichermodell.Atomar.Atomar
 @[expose] public section
@@ -240,7 +241,10 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   have hK' := hF.1
   refine ⟨fun l Γ Λ ρ tb inv body ks k hr => ?_, fun l Γ Λ ρ a n inv body k hr => ?_,
     fun l Γ Λ Λx ρ tb inv body is k rest hl i hr => ?_,
-    fun l Γ Λ Λ' ρ s Kr hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_⟩
+    fun l Γ Λ Λ' ρ s Kr hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
+    fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
+    fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
   · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
       kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
     obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ inv.orte (M.weltVon t).speicher
@@ -307,6 +311,66 @@ theorem fadenSA_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     rw [semHA_dann_cons, execStmtHA_blatt P S (orakelAus O HA) (umweltAus S sp HU) hHA passes
       (rufAusL H) s hb, h']
     exact weiterHA_logik _ _ _ _ _ _ _ e
+
+  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+      kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    have hX₂ : ∀ c ∈ member.orte ++ edge.orte,
+        c ∈ stabilS P S lok (M.faeden t).kopf.f Λ ∨ Tg c := by
+      intro c hc
+      rcases List.mem_append.mp hc with hc | hc
+      · exact expr_stabilX (hFS _) member hok.1 c hc
+      · exact expr_stabilX (hFS _) edge hok.2.1 c hc
+    obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese2_schritt hfx hkx Λ inv.orte
+      (member.orte ++ edge.orte) (M.weltVon t).speicher
+    have hPX := umweltAusA_passt Tg hfx'
+    have hHA := umweltAusA_ok Tg HX'
+    obtain ⟨g₁, g₂⟩ := verbrauch_lese2_gleichAuf hg (expr_stabilX (hFS _) inv hok.2.2.1) hX₂ Λ
+    by_contra hbad
+    apply hno _ (passtX_teil hsub hPX) hHA .schleife
+    apply semHA_verbrauch_pruefung_falsch
+    intro hp
+    apply hbad
+    dsimp only [verbrauchKopfPrueft] at hp ⊢
+    rw [(hrec _ hPX hHA).1, (hrec _ hPX hHA).2] at hp
+    have ei := eval_gleichAuf inv (fun _ h => List.mem_append_right _ h) g₁ ρ
+    have em := fun i => eval_gleichAuf member
+      (fun _ h => List.mem_append_right _ (List.mem_append_left _ h)) g₂ (.cons i ρ)
+    have ee := fun i j => eval_gleichAuf edge
+      (fun _ h => List.mem_append_right _ (List.mem_append_right _ h)) g₂ (.cons i (.cons j ρ))
+    simp_rw [ei, em, ee] at hp
+    exact hp
+  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+      kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese_schritt Tg hfx hkx Λ mass.orte (M.weltVon t).speicher
+    have hPX := umweltAusA_passt Tg hfx'
+    have hHA := umweltAusA_ok Tg HX'
+    by_contra hbad
+    apply hno _ (passtX_teil hsub hPX) hHA .schleife
+    apply semHA_verbrauchRest_falsch
+    intro hp
+    apply hbad
+    dsimp only [verbrauchAbstiegPrueft] at hp ⊢
+    rw [hrec _ hPX hHA, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h)
+      (mischT_gleichAuf hg (expr_stabilX (hFS _) mass hok.2.2.2.1) Λ Λ) ρ] at hp
+    exact hp
+  · obtain ⟨H, HA, HU, HX, σ, hfx, hkx, hg, hok, hno⟩ :=
+      kopfSA_keineLogik' hO hRL hQ hS hsp hK hK' hr
+    have hg' := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
+    obtain ⟨HX', hfx', _, hsub, hrec⟩ := lese2_schritt hfx hkx Λ mass.orte inv.orte (M.weltVon t).speicher
+    have hPX := umweltAusA_passt Tg hfx'
+    have hHA := umweltAusA_ok Tg HX'
+    obtain ⟨g₁, g₂⟩ := verbrauch_lese2_gleichAuf hg'
+      (expr_stabilX (hFS _) mass hok.2.2.2.2.2.1) (expr_stabilX (hFS _) inv hok.2.2.2.2.1) Λ
+    by_contra hbad
+    apply hno _ (passtX_teil hsub hPX) hHA .schleife
+    apply semHA_abbVerbrauch_falsch
+    intro hp
+    apply hbad
+    dsimp only [verbrauchAbbruchPrueft, verbrauchAbstiegPrueft] at hp ⊢
+    rw [(hrec _ hPX hHA).1, (hrec _ hPX hHA).2] at hp
+    rw [eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) g₁ ρ,
+      eval_gleichAuf inv (fun _ h => List.mem_append_right _ h) g₂ ρ] at hp
+    exact hp
 
 /-- **THE CONTRACT LEGS OVER GX** (as `ziel_ort_sperre` over G): on every machine GX reaches --
     G with the shared atomics answered by the weak memory -- the contracts hold at every logged
