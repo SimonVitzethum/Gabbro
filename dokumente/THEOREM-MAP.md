@@ -6865,3 +6865,34 @@ Continuation from `717635600` (implementation attempts only; **no Lean/lake/buil
 * **`Pruefung/Lauf/Zeugen.lean`**, **`Stage0/Zeugen/Pruefung/CheckConsumerWitness.lean`**: source-to-acceptance attempts for a complete check/local floor/gate/consumer, physical cycle conservation, actual sample/floor replay and its retained consumed report. Negative twins omit the consumer, call it twice, repeat ghost consumption or fabricate a measured sample. They are registered in `Alle/Teil1` and `Stage0.lean`.
 
 Validation boundary: the implementation and proof attempts above are uncompiled. C16 is not measured complete until the lead compiles the changed modules/importers, checks the generic source/return/history attachment attempts and the standard axioms of `gabbro_ziel`, then runs the guardians. A static finding already present at the task base is `Zielsatz/Kern/Spec/Teil4.lean:33`: it refers to `berich` whereas `CheckEvidenz` declares `bericht`; no file under `Spec` was edited. The pre-existing `Stage0/Zeugen/Annahme` folder has 24 entries; the new witness lives in a separate cohesive folder. No final emitted-image execution or external measurement was performed.
+
+## 181. C11 follow-up: part-4 frame gap closed over disciplined entries (2026-11-03)
+
+On `c11-nurabstieg`; model extension within the C-package rules, `Spec.lean` untouched, `gabbro_ziel` unchanged. The `rufAt_nurAbstieg` discharge relied on an unconditional frame half (`RufRahmenTreu` at every world), but the repaired frame proof (`rufAt_treu`: `TreuAusgang`/`TreuRet` with spare/rank, `vorCall`, entry `HeldB`) needs the entry discipline `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt` -- scoped returns may unwind scopes, and collapsing a callee release needs the discipline. Closed the strongest honest way: the discipline is a premise everywhere and is discharged where the theorems are consumed. An unconditional frame is unprovable (an undisciplined `ok` answer need not keep it), so no guarantee was weakened and none added.
+
+`grammatik/Grammatik/Logik/Ruf/Eintritt/RufEintritt.lean` (the entry-gated handler):
+
+* **`treuR_rufFrei`**: the patched handler (`logik` replaced by the hardware default) is `TreuR`.
+* **`treuR_torRuf`**: gating by the entry contract preserves `TreuR`.
+* **`rufEintritt`**: answers like `rufFrei` at disciplined entries, `.hardware .ieee` elsewhere (the `rufAusL` idiom).
+* **`eintritt_agree`**, **`eintritt_agree_tor`**: agreement with the patched handler where the discipline holds, also through the gate.
+* **`eintritt_ohneLogik`**, **`eintritt_ohneVorbedingung`**, **`eintritt_vertrag`**, **`eintritt_rahmen`**, **`eintritt_respektiert`**: the gated handler is in `RespektiertRahmen` (and both `Ohne*` classes), so the user obligation applies to it.
+* **`treuR_eintritt`**: the gated handler is frame-faithful.
+* **`RufRahmenTreu`** (moved here from `RufLogika.lean`): the disciplined frame half.
+
+`grammatik/Grammatik/Logik/Ruf/Eintritt/RufGleichSchleife.lean`, `RufGleichStmt.lean`, `RufGleichBindBlock.lean`, `RufGleichBindAxiom.lean` (joint run equality, mirror of the Treu induction with equality conclusions): `traverseLauf_gleich`, `verbrauchLauf_gleich`, `retryLauf_gleich`, `foreverLauf_gleich`, `stmt_gleich`, `block_gleich`, `end_gleich`, `arms_gleich`, `grundArms_gleich` with the `bind*` arms extracted as helpers taking the mutual IHs as premises. From a disciplined entry, runs under two handlers agreeing there coincide.
+
+`grammatik/Grammatik/Logik/Vertraege/HandlerKongruenz/Teil3.lean` (loop runs under an error set), `Teil4.lean`/`Teil5.lean` (fused `Block`/`Endblock` bind arms), `Teil6.lean` (fused mutual over all five syntax sorts), `Teil7.lean` (decision arms), `Teil8.lean` (remaining arms): handlers agreeing on disciplined entries or failing early with a first-side mark give runs that agree or fail early, from a disciplined entry (`HandlerUnterDisz`, `stmt_unter`, `block_unter`, `end_unter`, `arms_unter`, `grundArms_unter`, with the loop and bind arms as standalone theorems).
+
+`grammatik/Grammatik/Logik/Ruf/RufLogika.lean` (rewired discharge):
+
+* **`NurAbstieg`** carries the entry-discipline premise (restated; the unconditional form is unprovable).
+* **`kong_rufAt_torRuf_diszipliniert`**: step-3 congruence gated by the discipline (replaces the unconditional `kong_rufAt_torRuf`).
+* **`kong_torRuf`** (generalized from `kong_torRuf_rufFrei`): the gate congruence for any inner handler.
+* **`rufSchritt_unter`**: one call unfolding under two gatedly-related handlers, mirror of `rufSchritt_kongruent`.
+* **`rufAt_nurAbstieg`** takes `ScopesOkProg` (derived from the accepted spec via `scopesOkProg_of_spec`, no `Spec` change), applies the obligation to `rufEintritt`, transfers body duties through the run equalities, and classifies call outcomes through the gated step congruence.
+* **`rufAt_respektiertRahmen`** restated as the disciplined pair (contracts plus `RufRahmenTreu`).
+
+`grammatik/Grammatik/Logik/Ruf/RufLogikZeuge.lean`: `nurAbstieg_zeuge_104`/`_108` carry the discipline premise and supply `ScopesOkProg` by computation (`scopes4`, `scopes8`); the undisciplined-frame claim (unprovable in general since C11) is dropped while `heldB_faellt_104` keeps the non-vacuity and the concrete runs keep the non-degeneracy. `RufLogik.lean` header records the closure.
+
+Open: the lead build of this branch (new modules plus `RufLogika.lean`, `RufLogikZeuge.lean` and their importers, then the guardians); `gabbro_ziel` must stay on exactly `propext`/`Classical.choice`/`Quot.sound` with no `sorry`. No language case is claimed complete by these modules.
