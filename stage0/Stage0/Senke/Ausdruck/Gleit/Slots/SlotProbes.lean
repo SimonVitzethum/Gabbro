@@ -195,11 +195,11 @@ theorem computedFloatOfE_ok_zeuge (F : Gleitkomma.Format)
     (eval σ₀ (Expr.lit (Γ := []) (Λ := []) 37) σ (Env.nil : Env D []))
     (by decide) (by decide) scalar hp (by omega) ?_
   · simpa only [eval] using run
-  · intro ce ct he ht pre
+  · intro child he
     simp only [lowE_eqs, show lit32 37 = true by decide, ↓reduceIte,
-      Option.some.injEq, Prod.mk.injEq] at he
-    obtain ⟨rfl, rfl⟩ := he
-    exact const_ok pre (by decide) (by omega)
+      Option.some.injEq] at he
+    cases he
+    exact const_ok hp.left (by decide) (by omega)
 
 #print axioms computedFloatOfE_ok_zeuge
 
