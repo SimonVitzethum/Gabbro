@@ -105,6 +105,37 @@ theorem axiom_binding_selected_zeuge :
        .goalT "selected" (some ("linux", "x86_64", [("probe", { binding with ins := [], codes := [] }, .core [])]))]).toOption.map
       (fun gates => gates.map Tor.name) = some ["probe"] := by rfl
 
+def areaBinding : SBind := { errorBinding with resultArea := some "rdi" }
+def areaItems : List SItemTief :=
+  [.goalT "selected" (some ("linux", "x86_64", [("sys_gate", areaBinding, .core [])])),
+   .whyT "Error" [("BadFd", .lit 9, "bad descriptor"), ("Other", .lit 4, "other")] true]
+
+/-- The selected hidden register reaches the executable gate without being
+    inserted into the source parameter list. -/
+theorem selected_area_register_zeuge :
+    (torVonFor "x86_64" (some "selected") areaItems errorCall).toOption.map
+      (fun gate => (gate.regs, gate.resultArea)) =
+      some ([none, none, none, none, none, none], some 0) := by rfl
+
+/-- A hidden result pointer cannot overwrite an ordinary source argument. -/
+theorem overlapping_area_register_refused_zeuge :
+    torAusBindung "x86_64" [] "probe" [("fd", .atom "u64")] none
+      { binding with resultArea := some "rdi", codes := [] } =
+      .error "gate probe: result area register rdi overlaps a source argument" := by rfl
+
+def areaSource : String :=
+  "target host abi linux arch x86_64 { sys_gate = number 39 regs in { } regs out { rax } result area rdi clobbers { } errors { } assume contract falsifier probe; }"
+
+def parsedArea : Except String (Option String) := do
+  let tokens ← (lex areaSource).mapError fun _ => "lex"
+  let items ← parseTopTief tokens
+  let selected ← viaBindungFor "x86_64" (some "host") items "sys_gate"
+  pure selected.resultArea
+
+#eval do
+  unless parsedArea.toOption == some (some "rdi") do
+    throw (IO.userError "result area clause was not preserved by parsing and profile selection")
+
 #print axioms uniqueBinding_ok
 #print axioms torVonFor_via
 end Gabbro.Stage0.BindingProbes
