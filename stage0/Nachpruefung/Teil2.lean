@@ -73,5 +73,17 @@ public import Stage0.Bindung.Proben
 #print axioms Gabbro.Stage0.Senke.softAddWordsL_ok
 #print axioms Gabbro.Stage0.Senke.softFloatReject_none
 #print axioms Gabbro.Stage0.Senke.softFloatRangeL_ok
-#print axioms Gabbro.Stage0.Senke.blockFloatAdd_case
+#print axioms Gabbro.Stage0.Senke.blockFloatAddSub_case
 #print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_add_accepted_zeuge
+
+-- Binary64 subtraction reuses the total adder after exactly one sign-bit xor.
+#print axioms Gabbro.Stage0.Senke.floatSub_eq_add_neg
+#print axioms Gabbro.Stage0.Senke.softNegWord_model
+#print axioms Gabbro.Stage0.Senke.softNeg_model
+#print axioms Gabbro.Stage0.Senke.softSub_model
+#print axioms Gabbro.Stage0.Senke.softSubRoutine_ok
+#print axioms Gabbro.Stage0.Senke.softAddOperandL_ok
+#print axioms Gabbro.Stage0.Senke.softSub_model_zeuge
+#print axioms Gabbro.Stage0.Senke.softSubRoutine_ok_zeuge
+#print axioms Gabbro.Stage0.Senke.floatAddSubBlockL_addSub
+#print axioms Gabbro.Stage0.Senke.FloatArithmeticProbe.float_sub_accepted_zeuge

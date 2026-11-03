@@ -14,7 +14,8 @@
     `add`; `softRound_replay` (in `Runde.lean`) replays the rounding decision
     through the routine's (quotient, remainder, denominator) triple.
     `softAddComposed_bits` is the word identity the routine correctness
-    reuses. `sub`/`mul`/`div` have no entry point here and stay refused. -/
+    reuses. Subtraction composes this entry point with a sign-bit xor in
+    `Normal/Sub.lean`; multiplication and division remain refused. -/
 module
 public import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 public import Stage0.Senke.Gleit.Add

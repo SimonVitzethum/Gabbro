@@ -1,4 +1,4 @@
-/- Connect the integer-only adder to the generic Block simulation theorem. -/
+/- Connect shared integer-only add/sub to the generic Block simulation theorem. -/
 module
 public import Stage0.Senke.Anweisung.Faelle.Binden
 public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Check
@@ -10,20 +10,23 @@ open Gabbro.Grammatik Runner.IR Runner.Mem
 set_option linter.unusedSectionVars false
 variable [Kern] {D : Deklaration} {L : Lay D}
 
-private theorem finiteAddWf {l₁ h₁ l₂ h₂ : Int × Int}
-    (a : Gleit l₁ h₁) (b : Gleit l₂ h₂) :
-    Gleitkomma.wf Gleitkomma.f64 (Gleitkomma.add Gleitkomma.f64 a.x b.x) := by
-  have af := a.endlich
-  have bf := b.endlich
-  cases ka : Gleitkomma.klasse Gleitkomma.f64 a.x <;>
-    cases kb : Gleitkomma.klasse Gleitkomma.f64 b.x
+private theorem finiteAddWf (a b : GFloat)
+    (af : gleitEndlich a = true) (bf : gleitEndlich b = true) :
+    Gleitkomma.wf Gleitkomma.f64 (Gleitkomma.add Gleitkomma.f64 a b) := by
+  cases ka : Gleitkomma.klasse Gleitkomma.f64 a <;>
+    cases kb : Gleitkomma.klasse Gleitkomma.f64 b
   all_goals simp only [gleitEndlich, ka, kb, Bool.false_eq_true] at af bf
   all_goals simp only [Gleitkomma.add, Gleitkomma.wertExakt, ka, kb]
   all_goals first
     | exact Gleitkomma.wf_null _ _
     | exact Gleitkomma.rundeExakt_wf _ Gleitkomma.f64_p _
 
-theorem blockFloatAdd_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
+private theorem gleitRechneAddSub (subtract : Bool) (a b : GFloat) :
+    gleitRechne (if subtract then .sub else .add) a b =
+      Gleitkomma.add Gleitkomma.f64 a (floatAddOperand subtract Gleitkomma.f64 b) := by
+  cases subtract <;> rfl
+
+theorem blockFloatAddSub_case (subtract : Bool) {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {R : (f : D.Fn) → World D → Env D (D.params f) → RufAusgang f}
     {A : D.Fn → Nat} {C : D.Fn → List II} {dv : Runner.W} {cap : Nat}
     (hS : FunSpec L A C R dv cap) (hA : ∀ f, A f < 2 ^ 31)
@@ -38,27 +41,36 @@ theorem blockFloatAdd_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
     {rest : Block D (vertragVon D f) l (.fl low high :: Γ) Λ Λ'} :
     (∀ {pr ex}, BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex rest) →
     BlockCase (reserved := reserved) L O passes R A C dv cap P f fp K Ks lo rp cfp σ0 ρ0 cens tens pr ex
-      (.float .add a b low high rest) := by
+      (.float (if subtract then .sub else .add) a b low high rest) := by
   intro ihRest c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-  simp only [lowB, floatAddBlockL, ← hlo0] at h
+  simp only [lowB, floatAddSubBlockL_addSub, ← hlo0] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨⟨cc, tc⟩, hcc, ⟨ce, te⟩, he, ⟨cr, tr⟩, hr, hc⟩ := h
   cases hc
   let σr := σ.lese Λ (a.orte ++ b.orte)
-  let x := Gleitkomma.add Gleitkomma.f64 (eval σr a σr ρ).x (eval σr b σr ρ).x
-  have hwf : Gleitkomma.wf Gleitkomma.f64 x := finiteAddWf (eval σr a σr ρ) (eval σr b σr ρ)
-  let producer := fun j => softAddWordsL j (lowE (reserved := reserved) L a) (lowE (reserved := reserved) L b)
+  let x := Gleitkomma.add Gleitkomma.f64 (eval σr a σr ρ).x
+    (floatAddOperand subtract Gleitkomma.f64 (eval σr b σr ρ).x)
+  have finiteRight : gleitEndlich (floatAddOperand subtract Gleitkomma.f64
+      (eval σr b σr ρ).x) = true := by
+    cases subtract <;> simpa [floatAddOperand, gleitEndlich, Gleitkomma.klasse_neg] using
+      (eval σr b σr ρ).endlich
+  have hwf : Gleitkomma.wf Gleitkomma.f64 x :=
+    finiteAddWf _ _ (eval σr a σr ρ).endlich finiteRight
+  let producer := fun j => softAddWordsL j (lowE (reserved := reserved) L a)
+    (fun k => softAddOperandL subtract k (lowE (reserved := reserved) L b))
   have conv : ∀ fp K j code t, producer j = some (code, t) → t ≤ K →
       ∀ m pc, Pre L m pc fp K j code ρ (fun m => WeltAt m L σr) reserved →
       Ok m pc fp K j code (fun w => Gleitkomma.wf Gleitkomma.f64 x ∧
         w = BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 x)) := by
     intro fp K j code t hc ht m pc pre
-    exact softAddWordsL_ok (eval σr a σr ρ).x (eval σr b σr ρ).x
+    exact softAddWordsL_ok (eval σr a σr ρ).x
+      (floatAddOperand subtract Gleitkomma.f64 (eval σr b σr ρ).x)
       (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay a j c t hc ht m pc ρ pre).word trivial)
-      (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay b j c t hc ht m pc ρ pre).word trivial)
+      (softAddOperandL_ok subtract (eval σr b σr ρ).x
+        (fun j c t hc ht m pc pre => (lowE_ok σr σr (fun _ h => h) hW.lay b j c t hc ht m pc ρ pre).word trivial))
       hc ht pre
   simp only [floatNarrowC, List.length_append, List.length_singleton] at hs
-  simp only [execBlock, gleitRechne]
+  simp only [execBlock, gleitRechneAddSub]
   have hchoice := choice_ok (P := P) (σ0 := σ0) (ex := ex) (d := frei Γ reserved)
     (cc := cc) (ct := stopC 107 (frei Γ reserved)) (ce := ce ++ cr)
     (b := softFloatReject low high x)
@@ -102,5 +114,5 @@ theorem blockFloatAdd_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
           (by simp only [frei, contextWords_cons] at hlo2 ⊢; omega) hu hk hw
           (fun j hj => by have := hpr j hj; simp only [frei, contextWords_cons] at this ⊢; omega)
 
-#print axioms blockFloatAdd_case
+#print axioms blockFloatAddSub_case
 end Gabbro.Stage0.Senke
