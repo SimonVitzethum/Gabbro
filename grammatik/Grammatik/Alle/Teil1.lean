@@ -194,7 +194,7 @@ public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben30
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben31
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben32
 public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben33
-public import Grammatik.Parser.Elab.Proben.Formen.UebersetzeProben42
+public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben42
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben34
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben35
 public import Grammatik.Parser.Elab.Proben.Spaet.UebersetzeProben36
@@ -374,3 +374,6 @@ public import Grammatik.Kern.Syntax.Konst.AuswertungZeuge
 public import Grammatik.Kern.Syntax.Konst.Geschlossen
 public import Grammatik.Kern.Syntax.Konst.Literal
 public import Grammatik.Kern.Syntax.Konst.Ersetzung
+public import Grammatik.Parser.Spec.Zeugen
+public import Grammatik.Parser.Dyn.Witnesses
+public import Grammatik.Parser.Dyn.SourceWitnesses

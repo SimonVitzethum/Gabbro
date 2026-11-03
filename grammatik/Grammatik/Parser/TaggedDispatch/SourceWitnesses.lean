@@ -12,18 +12,18 @@ open Uebersetze UebersetzeAllg2
 set_option maxRecDepth 100000
 set_option maxHeartbeats 800000
 
-/-- Two distinct payload types, a receiver between ordinary arguments, and an
-    unimplemented static member taking and returning Self in the same group. -/
+/-- Two distinct payload types, a receiver between ordinary arguments, and a
+    static member with complete conforming implementations in the same group. -/
 private def taggedSource (rectResult : String) : String :=
   "spec Shape[T] { " ++
-  "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {}; " ++
-  "fn copy(s: T) -> T effects {}; } " ++
+  "fn area(prefix: bool, s: T, suffix: bool) -> bool effects {} costs <= 50 ops; " ++
+  "fn copy(s: T) -> T effects {} costs <= 50 ops; } " ++
   "impl Shape[u8] { fn area(prefix: bool, s: u8, suffix: bool) -> bool " ++
-  "effects {} { return prefix; } } " ++
+  "effects {} costs <= 20 ops { return prefix; } fn copy(s: u8) -> u8 effects {} costs <= 20 ops { return s; } } " ++
   "impl Shape[bool] { fn area(prefix: bool, s: bool, suffix: bool) -> " ++ rectResult ++
-  " effects {} { return suffix; } } " ++
+  " effects {} costs <= 20 ops { return suffix; } fn copy(s: bool) -> bool effects {} costs <= 20 ops { return s; } } " ++
   "tagged type AnyShape = { Circle(u8), Rect(bool) } by Shape; " ++
-  "impl fn sample(s: AnyShape) -> bool effects {} { " ++
+  "impl fn sample(s: AnyShape) -> bool effects {} costs <= 20 ops { " ++
   "let answer = Shape::area(false, s, true); return answer; }"
 
 private def taggedSourceItems (rectResult : String) : Except String (List SItemTief) := do
@@ -45,12 +45,12 @@ private def taggedExpectedMatch : SAnw :=
   .block [.cases (.variable "s")
     [.arm "Circle" (some "#dispatch")
       (.block [.bind false "#dispatch-result" none
-        (.call "#tagged-impl-1::area"
+        (.call "$spec$0$area"
           [.variable "prefix", .variable "#dispatch", .variable "suffix"])]
         (some (.ret (some (.variable "#dispatch-result"))))),
      .arm "Rect" (some "#dispatch")
       (.block [.bind false "#dispatch-result" none
-        (.call "#tagged-impl-2::area"
+        (.call "$spec$1$area"
           [.variable "prefix", .variable "#dispatch", .variable "suffix"])]
         (some (.ret (some (.variable "#dispatch-result")))))]] none
 
@@ -75,7 +75,7 @@ public theorem tagged_source_elaborated_zeuge :
     before any dispatcher is admitted. -/
 public theorem tagged_source_signature_refused_zeuge :
     beqTopTief (taggedSourceExpanded "u8")
-      (.error "tagged-dispatch-signature-mismatch: #tagged-impl-2::area") = true := by
+      (.error "spec.signature") = true := by
   decide +kernel
 
 end Gabbro.Grammatik.Parser

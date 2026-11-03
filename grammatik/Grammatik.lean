@@ -53,5 +53,14 @@ public import Grammatik.Parser.Elab.Uebersetze.Tagged.Proben
 public import Grammatik.Parser.TaggedDispatch.Witnesses
 public import Grammatik.Parser.TaggedDispatch.SignatureWitnesses
 public import Grammatik.Parser.TaggedDispatch.SourceWitnesses
+public import Grammatik.Parser.Elab.Generic.PipelineWitness
+public import Grammatik.Parser.Elab.Generic.FunctionWitness
+public import Grammatik.Parser.Elab.Generic.BoundsWitness
+
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Witnesses
+public import Grammatik.Parser.Elab.Uebersetze.Folds.ExistsWitness
+public import Grammatik.Parser.Elab.Uebersetze.Folds.FloatWitnesses
+public import Grammatik.Parser.Elab.Modules.PipelineWitness
+public import Grammatik.Parser.Elab.Instantiation.Witness
 
 @[expose] public section

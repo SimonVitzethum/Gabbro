@@ -122,7 +122,7 @@ theorem array_membership_export_zeuge :
 
 /-- A literal spelling a domain keyword is ordinary data, even beside an array type. -/
 theorem array_carrier_marker_zeuge :
-    let signature : FnSig := ⟨"impl", "sample", [("data", .array (.atom "u8") (.lit 2))], some (.atom "u8"), none, []⟩
+    let signature : FnSig := ⟨"impl", "sample", [("data", .array (.atom "u8") (.lit 2))], some (.atom "u8"), none, [], []⟩
     let body := SAnw.block [.bind false "message" none (.ext .text ["elems"] [])] (some (.ret (some (.lit 42))))
     uArrayCarriers [] [.fnT signature body] = [] := by rfl
 

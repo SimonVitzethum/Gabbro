@@ -1,15 +1,16 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Einheit.Elaboration
+public import Grammatik.Parser.Elab.Modules.Frontend
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
 
-/-- The sole source expansion path: adapters and reason propagation precede declaration
-    expansion (including tagged-by dispatch and libraries). Failures are preserved verbatim. -/
-def expandU (items : List SItemTief) : Except String (List SItemTief) := do
-  let expanded ← entzuckere (uMembers items)
-  Gabbro.Grammatik.Parser.exportDeclarationUnit (uMembers expanded)
+/-- The sole source expansion path: modules, generic functions, spec calls and literals,
+    followed by adapter/reason and tagged/dyn desugaring. Static obligations stay attached. -/
+def expandU (items : List SItemTief) :
+    Except String (List SItemTief × List (STyp × String)) :=
+  Modules.prepare items
 
 /-- Preserve canonical const-body admission before scope collection. Stage 0 supplies its
     separately certified evaluator for block-bodied constants. -/
@@ -29,11 +30,12 @@ def checkCanonicalConstants (msE : List SItemTief) : Except String Unit := do
   pure ()
 
 /-- Canonical scope collection on the expanded program. -/
-def elabUExpanded (msE : List SItemTief) : Except String UProg := do
+def elabUExpanded (expanded : List SItemTief × List (STyp × String)) : Except String UProg := do
+  let (msE, requirements) := expanded
   checkCanonicalConstants msE
   let consts := uConstsRech (uKonstFns msE) msE []
   let alias := uAliase consts msE ++ uAliasBreiten msE ++ consts.map (fun c => (c.1, (c.2, c.2)))
-  elabExpandedWithScopes msE consts alias (uKonstFns (uOhneSenken msE)) (uTabelle consts alias)
+  elabExpandedWithScopes msE consts alias (uKonstFns (uOhneSenken msE)) (uTabelle consts alias) requirements
 
 /-- Canonical export and Stage 0 consume the same expanded declarations and phase body. -/
 def elabU (items : List SItemTief) : Except String UProg :=

@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Parser.TaggedDispatch.Signature
+public import Grammatik.Parser.Spec.Expand
 public import Grammatik.Parser.Elab.Uebersetze.Tagged.Schema
 
 @[expose] public section
@@ -13,9 +14,6 @@ structure TaggedBinding where
   sumName : String
   signature : FnSig
   deriving Repr
-
-def taggedImplementationName (index : Nat) (member : String) : String :=
-  "#tagged-impl-" ++ toString index ++ "::" ++ member
 
 def taggedDispatchName (sumName spec member : String) : String :=
   "#tagged-" ++ sumName ++ "::" ++ spec ++ "::" ++ member
@@ -55,18 +53,30 @@ def resolveTaggedDeclaration (items : List SItemTief) (decl : SItemTief) (spec :
       | [schema] => pure (name, schema.cases)
       | _ => throw ("tagged-dispatch-invalid-declaration: " ++ name)
     | _ => throw "tagged-dispatch-invalid-declaration"
-  let (parameter, functions) ← match items.filterMap (fun
-      | .specGroupT n p fs => if strEq n spec then some (p, fs) else none
+  let group ← match items.filterMap (fun
+      | .specGroupT n ps es fs => if strEq n spec then some (Spec.Group.mk n ps es fs) else none
       | _ => none) with
     | [entry] => pure entry
     | [] => throw ("tagged-dispatch-unknown-spec: " ++ spec)
     | _ => throw ("tagged-dispatch-duplicate-spec: " ++ spec)
-  let impls := items.zipIdx.filterMap fun (item, index) => match item with
-    | .implGroupT n ty fs =>
-      if strEq n spec then some (TaggedImplementation.mk ty (fs.map fun (sig, _) =>
-        (sig.name, { sig with name := taggedImplementationName index sig.name }))) else none
+  let [parameter] := group.types | throw "tagged-dispatch-type-arity"
+  let functions := group.functions
+  let impls := (Spec.instances items).zipIdx.filterMap fun (i, index) =>
+    match i.types with
+    | [ty] =>
+      if strEq i.group spec then some (TaggedImplementation.mk (Spec.canonicalType items 128 ty)
+        (i.functions.filterMap fun
+          | .fnT sig _ => some (sig.name, { sig with name := Spec.implementationName index sig.name,
+              params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t)),
+              res := sig.res.map (Spec.canonicalType items 128) })
+          | _ => none)) else none
     | _ => none
-  let checked ← checkTaggedGroup (functions.map (taggedCanonicalSignature parameter)) variants impls
+  let variants := variants.map fun (n, t) => (n, t.map (Spec.canonicalType items 128))
+  let functions := functions.map fun original =>
+    let sig := taggedCanonicalSignature parameter original
+    { sig with params := sig.params.map (fun (n, t) => (n, Spec.canonicalType items 128 t)),
+      res := sig.res.map (Spec.canonicalType items 128) }
+  let checked ← checkTaggedGroup functions variants impls
   let mut output := [decl]
   let mut bindings := []
   for (sig, cases) in checked do
@@ -84,14 +94,5 @@ def resolveTaggedDeclaration (items : List SItemTief) (decl : SItemTief) (spec :
     output := output ++ [.fnT generated (.block [body] none)]
     bindings := bindings ++ [⟨spec ++ "::" ++ sig.name, receiver, sumName, generated⟩]
   pure (output, bindings)
-
-/-- Group declarations are compile-time data; implementations become ordinary
-    functions with deterministic private names. Static members are retained too. -/
-def taggedOrdinaryItems (items : List SItemTief) : List SItemTief :=
-  items.zipIdx.flatMap fun (item, index) => match item with
-    | .specGroupT .. | .taggedByT .. => []
-    | .implGroupT _ _ fs => fs.map fun (sig, body) =>
-      .fnT { sig with art := "impl", name := taggedImplementationName index sig.name } body
-    | _ => [item]
 
 end Gabbro.Grammatik.Parser

@@ -134,6 +134,7 @@ def anwArt : SAnw → String
   | .grow .. => "grow" | .free .. => "free" | .child .. => "child" | .start .. => "start" | .other w => w
   | .block .. => "block" | .allocVon .. => "alloc from a provider" | .bindQ .. => "let query"
   | .callQ .. => "call query"
+  | .genericCall .. => "unexpanded generic call"
 
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; mid-body `return` and every other statement are explicit errors). -/

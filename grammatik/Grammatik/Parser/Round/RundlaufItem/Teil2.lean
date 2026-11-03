@@ -9,14 +9,14 @@ public import Grammatik.Parser.Round.RundlaufItem.Teil1
 namespace Gabbro.Grammatik.Parser
 set_option maxRecDepth 100000
 
-/-- A printable function head. -/
+/-- The ordinary printable core. Generic heads have separate source-path witnesses. -/
 def SigGut (s : FnSig) : Prop :=
   (s.art = "" ∨ s.art = "const" ∨ istMod s.art = true) ∧ (∀ p ∈ s.params, TypGut p.2) ∧
-    TypOptGut s.res ∧ (∀ k ∈ s.klauseln, KlauselGut k)
+    TypOptGut s.res ∧ (∀ k ∈ s.klauseln, KlauselGut k) ∧ s.generics = []
 
 /-- The function head behind its modifier, up to the body. -/
 def sigToks (s : FnSig) : List Token :=
-  [.wort "fn", nameTok s.name, .zeichen "("] ++ druckParams s.params ++ [.zeichen ")"] ++
+  [.wort "fn", nameTok s.name] ++ druckGenericParams s.generics ++ [.zeichen "("] ++ druckParams s.params ++ [.zeichen ")"] ++
     (match s.res with
       | some t => [.zeichen "->"] ++ druckTyp t
       | none => []) ++
@@ -39,9 +39,9 @@ def fehlerToks : Option String → List Token
   | some n => [.wort "or", nameTok n]
   | none => []
 
-theorem sigToks_eq (s : FnSig) : sigToks s = [.wort "fn", nameTok s.name, .zeichen "("] ++
+theorem sigToks_eq (s : FnSig) (hg : s.generics = []) : sigToks s = [.wort "fn", nameTok s.name, .zeichen "("] ++
     druckParams s.params ++ [.zeichen ")"] ++ resToks s.res ++ fehlerToks s.fehler ++ druckKlauseln s.klauseln := by
-  simp only [sigToks]
+  simp only [sigToks, hg, druckGenericParams, List.append_nil, List.append_assoc, List.cons_append, List.nil_append]
   cases s.res <;> cases s.fehler <;> rfl
 
 /-- The tail of a function head (the `or` channel, clauses) is a type follow. -/
@@ -75,9 +75,10 @@ theorem kopfRest_typFolge (fehler : Option String) (ks : List SKlausel) (hk : �
 theorem fnSig_rund (s : FnSig) (hs : SigGut s) (R : List Token) (hR : KlauselEnde R) (F : Nat)
     (hF : 8 * (sigToks s).length + 42 ≤ F) :
     parseFnSig F s.art (sigToks s ++ R) = .ok (s, R) := by
-  obtain ⟨-, hp, hres, hk⟩ := hs
-  rw [sigToks_eq] at hF ⊢
-  obtain ⟨art, name, params, res, fehler, klauseln⟩ := s
+  obtain ⟨-, hp, hres, hk, hgeneric⟩ := hs
+  rw [sigToks_eq s hgeneric] at hF ⊢
+  obtain ⟨art, name, params, res, fehler, klauseln, generics⟩ := s
+  cases hgeneric
   simp only at hp hres hk hF ⊢
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hlenF : (fehlerToks fehler).length ≤ 2 := by cases fehler <;> simp only [fehlerToks, List.length_nil, Nat.zero_le, List.length_cons, Nat.zero_add, Nat.reduceAdd, Std.le_refl]
@@ -127,7 +128,8 @@ theorem fnSig_rund (s : FnSig) (hs : SigGut s) (R : List Token) (hR : KlauselEnd
   have hP := params_rund params hp (resToks res ++ (fehlerToks fehler ++ druckKlauseln klauseln ++ R)) F'
     (by omega)
   simp only [List.append_assoc, List.cons_append, List.nil_append, List.singleton_append] at hP hErg hK ⊢
-  simp only [parseFnSig, nimmWort, strEq_self, ↓reduceIte, nimmName, nameText_nameTok, hP, hErg, hK]
+  simp only [parseFnSig, nimmWort, strEq_self, ↓reduceIte, nimmName, nameText_nameTok,
+    bind, Except.bind, pure, Except.pure, parseGenericParams, List.any_nil, Bool.false_eq_true, hP, hErg, hK]
 
 /-! ### Items -/
 

@@ -94,7 +94,7 @@ theorem nimmName_nameTok (s : String) (r : List Token) :
 /-- The words that open a type form of their own (never an atom). -/
 def typKopf (a : String) : Bool :=
   strEq a "ptr" || strEq a "option" || strEq a "index" || strEq a "entry" || strEq a "fn" ||
-    strEq a "string"
+    strEq a "string" || strEq a "dyn"
 
 /-- One suffix of a type chain: `in lo .. hi` (`..<` when exclusive) or `wrapping`. -/
 inductive TSuff

@@ -33,7 +33,7 @@ public import Grammatik.Korpus.Programme.Export104
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 import all Init.Data.Repr
-public import Grammatik.Parser.Elab.Uebersetze.Teil.SpecExpansion
+public import Grammatik.Parser.Elab.Uebersetze.Folds.Substitution
 @[expose] public section
 namespace Gabbro.Grammatik.Parser.Uebersetze
 set_option maxRecDepth 100000
@@ -88,12 +88,15 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln0 : List SKlausel)
       match uAnwReihe ctx.tabs koepfe 1000000 ctx ss with
       | .error e => .error e
       | .ok (body, ctxE) =>
+        match expandFoldEnd ctxE ende with
+        | .error e => .error e
+        | .ok (prefix, ctxE, ende) =>
         match uEnde ctxE ende with
         | .error e =>
           if ende.isNone && (match ss.getLast? with | some s => uEndetTief 64 s | none => false) then
             .ok (gives, needs, body, .keins)
           else .error e
-        | .ok r => .ok (gives, needs, body, r)
+        | .ok r => .ok (gives, needs, body ++ prefix, r)
     | _ => .error "fn body without G form"
 /-- The context of a function from its head. -/
 def uCtxVon (alias : List (String × (Int × Int))) (lits : List (String × Int))

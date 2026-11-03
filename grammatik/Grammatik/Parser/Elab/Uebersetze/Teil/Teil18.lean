@@ -3,7 +3,7 @@
   Subject:   Phase 1 desugaring (`ABSTRACTION-SYNTAX-PLAN.md` §4, steps 1a/1b): reason
              propagation `?` and adapters `fn … from f` to EXISTING surface forms.
 
-  `entzuckere` runs first inside `elabU`, so machine G never sees the new syntax:
+  `entzuckere` runs after module/generic/spec/literal expansion inside `elabU`,\n  so machine G never sees the new syntax:
 
   * `let x = f(args) ?;` (resp. `f(args) ?;`) becomes the explicit `else` form of §4.3:
     `let x = f(args) else (e) { match e { C => { return R::C; } … } };` with one arm
@@ -20,12 +20,13 @@
   Every refusal is a named `Except` error at desugar time; elaboration never sees a new
   constructor. The identity of the desugaring with the explicit form is definitional
    (`entfalteFrage_beispiel`, `frageZuElse_ist_else`); end-to-end witnesses elaborate
-   the desugared programs (`Parser/Elab/Proben/Formen/UebersetzeProben42`).
+   the desugared programs (`Parser/Elab/Proben/Spaet/UebersetzeProben42`).
 -/
 module
 
 public import Grammatik.Parser.Item.ElementTief
 public import Grammatik.Parser.Namen.Gebunden
+public import Grammatik.Parser.Spec.Resolve
 
 @[expose] public section
 
@@ -384,13 +385,15 @@ def entfalteAdapterItem (sigs : List FnSig) : SItemTief → Except String SItemT
 def entfalteItem (ks : FrageKontext) : SItemTief → Except String SItemTief
   | .fnT s b => (entfalteFrage { ks with eigen := s.fehler } b).map (.fnT s)
   | .gateT item => (entfalteItem ks item).map SItemTief.gateT
+  | .implGroupT name types effects bodies => do
+    pure (.implGroupT name types effects (← bodies.mapM (entfalteItem ks)))
   | item => pure item
 
 /-- The single Phase-1 expansion: adapters first, then `?` with their complete signatures.
     Adapter targets keep the existing ordinary-function admission rule. -/
 def entzuckere (items : List SItemTief) : Except String (List SItemTief) := do
   let expanded ← items.mapM (entfalteAdapterItem (sigsVon items))
-  let sigs := sigsVon expanded
+  let sigs := sigsVon (Spec.materialize expanded)
   let ks : FrageKontext :=
     { eigen := none, ruf := sigs.map (fun s => (s.name, s.fehler)), gruende := gruendeVon expanded }
   expanded.mapM (entfalteItem ks)

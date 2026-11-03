@@ -46,19 +46,19 @@ def elabWithScopes (items : List SItemTief) (consts : List (String × Int))
     (typeEnv : List (String × (Int × Int)))
     (functions : List UKonstFn := uKonstFns (uOhneSenken (uMembers items)))
     (tableLowering : List String → SItemTief → Except String UTab := uTabelle consts typeEnv) : Except String UProg := do
-  let expanded ← expandU items
-  elabExpandedWithScopes (expanded.map OldSource.normalizeItem) consts typeEnv functions tableLowering
+  let (expanded, requirements) ← expandU items
+  elabExpandedWithScopes (expanded.map OldSource.normalizeItem) consts typeEnv functions tableLowering requirements
 
 /-- Equality on the expanded program, including every expansion and const-admission error.
     Both endpoints share the entire phase body, so later elaborator changes cannot drift. -/
 theorem elabU_scopes (items : List SItemTief) :
-    elabU items = ((expandU items).bind fun expanded => do
+    elabU items = ((expandU items).bind fun (expanded, requirements) => do
       checkCanonicalConstants expanded
       let consts := uConstsRech (uKonstFns expanded) expanded []
       let types := uAliase consts expanded ++ uAliasBreiten expanded ++
         consts.map (fun c => (c.1, (c.2, c.2)))
       elabExpandedWithScopes expanded consts types
-        (uKonstFns (uOhneSenken expanded)) (uTabelle consts types)) := by
+        (uKonstFns (uOhneSenken expanded)) (uTabelle consts types) requirements) := by
   rfl
 
 /-- The actual canonical consumer sees identical complete scopes on every input admitted by
