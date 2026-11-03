@@ -391,7 +391,7 @@ def uRestFehler : List SItemTief → Except String Unit
   | .goalT .. :: rest => uRestFehler rest
   | .fnT _ _ :: rest => uRestFehler rest
   | .entryT _ :: rest => uRestFehler rest
-  | .trustT _ _ arch regs _ _ :: _ => .error (ProfilBindung.gastQuelleFehler arch regs)
+  | .trustT .. :: rest => uRestFehler rest
   | .concT _ :: rest => uRestFehler rest
   | .devT .. :: rest => uRestFehler rest
   | .groupT .. :: rest => uRestFehler rest
@@ -486,6 +486,7 @@ def uAxKlauseln (kopf : UFnKopf) (tabs : List UTab) (globs : List UGlob) :
       | .ok eff =>
         uAxKlauseln { kopf with puts := uEindeutig (kopf.puts ++ eff.puts), gputs := uEindeutig (kopf.gputs ++ eff.gputs) } tabs globs rest
     else .error "foreign fn effect without G form"
+  | .needs _ :: rest | .gives _ :: rest => uAxKlauseln kopf tabs globs rest
   | .cost _ :: rest => uAxKlauseln kopf tabs globs rest
   | .arch _ :: rest => uAxKlauseln kopf tabs globs rest
   -- `deadline <= n ops arch X falsifier p`: a named hardware outcome outside the goal (`Spec.lean`, NOT CLAIMED:
