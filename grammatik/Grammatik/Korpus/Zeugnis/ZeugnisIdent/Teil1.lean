@@ -117,6 +117,7 @@ def printInt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
   | .tru => none
   | .fls => none
   | .thru _ _ _ _ _ _ => none
+  | .thruOwn _ _ _ _ _ _ _ _ _ _ _ => none
   | .ptrOf _ _ _ _ => none
   | .refEq _ _ => none
   | .slotRef _ _ _ _ _ _ => none
