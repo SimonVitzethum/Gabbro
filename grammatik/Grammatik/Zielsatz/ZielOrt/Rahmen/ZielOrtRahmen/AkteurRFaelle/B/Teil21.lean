@@ -4,6 +4,8 @@ public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.AkteurRFaelle.B.Teil20
 
+public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen.AkteurRFaelle.B.ScopedAnswer
+
 @[expose] public section
 
 namespace Gabbro.Grammatik
