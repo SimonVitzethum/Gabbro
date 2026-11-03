@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Parser.Elab.Konst.Ersetzung
 public import Grammatik.Parser.Elab.Generic.Body
+public import Grammatik.Parser.Elab.Konst.Scope
 public import Grammatik.Parser.Elab.Export.ExportMetadata
 
 @[expose] public section
@@ -32,8 +33,14 @@ def ersetzeKlausel (fns : List UKonstFn) : SKlausel → Except String SKlausel
 /-- Replace value calls in function bodies, contracts and constant initializers. -/
 def ersetzeSItem (fns : List UKonstFn) : SItemTief → Except String SItemTief
   | .fnT sig body => do
-    let body' ← ersetzeSAnw fns body
-    let clauses ← sig.klauseln.mapM (ersetzeKlausel fns)
+    if strEq sig.art "const" then return .fnT sig body
+    let body' ← ersetzeSAnwIn (sig.params.map Prod.fst) fns body
+    let clauses ← sig.klauseln.mapM fun
+      | .needs source => (ersetzeSExprIn (sig.params.map Prod.fst) fns source).map SKlausel.needs
+      | .gives source => (ersetzeSExprIn ("result" :: sig.params.map Prod.fst) fns source).map SKlausel.gives
+      | .cost source => (ersetzeSExprIn (sig.params.map Prod.fst) fns source).map SKlausel.cost
+      | .drops source => (ersetzeSExprIn (sig.params.map Prod.fst) fns source).map SKlausel.drops
+      | clause => pure clause
     return .fnT {sig with klauseln := clauses} body'
   | .constT name ty value => do return .constT name ty (← ersetzeKonstWert fns value)
   | .globT mutable name ty value bound proof shared => do
@@ -48,34 +55,12 @@ def ersetzeItems (fns : List UKonstFn) : List SItemTief → Except String (List 
     | .ok m', .ok rest' => .ok (m' :: rest')
     | .error e, _ | _, .error e => .error e
 
-/-- Reuse the existing capture-free surface traversal for known global constants.
-    Parameter, local, pattern and loop binders remove shadowed bindings. -/
-def closeConstantNames (items : List SItemTief) : Except String (List SItemTief) := do
-  let initial := uConstsRech (uKonstFns items) items []
-  let types := uAliase initial items
-  let functions := uKonstFnsWith types items
-  let values := uConstsRech functions items []
-  let bindings : Generic.Bindings := { values := values.map (fun (n, v) => (n, literalVonInt v)) }
-  let env : Generic.Environment :=
-    { declarations := [], constants := values, constantFunctions := functions,
-      aliases := types, deferApplications := true }
-  items.mapM fun
-    | .fnT sig body => do
-      if strEq sig.art "const" then return .fnT sig body
-      let ((sig', body'), _) ← (do
-        let sig' ← Generic.rewriteSignature env bindings sig
-        let body' ← Generic.rewriteBody env (bindings.without (sig.params.map Prod.fst)) body
-        pure (sig', body')).run []
-      pure (.fnT sig' body')
-    | .constT name ty (.one source) =>
-      pure (.constT name ty (.one (Generic.expression bindings.values source)))
-    | item => pure item
-
-/-- Close known constant names, resolve signatures, then certify every replacement. -/
-def konstErsetzePipeline (ms : List SItemTief) : Except String (List SItemTief) := do
-  let closed ← closeConstantNames ms
-  let values := uConstsRech (uKonstFns closed) closed []
-  ersetzeItems (uKonstFnsWith (uAliase values closed ++ values.map (fun (name, value) => (name, (value, value)))) closed) closed
+/-- Const calls are certified on original source arguments. Global names close
+    only inside their proof-producing typed expression reader; runtime expressions
+    keep their canonical source spelling and ordinary name resolution. -/
+def konstErsetzePipeline (items : List SItemTief) : Except String (List SItemTief) := do
+  let functions ← collectFunctions items
+  ersetzeItems functions items
 
 mutual
 /-- A surface call still names a dropped const function. -/
