@@ -150,4 +150,22 @@ theorem unlisted_void_answer :
     observed false true false (BitVec.ofInt 64 (-8)) = 23 ∧
     observed false true true (BitVec.ofInt 64 (-8)) = 23 := by decide +kernel
 
+/-- In particular, preserving local 23 cannot be implemented by deleting the call. -/
+def observedTrace (valued fallible nested : Bool) (raw : Runner.W) : List (Ereignis (D valued fallible)) :=
+  match execEnd (oracle valued fallible raw) 1 (calls valued fallible)
+      (body valued fallible nested) (initial valued fallible) .nil with
+  | .zurueck σ _ => σ.spur
+  | _ => []
+
+theorem oracle_effect_is_retained :
+    observedTrace false false false 7 = [.fremd (.inl (gate false false))] ∧
+    observedTrace false false true 7 = [.fremd (.inl (gate false false))] ∧
+    observedTrace false true false 7 = [.fremd (.inl (gate false true))] ∧
+    observedTrace false true true (BitVec.ofInt 64 (-9)) = [.fremd (.inl (gate false true))] := by
+  decide +kernel
+
+/-- Value decoding still rejects an answer outside its declared range. -/
+theorem invalid_value_answer :
+    observed true true false 11 = -1 ∧ observed true true true 11 = -1 := by decide +kernel
+
 end Gabbro.Stage0.OptionalBinderWitness
