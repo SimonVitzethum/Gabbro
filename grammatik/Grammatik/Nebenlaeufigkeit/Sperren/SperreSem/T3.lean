@@ -135,7 +135,7 @@ def weiterH : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} → GRest D V l 
   | _, _, _, .zurueckgekehrt a, o =>
       match o with
       | .ok σ _ =>
-          match a with
+          match a.1 with
           | .inl v => .zurueck σ v
           | .inr r => .why σ r
       | .zurueck σ v => .zurueck σ v

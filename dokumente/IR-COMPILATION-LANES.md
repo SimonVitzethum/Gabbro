@@ -2180,6 +2180,18 @@ reclaim metadata may support observation only; never infer a reclamation rule.
 
 **C11 — consuming traversal, capacity duty and returns across lock scopes.**
 
+Owner decision (2026-11-03): strengthen `StartEndeG`, hence the meaning of
+`Ziel.startEnde` in `Spec/Teil2.lean`, by conjoining `StartScopedEndeG` with
+the unchanged expression-return clause. A completed scoped root stores its
+evaluated answer together with the read world before release; its frame
+retains the start environment and `s0`. Its start function's `ensures` and
+every owed invariant must hold at that saved world, including in later
+reachable machines after other threads have changed released carriers.
+`ScopedRueckGutG` supplies the guarantee at the cleanup source; the saved-answer
+invariant carries it to completion. This adds a guarantee without changing
+the existing goal fields or any existing conjunct. Static implementation is
+pending the lead's module checks and standard-axiom audit.
+
 | Subpackage | Implementable change |
 |---|---|
 | Consuming Kern/G | Append **new** `Stmt.consumeTraverse`: finite represented domain, current-world membership predicate, declared edge relation/projection, invariant, measure `Expr D Γ Λ (.int 0 bound)` and body `Block D V true (.index (D.count t) :: Γ) Λ Λ`, with the domain predicate/edge tests typed over those represented indices. Define a deterministic current-state selector over `alleIndizes`, selecting a minimal remaining member for the declared well-founded edge relation, with index order as tie-break. Each completed body pass must remove its selected member, introduce no new domain member/edge, preserve the invariant and strictly decrease the measure. The user body's declared `touches … consumes` performs the actual mutation; the traversal must not silently free the object a second time. Recompute selection in the post-body world; a saved initial index sweep is not this semantics. Empty selection terminates only with the selector-completeness theorem. Add matching `GRest` selection/body continuations and `RufSchrittG` cases, carrying the previous measure and finite initial bound. A failed required decrease/invariant is a logical failure, excluded by the user's body duty, never a successful early exit. |

@@ -211,7 +211,7 @@ theorem invRuhe_erreichbarX (hO : GutO O) (hTA : ∀ c, Tg c → AtomarAusgenomm
               exact List.mem_singleton.mp hk
             obtain ⟨-, -, hSE, hKS⟩ := hIR M' hr'
             obtain ⟨l, Γ, Λ, ρ, r, e, hrest, hret⟩ := fertig_retKopf hFu hKS
-            have hI := (hSE u hst l Γ Λ ρ r e hrest hret).2
+            have hI := (hSE.1 u hst l Γ Λ ρ r e hrest hret).2
             refine hwelt _ (fun c _ => ?_) (hI i hi ?_)
             · show TraegerGleich (M'.weltVon u).speicher M'.speicher c
               have e : (M'.weltVon u).speicher = M'.speicher := speicher_welt_speicher _ _

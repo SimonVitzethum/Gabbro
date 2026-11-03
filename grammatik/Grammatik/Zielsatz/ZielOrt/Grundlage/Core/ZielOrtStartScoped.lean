@@ -52,8 +52,8 @@ theorem kopfS_scopedRet (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
   · intro O' calls U σ
     exact semH_scopedWert S O' U passes calls r e R hret σ ρ
 
-/-- The all-head release-step property, including roots. It is separate
-    from `StartEndeG`, whose expression-based statement is unchanged. -/
+/-- The all-head release-step property, including roots. The saved-answer
+    invariant carries this guarantee into `StartEndeG` after cleanup. -/
 def ScopedRueckGutG (P : Programm D) (M : RufMaschineG D) : Prop :=
   ∀ (t : Faden) (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ)
     (r : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
@@ -104,11 +104,10 @@ theorem start_scopedGrund_unmoeglich {P : Programm D} {O : Orakel D} {passes : N
     exact hG t
   exact (Fin.cast h0 grund).elim0
 
-/-- The immutable expression-based start-return predicate excludes saved
-    answers. A release-step theorem is therefore additional coverage, not
-    a proof that `StartEndeG` itself observes a completed scoped return. -/
+/-- The expression-based clause excludes saved answers. `StartEndeG` checks
+    them with its separate `StartScopedEndeG` conjunct instead. -/
 theorem zurueckgekehrt_nicht_retKopf {V : Vertrag D} {l : Bool} {Γ : Ctx}
-    (a : ErgVal D V.erg ⊕ Fin V.gruende) (e : ErgExpr D Γ V.ende V.erg) :
+    (a : (ErgVal D V.erg ⊕ Fin V.gruende) × World D) (e : ErgExpr D Γ V.ende V.erg) :
     ¬ RetKopf e (.zurueckgekehrt (l := l) a) := by
   rintro ⟨hp, h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩⟩ <;> cases h
 
