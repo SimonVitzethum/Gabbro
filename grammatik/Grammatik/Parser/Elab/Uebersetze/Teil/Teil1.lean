@@ -357,6 +357,8 @@ inductive UStmt
       continuation and no `blkEnd`. Appended at the end, so earlier
       constructor positions keep their names. -/
   | narrowReqBeg : String → Int → Int → UStmt
+  /-- Explicit linear retirement in generated check consumers. No payload or runtime effect. -/
+  | retireMark : String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/
