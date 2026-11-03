@@ -17,7 +17,7 @@ def uCallElse (tabs : List UTab) (heads : List UFnKopf)
     | none => pure none
     | some result => result.map some
   let (head, args) ← uRuf ctx tabs heads (pointer.map (·.name) |>.getD callee) args
-  let marker ← match pointer with
+  let marker : UStmt ← match pointer with
     | some _ =>
       if head.kanal.isNone then throw "indirect call else needs a fallible function pointer"
       if (uWertArt head).isNone then throw "indirect call else needs a result type"
