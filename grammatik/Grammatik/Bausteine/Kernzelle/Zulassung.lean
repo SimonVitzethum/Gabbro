@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Kernzelle.Verlauf
+public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 public import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 

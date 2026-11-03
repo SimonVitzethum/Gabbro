@@ -3,6 +3,7 @@ module
 public import Grammatik.Bausteine.Kernzelle.KernAbfrage
 public import Grammatik.Kern.Syntax.Syntax.Teil2Programm
 public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuhe.Teil2
+public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheStatisch.T1
 
 @[expose] public section
 
