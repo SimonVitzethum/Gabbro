@@ -17,7 +17,10 @@ theorem rufAntwortG_passt {z z' : RufFadenG D} {vor σ : World D}
   | nil =>
       simp only [rufAntwortG, hst, Option.some.injEq] at ha
       subst z'
-      exact rufFadenPasstG_behalte _ _ _ _ _ _ _ hz
+      have h := rufFadenPasstG_behalte z false (D.params z.kopf.f)
+        (vertragVon D z.kopf.f).ende z.kopf.rho (.zurueckgekehrt ⟨a, vor⟩) σ.spur hz
+      rw [hst] at h
+      exact h
   | cons c st =>
       obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a c.rest = some r := by
         cases hr : antwortRestG z.kopf.f a c.rest with
@@ -27,10 +30,12 @@ theorem rufAntwortG_passt {z z' : RufFadenG D} {vor σ : World D}
       | inl v =>
           simp [rufAntwortG, hst, hr] at ha
           subst z'
-          exact rufPopG_passt z c st hst _ rfl _ _ v _ σ rfl _ hz
+          exact rufPopG_passt z c st hst ⟨c.f, c.rho, c.s0, r⟩ rfl z.kopf.f z.kopf.rho v z.kopf.s0 σ rfl
+            σ.spur hz
       | inr grund =>
           simp [rufAntwortG, hst, hr] at ha
           subst z'
-          exact rufPopGrundG_passt z c st hst _ rfl _ _ grund _ σ rfl _ hz
+          exact rufPopGrundG_passt z c st hst ⟨c.f, c.rho, c.s0, r⟩ rfl z.kopf.f z.kopf.rho grund z.kopf.s0 σ
+            rfl σ.spur hz
 
 end Gabbro.Grammatik
