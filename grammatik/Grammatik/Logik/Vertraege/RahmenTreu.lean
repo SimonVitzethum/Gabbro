@@ -1,7 +1,7 @@
 /-
   File:      Grammatik/RahmenTreu.lean
-  Subject:   **THE FRAME, AT EVERY WORLD** -- `Rahmen` and the held locks,
-             without the lock discipline's `HeldB` premise.
+  Subject:   **THE FRAME AND THE HELD LOCKS, WITHOUT THE TRACE** -- `Rahmen`
+              and the held locks, without the trace quality's `Brav` premise.
 
   WHY THIS FILE EXISTS. `Satz.lean` proves ONE theorem about a body run
   (`stmt_gutB`/`block_gutB`/`end_gutB`, `rufAt_gut`) and it bundles THREE
@@ -11,13 +11,12 @@
     2. `σ'.haelt = σ.haelt` -- every lock it took it gave back;
     3. every event it left is GOOD and the trace stays consistent.
 
-  Fact 3 is what needs the lock discipline: an access event is good only if
-  the locks its `Λ` names are HELD, and a `nimmt` event is good only if the
-  lock ranks strictly above everything held. So the whole theorem carries
-  `HeldB bo Λ σ.haelt` -- a premise about the ENTRY WORLD.
-
-  Facts 1 and 2 do not need it, and this file says so by proving them alone,
-  by the same induction with the premise deleted:
+  Fact 3 is what needs the full lock discipline. Facts 1 and 2 need only its
+  static half: the entry discipline (`HeldB` at the callee entry, transported
+  with `RufPasst`) and the static scope discipline (`ScopesOkProg`: every
+  scoped return spares the residual and respects the floor). This file proves
+  them alone, by the same induction with the trace deleted from the
+  conclusion:
 
     * a write goes to a carrier the constructor's own `hw : V.schreibt t =
       true` names -- nothing about locks;
@@ -26,21 +25,24 @@
     * `locks L { .. }` is `nimmt L`, the body, `gibt L`, and
       `offen (gibt L :: nimmt L h :: s) = (L :: offen s).erase L = offen s`
       -- `List.erase` takes the FIRST occurrence, so this holds even at a
-      world that ALREADY holds `L`. (Such a world is not well-disciplined,
-      and `Gut` rightly refuses it: the `nimmt` event is not good there. But
-      the frame and the held set survive it.)
+      world that ALREADY holds `L`;
+    * a call restores the frame: the callee's normal return keeps every held
+      lock (`TreuR` under the transported entry discipline), a propagated
+      reason collapses its release (`TreuRet.toTreu_entry`) before the
+      continuation runs. A `TreuRet` prefix alone transports only returning
+      outcomes -- the false `TreuAusgang.vorRet` (C11) is replaced by the
+      call-specific `vorCall`.
 
   WHAT IT BUYS. `RufRahmenTreu P (rufAt P O passes n)` -- the frame half of
-  `RespektiertRahmen` for the model's own call handler, at EVERY world --
-  which `rufAt_gut` gives only at worlds meeting
-  `HeldB (D.signatur f).boden (Signatur.anfang D (D.signatur f)) σ.haelt`.
-  Part 4 of the closing theorem quantifies over ANY Gabbro world, so it was
-  carried as a named hypothesis of `rufAt_nurAbstieg` (RufLogik.lean) until
-  this file. See `messung/muse/OPUS-BERICHT-RAHMEN.md`.
+  `RespektiertRahmen` for the model's own call handler, at every disciplined
+  world -- which `rufAt_gut` gives only together with the trace. The entry
+  discipline cannot be deleted: a callee return may release scopes, and only
+  the discipline makes the release vacuous at the call boundary.
 
-  THE ONE PREMISE THAT STAYS is the hardware's: an axiom answer keeps the
-  frame of its `effects` and leaves the held locks alone (`TreuO`, the first
-  two conjuncts of `GutO`). That is H1 and it is named, not hidden.
+  THE PREMISES THAT STAY are the hardware's (an axiom answer keeps the frame
+  of its `effects` and leaves the held locks alone: `TreuO`, the first two
+  conjuncts of `GutO` -- that is H1 and it is named, not hidden), the static
+  scope discipline (`ScopesOkProg`) and the entry discipline (`HeldB`).
 -/
 module
 
