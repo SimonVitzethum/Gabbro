@@ -165,10 +165,10 @@ theorem constEvalGleichExpr (c : ConstProgram) {Γ : Ctx} {τ : Ty} {e : Expr c.
 
 /-- Pure tag payloads agree: the empty payload is unit, a value payload
     evaluates its expression. -/
-theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ := by
-  cases hp with
-  | empty => rfl
-  | val he => exact constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ
+theorem constEvalGleichPayload (c : ConstProgram) {Γ : Ctx} {k : Option Ty} {e : NutzlastExpr c.D Γ [] k} (hp : ConstPayload c e) (σ₁ σ₂ : World c.D) (ρ₁ ρ₂ : Env c.D Γ) (hW : WeltRahmen c σ₁ σ₂) (hρ : EnvGleich c ρ₁ ρ₂) : evalNutz σ₁ e σ₁ ρ₁ = evalNutz σ₂ e σ₂ ρ₂ :=
+  match hp with
+  | .empty => rfl
+  | .val he => constEvalGleichExpr c he σ₁ σ₂ ρ₁ ρ₂ hW hρ
 end
 
 /-- Pure call arguments agree: evaluation is pointwise over the expressions,
