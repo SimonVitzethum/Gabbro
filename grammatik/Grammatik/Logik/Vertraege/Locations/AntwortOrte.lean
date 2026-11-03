@@ -56,6 +56,29 @@ macro "kopfAnt" : tactic => `(tactic| (
     List.all_append, List.all_cons, List.all_nil, Bool.and_eq_true, Bool.and_true,
     Bool.true_and] at hok ⊢))
 
+/-- Answering classifies as a head-local step (root completion) or a pop of the caller. -/
+private theorem rufAntwortG_ant (C : D.Ax ⊕ D.Reg → Bool) {z z' : RufFadenG D} {vor σ : World D}
+    {a : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende}
+    (h : rufAntwortG z vor σ a = some z') :
+    (z'.stapel = z.stapel ∧
+      (z.kopf.rest.2.2.2.2.aR C → z'.kopf.rest.2.2.2.2.aR C)) ∨
+    (∃ (caller : RufRahmenG D) (rst : List (RufRahmenG D)),
+      z.stapel = caller :: rst ∧ z'.stapel = rst ∧
+      (caller.rest.2.2.2.2.aR C → z'.kopf.rest.2.2.2.2.aR C)) := by
+  cases hst : z.stapel with
+  | nil =>
+      simp only [rufAntwortG, hst, Option.some.injEq] at h
+      subst z'
+      exact Or.inl ⟨rfl, fun _ => trivial⟩
+  | cons c st =>
+      obtain ⟨r, hr⟩ : ∃ r, antwortRestG z.kopf.f a c.rest = some r := by
+        cases hr : antwortRestG z.kopf.f a c.rest with
+        | none => simp [rufAntwortG, hst, hr] at h
+        | some r => exact ⟨r, rfl⟩
+      simp [rufAntwortG, hst, hr] at h
+      subst z'
+      exact Or.inr ⟨c, st, rfl, rfl, fun hm => antwortRestG_aR _ _ _ _ hr C hm⟩
+
 set_option maxHeartbeats 4000000 in
 /-- **Every rule of G, classified by what it does to the site bound** (the twin of
     `schrittOrte`): (A) a head-local step keeps the stack and the function and carries `aR`
@@ -260,20 +283,9 @@ theorem schrittAnt {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschin
     | rueckScopedWertDirekt _ _ _ _ _ _ _ _ _ _ _ _ _ z hantwort
     | rueckScopedGrundDirekt _ _ _ _ _ _ _ _ _ z hantwort =>
       simp only [rufUpdateG_self]
-      cases hs : (M.faeden f).stapel with
-      | nil =>
-          simp only [rufAntwortG, hs, Option.some.injEq] at hantwort
-          subst z
-          exact Or.inl ⟨hs.symm, fun _ => trivial⟩
-      | cons caller rst =>
-          simp only [rufAntwortG, hs] at hantwort
-          cases hr : antwortRestG (M.faeden f).kopf.f _ caller.rest with
-          | none => simp [hr] at hantwort
-          | some rest =>
-              simp [hr] at hantwort
-              subst z
-              exact Or.inr (Or.inr ⟨caller, rst, hs, rfl,
-                fun hm => antwortRestG_aR _ _ _ _ hr C hm⟩)
+      rcases rufAntwortG_ant C hantwort with ⟨h1, h2⟩ | ⟨c, rst, h1, h2, h3⟩
+      · exact Or.inl ⟨h1, by rw [rufUpdateG_self]; exact h2⟩
+      · exact Or.inr (Or.inr ⟨c, rst, h1, h2, by rw [rufUpdateG_self]; exact h3⟩)
     | _ =>
       kopfAnt
       all_goals simp_all [GRest.aR_weiterOpt]
