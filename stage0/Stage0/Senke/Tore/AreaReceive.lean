@@ -57,6 +57,7 @@ theorem areaReceive_ok {τ : Ty} {v : Wert D τ} {s reserved : Nat}
           ⟨pc + BitVec.ofNat 64 (16 * (areaReceive τ s).length), fp⟩ m' ∧
         Agree fp s Ks m m' ∧ ValueAt L m' fp s τ v) ∧
     (tag ≠ 0 → Stops ⟨pc, fp⟩ m 110) := by
+  have baseEquation : foreignResultBase s = s + 10 := rfl
   have ks := layout.ks
   have positive := valueWords_pos τ
   have enough : s + 10 ≤ Ks := by unfold foreignResultBase at capacity; omega
