@@ -99,12 +99,12 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     shared aggregate encoding, with recursive validity and zero padding; packed integer tags
     retain `sumOff`. Generic construction/dispatch proofs connect through `lowE_ok` and
     `lowS_ok_onTag`; constant initialization preserves the selected payload's validity too.
-    `getBytes` emits <=8-byte kernels per canonical limb. `putBytes` captures the full value
+    `getBytes` captures its start once and emits <=8-byte kernels per canonical limb. `putBytes` captures the full value
     and index before iterating the existing write kernel; chunk-count induction preserves
     byte order, overlapping-copy reads and the complete write trace. The actual dispatch /
     wide-byte paths keep only ordinary layout/frame/code checks and an explicit `<2^31`
     tag-count / byte-span representability gate. Accepted-image witness declarations cover
-    all payload kinds and 9/16/17-byte boundaries, high limbs, zeros and overlap; boundary
+    all payload kinds and 9/13/16/17-byte boundaries, high limbs, zeros and overlap; boundary
     refusal declarations pin the wrappers. Coverage rows are updated as a source audit only.
     Open: lead Lean checks of the changed dependency closure, standard-axiom audits, witness
     image acceptance and runner execution. No Lean, Lake, compiler, runner or guardian ran.
@@ -520,7 +520,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Expr.rem` | yes G2:438 | yes E:110, unsigned or wide remainder | `lowE_ok`, Q:309 | same source range rule |
 | `Expr.sdiv` | yes G2:425 | yes E:113, signed or wide fallback | `lowE_ok`, Q:313 | denominator must exclude zero; minimum-word case uses wide fallback |
 | `Expr.srem` | yes G2:442 | yes E:118, signed or wide fallback | `lowE_ok`, Q:317 | denominator must exclude zero |
-| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes E:206, `readBytesL` | `lowE_ok`, Q:405 | E:207: `else none` for `n > 8`; source byte-span export missing |
+| `Expr.getBytes` | no producer in `Parser/Elab/**` | yes E:218, `readBytesWideL` captures the start once; `readBytesWordsL` emits <=8-byte kernels in canonical limb order | `lowE_ok`, Q:419 → `getBytes_ok` → `readBytesWide_ok`/`readBytesWords_ok` | no 8-byte cap; refuses `n ≥ 2^31` before expansion and inherited layout/frame/code failures; whole-span bounds/rights are constructor premises; source export and lead Lean/image checks pending |
 | `Expr.band` | yes G2:378 | yes E:123, scalar or wide bits | `lowE_ok`, Q:321 | source operands nonnegative |
 | `Expr.bor` | yes G2:395 | yes E:126, scalar resize or wide bits | `lowE_ok`, Q:325 | source width/range rule |
 | `Expr.bxor` | yes G2:409 | yes E:130, scalar resize or wide bits | `lowE_ok`, Q:329 | source width/range rule |
@@ -567,7 +567,7 @@ frame/code bounds and successful emission; it does not prove total language cove
 | `Stmt.assignSlot` | yes H1:219 | yes A:88, `slotStoreC` | `lowS_ok`, P:83 | layout/store guards |
 | `Stmt.assignThru` | yes H1:182 | yes A:92, resolved table/index | `lowS_ok`, P:84 | layout/store guards |
 | `Stmt.assignGlob` | yes H3:103 | yes A:80, `globalStoreC` | `lowS_ok`, P:79 | layout/store guards |
-| `Stmt.putBytes` | no producer in `Parser/Elab/**` | partial A:96, `putBytesL` | `lowS_ok`, P:121 | A:102: `else none` for `n > 8`; source export absent |
+| `Stmt.putBytes` | no producer in `Parser/Elab/**` | yes A:83, `putBytesL`/`putBytesWideL`; captures value and start before all chunk stores | `lowS_ok`, P:122 → `putBytes_ok` → `putBytesWide_ok`/`putBytesWords_ok` | no 8-byte cap; refuses `n ≥ 2^31` before expansion and inherited layout/frame/code failures; whole-span bounds/rights are constructor premises; source export and lead Lean/image checks pending |
 | `Stmt.assignVar` | yes H3:306/:321 | yes A:38, copies complete value | `lowS_ok`, P:66 | A:42: `else none` if parameter/protected span would be overwritten |
 | `Stmt.shift` | yes H4:54 | partial A:107 | `lowS_ok`, P:123 | A:117: `else none` unless source/prestate intervals fit signed word; runtime prestate mismatch stops 106 |
 | `Stmt.ite` | yes J/Struct:46 | yes A:43 | `lowS_ok`, P:69 | recursive branches/code size |
