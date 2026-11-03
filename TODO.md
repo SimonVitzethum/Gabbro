@@ -19,10 +19,11 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
 - **C-package status (2026-11-02).** Integrated into `c-runde1`: all C packages except C01 and C10, including C07
   and C08. Stage 0 admits C12 tables in named spaces and pointers into them (rights decoded by `DataRights.decode`),
   C14 `when TESTBUILD` (selection before Stage 0), C17 `decreases` measures, C18 `narrowRequired` (lowered with stop
-  code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value.
+  code 107; no source syntax yet), and C08 `bindAxiomOpt` with a value. C08 statement calls now have
+  `f(args) else [(reason)] { ... };` source syntax, export to `Stmt.axiomCallElse`, a generic printer
+  round-trip arm and acceptance/refusal witnesses; integration checks are pending.
   - **Stage-0 refusals with their missing step:**
     - C08 void `bindAxiomOpt` and `bindAxiomOptElse` (payload `none`): refused; lowering correctness lemmas missing.
-    - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
     - C11 `by consuming`: refused by design.
     - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
