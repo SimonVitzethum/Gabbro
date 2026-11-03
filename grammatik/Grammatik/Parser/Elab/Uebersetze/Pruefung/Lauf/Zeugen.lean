@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Boden
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Consumer
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Erhaltung
 public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.History
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.Lauf.Treue
 
 @[expose] public section
 
@@ -136,6 +137,15 @@ theorem retiringHistory_samples (world : World (declOf retiringU)) :
 theorem retiringHistory_complete (world : World (declOf retiringU)) :
     checkGhostComplete (checkGhostHistory retiringU retiringCheck retiringConsumer
       retiringWrapper (retiringEvents world).reverse) = true := rfl
+
+/-- The real recorded samples, once consumed, satisfy the unchanged goal leg
+    by the generic conservation theorem, not a per-report shape argument. -/
+theorem retiringHistory_treu (world : World (declOf retiringU)) :
+    Zielsatz.CheckTreueG retiringP [retiringCheck]
+      (checkGhostHistory retiringU retiringCheck retiringConsumer retiringWrapper
+        (retiringEvents world).reverse).history :=
+  checkGhostHistory_treu retiringU retiringP retiringCheck retiringConsumer retiringWrapper
+    (by decide +kernel) (retiringEvents world).reverse (retiringHistory_complete world)
 
 /-- A repeated consumption is also refused by ghost replay. -/
 theorem retiringHistory_double_refused (world : World (declOf retiringU)) :
