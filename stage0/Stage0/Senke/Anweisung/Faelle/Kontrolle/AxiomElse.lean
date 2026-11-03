@@ -101,7 +101,7 @@ theorem stmtAxiomElse_case {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat}
   intro ihErr c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
   simp only [lowS, ← hlo0] at h
   split at h
-  · next b lo' hi' hb hτ =>
+  · next b answer hb hτ =>
     split at h
     · next hc =>
       obtain ⟨hf, hlo', hn, hwhy⟩ := hc
