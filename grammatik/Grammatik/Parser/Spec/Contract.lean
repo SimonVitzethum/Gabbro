@@ -53,7 +53,8 @@ def substituteType (env : List (String × STyp)) : STyp → STyp
   | .array t n => .array (substituteType env t) n
   | .wrap t => .wrap (substituteType env t)
   | .embed t p s => .embed (substituteType env t) p s
-  | .entry ps t => .entry ps (t.map (substituteType env))
+  | .entry ps none => .entry ps none
+  | .entry ps (some t) => .entry ps (some (substituteType env t))
   | t => t
 
 /-- Parentheses are absent from `SExpr`; flatten only conjunctions, like `verbund::konjunkte`.
@@ -121,8 +122,9 @@ def expandEffects (items : List SItemTief) (gs : List Group) (ins : List Instanc
           | .error ("spec.effects.instance: " ++ n)
         if g.types.length != ts.length || g.effects.length != i.effects.length then
           .error "spec.arguments"
-        else expandEffects items gs ins (g.types.zip ts) (g.effects.zip i.effects) f
-          (g.functions.flatMap functionEffects)
+        else
+          expandEffects items gs ins (g.types.zip ts) (g.effects.zip i.effects) f
+            (g.functions.flatMap functionEffects)
       | e => pure [e]
     return lists.flatten
 
