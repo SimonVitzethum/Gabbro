@@ -17,7 +17,7 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uRestFehler msE with
   | .error e => .error e
   | .ok _ =>
-  match ExportMetadata.checkConstants msE with
+  match Gabbro.Grammatik.Parser.Konst.checkSourceConstants msE with
   | .error error => .error error
   | .ok () =>
   let ms := uOhneSenken msE

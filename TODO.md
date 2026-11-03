@@ -32,7 +32,7 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - Fallible indirect statement-else source syntax; unbound foreign gates; wide/reference/region
       foreign answers and fallible Bool answers. Optional value/void binders and fallible indirect bindings have IR arms.
     - Original source metadata without a checked duty binding: invariants, declared costs/scheduling, providers,
-      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, const functions, residual generic calls/module headers, counterprobes,
+      owner-qualified/byte/raw/entry capabilities, shared locks/RCU, residual generic calls/module headers, counterprobes,
       annotated placement and allocation-with-else. Required static-arena allocation has connected narrowing/store arms.
     - Boot/device-register forms (outside userspace scope), entrust, hardware entry obligations, named sections and
       incompatible runner ABI; supported TESTBUILD selection and consistent profile preparation are present.
