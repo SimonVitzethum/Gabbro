@@ -49,18 +49,28 @@ theorem akteurSA_g7 (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok
   | rueckFreigabeLetzte ρ a L hhead z hantwort =>
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenSA_scopedFreigabe hO hRL hQ hS hsp hK hF ρ a L [] hhead ((M.weltVon u).gibt L).spur
-    exact fadenSA_scopedAntwort hO hRL hQ hS hsp hK hFS hTV hclean hL hRS ρ a rfl hantwort
+    refine fadenSA_scopedAntwort hO hRL hQ hS hsp hK hFS hTV hclean hL hRS ρ a rfl ?_
+    have hw : (M.weltVon u).speicher.welt ((M.weltVon u).gibt L).spur =
+        (M.weltVon u).gibt L := Speicher.welt_speicher ((M.weltVon u).gibt L)
+    rw [hw]
+    exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
   | rueckScopedWertDirekt ρ r e R hhead hret hscope hΛ σ₁ hs₁ neu hneu hempty z hantwort =>
+    rename_i l Γ Λ
     subst σ₁
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenSA_scopedWert hFS hF ρ r e R hhead hret
-      ((M.weltVon u).lese _ e.orte).spur
-    apply fadenSA_scopedAntwort hO hRL hQ hS hsp hK hFS hTV hclean hL hRS ρ _ _ hantwort
-    simp only [hempty]
+      ((M.weltVon u).lese Λ e.orte).spur
+    refine fadenSA_scopedAntwort (l := l) hO hRL hQ hS hsp hK hFS hTV hclean hL hRS ρ
+      ⟨.inl (evalErg ((M.weltVon u).lese Λ e.orte) e
+        ((M.weltVon u).lese Λ e.orte) ρ), (M.weltVon u).lese Λ e.orte⟩
+      (by rw [hempty]) ?_
+    exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
   | rueckScopedGrundDirekt ρ r grund R hhead hret hscope hΛ hempty z hantwort =>
+    rename_i l Γ Λ
     simp only [RufMaschineG.weltVon, rufUpdateG_self]
     have hclean := fadenSA_scopedGrund hFS hF ρ r grund R hhead hret (M.faeden u).spur
-    apply fadenSA_scopedAntwort hO hRL hQ hS hsp hK hFS hTV hclean hL hRS ρ _ _ hantwort
-    simp only [hempty]
+    refine fadenSA_scopedAntwort (l := l) hO hRL hQ hS hsp hK hFS hTV hclean hL hRS ρ
+      ⟨.inr grund, M.weltVon u⟩ (by rw [hempty]) ?_
+    exact (rufAntwortG_rest_irrel (M.faeden u) _ _ _).trans hantwort
 
 end Gabbro.Grammatik
