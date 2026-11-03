@@ -94,7 +94,8 @@ theorem narrow_ok {L : Lay D} {P : Programm D} {f : D.Fn} {fp : Runner.W}
       (agreeW_of (changed.mono hlo2)) (keeps_of_agreeW hW changed hpr (by omega))
       (Sim.cast branch rfl ?_ ?_ ?_)
     all_goals simp only [narrowC, d, k, List.length_append, List.length_singleton,
-      List.length_nil, Nat.mul_add, BitVec.ofNat_add, BitVec.add_assoc]
+      List.length_nil, List.nil_append, Nat.zero_add, Nat.add_zero, Nat.mul_zero,
+      Nat.mul_add, BitVec.ofNat_add, BitVec.add_zero, BitVec.add_assoc]
   · intro _
     refine ⟨m3, by simpa using Star.refl _ m3, Agree.refl _ _ _ _, _, flag, ?_⟩
     have equivalent : ((eval σ e σ ρ).n < low' ∨ high' < (eval σ e σ ρ).n) ↔
