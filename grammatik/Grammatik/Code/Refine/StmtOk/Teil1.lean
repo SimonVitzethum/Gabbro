@@ -410,7 +410,6 @@ theorem lowerS_ok_assignThruOwn (lay : Layout D) (hL : LayoutOk lay) (cenv : Lis
     (ho)
     (he)
     (hg)
-    (hm)
     (zz1)
     (zz2)
     (lb : Lbl)
@@ -418,7 +417,7 @@ theorem lowerS_ok_assignThruOwn (lay : Layout D) (hL : LayoutOk lay) (cenv : Lis
     (st : St)
     (st' : St)
     (blks : List Block)
-    (h : lowerS lay cenv lv (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) (Λ := Λ) p t ht f i e mo s ho he hg hm zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) lb k st = some (blks, st'))
+    (h : lowerS lay cenv lv (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) (Λ := Λ) p t ht f i e mo s ho he hg zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) lb k st = some (blks, st'))
     (M : Modl)
     (S : Sees)
     (fn : Nat)
@@ -437,7 +436,7 @@ theorem lowerS_ok_assignThruOwn (lay : Layout D) (hL : LayoutOk lay) (cenv : Lis
     (hE : EnvRep lay rs m cenv ρ)
     (hW : WfL lay m)
     (hc : (∀ x ∈ cenv, x < st.r))
-    : OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) (Λ := Λ) p t ht f i e mo s ho he hg hm zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) σ ρ) :=
+    : OutOk lay cenv lv M S fn lb k st.r st'.r m rs ks dst (execStmt O passes R (.assignThruOwn (n := zi_n) (read := zi_read) (space := zi_space) (o := zi_eig) (Λ := Λ) p t ht f i e mo s ho he hg zz1 zz2 : Gabbro.Grammatik.Stmt D V l Γ Λ (Λ)) σ ρ) :=
   by
   simp only [lowerS] at h
   have hs : supp (D.typ t f) = true := by
