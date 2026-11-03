@@ -4,6 +4,7 @@ module
 public import Grammatik.Parser.Profil.Auswahl
 public import Grammatik.Parser.Profil.Pipeline
 public import Grammatik.Parser.Profil.Register
+public import Grammatik.Parser.Profil.Eintritt
 @[expose] public section
 
 
@@ -58,7 +59,7 @@ def checkItems : Nat → List SItemTief → Except String Unit
     | .pubT body => checkItems fuel [body]
     | .entryT e => checkEntry e
     | .bootT .. => throw "ir: boot is outside userspace compilation"
-    | .trustT .. => throw "ir: entrust: canonical source-to-G guest entry semantics missing"
+    | .trustT _ _ arch regs _ _ => throw (ProfilBindung.gastQuelleFehler arch regs)
     | .profT .. => throw "ir: profile: canonical source-to-goal profile binding missing"
     | .gateT .. => throw "ir: when TESTBUILD: canonical conditional selection proof missing"
     | _ => pure ()
