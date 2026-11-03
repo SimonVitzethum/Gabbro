@@ -49,12 +49,11 @@ theorem candidate_test (k : Wert D (.index (D.count x.table))) (hk : k.n = j)
     (h : q.CandState σ ρ j live m) :
     let minimal := istMinimalVerbrauch (alleIndizes (D.count x.table))
       (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k
-    if minimal then
-      ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 10) (x.at 37) m
-        (q.CandResult σ ρ (some k) true)
-    else
-      ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 10) (x.at 8) m
-        (q.CandState σ ρ (j + 1) (live || q.memberAt σ ρ k)) := by
+    ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 10)
+      (if minimal then x.at 37 else x.at 8) m
+      (fun m' => if minimal then q.CandResult σ ρ (some k) true m'
+        else q.CandState σ ρ (j + 1) (live || q.memberAt σ ρ k) m')
+ := by
   have room : x.s + 4 ≤ x.K := by have := x.scratch; have := x.layout.ks; omega
   have index : x.read m x.s (BitVec.ofInt 64 k.n) := by
     rw [hk, BitVec.ofInt_natCast]; exact h.candidateRead
@@ -146,20 +145,28 @@ theorem candidate_path : ∀ remaining j, j + remaining = (D.count x.table).toNa
       AgreeW.refl _ _ _ _ _, Keeps.refl _ _ _, ready, by intro _ impossible; cases impossible,
       state.liveRead⟩
   · intro j k hk live mem h
-    apply (h.ready.bound (i := 8) (by rw [← q.origin]; omega) (by omega)
+    have iteration :
+        let minimal := istMinimalVerbrauch (alleIndizes (D.count x.table))
+          (q.memberAt σ ρ) (q.edgeAt σ ρ) (fun a b => decide (a.n = b.n)) k
+        ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at 8)
+          (if minimal then x.at 37 else x.at 8) mem
+          (fun m' => if minimal then q.CandResult σ ρ (some k) true m'
+            else q.CandState σ ρ (j + 1) (live || q.memberAt σ ρ k) m') := by
+      apply (h.ready.bound (i := 8) (by rw [← q.origin]; omega) (by omega)
       (by have := k.le_hi; have := k.lo_le; have := x.bounds.2.2.1;
           simp only [inW, Bool.and_eq_true, decide_eq_true_eq] at this; omega)
       h.candidateRead rfl (by consume_arith x)).bind
-    intro mem' result
-    obtain ⟨ready, frame, read⟩ := result
-    have state := h.agree frame (by omega) (by have := x.scratch; have := x.layout.ks; omega)
-    have less : decide ((j : Int) < D.count x.table) = true := by have := k.le_hi; simp; omega
-    rw [less] at read
-    have pass := ready.branch 9 34 (x.s + 4) .exhausted 1 rfl
-      (by consume_arith x) (by consume_arith x) (by consume_arith x)
-      (by have := x.scratch; have := x.layout.ks; omega) read (by consume_arith x)
-    have test := candidate_test k hk state
-    split at test ⊢ <;> exact ScanRun.prefix (by simpa [Runner.IR.bool] using pass) test
+      intro mem' result
+      obtain ⟨ready, frame, read⟩ := result
+      have state := h.agree frame (by omega) (by have := x.scratch; have := x.layout.ks; omega)
+      have less : decide ((j : Int) < D.count x.table) = true := by have := k.le_hi; simp; omega
+      rw [less] at read
+      have pass := ready.branch 9 34 (x.s + 4) .exhausted 1 rfl
+        (by consume_arith x) (by consume_arith x) (by consume_arith x)
+        (by have := x.scratch; have := x.layout.ks; omega) read (by consume_arith x)
+      have test := candidate_test k hk state
+      exact ScanRun.prefix (by simpa [Runner.IR.bool] using pass) test
+    split <;> simpa only [*, ↓reduceIte] using iteration
 
 /-- Initialize both selector words, scan the entire index domain and retain
     the canonical empty/cyclic distinction in the live flag. -/
