@@ -83,7 +83,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
              spec impl raw divergent prim extern section arch when
   Vertraege  requires ensures maintains refines breaking effects costs where in
               exhaustive old narrow to induction order advances retires deadline
-  Wirkungen  reads writes locks masks allocs consumes borrows publishes diverges pure
+  Wirkungen  reads writes locks masks allocs consumes borrows moves mints publishes diverges pure
   Ablauf     if else match traverse over by touches retry forever until
              bounded progress on_exceeded per_pass return let mut
              unvisited consuming leave leaves next ops result
