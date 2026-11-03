@@ -23,7 +23,7 @@ inductive Piece where
   | jump (target : Label)
   | zero (slot : Nat) (target : Label)
 
-private def Piece.width : Piece → Nat
+def Piece.width : Piece → Nat
   | .code instructions => instructions.length
   | .label _ => 0
   | .jump _ | .zero _ _ => 1
@@ -128,7 +128,7 @@ def emit (s counter saved fuel failure : Nat) (count bound : Int)
         invariant.1 member.1 preMember.1 edge.1 measure.1 actual.1)
       pure (instructions,
         max invariant.2 (max member.2 (max preMember.2 (max edge.2
-          (max measure.2 (max actual.2 (max (counter + 1) (max (saved + 1) (s + 11))))))))))
+          (max measure.2 (max actual.2 (max (counter + 1) (max (saved + 1) (s + 11)))))))))
     else none
   else none
 
