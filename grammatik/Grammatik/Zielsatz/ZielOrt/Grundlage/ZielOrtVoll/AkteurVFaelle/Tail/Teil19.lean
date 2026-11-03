@@ -248,7 +248,9 @@ theorem akteurV_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel D
   obtain ⟨b, hsel⟩ : ∃ b, verbrauchSel t member edge (σ.lese Λ inv.orte) ρ =
       (((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)), some v, b) := by
     refine ⟨(verbrauchSel t member edge (σ.lese Λ inv.orte) ρ).2.2, ?_⟩
-    simp only [verbrauchSel, hW, hE, hv]
+    simp only [verbrauchSel, hW, hE]
+    refine Prod.ext rfl (Prod.ext ?_ rfl)
+    exact hv
   exact ⟨((((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte))).lese Λ mass.orte),
     Nat.le_trans (Nat.le_trans (lese_laenge _ _ _) (lese_laenge _ _ _)) (lese_laenge _ _ _), hg,
     ⟨hb, hbS, hmem, hedge, hinv, hmass, hb, hbS, hk⟩,
@@ -384,9 +386,10 @@ theorem akteurV_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D} 
     exact (congrArg (fun b : Bool => !b) (eM k)).trans ((List.all_eq_true.mp hkein) k hk)
   have hsel : verbrauchSel t member edge (σ.lese Λ inv.orte) ρ =
       (((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)), none, false) := by
-    apply Prod.ext rfl
-    apply Prod.ext
-    · simp only [verbrauchSel, hW, hE, hleer]
+    refine Prod.ext ?_ (Prod.ext ?_ ?_)
+    · first | rfl | simp only [verbrauchSel, hW, hE]
+    · simp only [verbrauchSel, hW, hE]
+      exact hleer
     · exact congrArg (fun b : Bool => !b) hall
   exact ⟨((σ.lese Λ inv.orte).lese Λ (member.orte ++ edge.orte)),
     Nat.le_trans (lese_laenge _ _ _) (lese_laenge _ _ _), hg, hk,
