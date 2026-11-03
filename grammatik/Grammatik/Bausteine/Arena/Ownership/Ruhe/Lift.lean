@@ -91,36 +91,36 @@ mutual
 theorem os_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Context} {st : Stmt D V l Γ Λ Λ'},
     OS A I out k c st c' → OS (liftA A) (liftI I) (outR A out) k c (ruS st) c'
   | _, _, _, _, _, _, _, _, .assignSlot t f i e hw hL hn hi he hs =>
-    .assignSlot _ _ _ _ _ _ hn (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact he)
-      (by rw [storeCheck_ruE]; exact hs)
+    .assignSlot _ _ _ _ _ _ hn ((checkExpression_ruE A _ _).trans hi) ((checkExpression_ruE A _ _).trans he)
+      ((storeCheck_ruE A _ _ _).trans hs)
   | _, _, _, _, _, _, _, _, .assignThru p t ht f i e hw hL hn hp hi he hs =>
-    .assignThru _ _ _ _ _ _ _ _ hn (by rw [checkExpression_ruE]; exact hp) (by rw [checkExpression_ruE]; exact hi)
-      (by rw [checkExpression_ruE]; exact he) (by rw [storeCheck_ruE]; exact hs)
+    .assignThru _ _ _ _ _ _ _ _ hn ((checkExpression_ruE A _ _).trans hp) ((checkExpression_ruE A _ _).trans hi)
+      ((checkExpression_ruE A _ _).trans he) ((storeCheck_ruE A _ _ _).trans hs)
   | _, _, _, _, _, _, _, _, .assignThruOwn p t ht f i e m s ho he hg hw hL hn hp hi he' hs =>
-    .assignThruOwn _ _ _ _ _ _ _ _ _ _ _ _ _ hn (by rw [checkExpression_ruE]; exact hp)
-      (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact he')
-      (by rw [storeCheck_ruE]; exact hs)
+    .assignThruOwn _ _ _ _ _ _ _ _ _ _ _ _ _ hn ((checkExpression_ruE A _ _).trans hp)
+      ((checkExpression_ruE A _ _).trans hi) ((checkExpression_ruE A _ _).trans he')
+      ((storeCheck_ruE A _ _ _).trans hs)
   | _, _, _, _, _, _, _, _, .assignGlob g e hw hL hg he =>
-    .assignGlob _ _ _ _ hg (by rw [checkExpression_ruE]; exact he)
+    .assignGlob _ _ _ _ hg ((checkExpression_ruE A _ _).trans he)
   | _, _, _, _, _, _, _, _, .putBytes t f hf n i hlo hhi e hw hL ht hi he =>
-    .putBytes _ _ _ _ _ _ _ _ _ _ ht (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact he)
+    .putBytes _ _ _ _ _ _ _ _ _ _ ht ((checkExpression_ruE A _ _).trans hi) ((checkExpression_ruE A _ _).trans he)
   | _, _, _, _, _, _, _, _, .assignSlotRef r t ht ho f e hw hL htA hr he =>
-    .assignSlotRef _ _ _ _ _ _ _ _ htA (by rw [checkExpression_ruE]; exact hr) (by rw [checkExpression_ruE]; exact he)
+    .assignSlotRef _ _ _ _ _ _ _ _ htA ((checkExpression_ruE A _ _).trans hr) ((checkExpression_ruE A _ _).trans he)
   | l, _, _, _, k, c, _, _, .assignVar x e he => by
     have h := OS.assignVar (A := liftA A) (I := liftI I) (V := vertragR V) (out := outR A out) (l := l) (k := k) (c := c)
       (varR x) (ruE e) ((checkExpression_ruE A c e).trans he)
     rw [origin_ruE, assign_varR] at h
     exact h
   | _, _, _, _, _, _, _, _, .shift t f hτ i von nach hn he hw hL hl hi hs =>
-    .shift _ _ _ _ _ _ _ _ _ _ hl (by rw [checkExpression_ruE]; exact hi) (by rw [storeCheck_ruE]; exact hs)
+    .shift _ _ _ _ _ _ _ _ _ _ hl ((checkExpression_ruE A _ _).trans hi) ((storeCheck_ruE A _ _ _).trans hs)
   | _, _, _, _, _, _, _, _, .ite cond t e hc ht he =>
-    .ite _ _ _ (by rw [checkExpression_ruE]; exact hc) (ob_lift ht) (ob_lift he)
+    .ite _ _ _ ((checkExpression_ruE A _ _).trans hc) (ob_lift ht) (ob_lift he)
   | _, _, _, _, _, _, _, _, .onOption o p a ho hp hw ha =>
-    .onOption _ _ _ (by rw [checkExpression_ruE]; exact ho) (ob_lift hp) hw (ob_lift ha)
+    .onOption _ _ _ ((checkExpression_ruE A _ _).trans ho) (ob_lift hp) hw (ob_lift ha)
   | _, _, _, _, _, _, _, _, .onTag v arms hv ha =>
-    .onTag _ _ (by rw [checkExpression_ruE]; exact hv) (oarms_lift ha)
+    .onTag _ _ ((checkExpression_ruE A _ _).trans hv) (oarms_lift ha)
   | _, _, _, _, _, _, _, _, .onWhy r arms hr ha =>
-    .onWhy _ _ (by rw [checkExpression_ruE]; exact hr) (ogrund_lift ha)
+    .onWhy _ _ ((checkExpression_ruE A _ _).trans hr) (ogrund_lift ha)
   | _, _, _, _, k, c, _, _, .call f args hp hr ha hplan =>
     os_nach _ (os_post ((congrArg (fun x => dropContext x _) (afterCall_lift c _ args)).trans (dropContext_outR _ _))
       (OS.call (A := liftA A) (I := liftI I) (V := vertragR V) (out := outR A out) (k := k) (c := c)
@@ -130,29 +130,31 @@ theorem os_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
     os_nach _ (os_post (congrArg (fun x => dropContextB x owner) (afterCall_lift c J args))
       (OS.callInd (A := liftA A) (I := liftI I) (V := vertragR V) (out := outR A out) (k := k) (c := c)
         (n := n + 1) (ruE p) (ruA args) (rufPasstR hp) hr (modesR J) owner (sigCompatible_lift hJ)
-        (by rw [checkExpression_ruE]; exact hpc) ((checkArguments_ruA A _ args).trans ha)
+        ((checkExpression_ruE A _ _).trans hpc) ((checkArguments_ruA A _ args).trans ha)
         ((planFits_lift _ J args).trans hplan)))
-  | _, _, _, _, k, c, _, _, .callIndElse (n := n) p args he hp hr err J owner hJ hpc ha hplan herr =>
+  | _, _, Λ, _, k, c, _, _, .callIndElse (n := n) (τ := τ) p args he hp hr err J owner hJ hpc ha hplan herr =>
     os_nach _ (os_post (congrArg (fun x => dropContextB x owner) (afterCall_lift c J args))
       (OS.callIndElse (A := liftA A) (I := liftI I) (V := vertragR V) (out := outR A out) (k := k) (c := c)
-        (n := n + 1) (ruE p) (ruA args) he (rufPasstR hp) hr (ruEnd err) (modesR J) owner
-        (sigCompatible_lift hJ) (by rw [checkExpression_ruE]; exact hpc)
+        (n := n + 1) (τ := tyR τ) (ruE p) (ruA args)
+        (by show Option.map tyR (D.sigNr n).erg = _; rw [he]; rfl) (rufPasstR hp) hr
+        (Endblock.umΛ (nachSig_map (D.sigNr n) Λ) (ruEnd err)) (modesR J) owner
+        (sigCompatible_lift hJ) ((checkExpression_ruE A _ _).trans hpc)
         ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
         (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ J args)) (oe_lift herr)))))
   | _, _, _, _, _, _, _, _, .locks L hr body hb => .locks _ _ _ (ob_lift hb)
   | _, _, _, _, _, _, _, _, .breaking i body hb => .breaking _ _ (ob_lift hb)
   | _, _, _, _, _, _, _, _, .traverse t inv body hentry hinv hb hback =>
-    .traverse _ _ _ hentry (by rw [checkExpression_ruE]; exact hinv) (ob_lift hb) hback
+    .traverse _ _ _ hentry ((checkExpression_ruE A _ _).trans hinv) (ob_lift hb) hback
   | _, _, _, _, _, _, _, _, .retry n bis body ueber hentry hbis hb hback hu =>
-    .retry _ _ _ _ hentry (by rw [checkExpression_ruE]; exact hbis) (ob_lift hb) hback (ob_lift hu)
+    .retry _ _ _ _ hentry ((checkExpression_ruE A _ _).trans hbis) (ob_lift hb) hback (ob_lift hu)
   | _, _, _, _, _, _, _, _, .forever a inv body hentry hinv hb hback =>
-    .forever _ _ _ hentry (by rw [checkExpression_ruE]; exact hinv) (ob_lift hb) hback
+    .forever _ _ _ hentry ((checkExpression_ruE A _ _).trans hinv) (ob_lift hb) hback
   | _, _, _, _, _, _, _, _, .axiomCall a args h hw hg hd hgd hfree ha =>
     .axiomCall _ _ _ _ _ _ _ hfree ((checkArguments_ruA A _ args).trans ha)
-  | _, _, _, _, _, _, _, _, .regWrite r hk e he => .regWrite _ _ _ (by rw [checkExpression_ruE]; exact he)
+  | _, _, _, _, _, _, _, _, .regWrite r hk e he => .regWrite _ _ _ ((checkExpression_ruE A _ _).trans he)
   | _, _, _, _, _, _, _, _, .transition r hk m hm hl maske bits => .transition _ _ _ _ _ _ _
   | _, _, _, _, _, _, _, _, .publish g e payload hp hw hL hg he =>
-    .publish _ _ _ _ _ _ hg (by rw [checkExpression_ruE]; exact he)
+    .publish _ _ _ _ _ _ hg ((checkExpression_ruE A _ _).trans he)
   | _, _, _, _, _, _, _, _, .advances m a h hs => os_nach _ (.advances _ _ _ _)
   | _, _, _, _, _, _, _, _, .retires m st h a => os_nach _ (.retires _ _ _ _)
   | _, _, _, _, _, _, _, _, .ret e hΛ he => .ret _ _ ((check_outR A _ out e).trans he)
@@ -169,13 +171,13 @@ theorem ob_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
   | _, _, _, _, _, _, _, _, .bind e rest he hr => by
     have h := ob_lift hr
     rw [← origin_ruE] at h
-    exact .bind _ _ (by rw [checkExpression_ruE]; exact he) h
+    exact .bind _ _ ((checkExpression_ruE A _ _).trans he) h
   | _, _, _, _, _, _, _, _, .bindCall f args he hp hr rest ha hplan hrest =>
     .bindCall _ _ _ _ _ _ ((checkArguments_ruA A _ args).trans ha)
       ((planFits_lift _ _ args).trans hplan)
       (ob_vor _ (ob_pre ((congrArg (fun x => resultContext x _) (afterCall_lift _ _ args)).trans (resultContext_outR _ _)) (ob_lift hrest)))
   | _, _, _, _, _, _, _, _, .bindCallInd (n := n) p args he hp hr rest J owner hJ hpc ha hplan hrest =>
-    .bindCallInd _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ) (by rw [checkExpression_ruE]; exact hpc)
+    .bindCallInd _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ) ((checkExpression_ruE A _ _).trans hpc)
       ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
       (ob_vor _ (ob_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (ob_lift hrest)))
   | _, _, _, _, _, _, _, _, .bindCallElse f args he hp hr err rest ha hplan herr hrest =>
@@ -186,7 +188,7 @@ theorem ob_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
   | _, _, _, _, _, _, _, _, .bindCallIndElse (n := n) p args he hp hr err rest J owner hJ hpc ha hplan
       herr hrest =>
     .bindCallIndElse _ _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ)
-      (by rw [checkExpression_ruE]; exact hpc)
+      ((checkExpression_ruE A _ _).trans hpc)
       ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ J args)) (oe_lift herr)))
       (ob_vor _ (ob_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (ob_lift hrest)))
@@ -196,38 +198,38 @@ theorem ob_lift : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {k c c' : Co
     .bindAxiomElse _ _ _ _ _ _ _ _ _ _ hfree ((checkArguments_ruA A _ args).trans ha) (oe_lift herr) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .regRead r hk rest hrest => .regRead _ _ _ (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .regReadElse r hk z sonst rest hz hs hrest =>
-    .regReadElse _ _ _ _ _ (by rw [checkExpression_ruE]; exact hz) (oe_lift hs) (ob_lift hrest)
+    .regReadElse _ _ _ _ _ ((checkExpression_ruE A _ _).trans hz) (oe_lift hs) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .awaits g pl hp hL ha rest hrest => .awaits _ _ _ _ _ _ (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .exchange g neu hw hL rest hg hn hrest =>
-    .exchange _ _ _ _ _ hg (by rw [checkExpression_ruE]; exact hn) (ob_lift hrest)
+    .exchange _ _ _ _ _ hg ((checkExpression_ruE A _ _).trans hn) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .narrow e lo' hi' sonst rest he hs hrest => by
     have h := ob_lift hrest
     rw [← origin_ruE] at h
-    exact .narrow _ _ _ _ _ (by rw [checkExpression_ruE]; exact he) (oe_lift hs) h
+    exact .narrow _ _ _ _ _ ((checkExpression_ruE A _ _).trans he) (oe_lift hs) h
   | _, _, _, _, _, _, _, _, .check cond sonst rest hc hs hrest =>
-    .check _ _ _ (by rw [checkExpression_ruE]; exact hc) (oe_lift hs) (ob_lift hrest)
+    .check _ _ _ ((checkExpression_ruE A _ _).trans hc) (oe_lift hs) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .float op a b lo hi rest ha hb hrest =>
-    .float _ _ _ _ _ _ (by rw [checkExpression_ruE]; exact ha) (by rw [checkExpression_ruE]; exact hb) (ob_lift hrest)
+    .float _ _ _ _ _ _ ((checkExpression_ruE A _ _).trans ha) ((checkExpression_ruE A _ _).trans hb) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .floatLit q lo hi rest hrest => .floatLit _ _ _ _ (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .floatOf e lo hi rest he hrest =>
-    .floatOf _ _ _ _ (by rw [checkExpression_ruE]; exact he) (ob_lift hrest)
+    .floatOf _ _ _ _ ((checkExpression_ruE A _ _).trans he) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .floatNarrow e lo hi sonst rest he hs hrest =>
-    .floatNarrow _ _ _ _ _ (by rw [checkExpression_ruE]; exact he) (oe_lift hs) (ob_lift hrest)
+    .floatNarrow _ _ _ _ _ ((checkExpression_ruE A _ _).trans he) (oe_lift hs) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .allocList e lo' hi' voll g e2 hwK hLK t f i ev hw hL rest he hhi hg he2 hn hi hev hs
       hvoll hrest =>
-    .allocList _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by rw [exprGlob_ruE]; exact he) hhi hg
-      (by rw [exprSlotRead_ruE, he2, List.length_map]; rfl) hn
-      (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact hev)
-      (by rw [storeCheck_ruE]; exact hs) (oe_lift hvoll) (ob_lift hrest)
+    .allocList _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ((exprGlob_ruE _).trans he) hhi hg
+      ((exprSlotRead_ruE _).trans (by rw [he2, List.length_map]; rfl)) hn
+      ((checkExpression_ruE A _ _).trans hi) ((checkExpression_ruE A _ _).trans hev)
+      ((storeCheck_ruE A _ _ _).trans hs) (oe_lift hvoll) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .allocCounter e lo' hi' voll t f i ev hw hL g e2 hwG hLG rest he hhi hn hg he2 hi hev hs
       hvoll hrest =>
-    .allocCounter _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by rw [exprGlob_ruE]; exact he) hhi hn hg
-      (by rw [exprSucc_ruE, he2, List.length_map])
-      (by rw [checkExpression_ruE]; exact hi) (by rw [checkExpression_ruE]; exact hev)
-      (by rw [storeCheck_ruE]; exact hs) (oe_lift hvoll) (ob_lift hrest)
+    .allocCounter _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ ((exprGlob_ruE _).trans he) hhi hn hg
+      ((exprSucc_ruE _).trans (by rw [he2, List.length_map]))
+      ((checkExpression_ruE A _ _).trans hi) ((checkExpression_ruE A _ _).trans hev)
+      ((storeCheck_ruE A _ _ _).trans hs) (oe_lift hvoll) (ob_lift hrest)
   | _, _, _, _, _, _, _, _, .release t f i e hw hL g e2 hwK hLK rest ht hf hip he hg he2 hc hrest =>
-    .release _ _ _ _ _ _ _ _ _ _ _ ht hf (by rw [exprVarPos_ruE]; exact hip) (by rw [exprGlob_ruE]; exact he) hg
-      (by rw [exprVarPos_ruE]; exact he2) (by rw [consume_ruE]; exact hc) (ob_lift hrest)
+    .release _ _ _ _ _ _ _ _ _ _ _ ht hf ((exprVarPos_ruE _).trans hip) ((exprGlob_ruE _).trans he) hg
+      ((exprVarPos_ruE _).trans he2) ((consume_ruE _ _).trans hc) (ob_lift hrest)
 
 theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} {e : Endblock D V l Γ Λ},
     OE A I out k c e → OE (liftA A) (liftI I) (outR A out) k c (ruEnd e)
@@ -240,7 +242,7 @@ theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} 
   | _, _, _, _, _, _, .bind e rest he hr => by
     have h := oe_lift hr
     rw [← origin_ruE] at h
-    exact .bind _ _ (by rw [checkExpression_ruE]; exact he) h
+    exact .bind _ _ ((checkExpression_ruE A _ _).trans he) h
   | _, _, _, _, _, _, .bindCall f args he hp hr rest ha hplan hrest =>
     .bindCall _ _ _ _ _ _ ((checkArguments_ruA A _ args).trans ha)
       ((planFits_lift _ _ args).trans hplan)
@@ -253,7 +255,7 @@ theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} 
   | _, _, _, _, _, _, .bindCallIndElse (n := n) p args he hp hr err rest J owner hJ hpc ha hplan herr
       hrest =>
     .bindCallIndElse _ _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ)
-      (by rw [checkExpression_ruE]; exact hpc)
+      ((checkExpression_ruE A _ _).trans hpc)
       ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => Context.bind x none) (afterCall_lift _ J args)) (oe_lift herr)))
       (oe_um _ (oe_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (oe_lift hrest)))
@@ -263,10 +265,10 @@ theorem oe_lift : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)} {k c : Context} 
     .bindAxiomElse _ _ _ _ _ _ _ _ _ _ hfree ((checkArguments_ruA A _ args).trans ha) (oe_lift herr) (oe_lift hrest)
   | _, _, _, _, _, _, .regRead r hk rest hrest => .regRead _ _ _ (oe_lift hrest)
   | _, _, _, _, _, _, .regReadElse r hk z sonst rest hz hs hrest =>
-    .regReadElse _ _ _ _ _ (by rw [checkExpression_ruE]; exact hz) (oe_lift hs) (oe_lift hrest)
+    .regReadElse _ _ _ _ _ ((checkExpression_ruE A _ _).trans hz) (oe_lift hs) (oe_lift hrest)
   | _, _, _, _, _, _, .awaits g pl hp hL ha rest hrest => .awaits _ _ _ _ _ _ (oe_lift hrest)
   | _, _, _, _, _, _, .bindCallInd (n := n) p args he hp hr rest J owner hJ hpc ha hplan hrest =>
-    .bindCallInd _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ) (by rw [checkExpression_ruE]; exact hpc)
+    .bindCallInd _ _ _ _ _ _ (modesR J) owner (sigCompatible_lift hJ) ((checkExpression_ruE A _ _).trans hpc)
       ((checkArguments_ruA A _ args).trans ha) ((planFits_lift _ J args).trans hplan)
       (oe_um _ (oe_pre (congrArg (fun x => resultContextB x owner) (afterCall_lift _ J args)) (oe_lift hrest)))
 

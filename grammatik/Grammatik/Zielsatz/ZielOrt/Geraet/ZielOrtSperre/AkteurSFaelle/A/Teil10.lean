@@ -360,7 +360,7 @@ theorem akteurS_dannNextVerbrauch {D : Deklaration} {P : Programm D} {O : Orakel
     hL⟩
   obtain ⟨_, _, hTR⟩ := hok
   have hg := gleichAuf_stabil_iff (fun L => Block.held_iff restb L) hg
-  obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := hTR
+  obtain ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩ := id hTR
   have hm'' : (eval (σ.lese Λ mass.orte) mass (σ.lese Λ mass.orte) ρ).n = m' := by
     have hg1 : GleichAuf (stabilS P S lok (M.faeden u).kopf.f Λ) (σ.lese Λ mass.orte) σm := by
       rw [hsm]; exact hg.lese Λ Λ mass.orte mass.orte
