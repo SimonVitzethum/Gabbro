@@ -62,17 +62,19 @@ theorem treuR_rufFrei (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO
   | ok σ₂ v =>
       simp only [hx, RufAusgang.welt, Option.some.injEq] at h ⊢
       subst h
-      exact hT σ₂ (by rw [hx]; rfl)
+      have ht := hT σ₂ (by rw [hx]; rfl)
+      rw [hx] at ht
+      exact ht
   | why σ₁ r =>
       simp only [hx, RufAusgang.welt, Option.some.injEq] at h ⊢
       subst h
-      exact hT σ₁ (by rw [hx]; rfl)
+      have ht := hT σ₁ (by rw [hx]; rfl)
+      rw [hx] at ht
+      exact ht
   | logik e =>
       simp only [hx, RufAusgang.welt, reduceCtorEq] at h
-      cases h
   | hardware e =>
-      simp only [hx] at ⊢
-      trivial
+      exact True.intro
 
 /-- **Gating by the entry contract preserves `TreuR`.** `torRuf` answers the
     handler's answer where the entry contract holds and a `logik` mark
@@ -87,7 +89,6 @@ theorem treuR_torRuf (P : Programm D)
     exact hR f σ ρ hh σ' h
   · rw [if_neg hq] at h ⊢
     simp only [RufAusgang.welt, reduceCtorEq] at h
-    exact True.intro
 
 /-- **The entry-gated handler.** Like `rufFrei` at entries meeting the
     callee-entry discipline, the hardware default elsewhere. -/
@@ -147,13 +148,15 @@ theorem eintritt_vertrag (P : Programm D) (O : Orakel D) (passes n : Nat) :
     cases h
 
 /-- The gated handler keeps the frame: at disciplined entries by
-    `rufAt_rahmenTreu`, elsewhere it has no `ok` answer. -/
+    `rufAt_treu`, elsewhere it has no `ok` answer. -/
 theorem eintritt_rahmen (P : Programm D) (O : Orakel D) (passes : Nat) (hO : TreuO O)
     (hS : ScopesOkProg P) (n : Nat) : RufRahmenTreu P (rufEintritt P O passes n) := by
   intro f σ ρ σ' v hh h
   simp only [rufEintritt, dif_pos hh] at h
-  exact rufAt_rahmenTreu P O passes hO hS n f σ ρ σ' v hh
-    (rufFrei_ok P O passes n f σ ρ σ' v h)
+  have hout := rufFrei_ok P O passes n f σ ρ σ' v h
+  have ht := rufAt_treu P O passes hO hS n f σ ρ hh σ' (by rw [hout]; rfl)
+  rw [hout] at ht
+  exact ⟨ht.1, ht.2⟩
 
 /-- **The gated handler is in the obligation's class.** Contracts
     (`eintritt_vertrag`) and frames at every world -- at undisciplined
@@ -178,7 +181,6 @@ theorem treuR_eintritt (P : Programm D) (O : Orakel D) (passes : Nat) (hO : Treu
   · simp only [rufEintritt, dif_pos hd] at h ⊢
     exact treuR_rufFrei P O passes hO hS n f σ ρ hd σ' h
   · simp only [rufEintritt, dif_neg hd] at h ⊢
-    trivial
 
 #print axioms Gabbro.Grammatik.treuR_rufFrei
 #print axioms Gabbro.Grammatik.treuR_torRuf

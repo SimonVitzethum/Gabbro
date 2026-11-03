@@ -77,8 +77,8 @@ def decl : Deklaration where
     Predicate texts differ, and both implications are strict on some values. -/
 def prog : Programm decl where
   invariante := fun i => nomatch i
-  requires := fun f => if f then .le (.lit 1) (.var .here) else .le (.lit 2) (.var .here)
-  ensures := fun f => if f then .eq (.var .here) (.var (.there .here))
+  requires := fun (f : Bool) => if f then .le (.lit 1) (.var .here) else .le (.lit 2) (.var .here)
+  ensures := fun (f : Bool) => if f then .eq (.var .here) (.var (.there .here))
     else .le (.var (.there .here)) (.var .here)
   rumpf := fun _ => .ret (.val (.var .here)) (List.Perm.refl [])
   ptrVertrag := fun _ =>
@@ -139,7 +139,7 @@ theorem concrete_contracts_differ :
     ¬ ReqAmEintritt prog false entry (.cons ⟨1, by decide, by decide⟩ .nil) ∧
     EnsAmRueck prog false entry later arguments ⟨4, by decide, by decide⟩ ∧
     ¬ EnsAmRueck prog true entry later arguments ⟨4, by decide, by decide⟩ := by
-  exact ⟨rfl, by intro h; cases h, rfl, by intro h; cases h⟩
+  exact ⟨rfl, (by intro h; cases h), rfl, (by intro h; cases h)⟩
 
 /-- A true interface pre does not license either target's stronger requires. -/
 def unguarded : Programm decl :=
@@ -180,12 +180,12 @@ theorem old_world_and_read_only_zeuge :
     ¬ oldContract.postHolds later later arguments ⟨0, by decide, by decide⟩ ∧
     oldContract.orte = [.inl (), .inl ()] ∧ sig.schreibt () = false ∧
     oldContract.atomicFreeB (fun _ => true) = false := by
-  exact ⟨rfl, by intro h; cases h, rfl, by intro h; cases h, rfl, rfl, rfl⟩
+  exact ⟨rfl, (by intro h; cases h), rfl, (by intro h; cases h), rfl, rfl, rfl⟩
 
 /-- One bad second target refutes the universal duty even though the first
     target and all structural signatures are unchanged. -/
 def badSecondTarget : Programm decl :=
-  { prog with ensures := fun f => if f then prog.ensures f else .tru }
+  { prog with ensures := fun (f : Bool) => if f then prog.ensures f else .tru }
 
 theorem weaker_second_target_post_refused : ¬ PtrVerfeinert badSecondTarget := by
   intro h
@@ -209,7 +209,7 @@ theorem stronger_interface_post_refused : ¬ PtrVerfeinert strongerInterfacePost
     `true` needs `5 ≤ x` but the interface only promises `3 ≤ x`
     (counterexample `x = 4`). -/
 def strongerTargetPre : Programm decl :=
-  { prog with requires := fun f => if f then .le (.lit 5) (.var .here) else prog.requires f }
+  { prog with requires := fun (f : Bool) => if f then .le (.lit 5) (.var .here) else prog.requires f }
 
 theorem stronger_target_pre_refused : ¬ PtrVerfeinert strongerTargetPre := by
   intro h
@@ -287,7 +287,7 @@ theorem hoare_callInd_zeuge :
     (∃ v, handler true entry (umsig pointer.property arguments) = RufAusgang.ok entry v ∧
       EnsAmRueck prog true entry entry (umsig pointer.property arguments) v ∧
       (prog.ptrVertrag 0).postHolds entry entry arguments (ptrResult pointer.property v)) := by
-  have ht := hoare_callInd (V := vertragVon decl true) prog oracle 0 handler
+  have ht := hoare_callInd (V := vertragVon decl true) (l := false) prog oracle 0 handler
     handler_contracts refinement operand operands permissions rfl entry arguments
   have hp := ht entry arguments ⟨rfl, rfl, rfl⟩ entry arguments rfl
   exact ⟨handler_contracts, refinement, rfl, hp.2⟩
@@ -318,7 +318,7 @@ theorem ptrTor_prefix_zeuge :
       handler true entry (umsig pointer.property arguments) := by
   have h := Gabbro.Grammatik.ptrTor_prefix_stmt refinement handler operand operands
     entry entry arguments rfl (GleichAuf.refl _ _) rfl
-  simpa using h
+  exact h
 
 /-- Indirect closure is already decided: every admitted target of an
     indirect site is in the closed set. Both same-shape targets are admitted
@@ -327,8 +327,9 @@ theorem ptrTor_prefix_zeuge :
 theorem abgK_indirekt_schliesst_zeuge :
     (fun _ : decl.Fn => true) true = true :=
   Gabbro.Grammatik.abgK_indirekt_schliesst (P := prog) (fs := [false, true])
+    (f := true) (n := 0) (g := true)
     (Z := fun _ => true) (fun f _ => by cases f <;> rfl) rfl rfl rfl
-    (fun g => by cases g <;> decide)
+    inventory_functions
 
 
 /-- Finite interfaces: nontrivial only at `0`, trivial elsewhere. The table
@@ -336,13 +337,14 @@ theorem abgK_indirekt_schliesst_zeuge :
     infinite freeness duty. Footprints are empty (value-only predicates), so
     no shared atomic is hidden. -/
 def progFin : Programm decl :=
-  { prog with ptrVertrag := fun | 0 => prog.ptrVertrag 0 | n + 1 =>
-      CallContract.trivial decl (decl.sigNr (n + 1)) }
+  { prog with ptrVertrag := fun
+      | 0 => prog.ptrVertrag 0
+      | n + 1 => CallContract.trivial decl (decl.sigNr (n + 1)) }
 
 theorem progFin_trivial_ausserhalb (n : Nat) (h : n ∉ [0]) :
     (progFin.ptrVertrag n).pre.orte = [] ∧ (progFin.ptrVertrag n).post.orte = [] := by
   cases n with
-  | zero => cases h rfl
+  | zero => exact absurd List.mem_cons_self h
   | succ k => exact ⟨rfl, rfl⟩
 
 theorem ptrVertragsFreiB_zeuge :
