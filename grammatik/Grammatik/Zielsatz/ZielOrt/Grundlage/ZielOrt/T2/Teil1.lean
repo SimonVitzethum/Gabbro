@@ -203,6 +203,20 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
 
   | g7 hs =>
     cases hs with
+    | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb _ ρ hleave hhead σ' ρ' neu hstep hneu _ σm hsm _ _ _ σ₁ hs₁ _ neu₁ hneu₁ hΛ =>
+        simp only [execStmt, Ausgang.leave.injEq] at hstep
+        obtain ⟨e, _⟩ := hstep
+        subst e hs₁ hsm
+        simp only [rufUpdateG_self]
+        refine Or.inl ?_
+        simp only [lese_offen] <;> rfl
+    | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb _ ρ hnext hhead σ' ρ' neu hstep hneu _ σm hsm _ _ _ neum hneum hΛ =>
+        simp only [execStmt, Ausgang.next.injEq] at hstep
+        obtain ⟨e, _⟩ := hstep
+        subst e hsm
+        simp only [rufUpdateG_self]
+        refine Or.inl ?_
+        simp only [lese_offen] <;> rfl
     | _ =>
         simp only [execStmt, Ausgang.leave.injEq, Ausgang.next.injEq] at *
         subst_vars

@@ -200,7 +200,7 @@ theorem assignSlot_neu (O : Orakel D) (passes : Nat)
           (eval (σ.lese Λ (i.orte ++ e.orte)) e
             (σ.lese Λ (i.orte ++ e.orte)) ρ)).spur =
         (σ.lese Λ (i.orte ++ e.orte)).spur := rfl
-    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+      rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
 
 /-- `assignDurch t` records its write event in the recorded list. -/
@@ -261,7 +261,7 @@ theorem assignDurch_neu (O : Orakel D) (passes : Nat)
           (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) e
             (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)).spur =
         (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).spur := rfl
-    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+      rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
 
 /-- `assignSlotRef t` records its write event in the recorded list. -/
@@ -322,7 +322,7 @@ theorem assignSlotRef_neu (O : Orakel D) (passes : Nat)
           (eval (σ.lese Λ (r.orte ++ e.orte)) e
             (σ.lese Λ (r.orte ++ e.orte)) ρ)).spur =
         (σ.lese Λ (r.orte ++ e.orte)).spur := rfl
-    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+      rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
 
 /-- `uebergang t` records its write event in the recorded list. -/
@@ -386,7 +386,7 @@ theorem uebergang_neu (O : Orakel D) (passes : Nat)
               (σ.lese Λ (.inl t :: i.orte)) ρ).n f
             (hτ ▸ (⟨nach, hn.1, hn.2⟩ : Zahl _ _))).spur =
           (σ.lese Λ (.inl t :: i.orte)).spur := rfl
-    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+      rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
 
 /-- `assignDurchOwn t` records its write event in the recorded list: the same
@@ -451,7 +451,7 @@ theorem assignDurchOwn_neu (O : Orakel D) (passes : Nat)
           (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) e
             (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) ρ)).spur =
         (σ.lese Λ (p.orte ++ i.orte ++ e.orte)).spur := rfl
-    rw [hspur₂, hspur, List.singleton_append, List.cons_append]
+      rw [hspur₂, hspur, List.singleton_append, List.cons_append]
   exact neu_head h1 hneu
   · rw [if_neg hvon, Ausgang.welt] at hstep
     exact absurd hstep (by simp only [reduceCtorEq, not_false_eq_true])

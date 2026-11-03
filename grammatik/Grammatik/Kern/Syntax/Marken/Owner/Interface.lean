@@ -37,12 +37,12 @@ variable {Marke : Type}
 /-- All owner inputs, including the exclusive loans and the checked mints
     the minter holds from its start frame. -/
 def inputs (F : OwnerFlow Marke) : List (Marke × Nat) :=
-  F.moves.map (fun x => (x.mark, x.before)) ++ F.loans ++ F.mints
+  F.moves.map (fun x => (x.mark, x.before)) ++ (F.loans ++ F.mints)
 
 /-- The common normal/reason inventory: retired moves contribute no output.
     Minted owners are returned, never ordinarily produced. -/
 def outputs (F : OwnerFlow Marke) : List (Marke × Nat) :=
-  F.moves.filterMap (fun x => x.after.map (fun s => (x.mark, s))) ++ F.loans ++ F.mints
+  F.moves.filterMap (fun x => x.after.map (fun s => (x.mark, s))) ++ (F.loans ++ F.mints)
 
 /-- One input per nominal identity across all stages, disjoint moves/loans/mints,
     owner-only entries, bounded stages and monotone stage-changing moves.
@@ -91,15 +91,13 @@ theorem outputs_nodup {isOwner : Marke → Bool} {stages : Marke → Nat}
     {F : OwnerFlow Marke} (hv : Valid isOwner stages F) : (F.outputs.map Prod.fst).Nodup := by
   have hs := returned_moves_sublist F.moves F.loans F.mints
   have hs' : (F.outputs.map Prod.fst).Sublist (F.inputs.map Prod.fst) := by
-    simpa only [outputs, inputs, List.map_append] using hs
+    simpa only [outputs, inputs, List.map_append, List.append_assoc] using hs
   exact hs'.nodup hv.1
 
 /-- Every returned identity has an explicit input; only its move stage may
     differ. Minted owners are held from the start frame. -/
 theorem output_from_input (F : OwnerFlow Marke) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : ∃ before, (m, before) ∈ F.inputs := by
-  rw [outputs, List.append_assoc] at h
-  simp only [inputs, List.append_assoc]
   rcases List.mem_append.mp h with h | h
   · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
     cases hs : x.after with
@@ -117,7 +115,6 @@ theorem output_from_input (F : OwnerFlow Marke) {m : Marke} {s : Nat}
 theorem output_bounded {isOwner : Marke → Bool} {stages : Marke → Nat}
     {F : OwnerFlow Marke} (hv : Valid isOwner stages F) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : isOwner m = true ∧ s < stages m := by
-  rw [outputs, List.append_assoc] at h
   rcases List.mem_append.mp h with h | h
   · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
     cases hs : x.after with
