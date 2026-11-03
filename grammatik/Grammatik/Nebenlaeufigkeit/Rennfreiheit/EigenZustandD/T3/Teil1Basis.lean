@@ -232,12 +232,12 @@ theorem assignDurchOwn_andere_fest (O : Orakel D) (passes : Nat)
     {hw : V.schreibt t₂ = true} {hL : darf D t₂ Λ}
     (σ : World D) (ρ : Env D Γ) (σ' : World D)
     (hstep : (execStmt O passes keinRuf
-      (Stmt.assignThruOwn (V := V) (l := l) p t₂ ht₂ f₂ i e m s ho he hg hm hw hL :
+      (Stmt.assignThruOwn (V := V) (l := l) p t₂ ht₂ f₂ i e m s ho he hg hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt = some σ')
     (t : D.Tab) (ht : t₂ ≠ t) (k : Int) (f : D.Feld t) :
     σ'.slots t k f = σ.slots t k f := by
   have hEq : (execStmt O passes keinRuf
-      (Stmt.assignThruOwn (V := V) (l := l) p t₂ ht₂ f₂ i e m s ho he hg hm hw hL :
+      (Stmt.assignThruOwn (V := V) (l := l) p t₂ ht₂ f₂ i e m s ho he hg hw hL :
         Stmt D V l Γ Λ Λ) σ ρ).welt =
       some ((σ.lese Λ (p.orte ++ i.orte ++ e.orte)).schreibSlot t₂ Λ
         (eval (σ.lese Λ (p.orte ++ i.orte ++ e.orte)) i
