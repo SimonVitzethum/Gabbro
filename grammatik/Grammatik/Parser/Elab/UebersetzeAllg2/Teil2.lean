@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil1
+public import Grammatik.Gen.Erzeuger.Entscheidung
 
 @[expose] public section
 
@@ -268,15 +269,15 @@ def lowCallArgsAuxL (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn
         | .ok rest => .ok (Args.cons e rest)
     | _, _ => .error "argument count without G form"
 
-/-- No consumed marks at a call (`RufPasst.hk`). -/
+/-- The consumed input marks are held at a call (C16): the decided sub-multiset
+    check over the callee's input marks. -/
 theorem rufHk_ok (u : UProg) (callee : Fin u.fns.length)
-    (Λ : List (Res (declOf u))) :
+    (Λ : List (Res (declOf u)))
+    (h : decide (Untermulti (((declOf u).signatur callee).inputMarks.map
+      (Res.vonMarke (declOf u))) Λ) = true) :
     Untermulti (((declOf u).signatur callee).inputMarks.map
-      (Res.vonMarke (declOf u))) Λ := by
-  unfold Signatur.inputMarks
-  rw [sigKonsumiert_nil u callee, signaturOwner_nil u callee]
-  show Untermulti ([] : List (Res (declOf u))) Λ
-  exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
+      (Res.vonMarke (declOf u))) Λ :=
+  of_decide_eq_true h
 
 /-- The caller's floor is at most the callee's (the Bool the lowering decides). -/
 def floorLeB (u : UProg) (caller callee : Fin u.fns.length) : Bool :=
@@ -383,6 +384,8 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
          if hB : floorLeB u caller callee = true then
           if hX : ∀ L ∈ heldLocksD u Λ,
               L ∈ ((declOf u).signatur callee).haelt ∨ floorUeberB u callee L = true then
+           if hK : decide (Untermulti (((declOf u).signatur callee).inputMarks.map
+               (Res.vonMarke (declOf u))) Λ) = true then
             have hw : ∀ t, ((declOf u).signatur callee).schreibt t =
                 true → (vertragVon (declOf u) caller).schreibt t =
                 true := fun t ht => by
@@ -410,7 +413,8 @@ def lowRufKopf (u : UProg) (caller : Fin u.fns.length) (Γ : Ctx) (fn : UFn)
               rw [sigGSchreibt_eq u callee g] at hg0
               rw [vGSchreibt_eq u caller g]
               exact hG g hg0
-            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (signaturOwner_nil u callee) } }
+            .ok { callee := callee, args := a, hp := { hw := hw, hg := hg, hk := rufHk_ok u callee Λ hK, hh := hH, hx := hx, hb := rufHb_ok u caller callee hB, ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _ (signaturOwner_nil u callee) } }
+           else .error "call without held mark"
           else .error "call: a held lock does not rank below the callee's floor"
          else .error "call: the caller's lock floor is above the callee's"
         else .error "call without held guard"

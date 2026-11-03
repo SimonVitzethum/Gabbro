@@ -3,6 +3,7 @@ module
 public import Grammatik.Parser.Elab.UebersetzeAllg
 public import Grammatik.Korpus.Programme.Export108
 public import Grammatik.Parser.Elab.UebersetzeAllg2.Teil2
+public import Grammatik.Gen.Erzeuger.Entscheidung
 
 @[expose] public section
 
@@ -375,8 +376,8 @@ theorem nachSigAt_eq (u : UProg) (n : Nat) (L : List (Res (declOf u))) :
   unfold nachSig
 
 /-- `RufPasst` against any signature of the unit, decided over the finite carriers. The
-    admitted boundary is still mark-free: no consumed marks and no owner flow travel yet
-    (both arrive with the C16/C09 export; foreign signatures never consume marks). -/
+    admitted boundary holds the callee's input marks (C16) and no owner flow yet
+    (foreign signatures never consume marks; the C09 handoff arrives with real flows). -/
 def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
     (Fin u.locks.length) (Fin u.marken.length)) (Λ : List (Res (declOf u))) : Bool :=
   (List.finRange u.tabs.length).all (fun t => !S.schreibt t || V.schreibt t) &&
@@ -387,26 +388,22 @@ def rufPasstB (u : UProg) (V : Vertrag (declOf u)) (S : Signatur (Fin u.tabs.len
   (match V.boden with
     | none => true
     | some c => match S.boden with | some c' => decide (c ≤ c') | none => false) &&
-  decide (S.konsumiert = []) &&
+  decide (Untermulti (S.inputMarks.map (Res.vonMarke (declOf u))) Λ) &&
   decide (S.owner = {})
 
-theorem rufPasstB_ok {u : UProg} {V : Vertrag (declOf u)} {S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
+theorem rufPasstB_ok {u : UProg} {V : vertrag (declOf u)} {S : Signatur (Fin u.tabs.length) (Fin u.globs.length)
     (Fin u.locks.length) (Fin u.marken.length)} {Λ : List (Res (declOf u))} (h : rufPasstB u V S Λ = true) :
     RufPasst (declOf u) V S Λ := by
   unfold rufPasstB at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_true'] at h
-  obtain ⟨⟨⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩, hk0⟩, ho⟩ := h
-  refine ⟨fun t ht => ?_, fun g ht => ?_, ?_, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, OwnerFlow.escrowReady_of_empty _ _ _ _ ho⟩
+  obtain ⟨⟨⟨⟨⟨⟨hw, hg⟩, hh⟩, hx⟩, hb⟩, hk⟩, ho⟩ := h
+  refine ⟨fun t ht => ?_, fun g ht => ?_, hk, fun L hL => hh L hL, fun L hL hn => ?_, fun c hc => ?_, OwnerFlow.escrowReady_of_empty _ _ _ _ ho⟩
   · rcases hw t (List.mem_finRange t) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
   · rcases hg g (List.mem_finRange g) with h1 | h1
     · rw [ht] at h1; cases h1
     · exact h1
-  · have hI : S.inputMarks = [] := by
-      unfold Signatur.inputMarks
-      rw [hk0, ho]
-    rw [hI]; exact ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩
   · rcases hx L (List.mem_finRange L) with (h1 | h1) | h1
     · simp only [decide_eq_false_iff_not] at h1; exact absurd hL h1
     · exact absurd h1 hn
