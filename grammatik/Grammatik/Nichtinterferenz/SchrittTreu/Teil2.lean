@@ -2,6 +2,7 @@ module
 
 public import Grammatik.Nichtinterferenz.Schritt
 public import Grammatik.Nichtinterferenz.SchrittTreu.Teil1
+public import Grammatik.Nichtinterferenz.SchrittTreu.Scoped
 
 @[expose] public section
 
@@ -240,6 +241,17 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       split
       · rfl
       · rename_i hn; exact absurd hfall hn
+
+  | rueckScopedWert ρ r e R hhead hret hΛ σ₁ σ₂ hs₁ hs₂ neu hneu z hantwort =>
+      subst hs₂ hs₁
+      kstart
+      rw [kr_scopedWert _ _ _ _ _ _ _ _ _ _ _ _ hret]
+      exact kPop_rufAntwortG _ _ _ _ hantwort
+  | rueckScopedGrund ρ r grund R hhead hret hΛ σ₂ hs₂ neu hneu z hantwort =>
+      subst hs₂
+      kstart
+      rw [kr_scopedGrund _ _ _ _ _ _ _ _ _ _ _ _ hret]
+      exact kPop_rufAntwortG _ _ _ _ hantwort
 
 theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M') :

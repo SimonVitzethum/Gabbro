@@ -92,8 +92,8 @@ theorem kAusDann_ok {l : Bool} {Γ : Ctx} {Λ' Λ'' : List (Res D)}
   | ok σ' ρ' =>
       try simp only [kAusDann]
       exact KErgOk.lokal hst _ _ _ (by first | exact ⟨hr, hk⟩ | (simp only [GRest.nR]; exact ⟨hr, hk⟩)) _ _
-  | zurueck σ v => exact kPop_ok hst f σ v
-  | why σ r => exact kPopGrund_ok hst f _ _ r
+  | zurueck σ v => exact kPop_ok hst f rho σ v
+  | why σ r => exact kPopGrund_ok hst f rho _ _ r
   | leave h σ' ρ' => exact kLeave_ok P hst f rho k hk h σ' ρ'
   | next h σ' ρ' => exact kNext_ok P hst f rho k hk h σ' ρ'
   | logik _ => exact KErgOk.none
@@ -106,8 +106,8 @@ theorem kAusEnde_ok {l : Bool} {Γ : Ctx} {Λ' : List (Res D)}
   | ok σ' ρ' =>
       try simp only [kAusEnde]
       exact KErgOk.lokal hst _ _ _ (by first | exact hr | (simp only [GRest.nR]; exact hr)) _ _
-  | zurueck σ v => exact kPop_ok hst f σ v
-  | why σ r => exact kPopGrund_ok hst f _ _ r
+  | zurueck σ v => exact kPop_ok hst f rho σ v
+  | why σ r => exact kPopGrund_ok hst f rho _ _ r
   | _ => exact KErgOk.none
 
 theorem kRufEnde_ok {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (ρ : Env D Γ)

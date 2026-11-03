@@ -74,11 +74,11 @@ theorem kAusDann_rel (hST : ∀ c, S c = true → T c = true) (st : List (KRahme
     KRel T (kAusDann st f rho rest k o₁) (kAusDann st f rho rest k o₂) := by
   cases o₁ <;> cases o₂ <;> simp only [AusRel] at h
   · obtain ⟨hw, rfl⟩ := h; exact KRel.lokal _ _ _ _ _ hw.1 hw.2
-  · obtain ⟨hw, rfl⟩ := h; exact kPop_rel st f hw _
+  · obtain ⟨hw, rfl⟩ := h; exact kPop_rel st f rho hw _
   · obtain ⟨hw, rfl⟩ := h
     simp only [kAusDann]
     rw [hw.1]
-    exact kPopGrund_rel st f _ hw.2 _
+    exact kPopGrund_rel st f rho _ hw.2 _
   · obtain ⟨hw, rfl⟩ := h; exact kLeave_rel hST st f rho k hk _ hw _
   · obtain ⟨hw, rfl⟩ := h; exact kNext_rel hST st f rho k hk _ hw _
   · exact KRel.none_l _
@@ -91,11 +91,11 @@ theorem kAusEnde_rel (st : List (KRahmen D)) (f : D.Fn)
     KRel T (kAusEnde st f rho rest o₁) (kAusEnde st f rho rest o₂) := by
   cases o₁ <;> cases o₂ <;> simp only [AusRel] at h
   · obtain ⟨hw, rfl⟩ := h; exact KRel.lokal _ _ _ _ _ hw.1 hw.2
-  · obtain ⟨hw, rfl⟩ := h; exact kPop_rel st f hw _
+  · obtain ⟨hw, rfl⟩ := h; exact kPop_rel st f rho hw _
   · obtain ⟨hw, rfl⟩ := h
     simp only [kAusEnde]
     rw [hw.1]
-    exact kPopGrund_rel st f _ hw.2 _
+    exact kPopGrund_rel st f rho _ hw.2 _
   · exact KRel.none_l _
   · exact KRel.none_l _
   · exact KRel.none_l _
@@ -427,16 +427,16 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [nE] at he
       simp only [kEnde]
       rw [(hW.lese Λ e.orte).evalErg e (alle_von hST he) ρ]
-      exact kPop_rel st f (hW.lese Λ e.orte) _
+      exact kPop_rel st f rho (hW.lese Λ e.orte) _
   | retScoped e R =>
       simp only [nE] at he
       simp only [kEnde]
       rw [(hW.lese Λ e.orte).evalErg e (alle_von hST he) ρ]
-      exact kPop_rel st f ((hW.lese Λ e.orte).gibt_foldl R.scopes) _
-  | retWhy r _ => exact kPopGrund_rel st f spur hsp r
+      exact kPop_rel st f rho ((hW.lese Λ e.orte).gibt_foldl R.scopes) _
+  | retWhy r _ => exact kPopGrund_rel st f rho spur hsp r
   | retWhyScoped r R =>
       simp only [kEnde, World.gibt_foldl_spur]
-      exact kPopGrund_rel st f _ (hW.gibt_foldl R.scopes).2 r
+      exact kPopGrund_rel st f rho _ (hW.gibt_foldl R.scopes).2 r
   | leave _ => exact KRel.none_l _
   | next _ => exact KRel.none_l _
 

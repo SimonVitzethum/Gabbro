@@ -128,15 +128,15 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       else none
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
-      kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)
+      kPop st f rho σ₁ (evalErg σ₁ e σ₁ ρ)
   | _, _, Λ, ρ, .retScoped e R =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       let σ₂ := R.scopes.foldl World.gibt σ₁
-      kPop st f σ₂ (evalErg σ₁ e σ₁ ρ)
-  | _, _, _, _, .retWhy r _ => kPopGrund st f spur sp r
+      kPop st f rho σ₂ (evalErg σ₁ e σ₁ ρ)
+  | _, _, _, _, .retWhy r _ => kPopGrund st f rho spur sp r
   | _, _, _, _, .retWhyScoped r R =>
       let σ₂ := R.scopes.foldl World.gibt (sp.welt spur)
-      kPopGrund st f σ₂.spur σ₂.speicher r
+      kPopGrund st f rho σ₂.spur σ₂.speicher r
   | _, _, _, _, _ => none
 
 /-- A `dann` residue. -/

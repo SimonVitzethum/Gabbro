@@ -164,6 +164,28 @@ inductive GRest (D : Deklaration) (V : Vertrag D) : Bool → Ctx → List (Res D
       (body : Block D V true (.index (D.count t) :: Γ) Λ Λ)
       (rest : Nat) (vor : Int) (k : GRest D V l Γ Λ) :
       GRest D V true (.index (D.count t) :: Γ) Λ
+  /-- A completed scoped return. The expression has already been evaluated and
+      every lexical scope released. Only the contract's end resources remain;
+      a root keeps this residue, whereas a callee immediately resumes its caller. -/
+  | zurueckgekehrt {l : Bool} {Γ : Ctx}
+      (antwort : ErgVal D V.erg ⊕ Fin V.gruende) : GRest D V l Γ V.ende
+
+/-- The three value-return heads consumed by scoped cleanup. Keeping this
+    selection next to the residue prevents separate root/callee shape lists. -/
+def GRest.scopedWert {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Option (ErgExpr D Γ Λ V.erg × RueckRessourcen D V Λ)
+  | .ende (.retScoped e R) => some (e, R)
+  | .ende (.cons (.retScoped e R) _) => some (e, R)
+  | .dann (.cons (.retScoped e R) _) _ => some (e, R)
+  | _ => none
+
+/-- The reason-return counterpart of `scopedWert`. -/
+def GRest.scopedGrund {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
+    GRest D V l Γ Λ → Option (Fin V.gruende × RueckRessourcen D V Λ)
+  | .ende (.retWhyScoped r R) => some (r, R)
+  | .ende (.cons (.retWhyScoped r R) _) => some (r, R)
+  | .dann (.cons (.retWhyScoped r R) _) _ => some (r, R)
+  | _ => none
 
 /-- **The continuation behind a generalized foreign binder** («C08»): void keeps the
     residue, a value pushes a shrink -- the residue half of `Ausgang.weiterOpt`. -/

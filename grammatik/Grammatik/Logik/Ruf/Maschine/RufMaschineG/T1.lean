@@ -66,6 +66,47 @@ structure RufMaschineG (D : Deklaration) where
   lauf : Lauf D
   start : World D
 
+/-- Resume a caller with an already evaluated answer. Both the G and K
+    machines use this operation, including the signature equality checks. -/
+def antwortRestG {V : Vertrag D} (g : D.Fn)
+    (antwort : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    (c : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) :
+    Option (Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) :=
+  match antwort, c with
+  | .inl v, ⟨l, Γ, Λ, ρ, .wartet (τ := τ) rest k⟩ =>
+      if he : (vertragVon D g).erg = some τ then
+        some ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .dann rest (.schrumpf k)⟩
+      else none
+  | .inl v, ⟨l, Γ, Λ, ρ, .wartetSonst (τ := τ) _ _ rest k⟩ =>
+      if he : (vertragVon D g).erg = some τ then
+        some ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .dann rest (.schrumpf k)⟩
+      else none
+  | .inl _, c => some c
+  | .inr r, ⟨l, Γ, Λ, ρ, .wartetSonst n err _ k⟩ =>
+      if hn : (vertragVon D g).gruende = n then
+        some ⟨l, .why n :: Γ, Λ, .cons (Fin.cast hn r) ρ,
+          .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩
+      else none
+  | .inr _, _ => none
+
+/-- Return after cleanup. A root keeps its entry record and a completed
+    residue; a callee pops and records its answer at the released world.
+    The returned value is supplied, never re-evaluated after a release. -/
+def rufAntwortG (z : RufFadenG D) (σ : World D)
+    (antwort : ErgVal D (vertragVon D z.kopf.f).erg ⊕ Fin (vertragVon D z.kopf.f).gruende) :
+    Option (RufFadenG D) :=
+  match z.stapel with
+  | [] => some ⟨[],
+      ⟨z.kopf.f, z.kopf.rho, z.kopf.s0,
+        ⟨false, D.params z.kopf.f, (vertragVon D z.kopf.f).ende,
+          z.kopf.rho, .zurueckgekehrt antwort⟩⟩, σ.spur, z.log⟩
+  | c :: st => do
+      let rest ← antwortRestG z.kopf.f antwort c.rest
+      let ev := match antwort with
+        | .inl v => RufEreignisF.rueck z.kopf.f z.kopf.rho v z.kopf.s0 σ
+        | .inr r => RufEreignisF.why z.kopf.f z.kopf.rho r z.kopf.s0 σ
+      pure ⟨st, ⟨c.f, c.rho, c.s0, rest⟩, σ.spur, ev :: z.log⟩
+
 /-- The current world of thread `f`: live shared memory plus its own trace. -/
 def RufMaschineG.weltVon (M : RufMaschineG D) (f : Faden) : World D :=
   M.speicher.welt (M.faeden f).spur

@@ -6925,3 +6925,32 @@ K root transition, and agreement on the definitions of completion used by `Spec`
 `rueckBereit scopes k` is indexed by still-held scope resources. No weakened deadlock statement or
 finished-holder exception is proposed. Work stopped at this boundary as instructed; machine rules,
 replay/noninterference arms and finished-thread proofs remain open.
+
+## 183. Scoped-return release and completion checkpoint (2026-11-03)
+
+Owner-selected design after §182; source inspection only, no build or Lean check. This changes
+`RufSchrittG` through two new group-7 rules, `rueckScopedWert` and `rueckScopedGrund`.
+Each recognizes the same three heads (end return, end-block cons, block cons), evaluates the value
+at the read world before cleanup, applies `R.scopes.foldl World.gibt`, and answers through
+`rufAntwortG`. A nonroot resumes its caller (discard, bind, or reason handler); a root retains its
+entry/log and the new final residue `GRest.zurueckgekehrt`, appended to the inductive and indexed
+by exactly `V.ende`. The saved answer is a value or reason, never an expression to re-evaluate.
+
+`Stmt.istRueck` and `Endblock.istRueck` still exclude pending scoped returns. `GRest.anRueck`
+counts the final residue; `GRest.anRueck_perm` and `fertigG_zurueckgekehrt` use its end-resource
+index. Thus the pre-release finished-holder counterexample is not introduced.
+
+K now receives the root environment explicitly in `kPop`/`kPopGrund`; an empty stack yields the
+same final residue rather than `none`. Existing nonroot pop behavior is unchanged. Root cases in
+`kPop_rel`/`kPopGrund_rel` and `kPop_ok`/`kPopGrund_ok` carry equal saved answers and the terminal
+flow predicate. `SchrittTreu/Scoped.lean` connects `rufAntwortG` to K and computes both scoped
+head selectors; `schrittK_von_g7` consumes these facts.
+
+Dependency order for the lead: `RufMaschineG/T1Basis`, `T1`, `Schritt/G7`, `T2`; the remaining G
+and residue consumers; `Verklemmung/T2`; `Nichtinterferenz/LokalBasis`, `SchrittBasis`, `Schritt`,
+`SchrittTreu/Scoped`, `SchrittTreu/Teil2`, `LokalSchritt/Teil1Basis`, `Teil1`, `Teil2`,
+`Invariante/Teil1Basis`, `Teil1`, `Teil2`, then their importers. This is a source checkpoint,
+not a buildable/integratable claim: exhaustive GRest and group-7 consumers and the replay/actor
+return guarantees are the next implementation stage. `Spec.lean` and all Spec submodule statements
+are untouched. In particular, `RetKopf`/`StartEndeG` still mention source expressions only; they do
+not assert anything about the saved terminal residue. No language case is claimed complete.

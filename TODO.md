@@ -90,9 +90,12 @@ Thus a parser/exporter or an expanded-unit certificate can exist while the origi
   Open: return-capable physical lock cleanup/admission, mode-aware RW/RCU source-to-IR integration and reader-wait liveness.
   **Scoped-return model boundary (2026-11-03, static):** counting a pre-release scoped return as `FertigG`
   contradicts `Ziel.keineVerklemmung`: a finished root can still hold the lock an unfinished thread awaits.
-  `kPop [] = none` also prevents a root cleanup step from satisfying the existing K correspondence.
-  Open: owner decision on completion after cleanup and the corresponding K root transition; see
-  [the scoped-return design boundary](dokumente/THEOREM-MAP.md#182-scoped-return-completion-design-boundary-2026-11-03).
+  The owner selected completion after cleanup. The `scoped-returns` branch adds
+  `rueckScopedWert`/`rueckScopedGrund`, the saved `zurueckgekehrt` residue at exactly `V.ende`,
+  and the K root cases, with correspondence and flow-preservation proof edits (not built).
+  Open: exhaustive residue/step consumers and guarantee transfer at the release step; the unchanged
+  expression-based `StartEndeG` does not quantify over the saved residue. See
+  [the scoped-return implementation checkpoint](dokumente/THEOREM-MAP.md#183-scoped-return-release-and-completion-checkpoint-2026-11-03).
 - **C11 consuming traversal: implemented, connected, with a source producer.**
   [`uLoopExport`](grammatik/Grammatik/Parser/Elab/Uebersetze/Teil/Teil9.lean), `ExportMetadata.consumingHeader`,
   [`lowStructStep`](grammatik/Grammatik/Parser/Elab/UebersetzeAllg3/Struct.lean) and

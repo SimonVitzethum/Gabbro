@@ -64,21 +64,22 @@ def kBinde (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) (σ : World D)
       else none
   | _ => none
 
-/-- A pop with a value (`rueck`, `rueckBind` and their `cons`/`dann`
-    forms): the caller resumes, bound if it waits. -/
-def kPop (st : List (KRahmen D)) (f : D.Fn) (σ : World D) (v : ErgVal D (vertragVon D f).erg) : KErg D :=
+/-- A pop with a saved value: a caller resumes, bound if it waits; a root
+    retains the completed answer. The root environment is explicit because
+    the completed residue has no expression or live local bindings. -/
+def kPop (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (σ : World D) (v : ErgVal D (vertragVon D f).erg) : KErg D :=
   match st with
-  | [] => none
+  | [] => kLokal [] f rho rho (.zurueckgekehrt (.inl v)) σ.spur σ.speicher
   | c :: rst =>
       if c.rest.2.2.2.2.wartend = true then kBinde f rst c σ v
       else some (⟨rst, c, σ.spur⟩, σ.speicher)
 
-/-- A pop with a reason (`rueckGrund` and its forms): the caller waiting in
-    `let … else` runs its else block. -/
-def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
+/-- A pop with a reason: a caller waiting in `let … else` runs its else
+    block; a root retains a completed reason (excluded for accepted starts). -/
+def kPopGrund (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D)) (sp : Speicher D) (r : Fin (vertragVon D f).gruende) :
     KErg D :=
   match st with
-  | [] => none
+  | [] => kLokal [] f rho rho (.zurueckgekehrt (.inr r)) spur sp
   | c :: rst =>
       match c.rest with
       | ⟨l, Γ, Λ, ρc, GRest.wartetSonst n err _ k⟩ =>
@@ -157,8 +158,8 @@ def kAusDann (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : 
     (rest : Block D (vertragVon D f) l Γ Λ' Λ'') (k : GRest D (vertragVon D f) l Γ Λ'') :
     Ausgang (vertragVon D f) l Γ → KErg D
   | .ok σ' ρ' => kLokal st f rho ρ' (.dann rest k) σ'.spur σ'.speicher
-  | .zurueck σ v => kPop st f σ v
-  | .why σ r => kPopGrund st f σ.spur σ.speicher r
+  | .zurueck σ v => kPop st f rho σ v
+  | .why σ r => kPopGrund st f rho σ.spur σ.speicher r
   | .leave h σ' ρ' => kLeave st f rho k h σ' ρ'
   | .next h σ' ρ' => kNext st f rho k h σ' ρ'
   | _ => none
@@ -167,8 +168,8 @@ def kAusDann (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : 
 def kAusEnde (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {l : Bool} {Γ : Ctx} {Λ' : List (Res D)}
     (rest : Endblock D (vertragVon D f) l Γ Λ') : Ausgang (vertragVon D f) l Γ → KErg D
   | .ok σ' ρ' => kLokal st f rho ρ' (.ende rest) σ'.spur σ'.speicher
-  | .zurueck σ v => kPop st f σ v
-  | .why σ r => kPopGrund st f σ.spur σ.speicher r
+  | .zurueck σ v => kPop st f rho σ v
+  | .why σ r => kPopGrund st f rho σ.spur σ.speicher r
   | _ => none
 
 
