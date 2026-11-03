@@ -1,7 +1,38 @@
 module
+import all Init.Data.String.Basic
+import all Init.Data.String.Bootstrap
+import all Init.Data.String.Decode
+import all Init.Data.String.Defs
+import all Init.Data.String.Extra
+import all Init.Data.String.FindPos
+import all Init.Data.String.Hashable
+import all Init.Data.String.Iter
+import all Init.Data.String.Iter.Basic
+import all Init.Data.String.Iter.Intercalate
+import all Init.Data.String.Iterate
+import all Init.Data.String.Iterator
+import all Init.Data.String.Legacy
+import all Init.Data.String.Length
+import all Init.Data.String.Modify
+import all Init.Data.String.OrderInstances
+import all Init.Data.String.Pattern
+import all Init.Data.String.Pattern.Basic
+import all Init.Data.String.Pattern.Char
+import all Init.Data.String.Pattern.Pred
+import all Init.Data.String.Pattern.String
+import all Init.Data.String.PosRaw
+import all Init.Data.String.Search
+import all Init.Data.String.Slice
+import all Init.Data.String.Stream
+import all Init.Data.String.Subslice
+import all Init.Data.String.Substring
+import all Init.Data.String.TakeDrop
+import all Init.Data.String.Termination
+import all Init.Data.String.ToSlice
 
 public import Grammatik.Bausteine.Kernzelle.KernAbfrageBindung
 public import Grammatik.Bausteine.Kernzelle.Verlauf
+public import Grammatik.Bausteine.Kernzelle.Zulassung
 
 @[expose] public section
 
@@ -101,18 +132,19 @@ def qD : Deklaration where
   a10 := ()
   geteilt_bewacht := fun e => nomatch e
   invarianten_gehalten := fun _ i => nomatch i
-  ggeteilt_bewacht := fun e => nomatch e
+  ggeteilt_bewacht := fun _ h => by simp only [Bool.false_eq_true] at h
   axHerkunft := fun _ => some .hardware
   axBeleg := fun _ => some ()
 
 instance : DecidableEq qD.Fn := inferInstanceAs (DecidableEq QFn)
+instance : DecidableEq qD.Ax := inferInstanceAs (DecidableEq (Fin 1))
 
 /-- The hardware core-query axiom. -/
 def qAX : qD.Ax := ⟨0, by decide⟩
 
-def qQ : QFn := .q
-def qU : QFn := .u
-def qF : QFn := .f
+def qQ : qD.Fn := .q
+def qU : qD.Fn := .u
+def qF : qD.Fn := .f
 
 /-- Literal `0` in `0 .. 255`: the `add` neutral the reduction returns. -/
 def qALitN {Γ : Ctx} {Λ : List (Res qD)} : Expr qD Γ Λ (Ty.int 0 255) :=
@@ -120,9 +152,9 @@ def qALitN {Γ : Ctx} {Λ : List (Res qD)} : Expr qD Γ Λ (Ty.int 0 255) :=
 
 /-- The query wrapper: bind the hardware axiom, return its answer. -/
 def qARumpfQ : Endblock qD (vertragVon qD qQ) false [] [] :=
-  .bindAxiom qAX Args.nil rfl
-    (fun t _ => nomatch t) (fun g h => by simp at h)
-    (fun t _ => nomatch t) (fun g h => by simp at h)
+  .bindAxiom qAX Args.nil (by rfl)
+    (fun t _ => nomatch t) (fun _ h => by cases h)
+    (fun t _ => nomatch t) (fun _ h => by cases h)
     (.ret (.val (.var .here)) (List.Perm.refl _))
 
 /-- The reduction body: return the neutral `0` (read-only, hence admitted). -/
@@ -132,8 +164,11 @@ def qARumpfF : Endblock qD (vertragVon qD qF) false [] [] :=
 /-- The update body: call the wrapper, then return (no value). The call edge
     is what `reachB` needs; the wrapper binds the axiom. -/
 def qARumpfU : Endblock qD (vertragVon qD qU) false [Ty.int 0 255] [] :=
-  .bindCall qQ Args.nil rfl
-    { hw := fun t _ => nomatch t, hg := fun g h => by simp at h, hk := ⟨[], List.Perm.refl _, by simp only [List.nil_sublist]⟩, hh := fun L h => absurd h (List.not_mem_nil _) } rfl
+  .bindCall qQ Args.nil (by rfl)
+    { hw := fun t _ => nomatch t
+      hg := fun _ h => by cases h
+      hk := ⟨[], List.Perm.refl _, List.nil_sublist _⟩
+      hh := fun _ h => by cases h } (by rfl)
     (.ret .empty (List.Perm.refl _))
 
 /-- The fixture program: query wrapper, update, reduction. -/
@@ -165,13 +200,15 @@ def qATabs : List qD.Tab := []
 
 def qAGlobs : List qD.Glob := [⟨0, by decide⟩, ⟨1, by decide⟩]
 
-theorem qAGlobs_voll : ∀ g : qD.Glob, g ∈ qAGlobs := fun g => by
-  fin_cases g <;> decide
+theorem qAGlobs_voll : ∀ g : qD.Glob, g ∈ qAGlobs := by
+  intro ⟨n, hn⟩
+  have h : n = 0 ∨ n = 1 := by omega
+  rcases h with rfl | rfl <;> decide
 
 /-! ## 2. The descriptor and the connected query, decided -/
 
 /-- The fixture `add` descriptor is valid, decided. -/
-theorem qA_okB : akkuOkB qA = true := by decide
+theorem qA_okB : akkuOkB qA = true := by decide +kernel
 
 /-- The fixture descriptor is valid (non-degenerate: two cells, `add` with
     neutral `0`). -/
@@ -183,7 +220,7 @@ theorem qA_nichtEntartet : qA.zellen ⟨0, by decide⟩ ≠ qA.zellen ⟨1, by d
   refine ⟨by decide, rfl⟩
 
 /-- The core-query shape holds on the fixture, decided. -/
-theorem qGestaltB : kernAbfrageGestaltB qD qAX 2 qATabs qAGlobs = true := by decide
+theorem qGestaltB : kernAbfrageGestaltB qD qAX 2 qATabs qAGlobs = true := by decide +kernel
 
 /-- The core-query shape holds: no params, answer `0 .. 1`, no channel,
     no writes. -/
@@ -205,12 +242,12 @@ theorem qBindetB : bindetAxE qAX (qAP.rumpf qQ) = true := by decide
 /-- **The connected core query `_zeuge`**: shape, hardware provenance and
     the wrapper's foreign bind. -/
 theorem kernAbfrage_zeuge : KernAbfrageVerbunden qAP qA qAX :=
-  (kernAbfrageEinzelB_iff (tabs := qATabs) (fun t => nomatch t) qAGlobs_voll).mp (by decide)
+  (kernAbfrageEinzelB_iff (tabs := qATabs) (fun t => nomatch t) qAGlobs_voll).mp (by decide +kernel)
 
 /-! ## 3. The identity and the quiescent reduction -/
 
 /-- The identity witness: on the two-core assignment, thread `0` queries `0`. -/
-theorem treue_zeuge : KernAbfrageTreue (fun _ => 0) 0 0 := by decide
+theorem treue_zeuge : KernAbfrageTreue (fun _ => 0) 0 0 := rfl
 
 /-- The identity gives the query range: the answer lies in `0 .. N - 1`. -/
 theorem treueBereich_zeuge : 0 ≤ (0 : Int) ∧ (0 : Int) ≤ (2 : Int) - 1 :=
@@ -233,7 +270,9 @@ theorem qN0_abgelehnt : kernAbfrageGestaltB qD qAX 0 qATabs qAGlobs = false := b
 
 /-- A wrong core identity is refused: thread `0` answering `1` is not the
     running core. -/
-theorem qFalscherKern_abgelehnt : ¬ KernAbfrageTreue (fun _ => 0) 0 1 := by decide
+theorem qFalscherKern_abgelehnt : ¬ KernAbfrageTreue (fun _ => 0) 0 1 := by
+  change ¬ (1 : Int) = 0
+  decide
 
 /-- An out-of-range answer is refused: `5` lies outside `0 .. 1`. -/
 theorem qAusserhalb_abgelehnt : ¬ (0 ≤ (5 : Int) ∧ (5 : Int) ≤ (2 : Int) - 1) := by decide

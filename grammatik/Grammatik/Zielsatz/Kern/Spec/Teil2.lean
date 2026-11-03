@@ -17,6 +17,7 @@ public import Grammatik.Logik.Terminierung.LaufGX
 public import Grammatik.Bausteine.Arena.Ownership.Ruhe.Lift
 public import Grammatik.Bausteine.Arena.Ownership.Machine.Reach
 public import Grammatik.Zielsatz.Kern.Spec.Teil1
+public import Grammatik.Bausteine.Kernzelle.Start
 public import Grammatik.Zielsatz.Kern.Akzeptiert.Bibliothek
 public import Grammatik.Zielsatz.Kern.Akzeptiert.CheckDecide
 

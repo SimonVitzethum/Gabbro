@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Bausteine.Kernzelle.Zulassung
+public import Grammatik.Bausteine.Kernzelle.Start
 public import Grammatik.Bausteine.Kernzelle.Verlauf
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 public import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein.T3
