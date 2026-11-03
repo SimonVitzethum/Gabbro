@@ -45,9 +45,9 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
             (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 = some value := by
           cases result : einpassenErg O.zeiger (D.aerg a)
               (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 with
-          | none => simp only [foreignDecode, noReasons, ↓reduceIte, result, Option.map_none] at decoded; cases decoded
+          | none => simp only [foreignDecode_zero noReasons, result, Option.map_none] at decoded; cases decoded
           | some value' =>
-            simp only [foreignDecode, noReasons, ↓reduceIte, result, Option.map_some,
+            simp only [foreignDecode_zero noReasons, result, Option.map_some,
               Option.some.injEq, Sum.inl.injEq] at decoded
             cases decoded
             exact result
@@ -67,7 +67,7 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
               (O.wirkt a (σ.fragt (.inl a)) (evalArgs σ args σ ρ)).2 with
           | none => exact result
           | some value =>
-            simp only [foreignDecode, noReasons, ↓reduceIte, result, Option.map_some] at decoded
+            simp only [foreignDecode_zero noReasons, result, Option.map_some] at decoded
             cases decoded
         exact .inr ⟨by rw [axiomAntwort_eq, source],
           Stops.prefix run1 (areaReceive_nonzero layout span next.left input nonzero)⟩
@@ -76,6 +76,8 @@ theorem plainForeignC_ok {O : Orakel D} [TorOK L O] {Γ : Ctx} {Λ : List (Res D
     obtain ⟨⟨request, requestTop⟩, requestMade, check, checkMade, rfl, rfl⟩ := emitted
     exact torBind_ok he requestMade checkMade (by omega) (by omega) layout pre world
 
+/-- The lexical continuation receives the complete declared result span,
+    including every limb when the selected provider uses a result area. -/
 theorem plainForeignC_top {Γ : Ctx} {Λ : List (Res D)} {a : D.Ax}
     {args : Args D Γ Λ (D.aparams a)} {τ : Ty} (he : D.aerg a = some τ)
     {s reserved top : Nat} {code : List II}
