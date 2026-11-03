@@ -169,9 +169,10 @@ theorem mintAtMarke_ok : stufe mintAtMarke = "OK" := by
 
 /-- C09: a linear handoff through a call: the caller holds the mark, the
     callee receives the same nominal identity for the call and hands it back
-    on return (`moves Marke` is the `OwnerMove` handback). -/
+    on return (`moves Marke` is the `OwnerMove` handback). The capability rides
+    a variable, as a fresh `&T` has no owned form. -/
 def moveAtMarke : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return p.slots[i].b; } impl fn caller() -> bool effects { writes T.slots, moves Marke } { mover(&T, 0); return true; } }"
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return p.slots[i].b; } impl fn caller(r : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads r.slots, writes r.slots, moves Marke } { mover(r, i); return r.slots[i].b; } }"
 theorem moveAtMarke_ok : stufe moveAtMarke = "OK" := by
   decide +kernel
 
@@ -212,9 +213,10 @@ theorem moveBorrowed_refused :
   decide +kernel
 
 /-- C09: moving a mark the caller does not hold is refused at the call: the
-    escrow cannot hand over a binding the caller never had. -/
+    escrow cannot hand over a binding the caller never had. The callee takes
+    no capability, so the call -- not the argument -- is what fails. -/
 def moveDropped : String :=
-  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(p : ptr<normal, rw+own@Marke> T, i : index into T) -> bool effects { reads p.slots, writes p.slots, moves Marke } { p.slots[i].b = true; return p.slots[i].b; } impl fn caller() effects { writes T.slots } { mover(&T, 0); } }"
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn mover(i : index into T) -> bool effects { moves Marke } { return true; } impl fn caller() { mover(0); } }"
 theorem moveDropped_refused :
     stufe moveDropped = "lower: call without held mark" := by
   decide +kernel
