@@ -62,7 +62,13 @@ theorem execBlock_ru_float {V : Vertrag D}
   by
   simp only [ruB, execBlock]
   erw [orte2, lese_worldR, eval_ru, eval_ru]
-  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  have ha := congrArg (fun v : Gleit zi_l1 zi_h1 => v.x)
+    (valR_fl (D := D)
+      (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ))
+  have hb := congrArg (fun v : Gleit zi_l2 zi_h2 => v.x)
+    (valR_fl (D := D)
+      (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ))
+  erw [ha, hb]
   cases gleitPasst lo hi (gleitRechne op
       (eval (σ.lese Λ (a.orte ++ b.orte)) a (σ.lese Λ (a.orte ++ b.orte)) ρ).x
       (eval (σ.lese Λ (a.orte ++ b.orte)) b (σ.lese Λ (a.orte ++ b.orte)) ρ).x) with
@@ -112,7 +118,9 @@ theorem execBlock_ru_floatOf {V : Vertrag D}
   by
   simp only [ruB, execBlock]
   erw [ruE_orte, lese_worldR, eval_ru]
-  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  have he := congrArg (fun v : Zahl zi_l1 zi_h1 => v.n)
+    (valR_int (D := D) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ))
+  erw [he]
   cases gleitPasst lo hi (gleitAusInt (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n) with
   | none => rfl
   | some v =>
@@ -140,7 +148,9 @@ theorem execBlock_ru_floatNarrow {V : Vertrag D}
   by
   simp only [ruB, execBlock]
   erw [ruE_orte, lese_worldR, eval_ru]
-  try simp only [valR_int, valR_opt, valR_fl, valR_fnptr]
+  have he := congrArg (fun v : Gleit zi_l1 zi_h1 => v.x)
+    (valR_fl (D := D) (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ))
+  erw [he]
   cases gleitPasst lo hi (eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).x with
   | none => rw [← endR_zuAusgang, ih_execEnd_ru_sonst _ ρ]
   | some v =>
@@ -176,6 +186,7 @@ theorem execEnd_ru_retScoped {V : Vertrag D}
   simp only [ruEnd, execEnd]
   erw [ruErg_orte, lese_worldR, evalErg_ru]
   rw [gibt_foldl_worldR]
+  rfl
 
 set_option linter.unusedSectionVars false in
 theorem execEnd_ru_retWhyScoped {V : Vertrag D}
@@ -190,6 +201,7 @@ theorem execEnd_ru_retWhyScoped {V : Vertrag D}
   by
   simp only [ruEnd, execEnd]
   rw [gibt_foldl_worldR]
+  rfl
 
 set_option linter.unusedSectionVars false in
 theorem execEnd_ru_cons {V : Vertrag D}
