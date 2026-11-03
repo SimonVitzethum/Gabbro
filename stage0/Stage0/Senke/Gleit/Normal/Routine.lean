@@ -98,6 +98,34 @@ theorem softAddRoutineL_word {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop
     WordCode (L := L) ρ W (fun d => softAddRoutineL d a b) (softAddRoutineWord av bv) :=
   routineSpecialL_ok ha hb (routineFiniteL_word ha hb)
 
+/-- The complete routine already agrees with the canonical addition on
+    every special-case input. The finite continuation is irrelevant there. -/
+theorem softAddRoutineWord_special_model (a b : GFloat)
+    (ha : Gleitkomma.wf Gleitkomma.f64 a) (hb : Gleitkomma.wf Gleitkomma.f64 b)
+    (special : floatAddSpecial Gleitkomma.f64 a b ≠ none) :
+    softAddRoutineWord (BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 a))
+      (BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 b)) =
+      BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 (Gleitkomma.add Gleitkomma.f64 a b)) := by
+  unfold softAddRoutineWord
+  rw [routineSpecialWord_model a b ha hb]
+  cases hs : floatAddSpecial Gleitkomma.f64 a b with
+  | none => exact (special hs).elim
+  | some r =>
+    have model := floatAddSpecial_model Gleitkomma.f64 a b
+    rw [hs] at model
+    rw [model]
+
+theorem softAddRoutineL_special_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
+    {left right : Nat → Option (List II × Nat)} (a b : GFloat)
+    (ha : Gleitkomma.wf Gleitkomma.f64 a) (hb : Gleitkomma.wf Gleitkomma.f64 b)
+    (hl : WordCode (L := L) ρ W left (BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 a)))
+    (hr : WordCode (L := L) ρ W right (BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 b)))
+    (special : floatAddSpecial Gleitkomma.f64 a b ≠ none) :
+    WordCode (L := L) ρ W (fun d => softAddRoutineL d left right)
+      (BitVec.ofNat 64 (Gleitkomma.zuBits Gleitkomma.f64 (Gleitkomma.add Gleitkomma.f64 a b))) := by
+  rw [← softAddRoutineWord_special_model a b ha hb special]
+  exact softAddRoutineL_word hl hr
+
 /-- Fixtures cover both orders, signed cancellation, subnormal output,
     overflow, a wide exact sum, NaN payload priority and negative zero. -/
 theorem softAddRoutineWord_zeuge :
@@ -132,6 +160,7 @@ theorem softAddRoutineL_word_zeuge {Γ : Ctx} (ρ : Env D Γ) (W : Runner.Mem �
 
 #print axioms routineFiniteDirectionalL_word
 #print axioms softAddRoutineL_word
+#print axioms softAddRoutineL_special_ok
 #print axioms softAddRoutineWord_zeuge
 #print axioms softAddRoutineL_word_zeuge
 end Gabbro.Stage0.Senke
