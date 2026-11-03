@@ -263,8 +263,8 @@ namespace Gabbro.Grammatik
 /-- A waiting caller and a callee returning the first reason. -/
 def vGrundCaller : RufRahmenG vD :=
   ⟨vMid, .nil, vSp.welt [],
-    ⟨false, [], [], .nil,
-      .wartetSonst (vD.gruende vErr) vErrBlock .nil
+    ⟨false, [], nach vD vErr [], .nil,
+      .wartetSonst (τ := .bool) (vD.gruende vErr) vErrBlock .nil
         (.ende (.ret .empty List.Perm.nil))⟩⟩
 
 def vGrundM : RufMaschineG vD :=
@@ -290,7 +290,7 @@ theorem rufG_grund_treu_zeuge :
     (vHg0 (show offen (vGrundM.faeden 0).spur = [] from rfl)).heldIn
     vErr rfl .nil rfl (vSp.welt []) rfl vR0 rfl rfl
   have ht := rufG_grund_treu hs vErr .nil vR0 (vSp.welt [])
-    (vGrundM.weltVon 0) (by simp only [rufUpdateG_self]; rfl)
+    (vGrundM.weltVon 0) (by simp only [rufUpdateG_self])
   exact ⟨_, hs, by simp only [rufUpdateG_self]; rfl,
     ht.1, ht.2.1, by simp only [rufUpdateG_self]⟩
 

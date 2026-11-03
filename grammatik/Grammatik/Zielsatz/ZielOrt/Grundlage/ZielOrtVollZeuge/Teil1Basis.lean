@@ -118,6 +118,8 @@ theorem vHp (caller callee : vD.Fn) (hw : ∀ t, (vD.signatur callee).schreibt t
     RufPasst vD (vertragVon vD caller) (vD.signatur callee) [] where
   hw := hw
   hg := fun g => nomatch g
+  ownerReady := OwnerFlow.escrowReady_of_empty _ _ _ _
+    (OwnerFlow.empty_of_empty (vD.signatur callee).owner)
   hb := fun c hc => by revert hc; cases caller <;> intro hc <;> cases hc
   hk := by
     unfold Signatur.inputMarks
