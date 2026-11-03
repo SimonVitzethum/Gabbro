@@ -46,7 +46,10 @@ def quotient {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
 
 def denominator {lo hi : Int} (w : Nat) (e : Expr D Γ Λ (.int lo hi)) :
     Expr D Γ Λ (.int 1 ((2 : Int) ^ w)) :=
-  .eng (.shl (w + 2) (by have := upper_one (w + 1); unfold upper at this; omega)
+  .eng (.shl (w + 2) (by
+    have positive : (0 : Int) < 2 ^ (w + 1) := Int.pow_pos (by decide)
+    rw [show w + 2 = (w + 1) + 1 by omega, Int.pow_succ]
+    omega)
     (by omega) (by omega) (by omega) (.lit 1) (shift w e))
     1 ((2 : Int) ^ w)
     (.widen (by omega) (by have := Int.pow_pos (n := (2 : Int)) (m := w) (by decide); omega) (.lit 1))
@@ -76,7 +79,7 @@ theorem magnitude_bound {lo hi : Int} (x : Zahl lo hi) :
   have abs : x.n.natAbs ≤ b := by have := x.lo_le; have := x.le_hi; dsimp [b]; omega
   have high : b < 2 ^ (b.log2 + 1) := Nat.lt_log2_self
   have power := Nat.pow_le_pow_right (by decide : 0 < 2)
-    (show b.log2 + 1 ≤ width lo hi + 1 by unfold width; omega)
+    (show b.log2 + 1 ≤ width lo hi + 1 by dsimp only [b, width]; omega)
   have result : x.n.natAbs < 2 ^ (width lo hi + 1) := by omega
   have cast : (x.n.natAbs : Int) < (2 : Int) ^ (width lo hi + 1) := by
     simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using Int.ofNat_lt.mpr result
@@ -86,15 +89,26 @@ theorem magnitude_bound {lo hi : Int} (x : Zahl lo hi) :
 variable {σ₀ σ : World D} {ρ : Env D Γ} {lo hi : Int} {e : Expr D Γ Λ (.int lo hi)}
   {w : Nat}
 
+private theorem eval_upper_cast {a b : Int} (bound : a = b)
+    (types : Expr D Γ Λ (.int 0 a) = Expr D Γ Λ (.int 0 b))
+    (input : Expr D Γ Λ (.int 0 a)) :
+    (eval σ₀ (cast types input) σ ρ).n = (eval σ₀ input σ ρ).n := by
+  cases bound
+  rfl
+
 theorem magnitude_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w) :
     (eval σ₀ (magnitude w e) σ ρ).n = ((eval σ₀ e σ ρ).n.natAbs : Int) := by
   by_cases negative : (eval σ₀ e σ ρ).n < 0
   · have lower : 0 ≤ -(eval σ₀ e σ ρ).n := by omega
-    have upper : -(eval σ₀ e σ ρ).n ≤ upper w := by omega
-    simp [magnitude, eval, Zahl.neg, negative, lower, upper]
+    have absolute := Int.ofNat_natAbs_of_nonpos (show (eval σ₀ e σ ρ).n ≤ 0 by omega)
+    have upper : -(eval σ₀ e σ ρ).n ≤ upper w := by rwa [absolute] at bound
+    rw [absolute]
+    simp [magnitude, eval, wahr?, Zahl.neg, negative, lower, upper]
   · have lower : 0 ≤ (eval σ₀ e σ ρ).n := by omega
-    have upper : (eval σ₀ e σ ρ).n ≤ upper w := by omega
-    simp [magnitude, eval, negative, lower, upper, Int.natAbs_of_nonneg lower]
+    have absolute := Int.natAbs_of_nonneg lower
+    have upper : (eval σ₀ e σ ρ).n ≤ upper w := by rwa [absolute] at bound
+    rw [absolute]
+    simp [magnitude, eval, wahr?, negative, lower, upper]
 
 theorem logarithm_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (positive : 0 < (eval σ₀ e σ ρ).n.natAbs) :
@@ -105,25 +119,47 @@ theorem logarithm_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper
       omega
     apply Int.ofNat_lt.mp
     simpa only [Int.natCast_pow, Int.cast_ofNat_Int] using cast
-  exact position_root (magnitude w e) σ₀ σ ρ _ w (magnitude_value bound) positive high
+  have transport : (eval σ₀ (logarithm w e) σ ρ).n =
+      (eval σ₀ (position (magnitude w e) 0 w) σ ρ).n := by
+    unfold logarithm
+    exact eval_upper_cast (a := ((0 + w : Nat) : Int)) (b := (w : Int))
+      (by simp only [Nat.zero_add]) (by simp only [Nat.zero_add])
+      (position (magnitude w e) 0 w)
+  exact transport.trans (position_root (magnitude w e) σ₀ σ ρ _ w
+    (magnitude_value bound) positive high)
 
 theorem shift_value (bound : ((eval σ₀ e σ ρ).n.natAbs : Int) ≤ upper w)
     (positive : 0 < (eval σ₀ e σ ρ).n.natAbs) :
     (eval σ₀ (shift w e) σ ρ).n = (integerFloatShift (eval σ₀ e σ ρ).n.natAbs : Int) := by
-  have value := logarithm_value bound positive
-  have limit := (eval σ₀ (logarithm w e) σ ρ).le_hi
-  simp only [shift, eval, Zahl.sub]
-  dsimp only
-  rw [value]
-  split <;> rename_i h
-  · unfold integerFloatShift; omega
-  · simp only [zero, eval, Zahl.weiter]
+  let value : Zahl 0 (w : Int) := eval σ₀ (logarithm w e) σ ρ
+  have number : value.n = ((eval σ₀ e σ ρ).n.natAbs.log2 : Int) :=
+    logarithm_value bound positive
+  have limit := value.le_hi
+  by_cases inside : 0 ≤ value.n - 55 ∧ value.n - 55 ≤ (w : Int)
+  · have whole : eval σ₀ (shift w e) σ ρ =
+        (⟨value.n - 55, inside.1, inside.2⟩ : Zahl 0 (w : Int)) := by
+      simp only [shift, eval, Zahl.sub]
+      exact dif_pos inside
+    rw [whole]
+    change value.n - 55 = _
+    unfold integerFloatShift
+    omega
+  · have whole : eval σ₀ (shift w e) σ ρ =
+        eval σ₀ (zero (w : Int) (by omega)) σ ρ := by
+      simp only [shift, eval, Zahl.sub]
+      exact dif_neg inside
+    rw [whole]
+    change (0 : Int) = _
     unfold integerFloatShift
     omega
 
 theorem small_value (bound : (eval σ₀ e σ ρ).n.natAbs < 2 ^ 55) :
     (eval σ₀ (small e) σ ρ).n = (eval σ₀ e σ ρ).n := by
   have inside : -(2 ^ 55) ≤ (eval σ₀ e σ ρ).n ∧ (eval σ₀ e σ ρ).n ≤ 2 ^ 55 := by omega
-  simp only [small, eval, dif_pos inside]
+  have whole : eval σ₀ (small e) σ ρ =
+      (⟨(eval σ₀ e σ ρ).n, inside.1, inside.2⟩ : Zahl (-2 ^ 55) (2 ^ 55)) := by
+    simp only [small, eval]
+    exact dif_pos inside
+  exact congrArg Zahl.n whole
 
 end Gabbro.Stage0.Senke.WideFloat
