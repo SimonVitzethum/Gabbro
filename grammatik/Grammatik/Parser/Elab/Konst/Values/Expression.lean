@@ -92,6 +92,14 @@ def payloadExpression {D : Deklaration} {Γ : Ctx} (names : Locals Γ)
   | _ + 1, _, _ => .error "const tagged constructor payload does not match its declared type"
 end
 
+/-- Closed reason values retain their declared source owner even when a foreign
+    reason has the same number of cases. Other schemas retain their payload closure. -/
+def resultSchemas (k : UKonstFn) : List USum :=
+  match k.erg, k.signature.res with
+  | .why _, some (.atom owner) => k.sums.filter (fun schema => strEq schema.name owner)
+  | .why _, _ => []
+  | _, _ => k.sums
+
 /-- Only portable A28 results enter this additional value path. Other types keep
     a named refusal; integer calls retain the existing bounded/KExpr certificate. -/
 def resultType : Ty → Bool
