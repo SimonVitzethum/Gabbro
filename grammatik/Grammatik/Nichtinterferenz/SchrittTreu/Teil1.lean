@@ -102,31 +102,27 @@ theorem schrittK_von_g3 (P : Programm D) (O : Orakel D) (passes : Nat)
   | dannLeaveTrav l Γ Λ t inv body is k rest i ρ hleave hhead σ' ρ' neu hstep hneu hk σ₁ hs₁ hw
       neu₁ hneu₁ hΛ =>
       kstart
-      simp only [execStmt, RufMaschineG.weltVon] at hstep
       cases hstep
       subst hs₁
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt, Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kLeave,
         Env.tail]
+      simp only [RufMaschineG.weltVon] at hw
       rw [if_pos hw]
       rfl
   | dannNextTrav l Γ Λ t inv body is k rest i ρ hnext hhead σ' ρ' neu hstep hneu hk hΛ =>
       kstart
-      simp only [execStmt, RufMaschineG.weltVon] at hstep
       cases hstep
       rfl
   | dannLeaveWieder l Γ Λ n bis body ueber k rest ρ hleave hhead σ' ρ' neu hstep hneu hk hΛ =>
       kstart
-      simp only [execStmt, RufMaschineG.weltVon] at hstep
       cases hstep
       rfl
   | dannNextWieder l Γ Λ n bis body ueber k rest ρ hnext hhead σ' ρ' neu hstep hneu hk hΛ =>
       kstart
-      simp only [execStmt, RufMaschineG.weltVon] at hstep
       cases hstep
       rfl
   | dannLeaveEwig l Γ Λ a n inv body k rest ρ hleave hhead σ' ρ' neu hstep hneu hk hΛ =>
       kstart
-      simp only [execStmt, RufMaschineG.weltVon] at hstep
       cases hstep
       rfl
 
@@ -136,7 +132,6 @@ theorem schrittK_von_g4 (P : Programm D) (O : Orakel D) (passes : Nat)
   cases hs with
   | dannNextEwig l Γ Λ a n inv body k rest ρ hnext hhead σ' ρ' neu hstep hneu hk hΛ =>
       kstart
-      simp only [execStmt, RufMaschineG.weltVon] at hstep
       cases hstep
       rfl
   | peelDannLeave l Γ Λ rest b k ρ hleave hhead =>

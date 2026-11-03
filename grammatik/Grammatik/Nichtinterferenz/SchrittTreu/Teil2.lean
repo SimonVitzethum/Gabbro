@@ -204,10 +204,19 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       σ₁ hs₁ m' hm' hfall neu hneu hΛ =>
       kstart
       subst hm' hs₁
-      simp only [kr]
       simp only [RufMaschineG.weltVon] at hfall
-      rw [if_pos hfall]
-      rfl
+      show (let σ₁ := (M.speicher.welt (M.faeden f).spur).lese Λ mass.orte
+            let m' := (eval σ₁ mass σ₁ ρ).n
+            if 0 ≤ m' ∧ m' ≤ bound ∧ m' < vor then
+              kLokal (List.map RufRahmenG.kern (M.faeden f).stapel) (M.faeden f).kopf.f
+                (M.faeden f).kopf.rho ρ (GRest.verbrauch t member edge inv bound mass body rest k)
+                σ₁.spur M.speicher
+            else none) = _
+      dsimp only
+      split
+      · rfl
+      · rename_i hn
+        exact absurd hfall hn
   | dannLeaveVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
       hleave hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall σ₁ hs₁ hw
       neu₁ hneu₁ hΛ =>
@@ -217,8 +226,9 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       subst hm' hs₁ hsm
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt,
         Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kLeave, Env.tail]
-      rw [if_pos hfall, if_pos hw]
-      rfl
+      split
+      · rfl
+      · rename_i hn; exact absurd hfall hn
   | dannNextVerbrauch l Γ Λ t member edge inv bound mass body rest vor k restb i ρ
       hnext hhead σ' ρ' neu hstep hneu hkein σm hsm m' hm' hfall neum hneum hΛ =>
       kstart
@@ -227,8 +237,9 @@ theorem schrittK_von_g7 (P : Programm D) (O : Orakel D) (passes : Nat)
       subst hm' hsm
       simp only [kr, kDann, kDannCons, GEntfaltbar, Stmt.istBlatt,
         Bool.false_eq_true, ↓reduceIte, kAusDann, execStmt, kNext, Env.tail]
-      rw [if_pos hfall]
-      rfl
+      split
+      · rfl
+      · rename_i hn; exact absurd hfall hn
 
 theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M') :
