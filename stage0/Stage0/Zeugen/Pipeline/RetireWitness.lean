@@ -91,4 +91,20 @@ theorem canonical_source : CanonicalSourceProgram output.compiled :=
 
 theorem image_correct [Runner.IR.Kern] [Senke.CloneOK] : output.Correct := output.correct
 
+/-- A signature alone cannot discharge the callee's terminal input. -/
+def droppedText : String :=
+  "module retire_probe { linear type Mark; table T count 1 owner Mark { slot { b : bool, } } impl fn finish() effects { consumes Mark } { } impl fn main() -> u8 effects { consumes Mark } { finish(); return 23; } }"
+
+theorem dropped_image_refused :
+    emit droppedText 256 = .error "lower: return without produced marks" := by
+  decide +kernel
+
+/-- The actual compiler refuses retirement of a held but borrowed owner. -/
+def borrowedText : String :=
+  "module retire_probe { linear type Mark; table T count 1 owner Mark { slot { b : bool, } } impl fn main() -> u8 effects { borrows Mark } { retires Mark; return 23; } }"
+
+theorem borrowed_image_refused :
+    emit borrowedText 256 = .error "retire of borrowed mark: Mark" := by
+  decide +kernel
+
 end Gabbro.Stage0.Pipeline.RetireWitness
