@@ -123,6 +123,6 @@ public import Stage0.Senke.Gleit.Compose
 public import Stage0.Senke.Gleit.BitLength
 public import Stage0.Senke.Gleit.Runde
 public import Stage0.Senke.Gleit.Normal.Replay
-public import Stage0.Senke.Gleit.Normal.Routine
+public import Stage0.Senke.Gleit.Normal.Finite
 
 @[expose] public section
