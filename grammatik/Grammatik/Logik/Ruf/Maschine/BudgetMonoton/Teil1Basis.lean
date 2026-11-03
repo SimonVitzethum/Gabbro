@@ -148,11 +148,33 @@ theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
 /-- Shifting loop counters does not change the source return selected. -/
 theorem GRest.plus_scopedWert (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (r : GRest D V l Γ Λ) : (r.plus j).scopedWert = r.scopedWert := by
-  cases r <;> rfl
+  cases r with
+  | dann b _ =>
+      cases b with
+      | cons s _ => cases s <;> rfl
+      | _ => rfl
+  | _ => rfl
 
 theorem GRest.plus_scopedGrund (j : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} (r : GRest D V l Γ Λ) : (r.plus j).scopedGrund = r.scopedGrund := by
-  cases r <;> rfl
+  cases r with
+  | dann b _ =>
+      cases b with
+      | cons s _ => cases s <;> rfl
+      | _ => rfl
+  | _ => rfl
+
+/-- Caller resumption shifts only the suspended continuation, in either answer channel. -/
+private theorem antwortRestG_plus (j : Nat) {V : Vertrag D} (g : D.Fn)
+    (a : ErgVal D (vertragVon D g).erg ⊕ Fin (vertragVon D g).gruende)
+    (c : Σ l : Bool, Σ Γ : Ctx, Σ Λ : List (Res D), Env D Γ × GRest D V l Γ Λ) :
+    antwortRestG g a ⟨c.1, c.2.1, c.2.2.1, c.2.2.2.1, c.2.2.2.2.plus j⟩ =
+      (antwortRestG g a c).map (fun r => ⟨r.1, r.2.1, r.2.2.1, r.2.2.2.1, r.2.2.2.2.plus j⟩) := by
+  obtain ⟨l, Γ, Λ, ρ, r⟩ := c
+  cases a <;> cases r <;> first
+  | rfl
+  | (simp only [antwortRestG, GRest.plus]
+     split <;> simp_all only [Option.map, ↓reduceDIte])
 
 /-- Returning a saved answer commutes with shifting the suspended counters. -/
 theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {vor σ : World D}
@@ -165,11 +187,15 @@ theorem rufAntwortG_plus (j : Nat) {z z' : RufFadenG D} {vor σ : World D}
       subst z'
       rfl
   | cons c st =>
-      obtain ⟨cf, crho, cs0, ⟨l, Γ, Λ, ρ, r⟩⟩ := c
-      cases a <;> cases r <;>
-        simp_all [rufAntwortG, antwortRestG, RufFadenG.plus, RufRahmenG.plus, GRest.plus]
-      all_goals split at h <;>
-        simp_all [rufAntwortG, antwortRestG, RufFadenG.plus, RufRahmenG.plus, GRest.plus]
+      cases hr : antwortRestG kopf.f a c.rest with
+      | none => simp only [rufAntwortG, hr, Option.bind] at h
+      | some rest =>
+          have hplus := antwortRestG_plus j kopf.f a c.rest
+          rw [hr] at hplus
+          simp only [Option.map] at hplus
+          simp only [rufAntwortG, hr, Option.bind, Option.some.injEq] at h
+          subst z'
+          simp only [RufFadenG.plus, RufRahmenG.plus, rufAntwortG, List.map_cons, hplus, Option.bind]
 
 /-! ## 2. The budget decides nothing but the budget -/
 
@@ -191,7 +217,11 @@ theorem RufRahmenG.plus_wartend (j : Nat) (r : RufRahmenG D) : (r.plus j).warten
 
 theorem GRest.plus_anRueck (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (g : GRest D V l Γ Λ), (g.plus j).anRueck = g.anRueck
-  | _, _, _, .ende _ | _, _, _, .dann .. | _, _, _, .schrumpf _ | _, _, _, .frei .. | _, _, _, .trav ..
+  | _, _, _, .dann b _ => by
+      cases b with
+      | cons s _ => cases s <;> rfl
+      | _ => rfl
+  | _, _, _, .ende _ | _, _, _, .schrumpf _ | _, _, _, .frei .. | _, _, _, .trav ..
   | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _ | _, _, _, .rueckBereit ..
   | _, _, _, .zurueckgekehrt _ => rfl
