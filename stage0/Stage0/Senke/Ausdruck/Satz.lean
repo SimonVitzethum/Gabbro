@@ -10,7 +10,7 @@ public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
 public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
 public import Stage0.Senke.Ausdruck.Tag
-public import Stage0.Senke.Ausdruck.Aggregat.Sum.Construct
+public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Construct
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
