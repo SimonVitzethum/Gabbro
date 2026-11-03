@@ -29,7 +29,8 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .fnptr _, v => [BitVec.ofNat 64 (L.fa v.1)]
   | .sum cs, v => if sumFits cs then [BitVec.ofNat 64 (sumN v)] else
       integerEncoding (integerWords 0 (cs.length - 1)) v.1.val ++
-        integerEncoding (sumPayloadWords cs) (sumOff (cs.get v.1) (Fall.toNutzlast _ _ _ _ v.2))
+        (encodeSumPayload L cs v.1 v.2 ++ List.replicate
+          (sumPayloadWords cs - (encodeSumPayload L cs v.1 v.2).length) 0)
   | .prod _ fs, v => encodeProduct L fs v
   | .arr τ n, v => if n = 0 then [0] else elementEncoding n (fun i => encodeWords L τ (v i))
   | .str n, v => if n ≤ 1 then [BitVec.ofNat 64 (strN v.1)] else
@@ -39,7 +40,16 @@ def encodeWords (L : Lay D) : (τ : Ty) → Wert D τ → List Runner.W
   | .ptr _, _ => [0]
   | .never, v => nomatch v
 
-/-- Encode heterogeneous fields in declaration order. -/
+/-- Traverse the selected schema structurally, retaining the payload's own encoding. -/
+def encodeSumPayload (L : Lay D) : (cs : List (Option Ty)) →
+    (i : Fin cs.length) → Fall D.Fn D.passt cs i → List Runner.W
+  | [], i, _ => Fin.elim0 i
+  | none :: _, ⟨0, _⟩, _ => []
+  | some τ :: _, ⟨0, _⟩, v => encodeWords L τ v
+  | _ :: cs, ⟨i + 1, hi⟩, v => encodeSumPayload L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+
+/-- Encode heterogeneous fields
+ in declaration order. -/
 def encodeProductFields (L : Lay D) : (fs : List Ty) →
     ProdVal D.Fn D.passt fs → List Runner.W
   | [], _ => []
@@ -114,7 +124,32 @@ theorem encodeWords_length (L : Lay D) (τ : Ty) (v : Wert D τ) :
     simp only [encodeWords, valueWords]
     split
     · rfl
-    · simp [integerEncoding_length]
+· have selected : ∀ (cs : List (Option Ty)) (i : Fin cs.length)
+          (v : Fall D.Fn D.passt cs i),
+          (∀ τ, some τ ∈ cs → ∀ w : Wert D τ,
+            (encodeWords L τ w).length = valueWords τ) →
+          (encodeSumPayload L cs i v).length ≤ sumPayloadWords cs := by
+        intro cs
+        induction cs with
+        | nil => intro i; exact Fin.elim0 i
+        | cons c rest ih =>
+          intro i v widths
+          rcases i with ⟨i, hi⟩
+          cases i with
+          | zero =>
+            cases c with
+            | none => simp [encodeSumPayload, sumPayloadWords]
+            | some τ =>
+              simp only [encodeSumPayload, widths τ List.mem_cons_self, sumPayloadWords]
+              exact Nat.le_max_left _ _
+          | succ i =>
+            have tail := ih ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+              (fun τ mem => widths τ (List.mem_cons_of_mem _ mem))
+            cases c <;> simp only [encodeSumPayload, sumPayloadWords] <;> omega
+      have bound := selected cs v.1 v.2
+        (fun τ mem w => encodeWords_length L τ w)
+      simp only [List.length_append, integerEncoding_length, List.length_replicate]
+      omega
   | never => exact Empty.elim v
   | _ => simp [encodeWords, integerEncoding_length, valueWords]
 
@@ -128,6 +163,11 @@ decreasing_by
       | (simp_wf
          have hs := List.sizeOf_lt_of_mem ‹_ ∈ _›
          simp only [Ty.prod.sizeOf_spec] at *
+         omega)
+      | (simp_wf
+         have hs := List.sizeOf_lt_of_mem ‹_ ∈ _›
+         simp only [Ty.sum.sizeOf_spec] at *
+         simp_all
          omega)
 
 /-- Typed parameters use the same tail-first order as lexical variable offsets.
@@ -152,9 +192,19 @@ def ValueValid (L : Lay D) : (τ : Ty) → Wert D τ → Prop
   | .fl _ _, v => Gleitkomma.wf Gleitkomma.f64 v.x
   | .arr τ _, v => ∀ i, ValueValid L τ (v i)
   | .prod _ fs, v => ProdValid L fs v
+  | .sum cs, v => SumValid L cs v.1 v.2
   | _, _ => True
 
-/-- Representation obligations for each field in declaration order. -/
+/-- Sum validity follows the selected payload, including float/reference obligations. -/
+def SumValid (L : Lay D) : (cs : List (Option Ty)) →
+    (i : Fin cs.length) → Fall D.Fn D.passt cs i → Prop
+  | [], i, _ => Fin.elim0 i
+  | none :: _, ⟨0, _⟩, _ => True
+  | some τ :: _, ⟨0, _⟩, v => ValueValid L τ v
+  | _ :: cs, ⟨i + 1, hi⟩, v => SumValid L cs ⟨i, Nat.lt_of_succ_lt_succ hi⟩ v
+
+/-- Representation obligations for each field
+ in declaration order. -/
 def ProdValid (L : Lay D) : (fs : List Ty) → ProdVal D.Fn D.passt fs → Prop
   | [], _ => True
   | τ :: rest, v => ValueValid L τ (ProdVal.hd v) ∧ ProdValid L rest (ProdVal.tl v)
