@@ -107,7 +107,7 @@ noncomputable def RufRahmenG.kern (r : RufRahmenG D) : KRahmen D :=
 /-- **The ghost-free state of a thread**: its frames (function, parameters,
     residue) and its trace. -/
 noncomputable def RufFadenG.kern (z : RufFadenG D) : KFaden D :=
-  ⟨z.stapel.map RufRahmenG.kern, GRest.kern, z.kopf.kern, z.spur⟩
+  ⟨z.stapel.map RufRahmenG.kern, z.kopf.kern, z.spur⟩
 
 /-! ## 3. Low-equivalence and the observation -/
 
