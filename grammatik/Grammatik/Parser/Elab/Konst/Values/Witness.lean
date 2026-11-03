@@ -274,4 +274,14 @@ theorem reify_denotes_zeuge :
   let literal := (reify (D := declaration [] .bool) (Γ := []) [] [] 64 .bool true).toOption.get (by decide)
   exact ⟨literal, by rfl, by rfl, fun before after => reify_denotes literal before after .nil⟩
 
+theorem source_function_normalized_zeuge :
+    ∃ fn : Scalar.SourceFunction captured 0 20,
+      Scalar.elaborate captured = .ok ⟨0, 20, fn⟩ ∧
+      Scalar.expression (locals captured.params)
+        (normalizeNames (locals captured.params) captured.constants fn.source) =
+          .ok ⟨_, fn.model.body.2.2⟩ := by
+  let fn : Scalar.SourceFunction captured 0 20 :=
+    ((Scalar.elaborate captured).toOption.get (by decide)).2.2
+  exact ⟨fn, by rfl, fn.normalized⟩
+
 end Gabbro.Grammatik.Parser.Konst.Values.Witness
