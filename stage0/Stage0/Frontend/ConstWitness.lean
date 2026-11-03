@@ -105,4 +105,32 @@ theorem image_pipeline_zeuge [Runner.IR.Kern] [Senke.CloneOK]
   obtain ⟨output, he, hb, hc, _⟩ := irBild_correct text K bytes emitted
   exact ⟨output, he, hb, hc⟩
 
+/-- A contracted const call in an initializer uses the same checked source path. -/
+def initializerText : String := String.ofList
+  ("const fn increment(x : u8 in 0 .. 10) -> u8 in 0 .. 11 ".toList ++
+   "requires x > 0 ensures result == x + 1 { return x + 1; } ".toList ++
+   "const ANSWER : u8 = increment(3); impl fn main() -> u8 { return ANSWER; }".toList)
+
+theorem initializer_compiled_zeuge :
+    (compile initializerText).toOption.isSome = true := by decide +kernel
+
+/-- An outer constant cannot turn a same-named runtime parameter into a closed argument. -/
+theorem parameter_shadow_zeuge :
+    let items := [SItemTief.constT "x" (.atom "u8") (.one (.lit 3)),
+      .fnT signature function.rumpf,
+      .fnT { art := "impl", name := "main", params := [("x", .atom "u8")],
+        res := some (.atom "u8"), fehler := none, klauseln := [] }
+        (.block [] (some (.ret (some (.call "increment" [.variable "x"])))))]
+    konstErsetzePipeline items =
+      .error "const open argument at `increment`: certified substitution needs closed arguments" := by rfl
+
+/-- Else-arm reason binders also shadow compile-time constant names. -/
+theorem reason_shadow_zeuge :
+    let env : Generic.Environment :=
+      { declarations := [], constants := [], constantFunctions := [], aliases := [] }
+    let bindings : Generic.Bindings := { values := [("reason", .lit 3)] }
+    let body := SAnw.bindElse "value" none (.call "foreign" []) "reason"
+      (.block [] (some (.ret (some (.call "increment" [.variable "reason"])))) )
+    (Generic.rewriteBody env bindings body).run [] = .ok (body, []) := by rfl
+
 end Gabbro.Stage0.Frontend.ConstWitness
