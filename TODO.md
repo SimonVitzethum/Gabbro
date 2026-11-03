@@ -25,7 +25,16 @@ reasoning live in the linked plans, never here. Keep an entry to one short parag
     - C08 `axiomCallElse`: no source syntax; statement calls must end in `;`, and `else` exists only for bindings.
     - C11 `retScoped`/`retWhyScoped`: refused; scope unwinding is not lowered to Stage-0 IR.
     - C11 `by consuming`: refused by design.
-    - C17 `const` functions: no certified replacement of call sites by the compile-time value before export.
+    - C17 `const` functions: source-bound scalar replacement is implemented on `c17-const2` but unbuilt.
+      The actual substitution requires typed arguments, exact bounded candidate evaluation, both original
+      predicates, structural KExpr-to-G quotation and an ordinary G-call certificate; original runtime
+      metadata is checked before and after rewriting. Stage-0 compiler/source gates are connected.
+      Pending: lead module checks, source/image witnesses and guardians (zero new compiled cases measured).
+      Still refused: block bodies, calls inside const bodies/contracts that need runtime parameter binding,
+      Boolean/aggregate results, statement-position const calls, and operations without a typed scalar
+      source derivation (including shifts whose declared storage width is not yet carried).
+      Remaining proof work: connect capture-free global-name normalization to original source denotation
+      rather than relying only on retained source elaboration equations after that normalization.
     - C10 RW locks: reader-wait liveness remains open.
     - C09 owner flows: escrow simulation in progress.
     - C18 end-block-level required allocation and allocation with `else`: still refused; connected lowering remains open.
