@@ -37,7 +37,7 @@ variable {q} {n : Nat} {m : Mem} {σ : World D} {ρ : Env D Γ}
 
 /-- Zero fuel jumps to the actual stop block before reading the invariant. -/
 theorem zero (entry : q.Entry 0 m σ ρ) :
-    Stops ⟨x.at 2, x.fp⟩ m (logikCode (D := D) .schleife) := by
+    Stops ⟨x.addr 2, x.fp⟩ m (logikCode (D := D) .schleife) := by
   obtain ⟨ready, read, bound⟩ := entry
   have jump := ready.branch 2 49 x.counter .stop 0 rfl (by consume_arith x)
     (by consume_arith x) (by consume_arith x)
@@ -48,7 +48,7 @@ theorem zero (entry : q.Entry 0 m σ ρ) :
 /-- Positive fuel is decremented in its reserved word, preserving all lexical
     variables and the surrounding protected words. -/
 theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
-    ScanRun L x.fp x.lo x.K x.pr (x.at 2) (x.at 4) m (q.Entry n · σ ρ) := by
+    ScanRun L x.fp x.lo x.K x.pr (x.addr 2) (x.addr 4) m (q.Entry n · σ ρ) := by
   obtain ⟨ready, read, bound⟩ := entry
   have room : x.s + 4 < x.K := by have := x.scratch; have := x.layout.ks; omega
   have controlRoom : x.counter < x.K := by have := x.controls; have := x.scratch; omega
@@ -79,7 +79,7 @@ theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
     (by have := x.controls; omega) (by rw [← q.selector.origin]; have := x.scratch; omega)
   refine ⟨m2, ?_, agreeW_of (frame.mono x.controls.1), ?_, finalReady, ?_, by omega⟩
   · have total := branch.trans (oneRun.trans run)
-    simpa only [show x.at 3 + 16 + 16 = x.at 4 by consume_arith x] using total
+    simpa only [show x.addr 3 + 16 + 16 = x.addr 4 by consume_arith x] using total
   · have k1 := keeps_of_agree oneFrame ready.frame.room
       (fun j hj => by have := x.protected j hj; omega) (by omega)
     have k2 := keeps_write oneReady.frame.room controlRoom
@@ -92,8 +92,8 @@ theorem fuel (entry : q.Entry (n + 1) m σ ρ) :
 /-- The head executes the invariant in exactly its canonical read world. -/
 theorem head (entry : q.Entry (n + 1) m σ ρ) :
     if (q.invW σ ρ).2 = false then
-      Stops ⟨x.at 2, x.fp⟩ m (logikCode (D := D) .schleife)
-    else ScanRun L x.fp x.lo x.K x.pr (x.at 2) (x.at 6) m
+      Stops ⟨x.addr 2, x.fp⟩ m (logikCode (D := D) .schleife)
+    else ScanRun L x.fp x.lo x.K x.pr (x.addr 2) (x.addr 6) m
       (fun m' => q.Entry n m' (q.invW σ ρ).1 ρ) := by
   obtain ⟨m1, fuelRun, fuelFrame, fuelKept, ready1, counterRead, bound⟩ := fuel entry
   let σi := (q.invW σ ρ).1
@@ -120,8 +120,8 @@ theorem head (entry : q.Entry (n + 1) m σ ρ) :
 /-- Compose the invariant header and the complete current-world selector. -/
 theorem round (entry : q.Entry (n + 1) m σ ρ) (valid : (q.invW σ ρ).2 ≠ false) :
     let answer := q.sel (q.invW σ ρ).1 ρ
-    ScanRun L x.fp x.lo x.K x.pr (x.at 2)
-      (if answer.2.1.isSome then x.at 37 else x.at 34) m
+    ScanRun L x.fp x.lo x.K x.pr (x.addr 2)
+      (if answer.2.1.isSome then x.addr 37 else x.addr 34) m
       (fun m' => q.selector.CandResult answer.1 ρ answer.2.1 answer.2.2 m' ∧
         x.read m' x.counter (BitVec.ofNat 64 n)) := by
   have start := head entry
