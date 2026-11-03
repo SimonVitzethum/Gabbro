@@ -43,10 +43,10 @@ def text : String :=
 
 def candidate : Except String (Emitted text 64) := emit text 64
 
-/-- Parser.Profil.Eintritt deliberately refuses source entrust: the syntax
+/-- Parser.Profil.Eintritt names the missing service: the syntax
     supplies no proved isolation or invocation service for the guest boundary. -/
 theorem candidate_refused :
     (match candidate with | .error message => some message | .ok _ => none) =
-      some "ir: entrust: canonical source-to-G guest entry semantics missing" := by decide +kernel
+      some "entrust: missing isolation service binding" := by decide +kernel
 
 end Gabbro.Stage0.EntrustWitness
