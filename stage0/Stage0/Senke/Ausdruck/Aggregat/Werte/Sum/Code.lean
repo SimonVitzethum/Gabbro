@@ -34,7 +34,7 @@ theorem constZeros_top (n d : Nat) : (constWords (List.replicate n 0) d).2 = d +
   | zero => simp [constWords]
   | succ n ih =>
     simp only [List.replicate_succ, constWords, ih]
-    simp [wordConst, lit32, Nat.max_eq_right (by omega : d + 1 ≤ d + 1 + n)]
+    simp [wordConst, lit32, Nat.max_eq_right (by omega : d + 1 ≤ d + 1 + n)] <;> omega
 
 /-- A bare payload and a typed payload use exactly the same construction kernel. -/
 theorem sumSpanL_span {cs : List (Option Ty)} {i : Fin cs.length} {d top : Nat}
