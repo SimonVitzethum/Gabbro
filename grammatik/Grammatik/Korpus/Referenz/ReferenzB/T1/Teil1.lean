@@ -89,7 +89,7 @@ def refRumpfEin :
   .cons refWriteStAt
     (.cons (.call (V := vertragVon refD refEin) refLies refArgsLies
       refHpLiesAt rfl)
-      (.ret .empty (by simp [Vertrag.ende])))
+      (.ret .empty (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))))
 
 /-- `lies` holds the lock: start equals end. -/
 theorem refLies_start : Signatur.anfang refD (refD.signatur refLies) =
@@ -110,7 +110,7 @@ theorem refDarfBodyLies :
 def refRumpfLies :
     Endblock refD (vertragVon refD refLies) false []
       (Signatur.anfang refD (refD.signatur refLies)) :=
-  .ret (.val (.slot () () refIdxBodyLies refDarfBodyLies)) (by simp [Vertrag.ende])
+  .ret (.val (.slot () () refIdxBodyLies refDarfBodyLies)) (by first | exact List.Perm.refl _ | (simp [Vertrag.ende, nach, nachSig, Signatur.anfang, vertragVon, Vertrag.vonSig]))
 
 /-- The program: `true` requires, ensured non-decrease, write-call-return;
     `false` requires `true`, ensures result equality, slot return.
