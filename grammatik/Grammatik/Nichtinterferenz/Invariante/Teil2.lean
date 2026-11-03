@@ -106,7 +106,9 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       · exact KErgOk.lokal hst _ _ _ (by first | exact he.1.2 | (simp only [GRest.nR]; exact he.1.2)) _ _
       · exact KErgOk.none
   | ret e _ => exact kPop_ok hst f rho _ _
-  | retScoped e R => exact kScoped_ok (l := l) hst f rho ρ _ _ R.scopes
+  | retScoped e R =>
+      let read := (sp.welt spur).lese Λ e.orte
+      exact kScoped_ok (l := l) hst f rho ρ (.inl (evalErg read e read ρ)) read R.scopes
   | retWhy r _ => exact kPopGrund_ok hst f rho _ _ r
   | retWhyScoped r R => exact kScoped_ok (l := l) hst f rho ρ (.inr r) _ R.scopes
   | leave _ => exact KErgOk.none
