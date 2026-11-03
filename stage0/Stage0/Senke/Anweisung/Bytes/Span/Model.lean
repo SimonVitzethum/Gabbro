@@ -73,7 +73,7 @@ theorem bytesAb_take (σ : World D) (t : D.Tab) (f : D.Feld t)
   | succ k ih =>
     cases n with
     | zero => rfl
-    | succ n => simp only [World.bytesAb, List.take_succ_cons, Nat.min_add_add_right, ih]
+    | succ n => simp only [World.bytesAb, List.take_succ_cons, Nat.add_min_add_right, ih]
 
 /-- One read kernel returns exactly the low limb of the remaining byte span. -/
 theorem bytes_chunk_word (σ : World D) (t : D.Tab) (f : D.Feld t)
