@@ -120,7 +120,7 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
     match uWertBody ctx e with
     | .ok sd =>
       match uValueType ctx sd with
-      | some ty@(.prod ..) | some ty@(.arr ..) | some ty@(.str ..) =>
+      | some ty@(.fl ..) | some ty@(.prod ..) | some ty@(.arr ..) | some ty@(.str ..) =>
         .ok (.bindW x (some ty) sd, uMitLokal ctx x .wert ty muts)
       | _ =>
         if mu then .error "let mut without a type"
@@ -155,7 +155,7 @@ def uBindWertAllg (ctx : UCtx) (mu : Bool) (x : String) (t : Option STyp) (e : S
         | .ok sd => .ok (.bindW x (some τ) sd, uMitLokal ctx x UParamArt.wert τ muts)
   | .some ty =>
     match uTypIn ctx.alias ctx.tabs ctx.namedTypes ctx.spaces ty with
-    | .ok ty@(.prod ..) => do
+    | .ok ty@(.fl ..) | .ok ty@(.prod ..) => do
       let side ← uWertBody ctx e
       pure (.bindW x (some ty) side, uMitLokal ctx x .wert ty muts)
     | _ =>

@@ -159,6 +159,7 @@ primary   += foldexpr | existsexpr ;
 foldexpr   = ( "add" | "min" | "max" ) ident "in" domain [ "where" pred ] ":" expr
              [ "else" expr ] ;                               (* `else` required for min and max *)
 existsexpr = "exists" ident "in" domain ":" pred ;
+returnstmt += "return" "add" ident "in" "0" "..<" expr [ "where" pred ] ":" expr ";" ;
 ```
 
 ```gabbro
@@ -173,6 +174,14 @@ if exists k in slots of Jobs : Jobs[k].failed { … }
   result type is refused — the writer narrows first. There is no wrapping fold (wrapping stays `+%`).
 - `add` over floats folds in slot order (IEEE: no reassociation); the order is part of the meaning.
 - `costs` is capacity × per-element cost plus the loop overhead, computed statically.
+- The §5.2 `total` example additionally uses a full-array range: `return add i in 0 ..< N : e`.
+  Its indexed array must have declared type `[T; N]`, with the same symbolic upper bound;
+  this expands before instantiation to `traverse i over elems of xs by unvisited` and an
+  explicitly typed integer accumulator. The operand's call is bound inside the traversal,
+  so normal spec resolution can select the implementation. The ordinary checks retain
+  overflow, effect, contract and cost obligations; no range or budget fact is assumed.
+  Other range-fold contexts are refused. This is source sugar over existing forms and
+  does not change machine G, `Akzeptiert` or the meaning of `Spec.lean`.
 
 ---
 

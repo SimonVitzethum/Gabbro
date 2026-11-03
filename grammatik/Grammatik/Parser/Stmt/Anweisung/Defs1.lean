@@ -212,6 +212,9 @@ def parseKopfStmt (f : Nat) (toks : List Token) :
     | .ok (e, rest) => match e with
       | .call c args => parseRufSchwanz c args rest
       | .ext .call _ (callee :: args) => parseRufSchwanz (druck callee) args rest
+      | .ext .instantiate (name :: words) args => match fordereZeichen ";" rest with
+        | .ok rest' => .ok (.genericCall name words args, rest')
+        | .error error => .error error
       | _ => match rest with
         | .zeichen "(" :: _ => match parseArgs f rest.tail with
           | .ok (args, rest') => parseRufSchwanz (druck e) args rest'

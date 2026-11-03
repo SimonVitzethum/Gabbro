@@ -1,0 +1,71 @@
+module
+
+public import Grammatik.Parser.Spec.Items
+
+@[expose] public section
+
+namespace Gabbro.Grammatik.Parser.Spec
+
+/-- Resolve statically known spec calls before dyn closure. Calls whose receiver is
+    dynamic (or whose type depends on a later binding) stay for the mandatory final
+    resolver. This pass never admits a program: every remaining call must resolve there. -/
+def resolveKnownBodies (source : List SItemTief) : SItemTief → Except String SItemTief
+  | .fnT sig body => do
+    let rewrite : Walk := { source, instantiate := false, resolveSpecs := false,
+      exprRewrite := fun locals _ e => do
+        let resolve := fun name types args =>
+          match resolveCall source locals name types args with
+          | .ok target => pure (SExpr.call target args)
+          | .error _ => pure e
+        match e with
+        | .call name args => resolve name none args
+        | .ext .instantiate (name :: words) args =>
+          match explicitTypes (String.intercalate ", " words) with
+          | .ok types => resolve name (some types) args
+          | .error _ => pure e
+        | _ => pure e }
+    return .fnT sig (← { rewrite with result := sig.res }.statement sig.params 100000 body)
+  | .implGroupT n ts es fs => do return .implGroupT n ts es (← fs.mapM (resolveKnownBodies source))
+  | .modT n fs => do return .modT n (← fs.mapM (resolveKnownBodies source))
+  | .pubT it => do return .pubT (← resolveKnownBodies source it)
+  | .gateT it => do return .gateT (← resolveKnownBodies source it)
+  | it => pure it
+
+
+
+/-- Check model A: check interfaces, materialize concrete bodies, resolve every abstract call,
+    and validate that only existing forms remain. Real contracts travel with the concrete calls. -/
+def expand (items : List SItemTief) : Except String (List SItemTief) := do
+  check items
+  let concrete := materialize items
+  if !uniqueNames ((functionHeads concrete).map (·.name)) then throw "spec.function.collision"
+  let output ← concrete.mapM ((Walk.mk items true).item 100000)
+  if ordinary items output then return output else throw "spec.output"
+
+/-- Every successful instantiation passes the ordinary-form gate, for arbitrary input programs.
+    The existing elaborator subsequently checks types and the implementations' actual contracts. -/
+theorem expand_ordinary {items output : List SItemTief} (h : expand items = .ok output) :
+    ordinary items output = true := by
+  unfold expand at h
+  cases hc : check items with
+  | error e => simp [hc] at h
+  | ok u =>
+    simp only [hc, bind, Except.bind] at h
+    split at h
+    · simp at h
+    · cases hw : (materialize items).mapM ((Walk.mk items true).item 100000) with
+      | error e => simp [hw] at h
+      | ok result =>
+        simp only [hw, bind, Except.bind] at h
+        split at h
+        · have he : result = output := by simpa using h
+          subst output
+          assumption
+        · simp at h
+
+/-- Preserve the existing front-end path for units with no spec-group items. -/
+def prepare (items : List SItemTief) : Except String (List SItemTief) :=
+  if items.any (fun | .specGroupT .. | .implGroupT .. => true | _ => false) then expand items
+  else .ok items
+
+end Gabbro.Grammatik.Parser.Spec

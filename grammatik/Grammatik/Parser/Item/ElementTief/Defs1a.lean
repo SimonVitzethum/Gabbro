@@ -47,6 +47,11 @@ def parseEffekt (f : Nat) (toks : List Token) :
       else if strEq s "diverges" then .ok (.loops, rest)
       else if strEq s "pure" then .ok (.pure, rest)
       else .error "effect expected"
+    | .ident n :: .zeichen "[" :: rest => do
+      let (ts, r) ← parseSpecTypes f rest
+      let r ← fordereZeichen "]" r
+      return (.instanceEffects n ts, r)
+    | .ident n :: rest => .ok (.param n, rest)
     | _ => .error "effect expected"
 
 /-- The comma-separated tail of an effect or predicate list

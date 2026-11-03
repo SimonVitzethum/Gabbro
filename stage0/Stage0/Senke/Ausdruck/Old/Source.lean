@@ -124,7 +124,7 @@ def collect : (n : Nat) → (T : Fin n → Type) → ((i : Fin n) → Except Str
 
 def restore (items : List SItemTief) (u : UProg) (P : Programm (declOf u)) :
     Except String (Programm (declOf u)) := do
-  let expanded ← expandU items
+  let (expanded, _) ← expandU items
   let es ← collect u.fns.length (EnsTy u) (atFunction expanded u P)
   pure {P with ensures := es}
 
@@ -137,7 +137,7 @@ theorem restore_invariante (items : List SItemTief) (u : UProg)
   | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at h
   | ok expanded =>
     simp only [hx, bind, Except.bind] at h
-    cases hs : collect u.fns.length (EnsTy u) (atFunction expanded u P) with
+    cases hs : collect u.fns.length (EnsTy u) (atFunction expanded.1 u P) with
     | error error => simp only [hs, bind, Except.bind, reduceCtorEq] at h
     | ok es =>
       simp only [hs, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h

@@ -35,6 +35,8 @@ inductive STyp
   | str : SExpr → STyp
   /-- `entry fn(params) [-> T]` (`entryfn`): the parameter words raw, the result type read. -/
   | entry : String → Option STyp → STyp
+  /-- Link-time closed spec sum; effect tokens are interpreted after group resolution. -/
+  | dyn : String → Option String → STyp
   deriving Repr
 
 -- Shape equality on surface types, as a `Bool`: one recursive
@@ -42,6 +44,7 @@ inductive STyp
 -- `beqSExpr`/`beqSExprList` (which reduce by kernel evaluation).
 mutual
 def beqSTyp : STyp → STyp → Bool
+  | .dyn a es, .dyn b fs => strEq a b && beqOptWort es fs
   | .atom a, .atom b => strEq a b
   | .path a, .path b => beqWorte a b
   | .ptr r1 w1 t1, .ptr r2 w2 t2 =>
@@ -196,7 +199,14 @@ def parseTyp (f : Nat) (toks : List Token) :
   | 0 => .error "out of fuel"
   | f + 1 => match toks with
     | .wort s :: rest =>
-      if strEq s "ptr" then match fordereZeichen "<" rest with
+      if strEq s "dyn" then do
+        let (name, rest) ← nimmPfad rest
+        match rest with
+        | .wort "effects" :: .zeichen "{" :: tail =>
+          let (raw, tail) ← sammleAusgewogen tail 0 0 1
+          return (.dyn ("::".intercalate name) (some raw), tail)
+        | _ => return (.dyn ("::".intercalate name) none, rest)
+      else if strEq s "ptr" then match fordereZeichen "<" rest with
         | .error e => .error e
         | .ok r1 => match nimmName r1 with
           | .error e => .error e
@@ -306,5 +316,16 @@ def parseTypNach (f : Nat) (basis : STyp) (toks : List Token) :
       else .ok (basis, toks)
     | _ => .ok (basis, toks)
 end
+
+/-- A nonempty tuple of types; leaves `]` or `;` for its caller. -/
+def parseSpecTypes : Nat → List Token → Except String (List STyp × List Token)
+  | 0, _ => .error "spec.types: out of fuel"
+  | f + 1, ts => do
+      let (t, r) ← parseTyp f ts
+      match r with
+      | .zeichen "," :: rest =>
+        let (types, tail) ← parseSpecTypes f rest
+        return (t :: types, tail)
+      | _ => return ([t], r)
 
 end Gabbro.Grammatik.Parser

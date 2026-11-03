@@ -1,5 +1,6 @@
 module
 public import Grammatik.Parser.Elab.Uebersetze.Einheit.Signatures
+public import Grammatik.Parser.Elab.Generic.StaticConformance
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -10,7 +11,8 @@ set_option maxRecDepth 100000
     Runtime checks, declaration expansion and G elaboration are never copied into Stage 0. -/
 def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int))
     (alias : List (String × (Int × Int))) (functions : List UKonstFn)
-    (tableLowering : List String → SItemTief → Except String UTab) : Except String UProg :=
+    (tableLowering : List String → SItemTief → Except String UTab)
+    (staticRequirements : List (STyp × String) := []) : Except String UProg :=
   match uRestFehler msE with
   | .error e => .error e
   | .ok _ =>
@@ -153,6 +155,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
     | .ok regiert =>
     let u : UProg :=
       { tabs := tabs, locks := locks, fns := fns ++ torFns, roots := roots, hands := uHandler ms, globs := globs, gestartet := gestartet, axs := axKoepfe.map (fun k => { name := k.name, params := k.types, kinds := k.kinds, res := k.axErg, gruende := (k.kanal.map (·.2)).getD 0, puts := k.puts, gputs := k.gputs }), annahmen := annahmen, whys := whys, sums := sums, regs := regs, invs := invs, zustaende := zustaende, regiert := regiert, ptrs := zeigerPaare.map (·.2), ptrKeys := zeiger, exportGate := Gabbro.Grammatik.Parser.Konst.checkErsetzt msE msSub, checks := checks, marken := marken, spaces := spaces, records := valueScope.records }
-    .ok (uMitBoden u)
+    let u := uMitBoden u
+    match Generic.checkStaticConformance consts alias u staticRequirements with
+    | .error error => .error error
+    | .ok () => .ok u
 
 end Gabbro.Grammatik.Parser.Uebersetze

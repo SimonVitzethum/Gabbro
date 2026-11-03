@@ -18,7 +18,7 @@ theorem restore_measure_lengths (items : List SItemTief) (u : UProg)
   | error error => simp only [hx, bind, Except.bind, reduceCtorEq] at restored
   | ok expanded =>
     simp only [hx, bind, Except.bind] at restored
-    cases hc : OldSource.collect u.fns.length (EnsTy u) (OldSource.atFunction expanded u raw) with
+    cases hc : OldSource.collect u.fns.length (EnsTy u) (OldSource.atFunction expanded.1 u raw) with
     | error error => simp only [hc, bind, Except.bind, reduceCtorEq] at restored
     | ok predicates =>
       simp only [hc, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at restored
