@@ -9,8 +9,7 @@ public import Stage0.Senke.Ausdruck.Wenn
 public import Stage0.Senke.Ausdruck.Zeiger.Fnptr
 public import Stage0.Senke.Ausdruck.Tops.Eng
 public import Stage0.Senke.Ausdruck.Arithmetik.Mixed
-public import Stage0.Senke.Ausdruck.Tag
-public import Stage0.Senke.Ausdruck.Aggregat.Werte.Sum.Construct
+public import Stage0.Senke.Ausdruck.Satz.Payload
 public import Stage0.Senke.Ausdruck.Aggregat.KopieSatz
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerResize
 public import Stage0.Senke.Ausdruck.Aggregat.Werte.IntegerOps
@@ -364,29 +363,11 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
     exact slotValueC_index_ok (eval σ₀ i σ ρ) hs hK hLay hWL
       (fun m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay i _ ci1 ti hci tiK m pc ρ hp).word trivial) hp
   | _, _, .case cs i nutz, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs] at h
-    split at h
-    · next hfit =>
-      refine Ok.value ?_ (by simp only [valueWords, hfit, ite_true])
-      have hl : cs.length ≤ 256 := by
-        simpa only [sumFits, Bool.and_eq_true, decide_eq_true_eq] using
-          (show decide (cs.length ≤ 256) = true from (by
-            simp only [sumFits, Bool.and_eq_true] at hfit; exact hfit.1))
-      exact (lowN_ok (same := same) σ₀ σ hWL hLay i.val (by have := i.isLt; omega) nutz d c top h hK m pc ρ hp).mono
-        (fun w hw => ⟨hfit, hw⟩)
-    · next separate =>
-      have hsep : sumFits cs = false := Bool.eq_false_iff.mpr separate
-      cases nutz with
-      | empty =>
-        exact sumSpan_ok i () hsep (by
-          intro ca ta made fits m pc pre
-          cases made
-          exact ⟨m, by simpa using Star.refl ⟨pc, fp⟩ m,
-            Agree.refl _ _ _ _, trivial, by simp [WordsAt, payloadEncoding]⟩) h hK hp
-      | val e =>
-        exact sumSpan_ok i (eval σ₀ e σ ρ) hsep
-          (fun ca ta made fits m pc pre =>
-            lowE_ok (same := same) σ₀ σ hWL hLay e _ ca ta made fits m pc ρ pre) h hK hp
+    exact case_value_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) cs i nutz
+      (fun tagBound ca ta made fits m pc pre =>
+        lowN_ok (same := same) σ₀ σ hWL hLay i.val tagBound nutz d ca ta made fits m pc ρ pre)
+      (fun ca ta made fits m pc pre =>
+        lowPayload_ok (same := same) σ₀ σ hWL hLay nutz _ ca ta made fits m pc ρ pre) h hK hp
   | _, _, .wenn cond a b, d, c, top, h, hK, m, pc, ρ, hp => by
     simp only [lowE_eqs, wennL, bind, Option.bind_eq_some_iff] at h
     obtain ⟨⟨cc, tc⟩, hc, ⟨ca, ta⟩, ha, ⟨cb, tb⟩, hb, h⟩ := h
@@ -460,6 +441,7 @@ theorem lowE_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem �
   | _, _, .oldS t f i access, d, c, top, h, hK, m, pc, ρ, hp =>
     oldSlot_ok σ₀ σ hWL hLay t f i access same
       (fun ci ti lower fits m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay i _ ci ti lower fits m pc ρ hp) h hK hp
+termination_by structural e
 theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
     {Γ : Ctx} → {fs : List Ty} → (args : Args D Γ Λ fs) → (ρ : Env D Γ) →
@@ -468,30 +450,36 @@ theorem lowE_ok_args {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.M
   | _, _, .cons e rest, ρ =>
     ⟨(fun d c top h hK m pc hp => lowE_ok (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp),
       lowE_ok_args (same := same) σ₀ σ hWL hLay rest ρ⟩
+termination_by structural args
 theorem lowN_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
     (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} (tag : Nat) (htag : tag < 256) :
     {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
     (c : List II) → (top : Nat) → lowN (currentOld := currentOld) L (reserved := reserved) tag nutz d = some (c, top) → top ≤ K →
     ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
     Ok m pc fp K d c (fun w => w = BitVec.ofNat 64 (tag + 256 * sumOff a (evalNutz σ₀ nutz σ ρ)))
-  | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => by
-    simp only [lowE_eqs, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
-    exact (const_ok hp (lit32_nat (by omega)) (by omega)).mono (fun w hw => by
-      simpa only [evalNutz, sumOff, Nat.mul_zero, Nat.add_zero, BitVec.ofInt_natCast] using hw)
+  | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => lowN_empty_ok tag htag h hK hp
   | _, some τ, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
     cases τ with
     | int lo hi =>
-      simp only [lowE_eqs, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-      obtain ⟨⟨ce, te⟩, he, hc⟩ := h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
-      exact packSum_ok (by simp only [packSum, bin2] at hK; omega) htag
-        (by simp only [packSum, bin2] at hK; omega)
-        (fun m pc hp => (lowE_ok (same := same) σ₀ σ hWL hLay e d ce te he
-          (by simp only [packSum, bin2] at hK; omega) m pc ρ hp).word trivial) hp
-    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ => by
-      have hnone : lowN (currentOld := currentOld) L (reserved := reserved) tag e d = none := rfl
+      exact lowN_int_ok (σ₀ := σ₀) (σ := σ) (d := d) (K := K) e tag htag
+        (fun ce te made fits m pc pre =>
+          lowE_ok (same := same) σ₀ σ hWL hLay e d ce te made fits m pc ρ pre) h hK hp
+    | bool | opt _ | sum _ | why _ | never | fl _ _ | fnptr _ | ptr _ | ref _ | arr _ _ | prod _ _ | str _ =>
+      have hnone : lowN (currentOld := currentOld) L (reserved := reserved) tag (.val e) d = none := rfl
       rw [hnone] at h
       cases h
+termination_by structural nutz
+/-- A payload uses exactly its canonical words; the absent payload has no marker. -/
+theorem lowPayload_ok {Λ : List (Res D)} {fp : Runner.W} {K : Nat} {W : Runner.Mem → Prop}
+    (σ₀ σ : World D) (hWL : ∀ m, W m → WeltAt m L σ) (hLay : LayIn L) {same : currentOld = true → σ₀ = σ} :
+    {Γ : Ctx} → {a : Option Ty} → (nutz : NutzlastExpr D Γ Λ a) → (d : Nat) →
+    (c : List II) → (top : Nat) → lowPayload (currentOld := currentOld) L (reserved := reserved) nutz d = some (c, top) → top ≤ K →
+    ∀ (m : Runner.Mem) (pc : Runner.W) (ρ : Env D Γ), Pre L m pc fp K d c ρ W reserved →
+    Executes m pc fp K d c (fun m' => PayloadAt L m' fp d a (evalNutz σ₀ nutz σ ρ))
+  | _, _, .empty, d, c, top, h, hK, m, pc, ρ, hp => lowPayload_empty_ok h hK hp
+  | _, _, .val e, d, c, top, h, hK, m, pc, ρ, hp => by
+    rw [lowPayload_val] at h
+    exact lowE_ok (same := same) σ₀ σ hWL hLay e d c top h hK m pc ρ hp
+termination_by structural nutz
 end
 end Gabbro.Stage0.Senke
