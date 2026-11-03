@@ -14,7 +14,9 @@ theorem chkAnswer_ok {e : Option Ty} {τ : Ty} (he : e = some τ) {s reserved : 
     {m : Runner.Mem} {pc fp : Runner.W} {K : Nat} {Γ : Ctx}
     {ρ : Env D Γ} {w : Runner.W}
     (hp : PreS L m pc fp K s c ρ reserved) (room : s + 10 ≤ K)
-    (input : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w) :
+    (input : m.rd64 (slot fp (BitVec.ofNat 64 s)) = some w)
+    (valid : ∀ n, τ = .ref n → 0 ≤ w.toInt →
+      ValueValid L (.ref n) (Val.vonZelle w.toInt.toNat)) :
     match einpassenErg z e w.toInt with
     | some v => ∃ m' w',
         Star ⟨pc, fp⟩ m ⟨pc + BitVec.ofNat 64 (16 * c.length), fp⟩ m' ∧
@@ -40,38 +42,31 @@ theorem chkAnswer_ok {e : Option Ty} {τ : Ty} (he : e = some τ) {s reserved : 
     subst c
     obtain ⟨m', run, changed, w', output, encoded⟩ := boolC_ok hp (by omega) input
     exact ⟨m', w', run, changed, output, encoded⟩
+  | ref n =>
+    simp only [chkC, Option.some.injEq] at h
+    subst c
+    have test := loC_ok (hp.up (by omega)) (by decide) room input
+    by_cases nonnegative : 0 ≤ w.toInt
+    · simp only [einpassenErg, einpassen, if_pos nonnegative]
+      obtain ⟨m', run, changed⟩ := test.1 nonnegative
+      refine ⟨m', w, run, changed.mono (Nat.le_succ _), ?_, ?_⟩
+      · rw [agree_rd_low changed hp.frame.room (by omega) (by omega)]
+        exact input
+      · refine ⟨?_, valid n rfl nonnegative⟩
+        rw [← BitVec.ofInt_natCast, Int.toNat_of_nonneg nonnegative]
+        exact BitVec.ofInt_toInt.symm
+    · simp only [einpassenErg, einpassen, if_neg nonnegative]
+      exact test.2 nonnegative
+  | ptr cap =>
+    simp only [chkC, Option.some.injEq] at h
+    subst c
+    obtain ⟨m', run, changed, w', output, encoded⟩ := const_ok hp (by decide) (by omega)
+    exact ⟨m', w', run, changed, output, encoded⟩
   | never =>
     simp only [chkC, Option.some.injEq] at h
     subst c
     exact stop_ok hp.code hp.far hp.frame (by omega) hp.small (by decide)
   | _ => simp [chkC] at h
-
-/-- Under an errno profile, an unlisted error word and its canonical sentinel
-    have the same Boolean payload. This does not turn a listed error into a value. -/
-theorem bool_errno_decode {z : Int → Option D.Fn} {n : Nat} (positive : 0 < n)
-    {b : TorB} (w : Runner.W)
-    (miss : b.fehler.find? (fun x => x.1 == w.toInt) = none) :
-    sonstPasst z (some .bool) n (rohW b n w) =
-      (einpassenErg z (some .bool) w.toInt).map Sum.inl := by
-  have nz : n ≠ 0 := by omega
-  have divisor : ((n : Int) + 1) ≠ 0 := by omega
-  by_cases negative : -4095 ≤ w.toInt ∧ w.toInt ≤ -1
-  · have raw : rohW b n w = (-1) * ((n : Int) + 1) := by
-      simp only [rohW, nz, ↓reduceIte]
-      rw [if_pos negative, miss]
-      simp only
-      omega
-    rw [raw]
-    simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte,
-      Int.mul_ediv_cancel _ divisor, einpassenErg, einpassen, Option.map_some]
-    have nonzero : w.toInt ≠ 0 := by omega
-    simp [nonzero]
-  · have raw : rohW b n w = w.toInt * ((n : Int) + 1) := by
-      simp only [rohW, nz, ↓reduceIte]
-      rw [if_neg negative]
-    rw [raw]
-    simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte,
-      Int.mul_ediv_cancel _ divisor]
 
 /-- Listed errnos select the same nominal reason for every answer type. -/
 theorem fallible_hit {z : Int → Option D.Fn} {e : Option Ty} {n : Nat}
@@ -104,29 +99,35 @@ theorem fallible_decode {z : Int → Option D.Fn} {e : Option Ty} {τ : Ty} {n :
     sonstPasst z e n (rohW b n w) =
       (einpassenErg z e w.toInt).map Sum.inl := by
   subst e
-  cases τ with
-  | int lo hi =>
-    have lower : 0 ≤ lo := of_decide_eq_true accepted
-    have nz : n ≠ 0 := by omega
-    have divisor : ((n : Int) + 1) ≠ 0 := by omega
-    by_cases negative : -4095 ≤ w.toInt ∧ w.toInt ≤ -1
-    · have raw : rohW b n w = (-1) * ((n : Int) + 1) := by
-        simp only [rohW, nz, ↓reduceIte]
-        rw [if_pos negative, miss]
-        simp only
-        omega
-      rw [raw]
-      simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte,
-        Int.mul_ediv_cancel _ divisor, einpassenErg, einpassen]
-      rw [dif_neg (by omega), dif_neg (by omega)]
+  have nz : n ≠ 0 := by omega
+  have divisor : ((n : Int) + 1) ≠ 0 := by omega
+  let negative := -4095 ≤ w.toInt ∧ w.toInt ≤ -1
+  have raw : rohW b n w = (if negative then -1 else w.toInt) * ((n : Int) + 1) := by
+    simp only [rohW, nz, ↓reduceIte]
+    by_cases error : negative
+    · rw [if_pos error, miss, if_pos error]
+      simp only
+      omega
+    · rw [if_neg error, if_neg error]
+  rw [raw]
+  simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte, Int.mul_ediv_cancel _ divisor]
+  by_cases error : negative
+  · rw [if_pos error]
+    cases τ with
+    | int lo hi =>
+      have lower : 0 ≤ lo := of_decide_eq_true accepted
+      simp only [einpassenErg, einpassen]
+      rw [dif_neg (by omega), dif_neg (by dsimp only [negative] at error; omega)]
       rfl
-    · have raw : rohW b n w = w.toInt * ((n : Int) + 1) := by
-        simp only [rohW, nz, ↓reduceIte]
-        rw [if_neg negative]
-      rw [raw]
-      simp only [sonstPasst, Int.mul_emod_left, ↓reduceIte,
-        Int.mul_ediv_cancel _ divisor]
-  | bool => exact bool_errno_decode positive w miss
-  | _ => simp [fallibleTy] at accepted
+    | ref n =>
+      simp only [einpassenErg, einpassen]
+      rw [if_neg (by omega), if_neg (by dsimp only [negative] at error; omega)]
+      rfl
+    | ptr cap => rfl
+    | bool =>
+      have nonzero : w.toInt ≠ 0 := by dsimp only [negative] at error; omega
+      simp [einpassenErg, einpassen, nonzero]
+    | _ => simp [fallibleTy] at accepted
+  · rw [if_neg error]
 
 end Gabbro.Stage0.Senke
