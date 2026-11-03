@@ -448,6 +448,8 @@ theorem ensExpr_vor {fn : UFn} : ∀ (e : UEns) {a a' : Acc} {x : Gabbro.Body.Ex
         obtain ⟨_, rfl⟩ := h
         exact ensExpr_vor x hx
       · cases h
+  -- All other predicates are outside the Body fragment (`ensExpr` returns `none`).
+  | _, _, _, _, h => by simp [ensExpr] at h
 
 /-- **The binding an `ensures` clause is evaluated under** (`clauseAux` builds it): the
     parameters as in the entry state, `result` as the answer (the G context's first entry when
