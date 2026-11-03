@@ -27,12 +27,12 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
   gateMembers : List SItemTief
   gateExpansion : Gabbro.Grammatik.Parser.Modules.prepare
     (pre108 source.prepared.elaborierbar) = .ok (expanded, requirements)
-  elaborated : (Frontend.elabWithScopes
+  elaborated : ((Frontend.elabWithScopes
     (pre108 source.prepared.elaborierbar)
     source.scopes.values source.scopes.types source.scopes.functions
-    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+    (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options)).map
       (fun u => {u with exportGate := Konst.checkSourceMetadata gateMembers}) = .ok unit
-  entry : fnIdx unit.fns "main" = .ok main
+  entry : fnIdx unit.fns (Profil.entryName options) = .ok main
   lowered : ∃ raw fs, lowerAllg unit = .ok (raw, fs) ∧
     OldSource.restore (pre108 source.prepared.elaborierbar) unit raw = .ok program
   accepted : OldSource.accepts unit program = .ok true
@@ -58,6 +58,8 @@ structure Compiled (text : String) (options : Profil.Options := {}) where
       measures.val measures.property lowered
 
 /-- The remainder of compilation once the expansion-aware gate has accepted.
+    The shared elaborator expands declared checks and their producer/probe/gate functions;
+    profile selection then adds the selected C16 consumer and driver to that unit.
     `gateChecked` is the checked original-or-expanded disjunct for this unit. -/
 def compileChecked (source : Frontend.Source text options)
     (hc : Konst.checkSourceConstants (uMembers (pre108 source.prepared.elaborierbar)) = .ok ())
@@ -71,15 +73,15 @@ def compileChecked (source : Frontend.Source text options)
         Konst.checkSourceMetadata gateMembers = .ok ())) :
     Except String (Compiled text options) := do
   let declarations := pre108 source.prepared.elaborierbar
-  match he : Frontend.elabWithScopes declarations
+  match he : (Frontend.elabWithScopes declarations
       source.scopes.values source.scopes.types source.scopes.functions
-      (Frontend.tableWithEmpty source.scopes.values source.scopes.types) with
+      (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options) with
   | .error e => throw e
   | .ok candidate => do
     let unit := {candidate with exportGate := Konst.checkSourceMetadata gateMembers}
-    have elaborated : (Frontend.elabWithScopes declarations
+    have elaborated : ((Frontend.elabWithScopes declarations
         source.scopes.values source.scopes.types source.scopes.functions
-        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).map
+        (Frontend.tableWithEmpty source.scopes.values source.scopes.types)).bind (Profil.selectUnit options)).map
           (fun u => {u with exportGate := Konst.checkSourceMetadata gateMembers}) = .ok unit := by
       rw [he]
       rfl
@@ -88,7 +90,7 @@ def compileChecked (source : Frontend.Source text options)
     | .error error => throw error
     | .ok () => do
       let arrays ← Frontend.checkArrays unit source.scopes (uMembers declarations)
-      match hm : fnIdx unit.fns "main" with
+      match hm : fnIdx unit.fns (Profil.entryName options) with
       | .error e => throw e
       | .ok main =>
         match hl : lowerAllg unit with
@@ -100,7 +102,7 @@ def compileChecked (source : Frontend.Source text options)
             match ha : OldSource.accepts unit program with
             | .error e => throw e
             | .ok false => throw "refused by the checker (AkzeptiertX)"
-            | .ok true => pure { source, unit, main, elaborated,
+            | .ok true => pure { source, unit, main, program, elaborated,
                 entry := hm, lowered := ⟨raw, fs, hl, hr⟩, accepted := ha,
                 arrayConstants := arrays.down, initializerExports := hi,
                 constantExports := hc, expanded, requirements, gateMembers,
@@ -197,8 +199,8 @@ def CanonicalSourceProgram {text : String} {options : Profil.Options} (result : 
     Frontend.checkInitializers original result.unit = .ok () ∧
     Konst.checkSourceConstants original = .ok () ∧
     Frontend.compileTimeSafe original = true ∧
-    (Frontend.elabWithScopes declarations scope.values scope.types scope.functions
-      (Frontend.tableWithEmpty scope.values scope.types)).map
+    ((Frontend.elabWithScopes declarations scope.values scope.types scope.functions
+      (Frontend.tableWithEmpty scope.values scope.types)).bind (Profil.selectUnit options)).map
         (fun u => {u with exportGate := Konst.checkSourceMetadata result.gateMembers}) = .ok result.unit ∧
     (∃ raw fs, lowerAllg result.unit = .ok (raw, fs) ∧
       OldSource.restore declarations result.unit raw = .ok result.program) ∧

@@ -4,6 +4,7 @@ public import Grammatik.Parser.Elab.Uebersetze.Kontext.Eigner
 public import Grammatik.Parser.Elab.Uebersetze.Akku.Expand
 public import Grammatik.Parser.Elab.Generic.StaticConformance
 public import Grammatik.Parser.Elab.Uebersetze.Guest.Source
+public import Grammatik.Parser.Elab.Uebersetze.Pruefung.SondeCode
 @[expose] public section
 
 namespace Gabbro.Grammatik.Parser.Uebersetze
@@ -147,7 +148,13 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   | .error e => .error e
   | .ok fns =>
   let fns := fns ++ transitionFns ++ probeFns
-  match uTorHuellen fns checks with
+  match uSondenFns fns axKoepfe checks with
+  | .error e => .error e
+  | .ok sondeFns =>
+  let fns := fns ++ sondeFns
+  -- C16: every gate of every check derives its Duty-threading wrapper, over a
+  -- unit function or a C08 foreign body (the elaborated foreign heads).
+  match uTorHuellen fns axKoepfe checks with
   | .error e => .error e
   | .ok torFns =>
   let marken := uMarken ms checks

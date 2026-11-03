@@ -195,6 +195,8 @@ structure UFn where
       mint outputs (`OwnerFlow.mints`) -- the minter holds the fresh owner from
       its start frame and returns it, never ordinary production. -/
   praegt : List String := []
+  /-- Private typed reporter metadata, consumed only by ghost replay. -/
+  checkReturn : Option UCheckReturn := none
   deriving DecidableEq, Repr
 
 /-- The kind of a value of type `τ` that is no pointer, index, option, sum or reason: an aggregate or a number. -/

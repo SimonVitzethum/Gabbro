@@ -359,6 +359,8 @@ inductive UStmt
   /-- `retires m;`: explicit discharge of one held linear mark. -/
   | retires : String → UStmt
   | callIndElseBeg : String → String → List UArg → String → UStmt
+  /-- Explicit linear retirement in generated check consumers. No payload or runtime effect. -/
+  | retireMark : String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/

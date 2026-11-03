@@ -189,6 +189,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       requires `globs = []`), so the checked range-store expansion of the generic lowering
       (`lowResetRangeL`) has no target here; the form stays refused, by reason rather than
       by name. -/
+  | .retireMark .. :: _, _ => .error "check Duty retirement requires the generic lowering"
   | .retires .. :: _, _ => .error "mark retirement without G form in the 104 lowering (no marks)"
   | .resetRange .. :: _, _ =>
     .error "static array reset without G form in the 104 lowering (no array statics)"
@@ -238,6 +239,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   /- `reset A at i count n;` (C18): as above, the 104 program has no array statics, so the
       checked range-store expansion of the generic lowering has no target here. -/
+  | .retireMark .. :: _, _ => .error "check Duty retirement requires the generic lowering"
   | .retires .. :: _, _ => .error "mark retirement without G form in the 104 lowering (no marks)"
   | .resetRange .. :: _, _ =>
     .error "static array reset without G form in the 104 lowering (no array statics)"

@@ -453,14 +453,14 @@ Design of the final validator: `PLAN-TRANSLATION-VALIDATION.md`† §§0-5 and �
   6. C02 pure execution, termination and effect/cost obligations.
   7. C02 immutable payload initialization and ordinary call expansion.
   8. C02 connected source/image correctness and refusal witnesses.
-  9. C16 declared-check identity and checked expansion.
-  10. C16 generated producer/probe/gate functions.
-  11. C16 actual measurement samples and floor results.
-  12. C16 completed reports for both verdicts and linear Duty discharge.
-  13. C16 report/token provenance through call push and normal return.
-  14. C16 G/GX replay and ownership conservation.
-  15. C16 counterprobe binding, artifact identity and measured status.
-  16. C16 connected export/Stage-0 correctness with emitted sample work.
+  9. C16 declared-check identity and checked expansion (done on `c16-a`, THEOREM-MAP §178: `CheckIdentitaet`, `identitaet_aus_zulassung`, elaborated identity record).
+  10. C16 generated producer/probe/gate functions (done on `c16-a`, THEOREM-MAP §178: Duty in probe `nimmt`/`gibt` and wrapper `nimmt`, `bool` wrapper forwarding).
+  11. C16 actual measurement samples and floor results (done on `c16-a`, THEOREM-MAP §178: `messWert`, `bodenHalten`, `berichtDeckt` with witnesses).
+  12. C16 completed reports for both verdicts and linear Duty discharge (done on `c16-a`, THEOREM-MAP §178: `CheckAbschluss`, `CheckEntladung`, `CheckEntladungErfolg` with both-verdict witnesses).
+  13. C16 report/token provenance through call push and normal return (done on `c16-a`, THEOREM-MAP §179: `BerichtHerkunft`, `HerkunftSchritt`, `rueckUrteil` over `RufEreignisF` with fixture witnesses and error-channel refusals).
+  14. C16 G/GX replay and ownership conservation (done on `c16-a`, THEOREM-MAP §179: `CheckErhaltung`, `erhaltung_kreislauf`, `replayEintrag` with witnesses).
+  15. C16 counterprobe binding, artifact identity and measured status (done on `c16-a`, THEOREM-MAP §179: `SondenEindeutig` with exact decider, `SondenBindung`, `Gemessen` with measured/unrun/stale witnesses).
+  16. C16 connected export/Stage-0 correctness with emitted sample work (implementation attempts on `c16-a`/`c16-close`, THEOREM-MAP §§179–180; not yet measured green): derived `uCheckDecls` with a real declared Duty, source-to-`lowerAllg`-to-`checkB`/`AkzeptiertX` witnesses for the minimal check, passing/failing local floors, a bound ordinary counterprobe and infallible/fallible C08 foreign gates. `Pruefung/Lauf/Recording` now emits private typed return reporters whose actual arguments are the captured samples, separately evaluated floors over those snapshots and written verdict. `Lauf/History` decodes G/GX's saved `Env` values, appends evidence at the probe return and retains it after consumption; replay proves the recorded sample/floor origin, with distinct ghost activation points. The previous supplied-report fold is deleted. C14's explicit `--check CHECK GATE` selection generates a driver and physical consumer before the actual Stage-0 lowering: the producer threads its invocation permit, the selected consumer invokes the wrapper then retires its returning Duty with empty outputs on both channels. Foreign errors are explicitly retired and rethrown with their exact reason identity. New source/acceptance and history witnesses cover the complete cycle, unconsumed Duty, double consumption and fabricated samples. Counterprobe adapters and exact-image `SondenNachweis`/`sondenNachweisB` remain required; unrun never means passed. `Lauf/Treue` adds generic event/whole-log conservation and the completed-history `CheckTreueG`/GX attachment; the Stage-0 emitted-program theorem retains the same generic IR execution certificate. Open: lead compilation of all changed modules/importers, validation of these generic attachment attempts, axiom checks and guardians. The round-one merge retains the corrected `bericht` evidence field; no additional `Spec` or owner-flow change is made here. Parameterized gates and ordinary reason-channel gates retain their existing named refusals because no argument/failure policy is declared. No final IR execution or external measurement is claimed.
 - Generic functions (§5.2, check model A): connect parser, instance closure and exporter;
   `Parser.Elab.Generic.Substitution` supplies preliminary surface substitution and C17 argument evaluation.
   On `syntax-s0` (2026-11-04, needs the lead build): `Stage0.Frontend.ExpansionGate` checks the expanded
