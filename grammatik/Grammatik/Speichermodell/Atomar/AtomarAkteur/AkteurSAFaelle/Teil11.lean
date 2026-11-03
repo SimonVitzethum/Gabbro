@@ -229,10 +229,20 @@ theorem akteurSA_verbrauchLeer {D : Deklaration} {P : Programm D} {O : Orakel D}
             mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher := e₁
         rw [h1]
         simp only [verbrauchSelA]
-        refine ⟨?_, ?_, ?_⟩
+        refine Prod.ext ?_ (Prod.ext ?_ ?_)
         · exact e₂
-        · rw [hW, hE]; exact hleer
-        · rw [hall]
+        · exact (congrArg (fun σr : World D =>
+            verbrauchWahl (alleIndizes (D.count t))
+              (fun k => wahr? (eval σr member σr (.cons k ρ)))
+              (fun j k => wahr? (eval σr edge σr (.cons j (.cons k ρ))))
+              (fun j k => decide (j.n = k.n))) e₂).trans
+            ((congrFun
+              (congr (congrArg (verbrauchWahl (alleIndizes (D.count t))) hW) hE)
+              (fun j k => decide (j.n = k.n))).trans hleer)
+        · exact (congrArg (fun σr : World D =>
+            !((alleIndizes (D.count t)).all fun k =>
+              !(wahr? (eval σr member σr (.cons k ρ))))) e₂).trans
+            (congrArg Bool.not hall)
       exact semHA_verbrauchLeer S O' U A passes R t member edge inv bound mass body rest k σ ρ hwA
         _ hsel)⟩
 
@@ -343,8 +353,8 @@ theorem akteurSA_verbrauchFort {D : Deklaration} {P : Programm D} {O : Orakel D}
     ⟨hmem, hedge, hinv, hmass, hb, hbS, hk⟩,
     fun R O' U A σ0 _ _ hσ0 => ZErgG.folgt_of_eq (by
       have hmA : (eval (leseA A σ0 Λ mass.orte) mass (leseA A σ0 Λ mass.orte) ρ).n = m' := by
-        rw [hσ0, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) hg ρ]
-        exact hm.symm
+        rw [hσ0, eval_gleichAuf mass (fun _ h => List.mem_append_right _ h) hg ρ, ← hs₁]
+        exact hm'.symm
       rw [semHA_verbrauchFort S O' U A passes R t member edge inv bound mass body rest vor k i σ0 ρ
         (leseA A σ0 Λ mass.orte) rfl m' hmA hfall, hσ0])⟩
 

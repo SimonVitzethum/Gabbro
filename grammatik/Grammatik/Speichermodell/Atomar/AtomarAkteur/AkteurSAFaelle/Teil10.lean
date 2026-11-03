@@ -240,16 +240,13 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
     hsub,
     Nat.le_trans (mischT_laenge Tg inv.orte σ Λ (M.weltVon u).speicher)
       (Nat.le_trans
-        (lese_laenge (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) Λ
-          (member.orte ++ edge.orte))
-        (Nat.le_trans
-          (mischT_laenge Tg (member.orte ++ edge.orte)
-            (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) Λ (M.weltVon u).speicher)
-          (lese_laenge
-            (mischT Tg (member.orte ++ edge.orte)
-              ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ
-                (member.orte ++ edge.orte))
-              (M.weltVon u).speicher) Λ mass.orte))),
+        (mischT_laenge Tg (member.orte ++ edge.orte)
+          (mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher) Λ (M.weltVon u).speicher)
+        (lese_laenge
+          (mischT Tg (member.orte ++ edge.orte)
+            ((mischT Tg inv.orte (σ.lese Λ inv.orte) (M.weltVon u).speicher).lese Λ
+              (member.orte ++ edge.orte))
+            (M.weltVon u).speicher) Λ mass.orte)),
     GleichAuf.mono
       (fun _ h => List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _ h)))
       (g₃.trans (GleichAuf.vonSpeicher rfl)),
@@ -270,7 +267,14 @@ theorem akteurSA_verbrauchWeiter {D : Deklaration} {P : Programm D} {O : Orakel 
         simp only [verbrauchSelA]
         refine Prod.ext ?_ (Prod.ext ?_ rfl)
         · exact e₂
-        · rw [hW, hE]; exact hv
+        · exact (congrArg (fun σr : World D =>
+            verbrauchWahl (alleIndizes (D.count t))
+              (fun k => wahr? (eval σr member σr (.cons k ρ)))
+              (fun j k => wahr? (eval σr edge σr (.cons j (.cons k ρ))))
+              (fun j k => decide (j.n = k.n))) e₂).trans
+            ((congrFun
+              (congr (congrArg (verbrauchWahl (alleIndizes (D.count t))) hW) hE)
+              (fun j k => decide (j.n = k.n))).trans hv)
       have hmA : (eval
           (leseA A
             (mischT Tg (member.orte ++ edge.orte)
