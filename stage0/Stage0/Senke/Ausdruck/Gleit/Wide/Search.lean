@@ -23,14 +23,15 @@ def position {lo hi : Int} (input : Expr D Γ Λ (.int lo hi))
         (.widen (by omega) (by omega) (position input start half))
         (.widen (by omega) (by omega) (position input pivot (fuel - half)))
 termination_by fuel
-decreasing_by all_goals (dsimp only; omega)
+decreasing_by all_goals omega
 
 /-- The comparison used by the emitted search decides exactly whether the
     leading position precedes the pivot, including equality to a power of two. -/
 theorem position_compare (n pivot : Nat) (positive : 0 < n) :
     ((n : Int) < (2 : Int) ^ pivot) ↔ n.log2 < pivot := by
   have cast : ((n : Int) < (2 : Int) ^ pivot) ↔ n < 2 ^ pivot := by
-    rw [← Int.natCast_pow, Int.ofNat_lt]
+    have power : ((2 ^ pivot : Nat) : Int) = (2 : Int) ^ pivot := Int.natCast_pow 2 pivot
+    rw [← power, Int.ofNat_lt]
   rw [cast]
   exact (Nat.log2_lt (by omega : n ≠ 0)).symm
 
@@ -76,7 +77,7 @@ theorem position_root {lo hi : Int} (input : Expr D Γ Λ (.int lo hi))
 /-- Nonzero values at and around each pivot jointly inhabit the recursive
     search's value premises. The checked source exporter is not involved. -/
 theorem position_value_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
-    ∀ n ∈ [1, 2 ^ 55, 2 ^ 64 - 1, 2 ^ 64, 2 ^ 80 + 1],
+    ∀ (n : Nat), n ∈ [1, 2 ^ 55, 2 ^ 64 - 1, 2 ^ 64, 2 ^ 80 + 1] →
       0 < n ∧ n < 2 ^ 81 ∧
       (eval σ₀ (position (Expr.lit (Λ := Λ) (n : Int)) 0 80) σ ρ).n = (n.log2 : Int) := by
   intro n member
@@ -94,7 +95,11 @@ theorem position_value_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
 theorem position_zero_zeuge (σ₀ σ : World D) (ρ : Env D Γ) :
     (eval σ₀ (position (Expr.lit (Λ := Λ) 0) 0 3) σ ρ).n = 0 ∧
     (eval σ₀ (position (Expr.lit (Λ := Λ) 1) 0 3) σ ρ).n = 0 := by
-  constructor <;> rfl
+  constructor
+  · simp [position.eq_def, eval, wahr?, Zahl.weiter]
+  · have logOne : (1 : Nat).log2 = 0 := by decide
+    simpa only [logOne, Int.natCast_zero] using
+      (position_root (Expr.lit (Λ := Λ) 1) σ₀ σ ρ 1 3 rfl (by decide) (by decide))
 
 #print axioms position_zero_zeuge
 end Gabbro.Stage0.Senke.WideFloat
