@@ -7,6 +7,7 @@
 -/
 module
 public import Grammatik.Parser.Elab.Proben.Fruehe.UebersetzeProben3
+public import Grammatik.Parser.Cover.Mitglieder
 import all Init.Data.Repr
 import all Init.Data.String.Basic
 import all Init.Data.String.Bootstrap
@@ -95,6 +96,39 @@ theorem float_narrow_finite_zeuge : stufe float_narrow_finite = "OK" := by
 theorem float_narrow_falls_refused_zeuge :
     stufe "module m { impl fn f(x : f64, c : bool) -> u8 { if c { narrow x to finite else { } } return 1; } }" =
       "elab: narrow else falls through" := by
+  decide +kernel
+
+/-- Check the actual G constructor after lexing, parsing and both elaboration
+    stages, rather than just observing that the source was accepted. -/
+private def reachesFloatOf (source : String) : Bool :=
+  (do
+    let tokens ← (lex source).toOption
+    let items ← (parseTopTief tokens).toOption
+    let unit ← (elabU (pre108 items)).toOption
+    let (program, functions) ← (lowerAllg unit).toOption
+    pure ((Cover.Mitglieder.mitglieder unit program functions).contains "Block.floatOf")).getD false
+
+/-- The conversion reads a computed integer local, preserves the declared result
+    range, and leaves a usable float local in a continuing branch. -/
+def float_of_computed : String :=
+  "module m { impl fn f(a : u8 in 0 .. 9, c : bool) -> u8 { if c { let n = a + 1; let y : f64 in 0 .. 10 = f64(n); let z = y; } return 1; } }"
+
+theorem float_of_computed_zeuge : reachesFloatOf float_of_computed = true := by
+  decide +kernel
+
+theorem float_of_f32_computed_zeuge :
+    reachesFloatOf "module m { impl fn f(a : u8 in 0 .. 9, c : bool) -> u8 { if c { let n = a + 1; let y : f32 in 0 .. 10 = f32(n); let z = y; } return 1; } }" = true := by
+  decide +kernel
+
+/-- Float annotations retain exact rational endpoints, including fractions. -/
+theorem float_of_rational_target_zeuge :
+    uTyp [] [] (.range (.atom "f64") (.float "0.5") (.float "10.5") false) =
+      .ok (.fl (5, 10) (105, 10)) := rfl
+
+/-- A float argument fails the integer-operand premise at the dependent exporter. -/
+theorem float_of_noninteger_refused_zeuge :
+    stufe "module m { impl fn f(a : f64, c : bool) -> u8 { if c { let y : f64 = f64(a); } return 1; } }" =
+      "lower: floatOf: operand is not an integer" := by
   decide +kernel
 
 /-! ## `exchange update` -/
