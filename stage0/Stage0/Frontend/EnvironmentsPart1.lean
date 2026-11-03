@@ -219,6 +219,30 @@ theorem typedItem_scalar_eq (env : List (String × (Int × Int))) (fns : List UK
       (uKonstWert lo hi fns values 64 expr).map (fun value => values ++ [(name, value)]) := by
   cases evaluated : uKonstWert lo hi fns values 64 expr <;> simp [typedItem, typed, evaluated]
 
+/-- Every successful step extends the complete ordered scope. Deferred declarations preserve
+    it exactly; numeric declarations append one checked binding, including negative values. -/
+theorem typedItem_extends (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (values result : List (String × Int)) (item : SItemTief)
+    (accepted : typedItem env fns values item = some result) :
+    ∃ suffix, result = values ++ suffix := by
+  cases item <;> try exact ⟨[], by simpa only [List.append_nil] using (Option.some.inj accepted).symm⟩
+  case constT name ty payload =>
+    cases payload with
+    | rows _ => exact ⟨[], by simpa only [List.append_nil] using (Option.some.inj accepted).symm⟩
+    | one expr =>
+      cases typed : uFeldTyp (env ++ values.map (fun c => (c.1, (c.2, c.2)))) ty with
+      | error e =>
+        have same : values = result := by simpa [typedItem, typed] using accepted
+        exact ⟨[], by simpa only [List.append_nil] using same.symm⟩
+      | ok range =>
+        rcases range with ⟨lo, hi⟩
+        rw [typedItem_scalar_eq env fns values name ty expr lo hi typed] at accepted
+        cases evaluated : uKonstWert lo hi fns values 64 expr with
+        | none => simp only [evaluated, Option.map_none, reduceCtorEq] at accepted
+        | some value =>
+          simp only [evaluated, Option.map_some, Option.some.injEq] at accepted
+          exact ⟨[(name, value)], accepted.symm⟩
+
 /-- Every successful scalar step checks the original type through canonical elaboration and
     every expression intermediate through the existing exact-range evaluator. -/
 theorem typedItem_sound (env : List (String × (Int × Int))) (fns : List UKonstFn)

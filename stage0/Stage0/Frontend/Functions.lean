@@ -31,6 +31,15 @@ theorem fieldType_sound (env : List (String × (Int × Int))) (ty : STyp) (lo hi
       cases h
       exact ht
 
+/-- The scalar reader is exactly the integer projection of canonical source typing. This
+    transports a final validation fact back to the scalar classifier without a caller premise. -/
+theorem fieldType_iff (env : List (String × (Int × Int))) (ty : STyp) (lo hi : Int) :
+    uFeldTyp env ty = .ok (lo, hi) ↔ uTyp env [] [] ty = .ok (.int lo hi) := by
+  constructor
+  · exact fieldType_sound env ty lo hi
+  · intro typed
+    simp only [uFeldTyp, typed]
+
 /-- The old base-ignoring reader admitted this nonnumeric range. The canonical reader refuses. -/
 theorem fieldType_noninteger_range_refused_zeuge :
     uFeldTyp [] (.range (.atom "bool") (.lit 0) (.lit 1) false) =

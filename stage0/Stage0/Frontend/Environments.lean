@@ -63,6 +63,36 @@ theorem typedConstants_append (env : List (String × (Int × Int))) (fns : List 
       (typedConstants env fns first values).bind (typedConstants env fns rest) := by
   exact List.foldlM_append
 
+/-- The actual successful fold keeps its entire input scope as a prefix, never a filtered or
+    reordered candidate. Deferred declarations still require the mandatory final literal gate. -/
+theorem typedConstants_extends (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (items : List SItemTief) (values result : List (String × Int))
+    (accepted : typedConstants env fns items values = some result) :
+    ∃ suffix, result = values ++ suffix := by
+  induction items generalizing values result with
+  | nil =>
+    exact ⟨[], by simpa only [List.append_nil] using (Option.some.inj accepted).symm⟩
+  | cons item rest ih =>
+    change (typedItem env fns values item).bind (typedConstants env fns rest) = some result at accepted
+    cases step : typedItem env fns values item with
+    | none => simp only [step, Option.bind_none, reduceCtorEq] at accepted
+    | some next =>
+      have tail : typedConstants env fns rest next = some result := by
+        simpa only [step, Option.bind_some] using accepted
+      obtain ⟨headSuffix, headEq⟩ := typedItem_extends env fns values next item step
+      obtain ⟨tailSuffix, tailEq⟩ := ih next result tail
+      exact ⟨headSuffix ++ tailSuffix, by rw [tailEq, headEq, List.append_assoc]⟩
+
+/-- Canonical first-match lookup is stable under every successful scalar fold, even when
+    later declarations repeat a spelling. Namespace uniqueness remains a separate mandatory gate. -/
+theorem typedConstants_lookup (env : List (String × (Int × Int))) (fns : List UKonstFn)
+    (items : List SItemTief) (values result : List (String × Int)) (name : String)
+    (binding : String × Int) (accepted : typedConstants env fns items values = some result)
+    (found : values.find? (fun entry => strEq entry.1 name) = some binding) :
+    result.find? (fun entry => strEq entry.1 name) = some binding := by
+  obtain ⟨suffix, extended⟩ := typedConstants_extends env fns items values result accepted
+  simp only [extended, List.find?_append, found, Option.some_or]
+
 
 theorem typedItem_aliasItem (values : List (String × Int))
     (typeEnv aliasEnv : List (String × (Int × Int))) (fns : List UKonstFn) (item : SItemTief) :
@@ -164,6 +194,18 @@ structure Scopes (original : List SItemTief) where
   scalarPermutation : scalarOrder.Perm original
   scalarValues : typedConstants declared functions scalarOrder [] = some values
 
+/-- A binding found after any original scheduled prefix remains the first binding in the
+    final certified scope. The suffix is evaluated by the same fold used by scalarValues. -/
+theorem Scopes.prefix_lookup {original : List SItemTief} (scope : Scopes original)
+    (prefix suffix : List SItemTief) (values : List (String × Int)) (name : String) (binding : String × Int)
+    (schedule : scope.scalarOrder = prefix ++ suffix)
+    (evaluated : typedConstants scope.declared scope.functions prefix [] = some values)
+    (found : values.find? (fun entry => strEq entry.1 name) = some binding) :
+    scope.values.find? (fun entry => strEq entry.1 name) = some binding := by
+  have final := scope.scalarValues
+  rw [schedule, typedConstants_append, evaluated] at final
+  exact typedConstants_lookup scope.declared scope.functions suffix values scope.values name binding final found
+
 /-- The canonical environment used to elaborate compile-time function signatures. Existing
     scopes use declared aliases; dependent signatures additionally use certified scalar bounds. -/
 def Scopes.functionTypes {items : List SItemTief} (scope : Scopes items) : List (String × (Int × Int)) :=
@@ -261,5 +303,25 @@ theorem deriveScopes_custom_negative_zeuge :
   refine ⟨(deriveScopes _).toOption.get (by decide +kernel), ?_, ?_, ?_, ?_⟩
   · exact Gabbro.Grammatik.except_ok_get _
   all_goals decide +kernel
+
+/-- The generic prefix/lookup chain on actual original declarations, with a negative binding
+    read by a later checked expression. No fabricated candidate values enter the certificate. -/
+theorem Scopes.prefix_lookup_zeuge :
+    let prefix : List SItemTief := [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
+    let suffix : List SItemTief := [.constT "ANSWER" (.atom "i8")
+      (.one (.bin "+" (.variable "BASE") (.lit 43)))]
+    ∃ scope : Scopes (prefix ++ suffix),
+      scope.values.find? (fun entry => strEq entry.1 "BASE") = some ("BASE", -1) := by
+  dsimp only
+  let scope := evaluatedScopes
+    [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1))),
+     .constT "ANSWER" (.atom "i8") (.one (.bin "+" (.variable "BASE") (.lit 43)))]
+    [("BASE", -1), ("ANSWER", 42)] (by decide +kernel)
+  refine ⟨scope, Scopes.prefix_lookup scope
+    [.constT "BASE" (.atom "i8") (.one (.un "-" (.lit 1)))]
+    [.constT "ANSWER" (.atom "i8") (.one (.bin "+" (.variable "BASE") (.lit 43)))]
+    [("BASE", -1)] "BASE" ("BASE", -1) rfl ?_ ?_⟩
+  · decide +kernel
+  · rfl
 
 end Gabbro.Stage0.Frontend

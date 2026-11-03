@@ -83,7 +83,7 @@ theorem checkConstantMeaning_sound (types : List (String × (Int × Int))) (fns 
           exact ⟨binding, hn, fieldType_sound _ _ _ _ ht, of_decide_eq_true h⟩
 
 /-- At the actual source-derived scope, every scalar retains the old typed step guarantee.
-    The classifier premise of typedItem_sound is derived here, never supplied by a caller.
+    Its classifier follows from retained canonical typing, never a caller-supplied assumption.
     Deferred types still require the compiler's mandatory ArrayMeaning certificate. -/
 def ScalarStep {items : List SItemTief} (scope : Scopes items) (item : SItemTief) : Prop :=
   match item with
@@ -108,22 +108,12 @@ theorem constantMeaning_scalarStep {items : List SItemTief} (scope : Scopes item
       | ok range =>
         rcases range with ⟨lo, hi⟩
         simp only [ConstantMeaning, ht] at meaning
-        obtain ⟨binding, _, _, value⟩ := meaning
-        have scalar : (uFeldTyp (scope.declared ++ scope.values.map
-            (fun c => (c.1, (c.2, c.2)))) ty).toOption.isSome = true := by
-          change (uFeldTyp scope.types ty).toOption.isSome = true
-          simp only [ht, Except.toOption, Option.isSome_some]
-        have step : typedItem scope.declared scope.functions scope.values
-            (.constT name ty (.one expr)) = some (scope.values ++ [(name, binding.2)]) := by
-          simpa only [value, Option.map_some] using
-            typedItem_scalar_eq scope.declared scope.functions scope.values name ty expr lo hi ht
-        obtain ⟨a, b, result, typed, evaluated, collected⟩ :=
-          typedItem_sound scope.declared scope.functions scope.values
-            (scope.values ++ [(name, binding.2)]) name ty expr scalar step
+        obtain ⟨binding, _, typed, value⟩ := meaning
+        have classifier := (fieldType_iff scope.types ty lo hi).mpr typed
         simp only [ScalarStep, ht]
-        refine ⟨a, b, result, typed, evaluated, ?_⟩
-        rw [← collected]
-        exact step
+        refine ⟨lo, hi, binding.2, typed, value, ?_⟩
+        simpa only [value, Option.map_some] using
+          typedItem_scalar_eq scope.declared scope.functions scope.values name ty expr lo hi classifier
 
 /-- The meaning check accepts a forward binding and rejects a fabricated discovery value. -/
 theorem checkConstantMeaning_sound_zeuge :
