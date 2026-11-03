@@ -21,7 +21,7 @@ local macro "mono_operands" : tactic => `(tactic| (
   rcases hOperand : lowerE lay cenv b r1 with _ | ⟨cb, ob, r2⟩
   · simp only [hOperand, reduceCtorEq] at h
   have m2 := lowerE_mono lay cenv b r1 _ hOperand
-   simp only [hOperand] at h))
+  simp only [hOperand] at h))
 
 mutual
 
