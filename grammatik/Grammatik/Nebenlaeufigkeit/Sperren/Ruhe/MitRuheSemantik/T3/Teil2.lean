@@ -10,16 +10,14 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T3.Teil1b
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
 
-/-- The optional binder uses equality transport rather than the `ergWert` wrapper. -/
-private theorem ergWert_eq_transport {e : Option Ty} {τ : Ty} (he : e = some τ)
-    (v : ErgVal D e) : ergWert he v = (he ▸ v : Wert D τ) := by
-  cases he
-  rfl
-
+/-- The optional binder transports the complete canonical answer value. -/
 private theorem ergTransport_ru {e : Option Ty} {τ : Ty} (he : e = some τ)
     (he' : e.map tyR = some (tyR τ)) (v : ErgVal D e) :
-    (he' ▸ ergR e v : Wert D.mitRuhe (tyR τ)) = valR τ (he ▸ v) := by
-  simpa only [ergWert_eq_transport] using (ergWert_ru he he' v)
+    (he' ▸ ergR e v : ErgVal D.mitRuhe (some (tyR τ))) =
+      valR τ (he ▸ v : ErgVal D (some τ)) := by
+  cases he
+  cases he'
+  rfl
 
 section Haupt
 variable (O : Orakel D) (passes : Nat)
@@ -367,7 +365,8 @@ theorem execBlock_ru_bindAxiomOpt {V : Vertrag D}
               exact (congrArg Ausgang.schrumpf
                 ((congrArg (fun env => execBlock O.mitRuhe passes R' (ruB rest)
                     (worldR σ') env) henv).trans
-                  (ih_execBlock_ru_rest σ' (Env.cons (he ▸ v) ρ)))).trans (ausR_schrumpf _)
+                  (ih_execBlock_ru_rest σ'
+                    (Env.cons (show ErgVal D (some τ) from he ▸ v) ρ)))).trans (ausR_schrumpf _)
 
 set_option linter.unusedSectionVars false in
 theorem execBlock_ru_bindAxiomOptElse {V : Vertrag D}
@@ -428,7 +427,8 @@ theorem execBlock_ru_bindAxiomOptElse {V : Vertrag D}
             exact (congrArg Ausgang.schrumpf
               ((congrArg (fun env => execBlock O.mitRuhe passes R' (ruB rest)
                   (worldR σ') env) henv).trans
-                (ih_execBlock_ru_rest σ' (Env.cons (he ▸ v) ρ)))).trans (ausR_schrumpf _)
+                (ih_execBlock_ru_rest σ'
+                  (Env.cons (show ErgVal D (some τ) from he ▸ v) ρ)))).trans (ausR_schrumpf _)
           · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id,
               sigR, Deklaration.asignatur]
             erw [execEnd_umΛ]
