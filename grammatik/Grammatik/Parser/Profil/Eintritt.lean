@@ -121,22 +121,22 @@ theorem eintritt_ohne_registerzustand {fns : List String} {e : SEingang}
 
 /-! ## The source guest boundary -/
 
-/-- The current source form contains no service-binding field. Diagnose the
-    excluded register-state/unknown-ABI cases before the missing service.
-    This refusal is shared by canonical elaboration and Stage 0; neither can
-    promote the historical `assume` name to a software-isolation proof. -/
-def gastQuelleFehler (arch : String) (registers : List SRegBind) : String :=
-  if (wertVon .arch arch).isNone then "entrust: unknown userspace ABI"
-  else if !registers.isEmpty then
-    "entrust: register-state or privileged transfer is excluded"
-  else "entrust: missing isolation service binding"
+/-- Shared source-header admission. Complete service resolution, ownership and
+    contracts are checked by the canonical elaborator against the actual unit;
+    this check never treats a historical assume name as software isolation. -/
+def gastQuellePruefung (arch : String) (registers : List SRegBind)
+    (stack assumption : String) (service : Option String) : Except String Unit := do
+  if (wertVon .arch arch).isNone then throw "entrust: unknown userspace ABI"
+  if !registers.isEmpty then throw "entrust: register-state or privileged transfer is excluded"
+  if service.isNone then throw "entrust: missing isolation service binding"
+  if !stack.isEmpty || !assumption.isEmpty then
+    throw "entrust: register-state or privileged transfer is excluded"
 
-/-- Source-level admission needs the explicit C08 service binding that the
-    current trustT constructor does not yet retain. No name-only candidate
-    record stands in for the canonical, typed GuestBoundary. -/
+/-- An absent source service is always refused, regardless of code labels. -/
 theorem gastQuelle_ohne_dienst (arch : String)
     (ha : (wertVon .arch arch).isNone = false) :
-    gastQuelleFehler arch [] = "entrust: missing isolation service binding" := by
-  simp [gastQuelleFehler, ha]
+    gastQuellePruefung arch [] "" "" none =
+      .error "entrust: missing isolation service binding" := by
+  simp [gastQuellePruefung, ha]
 
 end Gabbro.Grammatik.Parser.ProfilBindung
