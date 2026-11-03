@@ -22,9 +22,7 @@ def driverFnName (cname gate : String) : String := cname ++ "#driver#" ++ gate
     rethrown with its exact reason, after explicit retirement; it is never
     converted into a successful gate result. -/
 def consumerFehler (duty : String) (count : Nat) : List UStmt :=
-  (torFehler count).flatMap fun statement => match statement with
-    | .ret answer => [.retireMark duty, .ret answer]
-    | other => [other]
+  [.retireMark duty] ++ torFehler count
 
 /-- The physical consumer: invoke the selected wrapper, then retire its one
     returning mark. The wrapper's argument/result/reason types are unchanged.
