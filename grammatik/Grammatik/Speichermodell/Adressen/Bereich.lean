@@ -206,7 +206,7 @@ set_option maxHeartbeats 4000000 in
 /-- **Every step of machine G writes inside the declared extents.** -/
 theorem rufSchrittG_aussen {P : Programm D} {O : Orakel D} {p : Nat} (hI : ImBereichO O) {M M' : RufMaschineG D}
     {u : Faden} (h : RufSchrittG P O p M u M') : AussenGleich M.speicher M'.speicher := by
-  (rcases h with h | h | h | h | h | h <;> cases h) <;> aussen_fall hI
+  (rcases h with h | h | h | h | h | h | h <;> cases h) <;> aussen_fall hI
 
 /-- **Every step of machine GX**: the presented memory differs from the actual one only at shared atomics, and
     they are globals. -/

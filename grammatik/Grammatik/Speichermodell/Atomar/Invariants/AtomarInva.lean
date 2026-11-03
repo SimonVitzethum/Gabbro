@@ -125,6 +125,9 @@ theorem invGrundLogA_schritt (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q
   | g6 hs =>
     cases hs with
     | _ => ohneGrundA
+  | g7 hs =>
+    cases hs with
+    | _ => ohneGrundA
 
 /-- **A replayed head at a `return` meets `ensures` and its owed invariants** (as `kopfS_ret`). -/
 theorem kopfSA_ret (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hS : SperrInvOk S)

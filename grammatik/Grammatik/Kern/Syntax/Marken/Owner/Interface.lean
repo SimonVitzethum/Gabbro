@@ -80,10 +80,10 @@ private theorem returned_moves_sublist (moves : List (OwnerMove Marke))
         cases hs : x.after with
         | none => simpa [hs] using List.Sublist.cons x.mark ih
         | some s => simpa [hs] using List.Sublist.cons_cons x.mark ih
-  have htail : (loans ++ mints).map Prod.fst |>.Sublist (loans ++ mints).map Prod.fst :=
+  have htail : ((loans ++ mints).map Prod.fst).Sublist ((loans ++ mints).map Prod.fst) :=
     List.Sublist.refl _
   have h := hmoves.append htail
-  simpa only [List.map_append] using h
+  simpa only [List.map_append, List.append_assoc] using h
 
 /-- Returning never duplicates an input identity, including across stages
     and through checked mints. -/
@@ -98,6 +98,8 @@ theorem outputs_nodup {isOwner : Marke → Bool} {stages : Marke → Nat}
     differ. Minted owners are held from the start frame. -/
 theorem output_from_input (F : OwnerFlow Marke) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : ∃ before, (m, before) ∈ F.inputs := by
+  rw [outputs, List.append_assoc] at h
+  simp only [inputs, List.append_assoc]
   rcases List.mem_append.mp h with h | h
   · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
     cases hs : x.after with
@@ -115,6 +117,7 @@ theorem output_from_input (F : OwnerFlow Marke) {m : Marke} {s : Nat}
 theorem output_bounded {isOwner : Marke → Bool} {stages : Marke → Nat}
     {F : OwnerFlow Marke} (hv : Valid isOwner stages F) {m : Marke} {s : Nat}
     (h : (m, s) ∈ F.outputs) : isOwner m = true ∧ s < stages m := by
+  rw [outputs, List.append_assoc] at h
   rcases List.mem_append.mp h with h | h
   · obtain ⟨x, hx, he⟩ := List.mem_filterMap.mp h
     cases hs : x.after with
