@@ -300,7 +300,7 @@ theorem lowE_top {reserved : Nat} {Λ : List (Res D)} : {Γ : Ctx} → {τ : Ty}
     simp only [lowE_eqs] at h
     split at h
     · exact readBytesL_top L t f (lowE (currentOld := currentOld) L (reserved := reserved) i) n 0 d c top h
-    · cases h
+    · exact readBytesWideL_top h
   | _, _, .forallSlots .., d, c, top, h | _, _, .existsSlots .., d, c, top, h => by
     simp only [lowE_eqs, quantL] at h
     split at h
