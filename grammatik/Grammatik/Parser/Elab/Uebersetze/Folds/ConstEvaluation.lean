@@ -17,15 +17,15 @@ def uKonstEval (bounds : Option (Int × Int)) (fns : List UKonstFn)
       | some (lo, hi) => if lo ≤ value ∧ value ≤ hi then some value else none
     match expression with
     | .lit n => checked n
-    | .tru => checked 1
-    | .fls => checked 0
+    | .tru => if bounds.isNone then checked 1 else none
+    | .fls => if bounds.isNone then checked 0 else none
     | .res => (env.find? (fun p => strEq p.1 "result")).bind (fun p => checked p.2)
     | .variable name => (env.find? (fun p => strEq p.1 name)).bind (fun p => checked p.2)
     | .un "-" (.lit n) => checked (-(Int.ofNat n))
     | .un op source => do
       let value ← uKonstEval bounds fns env fuel source
       if op == "-" then checked (-value)
-      else if op == "!" then checked (if value == 0 then 1 else 0)
+      else if op == "!" then if bounds.isNone then checked (if value == 0 then 1 else 0) else none
       else none
     | .field (.variable ty) member =>
       match uTypName [] ty with
@@ -51,6 +51,7 @@ def uKonstEval (bounds : Option (Int × Int)) (fns : List UKonstFn)
         if 0 ≤ a ∧ 0 ≤ b ∧ b < 64 then checked (a * 2 ^ b.toNat) else none
       else if op == ">>" then
         if 0 ≤ a ∧ 0 ≤ b ∧ b < 64 then checked (a / 2 ^ b.toNat) else none
+      else if bounds.isSome then none
       else if op == "==" then checked (if a == b then 1 else 0)
       else if op == "!=" then checked (if a != b then 1 else 0)
       else if op == "<" then checked (if a < b then 1 else 0)
