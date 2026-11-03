@@ -145,4 +145,25 @@ theorem bewegtMovesAt_inputs (u : UProg) (f : UFn) :
   rw [hcomp]
   exact List.map_id _
 
+/-- `consumes m` on a table owner is a terminal move: the existing owner-name
+    resolver selects exactly those consumed marks that name table owners. -/
+def terminalMovesAt (u : UProg) (f : UFn) : List (OwnerMove (Fin u.marken.length)) :=
+  (bewegtAt u { f with bewegt := f.nimmt }).map fun p => ⟨p.1, p.2, none⟩
+
+/-- One call interface for handback and terminal moves. Ordinary `nimmtAt`
+    excludes these owners, so a terminal input is not consumed twice. -/
+def ownerMovesAt (u : UProg) (f : UFn) : List (OwnerMove (Fin u.marken.length)) :=
+  bewegtMovesAt u f ++ terminalMovesAt u f
+
+/-- Terminal transfers return no owner on either outcome channel. -/
+theorem terminalMovesAt_outputs (u : UProg) (f : UFn) :
+    (terminalMovesAt u f).filterMap (fun x => x.after.map (fun s => (x.mark, s))) = [] := by
+  simp [terminalMovesAt, List.filterMap_map]
+
+/-- Only handback moves contribute to the return inventory. -/
+theorem ownerMovesAt_outputs (u : UProg) (f : UFn) :
+    (ownerMovesAt u f).filterMap (fun x => x.after.map (fun s => (x.mark, s))) =
+      bewegtAt u f := by
+  simp [ownerMovesAt, List.filterMap_append, bewegtMovesAt_outputs, terminalMovesAt_outputs]
+
 end Gabbro.Grammatik.Parser.UebersetzeAllg

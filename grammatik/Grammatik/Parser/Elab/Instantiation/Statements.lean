@@ -40,6 +40,7 @@ def statement (scope : Scope) : SAnw → SurfaceFacts
       expression scope subject, optional (expression (scope.bind [binder])) inv,
       statement (scope.bind [binder]) body]
   | .retry _ body | .loop _ body | .waive _ body | .watch _ body | .child body => statement scope body
+  | .retires _ => {}
   | .leave _ | .next _ | .step _ _ | .other _ => {}
   | .ret value => optional (expression scope) value
   | .alloc _ _ ty _ count no => gather [optional (inspectType scope) ty, expression scope count,

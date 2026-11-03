@@ -167,7 +167,7 @@ def callFreeStmt : SAnw → Bool
   | .each _ _ _ _ _ _ _ _ | .loop _ _ | .retry _ _ => false
   | .emit _ _ _ | .await _ _ _ _ | .swap _ _ _ _ => false
   | .alloc _ _ _ _ _ _ | .allocVon _ _ _ _ | .reset _ _ | .grow _ _ _ | .free _ | .genericCall _ _ _ => false
-  | .child _ | .start _ | .step _ _ | .shift _ _ _ | .locks _ _ _ | .watch _ _ => false
+  | .child _ | .start _ | .step _ _ | .shift _ _ _ | .locks _ _ _ | .watch _ _ | .retires _ => false
   | .bind _ _ _ e => callFreeExpr e
   | .bindElse _ _ e _ body => callFreeExpr e && callFreeStmt body
   | .bindQ _ _ _ e => callFreeExpr e

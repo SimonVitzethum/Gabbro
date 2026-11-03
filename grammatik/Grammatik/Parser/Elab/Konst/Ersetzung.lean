@@ -276,6 +276,7 @@ def ersetzeSAnwIn (shadowed : List String) (fns : List UKonstFn) : SAnw → Exce
     match ersetzeSExprIn shadowed fns o with
     | .error e => .error e
     | .ok o' => .ok (.swap n ty o' k)
+  | .retires m => .ok (.retires m)
   | .step a b => .ok (.step a b)
   | .ret x =>
     match x with

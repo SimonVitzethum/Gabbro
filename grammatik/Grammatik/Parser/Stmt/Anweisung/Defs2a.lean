@@ -114,6 +114,7 @@ def parseStmt (f : Nat) (toks : List Token) :
       else if strEq w "child" then parseChild f rest
       else if strEq w "transition" then parseUebergang f rest
       else if strEq w "advances" then parseSchreitet f rest
+      else if strEq w "retires" then parseRetires rest
       else parsePlatzStmt f toks
     | .ident "start" :: .zeichen "{" :: rest => parseStart f rest
     | .zeichen "@" :: _ => parseLibStmt f toks

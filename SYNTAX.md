@@ -155,7 +155,27 @@ impl fn caller() -> bool
   { mover(&T, 0); return true; }
 ```
 
-Resource-only handoffs emit no bytes: the call transformer erases the inputs
-and appends the outputs (`nachSig`), and the ghost ledger replays the loan,
-transfer and restore. Terminal consumption stays model-complete with fixture
-witnesses; its body-level retire lowering is open, as for ordinary marks.
+A terminal transfer uses the existing `consumes` effect: the callee receives
+the mark and promises no handback (`OwnerMove.after := none` for an owner).
+It must explicitly discharge that input before returning:
+
+```gabbro
+impl fn finish() effects { consumes Marke } { retires Marke; }
+impl fn caller() effects { consumes Marke } { finish(); }
+```
+
+`retires Marke;` removes exactly the held mark from the resource inventory.
+The same statement discharges an ordinary linear mark, such as a C16 Duty.
+It introduces no runtime value and no hardware assumption. Retiring an unheld
+or already retired mark is refused (`retire without held mark`); retiring a
+`borrows` loan is refused (`retire of borrowed mark`), because loans must be
+returned. Dropping a terminal input without retire fails the exact return
+inventory check. Retiring a `moves` handback also fails that check, because
+the promised output is missing.
+
+Resource-only handoffs and retirement emit no runtime words: `nachSig` erases
+the call inputs and appends exactly the outputs, and `retires` lowers through
+the existing ghost statement case. The source-to-IR retirement witnesses are
+implemented, pending the lead build. The dynamic escrow replay and the C08
+mint software-call/root-once admission remain open; Stage 0 continues to
+refuse mint effects and ghost value types at its metadata gate.

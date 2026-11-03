@@ -252,6 +252,7 @@ def anw (k : Kontext) : SAnw → SAnw
   | .trimReq e g => .trimReq (aus k e) g
   | .locks sh p s => .locks sh (aus k p) (anw k s)
   | .watch d s => .watch (k.ref d) (anw k s)
+  | .retires m => .retires (k.ref m)
   | .emit a b p => .emit (aus k a) (aus k b) p
   | .await x t e p => .await x t (aus k e) p
   | .swap x t e w => .swap x t (aus k e) w

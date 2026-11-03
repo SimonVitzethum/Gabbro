@@ -6579,3 +6579,39 @@ pin nonempty images within the scratch bound (`decide +kernel`); `own_access_zeu
 Open: the lead build of this branch (changed-module and dependent checks of the touched Senke
 modules, the new witness module, standard-axiom inspection, guardians); byte/raw/entry targets
 stay refused.
+Body-level retire implementation on `c09-retire` (2026-11-03), UNBUILT:
+
+* `SAnw.retires` / `UStmt.retires`, read and printed as `retires Mark;`, retain the nominal
+  mark through name resolution, constant substitution and generic surface processing. The
+  operation is a software resource discharge; the canonical annotation is `none`, without
+  a new hardware assumption or runtime token value.
+* `UebersetzeAllg2.lowRetiresL` / `lowRetiresL_exact` construct exactly `Stmt.retires m 0 held none`
+  with output inventory `Λ.erase (.marke m 0)`. The exported declaration has one mark stage.
+  `lowRetiresL_borrowed` checks the original caller signature, preserving loan refusal even
+  when locals extend the lowering scope; `lowRetiresL_unheld` refuses an absent input.
+  The existing dependent block/end-block readers propagate this exact inventory into the
+  unchanged `Perm ende` return gate.
+* `terminalMovesAt` resolves an owner's existing `consumes` (`takes`) effect to a terminal
+  `OwnerMove` (`after := none`). `nimmtAt` retains only ordinary consumed marks; `ownerMovesAt`
+  combines terminal transfers and handbacks. `terminalMovesAt_outputs` / `ownerMovesAt_outputs`
+  prove terminal moves contribute no output; `mkSig`, `sigAt_owner`, `signaturOwner` and `ende_eq`
+  carry the complete interface. `eigner_nie_erzeugt` and ordinary `produziert` are unchanged.
+* `UebersetzeProben11`: `terminalMoveRetires_ok` (terminal call with callee retire),
+  `terminalReasonRetire_ok` (reason return), `ordinaryRetire_ok` (C16 ordinary consumption),
+  `terminalMoveDropped_refused`, `borrowedRetire_refused`, `unheldRetire_refused`,
+  `repeatedRetire_refused`, `handbackRetire_refused`.
+* `Stage0/Zeugen/Pipeline/RetireWitness.lean`: `candidate_present` / `accepted_image`,
+  `image_shape` (actual terminal signatures, retained source retire and nonempty image),
+  `return_inventory`, `canonical_source` and `image_correct` reference the production
+  `compile_source_program` / `irBild_correct` path. `retires_ghost` states the existing generic
+  `lowS` arm emits no instructions or extra scratch words; its existing `lowS_ok` case remains
+  the simulation. `dropped_image_refused` and `borrowed_image_refused` exercise the same emitter.
+* `ExportMetadata` admits only the plain nominal declaration `linear type Mark;` through the
+  checked mark registry. It retains refusal of mint effects and ghost value types while the
+  C08 software-call/root-once bridge is open (`mint_effect_metadata_refused`,
+  `owner_mint_type_refused_zeuge`); ordinary `takes` and owner terminal transfer can now reach IR.
+
+Measured here: static diff/whitespace check, changed Lean module headers and file sizes below
+500 lines. No Lean, lake, build, guardian or runner invocation; all new proof bodies and witnesses
+await the lead's checks. `Spec.lean` and the `gabbro_ziel` proof are untouched; standard-axiom
+verification remains a required lead check. Dynamic transfer replay and mint admission stay open.

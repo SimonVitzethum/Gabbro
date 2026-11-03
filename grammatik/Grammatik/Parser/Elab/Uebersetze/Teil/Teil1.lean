@@ -357,6 +357,8 @@ inductive UStmt
       constructor positions keep their names. -/
   | narrowReqBeg : String → Int → Int → UStmt
   | axCallElseBeg : String → List UArg → String → UStmt
+  /-- `retires m;`: explicit discharge of one held linear mark. -/
+  | retires : String → UStmt
   deriving DecidableEq, Repr
 /-- One elaborated table: slot count and one integer range per
     slot field (the `TableModel` of `lean_g.rs`). -/

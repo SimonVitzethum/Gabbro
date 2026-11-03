@@ -153,6 +153,8 @@ inductive SAnw
   | genericCall : String → List String → List SExpr → SAnw
   /-- Fallible foreign statement call; an empty reason name discards the reason. -/
   | callElse : String → List SExpr → String → SAnw → SAnw
+  /-- `retires m;`: consume the held linear mark, without a runtime value. -/
+  | retires : String → SAnw
 deriving Repr
 
 -- Shape equality on surface trees, as a `Bool`: one recursive
@@ -221,6 +223,7 @@ def beqSAnw : SAnw → SAnw → Bool
     strEq n m && beqSTypOpt t u && beqSExpr q p && strEq e f
   | .swap n t o k, .swap m u p l =>
     strEq n m && beqSTypOpt t u && beqSExpr o p && strEq k l
+  | .retires a, .retires b => strEq a b
   | .step a b, .step c d => strEq a c && strEq b d
   | .ret x, .ret y => beqOptExpr x y
   | .alloc m n y t w s, .alloc k o z u v r =>

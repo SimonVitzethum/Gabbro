@@ -189,6 +189,7 @@ def lowerNachLies (tabs : List UTab) (names : List String)
       requires `globs = []`), so the checked range-store expansion of the generic lowering
       (`lowResetRangeL`) has no target here; the form stays refused, by reason rather than
       by name. -/
+  | .retires .. :: _, _ => .error "mark retirement without G form in the 104 lowering (no marks)"
   | .resetRange .. :: _, _ =>
     .error "static array reset without G form in the 104 lowering (no array statics)"
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .narrowReqBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindOptBeg .. :: _, _ | .bindOptElseBeg .. :: _, _ | .axCallElseBeg .. :: _, _ | .allocReqBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _
@@ -237,6 +238,7 @@ def lowerSaetzeEin (tabs : List UTab) (names : List String)
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
   /- `reset A at i count n;` (C18): as above, the 104 program has no array statics, so the
       checked range-store expansion of the generic lowering has no target here. -/
+  | .retires .. :: _, _ => .error "mark retirement without G form in the 104 lowering (no marks)"
   | .resetRange .. :: _, _ =>
     .error "static array reset without G form in the 104 lowering (no array statics)"
   | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .lockBeg _ :: _, _ | .blkEnd :: _, _ | .bind .. :: _, _ | .bindCall .. :: _, _ | .axCall .. :: _, _ | .bindAx .. :: _, _ | .narrowBeg .. :: _, _ | .narrowReqBeg .. :: _, _ | .retryBeg .. :: _, _ | .foreverBeg .. :: _, _ | .bindOpt .. :: _, _ | .assignOpt .. :: _, _ | .assignTabOpt .. :: _, _ | .matchBeg .. :: _, _ | .startS :: _, _ | .allocBeg .. :: _, _ | .bindOptBeg .. :: _, _ | .bindOptElseBeg .. :: _, _ | .axCallElseBeg .. :: _, _ | .allocReqBeg .. :: _, _ | .bindElse .. :: _, _ | .matchWhyBeg .. :: _, _ | .bindSum .. :: _, _ | .matchTagBeg .. :: _, _ | .bindAxElse .. :: _, _ | .bindB .. :: _, _ | .bindMut .. :: _, _ | .setVar .. :: _, _ | .setVarB .. :: _, _ | .ifBeg _ :: _, _ | .ifElse :: _, _

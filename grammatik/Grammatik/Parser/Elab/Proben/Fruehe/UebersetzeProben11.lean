@@ -221,4 +221,66 @@ theorem moveDropped_refused :
     stufe moveDropped = "lower: call without held mark" := by
   decide +kernel
 
+/-! ## C09 terminal moves and C16 ordinary consumption -/
+
+/-- A terminal owner callee and its consuming caller, using the existing
+    `consumes` effect (`takes` in the surface model), never ordinary production. -/
+def terminalMoveSource (body : String) : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn finish() effects { consumes Marke } { " ++
+  body ++ " } impl fn main() -> u8 effects { consumes Marke } { finish(); return 23; } }"
+
+def terminalMoveRetires : String := terminalMoveSource "retires Marke;"
+
+theorem terminalMoveRetires_ok : stufe terminalMoveRetires = "OK" := by
+  decide +kernel
+
+/-- Omitting retire leaves an input outside `ende`; exact return inventory
+    refuses the body even though the terminal call signature is valid. -/
+theorem terminalMoveDropped_refused :
+    stufe (terminalMoveSource "") = "lower: lower: return without produced marks" := by
+  decide +kernel
+
+/-- Returning a loan is mandatory; retiring it is refused directly. -/
+def borrowedRetire : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn f() effects { borrows Marke } { retires Marke; } }"
+
+theorem borrowedRetire_refused :
+    stufe borrowedRetire = "lower: retire of borrowed mark: Marke" := by
+  decide +kernel
+
+/-- Declaring a nominal mark does not mean holding it. -/
+def unheldRetire : String :=
+  "module m { linear type Marke; impl fn f() { retires Marke; } }"
+
+theorem unheldRetire_refused :
+    stufe unheldRetire = "lower: retire without held mark: Marke" := by
+  decide +kernel
+
+theorem repeatedRetire_refused :
+    stufe (terminalMoveSource "retires Marke; retires Marke;") =
+      "lower: retire without held mark: Marke" := by
+  decide +kernel
+
+/-- Ordinary C16 marks use the same body operation and exact return check. -/
+def ordinaryRetire : String :=
+  "module m { linear type Duty; impl fn gate() effects { consumes Duty } { retires Duty; } impl fn caller() effects { consumes Duty } { gate(); } }"
+
+theorem ordinaryRetire_ok : stufe ordinaryRetire = "OK" := by
+  decide +kernel
+
+/-- Retiring a handback move cannot satisfy its promised returned owner. -/
+def handbackRetire : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } impl fn f() effects { moves Marke } { retires Marke; } }"
+
+theorem handbackRetire_refused :
+    stufe handbackRetire = "lower: lower: return without produced marks" := by
+  decide +kernel
+
+/-- Retire is valid before a terminal reason return as well. -/
+def terminalReasonRetire : String :=
+  "module m { linear type Marke; table T count 2 owner Marke { slot { b : bool, } } reason R { Gone = 1 \"gone\" exhaustive } impl fn f() -> bool or R effects { consumes Marke } { retires Marke; return R::Gone; } }"
+
+theorem terminalReasonRetire_ok : stufe terminalReasonRetire = "OK" := by
+  decide +kernel
+
 end Gabbro.Grammatik.Parser.UebersetzeProben11
