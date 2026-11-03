@@ -7,7 +7,7 @@
 -/
 module
 public import Stage0.Senke.Anweisung.Schreiben
-public import Stage0.Senke.Anweisung.Faelle.Sum.Statement
+public import Stage0.Senke.Anweisung.Faelle.Kontrolle.Sum.Statement
 public import Stage0.Senke.Welt.Spans.CellStore
 public import Stage0.Senke.Welt.WordCell
 public import Stage0.Senke.Sperre.Satz
