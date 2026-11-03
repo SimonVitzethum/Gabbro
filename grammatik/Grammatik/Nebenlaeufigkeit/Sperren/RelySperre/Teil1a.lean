@@ -108,6 +108,10 @@ theorem blatt_erhaelt_globs
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
       rfl
+  | assignThruOwn p u ht fld i e m s ho he hg hm hw hL =>
+      simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
+      subst hstep
+      rfl
   | assignSlotRef r u ht ho fld e hw hL =>
       simp only [execStmt, Ausgang.welt, Option.some.injEq] at hstep
       subst hstep
