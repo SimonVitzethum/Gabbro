@@ -253,8 +253,7 @@ theorem execEnd_ru_awaits {V : Vertrag D}
         lese_worldR, ← endR_schrumpf, ← ih_execEnd_ru_rest _ (Env.cons _ ρ)]
       rfl
 
-end Haupt
-
+omit hR in
 set_option linter.unusedSectionVars false in
 theorem execEnd_ru_bindAxiomOpt {V : Vertrag D}
     {l : Bool}
@@ -298,6 +297,7 @@ theorem execEnd_ru_bindAxiomOpt {V : Vertrag D}
               rw [ergWert_ru he, ← endR_schrumpf, ← ih_execEnd_ru_rest σ' (Env.cons _ ρ)]
               rfl
 
+omit hR in
 set_option linter.unusedSectionVars false in
 theorem execEnd_ru_bindAxiomOptElse {V : Vertrag D}
     {l : Bool}
@@ -330,7 +330,7 @@ theorem execEnd_ru_bindAxiomOptElse {V : Vertrag D}
           · rfl
           · simp only [EndAusgang.weiterOpt, ergEnv]
             exact ih_execEnd_ru_rest σ' _
-          · simp only [EndAusgang.weiterOpt, ergEnv]
+          · erw [execEnd_umΛ]
             exact (congrArg (fun a => (EndAusgang.schrumpf a)) (ih_execEnd_ru_err σ' _)).trans
               (endR_schrumpf _)
   | some τ =>
@@ -344,7 +344,7 @@ theorem execEnd_ru_bindAxiomOptElse {V : Vertrag D}
           · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
             rw [ergWert_ru he, ← endR_schrumpf, ← ih_execEnd_ru_rest σ' (Env.cons _ ρ)]
             rfl
-          · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+          · erw [execEnd_umΛ]
             exact (congrArg (fun a => (EndAusgang.schrumpf a)) (ih_execEnd_ru_err σ' _)).trans
               (endR_schrumpf _)
 

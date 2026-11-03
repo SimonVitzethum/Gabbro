@@ -168,10 +168,10 @@ theorem execEnd_ru_retScoped {V : Vertrag D}
     {Γ : Ctx}
     {Λ : List (Res D)}
     (e)
-    (R)
+    (cleanup)
     (σ : World D)
     (ρ : Env D Γ)
-    : execEnd O.mitRuhe passes R' (ruEnd (.retScoped e R : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.retScoped e R : Endblock D V l Γ Λ) σ ρ) :=
+    : execEnd O.mitRuhe passes R' (ruEnd (.retScoped e cleanup : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.retScoped e cleanup : Endblock D V l Γ Λ) σ ρ) :=
   by
   simp only [ruEnd, execEnd]
   erw [ruErg_orte, lese_worldR, evalErg_ru]
@@ -183,10 +183,10 @@ theorem execEnd_ru_retWhyScoped {V : Vertrag D}
     {Γ : Ctx}
     {Λ : List (Res D)}
     (r)
-    (R)
+    (cleanup)
     (σ : World D)
     (ρ : Env D Γ)
-    : execEnd O.mitRuhe passes R' (ruEnd (.retWhyScoped r R : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.retWhyScoped r R : Endblock D V l Γ Λ) σ ρ) :=
+    : execEnd O.mitRuhe passes R' (ruEnd (.retWhyScoped r cleanup : Endblock D V l Γ Λ)) (worldR σ) (envR ρ) = endR (execEnd O passes R (.retWhyScoped r cleanup : Endblock D V l Γ Λ) σ ρ) :=
   by
   simp only [ruEnd, execEnd]
   rw [gibt_foldl_worldR]

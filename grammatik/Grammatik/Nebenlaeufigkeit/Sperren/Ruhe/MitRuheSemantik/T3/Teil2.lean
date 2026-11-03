@@ -12,6 +12,8 @@ variable {D : Deklaration}
 section Haupt
 variable (O : Orakel D) (passes : Nat)
   (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+  (R' : ∀ f : D.mitRuhe.Fn, World D.mitRuhe → Env D.mitRuhe (D.mitRuhe.params f) → RufAusgang f)
+
 set_option linter.unusedSectionVars false in
 theorem execBlock_ru_bindAxiom {V : Vertrag D}
     {l : Bool}
@@ -255,9 +257,7 @@ theorem execBlock_ru_narrowRequired {V : Vertrag D}
       (Env.cons (⟨(eval (σ.lese Λ e.orte) e (σ.lese Λ e.orte) ρ).n, hc.1, hc.2⟩ : Zahl lo' hi') ρ))).trans
       (ausR_schrumpf _)
   · erw [dif_neg hc, dif_neg hc]
-    exact Or.inl rfl
-
-end Haupt
+    rfl
 
 set_option linter.unusedSectionVars false in
 theorem execBlock_ru_bindAxiomOpt {V : Vertrag D}
