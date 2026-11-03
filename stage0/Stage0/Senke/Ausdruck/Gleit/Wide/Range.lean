@@ -72,7 +72,23 @@ theorem computedFloatRangeL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     exact canonicalFloatRangeL_ok x hw finite producer
       (fun d c top hc ht m pc hp => run hc ht m pc hp) emitted fits pre
   have result := routineChooseL_ok check yes no
-  simpa only [computedFloatRangeL, computedFloatRangeReject, decide_eq_true_eq] using result
+  by_cases nonfinite : x.bexp = 2047
+  · simpa only [computedFloatRangeL, computedFloatRangeReject, nonfinite,
+      decide_true, ite_true] using result
+  · simpa only [computedFloatRangeL, computedFloatRangeReject, nonfinite,
+      decide_false, Bool.false_eq_true, ite_false] using result
+
+/-- The finite path is exactly the established inclusive decision, including
+    its NaN-endpoint rejection. The extra guard changes overflow only. -/
+theorem computedFloatRangeReject_finite {lo hi : Int × Int} {x : GFloat}
+    (finite : gleitEndlich x = true) :
+    computedFloatRangeReject lo hi x = floatRangeReject lo hi x := by
+  have notMax : x.bexp ≠ 2047 := by
+    intro maxExp
+    simp only [gleitEndlich, klasse, show f64.bexpMax = 2047 from rfl,
+      maxExp, ite_true] at finite
+    split at finite <;> cases finite
+  exact if_neg notMax
 
 /-- Overflow must reject even when the declared upper endpoint is infinite. -/
 theorem computedFloatRangeReject_overflow_zeuge :
