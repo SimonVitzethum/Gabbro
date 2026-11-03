@@ -14,6 +14,7 @@ public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomValueWitness
 public import Stage0.Zeugen.Annahme.Optional.OptionalAxiomVoidWitness
 public import Stage0.Zeugen.Ablehnung.ConsumingTraversalWitness
 public import Stage0.Zeugen.Ablehnung.OwnerMintWitness
+public import Stage0.Zeugen.Pipeline.RetireWitness
 public import Stage0.Zeugen.Annahme.LibraryWitness
 public import Stage0.Zeugen.Annahme.CheckWitness
 public import Stage0.Zeugen.Annahme.AccWitness
