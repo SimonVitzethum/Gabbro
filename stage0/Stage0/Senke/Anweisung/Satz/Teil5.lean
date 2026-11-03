@@ -199,12 +199,15 @@ theorem lowB_ok {O : Orakel D} [TorOK L O] [SichtOK O] {passes : Nat} {R : (f : 
   | _, Γ, Λ, _, .float op a b low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr => by
       cases op with
       | add =>
-        exact blockFloatAdd_case hS hA hlo0 hens
+        exact blockFloatAddSub_case false hS hA hlo0 hens
           (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
           c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
-      | sub => simp [lowB, floatAddBlockL] at h
-      | mul => simp [lowB, floatAddBlockL] at h
-      | div => simp [lowB, floatAddBlockL] at h
+      | sub =>
+        exact blockFloatAddSub_case true hS hA hlo0 hens
+          (fun {pr ex} => lowB_ok (pr := pr) (ex := ex) hS hA hlo0 hens rest)
+          c top h hK hs hW m pc σ ρ hp hlo hlo2 hu hk hWa hpr
+      | mul => simp [lowB, floatAddSubBlockL] at h
+      | div => simp [lowB, floatAddSubBlockL] at h
   | _, Γ, Λ, _, .floatLit q low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
       lowB_ok_floatLit (hS := hS) (hA := hA) (hlo0 := hlo0) (hens := hens) (q := q) (low := low) (high := high) (rest := rest) (c := c) (top := top) (h := h) (hK := hK) (hs := hs) (hW := hW) (m := m) (pc := pc) (σ := σ) (ρ := ρ) (hp := hp) (hlo := hlo) (hlo2 := hlo2) (hu := hu) (hk := hk) (hWa := hWa) (hpr := hpr) (ih_lowB_ok_rest := fun {O} [zinst1 : TorOK L O] [zinst2 : SichtOK O] {passes} {R} {A} {C} {dv} {cap} (hS) (hA) {P} {fp} {K} {Ks} {lo} {rp} {cfp} {σ0} {ρ0} {cens} {tens} (hlo0) (hens) {reserved} {pr} {ex} => @lowB_ok O zinst1 zinst2 passes R A C dv cap hS hA P f fp K Ks lo rp cfp σ0 ρ0 cens tens hlo0 hens reserved pr ex _ _ _ _ rest)
   | _, Γ, Λ, _, .floatOf e low high rest, c, top, h, hK, hs, hW, m, pc, σ, ρ, hp, hlo, hlo2, hu, hk, hWa, hpr =>
