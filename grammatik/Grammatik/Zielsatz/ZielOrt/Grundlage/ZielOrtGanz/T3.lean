@@ -15,14 +15,15 @@ variable {P : Programm D} {O : Orakel D} {passes : Nat}
 /-- **At a `logik` check whose test passes, G fires.** From `PrueftG` (the
     conclusion of the goal theorem) and `HeldGenau` of the head's static
     holdings: `travNext`/`travDone`, `ewigWeiter`, `dannLeaveTrav`, and
-    `blatt`/`dannBlatt` on a `state` transition. -/
+    `blatt`/`dannBlatt` on a `state` transition, and required narrowing. -/
 theorem schritt_an_pruefungI {M : RufMaschineG D} (t : Faden) (hP : PrueftG O passes M t)
     (hH : HeldIn (M.faeden t).kopf.rest.2.2.1 (offen (M.faeden t).spur))
     (hA : AnPruefungG M t) : ∃ M', RufSchrittG P O passes M t M' := by
   rcases hA with ⟨l, Γ, Λ, ρ, tb, inv, body, ks, k, hr⟩ | ⟨l, Γ, Λ, ρ, a, n, inv, body, k, hr⟩ |
       ⟨l, Γ, Λ, Λx, ρ, tb, inv, body, is, k, rest, hl, i, hr⟩ |
       ⟨l, Γ, Λ, ρ, lo, hi, tb, fl, hτ, i, von, nach, hn, he, hw, hL, K, hr⟩ |
-      ⟨l, Γ, Λ, Λ'', ρ, lo, hi, tb, fl, hτ, i, von, nach, hn, he, hw, hL, rst, k, hr⟩
+      ⟨l, Γ, Λ, Λ'', ρ, lo, hi, tb, fl, hτ, i, von, nach, hn, he, hw, hL, rst, k, hr⟩ |
+      ⟨l, Γ, Λ, Λ', ρ, lo, hi, lo', hi', e, rest, k, hr⟩
   · have hwahr := hP.1 l Γ Λ ρ tb inv body ks k hr
     rw [hr] at hH
     cases ks with
@@ -56,6 +57,11 @@ theorem schritt_an_pruefungI {M : RufMaschineG D} (t : Faden) (hP : PrueftG O pa
     obtain ⟨M', hs, _⟩ := w_dannBlatt (P := P) (O := O) (passes := passes) (z := M.faeden t) rfl
       _ rst k ρ rfl hr hH σ' ρ' hst herw
     exact ⟨M', hs⟩
+  · have passed := hP.requiredRange l Γ Λ Λ' ρ lo hi lo' hi' e rest k hr
+    rw [hr] at hH
+    obtain ⟨neu, hneu, _⟩ := Erw.lese (M.weltVon t) Λ e.orte
+    exact ⟨_, RufSchrittG.dannNarrowRequired M t l Γ Λ Λ' lo hi lo' hi' e rest k ρ hr
+      _ rfl passed neu hneu hH⟩
 
 /-- The form with the exact held set (before the held-set relaxation the
     rules demanded it; now `HeldIn` suffices, `schritt_an_pruefungI`). -/

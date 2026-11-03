@@ -1,6 +1,7 @@
 module
 
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.VerbrauchPruefung
+public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.RequiredRange
 public import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz.T2.Teil1
 
 @[expose] public section
@@ -20,6 +21,7 @@ variable {D : Deklaration}
       `dannBlatt`; the only leaf with a `logik` outcome is a `state`
       transition): its outcome is no `logik` outcome, so the transition
       finds its pre-state.
+    * required narrowing at a block head: the actual read/eval value is in range;
     Consuming boundaries additionally require fuel and a selectable minimum
     in a nonempty domain, strict
     descent at every completed round, and the invariant on `leave`.
@@ -88,8 +90,12 @@ def PrueftG (O : Orakel D) (passes : Nat) (M : RufMaschineG D) (t : Faden) : Pro
         (i : Wert D (.index (D.count tb))) (w : Bool),
       (M.faeden t).kopf.rest = ⟨true, .index (D.count tb) :: Γ, Λx, .cons i ρ,
         .dann (.cons (abbS rfl w) restb) (.verbrauchRest tb member edge inv bound mass body rest vor k)⟩ →
-      verbrauchAbbruchPrueft World.lese inv mass vor w (M.weltVon t) ρ)
+      verbrauchAbbruchPrueft World.lese inv mass vor w (M.weltVon t) ρ) ∧
+    RequiredRangePrueftG M t
 
+/-- The required-range component is derived with all other logical checks of the replay. -/
+theorem PrueftG.requiredRange {O : Orakel D} {passes : Nat} {M : RufMaschineG D} {t : Faden}
+    (h : PrueftG O passes M t) : RequiredRangePrueftG M t := h.2.2.2.2.2.2.2.2
 
 /-- **No thread of `M` is stopped at a `logik` check of G.** -/
 def KeinLogikHaltG (O : Orakel D) (passes : Nat) (M : RufMaschineG D) : Prop :=
@@ -116,7 +122,8 @@ theorem fadenR_prueft (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O)
     fun l Γ Λ Λ' ρ s K hb hr e he => ?_, fun l Γ Λ Λ' Λ'' ρ s rst k hb hr e he => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest k hr => ?_,
     fun l Γ Λ ρ tb member edge inv bound mass body rest vor k i hr => ?_,
-    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_⟩
+    fun l Γ Λ Λx ρ tb member edge inv bound mass body rest vor k restb i w hr => ?_,
+    fadenR_requiredRange hO hRL hQ hL t hF⟩
   · obtain ⟨H, HA, σ, hg, hok, hno⟩ := kopfR_keineLogik' hO hRL hQ hL hK hr
     refine wahr_of_nicht_falsch fun hw => hno .schleife ?_
     apply semV_trav_falsch
@@ -191,7 +198,7 @@ end Halt
 /-- **Thread `t` of `M` stands at a `logik` check of G**: a `traverse`
     boundary, a `forever` boundary with budget left, a `leave` out of a
     `traverse` body, or a `state` transition at the head of an end block or
-    of a block. -/
+    of a block, or the required capacity check at a narrowing head. -/
 def AnPruefungG (M : RufMaschineG D) (t : Faden) : Prop :=
   (∃ (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (ρ : Env D Γ) (tb : D.Tab)
       (inv : Expr D Γ Λ .bool)
@@ -226,7 +233,12 @@ def AnPruefungG (M : RufMaschineG D) (t : Faden) : Prop :=
       (rst : Block D (vertragVon D (M.faeden t).kopf.f) l Γ Λ Λ'')
       (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ''),
     (M.faeden t).kopf.rest =
-      ⟨l, Γ, Λ, ρ, .dann (.cons (.shift tb fl hτ i von nach hn he hw hL) rst) k⟩)
+      ⟨l, Γ, Λ, ρ, .dann (.cons (.shift tb fl hτ i von nach hn he hw hL) rst) k⟩) ∨
+  (∃ (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (ρ : Env D Γ) (lo hi lo' hi' : Int)
+      (e : Expr D Γ Λ (.int lo hi))
+      (rest : Block D (vertragVon D (M.faeden t).kopf.f) l (.int lo' hi' :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden t).kopf.f) l Γ Λ'),
+    (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .dann (.narrowRequired e lo' hi' rest) k⟩)
 
 /-- A `state` transition whose outcome is no `logik` outcome is an `ok`
     step that only adds accesses to the trace. -/

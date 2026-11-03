@@ -425,4 +425,27 @@ inductive RufSchrittG1 (P : Programm D) (O : Orakel D) (passes : Nat) :
             σ₂.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
 
+  /-- Required narrowing uses the actual read world and binds its checked integer value.
+      An out-of-range value has no success step, matching `Logik.kapazitaet` in execBlock. -/
+  | dannNarrowRequired (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (lo hi lo' hi' : Int)
+      (e : Expr D Γ Λ (.int lo hi))
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (.int lo' hi' :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ')
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .dann (.narrowRequired e lo' hi' rest) k⟩)
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ e.orte)
+      (h : lo' ≤ (eval σ₁ e σ₁ ρ).n ∧ (eval σ₁ e σ₁ ρ).n ≤ hi')
+      (neu : List (Ereignis D)) (hneu : σ₁.spur = neu ++ (M.faeden f).spur)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      RufSchrittG1 P O passes M f
+        ⟨M.speicher, rufUpdateG M.faeden f
+          ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+              ⟨l, .int lo' hi' :: Γ, Λ,
+                .cons ⟨(eval σ₁ e σ₁ ρ).n, h.1, h.2⟩ ρ, .dann rest (.schrumpf k)⟩⟩,
+            σ₁.spur, (M.faeden f).log⟩,
+          M.lauf ++ rufEigenG f neu, M.start⟩
+
 end Gabbro.Grammatik
