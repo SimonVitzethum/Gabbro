@@ -136,33 +136,6 @@ theorem storage_disjoint_zeuge :
     GuestBoundary.StorageDisjoint [protectedGrant] [guestStorage] :=
   (GuestBoundary.storageDisjointB_iff _ _).mp disjoint_storage
 
-def program : Programm D where
-  invariante := fun e => nomatch e
-  requires := fun _ => .tru
-  ensures := fun _ => .tru
-  rumpf := fun _ => .ret .empty (List.Perm.refl _)
-
-def locks : SperrInv D := ⟨fun e => nomatch e, fun e => nomatch e⟩
-
-/-- The admission is actually conjoined with the existing whole-program
-    checker. This is a model fixture, not a source-to-IR witness. -/
-theorem checked_guest :
-    Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] [] [guest] = true := by
-  decide +kernel
-
-theorem checked_missing_service :
-    Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] []
-      [{ guest with service := none }] = false := by
-  decide +kernel
-
-/-- The service's typed input contract exists on the ordinary program field;
-    admission itself establishes no software implementation or OS guarantee. -/
-theorem ordinary_contract :
-    program.axVertrag false = callVertragWahr D (D.asignatur false) := rfl
-
-theorem no_hardware_isolation : D.axBeleg false = none ∧
-    D.axHerkunft false = some AxOrigin.software := ⟨rfl, rfl⟩
-
 def fits : RufPasst D (vertragVon D ()) (D.asignatur false) [] where
   hw _ h := by cases h
   hg e := nomatch e
@@ -191,5 +164,34 @@ theorem invocation_lower_eq_zeuge :
     invocation.lower = .bindAxiomOptElse none false invocation.args rfl
       fits invocation.writes invocation.globalWrites invocation.fallible
       invocation.failure .nil := GuestBoundary.Invocation.lower_eq invocation
+
+def program : Programm D where
+  invariante := fun e => nomatch e
+  requires := fun _ => .tru
+  ensures := fun _ => .tru
+  rumpf := fun _ => .bindAxiomOptElse none false invocation.args rfl
+    fits invocation.writes invocation.globalWrites invocation.fallible
+    invocation.failure (.ret .empty (List.Perm.refl _))
+
+def locks : SperrInv D := ⟨fun e => nomatch e, fun e => nomatch e⟩
+
+/-- The admission is actually conjoined with the existing whole-program
+    checker. This is a model fixture, not a source-to-IR witness. -/
+theorem checked_guest :
+    Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] [] [guest] = true := by
+  decide +kernel
+
+theorem checked_missing_service :
+    Akzeptiert program locks [()] [] [.inl false, .inl true] [] [] [] []
+      [{ guest with service := none }] = false := by
+  decide +kernel
+
+/-- The service's typed input contract exists on the ordinary program field;
+    admission itself establishes no software implementation or OS guarantee. -/
+theorem ordinary_contract :
+    program.axVertrag false = callVertragWahr D (D.asignatur false) := rfl
+
+theorem no_hardware_isolation : D.axBeleg false = none ∧
+    D.axHerkunft false = some AxOrigin.software := ⟨rfl, rfl⟩
 
 end Gabbro.Grammatik.GuestWitness
