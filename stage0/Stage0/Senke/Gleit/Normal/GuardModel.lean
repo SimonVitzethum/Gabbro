@@ -17,21 +17,25 @@ theorem routineRoundPackWord_exact (s : Bool) (e n : Nat)
       BitVec.ofNat 64 (zuBits f64
         (rundeExakt f64 ⟨if s then -(n : Int) else (n : Int), (e : Int) - 1078⟩)) := by
   let q := rundeInt (n / 8) (n % 8) 8
-  have qb : q ≤ 2 ^ 53 := by
+  have qRange : n / 8 ≤ q ∧ q ≤ n / 8 + 1 := by
     dsimp only [q]
     unfold rundeInt
-    split <;> omega
+    split
+    · omega
+    · split
+      · omega
+      · split <;> omega
+  have qb : q ≤ 2 ^ 53 := by omega
   have qScale : softRoundDyadic n (-3) = q := by
     simp only [softRoundDyadic]
     change rundeInt ((n * 1) / 8) ((n * 1) % 8) 8 = q
-    simp only [Nat.mul_one]
+    simp only [Nat.mul_one, q]
   have signedNonzero : (if s then -(n : Int) else (n : Int)) ≠ 0 := by
     cases s <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
   have magnitude : (if s then -(n : Int) else (n : Int)).natAbs = n := by
     cases s <;> simp
   have sign : decide ((if s then -(n : Int) else (n : Int)) < 0) = s := by
-    cases s <;> simp only [Bool.false_eq_true, ↓reduceIte] <;>
-      simp [show (0 : Int) < n by omega]
+    cases s <;> simp [show (0 : Nat) < n by omega]
   have replay := softRound_replay_all (if s then -(n : Int) else (n : Int))
     ((e : Int) - 1078) signedNonzero
   dsimp only at replay
@@ -47,12 +51,10 @@ theorem routineRoundPackWord_exact (s : Bool) (e n : Nat)
       rw [bits] at replay
       have position : (e : Int) - 1078 + (56 : Nat) - 1 = (e : Int) - 1023 := by omega
       rw [position] at replay
-      have quant : softRoundDyadic n (53 - (56 : Int)) = q := qScale
+      have quant : softRoundDyadic n (53 - ((56 : Nat) : Int)) = q := qScale
       rw [quant] at replay
       have qlow : 2 ^ 52 ≤ q := by
-        dsimp only [q]
-        unfold rundeInt
-        split <;> omega
+        omega
       by_cases overflow : e = 2047
       · have above : (f64.emax : Int) < (e : Int) - 1023 := by
           change (1023 : Int) < (e : Int) - 1023
@@ -116,9 +118,7 @@ theorem routineRoundPackWord_exact (s : Bool) (e n : Nat)
           (show bitlen n ≤ 2 by omega)
         omega
       have qsmall : q ≤ 2 ^ 52 := by
-        dsimp only [q]
-        unfold rundeInt
-        split <;> omega
+        omega
       have carry : q ≠ 2 ^ 53 := by omega
       have below : ¬ (f64.emax : Int) < (e : Int) - 1078 + (bitlen n : Int) - 1 := by
         change ¬ (1023 : Int) < (e : Int) - 1078 + (bitlen n : Int) - 1
@@ -133,14 +133,15 @@ theorem routineRoundPackWord_exact (s : Bool) (e n : Nat)
       rw [if_neg below, if_neg noUnderflow, if_neg subnormal] at replay
       have scale : (e : Int) - 1078 + 1074 = -3 := by omega
       rw [scale, qScale] at replay
+      have exponent : softCarryExp e q = 1 := by
+        simp only [softCarryExp, if_neg carry, floor]
+      have significand : softCarry q = q := by
+        simp only [softCarry, if_neg carry]
+      rw [exponent, significand, if_pos (by decide : (1 : Nat) < 2047)]
       by_cases sub : q < 2 ^ 52
-      · simpa only [softCarryExp, softCarry, if_neg carry, floor,
-          show (1 : Nat) < 2047 by decide, ite_true, sub,
-          show f64.p - 1 = 52 from rfl] using replay
-      · have hidden : q = 2 ^ 52 := by omega
-        simpa only [softCarryExp, softCarry, if_neg carry, floor,
-          show (1 : Nat) < 2047 by decide, ite_true,
-          show f64.p - 1 = 52 from rfl, if_neg sub, hidden, Nat.sub_self] using replay
+      · simpa only [show f64.p - 1 = 52 from rfl, if_pos sub] using replay
+      · have fractionZero : q - 2 ^ 52 = 0 := by omega
+        simpa only [show f64.p - 1 = 52 from rfl, if_neg sub, fractionZero] using replay
   rw [routineRoundPackWord_model s e n eb nb]
   exact congrArg (fun a : GFloat => BitVec.ofNat 64 (zuBits f64 a)) kernel.symm
 
