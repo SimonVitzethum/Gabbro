@@ -67,7 +67,7 @@ def softMulProduct (a b : GFloat) : Nat :=
   softSig a.bexp a.frac * softSig b.bexp b.frac
 
 def softMulExponent (a b : GFloat) : Int :=
-  (max a.bexp 1 : Int) + (max b.bexp 1 : Int) - 2150
+  ((max a.bexp 1 : Nat) : Int) + ((max b.bexp 1 : Nat) : Int) - 2150
 
 /-- Silence of the dispatcher means both inputs are nonzero and finite. -/
 theorem softMulSpecial_none (a b : GFloat) (h : softMulSpecial a b = none) :
@@ -82,7 +82,7 @@ theorem softMul_operand (a : GFloat)
     (finite : klasse f64 a = .normal ∨ klasse f64 a = .subnormal) :
     wertExakt f64 a = some
       ⟨if a.sign then -(softSig a.bexp a.frac : Int) else softSig a.bexp a.frac,
-        (max a.bexp 1 : Int) - 1075⟩ := by
+        ((max a.bexp 1 : Nat) : Int) - 1075⟩ := by
   have notMax : a.bexp ≠ 2047 := by
     intro e
     rcases finite with finite | finite <;>
@@ -95,8 +95,7 @@ theorem softMul_operand (a : GFloat)
     rw [show a = ⟨a.sign, 0, a.frac⟩ by cases a; simp_all,
       softWertExakt_subnormal _ _ nonzero]
     cases a.sign <;> simp [softSig, f64, Format.emin]
-  · rw [show a = ⟨a.sign, a.bexp, a.frac⟩ from rfl,
-      softWertExakt_normal _ _ _ ez notMax]
+  · rw [softWertExakt_normal a.sign a.bexp a.frac ez notMax]
     have index : max a.bexp 1 = a.bexp := Nat.max_eq_left (by omega)
     cases a.sign <;> simp [softSig, ez, index, f64, Format.bias] <;> congr 1 <;> omega
 
@@ -113,7 +112,7 @@ theorem softMul_product (a b : GFloat) (h : softMulSpecial a b = none) :
   congr 1
   · cases a.sign <;> cases b.sign <;>
       simp [exaktMul, softMulProduct, Int.natCast_mul]
-  · change ((max a.bexp 1 : Int) - 1075) + ((max b.bexp 1 : Int) - 1075) = _
+  · change (((max a.bexp 1 : Nat) : Int) - 1075) + (((max b.bexp 1 : Nat) : Int) - 1075) = _
     unfold softMulExponent
     omega
 
