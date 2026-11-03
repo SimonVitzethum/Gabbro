@@ -411,5 +411,6 @@ theorem hcount_anfang (S : Signatur D.Tab D.Glob D.Lock D.Marke) :
   left
   unfold Signatur.anfang
   rw [List.count_append, count_held_marke_map, Nat.add_zero]
+  rfl
 
 end Gabbro.Grammatik
