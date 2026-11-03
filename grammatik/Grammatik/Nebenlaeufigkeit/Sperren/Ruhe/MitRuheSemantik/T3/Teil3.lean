@@ -8,6 +8,16 @@ public import Grammatik.Nebenlaeufigkeit.Sperren.Ruhe.MitRuheSemantik.T3.Teil2
 
 namespace Gabbro.Grammatik
 variable {D : Deklaration}
+
+/-- Transport the complete optional answer before extending its continuation environment. -/
+private theorem ergTransport_ru {e : Option Ty} {τ : Ty} (he : e = some τ)
+    (he' : e.map tyR = some (tyR τ)) (v : ErgVal D e) :
+    (he' ▸ ergR e v : ErgVal D.mitRuhe (some (tyR τ))) =
+      valR τ (he ▸ v : ErgVal D (some τ)) := by
+  cases he
+  cases he'
+  rfl
+
 section Haupt
 variable (O : Orakel D) (passes : Nat)
   (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -214,10 +224,16 @@ theorem execEnd_ru_regReadElse {V : Vertrag D}
   | none => rfl
   | some v =>
       simp only [Option.map]
-      rw [ruE_orte, lese_worldR]
+      have horte :
+          (ruE zusage : Expr D.mitRuhe (tyR (D.rtyp r) :: Γ.map tyR)
+            (Λ.map resR) .bool).orte = zusage.orte := ruE_orte zusage
+      erw [horte, lese_worldR]
       have ez := eval_ru ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage (Env.cons v ρ)
-      change eval _ (ruE zusage) _ (Env.cons (valR _ v) (envR ρ)) = _ at ez
-      rw [ez]
+      change @Eq Bool (eval _ (ruE zusage : Expr D.mitRuhe
+        (tyR (D.rtyp r) :: Γ.map tyR) (Λ.map resR) .bool) _ (Env.cons (valR _ v) (envR ρ)))
+        (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage
+          ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (Env.cons v ρ)) at ez
+      erw [ez]
       cases h : (eval ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) zusage ((σ.fragt (.inr (.inl r))).lese Λ zusage.orte) (Env.cons v ρ) : Bool) with
       | false =>
           simp only [wahr?, valR_bool, h, Bool.false_eq_true, if_false]
@@ -275,18 +291,7 @@ theorem execEnd_ru_bindAxiomOpt {V : Vertrag D}
   cases zi_e with
   | none =>
       simp only [ruEnd, execEnd]
-      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
-      cases axiomAntwort O a (σ.lese Λ args.orte)
-        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
-      | mk σ' w =>
-          cases w with
-          | none => rfl
-          | some v =>
-              simp only [EndAusgang.weiterOpt, ergEnv]
-              exact ih_execEnd_ru_rest σ' _
-  | some τ =>
-      simp only [ruEnd, execEnd]
-      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
       cases axiomAntwort O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
       | mk σ' w =>
@@ -294,8 +299,28 @@ theorem execEnd_ru_bindAxiomOpt {V : Vertrag D}
           | none => rfl
           | some v =>
               simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
-              rw [ergWert_ru he, ← endR_schrumpf, ← ih_execEnd_ru_rest σ' (Env.cons _ ρ)]
-              rfl
+              exact (execEnd_umΛ O.mitRuhe passes R'
+                (nachSig_map (D.asignatur a) Λ) (ruEnd rest)
+                (worldR σ') (envR ρ)).trans (ih_execEnd_ru_rest σ' ρ)
+  | some τ =>
+      simp only [ruEnd, execEnd]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => rfl
+          | some v =>
+              simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
+              erw [execEnd_umΛ]
+              have hv := ergTransport_ru he (congrArg (Option.map tyR) he) v
+              have henv := congrArg
+                (fun w : Wert D.mitRuhe (tyR τ) => Env.cons w (envR ρ)) hv
+              exact (congrArg EndAusgang.schrumpf
+                ((congrArg (fun env => execEnd O.mitRuhe passes R' (ruEnd rest)
+                    (worldR σ') env) henv).trans
+                  (ih_execEnd_ru_rest σ'
+                    (Env.cons (show ErgVal D (some τ) from he ▸ v) ρ)))).trans (endR_schrumpf _)
 
 omit hR in
 set_option linter.unusedSectionVars false in
@@ -322,30 +347,49 @@ theorem execEnd_ru_bindAxiomOptElse {V : Vertrag D}
   cases zi_e with
   | none =>
       simp only [ruEnd, execEnd]
-      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
       cases axiomAntwortSonst O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
       | mk σ' w =>
           rcases w with _ | v | r
           · rfl
-          · simp only [EndAusgang.weiterOpt, ergEnv]
-            exact ih_execEnd_ru_rest σ' _
-          · erw [execEnd_umΛ]
-            exact (congrArg (fun a => (EndAusgang.schrumpf a)) (ih_execEnd_ru_err σ' _)).trans
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            simp only [EndAusgang.weiterOpt, ergEnv]
+            exact (execEnd_umΛ O.mitRuhe passes R'
+              (nachSig_map (D.asignatur a) Λ) (ruEnd rest)
+              (worldR σ') (envR ρ)).trans (ih_execEnd_ru_rest σ' ρ)
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            exact (congrArg EndAusgang.schrumpf
+              ((execEnd_umΛ O.mitRuhe passes R'
+                (nachSig_map (D.asignatur a) Λ) (ruEnd err) (worldR σ')
+                (envR (Env.cons (τ := reasonTy (D.agruende a)) r ρ))).trans
+                (ih_execEnd_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))).trans
               (endR_schrumpf _)
   | some τ =>
       simp only [ruEnd, execEnd]
-      erw [execEnd_umΛ, ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
       cases axiomAntwortSonst O a (σ.lese Λ args.orte)
         (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
       | mk σ' w =>
           rcases w with _ | v | r
           · rfl
-          · simp only [Option.map, EndAusgang.weiterOpt, ergEnv]
-            rw [ergWert_ru he, ← endR_schrumpf, ← ih_execEnd_ru_rest σ' (Env.cons _ ρ)]
-            rfl
-          · erw [execEnd_umΛ]
-            exact (congrArg (fun a => (EndAusgang.schrumpf a)) (ih_execEnd_ru_err σ' _)).trans
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            simp only [EndAusgang.weiterOpt, ergEnv]
+            erw [execEnd_umΛ]
+            have hv := ergTransport_ru he (congrArg (Option.map tyR) he) v
+            have henv := congrArg
+              (fun w : Wert D.mitRuhe (tyR τ) => Env.cons w (envR ρ)) hv
+            exact (congrArg EndAusgang.schrumpf
+              ((congrArg (fun env => execEnd O.mitRuhe passes R' (ruEnd rest)
+                  (worldR σ') env) henv).trans
+                (ih_execEnd_ru_rest σ'
+                  (Env.cons (show ErgVal D (some τ) from he ▸ v) ρ)))).trans (endR_schrumpf _)
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            exact (congrArg EndAusgang.schrumpf
+              ((execEnd_umΛ O.mitRuhe passes R'
+                (nachSig_map (D.asignatur a) Λ) (ruEnd err) (worldR σ')
+                (envR (Env.cons (τ := reasonTy (D.agruende a)) r ρ))).trans
+                (ih_execEnd_ru_err σ' (Env.cons (τ := reasonTy (D.agruende a)) r ρ)))).trans
               (endR_schrumpf _)
 
 end Haupt
