@@ -34,6 +34,7 @@ def GRest.plus (j : Nat) {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : L
   | _, _, _, .wartetSonst n err rest k => .wartetSonst n err rest (k.plus j)
   | _, _, _, .abbruch k => .abbruch (k.plus j)
   | _, _, _, .rueckBereit sc k => .rueckBereit sc (k.plus j)
+  | _, _, _, .zurueckgekehrt a => .zurueckgekehrt a
   | _, _, _, .leer => .leer
 
 /-- A frame with its residue shifted. -/
@@ -108,6 +109,7 @@ theorem GRest.plus_zero {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (
   | _, _, _, .wartetSonst _ _ _ k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .abbruch k => by simp only [GRest.plus, GRest.plus_zero k]
   | _, _, _, .rueckBereit _ k => by simp only [GRest.plus, GRest.plus_zero k]
+  | _, _, _, .zurueckgekehrt _ => rfl
   | _, _, _, .leer => rfl
 
 theorem GRest.plus_plus (i j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -128,6 +130,7 @@ theorem GRest.plus_plus (i j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} 
   | _, _, _, .wartetSonst _ _ _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .abbruch k => by simp only [GRest.plus, GRest.plus_plus i j k]
   | _, _, _, .rueckBereit _ k => by simp only [GRest.plus, GRest.plus_plus i j k]
+  | _, _, _, .zurueckgekehrt _ => rfl
   | _, _, _, .leer => rfl
 
 theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
@@ -135,6 +138,7 @@ theorem GRest.plus_wartend (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .ende _ | _, _, _, .dann .. | _, _, _, .schrumpf _ | _, _, _, .frei .. | _, _, _, .trav ..
   | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _ | _, _, _, .rueckBereit ..
+  | _, _, _, .zurueckgekehrt _ => rfl
   | _, _, _, .leer => rfl
 
 /-! ## 2. The budget decides nothing but the budget -/
@@ -160,6 +164,7 @@ theorem GRest.plus_anRueck (j : Nat) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .ende _ | _, _, _, .dann .. | _, _, _, .schrumpf _ | _, _, _, .frei .. | _, _, _, .trav ..
   | _, _, _, .travRest .. | _, _, _, .verbrauch .. | _, _, _, .verbrauchRest .. | _, _, _, .wieder .. | _, _, _, .wiederRest .. | _, _, _, .ewig ..
   | _, _, _, .ewigRest .. | _, _, _, .wartet .. | _, _, _, .wartetSonst .. | _, _, _, .abbruch _ | _, _, _, .rueckBereit ..
+  | _, _, _, .zurueckgekehrt _ => rfl
   | _, _, _, .leer => rfl
 
 theorem fertigG_plus (j : Nat) (M : RufMaschineG D) (t : Faden) : FertigG (M.plus j) t ↔ FertigG M t := by

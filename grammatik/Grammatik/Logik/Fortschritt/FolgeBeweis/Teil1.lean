@@ -163,6 +163,8 @@ theorem fR_mono (e : Bool) :
   | _, _, _, .wartetSonst _ err b k, w, w', hw, h => ⟨h.1, fB_mono Φ e b w w' hw h.2.1, h.2.2⟩
   | _, _, _, .abbruch _, _, _, _, h => h
   | _, _, _, .rueckBereit .., _, _, _, h => h
+  | _, _, _, .zurueckgekehrt _, w, w', hw, h => by
+      cases e <;> cases w <;> cases w' <;> simp_all [GRest.fR]
   | _, _, _, .leer, _, _, _, h => h
 
 theorem fR_von_false (e : Bool) {l : Bool} {Γ : Ctx} {Λ : List (Res D)}

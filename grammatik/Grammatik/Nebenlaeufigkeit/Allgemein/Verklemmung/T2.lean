@@ -57,9 +57,8 @@ theorem schritt_an_sperre {w : D.Fn} {M : RufMaschineG D} {t : Faden}
 end Folgen
 /-! ## 4. No wait cycle -/
 
-/-- A statement returns (a value or a reason). Scoped returns are NOT counted: the machine has no step that
-    fires them yet (C11 scoped-return step is OPEN), so a thread standing at one is neither finished nor
-    covered by the finished-thread guarantees. -/
+/-- A statement is already at a plain return. A scoped return must first
+    release its scopes; only its completed residue counts as returned. -/
 def Stmt.istRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     Stmt D V l Γ Λ Λ' → Bool
   | .ret .. => true
@@ -87,6 +86,7 @@ def GRest.anRueck {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
     GRest D V l Γ Λ → Bool
   | .ende e => e.istRueck
   | .dann b _ => b.istRueck
+  | .zurueckgekehrt _ => true
   | _ => false
 
 theorem Stmt.istRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -106,12 +106,26 @@ theorem GRest.anRueck_perm {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
       cases b with
       | cons s _ => exact s.istRueck_perm h
       | _ => simp only [anRueck, Block.istRueck, Bool.false_eq_true] at h
+  | zurueckgekehrt _ => exact List.Perm.refl _
   | _ => simp only [anRueck, Bool.false_eq_true] at h
 
 /-- **Thread `t` is finished**: its stack is empty and its head stands at a
     return. -/
 def FertigG (M : RufMaschineG D) (t : Faden) : Prop :=
   (M.faeden t).stapel = [] ∧ (M.faeden t).kopf.rest.2.2.2.2.anRueck = true
+
+/-- The released root is finished, independently of the channel of its
+    saved answer. The holdings equality is enforced by the residue's index. -/
+theorem fertigG_zurueckgekehrt {M : RufMaschineG D} {t : Faden}
+    (hst : (M.faeden t).stapel = []) {l : Bool} {Γ : Ctx} (ρ : Env D Γ)
+    (a : ErgVal D (vertragVon D (M.faeden t).kopf.f).erg ⊕
+      Fin (vertragVon D (M.faeden t).kopf.f).gruende)
+    (hhead : (M.faeden t).kopf.rest =
+      ⟨l, Γ, (vertragVon D (M.faeden t).kopf.f).ende, ρ, .zurueckgekehrt a⟩) :
+    FertigG M t := by
+  refine ⟨hst, ?_⟩
+  rw [hhead]
+  rfl
 
 /-- **Thread `t` waits for a lock**: it stands at a `locks L` head, and
     every lock it stands at is held by another thread. -/

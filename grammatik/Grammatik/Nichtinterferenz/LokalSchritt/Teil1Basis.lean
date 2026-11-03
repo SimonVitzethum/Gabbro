@@ -85,10 +85,10 @@ theorem kBinde_rel (f : D.Fn) (rst : List (KRahmen D)) (c : KRahmen D) {σ τ : 
       · exact KRel.none_l _
   | _ => exact KRel.none_l _
 
-theorem kPop_rel (st : List (KRahmen D)) (f : D.Fn) {σ τ : World D} (h : WRel T σ τ)
-    (v : ErgVal D (vertragVon D f).erg) : KRel T (kPop st f σ v) (kPop st f τ v) := by
+theorem kPop_rel (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) {σ τ : World D} (h : WRel T σ τ)
+    (v : ErgVal D (vertragVon D f).erg) : KRel T (kPop st f rho σ v) (kPop st f rho τ v) := by
   cases st with
-  | nil => exact KRel.none_l _
+  | nil => exact KRel.lokal [] f rho rho _ h.1 h.2
   | cons c rst =>
       simp only [kPop]
       refine KRel.ite (fun _ => kBinde_rel f rst c h v) (fun _ => ?_)
@@ -97,11 +97,11 @@ theorem kPop_rel (st : List (KRahmen D)) (f : D.Fn) {σ τ : World D} (h : WRel 
       subst ha hb
       exact ⟨by simp only [h.1], h.2⟩
 
-theorem kPopGrund_rel (st : List (KRahmen D)) (f : D.Fn) (spur : List (Ereignis D))
+theorem kPopGrund_rel (st : List (KRahmen D)) (f : D.Fn) (rho : Env D (D.params f)) (spur : List (Ereignis D))
     {m₁ m₂ : Speicher D} (hm : SpeicherGleich T m₁ m₂) (r : Fin (vertragVon D f).gruende) :
-    KRel T (kPopGrund st f spur m₁ r) (kPopGrund st f spur m₂ r) := by
+    KRel T (kPopGrund st f rho spur m₁ r) (kPopGrund st f rho spur m₂ r) := by
   cases st with
-  | nil => exact KRel.none_l _
+  | nil => exact KRel.lokal [] f rho rho _ rfl hm
   | cons c rst =>
       obtain ⟨cf, crho, ⟨l, Γ, Λ, ρc, rr⟩⟩ := c
       cases rr with

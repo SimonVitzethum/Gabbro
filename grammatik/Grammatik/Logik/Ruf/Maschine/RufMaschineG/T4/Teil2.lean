@@ -39,6 +39,7 @@ def GRest.sauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .abbruch k => k.sauber
   | .leer => true
   | .rueckBereit _ k => k.sauber
+  | .zurueckgekehrt _ => true
 
 /-- A stacked residue: clean, or waiting over a clean continuation. -/
 def GRest.stapelSauber {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
