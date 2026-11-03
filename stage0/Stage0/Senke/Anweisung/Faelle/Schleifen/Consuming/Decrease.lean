@@ -61,7 +61,7 @@ theorem strict_compare {Γ : Ctx} {ρ : Env D Γ} {m : Mem} {pc fp : W}
 /-- Both protected words really survive any body outcome that reaches one of
     the post-body checks. This uses the ordinary block simulation's Keeps,
     including bodies with calls or world writes. -/
-theorem body_control_words {P : Programm D} {f : D.Fn} {Γ : Ctx}
+theorem body_control_words {Γ : Ctx}
     {σ : World D} {ρ : Env D Γ} {fp pc exit : W} {lo K : Nat} {pr : List Nat}
     {counter saved : Nat} {m : Mem} {fuel : W} {old : Int}
     (body : Reach L fp lo K (counter :: saved :: pr) ⟨pc, fp⟩ m exit σ ρ reserved)
