@@ -41,9 +41,15 @@ private theorem antwortRestG_fort {V : Vertrag D} (g : D.Fn)
   cases a <;> cases r <;>
     simp_all [antwortRestG, GRest.fOk, GRest.blockiert, GRest.nimmtAb,
       GRest.absorb, Endblock.alsBlock_terminal]
-  all_goals split at ha <;>
-    simp_all [GRest.fOk, GRest.blockiert, GRest.nimmtAb, GRest.absorb,
-      Endblock.alsBlock_terminal]
+  all_goals first
+    | (obtain ⟨guard, ha⟩ := ha; cases ha
+       simp_all [GRest.fOk, GRest.blockiert, GRest.nimmtAb, GRest.absorb,
+         Endblock.alsBlock_terminal])
+    | (cases ha; simp_all [GRest.fOk, GRest.blockiert, GRest.nimmtAb, GRest.absorb,
+        Endblock.alsBlock_terminal])
+    | (split at ha <;>
+        simp_all [GRest.fOk, GRest.blockiert, GRest.nimmtAb, GRest.absorb,
+          Endblock.alsBlock_terminal])
 
 /-- Answer delivery uses the caller's stored shape; a root is complete. -/
 theorem rufAntwortG_fort {z z' : RufFadenG D} {vor σ : World D}

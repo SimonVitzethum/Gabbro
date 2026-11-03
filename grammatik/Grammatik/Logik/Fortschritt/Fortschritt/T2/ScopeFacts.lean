@@ -38,9 +38,9 @@ theorem scopesOk_armWahlG (haelt : List D.Lock) (boden : Option Int)
       arms.scopesOk haelt boden = true →
         (armWahlG arms v).2.1.scopesOk haelt boden = true
   | _, .nil, ⟨⟨k, hk⟩, _⟩, _ => (Nat.not_lt_zero k hk).elim
-  | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => (Bool.and_eq_true.mp h).1
+  | _, .cons b rest, ⟨⟨0, _⟩, _⟩, h => (Bool.and_eq_true_iff.mp h).1
   | _, .cons b rest, ⟨⟨n + 1, hn⟩, nutz⟩, h =>
-      scopesOk_armWahlG haelt boden rest _ (Bool.and_eq_true.mp h).2
+      scopesOk_armWahlG haelt boden rest _ (Bool.and_eq_true_iff.mp h).2
 
 theorem scopesOk_grundWahlG (haelt : List D.Lock) (boden : Option Int)
     {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -48,9 +48,9 @@ theorem scopesOk_grundWahlG (haelt : List D.Lock) (boden : Option Int)
       arms.scopesOk haelt boden = true →
         (grundWahlG arms r).scopesOk haelt boden = true
   | _, .nil, ⟨k, hk⟩, _ => (Nat.not_lt_zero k hk).elim
-  | _, .cons b rest, ⟨0, _⟩, h => (Bool.and_eq_true.mp h).1
+  | _, .cons b rest, ⟨0, _⟩, h => (Bool.and_eq_true_iff.mp h).1
   | _, .cons b rest, ⟨k + 1, hk⟩, h =>
-      scopesOk_grundWahlG haelt boden rest _ (Bool.and_eq_true.mp h).2
+      scopesOk_grundWahlG haelt boden rest _ (Bool.and_eq_true_iff.mp h).2
 
 /-- The existing source scope check, retained on every remaining source
     fragment. This is independent of memory and the replay's read footprint. -/
