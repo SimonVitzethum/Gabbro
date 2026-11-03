@@ -225,7 +225,10 @@ def druckItem : SItemTief → List Token
   | .bootT n a ss dp =>
     ([.wort "boot", nameTok n, .wort "arch", nameTok a, .zeichen "{"] ++ druckBootSchritte ss ++
       [.wort "dispatch"] ++ pfadToks dp ++ [.zeichen ";", .zeichen "}"])
-  | .trustT n m a ri st g =>
+  | .trustT n m a [] "" "" (some service) =>
+    [.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a,
+      .wort "via", nameTok service, .zeichen ";"]
+  | .trustT n m a ri st g _ =>
     ([.wort "entrust", nameTok n, .wort "at", nameTok m, .wort "arch", nameTok a, .zeichen "{",
       .wort "regs", .wort "in", .zeichen "{"] ++ druckRegBinds ri ++
       [.zeichen "}", .wort "stack", nameTok st, .wort "assume", nameTok g, .zeichen ";", .zeichen "}"])
