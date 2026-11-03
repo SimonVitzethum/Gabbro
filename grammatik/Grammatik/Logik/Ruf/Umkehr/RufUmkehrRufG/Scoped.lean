@@ -73,10 +73,10 @@ private theorem erhaltK_antwort {P : Programm D} {O : Orakel D} {passes : Nat}
   cases hst : (M.faeden f).stapel with
   | nil =>
     simp only [rufAntwortG, hst, Option.some.injEq] at ha
-    subst z
+    subst ha
     refine Or.inl ⟨false, _, _, (M.faeden f).kopf.rho,
       .zurueckgekehrt ⟨.inl v, vor⟩, σ.spur, ?_,
-      RestK.zurueckgekehrt (A := A) (C := C) v vor, ?_⟩
+      RestK.zurueckgekehrt (A := A) (C := C) (V := vertragVon D (M.faeden f).kopf.f) v vor, ?_⟩
     · simpa only [hst] using hz
     · have hw : M'.weltVon f = σ := by
         unfold RufMaschineG.weltVon
@@ -89,9 +89,10 @@ private theorem erhaltK_antwort {P : Programm D} {O : Orakel D} {passes : Nat}
     cases hr : antwortRestG (M.faeden f).kopf.f (.inl v) caller.rest with
     | none => simp only [hr] at ha; cases ha
     | some rest =>
-      simp only [hr, Option.some.injEq] at ha
+      simp [hr] at ha
+      subst ha
       exact Or.inr (Or.inl ⟨v, σ, caller, _, st, rfl,
-        antwortRestG_wiederauf caller v rest hr, hz.trans ha.symm, hm, hs⟩)
+        antwortRestG_wiederauf caller v rest hr, hz, hm, hs⟩)
 
 /-- Scoped returns retain the normal-answer converse through every cleanup
     step. Reason returns remain outside its syntactic fragment. -/
@@ -188,10 +189,9 @@ theorem semK_scopedWert_zeuge :
       .zurueck ((umkehrScopedVor.lese adΛL umkehrScopedExpr.orte).gibt ())
         (evalErg (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) (.val umkehrScopedExpr)
           (umkehrScopedVor.lese adΛL umkehrScopedExpr.orte) Env.nil) := by
-  simpa only [umkehrScopedR, List.foldl] using
-    (semK_scopedWert adO 0 keinRuf
-      (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
-      (.val umkehrScopedExpr) umkehrScopedR rfl umkehrScopedVor Env.nil)
+  exact semK_scopedWert adO 0 keinRuf
+    (.ende (l := false) (.retScoped (.val umkehrScopedExpr) umkehrScopedR))
+    (.val umkehrScopedExpr) umkehrScopedR rfl umkehrScopedVor Env.nil
 
 def umkehrScopedWert : ErgVal adD (adD.erg adFn) :=
   ⟨7, by decide, by decide⟩
