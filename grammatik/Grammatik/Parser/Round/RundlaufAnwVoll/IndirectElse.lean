@@ -14,7 +14,7 @@ theorem indCallElse_tail (reader : List Token → Except String (SAnw × List To
       ((if strEq reason "" then [] else [.zeichen "(", nameTok reason, .zeichen ")"]) ++
         (druckAnw body ++ .zeichen ";" :: rest))) =
       .ok (.callIndElse pointer args reason body, rest) := by
-  rw [parseIndRufMitElse, callElse_tail reader "" args reason body rest hk hb]
+  rw [parseIndRufMitElse, callElse_tail reader (druck pointer) args reason body rest hk hb]
   rfl
 
 /-- Every printable pointer expression and argument list round trips with its
