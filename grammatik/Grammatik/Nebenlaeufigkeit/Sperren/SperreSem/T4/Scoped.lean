@@ -78,7 +78,7 @@ theorem semH_scopedWert (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes :
     World.gibt_foldl_speicher _ _
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedWert_faelle h <;> subst r
   · simp only [semH, weiterH, execEndH, hcheck, ite_true, zErgG, ZErgG.gleich]
-    exact ⟨hg, rfl⟩
+    exact ⟨hg, trivial⟩
   · rw [semH_ende_cons]
     simp only [execStmtH, hcheck, ite_true]
     exact ⟨hg, rfl⟩
@@ -96,7 +96,7 @@ theorem semH_scopedGrund (S : SperrInv D) (O : Orakel D) (U : Umwelt D) (passes 
   have hg : SG (R.scopes.foldl World.gibt σ) σ := World.gibt_foldl_speicher _ _
   obtain h | ⟨rest, h⟩ | ⟨Λ', rest, k, h⟩ := GRest.scopedGrund_faelle h <;> subst r
   · simp only [semH, weiterH, execEndH, hcheck, ite_true, zErgG, ZErgG.gleich]
-    exact ⟨hg, rfl⟩
+    exact ⟨hg, trivial⟩
   · rw [semH_ende_cons]
     simp only [execStmtH, hcheck, ite_true]
     exact ⟨hg, rfl⟩
