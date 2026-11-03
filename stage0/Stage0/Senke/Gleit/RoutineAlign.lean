@@ -84,11 +84,14 @@ theorem routineSigL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
     (ha : WordCode (L := L) ρ W a av) :
     WordCode (L := L) ρ W (fun d => routineSigL d a) (routineSigWord av) := by
-  have e := unpackBexpL_ok ha
-  have f := unpackFracL_ok ha
+  have e : WordCode (L := L) ρ W _ _ := unpackBexpL_ok ha
+  have f : WordCode (L := L) ρ W _ _ := unpackFracL_ok ha
   have normal : WordCode (L := L) ρ W _ _ := WordCode.bin f (WordCode.konst 4503599627370496 (by decide))
     (g := fun x y => some (x + y)) rfl rfl (by decide : 3 < 256)
-  exact routineChooseL_ok (isExpZeroL_ok e) (fun _ => f) (fun _ => normal)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok (isExpZeroL_ok e) (fun _ => f) (fun _ => normal)
+  intro fp K d c top h hK m pc hp
+  exact result h hK m pc hp
 
 theorem routineIndexL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Prop}
     {a : Nat → Option (List II × Nat)} {av : Runner.W}
@@ -109,12 +112,15 @@ theorem routineDirectionalL_ok {Γ : Ctx} {ρ : Env D Γ} {W : Runner.Mem → Pr
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
   have ss : WordCode (L := L) ρ W _ _ := WordCode.bin (routineSigL_ok hs) (WordCode.const 3 (by decide))
     (g := fun x y => some (x <<< (y.toNat % 64))) rfl rfl (by decide : 11 < 256)
-  have gap := alignGapL_ok (routineIndexL_ok hs) (routineIndexL_ok hl)
-  have sm := alignShiftL_ok ss gap
-  have xor := xorSignL_ok (unpackSignL_ok hl) (unpackSignL_ok hs)
+  have gap : WordCode (L := L) ρ W _ _ := alignGapL_ok (routineIndexL_ok hs) (routineIndexL_ok hl)
+  have sm : WordCode (L := L) ρ W _ _ := alignShiftL_ok ss gap
+  have xor : WordCode (L := L) ρ W _ _ := xorSignL_ok (unpackSignL_ok hl) (unpackSignL_ok hs)
   have same : WordCode (L := L) ρ W _ _ := WordCode.bin xor (WordCode.const 0 (by decide))
     (g := fun x y => some (Runner.IR.bool (x == y))) rfl rfl (by decide : 14 < 256)
-  exact routineChooseL_ok same (fun _ => addMagL_ok lm sm) (fun _ => subMagL_ok lm sm)
+  have result : WordCode (L := L) ρ W _ _ :=
+    routineChooseL_ok same (fun _ => addMagL_ok lm sm) (fun _ => subMagL_ok lm sm)
+  intro fp K d c top h hK m pc hp
+  exact result h hK m pc hp
 
 /-- Both operand orders use the same directional routine. Unsigned comparison
     selects the order from the actual words, without an ordering premise. -/
