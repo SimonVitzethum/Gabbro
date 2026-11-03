@@ -150,6 +150,9 @@ def elabExpandedWithScopes (msE : List SItemTief) (consts : List (String × Int)
   match uGibtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
   | .error e => .error e
   | .ok _ =>
+  match uLeihtPruef (ms.filterMap (fun | .tableT _ _ _ _ o _ _ => o | _ => none)) (fns ++ torFns ++ zeigerPaare.map (·.2)) with
+  | .error e => .error e
+  | .ok _ =>
   match uWurzeln tabs fns ms with
   | .error e => .error e
   | .ok roots =>
