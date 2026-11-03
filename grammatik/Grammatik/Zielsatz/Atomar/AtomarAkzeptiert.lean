@@ -296,7 +296,7 @@ theorem fussWXB_ok (hvoll : ∀ g : D.Fn, g ∈ fs) (hAbg : ∀ w, AbgK P fs (re
     (h : fussWXB P S fs ws = true) (f : D.Fn) : FussSX P S (lokW P fs ws) (GeteiltV P ws) f := by
   rw [← getrenntW_eq_lokW hvoll]
   have h1 := (List.all_eq_true.mp h) f (hvoll f)
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h1
+  simp only [Bool.and_eq_true] at h1
   refine ⟨fun c hc => ?_, fun c hc => (List.all_eq_true.mp h1.2) c hc⟩
   have h2 := (List.all_eq_true.mp h1.1) c hc
   simp only [Bool.or_eq_true] at h2
@@ -352,7 +352,7 @@ theorem scopesOkProg_of_akzeptiertX (hvoll : ∀ g : D.Fn, g ∈ fs)
 theorem fussWXB_of_fussWB (h : fussWB P S fs ws = true) : fussWXB P S fs ws = true := by
   refine List.all_eq_true.mpr fun f hf => ?_
   have h1 := (List.all_eq_true.mp h) f hf
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true] at h1 ⊢
+  simp only [Bool.and_eq_true] at h1 ⊢
   refine ⟨List.all_eq_true.mpr fun c hc => ?_, h1.2⟩
   have h2 := (List.all_eq_true.mp h1.1) c hc
   simp only [Bool.or_eq_true] at h2 ⊢
@@ -388,7 +388,7 @@ theorem vertragsFreiB_vollstaendig {c : D.Tab ⊕ D.Glob}
     cases he : istIn (invOrteP P g) c with
     | true => exact absurd (istIn_iff.mp he) h3
     | false => rfl
-  simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
+  simp only [Bool.and_eq_true]
   exact ⟨⟨e1, e2⟩, e3⟩
 
 /-- **The footprint component with the admitted shared atomics is complete**: from
@@ -413,7 +413,7 @@ theorem fussWXB_vollstaendig (hvoll : ∀ g : D.Fn, g ∈ fs)
         List.eq_nil_iff_forall_not_mem.mpr (fun L hL => hG L (waechterVon_mem.mp hL))
       have hg : geteiltVB P fs c = true := by
         unfold geteiltVB
-        simp only [GuestBoundary.admissionB_nil, Bool.and_true, Bool.and_eq_true]
+        simp only [Bool.and_eq_true]
         refine ⟨⟨atomarB_iff.mpr ha, ?_⟩, vertragsFreiB_vollstaendig hV⟩
         rw [hempty]
         rfl
