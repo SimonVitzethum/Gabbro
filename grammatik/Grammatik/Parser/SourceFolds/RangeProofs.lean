@@ -242,7 +242,7 @@ theorem expandNested_ok (source : List SItemTief) (locals : Spec.Locals)
     | float t => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | tru => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | fls => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
-    | variable v => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
+    | «variable» v => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | fnref f => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | res => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
     | why g r => simp [expandNested, matchFoldNode] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩

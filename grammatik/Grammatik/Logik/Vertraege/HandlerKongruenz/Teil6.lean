@@ -29,7 +29,7 @@ public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil8
 
 namespace Gabbro.Grammatik
 
-variable {D : Deklaration} {V : vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 
 /-- **The gated handler premise**: at entries meeting the callee-entry
     discipline the two handlers agree, or both answer an error and the two

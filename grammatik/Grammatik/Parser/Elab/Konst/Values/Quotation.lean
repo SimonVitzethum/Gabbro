@@ -28,10 +28,10 @@ inductive LiteralMeaning (D : Deklaration) (schemas : List USum) :
   | tag (schema : USum) (member : schema ∈ schemas) (shape : schema.spec = cases)
       (i : Fin cases.length) (name : String)
       (named : (schema.cases[i.val]?).map Prod.fst = some name)
-      (syntax : Option SExpr) (value : Nutzlast D.Fn D.passt (cases.get i))
-      (payload : PayloadMeaning D schemas (cases.get i) syntax value) :
+      («syntax» : Option SExpr) (value : Nutzlast D.Fn D.passt (cases.get i))
+      (payload : PayloadMeaning D schemas (cases.get i) «syntax» value) :
       LiteralMeaning D schemas (.sum cases)
-        (match syntax with | none => .variable name | some source => .call name [source])
+        (match «syntax» with | none => .variable name | some source => .call name [source])
         ⟨i, Fall.ofNutzlast D.Fn D.passt cases i value⟩
 inductive PayloadMeaning (D : Deklaration) (schemas : List USum) :
     (c : Option Ty) → Option SExpr → Nutzlast D.Fn D.passt c → Prop where
@@ -42,16 +42,16 @@ end
 
 /-- Exact source literal and its G expression for a complete portable value. -/
 structure Reified (D : Deklaration) (Γ : Ctx) (schemas : List USum) (τ : Ty) (value : Wert D τ) where
-  syntax : SExpr
+  «syntax» : SExpr
   expr : Expr D Γ [] τ
-  source : LiteralMeaning D schemas τ syntax value
+  source : LiteralMeaning D schemas τ «syntax» value
   equation : ∀ before after args, eval before expr after args = value
 
 structure ReifiedPayload (D : Deklaration) (Γ : Ctx) (schemas : List USum)
     (c : Option Ty) (value : Nutzlast D.Fn D.passt c) where
-  syntax : Option SExpr
+  «syntax» : Option SExpr
   expr : NutzlastExpr D Γ [] c
-  source : PayloadMeaning D schemas c syntax value
+  source : PayloadMeaning D schemas c «syntax» value
   equation : ∀ before after args, evalNutz before expr after args = value
 
 private def numberEq (a b : Zahl lo hi) : Decidable (a = b) :=

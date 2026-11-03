@@ -71,7 +71,7 @@ theorem rufGleichRefl (c : ConstProgram) {f : c.D.Fn} (o : RufAusgang f) :
   | hardware e => exact .hardware rfl
 
 /-- Shrinking an agreed end outcome past one binder preserves agreement. -/
-theorem schrumpfEndGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx}
+theorem schrumpfEndGleich (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx}
     {τ : Ty} {o₁ o₂ : EndAusgang V l (τ :: Γ)}
     (h : EndGleich c o₁ o₂) : EndGleich c o₁.schrumpf o₂.schrumpf := by
   cases h with
@@ -99,7 +99,7 @@ theorem schrumpfEndGleich (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : 
     handler is the canonical `rufAt` at sufficient depth, so
     `const_call_sound` supplies the certified answer with its frame. -/
 theorem const_bindCall_ersetzt_single
-    (c : ConstProgram) {V : vertrag c.D} {l : Bool} {Γ : Ctx} {τ : Ty}
+    (c : ConstProgram) {V : Vertrag c.D} {l : Bool} {Γ : Ctx} {τ : Ty}
     {f : c.D.Fn} {args_syn : Args c.D Γ [] (c.D.params f)}
     {he : c.D.erg f = some τ}
     {hp : RufPasst c.D V (c.D.signatur f) []}

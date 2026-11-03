@@ -252,7 +252,7 @@ theorem sim_stmt_assignThru {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
     exact ⟨hI.schreibSlot E t Λ _ _ f _ _ (E.vrel_um hZ (E.typ t f) (hev e ρ ρ' hρ)), hρ⟩
 
 set_option linter.unusedSectionVars false in
-theorem sim_stmt_assignThruOwn {V : vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+theorem sim_stmt_assignThruOwn {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     {zi_n}
     (p)
     (t)

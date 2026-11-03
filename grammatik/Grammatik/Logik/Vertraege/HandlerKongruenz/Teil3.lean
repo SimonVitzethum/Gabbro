@@ -23,7 +23,7 @@ public import Grammatik.Logik.Ruf.Eintritt.RufGleichSchleife
 
 namespace Gabbro.Grammatik
 
-variable {D : Deklaration} {V : vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 
 section SchleifenUnter
 

@@ -106,7 +106,7 @@ theorem execStmtHA_ru_assignThru {V : Vertrag D}
   rfl
 
 set_option linter.unusedSectionVars false in
-theorem execStmtHA_ru_assignThruOwn {V : vertrag D}
+theorem execStmtHA_ru_assignThruOwn {V : Vertrag D}
     {l : Bool}
     {Γ : Ctx}
     {Λ : List (Res D)}

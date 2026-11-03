@@ -32,7 +32,7 @@ public import Grammatik.Logik.Ruf.Eintritt.RufGleichTests
 
 namespace Gabbro.Grammatik
 
-variable {D : Deklaration} {V : vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 section Gleich
 variable (O : Orakel D) (passes : Nat)
   (R₁ R₂ : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)

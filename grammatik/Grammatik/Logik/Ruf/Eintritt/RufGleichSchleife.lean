@@ -23,7 +23,7 @@ public import Grammatik.Logik.Vertraege.HandlerKongruenz.Teil1
 
 namespace Gabbro.Grammatik
 
-variable {D : Deklaration} {V : vertrag D}
+variable {D : Deklaration} {V : Vertrag D}
 
 /-- Extract `Treu` from a `TreuAusgang` at a normal outcome. -/
 theorem treuAus_ok {W : D.Tab → Bool} {G : D.Glob → Bool} {l : Bool} {Γ : Ctx}

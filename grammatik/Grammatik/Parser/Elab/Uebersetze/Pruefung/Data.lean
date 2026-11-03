@@ -21,7 +21,7 @@ set_option maxRecDepth 100000
 
 /-- A measured place of a declared check, resolved from its source shape. -/
 inductive UMessOrt where
-  | variable (name : String)
+  | «variable» (name : String)
   | feld (basis : String) (feld : String)
   | stelle (basis : String) (feld : String) (index : Int)
   deriving DecidableEq, Repr
