@@ -18,6 +18,19 @@ def ScanRun (L : Lay D) (fp : W) (lo K : Nat) (pr : List Nat)
   ∃ m', Star ⟨start, fp⟩ m ⟨finish, fp⟩ m' ∧
     AgreeW L fp lo K m m' ∧ Keeps fp pr m m' ∧ post m'
 
+theorem ScanRun.map {start finish : W} {m : Mem} {p q : Mem → Prop}
+    (run : ScanRun L fp lo K pr start finish m p) (f : ∀ m', p m' → q m') :
+    ScanRun L fp lo K pr start finish m q := by
+  obtain ⟨m', run, frame, kept, post⟩ := run
+  exact ⟨m', run, frame, kept, f m' post⟩
+
+theorem ScanRun.prefix {start middle finish : W} {m : Mem} {post : Mem → Prop}
+    (first : Star ⟨start, fp⟩ m ⟨middle, fp⟩ m)
+    (rest : ScanRun L fp lo K pr middle finish m post) :
+    ScanRun L fp lo K pr start finish m post := by
+  obtain ⟨m', run, frame, kept, post⟩ := rest
+  exact ⟨m', first.trans run, frame, kept, post⟩
+
 /-- Prefix a suffix simulation with the instructions of one actual scan step. -/
 theorem ScanRun.bind {start middle finish : W} {m : Mem}
     {mid post : Mem → Prop}
