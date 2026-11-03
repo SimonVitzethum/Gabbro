@@ -85,7 +85,27 @@ theorem Ready.bound (h : x.Ready m σ ρ) {i index j : Nat}
     ctx (by omega) (by have := x.scratch; have := x.layout.ks; omega)
   exact ⟨m', path, a, kept, ready, localFrame, rv⟩
 
-/-- Constant/increment blocks used by candidate and predecessor scans. -/
+/-- A binary instruction with its exact destination write. -/
+theorem binary_to {m : Mem} {pc fp : W} {K cell a b o : Nat} {va vb value : W}
+    {g : W → W → Option W} (code : CodeAt m pc [ci o cell a b])
+    (frame : FrameOK m fp K) (small : K < 2 ^ 31)
+    (cellBound : cell < K) (aBound : a < K) (bBound : b < K)
+    (ra : m.rd64 (slot fp (BitVec.ofNat 64 a)) = some va)
+    (rb : m.rd64 (slot fp (BitVec.ofNat 64 b)) = some vb)
+    (opEq : op o = bin g) (opBound : o < 256) (valueEq : g va vb = some value) :
+    Star ⟨pc, fp⟩ m ⟨pc + 16, fp⟩
+      (write m (slot fp (BitVec.ofNat 64 cell)) 8 value.toNat) := by
+  have hi := code 0 (by simp)
+  simp only [ci, List.getElem_cons_zero, Nat.mul_zero, BitVec.add_zero] at hi
+  apply star_ins code (by simpa only [ci] using opBound)
+  simp only [ci, opEq]
+  apply run_bin hi
+  · simpa only [sx_nat (by omega)] using ra
+  · simpa only [sx_nat (by omega)] using rb
+  · exact valueEq
+  · simpa only [sx_nat (by omega)] using wr64_some (frame.wr cell cellBound)
+
+/-- Increment one selector word; retain every other word below scratch. -/
 theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
     (ctx : frei Γ reserved ≤ cell) (low : x.s ≤ cell)
     (room : cell < x.s + 4) (read : x.read m cell (BitVec.ofNat 64 n))
@@ -93,30 +113,38 @@ theorem Ready.increment (h : x.Ready m σ ρ) {i j cell n : Nat}
       [ci 1 (x.s + 4) 1 0, ci 3 cell cell (x.s + 4)]))
     (endAt : x.at i + 32 = x.at j) :
     ScanRun L x.fp x.lo x.K (x.counter :: x.saved :: x.pr) (x.at i) (x.at j) m
-      (fun m' => x.Ready m' σ ρ ∧ Agree x.fp cell x.K m m' ∧ x.read m' cell (BitVec.ofNat 64 (n + 1))) := by
+      (fun m' => x.Ready m' σ ρ ∧ Agree x.fp cell x.K m m' ∧
+        (∀ q, q < x.s + 4 → q ≠ cell →
+          m'.rd64 (slot x.fp (BitVec.ofNat 64 q)) = m.rd64 (slot x.fp (BitVec.ofNat 64 q))) ∧
+        x.read m' cell (BitVec.ofNat 64 (n + 1))) := by
+  have inside : x.s + 4 < x.K := by have := x.scratch; have := x.layout.ks; omega
   have pre := h.pre i cell _ ctx found
-  have preWorld := PreS.welt pre x.layout.ks h.world x.layout.lay x.layout.top
-  obtain ⟨m1, run1, a1, v, rv, rfl⟩ := const_ok
-    { preWorld.left with ctx := by omega } (by decide)
-    (by have := x.scratch; omega)
-  have a1c := a1.mono (by omega : cell ≤ x.s + 4)
-  have tail := preWorld.next a1c (Nat.le_refl _) (by have := x.scratch; omega)
-  have old : m1.rd64 (slot x.fp (BitVec.ofNat 64 cell)) = some (BitVec.ofNat 64 n) := by
-    rw [agree_rd_low a1 preWorld.frame.room room (by have := x.scratch; omega)]
-    exact read
-  obtain ⟨m2, run2, a2, v, rv2, rfl⟩ := eng_bin_ok tail
-    (by have := x.scratch; omega) (by have := x.scratch; omega)
-    (by have := x.scratch; omega) old rv (g := fun a b => some (a + b))
-    rfl (by decide) rfl
-  have run : Ok m (x.at i) x.fp x.K cell
-      [ci 1 (x.s + 4) 1 0, ci 3 cell cell (x.s + 4)]
-      (· = BitVec.ofNat 64 (n + 1)) := by
-    refine ⟨m2, ?_, Agree.widen (a1c.trans a2) x.layout.ks, _, rv2, ?_⟩
-    · simpa only [List.length_cons, List.length_nil, pc_add] using run1.trans run2
-    · rw [show BitVec.ofInt 64 1 = BitVec.ofNat 64 1 by decide, ← BitVec.ofNat_add]
-  obtain ⟨m', path, a, kept, ready, localFrame, v, read, rfl⟩ := h.ok run
-    (by simpa using endAt) ctx low (by have := x.scratch; have := x.layout.ks; omega)
-  exact ⟨m', path, a, kept, ready, localFrame, read⟩
+  let m1 := write m (slot x.fp (BitVec.ofNat 64 (x.s + 4))) 8 1
+  have a1 : Agree x.fp (x.s + 4) x.K m m1 := agree_write h.frame.room (by omega) inside 1
+  have run1 := const_to pre.left.code h.frame inside x.small (by decide : lit32 1 = true)
+  have tail := pre.next (a1.mono (by omega)) (Nat.le_refl _) (by omega)
+  have old := read_agree a1 h.frame room (by omega) read
+  have one : x.read m1 (x.s + 4) 1 := rd_same h.frame inside 1
+  let value := BitVec.ofNat 64 n + 1
+  let m2 := write m1 (slot x.fp (BitVec.ofNat 64 cell)) 8 value.toNat
+  have run2 := binary_to tail.code tail.frame x.small (by omega) (by omega) inside old one
+    (g := fun a b => some (a + b)) rfl (by decide) rfl
+  have a2 : Agree x.fp cell x.K m1 m2 := agree_write tail.frame.room (by omega) (by omega) _
+  have aa := (a1.mono (by omega : cell ≤ x.s + 4)).trans a2
+  refine ⟨m2, ?_, agreeW_of (aa.mono (by have := x.controls; have := x.scratch; omega)),
+    keeps_of_agree aa h.frame.room (by
+      intro q hq; have := x.controls; have := x.scratch
+      simp only [List.mem_cons] at hq
+      rcases hq with rfl | rfl | hq <;> try omega
+      have := x.protected q hq; omega) (by omega),
+    h.agree aa ctx (by rw [← x.abi]; have := x.controls; have := x.scratch; omega) (by omega),
+    aa, ?_, ?_⟩
+  · simpa only [addr_norm, show (16 : Nat) + 16 = 32 by decide, endAt] using run1.trans run2
+  · intro q below different
+    rw [rd_other tail.frame.room (by omega) (by omega) (Ne.symm different)]
+    exact agree_rd_low a1 h.frame.room below (by omega)
+  · have result := rd_same tail.frame (by omega : cell < x.K) value
+    simpa only [value, BitVec.ofNat_add] using result
 
 /-- Stop code is reached through an ordinary extracted block. -/
 theorem Ready.stop (h : x.Ready m σ ρ) :
