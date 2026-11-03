@@ -76,8 +76,8 @@ theorem softMulRoundWord_model (s : Bool) (total n : Nat)
       simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq, BitVec.toNat_ofNat,
         Nat.mod_eq_of_lt n64, Nat.mod_eq_of_lt k64] using result
     rw [jam, softMulUnderflow_model s n (1201 - total) nl nb (by omega)]
-    congr 3
-    omega
+    have scale : -1077 - ((1201 - total : Nat) : Int) = (total : Int) - 2278 := by omega
+    rw [scale]
   · simp only [sub, decide_false, Bool.false_eq_true, ite_false]
     by_cases finite : total < 3247
     · simp only [finite, decide_true, ite_true]
@@ -85,8 +85,8 @@ theorem softMulRoundWord_model (s : Bool) (total n : Nat)
         BitVec.ofNat_sub_ofNat_of_le _ _ (by decide) (by omega)
       rw [index, routineRoundPackWord_exact s (total - 1200) n
         (by omega) (by omega) (by omega) nb (Or.inl nl)]
-      congr 3
-      omega
+      have scale : ((total - 1200 : Nat) : Int) - 1078 = (total : Int) - 2278 := by omega
+      rw [scale]
     · simp only [finite, decide_false, Bool.false_eq_true, ite_false]
       have nonzero : (if s then -(n : Int) else (n : Int)) ≠ 0 := by
         cases s <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
