@@ -24,7 +24,6 @@ theorem strCat_ok {n q : Nat} (s : Expr D Γ Λ (.str n)) (t : Expr D Γ Λ (.st
       else lowE (currentOld := currentOld) L (reserved := reserved) s d) else none) = some (c, top)) (hK : top ≤ K)
     (hp : Pre L m pc fp K d c ρ W reserved) :
     ValueOk L m pc fp K d c (.str (n + q)) (eval σ₀ (.strCat s t) σ ρ) := by
-  simp only [lowE_eqs] at h
   split at h
   · next hn =>
     refine Ok.value ?_ (by simp only [valueWords, if_pos hn])
